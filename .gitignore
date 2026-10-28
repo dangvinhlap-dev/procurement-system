@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / React
+node_modules/
+dist/
+.vite/
+
+# Môi trường & bí mật
+.env
+*.env.local
+appsettings.*.local.json
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
