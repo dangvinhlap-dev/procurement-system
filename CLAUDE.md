@@ -80,3 +80,11 @@ Tài liệu thiết kế đầy đủ: `docs/design.md`. Đọc mục liên quan
 - Sau khi tôi đồng ý: tạo nhánh `rollback/vX` từ tag X, hoặc dùng `git revert`
   cho các commit cần gỡ; chạy build và test; gỡ migration bằng `dotnet ef database update <migration-của-bản-X>`
   chỉ khi tôi xác nhận đã sao lưu CSDL.
+## Giao diện (bắt buộc)
+- Mọi màn hình theo phong cách ứng dụng desktop kiểu Windows XP, đặc tả tại docs/ui-guide.md;
+  ảnh mẫu tại docs/ui/mau-man-hinh-danh-sach.png. Xem ảnh mẫu trước khi làm bất kỳ màn hình nào.
+- Mọi trang nằm trong AppShell; mọi danh sách dùng ListPage + DataGrid; mọi chứng từ dùng DocumentForm.
+  Không tự tạo bố cục riêng cho từng màn hình.
+- Màu, cỡ chữ, khoảng cách lấy từ theme token; không viết màu cứng trong component.
+- Ưu tiên mật độ thông tin cao, gọn, thao tác bằng bàn phím.
+- Sau khi làm xong một màn hình, chụp màn hình (Playwright) và so với ảnh mẫu, sửa đến khi giống bố cục.
