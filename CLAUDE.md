@@ -28,3 +28,13 @@ Tài liệu thiết kế đầy đủ: `docs/design.md`. Đọc mục liên quan
 - Làm từng lát nhỏ, commit sau mỗi lát chạy được.
 - Giao diện tiếng Việt; tên code, bảng, cột bằng tiếng Anh.
 - Không commit mật khẩu thật hay file .env.
+## Ghi chú trong code (bắt buộc)
+- Mọi ghi chú (comment) viết bằng tiếng Việt có dấu, file lưu UTF-8.
+- Tên biến, hàm, lớp, bảng, cột vẫn bằng tiếng Anh; chỉ phần ghi chú là tiếng Việt.
+- Mỗi lớp và mỗi hàm public có XML doc comment (`/// <summary>`) giải thích: làm gì, tham số, giá trị trả về, ngoại lệ.
+- Mỗi quy tắc nghiệp vụ trong code ghi rõ lý do và mục tương ứng trong docs/design.md
+  (ví dụ: `// Kho Sub không được chuyển sang công ty khác – xem design.md mục 4`).
+- Đoạn tính toán phức tạp (giá vốn, phân bổ chi phí, làm tròn) ghi công thức và ví dụ số.
+- React/TypeScript: dùng JSDoc (`/** ... */`) tiếng Việt cho component và hàm.
+- Không ghi chú thừa kiểu lặp lại tên hàm; ghi chú phải giải thích "tại sao", không chỉ "làm gì".
+- Ghi chú commit (commit message) cũng viết bằng tiếng Việt.
