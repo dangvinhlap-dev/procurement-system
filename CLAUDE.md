@@ -38,3 +38,45 @@ Tài liệu thiết kế đầy đủ: `docs/design.md`. Đọc mục liên quan
 - React/TypeScript: dùng JSDoc (`/** ... */`) tiếng Việt cho component và hàm.
 - Không ghi chú thừa kiểu lặp lại tên hàm; ghi chú phải giải thích "tại sao", không chỉ "làm gì".
 - Ghi chú commit (commit message) cũng viết bằng tiếng Việt.
+## Quản lý phiên bản và quay lại bản cũ (bắt buộc)
+
+### Nhánh làm việc
+- Không code trực tiếp trên `main`. Mỗi tính năng/sửa lỗi làm trên nhánh riêng:
+  `feature/<ten-ngan>` hoặc `fix/<ten-ngan>`.
+- Chỉ gộp (merge) vào `main` khi `dotnet build` và `dotnet test` đều chạy qua.
+- `main` luôn ở trạng thái chạy được.
+- Tuyệt đối không dùng `git push --force`, `git reset --hard` trên `main`,
+  không xóa hay sửa tag đã tạo, không viết lại lịch sử commit.
+
+### Đánh số phiên bản (Semantic Versioning: MAJOR.MINOR.PATCH)
+- PATCH (0.3.0 → 0.3.1): sửa lỗi, không đổi chức năng.
+- MINOR (0.3.1 → 0.4.0): thêm chức năng, tương thích ngược.
+- MAJOR (0.x → 1.0.0): thay đổi lớn, không tương thích; 1.0.0 = bản chạy thật đầu tiên.
+- Số phiên bản ghi trong `Directory.Build.props` (thẻ `<Version>`) và hiện ở chân trang giao diện.
+
+### Mỗi lần phát hành phiên bản mới, làm đủ các bước
+1. Cập nhật `CHANGELOG.md` (tiếng Việt) theo mẫu:
+   `## [0.4.0] - YYYY-MM-DD` với các mục: Thêm mới / Thay đổi / Sửa lỗi /
+   Thay đổi CSDL / Lưu ý khi nâng cấp / Cách quay lại bản trước.
+2. Cập nhật `<Version>` trong `Directory.Build.props`.
+3. Commit: `Phát hành phiên bản 0.4.0`.
+4. Tạo tag có ghi chú: `git tag -a v0.4.0 -m "Phiên bản 0.4.0: <tóm tắt>"`.
+5. `git push` và `git push --tags`.
+6. Báo cho tôi: số phiên bản, tóm tắt thay đổi, có thay đổi CSDL hay không.
+
+### Thay đổi CSDL
+- Mọi thay đổi cấu trúc qua EF Core migration, đặt tên rõ nghĩa
+  (ví dụ `V0_4_0_ThemBangGiaNoiBo`).
+- Mỗi migration phải có hàm `Down()` gỡ được thay đổi; ghi chú nếu `Down()` làm mất dữ liệu.
+- Không xóa cột/bảng có dữ liệu ngay trong một bản; đánh dấu ngừng dùng trước,
+  xóa ở bản sau.
+- Sinh script SQL cho mỗi bản: `dotnet ef migrations script <bản-trước> <bản-mới>`
+  lưu vào `db/scripts/<phiên-bản>.sql`.
+- Trong CHANGELOG ghi rõ: cần sao lưu CSDL trước khi nâng cấp.
+
+### Khi tôi yêu cầu "quay về phiên bản X"
+- Không xóa lịch sử. Liệt kê cho tôi các thay đổi giữa bản hiện tại và bản X
+  (code và migration), nêu rủi ro mất dữ liệu, chờ tôi đồng ý.
+- Sau khi tôi đồng ý: tạo nhánh `rollback/vX` từ tag X, hoặc dùng `git revert`
+  cho các commit cần gỡ; chạy build và test; gỡ migration bằng `dotnet ef database update <migration-của-bản-X>`
+  chỉ khi tôi xác nhận đã sao lưu CSDL.
