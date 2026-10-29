@@ -5,3 +5,8 @@ body,
   margin: 0;
   height: 100%;
 }
+
+/* Trang đơn giản (Trang chủ, trang tạm) trong vùng nội dung của AppShell. */
+.simple-page {
+  padding: 8px 12px;
+}

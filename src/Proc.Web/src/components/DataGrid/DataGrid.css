@@ -1,0 +1,147 @@
+/*
+ * Kiểu của DataGrid theo ui-guide.md mục "Lưới dữ liệu".
+ * Màu lấy từ biến CSS mà antd sinh ra từ theme token (src/theme.ts); không viết màu cứng.
+ */
+
+.data-grid-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 6px;
+}
+
+/* Vùng "Kéo tiêu đề cột vào đây để nhóm" – viền đứt nét. */
+.data-grid-group-zone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px dashed var(--ant-color-border);
+  background: var(--ant-color-fill-alter);
+  color: var(--ant-color-text-secondary);
+}
+.data-grid-group-zone.is-drag-over {
+  border-color: var(--ant-color-primary);
+  background: var(--ant-control-item-bg-active);
+}
+
+.data-grid {
+  flex: 1;
+  min-height: 0;
+  outline: none;
+  border: 1px solid var(--ant-color-border);
+  background: var(--ant-color-bg-container);
+}
+.data-grid:focus-visible {
+  outline: 1px solid var(--ant-color-primary);
+  outline-offset: -1px;
+}
+/* Viền ngoài do khung .data-grid vẽ; bỏ viền ngoài của antd để không thành viền đôi. */
+.data-grid .ant-table-container {
+  border-inline-start: none !important;
+  border-top: none !important;
+}
+
+/* Tiêu đề cột: nền xám nhạt, chữ đậm, cao 26px. */
+.data-grid .ant-table-thead > tr > th {
+  height: 26px;
+  padding-block: 0 !important;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+}
+.data-grid .ant-table-thead > tr > th[draggable='true'] {
+  cursor: pointer;
+}
+
+/* Tay kéo đổi độ rộng ở mép phải ô tiêu đề. */
+.data-grid-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+
+/*
+ * Dòng dữ liệu cao 24px, chữ 12px. Dùng .ant-table-cell thay vì tr/td vì khi bật cuộn ảo
+ * antd vẽ dòng bằng div – một bộ selector áp cho cả hai chế độ.
+ */
+.data-grid .ant-table-tbody .ant-table-cell,
+.data-grid .ant-table-tbody-virtual .ant-table-cell {
+  box-sizing: border-box;
+  height: 24px;
+  padding-block: 0 !important;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.data-grid .data-grid-row.is-alt > .ant-table-cell {
+  background: var(--ant-color-fill-alter);
+}
+.data-grid .data-grid-row.is-selected > .ant-table-cell {
+  background: var(--ant-control-item-bg-active);
+}
+.data-grid .data-grid-group-row > .ant-table-cell {
+  background: var(--ant-color-bg-layout);
+}
+
+/* Cột đánh dấu đầu lưới. */
+.data-grid .ant-table-cell.data-grid-mark {
+  padding-inline: 0 !important;
+  text-align: center;
+  overflow: visible !important;
+}
+.data-grid-mark-toggle,
+.data-grid-group-toggle {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ant-color-text-disabled);
+  font: inherit;
+}
+.data-grid-mark-toggle.is-on {
+  color: var(--ant-color-primary);
+}
+.data-grid-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 6px;
+}
+
+/* Trạng thái: chấm tròn màu + chữ đậm cùng màu. */
+.data-grid-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.data-grid-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+}
+.data-grid-status.tone-success {
+  color: var(--ant-color-success);
+}
+.data-grid-status.tone-warning {
+  color: var(--ant-color-warning);
+}
+.data-grid-status.tone-error {
+  color: var(--ant-color-error);
+}
+.data-grid-status.tone-neutral {
+  color: var(--ant-color-text);
+  font-weight: normal;
+}
+.data-grid-status.tone-neutral .data-grid-status-dot {
+  background: var(--ant-color-text-disabled);
+}

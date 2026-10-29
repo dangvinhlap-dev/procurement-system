@@ -16,6 +16,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   trên database `procurement_test`.
 - `Directory.Build.props` (phiên bản 0.1.0), `Directory.Packages.props` (quản lý gói tập trung),
   `global.json` (dùng Microsoft.Testing.Platform cho `dotnet test`), công cụ local `dotnet-ef`.
+- Khung giao diện theo docs/ui-guide.md: `AppShell` (thanh menu có Alt + chữ gạch chân, thanh công cụ
+  có ô lệnh, cây điều hướng có nhóm Ghim và số đếm, kéo rộng/ẩn được, thanh trạng thái hiện phiên bản),
+  `ListPage` (tìm kiếm có/không dấu, bộ lọc, Nhóm theo, chọn cột, xuất CSV) và `DataGrid`
+  (sắp xếp, kéo đổi rộng/thứ tự cột, kéo cột để nhóm, trạng thái chấm màu, phím mũi tên/Enter,
+  cuộn ảo trên 500 dòng).
+- Màn hình Danh sách đơn mua hàng (PO) với 30 dòng dữ liệu giả.
+- Test giao diện Playwright (`npm run test:e2e` trong `src\Proc.Web`).
 
 ### Thay đổi
 - Không có.

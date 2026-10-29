@@ -5,8 +5,9 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
+import { RouterProvider } from 'react-router'
 import './index.css'
+import { router } from './router'
 import { appTheme } from './theme'
 
 // Ngày giờ hiển thị tiếng Việt (dd/MM/yyyy) – CLAUDE.md mục 5.
@@ -17,9 +18,10 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider locale={viVN} theme={appTheme}>
+      {/* AntApp gắn lớp chứa biến CSS của theme, nên CSS của AppShell/ListPage/DataGrid đọc được var(--ant-*). */}
       <AntApp>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <RouterProvider router={router} />
         </QueryClientProvider>
       </AntApp>
     </ConfigProvider>
