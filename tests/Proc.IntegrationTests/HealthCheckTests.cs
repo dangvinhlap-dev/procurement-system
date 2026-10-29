@@ -9,7 +9,8 @@ namespace Proc.IntegrationTests;
 /// <summary>
 /// Test tích hợp trên PostgreSQL thật (database procurement_test): kết nối CSDL và endpoint /health.
 /// </summary>
-public class HealthCheckTests : IClassFixture<ProcApiFactory>
+[Collection(ApiCollection.Name)]
+public class HealthCheckTests
 {
     private readonly ProcApiFactory _factory;
 

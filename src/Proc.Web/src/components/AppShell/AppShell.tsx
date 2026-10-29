@@ -1,13 +1,9 @@
+import { App } from 'antd'
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { findScreenByPath } from '../../app/screens'
-import {
-  demoNavCounts,
-  demoPinnedScreens,
-  demoUnreadNotifications,
-  demoUser,
-  demoWorkingCompanies,
-} from '../../mocks/session'
+import { useAuth } from '../../auth/useAuth'
+import { demoNavCounts, demoPinnedScreens, demoUnreadNotifications } from '../../mocks/session'
 import { layoutCssVars } from '../../theme'
 import { MenuBar } from './MenuBar'
 import { NavTree } from './NavTree'
@@ -35,13 +31,15 @@ function todayInVietnam(): string {
  * Khung ứng dụng cố định cho mọi trang (ui-guide.md mục AppShell, design.md mục 17.1):
  * thanh menu 28px, thanh công cụ 32px, cây điều hướng trái 240px, vùng nội dung, thanh trạng thái 22px.
  * Phím tắt chung: F3 tìm kiếm, Insert đổi INS/OVR, Alt + chữ gạch chân mở menu (trong MenuBar).
- * Người dùng, công ty, số đếm hiện là dữ liệu giả (src/mocks/session.ts) cho đến lát phân quyền.
+ * Người dùng và công ty lấy từ phiên đăng nhập; số đếm, ghim, thông báo còn là dữ liệu giả (src/mocks/session.ts).
+ * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.
  */
 export function AppShell() {
   const { pathname } = useLocation()
   const screen = findScreenByPath(pathname)
   const screenTitle = screen?.title ?? 'Không tìm thấy màn hình'
-  const [company, setCompany] = useState<string>(demoWorkingCompanies[0].value)
+  const { session, workingCompany, setWorkingCompany, logout } = useAuth()
+  const { message } = App.useApp()
   const [insertMode, setInsertMode] = useState(true)
 
   useEffect(() => {
@@ -61,16 +59,24 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  if (!session) return null
+  const user = session.user
+
   return (
     <div className="app-shell" style={layoutCssVars()}>
       <MenuBar
         activeGroup={screen?.group}
-        companies={demoWorkingCompanies}
-        company={company}
-        onCompanyChange={setCompany}
+        companies={user.companies.map((c) => ({ value: c.id, label: `${c.code} – ${c.shortName ?? c.name}` }))}
+        company={workingCompany?.id ?? user.defaultCompanyId}
+        onCompanyChange={(id) => {
+          setWorkingCompany(id)
+          const company = user.companies.find((c) => c.id === id)
+          if (company) message.success(`Đang làm việc tại ${company.code} – ${company.name}.`)
+        }}
         unreadCount={demoUnreadNotifications}
-        userFullName={demoUser.fullName}
-        userInitials={demoUser.initials}
+        userFullName={user.fullName}
+        userName={user.userName}
+        onLogout={() => logout()}
       />
       <Toolbar />
       <div className="app-body">
@@ -80,9 +86,9 @@ export function AppShell() {
         </main>
       </div>
       <StatusBar
-        message="Đang dùng dữ liệu mẫu – chưa kết nối dữ liệu thật."
+        message="Danh sách, số đếm trên cây điều hướng còn là dữ liệu mẫu."
         screenTitle={screenTitle}
-        userFullName={demoUser.fullName}
+        userFullName={user.fullName}
         workingDate={todayInVietnam()}
         version={__APP_VERSION__}
         insertMode={insertMode}

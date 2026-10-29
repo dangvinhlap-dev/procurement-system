@@ -6,6 +6,7 @@ import 'dayjs/locale/vi'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
+import { AuthProvider } from './auth/AuthProvider'
 import './index.css'
 import { router } from './router'
 import { appTheme } from './theme'
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
       {/* AntApp gắn lớp chứa biến CSS của theme, nên CSS của AppShell/ListPage/DataGrid đọc được var(--ant-*). */}
       <AntApp>
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          <AuthProvider>
+            <RouterProvider router={router} />
+          </AuthProvider>
         </QueryClientProvider>
       </AntApp>
     </ConfigProvider>

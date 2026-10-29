@@ -1,0 +1,57 @@
+/* Màn hình đăng nhập kiểu hộp thoại Windows; màu lấy từ biến token của antd. */
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--ant-color-bg-layout);
+  font-family: var(--ant-font-family);
+  font-size: var(--ant-font-size);
+}
+
+.login-dialog {
+  width: 400px;
+  border: 1px solid var(--ant-color-border);
+  background: var(--ant-color-bg-container);
+}
+
+.login-title-bar {
+  height: 26px;
+  padding: 0 10px;
+  background: var(--ant-color-primary);
+  color: var(--ant-color-text-light-solid);
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.login-body {
+  padding: 16px 20px 4px;
+}
+.login-body .login-app-name {
+  margin: 0 0 14px;
+}
+.login-alert {
+  margin-bottom: 12px;
+}
+.login-body .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.login-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 12px;
+}
+.login-actions .ant-btn {
+  min-width: 100px;
+}
+
+.login-footer {
+  padding: 4px 10px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-bg-layout);
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+  text-align: right;
+}

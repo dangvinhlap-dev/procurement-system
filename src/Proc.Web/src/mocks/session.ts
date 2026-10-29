@@ -1,13 +1,8 @@
 /**
- * DỮ LIỆU GIẢ của phiên làm việc (người dùng, công ty, số đếm trên cây điều hướng) cho lát giao diện khung.
- * Sẽ thay bằng dữ liệu đăng nhập và API ở lát phân quyền (design.md mục 13.3, bước 3).
+ * DỮ LIỆU GIẢ cho phần khung chưa có API: số thông báo, màn hình ghim, số đếm trên cây điều hướng.
+ * Người dùng và công ty đã lấy từ đăng nhập thật (src/auth).
  */
-import { demoCompanies, mockPurchaseOrders } from './purchaseOrders'
-
-export const demoUser = { userName: 'an.nguyen', fullName: 'Nguyễn Văn An', initials: 'NA' }
-
-/** Công ty người dùng được làm việc; công ty đầu tiên là mặc định. */
-export const demoWorkingCompanies = demoCompanies.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}` }))
+import { mockPurchaseOrders } from './purchaseOrders'
 
 /** Số thông báo chưa đọc. */
 export const demoUnreadNotifications = 7

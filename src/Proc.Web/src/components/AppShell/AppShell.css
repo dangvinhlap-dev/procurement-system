@@ -68,6 +68,20 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 22px;
+  border: 0;
+  padding: 0 4px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.app-menu-user:hover,
+.app-menu-user.ant-dropdown-open {
+  background: var(--ant-control-item-bg-active);
+}
+.app-menu-user-caret {
+  font-size: var(--ant-font-size-sm);
 }
 .app-menu-avatar {
   background: var(--ant-color-success);

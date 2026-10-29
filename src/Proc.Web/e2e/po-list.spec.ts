@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { ADMIN, loginViaApi } from './helpers.ts'
 
 /**
  * Test giao diện khung (AppShell, ListPage, DataGrid) trên màn hình Danh sách đơn mua hàng (PO),
@@ -9,6 +10,7 @@ import { expect, test, type Page } from '@playwright/test'
 const dataRows = (page: Page) => page.locator('.data-grid tbody tr.data-grid-row')
 
 test.beforeEach(async ({ page }) => {
+  await loginViaApi(page)
   await page.goto('/mua-hang/po')
   await expect(page.getByRole('heading', { name: 'Danh sách đơn mua hàng (PO)' })).toBeVisible()
 })
@@ -25,7 +27,7 @@ test('khung ứng dụng đúng kích thước và thành phần theo ui-guide',
   expect((await nav.boundingBox())?.width).toBe(240)
 
   for (const name of ['Hằng ngày', 'Mua hàng', 'Kho', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống']) {
-    await expect(menuBar.getByRole('button', { name })).toBeVisible()
+    await expect(menuBar.getByRole('button', { name, exact: true })).toBeVisible()
   }
   await expect(toolbar.getByPlaceholder('Ô lệnh – tên màn hình')).toBeVisible()
 
@@ -36,6 +38,7 @@ test('khung ứng dụng đúng kích thước và thành phần theo ui-guide',
 
   // Thanh trạng thái: tên màn hình, người dùng, ngày làm việc, phiên bản, INS.
   await expect(statusBar).toContainText('Danh sách đơn mua hàng (PO)')
+  await expect(statusBar).toContainText(ADMIN.fullName)
   await expect(statusBar).toContainText('0.1.0')
   await expect(statusBar).toContainText('INS')
   await expect(statusBar).toContainText(/\d{2}\/\d{2}\/\d{4}/)

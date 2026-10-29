@@ -1,4 +1,4 @@
-import { BellOutlined } from '@ant-design/icons'
+import { BellOutlined, DownOutlined, LogoutOutlined } from '@ant-design/icons'
 import { Avatar, Badge, Dropdown, Select } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -9,12 +9,26 @@ import { normalizeVi } from '../../utils/text'
 export interface MenuBarProps {
   /** Nhóm của màn hình đang mở – hiện chữ đậm. */
   activeGroup?: ModuleKey
+  /** Các công ty người dùng được làm việc. */
   companies: { value: string; label: string }[]
+  /** Id công ty đang làm việc. */
   company: string
   onCompanyChange: (value: string) => void
   unreadCount: number
   userFullName: string
-  userInitials: string
+  userName: string
+  onLogout: () => void
+}
+
+/**
+ * Chữ viết tắt từ họ tên cho ô avatar: chữ đầu của từ đầu và từ cuối, ví dụ "Nguyễn Văn An" → "NA".
+ */
+function initialsOf(fullName: string): string {
+  const words = fullName.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  const first = words[0][0]
+  const last = words.length > 1 ? words[words.length - 1][0] : ''
+  return (first + last).toUpperCase()
 }
 
 /**
@@ -35,7 +49,7 @@ function HotkeyLabel({ group }: { group: ModuleGroup }) {
  * Thanh menu trên cùng, cao 28px (ui-guide.md mục AppShell, ý 1): nhóm chức năng theo module,
  * bấm mở menu thả xuống; bên phải là công ty đang làm việc, thông báo, ngôn ngữ, người dùng.
  */
-export function MenuBar({ activeGroup, companies, company, onCompanyChange, unreadCount, userFullName, userInitials }: MenuBarProps) {
+export function MenuBar({ activeGroup, companies, company, onCompanyChange, unreadCount, userFullName, userName, onLogout }: MenuBarProps) {
   const navigate = useNavigate()
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null)
   const buttons = useRef(new Map<ModuleKey, HTMLButtonElement>())
@@ -104,12 +118,27 @@ export function MenuBar({ activeGroup, companies, company, onCompanyChange, unre
         <span className="app-menu-lang" title="Ngôn ngữ: Tiếng Việt">
           VI
         </span>
-        <span className="app-menu-user">
-          <Avatar size={18} className="app-menu-avatar">
-            {userInitials}
-          </Avatar>
-          {userFullName}
-        </span>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: 'account', label: `Tài khoản: ${userName}`, disabled: true },
+              { type: 'divider' },
+              { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất' },
+            ],
+            onClick: ({ key }) => {
+              if (key === 'logout') onLogout()
+            },
+          }}
+        >
+          <button type="button" className="app-menu-user" aria-label={`Người dùng: ${userFullName}`}>
+            <Avatar size={18} className="app-menu-avatar">
+              {initialsOf(userFullName)}
+            </Avatar>
+            {userFullName}
+            <DownOutlined className="app-menu-user-caret" />
+          </button>
+        </Dropdown>
       </div>
     </div>
   )
