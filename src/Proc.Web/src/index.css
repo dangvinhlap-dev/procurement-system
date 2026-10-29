@@ -1,0 +1,7 @@
+/* Chỉ đặt lại lề trang; màu và chữ lấy từ theme token (src/theme.ts). */
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
