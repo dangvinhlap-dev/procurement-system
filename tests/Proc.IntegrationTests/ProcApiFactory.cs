@@ -89,7 +89,7 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
 
-        var user = new AppUser { UserName = userName, FullName = $"Người thử {userName}", IsActive = isActive };
+        var user = new AppUser { UserName = userName, FullName = $"Người thử {userName}", IsActive = isActive, CreatedAt = DateTimeOffset.UtcNow };
         var result = await users.CreateAsync(user, password);
         if (!result.Succeeded)
             throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
@@ -122,7 +122,7 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
 
-        var user = new AppUser { UserName = userName, FullName = $"Người thử {userName}" };
+        var user = new AppUser { UserName = userName, FullName = $"Người thử {userName}", CreatedAt = DateTimeOffset.UtcNow };
         var result = await users.CreateAsync(user, TestPassword);
         if (!result.Succeeded)
             throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
@@ -144,6 +144,36 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
 
         await db.SaveChangesAsync();
         return user.Id;
+    }
+
+    /// <summary>
+    /// Tạo vai trò thử với danh sách quyền cho trước (bỏ qua nếu mã đã có).
+    /// </summary>
+    /// <param name="code">Mã vai trò.</param>
+    /// <param name="permissions">Mã quyền.</param>
+    /// <returns>Id vai trò.</returns>
+    public async Task<Guid> CreateRoleAsync(string code, params string[] permissions)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var role = Role.Create(code, $"Vai trò thử {code}");
+        db.Roles.Add(role);
+        foreach (var permission in permissions)
+            db.RolePermissions.Add(RolePermission.Grant(role.Id, permission));
+        await db.SaveChangesAsync();
+        return role.Id;
+    }
+
+    /// <summary>
+    /// Lấy Id vai trò theo mã.
+    /// </summary>
+    /// <param name="code">Mã vai trò.</param>
+    /// <returns>Id vai trò.</returns>
+    public async Task<Guid> GetRoleIdAsync(string code)
+    {
+        using var scope = Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ProcDbContext>()
+            .Roles.Where(r => r.Code == code).Select(r => r.Id).SingleAsync();
     }
 
     /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>

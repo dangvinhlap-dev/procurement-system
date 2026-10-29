@@ -1,0 +1,66 @@
+/* Ngăn kéo chi tiết kiểu Windows: tiêu đề đậm, hàng nút lệnh, tab dạng thẻ; màu lấy từ biến token của antd. */
+
+.detail-drawer .ant-drawer-header {
+  padding: 6px 12px;
+  background: var(--ant-color-fill-alter);
+  border-bottom: 1px solid var(--ant-color-border);
+}
+.detail-drawer .ant-drawer-title {
+  font-size: var(--ant-font-size-lg);
+  font-weight: 700;
+}
+.detail-drawer .ant-drawer-body {
+  padding: 8px 12px 12px;
+}
+
+.detail-drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.detail-drawer-actions .ant-btn-primary {
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+.detail-drawer-error {
+  margin-bottom: 8px;
+}
+
+.detail-drawer-tabs > .ant-tabs-nav {
+  margin-bottom: 0;
+}
+.detail-drawer-tabs > .ant-tabs-content-holder {
+  border: 1px solid var(--ant-color-border);
+  border-top: none;
+  padding: 10px 12px;
+  background: var(--ant-color-bg-container);
+}
+
+/* Khung nhóm trường kiểu fieldset của Windows. */
+.detail-section {
+  border: 1px solid var(--ant-color-border-secondary);
+  padding: 6px 10px 8px;
+  margin: 0 0 10px;
+}
+.detail-section > legend {
+  width: auto;
+  padding: 0 4px;
+  margin: 0;
+  border: none;
+  font-size: var(--ant-font-size);
+  font-weight: 600;
+}
+.detail-hint {
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+
+/* Danh sách ô chọn chia cột, đọc từ trên xuống như hộp thoại Windows. */
+.detail-check-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+  width: 100%;
+}
