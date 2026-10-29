@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Lớp Api: endpoint, xác thực, phân quyền, middleware. Không chứa logic nghiệp vụ (design.md mục 3.1). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Proc.Application\Proc.Application.csproj" />
+    <ProjectReference Include="..\Proc.Infrastructure\Proc.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Lớp Application: use case, validator, DTO, interface. Không viết SQL trực tiếp (design.md mục 3.1). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Proc.Domain\Proc.Domain.csproj" />
+  </ItemGroup>
+</Project>
