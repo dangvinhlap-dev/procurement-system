@@ -1,0 +1,4 @@
+# Chuẩn hóa xuống dòng: script shell phải là LF để chạy được trên Linux/Codespaces.
+* text=auto
+*.sh text eol=lf
+*.png binary

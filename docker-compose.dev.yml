@@ -1,0 +1,17 @@
+# CSDL cho môi trường lập trình (chỉ dữ liệu mẫu).
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: proc
+      POSTGRES_PASSWORD: proc_dev_only
+      POSTGRES_DB: procurement
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql
+
+volumes:
+  pg_data: {}
