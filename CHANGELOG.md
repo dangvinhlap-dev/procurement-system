@@ -37,6 +37,12 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Đổi mật khẩu (`POST /api/auth/change-password`, hộp thoại trong menu người dùng); thông báo lỗi mật khẩu tiếng Việt.
 - Giao diện ẩn màn hình không có quyền trên menu, cây điều hướng, ô lệnh; mở thẳng đường dẫn thì báo không có quyền.
 - Dữ liệu mẫu dev/test: kho cho 4 công ty, cây nhóm hàng, vai trò Thủ kho và Nhân viên mua hàng, 2 tài khoản mẫu.
+- Màn hình Người dùng và Vai trò và phân quyền (design.md mục 9.5, 10.9): danh sách + ngăn kéo chi tiết có tab;
+  tạo tài khoản, sửa thông tin, ngừng dùng, đặt lại mật khẩu (mở khóa tạm); gán vai trò, kho, nhóm hàng tại công ty
+  đang làm việc; tạo/sửa vai trò và tick quyền theo module. Chặn tự nâng quyền: chỉ gán vai trò và cấp quyền nằm trong
+  quyền của chính mình, không tự sửa quyền của mình, vai trò ADMIN không sửa được.
+- API `/api/users`, `/api/roles`, `/api/permissions`; lỗi không tìm thấy trả 404 tiếng Việt.
+- Component dùng chung `DetailDrawer` (ngăn kéo chi tiết của form danh mục, Ctrl+S lưu, Esc đóng).
 
 ### Thay đổi
 - Không có.

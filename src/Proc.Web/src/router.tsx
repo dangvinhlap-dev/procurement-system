@@ -9,11 +9,15 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
+import { RoleListPage } from './pages/system/RoleListPage'
+import { UserListPage } from './pages/system/UserListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
   PO: <PurchaseOrderListPage />,
+  USER: <UserListPage />,
+  ROLE: <RoleListPage />,
 }
 
 /**

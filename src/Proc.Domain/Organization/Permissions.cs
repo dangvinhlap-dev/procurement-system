@@ -146,4 +146,27 @@ public static class Permissions
         new(Report.PurchaseView, "Xem báo cáo mua hàng"),
         new(Report.PriceViewAllCompanies, "Xem so sánh giá toàn tập đoàn"),
     ];
+
+    /// <summary>
+    /// Lọc ra các mã quyền không có trong danh mục – dùng khi lưu quyền của vai trò, chặn client gửi mã tự đặt.
+    /// </summary>
+    /// <param name="codes">Mã quyền cần kiểm tra.</param>
+    /// <returns>Các mã không hợp lệ (rỗng nếu tất cả hợp lệ).</returns>
+    public static IReadOnlyList<string> FindUnknown(IEnumerable<string> codes) =>
+        codes.Where(c => !KnownCodes.Contains(c)).Distinct().ToList();
+
+    /// <summary>Tên tiếng Việt của module, theo thứ tự hiển thị trên màn hình phân quyền.</summary>
+    public static readonly IReadOnlyList<(string Module, string Name)> Modules =
+    [
+        ("System", "Hệ thống"),
+        ("Organization", "Tổ chức"),
+        ("MasterData", "Danh mục"),
+        ("Purchase", "Mua hàng"),
+        ("Inventory", "Kho"),
+        ("Pricing", "Giá và nhà cung cấp"),
+        ("Sourcing", "Tìm nguồn và đấu thầu"),
+        ("Report", "Báo cáo"),
+    ];
+
+    private static readonly HashSet<string> KnownCodes = [.. All.Select(p => p.Code)];
 }

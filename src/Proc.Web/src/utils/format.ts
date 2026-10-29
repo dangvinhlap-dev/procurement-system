@@ -32,3 +32,11 @@ export function formatQuantity(value: number | null | undefined): string {
 export function formatDate(value: string | Date | null | undefined): string {
   return value ? dayjs(value).format('DD/MM/YYYY') : ''
 }
+
+/**
+ * Hiển thị ngày giờ dd/MM/yyyy HH:mm theo giờ máy người dùng (Việt Nam – CLAUDE.md mục 5).
+ * @param value Thời điểm ISO 8601 (UTC từ server).
+ */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : ''
+}

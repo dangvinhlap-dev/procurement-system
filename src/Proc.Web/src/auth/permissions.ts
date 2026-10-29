@@ -5,7 +5,9 @@
 export const Permission = {
   CompanyView: 'System.Company.View',
   UserView: 'System.User.View',
+  UserManage: 'System.User.Manage',
   RoleView: 'System.Role.View',
+  RoleManage: 'System.Role.Manage',
   LogView: 'System.Log.View',
   ParameterView: 'System.Parameter.View',
   WarehouseView: 'Organization.Warehouse.View',

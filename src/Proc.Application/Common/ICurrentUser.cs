@@ -1,8 +1,8 @@
 namespace Proc.Application.Common;
 
 /// <summary>
-/// Người dùng đang gọi hệ thống, lấy từ token đăng nhập. Phạm vi dữ liệu đầy đủ (công ty, kho, nhóm hàng)
-/// sẽ nằm ở ICurrentUserScope ở lát phân quyền (design.md mục 9.2).
+/// Người dùng đang gọi hệ thống, lấy từ token đăng nhập. Phạm vi dữ liệu (công ty, kho, nhóm hàng, quyền)
+/// nằm ở ICurrentUserScope (design.md mục 9.2).
 /// </summary>
 public interface ICurrentUser
 {

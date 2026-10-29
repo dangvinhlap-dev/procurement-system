@@ -95,6 +95,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 app.MapAuthEndpoints();
 app.MapOrganizationEndpoints();
+app.MapAdministrationEndpoints();
 
 app.Run();
 

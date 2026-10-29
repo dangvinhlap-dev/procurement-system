@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Proc.Application.Administration;
 using Proc.Application.Auth;
 using Proc.Application.Common;
 using Proc.Application.Organization;
+using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Security;
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserScope>(sp => sp.GetRequiredService<CurrentUserScope>());
         services.AddScoped<UserScopeLoader>();
         services.AddScoped<IOrganizationQueries, OrganizationQueries>();
+        services.AddScoped<IUserAdministration, UserAdministration>();
+        services.AddScoped<IRoleAdministration, RoleAdministration>();
 
         services.AddDbContext<ProcDbContext>((sp, options) => options
             .UseNpgsql(connectionString)

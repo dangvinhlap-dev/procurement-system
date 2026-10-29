@@ -24,6 +24,9 @@ Tài khoản mẫu để thử phân quyền (mật khẩu **Demo@2026**):
 | `thukho.bha` | Thủ kho | BHA | Chỉ kho KP1, chỉ nhóm hàng Vật tư (VT) và nhóm con |
 | `muahang.nmi` | Nhân viên mua hàng | NMI | Mọi kho, mọi nhóm hàng |
 
+Thêm tài khoản, gán vai trò, kho, nhóm hàng ở **Hệ thống → Người dùng** (gán tại công ty đang chọn trên thanh menu);
+sửa quyền của vai trò ở **Hệ thống → Vai trò**.
+
 ## Lệnh thường dùng (PowerShell, tại thư mục gốc)
 | Việc | Lệnh |
 | --- | --- |

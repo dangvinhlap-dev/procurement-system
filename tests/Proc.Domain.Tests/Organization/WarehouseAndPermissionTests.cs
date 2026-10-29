@@ -84,4 +84,11 @@ public class WarehouseAndPermissionTests
         ];
         Assert.All(required, r => Assert.Contains(Permissions.All, p => p.Code == r));
     }
+
+    [Fact]
+    public void DanhMucQuyen_MoiModuleDeuCoTenTiengViet()
+    {
+        var modules = Permissions.Modules.Select(m => m.Module).ToList();
+        Assert.All(Permissions.All, p => Assert.Contains(p.Module, modules));
+    }
 }

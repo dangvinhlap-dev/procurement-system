@@ -28,6 +28,10 @@ export interface ListPageProps<T> {
   onClearFilters?: () => void
   /** Bấm "+ Tạo mới". */
   onCreate?: () => void
+  /** false thì ẩn nút "Tạo mới" (người dùng không có quyền thêm). Mặc định true. */
+  canCreate?: boolean
+  /** Đang tải dữ liệu từ server. */
+  loading?: boolean
   /** Mở chi tiết dòng (bấm đúp hoặc Enter). */
   onOpenRow?: (row: T) => void
   isMarked?: (row: T) => boolean
@@ -64,6 +68,8 @@ export function ListPage<T>({
   filters,
   onClearFilters,
   onCreate,
+  canCreate = true,
+  loading = false,
   onOpenRow,
   isMarked,
   exportFileName,
@@ -145,9 +151,11 @@ export function ListPage<T>({
       </Typography.Text>
 
       <div className="list-page-actions">
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate ?? notYet}>
-          Tạo mới
-        </Button>
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate ?? notYet}>
+            Tạo mới
+          </Button>
+        )}
         <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
           Xuất CSV
         </Button>
@@ -230,6 +238,7 @@ export function ListPage<T>({
               onGroupByChange={setGroupBy}
               onOpenRow={onOpenRow}
               isMarked={isMarked}
+              loading={loading}
             />
           </>
         ) : (

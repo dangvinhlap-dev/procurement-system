@@ -30,6 +30,8 @@ export interface DataGridProps<T> {
   isMarked?: (row: T) => boolean
   /** Tên cột đầy đủ (kể cả cột đang ẩn) để hiện nhãn "Nhóm theo". */
   allColumns?: GridColumn<T>[]
+  /** Đang tải dữ liệu: hiện vòng xoay trên lưới. */
+  loading?: boolean
 }
 
 /**
@@ -50,7 +52,17 @@ type SortState = { key: string; order: 'ascend' | 'descend' } | null
  * Enter hoặc bấm đúp để mở; tự bật cuộn ảo khi trên 500 dòng.
  * Viết trên antd Table (miễn phí), không dùng AG Grid Enterprise.
  */
-export function DataGrid<T>({ rows, columns, rowKey, groupBy, onGroupByChange, onOpenRow, isMarked, allColumns }: DataGridProps<T>) {
+export function DataGrid<T>({
+  rows,
+  columns,
+  rowKey,
+  groupBy,
+  onGroupByChange,
+  onOpenRow,
+  isMarked,
+  allColumns,
+  loading = false,
+}: DataGridProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [sort, setSort] = useState<SortState>(null)
@@ -266,6 +278,7 @@ export function DataGrid<T>({ rows, columns, rowKey, groupBy, onGroupByChange, o
           bordered
           virtual={virtual}
           pagination={false}
+          loading={loading}
           tableLayout="fixed"
           columns={antColumns}
           dataSource={records}
