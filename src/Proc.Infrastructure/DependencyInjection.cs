@@ -5,9 +5,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Proc.Application.Administration;
 using Proc.Application.Auth;
 using Proc.Application.Common;
+using Proc.Application.Documents;
 using Proc.Application.Logging;
 using Proc.Application.Organization;
 using Proc.Infrastructure.Administration;
+using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Logging;
 using Proc.Infrastructure.Persistence;
@@ -49,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<AuditLogInterceptor>();
         services.AddScoped<IAccessLog, AccessLogWriter>();
         services.AddScoped<ILogQueries, LogQueries>();
+        services.AddScoped<IDocumentNumberService, DocumentNumberService>();
 
         // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
         services.AddScoped<CurrentUserScope>();

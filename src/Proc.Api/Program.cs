@@ -98,6 +98,7 @@ app.MapAuthEndpoints();
 app.MapOrganizationEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
+app.MapDocumentNumberingEndpoints();
 
 app.Run();
 

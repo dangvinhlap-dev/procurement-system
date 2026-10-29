@@ -165,9 +165,25 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Thuế suất | Mã, % (0, 5, 8, 10, không chịu thuế) |
 | Điều khoản thanh toán / giao hàng | Mã, tên, số ngày |
 | Lý do nhập/xuất | Mã, tên, loại chứng từ áp dụng |
-| Đánh số chứng từ (`DocumentNumbering`) | Loại chứng từ, công ty, tiền tố, định dạng (`PO-{CTY}-{YYMM}-{0000}`), số hiện tại |
+| Đánh số chứng từ (`DocumentNumbering`) | Loại chứng từ, công ty, định dạng (`PO-{CTY}-{YYMM}-{0000}`); số hiện tại ở bảng `DocumentSequence` theo kỳ |
 | Cấu hình duyệt (`ApprovalRule`) | Loại chứng từ, công ty, ngưỡng giá trị, các cấp duyệt, người/vai trò duyệt |
 | Tham số công ty | Phương pháp giá vốn, cho tồn âm, % markup nội bộ mặc định |
+
+### 5.5 Đánh số chứng từ
+
+- **Mẫu số** gồm chữ cố định (A–Z, 0–9, `- / . _`, phần tiền tố nằm luôn trong mẫu) và các mã: `{CTY}` mã công ty,
+  `{YYYY}`/`{YY}` năm, `{MM}` tháng, `{YYMM}` năm 2 số + tháng, `{0000}` số thứ tự (3–10 chữ số; vượt thì nới rộng, không cắt).
+  Mẫu dài tối đa 40 ký tự, có đúng một nhóm số; có tháng thì phải có năm (để số không lặp giữa các năm).
+- **Mẫu mặc định** khi công ty chưa cấu hình: `{LOẠI}-{CTY}-{YYMM}-{0000}`, ví dụ `PO-BHA-2610-0001`.
+  Loại chứng từ: PR, RFQ, PO, CTR, GRN, RTV, TRF, ICS, ICR, ADJ (khai báo một nơi trong code).
+- **Năm/tháng lấy theo ngày chứng từ**, không theo ngày nhập máy. Số thứ tự đếm lại theo **kỳ suy từ mẫu**: có tháng → mỗi tháng;
+  chỉ có năm → mỗi năm; không có ngày → liên tục. Bộ đếm `DocumentSequence` khóa theo (công ty, loại, kỳ).
+- **Cấp số khi lưu chứng từ**, trong cùng giao dịch, bằng một câu `INSERT … ON CONFLICT DO UPDATE … RETURNING`:
+  không trùng khi nhiều người lưu cùng lúc; lưu lỗi thì số được trả lại (không nhảy số).
+- Đổi mẫu không đổi số đã cấp. Ràng buộc duy nhất (CompanyId, DocType, số) ở bảng chứng từ (mục 12.2) là lớp chặn cuối,
+  phòng khi đổi qua lại giữa các mẫu sinh ra số đã dùng.
+- Màn hình **Hệ thống → Đánh số chứng từ** (quyền xem/sửa tham số hệ thống) theo công ty đang làm việc: xem mẫu, số gần nhất
+  và số kế tiếp của tháng này; sửa mẫu hoặc để trống để về mẫu mặc định.
 
 ## 6. Chứng từ nghiệp vụ và luồng xử lý
 
