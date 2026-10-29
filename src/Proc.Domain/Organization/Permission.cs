@@ -1,3 +1,5 @@
+using Proc.Domain.Common;
+
 namespace Proc.Domain.Organization;
 
 /// <summary>
@@ -41,6 +43,7 @@ public sealed class Permission
 /// <summary>
 /// Quyền thuộc vai trò: vai trò = tập quyền (design.md mục 9.1).
 /// </summary>
+[Auditable("Quyền của vai trò", LabelProperty = nameof(PermissionCode))]
 public sealed class RolePermission
 {
     private RolePermission()

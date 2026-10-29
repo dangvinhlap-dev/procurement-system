@@ -30,6 +30,7 @@ var connectionString = builder.Configuration.GetConnectionString("Procurement")
 builder.Services.AddHttpContextAccessor();
 // Đăng ký trước AddInfrastructure để thay cho mặc định "không có người dùng".
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddScoped<IRequestContext, HttpRequestContext>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 
@@ -96,6 +97,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 app.MapAuthEndpoints();
 app.MapOrganizationEndpoints();
 app.MapAdministrationEndpoints();
+app.MapLogEndpoints();
 
 app.Run();
 

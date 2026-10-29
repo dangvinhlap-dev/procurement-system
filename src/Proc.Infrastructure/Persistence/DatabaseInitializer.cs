@@ -147,7 +147,7 @@ public sealed class SeedOptions
 public static class DatabaseInitializer
 {
     /// <summary>
-    /// Chạy migration (nếu Database:MigrateOnStartup), đồng bộ danh mục quyền, tạo dữ liệu mẫu (nếu Seed:Enabled).
+    /// Chạy migration (nếu Database:MigrateOnStartup), tạo phân vùng nhật ký tháng tới, đồng bộ danh mục quyền, tạo dữ liệu mẫu (nếu Seed:Enabled).
     /// Gọi nhiều lần không sinh dữ liệu trùng.
     /// </summary>
     /// <param name="services">Service provider gốc của ứng dụng.</param>
@@ -162,6 +162,7 @@ public static class DatabaseInitializer
         if (sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.MigrateOnStartup)
             await sp.GetRequiredService<ProcDbContext>().Database.MigrateAsync(cancellationToken);
 
+        await EnsureAuditLogPartitionsAsync(sp.GetRequiredService<ProcDbContext>(), cancellationToken);
         await SeedAsync(sp, cancellationToken);
     }
 
@@ -190,6 +191,15 @@ public static class DatabaseInitializer
 
         await GrantAllPermissionsToAdminAsync(db, cancellationToken);
     }
+
+    /// <summary>
+    /// Tạo sẵn phân vùng AuditLog cho tháng này và 2 tháng tới (design.md mục 9.3). Khởi động lại API ít nhất mỗi tháng
+    /// là đủ; nếu quên, dòng nhật ký rơi vào phân vùng mặc định chứ không lỗi. Sau này chuyển thành job Hangfire hằng tháng.
+    /// </summary>
+    private static async Task EnsureAuditLogPartitionsAsync(ProcDbContext db, CancellationToken cancellationToken) =>
+        await db.Database.ExecuteSqlRawAsync(
+            "DO $$ BEGIN IF to_regproc('audit_log_ensure_partitions') IS NOT NULL THEN PERFORM audit_log_ensure_partitions(2); END IF; END $$;",
+            cancellationToken);
 
     /// <summary>
     /// Bảng Permission luôn khớp <see cref="Permissions.All"/>: thêm quyền mới, cập nhật tên, xóa quyền đã bỏ

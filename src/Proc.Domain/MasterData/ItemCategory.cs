@@ -6,6 +6,7 @@ namespace Proc.Domain.MasterData;
 /// Nhóm hàng dạng cây nhiều cấp, dùng chung toàn tập đoàn (design.md mục 5.2).
 /// Dùng để phân quyền theo nhóm hàng: được phép một nhóm thì được phép mọi nhóm con (design.md mục 9.2).
 /// </summary>
+[Auditable("Nhóm hàng", LabelProperty = nameof(Code))]
 public sealed class ItemCategory : AuditableEntity
 {
     private ItemCategory()

@@ -29,4 +29,21 @@ public interface IAuthService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Danh sách lỗi tiếng Việt; rỗng khi đổi thành công.</returns>
     Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ghi nhận đổi công ty làm việc (nhật ký truy cập) sau khi kiểm tra người dùng được làm việc ở công ty đó.
+    /// </summary>
+    /// <param name="userId">Người dùng.</param>
+    /// <param name="companyId">Công ty chọn.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>false nếu người dùng không được làm việc ở công ty này.</returns>
+    Task<bool> SwitchCompanyAsync(Guid userId, Guid companyId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ghi nhận đăng xuất. JWT không thu hồi được phía server nên đây chỉ là ghi nhật ký; giao diện tự xóa phiên.
+    /// </summary>
+    /// <param name="userId">Người dùng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Task hoàn tất khi đã ghi.</returns>
+    Task LogoutAsync(Guid userId, CancellationToken cancellationToken);
 }

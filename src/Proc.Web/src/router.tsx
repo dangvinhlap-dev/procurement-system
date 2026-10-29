@@ -9,6 +9,8 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
+import { AccessLogListPage } from './pages/system/AccessLogListPage'
+import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { RoleListPage } from './pages/system/RoleListPage'
 import { UserListPage } from './pages/system/UserListPage'
 
@@ -18,6 +20,8 @@ const implemented: Record<string, ReactNode> = {
   PO: <PurchaseOrderListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
+  LOG: <AuditLogListPage />,
+  ACC: <AccessLogListPage />,
 }
 
 /**

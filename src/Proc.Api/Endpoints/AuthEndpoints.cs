@@ -5,7 +5,7 @@ using Proc.Application.Common;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Endpoint đăng nhập và lấy thông tin phiên: /api/auth/login, /api/auth/me.
+/// Endpoint đăng nhập, phiên làm việc và nhật ký truy cập: /api/auth/login, me, change-password, working-company, logout.
 /// </summary>
 public static class AuthEndpoints
 {
@@ -23,6 +23,8 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapGet("/me", GetMeAsync);
         group.MapPost("/change-password", ChangePasswordAsync);
+        group.MapPost("/working-company", SwitchCompanyAsync);
+        group.MapPost("/logout", LogoutAsync);
         return group;
     }
 
@@ -89,6 +91,30 @@ public static class AuthEndpoints
             : Results.ValidationProblem(
                 new Dictionary<string, string[]> { [nameof(ChangePasswordRequest.NewPassword)] = [.. errors] },
                 title: errors[0]);
+    }
+
+    /// <summary>
+    /// Ghi nhận đổi công ty làm việc. Header X-Company-Id của các request sau mới quyết định phạm vi;
+    /// endpoint này để nhật ký truy cập có dòng "đổi công ty" (design.md mục 9.3). 204 khi được phép, 403 khi không.
+    /// </summary>
+    private static async Task<IResult> SwitchCompanyAsync(
+        SwitchCompanyRequest request,
+        ICurrentUser currentUser,
+        IAuthService auth,
+        CancellationToken cancellationToken)
+    {
+        if (currentUser.UserId is not { } userId) return Results.Unauthorized();
+        return await auth.SwitchCompanyAsync(userId, request.CompanyId, cancellationToken)
+            ? Results.NoContent()
+            : Problem(StatusCodes.Status403Forbidden, "Bạn không được làm việc tại công ty này.");
+    }
+
+    /// <summary>Ghi nhận đăng xuất (giao diện tự xóa phiên). Trả 204.</summary>
+    private static async Task<IResult> LogoutAsync(ICurrentUser currentUser, IAuthService auth, CancellationToken cancellationToken)
+    {
+        if (currentUser.UserId is not { } userId) return Results.Unauthorized();
+        await auth.LogoutAsync(userId, cancellationToken);
+        return Results.NoContent();
     }
 
     private static IResult Problem(int status, string message) => Results.Problem(title: message, statusCode: status);

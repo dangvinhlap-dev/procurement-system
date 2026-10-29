@@ -6,6 +6,7 @@ namespace Proc.Domain.Organization;
 /// Gán vai trò cho người dùng theo từng công ty (design.md mục 9.1, 9.2): một người có thể là Thủ kho ở công ty A
 /// nhưng chỉ Xem báo cáo ở công ty B. Người dùng chỉ chọn được công ty mà mình có ít nhất một dòng gán ở đây.
 /// </summary>
+[Auditable("Gán vai trò")]
 public sealed class UserCompanyRole : AuditableEntity
 {
     private UserCompanyRole()

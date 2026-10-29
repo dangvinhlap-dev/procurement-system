@@ -7,6 +7,7 @@ using Proc.Domain.Common;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
+using Proc.Infrastructure.Logging;
 
 namespace Proc.Infrastructure.Persistence;
 
@@ -84,6 +85,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 
     /// <summary>Phạm vi nhóm hàng của người dùng.</summary>
     public DbSet<UserItemCategoryScope> UserItemCategoryScopes => Set<UserItemCategoryScope>();
+
+    /// <summary>Nhật ký thao tác (chỉ thêm).</summary>
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    /// <summary>Nhật ký truy cập (chỉ thêm).</summary>
+    public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
 
     /// <summary>
     /// Cấu hình bảng Identity, áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure, rồi gắn filter phạm vi.

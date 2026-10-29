@@ -1,10 +1,10 @@
-import { formatDate, formatMoney, formatQuantity } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, formatQuantity } from '../../utils/format'
 
 /** Tông màu của cột trạng thái (ui-guide.md): xanh lá hoàn tất, cam chờ duyệt, đỏ quá hạn/lỗi, xám trung tính. */
 export type StatusTone = 'success' | 'warning' | 'error' | 'neutral'
 
 /** Kiểu cột, quyết định định dạng, căn lề và cách sắp xếp. */
-export type GridColumnType = 'text' | 'date' | 'money' | 'quantity' | 'status'
+export type GridColumnType = 'text' | 'date' | 'datetime' | 'money' | 'quantity' | 'status'
 
 /** Khai báo một cột của DataGrid. */
 export interface GridColumn<T> {
@@ -13,7 +13,7 @@ export interface GridColumn<T> {
   /** Độ rộng ban đầu (px); người dùng kéo để đổi. */
   width: number
   type?: GridColumnType
-  /** Giá trị thô của ô: dùng để sắp xếp, tìm kiếm, nhóm và xuất CSV. Ngày dạng ISO yyyy-MM-dd. */
+  /** Giá trị thô của ô: dùng để sắp xếp, tìm kiếm, nhóm và xuất CSV. Ngày dạng ISO yyyy-MM-dd, ngày giờ dạng ISO 8601 UTC. */
   value: (row: T) => string | number | null
   /** Với cột trạng thái: tông màu của chấm theo dòng. */
   tone?: (row: T) => StatusTone
@@ -34,6 +34,8 @@ export function cellText<T>(column: GridColumn<T>, row: T): string {
   switch (column.type) {
     case 'date':
       return formatDate(String(value))
+    case 'datetime':
+      return formatDateTime(String(value))
     case 'money':
       return formatMoney(Number(value))
     case 'quantity':
