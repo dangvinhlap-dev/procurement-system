@@ -17,6 +17,7 @@ import {
   InboxOutlined,
   LineChartOutlined,
   LoginOutlined,
+  NumberOutlined,
   ProfileOutlined,
   RollbackOutlined,
   SafetyOutlined,
@@ -112,6 +113,7 @@ export const screens: Screen[] = [
   { code: 'PER', title: 'Kỳ kho', navLabel: 'Kỳ kho', path: '/he-thong/ky-kho', icon: <CalendarOutlined />, group: 'system', permission: Permission.PeriodView },
   { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },
+  { code: 'DSCT', title: 'Đánh số chứng từ', navLabel: 'Đánh số chứng từ', path: '/he-thong/danh-so-chung-tu', icon: <NumberOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'SEC', title: 'Tham số hệ thống', navLabel: 'Tham số hệ thống', path: '/he-thong/tham-so', icon: <SafetyOutlined />, group: 'system', permission: Permission.ParameterView },
 ]
 

@@ -50,6 +50,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   (API `POST /api/auth/logout`, `POST /api/auth/working-company`).
 - Màn hình Nhật ký thao tác (lọc khoảng ngày, loại đối tượng, hành động; xem trước/sau) và Nhật ký truy cập;
   API `GET /api/audit-logs`, `GET /api/audit-logs/{id}`, `GET /api/access-logs`.
+- Đánh số chứng từ (design.md mục 5.5): mẫu số theo công ty và loại chứng từ (mặc định `{LOẠI}-{CTY}-{YYMM}-{0000}`,
+  ví dụ PO-BHA-2610-0001), đếm lại theo tháng/năm của ngày chứng từ; cấp số nguyên tử trong giao dịch của chứng từ
+  (không trùng khi lưu đồng thời, lưu lỗi thì trả lại số). Màn hình Hệ thống → Đánh số chứng từ; API `/api/document-numbering`.
 
 ### Thay đổi
 - Không có.
@@ -66,6 +69,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_1_0_NhatKyThaoTac`: bảng `AuditLog` (phân vùng theo tháng, phân vùng mặc định `AuditLog_default`,
   hàm `audit_log_ensure_partitions`) và `AccessLog`; trigger chặn UPDATE/DELETE trên cả hai bảng.
   `Down()` xóa hai bảng nhật ký cùng toàn bộ nhật ký đã ghi.
+- Migration `V0_1_0_DanhSoChungTu`: bảng `DocumentNumbering` (mẫu số theo công ty) và `DocumentSequence` (bộ đếm theo
+  công ty, loại chứng từ, kỳ). `Down()` xóa hai bảng – mất cấu hình mẫu số và số hiện tại.
 
 ### Lưu ý khi nâng cấp
 - Cần tạo sẵn database `procurement` và `procurement_test`, user `proc` (README.md).

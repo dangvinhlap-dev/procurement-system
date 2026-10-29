@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Domain.Common;
+using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
@@ -85,6 +86,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 
     /// <summary>Phạm vi nhóm hàng của người dùng.</summary>
     public DbSet<UserItemCategoryScope> UserItemCategoryScopes => Set<UserItemCategoryScope>();
+
+    /// <summary>Cấu hình đánh số chứng từ (lọc theo công ty).</summary>
+    public DbSet<DocumentNumbering> DocumentNumberings => Set<DocumentNumbering>();
+
+    /// <summary>Bộ đếm số chứng từ (lọc theo công ty).</summary>
+    public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
 
     /// <summary>Nhật ký thao tác (chỉ thêm).</summary>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

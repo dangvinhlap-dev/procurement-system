@@ -11,6 +11,7 @@ import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
+import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
 import { RoleListPage } from './pages/system/RoleListPage'
 import { UserListPage } from './pages/system/UserListPage'
 
@@ -22,6 +23,7 @@ const implemented: Record<string, ReactNode> = {
   ROLE: <RoleListPage />,
   LOG: <AuditLogListPage />,
   ACC: <AccessLogListPage />,
+  DSCT: <DocumentNumberingPage />,
 }
 
 /**

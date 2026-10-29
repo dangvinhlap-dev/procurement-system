@@ -10,6 +10,7 @@ export const Permission = {
   RoleManage: 'System.Role.Manage',
   LogView: 'System.Log.View',
   ParameterView: 'System.Parameter.View',
+  ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',
   ItemCategoryView: 'MasterData.ItemCategory.View',
   ItemView: 'MasterData.Item.View',
