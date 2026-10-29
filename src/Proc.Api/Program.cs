@@ -73,6 +73,8 @@ app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
+// Sau xác thực: nạp phạm vi (công ty từ X-Company-Id, quyền, kho, nhóm hàng) trước khi vào endpoint.
+app.UseMiddleware<CompanyScopeMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -92,6 +94,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 }).AllowAnonymous();
 
 app.MapAuthEndpoints();
+app.MapOrganizationEndpoints();
 
 app.Run();
 

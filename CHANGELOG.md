@@ -28,6 +28,15 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Danh mục Công ty, Vai trò và gán vai trò theo công ty (UserCompanyRole); chọn công ty làm việc
   trên thanh menu, gửi kèm mọi request qua header `X-Company-Id`; menu người dùng có Đăng xuất.
 - Tự điền CreatedAt/By, UpdatedAt/By khi lưu danh mục.
+- Phân quyền (design.md mục 9.1, 9.2): danh mục 42 quyền dạng Module.Đối tượng.Hành động, quyền theo vai trò,
+  vai trò ADMIN luôn đủ quyền; phạm vi kho và nhóm hàng (kế thừa nhóm con) theo từng công ty;
+  `ICurrentUserScope` nạp theo header `X-Company-Id` (công ty không được gán → 403);
+  global query filter theo công ty/kho/nhóm hàng, mặc định từ chối khi chưa nạp phạm vi.
+- Danh mục Kho (Main/Sub, mỗi công ty một kho tổng) và Nhóm hàng (dạng cây) ở mức dữ liệu; API
+  `GET /api/warehouses`, `GET /api/item-categories`.
+- Đổi mật khẩu (`POST /api/auth/change-password`, hộp thoại trong menu người dùng); thông báo lỗi mật khẩu tiếng Việt.
+- Giao diện ẩn màn hình không có quyền trên menu, cây điều hướng, ô lệnh; mở thẳng đường dẫn thì báo không có quyền.
+- Dữ liệu mẫu dev/test: kho cho 4 công ty, cây nhóm hàng, vai trò Thủ kho và Nhân viên mua hàng, 2 tài khoản mẫu.
 
 ### Thay đổi
 - Không có.
@@ -38,6 +47,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Thay đổi CSDL
 - Migration `V0_1_0_DangNhapVaCongTy`: bảng `Company`, `Role`, `UserCompanyRole`, `User`, `UserClaim`,
   `UserLogin`, `UserToken`. `Down()` xóa các bảng này cùng dữ liệu.
+- Migration `V0_1_0_PhanQuyenVaPhamVi`: bảng `Permission`, `RolePermission`, `Warehouse`, `ItemCategory`,
+  `UserWarehouseScope`, `UserItemCategoryScope`. `Down()` xóa các bảng này cùng dữ liệu.
 
 ### Lưu ý khi nâng cấp
 - Cần tạo sẵn database `procurement` và `procurement_test`, user `proc` (README.md).

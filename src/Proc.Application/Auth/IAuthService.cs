@@ -20,4 +20,13 @@ public interface IAuthService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Thông tin người dùng; null nếu tài khoản không còn, đã ngừng dùng hoặc không còn công ty nào.</returns>
     Task<CurrentUserInfo?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Đổi mật khẩu của chính người dùng.
+    /// </summary>
+    /// <param name="userId">Người đang đăng nhập.</param>
+    /// <param name="request">Mật khẩu hiện tại và mật khẩu mới (đã qua ChangePasswordRequestValidator).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Danh sách lỗi tiếng Việt; rỗng khi đổi thành công.</returns>
+    Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
 }

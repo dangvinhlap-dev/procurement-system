@@ -11,6 +11,8 @@ export interface UserCompanyInfo {
   shortName: string | null
   isHeadOffice: boolean
   roleCodes: string[]
+  /** Quyền tại công ty này – chỉ để ẩn menu/nút, API vẫn kiểm tra lại. */
+  permissions: string[]
 }
 
 /** Thông tin người dùng đang đăng nhập. */

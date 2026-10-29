@@ -22,6 +22,7 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/auth").WithTags("Đăng nhập");
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapGet("/me", GetMeAsync);
+        group.MapPost("/change-password", ChangePasswordAsync);
         return group;
     }
 
@@ -64,6 +65,30 @@ public static class AuthEndpoints
         return info is null
             ? Problem(StatusCodes.Status401Unauthorized, "Phiên đăng nhập không còn hiệu lực. Hãy đăng nhập lại.")
             : Results.Ok(info);
+    }
+
+    /// <summary>
+    /// Đổi mật khẩu của chính người đang đăng nhập. Trả 204 khi thành công, 400 kèm lỗi tiếng Việt khi không đạt.
+    /// </summary>
+    private static async Task<IResult> ChangePasswordAsync(
+        ChangePasswordRequest request,
+        IValidator<ChangePasswordRequest> validator,
+        ICurrentUser currentUser,
+        IAuthService auth,
+        CancellationToken cancellationToken)
+    {
+        if (currentUser.UserId is not { } userId) return Results.Unauthorized();
+
+        var validation = await validator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+            return Results.ValidationProblem(validation.ToDictionary(), title: "Dữ liệu đổi mật khẩu không hợp lệ.");
+
+        var errors = await auth.ChangePasswordAsync(userId, request, cancellationToken);
+        return errors.Count == 0
+            ? Results.NoContent()
+            : Results.ValidationProblem(
+                new Dictionary<string, string[]> { [nameof(ChangePasswordRequest.NewPassword)] = [.. errors] },
+                title: errors[0]);
     }
 
     private static IResult Problem(int status, string message) => Results.Problem(title: message, statusCode: status);

@@ -17,6 +17,8 @@ export interface AuthContextValue {
   setWorkingCompany: (companyId: string) => void
   /** Thông báo lý do đăng xuất gần nhất, hiện trên màn hình đăng nhập. */
   logoutReason: string | null
+  /** Người dùng có quyền tại công ty đang làm việc không (dùng để ẩn menu, nút). */
+  hasPermission: (permission: string) => boolean
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

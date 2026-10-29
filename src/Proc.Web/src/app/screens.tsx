@@ -29,6 +29,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
+import { Permission } from '../auth/permissions'
 
 /** Nhóm chức năng theo module – dùng cho thanh menu và cây điều hướng (design.md mục 1.2, 17.1). */
 export type ModuleKey = 'daily' | 'purchasing' | 'inventory' | 'pricing' | 'sourcing' | 'reports' | 'system'
@@ -52,6 +53,8 @@ export interface Screen {
   path: string
   icon: ReactNode
   group: ModuleKey
+  /** Quyền cần có để thấy và mở màn hình; không khai báo = ai đăng nhập cũng mở được. */
+  permission?: string
 }
 
 /**
@@ -77,37 +80,37 @@ export const screens: Screen[] = [
   { code: 'TODO', title: 'Việc cần làm', navLabel: 'Việc cần làm', path: '/hang-ngay/viec-can-lam', icon: <CheckSquareOutlined />, group: 'daily' },
   { code: 'NOTI', title: 'Thông báo', navLabel: 'Thông báo', path: '/hang-ngay/thong-bao', icon: <BellOutlined />, group: 'daily' },
 
-  { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing' },
-  { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing' },
-  { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing' },
-  { code: 'CTR', title: 'Hợp đồng khung', navLabel: 'Hợp đồng khung', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing' },
+  { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing', permission: Permission.PrView },
+  { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },
+  { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing', permission: Permission.PoView },
+  { code: 'CTR', title: 'Hợp đồng khung', navLabel: 'Hợp đồng khung', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing', permission: Permission.ContractView },
 
-  { code: 'GRN', title: 'Phiếu nhập mua từ NCC (GRN)', navLabel: 'Nhập mua NCC', path: '/kho/grn', icon: <ImportOutlined />, group: 'inventory' },
-  { code: 'RTV', title: 'Phiếu xuất trả hàng NCC (RTV)', navLabel: 'Xuất trả NCC', path: '/kho/rtv', icon: <RollbackOutlined />, group: 'inventory' },
-  { code: 'TRF', title: 'Phiếu chuyển kho nội bộ (TRF)', navLabel: 'Chuyển kho nội bộ', path: '/kho/trf', icon: <SwapOutlined />, group: 'inventory' },
-  { code: 'ICS', title: 'Phiếu xuất bán nội bộ (ICS)', navLabel: 'Xuất bán nội bộ', path: '/kho/ics', icon: <FileDoneOutlined />, group: 'inventory' },
-  { code: 'ICR', title: 'Phiếu nhập mua nội bộ (ICR)', navLabel: 'Nhập mua nội bộ', path: '/kho/icr', icon: <InboxOutlined />, group: 'inventory' },
-  { code: 'STK', title: 'Tồn kho hiện tại', navLabel: 'Tồn kho hiện tại', path: '/kho/ton-kho', icon: <DatabaseOutlined />, group: 'inventory' },
-  { code: 'CARD', title: 'Thẻ kho', navLabel: 'Thẻ kho', path: '/kho/the-kho', icon: <ProfileOutlined />, group: 'inventory' },
+  { code: 'GRN', title: 'Phiếu nhập mua từ NCC (GRN)', navLabel: 'Nhập mua NCC', path: '/kho/grn', icon: <ImportOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  { code: 'RTV', title: 'Phiếu xuất trả hàng NCC (RTV)', navLabel: 'Xuất trả NCC', path: '/kho/rtv', icon: <RollbackOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  { code: 'TRF', title: 'Phiếu chuyển kho nội bộ (TRF)', navLabel: 'Chuyển kho nội bộ', path: '/kho/trf', icon: <SwapOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  { code: 'ICS', title: 'Phiếu xuất bán nội bộ (ICS)', navLabel: 'Xuất bán nội bộ', path: '/kho/ics', icon: <FileDoneOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  { code: 'ICR', title: 'Phiếu nhập mua nội bộ (ICR)', navLabel: 'Nhập mua nội bộ', path: '/kho/icr', icon: <InboxOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  { code: 'STK', title: 'Tồn kho hiện tại', navLabel: 'Tồn kho hiện tại', path: '/kho/ton-kho', icon: <DatabaseOutlined />, group: 'inventory', permission: Permission.StockView },
+  { code: 'CARD', title: 'Thẻ kho', navLabel: 'Thẻ kho', path: '/kho/the-kho', icon: <ProfileOutlined />, group: 'inventory', permission: Permission.StockView },
 
-  { code: 'SUP', title: 'Danh mục nhà cung cấp', navLabel: 'Nhà cung cấp', path: '/gia-ncc/nha-cung-cap', icon: <ShopOutlined />, group: 'pricing' },
-  { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing' },
-  { code: 'PRL', title: 'Bảng giá NCC', navLabel: 'Bảng giá NCC', path: '/gia-ncc/bang-gia', icon: <FileTextOutlined />, group: 'pricing' },
-  { code: 'PCMP', title: 'So sánh giá', navLabel: 'So sánh giá', path: '/gia-ncc/so-sanh-gia', icon: <LineChartOutlined />, group: 'pricing' },
+  { code: 'SUP', title: 'Danh mục nhà cung cấp', navLabel: 'Nhà cung cấp', path: '/gia-ncc/nha-cung-cap', icon: <ShopOutlined />, group: 'pricing', permission: Permission.SupplierView },
+  { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },
+  { code: 'PRL', title: 'Bảng giá NCC', navLabel: 'Bảng giá NCC', path: '/gia-ncc/bang-gia', icon: <FileTextOutlined />, group: 'pricing', permission: Permission.PriceListView },
+  { code: 'PCMP', title: 'So sánh giá', navLabel: 'So sánh giá', path: '/gia-ncc/so-sanh-gia', icon: <LineChartOutlined />, group: 'pricing', permission: Permission.PriceCompareView },
 
-  { code: 'SRC', title: 'Danh sách tìm nguồn', navLabel: 'Tìm nguồn', path: '/dau-thau/tim-nguon', icon: <FileSearchOutlined />, group: 'sourcing' },
-  { code: 'RFQ', title: 'Yêu cầu báo giá (RFQ)', navLabel: 'Yêu cầu báo giá', path: '/dau-thau/rfq', icon: <ContainerOutlined />, group: 'sourcing' },
-  { code: 'QCMP', title: 'So sánh báo giá', navLabel: 'So sánh báo giá', path: '/dau-thau/so-sanh-bao-gia', icon: <DiffOutlined />, group: 'sourcing' },
+  { code: 'SRC', title: 'Danh sách tìm nguồn', navLabel: 'Tìm nguồn', path: '/dau-thau/tim-nguon', icon: <FileSearchOutlined />, group: 'sourcing', permission: Permission.RfqView },
+  { code: 'RFQ', title: 'Yêu cầu báo giá (RFQ)', navLabel: 'Yêu cầu báo giá', path: '/dau-thau/rfq', icon: <ContainerOutlined />, group: 'sourcing', permission: Permission.RfqView },
+  { code: 'QCMP', title: 'So sánh báo giá', navLabel: 'So sánh báo giá', path: '/dau-thau/so-sanh-bao-gia', icon: <DiffOutlined />, group: 'sourcing', permission: Permission.RfqView },
 
-  { code: 'NXT', title: 'Báo cáo nhập – xuất – tồn', navLabel: 'Nhập – xuất – tồn', path: '/bao-cao/nxt', icon: <BarChartOutlined />, group: 'reports' },
-  { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports' },
+  { code: 'NXT', title: 'Báo cáo nhập – xuất – tồn', navLabel: 'Nhập – xuất – tồn', path: '/bao-cao/nxt', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportStockView },
+  { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
 
-  { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system' },
-  { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system' },
-  { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system' },
-  { code: 'PER', title: 'Kỳ kho', navLabel: 'Kỳ kho', path: '/he-thong/ky-kho', icon: <CalendarOutlined />, group: 'system' },
-  { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system' },
-  { code: 'SEC', title: 'Tham số hệ thống', navLabel: 'Tham số hệ thống', path: '/he-thong/tham-so', icon: <SafetyOutlined />, group: 'system' },
+  { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },
+  { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system', permission: Permission.UserView },
+  { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
+  { code: 'PER', title: 'Kỳ kho', navLabel: 'Kỳ kho', path: '/he-thong/ky-kho', icon: <CalendarOutlined />, group: 'system', permission: Permission.PeriodView },
+  { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
+  { code: 'SEC', title: 'Tham số hệ thống', navLabel: 'Tham số hệ thống', path: '/he-thong/tham-so', icon: <SafetyOutlined />, group: 'system', permission: Permission.ParameterView },
 ]
 
 /**

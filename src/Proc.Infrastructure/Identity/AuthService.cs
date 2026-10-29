@@ -66,9 +66,23 @@ public sealed class AuthService : IAuthService
         return await BuildUserInfoAsync(user, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !user.IsActive) return ["Tài khoản không còn hiệu lực."];
+
+        // Identity kiểm tra mật khẩu hiện tại và quy tắc mật khẩu mới; thông báo lỗi đã dịch ở VietnameseIdentityErrorDescriber.
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        return result.Succeeded ? [] : result.Errors.Select(e => e.Description).ToList();
+    }
+
     /// <summary>
     /// Lấy các công ty người dùng được làm việc: có ít nhất một vai trò đang dùng tại công ty đang hoạt động.
-    /// Thứ tự: tổng công ty trước, rồi theo mã.
+    /// Thứ tự: tổng công ty trước, rồi theo mã. Kèm quyền tại từng công ty (hợp quyền của các vai trò).
     /// </summary>
     private async Task<CurrentUserInfo?> BuildUserInfoAsync(AppUser user, CancellationToken cancellationToken)
     {
@@ -82,11 +96,20 @@ public sealed class AuthService : IAuthService
                 x.Company.Name,
                 x.Company.ShortName,
                 x.Company.IsHeadOffice,
+                x.RoleId,
                 RoleCode = x.Role!.Code,
             })
             .ToListAsync(cancellationToken);
 
         if (rows.Count == 0) return null;
+
+        var roleIds = rows.Select(r => r.RoleId).Distinct().ToList();
+        var permissionsByRole = (await _db.RolePermissions
+                .AsNoTracking()
+                .Where(rp => roleIds.Contains(rp.RoleId))
+                .Select(rp => new { rp.RoleId, rp.PermissionCode })
+                .ToListAsync(cancellationToken))
+            .ToLookup(rp => rp.RoleId, rp => rp.PermissionCode);
 
         var companies = rows
             .GroupBy(r => r.Id)
@@ -94,7 +117,8 @@ public sealed class AuthService : IAuthService
             {
                 var c = g.First();
                 return new UserCompanyInfo(c.Id, c.Code, c.Name, c.ShortName, c.IsHeadOffice,
-                    g.Select(r => r.RoleCode).Distinct().Order().ToList());
+                    g.Select(r => r.RoleCode).Distinct().Order().ToList(),
+                    g.SelectMany(r => permissionsByRole[r.RoleId]).Distinct().Order(StringComparer.Ordinal).ToList());
             })
             .OrderByDescending(c => c.IsHeadOffice)
             .ThenBy(c => c.Code, StringComparer.Ordinal)

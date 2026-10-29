@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router'
 import { screens } from './app/screens'
 import { LOGIN_PATH } from './auth/paths'
 import { RequireAuth } from './auth/RequireAuth'
+import { ScreenGuard } from './auth/ScreenGuard'
 import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -28,7 +29,10 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      ...screens.map((s) => ({ path: s.path, element: implemented[s.code] ?? <PlaceholderPage /> })),
+      ...screens.map((s) => ({
+        path: s.path,
+        element: <ScreenGuard screen={s}>{implemented[s.code] ?? <PlaceholderPage />}</ScreenGuard>,
+      })),
       { path: '*', element: <PlaceholderPage /> },
     ],
   },

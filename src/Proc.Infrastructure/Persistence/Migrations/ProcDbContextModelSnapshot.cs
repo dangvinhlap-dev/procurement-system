@@ -86,6 +86,50 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("UserToken", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.ItemCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("ItemCategory", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,6 +201,27 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Company", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Organization.Permission", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("Permission", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -196,6 +261,22 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Role", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Organization.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PermissionCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("RoleId", "PermissionCode");
+
+                    b.HasIndex("PermissionCode");
+
+                    b.ToTable("RolePermission", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.UserCompanyRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -233,6 +314,150 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("UserCompanyRole", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.UserItemCategoryScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ItemCategoryId");
+
+                    b.HasIndex("UserId", "CompanyId", "ItemCategoryId")
+                        .IsUnique();
+
+                    b.ToTable("UserItemCategoryScope", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.UserWarehouseScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("WarehouseId", "CompanyId");
+
+                    b.HasIndex("UserId", "CompanyId", "WarehouseId")
+                        .IsUnique();
+
+                    b.ToTable("UserWarehouseScope", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.Warehouse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("AllowNegativeStock")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keeper")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ParentWarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Warehouse_CompanyId_Main")
+                        .HasFilter("\"Type\" = 1");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("ParentWarehouseId", "CompanyId");
+
+                    b.ToTable("Warehouse", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Infrastructure.Identity.AppUser", b =>
@@ -343,6 +568,29 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.ItemCategory", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.ItemCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.RolePermission", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Permission", null)
+                        .WithMany()
+                        .HasForeignKey("PermissionCode")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.UserCompanyRole", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", "Company")
@@ -366,6 +614,64 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.UserItemCategoryScope", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.ItemCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ItemCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.UserWarehouseScope", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.Warehouse", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("ParentWarehouseId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Proc.Infrastructure.Identity.AppUser", b =>

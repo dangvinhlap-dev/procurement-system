@@ -1,9 +1,12 @@
-import { BellOutlined, DownOutlined, LogoutOutlined } from '@ant-design/icons'
-import { Avatar, Badge, Dropdown, Select } from 'antd'
+import { BellOutlined, DownOutlined, KeyOutlined, LogoutOutlined } from '@ant-design/icons'
+import { Avatar, Badge, Dropdown, Select, type MenuProps } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { moduleGroups, screens, type ModuleGroup, type ModuleKey } from '../../app/screens'
+import { moduleGroups, type ModuleGroup, type ModuleKey } from '../../app/screens'
+import { useVisibleScreens } from '../../app/useVisibleScreens'
 import { normalizeVi } from '../../utils/text'
+
+type MenuItems = NonNullable<MenuProps['items']>
 
 /** Thuộc tính của thanh menu. */
 export interface MenuBarProps {
@@ -18,6 +21,7 @@ export interface MenuBarProps {
   userFullName: string
   userName: string
   onLogout: () => void
+  onChangePassword: () => void
 }
 
 /**
@@ -49,8 +53,27 @@ function HotkeyLabel({ group }: { group: ModuleGroup }) {
  * Thanh menu trên cùng, cao 28px (ui-guide.md mục AppShell, ý 1): nhóm chức năng theo module,
  * bấm mở menu thả xuống; bên phải là công ty đang làm việc, thông báo, ngôn ngữ, người dùng.
  */
-export function MenuBar({ activeGroup, companies, company, onCompanyChange, unreadCount, userFullName, userName, onLogout }: MenuBarProps) {
+export function MenuBar({
+  activeGroup,
+  companies,
+  company,
+  onCompanyChange,
+  unreadCount,
+  userFullName,
+  userName,
+  onLogout,
+  onChangePassword,
+}: MenuBarProps) {
   const navigate = useNavigate()
+  const screens = useVisibleScreens()
+
+  // Nhóm vẫn hiện trên thanh menu để giữ bố cục cố định; không có màn hình được phép thì báo rõ trong menu.
+  const menuItemsOf = (group: ModuleKey): MenuItems => {
+    const items: MenuItems = screens
+      .filter((s) => s.group === group)
+      .map((s) => ({ key: s.path, icon: s.icon, label: `${s.navLabel}  (${s.code})` }))
+    return items.length > 0 ? items : [{ key: `none-${group}`, label: 'Không có màn hình được phép', disabled: true }]
+  }
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null)
   const buttons = useRef(new Map<ModuleKey, HTMLButtonElement>())
 
@@ -78,9 +101,7 @@ export function MenuBar({ activeGroup, companies, company, onCompanyChange, unre
           open={openKey === g.key}
           onOpenChange={(open) => setOpenKey(open ? g.key : null)}
           menu={{
-            items: screens
-              .filter((s) => s.group === g.key)
-              .map((s) => ({ key: s.path, icon: s.icon, label: `${s.navLabel}  (${s.code})` })),
+            items: menuItemsOf(g.key),
             onClick: ({ key }) => {
               setOpenKey(null)
               navigate(key)
@@ -124,10 +145,12 @@ export function MenuBar({ activeGroup, companies, company, onCompanyChange, unre
             items: [
               { key: 'account', label: `Tài khoản: ${userName}`, disabled: true },
               { type: 'divider' },
+              { key: 'password', icon: <KeyOutlined />, label: 'Đổi mật khẩu' },
               { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất' },
             ],
             onClick: ({ key }) => {
               if (key === 'logout') onLogout()
+              if (key === 'password') onChangePassword()
             },
           }}
         >
