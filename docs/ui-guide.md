@@ -46,6 +46,11 @@ Dùng cho PR, PO, phiếu kho, NCC, hàng hóa… Từ trên xuống:
    - Bấm đúp hoặc Enter để mở chi tiết; mũi tên lên/xuống để di chuyển; dòng chọn nền xanh nhạt.
    - Cuộn ảo hoặc phân trang khi trên 500 dòng.
 
+## Màn hình đăng nhập
+Ngoại lệ duy nhất không nằm trong AppShell (chưa có người dùng và công ty). Vẽ như hộp thoại Windows giữa màn hình:
+thanh tiêu đề màu chính "Đăng nhập – Quản lý mua hàng và kho", nhãn bên trái ô nhập (Tên đăng nhập, Mật khẩu),
+nút "Đăng nhập" bên phải, dòng phiên bản ở chân hộp thoại. Enter để đăng nhập; lỗi hiện ngay trên form bằng tiếng Việt.
+
 ## Màn hình chứng từ (DocumentForm)
 Theo docs/design.md mục 10.1, cùng phong cách: thanh lệnh của phiếu, phần đầu phiếu 2–3 cột,
 lưới dòng nhập như Excel, chân phiếu tổng tiền, tab phụ (Đính kèm, Lịch sử duyệt, Nhật ký).

@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 import { createBrowserRouter } from 'react-router'
 import { screens } from './app/screens'
+import { LOGIN_PATH } from './auth/paths'
+import { RequireAuth } from './auth/RequireAuth'
 import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
+import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 
@@ -13,11 +16,17 @@ const implemented: Record<string, ReactNode> = {
 }
 
 /**
- * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9).
+ * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9) và yêu cầu đăng nhập;
+ * riêng màn hình đăng nhập đứng ngoài khung.
  */
 export const router = createBrowserRouter([
+  { path: LOGIN_PATH, element: <LoginPage /> },
   {
-    element: <AppShell />,
+    element: (
+      <RequireAuth>
+        <AppShell />
+      </RequireAuth>
+    ),
     children: [
       ...screens.map((s) => ({ path: s.path, element: implemented[s.code] ?? <PlaceholderPage /> })),
       { path: '*', element: <PlaceholderPage /> },

@@ -23,6 +23,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   cuộn ảo trên 500 dòng).
 - Màn hình Danh sách đơn mua hàng (PO) với 30 dòng dữ liệu giả.
 - Test giao diện Playwright (`npm run test:e2e` trong `src\Proc.Web`).
+- Đăng nhập (design.md mục 9.4): ASP.NET Core Identity + JWT 8 giờ, khóa tạm 15 phút sau 5 lần sai,
+  thông báo lỗi tiếng Việt; màn hình Đăng nhập; mọi API bắt buộc đăng nhập trừ `/health`.
+- Danh mục Công ty, Vai trò và gán vai trò theo công ty (UserCompanyRole); chọn công ty làm việc
+  trên thanh menu, gửi kèm mọi request qua header `X-Company-Id`; menu người dùng có Đăng xuất.
+- Tự điền CreatedAt/By, UpdatedAt/By khi lưu danh mục.
 
 ### Thay đổi
 - Không có.
@@ -31,10 +36,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Không có.
 
 ### Thay đổi CSDL
-- Không có (chưa có migration).
+- Migration `V0_1_0_DangNhapVaCongTy`: bảng `Company`, `Role`, `UserCompanyRole`, `User`, `UserClaim`,
+  `UserLogin`, `UserToken`. `Down()` xóa các bảng này cùng dữ liệu.
 
 ### Lưu ý khi nâng cấp
 - Cần tạo sẵn database `procurement` và `procurement_test`, user `proc` (README.md).
+- Server thật: đặt biến môi trường `Jwt__SigningKey` (tối thiểu 32 ký tự) và `Seed__AdminPassword`;
+  nâng cấp CSDL bằng script `db/scripts/0.1.0.sql` (dev/test tự chạy migration khi khởi động).
 
 ### Cách quay lại bản trước
 - Đây là bản đầu tiên.

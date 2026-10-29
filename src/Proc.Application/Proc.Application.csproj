@@ -3,4 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Proc.Domain\Proc.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
 </Project>

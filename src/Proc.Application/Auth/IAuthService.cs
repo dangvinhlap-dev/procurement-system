@@ -1,0 +1,23 @@
+namespace Proc.Application.Auth;
+
+/// <summary>
+/// Xử lý đăng nhập và lấy thông tin phiên. Cài đặt ở Infrastructure (ASP.NET Core Identity + JWT).
+/// </summary>
+public interface IAuthService
+{
+    /// <summary>
+    /// Kiểm tra tên đăng nhập/mật khẩu; đúng thì cấp JWT, sai thì tăng số lần sai (đủ 5 lần thì khóa tạm).
+    /// </summary>
+    /// <param name="request">Tên đăng nhập và mật khẩu (đã qua LoginRequestValidator).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Kết quả đăng nhập.</returns>
+    Task<LoginOutcome> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lấy lại thông tin người dùng và danh sách công ty (khi tải lại trang).
+    /// </summary>
+    /// <param name="userId">Id người dùng trong token.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Thông tin người dùng; null nếu tài khoản không còn, đã ngừng dùng hoặc không còn công ty nào.</returns>
+    Task<CurrentUserInfo?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
+}
