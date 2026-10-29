@@ -23,3 +23,5 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 | Cài gói giao diện (lần đầu) | `cd src\Proc.Web; npm install` |
 | Chạy giao diện (http://localhost:5173) | `cd src\Proc.Web; npm run dev` |
 | Build giao diện | `cd src\Proc.Web; npm run build` |
+| Cài trình duyệt cho Playwright (lần đầu) | `cd src\Proc.Web; npx playwright install chromium` |
+| Test giao diện (tự chạy Vite nếu chưa chạy) | `cd src\Proc.Web; npm run test:e2e` |
