@@ -1,7 +1,8 @@
 import { DoubleRightOutlined, FolderOpenOutlined, FolderOutlined, PushpinOutlined } from '@ant-design/icons'
 import { useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { moduleGroups, screens, type Screen } from '../../app/screens'
+import { moduleGroups, type Screen } from '../../app/screens'
+import { useVisibleScreens } from '../../app/useVisibleScreens'
 import { layoutTokens } from '../../theme'
 
 /** Thuộc tính của cây điều hướng. */
@@ -38,11 +39,13 @@ function saveState(state: { width: number; hidden: boolean }) {
 
 /**
  * Cây điều hướng bên trái (ui-guide.md mục AppShell, ý 3): rộng 240px, kéo mép phải để đổi rộng, ẩn/hiện được;
+ * chỉ hiện màn hình người dùng có quyền tại công ty đang làm việc;
  * "Thu gọn tất cả" và nút ghim ở đầu; nhóm "Ghim" rồi các nhóm theo module; mỗi mục có biểu tượng, tên,
  * số đếm (xám, đỏ nếu cần chú ý); mục đang mở nền xanh đậm chữ trắng.
  */
 export function NavTree({ activePath, pinnedCodes, counts }: NavTreeProps) {
   const navigate = useNavigate()
+  const screens = useVisibleScreens()
   const [{ width, hidden }, setState] = useState(loadState)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
@@ -54,7 +57,8 @@ export function NavTree({ activePath, pinnedCodes, counts }: NavTreeProps) {
   const groups: { key: string; label: string; items: Screen[] }[] = [
     { key: 'pinned', label: 'Ghim', items: pinnedCodes.map((c) => screens.find((s) => s.code === c)).filter((s): s is Screen => !!s) },
     ...moduleGroups.map((g) => ({ key: g.key, label: g.label, items: screens.filter((s) => s.group === g.key) })),
-  ]
+    // Nhóm không còn màn hình nào được phép thì ẩn hẳn.
+  ].filter((g) => g.items.length > 0)
 
   const startResize = (e: ReactMouseEvent) => {
     e.preventDefault()

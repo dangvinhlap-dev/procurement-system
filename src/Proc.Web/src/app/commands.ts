@@ -1,5 +1,5 @@
 import { normalizeVi } from '../utils/text'
-import { screens, type Screen } from './screens'
+import type { Screen } from './screens'
 
 /**
  * Đưa con trỏ vào ô Tìm kiếm của màn hình danh sách đang mở (nếu có).
@@ -16,9 +16,10 @@ export function focusListSearch(): boolean {
 /**
  * Tìm màn hình cho ô lệnh: khớp đúng mã trước, rồi mã bắt đầu bằng từ gõ, rồi tên chứa từ gõ (không dấu).
  * @param text Nội dung người dùng gõ, ví dụ "po" hoặc "don mua".
+ * @param screens Các màn hình được phép mở (useVisibleScreens).
  * @returns Danh sách màn hình theo thứ tự ưu tiên.
  */
-export function searchScreens(text: string): Screen[] {
+export function searchScreens(text: string, screens: Screen[]): Screen[] {
   const q = normalizeVi(text)
   if (!q) return []
   const rank = (s: Screen) => {

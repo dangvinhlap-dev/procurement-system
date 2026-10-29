@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Proc.Application.Auth;
 using Proc.Application.Common;
+using Proc.Application.Organization;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Security;
 
 namespace Proc.Infrastructure;
 
@@ -40,6 +42,12 @@ public static class DependencyInjection
         services.TryAddScoped<ICurrentUser, NoCurrentUser>();
         services.AddScoped<AuditFieldsInterceptor>();
 
+        // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
+        services.AddScoped<CurrentUserScope>();
+        services.AddScoped<ICurrentUserScope>(sp => sp.GetRequiredService<CurrentUserScope>());
+        services.AddScoped<UserScopeLoader>();
+        services.AddScoped<IOrganizationQueries, OrganizationQueries>();
+
         services.AddDbContext<ProcDbContext>((sp, options) => options
             .UseNpgsql(connectionString)
             .AddInterceptors(sp.GetRequiredService<AuditFieldsInterceptor>()));
@@ -61,7 +69,8 @@ public static class DependencyInjection
 
                 options.User.RequireUniqueEmail = false;
             })
-            .AddEntityFrameworkStores<ProcDbContext>();
+            .AddEntityFrameworkStores<ProcDbContext>()
+            .AddErrorDescriber<VietnameseIdentityErrorDescriber>();
 
         services.AddScoped<JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();

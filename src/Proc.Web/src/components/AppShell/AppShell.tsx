@@ -5,6 +5,7 @@ import { findScreenByPath } from '../../app/screens'
 import { useAuth } from '../../auth/useAuth'
 import { demoNavCounts, demoPinnedScreens, demoUnreadNotifications } from '../../mocks/session'
 import { layoutCssVars } from '../../theme'
+import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { MenuBar } from './MenuBar'
 import { NavTree } from './NavTree'
 import { StatusBar } from './StatusBar'
@@ -41,6 +42,7 @@ export function AppShell() {
   const { session, workingCompany, setWorkingCompany, logout } = useAuth()
   const { message } = App.useApp()
   const [insertMode, setInsertMode] = useState(true)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   useEffect(() => {
     document.title = `${screenTitle} – ${APP_NAME}`
@@ -77,7 +79,9 @@ export function AppShell() {
         userFullName={user.fullName}
         userName={user.userName}
         onLogout={() => logout()}
+        onChangePassword={() => setChangingPassword(true)}
       />
+      <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
       <Toolbar />
       <div className="app-body">
         <NavTree activePath={pathname} pinnedCodes={demoPinnedScreens} counts={demoNavCounts} />

@@ -11,6 +11,7 @@ using Proc.Application.Common;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Security;
 
 namespace Proc.IntegrationTests;
 
@@ -71,12 +72,7 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
 #pragma warning restore EF1002
         }
 
-        await DatabaseInitializer.SeedAsync(
-            db,
-            scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
-            scope.ServiceProvider.GetRequiredService<IClock>(),
-            scope.ServiceProvider.GetRequiredService<IOptions<SeedOptions>>().Value,
-            CancellationToken.None);
+        await DatabaseInitializer.SeedAsync(scope.ServiceProvider, CancellationToken.None);
     }
 
     /// <summary>
@@ -104,6 +100,80 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             db.UserCompanyRoles.Add(UserCompanyRole.Assign(user.Id, company.Id, role.Id));
         await db.SaveChangesAsync();
         return user.Id;
+    }
+
+    /// <summary>
+    /// Tạo tài khoản thử với một vai trò tại một công ty, kèm phạm vi kho và nhóm hàng (trống = tất cả).
+    /// </summary>
+    /// <param name="userName">Tên đăng nhập.</param>
+    /// <param name="companyCode">Mã công ty.</param>
+    /// <param name="roleCode">Mã vai trò (đã có).</param>
+    /// <param name="warehouseCodes">Mã kho được phép tại công ty.</param>
+    /// <param name="categoryCodes">Mã nhóm hàng được phép tại công ty.</param>
+    /// <returns>Id tài khoản.</returns>
+    public async Task<Guid> CreateScopedUserAsync(
+        string userName,
+        string companyCode,
+        string roleCode,
+        string[]? warehouseCodes = null,
+        string[]? categoryCodes = null)
+    {
+        using var scope = Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+
+        var user = new AppUser { UserName = userName, FullName = $"Người thử {userName}" };
+        var result = await users.CreateAsync(user, TestPassword);
+        if (!result.Succeeded)
+            throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        var company = await db.Companies.SingleAsync(c => c.Code == companyCode);
+        var role = await db.Roles.SingleAsync(r => r.Code == roleCode);
+        db.UserCompanyRoles.Add(UserCompanyRole.Assign(user.Id, company.Id, role.Id));
+
+        // Đọc kho/nhóm hàng qua global query filter như mọi truy vấn khác: mở phạm vi của đúng công ty này.
+        scope.ServiceProvider.GetRequiredService<CurrentUserScope>()
+            .Initialize(Guid.Empty, company.Id, [], allWarehouses: true, [], allItemCategories: true, []);
+        foreach (var code in warehouseCodes ?? [])
+            db.UserWarehouseScopes.Add(UserWarehouseScope.Allow(user.Id, await db.Warehouses.SingleAsync(w => w.Code == code)));
+        foreach (var code in categoryCodes ?? [])
+        {
+            var category = await db.ItemCategories.SingleAsync(c => c.Code == code);
+            db.UserItemCategoryScopes.Add(UserItemCategoryScope.Allow(user.Id, company.Id, category.Id));
+        }
+
+        await db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>
+    public const string TestPassword = "matkhau123";
+
+    /// <summary>
+    /// Lấy Id công ty theo mã.
+    /// </summary>
+    /// <param name="code">Mã công ty.</param>
+    /// <returns>Id công ty.</returns>
+    public async Task<Guid> GetCompanyIdAsync(string code)
+    {
+        using var scope = Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ProcDbContext>()
+            .Companies.Where(c => c.Code == code).Select(c => c.Id).SingleAsync();
+    }
+
+    /// <summary>
+    /// Đăng nhập và trả HttpClient đã gắn token, kèm header X-Company-Id nếu có mã công ty.
+    /// </summary>
+    /// <param name="userName">Tên đăng nhập.</param>
+    /// <param name="password">Mật khẩu.</param>
+    /// <param name="companyCode">Mã công ty làm việc; null thì không gửi header.</param>
+    /// <returns>Client đã đăng nhập.</returns>
+    public async Task<HttpClient> CreateClientInCompanyAsync(string userName, string password, string? companyCode)
+    {
+        var client = await CreateAuthenticatedClientAsync(userName, password);
+        if (companyCode is not null)
+            client.DefaultRequestHeaders.Add("X-Company-Id", (await GetCompanyIdAsync(companyCode)).ToString());
+        return client;
     }
 
     /// <summary>

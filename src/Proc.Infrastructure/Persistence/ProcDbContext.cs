@@ -1,6 +1,10 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Proc.Application.Common;
+using Proc.Domain.Common;
+using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
 
@@ -10,17 +14,49 @@ namespace Proc.Infrastructure.Persistence;
 /// DbContext chính của hệ thống, dùng chung cho mọi module (modular monolith, một CSDL – design.md mục 3).
 /// Kế thừa IdentityUserContext để chứa bảng tài khoản của ASP.NET Core Identity (không gồm bảng vai trò của Identity,
 /// vì vai trò gán theo công ty ở bảng UserCompanyRole – design.md mục 9.1).
+/// Global query filter lọc dữ liệu theo phạm vi của người dùng (design.md mục 9.2) – xem <see cref="ApplyScopeFilters"/>.
 /// </summary>
 public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 {
+    /// <summary>Tên filter lọc theo công ty đang làm việc.</summary>
+    public const string CompanyFilter = "Company";
+
+    /// <summary>Tên filter lọc theo kho được phép.</summary>
+    public const string WarehouseFilter = "WarehouseScope";
+
+    /// <summary>Tên filter lọc theo nhóm hàng được phép.</summary>
+    public const string ItemCategoryFilter = "ItemCategoryScope";
+
+    private readonly ICurrentUserScope _scope;
+
     /// <summary>
     /// Khởi tạo DbContext với cấu hình do DI cung cấp.
     /// </summary>
     /// <param name="options">Tùy chọn kết nối (Npgsql, chuỗi kết nối, interceptor).</param>
-    public ProcDbContext(DbContextOptions<ProcDbContext> options)
+    /// <param name="scope">Phạm vi của người dùng trong request hiện tại.</param>
+    public ProcDbContext(DbContextOptions<ProcDbContext> options, ICurrentUserScope scope)
         : base(options)
     {
+        _scope = scope;
     }
+
+    // Các thuộc tính Scope* được global query filter đọc lại ở MỖI truy vấn (EF Core tham số hóa thành viên của DbContext),
+    // nên cùng một mô hình dùng được cho mọi người dùng.
+
+    /// <summary>Công ty đang làm việc; null thì filter không trả dòng nào.</summary>
+    public Guid? ScopeCompanyId => _scope.CompanyId;
+
+    /// <summary>Được mọi kho.</summary>
+    public bool ScopeAllWarehouses => _scope.AllWarehouses;
+
+    /// <summary>Kho được phép.</summary>
+    public IReadOnlyList<Guid> ScopeWarehouseIds => _scope.WarehouseIds;
+
+    /// <summary>Được mọi nhóm hàng.</summary>
+    public bool ScopeAllItemCategories => _scope.AllItemCategories;
+
+    /// <summary>Nhóm hàng được phép (gồm nhóm con).</summary>
+    public IReadOnlyList<Guid> ScopeItemCategoryIds => _scope.ItemCategoryIds;
 
     /// <summary>Công ty.</summary>
     public DbSet<Company> Companies => Set<Company>();
@@ -31,8 +67,26 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Gán vai trò cho người dùng theo công ty.</summary>
     public DbSet<UserCompanyRole> UserCompanyRoles => Set<UserCompanyRole>();
 
+    /// <summary>Quyền chức năng (đồng bộ từ Permissions.All).</summary>
+    public DbSet<Permission> Permissions => Set<Permission>();
+
+    /// <summary>Quyền của vai trò.</summary>
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+
+    /// <summary>Kho (lọc theo công ty và phạm vi kho).</summary>
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+
+    /// <summary>Nhóm hàng (lọc theo phạm vi nhóm hàng).</summary>
+    public DbSet<ItemCategory> ItemCategories => Set<ItemCategory>();
+
+    /// <summary>Phạm vi kho của người dùng.</summary>
+    public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
+
+    /// <summary>Phạm vi nhóm hàng của người dùng.</summary>
+    public DbSet<UserItemCategoryScope> UserItemCategoryScopes => Set<UserItemCategoryScope>();
+
     /// <summary>
-    /// Cấu hình bảng Identity rồi áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure.
+    /// Cấu hình bảng Identity, áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure, rồi gắn filter phạm vi.
     /// </summary>
     /// <param name="modelBuilder">Bộ dựng mô hình của EF Core.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -45,5 +99,34 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         modelBuilder.Entity<IdentityUserToken<Guid>>().ToTable("UserToken");
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ProcDbContext).Assembly);
+        ApplyScopeFilters(modelBuilder);
+    }
+
+    /// <summary>
+    /// Gắn global query filter theo phạm vi (design.md mục 9.2):
+    /// <list type="bullet">
+    /// <item>Mọi entity có CompanyId (<see cref="ICompanyOwned"/>): chỉ thấy dòng của công ty đang làm việc – tự động,
+    /// để bảng giao dịch thêm sau không thể quên lọc.</item>
+    /// <item>Kho: thêm điều kiện kho được phép. Nhóm hàng: thêm điều kiện nhóm được phép.</item>
+    /// </list>
+    /// Filter có tên riêng (EF Core 10) để sau này tắt riêng từng filter khi thật cần, có ghi lý do.
+    /// </summary>
+    private void ApplyScopeFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                     .Where(t => typeof(ICompanyOwned).IsAssignableFrom(t.ClrType) && t.BaseType is null))
+        {
+            // Dựng biểu thức e => (Guid?)e.CompanyId == this.ScopeCompanyId cho từng loại entity.
+            var e = Expression.Parameter(entityType.ClrType, "e");
+            var body = Expression.Equal(
+                Expression.Convert(Expression.Property(e, nameof(ICompanyOwned.CompanyId)), typeof(Guid?)),
+                Expression.Property(Expression.Constant(this), nameof(ScopeCompanyId)));
+            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(CompanyFilter, Expression.Lambda(body, e));
+        }
+
+        modelBuilder.Entity<Warehouse>().HasQueryFilter(
+            WarehouseFilter, w => ScopeAllWarehouses || ScopeWarehouseIds.Contains(w.Id));
+        modelBuilder.Entity<ItemCategory>().HasQueryFilter(
+            ItemCategoryFilter, c => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(c.Id));
     }
 }

@@ -17,6 +17,13 @@ Lần đầu chạy API, CSDL `procurement` tự tạo bảng và dữ liệu m�
 mật khẩu **Admin@2026** (chỉ dùng cho dev, khai báo trong `src\Proc.Api\appsettings.Development.json`).
 Tài khoản này được gán vào Tổng công ty (TCT) và 3 công ty mẫu (BHA, NMI, DTV).
 
+Tài khoản mẫu để thử phân quyền (mật khẩu **Demo@2026**):
+
+| Tài khoản | Vai trò | Công ty | Phạm vi |
+| --- | --- | --- | --- |
+| `thukho.bha` | Thủ kho | BHA | Chỉ kho KP1, chỉ nhóm hàng Vật tư (VT) và nhóm con |
+| `muahang.nmi` | Nhân viên mua hàng | NMI | Mọi kho, mọi nhóm hàng |
+
 ## Lệnh thường dùng (PowerShell, tại thư mục gốc)
 | Việc | Lệnh |
 | --- | --- |

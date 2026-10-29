@@ -12,7 +12,7 @@ import { App, AutoComplete, Button, Input, Tooltip } from 'antd'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { focusListSearch, searchScreens } from '../../app/commands'
-import { screens } from '../../app/screens'
+import { useVisibleScreens } from '../../app/useVisibleScreens'
 
 /** Một nút biểu tượng trên thanh công cụ; nút không dùng được thì mờ đi (ui-guide.md). */
 function ToolButton({ title, icon, onClick, disabled }: { title: string; icon: ReactNode; onClick?: () => void; disabled?: boolean }) {
@@ -31,8 +31,9 @@ function ToolButton({ title, icon, onClick, disabled }: { title: string; icon: R
 export function Toolbar() {
   const navigate = useNavigate()
   const { message } = App.useApp()
+  const screens = useVisibleScreens()
   const [text, setText] = useState('')
-  const matches = useMemo(() => searchScreens(text), [text])
+  const matches = useMemo(() => searchScreens(text, screens), [text, screens])
 
   const open = (code: string) => {
     const screen = screens.find((s) => s.code === code)

@@ -70,11 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer)
   }, [session, logout])
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
+  const value = useMemo<AuthContextValue>(() => {
+    const workingCompany = session?.user.companies.find((c) => c.id === session.workingCompanyId) ?? null
+    return {
       session,
       logoutReason,
-      workingCompany: session?.user.companies.find((c) => c.id === session.workingCompanyId) ?? null,
+      workingCompany,
+      hasPermission: (permission) => workingCompany?.permissions.includes(permission) ?? false,
       login: async (userName, password) => {
         const result = await apiFetch<LoginResult>('/api/auth/login', { method: 'POST', body: { userName, password } })
         setLogoutReason(null)
@@ -94,9 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Dữ liệu đã tải thuộc công ty cũ – tải lại theo công ty mới (mỗi công ty là pháp nhân độc lập).
         void queryClient.invalidateQueries()
       },
-    }),
-    [session, logoutReason, logout, update, queryClient],
-  )
+    }
+  }, [session, logoutReason, logout, update, queryClient])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

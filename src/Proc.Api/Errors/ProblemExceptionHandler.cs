@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Proc.Application.Common;
 using Proc.Domain.Common;
 
 namespace Proc.Api.Errors;
 
 /// <summary>
-/// Chuyển exception thành ProblemDetails: lỗi nghiệp vụ trả 400 kèm thông điệp tiếng Việt;
-/// lỗi khác trả 500 với thông điệp chung (chi tiết chỉ ghi vào log, không lộ ra ngoài).
+/// Chuyển exception thành ProblemDetails: lỗi nghiệp vụ trả 400, không đủ quyền/ngoài phạm vi trả 403,
+/// cả hai kèm thông điệp tiếng Việt; lỗi khác trả 500 với thông điệp chung (chi tiết chỉ ghi vào log, không lộ ra ngoài).
 /// </summary>
 public sealed class ProblemExceptionHandler : IExceptionHandler
 {
@@ -26,9 +27,12 @@ public sealed class ProblemExceptionHandler : IExceptionHandler
     /// <inheritdoc />
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        var (status, title) = exception is BusinessRuleException
-            ? (StatusCodes.Status400BadRequest, exception.Message)
-            : (StatusCodes.Status500InternalServerError, "Có lỗi hệ thống. Hãy thử lại hoặc báo quản trị hệ thống.");
+        var (status, title) = exception switch
+        {
+            BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message),
+            ForbiddenAccessException => (StatusCodes.Status403Forbidden, exception.Message),
+            _ => (StatusCodes.Status500InternalServerError, "Có lỗi hệ thống. Hãy thử lại hoặc báo quản trị hệ thống."),
+        };
 
         if (status == StatusCodes.Status500InternalServerError)
             _logger.LogError(exception, "Lỗi chưa xử lý khi gọi {Path}", httpContext.Request.Path);

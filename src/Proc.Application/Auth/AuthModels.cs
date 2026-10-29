@@ -31,13 +31,16 @@ public sealed record CurrentUserInfo(
 /// <param name="ShortName">Tên viết tắt.</param>
 /// <param name="IsHeadOffice">Là tổng công ty.</param>
 /// <param name="RoleCodes">Mã các vai trò của người dùng tại công ty này.</param>
+/// <param name="Permissions">Mã các quyền chức năng tại công ty này (hợp của quyền mọi vai trò) –
+/// giao diện dùng để ẩn menu, nút; API vẫn kiểm tra lại ở mỗi request.</param>
 public sealed record UserCompanyInfo(
     Guid Id,
     string Code,
     string Name,
     string? ShortName,
     bool IsHeadOffice,
-    IReadOnlyList<string> RoleCodes);
+    IReadOnlyList<string> RoleCodes,
+    IReadOnlyList<string> Permissions);
 
 /// <summary>Lý do đăng nhập không thành công.</summary>
 public enum LoginFailure
