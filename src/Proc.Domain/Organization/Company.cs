@@ -6,6 +6,7 @@ namespace Proc.Domain.Organization;
 /// Công ty – một pháp nhân độc lập (CLAUDE.md mục 4). Tổng công ty cũng là một bản ghi với IsHeadOffice = true
 /// (design.md mục 5.1). Mọi bảng giao dịch đều có CompanyId trỏ về đây.
 /// </summary>
+[Auditable("Công ty", LabelProperty = nameof(Code))]
 public sealed class Company : AuditableEntity
 {
     /// <summary>Độ dài tối thiểu của mã công ty.</summary>

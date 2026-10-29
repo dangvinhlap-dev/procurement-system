@@ -67,3 +67,7 @@ public sealed record LoginOutcome(LoginResult? Result, LoginFailure? Failure, Da
     /// <summary>true khi đăng nhập thành công.</summary>
     public bool Succeeded => Result is not null;
 }
+
+/// <summary>Đổi công ty làm việc trên thanh menu – để ghi nhật ký truy cập (design.md mục 9.3).</summary>
+/// <param name="CompanyId">Công ty chọn.</param>
+public sealed record SwitchCompanyRequest(Guid CompanyId);

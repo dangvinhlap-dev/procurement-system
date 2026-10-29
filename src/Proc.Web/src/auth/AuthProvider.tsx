@@ -33,6 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(
     (reason?: string) => {
+      // Người dùng tự đăng xuất: báo server để ghi nhật ký truy cập (design.md mục 9.3). Không chờ kết quả;
+      // hết phiên (có reason) thì token đã vô hiệu nên không gọi.
+      if (!reason && sessionRef.current) void apiFetch<void>('/api/auth/logout', { method: 'POST' }).catch(() => {})
       update(null)
       setLogoutReason(reason ?? null)
       // Xóa dữ liệu đã tải để người đăng nhập sau không thấy dữ liệu của người trước.
@@ -93,6 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const current = sessionRef.current
         if (!current || !current.user.companies.some((c) => c.id === companyId)) return
         update({ ...current, workingCompanyId: companyId })
+        // Ghi nhật ký truy cập "đổi công ty"; phạm vi dữ liệu vẫn do header X-Company-Id của từng request quyết định.
+        void apiFetch<void>('/api/auth/working-company', { method: 'POST', body: { companyId } }).catch(() => {})
         // Dữ liệu đã tải thuộc công ty cũ – tải lại theo công ty mới (mỗi công ty là pháp nhân độc lập).
         void queryClient.invalidateQueries()
       },

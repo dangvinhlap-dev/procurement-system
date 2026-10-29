@@ -43,23 +43,36 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   quyền của chính mình, không tự sửa quyền của mình, vai trò ADMIN không sửa được.
 - API `/api/users`, `/api/roles`, `/api/permissions`; lỗi không tìm thấy trả 404 tiếng Việt.
 - Component dùng chung `DetailDrawer` (ngăn kéo chi tiết của form danh mục, Ctrl+S lưu, Esc đóng).
+- Nhật ký thao tác (design.md mục 9.3): mọi thay đổi của entity `[Auditable]` (công ty, vai trò, quyền của vai trò,
+  kho, nhóm hàng, gán vai trò, phạm vi, tài khoản) tự ghi vào `AuditLog` trong cùng giao dịch, kèm người, công ty,
+  IP, trình duyệt, mã liên kết request và giá trị cũ/mới; mã băm mật khẩu chỉ ghi `***`.
+- Nhật ký truy cập: đăng nhập, đăng nhập sai, bị khóa tạm, đăng xuất, đổi mật khẩu, đổi công ty làm việc
+  (API `POST /api/auth/logout`, `POST /api/auth/working-company`).
+- Màn hình Nhật ký thao tác (lọc khoảng ngày, loại đối tượng, hành động; xem trước/sau) và Nhật ký truy cập;
+  API `GET /api/audit-logs`, `GET /api/audit-logs/{id}`, `GET /api/access-logs`.
 
 ### Thay đổi
 - Không có.
 
 ### Sửa lỗi
-- Không có.
+- Cùng một tài khoản đăng nhập đồng thời (nhiều tab/máy, có lần sai mật khẩu) có thể trả lỗi hệ thống 500 do xung đột
+  ghi bộ đếm sai mật khẩu; nay tự đọc lại và thử lại.
 
 ### Thay đổi CSDL
 - Migration `V0_1_0_DangNhapVaCongTy`: bảng `Company`, `Role`, `UserCompanyRole`, `User`, `UserClaim`,
   `UserLogin`, `UserToken`. `Down()` xóa các bảng này cùng dữ liệu.
 - Migration `V0_1_0_PhanQuyenVaPhamVi`: bảng `Permission`, `RolePermission`, `Warehouse`, `ItemCategory`,
   `UserWarehouseScope`, `UserItemCategoryScope`. `Down()` xóa các bảng này cùng dữ liệu.
+- Migration `V0_1_0_NhatKyThaoTac`: bảng `AuditLog` (phân vùng theo tháng, phân vùng mặc định `AuditLog_default`,
+  hàm `audit_log_ensure_partitions`) và `AccessLog`; trigger chặn UPDATE/DELETE trên cả hai bảng.
+  `Down()` xóa hai bảng nhật ký cùng toàn bộ nhật ký đã ghi.
 
 ### Lưu ý khi nâng cấp
 - Cần tạo sẵn database `procurement` và `procurement_test`, user `proc` (README.md).
 - Server thật: đặt biến môi trường `Jwt__SigningKey` (tối thiểu 32 ký tự) và `Seed__AdminPassword`;
   nâng cấp CSDL bằng script `db/scripts/0.1.0.sql` (dev/test tự chạy migration khi khởi động).
+- API tạo sẵn phân vùng nhật ký cho tháng hiện tại và 2 tháng tới mỗi lần khởi động; server chạy liên tục
+  nhiều tháng không khởi động lại thì nhật ký vào phân vùng mặc định (không lỗi) – sẽ thêm job hằng tháng.
 
 ### Cách quay lại bản trước
 - Đây là bản đầu tiên.

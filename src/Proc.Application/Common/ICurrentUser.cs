@@ -8,6 +8,24 @@ public interface ICurrentUser
 {
     /// <summary>Id người dùng; null khi chưa đăng nhập hoặc chạy nền (khởi tạo dữ liệu, job).</summary>
     Guid? UserId { get; }
+
+    /// <summary>Tên đăng nhập (ghi vào nhật ký để đọc được ngay cả khi tài khoản đổi họ tên); null khi chạy nền.</summary>
+    string? UserName { get; }
+}
+
+/// <summary>
+/// Thông tin request đang xử lý, ghi kèm nhật ký (design.md mục 9.3). Chạy ngoài HTTP (khởi tạo dữ liệu, job) thì các giá trị null.
+/// </summary>
+public interface IRequestContext
+{
+    /// <summary>Địa chỉ IP của máy người dùng.</summary>
+    string? IpAddress { get; }
+
+    /// <summary>Trình duyệt (header User-Agent).</summary>
+    string? UserAgent { get; }
+
+    /// <summary>Mã liên kết request: cùng mã trong AuditLog, AccessLog và log kỹ thuật để lần theo một thao tác.</summary>
+    string? CorrelationId { get; }
 }
 
 /// <summary>

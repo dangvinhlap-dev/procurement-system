@@ -5,9 +5,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Proc.Application.Administration;
 using Proc.Application.Auth;
 using Proc.Application.Common;
+using Proc.Application.Logging;
 using Proc.Application.Organization;
 using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Identity;
+using Proc.Infrastructure.Logging;
 using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Security;
 
@@ -42,7 +44,11 @@ public static class DependencyInjection
         services.TryAddSingleton<IClock, SystemClock>();
         // Api thay bằng người dùng lấy từ token; khi chạy ngoài HTTP (khởi tạo dữ liệu) thì không có người dùng.
         services.TryAddScoped<ICurrentUser, NoCurrentUser>();
+        services.TryAddScoped<IRequestContext, NoRequestContext>();
         services.AddScoped<AuditFieldsInterceptor>();
+        services.AddScoped<AuditLogInterceptor>();
+        services.AddScoped<IAccessLog, AccessLogWriter>();
+        services.AddScoped<ILogQueries, LogQueries>();
 
         // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
         services.AddScoped<CurrentUserScope>();
@@ -54,7 +60,8 @@ public static class DependencyInjection
 
         services.AddDbContext<ProcDbContext>((sp, options) => options
             .UseNpgsql(connectionString)
-            .AddInterceptors(sp.GetRequiredService<AuditFieldsInterceptor>()));
+            // Thứ tự quan trọng: điền CreatedAt/UpdatedAt trước, rồi mới sinh nhật ký.
+            .AddInterceptors(sp.GetRequiredService<AuditFieldsInterceptor>(), sp.GetRequiredService<AuditLogInterceptor>()));
 
         services.AddIdentityCore<AppUser>(options =>
             {
@@ -96,5 +103,17 @@ public static class DependencyInjection
     private sealed class NoCurrentUser : ICurrentUser
     {
         public Guid? UserId => null;
+
+        public string? UserName => null;
+    }
+
+    /// <summary>Không có request HTTP (chạy nền).</summary>
+    private sealed class NoRequestContext : IRequestContext
+    {
+        public string? IpAddress => null;
+
+        public string? UserAgent => null;
+
+        public string? CorrelationId => null;
     }
 }

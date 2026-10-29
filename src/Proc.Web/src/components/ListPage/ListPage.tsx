@@ -32,6 +32,8 @@ export interface ListPageProps<T> {
   canCreate?: boolean
   /** Đang tải dữ liệu từ server. */
   loading?: boolean
+  /** Thông báo hiện ngay trên lưới, ví dụ "kết quả bị cắt, hãy thu hẹp bộ lọc". */
+  notice?: ReactNode
   /** Mở chi tiết dòng (bấm đúp hoặc Enter). */
   onOpenRow?: (row: T) => void
   isMarked?: (row: T) => boolean
@@ -70,6 +72,7 @@ export function ListPage<T>({
   onCreate,
   canCreate = true,
   loading = false,
+  notice,
   onOpenRow,
   isMarked,
   exportFileName,
@@ -229,6 +232,7 @@ export function ListPage<T>({
                 Xóa bộ lọc
               </Button>
             </div>
+            {notice}
             <DataGrid
               rows={filteredRows}
               columns={visibleColumns}

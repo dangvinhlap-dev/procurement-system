@@ -6,6 +6,7 @@ namespace Proc.Domain.Organization;
 /// Vai trò = tập quyền chức năng (design.md mục 9.1); quyền của vai trò lưu ở RolePermission.
 /// Vai trò dùng chung cho mọi công ty; việc gán vai trò thì theo từng công ty (UserCompanyRole).
 /// </summary>
+[Auditable("Vai trò", LabelProperty = nameof(Code))]
 public sealed class Role : AuditableEntity
 {
     /// <summary>Mã vai trò Quản trị hệ thống, tạo sẵn khi khởi tạo dữ liệu.</summary>

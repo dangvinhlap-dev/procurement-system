@@ -16,6 +16,7 @@ public enum WarehouseType
 /// Kho của một công ty (design.md mục 5.1). Mỗi công ty có đúng một kho Main (ràng buộc duy nhất trong CSDL);
 /// kho Sub thuộc một công ty và có kho cha cùng công ty.
 /// </summary>
+[Auditable("Kho", LabelProperty = nameof(Code))]
 public sealed class Warehouse : AuditableEntity, ICompanyOwned
 {
     private Warehouse()

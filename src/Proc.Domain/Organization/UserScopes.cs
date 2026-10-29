@@ -6,6 +6,7 @@ namespace Proc.Domain.Organization;
 /// Kho người dùng được phép tại một công ty (design.md mục 9.2). Không có dòng nào cho (người dùng, công ty)
 /// nghĩa là được mọi kho của công ty đó.
 /// </summary>
+[Auditable("Phạm vi kho")]
 public sealed class UserWarehouseScope : AuditableEntity
 {
     private UserWarehouseScope()
@@ -36,6 +37,7 @@ public sealed class UserWarehouseScope : AuditableEntity
 /// Không có dòng nào cho (người dùng, công ty) nghĩa là được mọi nhóm hàng.
 /// Gán theo công ty (giống phạm vi kho) vì cùng một người có thể quản lý nhóm hàng khác nhau ở từng công ty.
 /// </summary>
+[Auditable("Phạm vi nhóm hàng")]
 public sealed class UserItemCategoryScope : AuditableEntity
 {
     private UserItemCategoryScope()

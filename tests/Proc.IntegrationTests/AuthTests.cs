@@ -194,4 +194,20 @@ public class AuthTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me", Ct)).StatusCode);
     }
+
+    [Fact]
+    public async Task DangNhapDongThoi_DungVaSaiMatKhau_KhongLoiHeThong()
+    {
+        // Nhiều người (hoặc nhiều tab) đăng nhập cùng tài khoản một lúc: cập nhật bộ đếm sai mật khẩu
+        // không được làm hỏng lần đăng nhập đúng (lỗi xung đột ghi đồng thời).
+        var userName = UniqueName("dongthoi");
+        await _factory.CreateUserAsync(userName, Password, ["BHA"]);
+
+        var attempts = Enumerable.Range(0, 12)
+            .Select(i => LoginAsync(userName, i % 3 == 0 ? "sai-mat-khau-1" : Password));
+        var responses = await Task.WhenAll(attempts);
+
+        Assert.All(responses, r => Assert.Contains(r.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Unauthorized }));
+        Assert.Equal(8, responses.Count(r => r.StatusCode == HttpStatusCode.OK));
+    }
 }
