@@ -24,6 +24,20 @@ public static partial class CodeRules
     public static bool IsAlphanumeric(string code, int minLength, int maxLength) =>
         code.Length >= minLength && code.Length <= maxLength && AlphanumericRegex().IsMatch(code);
 
+    /// <summary>
+    /// Kiểm tra mã dài có dấu phân cách (mã hàng VT-0001, mã NCC NCC.HN/001): chữ A–Z không dấu, số và - . _ /,
+    /// bắt đầu bằng chữ hoặc số, không có khoảng trắng để gõ nhanh.
+    /// </summary>
+    /// <param name="code">Mã đã chuẩn hóa.</param>
+    /// <param name="minLength">Độ dài tối thiểu.</param>
+    /// <param name="maxLength">Độ dài tối đa.</param>
+    /// <returns>true nếu hợp lệ.</returns>
+    public static bool IsExtendedCode(string code, int minLength, int maxLength) =>
+        code.Length >= minLength && code.Length <= maxLength && ExtendedRegex().IsMatch(code);
+
     [GeneratedRegex("^[A-Z0-9]+$")]
     private static partial Regex AlphanumericRegex();
+
+    [GeneratedRegex(@"^[A-Z0-9][A-Z0-9._/\-]*$")]
+    private static partial Regex ExtendedRegex();
 }

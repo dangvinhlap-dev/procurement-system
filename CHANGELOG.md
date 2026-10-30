@@ -15,7 +15,10 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   tài khoản kho mặc định. Thêm, sửa ở tổng công ty; hàng hóa lọc theo phạm vi nhóm hàng.
 - API `/api/uoms`, `/api/item-categories` (thêm POST, PUT; GET trả thêm đường dẫn, cấp, tài khoản kho), `/api/items`.
 - Trùng mã duy nhất trong CSDL (kể cả bản ghi ngoài phạm vi người dùng) trả 409 kèm thông báo tiếng Việt thay vì lỗi hệ thống.
-- Dữ liệu mẫu dev/test: 7 đơn vị tính.
+- Màn hình Giá và NCC → Nhà cung cấp (SUP) và Nhóm NCC (SGRP) (design.md mục 5.3, 5.8): NCC có nhóm, mã số thuế không trùng
+  (trong nước/nước ngoài), liên hệ, điều khoản thanh toán, ngành hàng, xếp hạng, trạng thái (danh sách đen phải có lý do),
+  NCC nội bộ liên kết công ty thành viên; tab Người liên hệ và Ngân hàng. API `/api/supplier-groups`, `/api/suppliers`.
+- Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ).
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
 
@@ -28,6 +31,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 - Migration `V0_2_0_HangHoa`: bảng `Uom`, `Item`, `ItemUomConversion`; cột `InventoryAccount` của `ItemCategory`.
   `Down()` xóa ba bảng và cột đó – mất toàn bộ hàng hóa, đơn vị tính, quy đổi đã nhập.
+- Migration `V0_2_0_NhaCungCap`: bảng `SupplierGroup`, `Supplier`, `SupplierContact`, `SupplierBankAccount`.
+  `Down()` xóa bốn bảng – mất toàn bộ NCC đã nhập.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.
