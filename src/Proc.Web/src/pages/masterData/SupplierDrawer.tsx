@@ -11,7 +11,9 @@ import {
   type SupplierStatus,
 } from '../../api/masterData'
 import { useCompanies } from '../../api/organization'
+import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { SupplierCompanyTab, SupplierItemsTab } from './SupplierLinkTabs'
 
 interface SupplierFormValues {
   code: string
@@ -61,8 +63,8 @@ const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim
 const rowStyle = { display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr auto auto', gap: '0 8px', alignItems: 'start' } as const
 
 /**
- * Ngăn kéo chi tiết NCC: tab Thông tin chung, Người liên hệ, Ngân hàng (design.md mục 10.9).
- * Tab Công ty áp dụng, Sản phẩm/dịch vụ, Bảng giá, Đánh giá, Tài liệu thêm ở các lát sau.
+ * Ngăn kéo chi tiết NCC: tab Thông tin chung, Người liên hệ, Ngân hàng (lưu bằng nút Lưu của ngăn kéo), Sản phẩm/dịch vụ và
+ * Áp dụng tại công ty (lưu riêng trong tab) (design.md mục 10.9). Tab Bảng giá, Đánh giá, Tài liệu thêm ở các lát sau.
  * @param supplierId Id NCC; null = thêm mới.
  * @param groups Nhóm NCC.
  * @param canManage Được sửa (ở tổng công ty, có quyền).
@@ -80,6 +82,7 @@ export function SupplierDrawer({
   onClose: () => void
 }) {
   const { message } = App.useApp()
+  const { workingCompany } = useAuth()
   const [form] = Form.useForm<SupplierFormValues>()
   const supplier = useSupplier(supplierId)
   const companies = useCompanies()
@@ -377,6 +380,13 @@ export function SupplierDrawer({
             </Form.List>
           ),
         },
+        // Hai tab dưới cần NCC đã lưu (có Id); thêm mới thì lưu NCC trước rồi mở lại.
+        ...(supplierId
+          ? [
+              { key: 'items', label: 'Sản phẩm/dịch vụ', children: <SupplierItemsTab supplierId={supplierId} canManage={editable} /> },
+              { key: 'company', label: `Áp dụng tại ${workingCompany?.code ?? ''}`, children: <SupplierCompanyTab supplierId={supplierId} /> },
+            ]
+          : []),
       ]}
     />
   )

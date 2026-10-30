@@ -24,6 +24,10 @@ public static class DuplicateKeyMessages
         ["IX_Supplier_Code"] = "Mã NCC đã có.",
         ["IX_Supplier_TaxCode"] = "Mã số thuế đã dùng cho NCC khác.",
         ["IX_Supplier_InternalCompanyId"] = "Công ty này đã có NCC nội bộ.",
+        ["IX_SupplierCompany_SupplierId_CompanyId"] = "NCC đã được áp dụng cho công ty này.",
+        ["IX_SupplierCompany_CompanyId_LocalCode"] = "Mã NCC tại công ty đã dùng cho NCC khác.",
+        ["IX_SupplierItem_SupplierId_ItemId"] = "NCC đã có mặt hàng này.",
+        ["IX_SupplierItem_ItemId_Preferred"] = "Mặt hàng đã có NCC ưu tiên khác. Hãy tải lại rồi thử lại.",
     };
 
     /// <summary>

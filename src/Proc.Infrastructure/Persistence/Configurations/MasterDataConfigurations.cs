@@ -130,3 +130,40 @@ internal sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.Navigation(x => x.BankAccounts).HasField("_bankAccounts").UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }
+
+/// <summary>Cấu hình bảng SupplierCompany (design.md mục 5.3, 5.9).</summary>
+internal sealed class SupplierCompanyConfiguration : IEntityTypeConfiguration<SupplierCompany>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierCompany> builder)
+    {
+        builder.ToTable("SupplierCompany");
+        builder.HasIndex(x => new { x.SupplierId, x.CompanyId }).IsUnique();
+        // Mã NCC tại công ty duy nhất trong công ty (khớp mã đối tượng của phần mềm kế toán công ty đó).
+        builder.Property(x => x.LocalCode).HasMaxLength(30);
+        builder.HasIndex(x => new { x.CompanyId, x.LocalCode }).IsUnique().HasFilter("\"LocalCode\" IS NOT NULL");
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng SupplierItem (design.md mục 5.3, 5.9).</summary>
+internal sealed class SupplierItemConfiguration : IEntityTypeConfiguration<SupplierItem>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierItem> builder)
+    {
+        builder.ToTable("SupplierItem");
+        builder.HasIndex(x => new { x.SupplierId, x.ItemId }).IsUnique();
+        // Mỗi mặt hàng tối đa một NCC ưu tiên.
+        // Hai chỉ mục trên cùng cột phải đặt tên riêng, nếu không EF gộp làm một.
+        builder.HasIndex(x => x.ItemId, "IX_SupplierItem_ItemId_Preferred").IsUnique().HasFilter("\"IsPreferred\"");
+        builder.HasIndex(x => x.ItemId, "IX_SupplierItem_ItemId");
+        builder.Property(x => x.SupplierItemCode).HasMaxLength(50);
+        // Số lượng numeric(18,4) – CLAUDE.md mục 4.
+        builder.Property(x => x.Moq).HasPrecision(18, 4);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.PurchaseUomId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

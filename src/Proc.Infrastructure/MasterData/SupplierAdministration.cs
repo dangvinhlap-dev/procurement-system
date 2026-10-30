@@ -119,17 +119,24 @@ public sealed class SupplierAdministration : ISupplierAdministration
             suppliers = suppliers.Where(s => EF.Functions.Like(s.SearchText, pattern, LikePatterns.Escape));
         }
 
+        // SupplierCompanies tự lọc theo công ty đang làm việc, nên đây là "áp dụng tại công ty này".
+        if (query.AppliedOnly) suppliers = suppliers.Where(s => _db.SupplierCompanies.Any(sc => sc.SupplierId == s.Id && sc.IsActive));
+
         var rows = await (
                 from s in suppliers
                 join g in _db.SupplierGroups on s.GroupId equals g.Id
                 join c in _db.Companies on s.InternalCompanyId equals c.Id into internalCompany
                 from c in internalCompany.DefaultIfEmpty()
+                join sc in _db.SupplierCompanies on s.Id equals sc.SupplierId into applied
+                from sc in applied.DefaultIfEmpty()
                 orderby s.Code
                 select new
                 {
                     s.Id, s.Code, s.Name, s.ShortName, GroupCode = g.Code, GroupName = g.Name, s.IsForeign, s.TaxCode,
                     s.Phone, s.Email, s.Address, s.Status, s.Rating, CompanyCode = c == null ? null : c.Code,
                     Primary = s.Contacts.Where(x => x.IsPrimary).Select(x => new { x.Name, x.Phone }).FirstOrDefault(),
+                    Applied = sc != null && sc.IsActive,
+                    LocalCode = sc == null ? null : sc.LocalCode,
                 })
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
@@ -138,7 +145,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
             .Select(r => new SupplierListItemDto(
                 r.Id, r.Code, r.Name, r.ShortName, r.GroupCode, r.GroupName, r.IsForeign, r.TaxCode, r.Phone, r.Email, r.Address,
                 r.Primary is null ? null : r.Primary.Phone is null ? r.Primary.Name : $"{r.Primary.Name} – {r.Primary.Phone}",
-                r.Status.ToString(), r.Rating, r.CompanyCode))
+                r.Status.ToString(), r.Rating, r.CompanyCode, r.Applied, r.LocalCode))
             .ToList();
         return new SupplierListResult(items, rows.Count > SearchLimit, SearchLimit);
     }
