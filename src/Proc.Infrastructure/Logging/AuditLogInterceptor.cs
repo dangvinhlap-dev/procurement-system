@@ -144,6 +144,9 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
 
     private static object? ValueOf(EntityEntry entry, string propertyName)
     {
+        // Nhãn có thể là thuộc tính tính toán không lưu CSDL (kỳ kho: "10/2026" ghép từ Month, Year) – đọc thẳng từ đối tượng.
+        if (entry.Metadata.FindProperty(propertyName) is null)
+            return entry.Entity.GetType().GetProperty(propertyName)?.GetValue(entry.Entity);
         var property = entry.Property(propertyName);
         return entry.State == EntityState.Deleted ? property.OriginalValue : property.CurrentValue;
     }

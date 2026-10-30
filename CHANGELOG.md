@@ -24,7 +24,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Nhập/xuất Excel (ClosedXML) cho đơn vị tính, nhóm hàng, hàng hóa, nhóm NCC, nhà cung cấp (design.md mục 5.10): nút
   "Xuất Excel" và "Nhập Excel" trên danh sách; file mẫu có hướng dẫn; kiểm tra thử báo lỗi theo dòng, nhập thật chỉ lưu khi
   không có lỗi. API `GET /api/excel/{danh-mục}`, `POST /api/excel/{danh-mục}/import?commit=`.
-- Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ).
+- Kỳ kho (design.md mục 7.6): màn hình Hệ thống → Kỳ kho (PER) – tạo lịch năm (13 kỳ), mở kỳ tháng tuần tự; quyền mới
+  `Inventory.Period.Open`; kiểm tra "ngày chứng từ thuộc kỳ đang mở" cho ghi sổ. API `/api/inventory-periods`.
+- Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
 
@@ -45,6 +47,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `Down()` xóa bốn bảng – mất toàn bộ NCC đã nhập.
 - Migration `V0_2_0_NccCongTySanPham`: bảng `SupplierCompany`, `SupplierItem`. `Down()` xóa hai bảng – mất danh sách NCC
   từng công ty đang mua và mặt hàng từng NCC bán.
+- Migration `V0_3_0_KyKho`: bảng `InventoryPeriod`. `Down()` xóa bảng – mất lịch kỳ và trạng thái kỳ.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

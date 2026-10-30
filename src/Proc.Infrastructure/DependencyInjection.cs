@@ -7,6 +7,7 @@ using Proc.Application.Auth;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Excel;
+using Proc.Application.Inventory;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -14,6 +15,7 @@ using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Excel;
 using Proc.Infrastructure.Identity;
+using Proc.Infrastructure.Inventory;
 using Proc.Infrastructure.Logging;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Organization;
@@ -57,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IAccessLog, AccessLogWriter>();
         services.AddScoped<ILogQueries, LogQueries>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
+        services.AddScoped<IInventoryPeriodService, InventoryPeriodService>();
 
         // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
         services.AddScoped<CurrentUserScope>();

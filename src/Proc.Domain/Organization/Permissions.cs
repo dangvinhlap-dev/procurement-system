@@ -101,6 +101,8 @@ public static class Permissions
         public const string StockView = "Inventory.Stock.View";
         /// <summary>Quyền "Xem kỳ kho".</summary>
         public const string PeriodView = "Inventory.Period.View";
+        /// <summary>Quyền "Tạo lịch và mở kỳ kho".</summary>
+        public const string PeriodOpen = "Inventory.Period.Open";
         /// <summary>Quyền "Đóng kỳ kho".</summary>
         public const string PeriodClose = "Inventory.Period.Close";
         /// <summary>Quyền "Mở lại kỳ kho".</summary>
@@ -175,6 +177,7 @@ public static class Permissions
         new(Inventory.DocumentUnpost, "Bỏ ghi sổ chứng từ kho"),
         new(Inventory.StockView, "Xem tồn kho, thẻ kho"),
         new(Inventory.PeriodView, "Xem kỳ kho"),
+        new(Inventory.PeriodOpen, "Tạo lịch và mở kỳ kho"),
         new(Inventory.PeriodClose, "Đóng kỳ kho"),
         new(Inventory.PeriodReopen, "Mở lại kỳ kho"),
         new(Pricing.PriceListView, "Xem bảng giá nhà cung cấp"),

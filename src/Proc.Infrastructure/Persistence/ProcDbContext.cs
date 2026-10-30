@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
@@ -98,6 +99,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 
     /// <summary>NCC – sản phẩm (lọc theo phạm vi nhóm hàng của mặt hàng).</summary>
     public DbSet<SupplierItem> SupplierItems => Set<SupplierItem>();
+
+    /// <summary>Kỳ kho (lọc theo công ty).</summary>
+    public DbSet<InventoryPeriod> InventoryPeriods => Set<InventoryPeriod>();
 
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
