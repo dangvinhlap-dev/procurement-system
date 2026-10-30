@@ -10,6 +10,22 @@ export interface DetailTab {
   children: ReactNode
 }
 
+/** Lớp phủ có thể nằm phía trên ngăn kéo: danh sách thả xuống, lịch, hộp thoại. */
+const POPUP_SELECTOR = [
+  '.ant-select-dropdown:not(.ant-select-dropdown-hidden)',
+  '.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)',
+  '.ant-modal-wrap:not([style*="display: none"])',
+].join(', ')
+
+/**
+ * Có lớp phủ nào đang mở không. Bỏ qua lớp phủ đang chạy hiệu ứng ẩn (lớp *-leave): vừa chọn xong một mục, danh sách thả xuống
+ * còn ẩn dần vài trăm mili giây – nếu tính là "đang mở" thì bấm Esc ngay lúc đó không đóng được ngăn kéo.
+ * @returns true nếu đang có lớp phủ mở.
+ */
+function hasOpenPopup(): boolean {
+  return [...document.querySelectorAll(POPUP_SELECTOR)].some((e) => !/-leave(\s|$)/.test(e.className))
+}
+
 /** Thuộc tính của DetailDrawer. */
 export interface DetailDrawerProps {
   open: boolean
@@ -67,11 +83,26 @@ export function DetailDrawer({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onSave, saving])
 
+  // Esc đóng ngăn kéo, nghe ở cấp cửa sổ: Drawer của antd chỉ nhận Esc khi tiêu điểm nằm trong ngăn kéo, mà chọn xong một mục
+  // trong ô chọn thì tiêu điểm có thể rơi ra ngoài (danh sách thả xuống vẽ ở cuối trang) – khi đó Esc không đóng được.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      // Đang mở danh sách thả xuống, lịch hay hộp thoại con thì Esc đóng cái đó trước, chưa đóng ngăn kéo.
+      if (hasOpenPopup()) return
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   return (
     <Drawer
       open={open}
       title={title}
       onClose={onClose}
+      keyboard={false}
       size={720}
       destroyOnHidden
       className="detail-drawer"

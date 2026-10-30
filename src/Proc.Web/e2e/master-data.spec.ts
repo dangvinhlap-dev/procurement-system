@@ -80,7 +80,8 @@ test.describe('danh mục hàng hóa', () => {
     await pick(page, 'Loại hàng', 'Dịch vụ')
     await drawer.getByRole('tab', { name: 'Quản lý kho' }).click()
     await expect(drawer.getByRole('checkbox', { name: 'Quản lý theo lô' })).toBeDisabled()
-    await drawer.getByRole('button', { name: 'Đóng' }).click()
+    // Sau khi chọn trong ô chọn (danh sách thả xuống nằm ngoài ngăn kéo), Esc vẫn phải đóng ngăn kéo.
+    await page.keyboard.press('Escape')
     await expect(drawer).toHaveCount(0)
     await page.waitForLoadState('networkidle')
     await page.screenshot({ path: 'e2e/screenshots/item-list.png' })
