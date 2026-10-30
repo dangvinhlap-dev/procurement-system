@@ -1,0 +1,18 @@
+# Không đưa vào ngữ cảnh build Docker: file build, gói đã cài, bí mật, tài liệu.
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/test-results/
+**/playwright-report/
+TestResults/
+.git/
+.vs/
+.env
+*.env.local
+**/appsettings.*.local.json
+**/appsettings.Development.json
+**/appsettings.Testing.json
+docs/
+tests/
+backups/

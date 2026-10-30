@@ -508,13 +508,15 @@ procurement-system/
 ├─ CHANGELOG.md                    # nhật ký phiên bản
 ├─ Directory.Build.props           # số phiên bản <Version>
 ├─ docker-compose.dev.yml          # PostgreSQL cho môi trường lập trình
-├─ docker-compose.yml              # chạy thật: app, db, caddy, seq, backup
+├─ docker-compose.yml              # chạy thật: app, db, caddy, seq, backup (mục 14.2)
+├─ Dockerfile, Caddyfile, .env.example
 ├─ .devcontainer/                  # cấu hình GitHub Codespaces (mục 15)
 ├─ docs/
 │  ├─ design.md                    # tài liệu thiết kế này
 │  ├─ ui-guide.md                  # đặc tả giao diện (mục 17)
 │  └─ mau-*.png                    # ảnh mẫu màn hình
 ├─ db/scripts/                     # script SQL theo phiên bản
+├─ db/backup.sh                    # sao lưu hằng đêm (container backup)
 ├─ src/
 │  ├─ Proc.Api/                    # ASP.NET Core host, auth, middleware, endpoints
 │  ├─ Proc.Application/            # use case: Organization, MasterData, Suppliers, Pricing,
@@ -572,33 +574,19 @@ Chốt: **Ubuntu Server 24.04 LTS + Docker Engine + Docker Compose**, CSDL **Pos
 
 Không chạy máy chủ chính thức trên Windows 11 Pro: bản quyền Windows bản client giới hạn số thiết bị kết nối, máy tự khởi động lại khi cập nhật, và là điểm hỏng duy nhất. Nếu công ty bắt buộc dùng Windows Server, tạo máy ảo Ubuntu trong Hyper-V và triển khai y như trên.
 
-### 14.2 Khung docker-compose.yml (chạy thật)
+### 14.2 docker-compose.yml (chạy thật)
 
-```
-services:
-  proxy:
-    image: caddy:2
-    ports: ["80:80", "443:443"]
-    volumes: ["./Caddyfile:/etc/caddy/Caddyfile", "caddy_data:/data"]
-  app:
-    image: ghcr.io/<tai-khoan>/proc-app:${APP_VERSION}
-    env_file: .env
-    depends_on: [db]
-  db:
-    image: postgres:18
-    env_file: .env
-    volumes: ["pg_data:/var/lib/postgresql"]
-  seq:
-    image: datalust/seq
-    volumes: ["seq_data:/data"]
-  backup:
-    image: ghcr.io/<tai-khoan>/proc-backup:1
-    env_file: .env
-    volumes: ["./backups:/backups"]
-volumes: { caddy_data: {}, pg_data: {}, seq_data: {} }
-```
+File `docker-compose.yml` ở gốc repo, cấu hình trong `.env` (mẫu `.env.example`, không đưa lên Git):
 
-Mật khẩu, chuỗi kết nối nằm trong `.env` (không đưa lên Git). Image build cho cả `linux/amd64` và `linux/arm64`.
+| Dịch vụ | Image | Việc |
+| --- | --- | --- |
+| `proxy` | `caddy:2` | Mở cổng 80/443; `SITE_ADDRESS` là tên miền thì tự cấp HTTPS, `:80` thì chỉ HTTP nội bộ (`Caddyfile`) |
+| `app` | `${APP_IMAGE}:${APP_VERSION}` (build từ `Dockerfile`) | API + giao diện React đã build, cổng 8080; không tự chạy migration; chỉ tạo Tổng công ty, kho tổng và tài khoản quản trị nếu chưa có |
+| `db` | `postgres:18` | Dữ liệu trên volume `pg_data`; thư mục `db/scripts` gắn vào `/db/scripts` để chạy script nâng cấp |
+| `seq` | `datalust/seq` | Log kỹ thuật; chỉ mở ở `127.0.0.1:5341`, xem từ xa qua SSH tunnel |
+| `backup` | `postgres:18` + `db/backup.sh` | `pg_dump` mỗi ngày lúc `BACKUP_TIME` vào `./backups`, giữ `BACKUP_KEEP_DAYS` ngày |
+
+Mật khẩu, khóa JWT chỉ nằm trong `.env`. App đứng sau Caddy nên bật forwarded headers để nhật ký truy cập ghi IP thật của người dùng; khóa Data Protection lưu trên volume `app_keys`. Quay lại bản cũ: đổi `APP_VERSION` rồi `docker compose up -d` (CSDL quay lại theo mục 16.4). Image build cho cả `linux/amd64` và `linux/arm64` khi có CI.
 
 ### 14.3 Môi trường chạy thử miễn phí
 

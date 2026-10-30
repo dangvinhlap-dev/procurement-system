@@ -19,3 +19,6 @@ appsettings.*.local.json
 # Hệ điều hành
 .DS_Store
 Thumbs.db
+
+# Bản sao lưu CSDL trên server (docker-compose.yml)
+backups/

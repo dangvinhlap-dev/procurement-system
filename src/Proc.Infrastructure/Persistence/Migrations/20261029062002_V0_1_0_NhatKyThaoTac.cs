@@ -81,7 +81,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     END LOOP;
                 END $$;
 
-                SELECT audit_log_ensure_partitions(2);
+                -- Bọc trong DO … PERFORM chứ không SELECT trần: script --idempotent (db/scripts) đặt cả migration
+                -- vào một khối DO, mà trong PL/pgSQL câu SELECT không có INTO bị báo lỗi "query has no destination".
+                DO $p$ BEGIN PERFORM audit_log_ensure_partitions(2); END $p$;
                 """);
 
             migrationBuilder.CreateIndex(

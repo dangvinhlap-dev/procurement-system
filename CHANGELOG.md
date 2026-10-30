@@ -53,6 +53,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Đánh số chứng từ (design.md mục 5.5): mẫu số theo công ty và loại chứng từ (mặc định `{LOẠI}-{CTY}-{YYMM}-{0000}`,
   ví dụ PO-BHA-2610-0001), đếm lại theo tháng/năm của ngày chứng từ; cấp số nguyên tử trong giao dịch của chứng từ
   (không trùng khi lưu đồng thời, lưu lỗi thì trả lại số). Màn hình Hệ thống → Đánh số chứng từ; API `/api/document-numbering`.
+- Triển khai server bằng Docker (design.md mục 14): `Dockerfile` (một image chứa API + giao diện React đã build,
+  chạy bằng user không phải root), `docker-compose.yml` (Caddy HTTPS, app, PostgreSQL 18, Seq xem log, sao lưu
+  `pg_dump` mỗi đêm vào `./backups` giữ 14 ngày), `Caddyfile`, `.env.example`; hướng dẫn cài và nâng cấp trong README.
+- API phục vụ giao diện khi có `wwwroot` (đường dẫn của giao diện đều trả `index.html`, không lưu đệm `index.html`);
+  `/api` không tồn tại trả 404. Log kỹ thuật gửi được sang Seq (gói `Serilog.Sinks.Seq`).
 
 ### Thay đổi
 - Không có.
@@ -60,6 +65,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Sửa lỗi
 - Cùng một tài khoản đăng nhập đồng thời (nhiều tab/máy, có lần sai mật khẩu) có thể trả lỗi hệ thống 500 do xung đột
   ghi bộ đếm sai mật khẩu; nay tự đọc lại và thử lại.
+- Script SQL dạng `--idempotent` lỗi "query has no destination for result data" ở migration `V0_1_0_NhatKyThaoTac`
+  (lời gọi tạo phân vùng nằm trong khối DO); nay gọi qua `PERFORM`.
 
 ### Thay đổi CSDL
 - Migration `V0_1_0_DangNhapVaCongTy`: bảng `Company`, `Role`, `UserCompanyRole`, `User`, `UserClaim`,
