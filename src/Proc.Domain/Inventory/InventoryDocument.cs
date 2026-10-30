@@ -31,22 +31,40 @@ public sealed record ReceiptHeader(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
     string? DeliveryNoteNo, string? Deliverer, string? Note);
 
+/// <summary>Đầu phiếu xuất trả NCC (design.md mục 10.5): kho xuất, NCC lấy theo phiếu nhập gốc.</summary>
+/// <param name="Date">Ngày xuất trả.</param>
+/// <param name="Source">Phiếu nhập gốc (đã ghi sổ).</param>
+/// <param name="InvoiceNo">Số hóa đơn điều chỉnh.</param>
+/// <param name="Note">Lý do trả.</param>
+public sealed record ReturnHeader(DateOnly Date, InventoryDocument Source, string? InvoiceNo, string? Note);
+
+/// <summary>Đầu phiếu chuyển kho nội bộ (design.md mục 10.6).</summary>
+/// <param name="Date">Ngày chuyển.</param>
+/// <param name="FromWarehouseId">Kho xuất.</param>
+/// <param name="ToWarehouseId">Kho nhập (cùng công ty – CSDL chặn kho công ty khác).</param>
+/// <param name="Deliverer">Người giao.</param>
+/// <param name="Receiver">Người nhận.</param>
+/// <param name="Note">Lý do chuyển.</param>
+public sealed record TransferHeader(DateOnly Date, Guid FromWarehouseId, Guid ToWarehouseId, string? Deliverer, string? Receiver, string? Note);
+
 /// <summary>Một dòng gửi vào khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
 /// <param name="ItemId">Mặt hàng.</param>
 /// <param name="UomId">ĐVT trên phiếu (ĐVT cơ sở hoặc ĐVT quy đổi).</param>
 /// <param name="Qty">Số lượng theo ĐVT trên phiếu.</param>
-/// <param name="UnitPrice">Đơn giá trước VAT theo ĐVT trên phiếu.</param>
+/// <param name="UnitPrice">Đơn giá trước VAT theo ĐVT trên phiếu (phiếu chuyển kho: 0 – giá vốn ghi ở sổ kho).</param>
 /// <param name="VatCode">Thuế suất (KCT, 0, 5, 8, 10).</param>
 /// <param name="LotNo">Số lô.</param>
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
+/// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập).</param>
 public sealed record InventoryLineData(
-    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note);
+    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
+    Guid? SourceLineId = null);
 
 /// <summary>
 /// Chứng từ kho (design.md mục 6.1, 12.1): một bảng cho mọi loại phiếu (GRN, RTV, TRF…), phân biệt bằng DocType.
-/// Lát này có phiếu nhập mua NCC (GRN) ở trạng thái nháp; ghi sổ (sinh StockLedger) làm ở lát sau.
+/// Hiện có phiếu nhập mua NCC (GRN), xuất trả NCC (RTV), chuyển kho nội bộ (TRF).
 /// </summary>
 [Auditable("Chứng từ kho", LabelProperty = nameof(No))]
 public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocumentNumber
@@ -98,6 +116,12 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
 
     /// <summary>Người giao hàng.</summary>
     public string? Deliverer { get; private set; }
+
+    /// <summary>Người nhận hàng (phiếu chuyển kho).</summary>
+    public string? Receiver { get; private set; }
+
+    /// <summary>Chứng từ liên kết (phiếu trả NCC: phiếu nhập gốc).</summary>
+    public Guid? LinkedDocumentId { get; private set; }
 
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
@@ -160,6 +184,85 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     }
 
     /// <summary>
+    /// Lập phiếu xuất trả NCC ở trạng thái nháp, gắn với phiếu nhập gốc.
+    /// </summary>
+    /// <param name="companyId">Công ty.</param>
+    /// <param name="no">Số phiếu đã cấp.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <returns>Phiếu nháp.</returns>
+    /// <exception cref="BusinessRuleException">Khi phiếu gốc không phải phiếu nhập đã ghi sổ.</exception>
+    public static InventoryDocument CreateReturn(Guid companyId, string no, ReturnHeader header)
+    {
+        if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");
+        if (string.IsNullOrWhiteSpace(no)) throw new BusinessRuleException("Chứng từ phải có số.");
+        var document = new InventoryDocument { CompanyId = companyId, DocType = DocumentTypes.ReturnToVendor, No = no };
+        document.UpdateReturn(header);
+        return document;
+    }
+
+    /// <summary>
+    /// Sửa đầu phiếu xuất trả NCC: kho xuất = kho đã nhập, NCC = NCC của phiếu nhập gốc (design.md mục 6.1, 10.5).
+    /// </summary>
+    /// <param name="header">Đầu phiếu mới.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp, phiếu gốc không phải phiếu nhập đã ghi sổ, khác công ty,
+    /// hoặc ngày trả trước ngày nhập.</exception>
+    public void UpdateReturn(ReturnHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        EnsureDraft();
+        var source = header.Source;
+        if (source.DocType != DocumentTypes.GoodsReceipt || source.Status != DocumentStatus.Posted)
+            throw new BusinessRuleException($"Phiếu gốc {source.No} phải là phiếu nhập mua đã ghi sổ.");
+        if (source.CompanyId != CompanyId) throw new BusinessRuleException("Phiếu nhập gốc phải cùng công ty.");
+        if (header.Date < source.Date)
+            throw new BusinessRuleException($"Ngày trả hàng không được trước ngày nhập {source.Date:dd/MM/yyyy} của phiếu {source.No}.");
+        Date = header.Date;
+        LinkedDocumentId = source.Id;
+        FromWarehouseId = source.ToWarehouseId;
+        SupplierId = source.SupplierId;
+        InvoiceNo = Clean(header.InvoiceNo);
+        Note = Clean(header.Note);
+    }
+
+    /// <summary>
+    /// Lập phiếu chuyển kho nội bộ ở trạng thái nháp.
+    /// </summary>
+    /// <param name="companyId">Công ty.</param>
+    /// <param name="no">Số phiếu đã cấp.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <returns>Phiếu nháp.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu kho hoặc kho xuất trùng kho nhập.</exception>
+    public static InventoryDocument CreateTransfer(Guid companyId, string no, TransferHeader header)
+    {
+        if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");
+        if (string.IsNullOrWhiteSpace(no)) throw new BusinessRuleException("Chứng từ phải có số.");
+        var document = new InventoryDocument { CompanyId = companyId, DocType = DocumentTypes.Transfer, No = no };
+        document.UpdateTransfer(header);
+        return document;
+    }
+
+    /// <summary>
+    /// Sửa đầu phiếu chuyển kho. Hai kho phải khác nhau; cùng công ty do khóa (kho, công ty) trong CSDL bảo đảm – kho Sub không
+    /// chuyển sang công ty khác được (CLAUDE.md mục 4).
+    /// </summary>
+    /// <param name="header">Đầu phiếu mới.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp, thiếu kho hoặc hai kho trùng nhau.</exception>
+    public void UpdateTransfer(TransferHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        EnsureDraft();
+        if (header.FromWarehouseId == Guid.Empty) throw new BusinessRuleException("Hãy chọn kho xuất.");
+        if (header.ToWarehouseId == Guid.Empty) throw new BusinessRuleException("Hãy chọn kho nhập.");
+        if (header.FromWarehouseId == header.ToWarehouseId) throw new BusinessRuleException("Kho xuất và kho nhập phải khác nhau.");
+        Date = header.Date;
+        FromWarehouseId = header.FromWarehouseId;
+        ToWarehouseId = header.ToWarehouseId;
+        Deliverer = Clean(header.Deliverer);
+        Receiver = Clean(header.Receiver);
+        Note = Clean(header.Note);
+    }
+
+    /// <summary>
     /// Thay toàn bộ dòng (sửa theo Id để nhật ký chỉ ghi dòng thay đổi), tính lại số lượng cơ sở, thành tiền, VAT, tổng phiếu.
     /// </summary>
     /// <param name="lines">Dòng và mặt hàng tương ứng (đã đọc qua filter phạm vi nhóm hàng).</param>
@@ -186,7 +289,7 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
                 _lines.Add(line);
             }
 
-            line.Set(lineNo, data, item);
+            line.Set(lineNo, data, item, DocType);
             keep.Add(line);
         }
 
@@ -298,12 +401,21 @@ public sealed class InventoryDocumentLine : Entity
     /// <summary>Ghi chú dòng.</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập) – để tính số còn trả được.</summary>
+    public Guid? SourceLineId { get; private set; }
+
     /// <summary>
     /// Gán dữ liệu dòng và tính số lượng cơ sở, thành tiền, VAT.
     /// Ví dụ: 2 thùng × 24 hộp/thùng, đơn giá 480.000 đ/thùng, VAT 10%: BaseQty = 48 hộp; Amount = 960.000; VAT = 96.000.
     /// </summary>
-    internal void Set(int lineNo, InventoryLineData data, Item item)
+    internal void Set(int lineNo, InventoryLineData data, Item item, string docType)
     {
+        // Phiếu chuyển kho không có đơn giá nhập tay: giá vốn tạm tính ghi ở sổ kho, chốt khi đóng kỳ (design.md mục 10.6).
+        if (docType == DocumentTypes.Transfer && (data.UnitPrice != 0 || !string.IsNullOrWhiteSpace(data.VatCode)))
+            throw new BusinessRuleException($"Dòng {lineNo}: phiếu chuyển kho không nhập đơn giá, thuế suất.");
+        if (docType == DocumentTypes.ReturnToVendor && data.SourceLineId is null)
+            throw new BusinessRuleException($"Dòng {lineNo}: phiếu trả NCC phải chọn dòng của phiếu nhập gốc.");
+        SourceLineId = data.SourceLineId;
         var prefix = $"Dòng {lineNo} ({item.Code})";
         if (data.ItemId != item.Id) throw new BusinessRuleException($"{prefix}: mặt hàng không khớp.");
         // Chỉ hàng tồn kho mới đi qua kho (design.md mục 5.2).
@@ -323,7 +435,9 @@ public sealed class InventoryDocumentLine : Entity
             throw new BusinessRuleException($"{prefix}: thuế suất phải là một trong {string.Join(", ", VatRates.All)}.");
         var lot = string.IsNullOrWhiteSpace(data.LotNo) ? null : data.LotNo.Trim();
         if (item.TrackLot && lot is null) throw new BusinessRuleException($"{prefix}: mặt hàng quản lý theo lô – hãy nhập số lô.");
-        if (item.TrackExpiry && data.ExpiryDate is null) throw new BusinessRuleException($"{prefix}: mặt hàng quản lý hạn dùng – hãy nhập hạn dùng.");
+        // Hạn dùng ghi lúc nhập; phiếu xuất/chuyển xác định hàng qua số lô nên không bắt buộc.
+        if (item.TrackExpiry && data.ExpiryDate is null && docType == DocumentTypes.GoodsReceipt)
+            throw new BusinessRuleException($"{prefix}: mặt hàng quản lý hạn dùng – hãy nhập hạn dùng.");
         if (lot?.Length > 50) throw new BusinessRuleException($"{prefix}: số lô tối đa 50 ký tự.");
 
         LineNo = lineNo;

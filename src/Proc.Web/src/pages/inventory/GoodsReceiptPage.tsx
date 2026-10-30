@@ -1,8 +1,7 @@
-import { CheckCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { Alert, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import {
   documentStatusLabels,
   useGoodsReceiptMutations,
@@ -21,6 +20,7 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
+import { useDocumentCommands } from './useDocumentCommands'
 
 interface LineValues {
   id: string | null
@@ -74,8 +74,6 @@ function computeLine(line: LineValues | undefined, item: ItemLookup | undefined)
 export function GoodsReceiptPage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
-  const navigate = useNavigate()
-  const { message, modal } = App.useApp()
   const { hasPermission } = useAuth()
   const [form] = Form.useForm<ReceiptFormValues>()
   const document = useInventoryDocument(isNew ? null : id)
@@ -176,71 +174,9 @@ export function GoodsReceiptPage() {
     }
   }
 
-  const save = async () => {
-    if (readOnly) return
-    const saved = await persist()
-    if (!saved) return
-    message.success(`Đã lưu phiếu ${saved.no}.`)
-    if (isNew) navigate(`/kho/grn/${saved.id}`, { replace: true })
-  }
-
-  /** Ghi sổ: phiếu đang sửa được thì lưu nháp trước (để ghi sổ đúng nội dung đang thấy), rồi ghi sổ. */
-  const postDocument = () =>
-    modal.confirm({
-      title: 'Ghi sổ phiếu nhập?',
-      content: 'Ghi sổ thì cộng tồn kho theo phiếu. Sau khi ghi sổ không sửa được; muốn sửa phải bỏ ghi sổ khi kỳ kho còn mở.',
-      okText: 'Ghi sổ',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
-        const saved = readOnly ? doc : await persist()
-        if (!saved) return
-        try {
-          const posted = await mutations.post.mutateAsync(saved.id)
-          message.success(`Đã ghi sổ phiếu ${posted.no}.`)
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không ghi sổ được phiếu.')
-        }
-        if (isNew) navigate(`/kho/grn/${saved.id}`, { replace: true })
-      },
-    })
-
-  const unpostDocument = () =>
-    doc &&
-    modal.confirm({
-      title: `Bỏ ghi sổ phiếu ${doc.no}?`,
-      content: 'Tồn kho trừ lại theo phiếu, phiếu về trạng thái nháp để sửa. Chỉ làm được khi kỳ kho của phiếu còn mở.',
-      okText: 'Bỏ ghi sổ',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
-        try {
-          await mutations.unpost.mutateAsync(doc.id)
-          message.success(`Đã bỏ ghi sổ phiếu ${doc.no}.`)
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không bỏ ghi sổ được phiếu.')
-        }
-      },
-    })
-
-  const cancelDocument = () =>
-    doc &&
-    modal.confirm({
-      title: `Hủy phiếu ${doc.no}?`,
-      content: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không sửa hay dùng lại được.',
-      okText: 'Hủy phiếu',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
-        try {
-          await mutations.cancel.mutateAsync(doc.id)
-          message.success(`Đã hủy phiếu ${doc.no}.`)
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không hủy được phiếu.')
-        }
-      },
-    })
+  const { save, actions } = useDocumentCommands({
+    isNew, doc, readOnly, persist, mutations, listPath: '/kho/grn', noun: 'phiếu nhập', setError,
+  })
 
   const pickItem = (index: number, itemId: string) => {
     const item = itemsById.get(itemId)
@@ -420,33 +356,7 @@ export function GoodsReceiptPage() {
       readOnly={readOnly}
       onSave={save}
       onAddLine={() => addRef.current?.()}
-      actions={
-        <>
-          {!readOnly && (
-            <Button type="primary" icon={<SaveOutlined />} onClick={save} loading={mutations.create.isPending || mutations.update.isPending}>
-              Lưu nháp
-            </Button>
-          )}
-          {(isNew ? !readOnly && hasPermission(Permission.InventoryDocumentPost) : doc?.canPost) && (
-            <Button icon={<CheckCircleOutlined />} onClick={postDocument} loading={mutations.post.isPending}>
-              Ghi sổ
-            </Button>
-          )}
-          {doc?.canUnpost && (
-            <Button danger icon={<RollbackOutlined />} onClick={unpostDocument} loading={mutations.unpost.isPending}>
-              Bỏ ghi sổ
-            </Button>
-          )}
-          {!isNew && doc?.status === 'Draft' && doc.canEdit && (
-            <Button danger icon={<StopOutlined />} onClick={cancelDocument}>
-              Hủy phiếu
-            </Button>
-          )}
-          <Button type="text" icon={<CloseOutlined />} onClick={() => navigate('/kho/grn')}>
-            Đóng
-          </Button>
-        </>
-      }
+      actions={actions}
       header={
         <>
           <Form.Item label="Ngày nhập" name="date" rules={[{ required: true, message: 'Chọn ngày nhập.' }]} extra="Quyết định kỳ kho khi ghi sổ.">

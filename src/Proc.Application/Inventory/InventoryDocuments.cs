@@ -14,9 +14,12 @@ namespace Proc.Application.Inventory;
 /// <param name="TotalAmount">Tiền hàng trước VAT.</param>
 /// <param name="TotalVat">Tiền VAT.</param>
 /// <param name="LineCount">Số dòng.</param>
+/// <param name="FromWarehouseCode">Mã kho xuất (phiếu chuyển kho; phiếu trả NCC thì trùng kho ở cột Kho).</param>
+/// <param name="ToWarehouseCode">Mã kho nhập (phiếu chuyển kho).</param>
 public sealed record InventoryDocumentListItemDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, string? WarehouseCode, string? WarehouseName,
-    string? SupplierCode, string? SupplierName, string? InvoiceNo, decimal TotalAmount, decimal TotalVat, int LineCount);
+    string? SupplierCode, string? SupplierName, string? InvoiceNo, decimal TotalAmount, decimal TotalVat, int LineCount,
+    string? FromWarehouseCode = null, string? ToWarehouseCode = null);
 
 /// <summary>Kết quả tìm chứng từ; mỗi lần tối đa <see cref="Limit"/> dòng.</summary>
 /// <param name="Items">Các phiếu, mới nhất trước.</param>
@@ -50,10 +53,11 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 /// <param name="LotNo">Số lô.</param>
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
+/// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập).</param>
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
-    DateOnly? ExpiryDate, string? Note);
+    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null);
 
 /// <summary>Chi tiết chứng từ kho.</summary>
 /// <param name="Id">Id.</param>
@@ -82,11 +86,15 @@ public sealed record InventoryLineDto(
 /// <param name="ReadOnlyReason">Lý do chỉ xem được (null nếu sửa được hoặc chỉ vì trạng thái).</param>
 /// <param name="CanPost">Người xem ghi sổ được (phiếu nháp, có quyền ghi sổ, thấy hết mặt hàng).</param>
 /// <param name="CanUnpost">Người xem bỏ ghi sổ được (đã ghi sổ, có quyền bỏ ghi sổ; kỳ còn mở kiểm tra khi bấm).</param>
+/// <param name="Receiver">Người nhận (phiếu chuyển kho).</param>
+/// <param name="LinkedDocumentId">Chứng từ liên kết (phiếu trả: phiếu nhập gốc).</param>
+/// <param name="LinkedDocumentNo">Số chứng từ liên kết.</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
     string? Deliverer, string? Note, decimal TotalAmount, decimal TotalVat, DateTimeOffset CreatedAt, string? CreatedByName,
-    DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost);
+    DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost,
+    string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -115,6 +123,66 @@ public sealed record SaveInventoryLineRequest(
 public sealed record SaveReceiptRequest(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
     string? DeliveryNoteNo, string? Deliverer, string? Note, IReadOnlyList<SaveInventoryLineRequest> Lines);
+
+/// <summary>Một dòng trả NCC gửi lên khi lưu: chỉ chọn dòng nhập gốc và số lượng trả; hàng, ĐVT, lô, giá lấy theo dòng gốc.</summary>
+/// <param name="Id">Id dòng đã có.</param>
+/// <param name="SourceLineId">Dòng của phiếu nhập gốc.</param>
+/// <param name="Qty">Số lượng trả theo ĐVT của dòng gốc.</param>
+/// <param name="Note">Ghi chú dòng.</param>
+public sealed record SaveReturnLineRequest(Guid? Id, Guid SourceLineId, decimal Qty, string? Note);
+
+/// <summary>Lưu phiếu xuất trả NCC (nháp) – design.md mục 10.5.</summary>
+/// <param name="Date">Ngày xuất trả.</param>
+/// <param name="SourceDocumentId">Phiếu nhập gốc (đã ghi sổ).</param>
+/// <param name="InvoiceNo">Số hóa đơn điều chỉnh.</param>
+/// <param name="Note">Lý do trả.</param>
+/// <param name="Lines">Toàn bộ dòng.</param>
+public sealed record SaveReturnRequest(DateOnly Date, Guid SourceDocumentId, string? InvoiceNo, string? Note, IReadOnlyList<SaveReturnLineRequest> Lines);
+
+/// <summary>Một dòng chuyển kho gửi lên khi lưu (không có đơn giá – design.md mục 10.6).</summary>
+/// <param name="Id">Id dòng đã có.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT.</param>
+/// <param name="Qty">Số lượng.</param>
+/// <param name="LotNo">Số lô.</param>
+/// <param name="Note">Ghi chú dòng.</param>
+public sealed record SaveTransferLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, string? LotNo, string? Note);
+
+/// <summary>Lưu phiếu chuyển kho nội bộ (nháp).</summary>
+/// <param name="Date">Ngày chuyển.</param>
+/// <param name="FromWarehouseId">Kho xuất.</param>
+/// <param name="ToWarehouseId">Kho nhập.</param>
+/// <param name="Deliverer">Người giao.</param>
+/// <param name="Receiver">Người nhận.</param>
+/// <param name="Note">Lý do chuyển.</param>
+/// <param name="Lines">Toàn bộ dòng.</param>
+public sealed record SaveTransferRequest(
+    DateOnly Date, Guid FromWarehouseId, Guid ToWarehouseId, string? Deliverer, string? Receiver, string? Note,
+    IReadOnlyList<SaveTransferLineRequest> Lines);
+
+/// <summary>Một dòng phiếu nhập còn trả được (để lập phiếu trả NCC).</summary>
+/// <param name="SourceLineId">Dòng phiếu nhập.</param>
+/// <param name="LineNo">Số thứ tự dòng trên phiếu nhập.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="UomId">ĐVT của dòng nhập.</param>
+/// <param name="UomCode">Mã ĐVT.</param>
+/// <param name="LotNo">Số lô.</param>
+/// <param name="UnitPrice">Đơn giá nhập gốc.</param>
+/// <param name="VatCode">Thuế suất.</param>
+/// <param name="ReceivedQty">Số đã nhập.</param>
+/// <param name="ReturnedQty">Số đã trả (các phiếu trả đã ghi sổ, không tính phiếu đang sửa).</param>
+/// <param name="RemainingQty">Còn trả được = đã nhập − đã trả.</param>
+public sealed record ReturnableLineDto(
+    Guid SourceLineId, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, string? LotNo,
+    decimal UnitPrice, string? VatCode, decimal ReceivedQty, decimal ReturnedQty, decimal RemainingQty);
+
+/// <summary>Tồn tức thời một mặt hàng (một lô) tại một kho.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="LotNo">Số lô.</param>
+/// <param name="Qty">Số tồn theo ĐVT cơ sở.</param>
+public sealed record StockAvailabilityDto(Guid ItemId, string? LotNo, decimal Qty);
 
 /// <summary>
 /// Chứng từ kho của công ty đang làm việc (design.md mục 6, 10.1, 10.4). Thấy phiếu của kho được phép (global query filter);
@@ -184,4 +252,53 @@ public interface IInventoryDocumentService
     /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> UnpostAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Các dòng của phiếu nhập đã ghi sổ kèm số còn trả được.</summary>
+    /// <param name="receiptId">Phiếu nhập.</param>
+    /// <param name="excludeDocumentId">Phiếu trả đang sửa (không tính vào số đã trả).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Theo số thứ tự dòng.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu nhập hoặc ngoài phạm vi.</exception>
+    Task<IReadOnlyList<ReturnableLineDto>> GetReturnableLinesAsync(Guid receiptId, Guid? excludeDocumentId, CancellationToken cancellationToken);
+
+    /// <summary>Lập phiếu xuất trả NCC (nháp).</summary>
+    /// <param name="request">Nội dung phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu vừa lập.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu gốc chưa ghi sổ, số trả vượt số còn trả được.</exception>
+    /// <exception cref="Common.NotFoundException">Khi phiếu gốc, dòng gốc không có hoặc ngoài phạm vi.</exception>
+    Task<InventoryDocumentDto> CreateReturnAsync(SaveReturnRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sửa phiếu xuất trả NCC còn nháp.</summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="request">Nội dung mới.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi sửa.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu không còn nháp hoặc dữ liệu sai.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> UpdateReturnAsync(Guid id, SaveReturnRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Lập phiếu chuyển kho nội bộ (nháp).</summary>
+    /// <param name="request">Nội dung phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu vừa lập.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kho trùng nhau, kho ngừng dùng, dòng sai.</exception>
+    /// <exception cref="Common.NotFoundException">Khi kho, mặt hàng không có hoặc ngoài phạm vi.</exception>
+    Task<InventoryDocumentDto> CreateTransferAsync(SaveTransferRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sửa phiếu chuyển kho còn nháp.</summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="request">Nội dung mới.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi sửa.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu không còn nháp hoặc dữ liệu sai.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> UpdateTransferAsync(Guid id, SaveTransferRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Tồn tức thời của các mặt hàng tại một kho (hiện "tồn khả dụng" trên dòng phiếu xuất/chuyển).</summary>
+    /// <param name="warehouseId">Kho.</param>
+    /// <param name="itemIds">Mặt hàng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Theo mặt hàng, lô.</returns>
+    Task<IReadOnlyList<StockAvailabilityDto>> GetAvailableStockAsync(Guid warehouseId, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 }

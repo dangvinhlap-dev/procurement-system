@@ -33,12 +33,18 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Ghi sổ, bỏ ghi sổ phiếu nhập mua (design.md mục 12.3): sổ kho `StockLedger`, tồn tức thời `StockOnHand` cập nhật trong
   cùng giao dịch, kiểm tra kỳ đang mở, chặn tồn âm; nút Ghi sổ (tự lưu nháp trước) và Bỏ ghi sổ trên phiếu. API
   `POST /api/inventory-documents/{id}/post`, `/unpost`.
+- Màn hình Kho → Xuất trả NCC (RTV) và Kho → Chuyển kho nội bộ (TRF) (design.md mục 6.5, 10.5, 10.6): phiếu trả chọn phiếu
+  nhập gốc đã ghi sổ, chọn dòng nhập, hiện số trả tối đa, nút "Lấy mọi dòng còn trả được", đơn giá theo giá nhập gốc; phiếu
+  chuyển chọn kho xuất/kho nhập cùng công ty, hiện tồn tại kho xuất và cảnh báo khi vượt tồn. Ghi sổ, bỏ ghi sổ cả hai loại
+  (TRF theo giá vốn tạm tính). Danh sách chứng từ kho dùng chung cho GRN, RTV, TRF. API `/api/goods-returns`,
+  `/api/stock-transfers`, `GET /api/goods-receipts/{id}/returnable`, `GET /api/stock-on-hand/available`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
 
 ### Thay đổi
 - Thanh menu cập nhật danh sách công ty ngay sau khi thêm/sửa công ty (không phải đăng nhập lại).
+- Không bỏ ghi sổ được phiếu nhập mua khi đã có phiếu trả NCC ghi sổ theo nó.
 
 ### Sửa lỗi
 - Ngăn kéo chi tiết không đóng bằng Esc khi vừa chọn xong một mục trong ô chọn (danh sách thả xuống còn đang ẩn dần).
@@ -57,6 +63,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_3_0_KyKho`: bảng `InventoryPeriod`. `Down()` xóa bảng – mất lịch kỳ và trạng thái kỳ.
 - Migration `V0_3_0_ChungTuKho`: bảng `InventoryDocument`, `InventoryDocumentLine`. `Down()` xóa hai bảng – mất mọi chứng từ kho.
 - Migration `V0_3_0_SoKho`: bảng `StockLedger`, `StockOnHand`. `Down()` xóa hai bảng – mất sổ kho và số tồn.
+- Migration `V0_3_0_TraNccChuyenKho`: cột `Receiver`, `LinkedDocumentId` (phiếu nhập gốc của phiếu trả) ở `InventoryDocument`,
+  `SourceLineId` ở `InventoryDocumentLine`. `Down()` xóa ba cột – mất người nhận và liên kết phiếu trả ↔ phiếu nhập.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

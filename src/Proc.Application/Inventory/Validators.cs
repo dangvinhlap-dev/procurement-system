@@ -41,3 +41,45 @@ public sealed class SaveReceiptRequestValidator : AbstractValidator<SaveReceiptR
         });
     }
 }
+
+/// <summary>Kiểm tra lưu phiếu xuất trả NCC.</summary>
+public sealed class SaveReturnRequestValidator : AbstractValidator<SaveReturnRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveReturnRequestValidator()
+    {
+        RuleFor(x => x.SourceDocumentId).NotEmpty().WithMessage("Hãy chọn phiếu nhập gốc.");
+        RuleFor(x => x.InvoiceNo).MaximumLength(50);
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+            .Must(l => l.Count <= SaveReceiptRequestValidator.MaxLines).WithMessage($"Mỗi phiếu tối đa {SaveReceiptRequestValidator.MaxLines} dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.SourceLineId).NotEmpty().WithMessage("Dòng hàng chưa chọn dòng của phiếu nhập gốc.");
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}
+
+/// <summary>Kiểm tra lưu phiếu chuyển kho.</summary>
+public sealed class SaveTransferRequestValidator : AbstractValidator<SaveTransferRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveTransferRequestValidator()
+    {
+        RuleFor(x => x.FromWarehouseId).NotEmpty().WithMessage("Hãy chọn kho xuất.");
+        RuleFor(x => x.ToWarehouseId).NotEmpty().WithMessage("Hãy chọn kho nhập.");
+        RuleFor(x => x.Deliverer).MaximumLength(200);
+        RuleFor(x => x.Receiver).MaximumLength(200);
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+            .Must(l => l.Count <= SaveReceiptRequestValidator.MaxLines).WithMessage($"Mỗi phiếu tối đa {SaveReceiptRequestValidator.MaxLines} dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Dòng hàng chưa chọn mặt hàng.");
+            l.RuleFor(x => x.UomId).NotEmpty().WithMessage("Dòng hàng chưa chọn ĐVT.");
+            l.RuleFor(x => x.LotNo).MaximumLength(50);
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}

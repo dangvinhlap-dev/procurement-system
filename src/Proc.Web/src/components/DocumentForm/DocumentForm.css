@@ -127,6 +127,11 @@
   padding: 0 4px;
   color: var(--ant-color-text-secondary);
 }
+/* Ô chỉ đọc cảnh báo (ví dụ số lượng vượt tồn). */
+.line-grid-readonly.line-grid-warning {
+  color: var(--ant-color-error);
+  font-weight: 600;
+}
 .line-grid-add {
   margin-top: 4px;
 }

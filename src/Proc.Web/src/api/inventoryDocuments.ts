@@ -32,6 +32,10 @@ export interface InventoryDocumentListItem {
   totalAmount: number
   totalVat: number
   lineCount: number
+  /** Mã kho xuất (phiếu chuyển kho). */
+  fromWarehouseCode: string | null
+  /** Mã kho nhập (phiếu chuyển kho). */
+  toWarehouseCode: string | null
 }
 
 /** Kết quả tìm chứng từ. */
@@ -62,6 +66,8 @@ export interface InventoryLine {
   /** yyyy-MM-dd. */
   expiryDate: string | null
   note: string | null
+  /** Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập). */
+  sourceLineId: string | null
 }
 
 /** Chi tiết chứng từ kho. */
@@ -94,6 +100,11 @@ export interface InventoryDocument {
   canPost: boolean
   /** Bỏ ghi sổ được (đã ghi sổ, có quyền bỏ ghi sổ; kỳ còn mở kiểm tra khi bấm). */
   canUnpost: boolean
+  /** Người nhận (phiếu chuyển kho). */
+  receiver: string | null
+  /** Phiếu nhập gốc (phiếu trả NCC). */
+  linkedDocumentId: string | null
+  linkedDocumentNo: string | null
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -171,18 +182,25 @@ export function useInventoryDocument(id: string | null) {
   })
 }
 
-/** Lập, sửa phiếu nhập mua; hủy phiếu nháp; ghi sổ, bỏ ghi sổ. Xong thì tải lại danh sách và chi tiết chứng từ. */
-export function useGoodsReceiptMutations() {
+/**
+ * Lập, sửa một loại phiếu (qua endpoint riêng của loại đó); hủy phiếu nháp, ghi sổ, bỏ ghi sổ (endpoint chung).
+ * Xong thì tải lại danh sách và chi tiết chứng từ, tồn kho.
+ * @param endpoint Đường dẫn lập/sửa, ví dụ "/api/goods-receipts".
+ */
+export function useInventoryDocumentMutations<TInput>(endpoint: string) {
   const queryClient = useQueryClient()
-  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+    void queryClient.invalidateQueries({ queryKey: ['stock'] })
+  }
   return {
     create: useMutation({
-      mutationFn: (input: SaveReceiptInput) => apiFetch<InventoryDocument>('/api/goods-receipts', { method: 'POST', body: input }),
+      mutationFn: (input: TInput) => apiFetch<InventoryDocument>(endpoint, { method: 'POST', body: input }),
       onSuccess,
     }),
     update: useMutation({
-      mutationFn: ({ id, input }: { id: string; input: SaveReceiptInput }) =>
-        apiFetch<InventoryDocument>(`/api/goods-receipts/${id}`, { method: 'PUT', body: input }),
+      mutationFn: ({ id, input }: { id: string; input: TInput }) =>
+        apiFetch<InventoryDocument>(`${endpoint}/${id}`, { method: 'PUT', body: input }),
       onSuccess,
     }),
     cancel: useMutation({
@@ -198,6 +216,112 @@ export function useGoodsReceiptMutations() {
       onSuccess,
     }),
   }
+}
+
+/** Lập, sửa, ghi sổ phiếu nhập mua NCC. */
+export const useGoodsReceiptMutations = () => useInventoryDocumentMutations<SaveReceiptInput>('/api/goods-receipts')
+
+/** Một dòng trả NCC gửi lên khi lưu. */
+export interface SaveReturnLineInput {
+  id: string | null
+  sourceLineId: string
+  qty: number
+  note: string | null
+}
+
+/** Nội dung phiếu xuất trả NCC gửi lên khi lưu. */
+export interface SaveReturnInput {
+  date: string
+  sourceDocumentId: string
+  invoiceNo: string | null
+  note: string | null
+  lines: SaveReturnLineInput[]
+}
+
+/** Lập, sửa, ghi sổ phiếu xuất trả NCC. */
+export const useGoodsReturnMutations = () => useInventoryDocumentMutations<SaveReturnInput>('/api/goods-returns')
+
+/** Một dòng chuyển kho gửi lên khi lưu. */
+export interface SaveTransferLineInput {
+  id: string | null
+  itemId: string
+  uomId: string
+  qty: number
+  lotNo: string | null
+  note: string | null
+}
+
+/** Nội dung phiếu chuyển kho gửi lên khi lưu. */
+export interface SaveTransferInput {
+  date: string
+  fromWarehouseId: string
+  toWarehouseId: string
+  deliverer: string | null
+  receiver: string | null
+  note: string | null
+  lines: SaveTransferLineInput[]
+}
+
+/** Lập, sửa, ghi sổ phiếu chuyển kho. */
+export const useStockTransferMutations = () => useInventoryDocumentMutations<SaveTransferInput>('/api/stock-transfers')
+
+/** Một dòng phiếu nhập còn trả được. */
+export interface ReturnableLine {
+  sourceLineId: string
+  lineNo: number
+  itemId: string
+  itemCode: string
+  itemName: string
+  uomId: string
+  uomCode: string
+  lotNo: string | null
+  unitPrice: number
+  vatCode: string | null
+  receivedQty: number
+  returnedQty: number
+  remainingQty: number
+}
+
+/**
+ * Các dòng của phiếu nhập kèm số còn trả được.
+ * @param receiptId Phiếu nhập gốc; null thì không tải.
+ * @param excludeDocumentId Phiếu trả đang sửa (không tính vào số đã trả).
+ */
+export function useReturnableLines(receiptId: string | null, excludeDocumentId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['inventory-documents', companyId, 'returnable', receiptId ?? '', excludeDocumentId ?? ''],
+    queryFn: () =>
+      apiFetch<ReturnableLine[]>(
+        `/api/goods-receipts/${receiptId}/returnable${excludeDocumentId ? `?excludeDocumentId=${excludeDocumentId}` : ''}`,
+      ),
+    enabled: receiptId !== null,
+  })
+}
+
+/** Tồn tức thời một mặt hàng (một lô) tại một kho, theo ĐVT cơ sở. */
+export interface StockAvailability {
+  itemId: string
+  lotNo: string | null
+  qty: number
+}
+
+/**
+ * Tồn khả dụng của các mặt hàng tại một kho – hiện trên dòng phiếu xuất/chuyển.
+ * @param warehouseId Kho; undefined thì không tải.
+ * @param itemIds Mặt hàng trên phiếu.
+ */
+export function useAvailableStock(warehouseId: string | undefined, itemIds: string[]) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({ warehouseId: warehouseId ?? '' })
+  for (const id of [...new Set(itemIds)].sort()) params.append('itemIds', id)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['stock', companyId, 'available', query],
+    queryFn: () => apiFetch<StockAvailability[]>(`/api/stock-on-hand/available?${query}`),
+    enabled: !!warehouseId && itemIds.length > 0,
+    placeholderData: keepPreviousData,
+  })
 }
 
 /**

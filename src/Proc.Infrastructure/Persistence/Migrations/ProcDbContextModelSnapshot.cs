@@ -191,6 +191,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid?>("LinkedDocumentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("No")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -208,6 +211,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("PostedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Receiver")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -233,6 +240,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LinkedDocumentId");
 
                     b.HasIndex("PeriodId");
 
@@ -287,6 +296,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<Guid?>("SourceLineId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(19, 6)
                         .HasColumnType("numeric(19,6)");
@@ -309,6 +321,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ItemId");
+
+                    b.HasIndex("SourceLineId");
 
                     b.HasIndex("UomId");
 
@@ -1508,6 +1522,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Proc.Domain.Inventory.InventoryDocument", null)
+                        .WithMany()
+                        .HasForeignKey("LinkedDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Inventory.InventoryPeriod", null)
                         .WithMany()
                         .HasForeignKey("PeriodId")
@@ -1544,6 +1563,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Inventory.InventoryDocumentLine", null)
+                        .WithMany()
+                        .HasForeignKey("SourceLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.MasterData.Uom", null)
                         .WithMany()
