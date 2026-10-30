@@ -5,6 +5,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+## [0.5.0] - 2026-10-30
+
 ### Thêm mới
 - Màn hình Hệ thống → Công ty (COMP) và Hệ thống → Kho (WH) theo khuôn danh sách + ngăn kéo chi tiết (design.md mục 5.1, 5.6):
   thêm công ty kèm kho tổng ở tổng công ty, người thêm được gán vào công ty mới; sửa thông tin, mã số thuế, ngày bắt đầu,
@@ -66,6 +68,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Sửa lỗi
 - Ngăn kéo chi tiết không đóng bằng Esc khi vừa chọn xong một mục trong ô chọn (danh sách thả xuống còn đang ẩn dần).
 - Build còn 41 cảnh báo thiếu ghi chú XML ở danh mục quyền (`Permissions.cs`); nay build không còn cảnh báo.
+- Bỏ ký tự BOM ở đầu `db/scripts/0.1.0.sql` – `psql` báo lỗi cú pháp ở dòng đầu khi chạy file có BOM.
 
 ### Thay đổi CSDL
 - Migration `V0_2_0_CongTyKho`: chỉ mục duy nhất mã số thuế công ty (bỏ qua công ty chưa có mã số thuế).
@@ -88,7 +91,22 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   bảng giá nội bộ và công ty đối ứng trên phiếu bán/nhập nội bộ.
 
 ### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước khi nâng cấp** (bản này có 10 migration mới, từ `V0_2_0_CongTyKho` đến `V0_5_0_MuaBanNoiBo`):
+  `pg_dump -h localhost -U proc -F c -f procurement_truoc_0.5.0.dump procurement`.
+- Môi trường Development tự áp migration khi chạy API (`MigrateOnStartup: true`). Môi trường chạy thật
+  (`MigrateOnStartup: false`) chạy script: `$env:PGCLIENTENCODING='UTF8'; psql -h <máy> -U <user> -d procurement -v ON_ERROR_STOP=1 -f db\scripts\0.5.0.sql`
+  (script `--idempotent`, chạy lại không lỗi; phải đặt bảng mã UTF8 vì `psql` trên Windows mặc định WIN1252).
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.
+- Sau khi nâng cấp: tạo lịch kỳ kho và mở kỳ tháng (Hệ thống → Kỳ kho) cho từng công ty trước khi ghi sổ chứng từ kho; khai báo
+  bảng giá nội bộ (Giá và NCC → Bảng giá nội bộ) trước khi lập phiếu xuất bán nội bộ.
+- Vai trò có quyền mới cần gán lại cho người dùng nếu muốn dùng: `Inventory.Period.Open/Close/Reopen`, `Inventory.Stock.View`,
+  `Report.Stock.View`, `Pricing.PriceList.View/Manage`.
+
+### Cách quay lại bản trước
+- Code: không xóa lịch sử; tạo nhánh từ tag `git switch -c rollback/v0.1.0 v0.1.0`, build và chạy.
+- CSDL (chỉ khi đã sao lưu): `dotnet ef database update V0_1_0_DanhSoChungTu -p src\Proc.Infrastructure -s src\Proc.Api`.
+  **Mất dữ liệu**: toàn bộ hàng hóa, NCC, kỳ kho, chứng từ kho, sổ kho, tồn kho, số dư, giá vốn kỳ, bảng giá nội bộ (các bảng thêm
+  từ 0.2.0 đến 0.5.0). Muốn giữ dữ liệu thì khôi phục bản sao lưu: `pg_restore -h localhost -U proc -d procurement --clean procurement_truoc_0.5.0.dump`.
 
 ## [0.1.0] - 2026-10-30
 

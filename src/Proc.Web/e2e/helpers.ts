@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 
 /** Tài khoản quản trị tạo sẵn ở môi trường Testing/Development (appsettings.*.json, mục Seed). */
 export const ADMIN = { userName: 'admin', password: 'Admin@2026', fullName: 'Quản trị hệ thống' }
@@ -36,4 +37,14 @@ export async function loginViaApi(page: Page, user: TestUser = ADMIN): Promise<v
     },
     [SESSION_KEY, session],
   )
+}
+
+/**
+ * Số phiên bản đang phát hành, đọc từ Directory.Build.props (nơi duy nhất ghi phiên bản – CLAUDE.md mục 8), để test không phải
+ * sửa mỗi lần phát hành.
+ * @returns Ví dụ "0.5.0".
+ */
+export function appVersion(): string {
+  const props = readFileSync(new URL('../../../Directory.Build.props', import.meta.url), 'utf8')
+  return /<Version>\s*([^<\s]+)\s*<\/Version>/.exec(props)![1]
 }

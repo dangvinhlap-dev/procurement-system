@@ -16,6 +16,8 @@ namespace Proc.Application.Inventory;
 /// <param name="LineCount">Số dòng.</param>
 /// <param name="FromWarehouseCode">Mã kho xuất (phiếu chuyển kho; phiếu trả NCC thì trùng kho ở cột Kho).</param>
 /// <param name="ToWarehouseCode">Mã kho nhập (phiếu chuyển kho).</param>
+/// <param name="CounterCompanyCode">Mã công ty đối ứng (phiếu bán/nhập nội bộ).</param>
+/// <param name="ReceiveStatus">Trạng thái nhận hàng bán nội bộ (Pending, Full, Short); hiện chưa tính ở danh sách.</param>
 public sealed record InventoryDocumentListItemDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, string? WarehouseCode, string? WarehouseName,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, decimal TotalAmount, decimal TotalVat, int LineCount,
@@ -54,6 +56,7 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập).</param>
+/// <param name="SentQty">SL gửi theo dòng phiếu xuất bán (chỉ phiếu nhập mua nội bộ).</param>
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
@@ -89,6 +92,10 @@ public sealed record InventoryLineDto(
 /// <param name="Receiver">Người nhận (phiếu chuyển kho).</param>
 /// <param name="LinkedDocumentId">Chứng từ liên kết (phiếu trả: phiếu nhập gốc).</param>
 /// <param name="LinkedDocumentNo">Số chứng từ liên kết.</param>
+/// <param name="CounterCompanyId">Công ty đối ứng (ICS: công ty mua; ICR: công ty bán).</param>
+/// <param name="CounterCompanyCode">Mã công ty đối ứng.</param>
+/// <param name="CounterCompanyName">Tên công ty đối ứng.</param>
+/// <param name="ReceiveStatus">Trạng thái nhận hàng bán nội bộ: Pending (chờ nhận), Full (đã nhận đủ), Short (nhận thiếu).</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
@@ -201,6 +208,15 @@ public sealed record ConfirmIntercompanyReceiptRequest(DateOnly Date, string? No
 
 /// <summary>Một phiếu bán nội bộ đang là hàng đi đường (đã xuất, bên mua chưa xác nhận).</summary>
 /// <param name="Direction">Out = công ty đang làm việc bán ra; In = công ty khác bán cho công ty đang làm việc.</param>
+/// <param name="SaleId">Phiếu xuất bán.</param>
+/// <param name="SaleNo">Số phiếu xuất bán.</param>
+/// <param name="SaleDate">Ngày xuất.</param>
+/// <param name="SellerCode">Mã công ty bán.</param>
+/// <param name="BuyerCode">Mã công ty mua.</param>
+/// <param name="ReceiptId">Phiếu nhập mua nội bộ chờ nhận (nếu có).</param>
+/// <param name="ReceiptNo">Số phiếu nhập chờ nhận.</param>
+/// <param name="TotalAmount">Tiền hàng trước VAT.</param>
+/// <param name="TotalVat">Tiền VAT.</param>
 public sealed record GoodsInTransitDto(
     string Direction, Guid SaleId, string SaleNo, DateOnly SaleDate, string SellerCode, string BuyerCode, Guid? ReceiptId, string? ReceiptNo,
     decimal TotalAmount, decimal TotalVat);
