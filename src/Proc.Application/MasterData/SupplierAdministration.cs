@@ -124,6 +124,13 @@ public sealed record SaveSupplierRequest(
     string? StatusNote, Guid? InternalCompanyId, IReadOnlyList<SupplierContactDto> Contacts,
     IReadOnlyList<SupplierBankAccountDto> BankAccounts);
 
+/// <summary>NCC cho ô chọn NCC trên chứng từ.</summary>
+/// <param name="Id">Id.</param>
+/// <param name="Code">Mã NCC.</param>
+/// <param name="Name">Tên NCC.</param>
+/// <param name="TaxCode">Mã số thuế.</param>
+public sealed record SupplierLookupDto(Guid Id, string Code, string Name, string? TaxCode);
+
 /// <summary>
 /// Quản lý nhóm NCC (design.md mục 5.3, 5.8). Danh mục dùng chung: thêm, sửa ở tổng công ty.
 /// </summary>
@@ -163,6 +170,14 @@ public interface ISupplierAdministration
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Tối đa <see cref="SupplierListResult.Limit"/> dòng theo mã.</returns>
     Task<SupplierListResult> SearchAsync(SupplierQuery query, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// NCC chọn được trên chứng từ mua/nhập của công ty đang làm việc: đã duyệt và đang áp dụng tại công ty (design.md mục 6.1, 5.9).
+    /// </summary>
+    /// <param name="ids">Thêm các NCC theo Id dù không còn thỏa điều kiện (hiển thị lại phiếu cũ).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Theo mã NCC.</returns>
+    Task<IReadOnlyList<SupplierLookupDto>> LookupForPurchaseAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken);
 
     /// <summary>Chi tiết NCC.</summary>
     /// <param name="id">Id.</param>

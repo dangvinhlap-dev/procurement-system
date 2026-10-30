@@ -1,0 +1,153 @@
+/* Khuôn chứng từ kiểu Windows (ui-guide.md mục DocumentForm); mọi màu lấy từ biến token của antd. */
+
+.document-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  height: 100%;
+  overflow: auto;
+}
+
+.document-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+.document-form-actions .ant-btn-primary {
+  font-weight: 600;
+}
+
+.document-form-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.document-form-title h2 {
+  margin: 0;
+  font-size: var(--ant-font-size-heading-4);
+  font-weight: 700;
+}
+.document-form-number {
+  font-weight: 600;
+  color: var(--ant-color-primary);
+}
+.document-form-meta {
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+.document-form-alert {
+  margin: 0;
+}
+
+/* Đầu phiếu: khung fieldset kiểu Windows, lưới 3 cột. */
+.document-form-header {
+  border: 1px solid var(--ant-color-border-secondary);
+  padding: 4px 10px 0;
+  margin: 0;
+}
+.document-form-header > legend {
+  width: auto;
+  padding: 0 4px;
+  margin: 0;
+  border: none;
+  font-size: var(--ant-font-size);
+  font-weight: 600;
+}
+.document-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.document-form-grid .ant-form-item {
+  margin-bottom: 6px;
+}
+.document-form-grid .document-form-wide {
+  grid-column: 1 / -1;
+}
+
+.document-form-tabs > .ant-tabs-nav {
+  margin-bottom: 0;
+}
+.document-form-tabs > .ant-tabs-content-holder {
+  border: 1px solid var(--ant-color-border);
+  border-top: none;
+  padding: 6px;
+  background: var(--ant-color-bg-container);
+}
+
+/* Lưới dòng nhập như Excel: ô không viền, kẻ ô mảnh, dòng 26px. */
+.line-grid {
+  overflow-x: auto;
+}
+.line-grid table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 100%;
+}
+.line-grid th {
+  background: var(--ant-color-fill-alter);
+  border: 1px solid var(--ant-color-border-secondary);
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: var(--ant-font-size-sm);
+  white-space: nowrap;
+}
+.line-grid td {
+  border: 1px solid var(--ant-color-border-secondary);
+  padding: 0 2px;
+  height: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.line-grid tbody tr:nth-child(even) {
+  background: var(--ant-color-fill-quaternary);
+}
+.line-grid td .ant-form-item {
+  margin: 0;
+}
+.line-grid td:focus-within {
+  outline: 2px solid var(--ant-color-primary);
+  outline-offset: -2px;
+}
+.line-grid-stt {
+  text-align: center;
+  color: var(--ant-color-text-secondary);
+}
+.line-grid-empty {
+  text-align: center;
+  color: var(--ant-color-text-secondary);
+  padding: 8px !important;
+}
+.line-grid-readonly {
+  padding: 0 4px;
+  color: var(--ant-color-text-secondary);
+}
+.line-grid-add {
+  margin-top: 4px;
+}
+
+/* Chân phiếu: các ô tổng căn phải. */
+.document-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  padding: 6px 4px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+.document-total {
+  display: flex;
+  gap: 8px;
+}
+.document-total-value {
+  min-width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.document-total-strong {
+  font-weight: 700;
+}

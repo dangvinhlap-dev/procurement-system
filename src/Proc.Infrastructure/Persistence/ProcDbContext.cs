@@ -103,6 +103,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Kỳ kho (lọc theo công ty).</summary>
     public DbSet<InventoryPeriod> InventoryPeriods => Set<InventoryPeriod>();
 
+    /// <summary>Chứng từ kho (lọc theo công ty và kho được phép).</summary>
+    public DbSet<InventoryDocument> InventoryDocuments => Set<InventoryDocument>();
+
+    /// <summary>Dòng chứng từ kho (theo chứng từ thấy được).</summary>
+    public DbSet<InventoryDocumentLine> InventoryDocumentLines => Set<InventoryDocumentLine>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 
@@ -167,6 +173,15 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         // Hàng hóa theo nhóm hàng của nó: người chỉ được nhóm Vật tư không thấy mã hàng nhóm khác (design.md mục 9.2).
         modelBuilder.Entity<Item>().HasQueryFilter(
             ItemCategoryFilter, i => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(i.CategoryId));
+        // Chứng từ kho theo kho được phép: thủ kho chỉ được kho KP1 thì chỉ thấy phiếu nhập/xuất của KP1 (design.md mục 9.2).
+        modelBuilder.Entity<InventoryDocument>().HasQueryFilter(
+            WarehouseFilter,
+            d => ScopeAllWarehouses
+                 || (d.ToWarehouseId != null && ScopeWarehouseIds.Contains(d.ToWarehouseId.Value))
+                 || (d.FromWarehouseId != null && ScopeWarehouseIds.Contains(d.FromWarehouseId.Value)));
+        // Dòng đi theo chứng từ: chỉ thấy dòng của chứng từ thấy được (công ty, kho).
+        modelBuilder.Entity<InventoryDocumentLine>().HasQueryFilter(
+            CompanyFilter, l => InventoryDocuments.Any(d => d.Id == l.DocumentId));
         // NCC – sản phẩm theo phạm vi của mặt hàng: Items đã có filter nhóm hàng, nên chỉ thấy dòng của hàng mình được xem.
         modelBuilder.Entity<SupplierItem>().HasQueryFilter(
             ItemCategoryFilter, si => ScopeAllItemCategories || Items.Any(i => i.Id == si.ItemId));

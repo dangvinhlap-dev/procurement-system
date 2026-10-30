@@ -75,6 +75,43 @@ public sealed class ItemAdministration : IItemAdministration
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ItemLookupDto>> LookupAsync(
+        string? search, bool inventoryOnly, IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        var words = SearchText.Normalize(search).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var found = new List<Item>();
+        if (words.Length > 0)
+        {
+            var items = _db.Items.AsNoTracking().Where(i => i.IsActive);
+            if (inventoryOnly) items = items.Where(i => i.Type == ItemType.Inventory);
+            foreach (var word in words)
+            {
+                var pattern = LikePatterns.Contains(word);
+                items = items.Where(i => EF.Functions.Like(i.SearchText, pattern, LikePatterns.Escape));
+            }
+
+            found = await items.OrderBy(i => i.Code).Take(50).ToListAsync(cancellationToken);
+        }
+
+        if (ids.Count > 0)
+        {
+            var known = found.Select(i => i.Id).ToHashSet();
+            var missing = ids.Where(id => !known.Contains(id)).Distinct().ToList();
+            found.AddRange(await _db.Items.AsNoTracking().Where(i => missing.Contains(i.Id)).ToListAsync(cancellationToken));
+        }
+
+        var uomIds = found.SelectMany(i => i.Conversions.Select(c => c.UomId).Append(i.BaseUomId)).Distinct().ToList();
+        var codes = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
+        return found
+            .Select(i => new ItemLookupDto(
+                i.Id, i.Code, i.Name, i.Type.ToString(), i.BaseUomId, i.VatCode, i.TrackLot, i.TrackExpiry,
+                [new ItemUomOptionDto(i.BaseUomId, codes[i.BaseUomId], 1m),
+                 .. i.Conversions.OrderBy(c => c.Factor).Select(c => new ItemUomOptionDto(c.UomId, codes[c.UomId], c.Factor))]))
+            .ToList();
+    }
+
+    /// <inheritdoc />
     public async Task<ItemDetailDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var canEdit = _scope.HasPermission(Permissions.MasterData.ItemManage)

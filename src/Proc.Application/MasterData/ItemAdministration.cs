@@ -118,6 +118,26 @@ public sealed record UpdateItemRequest(
     bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, IReadOnlyList<ItemUomConversionInput> Conversions,
     bool IsActive);
 
+/// <summary>Một ĐVT chọn được trên dòng chứng từ.</summary>
+/// <param name="UomId">ĐVT.</param>
+/// <param name="Code">Mã ĐVT.</param>
+/// <param name="Factor">Số ĐVT cơ sở trong 1 ĐVT này (ĐVT cơ sở = 1).</param>
+public sealed record ItemUomOptionDto(Guid UomId, string Code, decimal Factor);
+
+/// <summary>Mặt hàng cho ô chọn hàng trên chứng từ: đủ thông tin để điền dòng mà không phải gọi thêm API.</summary>
+/// <param name="Id">Id.</param>
+/// <param name="Code">Mã hàng.</param>
+/// <param name="Name">Tên hàng.</param>
+/// <param name="Type">Loại hàng.</param>
+/// <param name="BaseUomId">ĐVT cơ sở.</param>
+/// <param name="VatCode">Thuế suất mặc định.</param>
+/// <param name="TrackLot">Quản lý lô.</param>
+/// <param name="TrackExpiry">Quản lý hạn dùng.</param>
+/// <param name="Uoms">ĐVT chọn được: ĐVT cơ sở trước, rồi ĐVT quy đổi.</param>
+public sealed record ItemLookupDto(
+    Guid Id, string Code, string Name, string Type, Guid BaseUomId, string? VatCode, bool TrackLot, bool TrackExpiry,
+    IReadOnlyList<ItemUomOptionDto> Uoms);
+
 /// <summary>
 /// Quản lý hàng hóa – dịch vụ dùng chung (design.md mục 5.2, 5.7). Chỉ thấy hàng thuộc nhóm hàng trong phạm vi
 /// (global query filter); thêm, sửa khi làm việc ở tổng công ty.
@@ -129,6 +149,16 @@ public interface IItemAdministration
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Tối đa <see cref="ItemListResult.Limit"/> dòng theo mã.</returns>
     Task<ItemListResult> SearchAsync(ItemQuery query, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tìm hàng đang dùng cho ô chọn hàng trên chứng từ (tối đa 50 dòng), theo mã/tên/mã vạch có dấu hay không dấu.
+    /// </summary>
+    /// <param name="search">Từ khóa; trống thì trả rỗng.</param>
+    /// <param name="inventoryOnly">Chỉ hàng tồn kho (chứng từ kho).</param>
+    /// <param name="ids">Thêm các mặt hàng theo Id (để hiển thị lại dòng đã chọn).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Mặt hàng kèm ĐVT chọn được.</returns>
+    Task<IReadOnlyList<ItemLookupDto>> LookupAsync(string? search, bool inventoryOnly, IReadOnlyList<Guid> ids, CancellationToken cancellationToken);
 
     /// <summary>Chi tiết hàng hóa.</summary>
     /// <param name="id">Id.</param>

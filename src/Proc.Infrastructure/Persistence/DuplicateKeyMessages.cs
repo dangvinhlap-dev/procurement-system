@@ -20,6 +20,7 @@ public static class DuplicateKeyMessages
         ["IX_Uom_Code"] = "Mã đơn vị tính đã có.",
         ["IX_Item_Code"] = "Mã hàng đã có (có thể thuộc nhóm hàng bạn không được xem).",
         ["IX_Role_Code"] = "Mã vai trò đã có.",
+        ["IX_InventoryDocument_CompanyId_DocType_No"] = "Số chứng từ đã có. Kiểm tra cấu hình đánh số chứng từ.",
         ["IX_SupplierGroup_Code"] = "Mã nhóm NCC đã có.",
         ["IX_Supplier_Code"] = "Mã NCC đã có.",
         ["IX_Supplier_TaxCode"] = "Mã số thuế đã dùng cho NCC khác.",

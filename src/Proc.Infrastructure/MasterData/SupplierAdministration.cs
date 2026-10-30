@@ -151,6 +151,19 @@ public sealed class SupplierAdministration : ISupplierAdministration
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<SupplierLookupDto>> LookupForPurchaseAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        // SupplierCompanies tự lọc theo công ty đang làm việc.
+        return await _db.Suppliers.AsNoTracking()
+            .Where(s => ids.Contains(s.Id)
+                        || (s.Status == SupplierStatus.Approved && _db.SupplierCompanies.Any(sc => sc.SupplierId == s.Id && sc.IsActive)))
+            .OrderBy(s => s.Code)
+            .Select(s => new SupplierLookupDto(s.Id, s.Code, s.Name, s.TaxCode))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<SupplierDetailDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var canEdit = _scope.HasPermission(Permissions.MasterData.SupplierManage)
