@@ -112,6 +112,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 app.MapAuthEndpoints();
 app.MapOrganizationEndpoints();
 app.MapMasterDataEndpoints();
+app.MapExcelEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();

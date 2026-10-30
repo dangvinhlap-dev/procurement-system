@@ -66,6 +66,7 @@ export function ItemListPage() {
       <ListPage
         title="Danh mục hàng hóa"
         exportFileName="hang-hoa"
+        excel={{ catalog: 'items', title: 'hàng hóa', canImport: canManage }}
         rows={items.data?.items ?? []}
         columns={columns}
         rowKey={(r) => r.id}

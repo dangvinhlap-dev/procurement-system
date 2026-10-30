@@ -43,6 +43,7 @@ export function UomListPage() {
       <ListPage
         title="Đơn vị tính"
         exportFileName="don-vi-tinh"
+        excel={{ catalog: 'uoms', title: 'đơn vị tính', canImport: canManage }}
         rows={uoms.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}

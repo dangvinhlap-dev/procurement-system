@@ -37,6 +37,7 @@ export function SupplierGroupListPage() {
       <ListPage
         title="Nhóm nhà cung cấp"
         exportFileName="nhom-ncc"
+        excel={{ catalog: 'supplier-groups', title: 'nhóm NCC', canImport: canManage }}
         rows={groups.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}

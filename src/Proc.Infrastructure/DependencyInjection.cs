@@ -6,11 +6,13 @@ using Proc.Application.Administration;
 using Proc.Application.Auth;
 using Proc.Application.Common;
 using Proc.Application.Documents;
+using Proc.Application.Excel;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Documents;
+using Proc.Infrastructure.Excel;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Logging;
 using Proc.Infrastructure.MasterData;
@@ -69,6 +71,14 @@ public static class DependencyInjection
         services.AddScoped<ISupplierGroupAdministration, SupplierGroupAdministration>();
         services.AddScoped<ISupplierAdministration, SupplierAdministration>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();
+        // Nhập/xuất Excel: mỗi danh mục một lớp; ExcelTransfer chọn theo mã danh mục.
+        services.AddScoped<ExcelCatalog, UomExcelCatalog>();
+        services.AddScoped<ExcelCatalog, ItemCategoryExcelCatalog>();
+        services.AddScoped<ExcelCatalog, ItemExcelCatalog>();
+        services.AddScoped<ExcelCatalog, SupplierGroupExcelCatalog>();
+        services.AddScoped<ExcelCatalog, SupplierExcelCatalog>();
+        services.AddScoped<IExcelTransfer>(sp => new ExcelTransfer(
+            sp.GetRequiredService<ProcDbContext>(), sp.GetRequiredService<ICurrentUserScope>(), sp.GetServices<ExcelCatalog>()));
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 
