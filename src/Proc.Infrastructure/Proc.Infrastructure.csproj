@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Proc.Application\Proc.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="ClosedXML" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />

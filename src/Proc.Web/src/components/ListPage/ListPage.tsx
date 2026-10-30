@@ -11,6 +11,8 @@ import { useId, useMemo, useState, type ReactNode } from 'react'
 import { matchesKeyword } from '../../utils/text'
 import { DataGrid } from '../DataGrid/DataGrid'
 import { cellText, type GridColumn } from '../DataGrid/types'
+import { apiDownload } from '../../api/client'
+import { ExcelImportDialog } from './ExcelImportDialog'
 import './ListPage.css'
 
 /** Thuộc tính của ListPage. */
@@ -39,6 +41,11 @@ export interface ListPageProps<T> {
   isMarked?: (row: T) => boolean
   /** Tên file khi xuất CSV (không gồm đuôi). */
   exportFileName: string
+  /**
+   * Danh mục hỗ trợ nhập/xuất Excel ở server (design.md mục 5.10): catalog là mã trên API /api/excel/{catalog},
+   * canImport = người dùng được nhập (có quyền quản lý, đúng công ty). Không truyền thì hai nút Excel chưa dùng được.
+   */
+  excel?: { catalog: string; title: string; canImport: boolean }
 }
 
 /**
@@ -76,8 +83,24 @@ export function ListPage<T>({
   onOpenRow,
   isMarked,
   exportFileName,
+  excel,
 }: ListPageProps<T>) {
   const { message } = App.useApp()
+  const [importing, setImporting] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  /** Xuất cả danh mục (trong phạm vi người dùng) ra Excel ở server – cùng định dạng file nhập để sửa rồi nhập lại. */
+  const exportExcel = async () => {
+    if (!excel) return
+    setExporting(true)
+    try {
+      await apiDownload(`/api/excel/${excel.catalog}`, `${exportFileName}.xlsx`)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không xuất được Excel.')
+    } finally {
+      setExporting(false)
+    }
+  }
   const [keyword, setKeyword] = useState('')
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
@@ -162,12 +185,14 @@ export function ListPage<T>({
         <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
           Xuất CSV
         </Button>
-        <Button type="text" icon={<FileExcelOutlined />} onClick={notYet}>
+        <Button type="text" icon={<FileExcelOutlined />} onClick={excel ? exportExcel : notYet} loading={exporting}>
           Xuất Excel
         </Button>
-        <Button type="text" icon={<UploadOutlined />} onClick={notYet}>
-          Nhập CSV / Excel
-        </Button>
+        {(!excel || excel.canImport) && (
+          <Button type="text" icon={<UploadOutlined />} onClick={excel ? () => setImporting(true) : notYet}>
+            Nhập Excel
+          </Button>
+        )}
       </div>
 
       <Tabs
@@ -249,6 +274,7 @@ export function ListPage<T>({
           <Empty className="list-page-empty" description="Chưa có nội dung – sẽ làm ở giai đoạn báo cáo." />
         )}
       </div>
+      {importing && excel && <ExcelImportDialog catalog={excel.catalog} title={excel.title} onClose={() => setImporting(false)} />}
     </div>
   )
 }

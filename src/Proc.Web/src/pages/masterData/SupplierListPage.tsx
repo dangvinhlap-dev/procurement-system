@@ -84,6 +84,7 @@ export function SupplierListPage() {
       <ListPage
         title="Danh mục nhà cung cấp"
         exportFileName="nha-cung-cap"
+        excel={{ catalog: 'suppliers', title: 'nhà cung cấp', canImport: canManage }}
         rows={suppliers.data?.items ?? []}
         columns={columns}
         rowKey={(r) => r.id}

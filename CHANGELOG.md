@@ -21,6 +21,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - NCC áp dụng cho công ty và NCC – sản phẩm (design.md mục 5.9): tab "Sản phẩm/dịch vụ" và "Áp dụng tại …" trong ngăn kéo NCC,
   tab "Nhà cung cấp" trong ngăn kéo hàng hóa; mỗi mặt hàng một NCC ưu tiên; danh sách NCC lọc "NCC công ty đang mua".
   API `/api/suppliers/{id}/company`, `/api/suppliers/{id}/items`, `/api/supplier-items/{id}`, `/api/items/{id}/suppliers`.
+- Nhập/xuất Excel (ClosedXML) cho đơn vị tính, nhóm hàng, hàng hóa, nhóm NCC, nhà cung cấp (design.md mục 5.10): nút
+  "Xuất Excel" và "Nhập Excel" trên danh sách; file mẫu có hướng dẫn; kiểm tra thử báo lỗi theo dòng, nhập thật chỉ lưu khi
+  không có lỗi. API `GET /api/excel/{danh-mục}`, `POST /api/excel/{danh-mục}/import?commit=`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ).
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
