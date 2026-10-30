@@ -146,6 +146,59 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("DocumentSequence", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Inventory.InventoryPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("InventoryPeriod", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryPeriod_Month", "\"Month\" BETWEEN 0 AND 12");
+                        });
+                });
+
             modelBuilder.Entity("Proc.Domain.MasterData.Item", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1151,6 +1204,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Proc.Domain.Documents.DocumentSequence", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Inventory.InventoryPeriod", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
                         .WithMany()

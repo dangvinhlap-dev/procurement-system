@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Proc.Application.Common;
+using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
@@ -140,6 +141,12 @@ public sealed class SeedOptions
     /// <summary>Nhóm NCC mẫu (mã → tên), ví dụ TN → Trong nước.</summary>
     public Dictionary<string, string> DemoSupplierGroups { get; set; } = [];
 
+    /// <summary>
+    /// Tạo sẵn lịch kỳ kho năm hiện tại và mở kỳ tháng hiện tại cho mọi công ty (chỉ dev/test – để thử ghi sổ ngay);
+    /// chỉ làm với công ty chưa mở kỳ nào.
+    /// </summary>
+    public bool DemoOpenCurrentPeriod { get; set; }
+
     /// <summary>Vai trò mẫu.</summary>
     public List<SeedRole> DemoRoles { get; set; } = [];
 
@@ -275,6 +282,10 @@ internal sealed class DataSeeder
         var categories = await EnsureItemCategoriesAsync(ct);
         await EnsureUomsAsync(ct);
         await EnsureSupplierGroupsAsync(ct);
+        if (_seed.DemoOpenCurrentPeriod)
+        {
+            foreach (var company in companies) await EnsureCurrentPeriodAsync(company.Id, ct);
+        }
 
         var roles = new Dictionary<string, Role>(StringComparer.OrdinalIgnoreCase)
         {
@@ -344,6 +355,28 @@ internal sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
         WorkIn(null);
         return existing;
+    }
+
+    private async Task EnsureCurrentPeriodAsync(Guid companyId, CancellationToken ct)
+    {
+        WorkIn(companyId);
+        var today = _clock.TodayInVietnam();
+        var periods = await _db.InventoryPeriods.ToListAsync(ct);
+        if (periods.Any(p => p.Month > 0 && p.Status != PeriodStatus.NotOpened))
+        {
+            WorkIn(null);
+            return;
+        }
+
+        if (!periods.Any(p => p.Year == today.Year))
+        {
+            periods = [.. InventoryPeriod.CreateYear(companyId, today.Year)];
+            _db.InventoryPeriods.AddRange(periods);
+        }
+
+        periods.Single(p => p.Year == today.Year && p.Month == today.Month).Open();
+        await _db.SaveChangesAsync(ct);
+        WorkIn(null);
     }
 
     private async Task EnsureSupplierGroupsAsync(CancellationToken ct)

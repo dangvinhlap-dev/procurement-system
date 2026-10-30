@@ -36,3 +36,18 @@ public interface IClock
     /// <summary>Thời điểm hiện tại theo UTC (CSDL lưu UTC – CLAUDE.md mục 5).</summary>
     DateTimeOffset UtcNow { get; }
 }
+
+/// <summary>Ngày giờ theo múi giờ Việt Nam (CLAUDE.md mục 5: lưu UTC, ngày chứng từ theo giờ Việt Nam).</summary>
+public static class VietnamTime
+{
+    /// <summary>Múi giờ Asia/Ho_Chi_Minh (UTC+7, không đổi giờ mùa hè).</summary>
+    public static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+
+    /// <summary>
+    /// Hôm nay theo giờ Việt Nam – 0h–7h sáng ở Việt Nam vẫn là "hôm qua" theo UTC, nên không lấy ngày UTC.
+    /// </summary>
+    /// <param name="clock">Đồng hồ.</param>
+    /// <returns>Ngày hôm nay ở Việt Nam.</returns>
+    public static DateOnly TodayInVietnam(this IClock clock) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.UtcNow, Zone).DateTime);
+}

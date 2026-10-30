@@ -1,4 +1,5 @@
 using Proc.Api.Security;
+using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Domain.Organization;
 
@@ -9,8 +10,6 @@ namespace Proc.Api.Endpoints;
 /// </summary>
 public static class DocumentNumberingEndpoints
 {
-    private static readonly TimeZoneInfo Vietnam = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
-
     /// <summary>
     /// Khai báo các endpoint.
     /// </summary>
@@ -20,16 +19,13 @@ public static class DocumentNumberingEndpoints
     {
         var group = app.MapGroup("/api/document-numbering").WithTags("Đánh số chứng từ");
 
-        group.MapGet("/", (IDocumentNumberService s, CancellationToken ct) => s.ListAsync(Today(), ct))
+        group.MapGet("/", (IDocumentNumberService s, IClock clock, CancellationToken ct) => s.ListAsync(clock.TodayInVietnam(), ct))
             .RequirePermission(Permissions.System.ParameterView);
 
-        group.MapPut("/{docType}", (string docType, UpdateDocumentNumberingRequest request, IDocumentNumberService s, CancellationToken ct) =>
-                s.UpdateAsync(docType, request, Today(), ct))
+        group.MapPut("/{docType}", (string docType, UpdateDocumentNumberingRequest request, IDocumentNumberService s, IClock clock, CancellationToken ct) =>
+                s.UpdateAsync(docType, request, clock.TodayInVietnam(), ct))
             .RequirePermission(Permissions.System.ParameterManage);
 
         return app;
     }
-
-    /// <summary>Hôm nay theo giờ Việt Nam – kỳ đếm số theo ngày chứng từ ở Việt Nam (CLAUDE.md mục 5).</summary>
-    private static DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, Vietnam));
 }

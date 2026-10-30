@@ -12,6 +12,7 @@ import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
+import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
@@ -32,6 +33,7 @@ const implemented: Record<string, ReactNode> = {
   CAT: <ItemCategoryListPage />,
   UOM: <UomListPage />,
   COMP: <CompanyListPage />,
+  PER: <InventoryPeriodPage />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
