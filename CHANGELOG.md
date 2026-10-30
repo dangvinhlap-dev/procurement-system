@@ -31,6 +31,10 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Thay đổi
 - Thanh menu cập nhật danh sách công ty ngay sau khi thêm/sửa công ty (không phải đăng nhập lại).
 
+### Sửa lỗi
+- Ngăn kéo chi tiết không đóng bằng Esc khi vừa chọn xong một mục trong ô chọn (danh sách thả xuống còn đang ẩn dần).
+- Build còn 41 cảnh báo thiếu ghi chú XML ở danh mục quyền (`Permissions.cs`); nay build không còn cảnh báo.
+
 ### Thay đổi CSDL
 - Migration `V0_2_0_CongTyKho`: chỉ mục duy nhất mã số thuế công ty (bỏ qua công ty chưa có mã số thuế).
   `Down()` chỉ bỏ chỉ mục, không mất dữ liệu.
