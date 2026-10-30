@@ -53,6 +53,42 @@ public static class InventoryEndpoints
             .RequirePermission(Permissions.Inventory.DocumentCreate)
             .Validate<SaveReceiptRequest>();
 
+        receipts.MapGet("/{id:guid}/returnable", (Guid id, Guid? excludeDocumentId, IInventoryDocumentService s, CancellationToken ct) =>
+                s.GetReturnableLinesAsync(id, excludeDocumentId, ct))
+            .RequirePermission(Permissions.Inventory.DocumentView);
+
+        var returns = app.MapGroup("/api/goods-returns").WithTags("Chứng từ kho");
+        returns.MapPost("/", async (SaveReturnRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateReturnAsync(request, ct);
+                return Results.Created($"/api/inventory-documents/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveReturnRequest>();
+        returns.MapPut("/{id:guid}", (Guid id, SaveReturnRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.UpdateReturnAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveReturnRequest>();
+
+        var transfers = app.MapGroup("/api/stock-transfers").WithTags("Chứng từ kho");
+        transfers.MapPost("/", async (SaveTransferRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateTransferAsync(request, ct);
+                return Results.Created($"/api/inventory-documents/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveTransferRequest>();
+        transfers.MapPut("/{id:guid}", (Guid id, SaveTransferRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.UpdateTransferAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveTransferRequest>();
+
+        // Tồn khả dụng hiện trên dòng phiếu xuất/chuyển: người lập phiếu có quyền xem chứng từ kho là đủ.
+        app.MapGet("/api/stock-on-hand/available", (Guid warehouseId, Guid[]? itemIds, IInventoryDocumentService s, CancellationToken ct) =>
+                s.GetAvailableStockAsync(warehouseId, itemIds ?? [], ct))
+            .WithTags("Chứng từ kho")
+            .RequirePermission(Permissions.Inventory.DocumentView);
+
         return app;
     }
 }

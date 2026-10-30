@@ -12,8 +12,10 @@ import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
-import { GoodsReceiptListPage } from './pages/inventory/GoodsReceiptListPage'
 import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
+import { GoodsReturnPage } from './pages/inventory/GoodsReturnPage'
+import { InventoryDocumentListPage } from './pages/inventory/InventoryDocumentListPage'
+import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -36,7 +38,9 @@ const implemented: Record<string, ReactNode> = {
   UOM: <UomListPage />,
   COMP: <CompanyListPage />,
   PER: <InventoryPeriodPage />,
-  GRN: <GoodsReceiptListPage />,
+  GRN: <InventoryDocumentListPage docType="GRN" title="Phiếu nhập mua từ NCC (GRN)" path="/kho/grn" exportFileName="phieu-nhap-mua" />,
+  RTV: <InventoryDocumentListPage docType="RTV" title="Phiếu xuất trả hàng NCC (RTV)" path="/kho/rtv" exportFileName="phieu-tra-ncc" />,
+  TRF: <InventoryDocumentListPage docType="TRF" title="Phiếu chuyển kho nội bộ (TRF)" path="/kho/trf" exportFileName="phieu-chuyen-kho" />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
@@ -46,7 +50,11 @@ const implemented: Record<string, ReactNode> = {
 }
 
 /** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */
-const documentPages = [{ code: 'GRN', element: <GoodsReceiptPage /> }].map((d) => ({
+const documentPages = [
+  { code: 'GRN', element: <GoodsReceiptPage /> },
+  { code: 'RTV', element: <GoodsReturnPage /> },
+  { code: 'TRF', element: <StockTransferPage /> },
+].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,
 }))

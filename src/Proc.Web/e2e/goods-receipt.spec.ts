@@ -1,47 +1,12 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi } from './helpers.ts'
+import { expect, test } from '@playwright/test'
+import { loginViaApi } from './helpers.ts'
+import { api, chooseOption, openByCommand, pickOption, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Phiếu nhập mua từ NCC (design.md mục 10.1, 10.4) trên khuôn DocumentForm: lập phiếu nháp ở BHA, F2 thêm dòng, chọn hàng
  * bằng ô tìm kiếm, đổi ĐVT, thành tiền tính ngay, Ctrl+S lưu và cấp số; hủy phiếu nháp.
  * Mặt hàng và NCC tạo sẵn qua API (ở tổng công ty), NCC được áp dụng tại BHA.
  */
-
-const unique = (prefix: string) => `${prefix}${Date.now().toString(36).slice(-5)}${Math.floor(Math.random() * 100)}`.toUpperCase()
-
-async function api(request: APIRequestContext, companyCode?: string) {
-  const login = await request.post('/api/auth/login', { data: { userName: ADMIN.userName, password: ADMIN.password } })
-  const { accessToken, user } = (await login.json()) as {
-    accessToken: string
-    user: { defaultCompanyId: string; companies: { id: string; code: string }[] }
-  }
-  const companyId = companyCode ? user.companies.find((c) => c.code === companyCode)!.id : user.defaultCompanyId
-  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': companyId }
-  return {
-    get: async <T,>(url: string) => (await (await request.get(url, { headers })).json()) as T,
-    send: async <T,>(method: 'post' | 'put', url: string, data: unknown) => {
-      const response = await request[method](url, { headers, data })
-      expect(response.ok(), await response.text()).toBeTruthy()
-      return (await response.json()) as T
-    },
-  }
-}
-
-async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
-}
-
-async function switchCompany(page: Page, label: string) {
-  await page.getByTestId('menu-bar').locator('.app-company-select').click()
-  await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
-}
-
-/** Chọn mục trong danh sách thả xuống đang mở. */
-async function pickOption(page: Page, text: string) {
-  await page.locator('.ant-select-dropdown:visible').getByTitle(text, { exact: false }).first().click()
-}
 
 test('lập phiếu nhập mua nháp, tính tiền, lưu cấp số, hủy phiếu', async ({ page, request }) => {
   const head = await api(request)
@@ -73,8 +38,7 @@ test('lập phiếu nhập mua nháp, tính tiền, lưu cấp số, hủy phi�
   await expect(page).toHaveURL(/\/kho\/grn\/moi$/)
   await expect(page.getByText('(số phiếu tự cấp khi lưu)')).toBeVisible()
 
-  await page.getByLabel('Nhà cung cấp').click()
-  await pickOption(page, supplierCode)
+  await chooseOption(page, 'Nhà cung cấp', supplierCode)
   await page.getByLabel('Số hóa đơn').fill('0000456')
 
   // F2 thêm dòng; gõ mã để tìm hàng ở server.

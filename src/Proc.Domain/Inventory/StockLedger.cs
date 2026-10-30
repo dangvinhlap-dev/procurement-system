@@ -72,7 +72,53 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(line);
         var warehouseId = document.ToWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho nhập.");
-        return new StockLedgerEntry
+        return Create(document, line, warehouseId, 1, periodId, line.Amount, isCostFinal: true);
+    }
+
+    /// <summary>
+    /// Dòng xuất kho trả NCC theo giá nhập gốc đích danh (design.md mục 6.1): giá trị = thành tiền dòng trả (SL trả × đơn giá
+    /// của dòng nhập gốc). Giá trả NCC không đổi khi đóng kỳ nên là giá cuối cùng.
+    /// </summary>
+    /// <param name="document">Phiếu trả (có kho xuất).</param>
+    /// <param name="line">Dòng phiếu.</param>
+    /// <param name="periodId">Kỳ kho.</param>
+    /// <returns>Dòng sổ kho xuất.</returns>
+    /// <exception cref="BusinessRuleException">Khi phiếu không có kho xuất.</exception>
+    public static StockLedgerEntry Return(InventoryDocument document, InventoryDocumentLine line, Guid periodId)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(line);
+        var warehouseId = document.FromWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho xuất.");
+        return Create(document, line, warehouseId, -1, periodId, line.Amount, isCostFinal: true);
+    }
+
+    /// <summary>
+    /// Cặp dòng chuyển kho: xuất kho đi, nhập kho đến cùng một giá vốn tạm tính (design.md mục 6.1, 7.5). Giá trị =
+    /// SL cơ sở × đơn giá vốn tạm tính, làm tròn 2 chữ số; chưa phải giá cuối cùng – đóng kỳ tính lại theo giá vốn kỳ.
+    /// Ví dụ 48 hộp × 20.416,666667 = 980.000,00.
+    /// </summary>
+    /// <param name="document">Phiếu chuyển (có kho xuất, kho nhập).</param>
+    /// <param name="line">Dòng phiếu.</param>
+    /// <param name="periodId">Kỳ kho.</param>
+    /// <param name="unitCost">Đơn giá vốn tạm tính theo ĐVT cơ sở.</param>
+    /// <returns>Dòng xuất kho đi và dòng nhập kho đến.</returns>
+    /// <exception cref="BusinessRuleException">Khi phiếu thiếu kho.</exception>
+    public static (StockLedgerEntry Out, StockLedgerEntry In) Transfer(
+        InventoryDocument document, InventoryDocumentLine line, Guid periodId, decimal unitCost)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(line);
+        var from = document.FromWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho xuất.");
+        var to = document.ToWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho nhập.");
+        var cost = decimal.Round(unitCost, 6, MidpointRounding.AwayFromZero);
+        var amount = decimal.Round(line.BaseQty * cost, 2, MidpointRounding.AwayFromZero);
+        return (Create(document, line, from, -1, periodId, amount, false, cost), Create(document, line, to, 1, periodId, amount, false, cost));
+    }
+
+    private static StockLedgerEntry Create(
+        InventoryDocument document, InventoryDocumentLine line, Guid warehouseId, int direction, Guid periodId, decimal amount,
+        bool isCostFinal, decimal? unitCost = null) =>
+        new()
         {
             CompanyId = document.CompanyId,
             WarehouseId = warehouseId,
@@ -83,13 +129,12 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
             DocumentId = document.Id,
             DocumentLineId = line.Id,
             DocType = document.DocType,
-            Direction = 1,
+            Direction = direction,
             BaseQty = line.BaseQty,
-            UnitCost = decimal.Round(line.Amount / line.BaseQty, 6, MidpointRounding.AwayFromZero),
-            Amount = line.Amount,
-            IsCostFinal = true,
+            UnitCost = unitCost ?? decimal.Round(amount / line.BaseQty, 6, MidpointRounding.AwayFromZero),
+            Amount = amount,
+            IsCostFinal = isCostFinal,
         };
-    }
 }
 
 /// <summary>

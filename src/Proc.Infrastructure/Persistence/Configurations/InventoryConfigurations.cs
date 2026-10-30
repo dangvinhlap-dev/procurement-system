@@ -40,7 +40,10 @@ internal sealed class InventoryDocumentConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.InvoiceSeries).HasMaxLength(20);
         builder.Property(x => x.DeliveryNoteNo).HasMaxLength(50);
         builder.Property(x => x.Deliverer).HasMaxLength(200);
+        builder.Property(x => x.Receiver).HasMaxLength(200);
         builder.Property(x => x.Note).HasMaxLength(1000);
+        // Phiếu trả NCC trỏ về phiếu nhập gốc (design.md mục 10.5).
+        builder.HasOne<InventoryDocument>().WithMany().HasForeignKey(x => x.LinkedDocumentId).OnDelete(DeleteBehavior.Restrict);
         // Tiền numeric(19,2) – CLAUDE.md mục 4.
         builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
         builder.Property(x => x.TotalVat).HasPrecision(19, 2);
@@ -82,6 +85,8 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.Property(x => x.Note).HasMaxLength(500);
         builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+        // Dòng trả trỏ về dòng nhập gốc – tính số còn trả được.
+        builder.HasOne<InventoryDocumentLine>().WithMany().HasForeignKey(x => x.SourceLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

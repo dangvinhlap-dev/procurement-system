@@ -303,6 +303,19 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Danh sách, chi tiết chứng từ lọc theo **kho được phép** (filter trên kho nhập/kho xuất). Phiếu có mặt hàng ngoài phạm vi nhóm hàng của người xem: hiện "(ngoài phạm vi)", chỉ xem, không sửa được | Sửa phiếu là thay toàn bộ dòng – không để người bị giới hạn vô tình xóa dòng họ không thấy |
 | Ô chọn hàng, chọn NCC trên phiếu dùng API tra cứu riêng (`/api/items/lookup`, `/api/suppliers/lookup`) không đòi quyền xem danh mục | Thủ kho lập phiếu nhưng có thể không có quyền xem danh mục NCC |
 
+### 6.5 Phiếu trả NCC (RTV) và chuyển kho nội bộ (TRF) – giai đoạn 2
+
+| Quy tắc | Lý do |
+| --- | --- |
+| RTV bắt buộc tham chiếu **một phiếu nhập GRN đã ghi sổ** cùng công ty; kho xuất, NCC lấy theo phiếu nhập; ngày trả không trước ngày nhập | Mục 6.1, 10.5 |
+| Mỗi dòng RTV trỏ tới một dòng của phiếu nhập (`SourceLineId`), không trùng dòng; mặt hàng, ĐVT, lô, hạn dùng, đơn giá, thuế suất **chép từ dòng nhập**, người lập chỉ nhập số lượng | Giá xuất trả = giá nhập gốc (đích danh) |
+| SL trả ≤ **còn trả được** = SL nhập − tổng SL của các RTV **đã ghi sổ** khác trên cùng dòng nhập (phiếu nháp chưa giữ chỗ); kiểm tra khi lưu và kiểm tra lại khi ghi sổ | Hai phiếu nháp cùng trả một dòng: phiếu ghi sổ sau bị chặn |
+| Không bỏ ghi sổ được phiếu nhập khi còn RTV đã ghi sổ tham chiếu nó | Không để RTV trỏ tới phiếu nhập không còn trong sổ |
+| TRF: hai kho **khác nhau, cùng công ty**, đều trong phạm vi kho của người lập và đang dùng; dòng không có đơn giá, không VAT | Mục 4; liên công ty dùng ICS/ICR |
+| Ghi sổ TRF sinh hai dòng sổ mỗi dòng phiếu (−1 kho đi, +1 kho đến) theo **giá vốn tạm tính** = Σ giá trị tồn ÷ Σ SL tồn của mặt hàng trên **mọi kho của công ty** lúc ghi sổ (0 nếu tồn ≤ 0), đánh dấu chưa chốt (`IsCostFinal = false`), chốt khi đóng kỳ. Ví dụ tồn 10 cái giá trị 500.000 → giá tạm 50.000/cái | Mục 7.5; giá vốn tính theo công ty × mặt hàng nên tính trên mọi kho, kể cả kho ngoài phạm vi của người lập |
+| Bỏ ghi sổ đòi người dùng thấy **mọi kho** trên phiếu (TRF có hai kho) | Không cho trừ tồn ở kho mình không được phép |
+| Chưa làm ở giai đoạn 2: xác nhận nhận hàng, SL thực nhận của TRF (mục 10.6) | Làm cùng luồng duyệt |
+
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.
@@ -591,7 +604,7 @@ Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NC
   Bảng `Warehouse` có khóa (`Id`, `CompanyId`); kho cha của kho Sub và `UserWarehouseScope` trỏ tới khóa kép này, nên CSDL tự chặn ghép kho với công ty khác. Mỗi công ty tối đa một kho Main (chỉ mục duy nhất có điều kiện).
 - Khóa chính dùng `uuid` v7 (sắp xếp theo thời gian); số chứng từ là cột riêng, duy nhất theo (CompanyId, DocType, No).
 
-### 12.3 Ghi sổ và bỏ ghi sổ (đã làm cho phiếu nhập mua GRN)
+### 12.3 Ghi sổ và bỏ ghi sổ (đã làm cho GRN, RTV, TRF)
 
 | Quy tắc | Lý do |
 | --- | --- |
@@ -599,6 +612,7 @@ Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NC
 | Tồn tức thời cộng/trừ bằng **một câu SQL nguyên tử** (`INSERT … ON CONFLICT DO UPDATE … RETURNING`), khóa dòng tồn tới hết giao dịch; chỉ mục duy nhất công ty × kho × hàng × lô với `NULLS NOT DISTINCT` (hàng không theo lô cũng chỉ một dòng) | Ghi sổ đồng thời không mất số, kiểm tra tồn âm trên số đúng |
 | Tồn sau khi trừ < 0 và kho không bật "cho phép tồn âm" → báo lỗi, **hủy cả giao dịch** | CLAUDE.md mục 4 |
 | **Bỏ ghi sổ** (quyền `Inventory.Document.Unpost`) chỉ khi kỳ của phiếu còn **Đang mở**: xóa các dòng sổ kho của phiếu, trừ lại tồn (chặn nếu làm tồn âm), phiếu về Nháp; kỳ đã đóng thì lập chứng từ điều chỉnh | CLAUDE.md mục 4 |
+| RTV: mỗi dòng −1 tại kho xuất, đơn giá = giá nhập gốc, giá trị = thành tiền trước VAT, đã chốt. TRF: cặp dòng −1/+1 theo giá vốn tạm tính (mục 6.5), chưa chốt | Mục 6.1, 7.5 |
 | Sổ kho, tồn kho lọc theo công ty, kho được phép, nhóm hàng được phép | Mục 9.2 |
 
 ## 13. Lộ trình triển khai với Claude Code

@@ -15,7 +15,7 @@ namespace Proc.Infrastructure.Inventory;
 /// Chứng từ kho (design.md mục 6, 10.1, 10.4). Chứng từ, kho, mặt hàng đều đọc qua global query filter: kho ngoài phạm vi,
 /// hàng ngoài nhóm được phép như không tồn tại – người lập không thể đưa chúng vào phiếu.
 /// </summary>
-public sealed class InventoryDocumentService : IInventoryDocumentService
+public sealed partial class InventoryDocumentService : IInventoryDocumentService
 {
     /// <summary>Số phiếu tối đa mỗi lần tìm.</summary>
     public const int SearchLimit = 2000;
@@ -69,10 +69,15 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
                 from w in wh.DefaultIfEmpty()
                 join s in _db.Suppliers on d.SupplierId equals s.Id into sup
                 from s in sup.DefaultIfEmpty()
+                join wf in _db.Warehouses on d.FromWarehouseId equals wf.Id into whFrom
+                from wf in whFrom.DefaultIfEmpty()
+                join wt in _db.Warehouses on d.ToWarehouseId equals wt.Id into whTo
+                from wt in whTo.DefaultIfEmpty()
                 orderby d.Date descending, d.No descending
                 select new InventoryDocumentListItemDto(
                     d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), w == null ? null : w.Code, w == null ? null : w.Name,
-                    s == null ? null : s.Code, s == null ? null : s.Name, d.InvoiceNo, d.TotalAmount, d.TotalVat, d.Lines.Count))
+                    s == null ? null : s.Code, s == null ? null : s.Name, d.InvoiceNo, d.TotalAmount, d.TotalVat, d.Lines.Count,
+                    wf == null ? null : wf.Code, wt == null ? null : wt.Code))
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
         return new InventoryDocumentListResult(rows.Take(SearchLimit).ToList(), rows.Count > SearchLimit, SearchLimit);
@@ -138,27 +143,58 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
         var companyId = _scope.RequireCompany();
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
-        if (document.DocType != DocumentTypes.GoodsReceipt)
-            throw new BusinessRuleException($"Chưa hỗ trợ ghi sổ chứng từ loại {document.DocType}.");
         if (document.Status != DocumentStatus.Draft)
             throw new BusinessRuleException($"Phiếu {document.No} không ở trạng thái nháp nên không ghi sổ được.");
         await EnsureAllItemsVisibleAsync(document, cancellationToken);
-
-        // Kiểm tra lại lúc ghi sổ: từ lúc lưu nháp tới giờ NCC có thể bị tạm ngưng, kho ngừng dùng, mặt hàng ngừng dùng.
-        await CheckReceiptHeaderAsync(ToRequest(document), cancellationToken);
-        var periodId = await _periods.RequireOpenPeriodAsync(document.Date, cancellationToken);
         var itemIds = document.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
-        foreach (var line in document.Lines.Where(l => !items[l.ItemId].IsActive))
-            throw new BusinessRuleException($"Dòng {line.LineNo}: mặt hàng {items[line.ItemId].Code} đã ngừng dùng.");
 
-        var warehouse = await _db.Warehouses.AsNoTracking().SingleAsync(w => w.Id == document.ToWarehouseId, cancellationToken);
+        // Kiểm tra lại lúc ghi sổ: từ lúc lưu nháp tới giờ NCC có thể bị tạm ngưng, kho ngừng dùng, phiếu trả khác đã trả bớt…
+        switch (document.DocType)
+        {
+            case DocumentTypes.GoodsReceipt:
+                await CheckReceiptHeaderAsync(ToRequest(document), cancellationToken);
+                EnsureItemsActive(document, items);
+                break;
+            case DocumentTypes.ReturnToVendor:
+                await CheckReturnQuantitiesAsync(document, cancellationToken);
+                break;
+            case DocumentTypes.Transfer:
+                await CheckTransferWarehousesAsync(document.FromWarehouseId!.Value, document.ToWarehouseId!.Value, cancellationToken);
+                EnsureItemsActive(document, items);
+                break;
+            default:
+                throw new BusinessRuleException($"Chưa hỗ trợ ghi sổ chứng từ loại {document.DocType}.");
+        }
+
+        var periodId = await _periods.RequireOpenPeriodAsync(document.Date, cancellationToken);
+        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().ToList();
+        var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
+        // Giá vốn tạm tính của phiếu chuyển tính trước khi ghi các dòng sổ của chính phiếu này.
+        var costs = document.DocType == DocumentTypes.Transfer ? await ProvisionalCostsAsync(itemIds, cancellationToken) : [];
+
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         document.MarkPosted(periodId, _clock.UtcNow, _scope.UserId);
         foreach (var line in document.Lines)
         {
-            _db.StockLedger.Add(StockLedgerEntry.Receipt(document, line, periodId));
-            await ApplyStockAsync(companyId, warehouse, items[line.ItemId], line.LotNo, line.BaseQty, cancellationToken);
+            var item = items[line.ItemId];
+            switch (document.DocType)
+            {
+                case DocumentTypes.GoodsReceipt:
+                    _db.StockLedger.Add(StockLedgerEntry.Receipt(document, line, periodId));
+                    await ApplyStockAsync(companyId, warehouses[document.ToWarehouseId!.Value], item, line.LotNo, line.BaseQty, cancellationToken);
+                    break;
+                case DocumentTypes.ReturnToVendor:
+                    _db.StockLedger.Add(StockLedgerEntry.Return(document, line, periodId));
+                    await ApplyStockAsync(companyId, warehouses[document.FromWarehouseId!.Value], item, line.LotNo, -line.BaseQty, cancellationToken);
+                    break;
+                default:
+                    var (outEntry, inEntry) = StockLedgerEntry.Transfer(document, line, periodId, costs[item.Id]);
+                    _db.StockLedger.AddRange(outEntry, inEntry);
+                    await ApplyStockAsync(companyId, warehouses[document.FromWarehouseId!.Value], item, line.LotNo, -line.BaseQty, cancellationToken);
+                    await ApplyStockAsync(companyId, warehouses[document.ToWarehouseId!.Value], item, line.LotNo, line.BaseQty, cancellationToken);
+                    break;
+            }
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -179,10 +215,23 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
         var period = await _db.InventoryPeriods.AsNoTracking().SingleAsync(p => p.Id == document.PeriodId, cancellationToken);
         if (period.Status != PeriodStatus.Open)
             throw new BusinessRuleException($"Kỳ kho {period.Label} không còn mở nên không bỏ ghi sổ phiếu {document.No} được. Lập chứng từ điều chỉnh ở kỳ đang mở.");
+        // Phiếu nhập đã có phiếu trả ghi sổ: bỏ ghi sổ phiếu nhập thì phiếu trả treo không có hàng gốc – bỏ ghi sổ phiếu trả trước.
+        if (document.DocType == DocumentTypes.GoodsReceipt)
+        {
+            var returns = await _db.InventoryDocuments.AsNoTracking()
+                .Where(d => d.LinkedDocumentId == id && d.DocType == DocumentTypes.ReturnToVendor && d.Status == DocumentStatus.Posted)
+                .Select(d => d.No).ToListAsync(cancellationToken);
+            if (returns.Count > 0)
+                throw new BusinessRuleException($"Phiếu {document.No} đã có phiếu trả NCC ghi sổ: {string.Join(", ", returns)}. Bỏ ghi sổ phiếu trả trước.");
+        }
 
-        var entries = await _db.StockLedger.Where(x => x.DocumentId == id).ToListAsync(cancellationToken);
-        var warehouseIds = entries.Select(e => e.WarehouseId).Distinct().ToList();
+        // Phiếu chuyển kho hiện với người được một trong hai kho, nhưng sổ kho của kho kia bị filter che – bỏ ghi sổ khi đó chỉ
+        // đảo được một nửa. Bắt buộc thấy đủ mọi kho của phiếu.
+        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().ToList();
         var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
+        if (warehouses.Count < warehouseIds.Count)
+            throw new ForbiddenAccessException($"Phiếu {document.No} có kho ngoài phạm vi của bạn nên bạn không bỏ ghi sổ được.");
+        var entries = await _db.StockLedger.Where(x => x.DocumentId == id).ToListAsync(cancellationToken);
         var itemIds = entries.Select(e => e.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
 
@@ -303,8 +352,11 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
             return new InventoryLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? HiddenItem, item?.Name ?? string.Empty, l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.UnitPrice, l.Amount,
-                l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note);
+                l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId);
         }).ToList();
+        var linkedNo = d.LinkedDocumentId is { } linkedId
+            ? await _db.InventoryDocuments.AsNoTracking().Where(x => x.Id == linkedId).Select(x => x.No).SingleOrDefaultAsync(cancellationToken)
+            : null;
 
         string? readOnlyReason = null;
         if (items.Count < itemIds.Count) readOnlyReason = "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được.";
@@ -317,7 +369,7 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
         return new InventoryDocumentDto(
             d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), d.FromWarehouseId, d.ToWarehouseId, d.SupplierId, supplier?.Code, supplier?.Name,
             d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.DeliveryNoteNo, d.Deliverer, d.Note, d.TotalAmount, d.TotalVat, d.CreatedAt,
-            createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost);
+            createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo);
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>
