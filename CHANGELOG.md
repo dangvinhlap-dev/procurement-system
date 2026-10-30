@@ -49,6 +49,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Thay đổi
 - Thanh menu cập nhật danh sách công ty ngay sau khi thêm/sửa công ty (không phải đăng nhập lại).
 - Không bỏ ghi sổ được phiếu nhập mua khi đã có phiếu trả NCC ghi sổ theo nó.
+- Cảnh báo "dưới mức tối thiểu" ở Tồn kho hiện tại so với tổng tồn của mặt hàng trên mọi kho của công ty, không theo kho
+  đang lọc – lọc riêng kho phụ hay thủ kho một kho không còn bị báo động sai.
 
 ### Sửa lỗi
 - Ngăn kéo chi tiết không đóng bằng Esc khi vừa chọn xong một mục trong ô chọn (danh sách thả xuống còn đang ẩn dần).
