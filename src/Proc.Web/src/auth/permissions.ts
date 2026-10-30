@@ -29,6 +29,8 @@ export const Permission = {
   StockView: 'Inventory.Stock.View',
   PeriodView: 'Inventory.Period.View',
   PeriodOpen: 'Inventory.Period.Open',
+  PeriodClose: 'Inventory.Period.Close',
+  PeriodReopen: 'Inventory.Period.Reopen',
   PriceListView: 'Pricing.PriceList.View',
   PriceCompareView: 'Pricing.Compare.View',
   RfqView: 'Sourcing.Rfq.View',

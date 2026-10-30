@@ -11,7 +11,7 @@ namespace Proc.Infrastructure.Inventory;
 /// <summary>
 /// Kỳ kho (design.md mục 7, 7.6). Bảng InventoryPeriod có CompanyId nên mọi truy vấn tự lọc theo công ty đang làm việc.
 /// </summary>
-public sealed class InventoryPeriodService : IInventoryPeriodService
+public sealed partial class InventoryPeriodService : IInventoryPeriodService
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
@@ -42,11 +42,17 @@ public sealed class InventoryPeriodService : IInventoryPeriodService
         // Mặc định xem năm có kỳ tháng đang mở gần nhất – năm người dùng đang nhập liệu.
         var shown = year ?? periods.Where(p => !p.IsYear && p.Status == PeriodStatus.Open).Select(p => (int?)p.Year).Max() ?? years[^1];
         var canOpen = _scope.HasPermission(Permissions.Inventory.PeriodOpen);
+        var canClose = _scope.HasPermission(Permissions.Inventory.PeriodClose);
+        var canReopen = _scope.HasPermission(Permissions.Inventory.PeriodReopen);
         var company = await CompanyAsync(cancellationToken);
         var rows = periods
             .Where(p => p.Year == shown)
             .OrderBy(p => p.Month)
-            .Select(p => ToDto(p, canOpen && OpenBlocker(p, periods, company.StartDate) is null))
+            .Select(p => ToDto(
+                p,
+                canOpen && OpenBlocker(p, periods, company.StartDate) is null,
+                canClose && CloseBlocker(p, periods) is null,
+                canReopen && ReopenBlocker(p, periods) is null))
             .ToList();
         return new InventoryCalendarDto(years, shown, rows, nextYear);
     }
@@ -131,6 +137,6 @@ public sealed class InventoryPeriodService : IInventoryPeriodService
         return await _db.Companies.AsNoTracking().SingleAsync(c => c.Id == companyId, cancellationToken);
     }
 
-    private static InventoryPeriodDto ToDto(InventoryPeriod p, bool canOpen) =>
-        new(p.Id, p.Year, p.Month, p.Label, p.StartDate, p.EndDate, p.Status.ToString(), p.ClosedAt, canOpen);
+    private static InventoryPeriodDto ToDto(InventoryPeriod p, bool canOpen, bool canClose = false, bool canReopen = false) =>
+        new(p.Id, p.Year, p.Month, p.Label, p.StartDate, p.EndDate, p.Status.ToString(), p.ClosedAt, canOpen, canClose, canReopen, p.ReopenReason);
 }

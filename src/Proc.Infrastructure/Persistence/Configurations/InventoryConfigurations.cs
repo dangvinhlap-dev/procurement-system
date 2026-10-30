@@ -17,6 +17,7 @@ internal sealed class InventoryPeriodConfiguration : IEntityTypeConfiguration<In
         builder.HasIndex(x => new { x.CompanyId, x.Year, x.Month }).IsUnique();
         builder.Ignore(x => x.IsYear);
         builder.Ignore(x => x.Label);
+        builder.Property(x => x.ReopenReason).HasMaxLength(500);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         // Tháng 0–12; kỳ tháng nằm gọn trong một tháng dương lịch.
         builder.ToTable(t => t.HasCheckConstraint("CK_InventoryPeriod_Month", "\"Month\" BETWEEN 0 AND 12"));
@@ -142,6 +143,46 @@ internal sealed class StockOnHandConfiguration : IEntityTypeConfiguration<StockO
         builder.HasOne<Warehouse>().WithMany()
             .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng StockPeriodBalance – số dư kỳ đã đóng (design.md mục 7.2, 12.1).</summary>
+internal sealed class StockPeriodBalanceConfiguration : IEntityTypeConfiguration<StockPeriodBalance>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<StockPeriodBalance> builder)
+    {
+        builder.ToTable("StockPeriodBalance");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.LotNo).HasMaxLength(50);
+        // Số lượng numeric(18,4), tiền numeric(19,2) – CLAUDE.md mục 4.
+        foreach (var qty in new[] { nameof(StockPeriodBalance.OpenQty), nameof(StockPeriodBalance.InQty), nameof(StockPeriodBalance.OutQty), nameof(StockPeriodBalance.CloseQty) })
+            builder.Property<decimal>(qty).HasPrecision(18, 4);
+        foreach (var amount in new[] { nameof(StockPeriodBalance.OpenAmount), nameof(StockPeriodBalance.InAmount), nameof(StockPeriodBalance.OutAmount), nameof(StockPeriodBalance.CloseAmount) })
+            builder.Property<decimal>(amount).HasPrecision(19, 2);
+        // Mỗi kỳ một dòng cho mỗi kho × hàng × lô (lô trống cũng chỉ một dòng).
+        builder.HasIndex(x => new { x.PeriodId, x.WarehouseId, x.ItemId, x.LotNo }).IsUnique().AreNullsDistinct(false);
+        builder.HasIndex(x => new { x.CompanyId, x.PeriodId });
+        builder.HasOne<InventoryPeriod>().WithMany().HasForeignKey(x => x.PeriodId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Warehouse>().WithMany()
+            .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng ItemPeriodCost – giá vốn kỳ theo công ty × mặt hàng (design.md mục 7.3, 12.1).</summary>
+internal sealed class ItemPeriodCostConfiguration : IEntityTypeConfiguration<ItemPeriodCost>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ItemPeriodCost> builder)
+    {
+        builder.ToTable("ItemPeriodCost");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.UnitCost).HasPrecision(19, 6);
+        builder.HasIndex(x => new { x.PeriodId, x.ItemId }).IsUnique();
+        builder.HasOne<InventoryPeriod>().WithMany().HasForeignKey(x => x.PeriodId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
     }
 }

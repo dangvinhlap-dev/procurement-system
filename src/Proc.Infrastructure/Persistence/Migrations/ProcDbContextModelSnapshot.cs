@@ -358,6 +358,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ReopenReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
@@ -382,6 +386,37 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_InventoryPeriod_Month", "\"Month\" BETWEEN 0 AND 12");
                         });
+                });
+
+            modelBuilder.Entity("Proc.Domain.Inventory.ItemPeriodCost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("PeriodId", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("ItemPeriodCost", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.Inventory.StockLedgerEntry", b =>
@@ -499,6 +534,75 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("CompanyId", "WarehouseId", "ItemId", "LotNo"), false);
 
                     b.ToTable("StockOnHand", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Inventory.StockPeriodBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CloseAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("CloseQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("InAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("InQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LotNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("OpenAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("OpenQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("OutAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("OutQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("CompanyId", "PeriodId");
+
+                    b.HasIndex("WarehouseId", "CompanyId");
+
+                    b.HasIndex("PeriodId", "WarehouseId", "ItemId", "LotNo")
+                        .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("PeriodId", "WarehouseId", "ItemId", "LotNo"), false);
+
+                    b.ToTable("StockPeriodBalance", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.MasterData.Item", b =>
@@ -1585,6 +1689,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Inventory.ItemPeriodCost", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Inventory.InventoryPeriod", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Inventory.StockLedgerEntry", b =>
                 {
                     b.HasOne("Proc.Domain.Inventory.InventoryDocument", null)
@@ -1624,6 +1743,28 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.MasterData.Item", null)
                         .WithMany()
                         .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Inventory.StockPeriodBalance", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Inventory.InventoryPeriod", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

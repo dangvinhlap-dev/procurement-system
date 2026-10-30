@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { PeriodStatus } from './inventory'
 
 /*
  * Kiểu dữ liệu và hàm gọi API tồn kho hiện tại, thẻ kho (khớp Proc.Application.Inventory.Stock).
@@ -94,6 +95,61 @@ export function useStockCard(filter: { itemId?: string; warehouseId?: string; fr
     queryKey: ['stock', companyId, 'card', query],
     queryFn: () => apiFetch<StockCard>(`/api/stock-card?${query}`),
     enabled: !!filter.itemId,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Một dòng nhập – xuất – tồn theo kho × mặt hàng (SL theo ĐVT cơ sở). */
+export interface StockMovementRow {
+  warehouseId: string
+  warehouseCode: string
+  warehouseName: string
+  itemId: string
+  itemCode: string
+  itemName: string
+  categoryCode: string
+  categoryName: string
+  uomCode: string
+  openQty: number
+  openAmount: number
+  purchaseQty: number
+  purchaseAmount: number
+  transferInQty: number
+  transferInAmount: number
+  inQty: number
+  inAmount: number
+  returnQty: number
+  returnAmount: number
+  transferOutQty: number
+  transferOutAmount: number
+  outQty: number
+  outAmount: number
+  closeQty: number
+  closeAmount: number
+}
+
+/** Báo cáo nhập – xuất – tồn một kỳ. */
+export interface StockMovementResult {
+  periodLabel: string
+  periodStatus: PeriodStatus
+  isFinal: boolean
+  items: StockMovementRow[]
+}
+
+/**
+ * Báo cáo nhập – xuất – tồn một kỳ tháng.
+ * @param filter Kỳ (chưa chọn thì không tải), kho, nhóm hàng (gồm nhóm con).
+ */
+export function useStockMovement(filter: { periodId?: string; warehouseId?: string; categoryId?: string }) {
+  const companyId = useAuth().workingCompany?.id ?? ''
+  const params = new URLSearchParams({ periodId: filter.periodId ?? '' })
+  if (filter.warehouseId) params.set('warehouseId', filter.warehouseId)
+  if (filter.categoryId) params.set('categoryId', filter.categoryId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['stock', companyId, 'movement', query],
+    queryFn: () => apiFetch<StockMovementResult>(`/api/reports/stock-movement?${query}`),
+    enabled: !!filter.periodId,
     placeholderData: keepPreviousData,
   })
 }

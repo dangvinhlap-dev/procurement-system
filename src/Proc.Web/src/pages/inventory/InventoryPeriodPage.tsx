@@ -1,5 +1,5 @@
-import { UnlockOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Descriptions, Select } from 'antd'
+import { LockOutlined, RollbackOutlined, UnlockOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Descriptions, Input, Select } from 'antd'
 import { useState } from 'react'
 import {
   periodStatusLabels,
@@ -37,13 +37,18 @@ const columns: GridColumn<InventoryPeriod>[] = [
     groupable: true,
   },
   { key: 'closedAt', title: 'Ngày đóng', width: 130, type: 'datetime', value: (r) => r.closedAt },
-  { key: 'canOpen', title: 'Mở được', width: 90, value: (r) => (r.canOpen ? 'Kỳ tiếp theo' : '') },
+  {
+    key: 'next',
+    title: 'Làm được',
+    width: 110,
+    value: (r) => (r.canOpen ? 'Mở kỳ' : r.canClose ? 'Đóng kỳ' : r.canReopen ? 'Mở lại kỳ' : ''),
+  },
+  { key: 'reopenReason', title: 'Lý do mở lại gần nhất', width: 220, value: (r) => r.reopenReason },
 ]
 
 /**
  * Màn hình Kỳ kho (design.md mục 7, 7.6): lịch kỳ năm và 12 kỳ tháng của công ty đang làm việc.
- * "Tạo mới" tạo lịch năm tiếp theo; bấm đúp một kỳ tháng để mở kỳ (mở tuần tự theo tháng).
- * Đóng kỳ, mở lại kỳ làm ở giai đoạn 3 cùng tính giá vốn.
+ * "Tạo mới" tạo lịch năm tiếp theo; bấm đúp một kỳ tháng để mở kỳ, đóng kỳ (tính giá vốn) hoặc mở lại kỳ (design.md mục 7.2–7.4a).
  */
 export function InventoryPeriodPage() {
   const { message, modal } = App.useApp()
@@ -111,26 +116,61 @@ export function InventoryPeriodPage() {
 }
 
 /**
- * Ngăn kéo chi tiết kỳ tháng, có nút "Mở kỳ" khi kỳ mở được.
+ * Ngăn kéo chi tiết kỳ tháng: "Mở kỳ" (kỳ chưa mở), "Đóng kỳ" (tính giá vốn, chốt số dư), "Mở lại kỳ" (bắt buộc lý do).
+ * Nút chỉ hiện khi server báo làm được (đúng thứ tự, có quyền) – server vẫn kiểm tra lại khi bấm.
  * @param period Kỳ đang xem.
  * @param canManage Có quyền mở kỳ.
  * @param onClose Đóng.
  */
 function PeriodDrawer({ period, canManage, onClose }: { period: InventoryPeriod; canManage: boolean; onClose: () => void }) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const mutations = useInventoryPeriodMutations()
   const [error, setError] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
 
-  const openPeriod = async () => {
+  const run = async (action: () => Promise<unknown>, done: string, fallback: string) => {
     setError(null)
     try {
-      await mutations.open.mutateAsync(period.id)
-      message.success(`Đã mở kỳ ${period.label}.`)
+      await action()
+      message.success(done)
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Không mở được kỳ.')
+      setError(e instanceof Error ? e.message : fallback)
     }
   }
+
+  const closePeriod = () =>
+    modal.confirm({
+      title: `Đóng kỳ ${period.label}?`,
+      content:
+        'Hệ thống tính giá vốn bình quân cuối kỳ, gán giá cho phiếu chuyển kho, chốt số dư từng kho. Sau khi đóng không ghi sổ, ' +
+        'bỏ ghi sổ chứng từ trong kỳ được nữa; muốn sửa phải mở lại kỳ.',
+      okText: 'Đóng kỳ',
+      cancelText: 'Không',
+      onOk: () => run(() => mutations.close.mutateAsync(period.id), `Đã đóng kỳ ${period.label}.`, 'Không đóng được kỳ.'),
+    })
+
+  const actions = (
+    <>
+      {canManage && period.status === 'NotOpened' && (
+        <Button type="primary" icon={<UnlockOutlined />} disabled={!period.canOpen} loading={mutations.open.isPending}
+          onClick={() => run(() => mutations.open.mutateAsync(period.id), `Đã mở kỳ ${period.label}.`, 'Không mở được kỳ.')}>
+          Mở kỳ
+        </Button>
+      )}
+      {period.canClose && (
+        <Button type="primary" icon={<LockOutlined />} onClick={closePeriod} loading={mutations.close.isPending}>
+          Đóng kỳ
+        </Button>
+      )}
+      {period.canReopen && (
+        <Button danger icon={<RollbackOutlined />} disabled={!reason.trim()} loading={mutations.reopen.isPending}
+          onClick={() => run(() => mutations.reopen.mutateAsync({ id: period.id, reason: reason.trim() }), `Đã mở lại kỳ ${period.label}.`, 'Không mở lại được kỳ.')}>
+          Mở lại kỳ
+        </Button>
+      )}
+    </>
+  )
 
   return (
     <DetailDrawer
@@ -138,14 +178,7 @@ function PeriodDrawer({ period, canManage, onClose }: { period: InventoryPeriod;
       title={`Kỳ kho ${period.label}`}
       onClose={onClose}
       error={error}
-      extraActions={
-        canManage &&
-        period.status === 'NotOpened' && (
-          <Button type="primary" icon={<UnlockOutlined />} onClick={openPeriod} loading={mutations.open.isPending} disabled={!period.canOpen}>
-            Mở kỳ
-          </Button>
-        )
-      }
+      extraActions={actions}
       tabs={[
         {
           key: 'general',
@@ -160,15 +193,26 @@ function PeriodDrawer({ period, canManage, onClose }: { period: InventoryPeriod;
                   title="Mở kỳ tuần tự theo tháng: chỉ mở được kỳ liền sau kỳ đã mở gần nhất."
                 />
               )}
+              {period.status === 'Open' && !period.canClose && (
+                <Alert type="info" showIcon className="detail-section" title="Đóng kỳ tuần tự: kỳ tháng trước phải đã đóng (và cần quyền đóng kỳ)." />
+              )}
               <Descriptions size="small" column={1} bordered>
                 <Descriptions.Item label="Kỳ">{period.label}</Descriptions.Item>
                 <Descriptions.Item label="Từ ngày">{formatDate(period.startDate)}</Descriptions.Item>
                 <Descriptions.Item label="Đến ngày">{formatDate(period.endDate)}</Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">{periodStatusLabels[period.status]}</Descriptions.Item>
                 <Descriptions.Item label="Ngày đóng">{formatDateTime(period.closedAt)}</Descriptions.Item>
+                <Descriptions.Item label="Lý do mở lại gần nhất">{period.reopenReason}</Descriptions.Item>
               </Descriptions>
+              {period.canReopen && (
+                <div className="detail-section" style={{ marginTop: 8 }}>
+                  <label htmlFor="reopen-reason">Lý do mở lại kỳ (bắt buộc)</label>
+                  <Input.TextArea id="reopen-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
+                </div>
+              )}
               <div className="detail-hint" style={{ marginTop: 8 }}>
-                Chứng từ kho chỉ ghi sổ được khi ngày chứng từ thuộc kỳ tháng đang mở. Đóng kỳ, mở lại kỳ làm cùng tính giá vốn.
+                Chứng từ kho chỉ ghi sổ được khi ngày chứng từ thuộc kỳ tháng đang mở. Đóng kỳ cần kỳ trước đã đóng và không còn
+                phiếu nháp trong kỳ; chỉ mở lại được kỳ đã đóng gần nhất.
               </div>
             </>
           ),
