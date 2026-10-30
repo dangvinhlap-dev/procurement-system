@@ -81,6 +81,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Nhóm hàng (lọc theo phạm vi nhóm hàng).</summary>
     public DbSet<ItemCategory> ItemCategories => Set<ItemCategory>();
 
+    /// <summary>Đơn vị tính (dùng chung).</summary>
+    public DbSet<Uom> Uoms => Set<Uom>();
+
+    /// <summary>Hàng hóa (lọc theo phạm vi nhóm hàng).</summary>
+    public DbSet<Item> Items => Set<Item>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 
@@ -142,5 +148,8 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
             WarehouseFilter, w => ScopeAllWarehouses || ScopeWarehouseIds.Contains(w.Id));
         modelBuilder.Entity<ItemCategory>().HasQueryFilter(
             ItemCategoryFilter, c => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(c.Id));
+        // Hàng hóa theo nhóm hàng của nó: người chỉ được nhóm Vật tư không thấy mã hàng nhóm khác (design.md mục 9.2).
+        modelBuilder.Entity<Item>().HasQueryFilter(
+            ItemCategoryFilter, i => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(i.CategoryId));
     }
 }

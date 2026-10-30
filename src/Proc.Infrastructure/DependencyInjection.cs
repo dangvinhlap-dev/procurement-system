@@ -7,11 +7,13 @@ using Proc.Application.Auth;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Logging;
+using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Logging;
+using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Security;
@@ -61,6 +63,9 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationQueries, OrganizationQueries>();
         services.AddScoped<ICompanyAdministration, CompanyAdministration>();
         services.AddScoped<IWarehouseAdministration, WarehouseAdministration>();
+        services.AddScoped<IUomAdministration, UomAdministration>();
+        services.AddScoped<IItemCategoryAdministration, ItemCategoryAdministration>();
+        services.AddScoped<IItemAdministration, ItemAdministration>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 

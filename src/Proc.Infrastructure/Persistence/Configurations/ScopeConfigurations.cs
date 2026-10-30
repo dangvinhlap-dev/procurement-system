@@ -74,6 +74,7 @@ internal sealed class ItemCategoryConfiguration : IEntityTypeConfiguration<ItemC
         builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.InventoryAccount).HasMaxLength(10);
         builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Proc.Application.Common;
 using Proc.Domain.Common;
+using Proc.Infrastructure.Persistence;
 
 namespace Proc.Api.Errors;
 
 /// <summary>
 /// Chuyển exception thành ProblemDetails: lỗi nghiệp vụ trả 400, không đủ quyền/ngoài phạm vi trả 403, không tìm thấy trả 404,
-/// đều kèm thông điệp tiếng Việt; lỗi khác trả 500 với thông điệp chung (chi tiết chỉ ghi vào log, không lộ ra ngoài).
+/// trùng khóa duy nhất trong CSDL trả 409, đều kèm thông điệp tiếng Việt; lỗi khác trả 500 với thông điệp chung (chi tiết chỉ ghi vào log, không lộ ra ngoài).
 /// </summary>
 public sealed class ProblemExceptionHandler : IExceptionHandler
 {
@@ -32,6 +33,7 @@ public sealed class ProblemExceptionHandler : IExceptionHandler
             BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message),
             ForbiddenAccessException => (StatusCodes.Status403Forbidden, exception.Message),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+            _ when DuplicateKeyMessages.Describe(exception) is { } duplicate => (StatusCodes.Status409Conflict, duplicate),
             _ => (StatusCodes.Status500InternalServerError, "Có lỗi hệ thống. Hãy thử lại hoặc báo quản trị hệ thống."),
         };
 

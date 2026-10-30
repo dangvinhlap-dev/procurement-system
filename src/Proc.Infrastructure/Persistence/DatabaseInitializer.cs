@@ -134,6 +134,9 @@ public sealed class SeedOptions
     /// <summary>Nhóm hàng mẫu.</summary>
     public List<SeedItemCategory> DemoItemCategories { get; set; } = [];
 
+    /// <summary>Đơn vị tính mẫu (mã → tên), ví dụ CAI → Cái.</summary>
+    public Dictionary<string, string> DemoUoms { get; set; } = [];
+
     /// <summary>Vai trò mẫu.</summary>
     public List<SeedRole> DemoRoles { get; set; } = [];
 
@@ -267,6 +270,7 @@ internal sealed class DataSeeder
         }
 
         var categories = await EnsureItemCategoriesAsync(ct);
+        await EnsureUomsAsync(ct);
 
         var roles = new Dictionary<string, Role>(StringComparer.OrdinalIgnoreCase)
         {
@@ -336,6 +340,18 @@ internal sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
         WorkIn(null);
         return existing;
+    }
+
+    private async Task EnsureUomsAsync(CancellationToken ct)
+    {
+        var existing = await _db.Uoms.Select(u => u.Code).ToListAsync(ct);
+        foreach (var (code, name) in _seed.DemoUoms)
+        {
+            var uom = Uom.Create(code, name);
+            if (!existing.Contains(uom.Code)) _db.Uoms.Add(uom);
+        }
+
+        await _db.SaveChangesAsync(ct);
     }
 
     private async Task<Dictionary<string, ItemCategory>> EnsureItemCategoriesAsync(CancellationToken ct)

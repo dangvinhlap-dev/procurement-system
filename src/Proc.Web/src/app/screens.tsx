@@ -4,6 +4,8 @@ import {
   BarChartOutlined,
   BankOutlined,
   BellOutlined,
+  ClusterOutlined,
+  ColumnWidthOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
   ContainerOutlined,
@@ -98,6 +100,8 @@ export const screens: Screen[] = [
 
   { code: 'SUP', title: 'Danh mục nhà cung cấp', navLabel: 'Nhà cung cấp', path: '/gia-ncc/nha-cung-cap', icon: <ShopOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },
+  { code: 'CAT', title: 'Nhóm hàng', navLabel: 'Nhóm hàng', path: '/gia-ncc/nhom-hang', icon: <ClusterOutlined />, group: 'pricing', permission: Permission.ItemCategoryView },
+  { code: 'UOM', title: 'Đơn vị tính', navLabel: 'Đơn vị tính', path: '/gia-ncc/don-vi-tinh', icon: <ColumnWidthOutlined />, group: 'pricing', permission: Permission.ItemView },
   { code: 'PRL', title: 'Bảng giá NCC', navLabel: 'Bảng giá NCC', path: '/gia-ncc/bang-gia', icon: <FileTextOutlined />, group: 'pricing', permission: Permission.PriceListView },
   { code: 'PCMP', title: 'So sánh giá', navLabel: 'So sánh giá', path: '/gia-ncc/so-sanh-gia', icon: <LineChartOutlined />, group: 'pricing', permission: Permission.PriceCompareView },
 

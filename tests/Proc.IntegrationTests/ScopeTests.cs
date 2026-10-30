@@ -130,7 +130,8 @@ public class ScopeTests
 
         var categories = await client.GetFromJsonAsync<List<ItemCategoryDto>>("/api/item-categories", Ct);
 
-        Assert.Equal(6, categories!.Count);
+        // Test khác thêm nhóm hàng mới vào CSDL test, nên kiểm tra đủ 6 nhóm mẫu (kể cả nhóm con) thay vì đếm đúng 6.
+        Assert.Superset(new HashSet<string> { "VT", "VTD", "VTC", "VTCK", "NVL", "VPP" }, categories!.Select(c => c.Code).ToHashSet());
     }
 
     [Fact]
