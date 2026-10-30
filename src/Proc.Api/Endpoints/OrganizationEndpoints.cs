@@ -6,7 +6,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Endpoint danh mục tổ chức: công ty, kho, nhóm hàng (design.md mục 5.1, 5.6). Dữ liệu đã được lọc theo phạm vi người dùng;
+/// Endpoint danh mục tổ chức: công ty, kho (design.md mục 5.1, 5.6). Dữ liệu đã được lọc theo phạm vi người dùng;
 /// quy tắc thêm/sửa (chỉ ở tổng công ty, kho tổng, phạm vi kho) nằm ở dịch vụ.
 /// </summary>
 public static class OrganizationEndpoints
@@ -51,10 +51,6 @@ public static class OrganizationEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Organization.WarehouseManage)
             .Validate<UpdateWarehouseRequest>();
-
-        app.MapGet("/api/item-categories", (IOrganizationQueries queries, CancellationToken ct) => queries.GetItemCategoriesAsync(ct))
-            .WithTags("Danh mục")
-            .RequirePermission(Permissions.MasterData.ItemCategoryView);
 
         return app;
     }

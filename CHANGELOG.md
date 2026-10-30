@@ -9,6 +9,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Màn hình Hệ thống → Công ty (COMP) và Hệ thống → Kho (WH) theo khuôn danh sách + ngăn kéo chi tiết (design.md mục 5.1, 5.6):
   thêm công ty kèm kho tổng ở tổng công ty, người thêm được gán vào công ty mới; sửa thông tin, mã số thuế, ngày bắt đầu,
   ngừng dùng; thêm kho phụ, đổi kho cha (chặn vòng lặp), thủ kho, địa chỉ, cho phép tồn âm, ngừng dùng.
+- Màn hình Giá và NCC → Hàng hóa (ITEM), Nhóm hàng (CAT), Đơn vị tính (UOM) (design.md mục 5.2, 5.7): hàng hóa có loại hàng,
+  nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất mặc định, quản lý lô/hạn dùng, tồn tối thiểu/tối đa,
+  quy đổi ĐVT, thông số kỹ thuật; tìm không dấu ở server, lọc theo nhóm (gồm nhóm con) và loại hàng; nhóm hàng dạng cây có
+  tài khoản kho mặc định. Thêm, sửa ở tổng công ty; hàng hóa lọc theo phạm vi nhóm hàng.
+- API `/api/uoms`, `/api/item-categories` (thêm POST, PUT; GET trả thêm đường dẫn, cấp, tài khoản kho), `/api/items`.
+- Trùng mã duy nhất trong CSDL (kể cả bản ghi ngoài phạm vi người dùng) trả 409 kèm thông báo tiếng Việt thay vì lỗi hệ thống.
+- Dữ liệu mẫu dev/test: 7 đơn vị tính.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
 
@@ -18,6 +25,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Thay đổi CSDL
 - Migration `V0_2_0_CongTyKho`: chỉ mục duy nhất mã số thuế công ty (bỏ qua công ty chưa có mã số thuế).
   `Down()` chỉ bỏ chỉ mục, không mất dữ liệu.
+
+- Migration `V0_2_0_HangHoa`: bảng `Uom`, `Item`, `ItemUomConversion`; cột `InventoryAccount` của `ItemCategory`.
+  `Down()` xóa ba bảng và cột đó – mất toàn bộ hàng hóa, đơn vị tính, quy đổi đã nhập.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

@@ -130,19 +130,11 @@ public sealed class CompanyAdministration : ICompanyAdministration
             throw new BusinessRuleException($"Mã số thuế {company.TaxCode} đã dùng cho công ty {other}.");
     }
 
-    private async Task<bool> AtHeadOfficeAsync(CancellationToken cancellationToken)
-    {
-        var companyId = _scope.RequireCompany();
-        return await _db.Companies.AnyAsync(c => c.Id == companyId && c.IsHeadOffice, cancellationToken);
-    }
+    private Task<bool> AtHeadOfficeAsync(CancellationToken cancellationToken) =>
+        HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
 
-    /// <summary>Thêm/sửa công ty chỉ làm ở tổng công ty – danh mục tổ chức do tổng công ty quản lý (design.md mục 5, 5.6).</summary>
-    private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
-    {
-        if (!await AtHeadOfficeAsync(cancellationToken))
-            throw new ForbiddenAccessException("Chỉ thêm, sửa công ty khi đang làm việc ở tổng công ty.");
-        return _scope.RequireCompany();
-    }
+    private Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken) =>
+        HeadOffice.RequireAsync(_db, _scope, "công ty", cancellationToken);
 
     private static CompanyDetailDto ToDetail(Company c, bool canEdit) =>
         new(c.Id, c.Code, c.Name, c.ShortName, c.TaxCode, c.Address, c.Representative, c.IsHeadOffice,
