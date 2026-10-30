@@ -90,6 +90,10 @@ export interface InventoryDocument {
   lines: InventoryLine[]
   canEdit: boolean
   readOnlyReason: string | null
+  /** Ghi sổ được (nháp, có quyền ghi sổ, thấy hết mặt hàng). */
+  canPost: boolean
+  /** Bỏ ghi sổ được (đã ghi sổ, có quyền bỏ ghi sổ; kỳ còn mở kiểm tra khi bấm). */
+  canUnpost: boolean
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -167,7 +171,7 @@ export function useInventoryDocument(id: string | null) {
   })
 }
 
-/** Lập, sửa phiếu nhập mua; hủy phiếu nháp. Xong thì tải lại danh sách và chi tiết chứng từ. */
+/** Lập, sửa phiếu nhập mua; hủy phiếu nháp; ghi sổ, bỏ ghi sổ. Xong thì tải lại danh sách và chi tiết chứng từ. */
 export function useGoodsReceiptMutations() {
   const queryClient = useQueryClient()
   const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
@@ -183,6 +187,14 @@ export function useGoodsReceiptMutations() {
     }),
     cancel: useMutation({
       mutationFn: (id: string) => apiFetch<InventoryDocument>(`/api/inventory-documents/${id}/cancel`, { method: 'POST' }),
+      onSuccess,
+    }),
+    post: useMutation({
+      mutationFn: (id: string) => apiFetch<InventoryDocument>(`/api/inventory-documents/${id}/post`, { method: 'POST' }),
+      onSuccess,
+    }),
+    unpost: useMutation({
+      mutationFn: (id: string) => apiFetch<InventoryDocument>(`/api/inventory-documents/${id}/unpost`, { method: 'POST' }),
       onSuccess,
     }),
   }

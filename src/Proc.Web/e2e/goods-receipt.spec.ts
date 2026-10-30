@@ -98,6 +98,22 @@ test('lập phiếu nhập mua nháp, tính tiền, lưu cấp số, hủy phi�
   const number = await page.locator('.document-form-number').textContent()
   await page.screenshot({ path: 'e2e/screenshots/goods-receipt.png' })
 
+  // Ghi sổ: phiếu thành chỉ xem, có nút Bỏ ghi sổ; bỏ ghi sổ thì về nháp.
+  await page.getByRole('button', { name: 'Ghi sổ' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Ghi sổ' }).click()
+  await expect(page.locator('.ant-message')).toContainText(`Đã ghi sổ phiếu ${number}.`)
+  await expect(page.locator('.document-form-title')).toContainText('Đã ghi sổ')
+  await expect(page.getByRole('button', { name: 'Lưu nháp' })).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  // Phiếu đã ghi sổ chỉ xem: ô nhập bị khóa.
+  await expect(page.getByLabel('Số hóa đơn')).toBeDisabled()
+  await page.screenshot({ path: 'e2e/screenshots/goods-receipt-posted.png' })
+  await page.getByRole('button', { name: 'Bỏ ghi sổ' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Bỏ ghi sổ' }).click()
+  await expect(page.locator('.ant-message')).toContainText(`Đã bỏ ghi sổ phiếu ${number}.`)
+  await expect(page.locator('.document-form-title')).toContainText('Nháp')
+  await expect(page.getByRole('button', { name: 'Lưu nháp' })).toBeVisible()
+
   await page.getByRole('button', { name: 'Hủy phiếu' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Hủy phiếu' }).click()
   await expect(page.locator('.ant-message')).toContainText(`Đã hủy phiếu ${number}.`)

@@ -80,11 +80,13 @@ public sealed record InventoryLineDto(
 /// <param name="Lines">Các dòng.</param>
 /// <param name="CanEdit">Người xem sửa được (nháp, có quyền lập, thấy hết mặt hàng trên phiếu).</param>
 /// <param name="ReadOnlyReason">Lý do chỉ xem được (null nếu sửa được hoặc chỉ vì trạng thái).</param>
+/// <param name="CanPost">Người xem ghi sổ được (phiếu nháp, có quyền ghi sổ, thấy hết mặt hàng).</param>
+/// <param name="CanUnpost">Người xem bỏ ghi sổ được (đã ghi sổ, có quyền bỏ ghi sổ; kỳ còn mở kiểm tra khi bấm).</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
     string? Deliverer, string? Note, decimal TotalAmount, decimal TotalVat, DateTimeOffset CreatedAt, string? CreatedByName,
-    DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason);
+    DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -158,4 +160,28 @@ public interface IInventoryDocumentService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu không còn nháp.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ghi sổ phiếu nháp trong một giao dịch (design.md mục 12.2): kiểm tra kỳ mở và lại các điều kiện của phiếu → ghi sổ kho →
+    /// cập nhật tồn (khóa dòng tồn) → đổi trạng thái → nhật ký.
+    /// </summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi ghi sổ.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kỳ không mở, phiếu không còn nháp, điều kiện phiếu không còn đúng, tồn âm.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người ghi sổ.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> PostAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bỏ ghi sổ khi kỳ của phiếu còn mở (CLAUDE.md mục 4): xóa dòng sổ kho của phiếu, trả lại tồn, phiếu về nháp.
+    /// Không cho bỏ ghi sổ nếu làm tồn kho âm (trừ kho cho phép tồn âm) – hàng đã xuất dùng rồi.
+    /// </summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi bỏ ghi sổ.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu chưa ghi sổ, kỳ đã đóng hoặc tồn sẽ âm.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> UnpostAsync(Guid id, CancellationToken cancellationToken);
 }

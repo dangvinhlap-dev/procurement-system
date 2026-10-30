@@ -35,6 +35,10 @@ public static class InventoryEndpoints
             .RequirePermission(Permissions.Inventory.DocumentView);
         documents.MapPost("/{id:guid}/cancel", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Inventory.DocumentCreate);
+        documents.MapPost("/{id:guid}/post", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.PostAsync(id, ct))
+            .RequirePermission(Permissions.Inventory.DocumentPost);
+        documents.MapPost("/{id:guid}/unpost", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.UnpostAsync(id, ct))
+            .RequirePermission(Permissions.Inventory.DocumentUnpost);
 
         var receipts = app.MapGroup("/api/goods-receipts").WithTags("Chứng từ kho");
         receipts.MapPost("/", async (SaveReceiptRequest request, IInventoryDocumentService s, CancellationToken ct) =>

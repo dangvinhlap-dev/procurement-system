@@ -26,6 +26,7 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IDocumentNumberService _numbers;
+    private readonly IInventoryPeriodService _periods;
     private readonly IClock _clock;
 
     /// <summary>
@@ -34,12 +35,15 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
     /// <param name="numbers">Cấp số chứng từ.</param>
-    /// <param name="clock">Đồng hồ (khoảng ngày mặc định khi tìm).</param>
-    public InventoryDocumentService(ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock)
+    /// <param name="periods">Kỳ kho (kiểm tra kỳ mở khi ghi sổ).</param>
+    /// <param name="clock">Đồng hồ (khoảng ngày mặc định khi tìm, thời điểm ghi sổ).</param>
+    public InventoryDocumentService(
+        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IInventoryPeriodService periods, IClock clock)
     {
         _db = db;
         _scope = scope;
         _numbers = numbers;
+        _periods = periods;
         _clock = clock;
     }
 
@@ -128,6 +132,106 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<InventoryDocumentDto> PostAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy chứng từ.");
+        if (document.DocType != DocumentTypes.GoodsReceipt)
+            throw new BusinessRuleException($"Chưa hỗ trợ ghi sổ chứng từ loại {document.DocType}.");
+        if (document.Status != DocumentStatus.Draft)
+            throw new BusinessRuleException($"Phiếu {document.No} không ở trạng thái nháp nên không ghi sổ được.");
+        await EnsureAllItemsVisibleAsync(document, cancellationToken);
+
+        // Kiểm tra lại lúc ghi sổ: từ lúc lưu nháp tới giờ NCC có thể bị tạm ngưng, kho ngừng dùng, mặt hàng ngừng dùng.
+        await CheckReceiptHeaderAsync(ToRequest(document), cancellationToken);
+        var periodId = await _periods.RequireOpenPeriodAsync(document.Date, cancellationToken);
+        var itemIds = document.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+        foreach (var line in document.Lines.Where(l => !items[l.ItemId].IsActive))
+            throw new BusinessRuleException($"Dòng {line.LineNo}: mặt hàng {items[line.ItemId].Code} đã ngừng dùng.");
+
+        var warehouse = await _db.Warehouses.AsNoTracking().SingleAsync(w => w.Id == document.ToWarehouseId, cancellationToken);
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        document.MarkPosted(periodId, _clock.UtcNow, _scope.UserId);
+        foreach (var line in document.Lines)
+        {
+            _db.StockLedger.Add(StockLedgerEntry.Receipt(document, line, periodId));
+            await ApplyStockAsync(companyId, warehouse, items[line.ItemId], line.LotNo, line.BaseQty, cancellationToken);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<InventoryDocumentDto> UnpostAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy chứng từ.");
+        if (document.Status != DocumentStatus.Posted) throw new BusinessRuleException($"Phiếu {document.No} chưa ghi sổ.");
+        await EnsureAllItemsVisibleAsync(document, cancellationToken);
+
+        // Chỉ bỏ ghi sổ khi kỳ còn mở; kỳ đã đóng thì lập chứng từ điều chỉnh ở kỳ đang mở (CLAUDE.md mục 4).
+        var period = await _db.InventoryPeriods.AsNoTracking().SingleAsync(p => p.Id == document.PeriodId, cancellationToken);
+        if (period.Status != PeriodStatus.Open)
+            throw new BusinessRuleException($"Kỳ kho {period.Label} không còn mở nên không bỏ ghi sổ phiếu {document.No} được. Lập chứng từ điều chỉnh ở kỳ đang mở.");
+
+        var entries = await _db.StockLedger.Where(x => x.DocumentId == id).ToListAsync(cancellationToken);
+        var warehouseIds = entries.Select(e => e.WarehouseId).Distinct().ToList();
+        var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
+        var itemIds = entries.Select(e => e.ItemId).Distinct().ToList();
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        foreach (var entry in entries)
+            await ApplyStockAsync(companyId, warehouses[entry.WarehouseId], items[entry.ItemId], entry.LotNo, -entry.SignedQty, cancellationToken);
+
+        _db.StockLedger.RemoveRange(entries);
+        document.MarkUnposted();
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Cộng (delta &gt; 0) hoặc trừ (delta &lt; 0) tồn tức thời bằng MỘT câu SQL nguyên tử: tạo dòng tồn nếu chưa có, ngược lại cộng
+    /// dồn, trả về số tồn mới. PostgreSQL khóa dòng tồn tới hết giao dịch, nên hai người ghi sổ cùng mặt hàng cùng kho phải lần lượt
+    /// – không mất số, và kiểm tra tồn âm dựa trên số tồn đúng (design.md mục 12.2: khóa dòng StockOnHand).
+    /// Câu lệnh ghi thẳng theo CompanyId/WarehouseId/ItemId đã kiểm tra phạm vi ở trên (kho, mặt hàng đọc qua filter).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi tồn sau khi trừ âm và kho không cho phép tồn âm (cả giao dịch bị hủy).</exception>
+    private async Task ApplyStockAsync(
+        Guid companyId, Warehouse warehouse, Item item, string? lotNo, decimal delta, CancellationToken cancellationToken)
+    {
+        var rows = await _db.Database
+            .SqlQuery<decimal>($"""
+                INSERT INTO "StockOnHand" ("Id", "CompanyId", "WarehouseId", "ItemId", "LotNo", "Qty", "ReservedQty")
+                VALUES ({Guid.CreateVersion7()}, {companyId}, {warehouse.Id}, {item.Id}, {lotNo}, {delta}, 0)
+                ON CONFLICT ("CompanyId", "WarehouseId", "ItemId", "LotNo")
+                DO UPDATE SET "Qty" = "StockOnHand"."Qty" + EXCLUDED."Qty"
+                RETURNING "Qty" AS "Value"
+                """)
+            .ToListAsync(cancellationToken);
+        var qty = rows.Single();
+        // Không cho tồn âm trừ khi tham số kho cho phép (CLAUDE.md mục 4).
+        if (qty < 0 && !warehouse.AllowNegativeStock)
+        {
+            var lot = lotNo is null ? string.Empty : $", lô {lotNo}";
+            var shown = qty.ToString("#,##0.####", VietnameseCulture);
+            throw new BusinessRuleException($"Tồn {item.Code}{lot} tại kho {warehouse.Code} sẽ âm ({shown}). Kho không cho phép tồn âm.");
+        }
+    }
+
+    private static readonly System.Globalization.CultureInfo VietnameseCulture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+
+    private static SaveReceiptRequest ToRequest(InventoryDocument d) =>
+        new(d.Date, d.ToWarehouseId ?? Guid.Empty, d.SupplierId ?? Guid.Empty, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate,
+            d.DeliveryNoteNo, d.Deliverer, d.Note, []);
+
     /// <summary>
     /// Kho nhập thuộc công ty, trong phạm vi, đang dùng; NCC đã duyệt và đang áp dụng tại công ty (design.md mục 6.1, 5.9).
     /// </summary>
@@ -206,11 +310,14 @@ public sealed class InventoryDocumentService : IInventoryDocumentService
         if (items.Count < itemIds.Count) readOnlyReason = "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được.";
         else if (!_scope.HasPermission(Permissions.Inventory.DocumentCreate)) readOnlyReason = "Bạn không có quyền lập, sửa chứng từ kho.";
         var canEdit = d.Status == DocumentStatus.Draft && readOnlyReason is null;
+        var itemsVisible = items.Count == itemIds.Count;
+        var canPost = d.Status == DocumentStatus.Draft && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentPost);
+        var canUnpost = d.Status == DocumentStatus.Posted && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentUnpost);
 
         return new InventoryDocumentDto(
             d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), d.FromWarehouseId, d.ToWarehouseId, d.SupplierId, supplier?.Code, supplier?.Name,
             d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.DeliveryNoteNo, d.Deliverer, d.Note, d.TotalAmount, d.TotalVat, d.CreatedAt,
-            createdBy, d.PostedAt, lines, canEdit, readOnlyReason);
+            createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost);
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>

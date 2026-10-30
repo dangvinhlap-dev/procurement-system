@@ -84,3 +84,59 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng StockLedger – sổ kho (design.md mục 12).</summary>
+internal sealed class StockLedgerConfiguration : IEntityTypeConfiguration<StockLedgerEntry>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<StockLedgerEntry> builder)
+    {
+        builder.ToTable("StockLedger");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.SignedQty);
+        builder.Property(x => x.DocType).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.LotNo).HasMaxLength(50);
+        // Số lượng numeric(18,4), đơn giá numeric(19,6), tiền numeric(19,2) – CLAUDE.md mục 4.
+        builder.Property(x => x.BaseQty).HasPrecision(18, 4);
+        builder.Property(x => x.UnitCost).HasPrecision(19, 6);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        // Thẻ kho: theo kho, mặt hàng, ngày; tính giá vốn: theo công ty, kỳ, mặt hàng.
+        builder.HasIndex(x => new { x.CompanyId, x.WarehouseId, x.ItemId, x.PostingDate });
+        builder.HasIndex(x => new { x.CompanyId, x.PeriodId, x.ItemId });
+        builder.HasIndex(x => x.DocumentId);
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_StockLedger_Direction", "\"Direction\" IN (-1, 1)");
+            t.HasCheckConstraint("CK_StockLedger_BaseQty", "\"BaseQty\" > 0");
+        });
+
+        builder.HasOne<Warehouse>().WithMany()
+            .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<InventoryPeriod>().WithMany().HasForeignKey(x => x.PeriodId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<InventoryDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<InventoryDocumentLine>().WithMany().HasForeignKey(x => x.DocumentLineId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng StockOnHand – tồn tức thời (design.md mục 12.1).</summary>
+internal sealed class StockOnHandConfiguration : IEntityTypeConfiguration<StockOnHand>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<StockOnHand> builder)
+    {
+        builder.ToTable("StockOnHand");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.LotNo).HasMaxLength(50);
+        builder.Property(x => x.Qty).HasPrecision(18, 4);
+        builder.Property(x => x.ReservedQty).HasPrecision(18, 4);
+        // Một dòng tồn cho mỗi công ty × kho × hàng × lô; NULLS NOT DISTINCT để hàng không theo lô (LotNo null) cũng chỉ một dòng
+        // – câu INSERT … ON CONFLICT của ghi sổ dựa vào chỉ mục này.
+        builder.HasIndex(x => new { x.CompanyId, x.WarehouseId, x.ItemId, x.LotNo }).IsUnique().AreNullsDistinct(false);
+        builder.HasOne<Warehouse>().WithMany()
+            .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

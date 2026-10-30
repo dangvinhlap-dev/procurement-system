@@ -195,6 +195,36 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         TotalVat = _lines.Sum(l => l.VatAmount);
     }
 
+    /// <summary>
+    /// Đánh dấu đã ghi sổ (dòng sổ kho, tồn kho do tầng Infrastructure ghi trong cùng giao dịch – design.md mục 12.2).
+    /// </summary>
+    /// <param name="periodId">Kỳ tháng đang mở chứa ngày chứng từ.</param>
+    /// <param name="postedAt">Thời điểm ghi sổ (UTC).</param>
+    /// <param name="postedBy">Người ghi sổ.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp hoặc không có dòng.</exception>
+    public void MarkPosted(Guid periodId, DateTimeOffset postedAt, Guid? postedBy)
+    {
+        EnsureDraft();
+        if (_lines.Count == 0) throw new BusinessRuleException("Phiếu không có dòng hàng nên không ghi sổ được.");
+        Status = DocumentStatus.Posted;
+        PeriodId = periodId;
+        PostedAt = postedAt;
+        PostedBy = postedBy;
+    }
+
+    /// <summary>
+    /// Bỏ ghi sổ: phiếu về nháp để sửa (chỉ khi kỳ còn mở – tầng Infrastructure kiểm tra, xóa dòng sổ kho, trả lại tồn).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi phiếu chưa ghi sổ.</exception>
+    public void MarkUnposted()
+    {
+        if (Status != DocumentStatus.Posted) throw new BusinessRuleException($"Phiếu {No} chưa ghi sổ.");
+        Status = DocumentStatus.Draft;
+        PeriodId = null;
+        PostedAt = null;
+        PostedBy = null;
+    }
+
     /// <summary>Hủy phiếu nháp: giữ số phiếu và lịch sử, không dùng lại được.</summary>
     /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp.</exception>
     public void Cancel()
