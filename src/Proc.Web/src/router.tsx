@@ -20,6 +20,7 @@ import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
@@ -45,6 +46,7 @@ const implemented: Record<string, ReactNode> = {
   TRF: <InventoryDocumentListPage docType="TRF" title="Phiếu chuyển kho nội bộ (TRF)" path="/kho/trf" exportFileName="phieu-chuyen-kho" />,
   STK: <StockOnHandPage />,
   CARD: <StockCardPage />,
+  NXT: <StockMovementReportPage />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,

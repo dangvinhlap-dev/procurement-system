@@ -46,7 +46,7 @@ test('tạo lịch kỳ năm rồi mở kỳ tháng theo thứ tự', async ({ p
   await drawer.getByRole('button', { name: 'Mở kỳ' }).click()
   await expect(page.locator('.ant-message')).toContainText(`Đã mở kỳ 03/${year}.`)
   await expect(page.locator('.data-grid-row', { hasText: `03/${year}` })).toContainText('Đang mở')
-  await expect(page.locator('.data-grid-row', { hasText: `04/${year}` })).toContainText('Kỳ tiếp theo')
+  await expect(page.locator('.data-grid-row', { hasText: `04/${year}` })).toContainText('Mở kỳ')
 
   await page.locator('.data-grid-row', { hasText: `05/${year}` }).dblclick()
   await expect(drawer.getByRole('button', { name: 'Mở kỳ' })).toBeDisabled()

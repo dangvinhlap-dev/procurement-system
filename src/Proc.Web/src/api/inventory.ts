@@ -33,6 +33,12 @@ export interface InventoryPeriod {
   closedAt: string | null
   /** Mở được ngay bây giờ (đúng thứ tự, có quyền). */
   canOpen: boolean
+  /** Kỳ đang mở, kỳ trước đã đóng, người xem có quyền đóng kỳ. */
+  canClose: boolean
+  /** Kỳ đã đóng gần nhất, người xem có quyền mở lại. */
+  canReopen: boolean
+  /** Lý do lần mở lại gần nhất. */
+  reopenReason: string | null
 }
 
 /** Lịch kỳ của công ty đang làm việc. */
@@ -68,6 +74,24 @@ export function useInventoryPeriodMutations() {
     open: useMutation({
       mutationFn: (id: string) => apiFetch<InventoryPeriod>(`/api/inventory-periods/${id}/open`, { method: 'POST' }),
       onSuccess,
+    }),
+    // Đóng/mở lại kỳ đổi giá vốn, số dư: làm mới cả tồn kho, báo cáo và chứng từ.
+    close: useMutation({
+      mutationFn: (id: string) => apiFetch<InventoryPeriod>(`/api/inventory-periods/${id}/close`, { method: 'POST' }),
+      onSuccess: () => {
+        onSuccess()
+        void queryClient.invalidateQueries({ queryKey: ['stock'] })
+        void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+      },
+    }),
+    reopen: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<InventoryPeriod>(`/api/inventory-periods/${id}/reopen`, { method: 'POST', body: { reason } }),
+      onSuccess: () => {
+        onSuccess()
+        void queryClient.invalidateQueries({ queryKey: ['stock'] })
+        void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+      },
     }),
   }
 }
