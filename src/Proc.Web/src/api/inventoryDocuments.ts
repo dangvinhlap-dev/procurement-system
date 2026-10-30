@@ -36,6 +36,8 @@ export interface InventoryDocumentListItem {
   fromWarehouseCode: string | null
   /** Mã kho nhập (phiếu chuyển kho). */
   toWarehouseCode: string | null
+  /** Công ty đối ứng (phiếu bán/nhập nội bộ). */
+  counterCompanyCode?: string | null
 }
 
 /** Kết quả tìm chứng từ. */
@@ -68,6 +70,8 @@ export interface InventoryLine {
   note: string | null
   /** Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập). */
   sourceLineId: string | null
+  /** SL gửi theo phiếu xuất bán (chỉ phiếu nhập mua nội bộ). */
+  sentQty?: number | null
 }
 
 /** Chi tiết chứng từ kho. */
@@ -105,6 +109,12 @@ export interface InventoryDocument {
   /** Phiếu nhập gốc (phiếu trả NCC). */
   linkedDocumentId: string | null
   linkedDocumentNo: string | null
+  /** Công ty đối ứng (ICS: công ty mua; ICR: công ty bán). */
+  counterCompanyId?: string | null
+  counterCompanyCode?: string | null
+  counterCompanyName?: string | null
+  /** Trạng thái nhận hàng của cặp bán nội bộ: Pending, Full, Short. */
+  receiveStatus?: ReceiveStatus | null
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -367,3 +377,48 @@ export function useSupplierLookup(ids: string[]) {
     queryFn: () => apiFetch<SupplierLookup[]>(`/api/suppliers/lookup${query ? `?${query}` : ''}`),
   })
 }
+
+/** Trạng thái nhận hàng bán nội bộ (design.md mục 10.7). */
+export type ReceiveStatus = 'Pending' | 'Full' | 'Short'
+
+/** Nhãn trạng thái nhận hàng. */
+export const receiveStatusLabels: Record<ReceiveStatus, string> = {
+  Pending: 'Chờ nhận',
+  Full: 'Đã nhận đủ',
+  Short: 'Nhận thiếu',
+}
+
+/** Một dòng phiếu xuất bán nội bộ gửi lên (giá do server lấy từ bảng giá nội bộ). */
+export interface SaveSaleLineInput {
+  id: string | null
+  itemId: string
+  uomId: string
+  qty: number
+  lotNo: string | null
+  note: string | null
+}
+
+/** Nội dung phiếu xuất bán nội bộ. */
+export interface SaveSaleInput {
+  date: string
+  fromWarehouseId: string
+  buyerCompanyId: string
+  invoiceNo: string | null
+  invoiceDate: string | null
+  deliverer: string | null
+  note: string | null
+  lines: SaveSaleLineInput[]
+}
+
+/** Lập, sửa, ghi sổ phiếu xuất bán nội bộ. */
+export const useIntercompanySaleMutations = () => useInventoryDocumentMutations<SaveSaleInput>('/api/intercompany-sales')
+
+/** Bên nhận xác nhận phiếu nhập mua nội bộ. */
+export interface ConfirmReceiptInput {
+  date: string
+  note: string | null
+  lines: { lineId: string; receivedQty: number; lotNo: string | null; note: string | null }[]
+}
+
+/** Xác nhận (lưu), ghi sổ phiếu nhập mua nội bộ – lập mới không có (phiếu do bên bán sinh). */
+export const useIntercompanyReceiptMutations = () => useInventoryDocumentMutations<ConfirmReceiptInput>('/api/intercompany-receipts')

@@ -155,6 +155,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CounterCompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -240,6 +243,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CounterCompanyId");
 
                     b.HasIndex("LinkedDocumentId");
 
@@ -1371,6 +1376,64 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Warehouse", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Pricing.InternalPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BuyerCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("VatCode")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerCompanyId");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("CompanyId", "ItemId", "BuyerCompanyId", "ValidFrom");
+
+                    b.ToTable("InternalPrice", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InternalPrice_Buyer", "\"BuyerCompanyId\" IS NULL OR \"BuyerCompanyId\" <> \"CompanyId\"");
+                        });
+                });
+
             modelBuilder.Entity("Proc.Infrastructure.Identity.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1625,6 +1688,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CounterCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Inventory.InventoryDocument", null)
                         .WithMany()
@@ -2062,6 +2130,26 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ParentWarehouseId", "CompanyId")
                         .HasPrincipalKey("Id", "CompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.InternalPrice", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("BuyerCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Infrastructure.Identity.AppUser", b =>

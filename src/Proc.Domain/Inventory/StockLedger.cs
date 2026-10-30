@@ -134,6 +134,24 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
         return (Create(document, line, from, -1, periodId, amount, false, cost), Create(document, line, to, 1, periodId, amount, false, cost));
     }
 
+    /// <summary>
+    /// Dòng xuất bán nội bộ tại kho tổng công ty bán (design.md mục 6.1): theo giá vốn tạm tính của công ty bán, chưa chốt – đóng kỳ
+    /// gán giá vốn kỳ. Doanh thu theo giá bán nội bộ nằm trên phiếu, không ở sổ kho.
+    /// </summary>
+    /// <param name="document">Phiếu xuất bán (có kho xuất).</param>
+    /// <param name="line">Dòng.</param>
+    /// <param name="periodId">Kỳ tháng.</param>
+    /// <param name="unitCost">Giá vốn tạm tính theo ĐVT cơ sở.</param>
+    /// <returns>Dòng sổ −1.</returns>
+    public static StockLedgerEntry Sale(InventoryDocument document, InventoryDocumentLine line, Guid periodId, decimal unitCost)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(line);
+        var warehouseId = document.FromWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho xuất.");
+        var amount = Math.Round(line.BaseQty * unitCost, 2, MidpointRounding.AwayFromZero);
+        return Create(document, line, warehouseId, -1, periodId, amount, isCostFinal: false, unitCost);
+    }
+
     private static StockLedgerEntry Create(
         InventoryDocument document, InventoryDocumentLine line, Guid warehouseId, int direction, Guid periodId, decimal amount,
         bool isCostFinal, decimal? unitCost = null) =>

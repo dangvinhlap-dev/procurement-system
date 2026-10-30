@@ -67,6 +67,34 @@ const columnsByType: Record<string, Column[]> = {
     { key: 'to', title: 'Kho nhập', width: 120, value: (r) => r.toWarehouseCode, groupable: true },
     ...tailColumns,
   ],
+  ICS: [
+    noColumn,
+    { key: 'date', title: 'Ngày xuất', width: 90, type: 'date', value: (r) => r.date },
+    { key: 'from', title: 'Kho xuất', width: 90, value: (r) => r.fromWarehouseCode },
+    { key: 'buyer', title: 'Công ty mua', width: 110, value: (r) => r.counterCompanyCode ?? null, groupable: true },
+    { key: 'invoice', title: 'Số hóa đơn', width: 100, value: (r) => r.invoiceNo },
+    ...moneyColumns,
+    ...tailColumns,
+  ],
+  ICR: [
+    noColumn,
+    { key: 'date', title: 'Ngày nhận', width: 90, type: 'date', value: (r) => r.date },
+    { key: 'seller', title: 'Công ty bán', width: 110, value: (r) => r.counterCompanyCode ?? null, groupable: true },
+    { key: 'to', title: 'Kho nhận', width: 90, value: (r) => r.toWarehouseCode },
+    { key: 'invoice', title: 'Số hóa đơn', width: 100, value: (r) => r.invoiceNo },
+    ...moneyColumns,
+    { key: 'lines', title: 'Số dòng', width: 70, type: 'quantity', value: (r) => r.lineCount },
+    {
+      key: 'status',
+      title: 'Trạng thái',
+      width: 110,
+      type: 'status',
+      // Phiếu nhập mua nội bộ nháp nghĩa là hàng đang chờ bên nhận xác nhận.
+      value: (r) => (r.status === 'Draft' ? 'Chờ nhận' : documentStatusLabels[r.status]),
+      tone: (r) => documentStatusTone[r.status],
+      groupable: true,
+    },
+  ],
 }
 
 /**
@@ -76,8 +104,11 @@ const columnsByType: Record<string, Column[]> = {
  * @param title Tiêu đề màn hình.
  * @param path Đường dẫn màn hình, ví dụ "/kho/grn".
  * @param exportFileName Tên file khi xuất CSV.
+ * @param canCreate false = không có nút Tạo mới (phiếu do hệ thống sinh, ví dụ phiếu nhập mua nội bộ).
  */
-export function InventoryDocumentListPage({ docType, title, path, exportFileName }: { docType: string; title: string; path: string; exportFileName: string }) {
+export function InventoryDocumentListPage({
+  docType, title, path, exportFileName, canCreate = true,
+}: { docType: string; title: string; path: string; exportFileName: string; canCreate?: boolean }) {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const [range, setRange] = useState<DateRange>(() => ({
@@ -95,7 +126,7 @@ export function InventoryDocumentListPage({ docType, title, path, exportFileName
       columns={columnsByType[docType]}
       rowKey={(r) => r.id}
       loading={documents.isLoading}
-      canCreate={hasPermission(Permission.InventoryDocumentCreate)}
+      canCreate={canCreate && hasPermission(Permission.InventoryDocumentCreate)}
       onCreate={() => navigate(`${path}/moi`)}
       onOpenRow={(r) => navigate(`${path}/${r.id}`)}
       notice={<TruncatedNotice truncated={documents.data?.truncated} />}

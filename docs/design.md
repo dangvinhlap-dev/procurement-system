@@ -316,6 +316,21 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Bỏ ghi sổ đòi người dùng thấy **mọi kho** trên phiếu (TRF có hai kho) | Không cho trừ tồn ở kho mình không được phép |
 | Chưa làm ở giai đoạn 2: xác nhận nhận hàng, SL thực nhận của TRF (mục 10.6) | Làm cùng luồng duyệt |
 
+### 6.6 Mua bán nội bộ – cách làm (giai đoạn 4)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Bảng giá nội bộ (`InternalPrice`) thuộc **công ty bán**: mặt hàng tồn kho, công ty mua (trống = mọi công ty), giá chưa VAT theo **ĐVT cơ sở**, thuế suất (trống = theo mặt hàng), hiệu lực từ – đến. Cùng mặt hàng, cùng công ty mua không được chồng hiệu lực; giá riêng cho công ty mua thắng giá chung. Quyền xem/sửa: `Pricing.PriceList.View/Manage`; công ty mua không thấy bảng giá của công ty bán | Mục 4, 12 |
+| ICS: kho xuất **chỉ kho tổng** đang dùng của công ty bán; công ty mua khác công ty bán, đang hoạt động, có kho tổng đang dùng. Đơn giá, thuế suất do **server** lấy từ bảng giá theo ngày phiếu (giá cơ sở × hệ số ĐVT), không nhận từ client; chưa có giá thì không lưu được | Mục 4, 10.7 |
+| Ghi sổ ICS: −1 tại kho tổng bên bán theo giá vốn tạm tính (chưa chốt, đóng kỳ gán giá vốn kỳ – là dòng xuất tiêu hao nhận chênh lệch làm tròn); trong cùng giao dịch sinh **ICR "Chờ nhận"** (nháp) tại công ty mua: số theo mẫu số của công ty mua, kho nhận = kho tổng công ty mua, dòng chép từ ICS (SL gửi, giá bán nội bộ, thuế suất, lô), liên kết hai chiều `LinkedDocumentId` | Mục 6.3 bước 2–3 |
+| Bên mua lưu xác nhận: ngày nhận (không trước ngày xuất), SL thực nhận 0 → SL gửi (dòng nhận 0 bị bỏ), lô, ghi chú chênh lệch; giá không sửa. Ghi sổ ICR bằng lệnh ghi sổ chung: +1 tại kho tổng bên mua theo giá bán nội bộ, giá cuối cùng; ICR là **nhập có giá** trong công thức giá vốn (mục 7.3) | Mục 6.3 bước 4, 10.8 |
+| Trạng thái nhận: Chờ nhận (ICR nháp) / Đã nhận đủ / Nhận thiếu (so SL cơ sở từng dòng). Biên bản chênh lệch giai đoạn này là ghi chú trên ICR + báo cáo đối chiếu; phiếu nhập lại hàng trả về, điều chỉnh hóa đơn làm sau | Mục 6.3 bước 5 |
+| Bên bán bỏ ghi sổ ICS: chặn nếu ICR đã ghi sổ; nếu ICR còn chờ nhận thì ICR bị **hủy** (giữ số), ghi sổ lại ICS sinh ICR mới. Bên mua không hủy được ICR; bỏ ghi sổ ICR được khi kỳ bên mua còn mở | Mục 6.3 bước 6 |
+| Đọc chứng từ công ty kia chỉ qua Id liên kết của đúng cặp ICS–ICR (hiện số phiếu, trạng thái nhận, SL gửi) và trong báo cáo hàng đi đường, đối chiếu (chỉ cặp có công ty đang làm việc, số tổng hợp) | Mỗi công ty là pháp nhân độc lập |
+| ICR chờ nhận là hàng đi đường: **không chặn** đóng kỳ bên mua (kiểm tra phiếu nháp bỏ qua ICR) | Mục 7.2 bước 1 |
+| Báo cáo hàng đi đường: ICS đã ghi sổ mà ICR chưa ghi sổ, cả chiều bán ra (Out) và mua vào (In). Đối chiếu nội bộ theo khoảng ngày ICS: bên này bán – bên kia đã nhận; bên kia bán – bên này đã nhận (giá trị trước VAT). Quyền `Report.Stock.View` | Mục 11 – nhóm Nội bộ |
+| Chưa làm: đơn đặt hàng nội bộ, duyệt ICS, thông báo cho thủ kho bên mua, nút Điều chuyển nhanh kho con → kho con khác công ty | Làm cùng luồng duyệt, thông báo |
+
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.

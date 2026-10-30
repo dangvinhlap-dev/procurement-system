@@ -28,13 +28,16 @@ public sealed class DocumentNumberService : IDocumentNumberService
     }
 
     /// <inheritdoc />
-    public async Task<string> NextAsync(string docType, DateOnly documentDate, CancellationToken cancellationToken)
+    public Task<string> NextAsync(string docType, DateOnly documentDate, CancellationToken cancellationToken) =>
+        NextForCompanyAsync(_scope.RequireCompany(), docType, documentDate, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> NextForCompanyAsync(Guid companyId, string docType, DateOnly documentDate, CancellationToken cancellationToken)
     {
-        var companyId = _scope.RequireCompany();
         var type = CodeRules.Normalize(docType);
         if (!DocumentTypes.IsKnown(type)) throw new BusinessRuleException($"Không có loại chứng từ {type}.");
 
-        var format = await FormatOfAsync(type, cancellationToken);
+        var format = await FormatOfAsync(companyId, type, cancellationToken);
         var period = format.PeriodKey(documentDate);
 
         // Một câu lệnh vừa tạo bộ đếm (nếu chưa có) vừa tăng và trả số: PostgreSQL khóa dòng bộ đếm đến hết giao dịch,
@@ -100,10 +103,11 @@ public sealed class DocumentNumberService : IDocumentNumberService
         return (await ListAsync(today, cancellationToken)).Single(x => x.DocType == info.Code);
     }
 
-    private async Task<DocumentNumberFormat> FormatOfAsync(string type, CancellationToken cancellationToken)
+    private async Task<DocumentNumberFormat> FormatOfAsync(Guid companyId, string type, CancellationToken cancellationToken)
     {
-        var pattern = await _db.DocumentNumberings.AsNoTracking()
-            .Where(x => x.DocType == type)
+        // Lọc công ty tường minh (bỏ filter công ty đang làm việc) để cấp số được cho công ty khác khi hệ thống sinh chứng từ thay.
+        var pattern = await _db.DocumentNumberings.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .Where(x => x.CompanyId == companyId && x.DocType == type)
             .Select(x => x.Format)
             .FirstOrDefaultAsync(cancellationToken);
         return pattern is null ? DocumentNumberFormat.Default(type) : DocumentNumberFormat.Parse(pattern);

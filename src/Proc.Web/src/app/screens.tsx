@@ -30,6 +30,9 @@ import {
   ShoppingCartOutlined,
   SolutionOutlined,
   SwapOutlined,
+  CarOutlined,
+  ReconciliationOutlined,
+  DollarOutlined,
   TagsOutlined,
   TeamOutlined,
   UserOutlined,
@@ -104,6 +107,7 @@ export const screens: Screen[] = [
   { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },
   { code: 'CAT', title: 'Nhóm hàng', navLabel: 'Nhóm hàng', path: '/gia-ncc/nhom-hang', icon: <ClusterOutlined />, group: 'pricing', permission: Permission.ItemCategoryView },
   { code: 'UOM', title: 'Đơn vị tính', navLabel: 'Đơn vị tính', path: '/gia-ncc/don-vi-tinh', icon: <ColumnWidthOutlined />, group: 'pricing', permission: Permission.ItemView },
+  { code: 'IPR', title: 'Bảng giá nội bộ', navLabel: 'Bảng giá nội bộ', path: '/gia-ncc/gia-noi-bo', icon: <DollarOutlined />, group: 'pricing', permission: Permission.PriceListView },
   { code: 'PRL', title: 'Bảng giá NCC', navLabel: 'Bảng giá NCC', path: '/gia-ncc/bang-gia', icon: <FileTextOutlined />, group: 'pricing', permission: Permission.PriceListView },
   { code: 'PCMP', title: 'So sánh giá', navLabel: 'So sánh giá', path: '/gia-ncc/so-sanh-gia', icon: <LineChartOutlined />, group: 'pricing', permission: Permission.PriceCompareView },
 
@@ -112,6 +116,8 @@ export const screens: Screen[] = [
   { code: 'QCMP', title: 'So sánh báo giá', navLabel: 'So sánh báo giá', path: '/dau-thau/so-sanh-bao-gia', icon: <DiffOutlined />, group: 'sourcing', permission: Permission.RfqView },
 
   { code: 'NXT', title: 'Báo cáo nhập – xuất – tồn', navLabel: 'Nhập – xuất – tồn', path: '/bao-cao/nxt', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportStockView },
+  { code: 'TRANSIT', title: 'Hàng đi đường nội bộ', navLabel: 'Hàng đi đường', path: '/bao-cao/hang-di-duong', icon: <CarOutlined />, group: 'reports', permission: Permission.ReportStockView },
+  { code: 'ICREC', title: 'Đối chiếu mua bán nội bộ', navLabel: 'Đối chiếu nội bộ', path: '/bao-cao/doi-chieu-noi-bo', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
 
   { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },

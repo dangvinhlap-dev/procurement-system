@@ -32,6 +32,17 @@ public interface IDocumentNumberService
     Task<string> NextAsync(string docType, DateOnly documentDate, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Cấp số chứng từ cho một công ty khác công ty đang làm việc – chỉ dùng khi hệ thống sinh chứng từ thay bên kia (phiếu nhập
+    /// mua nội bộ sinh từ phiếu xuất bán – design.md mục 6.3). Mẫu số, mã công ty theo công ty đó.
+    /// </summary>
+    /// <param name="companyId">Công ty nhận chứng từ.</param>
+    /// <param name="docType">Mã loại chứng từ.</param>
+    /// <param name="documentDate">Ngày chứng từ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số chứng từ.</returns>
+    Task<string> NextForCompanyAsync(Guid companyId, string docType, DateOnly documentDate, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Danh sách mọi loại chứng từ với mẫu số đang dùng tại công ty đang làm việc.
     /// </summary>
     /// <param name="today">Ngày dùng để tính kỳ hiện tại và số kế tiếp.</param>

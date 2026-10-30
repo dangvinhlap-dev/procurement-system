@@ -28,6 +28,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     private readonly IDocumentNumberService _numbers;
     private readonly IInventoryPeriodService _periods;
     private readonly IClock _clock;
+    private readonly Proc.Application.Pricing.IInternalPriceAdministration _prices;
 
     /// <summary>
     /// Tạo dịch vụ.
@@ -37,9 +38,12 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     /// <param name="numbers">Cấp số chứng từ.</param>
     /// <param name="periods">Kỳ kho (kiểm tra kỳ mở khi ghi sổ).</param>
     /// <param name="clock">Đồng hồ (khoảng ngày mặc định khi tìm, thời điểm ghi sổ).</param>
+    /// <param name="prices">Bảng giá nội bộ (giá phiếu xuất bán nội bộ).</param>
     public InventoryDocumentService(
-        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IInventoryPeriodService periods, IClock clock)
+        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IInventoryPeriodService periods, IClock clock,
+        Proc.Application.Pricing.IInternalPriceAdministration prices)
     {
+        _prices = prices;
         _db = db;
         _scope = scope;
         _numbers = numbers;
@@ -73,11 +77,13 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 from wf in whFrom.DefaultIfEmpty()
                 join wt in _db.Warehouses on d.ToWarehouseId equals wt.Id into whTo
                 from wt in whTo.DefaultIfEmpty()
+                join cc in _db.Companies on d.CounterCompanyId equals cc.Id into counter
+                from cc in counter.DefaultIfEmpty()
                 orderby d.Date descending, d.No descending
                 select new InventoryDocumentListItemDto(
                     d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), w == null ? null : w.Code, w == null ? null : w.Name,
                     s == null ? null : s.Code, s == null ? null : s.Name, d.InvoiceNo, d.TotalAmount, d.TotalVat, d.Lines.Count,
-                    wf == null ? null : wf.Code, wt == null ? null : wt.Code))
+                    wf == null ? null : wf.Code, wt == null ? null : wt.Code, cc == null ? null : cc.Code))
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
         return new InventoryDocumentListResult(rows.Take(SearchLimit).ToList(), rows.Count > SearchLimit, SearchLimit);
@@ -149,6 +155,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var itemIds = document.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
 
+        Guid? buyerMainWarehouseId = null;
         // Kiểm tra lại lúc ghi sổ: từ lúc lưu nháp tới giờ NCC có thể bị tạm ngưng, kho ngừng dùng, phiếu trả khác đã trả bớt…
         switch (document.DocType)
         {
@@ -163,6 +170,14 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 await CheckTransferWarehousesAsync(document.FromWarehouseId!.Value, document.ToWarehouseId!.Value, cancellationToken);
                 EnsureItemsActive(document, items);
                 break;
+            case DocumentTypes.IntercompanySale:
+                buyerMainWarehouseId = await CheckSaleHeaderAsync(document.FromWarehouseId!.Value, document.CounterCompanyId!.Value, cancellationToken);
+                EnsureItemsActive(document, items);
+                break;
+            case DocumentTypes.IntercompanyReceipt:
+                // Bên bán đã bỏ ghi sổ phiếu xuất thì phiếu nhập không còn hàng để nhận.
+                await LinkedSaleAsync(document, cancellationToken);
+                break;
             default:
                 throw new BusinessRuleException($"Chưa hỗ trợ ghi sổ chứng từ loại {document.DocType}.");
         }
@@ -171,7 +186,9 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().ToList();
         var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
         // Giá vốn tạm tính của phiếu chuyển tính trước khi ghi các dòng sổ của chính phiếu này.
-        var costs = document.DocType == DocumentTypes.Transfer ? await ProvisionalCostsAsync(itemIds, cancellationToken) : [];
+        var costs = document.DocType is DocumentTypes.Transfer or DocumentTypes.IntercompanySale
+            ? await ProvisionalCostsAsync(itemIds, cancellationToken)
+            : [];
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         await LockOpenPeriodAsync(periodId, cancellationToken);
@@ -182,11 +199,17 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             switch (document.DocType)
             {
                 case DocumentTypes.GoodsReceipt:
+                case DocumentTypes.IntercompanyReceipt:
+                    // Nhập mua nội bộ nhập kho tổng bên mua theo giá bán nội bộ, là giá cuối cùng (design.md mục 4).
                     _db.StockLedger.Add(StockLedgerEntry.Receipt(document, line, periodId));
                     await ApplyStockAsync(companyId, warehouses[document.ToWarehouseId!.Value], item, line.LotNo, line.BaseQty, cancellationToken);
                     break;
                 case DocumentTypes.ReturnToVendor:
                     _db.StockLedger.Add(StockLedgerEntry.Return(document, line, periodId));
+                    await ApplyStockAsync(companyId, warehouses[document.FromWarehouseId!.Value], item, line.LotNo, -line.BaseQty, cancellationToken);
+                    break;
+                case DocumentTypes.IntercompanySale:
+                    _db.StockLedger.Add(StockLedgerEntry.Sale(document, line, periodId, costs[item.Id]));
                     await ApplyStockAsync(companyId, warehouses[document.FromWarehouseId!.Value], item, line.LotNo, -line.BaseQty, cancellationToken);
                     break;
                 default:
@@ -196,6 +219,13 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                     await ApplyStockAsync(companyId, warehouses[document.ToWarehouseId!.Value], item, line.LotNo, line.BaseQty, cancellationToken);
                     break;
             }
+        }
+
+        if (document.DocType == DocumentTypes.IntercompanySale)
+        {
+            // Sinh phiếu nhập mua nội bộ "Chờ nhận" tại công ty mua, số theo mẫu số của công ty mua (design.md mục 6.3 bước 3).
+            var receiptNo = await _numbers.NextForCompanyAsync(document.CounterCompanyId!.Value, DocumentTypes.IntercompanyReceipt, document.Date, cancellationToken);
+            _db.InventoryDocuments.Add(document.CreateIntercompanyReceipt(receiptNo, buyerMainWarehouseId!.Value));
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -235,6 +265,10 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var entries = await _db.StockLedger.Where(x => x.DocumentId == id).ToListAsync(cancellationToken);
         var itemIds = entries.Select(e => e.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+
+        // Bên mua đã xác nhận thì không bỏ ghi sổ phiếu xuất bán; chưa xác nhận thì phiếu chờ nhận bị hủy (design.md mục 6.3 bước 6).
+        var counterpart = document.DocType == DocumentTypes.IntercompanySale ? await CounterpartAsync(document, cancellationToken) : null;
+        if (counterpart is not null) document.DetachIntercompanyReceipt(counterpart);
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         await LockOpenPeriodAsync(period.Id, cancellationToken);
@@ -361,17 +395,31 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             ? await _db.Users.AsNoTracking().Where(u => u.Id == uid).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
             : null;
 
+        var linkedNo = d.LinkedDocumentId is { } linkedId
+            ? await _db.InventoryDocuments.AsNoTracking().Where(x => x.Id == linkedId).Select(x => x.No).SingleOrDefaultAsync(cancellationToken)
+            : null;
+        // Bán nội bộ: phiếu bên kia thuộc công ty khác – đọc theo Id liên kết để hiện số phiếu, trạng thái nhận, SL gửi.
+        var counterpart = await CounterpartAsync(d, cancellationToken);
+        linkedNo ??= counterpart?.No;
+        var sale = d.DocType == DocumentTypes.IntercompanySale ? d : counterpart;
+        var receipt = d.DocType == DocumentTypes.IntercompanyReceipt ? d : counterpart;
+        var receiveStatus = ReceiveStatusOf(sale, receipt);
+        var sentQty = d.DocType == DocumentTypes.IntercompanyReceipt && counterpart is not null
+            ? counterpart.Lines.ToDictionary(l => l.Id, l => l.Qty)
+            : null;
+        var counterCompany = d.CounterCompanyId is { } ccid
+            ? await _db.Companies.AsNoTracking().Where(c => c.Id == ccid).Select(c => new { c.Code, c.Name }).SingleOrDefaultAsync(cancellationToken)
+            : null;
+
         var lines = d.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
             var item = items.GetValueOrDefault(l.ItemId);
             return new InventoryLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? HiddenItem, item?.Name ?? string.Empty, l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.UnitPrice, l.Amount,
-                l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId);
+                l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId,
+                sentQty is not null && l.SourceLineId is { } src ? sentQty.GetValueOrDefault(src) : null);
         }).ToList();
-        var linkedNo = d.LinkedDocumentId is { } linkedId
-            ? await _db.InventoryDocuments.AsNoTracking().Where(x => x.Id == linkedId).Select(x => x.No).SingleOrDefaultAsync(cancellationToken)
-            : null;
 
         string? readOnlyReason = null;
         if (items.Count < itemIds.Count) readOnlyReason = "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được.";
@@ -384,7 +432,8 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         return new InventoryDocumentDto(
             d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), d.FromWarehouseId, d.ToWarehouseId, d.SupplierId, supplier?.Code, supplier?.Name,
             d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.DeliveryNoteNo, d.Deliverer, d.Note, d.TotalAmount, d.TotalVat, d.CreatedAt,
-            createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo);
+            createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo,
+            d.CounterCompanyId, counterCompany?.Code, counterCompany?.Name, receiveStatus);
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>

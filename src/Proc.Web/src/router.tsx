@@ -14,12 +14,16 @@ import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
 import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
 import { GoodsReturnPage } from './pages/inventory/GoodsReturnPage'
+import { IntercompanyReceiptPage } from './pages/inventory/IntercompanyReceiptPage'
+import { IntercompanySalePage } from './pages/inventory/IntercompanySalePage'
 import { InventoryDocumentListPage } from './pages/inventory/InventoryDocumentListPage'
 import { StockCardPage } from './pages/inventory/StockCardPage'
 import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
+import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
@@ -47,6 +51,11 @@ const implemented: Record<string, ReactNode> = {
   STK: <StockOnHandPage />,
   CARD: <StockCardPage />,
   NXT: <StockMovementReportPage />,
+  ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
+  ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
+  IPR: <InternalPriceListPage />,
+  TRANSIT: <GoodsInTransitPage />,
+  ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
@@ -60,6 +69,8 @@ const documentPages = [
   { code: 'GRN', element: <GoodsReceiptPage /> },
   { code: 'RTV', element: <GoodsReturnPage /> },
   { code: 'TRF', element: <StockTransferPage /> },
+  { code: 'ICS', element: <IntercompanySalePage /> },
+  { code: 'ICR', element: <IntercompanyReceiptPage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,

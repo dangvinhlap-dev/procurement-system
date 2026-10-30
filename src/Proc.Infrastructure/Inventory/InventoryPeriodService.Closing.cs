@@ -28,7 +28,9 @@ public sealed partial class InventoryPeriodService
 
         // Kiểm tra trước đóng (design.md mục 7.2 bước 1): không còn phiếu nháp trong kỳ.
         var drafts = await _db.InventoryDocuments.AsNoTracking().IgnoreQueryFilters([ProcDbContext.WarehouseFilter])
-            .Where(d => d.Status == DocumentStatus.Draft && d.Date >= period.StartDate && d.Date <= period.EndDate)
+            // Phiếu nhập mua nội bộ chờ nhận là hàng đi đường, ngày còn tạm (ngày xuất bên bán) – không chặn đóng kỳ (design.md mục 7.2).
+            .Where(d => d.Status == DocumentStatus.Draft && d.DocType != DocumentTypes.IntercompanyReceipt
+                        && d.Date >= period.StartDate && d.Date <= period.EndDate)
             .OrderBy(d => d.No).Select(d => d.No).ToListAsync(cancellationToken);
         if (drafts.Count > 0)
             throw new BusinessRuleException(

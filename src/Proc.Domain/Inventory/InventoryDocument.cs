@@ -47,6 +47,24 @@ public sealed record ReturnHeader(DateOnly Date, InventoryDocument Source, strin
 /// <param name="Note">Lý do chuyển.</param>
 public sealed record TransferHeader(DateOnly Date, Guid FromWarehouseId, Guid ToWarehouseId, string? Deliverer, string? Receiver, string? Note);
 
+/// <summary>Đầu phiếu xuất bán nội bộ (design.md mục 10.7).</summary>
+/// <param name="Date">Ngày xuất.</param>
+/// <param name="FromWarehouseId">Kho xuất – phải là kho tổng của công ty bán (tầng Infrastructure kiểm tra loại kho).</param>
+/// <param name="BuyerCompanyId">Công ty mua.</param>
+/// <param name="InvoiceNo">Số hóa đơn.</param>
+/// <param name="InvoiceDate">Ngày hóa đơn.</param>
+/// <param name="Deliverer">Người giao, phương tiện vận chuyển.</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record SaleHeader(
+    DateOnly Date, Guid FromWarehouseId, Guid BuyerCompanyId, string? InvoiceNo, DateOnly? InvoiceDate, string? Deliverer, string? Note);
+
+/// <summary>Bên nhận xác nhận một dòng phiếu nhập mua nội bộ.</summary>
+/// <param name="LineId">Dòng phiếu nhập mua nội bộ.</param>
+/// <param name="ReceivedQty">SL thực nhận theo ĐVT trên phiếu (0 = không nhận được dòng này).</param>
+/// <param name="LotNo">Số lô.</param>
+/// <param name="Note">Ghi chú chênh lệch.</param>
+public sealed record ReceiptConfirmLine(Guid LineId, decimal ReceivedQty, string? LotNo, string? Note);
+
 /// <summary>Một dòng gửi vào khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
 /// <param name="ItemId">Mặt hàng.</param>
@@ -120,8 +138,11 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     /// <summary>Người nhận hàng (phiếu chuyển kho).</summary>
     public string? Receiver { get; private set; }
 
-    /// <summary>Chứng từ liên kết (phiếu trả NCC: phiếu nhập gốc).</summary>
+    /// <summary>Chứng từ liên kết (phiếu trả NCC: phiếu nhập gốc; ICS ↔ ICR: phiếu bên kia).</summary>
     public Guid? LinkedDocumentId { get; private set; }
+
+    /// <summary>Công ty đối ứng (ICS: công ty mua; ICR: công ty bán).</summary>
+    public Guid? CounterCompanyId { get; private set; }
 
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
@@ -263,6 +284,113 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     }
 
     /// <summary>
+    /// Lập phiếu xuất bán nội bộ ở trạng thái nháp (design.md mục 6.3, 10.7).
+    /// </summary>
+    /// <param name="companyId">Công ty bán.</param>
+    /// <param name="no">Số phiếu đã cấp.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <returns>Phiếu nháp.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu kho, công ty mua hoặc bán cho chính mình.</exception>
+    public static InventoryDocument CreateSale(Guid companyId, string no, SaleHeader header)
+    {
+        if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");
+        if (string.IsNullOrWhiteSpace(no)) throw new BusinessRuleException("Chứng từ phải có số.");
+        var document = new InventoryDocument { CompanyId = companyId, DocType = DocumentTypes.IntercompanySale, No = no };
+        document.UpdateSale(header);
+        return document;
+    }
+
+    /// <summary>
+    /// Sửa đầu phiếu xuất bán nội bộ. Bán nội bộ là giữa hai pháp nhân khác nhau; trong một công ty dùng phiếu chuyển kho
+    /// (design.md mục 4).
+    /// </summary>
+    /// <param name="header">Đầu phiếu mới.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp, thiếu kho/công ty mua, hoặc công ty mua là chính mình.</exception>
+    public void UpdateSale(SaleHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        EnsureDraft();
+        if (header.FromWarehouseId == Guid.Empty) throw new BusinessRuleException("Hãy chọn kho xuất.");
+        if (header.BuyerCompanyId == Guid.Empty) throw new BusinessRuleException("Hãy chọn công ty mua.");
+        if (header.BuyerCompanyId == CompanyId) throw new BusinessRuleException("Công ty mua phải khác công ty bán – trong một công ty dùng phiếu chuyển kho.");
+        Date = header.Date;
+        FromWarehouseId = header.FromWarehouseId;
+        CounterCompanyId = header.BuyerCompanyId;
+        InvoiceNo = Clean(header.InvoiceNo);
+        InvoiceDate = header.InvoiceDate;
+        Deliverer = Clean(header.Deliverer);
+        Note = Clean(header.Note);
+    }
+
+    /// <summary>
+    /// Sinh phiếu nhập mua nội bộ "Chờ nhận" tại công ty mua từ phiếu xuất bán đã ghi sổ (design.md mục 6.3 bước 3): kho nhận là kho
+    /// tổng công ty mua, dòng chép từ phiếu bán (mặt hàng, ĐVT, SL gửi, giá bán nội bộ, thuế suất, lô, hạn dùng), liên kết hai chiều.
+    /// </summary>
+    /// <param name="no">Số phiếu cấp theo công ty mua.</param>
+    /// <param name="buyerMainWarehouseId">Kho tổng công ty mua.</param>
+    /// <returns>Phiếu nhập mua nội bộ ở trạng thái nháp (Chờ nhận).</returns>
+    /// <exception cref="BusinessRuleException">Khi phiếu này không phải phiếu bán nội bộ đã ghi sổ.</exception>
+    public InventoryDocument CreateIntercompanyReceipt(string no, Guid buyerMainWarehouseId)
+    {
+        if (DocType != DocumentTypes.IntercompanySale || Status != DocumentStatus.Posted || CounterCompanyId is null)
+            throw new BusinessRuleException($"Phiếu {No} phải là phiếu xuất bán nội bộ đã ghi sổ.");
+        var receipt = new InventoryDocument
+        {
+            CompanyId = CounterCompanyId.Value, DocType = DocumentTypes.IntercompanyReceipt, No = no, Date = Date,
+            ToWarehouseId = buyerMainWarehouseId, CounterCompanyId = CompanyId, LinkedDocumentId = Id,
+            InvoiceNo = InvoiceNo, InvoiceDate = InvoiceDate, Deliverer = Deliverer,
+        };
+        foreach (var line in _lines.OrderBy(l => l.LineNo)) receipt._lines.Add(line.CopyFor(receipt.Id));
+        receipt.Recalculate();
+        LinkedDocumentId = receipt.Id;
+        return receipt;
+    }
+
+    /// <summary>
+    /// Bên nhận xác nhận phiếu nhập mua nội bộ (design.md mục 10.8): ngày nhận, SL thực nhận (≤ SL gửi), lô, ghi chú chênh lệch.
+    /// Đơn giá = giá bán nội bộ, không sửa. Dòng nhận 0 bị bỏ khỏi phiếu (chênh lệch thể hiện ở SL gửi − SL nhận).
+    /// </summary>
+    /// <param name="date">Ngày nhận (không trước ngày xuất của bên bán).</param>
+    /// <param name="sentDate">Ngày xuất của phiếu bán.</param>
+    /// <param name="note">Ghi chú/biên bản chênh lệch.</param>
+    /// <param name="lines">SL thực nhận từng dòng.</param>
+    /// <param name="sentQty">SL gửi theo dòng phiếu bán (Id dòng phiếu bán → SL).</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn chờ nhận, nhận vượt SL gửi hoặc không nhận dòng nào.</exception>
+    public void ConfirmIntercompanyReceipt(
+        DateOnly date, DateOnly sentDate, string? note, IReadOnlyList<ReceiptConfirmLine> lines, IReadOnlyDictionary<Guid, decimal> sentQty)
+    {
+        EnsureDraft();
+        if (DocType != DocumentTypes.IntercompanyReceipt) throw new BusinessRuleException($"Phiếu {No} không phải phiếu nhập mua nội bộ.");
+        if (date < sentDate) throw new BusinessRuleException($"Ngày nhận không được trước ngày xuất {sentDate:dd/MM/yyyy} của bên bán.");
+        foreach (var input in lines)
+        {
+            var line = _lines.FirstOrDefault(l => l.Id == input.LineId)
+                ?? throw new BusinessRuleException("Không tìm thấy dòng cần xác nhận – hãy tải lại phiếu.");
+            var sent = sentQty.GetValueOrDefault(line.SourceLineId ?? Guid.Empty);
+            if (input.ReceivedQty < 0 || input.ReceivedQty > sent)
+                throw new BusinessRuleException($"Dòng {line.LineNo}: SL thực nhận phải từ 0 đến SL gửi {sent:0.####}.");
+            line.Receive(input.ReceivedQty, Clean(input.LotNo), Clean(input.Note));
+        }
+
+        if (_lines.All(l => l.Qty == 0)) throw new BusinessRuleException("Phải nhận ít nhất một dòng hàng.");
+        Date = date;
+        Note = Clean(note);
+        Recalculate();
+    }
+
+    /// <summary>Bên bán bỏ ghi sổ phiếu xuất: phiếu nhập chờ nhận bên mua bị hủy (giữ số), gỡ liên kết.</summary>
+    /// <param name="receipt">Phiếu nhập mua nội bộ liên kết.</param>
+    /// <exception cref="BusinessRuleException">Khi bên mua đã xác nhận (đã ghi sổ) – design.md mục 6.3 bước 6.</exception>
+    public void DetachIntercompanyReceipt(InventoryDocument receipt)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+        if (receipt.Status == DocumentStatus.Posted)
+            throw new BusinessRuleException($"Công ty mua đã xác nhận nhận hàng ở phiếu {receipt.No} – không bỏ ghi sổ phiếu xuất bán được.");
+        if (receipt.Status == DocumentStatus.Draft) receipt.Status = DocumentStatus.Cancelled;
+        LinkedDocumentId = null;
+    }
+
+    /// <summary>
     /// Thay toàn bộ dòng (sửa theo Id để nhật ký chỉ ghi dòng thay đổi), tính lại số lượng cơ sở, thành tiền, VAT, tổng phiếu.
     /// </summary>
     /// <param name="lines">Dòng và mặt hàng tương ứng (đã đọc qua filter phạm vi nhóm hàng).</param>
@@ -333,7 +461,19 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     public void Cancel()
     {
         EnsureDraft();
+        // Phiếu nhập mua nội bộ do bên bán sinh ra; chỉ hủy khi bên bán bỏ ghi sổ phiếu xuất (design.md mục 6.3).
+        if (DocType == DocumentTypes.IntercompanyReceipt)
+            throw new BusinessRuleException("Phiếu nhập mua nội bộ không hủy được ở bên nhận – báo bên bán bỏ ghi sổ phiếu xuất nếu cần.");
         Status = DocumentStatus.Cancelled;
+    }
+
+    private void Recalculate()
+    {
+        _lines.RemoveAll(l => l.Qty == 0);
+        var lineNo = 0;
+        foreach (var line in _lines.OrderBy(l => l.LineNo)) line.Renumber(++lineNo);
+        TotalAmount = _lines.Sum(l => l.Amount);
+        TotalVat = _lines.Sum(l => l.VatAmount);
     }
 
     private void EnsureDraft()
@@ -403,6 +543,30 @@ public sealed class InventoryDocumentLine : Entity
 
     /// <summary>Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập) – để tính số còn trả được.</summary>
     public Guid? SourceLineId { get; private set; }
+
+    /// <summary>Chép dòng phiếu bán sang phiếu nhập mua nội bộ (SL nhận ban đầu = SL gửi).</summary>
+    internal InventoryDocumentLine CopyFor(Guid documentId) =>
+        new(documentId)
+        {
+            LineNo = LineNo, ItemId = ItemId, UomId = UomId, Qty = Qty, UomFactor = UomFactor, BaseQty = BaseQty, UnitPrice = UnitPrice,
+            Amount = Amount, VatCode = VatCode, VatAmount = VatAmount, LotNo = LotNo, ExpiryDate = ExpiryDate, SourceLineId = Id,
+        };
+
+    /// <summary>Bên nhận ghi SL thực nhận; thành tiền, VAT tính lại theo giá bán nội bộ giữ nguyên.</summary>
+    internal void Receive(decimal qty, string? lotNo, string? note)
+    {
+        if (decimal.Round(qty, 4) != qty) throw new BusinessRuleException($"Dòng {LineNo}: SL tối đa 4 chữ số thập phân.");
+        Qty = qty;
+        BaseQty = decimal.Round(qty * UomFactor, 4, MidpointRounding.AwayFromZero);
+        Amount = decimal.Round(qty * UnitPrice, 2, MidpointRounding.AwayFromZero);
+        VatAmount = VatCode is null or VatRates.NotSubject
+            ? 0m
+            : decimal.Round(Amount * decimal.Parse(VatCode, System.Globalization.CultureInfo.InvariantCulture) / 100m, 2, MidpointRounding.AwayFromZero);
+        LotNo = lotNo ?? LotNo;
+        Note = note;
+    }
+
+    internal void Renumber(int lineNo) => LineNo = lineNo;
 
     /// <summary>
     /// Gán dữ liệu dòng và tính số lượng cơ sở, thành tiền, VAT.

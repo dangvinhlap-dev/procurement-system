@@ -48,6 +48,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `/reopen`.
 - Báo cáo nhập – xuất – tồn (NXT) theo kỳ tháng, kho × mặt hàng (design.md mục 11.1). API `GET /api/reports/stock-movement`.
 - Thẻ kho, báo cáo NXT đọc tồn đầu từ số dư kỳ đã đóng thay vì cộng từ đầu sổ kho.
+- Mua bán nội bộ (design.md mục 6.3, 6.6): bảng giá nội bộ theo công ty bán (giá riêng/giá chung, hiệu lực); phiếu xuất bán nội
+  bộ (ICS) chỉ từ kho tổng, giá lấy từ bảng giá; ghi sổ ICS tự sinh phiếu nhập mua nội bộ (ICR) chờ nhận ở công ty mua; bên mua
+  xác nhận SL thực nhận (nhận thiếu) rồi ghi sổ theo giá bán nội bộ; chặn bỏ ghi sổ ICS khi bên mua đã nhận; báo cáo hàng đi đường
+  và đối chiếu nội bộ. API `/api/internal-prices`, `/api/group-companies`, `/api/intercompany-sales`, `/api/intercompany-receipts`,
+  `/api/reports/goods-in-transit`, `/api/reports/intercompany-reconciliation`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
@@ -79,6 +84,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `SourceLineId` ở `InventoryDocumentLine`. `Down()` xóa ba cột – mất người nhận và liên kết phiếu trả ↔ phiếu nhập.
 - Migration `V0_4_0_DongKyGiaVon`: bảng `StockPeriodBalance`, `ItemPeriodCost`, cột `InventoryPeriod.ReopenReason`. `Down()` xóa
   hai bảng và cột – mất số dư, giá vốn các kỳ đã đóng và lý do mở lại kỳ (nên mở lại các kỳ đã đóng trước khi gỡ).
+- Migration `V0_5_0_MuaBanNoiBo`: bảng `InternalPrice`, cột `InventoryDocument.CounterCompanyId`. `Down()` xóa bảng và cột – mất
+  bảng giá nội bộ và công ty đối ứng trên phiếu bán/nhập nội bộ.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

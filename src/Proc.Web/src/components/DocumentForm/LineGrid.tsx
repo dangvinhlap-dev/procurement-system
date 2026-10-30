@@ -23,23 +23,25 @@ export interface LineGridProps {
   readOnly?: boolean
   /** DocumentForm gọi hàm này khi bấm F2. */
   addRef?: MutableRefObject<(() => void) | null>
+  /** Sửa được ô nhưng không thêm/xóa dòng (phiếu sinh từ phiếu khác, ví dụ phiếu nhập mua nội bộ). */
+  fixedRows?: boolean
 }
 
 /**
  * Lưới dòng chứng từ nhập như Excel (design.md mục 10.1): mỗi ô là một ô nhập không viền, Enter sang ô tiếp theo
  * (hết dòng thì sang dòng dưới), F2 thêm dòng và đặt con trỏ vào ô đầu của dòng mới. Cột STT và nút xóa dòng có sẵn.
  */
-export function LineGrid({ name, columns, newLine, readOnly = false, addRef }: LineGridProps) {
+export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false }: LineGridProps) {
   return (
     <Form.List name={name}>
       {(fields, { add, remove }) => (
         <LineGridBody
           fields={fields}
           columns={columns}
-          readOnly={readOnly}
+          readOnly={readOnly || fixedRows}
           onAdd={() => add(newLine())}
           onRemove={remove}
-          addRef={addRef}
+          addRef={fixedRows ? undefined : addRef}
         />
       )}
     </Form.List>

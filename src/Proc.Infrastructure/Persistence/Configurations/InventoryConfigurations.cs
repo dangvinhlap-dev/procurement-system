@@ -31,6 +31,8 @@ internal sealed class InventoryDocumentConfiguration : IEntityTypeConfiguration<
     public void Configure(EntityTypeBuilder<InventoryDocument> builder)
     {
         builder.ToTable("InventoryDocument");
+        // Công ty đối ứng của bán nội bộ (ICS: công ty mua; ICR: công ty bán).
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CounterCompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.DocType).HasMaxLength(10).IsRequired();
         builder.Property(x => x.No).HasMaxLength(50).IsRequired();
         // Số chứng từ duy nhất theo (CompanyId, DocType, No) – design.md mục 12.2.
