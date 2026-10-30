@@ -38,6 +38,10 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   chuyển chọn kho xuất/kho nhập cùng công ty, hiện tồn tại kho xuất và cảnh báo khi vượt tồn. Ghi sổ, bỏ ghi sổ cả hai loại
   (TRF theo giá vốn tạm tính). Danh sách chứng từ kho dùng chung cho GRN, RTV, TRF. API `/api/goods-returns`,
   `/api/stock-transfers`, `GET /api/goods-receipts/{id}/returnable`, `GET /api/stock-on-hand/available`.
+- Màn hình Kho → Tồn kho hiện tại (STK) và Kho → Thẻ kho (CARD) (design.md mục 11.1): tồn theo kho × mặt hàng × lô, giá trị
+  và đơn giá bình quân theo sổ kho, cảnh báo dưới mức tối thiểu/tồn âm, lọc kho, nhóm hàng, dòng tồn 0; bấm đúp mở thẻ kho của
+  mặt hàng với tồn đầu, phát sinh, tồn lũy kế, tồn cuối; bấm đúp phát sinh mở phiếu gốc. API `GET /api/stock-on-hand`,
+  `GET /api/stock-card`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
