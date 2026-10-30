@@ -59,6 +59,25 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
     public decimal SignedQty => Direction * BaseQty;
 
     /// <summary>
+    /// Gán giá vốn chính thức khi đóng kỳ (design.md mục 7.2 bước 4): giá trị = SL × đơn giá, làm tròn 2 số lẻ (0,5 lên).
+    /// Ví dụ 24 × 10.857,142857 = 260.571,43.
+    /// </summary>
+    /// <param name="unitCost">Giá vốn đơn vị kỳ (đã làm tròn 6 số lẻ).</param>
+    public void ApplyPeriodCost(decimal unitCost)
+    {
+        UnitCost = unitCost;
+        Amount = Math.Round(BaseQty * unitCost, 2, MidpointRounding.AwayFromZero);
+        IsCostFinal = true;
+    }
+
+    /// <summary>Dồn chênh lệch làm tròn vào dòng này (design.md mục 7.3) – giá trị mới phải không âm.</summary>
+    /// <param name="amount">Giá trị sau điều chỉnh.</param>
+    public void AdjustAmount(decimal amount) => Amount = amount < 0 ? 0 : amount;
+
+    /// <summary>Mở lại kỳ: giá vốn xuất về trạng thái tạm tính, tính lại khi đóng kỳ lần sau.</summary>
+    public void ResetPeriodCost() => IsCostFinal = false;
+
+    /// <summary>
     /// Dòng nhập kho từ một dòng phiếu nhập mua NCC: giá trị nhập = thành tiền trước VAT (design.md mục 6.1; chi phí mua phân bổ
     /// thêm ở giai đoạn 3). Đơn giá vốn theo ĐVT cơ sở = thành tiền ÷ SL cơ sở, ví dụ 960.000 ÷ 48 hộp = 20.000 đ/hộp.
     /// </summary>

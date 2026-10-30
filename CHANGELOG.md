@@ -42,6 +42,12 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   và đơn giá bình quân theo sổ kho, cảnh báo dưới mức tối thiểu/tồn âm, lọc kho, nhóm hàng, dòng tồn 0; bấm đúp mở thẻ kho của
   mặt hàng với tồn đầu, phát sinh, tồn lũy kế, tồn cuối; bấm đúp phát sinh mở phiếu gốc. API `GET /api/stock-on-hand`,
   `GET /api/stock-card`.
+- Đóng kỳ kho, giá vốn bình quân gia quyền cuối kỳ, mở lại kỳ (design.md mục 7.2–7.4a): kiểm tra kỳ trước đã đóng và không còn
+  phiếu nháp; khóa ghi sổ khi đang tính giá; gán giá vốn chính thức cho phiếu chuyển kho; chốt số dư theo kho × hàng × lô; mở lại
+  kỳ đã đóng gần nhất kèm lý do. Nút Đóng kỳ, Mở lại kỳ trên màn hình Kỳ kho. API `POST /api/inventory-periods/{id}/close`,
+  `/reopen`.
+- Báo cáo nhập – xuất – tồn (NXT) theo kỳ tháng, kho × mặt hàng (design.md mục 11.1). API `GET /api/reports/stock-movement`.
+- Thẻ kho, báo cáo NXT đọc tồn đầu từ số dư kỳ đã đóng thay vì cộng từ đầu sổ kho.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
@@ -71,6 +77,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_3_0_SoKho`: bảng `StockLedger`, `StockOnHand`. `Down()` xóa hai bảng – mất sổ kho và số tồn.
 - Migration `V0_3_0_TraNccChuyenKho`: cột `Receiver`, `LinkedDocumentId` (phiếu nhập gốc của phiếu trả) ở `InventoryDocument`,
   `SourceLineId` ở `InventoryDocumentLine`. `Down()` xóa ba cột – mất người nhận và liên kết phiếu trả ↔ phiếu nhập.
+- Migration `V0_4_0_DongKyGiaVon`: bảng `StockPeriodBalance`, `ItemPeriodCost`, cột `InventoryPeriod.ReopenReason`. `Down()` xóa
+  hai bảng và cột – mất số dư, giá vốn các kỳ đã đóng và lý do mở lại kỳ (nên mở lại các kỳ đã đóng trước khi gỡ).
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

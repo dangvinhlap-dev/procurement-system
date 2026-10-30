@@ -360,6 +360,20 @@ Tính theo công ty × mặt hàng, trên số lượng ở ĐVT cơ sở:
 - Bắt buộc nhập lý do; ghi audit log; gửi thông báo cho kế toán.
 - Mở lại kỳ của công ty A **không** ảnh hưởng giá nhập của công ty B (vì B nhận theo giá bán nội bộ). Nếu A sửa giá bán nội bộ, phải lập phiếu điều chỉnh giá liên kết cho cả hai bên.
 
+### 7.4a Cách làm đóng/mở kỳ (giai đoạn 3)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Đóng kỳ (quyền `Inventory.Period.Close`) chạy ngay trong yêu cầu, không qua job nền: đủ nhanh với số liệu một công ty một tháng; chuyển sang Hangfire khi số dòng sổ kho lớn | Đơn giản, báo lỗi trực tiếp cho người đóng |
+| Kiểm tra trước đóng: kỳ Đang mở; kỳ tháng trước đã đóng (trừ khi chưa từng mở – kỳ đầu công ty dùng hệ thống); không còn phiếu kho **nháp** có ngày trong kỳ (mọi kho của công ty) | Mục 7.2 bước 1 |
+| Kỳ chuyển **Đang tính giá** và lưu trước (giao dịch riêng); ghi sổ/bỏ ghi sổ khóa dòng kỳ `FOR SHARE` và đọc lại trạng thái trong giao dịch của nó – phiếu đang ghi dở xong trước, phiếu sau bị chặn | Không có phiếu chen vào giữa lúc tính giá |
+| Tính giá, gán giá cho dòng sổ chưa chốt, chốt `StockPeriodBalance` (kho × hàng × lô), lưu `ItemPeriodCost`, chuyển Đã đóng trong **một giao dịch**; lỗi (ví dụ tồn cuối kỳ âm) thì hủy cả giao dịch và kỳ về Đang mở | Mục 7.2 bước 3–6 |
+| Giá vốn tính trên mọi kho, mọi nhóm hàng của công ty (bỏ qua phạm vi xem của người đóng kỳ, vẫn trong công ty) | Giá vốn theo công ty × mặt hàng (mục 7.3) |
+| Nhập có giá giai đoạn này: GRN (+), RTV (−, giá đích danh). Chuyển kho không tham gia; dòng xuất và nhập của phiếu chuyển nhận cùng giá vốn kỳ nên giá trị công ty không đổi. Mẫu số ≤ 0 thì dùng giá vốn kỳ trước (hoặc 0) | Mục 7.3 |
+| Chênh lệch làm tròn dồn vào dòng **xuất tiêu hao** cuối kỳ (không phải trả NCC, không phải chuyển kho). Chưa có loại phiếu xuất tiêu hao (xuất dùng, xuất bán nội bộ) nên hiện chưa phát sinh; SL tồn 0 mà còn giá trị thì chưa sinh bút toán điều chỉnh – làm cùng phiếu điều chỉnh (ADJ) | Mục 7.3 |
+| Mở lại kỳ (quyền `Inventory.Period.Reopen`): chỉ kỳ đã đóng gần nhất, bắt buộc lý do (≤ 500 ký tự, lưu ở kỳ và nhật ký thao tác); xóa số dư và giá vốn của kỳ; dòng xuất về tạm tính (giữ số cũ tới lần đóng sau). Chưa gửi thông báo cho kế toán (chưa có phân hệ thông báo) | Mục 7.4 |
+| Tồn đầu của thẻ kho, báo cáo NXT = số dư kỳ đã đóng gần nhất kết thúc trước ngày bắt đầu + sổ kho sau kỳ đó; chưa có kỳ đóng thì cộng từ đầu sổ | Mục 11, đoạn Hiệu năng |
+
 ### 7.5 Giá vốn tạm tính trong kỳ
 
 Khi kỳ đang mở, phiếu xuất hiển thị **giá vốn tạm tính** = giá vốn kỳ đã đóng gần nhất (hoặc bình quân di động tới thời điểm xuất). Đây chỉ là số tham khảo để định giá bán nội bộ; số chính thức là số sau đóng kỳ.
@@ -580,8 +594,9 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | Giá trị tồn = Σ (chiều × giá trị) trên `StockLedger` của đúng kho × hàng × lô; đơn giá bình quân = giá trị ÷ số lượng (0 khi tồn ≤ 0). Kỳ còn mở thì đây là giá vốn tạm tính | Mục 7.5 |
 | Cảnh báo **dưới mức tối thiểu** khi **tổng tồn của mặt hàng trên mọi kho của công ty** (mọi lô) < tồn tối thiểu của mặt hàng – không phụ thuộc kho đang lọc hay kho được phép của người xem (phép cộng này bỏ qua bộ lọc kho, chỉ trả cờ cảnh báo, không trả số tồn kho ngoài phạm vi); tồn âm (kho cho phép tồn âm) báo đỏ | Tồn tối thiểu là một số cho cả công ty; cộng theo kho đang xem làm kho phụ, thủ kho một kho bị báo động sai |
 | Thẻ kho: một mặt hàng, một kho hoặc mọi kho được phép, khoảng ngày tối đa hai năm; tồn đầu, từng phát sinh theo ngày rồi thứ tự ghi sổ với tồn lũy kế, tồn cuối. Xem mọi kho thì phiếu chuyển kho hiện cả dòng xuất và dòng nhập (tồn chung không đổi) | Mục 11 |
-| **Tạm thời** tồn đầu thẻ kho cộng từ `StockLedger` trước ngày bắt đầu vì chưa có `StockPeriodBalance`; khi làm đóng kỳ (giai đoạn 3) đổi sang số dư kỳ đã chốt + phát sinh trong kỳ như đoạn "Hiệu năng" ở trên | Chưa có số dư kỳ |
+| Tồn đầu thẻ kho = số dư kỳ đã đóng gần nhất trước ngày bắt đầu + sổ kho sau kỳ đó (mục 7.4a) | Đoạn "Hiệu năng" ở trên |
 | Quyền `Inventory.Stock.View`; sổ kho, tồn kho đi qua global query filter (công ty, kho, nhóm hàng) – người chỉ được kho KP1 chỉ thấy tồn và phát sinh của KP1 | Mục 9.2 |
+| Báo cáo NXT (quyền `Report.Stock.View`) theo kỳ tháng, kho × mặt hàng (cộng mọi lô): tồn đầu, nhập mua NCC, chuyển kho đến, tổng nhập, trả NCC, chuyển kho đi, tổng xuất, tồn cuối (SL + giá trị); kỳ chưa đóng ghi rõ giá trị tạm tính | Mục 11 |
 | Chưa làm: xuất Excel/PDF báo cáo, báo cáo chậm luân chuyển, sắp hết hạn, tồn tập đoàn | Làm cùng nhóm báo cáo |
 
 ## 12. Lược đồ CSDL chính

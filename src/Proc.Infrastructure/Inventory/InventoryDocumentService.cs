@@ -174,6 +174,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var costs = document.DocType == DocumentTypes.Transfer ? await ProvisionalCostsAsync(itemIds, cancellationToken) : [];
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        await LockOpenPeriodAsync(periodId, cancellationToken);
         document.MarkPosted(periodId, _clock.UtcNow, _scope.UserId);
         foreach (var line in document.Lines)
         {
@@ -236,6 +237,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        await LockOpenPeriodAsync(period.Id, cancellationToken);
         foreach (var entry in entries)
             await ApplyStockAsync(companyId, warehouses[entry.WarehouseId], items[entry.ItemId], entry.LotNo, -entry.SignedQty, cancellationToken);
 
@@ -244,6 +246,19 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Khóa dòng kỳ (FOR SHARE) tới hết giao dịch và đọc lại trạng thái: đóng kỳ phải chờ phiếu đang ghi dở xong mới chuyển được
+    /// Đang tính giá, còn phiếu ghi sau đó thấy kỳ không còn mở và bị chặn (design.md mục 7.2 bước 2).
+    /// </summary>
+    private async Task LockOpenPeriodAsync(Guid periodId, CancellationToken cancellationToken)
+    {
+        var status = await _db.Database
+            .SqlQuery<int>($"SELECT \"Status\" AS \"Value\" FROM \"InventoryPeriod\" WHERE \"Id\" = {periodId} FOR SHARE")
+            .SingleAsync(cancellationToken);
+        if ((PeriodStatus)status != PeriodStatus.Open)
+            throw new BusinessRuleException("Kỳ kho vừa chuyển sang tính giá vốn hoặc đã đóng – không ghi sổ, bỏ ghi sổ được lúc này.");
     }
 
     /// <summary>

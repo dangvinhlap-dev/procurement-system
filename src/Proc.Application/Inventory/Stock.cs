@@ -73,6 +73,31 @@ public sealed record StockCardDto(
     string ItemCode, string ItemName, string UomCode, decimal OpeningQty, decimal OpeningAmount, IReadOnlyList<StockCardEntryDto> Entries,
     decimal InQty, decimal OutQty, decimal ClosingQty, decimal ClosingAmount);
 
+/// <summary>Điều kiện báo cáo nhập – xuất – tồn.</summary>
+/// <param name="PeriodId">Kỳ tháng.</param>
+/// <param name="WarehouseId">Một kho; null = mọi kho được phép.</param>
+/// <param name="CategoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm được phép.</param>
+public sealed record StockMovementQuery(Guid PeriodId, Guid? WarehouseId, Guid? CategoryId);
+
+/// <summary>
+/// Một dòng nhập – xuất – tồn theo kho × mặt hàng (cộng mọi lô), SL theo ĐVT cơ sở: tồn đầu; nhập (nhập mua NCC, chuyển kho đến,
+/// tổng nhập); xuất (trả NCC, chuyển kho đi, tổng xuất); tồn cuối = đầu + nhập − xuất.
+/// </summary>
+public sealed record StockMovementRowDto(
+    Guid WarehouseId, string WarehouseCode, string WarehouseName, Guid ItemId, string ItemCode, string ItemName,
+    string CategoryCode, string CategoryName, string UomCode,
+    decimal OpenQty, decimal OpenAmount,
+    decimal PurchaseQty, decimal PurchaseAmount, decimal TransferInQty, decimal TransferInAmount, decimal InQty, decimal InAmount,
+    decimal ReturnQty, decimal ReturnAmount, decimal TransferOutQty, decimal TransferOutAmount, decimal OutQty, decimal OutAmount,
+    decimal CloseQty, decimal CloseAmount);
+
+/// <summary>Báo cáo nhập – xuất – tồn một kỳ.</summary>
+/// <param name="PeriodLabel">Nhãn kỳ, ví dụ "10/2026".</param>
+/// <param name="PeriodStatus">Trạng thái kỳ.</param>
+/// <param name="IsFinal">Kỳ đã đóng: giá trị là giá vốn chính thức; ngược lại là tạm tính.</param>
+/// <param name="Items">Các dòng theo mã kho, mã hàng.</param>
+public sealed record StockMovementResult(string PeriodLabel, string PeriodStatus, bool IsFinal, IReadOnlyList<StockMovementRowDto> Items);
+
 /// <summary>
 /// Xem tồn kho hiện tại và thẻ kho (design.md mục 11, 12) của công ty đang làm việc, trong phạm vi kho và nhóm hàng của người xem.
 /// </summary>
@@ -91,4 +116,11 @@ public interface IStockQueryService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi từ ngày sau đến ngày hoặc khoảng ngày quá dài.</exception>
     /// <exception cref="Common.NotFoundException">Khi mặt hàng hoặc kho không có (hoặc ngoài phạm vi).</exception>
     Task<StockCardDto> GetStockCardAsync(StockCardQuery query, CancellationToken cancellationToken);
+
+    /// <summary>Báo cáo nhập – xuất – tồn một kỳ tháng theo kho × mặt hàng (design.md mục 11).</summary>
+    /// <param name="query">Kỳ, kho, nhóm hàng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có kỳ tháng.</exception>
+    Task<StockMovementResult> GetMovementAsync(StockMovementQuery query, CancellationToken cancellationToken);
 }

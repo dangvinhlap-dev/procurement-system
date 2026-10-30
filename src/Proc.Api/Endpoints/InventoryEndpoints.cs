@@ -26,6 +26,11 @@ public static class InventoryEndpoints
             .Validate<CreateInventoryYearRequest>();
         periods.MapPost("/{id:guid}/open", (Guid id, IInventoryPeriodService s, CancellationToken ct) => s.OpenAsync(id, ct))
             .RequirePermission(Permissions.Inventory.PeriodOpen);
+        periods.MapPost("/{id:guid}/close", (Guid id, IInventoryPeriodService s, CancellationToken ct) => s.CloseAsync(id, ct))
+            .RequirePermission(Permissions.Inventory.PeriodClose);
+        periods.MapPost("/{id:guid}/reopen", (Guid id, ReopenPeriodRequest request, IInventoryPeriodService s, CancellationToken ct) =>
+                s.ReopenAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.PeriodReopen);
 
         var documents = app.MapGroup("/api/inventory-documents").WithTags("Chứng từ kho");
         documents.MapGet("/", (string docType, DateOnly? from, DateOnly? to, string? status, IInventoryDocumentService s, CancellationToken ct) =>
@@ -94,6 +99,9 @@ public static class InventoryEndpoints
         stock.MapGet("/stock-on-hand", (Guid? warehouseId, Guid? categoryId, bool? includeZero, IStockQueryService s, CancellationToken ct) =>
                 s.GetOnHandAsync(new StockOnHandQuery(warehouseId, categoryId, includeZero ?? false), ct))
             .RequirePermission(Permissions.Inventory.StockView);
+        stock.MapGet("/reports/stock-movement", (Guid periodId, Guid? warehouseId, Guid? categoryId, IStockQueryService s, CancellationToken ct) =>
+                s.GetMovementAsync(new StockMovementQuery(periodId, warehouseId, categoryId), ct))
+            .RequirePermission(Permissions.Report.StockView);
         stock.MapGet("/stock-card", (Guid itemId, Guid? warehouseId, DateOnly from, DateOnly to, IStockQueryService s, CancellationToken ct) =>
                 s.GetStockCardAsync(new StockCardQuery(itemId, warehouseId, from, to), ct))
             .RequirePermission(Permissions.Inventory.StockView);

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
 using Proc.Domain.Common;
+using Proc.Domain.Inventory;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Persistence;
 
@@ -112,13 +113,8 @@ public sealed class StockQueryService : IStockQueryService
         var ledger = _db.StockLedger.AsNoTracking().Where(l => l.ItemId == query.ItemId);
         if (query.WarehouseId is { } warehouseId) ledger = ledger.Where(l => l.WarehouseId == warehouseId);
 
-        // Tồn đầu cộng từ sổ kho trước ngày bắt đầu. Khi có số dư kỳ đã chốt (StockPeriodBalance – đóng kỳ, giai đoạn 3) sẽ đọc
-        // số dư kỳ trước rồi cộng phần trong kỳ, không cộng từ đầu (design.md mục 11, "Hiệu năng").
-        var opening = await ledger
-            .Where(l => l.PostingDate < query.From)
-            .GroupBy(_ => 1)
-            .Select(g => new { Qty = g.Sum(l => l.Direction * l.BaseQty), Amount = g.Sum(l => l.Direction * l.Amount) })
-            .SingleOrDefaultAsync(cancellationToken);
+        var openingRows = await OpeningAsync(query.From, query.WarehouseId, [query.ItemId], cancellationToken);
+        var opening = new { Qty = openingRows.Sum(o => o.Qty), Amount = openingRows.Sum(o => o.Amount) };
 
         var rows = await (
                 from l in ledger
@@ -142,7 +138,7 @@ public sealed class StockQueryService : IStockQueryService
 
         // Tồn lũy kế: tồn đầu + từng phát sinh theo thứ tự ngày rồi thứ tự ghi sổ. Ví dụ tồn đầu 48, xuất 24 → 24, nhập 24 → 48.
         // Xem mọi kho thì phiếu chuyển giữa hai kho được phép sinh cả dòng xuất và dòng nhập – tồn chung không đổi, đúng thực tế.
-        var balance = opening?.Qty ?? 0m;
+        var balance = opening.Qty;
         var entries = new List<StockCardEntryDto>(rows.Count);
         foreach (var r in rows)
         {
@@ -156,10 +152,114 @@ public sealed class StockQueryService : IStockQueryService
                 r.IsCostFinal));
         }
 
-        var openingQty = opening?.Qty ?? 0m;
-        var openingAmount = opening?.Amount ?? 0m;
+        var openingQty = opening.Qty;
+        var openingAmount = opening.Amount;
         return new StockCardDto(
             item.Code, item.Name, item.UomCode, openingQty, openingAmount, entries,
             entries.Sum(e => e.InQty), entries.Sum(e => e.OutQty), balance, openingAmount + entries.Sum(e => e.Amount));
+    }
+
+    /// <inheritdoc />
+    public async Task<StockMovementResult> GetMovementAsync(StockMovementQuery query, CancellationToken cancellationToken)
+    {
+        var period = await _db.InventoryPeriods.AsNoTracking().SingleOrDefaultAsync(p => p.Id == query.PeriodId && p.Month > 0, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy kỳ kho tháng.");
+        List<Guid>? itemIds = null;
+        if (query.CategoryId is { } categoryId)
+        {
+            var parents = await _db.ItemCategories.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.ParentId, cancellationToken);
+            var categoryIds = parents.Keys.Where(id => ItemAdministration.IsUnder(id, categoryId, parents)).ToList();
+            itemIds = await _db.Items.AsNoTracking().Where(i => categoryIds.Contains(i.CategoryId)).Select(i => i.Id).ToListAsync(cancellationToken);
+        }
+
+        var opening = await OpeningAsync(period.StartDate, query.WarehouseId, itemIds, cancellationToken);
+        var ledger = _db.StockLedger.AsNoTracking().Where(l => l.PostingDate >= period.StartDate && l.PostingDate <= period.EndDate);
+        if (query.WarehouseId is { } warehouseId) ledger = ledger.Where(l => l.WarehouseId == warehouseId);
+        if (itemIds is not null) ledger = ledger.Where(l => itemIds.Contains(l.ItemId));
+        var moves = await ledger
+            .GroupBy(l => new { l.WarehouseId, l.ItemId, l.DocType, l.Direction })
+            .Select(g => new { g.Key.WarehouseId, g.Key.ItemId, g.Key.DocType, g.Key.Direction, Qty = g.Sum(l => l.BaseQty), Amount = g.Sum(l => l.Amount) })
+            .ToListAsync(cancellationToken);
+
+        var keys = opening.Select(o => (o.WarehouseId, o.ItemId)).Concat(moves.Select(m => (m.WarehouseId, m.ItemId))).Distinct().ToList();
+        var keyItems = keys.Select(k => k.ItemId).Distinct().ToList();
+        var keyWarehouses = keys.Select(k => k.WarehouseId).Distinct().ToList();
+        var items = await (
+                from i in _db.Items.AsNoTracking()
+                join c in _db.ItemCategories on i.CategoryId equals c.Id
+                join u in _db.Uoms on i.BaseUomId equals u.Id
+                where keyItems.Contains(i.Id)
+                select new { i.Id, i.Code, i.Name, CategoryCode = c.Code, CategoryName = c.Name, UomCode = u.Code })
+            .ToDictionaryAsync(i => i.Id, cancellationToken);
+        var warehouses = await _db.Warehouses.AsNoTracking().Where(w => keyWarehouses.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
+
+        // NXT theo kho × mặt hàng (cộng mọi lô): tồn đầu + nhập − xuất = tồn cuối, tách nhập mua / trả NCC / chuyển kho (design.md mục 11).
+        var rows = keys
+            .Where(k => items.ContainsKey(k.ItemId) && warehouses.ContainsKey(k.WarehouseId))
+            .Select(k =>
+            {
+                var open = opening.Where(o => o.WarehouseId == k.WarehouseId && o.ItemId == k.ItemId).ToList();
+                var m = moves.Where(x => x.WarehouseId == k.WarehouseId && x.ItemId == k.ItemId).ToList();
+                (decimal Qty, decimal Amount) Sum(Func<string, int, bool> match) =>
+                    (m.Where(x => match(x.DocType, x.Direction)).Sum(x => x.Qty), m.Where(x => match(x.DocType, x.Direction)).Sum(x => x.Amount));
+                var purchase = Sum((t, d) => t == "GRN" && d > 0);
+                var returned = Sum((t, d) => t == "RTV" && d < 0);
+                var transferIn = Sum((t, d) => t == "TRF" && d > 0);
+                var transferOut = Sum((t, d) => t == "TRF" && d < 0);
+                var totalIn = Sum((_, d) => d > 0);
+                var totalOut = Sum((_, d) => d < 0);
+                var openQty = open.Sum(o => o.Qty);
+                var openAmount = open.Sum(o => o.Amount);
+                var item = items[k.ItemId];
+                var warehouse = warehouses[k.WarehouseId];
+                return new StockMovementRowDto(
+                    k.WarehouseId, warehouse.Code, warehouse.Name, k.ItemId, item.Code, item.Name, item.CategoryCode, item.CategoryName, item.UomCode,
+                    openQty, openAmount, purchase.Qty, purchase.Amount, transferIn.Qty, transferIn.Amount, totalIn.Qty, totalIn.Amount,
+                    returned.Qty, returned.Amount, transferOut.Qty, transferOut.Amount, totalOut.Qty, totalOut.Amount,
+                    openQty + totalIn.Qty - totalOut.Qty, openAmount + totalIn.Amount - totalOut.Amount);
+            })
+            .Where(r => r.OpenQty != 0 || r.OpenAmount != 0 || r.InQty != 0 || r.OutQty != 0)
+            .OrderBy(r => r.WarehouseCode).ThenBy(r => r.ItemCode)
+            .ToList();
+        var isFinal = period.Status is PeriodStatus.Closed or PeriodStatus.Locked;
+        return new StockMovementResult(period.Label, period.Status.ToString(), isFinal, rows);
+    }
+
+    /// <summary>Tồn đầu (SL, giá trị) theo kho × mặt hàng của một ngày.</summary>
+    private sealed record OpeningRow(Guid WarehouseId, Guid ItemId, decimal Qty, decimal Amount);
+
+    /// <summary>
+    /// Tồn đầu tại ngày <paramref name="before"/> theo kho × mặt hàng: số dư kỳ đã đóng gần nhất kết thúc trước ngày đó + sổ kho từ
+    /// sau kỳ đó tới trước ngày đó – không cộng từ đầu sổ (design.md mục 11, đoạn Hiệu năng). Chưa có kỳ đóng thì cộng từ đầu.
+    /// Đi qua global query filter như mọi truy vấn của dịch vụ này.
+    /// </summary>
+    private async Task<List<OpeningRow>> OpeningAsync(DateOnly before, Guid? warehouseId, IReadOnlyList<Guid>? itemIds, CancellationToken cancellationToken)
+    {
+        var closed = await _db.InventoryPeriods.AsNoTracking()
+            .Where(p => p.Month > 0 && p.EndDate < before && (p.Status == PeriodStatus.Closed || p.Status == PeriodStatus.Locked))
+            .OrderByDescending(p => p.EndDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var result = new List<OpeningRow>();
+        if (closed is not null)
+        {
+            var balances = _db.StockPeriodBalances.AsNoTracking().Where(b => b.PeriodId == closed.Id);
+            if (warehouseId is { } w) balances = balances.Where(b => b.WarehouseId == w);
+            if (itemIds is not null) balances = balances.Where(b => itemIds.Contains(b.ItemId));
+            result.AddRange(await balances
+                .GroupBy(b => new { b.WarehouseId, b.ItemId })
+                .Select(g => new OpeningRow(g.Key.WarehouseId, g.Key.ItemId, g.Sum(b => b.CloseQty), g.Sum(b => b.CloseAmount)))
+                .ToListAsync(cancellationToken));
+        }
+
+        var after = closed?.EndDate ?? DateOnly.MinValue;
+        var ledger = _db.StockLedger.AsNoTracking().Where(l => l.PostingDate > after && l.PostingDate < before);
+        if (warehouseId is { } wh) ledger = ledger.Where(l => l.WarehouseId == wh);
+        if (itemIds is not null) ledger = ledger.Where(l => itemIds.Contains(l.ItemId));
+        result.AddRange(await ledger
+            .GroupBy(l => new { l.WarehouseId, l.ItemId })
+            .Select(g => new OpeningRow(g.Key.WarehouseId, g.Key.ItemId, g.Sum(l => l.Direction * l.BaseQty), g.Sum(l => l.Direction * l.Amount)))
+            .ToListAsync(cancellationToken));
+        return result;
     }
 }

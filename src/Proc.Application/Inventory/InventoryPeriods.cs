@@ -10,8 +10,16 @@ namespace Proc.Application.Inventory;
 /// <param name="Status">NotOpened, Open, Costing, Closed, Locked.</param>
 /// <param name="ClosedAt">Thời điểm đóng kỳ.</param>
 /// <param name="CanOpen">Kỳ này mở được ngay bây giờ (đúng thứ tự, người xem có quyền).</param>
+/// <param name="CanClose">Kỳ đang mở, kỳ trước đã đóng (hoặc chưa từng dùng), người xem có quyền đóng kỳ.</param>
+/// <param name="CanReopen">Kỳ đã đóng gần nhất, người xem có quyền mở lại kỳ.</param>
+/// <param name="ReopenReason">Lý do lần mở lại gần nhất.</param>
 public sealed record InventoryPeriodDto(
-    Guid Id, int Year, int Month, string Label, DateOnly StartDate, DateOnly EndDate, string Status, DateTimeOffset? ClosedAt, bool CanOpen);
+    Guid Id, int Year, int Month, string Label, DateOnly StartDate, DateOnly EndDate, string Status, DateTimeOffset? ClosedAt, bool CanOpen,
+    bool CanClose = false, bool CanReopen = false, string? ReopenReason = null);
+
+/// <summary>Mở lại kỳ đã đóng.</summary>
+/// <param name="Reason">Lý do (bắt buộc – design.md mục 7.4).</param>
+public sealed record ReopenPeriodRequest(string Reason);
 
 /// <summary>Lịch kỳ của công ty đang làm việc.</summary>
 /// <param name="Years">Các năm đã tạo lịch, tăng dần.</param>
@@ -49,6 +57,28 @@ public interface IInventoryPeriodService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi không đúng thứ tự hoặc kỳ không ở trạng thái Chưa mở.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có kỳ.</exception>
     Task<InventoryPeriodDto> OpenAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Đóng kỳ tháng (design.md mục 7.2): kiểm tra trước đóng, khóa ghi sổ (Đang tính giá), tính giá vốn bình quân theo công ty ×
+    /// mặt hàng, gán giá cho dòng xuất chưa chốt, chốt số dư theo kho × hàng × lô, rồi Đã đóng.
+    /// </summary>
+    /// <param name="id">Id kỳ tháng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Kỳ sau khi đóng.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kỳ trước chưa đóng, còn phiếu nháp, tồn âm, hoặc kỳ không Đang mở.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có kỳ.</exception>
+    Task<InventoryPeriodDto> CloseAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Mở lại kỳ đã đóng gần nhất (design.md mục 7.4): xóa số dư, giá vốn kỳ; giá vốn xuất về tạm tính; ghi lý do.
+    /// </summary>
+    /// <param name="id">Id kỳ tháng.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Kỳ sau khi mở lại.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi không phải kỳ đã đóng gần nhất, đã khóa, hoặc thiếu lý do.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có kỳ.</exception>
+    Task<InventoryPeriodDto> ReopenAsync(Guid id, ReopenPeriodRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Kỳ tháng đang mở chứa ngày chứng từ – gọi trước khi ghi sổ (CLAUDE.md mục 4: chỉ ghi sổ khi ngày chứng từ thuộc kỳ Open).

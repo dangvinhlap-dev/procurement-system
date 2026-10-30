@@ -62,6 +62,9 @@ public sealed class InventoryPeriod : AuditableEntity, ICompanyOwned
     /// <summary>Người đóng kỳ.</summary>
     public Guid? ClosedBy { get; private set; }
 
+    /// <summary>Lý do mở lại kỳ gần nhất (bắt buộc khi mở lại – design.md mục 7.4).</summary>
+    public string? ReopenReason { get; private set; }
+
     /// <summary>Là kỳ năm.</summary>
     public bool IsYear => Month == 0;
 
@@ -110,6 +113,53 @@ public sealed class InventoryPeriod : AuditableEntity, ICompanyOwned
         if (IsYear) throw new BusinessRuleException("Kỳ năm tự mở khi tạo lịch; chỉ mở từng kỳ tháng.");
         if (Status != PeriodStatus.NotOpened) throw new BusinessRuleException($"Kỳ {Label} không ở trạng thái Chưa mở.");
         Status = PeriodStatus.Open;
+    }
+
+    /// <summary>
+    /// Bắt đầu đóng kỳ: chuyển Đang tính giá, khóa ghi sổ kỳ này trong lúc tính giá vốn (design.md mục 7.2 bước 2).
+    /// Điều kiện liên quan kỳ khác (kỳ trước đã đóng) do tầng Infrastructure kiểm tra.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi là kỳ năm hoặc kỳ không Đang mở.</exception>
+    public void StartCosting()
+    {
+        if (IsYear) throw new BusinessRuleException("Chỉ đóng từng kỳ tháng.");
+        if (Status != PeriodStatus.Open) throw new BusinessRuleException($"Kỳ {Label} không ở trạng thái Đang mở.");
+        Status = PeriodStatus.Costing;
+    }
+
+    /// <summary>Tính giá lỗi: trả kỳ về Đang mở để người dùng sửa rồi đóng lại.</summary>
+    public void CancelCosting()
+    {
+        if (Status == PeriodStatus.Costing) Status = PeriodStatus.Open;
+    }
+
+    /// <summary>Kết thúc đóng kỳ (design.md mục 7.2 bước 6).</summary>
+    /// <param name="userId">Người đóng.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi kỳ không ở trạng thái Đang tính giá.</exception>
+    public void Close(Guid userId, DateTimeOffset at)
+    {
+        if (Status != PeriodStatus.Costing) throw new BusinessRuleException($"Kỳ {Label} chưa qua bước tính giá.");
+        Status = PeriodStatus.Closed;
+        ClosedAt = at;
+        ClosedBy = userId;
+    }
+
+    /// <summary>
+    /// Mở lại kỳ đã đóng (design.md mục 7.4). "Chỉ kỳ đã đóng gần nhất" cần biết các kỳ khác nên tầng Infrastructure kiểm tra.
+    /// </summary>
+    /// <param name="reason">Lý do (bắt buộc, ghi nhật ký).</param>
+    /// <exception cref="BusinessRuleException">Khi thiếu lý do, kỳ chưa đóng hoặc đã khóa vĩnh viễn.</exception>
+    public void Reopen(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) throw new BusinessRuleException("Phải nhập lý do mở lại kỳ.");
+        if (reason.Trim().Length > 500) throw new BusinessRuleException("Lý do mở lại kỳ tối đa 500 ký tự.");
+        if (Status == PeriodStatus.Locked) throw new BusinessRuleException($"Kỳ {Label} đã khóa vĩnh viễn, không mở lại được.");
+        if (Status != PeriodStatus.Closed) throw new BusinessRuleException($"Kỳ {Label} chưa đóng.");
+        Status = PeriodStatus.Open;
+        ReopenReason = reason.Trim();
+        ClosedAt = null;
+        ClosedBy = null;
     }
 
     /// <summary>

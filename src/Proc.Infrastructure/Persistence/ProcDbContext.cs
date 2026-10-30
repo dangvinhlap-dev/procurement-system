@@ -115,6 +115,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Tồn tức thời (lọc theo công ty, kho, nhóm hàng).</summary>
     public DbSet<StockOnHand> StockOnHand => Set<StockOnHand>();
 
+    /// <summary>Số dư kỳ đã đóng (lọc theo công ty, kho, nhóm hàng).</summary>
+    public DbSet<StockPeriodBalance> StockPeriodBalances => Set<StockPeriodBalance>();
+
+    /// <summary>Giá vốn kỳ theo mặt hàng (lọc theo công ty, nhóm hàng).</summary>
+    public DbSet<ItemPeriodCost> ItemPeriodCosts => Set<ItemPeriodCost>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 
@@ -196,6 +202,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         modelBuilder.Entity<StockOnHand>().HasQueryFilter(
             WarehouseFilter, x => ScopeAllWarehouses || ScopeWarehouseIds.Contains(x.WarehouseId));
         modelBuilder.Entity<StockOnHand>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
+        modelBuilder.Entity<StockPeriodBalance>().HasQueryFilter(
+            WarehouseFilter, x => ScopeAllWarehouses || ScopeWarehouseIds.Contains(x.WarehouseId));
+        modelBuilder.Entity<StockPeriodBalance>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
+        modelBuilder.Entity<ItemPeriodCost>().HasQueryFilter(
             ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
         // NCC – sản phẩm theo phạm vi của mặt hàng: Items đã có filter nhóm hàng, nên chỉ thấy dòng của hàng mình được xem.
         modelBuilder.Entity<SupplierItem>().HasQueryFilter(
