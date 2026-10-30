@@ -1,5 +1,5 @@
 import { Alert, Select } from 'antd'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   supplierStatusLabels,
   useSupplierGroups,
@@ -21,7 +21,7 @@ const statusTone: Record<SupplierStatus, StatusTone> = {
   Blacklisted: 'error',
 }
 
-const columns: GridColumn<SupplierListItem>[] = [
+const baseColumns: GridColumn<SupplierListItem>[] = [
   { key: 'code', title: 'Mã NCC', width: 110, value: (r) => r.code },
   { key: 'name', title: 'Tên nhà cung cấp', width: 260, value: (r) => r.name },
   { key: 'shortName', title: 'Tên viết tắt', width: 110, value: (r) => r.shortName },
@@ -50,7 +50,18 @@ export function SupplierListPage() {
   const { workingCompany, hasPermission } = useAuth()
   const [groupId, setGroupId] = useState<string | undefined>()
   const [status, setStatus] = useState<SupplierStatus | undefined>()
-  const suppliers = useSuppliers({ groupId, status })
+  const [appliedOnly, setAppliedOnly] = useState(false)
+  const suppliers = useSuppliers({ groupId, status, appliedOnly })
+  const companyCode = workingCompany?.code ?? ''
+  // Cột "áp dụng tại" đổi tiêu đề theo công ty đang làm việc – mỗi công ty tự quản lý NCC mình mua (design.md mục 5.9).
+  const columns = useMemo<GridColumn<SupplierListItem>[]>(
+    () => [
+      ...baseColumns,
+      { key: 'applied', title: `Mua tại ${companyCode}`, width: 90, value: (r) => (r.appliedAtCompany ? 'Đang mua' : ''), groupable: true },
+      { key: 'localCode', title: `Mã tại ${companyCode}`, width: 100, value: (r) => r.localCode },
+    ],
+    [companyCode],
+  )
   const groups = useSupplierGroups()
   const canManage = workingCompany?.isHeadOffice === true && hasPermission(Permission.SupplierManage)
   // undefined = đóng; null = thêm mới; chuỗi = Id NCC đang mở.
@@ -84,9 +95,23 @@ export function SupplierListPage() {
         onClearFilters={() => {
           setGroupId(undefined)
           setStatus(undefined)
+          setAppliedOnly(false)
         }}
         filters={
           <>
+            <FilterField label="Phạm vi" width={200}>
+              {(id) => (
+                <Select
+                  id={id}
+                  value={appliedOnly ? 'applied' : 'all'}
+                  onChange={(v) => setAppliedOnly(v === 'applied')}
+                  options={[
+                    { value: 'all', label: 'Mọi NCC của tập đoàn' },
+                    { value: 'applied', label: `NCC ${companyCode} đang mua` },
+                  ]}
+                />
+              )}
+            </FilterField>
             <FilterField label="Nhóm NCC" width={180}>
               {(id) => (
                 <Select

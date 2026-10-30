@@ -281,6 +281,10 @@ export interface SupplierListItem {
   status: SupplierStatus
   rating: number | null
   internalCompanyCode: string | null
+  /** Công ty đang làm việc đang giao dịch với NCC này. */
+  appliedAtCompany: boolean
+  /** Mã NCC tại công ty đang làm việc. */
+  localCode: string | null
 }
 
 /** Kết quả tìm NCC. */
@@ -365,14 +369,15 @@ export function useSupplierGroupMutations() {
 }
 
 /**
- * Tìm NCC theo nhóm, trạng thái (lọc ở server); từ khóa lọc tiếp ở danh sách.
- * @param filter Nhóm NCC và trạng thái.
+ * Tìm NCC theo nhóm, trạng thái, "chỉ NCC công ty đang dùng" (lọc ở server); từ khóa lọc tiếp ở danh sách.
+ * @param filter Nhóm NCC, trạng thái, chỉ NCC áp dụng tại công ty đang làm việc.
  */
-export function useSuppliers(filter: { groupId?: string; status?: SupplierStatus }) {
+export function useSuppliers(filter: { groupId?: string; status?: SupplierStatus; appliedOnly?: boolean }) {
   const companyId = useCompanyId()
   const params = new URLSearchParams()
   if (filter.groupId) params.set('groupId', filter.groupId)
   if (filter.status) params.set('status', filter.status)
+  if (filter.appliedOnly) params.set('appliedOnly', 'true')
   const query = params.toString()
   return useQuery({
     queryKey: ['suppliers', companyId, query],
@@ -412,4 +417,131 @@ export function useSupplierMutations() {
       onSuccess,
     }),
   }
+}
+
+/** NCC áp dụng tại công ty đang làm việc. */
+export interface SupplierCompanyLink {
+  supplierId: string
+  companyCode: string
+  isApplied: boolean
+  localCode: string | null
+  /** yyyy-MM-dd. */
+  startDate: string | null
+  isActive: boolean
+  canEdit: boolean
+}
+
+/** Một dòng NCC – sản phẩm. */
+export interface SupplierItemRow {
+  id: string
+  supplierId: string
+  supplierCode: string
+  supplierName: string
+  supplierStatus: SupplierStatus
+  itemId: string
+  itemCode: string
+  itemName: string
+  baseUomCode: string
+  supplierItemCode: string | null
+  purchaseUomId: string
+  purchaseUomCode: string
+  moq: number | null
+  leadTimeDays: number | null
+  isPreferred: boolean
+}
+
+/** Dữ liệu lưu một dòng NCC – sản phẩm. */
+export interface SupplierItemInput {
+  itemId: string
+  supplierItemCode: string | null
+  purchaseUomId: string
+  moq: number | null
+  leadTimeDays: number | null
+  isPreferred: boolean
+}
+
+/**
+ * NCC áp dụng tại công ty đang làm việc.
+ * @param supplierId NCC; null thì không tải.
+ */
+export function useSupplierCompanyLink(supplierId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['suppliers', companyId, 'company', supplierId ?? ''],
+    queryFn: () => apiFetch<SupplierCompanyLink>(`/api/suppliers/${supplierId}/company`),
+    enabled: supplierId !== null,
+  })
+}
+
+/** Lưu NCC áp dụng tại công ty đang làm việc. */
+export function useSaveSupplierCompanyLink() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ supplierId, input }: { supplierId: string; input: { localCode: string | null; startDate: string | null; isActive: boolean } }) =>
+      apiFetch<SupplierCompanyLink>(`/api/suppliers/${supplierId}/company`, { method: 'PUT', body: input }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['suppliers'] }),
+  })
+}
+
+/**
+ * Sản phẩm/dịch vụ một NCC bán.
+ * @param supplierId NCC; null thì không tải.
+ */
+export function useSupplierItems(supplierId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['supplier-items', companyId, 'supplier', supplierId ?? ''],
+    queryFn: () => apiFetch<SupplierItemRow[]>(`/api/suppliers/${supplierId}/items`),
+    enabled: supplierId !== null,
+  })
+}
+
+/**
+ * Các NCC bán một mặt hàng.
+ * @param itemId Mặt hàng; null thì không tải.
+ */
+export function useItemSuppliers(itemId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['supplier-items', companyId, 'item', itemId ?? ''],
+    queryFn: () => apiFetch<SupplierItemRow[]>(`/api/items/${itemId}/suppliers`),
+    enabled: itemId !== null,
+  })
+}
+
+/** Thêm, sửa, xóa từng dòng NCC – sản phẩm. */
+export function useSupplierItemMutations() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['supplier-items'] })
+  return {
+    create: useMutation({
+      mutationFn: ({ supplierId, input }: { supplierId: string; input: SupplierItemInput }) =>
+        apiFetch<SupplierItemRow>(`/api/suppliers/${supplierId}/items`, { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: SupplierItemInput }) =>
+        apiFetch<SupplierItemRow>(`/api/supplier-items/${id}`, { method: 'PUT', body: input }),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => apiFetch<void>(`/api/supplier-items/${id}`, { method: 'DELETE' }),
+      onSuccess,
+    }),
+  }
+}
+
+/**
+ * Tìm mặt hàng đang dùng theo từ khóa (ô chọn hàng): chỉ gọi server khi đã gõ ít nhất 2 ký tự.
+ * @param search Từ khóa (mã, tên, mã vạch), có dấu hay không dấu.
+ */
+export function useItemSearch(search: string) {
+  const companyId = useCompanyId()
+  const keyword = search.trim()
+  return useQuery({
+    queryKey: ['items', companyId, 'search', keyword],
+    queryFn: () => apiFetch<ItemListResult>(`/api/items?activeOnly=true&search=${encodeURIComponent(keyword)}`),
+    enabled: keyword.length >= 2,
+    placeholderData: keepPreviousData,
+  })
 }

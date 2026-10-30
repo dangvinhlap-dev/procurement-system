@@ -18,6 +18,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Màn hình Giá và NCC → Nhà cung cấp (SUP) và Nhóm NCC (SGRP) (design.md mục 5.3, 5.8): NCC có nhóm, mã số thuế không trùng
   (trong nước/nước ngoài), liên hệ, điều khoản thanh toán, ngành hàng, xếp hạng, trạng thái (danh sách đen phải có lý do),
   NCC nội bộ liên kết công ty thành viên; tab Người liên hệ và Ngân hàng. API `/api/supplier-groups`, `/api/suppliers`.
+- NCC áp dụng cho công ty và NCC – sản phẩm (design.md mục 5.9): tab "Sản phẩm/dịch vụ" và "Áp dụng tại …" trong ngăn kéo NCC,
+  tab "Nhà cung cấp" trong ngăn kéo hàng hóa; mỗi mặt hàng một NCC ưu tiên; danh sách NCC lọc "NCC công ty đang mua".
+  API `/api/suppliers/{id}/company`, `/api/suppliers/{id}/items`, `/api/supplier-items/{id}`, `/api/items/{id}/suppliers`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ).
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
@@ -33,6 +36,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `Down()` xóa ba bảng và cột đó – mất toàn bộ hàng hóa, đơn vị tính, quy đổi đã nhập.
 - Migration `V0_2_0_NhaCungCap`: bảng `SupplierGroup`, `Supplier`, `SupplierContact`, `SupplierBankAccount`.
   `Down()` xóa bốn bảng – mất toàn bộ NCC đã nhập.
+- Migration `V0_2_0_NccCongTySanPham`: bảng `SupplierCompany`, `SupplierItem`. `Down()` xóa hai bảng – mất danh sách NCC
+  từng công ty đang mua và mặt hàng từng NCC bán.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

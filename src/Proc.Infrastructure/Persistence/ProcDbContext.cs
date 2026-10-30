@@ -93,6 +93,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Nhà cung cấp (dùng chung).</summary>
     public DbSet<Supplier> Suppliers => Set<Supplier>();
 
+    /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
+    public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
+
+    /// <summary>NCC – sản phẩm (lọc theo phạm vi nhóm hàng của mặt hàng).</summary>
+    public DbSet<SupplierItem> SupplierItems => Set<SupplierItem>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 
@@ -157,5 +163,8 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         // Hàng hóa theo nhóm hàng của nó: người chỉ được nhóm Vật tư không thấy mã hàng nhóm khác (design.md mục 9.2).
         modelBuilder.Entity<Item>().HasQueryFilter(
             ItemCategoryFilter, i => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(i.CategoryId));
+        // NCC – sản phẩm theo phạm vi của mặt hàng: Items đã có filter nhóm hàng, nên chỉ thấy dòng của hàng mình được xem.
+        modelBuilder.Entity<SupplierItem>().HasQueryFilter(
+            ItemCategoryFilter, si => ScopeAllItemCategories || Items.Any(i => i.Id == si.ItemId));
     }
 }

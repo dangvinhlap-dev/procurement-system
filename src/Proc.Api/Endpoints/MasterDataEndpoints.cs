@@ -82,8 +82,8 @@ public static class MasterDataEndpoints
             .Validate<UpdateSupplierGroupRequest>();
 
         var suppliers = app.MapGroup("/api/suppliers").WithTags("Nhà cung cấp");
-        suppliers.MapGet("/", (string? search, Guid? groupId, string? status, ISupplierAdministration s, CancellationToken ct) =>
-                s.SearchAsync(new SupplierQuery(search, groupId, status), ct))
+        suppliers.MapGet("/", (string? search, Guid? groupId, string? status, bool? appliedOnly, ISupplierAdministration s, CancellationToken ct) =>
+                s.SearchAsync(new SupplierQuery(search, groupId, status, appliedOnly ?? false), ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
         suppliers.MapGet("/{id:guid}", (Guid id, ISupplierAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
@@ -98,6 +98,39 @@ public static class MasterDataEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.MasterData.SupplierManage)
             .Validate<SaveSupplierRequest>();
+
+        // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
+        suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        suppliers.MapPut("/{id:guid}/company", (Guid id, SaveSupplierCompanyRequest request, ISupplierLinkAdministration s, CancellationToken ct) =>
+                s.SaveCompanyLinkAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .Validate<SaveSupplierCompanyRequest>();
+
+        suppliers.MapGet("/{id:guid}/items", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.ListItemsOfSupplierAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        suppliers.MapPost("/{id:guid}/items", async (Guid id, SaveSupplierItemRequest request, ISupplierLinkAdministration s, CancellationToken ct) =>
+            {
+                var created = await s.CreateItemAsync(id, request, ct);
+                return Results.Created($"/api/supplier-items/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .Validate<SaveSupplierItemRequest>();
+
+        var supplierItems = app.MapGroup("/api/supplier-items").WithTags("Nhà cung cấp");
+        supplierItems.MapPut("/{id:guid}", (Guid id, SaveSupplierItemRequest request, ISupplierLinkAdministration s, CancellationToken ct) =>
+                s.UpdateItemAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .Validate<SaveSupplierItemRequest>();
+        supplierItems.MapDelete("/{id:guid}", async (Guid id, ISupplierLinkAdministration s, CancellationToken ct) =>
+            {
+                await s.DeleteItemAsync(id, ct);
+                return Results.NoContent();
+            })
+            .RequirePermission(Permissions.MasterData.SupplierManage);
+
+        items.MapGet("/{id:guid}/suppliers", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.ListSuppliersOfItemAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.ItemView);
 
         return app;
     }

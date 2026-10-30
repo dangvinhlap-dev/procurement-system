@@ -138,3 +138,25 @@ public sealed class SaveSupplierRequestValidator : AbstractValidator<SaveSupplie
         });
     }
 }
+
+/// <summary>Kiểm tra lưu NCC áp dụng tại công ty.</summary>
+public sealed class SaveSupplierCompanyRequestValidator : AbstractValidator<SaveSupplierCompanyRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveSupplierCompanyRequestValidator()
+    {
+        RuleFor(x => x.LocalCode).MaximumLength(30);
+    }
+}
+
+/// <summary>Kiểm tra lưu NCC – sản phẩm.</summary>
+public sealed class SaveSupplierItemRequestValidator : AbstractValidator<SaveSupplierItemRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveSupplierItemRequestValidator()
+    {
+        RuleFor(x => x.ItemId).NotEmpty().WithMessage("Hãy chọn mặt hàng.");
+        RuleFor(x => x.PurchaseUomId).NotEmpty().WithMessage("Hãy chọn ĐVT mua.");
+        RuleFor(x => x.SupplierItemCode).MaximumLength(50);
+    }
+}

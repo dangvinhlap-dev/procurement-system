@@ -13,6 +13,7 @@ import {
 } from '../../api/masterData'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { buildCategoryTree } from './categoryTree'
+import { ItemSuppliersTab } from './SupplierLinkTabs'
 
 interface ItemFormValues {
   code: string
@@ -62,7 +63,7 @@ const orNull = (value: string | undefined) => (value?.trim() ? value.trim() : nu
 const numberProps = { decimalSeparator: ',', style: { width: '100%' } } as const
 
 /**
- * Ngăn kéo chi tiết hàng hóa: tab Thông tin chung, Quản lý kho, Quy đổi ĐVT, Thông số kỹ thuật.
+ * Ngăn kéo chi tiết hàng hóa: tab Thông tin chung, Quản lý kho, Quy đổi ĐVT, Thông số kỹ thuật, Nhà cung cấp (chỉ xem).
  * Chỉ hàng tồn kho mới quản lý lô/hạn dùng/tồn tối thiểu (design.md mục 5.2); đổi loại khác thì các ô đó bị khóa và xóa.
  * @param itemId Id hàng; null = thêm mới.
  * @param categories Nhóm hàng trong phạm vi.
@@ -351,6 +352,7 @@ export function ItemDrawer({
             </Form.Item>
           ),
         },
+        ...(itemId ? [{ key: 'suppliers', label: 'Nhà cung cấp', children: <ItemSuppliersTab itemId={itemId} /> }] : []),
       ]}
     />
   )

@@ -397,6 +397,52 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Supplier", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierCompany", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LocalCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateOnly?>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "LocalCode")
+                        .IsUnique()
+                        .HasFilter("\"LocalCode\" IS NOT NULL");
+
+                    b.HasIndex("SupplierId", "CompanyId")
+                        .IsUnique();
+
+                    b.ToTable("SupplierCompany", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.MasterData.SupplierGroup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -434,6 +480,63 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("SupplierGroup", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPreferred")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Moq")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("PurchaseUomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupplierItemCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseUomId");
+
+                    b.HasIndex("SupplierId", "ItemId")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "ItemId" }, "IX_SupplierItem_ItemId");
+
+                    b.HasIndex(new[] { "ItemId" }, "IX_SupplierItem_ItemId_Preferred")
+                        .IsUnique()
+                        .HasFilter("\"IsPreferred\"");
+
+                    b.ToTable("SupplierItem", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.MasterData.Uom", b =>
@@ -1208,6 +1311,42 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("BankAccounts");
 
                     b.Navigation("Contacts");
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierCompany", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierItem", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Uom", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseUomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Domain.Organization.RolePermission", b =>

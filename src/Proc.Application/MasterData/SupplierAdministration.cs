@@ -34,9 +34,12 @@ public sealed record UpdateSupplierGroupRequest(string Name, bool IsActive);
 /// <param name="Status">Potential, Approved, Suspended, Blacklisted.</param>
 /// <param name="Rating">Xếp hạng 1–5.</param>
 /// <param name="InternalCompanyCode">Mã công ty thành viên nếu là NCC nội bộ.</param>
+/// <param name="AppliedAtCompany">Công ty đang làm việc đang giao dịch với NCC này (SupplierCompany đang dùng).</param>
+/// <param name="LocalCode">Mã NCC tại công ty đang làm việc.</param>
 public sealed record SupplierListItemDto(
     Guid Id, string Code, string Name, string? ShortName, string GroupCode, string GroupName, bool IsForeign, string? TaxCode,
-    string? Phone, string? Email, string? Address, string? PrimaryContact, string Status, int? Rating, string? InternalCompanyCode);
+    string? Phone, string? Email, string? Address, string? PrimaryContact, string Status, int? Rating, string? InternalCompanyCode,
+    bool AppliedAtCompany, string? LocalCode);
 
 /// <summary>Kết quả tìm NCC; mỗi lần tối đa <see cref="Limit"/> dòng.</summary>
 /// <param name="Items">Các dòng theo mã.</param>
@@ -48,7 +51,8 @@ public sealed record SupplierListResult(IReadOnlyList<SupplierListItemDto> Items
 /// <param name="Search">Từ khóa (mã, tên, tên viết tắt, mã số thuế, điện thoại), có dấu hay không dấu.</param>
 /// <param name="GroupId">Nhóm NCC.</param>
 /// <param name="Status">Trạng thái.</param>
-public sealed record SupplierQuery(string? Search, Guid? GroupId, string? Status);
+/// <param name="AppliedOnly">Chỉ NCC công ty đang làm việc đang giao dịch (ô chọn NCC trên chứng từ mua hàng).</param>
+public sealed record SupplierQuery(string? Search, Guid? GroupId, string? Status, bool AppliedOnly = false);
 
 /// <summary>Người liên hệ (đọc ra và gửi lên; Id trống = dòng mới).</summary>
 /// <param name="Id">Id dòng.</param>
