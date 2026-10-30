@@ -1,4 +1,4 @@
-import { CloseOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -9,6 +9,7 @@ import {
   useInventoryDocument,
   useItemLookup,
   useSupplierLookup,
+  type InventoryDocument,
   type ItemLookup,
   type SaveReceiptInput,
 } from '../../api/inventoryDocuments'
@@ -133,14 +134,16 @@ export function GoodsReceiptPage() {
     { amount: 0, vat: 0 },
   )
 
-  const save = async () => {
-    if (readOnly) return
+  /**
+   * Lưu nháp (lập mới hoặc sửa) và trả về phiếu đã lưu; null nếu ô chưa hợp lệ hoặc server báo lỗi (lỗi đã hiện trên phiếu).
+   */
+  const persist = async (): Promise<InventoryDocument | null> => {
     let values: ReceiptFormValues
     try {
       values = await form.validateFields()
     } catch {
       setError('Còn ô chưa hợp lệ – xem các ô báo đỏ ở đầu phiếu và dòng hàng.')
-      return
+      return null
     }
     setError(null)
     const input: SaveReceiptInput = {
@@ -166,18 +169,60 @@ export function GoodsReceiptPage() {
       })),
     }
     try {
-      if (isNew) {
-        const created = await mutations.create.mutateAsync(input)
-        message.success(`Đã lưu phiếu ${created.no}.`)
-        navigate(`/kho/grn/${created.id}`, { replace: true })
-      } else {
-        const updated = await mutations.update.mutateAsync({ id, input })
-        message.success(`Đã lưu phiếu ${updated.no}.`)
-      }
+      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
+      return null
     }
   }
+
+  const save = async () => {
+    if (readOnly) return
+    const saved = await persist()
+    if (!saved) return
+    message.success(`Đã lưu phiếu ${saved.no}.`)
+    if (isNew) navigate(`/kho/grn/${saved.id}`, { replace: true })
+  }
+
+  /** Ghi sổ: phiếu đang sửa được thì lưu nháp trước (để ghi sổ đúng nội dung đang thấy), rồi ghi sổ. */
+  const postDocument = () =>
+    modal.confirm({
+      title: 'Ghi sổ phiếu nhập?',
+      content: 'Ghi sổ thì cộng tồn kho theo phiếu. Sau khi ghi sổ không sửa được; muốn sửa phải bỏ ghi sổ khi kỳ kho còn mở.',
+      okText: 'Ghi sổ',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        const saved = readOnly ? doc : await persist()
+        if (!saved) return
+        try {
+          const posted = await mutations.post.mutateAsync(saved.id)
+          message.success(`Đã ghi sổ phiếu ${posted.no}.`)
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Không ghi sổ được phiếu.')
+        }
+        if (isNew) navigate(`/kho/grn/${saved.id}`, { replace: true })
+      },
+    })
+
+  const unpostDocument = () =>
+    doc &&
+    modal.confirm({
+      title: `Bỏ ghi sổ phiếu ${doc.no}?`,
+      content: 'Tồn kho trừ lại theo phiếu, phiếu về trạng thái nháp để sửa. Chỉ làm được khi kỳ kho của phiếu còn mở.',
+      okText: 'Bỏ ghi sổ',
+      okButtonProps: { danger: true },
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          await mutations.unpost.mutateAsync(doc.id)
+          message.success(`Đã bỏ ghi sổ phiếu ${doc.no}.`)
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Không bỏ ghi sổ được phiếu.')
+        }
+      },
+    })
 
   const cancelDocument = () =>
     doc &&
@@ -380,6 +425,16 @@ export function GoodsReceiptPage() {
           {!readOnly && (
             <Button type="primary" icon={<SaveOutlined />} onClick={save} loading={mutations.create.isPending || mutations.update.isPending}>
               Lưu nháp
+            </Button>
+          )}
+          {(isNew ? !readOnly && hasPermission(Permission.InventoryDocumentPost) : doc?.canPost) && (
+            <Button icon={<CheckCircleOutlined />} onClick={postDocument} loading={mutations.post.isPending}>
+              Ghi sổ
+            </Button>
+          )}
+          {doc?.canUnpost && (
+            <Button danger icon={<RollbackOutlined />} onClick={unpostDocument} loading={mutations.unpost.isPending}>
+              Bỏ ghi sổ
             </Button>
           )}
           {!isNew && doc?.status === 'Draft' && doc.canEdit && (

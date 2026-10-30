@@ -30,6 +30,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   Excel – Enter sang ô kế, F2 thêm dòng, Ctrl+S lưu – chân phiếu tổng tiền); màn hình Kho → Nhập mua NCC (GRN): danh sách theo
   khoảng ngày và phiếu nhập nháp (cấp số khi lưu, tính SL quy đổi, thành tiền, VAT, hủy phiếu nháp). API `/api/goods-receipts`,
   `/api/inventory-documents`, `/api/items/lookup`, `/api/suppliers/lookup`.
+- Ghi sổ, bỏ ghi sổ phiếu nhập mua (design.md mục 12.3): sổ kho `StockLedger`, tồn tức thời `StockOnHand` cập nhật trong
+  cùng giao dịch, kiểm tra kỳ đang mở, chặn tồn âm; nút Ghi sổ (tự lưu nháp trước) và Bỏ ghi sổ trên phiếu. API
+  `POST /api/inventory-documents/{id}/post`, `/unpost`.
 - Dữ liệu mẫu dev/test: 7 đơn vị tính, 3 nhóm NCC (Trong nước, Nhập khẩu, Nội bộ); lịch kỳ năm hiện tại, mở tháng hiện tại.
 - API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
   `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
@@ -53,6 +56,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   từng công ty đang mua và mặt hàng từng NCC bán.
 - Migration `V0_3_0_KyKho`: bảng `InventoryPeriod`. `Down()` xóa bảng – mất lịch kỳ và trạng thái kỳ.
 - Migration `V0_3_0_ChungTuKho`: bảng `InventoryDocument`, `InventoryDocumentLine`. `Down()` xóa hai bảng – mất mọi chứng từ kho.
+- Migration `V0_3_0_SoKho`: bảng `StockLedger`, `StockOnHand`. `Down()` xóa hai bảng – mất sổ kho và số tồn.
 
 ### Lưu ý khi nâng cấp
 - Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.

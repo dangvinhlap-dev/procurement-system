@@ -591,6 +591,16 @@ Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NC
   Bảng `Warehouse` có khóa (`Id`, `CompanyId`); kho cha của kho Sub và `UserWarehouseScope` trỏ tới khóa kép này, nên CSDL tự chặn ghép kho với công ty khác. Mỗi công ty tối đa một kho Main (chỉ mục duy nhất có điều kiện).
 - Khóa chính dùng `uuid` v7 (sắp xếp theo thời gian); số chứng từ là cột riêng, duy nhất theo (CompanyId, DocType, No).
 
+### 12.3 Ghi sổ và bỏ ghi sổ (đã làm cho phiếu nhập mua GRN)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Ghi sổ trong **một giao dịch**: kiểm tra lại điều kiện phiếu (NCC còn Đã duyệt và áp dụng tại công ty, kho và mặt hàng còn dùng) → kỳ tháng chứa ngày phiếu phải **Đang mở** → mỗi dòng sinh một dòng `StockLedger` (+1, SL theo ĐVT cơ sở, giá trị = thành tiền trước VAT, đơn giá vốn = giá trị ÷ SL cơ sở) → cộng `StockOnHand` → phiếu Đã ghi sổ (kỳ, người, thời điểm) → nhật ký thao tác | Mục 12.2; giá nhập không gồm VAT được khấu trừ (mục 1.3) |
+| Tồn tức thời cộng/trừ bằng **một câu SQL nguyên tử** (`INSERT … ON CONFLICT DO UPDATE … RETURNING`), khóa dòng tồn tới hết giao dịch; chỉ mục duy nhất công ty × kho × hàng × lô với `NULLS NOT DISTINCT` (hàng không theo lô cũng chỉ một dòng) | Ghi sổ đồng thời không mất số, kiểm tra tồn âm trên số đúng |
+| Tồn sau khi trừ < 0 và kho không bật "cho phép tồn âm" → báo lỗi, **hủy cả giao dịch** | CLAUDE.md mục 4 |
+| **Bỏ ghi sổ** (quyền `Inventory.Document.Unpost`) chỉ khi kỳ của phiếu còn **Đang mở**: xóa các dòng sổ kho của phiếu, trừ lại tồn (chặn nếu làm tồn âm), phiếu về Nháp; kỳ đã đóng thì lập chứng từ điều chỉnh | CLAUDE.md mục 4 |
+| Sổ kho, tồn kho lọc theo công ty, kho được phép, nhóm hàng được phép | Mục 9.2 |
+
 ## 13. Lộ trình triển khai với Claude Code
 
 Cách làm: tài liệu này nằm trong repo (`docs/design.md`), `CLAUDE.md` chứa các quy tắc bất biến (mục 16), và Claude Code được giao **từng lát dọc (vertical slice)** nhỏ, mỗi lát có test, commit và push trước khi sang lát sau.
