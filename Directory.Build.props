@@ -4,7 +4,7 @@
     Số phiên bản theo Semantic Versioning (CLAUDE.md mục 8): chỉ đổi khi phát hành.
   -->
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.5.0</Version>
     <Product>Procurement &amp; Inventory</Product>
     <Company>Tổng công ty</Company>
     <TargetFramework>net10.0</TargetFramework>

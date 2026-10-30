@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, loginViaApi } from './helpers.ts'
+import { ADMIN, loginViaApi, appVersion } from './helpers.ts'
 
 /**
  * Test đăng nhập, đổi công ty làm việc, đăng xuất – chạy với API thật (database procurement_test).
@@ -9,7 +9,7 @@ test('chưa đăng nhập thì chuyển sang màn hình đăng nhập, đăng nh
   await page.goto('/mua-hang/po')
   await expect(page).toHaveURL(/\/dang-nhap$/)
   await expect(page.getByText('Đăng nhập – Quản lý mua hàng và kho')).toBeVisible()
-  await expect(page.getByText('Phiên bản 0.1.0')).toBeVisible()
+  await expect(page.getByText(`Phiên bản ${appVersion()}`)).toBeVisible()
 
   await page.getByLabel('Tên đăng nhập').fill(ADMIN.userName)
   await page.getByLabel('Mật khẩu').fill(ADMIN.password)
