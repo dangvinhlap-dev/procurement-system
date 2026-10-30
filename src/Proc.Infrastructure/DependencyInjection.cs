@@ -12,6 +12,7 @@ using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Identity;
 using Proc.Infrastructure.Logging;
+using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Security;
 
@@ -58,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserScope>(sp => sp.GetRequiredService<CurrentUserScope>());
         services.AddScoped<UserScopeLoader>();
         services.AddScoped<IOrganizationQueries, OrganizationQueries>();
+        services.AddScoped<ICompanyAdministration, CompanyAdministration>();
+        services.AddScoped<IWarehouseAdministration, WarehouseAdministration>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 

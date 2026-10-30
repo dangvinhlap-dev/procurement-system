@@ -4,6 +4,7 @@
  */
 export const Permission = {
   CompanyView: 'System.Company.View',
+  CompanyManage: 'System.Company.Manage',
   UserView: 'System.User.View',
   UserManage: 'System.User.Manage',
   RoleView: 'System.Role.View',
@@ -12,6 +13,7 @@ export const Permission = {
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',
+  WarehouseManage: 'Organization.Warehouse.Manage',
   ItemCategoryView: 'MasterData.ItemCategory.View',
   ItemView: 'MasterData.Item.View',
   SupplierView: 'MasterData.Supplier.View',

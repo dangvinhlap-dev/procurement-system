@@ -68,7 +68,8 @@ test.describe('quản trị hệ thống', () => {
 
   test('mở tài khoản của chính mình thì không sửa được phân quyền', async ({ page }) => {
     await openScreen(page, 'Người dùng')
-    await gridRow(page, 'Quản trị hệ thống').dblclick()
+    // Tìm theo đúng ô tên đăng nhập: test tích hợp tạo thêm nhiều quản trị cùng vai trò "Quản trị hệ thống" ở TCT.
+    await page.locator('.data-grid-row').filter({ has: page.getByRole('cell', { name: 'admin', exact: true }) }).dblclick()
     const drawer = page.locator('.detail-drawer')
     await drawer.getByRole('tab', { name: /Phân quyền tại/ }).click()
     await expect(drawer.getByText('Không được tự sửa quyền của chính mình.')).toBeVisible()

@@ -258,6 +258,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"IsHeadOffice\"");
 
+                    b.HasIndex("TaxCode")
+                        .IsUnique()
+                        .HasFilter("\"TaxCode\" IS NOT NULL");
+
                     b.ToTable("Company", (string)null);
                 });
 

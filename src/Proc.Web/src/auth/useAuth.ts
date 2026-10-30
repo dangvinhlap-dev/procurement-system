@@ -13,6 +13,8 @@ export interface AuthContextValue {
   login: (userName: string, password: string) => Promise<void>
   /** Đăng xuất; reason hiện cho người dùng nếu có (ví dụ "phiên đã hết hạn"). */
   logout: (reason?: string) => void
+  /** Đọc lại danh sách công ty và quyền của người đang đăng nhập từ API. */
+  refreshUser: () => Promise<void>
   /** Đổi công ty đang làm việc. */
   setWorkingCompany: (companyId: string) => void
   /** Thông báo lý do đăng xuất gần nhất, hiện trên màn hình đăng nhập. */

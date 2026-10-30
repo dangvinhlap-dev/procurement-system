@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Proc.Domain.Common;
 
 namespace Proc.Domain.Organization;
@@ -7,7 +8,7 @@ namespace Proc.Domain.Organization;
 /// (design.md mục 5.1). Mọi bảng giao dịch đều có CompanyId trỏ về đây.
 /// </summary>
 [Auditable("Công ty", LabelProperty = nameof(Code))]
-public sealed class Company : AuditableEntity
+public sealed partial class Company : AuditableEntity
 {
     /// <summary>Độ dài tối thiểu của mã công ty.</summary>
     public const int CodeMinLength = 2;
@@ -80,8 +81,38 @@ public sealed class Company : AuditableEntity
         ShortName = string.IsNullOrWhiteSpace(shortName) ? null : shortName.Trim();
     }
 
+    /// <summary>
+    /// Sửa thông tin công ty (mọi trường trừ mã – mã nằm trong số chứng từ đã cấp nên không đổi).
+    /// </summary>
+    /// <param name="name">Tên đầy đủ, bắt buộc.</param>
+    /// <param name="shortName">Tên viết tắt.</param>
+    /// <param name="taxCode">Mã số thuế: 10 chữ số, hoặc 10 chữ số + "-" + 3 chữ số (đơn vị phụ thuộc); trống = chưa có.</param>
+    /// <param name="address">Địa chỉ.</param>
+    /// <param name="representative">Người đại diện theo pháp luật.</param>
+    /// <param name="startDate">Ngày bắt đầu dùng hệ thống.</param>
+    /// <exception cref="BusinessRuleException">Khi tên rỗng hoặc mã số thuế sai định dạng.</exception>
+    public void UpdateInfo(
+        string name, string? shortName, string? taxCode, string? address, string? representative, DateOnly? startDate)
+    {
+        var normalizedTaxCode = string.IsNullOrWhiteSpace(taxCode) ? null : taxCode.Trim();
+        if (normalizedTaxCode is not null && !TaxCodeRegex().IsMatch(normalizedTaxCode))
+            throw new BusinessRuleException("Mã số thuế gồm 10 chữ số, hoặc 10 chữ số + \"-\" + 3 chữ số (ví dụ 0101234567-001).");
+
+        Rename(name, shortName);
+        TaxCode = normalizedTaxCode;
+        Address = Clean(address);
+        Representative = Clean(representative);
+        StartDate = startDate;
+    }
+
     /// <summary>Ngừng sử dụng công ty: người dùng không chọn được công ty này để làm việc nữa.</summary>
-    public void Deactivate() => IsActive = false;
+    /// <exception cref="BusinessRuleException">Khi là tổng công ty.</exception>
+    public void Deactivate()
+    {
+        // Tổng công ty quản lý danh mục dùng chung và tài khoản quản trị (design.md mục 5) – ngừng thì không ai vào quản trị được.
+        if (IsHeadOffice) throw new BusinessRuleException("Không ngừng dùng được tổng công ty.");
+        IsActive = false;
+    }
 
     /// <summary>Dùng lại công ty đã ngừng.</summary>
     public void Activate() => IsActive = true;
@@ -99,4 +130,9 @@ public sealed class Company : AuditableEntity
 
         Code = normalized;
     }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    [GeneratedRegex(@"^\d{10}(-\d{3})?$")]
+    private static partial Regex TaxCodeRegex();
 }

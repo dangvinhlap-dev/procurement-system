@@ -76,6 +76,51 @@ public sealed class Warehouse : AuditableEntity, ICompanyOwned
         return Create(parent.CompanyId, code, name, WarehouseType.Sub, parent.Id);
     }
 
+    /// <summary>
+    /// Sửa thông tin kho. Mã và loại kho không đổi: mã nằm trên chứng từ đã ghi sổ, loại quyết định đường luân chuyển hợp lệ.
+    /// </summary>
+    /// <param name="name">Tên kho, bắt buộc.</param>
+    /// <param name="address">Địa chỉ.</param>
+    /// <param name="keeper">Thủ kho.</param>
+    /// <param name="allowNegativeStock">Cho phép tồn âm (CLAUDE.md mục 4: mặc định không).</param>
+    /// <exception cref="BusinessRuleException">Khi tên rỗng.</exception>
+    public void Update(string name, string? address, string? keeper, bool allowNegativeStock)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new BusinessRuleException("Tên kho không được để trống.");
+        Name = name.Trim();
+        Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
+        Keeper = string.IsNullOrWhiteSpace(keeper) ? null : keeper.Trim();
+        AllowNegativeStock = allowNegativeStock;
+    }
+
+    /// <summary>
+    /// Đổi kho cha của kho phụ. Việc chặn vòng lặp (kho cha là kho con của chính nó) cần cả cây kho nên do tầng
+    /// Infrastructure kiểm tra trước khi gọi.
+    /// </summary>
+    /// <param name="parent">Kho cha mới, cùng công ty.</param>
+    /// <exception cref="BusinessRuleException">Khi là kho tổng, kho cha khác công ty hoặc là chính nó.</exception>
+    public void MoveTo(Warehouse parent)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+        if (Type == WarehouseType.Main) throw new BusinessRuleException("Kho tổng không có kho cha.");
+        // Kho Sub không được treo dưới kho của công ty khác – design.md mục 4.
+        if (parent.CompanyId != CompanyId) throw new BusinessRuleException("Kho cha phải cùng công ty.");
+        if (parent.Id == Id) throw new BusinessRuleException("Kho không thể là kho cha của chính nó.");
+        ParentWarehouseId = parent.Id;
+    }
+
+    /// <summary>Ngừng dùng kho.</summary>
+    /// <exception cref="BusinessRuleException">Khi là kho tổng.</exception>
+    public void Deactivate()
+    {
+        // Mỗi công ty luôn có một kho tổng đang dùng – kênh duy nhất của giao dịch liên công ty ICS/ICR (design.md mục 4).
+        if (Type == WarehouseType.Main) throw new BusinessRuleException("Không ngừng dùng được kho tổng của công ty.");
+        IsActive = false;
+    }
+
+    /// <summary>Dùng lại kho đã ngừng.</summary>
+    public void Activate() => IsActive = true;
+
     private static Warehouse Create(Guid companyId, string code, string name, WarehouseType type, Guid? parentWarehouseId)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Kho phải thuộc một công ty.");

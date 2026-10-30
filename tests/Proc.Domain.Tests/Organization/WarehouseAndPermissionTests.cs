@@ -51,6 +51,51 @@ public class WarehouseAndPermissionTests
     }
 
     [Fact]
+    public void Kho_SuaThongTinVaChoPhepTonAm()
+    {
+        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
+
+        main.Update(" Kho tổng mới ", " Hà Nội ", " Trần Bình ", allowNegativeStock: true);
+
+        Assert.Equal("Kho tổng mới", main.Name);
+        Assert.Equal("Hà Nội", main.Address);
+        Assert.Equal("Trần Bình", main.Keeper);
+        Assert.True(main.AllowNegativeStock);
+        Assert.Throws<BusinessRuleException>(() => main.Update(" ", null, null, false));
+    }
+
+    [Fact]
+    public void KhoTong_KhongNgungDungDuoc()
+    {
+        // Mỗi công ty luôn có một kho tổng đang dùng để giao dịch liên công ty ICS/ICR – design.md mục 4.
+        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
+        Assert.Throws<BusinessRuleException>(main.Deactivate);
+
+        var sub = Warehouse.CreateSub(main, "KP1", "Kho phụ 1");
+        sub.Deactivate();
+        Assert.False(sub.IsActive);
+        sub.Activate();
+        Assert.True(sub.IsActive);
+    }
+
+    [Fact]
+    public void KhoPhu_DoiKhoChaTrongCungCongTy()
+    {
+        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
+        var sub1 = Warehouse.CreateSub(main, "KP1", "Kho phụ 1");
+        var sub2 = Warehouse.CreateSub(main, "KP2", "Kho phụ 2");
+
+        sub2.MoveTo(sub1);
+        Assert.Equal(sub1.Id, sub2.ParentWarehouseId);
+
+        // Kho cha công ty khác, chính nó, hoặc đổi kho cha của kho tổng đều bị chặn.
+        var other = Warehouse.CreateMain(Guid.CreateVersion7(), "KT", "Kho tổng công ty khác");
+        Assert.Throws<BusinessRuleException>(() => sub2.MoveTo(other));
+        Assert.Throws<BusinessRuleException>(() => sub2.MoveTo(sub2));
+        Assert.Throws<BusinessRuleException>(() => main.MoveTo(sub1));
+    }
+
+    [Fact]
     public void NhomHang_GhiNhoNhomCha()
     {
         var root = ItemCategory.Create("vt", "Vật tư");
