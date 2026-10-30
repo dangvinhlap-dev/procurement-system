@@ -151,3 +151,8 @@
 .document-total-strong {
   font-weight: 700;
 }
+
+/* Ô số trong lưới dòng căn phải như Excel. */
+.line-grid td .ant-input-number-input {
+  text-align: right;
+}

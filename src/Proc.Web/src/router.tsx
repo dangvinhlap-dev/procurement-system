@@ -12,6 +12,8 @@ import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
+import { GoodsReceiptListPage } from './pages/inventory/GoodsReceiptListPage'
+import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -34,6 +36,7 @@ const implemented: Record<string, ReactNode> = {
   UOM: <UomListPage />,
   COMP: <CompanyListPage />,
   PER: <InventoryPeriodPage />,
+  GRN: <GoodsReceiptListPage />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
@@ -41,6 +44,12 @@ const implemented: Record<string, ReactNode> = {
   ACC: <AccessLogListPage />,
   DSCT: <DocumentNumberingPage />,
 }
+
+/** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */
+const documentPages = [{ code: 'GRN', element: <GoodsReceiptPage /> }].map((d) => ({
+  screen: screens.find((s) => s.code === d.code)!,
+  element: d.element,
+}))
 
 /**
  * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9) và yêu cầu đăng nhập;
@@ -58,6 +67,11 @@ export const router = createBrowserRouter([
       ...screens.map((s) => ({
         path: s.path,
         element: <ScreenGuard screen={s}>{implemented[s.code] ?? <PlaceholderPage />}</ScreenGuard>,
+      })),
+      // Trang chứng từ (lập mới: /kho/grn/moi) – cùng quyền với màn hình danh sách của nó.
+      ...documentPages.map((d) => ({
+        path: `${d.screen.path}/:id`,
+        element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
       })),
       { path: '*', element: <PlaceholderPage /> },
     ],

@@ -24,6 +24,7 @@ export const Permission = {
   PoView: 'Purchase.PO.View',
   ContractView: 'Purchase.Contract.View',
   InventoryDocumentView: 'Inventory.Document.View',
+  InventoryDocumentCreate: 'Inventory.Document.Create',
   StockView: 'Inventory.Stock.View',
   PeriodView: 'Inventory.Period.View',
   PeriodOpen: 'Inventory.Period.Open',
