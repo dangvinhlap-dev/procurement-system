@@ -204,7 +204,12 @@ public sealed class ItemAdministration : IItemAdministration
             ? value
             : throw new BusinessRuleException("Loại hàng phải là Inventory, Service, Asset hoặc Consumable.");
 
-    private static bool IsUnder(Guid id, Guid ancestorId, Dictionary<Guid, Guid?> parents)
+    /// <summary>Nhóm <paramref name="id"/> là <paramref name="ancestorId"/> hoặc nằm dưới nó (dùng chung cho lọc theo nhóm gồm nhóm con).</summary>
+    /// <param name="id">Nhóm cần xét.</param>
+    /// <param name="ancestorId">Nhóm gốc.</param>
+    /// <param name="parents">Id nhóm → Id nhóm cha.</param>
+    /// <returns>true nếu thuộc cây con của nhóm gốc.</returns>
+    internal static bool IsUnder(Guid id, Guid ancestorId, Dictionary<Guid, Guid?> parents)
     {
         var visited = new HashSet<Guid>();
         for (Guid? current = id; current is { } c && visited.Add(c); current = parents.GetValueOrDefault(c))

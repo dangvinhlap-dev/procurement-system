@@ -572,6 +572,18 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 
 **Hiệu năng:** NXT kỳ đã đóng đọc từ `StockPeriodBalance` (đã chốt); kỳ đang mở = số dư kỳ trước + tổng hợp `StockLedger` trong kỳ. Không bao giờ cộng dồn từ đầu.
 
+### 11.1 Tồn kho hiện tại và thẻ kho (giai đoạn 2)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Tồn kho hiện tại đọc `StockOnHand` theo kho × mặt hàng × lô; lọc kho, nhóm hàng (gồm nhóm con) ở server, mặc định ẩn dòng tồn 0; tối đa 5.000 dòng mỗi lần | Dữ liệu lớn; ô tìm kiếm lọc tiếp trên dòng đã tải |
+| Giá trị tồn = Σ (chiều × giá trị) trên `StockLedger` của đúng kho × hàng × lô; đơn giá bình quân = giá trị ÷ số lượng (0 khi tồn ≤ 0). Kỳ còn mở thì đây là giá vốn tạm tính | Mục 7.5 |
+| Cảnh báo **dưới mức tối thiểu** khi tổng tồn của mặt hàng trên các kho đang xem (mọi lô) < tồn tối thiểu của mặt hàng; tồn âm (kho cho phép tồn âm) báo đỏ | Tồn tối thiểu đặt theo mặt hàng, không theo kho |
+| Thẻ kho: một mặt hàng, một kho hoặc mọi kho được phép, khoảng ngày tối đa hai năm; tồn đầu, từng phát sinh theo ngày rồi thứ tự ghi sổ với tồn lũy kế, tồn cuối. Xem mọi kho thì phiếu chuyển kho hiện cả dòng xuất và dòng nhập (tồn chung không đổi) | Mục 11 |
+| **Tạm thời** tồn đầu thẻ kho cộng từ `StockLedger` trước ngày bắt đầu vì chưa có `StockPeriodBalance`; khi làm đóng kỳ (giai đoạn 3) đổi sang số dư kỳ đã chốt + phát sinh trong kỳ như đoạn "Hiệu năng" ở trên | Chưa có số dư kỳ |
+| Quyền `Inventory.Stock.View`; sổ kho, tồn kho đi qua global query filter (công ty, kho, nhóm hàng) – người chỉ được kho KP1 chỉ thấy tồn và phát sinh của KP1 | Mục 9.2 |
+| Chưa làm: xuất Excel/PDF báo cáo, báo cáo chậm luân chuyển, sắp hết hạn, tồn tập đoàn | Làm cùng nhóm báo cáo |
+
 ## 12. Lược đồ CSDL chính
 
 Trái tim của kho là bảng **`StockLedger`** (sổ kho): mỗi dòng chứng từ khi ghi sổ sinh một hoặc hai dòng ledger (+ nhập, − xuất). Tồn kho, NXT, thẻ kho, giá vốn đều tính từ đây; chứng từ chỉ là nguồn.

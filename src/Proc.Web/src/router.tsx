@@ -15,6 +15,8 @@ import { UomListPage } from './pages/masterData/UomListPage'
 import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
 import { GoodsReturnPage } from './pages/inventory/GoodsReturnPage'
 import { InventoryDocumentListPage } from './pages/inventory/InventoryDocumentListPage'
+import { StockCardPage } from './pages/inventory/StockCardPage'
+import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -41,6 +43,8 @@ const implemented: Record<string, ReactNode> = {
   GRN: <InventoryDocumentListPage docType="GRN" title="Phiếu nhập mua từ NCC (GRN)" path="/kho/grn" exportFileName="phieu-nhap-mua" />,
   RTV: <InventoryDocumentListPage docType="RTV" title="Phiếu xuất trả hàng NCC (RTV)" path="/kho/rtv" exportFileName="phieu-tra-ncc" />,
   TRF: <InventoryDocumentListPage docType="TRF" title="Phiếu chuyển kho nội bộ (TRF)" path="/kho/trf" exportFileName="phieu-chuyen-kho" />,
+  STK: <StockOnHandPage />,
+  CARD: <StockCardPage />,
   WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,

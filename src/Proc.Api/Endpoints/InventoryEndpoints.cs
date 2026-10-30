@@ -89,6 +89,15 @@ public static class InventoryEndpoints
             .WithTags("Chứng từ kho")
             .RequirePermission(Permissions.Inventory.DocumentView);
 
+        // Tồn kho hiện tại, thẻ kho (design.md mục 11): quyền xem tồn kho; phạm vi kho, nhóm hàng do global query filter.
+        var stock = app.MapGroup("/api").WithTags("Tồn kho");
+        stock.MapGet("/stock-on-hand", (Guid? warehouseId, Guid? categoryId, bool? includeZero, IStockQueryService s, CancellationToken ct) =>
+                s.GetOnHandAsync(new StockOnHandQuery(warehouseId, categoryId, includeZero ?? false), ct))
+            .RequirePermission(Permissions.Inventory.StockView);
+        stock.MapGet("/stock-card", (Guid itemId, Guid? warehouseId, DateOnly from, DateOnly to, IStockQueryService s, CancellationToken ct) =>
+                s.GetStockCardAsync(new StockCardQuery(itemId, warehouseId, from, to), ct))
+            .RequirePermission(Permissions.Inventory.StockView);
+
         return app;
     }
 }

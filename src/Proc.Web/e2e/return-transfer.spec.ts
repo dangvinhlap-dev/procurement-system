@@ -1,43 +1,11 @@
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, switchCompany, unique } from './inventoryHelpers.ts'
+import { chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
 
 /**
  * Phiếu xuất trả NCC (design.md mục 10.5) và phiếu chuyển kho nội bộ (mục 10.6) trên khuôn DocumentForm, ở công ty BHA.
  * Dữ liệu chuẩn bị qua API: mặt hàng, NCC và một phiếu nhập 10 hộp vào kho tổng KT đã ghi sổ.
  */
-
-/** Tạo mặt hàng + NCC áp dụng tại BHA, nhập 10 HOP giá 50.000 (VAT 10%) vào kho KT và ghi sổ. */
-async function seedPostedReceipt(request: APIRequestContext) {
-  const head = await api(request)
-  const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
-  const hop = uoms.find((u) => u.code === 'HOP')!.id
-  const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: unique('R'), name: 'Nhóm trả/chuyển', parentId: null, inventoryAccount: null })
-  const itemCode = `${category.code}-01`
-  const item = await head.send<{ id: string }>('post', '/api/items', {
-    code: itemCode, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
-  })
-  const supplierCode = unique('NCC')
-  const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
-    code: supplierCode, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC trả hàng ${supplierCode}`, shortName: null,
-    isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
-    rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
-  })
-  const bha = await api(request, 'BHA')
-  await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
-  const warehouses = await bha.get<{ id: string; code: string }[]>('/api/warehouses')
-  const receipt = await bha.send<{ id: string; no: string }>('post', '/api/goods-receipts', {
-    date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }),
-    warehouseId: warehouses.find((w) => w.code === 'KT')!.id, supplierId: supplier.id, invoiceNo: null, invoiceSeries: null,
-    invoiceDate: null, deliveryNoteNo: null, deliverer: null, note: null,
-    lines: [{ id: null, itemId: item.id, uomId: hop, qty: 10, unitPrice: 50000, vatCode: '10', lotNo: null, expiryDate: null, note: null }],
-  })
-  await bha.send('post', `/api/inventory-documents/${receipt.id}/post`, {})
-  return { itemCode, receiptNo: receipt.no }
-}
 
 test('trả NCC theo phiếu nhập gốc, rồi chuyển phần còn lại sang kho phụ', async ({ page, request }) => {
   const { itemCode, receiptNo } = await seedPostedReceipt(request)
