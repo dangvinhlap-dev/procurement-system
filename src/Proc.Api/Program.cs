@@ -72,6 +72,21 @@ await DatabaseInitializer.InitializeAsync(app.Services);
 
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
+
+// Chạy server: image chứa sẵn giao diện React đã build trong wwwroot (design.md mục 14.1).
+// Máy dev không có wwwroot (Vite tự phục vụ ở cổng 5173) nên bỏ qua toàn bộ phần này.
+var hostsWebApp = app.Environment.WebRootFileProvider.GetFileInfo("index.html").Exists;
+if (hostsWebApp)
+{
+    // File tĩnh đặt trước xác thực: giao diện phải tải được trước khi đăng nhập.
+    // File trong assets/ có mã băm trong tên nên lưu đệm lâu được; index.html thì không (xem MapFallbackToFile bên dưới).
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl =
+            ctx.File.Name == "index.html" ? "no-cache" : "public, max-age=31536000, immutable",
+    });
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 // Sau xác thực: nạp phạm vi (công ty từ X-Company-Id, quyền, kho, nhóm hàng) trước khi vào endpoint.
@@ -99,6 +114,18 @@ app.MapOrganizationEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();
+
+// /api lạ trả 404 (không phải 401 do chính sách mặc định, cũng không rơi vào trang giao diện bên dưới).
+app.MapFallback("/api/{**path}", () => Results.NotFound()).AllowAnonymous();
+
+if (hostsWebApp)
+{
+    // Đường dẫn của React Router (gõ thẳng hoặc F5) đều trả index.html, để giao diện tự định tuyến.
+    app.MapFallbackToFile("index.html", new StaticFileOptions
+    {
+        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache",
+    }).AllowAnonymous();
+}
 
 app.Run();
 

@@ -1,0 +1,6 @@
+# Caddy đứng trước app: nhận HTTPS và chuyển tiếp vào cổng 8080 của container app.
+# SITE_ADDRESS đặt trong .env: tên miền (ví dụ proc.congty.vn) thì Caddy tự xin chứng chỉ SSL; ":80" thì chỉ chạy HTTP.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}

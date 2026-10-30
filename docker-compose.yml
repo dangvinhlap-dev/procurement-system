@@ -1,0 +1,102 @@
+# Chạy thật trên server Ubuntu (design.md mục 14). Máy dev KHÔNG dùng file này (dùng docker-compose.dev.yml).
+# Chuẩn bị: copy .env.example thành .env, đổi mọi mật khẩu. Các bước cài lần đầu và nâng cấp: README.md mục "Triển khai server".
+name: procurement
+
+services:
+  # HTTPS tự động (Let's Encrypt) khi SITE_ADDRESS là tên miền; ":80" nếu chỉ chạy HTTP trong mạng nội bộ.
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+
+  app:
+    image: ${APP_IMAGE:-proc-app}:${APP_VERSION:?Chưa đặt APP_VERSION trong .env}
+    build: .
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__Procurement: Host=db;Port=5432;Database=${POSTGRES_DB:-procurement};Username=${POSTGRES_USER:-proc};Password=${POSTGRES_PASSWORD:?Chưa đặt POSTGRES_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Chưa đặt JWT_SIGNING_KEY}
+      # Server thật nâng cấp CSDL bằng script trong db/scripts sau khi sao lưu, không tự chạy migration (CLAUDE.md mục 8).
+      Database__MigrateOnStartup: "false"
+      # Chỉ tạo Tổng công ty và tài khoản quản trị (chưa có thì tạo, có rồi thì thôi); không có dữ liệu mẫu.
+      Seed__Enabled: "true"
+      Seed__AdminUserName: ${ADMIN_USERNAME:-admin}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?Chưa đặt ADMIN_PASSWORD}
+      Seed__HeadOffice__Code: ${HEAD_OFFICE_CODE:-TCT}
+      Seed__HeadOffice__Name: ${HEAD_OFFICE_NAME:-Tổng công ty}
+      Seed__HeadOffice__Warehouses__0__Code: KT
+      Seed__HeadOffice__Warehouses__0__Name: Kho tổng ${HEAD_OFFICE_NAME:-Tổng công ty}
+      Seed__HeadOffice__Warehouses__0__Type: Main
+      # Đứng sau Caddy: lấy IP thật của người dùng từ X-Forwarded-For để ghi nhật ký truy cập.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      Serilog__WriteTo__1__Name: Seq
+      Serilog__WriteTo__1__Args__serverUrl: http://seq:5341
+    volumes:
+      # Khóa mã hóa của ASP.NET Core (Data Protection) phải giữ qua các lần nâng cấp image.
+      - app_keys:/home/app/.aspnet/DataProtection-Keys
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-proc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Chưa đặt POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-procurement}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - pg_data:/var/lib/postgresql
+      - ./db/scripts:/db/scripts:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Xem log kỹ thuật qua web. Chỉ mở cho máy chủ (127.0.0.1): xem từ xa bằng SSH tunnel
+  # ssh -L 5341:localhost:5341 <server> rồi mở http://localhost:5341.
+  seq:
+    image: datalust/seq:2025.2
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD:?Chưa đặt SEQ_ADMIN_PASSWORD}
+    ports: ["127.0.0.1:5341:80"]
+    volumes:
+      - seq_data:/data
+
+  # Sao lưu pg_dump mỗi đêm vào ./backups (design.md mục 14.5); nhớ chép thư mục này ra máy khác.
+  backup:
+    image: postgres:18
+    restart: unless-stopped
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-proc}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Chưa đặt POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-procurement}
+      BACKUP_TIME: ${BACKUP_TIME:-01:00}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ./db/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+  pg_data: {}
+  seq_data: {}
+  app_keys: {}

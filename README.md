@@ -40,3 +40,30 @@ sửa quyền của vai trò ở **Hệ thống → Vai trò**.
 | Build giao diện | `cd src\Proc.Web; npm run build` |
 | Cài trình duyệt cho Playwright (lần đầu) | `cd src\Proc.Web; npx playwright install chromium` |
 | Test giao diện (tự chạy API và Vite nếu chưa chạy) | `cd src\Proc.Web; npm run test:e2e` |
+
+## Triển khai server (Ubuntu + Docker)
+Chi tiết hạ tầng: docs/design.md mục 14. Các lệnh dưới đây chạy trên server Linux, tại thư mục chứa repo.
+
+**Cài lần đầu**
+1. Cài Docker Engine + Compose plugin; tường lửa chỉ mở cổng 22, 80, 443.
+2. `cp .env.example .env` rồi sửa `.env`: đổi mọi mật khẩu, `JWT_SIGNING_KEY` (sinh bằng `openssl rand -base64 48`),
+   `SITE_ADDRESS` (tên miền để có HTTPS, hoặc `:80` trong mạng nội bộ), `APP_VERSION` (ví dụ `0.1.0`).
+3. Build image: `docker compose build app`.
+4. Khởi động CSDL rồi tạo bảng bằng script của phiên bản:
+   `docker compose up -d db` rồi
+   `docker compose exec db psql -U proc -d procurement -v ON_ERROR_STOP=1 -f /db/scripts/0.1.0.sql`.
+5. `docker compose up -d`, mở trang web, đăng nhập bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD` rồi **đổi mật khẩu ngay**.
+
+**Nâng cấp lên bản mới** (xem CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó)
+1. Sao lưu trước: `docker compose exec backup sh -c 'pg_dump -Fc -f /backups/truoc-nang-cap.dump'`.
+2. `git pull`, đổi `APP_VERSION` trong `.env`, `docker compose build app`.
+3. Nếu bản mới có thay đổi CSDL: chạy `db/scripts/<phiên-bản>.sql` như bước 4 ở trên (script chạy lại nhiều lần không sao).
+4. `docker compose up -d`.
+
+**Sao lưu và khôi phục**
+- Container `backup` tự sao lưu mỗi đêm vào thư mục `backups/`, giữ 14 ngày; chép thư mục này ra máy khác.
+- Khôi phục vào CSDL trống: dừng app (`docker compose stop app`), rồi
+  `docker compose exec backup pg_restore --clean --if-exists -d procurement /backups/<file>.dump`, sau đó `docker compose up -d`.
+
+**Xem log kỹ thuật (Seq)**: `ssh -L 5341:localhost:5341 <server>` rồi mở http://localhost:5341
+(tài khoản `admin`, mật khẩu `SEQ_ADMIN_PASSWORD`).
