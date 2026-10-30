@@ -126,10 +126,11 @@ export const screens: Screen[] = [
 ]
 
 /**
- * Tìm màn hình theo đường dẫn hiện tại.
+ * Tìm màn hình theo đường dẫn hiện tại (kể cả trang con, ví dụ một phiếu của màn hình danh sách phiếu).
  * @param pathname location.pathname.
  * @returns Màn hình tương ứng, hoặc undefined nếu không có.
  */
 export function findScreenByPath(pathname: string): Screen | undefined {
-  return screens.find((s) => s.path === pathname)
+  // Trang con của màn hình (phiếu /kho/grn/123) thuộc màn hình cha /kho/grn: cùng quyền, cùng mục trên cây điều hướng.
+  return screens.find((s) => s.path === pathname) ?? screens.find((s) => s.path !== '/' && pathname.startsWith(`${s.path}/`))
 }

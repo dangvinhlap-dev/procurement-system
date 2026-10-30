@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<ILogQueries, LogQueries>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
         services.AddScoped<IInventoryPeriodService, InventoryPeriodService>();
+        services.AddScoped<IInventoryDocumentService, InventoryDocumentService>();
 
         // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
         services.AddScoped<CurrentUserScope>();

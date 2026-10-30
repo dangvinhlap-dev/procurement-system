@@ -52,6 +52,10 @@ public static class MasterDataEndpoints
         items.MapGet("/", (string? search, Guid? categoryId, string? type, bool? activeOnly, IItemAdministration s, CancellationToken ct) =>
                 s.SearchAsync(new ItemQuery(search, categoryId, type, activeOnly ?? false), ct))
             .RequirePermission(Permissions.MasterData.ItemView);
+        // Ô chọn hàng trên chứng từ: người lập chứng từ kho có thể không có quyền xem danh mục hàng hóa, nên chỉ cần đăng nhập
+        // và có công ty làm việc; kết quả vẫn lọc theo phạm vi nhóm hàng.
+        items.MapGet("/lookup", (string? search, bool? inventoryOnly, Guid[]? ids, IItemAdministration s, CancellationToken ct) =>
+            s.LookupAsync(search, inventoryOnly ?? false, ids ?? [], ct));
         items.MapGet("/{id:guid}", (Guid id, IItemAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.MasterData.ItemView);
         items.MapPost("/", async (CreateItemRequest request, IItemAdministration s, CancellationToken ct) =>
@@ -85,6 +89,8 @@ public static class MasterDataEndpoints
         suppliers.MapGet("/", (string? search, Guid? groupId, string? status, bool? appliedOnly, ISupplierAdministration s, CancellationToken ct) =>
                 s.SearchAsync(new SupplierQuery(search, groupId, status, appliedOnly ?? false), ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
+        // Ô chọn NCC trên chứng từ: thủ kho lập phiếu nhập nhưng có thể không có quyền xem danh mục NCC.
+        suppliers.MapGet("/lookup", (Guid[]? ids, ISupplierAdministration s, CancellationToken ct) => s.LookupForPurchaseAsync(ids ?? [], ct));
         suppliers.MapGet("/{id:guid}", (Guid id, ISupplierAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
         suppliers.MapPost("/", async (SaveSupplierRequest request, ISupplierAdministration s, CancellationToken ct) =>

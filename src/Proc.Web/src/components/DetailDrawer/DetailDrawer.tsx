@@ -1,6 +1,7 @@
 import { CloseOutlined, SaveOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, Form, Spin, Tabs, type FormInstance } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
+import { hasOpenPopup } from '../../utils/popup'
 import './DetailDrawer.css'
 
 /** Một tab của ngăn kéo chi tiết. */
@@ -8,22 +9,6 @@ export interface DetailTab {
   key: string
   label: string
   children: ReactNode
-}
-
-/** Lớp phủ có thể nằm phía trên ngăn kéo: danh sách thả xuống, lịch, hộp thoại. */
-const POPUP_SELECTOR = [
-  '.ant-select-dropdown:not(.ant-select-dropdown-hidden)',
-  '.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)',
-  '.ant-modal-wrap:not([style*="display: none"])',
-].join(', ')
-
-/**
- * Có lớp phủ nào đang mở không. Bỏ qua lớp phủ đang chạy hiệu ứng ẩn (lớp *-leave): vừa chọn xong một mục, danh sách thả xuống
- * còn ẩn dần vài trăm mili giây – nếu tính là "đang mở" thì bấm Esc ngay lúc đó không đóng được ngăn kéo.
- * @returns true nếu đang có lớp phủ mở.
- */
-function hasOpenPopup(): boolean {
-  return [...document.querySelectorAll(POPUP_SELECTOR)].some((e) => !/-leave(\s|$)/.test(e.className))
 }
 
 /** Thuộc tính của DetailDrawer. */

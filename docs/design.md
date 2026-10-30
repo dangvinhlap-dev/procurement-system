@@ -292,6 +292,17 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 5. Chênh lệch SL sinh biên bản; A lập phiếu nhập lại hàng trả về hoặc điều chỉnh hóa đơn.
 6. A không được bỏ ghi sổ ICS khi B đã xác nhận ICR.
 
+### 6.4 Chứng từ kho ở trạng thái nháp (giai đoạn 2)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Một bảng `InventoryDocument` (+ `InventoryDocumentLine`) cho mọi loại phiếu kho, phân biệt bằng `DocType`; trạng thái giai đoạn 2: **Nháp → Đã ghi sổ / Đã hủy** (chưa có bước duyệt) | Bước duyệt nhiều cấp làm cùng giai đoạn mua hàng |
+| Số phiếu cấp khi **lưu lần đầu**, trong cùng giao dịch lưu phiếu (mục 5.5); hủy phiếu nháp giữ số, không dùng lại | Không trùng, không nhảy số |
+| Phiếu nhập mua NCC (GRN) lập thẳng theo NCC (chưa có PO); NCC phải **Đã duyệt** và **đang áp dụng tại công ty** (mục 5.9); kho nhập trong phạm vi kho của người lập, đang dùng | Mục 6.1 |
+| Dòng: chỉ hàng tồn kho; ĐVT là ĐVT cơ sở hoặc quy đổi; lưu cả số lượng theo ĐVT trên phiếu và theo ĐVT cơ sở (hệ số chốt lúc lưu); thành tiền = SL × đơn giá, VAT = thành tiền × thuế suất, làm tròn 2 chữ số (0,5 lên); lô/hạn dùng bắt buộc khi mặt hàng bật quản lý | Tồn kho tính theo ĐVT cơ sở; kiểu số theo CLAUDE.md mục 4 |
+| Danh sách, chi tiết chứng từ lọc theo **kho được phép** (filter trên kho nhập/kho xuất). Phiếu có mặt hàng ngoài phạm vi nhóm hàng của người xem: hiện "(ngoài phạm vi)", chỉ xem, không sửa được | Sửa phiếu là thay toàn bộ dòng – không để người bị giới hạn vô tình xóa dòng họ không thấy |
+| Ô chọn hàng, chọn NCC trên phiếu dùng API tra cứu riêng (`/api/items/lookup`, `/api/suppliers/lookup`) không đòi quyền xem danh mục | Thủ kho lập phiếu nhưng có thể không có quyền xem danh mục NCC |
+
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.

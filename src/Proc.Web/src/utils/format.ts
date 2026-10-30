@@ -40,3 +40,19 @@ export function formatDate(value: string | Date | null | undefined): string {
 export function formatDateTime(value: string | Date | null | undefined): string {
   return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : ''
 }
+
+/**
+ * Thuộc tính cho InputNumber của antd để gõ và hiển thị số kiểu Việt Nam: dấu chấm phân cách nghìn, dấu phẩy thập phân
+ * (CLAUDE.md mục 5). Khi đang gõ giữ nguyên chữ người dùng gõ để con trỏ không nhảy.
+ * Ví dụ: 1234567.5 hiển thị "1.234.567,5"; gõ "20.333,5" hiểu là 20333.5.
+ */
+export const vnNumberInput = {
+  formatter: (value: string | number | undefined, info: { userTyping: boolean; input: string }) => {
+    if (info.userTyping) return info.input
+    if (value === undefined || value === '') return ''
+    const [int, dec] = String(value).split('.')
+    const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    return dec ? `${grouped},${dec}` : grouped
+  },
+  parser: (display: string | undefined) => (display ?? '').replace(/\./g, '').replace(',', '.'),
+} as const

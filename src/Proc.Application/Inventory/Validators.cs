@@ -13,3 +13,31 @@ public sealed class CreateInventoryYearRequestValidator : AbstractValidator<Crea
             .WithMessage($"Năm kỳ kho phải từ {InventoryPeriod.MinYear} đến {InventoryPeriod.MaxYear}.");
     }
 }
+
+/// <summary>Kiểm tra lưu phiếu nhập mua NCC: độ dài khớp cột; quy tắc nghiệp vụ dòng do Domain kiểm tra.</summary>
+public sealed class SaveReceiptRequestValidator : AbstractValidator<SaveReceiptRequest>
+{
+    /// <summary>Số dòng tối đa mỗi phiếu – phiếu dài hơn nên tách để in, đối chiếu được.</summary>
+    public const int MaxLines = 500;
+
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveReceiptRequestValidator()
+    {
+        RuleFor(x => x.WarehouseId).NotEmpty().WithMessage("Hãy chọn kho nhập.");
+        RuleFor(x => x.SupplierId).NotEmpty().WithMessage("Hãy chọn nhà cung cấp.");
+        RuleFor(x => x.InvoiceNo).MaximumLength(50);
+        RuleFor(x => x.InvoiceSeries).MaximumLength(20);
+        RuleFor(x => x.DeliveryNoteNo).MaximumLength(50);
+        RuleFor(x => x.Deliverer).MaximumLength(200);
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+            .Must(l => l.Count <= MaxLines).WithMessage($"Mỗi phiếu tối đa {MaxLines} dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Dòng hàng chưa chọn mặt hàng.");
+            l.RuleFor(x => x.UomId).NotEmpty().WithMessage("Dòng hàng chưa chọn ĐVT.");
+            l.RuleFor(x => x.LotNo).MaximumLength(50);
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}
