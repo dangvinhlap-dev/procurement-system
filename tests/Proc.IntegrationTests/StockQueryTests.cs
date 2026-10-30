@@ -36,7 +36,7 @@ public class StockQueryTests
     /// </summary>
     private sealed record Fixture(HttpClient Bha, ItemDetailDto Item, string CategoryCode, Guid CategoryId, Guid Kt, Guid Kp1, InventoryDocumentDto Transfer);
 
-    private async Task<Fixture> ArrangeAsync()
+    private async Task<Fixture> ArrangeAsync(decimal minStock = 60m)
     {
         var userName = $"qt.{Guid.NewGuid():N}"[..16];
         await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA"]);
@@ -47,7 +47,7 @@ public class StockQueryTests
             new CreateItemCategoryRequest(UniqueCode("T"), "Nhóm tồn kho", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest($"{category.Code}-01", "Đai ốc xem tồn", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
-                null, "10", null, false, false, 60m, null, []), Ct));
+                null, "10", null, false, false, minStock, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC xem tồn", null, false, null, null, null, null, null, null, null, null,
@@ -83,9 +83,27 @@ public class StockQueryTests
         // Tổng hai kho 48 < tồn tối thiểu 60 → cảnh báo trên mọi dòng của mặt hàng.
         Assert.All(rows, r => Assert.True(r.BelowMin));
 
-        // Lọc một kho: tổng chỉ 24 – vẫn dưới mức.
+        // Lọc một kho: chỉ hiện dòng KP1, cảnh báo vẫn theo tổng cả công ty (48 < 60).
         var onlyKp1 = await f.Bha.GetFromJsonAsync<StockOnHandResult>($"/api/stock-on-hand?categoryId={f.CategoryId}&warehouseId={f.Kp1}", Ct);
-        Assert.Equal((24m, 480_000m), (Assert.Single(onlyKp1!.Items).Qty, onlyKp1.Items[0].Amount));
+        Assert.Equal((24m, 480_000m, true), (Assert.Single(onlyKp1!.Items).Qty, onlyKp1.Items[0].Amount, onlyKp1.Items[0].BelowMin));
+    }
+
+    [Fact]
+    public async Task TonToiThieu_SoVoiTongCaCongTy_KhongTheoKhoDangXem()
+    {
+        // Tồn tối thiểu 30; KT 24 + KP1 24 = 48 ≥ 30 → không cảnh báo, kể cả khi chỉ xem KP1 (24 < 30).
+        var f = await ArrangeAsync(minStock: 30m);
+
+        var all = await f.Bha.GetFromJsonAsync<StockOnHandResult>($"/api/stock-on-hand?categoryId={f.CategoryId}", Ct);
+        var onlyKp1 = await f.Bha.GetFromJsonAsync<StockOnHandResult>($"/api/stock-on-hand?categoryId={f.CategoryId}&warehouseId={f.Kp1}", Ct);
+        var userName = $"tk.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(userName, "BHA", "THUKHO", ["KP1"], [f.CategoryCode]);
+        var keeper = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
+        var keeperView = await keeper.GetFromJsonAsync<StockOnHandResult>("/api/stock-on-hand", Ct);
+
+        Assert.All(all!.Items, r => Assert.False(r.BelowMin));
+        Assert.False(Assert.Single(onlyKp1!.Items).BelowMin);
+        Assert.False(Assert.Single(keeperView!.Items).BelowMin);
     }
 
     [Fact]

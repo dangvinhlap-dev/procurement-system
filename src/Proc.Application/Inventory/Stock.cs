@@ -20,8 +20,8 @@ public sealed record StockOnHandQuery(Guid? WarehouseId, Guid? CategoryId, bool 
 /// <param name="Qty">Số lượng tồn theo ĐVT cơ sở.</param>
 /// <param name="Amount">Giá trị tồn theo sổ kho (giá vốn tạm tính khi kỳ còn mở).</param>
 /// <param name="UnitCost">Đơn giá bình quân = giá trị ÷ số lượng (0 khi tồn ≤ 0).</param>
-/// <param name="MinStock">Tồn tối thiểu của mặt hàng (áp cho tổng mọi kho, mọi lô).</param>
-/// <param name="BelowMin">Tổng tồn mặt hàng trên các kho đang xem dưới mức tối thiểu.</param>
+/// <param name="MinStock">Tồn tối thiểu của mặt hàng (một số cho cả công ty).</param>
+/// <param name="BelowMin">Tổng tồn mặt hàng trên mọi kho của công ty (mọi lô) dưới mức tối thiểu – không phụ thuộc kho đang lọc.</param>
 public sealed record StockOnHandRowDto(
     Guid WarehouseId, string WarehouseCode, string WarehouseName, Guid ItemId, string ItemCode, string ItemName,
     string CategoryCode, string CategoryName, string UomCode, string? LotNo, decimal Qty, decimal Amount, decimal UnitCost,

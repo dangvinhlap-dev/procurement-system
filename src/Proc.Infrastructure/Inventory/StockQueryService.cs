@@ -67,8 +67,19 @@ public sealed class StockQueryService : IStockQueryService
                 .ToListAsync(cancellationToken))
             .ToDictionary(a => (a.WarehouseId, a.ItemId, a.LotNo), a => a.Amount);
 
-        // Tồn tối thiểu đặt cho mặt hàng nên so với tổng tồn của mặt hàng trên các kho đang xem (mọi lô).
-        var totals = rows.GroupBy(r => r.ItemId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
+        // Tồn tối thiểu là một số cho cả công ty nên so với tổng tồn của mặt hàng trên MỌI kho, mọi lô – không theo kho đang lọc
+        // hay kho được phép (design.md mục 11.1). Ví dụ KT 500 + KP1 24, tối thiểu 60: xem riêng KP1 vẫn không báo.
+        // Bỏ qua bộ lọc kho chỉ ở phép cộng này (cùng công ty, nhóm hàng vẫn lọc); màn hình chỉ nhận cờ báo, không nhận số tồn
+        // của kho ngoài phạm vi.
+        var minItemIds = rows.Where(r => r.MinStock != null).Select(r => r.ItemId).Distinct().ToList();
+        var totals = minItemIds.Count == 0
+            ? new Dictionary<Guid, decimal>()
+            : await _db.StockOnHand.AsNoTracking()
+                .IgnoreQueryFilters([ProcDbContext.WarehouseFilter])
+                .Where(x => minItemIds.Contains(x.ItemId))
+                .GroupBy(x => x.ItemId)
+                .Select(g => new { ItemId = g.Key, Qty = g.Sum(x => x.Qty) })
+                .ToDictionaryAsync(x => x.ItemId, x => x.Qty, cancellationToken);
         var items = rows.Select(r =>
         {
             var amount = amounts.GetValueOrDefault((r.WarehouseId, r.ItemId, r.LotNo));
@@ -76,7 +87,7 @@ public sealed class StockQueryService : IStockQueryService
             var unitCost = r.Qty > 0 ? Math.Round(amount / r.Qty, 6, MidpointRounding.AwayFromZero) : 0m;
             return new StockOnHandRowDto(
                 r.WarehouseId, r.WarehouseCode, r.WarehouseName, r.ItemId, r.ItemCode, r.ItemName, r.CategoryCode, r.CategoryName,
-                r.UomCode, r.LotNo, r.Qty, amount, unitCost, r.MinStock, r.MinStock is { } min && totals[r.ItemId] < min);
+                r.UomCode, r.LotNo, r.Qty, amount, unitCost, r.MinStock, r.MinStock is { } min && totals.GetValueOrDefault(r.ItemId) < min);
         }).ToList();
         return new StockOnHandResult(items, truncated, OnHandLimit);
     }
