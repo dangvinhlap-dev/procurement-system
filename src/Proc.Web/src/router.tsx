@@ -11,14 +11,18 @@ import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
+import { CompanyListPage } from './pages/system/CompanyListPage'
 import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
 import { RoleListPage } from './pages/system/RoleListPage'
 import { UserListPage } from './pages/system/UserListPage'
+import { WarehouseListPage } from './pages/system/WarehouseListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
   PO: <PurchaseOrderListPage />,
+  COMP: <CompanyListPage />,
+  WH: <WarehouseListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
   LOG: <AuditLogListPage />,

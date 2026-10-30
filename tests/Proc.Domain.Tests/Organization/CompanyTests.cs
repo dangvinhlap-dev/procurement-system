@@ -53,4 +53,47 @@ public class CompanyTests
         Assert.Equal("ADMIN", Role.Create("admin", "Quản trị hệ thống").Code);
         Assert.Throws<BusinessRuleException>(() => Role.Create(" ", "Không tên"));
     }
+    [Theory]
+    [InlineData("0101234567", "0101234567")]
+    [InlineData(" 0101234567-001 ", "0101234567-001")]
+    [InlineData("", null)]
+    public void UpdateInfo_GhiNhanThongTinVaMaSoThueHopLe(string taxCode, string? expected)
+    {
+        var company = Company.Create("BHA", "Công ty A", isHeadOffice: false);
+
+        company.UpdateInfo(" Công ty Thép Bắc Hà ", "Bắc Hà", taxCode, " Hà Nội ", "Nguyễn Văn A", new DateOnly(2026, 11, 1));
+
+        Assert.Equal("Công ty Thép Bắc Hà", company.Name);
+        Assert.Equal("Bắc Hà", company.ShortName);
+        Assert.Equal(expected, company.TaxCode);
+        Assert.Equal("Hà Nội", company.Address);
+        Assert.Equal("Nguyễn Văn A", company.Representative);
+        Assert.Equal(new DateOnly(2026, 11, 1), company.StartDate);
+    }
+
+    [Theory]
+    [InlineData("12345")]
+    [InlineData("0101234567-01")]
+    [InlineData("01012345AB")]
+    public void UpdateInfo_TuChoiMaSoThueSaiDinhDang(string taxCode)
+    {
+        // MST Việt Nam: 10 chữ số, hoặc 10 chữ số + "-" + 3 chữ số cho chi nhánh.
+        var company = Company.Create("BHA", "Công ty A", isHeadOffice: false);
+        var ex = Assert.Throws<BusinessRuleException>(() => company.UpdateInfo("Công ty A", null, taxCode, null, null, null));
+        Assert.Contains("Mã số thuế", ex.Message);
+    }
+
+    [Fact]
+    public void TongCongTy_KhongNgungDungDuoc()
+    {
+        // Tổng công ty quản lý danh mục dùng chung và tài khoản quản trị – ngừng thì không ai vào quản trị được.
+        var head = Company.Create("TCT", "Tổng công ty", isHeadOffice: true);
+        Assert.Throws<BusinessRuleException>(head.Deactivate);
+
+        var member = Company.Create("BHA", "Công ty A", isHeadOffice: false);
+        member.Deactivate();
+        Assert.False(member.IsActive);
+        member.Activate();
+        Assert.True(member.IsActive);
+    }
 }

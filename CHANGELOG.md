@@ -3,6 +3,25 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [Chưa phát hành]
+
+### Thêm mới
+- Màn hình Hệ thống → Công ty (COMP) và Hệ thống → Kho (WH) theo khuôn danh sách + ngăn kéo chi tiết (design.md mục 5.1, 5.6):
+  thêm công ty kèm kho tổng ở tổng công ty, người thêm được gán vào công ty mới; sửa thông tin, mã số thuế, ngày bắt đầu,
+  ngừng dùng; thêm kho phụ, đổi kho cha (chặn vòng lặp), thủ kho, địa chỉ, cho phép tồn âm, ngừng dùng.
+- API `GET/POST /api/companies`, `GET/PUT /api/companies/{id}`, `POST /api/warehouses`, `GET/PUT /api/warehouses/{id}`;
+  `GET /api/warehouses` trả thêm kho cha, địa chỉ, thủ kho, cho phép tồn âm.
+
+### Thay đổi
+- Thanh menu cập nhật danh sách công ty ngay sau khi thêm/sửa công ty (không phải đăng nhập lại).
+
+### Thay đổi CSDL
+- Migration `V0_2_0_CongTyKho`: chỉ mục duy nhất mã số thuế công ty (bỏ qua công ty chưa có mã số thuế).
+  `Down()` chỉ bỏ chỉ mục, không mất dữ liệu.
+
+### Lưu ý khi nâng cấp
+- Nếu đã có hai công ty trùng mã số thuế thì migration lỗi – sửa dữ liệu trước khi nâng cấp.
+
 ## [0.1.0] - 2026-10-30
 
 ### Thêm mới

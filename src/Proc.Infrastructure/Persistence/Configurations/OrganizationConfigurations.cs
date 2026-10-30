@@ -17,6 +17,8 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(x => x.Name).HasMaxLength(300).IsRequired();
         builder.Property(x => x.ShortName).HasMaxLength(100);
         builder.Property(x => x.TaxCode).HasMaxLength(20);
+        // Mỗi công ty là một pháp nhân có mã số thuế riêng (design.md mục 5.6); công ty chưa khai báo MST thì bỏ qua.
+        builder.HasIndex(x => x.TaxCode).IsUnique().HasFilter("\"TaxCode\" IS NOT NULL");
         builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.Representative).HasMaxLength(200);
         builder.Property(x => x.AccountingCurrency).HasMaxLength(3).IsFixedLength().IsRequired();

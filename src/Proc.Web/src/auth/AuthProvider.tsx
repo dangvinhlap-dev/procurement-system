@@ -52,18 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [logout])
 
+  /** Đọc lại /api/auth/me: danh sách công ty và quyền mới nhất (vừa thêm/sửa công ty, quản trị vừa đổi phân quyền). */
+  const refreshUser = useCallback(async () => {
+    if (!sessionRef.current) return
+    const user = await apiFetch<CurrentUserInfo>('/api/auth/me')
+    const current = sessionRef.current
+    if (current) update({ ...current, user, workingCompanyId: pickCompany(user, current.workingCompanyId) })
+  }, [update])
+
   // Tải lại trang: làm mới thông tin người dùng (quản trị có thể vừa đổi công ty được gán).
   useEffect(() => {
-    if (!sessionRef.current) return
-    apiFetch<CurrentUserInfo>('/api/auth/me')
-      .then((user) => {
-        const current = sessionRef.current
-        if (current) update({ ...current, user, workingCompanyId: pickCompany(user, current.workingCompanyId) })
-      })
-      .catch(() => {
-        // 401 đã được apiFetch xử lý (đăng xuất); lỗi mạng thì giữ phiên cũ.
-      })
-  }, [update])
+    refreshUser().catch(() => {
+      // 401 đã được apiFetch xử lý (đăng xuất); lỗi mạng thì giữ phiên cũ.
+    })
+  }, [refreshUser])
 
   // Tự đăng xuất đúng lúc token hết hạn.
   useEffect(() => {
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       },
       logout,
+      refreshUser,
       setWorkingCompany: (companyId) => {
         const current = sessionRef.current
         if (!current || !current.user.companies.some((c) => c.id === companyId)) return
@@ -102,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void queryClient.invalidateQueries()
       },
     }
-  }, [session, logoutReason, logout, update, queryClient])
+  }, [session, logoutReason, logout, refreshUser, update, queryClient])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

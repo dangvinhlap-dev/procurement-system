@@ -64,3 +64,10 @@
   gap: 2px 12px;
   width: 100%;
 }
+
+/* Hai trường ngắn đặt cạnh nhau (mã + tên viết tắt, MST + người đại diện) cho form gọn như hộp thoại Windows. */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
