@@ -3,7 +3,7 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
-## [0.1.0] - Chưa phát hành
+## [0.1.0] - 2026-10-30
 
 ### Thêm mới
 - Khung solution theo docs/design.md mục 13.1: Proc.Api, Proc.Application, Proc.Domain,
@@ -78,13 +78,17 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `Down()` xóa hai bảng nhật ký cùng toàn bộ nhật ký đã ghi.
 - Migration `V0_1_0_DanhSoChungTu`: bảng `DocumentNumbering` (mẫu số theo công ty) và `DocumentSequence` (bộ đếm theo
   công ty, loại chứng từ, kỳ). `Down()` xóa hai bảng – mất cấu hình mẫu số và số hiện tại.
+- Script cài mới `db/scripts/0.1.0.sql` (gồm cả 4 migration trên, dạng idempotent – chạy lại nhiều lần không sao).
 
 ### Lưu ý khi nâng cấp
 - Cần tạo sẵn database `procurement` và `procurement_test`, user `proc` (README.md).
-- Server thật: đặt biến môi trường `Jwt__SigningKey` (tối thiểu 32 ký tự) và `Seed__AdminPassword`;
-  nâng cấp CSDL bằng script `db/scripts/0.1.0.sql` (dev/test tự chạy migration khi khởi động).
+- Server thật (cài mới bằng Docker, README.md mục "Triển khai server"): copy `.env.example` thành `.env`, đặt
+  `JWT_SIGNING_KEY` (tối thiểu 32 ký tự), `ADMIN_PASSWORD`, mật khẩu CSDL và Seq; tạo bảng bằng `db/scripts/0.1.0.sql`
+  trước khi khởi động app (dev/test tự chạy migration khi khởi động). Đăng nhập lần đầu rồi đổi mật khẩu quản trị ngay.
+- Bản đầu tiên, chưa có dữ liệu cũ nên không cần sao lưu trước khi cài.
 - API tạo sẵn phân vùng nhật ký cho tháng hiện tại và 2 tháng tới mỗi lần khởi động; server chạy liên tục
   nhiều tháng không khởi động lại thì nhật ký vào phân vùng mặc định (không lỗi) – sẽ thêm job hằng tháng.
 
 ### Cách quay lại bản trước
-- Đây là bản đầu tiên.
+- Đây là bản đầu tiên, không có bản trước để quay lại. Gỡ hẳn: `docker compose down` (giữ dữ liệu) hoặc
+  `docker compose down -v` (xóa luôn CSDL – chỉ làm khi đã sao lưu).
