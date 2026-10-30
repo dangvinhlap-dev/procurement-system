@@ -39,6 +39,8 @@ interface DocumentCommandOptions {
   noun: string
   /** Hiện lỗi trên phiếu. */
   setError: (message: string | null) => void
+  /** Có nút Hủy phiếu cho phiếu nháp (phiếu nhập mua nội bộ không hủy ở bên nhận). Mặc định có. */
+  cancellable?: boolean
 }
 
 /**
@@ -46,7 +48,7 @@ interface DocumentCommandOptions {
  * đúng nội dung đang thấy), Bỏ ghi sổ, Hủy phiếu, Đóng. Nút hiện/ẩn theo trạng thái phiếu và quyền.
  * @returns Hàm lưu (gắn Ctrl+S) và các nút lệnh.
  */
-export function useDocumentCommands({ isNew, doc, readOnly, persist, mutations, listPath, noun, setError }: DocumentCommandOptions) {
+export function useDocumentCommands({ isNew, doc, readOnly, persist, mutations, listPath, noun, setError, cancellable = true }: DocumentCommandOptions) {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
   const { hasPermission } = useAuth()
@@ -134,7 +136,7 @@ export function useDocumentCommands({ isNew, doc, readOnly, persist, mutations, 
           Bỏ ghi sổ
         </Button>
       )}
-      {!isNew && doc?.status === 'Draft' && doc.canEdit && (
+      {cancellable && !isNew && doc?.status === 'Draft' && doc.canEdit && (
         <Button danger icon={<StopOutlined />} onClick={cancel}>
           Hủy phiếu
         </Button>
