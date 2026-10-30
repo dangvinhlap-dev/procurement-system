@@ -83,3 +83,44 @@ public sealed class SaveTransferRequestValidator : AbstractValidator<SaveTransfe
         });
     }
 }
+
+/// <summary>Kiểm tra lưu phiếu xuất bán nội bộ.</summary>
+public sealed class SaveSaleRequestValidator : AbstractValidator<SaveSaleRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveSaleRequestValidator()
+    {
+        RuleFor(x => x.FromWarehouseId).NotEmpty().WithMessage("Hãy chọn kho xuất.");
+        RuleFor(x => x.BuyerCompanyId).NotEmpty().WithMessage("Hãy chọn công ty mua.");
+        RuleFor(x => x.InvoiceNo).MaximumLength(50);
+        RuleFor(x => x.Deliverer).MaximumLength(200);
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+            .Must(l => l.Count <= SaveReceiptRequestValidator.MaxLines).WithMessage($"Mỗi phiếu tối đa {SaveReceiptRequestValidator.MaxLines} dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Dòng hàng chưa chọn mặt hàng.");
+            l.RuleFor(x => x.UomId).NotEmpty().WithMessage("Dòng hàng chưa chọn ĐVT.");
+            l.RuleFor(x => x.LotNo).MaximumLength(50);
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}
+
+/// <summary>Kiểm tra xác nhận phiếu nhập mua nội bộ.</summary>
+public sealed class ConfirmIntercompanyReceiptRequestValidator : AbstractValidator<ConfirmIntercompanyReceiptRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public ConfirmIntercompanyReceiptRequestValidator()
+    {
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.LineId).NotEmpty();
+            l.RuleFor(x => x.ReceivedQty).GreaterThanOrEqualTo(0).WithMessage("SL thực nhận không được âm.");
+            l.RuleFor(x => x.LotNo).MaximumLength(50);
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}

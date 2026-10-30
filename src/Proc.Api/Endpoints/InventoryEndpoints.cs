@@ -88,6 +88,31 @@ public static class InventoryEndpoints
             .RequirePermission(Permissions.Inventory.DocumentCreate)
             .Validate<SaveTransferRequest>();
 
+        var sales = app.MapGroup("/api/intercompany-sales").WithTags("Bán nội bộ");
+        sales.MapPost("/", async (SaveSaleRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateSaleAsync(request, ct);
+                return Results.Created($"/api/inventory-documents/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveSaleRequest>();
+        sales.MapPut("/{id:guid}", (Guid id, SaveSaleRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.UpdateSaleAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<SaveSaleRequest>();
+        app.MapPut("/api/intercompany-receipts/{id:guid}", (Guid id, ConfirmIntercompanyReceiptRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.ConfirmIntercompanyReceiptAsync(id, request, ct))
+            .WithTags("Bán nội bộ")
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<ConfirmIntercompanyReceiptRequest>();
+        app.MapGet("/api/reports/goods-in-transit", (IInventoryDocumentService s, CancellationToken ct) => s.GetGoodsInTransitAsync(ct))
+            .WithTags("Bán nội bộ")
+            .RequirePermission(Permissions.Report.StockView);
+        app.MapGet("/api/reports/intercompany-reconciliation", (DateOnly from, DateOnly to, IInventoryDocumentService s, CancellationToken ct) =>
+                s.GetReconciliationAsync(from, to, ct))
+            .WithTags("Bán nội bộ")
+            .RequirePermission(Permissions.Report.StockView);
+
         // Tồn khả dụng hiện trên dòng phiếu xuất/chuyển: người lập phiếu có quyền xem chứng từ kho là đủ.
         app.MapGet("/api/stock-on-hand/available", (Guid warehouseId, Guid[]? itemIds, IInventoryDocumentService s, CancellationToken ct) =>
                 s.GetAvailableStockAsync(warehouseId, itemIds ?? [], ct))

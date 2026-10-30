@@ -19,7 +19,7 @@ namespace Proc.Application.Inventory;
 public sealed record InventoryDocumentListItemDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, string? WarehouseCode, string? WarehouseName,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, decimal TotalAmount, decimal TotalVat, int LineCount,
-    string? FromWarehouseCode = null, string? ToWarehouseCode = null);
+    string? FromWarehouseCode = null, string? ToWarehouseCode = null, string? CounterCompanyCode = null, string? ReceiveStatus = null);
 
 /// <summary>Kết quả tìm chứng từ; mỗi lần tối đa <see cref="Limit"/> dòng.</summary>
 /// <param name="Items">Các phiếu, mới nhất trước.</param>
@@ -57,7 +57,7 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
-    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null);
+    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null);
 
 /// <summary>Chi tiết chứng từ kho.</summary>
 /// <param name="Id">Id.</param>
@@ -94,7 +94,8 @@ public sealed record InventoryDocumentDto(
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
     string? Deliverer, string? Note, decimal TotalAmount, decimal TotalVat, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost,
-    string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null);
+    string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null,
+    Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -183,6 +184,34 @@ public sealed record ReturnableLineDto(
 /// <param name="LotNo">Số lô.</param>
 /// <param name="Qty">Số tồn theo ĐVT cơ sở.</param>
 public sealed record StockAvailabilityDto(Guid ItemId, string? LotNo, decimal Qty);
+
+/// <summary>Một dòng phiếu xuất bán nội bộ gửi lên: giá, thuế suất lấy từ bảng giá nội bộ ở server, không nhận từ client.</summary>
+public sealed record SaveSaleLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, string? LotNo, string? Note);
+
+/// <summary>Nội dung phiếu xuất bán nội bộ (design.md mục 10.7).</summary>
+public sealed record SaveSaleRequest(
+    DateOnly Date, Guid FromWarehouseId, Guid BuyerCompanyId, string? InvoiceNo, DateOnly? InvoiceDate, string? Deliverer, string? Note,
+    IReadOnlyList<SaveSaleLineRequest> Lines);
+
+/// <summary>SL thực nhận một dòng phiếu nhập mua nội bộ.</summary>
+public sealed record ConfirmReceiptLineRequest(Guid LineId, decimal ReceivedQty, string? LotNo, string? Note);
+
+/// <summary>Bên nhận lưu xác nhận phiếu nhập mua nội bộ (design.md mục 10.8) – ghi sổ bằng lệnh ghi sổ chung.</summary>
+public sealed record ConfirmIntercompanyReceiptRequest(DateOnly Date, string? Note, IReadOnlyList<ConfirmReceiptLineRequest> Lines);
+
+/// <summary>Một phiếu bán nội bộ đang là hàng đi đường (đã xuất, bên mua chưa xác nhận).</summary>
+/// <param name="Direction">Out = công ty đang làm việc bán ra; In = công ty khác bán cho công ty đang làm việc.</param>
+public sealed record GoodsInTransitDto(
+    string Direction, Guid SaleId, string SaleNo, DateOnly SaleDate, string SellerCode, string BuyerCode, Guid? ReceiptId, string? ReceiptNo,
+    decimal TotalAmount, decimal TotalVat);
+
+/// <summary>
+/// Đối chiếu mua bán nội bộ với một công ty (design.md mục 11 – nhóm Nội bộ): bên này bán – bên kia đã nhận; bên kia bán – bên này
+/// đã nhận. Chênh lệch = hàng đi đường + nhận thiếu.
+/// </summary>
+public sealed record IntercompanyReconciliationDto(
+    Guid CounterCompanyId, string CounterCompanyCode, string CounterCompanyName,
+    decimal SoldAmount, decimal ReceivedByCounterAmount, decimal SoldByCounterAmount, decimal PurchasedAmount);
 
 /// <summary>
 /// Chứng từ kho của công ty đang làm việc (design.md mục 6, 10.1, 10.4). Thấy phiếu của kho được phép (global query filter);
@@ -294,6 +323,39 @@ public interface IInventoryDocumentService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu không còn nháp hoặc dữ liệu sai.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> UpdateTransferAsync(Guid id, SaveTransferRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Lập phiếu xuất bán nội bộ nháp; giá theo bảng giá nội bộ của công ty bán.</summary>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu đã lưu.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kho không phải kho tổng, chưa có giá nội bộ…</exception>
+    Task<InventoryDocumentDto> CreateSaleAsync(SaveSaleRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sửa phiếu xuất bán nội bộ nháp.</summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi sửa.</returns>
+    Task<InventoryDocumentDto> UpdateSaleAsync(Guid id, SaveSaleRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Bên nhận lưu ngày nhận, SL thực nhận, lô, ghi chú của phiếu nhập mua nội bộ chờ nhận.</summary>
+    /// <param name="id">Id phiếu nhập mua nội bộ.</param>
+    /// <param name="request">Nội dung xác nhận.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi lưu.</returns>
+    Task<InventoryDocumentDto> ConfirmIntercompanyReceiptAsync(Guid id, ConfirmIntercompanyReceiptRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Hàng đi đường của công ty đang làm việc: phiếu bán ra chưa được nhận và phiếu mua vào đang chờ nhận.</summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Danh sách theo ngày xuất.</returns>
+    Task<IReadOnlyList<GoodsInTransitDto>> GetGoodsInTransitAsync(CancellationToken cancellationToken);
+
+    /// <summary>Đối chiếu mua bán nội bộ hai chiều với từng công ty trong khoảng ngày (theo ngày phiếu xuất bán).</summary>
+    /// <param name="from">Từ ngày.</param>
+    /// <param name="to">Đến ngày.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Một dòng mỗi công ty có giao dịch.</returns>
+    Task<IReadOnlyList<IntercompanyReconciliationDto>> GetReconciliationAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
 
     /// <summary>Tồn tức thời của các mặt hàng tại một kho (hiện "tồn khả dụng" trên dòng phiếu xuất/chuyển).</summary>
     /// <param name="warehouseId">Kho.</param>

@@ -96,10 +96,10 @@ public sealed class ItemPeriodCost : Entity, ICompanyOwned
 public static class PeriodCosting
 {
     /// <summary>
-    /// Chứng từ "nhập có giá" tham gia công thức: nhập mua NCC cộng vào, trả NCC trừ ra theo giá đích danh. Chuyển kho trong
-    /// công ty không tham gia (chỉ đổi vị trí). Nhập mua nội bộ, nhập điều chỉnh thêm khi có các loại phiếu đó (giai đoạn 4).
+    /// Chứng từ "nhập có giá" tham gia công thức: nhập mua NCC, nhập mua nội bộ (giá bán nội bộ) cộng vào, trả NCC trừ ra theo giá
+    /// đích danh. Chuyển kho trong công ty không tham gia (chỉ đổi vị trí). Nhập điều chỉnh thêm khi có loại phiếu đó.
     /// </summary>
-    public static readonly IReadOnlySet<string> PricedDocTypes = new HashSet<string> { "GRN", "RTV" };
+    public static readonly IReadOnlySet<string> PricedDocTypes = new HashSet<string> { "GRN", "RTV", "ICR" };
 
     /// <summary>
     /// Giá vốn đơn vị kỳ = (giá trị tồn đầu + giá trị nhập có giá) ÷ (SL tồn đầu + SL nhập có giá), làm tròn 6 số lẻ (0,5 lên).
