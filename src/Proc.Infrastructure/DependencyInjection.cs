@@ -66,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<IUomAdministration, UomAdministration>();
         services.AddScoped<IItemCategoryAdministration, ItemCategoryAdministration>();
         services.AddScoped<IItemAdministration, ItemAdministration>();
+        services.AddScoped<ISupplierGroupAdministration, SupplierGroupAdministration>();
+        services.AddScoped<ISupplierAdministration, SupplierAdministration>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 

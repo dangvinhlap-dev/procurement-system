@@ -19,6 +19,7 @@ export const Permission = {
   ItemView: 'MasterData.Item.View',
   ItemManage: 'MasterData.Item.Manage',
   SupplierView: 'MasterData.Supplier.View',
+  SupplierManage: 'MasterData.Supplier.Manage',
   PrView: 'Purchase.PR.View',
   PoView: 'Purchase.PO.View',
   ContractView: 'Purchase.Contract.View',

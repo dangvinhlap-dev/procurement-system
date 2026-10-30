@@ -9,6 +9,8 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
+import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
+import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -24,6 +26,8 @@ import { WarehouseListPage } from './pages/system/WarehouseListPage'
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
   PO: <PurchaseOrderListPage />,
+  SUP: <SupplierListPage />,
+  SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
   CAT: <ItemCategoryListPage />,
   UOM: <UomListPage />,

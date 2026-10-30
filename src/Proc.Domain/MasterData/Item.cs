@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Proc.Domain.Common;
 
 namespace Proc.Domain.MasterData;
@@ -48,7 +47,7 @@ public sealed record ItemDescription(
 /// </summary>
 // SearchText suy ra từ mã, tên… nên không ghi vào nhật ký (trùng thông tin).
 [Auditable("Hàng hóa", LabelProperty = nameof(Code), Ignore = [nameof(SearchText)])]
-public sealed partial class Item : AuditableEntity
+public sealed class Item : AuditableEntity
 {
     /// <summary>Độ dài tối đa của mã hàng.</summary>
     public const int CodeMaxLength = 30;
@@ -130,7 +129,7 @@ public sealed partial class Item : AuditableEntity
     {
         var normalized = CodeRules.Normalize(code);
         // Mã hàng thường có dấu phân cách (VT-0001, BL.M8.50) nên rộng hơn mã công ty, nhưng không có khoảng trắng để gõ nhanh.
-        if (normalized.Length is < 2 or > CodeMaxLength || !ItemCodeRegex().IsMatch(normalized))
+        if (!CodeRules.IsExtendedCode(normalized, 2, CodeMaxLength))
             throw new BusinessRuleException($"Mã hàng gồm 2–{CodeMaxLength} ký tự chữ không dấu (A–Z), số hoặc - . _ /.");
         if (!Enum.IsDefined(type)) throw new BusinessRuleException("Loại hàng không hợp lệ.");
 
@@ -259,9 +258,6 @@ public sealed partial class Item : AuditableEntity
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    [GeneratedRegex(@"^[A-Z0-9][A-Z0-9._/\-]*$")]
-    private static partial Regex ItemCodeRegex();
 }
 
 /// <summary>

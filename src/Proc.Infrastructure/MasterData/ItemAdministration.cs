@@ -55,8 +55,8 @@ public sealed class ItemAdministration : IItemAdministration
         // Mỗi từ khóa (đã bỏ dấu) phải có trong chuỗi tìm kiếm – gõ "bu long m8" tìm được "Bu lông M8".
         foreach (var word in SearchText.Normalize(query.Search).Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
-            var pattern = $"%{EscapeLike(word)}%";
-            items = items.Where(i => EF.Functions.Like(i.SearchText, pattern, "\\"));
+            var pattern = LikePatterns.Contains(word);
+            items = items.Where(i => EF.Functions.Like(i.SearchText, pattern, LikePatterns.Escape));
         }
 
         var rows = await (
@@ -178,6 +178,4 @@ public sealed class ItemAdministration : IItemAdministration
         return false;
     }
 
-    private static string EscapeLike(string value) =>
-        value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
 }
