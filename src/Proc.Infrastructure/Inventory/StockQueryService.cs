@@ -173,7 +173,9 @@ public sealed class StockQueryService : IStockQueryService
         }
 
         var opening = await OpeningAsync(period.StartDate, query.WarehouseId, itemIds, cancellationToken);
-        var ledger = _db.StockLedger.AsNoTracking().Where(l => l.PostingDate >= period.StartDate && l.PostingDate <= period.EndDate);
+        // Lọc theo kỳ (mỗi dòng sổ kho thuộc đúng kỳ của ngày ghi sổ) để dùng chỉ mục (CompanyId, PeriodId, ItemId) – sổ kho nhiều năm không
+        // phải quét theo khoảng ngày (design.md mục 14.6).
+        var ledger = _db.StockLedger.AsNoTracking().Where(l => l.PeriodId == period.Id);
         if (query.WarehouseId is { } warehouseId) ledger = ledger.Where(l => l.WarehouseId == warehouseId);
         if (itemIds is not null) ledger = ledger.Where(l => itemIds.Contains(l.ItemId));
         var moves = await ledger
@@ -193,13 +195,18 @@ public sealed class StockQueryService : IStockQueryService
             .ToDictionaryAsync(i => i.Id, cancellationToken);
         var warehouses = await _db.Warehouses.AsNoTracking().Where(w => keyWarehouses.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
 
+        // Tra theo khóa kho × mặt hàng thay vì quét cả danh sách cho từng dòng: 6.000 dòng × 9.000 nhóm phát sinh từng mất ~1 giây
+        // (đo trên 200.000 dòng sổ kho – design.md mục 14.6).
+        var openingByKey = opening.ToLookup(o => (o.WarehouseId, o.ItemId));
+        var movesByKey = moves.ToLookup(x => (x.WarehouseId, x.ItemId));
+
         // NXT theo kho × mặt hàng (cộng mọi lô): tồn đầu + nhập − xuất = tồn cuối, tách nhập mua / trả NCC / chuyển kho (design.md mục 11).
         var rows = keys
             .Where(k => items.ContainsKey(k.ItemId) && warehouses.ContainsKey(k.WarehouseId))
             .Select(k =>
             {
-                var open = opening.Where(o => o.WarehouseId == k.WarehouseId && o.ItemId == k.ItemId).ToList();
-                var m = moves.Where(x => x.WarehouseId == k.WarehouseId && x.ItemId == k.ItemId).ToList();
+                var open = openingByKey[(k.WarehouseId, k.ItemId)].ToList();
+                var m = movesByKey[(k.WarehouseId, k.ItemId)].ToList();
                 (decimal Qty, decimal Amount) Sum(Func<string, int, bool> match) =>
                     (m.Where(x => match(x.DocType, x.Direction)).Sum(x => x.Qty), m.Where(x => match(x.DocType, x.Direction)).Sum(x => x.Amount));
                 var purchase = Sum((t, d) => t == "GRN" && d > 0);
