@@ -155,7 +155,7 @@ public class SupplierCatalogTests
     }
 
     [Fact]
-    public async Task Ncc_CongTyThanhVienXemDuocNhungKhongSuaDuoc_NhomConNccKhongNgungDuoc()
+    public async Task Ncc_CongTyThanhVienSuaTheoQuyenSuaDanhMucDungChung_NhomConNccKhongNgungDuoc()
     {
         var head = await HeadOfficeAdminAsync();
         var groupCode = UniqueCode("G");
@@ -167,8 +167,10 @@ public class SupplierCatalogTests
         Assert.Contains("1 NCC", await TitleAsync(stop));
 
         var bha = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
+        // Quản trị có quyền "Sửa thông tin danh mục dùng chung": sửa được ở công ty thành viên (design.md mục 5.7); người chỉ có quyền
+        // quản lý NCC thì không – xem SharedCatalogEditTests.
         var detail = await bha.GetFromJsonAsync<SupplierDetailDto>($"/api/suppliers/{supplier.Id}", Ct);
-        Assert.False(detail!.CanEdit);
-        Assert.Equal(HttpStatusCode.Forbidden, (await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}", Edit(detail), Ct)).StatusCode);
+        Assert.True(detail!.CanEdit);
+        Assert.Equal(supplier.Code, (await ReadAsync<SupplierDetailDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}", Edit(detail), Ct))).Code);
     }
 }

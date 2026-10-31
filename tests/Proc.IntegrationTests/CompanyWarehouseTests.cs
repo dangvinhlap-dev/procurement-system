@@ -73,9 +73,10 @@ public class CompanyWarehouseTests
         var own = await bha.GetFromJsonAsync<List<CompanyListItemDto>>("/api/companies", Ct);
         Assert.Equal(["BHA"], own!.Select(c => c.Code));
 
-        // Ở công ty thành viên: xem được công ty mình nhưng không sửa được; công ty khác như không tồn tại.
+        // Ở công ty thành viên: chỉ thấy công ty mình – quản trị có quyền "Sửa thông tin danh mục dùng chung" nên sửa được (design.md mục 5.7);
+        // công ty khác như không tồn tại.
         var detail = await bha.GetFromJsonAsync<CompanyDetailDto>($"/api/companies/{own![0].Id}", Ct);
-        Assert.False(detail!.CanEdit);
+        Assert.True(detail!.CanEdit);
         var nmi = await _factory.GetCompanyIdAsync("NMI");
         Assert.Equal(HttpStatusCode.NotFound, (await bha.GetAsync($"/api/companies/{nmi}", Ct)).StatusCode);
     }

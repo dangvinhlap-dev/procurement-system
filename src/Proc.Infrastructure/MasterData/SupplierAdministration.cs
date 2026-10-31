@@ -55,7 +55,7 @@ public sealed class SupplierGroupAdministration : ISupplierGroupAdministration
     /// <inheritdoc />
     public async Task<SupplierGroupDto> UpdateAsync(Guid id, UpdateSupplierGroupRequest request, CancellationToken cancellationToken)
     {
-        await HeadOffice.RequireAsync(_db, _scope, "nhóm NCC", cancellationToken);
+        await SharedCatalog.RequireEditAsync(_db, _scope, "nhóm NCC", Permissions.MasterData.SupplierManage, cancellationToken);
         var group = await _db.SupplierGroups.SingleOrDefaultAsync(g => g.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy nhóm NCC.");
         group.Rename(request.Name);
@@ -166,8 +166,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
     /// <inheritdoc />
     public async Task<SupplierDetailDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
-        var canEdit = _scope.HasPermission(Permissions.MasterData.SupplierManage)
-            && await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
+        var canEdit = await SharedCatalog.CanEditAsync(_db, _scope, Permissions.MasterData.SupplierManage, cancellationToken);
         var s = await _db.Suppliers.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy nhà cung cấp.");
         return new SupplierDetailDto(
@@ -196,7 +195,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
     /// <inheritdoc />
     public async Task<SupplierDetailDto> UpdateAsync(Guid id, SaveSupplierRequest request, CancellationToken cancellationToken)
     {
-        await HeadOffice.RequireAsync(_db, _scope, "nhà cung cấp", cancellationToken);
+        await SharedCatalog.RequireEditAsync(_db, _scope, "nhà cung cấp", Permissions.MasterData.SupplierManage, cancellationToken);
         var supplier = await _db.Suppliers.SingleOrDefaultAsync(s => s.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy nhà cung cấp.");
         supplier.Update(ToInfo(request));

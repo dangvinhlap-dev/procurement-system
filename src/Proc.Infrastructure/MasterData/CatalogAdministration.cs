@@ -3,6 +3,7 @@ using Proc.Application.Common;
 using Proc.Application.MasterData;
 using Proc.Domain.Common;
 using Proc.Domain.MasterData;
+using Proc.Domain.Organization;
 using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
 
@@ -55,7 +56,8 @@ public sealed class UomAdministration : IUomAdministration
     /// <inheritdoc />
     public async Task<UomDto> UpdateAsync(Guid id, UpdateUomRequest request, CancellationToken cancellationToken)
     {
-        await RequireManageAsync(cancellationToken);
+        await SharedCatalog.RequireEditAsync(_db, _scope, "đơn vị tính", Permissions.MasterData.ItemManage, cancellationToken);
+        RequireAllCategories();
         var uom = await _db.Uoms.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy đơn vị tính.");
         uom.Rename(request.Name);
@@ -85,6 +87,12 @@ public sealed class UomAdministration : IUomAdministration
     private async Task RequireManageAsync(CancellationToken cancellationToken)
     {
         await HeadOffice.RequireAsync(_db, _scope, "đơn vị tính", cancellationToken);
+        RequireAllCategories();
+    }
+
+    /// <summary>Đơn vị tính dùng cho mọi nhóm hàng: người chỉ được một số nhóm hàng không sửa được.</summary>
+    private void RequireAllCategories()
+    {
         if (!_scope.AllItemCategories)
             throw new ForbiddenAccessException("Bạn chỉ được làm việc với một số nhóm hàng nên không sửa được đơn vị tính dùng chung.");
     }
@@ -156,7 +164,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
     /// <inheritdoc />
     public async Task<ItemCategoryDetailDto> UpdateAsync(Guid id, UpdateItemCategoryRequest request, CancellationToken cancellationToken)
     {
-        await HeadOffice.RequireAsync(_db, _scope, "nhóm hàng", cancellationToken);
+        await SharedCatalog.RequireEditAsync(_db, _scope, "nhóm hàng", Permissions.MasterData.ItemCategoryManage, cancellationToken);
         var category = await _db.ItemCategories.SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy nhóm hàng.");
         category.Update(request.Name, request.InventoryAccount);

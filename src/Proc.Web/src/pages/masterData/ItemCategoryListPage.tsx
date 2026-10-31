@@ -1,11 +1,12 @@
-import { Alert, App, Checkbox, Form, Input, TreeSelect } from 'antd'
+import { App, Checkbox, Form, Input, TreeSelect } from 'antd'
 import { useMemo, useState } from 'react'
 import { useItemCategories, useItemCategoryMutations, type ItemCategory } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
-import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { ListPage } from '../../components/ListPage/ListPage'
+import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
+import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
 import { buildCategoryTree } from './categoryTree'
 
 const columns: GridColumn<ItemCategory>[] = [
@@ -29,12 +30,12 @@ const columns: GridColumn<ItemCategory>[] = [
 
 /**
  * Màn hình Nhóm hàng (design.md mục 5.2, 5.7): cây nhóm dùng chung, cũng là căn cứ phân quyền theo nhóm hàng.
- * Chỉ thấy nhóm trong phạm vi được phép; thêm, sửa khi làm việc ở tổng công ty.
+ * Chỉ thấy nhóm trong phạm vi được phép; thêm ở tổng công ty, sửa thông tin (trừ mã) theo quyền.
  */
 export function ItemCategoryListPage() {
-  const { workingCompany, hasPermission } = useAuth()
   const categories = useItemCategories()
-  const canManage = workingCompany?.isHeadOffice === true && hasPermission(Permission.ItemCategoryManage)
+  // Thêm mới ở tổng công ty; sửa thông tin (trừ mã) theo quyền – design.md mục 5.7.
+  const rights = useSharedCatalogRights(Permission.ItemCategoryManage)
   // undefined = đóng; null = thêm mới; còn lại = nhóm đang mở.
   const [open, setOpen] = useState<ItemCategory | null | undefined>(undefined)
 
@@ -43,25 +44,23 @@ export function ItemCategoryListPage() {
       <ListPage
         title="Nhóm hàng"
         exportFileName="nhom-hang"
-        excel={{ catalog: 'item-categories', title: 'nhóm hàng', canImport: canManage }}
+        excel={{ catalog: 'item-categories', title: 'nhóm hàng', canImport: rights.canCreate }}
         rows={categories.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
         loading={categories.isLoading}
-        canCreate={canManage}
+        canCreate={rights.canCreate}
         onCreate={() => setOpen(null)}
         onOpenRow={setOpen}
         notice={
-          !workingCompany?.isHeadOffice && (
-            <Alert type="info" showIcon title="Danh mục dùng chung toàn tập đoàn: chỉ thêm, sửa khi làm việc ở tổng công ty." />
-          )
+          <SharedCatalogNotice rights={rights} />
         }
       />
       {open !== undefined && (
         <ItemCategoryDrawer
           category={open}
           categories={categories.data ?? []}
-          canManage={canManage}
+          canManage={open === null ? rights.canCreate : rights.canEdit}
           onClose={() => setOpen(undefined)}
         />
       )}

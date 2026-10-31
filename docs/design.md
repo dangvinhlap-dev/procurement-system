@@ -190,7 +190,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Thêm, sửa, ngừng dùng công ty chỉ khi đang làm việc ở **tổng công ty** (quyền `System.Company.Manage`); ở công ty thành viên chỉ xem được công ty mình | Danh mục tổ chức do tổng công ty quản lý; mỗi công ty là pháp nhân độc lập, không thấy công ty khác |
+| Thêm công ty chỉ khi đang làm việc ở **tổng công ty** (quyền `System.Company.Manage`). Sửa, ngừng dùng công ty: ở tổng công ty với quyền đó, hoặc quyền `MasterData.Catalog.EditShared` ("Sửa thông tin danh mục dùng chung") cho **sửa thông tin (trừ mã)** ở bất kỳ công ty nào đang làm việc; mã không bao giờ sửa; mọi lần sửa ghi nhật ký (yêu cầu 31/10/2026) – ở công ty thành viên chỉ thấy (và chỉ sửa được) công ty mình | Danh mục tổ chức do tổng công ty quản lý; mỗi công ty là pháp nhân độc lập, không thấy công ty khác |
 | Mã công ty không đổi sau khi tạo; mã số thuế 10 chữ số hoặc 10 chữ số + "-" + 3 chữ số, không trùng giữa các công ty | Mã nằm trong số chứng từ đã cấp; mỗi pháp nhân một mã số thuế |
 | Thêm công ty là tạo luôn **kho tổng** của công ty đó | Mỗi công ty luôn có đúng một kho tổng (mục 4) |
 | Người thêm công ty được gán các vai trò mình đang có ở tổng công ty tại công ty mới (phạm vi nhóm hàng như ở tổng công ty, mọi kho) | Gán quyền chỉ làm tại công ty đang làm việc (mục 9.5); không gán thì không ai vào được công ty mới. Không cấp thêm quyền nào người đó chưa có |
@@ -205,7 +205,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Thêm, sửa đơn vị tính, nhóm hàng, hàng hóa chỉ khi làm việc ở **tổng công ty**; công ty thành viên chỉ xem | Danh mục dùng chung toàn tập đoàn để so sánh giá được (mục 5) |
+| **Thêm** đơn vị tính, nhóm hàng, hàng hóa chỉ khi làm việc ở **tổng công ty** (tránh tạo trùng từ nhiều công ty). **Sửa**: ở tổng công ty với quyền quản lý danh mục, hoặc quyền `MasterData.Catalog.EditShared` ("Sửa thông tin danh mục dùng chung") cho **sửa thông tin (trừ mã)** ở bất kỳ công ty nào đang làm việc; mã không bao giờ sửa; mọi lần sửa ghi nhật ký (yêu cầu 31/10/2026); không có quyền thì công ty thành viên chỉ xem | Danh mục dùng chung toàn tập đoàn để so sánh giá được (mục 5) |
 | Hàng hóa và nhóm hàng chỉ thấy trong **phạm vi nhóm hàng** của người xem (global query filter trên `Item` theo `CategoryId`) | Phân quyền theo nhóm hàng (mục 9.2) |
 | Mã ĐVT 1–10 chữ/số; mã nhóm 2–20 chữ/số; mã hàng 2–30 ký tự chữ không dấu, số, `- . _ /`. Không đổi sau khi tạo | Mã nằm trên chứng từ, phân quyền, báo cáo |
 | Trùng mã với bản ghi ngoài phạm vi: chỉ mục duy nhất trong CSDL chặn, API trả 409 kèm thông báo tiếng Việt | Kiểm tra trùng trước khi lưu đi qua filter nên không thấy bản ghi ngoài phạm vi |
@@ -221,7 +221,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Thêm, sửa nhóm NCC và NCC chỉ khi làm việc ở **tổng công ty**; mọi công ty có quyền `MasterData.Supplier.View` đều xem được | Danh mục dùng chung để so sánh giá (mục 5). NCC áp dụng cho công ty nào (`SupplierCompany`) làm ở lát sau |
+| **Thêm** nhóm NCC và NCC chỉ khi làm việc ở **tổng công ty**. **Sửa**: ở tổng công ty với quyền `MasterData.Supplier.Manage`, hoặc quyền `MasterData.Catalog.EditShared` ("Sửa thông tin danh mục dùng chung") cho **sửa thông tin (trừ mã)** ở bất kỳ công ty nào đang làm việc; mã không bao giờ sửa; mọi lần sửa ghi nhật ký (yêu cầu 31/10/2026); mọi công ty có quyền `MasterData.Supplier.View` đều xem được | Danh mục dùng chung để so sánh giá (mục 5). NCC áp dụng cho công ty nào (`SupplierCompany`) làm ở lát sau |
 | Mã NCC 2–30 ký tự chữ không dấu, số, `- . _ /`, không đổi sau khi tạo | Mã nằm trên chứng từ |
 | Mã số thuế không trùng giữa các NCC. NCC trong nước: 10 hoặc 10-3 chữ số; NCC nước ngoài: mã thuế nước sở tại 3–20 ký tự | Một pháp nhân một NCC |
 | Trạng thái: Tiềm năng (mặc định) → Đã duyệt / Tạm ngưng / Danh sách đen; Tạm ngưng và Danh sách đen **bắt buộc ghi lý do** | Người mua sau biết vì sao không đặt hàng được (chặn lập PO làm ở giai đoạn mua hàng) |

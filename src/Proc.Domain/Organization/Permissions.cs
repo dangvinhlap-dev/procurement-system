@@ -63,6 +63,12 @@ public static class Permissions
         public const string SupplierView = "MasterData.Supplier.View";
         /// <summary>Quyền "Thêm, sửa nhà cung cấp".</summary>
         public const string SupplierManage = "MasterData.Supplier.Manage";
+
+        /// <summary>
+        /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
+        /// chỉ ở tổng công ty (design.md mục 5.7).
+        /// </summary>
+        public const string CatalogEditShared = "MasterData.Catalog.EditShared";
     }
 
     /// <summary>Mua hàng: PR, PO, hợp đồng khung.</summary>
@@ -172,6 +178,7 @@ public static class Permissions
         new(MasterData.ItemManage, "Thêm, sửa hàng hóa"),
         new(MasterData.SupplierView, "Xem nhà cung cấp"),
         new(MasterData.SupplierManage, "Thêm, sửa nhà cung cấp"),
+        new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),
         new(Purchase.PrApprove, "Duyệt đề nghị mua hàng"),

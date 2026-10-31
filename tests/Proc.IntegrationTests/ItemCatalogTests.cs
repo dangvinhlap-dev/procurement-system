@@ -206,7 +206,7 @@ public class ItemCatalogTests
     }
 
     [Fact]
-    public async Task HangHoa_CongTyThanhVienXemDuocNhungKhongSuaDuoc()
+    public async Task HangHoa_CongTyThanhVienSuaTheoQuyenSuaDanhMucDungChung()
     {
         var head = await HeadOfficeAdminAsync();
         var category = await CreateCategoryAsync(head, UniqueCode("R"));
@@ -214,8 +214,11 @@ public class ItemCatalogTests
             NewItem($"{category.Code}-01", category.Id, await UomIdAsync(head, "HOP")), Ct));
 
         var bha = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
+        // Quản trị có quyền "Sửa thông tin danh mục dùng chung": sửa được ở công ty thành viên, mã giữ nguyên (design.md mục 5.7); người chỉ
+        // có quyền quản lý hàng hóa thì không – xem SharedCatalogEditTests.
         var detail = await bha.GetFromJsonAsync<ItemDetailDto>($"/api/items/{item.Id}", Ct);
-        Assert.False(detail!.CanEdit);
-        Assert.Equal(HttpStatusCode.Forbidden, (await bha.PutAsJsonAsync($"/api/items/{item.Id}", Edit(detail, isActive: false), Ct)).StatusCode);
+        Assert.True(detail!.CanEdit);
+        var updated = await ReadAsync<ItemDetailDto>(await bha.PutAsJsonAsync($"/api/items/{item.Id}", Edit(detail, isActive: false), Ct));
+        Assert.Equal((item.Code, false), (updated.Code, updated.IsActive));
     }
 }

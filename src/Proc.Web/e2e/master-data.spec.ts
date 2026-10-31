@@ -109,10 +109,16 @@ test.describe('danh mục hàng hóa', () => {
     await expect(drawer.getByText('Mã đơn vị tính CAI đã có.')).toBeVisible()
   })
 
-  test('ở công ty thành viên chỉ xem, không thêm được', async ({ page }) => {
+  test('ở công ty thành viên: không thêm được, quản trị sửa được thông tin trừ mã', async ({ page }) => {
     await switchCompany(page, 'BHA')
-    await openByCommand(page, 'ITEM')
-    await expect(page.getByText('Danh mục dùng chung toàn tập đoàn: chỉ thêm, sửa khi làm việc ở tổng công ty.')).toBeVisible()
+    await openByCommand(page, 'UOM')
+    // Quản trị có quyền "Sửa thông tin danh mục dùng chung" (design.md mục 5.7).
+    await expect(page.getByText('bạn được sửa thông tin (trừ mã); thêm mới làm ở tổng công ty.', { exact: false })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Tạo mới' })).toHaveCount(0)
+    await gridRow(page, 'Cái').dblclick()
+    const drawer = page.locator('.detail-drawer')
+    await expect(drawer.getByLabel('Mã ĐVT')).toBeDisabled()
+    await expect(drawer.getByLabel('Tên đơn vị tính')).toBeEnabled()
+    await expect(drawer.getByRole('button', { name: 'Lưu' })).toBeVisible()
   })
 })

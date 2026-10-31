@@ -32,7 +32,7 @@ public static class OrganizationEndpoints
             .Validate<CreateCompanyRequest>();
         companies.MapPut("/{id:guid}", (Guid id, UpdateCompanyRequest request, ICompanyAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.System.CompanyManage)
+            .RequireAnyPermission(Permissions.System.CompanyManage, Permissions.MasterData.CatalogEditShared)
             .Validate<UpdateCompanyRequest>();
 
         var warehouses = app.MapGroup("/api/warehouses").WithTags("Danh mục");

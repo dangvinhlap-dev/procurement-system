@@ -2,11 +2,12 @@ import { Alert, Select, TreeSelect } from 'antd'
 import { useMemo, useState } from 'react'
 import { itemTypeLabels, useItemCategories, useItems, type ItemListItem, type ItemType } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
-import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatQuantity } from '../../utils/format'
 import { buildCategoryTree } from './categoryTree'
+import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
+import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
 import { ItemDrawer } from './ItemDrawer'
 
 const vatLabel = (code: string | null) => (code === null ? '' : code === 'KCT' ? 'KCT' : `${code}%`)
@@ -39,13 +40,14 @@ const columns: GridColumn<ItemListItem>[] = [
  * ô tìm kiếm lọc tiếp trên các dòng đã tải. Chỉ thấy hàng thuộc nhóm hàng được phép.
  */
 export function ItemListPage() {
-  const { workingCompany, hasPermission } = useAuth()
   const [categoryId, setCategoryId] = useState<string | undefined>()
   const [type, setType] = useState<ItemType | undefined>()
   const items = useItems({ categoryId, type })
   const categories = useItemCategories()
   const tree = useMemo(() => buildCategoryTree(categories.data ?? []), [categories.data])
-  const canManage = workingCompany?.isHeadOffice === true && hasPermission(Permission.ItemManage)
+  // Thêm mới ở tổng công ty; sửa thông tin (trừ mã) theo quyền – ngăn kéo đọc canEdit từ API (design.md mục 5.7).
+  const rights = useSharedCatalogRights(Permission.ItemManage)
+  const canManage = rights.canCreate
   // undefined = đóng; null = thêm mới; chuỗi = Id hàng đang mở.
   const [openId, setOpenId] = useState<string | null | undefined>(undefined)
 
@@ -56,9 +58,7 @@ export function ItemListPage() {
       title={`Có hơn ${formatQuantity(items.data.limit)} mặt hàng khớp điều kiện, đang hiện ${formatQuantity(items.data.limit)} mã đầu tiên. Chọn nhóm hàng hoặc loại hàng để thu hẹp.`}
     />
   ) : (
-    !workingCompany?.isHeadOffice && (
-      <Alert type="info" showIcon title="Danh mục dùng chung toàn tập đoàn: chỉ thêm, sửa khi làm việc ở tổng công ty." />
-    )
+    <SharedCatalogNotice rights={rights} />
   )
 
   return (

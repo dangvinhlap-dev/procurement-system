@@ -1,10 +1,11 @@
-import { Alert, App, Checkbox, Form, Input } from 'antd'
+import { App, Checkbox, Form, Input } from 'antd'
 import { useState } from 'react'
 import { useUomMutations, useUoms, type Uom } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
-import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
+import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
 import { ListPage } from '../../components/ListPage/ListPage'
 
 const columns: GridColumn<Uom>[] = [
@@ -22,19 +23,13 @@ const columns: GridColumn<Uom>[] = [
   },
 ]
 
-/** Danh mục dùng chung chỉ sửa ở tổng công ty (design.md mục 5.7). */
-function useCanManage(): boolean {
-  const { workingCompany, hasPermission } = useAuth()
-  return workingCompany?.isHeadOffice === true && hasPermission(Permission.ItemManage)
-}
-
 /**
  * Màn hình Đơn vị tính (design.md mục 5.2): cái, hộp, thùng, kg… dùng chung toàn tập đoàn.
  */
 export function UomListPage() {
   const uoms = useUoms()
-  const canManage = useCanManage()
-  const { workingCompany } = useAuth()
+  // Thêm mới ở tổng công ty; sửa thông tin (trừ mã) theo quyền – design.md mục 5.7.
+  const rights = useSharedCatalogRights(Permission.ItemManage)
   // undefined = đóng; null = thêm mới; còn lại = ĐVT đang mở.
   const [open, setOpen] = useState<Uom | null | undefined>(undefined)
 
@@ -43,21 +38,19 @@ export function UomListPage() {
       <ListPage
         title="Đơn vị tính"
         exportFileName="don-vi-tinh"
-        excel={{ catalog: 'uoms', title: 'đơn vị tính', canImport: canManage }}
+        excel={{ catalog: 'uoms', title: 'đơn vị tính', canImport: rights.canCreate }}
         rows={uoms.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
         loading={uoms.isLoading}
-        canCreate={canManage}
+        canCreate={rights.canCreate}
         onCreate={() => setOpen(null)}
         onOpenRow={setOpen}
         notice={
-          !workingCompany?.isHeadOffice && (
-            <Alert type="info" showIcon title="Danh mục dùng chung toàn tập đoàn: chỉ thêm, sửa khi làm việc ở tổng công ty." />
-          )
+          <SharedCatalogNotice rights={rights} />
         }
       />
-      {open !== undefined && <UomDrawer uom={open} canManage={canManage} onClose={() => setOpen(undefined)} />}
+      {open !== undefined && <UomDrawer uom={open} canManage={open === null ? rights.canCreate : rights.canEdit} onClose={() => setOpen(undefined)} />}
     </>
   )
 }

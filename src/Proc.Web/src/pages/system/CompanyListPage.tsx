@@ -59,7 +59,11 @@ export function CompanyListPage() {
             <Alert
               type="info"
               showIcon
-              title="Đang làm việc ở công ty thành viên nên chỉ xem được công ty mình. Thêm, sửa công ty khi làm việc ở tổng công ty."
+              title={
+                hasPermission(Permission.CatalogEditShared)
+                  ? 'Đang làm việc ở công ty thành viên: chỉ thấy công ty mình, được sửa thông tin (trừ mã). Thêm công ty làm ở tổng công ty.'
+                  : 'Đang làm việc ở công ty thành viên nên chỉ xem được công ty mình. Thêm, sửa công ty khi làm việc ở tổng công ty.'
+              }
             />
           )
         }
