@@ -29,7 +29,7 @@ Kiểm tra gần nhất (SEC-1): 347 test .NET, 60 test Playwright, `npm run bui
 
 1. SEC-2 (đề xuất): % markup nội bộ mặc định + gợi ý giá bán nội bộ = giá vốn kỳ đóng gần nhất × (1 + % markup) khi chưa có bảng giá
    (design.md mục 1 câu hỏi 2, mục 5.4) – cần người dùng chốt gợi ý hiện ở đâu (màn hình bảng giá nội bộ hay phiếu ICS).
-2. Hợp đồng khung (CTR) còn trang tạm – chưa có đặc tả trong design.md, cần người dùng mô tả.
+2. Hợp đồng khung (CTR) còn trang tạm – **tạm bỏ qua** (31/10/2026): người dùng sẽ mô tả sau; không tự làm khi chưa có mô tả.
 3. Phát hành 0.9.0 khi người dùng yêu cầu: gồm DM-1, DM-2, DM-3, UI-a, UI-b, TB-1, SEC-1; có 4 migration
    (`V0_9_0_DanhSoDanhMuc`, `V0_9_0_DaiMaMacDinh`, `V0_9_0_ThongBao`, `V0_9_0_ThamSoCongTy`) → cần sao lưu CSDL, sinh `db/scripts/0.9.0.sql`.
 4. Chờ người dùng cho phép xóa CSDL `procurement_perf`, `procurement_perf_mau` và file `D:\project\procurement_perf_nguon.dump`.
