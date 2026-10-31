@@ -486,7 +486,7 @@ Phân quyền có hai chiều độc lập: **quyền chức năng** (được l
 
 ### 9.1 Quyền chức năng (RBAC)
 
-- Quyền dạng `Module.Đối tượng.Hành động`, ví dụ `Purchase.PO.Create`, `Purchase.PO.Approve`, `Inventory.Period.Close`, `Inventory.Period.Reopen`, `Report.Stock.View`, `Report.Price.ViewAllCompanies`.
+- Quyền dạng `Module.Đối tượng.Hành động`, ví dụ `Purchase.PO.Create`, `Purchase.PO.Approve`, `Inventory.Period.Close`, `Inventory.Period.Reopen`, `Report.Stock.View`, `Report.Price.ViewAllCompanies`, `Report.Stock.ViewAllCompanies`.
 - Vai trò (`Role`) = tập quyền. Vai trò mẫu: Quản trị hệ thống, Ban mua hàng tập đoàn, Trưởng mua hàng công ty, Nhân viên mua hàng, Thủ kho, Kế toán kho, Người đề nghị (PR), Người duyệt, Xem báo cáo.
 - Gán vai trò **theo công ty**: một người có thể là Thủ kho ở công ty A nhưng chỉ Xem báo cáo ở công ty B (`UserCompanyRole`).
 - Danh mục quyền khai báo **một nơi trong code** (`src/Proc.Domain/Organization/Permissions.cs`); khi khởi động, bảng `Permission` được đồng bộ theo danh mục này và vai trò `ADMIN` (Quản trị hệ thống) luôn có đủ mọi quyền. Quyền của vai trò lưu ở `RolePermission`; quyền tại một công ty = hợp quyền của mọi vai trò người dùng có ở công ty đó.
@@ -657,7 +657,17 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | Tồn đầu thẻ kho = số dư kỳ đã đóng gần nhất trước ngày bắt đầu + sổ kho sau kỳ đó (mục 7.4a) | Đoạn "Hiệu năng" ở trên |
 | Quyền `Inventory.Stock.View`; sổ kho, tồn kho đi qua global query filter (công ty, kho, nhóm hàng) – người chỉ được kho KP1 chỉ thấy tồn và phát sinh của KP1 | Mục 9.2 |
 | Báo cáo NXT (quyền `Report.Stock.View`) theo kỳ tháng, kho × mặt hàng (cộng mọi lô): tồn đầu, nhập mua NCC, chuyển kho đến, tổng nhập, trả NCC, chuyển kho đi, tổng xuất, tồn cuối (SL + giá trị); kỳ chưa đóng ghi rõ giá trị tạm tính | Mục 11 |
-| Chưa làm: xuất Excel/PDF báo cáo, báo cáo chậm luân chuyển, sắp hết hạn, tồn tập đoàn | Làm cùng nhóm báo cáo |
+| Xuất Excel đã làm (mục 11.2); chưa làm: xuất PDF báo cáo | Giai đoạn 7 |
+
+### 11.2 Báo cáo kho còn lại và xuất Excel (giai đoạn 7)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Xuất Excel** mọi danh sách, báo cáo: nút "Xuất Excel" gửi đúng các cột đang hiện và các dòng đã lọc (tìm kiếm, ô lọc) lên `POST /api/excel/grid`; server dựng .xlsx bằng ClosedXML: dòng 1 tiêu đề, dòng 2 điều kiện lọc và giờ xuất, dòng tiêu đề cột cố định có lọc; cột tiền, số lượng là ô số, cột ngày là ô ngày dd/MM/yyyy, cột chữ giữ dạng chữ (mã 0101 không mất số 0). Tối đa 100 cột, 50.000 dòng. Danh mục (mục 5.10) vẫn xuất cả danh mục theo định dạng file nhập | API chỉ định dạng lại dữ liệu người dùng đã nhận qua các API có kiểm quyền, không đọc CSDL – nên chỉ cần đăng nhập; file khớp đúng màn hình đang xem |
+| **Hàng chậm luân chuyển** (quyền `Report.Stock.View`): kho × mặt hàng (cộng mọi lô) còn tồn > 0 mà số ngày không xuất ≥ N (mặc định 90, 1–3.650). Số ngày không xuất = hôm nay − ngày xuất gần nhất trên sổ kho của đúng kho đó; chưa xuất lần nào thì tính từ ngày nhập đầu tiên (tô màu dòng). Mọi phát sinh xuất (trả NCC, chuyển kho đi, bán nội bộ) đều tính là xuất | Hàng đã rời kho thì kho đó không còn "nằm im"; kho nhận hàng chuyển đến tính từ ngày nhận |
+| **Hàng sắp hết hạn** (quyền `Report.Stock.View`): lô còn tồn > 0 có hạn dùng ≤ hôm nay + N ngày (mặc định 30, 0–3.650), luôn gồm lô đã hết hạn. Hạn dùng lấy từ dòng phiếu đã ghi sổ của công ty theo mặt hàng × lô (phiếu chuyển kho chép theo lô); một lô có nhiều hạn khác nhau thì lấy hạn sớm nhất | Không lưu hạn dùng trên tồn kho; báo sớm an toàn hơn báo muộn |
+| Hai báo cáo trên đi qua global query filter như màn hình tồn kho (công ty, kho, nhóm hàng được phép); giá trị theo sổ kho (tạm tính khi kỳ còn mở) | Mục 9.2, 11.1 |
+| **Tồn tập đoàn**: tồn một mặt hàng ở mọi công ty, cần quyền mới `Report.Stock.ViewAllCompanies` (kiểm tra trong dịch vụ, ngoài `Report.Stock.View` của màn hình). Chỉ số lượng – không giá trị, không giá vốn (số liệu riêng của từng pháp nhân). Tách tồn kho Main, phần kho Main chưa giữ chỗ (bán nội bộ được), tồn kho Sub. Truy vấn bỏ filter công ty và kho ở đúng một câu đọc `StockOnHand` của một mặt hàng; mặt hàng vẫn qua filter nhóm hàng | Mục 4: liên công ty chỉ đi kho Main → kho Main; gợi ý mua nội bộ thay vì mua mới (mục 11) |
 
 ## 12. Lược đồ CSDL chính
 

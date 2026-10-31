@@ -5,6 +5,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+### Thêm mới
+- Xuất Excel mọi danh sách, báo cáo (design.md mục 11.2): nút "Xuất Excel" xuất đúng các cột đang hiện và các dòng đã lọc ra file
+  .xlsx (ô số, ô ngày đúng kiểu; dòng tiêu đề cố định, có lọc). API `POST /api/excel/grid`.
+- Báo cáo Hàng chậm luân chuyển (SLOW), Hàng sắp hết hạn (EXP), Tồn tập đoàn (GSTK – tồn một mặt hàng ở mọi công ty, chỉ số lượng,
+  gợi ý mua nội bộ). Quyền mới `Report.Stock.ViewAllCompanies`. API `/api/reports/slow-moving`, `/api/reports/expiring`,
+  `/api/reports/group-stock`.
+
 ## [0.7.0] - 2026-10-31
 
 ### Thêm mới

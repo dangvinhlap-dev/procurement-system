@@ -43,5 +43,6 @@ export const Permission = {
   RfqAward: 'Sourcing.Rfq.Award',
   PriceViewAllCompanies: 'Report.Price.ViewAllCompanies',
   ReportStockView: 'Report.Stock.View',
+  StockViewAllCompanies: 'Report.Stock.ViewAllCompanies',
   ReportPurchaseView: 'Report.Purchase.View',
 } as const

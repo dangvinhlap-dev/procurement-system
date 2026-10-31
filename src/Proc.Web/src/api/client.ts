@@ -90,12 +90,15 @@ function authHeaders(): Headers {
  * header Authorization và X-Company-Id.
  * @param path Đường dẫn API.
  * @param fallbackName Tên file nếu server không gửi Content-Disposition.
+ * @param body Có thì gửi POST với body JSON (ví dụ xuất Excel lưới đang xem); không có thì GET.
  * @throws ApiError khi server trả lỗi hoặc không kết nối được.
  */
-export async function apiDownload(path: string, fallbackName: string): Promise<void> {
+export async function apiDownload(path: string, fallbackName: string, body?: unknown): Promise<void> {
   let response: Response
   try {
-    response = await fetch(path, { headers: authHeaders() })
+    const headers = authHeaders()
+    if (body !== undefined) headers.set('Content-Type', 'application/json')
+    response = await fetch(path, body === undefined ? { headers } : { method: 'POST', headers, body: JSON.stringify(body) })
   } catch {
     throw new ApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng hoặc báo quản trị hệ thống.')
   }
