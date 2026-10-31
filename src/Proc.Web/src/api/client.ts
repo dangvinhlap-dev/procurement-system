@@ -117,6 +117,31 @@ export async function apiDownload(path: string, fallbackName: string, body?: unk
 }
 
 /**
+ * Mở file PDF từ API (in phiếu) ở tab mới. Mở tab trống ngay khi bấm (trước khi chờ mạng) để trình duyệt không chặn cửa sổ bật lên,
+ * rồi gắn file vào tab đó; API cần header Authorization, X-Company-Id nên không mở thẳng đường dẫn.
+ * @param path Đường dẫn API, ví dụ "/api/purchase-orders/{id}/pdf".
+ * @throws ApiError khi server trả lỗi hoặc không kết nối được (tab trống được đóng lại).
+ */
+export async function apiOpenPdf(path: string): Promise<void> {
+  const tab = window.open('', '_blank')
+  try {
+    let response: Response
+    try {
+      response = await fetch(path, { headers: authHeaders() })
+    } catch {
+      throw new ApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng hoặc báo quản trị hệ thống.')
+    }
+    if (!response.ok) throw new ApiError(response.status, await readErrorMessage(response))
+    const url = URL.createObjectURL(await response.blob())
+    if (tab) tab.location.href = url
+    else window.location.assign(url)
+  } catch (e) {
+    tab?.close()
+    throw e
+  }
+}
+
+/**
  * Gửi file lên API dạng multipart/form-data (trường "file").
  * @param path Đường dẫn API.
  * @param file File người dùng chọn.

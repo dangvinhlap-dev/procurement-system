@@ -169,6 +169,7 @@ export function IntercompanyReceiptPage() {
     <DocumentForm
       title="Phiếu nhập mua nội bộ"
       number={doc?.no ?? ''}
+      printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Sinh từ phiếu xuất ${doc.linkedDocumentNo ?? ''} của ${doc.counterCompanyCode ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={document.isLoading}

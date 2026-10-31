@@ -36,6 +36,7 @@ builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddOptions<DatabaseOptions>().Bind(builder.Configuration.GetSection("Database"));
 builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection("Seed"));
+builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection("Jwt"))
     .Validate(
@@ -114,6 +115,7 @@ app.MapOrganizationEndpoints();
 app.MapMasterDataEndpoints();
 app.MapExcelEndpoints();
 app.MapReportEndpoints();
+app.MapPrintingEndpoints();
 app.MapInventoryEndpoints();
 app.MapPricingEndpoints();
 app.MapPurchasingEndpoints();

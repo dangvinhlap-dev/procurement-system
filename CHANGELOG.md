@@ -16,6 +16,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   API `/api/reports/pending-requests`, `/api/reports/purchase-spend`, `/api/reports/supplier-evaluation`, `/api/reports/sourcing-savings`.
 - Xếp loại nhà cung cấp theo ngưỡng do người dùng cấu hình (design.md mục 11.3): màn hình Hệ thống → Xếp loại NCC (RATE) thêm, sửa,
   xóa hạng (mã, thứ tự, % đúng hạn tối thiểu, % trả hàng tối đa); báo cáo Đánh giá NCC có cột Xếp loại. API `/api/supplier-rating-rules`.
+- In phiếu PDF (design.md mục 10.10): PO, PR, phiếu nhập mua, trả NCC, chuyển kho, xuất bán / nhập mua nội bộ – nút "In phiếu" (Ctrl+P)
+  trên mọi phiếu đã lưu, có số tiền bằng chữ và ô ký tên. Thư viện PDFsharp-MigraDoc 6.2.4 (MIT, ghim bản – bản mới hơn là AGPL).
+  API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`.
+
+### Thay đổi
+- Image Docker cài thêm phông `fonts-dejavu-core` để in PDF tiếng Việt. Máy chủ không dùng Docker cần có Arial, DejaVu Sans hoặc
+  Liberation Sans, hoặc khai báo thư mục phông ở `Printing:FontDirectories`.
 
 ### Thay đổi CSDL
 - Migration `V0_8_0_XepLoaiNcc`: bảng mới `SupplierRatingRule`. `Down()` xóa bảng – mất các hạng đã cấu hình (không ảnh hưởng chứng từ).

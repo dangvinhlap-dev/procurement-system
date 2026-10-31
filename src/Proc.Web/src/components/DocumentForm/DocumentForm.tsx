@@ -1,5 +1,7 @@
-import { Alert, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
-import { useEffect, useState, type ReactNode } from 'react'
+import { PrinterOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { apiOpenPdf } from '../../api/client'
 import type { StatusTone } from '../DataGrid/types'
 import { hasOpenPopup } from '../../utils/popup'
 import './DocumentForm.css'
@@ -57,12 +59,14 @@ export interface DocumentFormProps {
   onSave?: () => void
   /** F2 – thêm dòng. */
   onAddLine?: () => void
+  /** API PDF của phiếu đã lưu, ví dụ "/api/purchase-orders/{id}/pdf": hiện nút "In phiếu" (Ctrl+P) – design.md mục 10.10. */
+  printPath?: string
 }
 
 /**
  * Khuôn chung của mọi chứng từ (design.md mục 10.1, ui-guide.md mục DocumentForm): thanh lệnh của phiếu; thanh trạng thái
  * (số phiếu, trạng thái, người lập); đầu phiếu 3 cột; lưới dòng nhập như Excel; chân phiếu tổng tiền; tab phụ.
- * Bàn phím: Ctrl+S lưu, F2 thêm dòng.
+ * Bàn phím: Ctrl+S lưu, F2 thêm dòng, Ctrl+P in phiếu PDF.
  */
 export function DocumentForm({
   title,
@@ -84,8 +88,24 @@ export function DocumentForm({
   defaultTab = 'lines',
   onSave,
   onAddLine,
+  printPath,
 }: DocumentFormProps) {
   const [tab, setTab] = useState(defaultTab)
+  const { message } = App.useApp()
+  const [printing, setPrinting] = useState(false)
+
+  /** Mở PDF của phiếu ở tab mới để xem, in hoặc lưu file. */
+  const print = useCallback(async () => {
+    if (!printPath) return
+    setPrinting(true)
+    try {
+      await apiOpenPdf(printPath)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không in được phiếu.')
+    } finally {
+      setPrinting(false)
+    }
+  }, [printPath, message])
 
   // Phím tắt của phiếu (design.md mục 10.1). F2 chỉ khi không có danh sách thả xuống đang mở, để không chen vào ô đang chọn.
   useEffect(() => {
@@ -93,6 +113,10 @@ export function DocumentForm({
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && onSave) {
         e.preventDefault()
         onSave()
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p' && printPath) {
+        // Ctrl+P in phiếu PDF thay cho in cả trang web của trình duyệt.
+        e.preventDefault()
+        void print()
       } else if (e.key === 'F2' && onAddLine && !readOnly && !hasOpenPopup()) {
         e.preventDefault()
         setTab('lines')
@@ -101,11 +125,18 @@ export function DocumentForm({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onSave, onAddLine, readOnly])
+  }, [onSave, onAddLine, readOnly, printPath, print])
 
   return (
     <div className="document-form">
-      <div className="document-form-actions">{actions}</div>
+      <div className="document-form-actions">
+        {actions}
+        {printPath && (
+          <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
+            In phiếu
+          </Button>
+        )}
+      </div>
       <div className="document-form-title">
         <h2>{title}</h2>
         <span className="document-form-number">{number ?? '(số phiếu tự cấp khi lưu)'}</span>

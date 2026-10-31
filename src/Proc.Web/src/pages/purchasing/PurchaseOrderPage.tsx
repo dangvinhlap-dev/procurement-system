@@ -344,6 +344,7 @@ export function PurchaseOrderPage() {
       <DocumentForm
         title="Đơn mua hàng"
         number={isNew ? null : (doc?.no ?? '')}
+        printPath={doc ? `/api/purchase-orders/${doc.id}/pdf` : undefined}
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={order.isLoading}
