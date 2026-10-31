@@ -5,6 +5,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+## [0.7.0] - 2026-10-31
+
 ### Thêm mới
 - Mua hàng (design.md mục 6.2, 6.7, 10.2, 10.3): quy trình duyệt nhiều cấp theo ngưỡng giá trị và vai trò (Hệ thống → Quy trình
   duyệt); đề nghị mua hàng (PR) với giá tham khảo là giá nhập gần nhất; đơn mua hàng (PO) lấy dòng từ PR đã duyệt, chiết khấu, VAT,
@@ -22,6 +24,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   (không chọn giá thấp nhất phải ghi lý do); tạo PO nháp từ kết quả; giá trúng thầu vào lịch sử giá. Màn hình Tìm nguồn, Yêu cầu
   báo giá, So sánh báo giá. API `/api/sourcing`, `/api/rfqs`.
 
+### Thay đổi
+- Danh sách đơn mua hàng `/mua-hang/po` hiện dữ liệu thật; danh sách 30 dòng mẫu dùng so bố cục chuyển sang `/mua-hang/po/mau`.
+- Khi mở một phiếu, cây điều hướng đánh dấu màn hình danh sách cha của phiếu.
+- Khuôn phiếu `DocumentForm` cho đặt nhãn tab dòng và tab mở sẵn.
+
 ### Sửa lỗi
 - Giá tham khảo trên đề nghị mua hàng lấy cả giá nhập của công ty khác; nay chỉ lấy giá nhập của công ty đang làm việc.
 
@@ -33,6 +40,23 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_7_0_TimNguonDauThau`: bảng `SourcingRequest`, `SourcingCandidate`, `Rfq`, `RfqLine`, `RfqSupplier`, `QuotationLine`.
   `Down()` xóa các bảng – mất phiếu tìm nguồn, RFQ, báo giá, kết quả chọn thầu (PO đã tạo vẫn giữ).
 - Danh mục loại chứng từ thêm `PRL` (bảng giá NCC) và `SRC` (tìm nguồn) – không đổi bảng.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước khi nâng cấp** (bản này có 3 migration mới: `V0_6_0_MuaHang`, `V0_7_0_BangGiaNcc`, `V0_7_0_TimNguonDauThau`):
+  `pg_dump -h localhost -U proc -F c -f procurement_truoc_0.7.0.dump procurement`.
+- Môi trường Development tự áp migration khi chạy API. Môi trường chạy thật chạy script:
+  `$env:PGCLIENTENCODING='UTF8'; psql -h <máy> -U <user> -d procurement -v ON_ERROR_STOP=1 -f db\scripts\0.7.0.sql`
+  (script `--idempotent`, chạy lại không lỗi).
+- Không có bản 0.6.0 riêng: phần mua hàng (giai đoạn 5) phát hành cùng bản này.
+- Sau khi nâng cấp: cấu hình quy trình duyệt (Hệ thống → Quy trình duyệt) cho từng công ty nếu cần duyệt nhiều cấp – chưa cấu hình
+  thì PR/PO một cấp, ai có quyền duyệt cũng duyệt được. Gán quyền mới cho vai trò nếu cần: `Purchase.PR.*`, `Purchase.PO.*`,
+  `Pricing.PriceList.*`, `Pricing.Compare.View`, `Sourcing.Rfq.View/Manage/Award`, `Report.Price.ViewAllCompanies`.
+
+### Cách quay lại bản trước
+- Code: không xóa lịch sử; tạo nhánh từ tag `git switch -c rollback/v0.5.0 v0.5.0`, build và chạy.
+- CSDL (chỉ khi đã sao lưu): `dotnet ef database update V0_5_0_MuaBanNoiBo -p src\Proc.Infrastructure -s src\Proc.Api`.
+  **Mất dữ liệu**: quy trình duyệt, lịch sử duyệt, PR, PO, liên kết phiếu nhập ↔ PO, bảng giá NCC, phiếu tìm nguồn, RFQ, báo giá.
+  Muốn giữ dữ liệu thì khôi phục bản sao lưu: `pg_restore -h localhost -U proc -d procurement --clean procurement_truoc_0.7.0.dump`.
 
 ## [0.5.0] - 2026-10-30
 
