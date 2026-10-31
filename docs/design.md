@@ -1034,14 +1034,21 @@ nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đ
 
 | Vùng | Nội dung |
 | --- | --- |
-| Shellbar | Logo, tên ứng dụng, ô tìm/ô lệnh (gõ mã màn hình), công ty đang làm việc, thông báo, người dùng |
-| Điều hướng trái | Nhóm Ghim, nhóm theo module, số đếm (đỏ khi cần chú ý), thu gọn được |
-| Dynamic Page | Header đóng/mở (tiêu đề H1, tóm tắt, bộ lọc, nút lệnh) + Content (bảng hoặc form trên khối trắng bo góc 8px) |
+| Shellbar (48px) | Logo + tên ứng dụng (về trang chủ; tên ẩn khi màn hình hẹp hơn 1440px), Quay lại, menu module (Alt + chữ gạch chân), ô lệnh (gõ mã màn hình rồi Enter), công ty đang làm việc, thông báo, avatar người dùng – menu: họ tên, ngày làm việc, phiên bản, đổi mật khẩu, đăng xuất |
+| Điều hướng trái (240px) | Nhóm Ghim, nhóm theo module, dòng 32px, mục đang mở nền xanh nhạt + vạch nhấn trái, số đếm (đỏ khi cần chú ý), thu gọn/ẩn, kéo rộng được |
+| Dynamic Page | Header đóng/mở (tiêu đề H1, tổng số bản ghi, nút lệnh bên phải, khu bộ lọc, tab) + Content (bảng hoặc form trên khối trắng bo góc 8px) |
+
+Bỏ thanh công cụ và thanh trạng thái kiểu Windows (lát UI-b): Lưu/In nằm trên chứng từ, phiên bản và ngày làm việc nằm trong menu người dùng;
+bỏ chế độ INS/OVR (phím Insert) vì ô nhập web luôn ở chế độ chèn.
 
 ### 17.2 Danh sách và chứng từ
 
 Danh sách dùng `ListPage` + `DataGrid` (dòng 32px, chữ 14px, tiêu đề cột 36px, kẻ ngang mảnh, trạng thái màu ngữ nghĩa + chữ; tìm có/không dấu;
-nhóm theo cột; cuộn ảo). Chứng từ dùng `DocumentForm` (design.md mục 10.1) với khối form 3 cột, tiêu đề khối 16px/600, lưới dòng nhập như Excel.
+nhóm theo cột; cuộn ảo). Mỗi dòng có mũi tên ">" cuối dòng để mở chi tiết (ngoài bấm đúp/Enter).
+Chứng từ dùng `DocumentForm` (design.md mục 10.1) dạng Dynamic Page: header gồm tên loại phiếu, số phiếu, trạng thái, người lập, nút In phiếu
+bên phải; khối "Thông tin phiếu" 3 cột (thu gọn được), tiêu đề khối 16px/600; lưới dòng nhập như Excel. Phiếu đang sửa: nút lệnh (Lưu, Gửi duyệt,
+Ghi sổ…) ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở phải tiêu đề. Ngăn kéo chi tiết danh mục (`DetailDrawer`) có nhãn "Chỉ xem" khi không
+được sửa.
 
 ### 17.3 Màu, chữ, hình khối, bàn phím
 

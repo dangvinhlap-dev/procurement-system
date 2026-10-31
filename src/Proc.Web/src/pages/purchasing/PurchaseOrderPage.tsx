@@ -2,7 +2,7 @@ import { DollarOutlined, FileAddOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
 import { useWarehouses } from '../../api/organization'
@@ -87,6 +87,15 @@ export function PurchaseOrderPage() {
   const doc = order.data
   const readOnly = isNew ? !hasPermission(Permission.PoCreate) : !doc?.actions.canEdit
   const suppliers = useSupplierLookup(doc?.supplierId ? [doc.supplierId] : [])
+  // Ô NCC chỉ liệt kê NCC đã duyệt và đang áp dụng tại công ty (design.md mục 5.9): không có NCC nào thì nói rõ lý do và chỗ xử lý,
+  // tránh người dùng tưởng lỗi vì đã tạo NCC nhưng chưa duyệt hoặc chưa áp dụng cho công ty này.
+  const noEligibleSupplier = !readOnly && suppliers.isSuccess && suppliers.data.length === 0
+  const supplierHint = (
+    <>
+      Chưa có nhà cung cấp chọn được. Chỉ NCC <b>đã duyệt</b> và <b>đang áp dụng tại công ty đang làm việc</b> mới đặt hàng được – mở{' '}
+      <Link to="/gia-ncc/nha-cung-cap">Danh mục nhà cung cấp</Link> để duyệt NCC và thêm công ty áp dụng.
+    </>
+  )
 
   const watchedLines = Form.useWatch('lines', form) as PoLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -350,7 +359,9 @@ export function PurchaseOrderPage() {
         loading={order.isLoading}
         error={error ?? (order.error ? order.error.message : null)}
         notice={
-          doc?.rejectReason && doc.status === 'Draft' ? (
+          noEligibleSupplier ? (
+            <Alert type="warning" showIcon title={supplierHint} />
+          ) : doc?.rejectReason && doc.status === 'Draft' ? (
             <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
           ) : (
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
@@ -368,7 +379,11 @@ export function PurchaseOrderPage() {
               <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true, message: 'Chọn nhà cung cấp.' }]} extra="Chỉ NCC đã duyệt và đang áp dụng tại công ty.">
-              <Select showSearch={{ optionFilterProp: 'label' }} options={(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))} />
+              <Select
+                showSearch={{ optionFilterProp: 'label' }}
+                notFoundContent="Không có NCC đã duyệt và đang áp dụng tại công ty này."
+                options={(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
+              />
             </Form.Item>
             <Form.Item label="Kho nhận" name="warehouseId" rules={[{ required: true, message: 'Chọn kho nhận.' }]}>
               <Select showSearch={{ optionFilterProp: 'label' }}

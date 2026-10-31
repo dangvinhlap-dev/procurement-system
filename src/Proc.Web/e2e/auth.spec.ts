@@ -16,8 +16,7 @@ test('chưa đăng nhập thì chuyển sang màn hình đăng nhập, đăng nh
   await page.getByLabel('Mật khẩu').press('Enter')
 
   await expect(page).toHaveURL(/\/mua-hang\/po$/)
-  await expect(page.getByTestId('menu-bar')).toContainText(ADMIN.fullName)
-  await expect(page.getByTestId('status-bar')).toContainText(ADMIN.fullName)
+  await expect(page.getByTestId('shell-bar').getByRole('button', { name: `Người dùng: ${ADMIN.fullName}` })).toBeVisible()
 })
 
 test('sai mật khẩu thì hiện thông báo tiếng Việt và ở lại màn hình đăng nhập', async ({ page }) => {
@@ -32,7 +31,7 @@ test('sai mật khẩu thì hiện thông báo tiếng Việt và ở lại màn
   // Đăng nhập đúng ngay sau đó để đặt lại bộ đếm sai, tránh khóa tài khoản dùng chung của các test khác.
   await page.getByLabel('Mật khẩu').fill(ADMIN.password)
   await page.getByRole('button', { name: 'Đăng nhập' }).click()
-  await expect(page.getByTestId('menu-bar')).toBeVisible()
+  await expect(page.getByTestId('shell-bar')).toBeVisible()
 })
 
 test('bỏ trống thì báo ngay trên form, không gọi API', async ({ page }) => {
@@ -42,11 +41,11 @@ test('bỏ trống thì báo ngay trên form, không gọi API', async ({ page }
   await expect(page.getByText('Hãy nhập mật khẩu.')).toBeVisible()
 })
 
-test('đổi công ty làm việc trên thanh menu', async ({ page }) => {
+test('đổi công ty làm việc trên Shellbar', async ({ page }) => {
   await loginViaApi(page)
   await page.goto('/')
 
-  const companySelect = page.getByTestId('menu-bar').locator('.app-company-select')
+  const companySelect = page.getByTestId('shell-bar').locator('.app-company-select')
   await expect(companySelect).toContainText('TCT – Tổng công ty')
 
   await companySelect.click()

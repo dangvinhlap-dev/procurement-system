@@ -49,10 +49,10 @@ import {
 import type { ReactNode } from 'react'
 import { Permission } from '../auth/permissions'
 
-/** Nhóm chức năng theo module – dùng cho thanh menu và cây điều hướng (design.md mục 1.2, 17.1). */
+/** Nhóm chức năng theo module – dùng cho menu module trên Shellbar và cây điều hướng (design.md mục 1.2, 17.1). */
 export type ModuleKey = 'daily' | 'purchasing' | 'inventory' | 'pricing' | 'sourcing' | 'reports' | 'system'
 
-/** Một nhóm module trên thanh menu. */
+/** Một nhóm module trên Shellbar. */
 export interface ModuleGroup {
   key: ModuleKey
   label: string
@@ -64,7 +64,7 @@ export interface ModuleGroup {
 export interface Screen {
   /** Mã gõ được ở ô lệnh, ví dụ "PO". */
   code: string
-  /** Tên màn hình đầy đủ: tiêu đề trang và thanh trạng thái. */
+  /** Tên màn hình đầy đủ: tiêu đề trang và tiêu đề tab trình duyệt. */
   title: string
   /** Tên ngắn trên cây điều hướng và menu. */
   navLabel: string

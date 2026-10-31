@@ -149,3 +149,19 @@
 .data-grid-status.tone-neutral .data-grid-status-dot {
   background: var(--ant-color-text-disabled);
 }
+
+/* Cột mũi tên ">" cuối dòng mở chi tiết (Fiori Navigation indicator). */
+.data-grid .ant-table-cell.data-grid-nav {
+  padding-inline: 0 !important;
+  text-align: center;
+}
+.data-grid-nav-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ant-color-text-secondary);
+}
+.data-grid-nav-button:hover {
+  color: var(--ant-color-primary);
+}

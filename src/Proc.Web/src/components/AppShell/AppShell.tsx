@@ -7,11 +7,9 @@ import { useDashboard } from '../../api/dashboard'
 import { demoPinnedScreens } from '../../mocks/session'
 import { layoutCssVars } from '../../theme'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
-import { MenuBar } from './MenuBar'
 import { NavTree } from './NavTree'
-import { StatusBar } from './StatusBar'
+import { ShellBar } from './ShellBar'
 import { focusListSearch } from '../../app/commands'
-import { Toolbar } from './Toolbar'
 import './AppShell.css'
 
 /** Tên ứng dụng ghép vào tiêu đề tab trình duyệt. */
@@ -30,10 +28,10 @@ function todayInVietnam(): string {
 }
 
 /**
- * Khung ứng dụng cố định cho mọi trang (ui-guide.md mục AppShell, design.md mục 17.1):
- * thanh menu 28px, thanh công cụ 32px, cây điều hướng trái 240px, vùng nội dung, thanh trạng thái 22px.
- * Phím tắt chung: F3 tìm kiếm, Insert đổi INS/OVR, Alt + chữ gạch chân mở menu (trong MenuBar).
- * Người dùng và công ty lấy từ phiên đăng nhập; số đếm, ghim, thông báo còn là dữ liệu giả (src/mocks/session.ts).
+ * Khung ứng dụng cố định cho mọi trang theo Fiori Horizon (ui-guide.md mục 4, design.md mục 17): Shellbar 48px trên cùng, điều hướng trái
+ * 240px, vùng nội dung (Dynamic Page của ListPage/DocumentForm). Phiên bản và ngày làm việc nằm trong menu người dùng của Shellbar.
+ * Phím tắt chung: F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
+ * Người dùng và công ty lấy từ phiên đăng nhập; số đếm theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
  * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.
  */
 export function AppShell() {
@@ -42,7 +40,6 @@ export function AppShell() {
   const screenTitle = screen?.title ?? 'Không tìm thấy màn hình'
   const { session, workingCompany, setWorkingCompany, logout } = useAuth()
   const { message } = App.useApp()
-  const [insertMode, setInsertMode] = useState(true)
   // Số đếm cây điều hướng lấy từ số liệu trang chủ (design.md mục 11.4), theo quyền và công ty đang làm việc.
   const navCounts = useDashboard().data?.navCounts ?? {}
   const [changingPassword, setChangingPassword] = useState(false)
@@ -56,8 +53,6 @@ export function AppShell() {
       if (e.key === 'F3') {
         // F3 mặc định của trình duyệt là "tìm trong trang"; ở đây dùng để tìm trong danh sách.
         if (focusListSearch()) e.preventDefault()
-      } else if (e.key === 'Insert') {
-        setInsertMode((v) => !v)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -69,7 +64,8 @@ export function AppShell() {
 
   return (
     <div className="app-shell" style={layoutCssVars()}>
-      <MenuBar
+      <ShellBar
+        appName={APP_NAME}
         activeGroup={screen?.group}
         companies={user.companies.map((c) => ({ value: c.id, label: `${c.code} – ${c.shortName ?? c.name}` }))}
         company={workingCompany?.id ?? user.defaultCompanyId}
@@ -82,11 +78,12 @@ export function AppShell() {
         unreadCount={0}
         userFullName={user.fullName}
         userName={user.userName}
+        workingDate={todayInVietnam()}
+        version={__APP_VERSION__}
         onLogout={() => logout()}
         onChangePassword={() => setChangingPassword(true)}
       />
       <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
-      <Toolbar />
       <div className="app-body">
         {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
         <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={navCounts} />
@@ -94,14 +91,6 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
-      <StatusBar
-        message="Sẵn sàng."
-        screenTitle={screenTitle}
-        userFullName={user.fullName}
-        workingDate={todayInVietnam()}
-        version={__APP_VERSION__}
-        insertMode={insertMode}
-      />
     </div>
   )
 }

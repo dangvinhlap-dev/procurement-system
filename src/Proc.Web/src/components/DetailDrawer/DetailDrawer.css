@@ -1,73 +1,77 @@
-/* Ngăn kéo chi tiết kiểu Windows: tiêu đề đậm, hàng nút lệnh, tab dạng thẻ; màu lấy từ biến token của antd. */
+/* Ngăn kéo chi tiết kiểu Fiori Horizon (ui-guide.md mục 3, 6): tiêu đề 16px/600, hàng nút lệnh, tab dạng gạch dưới, khối nhóm trường
+   trắng bo góc 8px; màu lấy từ biến token của antd. */
 
 .detail-drawer .ant-drawer-header {
-  padding: 6px 12px;
-  background: var(--ant-color-fill-alter);
-  border-bottom: 1px solid var(--ant-color-border);
+  padding: 16px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 .detail-drawer .ant-drawer-title {
-  font-size: var(--ant-font-size-lg);
-  font-weight: 700;
+  font-size: var(--ant-font-size-heading-5);
+  font-weight: 600;
+}
+.detail-drawer-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .detail-drawer .ant-drawer-body {
-  padding: 8px 12px 12px;
+  padding: 16px;
+  background: var(--ant-color-bg-layout);
 }
 
 .detail-drawer-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-.detail-drawer-actions .ant-btn-primary {
-  margin-right: 8px;
-  font-weight: 600;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .detail-drawer-error {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .detail-drawer-tabs > .ant-tabs-nav {
-  margin-bottom: 0;
+  margin-bottom: 8px;
 }
 .detail-drawer-tabs > .ant-tabs-content-holder {
-  border: 1px solid var(--ant-color-border);
-  border-top: none;
-  padding: 10px 12px;
+  padding: 16px;
+  border-radius: var(--ant-border-radius-lg);
+  box-shadow: var(--ant-box-shadow);
   background: var(--ant-color-bg-container);
 }
 
-/* Khung nhóm trường kiểu fieldset của Windows. */
+/* Nhóm trường: tiêu đề nhóm 12px chữ phụ, kẻ mảnh phía trên. */
 .detail-section {
-  border: 1px solid var(--ant-color-border-secondary);
-  padding: 6px 10px 8px;
-  margin: 0 0 10px;
+  margin: 0 0 16px;
+  padding: 8px 0 0;
+  border: none;
+  border-top: 1px solid var(--ant-color-border-secondary);
 }
 .detail-section > legend {
   width: auto;
-  padding: 0 4px;
+  padding: 0 8px 0 0;
   margin: 0;
   border: none;
-  font-size: var(--ant-font-size);
+  font-size: var(--ant-font-size-sm);
   font-weight: 600;
+  color: var(--ant-color-text-secondary);
 }
 .detail-hint {
   color: var(--ant-color-text-secondary);
   font-size: var(--ant-font-size-sm);
 }
 
-/* Danh sách ô chọn chia cột, đọc từ trên xuống như hộp thoại Windows. */
+/* Danh sách ô chọn chia cột, đọc từ trên xuống. */
 .detail-check-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 12px;
+  gap: 4px 16px;
   width: 100%;
 }
 
-/* Hai trường ngắn đặt cạnh nhau (mã + tên viết tắt, MST + người đại diện) cho form gọn như hộp thoại Windows. */
+/* Hai trường ngắn đặt cạnh nhau (mã + tên viết tắt, MST + người đại diện) cho form gọn. */
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 12px;
+  gap: 0 16px;
 }

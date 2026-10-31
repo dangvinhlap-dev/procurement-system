@@ -8,7 +8,7 @@ import { loginViaApi } from './helpers.ts'
 test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về mặc định', async ({ page }) => {
   await loginViaApi(page)
   await page.goto('/')
-  await page.getByTestId('menu-bar').locator('.app-company-select').click()
+  await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: 'DTV' }).click()
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Đánh số chứng từ' }).click()
 

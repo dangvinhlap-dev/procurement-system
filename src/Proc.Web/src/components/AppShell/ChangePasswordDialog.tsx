@@ -9,7 +9,7 @@ interface FormValues {
 }
 
 /**
- * Hộp thoại đổi mật khẩu của chính người đang đăng nhập (mở từ menu người dùng trên thanh menu).
+ * Hộp thoại đổi mật khẩu của chính người đang đăng nhập (mở từ menu người dùng trên Shellbar).
  * Quy tắc mật khẩu (design.md mục 9.4) do server kiểm tra; ở đây chỉ báo sớm lỗi bỏ trống và nhập lại không khớp.
  * Esc hoặc nút Hủy để đóng.
  */

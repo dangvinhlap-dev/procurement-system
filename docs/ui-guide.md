@@ -9,7 +9,7 @@ nếu cần đối chiếu). Mọi màn hình mới hoặc sửa đều theo tà
 - **Phông chữ**: khai báo `"72", "72full", Arial, Helvetica, sans-serif`. Phần mềm **không kèm file phông "72"** (phông có giấy phép riêng
   của SAP); máy nào đã cài "72" thì hiện "72", còn lại dùng Arial/Helvetica.
 - **Lộ trình chuyển đổi**: lát UI-a đổi theme (màu, chữ, bo góc, đổ bóng, khoảng cách) và giữ bố cục cũ; lát UI-b đổi bố cục sang Shellbar
-  + Dynamic Page. Mỗi lát có ảnh chụp Playwright để duyệt.
+  + Dynamic Page (đã làm 31/10/2026: bỏ thanh công cụ, thanh trạng thái và chế độ INS/OVR). Mỗi lát có ảnh chụp Playwright để duyệt.
 - Giữ các tính năng thao tác nhanh đã có: ô lệnh (gõ mã màn hình), phím tắt, cây điều hướng có số đếm.
 
 ## 1. Chữ (Typography)
@@ -53,26 +53,31 @@ thông tin duy nhất.
    - **Content**: bảng (danh sách) hoặc form (chứng từ) trên khối nền trắng bo góc 8px, đổ bóng nhẹ.
    - **Thanh lệnh**: nút chính (màu nhấn) ở phải tiêu đề; nút phụ dạng "transparent"; trên form chứng từ có thanh chân (footer bar) chứa
      Lưu / Gửi duyệt khi đang sửa.
-4. Thông tin phiên bản, ngày làm việc chuyển vào menu người dùng / chân trang nhỏ (bỏ thanh trạng thái kiểu Windows ở lát UI-b).
+4. Thông tin phiên bản, ngày làm việc chuyển vào menu người dùng (bỏ thanh trạng thái kiểu Windows ở lát UI-b).
+5. Kích thước: Shellbar 48px; điều hướng trái 240px, dòng mục 32px; Shellbar chỉ hiện avatar người dùng (họ tên trong menu), tên ứng dụng ẩn khi
+   màn hình hẹp hơn 1440px để menu module và ô lệnh đủ chỗ.
 
 ## 5. Danh sách (ListPage + DataGrid)
 - Header: tiêu đề trang, "N bản ghi"; nút "Tạo mới" (nút chính duy nhất), Xuất CSV, Xuất Excel, Nhập Excel.
 - Khu bộ lọc trong header: Tìm kiếm (có dấu hoặc không dấu đều tìm được), các ô lọc nghiệp vụ, Nhóm theo, Cột, Xóa bộ lọc.
 - Bảng: nền trắng; tiêu đề cột chữ phụ đậm 600 trên nền trắng, kẻ dưới; dòng 32px, chữ 14px, kẻ ngang mảnh; dòng chọn nền xanh rất nhạt;
-  cột số căn phải; ngày dd/MM/yyyy; số kiểu 1.234.567,89; chữ dài cắt "…" và hiện đủ khi rê chuột; bấm đúp hoặc Enter để mở;
+  cột số căn phải; ngày dd/MM/yyyy; số kiểu 1.234.567,89; chữ dài cắt "…" và hiện đủ khi rê chuột; bấm đúp, Enter hoặc mũi tên ">" cuối
+  dòng để mở;
   mũi tên lên/xuống để di chuyển; cột trạng thái dạng chấm/nhãn màu ngữ nghĩa + chữ; vùng kéo tiêu đề cột để nhóm; cuộn ảo khi nhiều dòng.
 
 ## 6. Chứng từ (DocumentForm)
-Theo docs/design.md mục 10.1: header là số phiếu, trạng thái (nhãn màu ngữ nghĩa), người lập; khối "Thông tin phiếu" dạng form 3 cột với
-tiêu đề khối 16px/600; lưới dòng nhập như Excel; khối tổng tiền; tab phụ (Lịch sử duyệt, Nhật ký…); nút In phiếu.
+Theo docs/design.md mục 10.1: header là số phiếu, trạng thái (nhãn màu ngữ nghĩa), người lập, nút In phiếu bên phải; khối "Thông tin phiếu"
+dạng form 3 cột với tiêu đề khối 16px/600, thu gọn được; lưới dòng nhập như Excel; khối tổng tiền; tab phụ (Lịch sử duyệt, Nhật ký…).
+Phiếu đang sửa: Lưu / Gửi duyệt / Ghi sổ… ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở phải tiêu đề. Ngăn kéo chi tiết có nhãn "Chỉ xem"
+khi người dùng không được sửa.
 
 ## 7. Đăng nhập
 Ngoại lệ không nằm trong khung ứng dụng: thẻ trắng giữa nền #f5f6f7, bo góc 8px, đổ bóng nhẹ; tiêu đề ứng dụng, Tên đăng nhập, Mật khẩu,
 nút "Đăng nhập" màu nhấn; dòng phiên bản ở chân thẻ; lỗi hiện ngay trên form bằng tiếng Việt.
 
 ## 8. Bàn phím (giữ nguyên)
-F2 thêm dòng, F3 tìm, Ctrl+S lưu, Ctrl+P in phiếu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu, Enter ở ô lệnh
-mở màn hình. Mọi thao tác chính làm được không cần chuột.
+F2 thêm dòng, F3 tìm, Ctrl+S lưu, Ctrl+P in phiếu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu module trên
+Shellbar, Enter ở ô lệnh mở màn hình. Mọi thao tác chính làm được không cần chuột.
 
 ## 9. Kỹ thuật
 - Ant Design `ConfigProvider` với theme token ở `src/Proc.Web/src/theme.ts` (màu, chữ, bo góc, đổ bóng, chiều cao); kích thước khung

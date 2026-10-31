@@ -1,5 +1,5 @@
 import { CloseOutlined, SaveOutlined } from '@ant-design/icons'
-import { Alert, Button, Drawer, Form, Spin, Tabs, type FormInstance } from 'antd'
+import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { hasOpenPopup } from '../../utils/popup'
 import './DetailDrawer.css'
@@ -85,7 +85,13 @@ export function DetailDrawer({
   return (
     <Drawer
       open={open}
-      title={title}
+      title={
+        <span className="detail-drawer-title">
+          {title}
+          {/* Trạng thái luôn có chữ, không chỉ dựa vào ô bị mờ (ui-guide.md mục 2). */}
+          {readOnly && <Tag>Chỉ xem</Tag>}
+        </span>
+      }
       onClose={onClose}
       keyboard={false}
       size={720}

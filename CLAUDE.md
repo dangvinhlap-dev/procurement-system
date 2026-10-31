@@ -80,7 +80,7 @@ Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đú
 ## 8. Quản lý phiên bản và quay lại bản cũ (bắt buộc)
 - Số phiên bản MAJOR.MINOR.PATCH (Semantic Versioning):
   PATCH = sửa lỗi; MINOR = thêm chức năng; MAJOR = thay đổi lớn, 1.0.0 = bản chạy thật đầu tiên.
-- Số phiên bản ghi trong `Directory.Build.props` (thẻ `<Version>`) và hiện ở thanh trạng thái của giao diện.
+- Số phiên bản ghi trong `Directory.Build.props` (thẻ `<Version>`) và hiện trong menu người dùng trên Shellbar và trên màn hình đăng nhập.
 - Chỉ phát hành khi tôi yêu cầu. Mỗi lần phát hành làm đủ:
   1. Cập nhật `CHANGELOG.md` (tiếng Việt), mẫu `## [x.y.z] - YYYY-MM-DD` với các mục:
      Thêm mới / Thay đổi / Sửa lỗi / Thay đổi CSDL / Lưu ý khi nâng cấp / Cách quay lại bản trước.

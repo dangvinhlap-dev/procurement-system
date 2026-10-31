@@ -9,7 +9,7 @@ import { THUKHO_BHA, loginViaApi } from './helpers.ts'
 test.beforeEach(async ({ page }) => {
   await loginViaApi(page, THUKHO_BHA)
   await page.goto('/')
-  await expect(page.getByTestId('menu-bar')).toContainText(THUKHO_BHA.fullName)
+  await expect(page.getByTestId('shell-bar').getByRole('button', { name: `Người dùng: ${THUKHO_BHA.fullName}` })).toBeVisible()
 })
 
 test('cây điều hướng chỉ hiện màn hình có quyền', async ({ page }) => {
@@ -23,8 +23,8 @@ test('cây điều hướng chỉ hiện màn hình có quyền', async ({ page 
 })
 
 test('menu nhóm không có quyền báo rõ, chỉ được chọn công ty được gán', async ({ page }) => {
-  const menuBar = page.getByTestId('menu-bar')
-  await menuBar.getByRole('button', { name: 'Mua hàng', exact: true }).click()
+  const menuBar = page.getByTestId('shell-bar')
+  await menuBar.getByRole('menuitem', { name: 'Mua hàng', exact: true }).click()
   await expect(page.getByRole('menuitem', { name: 'Không có màn hình được phép' })).toBeVisible()
   await page.keyboard.press('Escape')
 

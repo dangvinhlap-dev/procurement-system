@@ -19,6 +19,13 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   (chữ #1d2d3d, nền #f5f6f7, màu nhấn #0a6ed1, màu trạng thái ngữ nghĩa), bo góc 4/8px, đổ bóng nhẹ, khoảng cách 8/16px, dòng bảng 32px,
   thanh tab gạch chân, khối nội dung/form bo góc; màn hình đăng nhập dạng thẻ. Giữ React + Ant Design, bố cục khung giữ nguyên (lát UI-b
   sẽ đổi sang Shellbar + Dynamic Page). CLAUDE.md mục 9 nạp toàn văn docs/ui-guide.md mỗi phiên.
+- Giao diện Fiori – lát UI-b (ui-guide.md mục 4–6, design.md mục 17): Shellbar 48px thay thanh menu, thanh công cụ và thanh trạng thái
+  (logo, Quay lại, menu module với Alt + chữ gạch chân, ô lệnh, công ty, thông báo, avatar – menu người dùng có ngày làm việc và phiên bản);
+  điều hướng trái kiểu Side Navigation; danh sách dạng Dynamic Page (phần đầu thu gọn được để ẩn bộ lọc) và mũi tên ">" cuối dòng để mở chi tiết;
+  chứng từ dạng Dynamic Page: nút In phiếu ở phải tiêu đề, khối "Thông tin phiếu" thu gọn được, phiếu đang sửa có thanh chân chứa Lưu / Gửi
+  duyệt / Ghi sổ; ngăn kéo chi tiết có nhãn "Chỉ xem". Bỏ chế độ INS/OVR (phím Insert).
+- Đơn mua hàng: khi chưa có NCC chọn được, phiếu báo rõ chỉ NCC đã duyệt và đang áp dụng tại công ty mới đặt hàng được, kèm liên kết tới
+  Danh mục nhà cung cấp.
 
 ### Thay đổi CSDL
 - Migration `V0_9_0_DanhSoDanhMuc`: bảng mới `CatalogNumbering` (dải đánh số danh mục). `Down()` xóa bảng – mất cấu hình dải, mã đã cấp không đổi.

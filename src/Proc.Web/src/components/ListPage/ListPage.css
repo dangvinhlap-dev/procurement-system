@@ -1,17 +1,35 @@
-/* Kiểu của ListPage theo ui-guide.md mục 5 (Fiori Horizon); màu, bo góc, đổ bóng lấy từ biến token của antd. */
+/* Kiểu của ListPage theo Dynamic Page của Fiori Horizon (ui-guide.md mục 4, 5); màu, bo góc, đổ bóng lấy từ biến token của antd. */
 
 .list-page {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 16px;
   box-sizing: border-box;
 }
 
-.list-page-header {
+/* Phần đầu trang (Dynamic Page header): nền trắng, đổ bóng nhẹ phía dưới, nút thu gọn ở giữa cạnh dưới. */
+.dyn-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 0;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
+  z-index: 1;
+}
+.dyn-title-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+.dyn-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 .list-page .list-page-title {
   margin: 0;
@@ -26,48 +44,51 @@
 .list-page-total {
   font-size: var(--ant-font-size-sm);
   line-height: 16px;
+  margin-top: -8px;
+}
+.dyn-header-toggle {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  box-shadow: var(--ant-box-shadow);
 }
 
+/* Nút lệnh của trang: bên phải tiêu đề; nút chính duy nhất có màu nhấn. */
 .list-page-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 8px 0 16px;
-}
-.list-page-actions .ant-btn-primary {
-  margin-right: 8px;
-  font-weight: 600;
 }
 
-/* Thanh tab kiểu Fiori (Icon Tab Bar): gạch chân tab đang chọn, nằm sát trên khối nội dung. */
+/* Thanh tab kiểu Fiori (Icon Tab Bar) ở cạnh dưới phần đầu trang. */
 .list-page .list-page-tabs .ant-tabs-nav {
-  margin: 0 0 8px;
+  margin: 0;
 }
 .list-page .list-page-tabs .ant-tabs-nav::before {
-  border-bottom-color: var(--ant-color-border-secondary);
+  border-bottom: none;
 }
 
+/* Phần nội dung: thông báo, vùng nhóm, bảng trên khối trắng bo góc 8px. */
 .list-page-panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 1;
   min-height: 0;
+  margin: 24px 16px 16px;
   padding: 16px;
   border-radius: var(--ant-border-radius-lg);
   box-shadow: var(--ant-box-shadow);
   background: var(--ant-color-bg-container);
 }
 
-/* Khu bộ lọc (Filter Bar): nền rất nhạt, bo góc nhỏ, nhãn 12px nằm trên ô. */
+/* Khu bộ lọc (Filter Bar) trong phần đầu trang: nhãn 12px nằm trên ô. */
 .list-filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px 16px;
-  padding: 8px 16px 16px;
-  border-radius: var(--ant-border-radius);
-  background: var(--ant-color-fill-alter);
 }
 .list-filter-field {
   display: flex;
