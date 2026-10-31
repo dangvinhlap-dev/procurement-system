@@ -53,8 +53,11 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await expect(buyer.locator('.line-grid-row').first()).toContainText('600.000')
   await expect(buyer.locator('.document-form-number')).toHaveText(/^PR-BHA-\d{4}-\d{4}$/)
   const prNo = (await buyer.locator('.document-form-number').textContent())!
+  // Phiếu đang sửa: nút lệnh ở thanh chân (ui-guide.md mục 4, ý 3); chờ duyệt thì chỉ xem, thanh chân ẩn.
+  await expect(buyer.getByTestId('document-form-bar')).toContainText('Gửi duyệt')
   await confirm(buyer, 'Gửi duyệt', `Đã gửi duyệt phiếu ${prNo}.`)
   await expect(buyer.locator('.document-form-title')).toContainText('Chờ duyệt')
+  await expect(buyer.getByTestId('document-form-bar')).toHaveCount(0)
   await expect(buyer.getByRole('button', { name: /(^|\s)Duyệt$/ })).toHaveCount(0)
   await buyer.screenshot({ path: 'e2e/screenshots/purchase-request.png' })
 
@@ -104,4 +107,14 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await openByCommand(page, 'PO')
   await expect(page.locator('.data-grid-row', { hasText: poNo })).toContainText('Đã nhận đủ')
   await buyerContext.close()
+})
+
+test('PO: chưa có NCC chọn được thì báo rõ lý do và chỗ xử lý', async ({ page }) => {
+  // Giả lập công ty chưa có NCC đã duyệt và đang áp dụng (design.md mục 5.9).
+  await page.route('**/api/suppliers/lookup**', (route) => route.fulfill({ json: [] }))
+  await loginViaApi(page)
+  await page.goto('/mua-hang/po/moi')
+  const hint = page.locator('.document-form-content .ant-alert-warning')
+  await expect(hint).toContainText('Chưa có nhà cung cấp chọn được')
+  await expect(hint.getByRole('link', { name: 'Danh mục nhà cung cấp' })).toHaveAttribute('href', '/gia-ncc/nha-cung-cap')
 })

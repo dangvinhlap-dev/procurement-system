@@ -1,4 +1,4 @@
-import { PrinterOutlined } from '@ant-design/icons'
+import { DownOutlined, PrinterOutlined, UpOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { apiOpenPdf } from '../../api/client'
@@ -31,7 +31,7 @@ export interface DocumentFormProps {
   status: { label: string; tone: StatusTone }
   /** Dòng thông tin phụ cạnh trạng thái: người lập, ngày lập, kỳ kho… */
   meta?: ReactNode
-  /** Nút lệnh theo trạng thái và quyền: Lưu nháp, Ghi sổ, Hủy phiếu, In, Đóng… */
+  /** Nút lệnh theo trạng thái và quyền: Lưu nháp, Ghi sổ, Hủy phiếu, Đóng… – phiếu đang sửa thì nằm ở thanh chân, chỉ xem thì ở phải tiêu đề. */
   actions: ReactNode
   /** Lỗi từ server (tiếng Việt). */
   error?: string | null
@@ -64,8 +64,10 @@ export interface DocumentFormProps {
 }
 
 /**
- * Khuôn chung của mọi chứng từ (design.md mục 10.1, ui-guide.md mục DocumentForm): thanh lệnh của phiếu; thanh trạng thái
- * (số phiếu, trạng thái, người lập); đầu phiếu 3 cột; lưới dòng nhập như Excel; chân phiếu tổng tiền; tab phụ.
+ * Khuôn chung của mọi chứng từ theo Dynamic Page của Fiori (design.md mục 10.1, ui-guide.md mục 4, 6):
+ * phần đầu trang gồm tên loại phiếu, số phiếu, trạng thái (nhãn màu + chữ), người lập, nút In phiếu ở bên phải;
+ * nội dung gồm khối "Thông tin phiếu" 3 cột (thu gọn được), lưới dòng nhập như Excel, tổng tiền, tab phụ.
+ * Phiếu đang sửa: nút lệnh (Lưu, Gửi duyệt…) ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở phải tiêu đề.
  * Bàn phím: Ctrl+S lưu, F2 thêm dòng, Ctrl+P in phiếu PDF.
  */
 export function DocumentForm({
@@ -93,6 +95,8 @@ export function DocumentForm({
   const [tab, setTab] = useState(defaultTab)
   const { message } = App.useApp()
   const [printing, setPrinting] = useState(false)
+  // Thu gọn khối "Thông tin phiếu" để lưới dòng được nhiều chỗ; chỉ ẩn bằng CSS, các ô vẫn nằm trong form nên kiểm tra dữ liệu vẫn chạy.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false)
 
   /** Mở PDF của phiếu ở tab mới để xem, in hoặc lưu file. */
   const print = useCallback(async () => {
@@ -129,38 +133,61 @@ export function DocumentForm({
 
   return (
     <div className="document-form">
-      <div className="document-form-actions">
-        {actions}
-        {printPath && (
-          <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
-            In phiếu
-          </Button>
-        )}
+      <div className="document-form-head">
+        <div className="document-form-title">
+          <h2>{title}</h2>
+          <span className="document-form-number">{number ?? '(số phiếu tự cấp khi lưu)'}</span>
+          <Tag color={toneColor[status.tone]}>{status.label}</Tag>
+          {meta && <span className="document-form-meta">{meta}</span>}
+        </div>
+        <div className="document-form-actions">
+          {readOnly && actions}
+          {printPath && (
+            <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
+              In phiếu
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="document-form-title">
-        <h2>{title}</h2>
-        <span className="document-form-number">{number ?? '(số phiếu tự cấp khi lưu)'}</span>
-        <Tag color={toneColor[status.tone]}>{status.label}</Tag>
-        {meta && <span className="document-form-meta">{meta}</span>}
+      <div className="document-form-content">
+        {error && <Alert type="error" showIcon title={error} className="document-form-alert" />}
+        {notice}
+        <Spin spinning={loading}>
+          <Form form={form} component={false} layout="vertical" requiredMark={false} initialValues={initialValues} disabled={readOnly}>
+            <section className={`document-form-header${headerCollapsed ? ' is-collapsed' : ''}`} aria-label="Thông tin phiếu">
+              <div className="document-form-header-title">
+                <h3>Thông tin phiếu</h3>
+                {/* Nút thu gọn không thuộc dữ liệu phiếu: vẫn bấm được khi phiếu chỉ xem (Form disabled). */}
+                <Button
+                  type="text"
+                  size="small"
+                  disabled={false}
+                  icon={headerCollapsed ? <DownOutlined /> : <UpOutlined />}
+                  aria-expanded={!headerCollapsed}
+                  onClick={() => setHeaderCollapsed((v) => !v)}
+                >
+                  {headerCollapsed ? 'Mở rộng' : 'Thu gọn'}
+                </Button>
+              </div>
+              <div className="document-form-grid">{header}</div>
+            </section>
+            <Tabs
+              size="small"
+              className="document-form-tabs"
+              activeKey={tab}
+              onChange={setTab}
+              items={[{ key: 'lines', label: linesLabel, children: lines }, ...extraTabs].map((t) => ({ ...t, forceRender: true }))}
+            />
+            {footer && <div className="document-form-footer">{footer}</div>}
+          </Form>
+        </Spin>
       </div>
-      {error && <Alert type="error" showIcon title={error} className="document-form-alert" />}
-      {notice}
-      <Spin spinning={loading}>
-        <Form form={form} component={false} layout="vertical" requiredMark={false} initialValues={initialValues} disabled={readOnly}>
-          <fieldset className="document-form-header">
-            <legend>Thông tin phiếu</legend>
-            <div className="document-form-grid">{header}</div>
-          </fieldset>
-          <Tabs
-            size="small"
-            className="document-form-tabs"
-            activeKey={tab}
-            onChange={setTab}
-            items={[{ key: 'lines', label: linesLabel, children: lines }, ...extraTabs].map((t) => ({ ...t, forceRender: true }))}
-          />
-          {footer && <div className="document-form-footer">{footer}</div>}
-        </Form>
-      </Spin>
+      {!readOnly && (
+        // Thanh chân (footer bar) khi đang sửa – ui-guide.md mục 4, ý 3.
+        <div className="document-form-bar" data-testid="document-form-bar">
+          {actions}
+        </div>
+      )}
     </div>
   )
 }

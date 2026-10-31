@@ -1,4 +1,4 @@
-import { CloseOutlined, MinusSquareOutlined, PlusSquareOutlined, PushpinFilled } from '@ant-design/icons'
+import { CloseOutlined, MinusSquareOutlined, PlusSquareOutlined, PushpinFilled, RightOutlined } from '@ant-design/icons'
 import { Button, Table, Tag } from 'antd'
 import type { TableColumnsType, TableProps, TableRef } from 'antd'
 import type { SortOrder } from 'antd/es/table/interface'
@@ -12,6 +12,8 @@ import './DataGrid.css'
 const VIRTUAL_THRESHOLD = 500
 /** Độ rộng cột đánh dấu/ghim đầu lưới. */
 const MARK_COLUMN_WIDTH = 28
+/** Cột mũi tên ">" cuối dòng (Fiori: dòng mở được chi tiết) – ui-guide.md mục 5. */
+const NAV_COLUMN_WIDTH = 32
 /** Chiều cao dòng tiêu đề cột, trừ ra khi tính chiều cao vùng cuộn. */
 const HEADER_HEIGHT = 26
 
@@ -120,7 +122,8 @@ export function DataGrid<T>({
   const virtual = rows.length > VIRTUAL_THRESHOLD
   const tableRef = useRef<TableRef>(null)
 
-  const totalColumns = orderedColumns.length + 1
+  const navWidth = onOpenRow ? NAV_COLUMN_WIDTH : 0
+  const totalColumns = orderedColumns.length + 1 + (onOpenRow ? 1 : 0)
   // Độ rộng người dùng đã kéo giữ nguyên; độ rộng khai báo nhân hệ số theo cỡ chữ (theme.ts – layoutTokens.columnWidthScale).
   const widthOf = (c: GridColumn<T>) => widths[c.key] ?? Math.round(c.width * layoutTokens.columnWidthScale)
 
@@ -201,6 +204,32 @@ export function DataGrid<T>({
         }) as GridHeaderCellProps as HTMLAttributes<HTMLElement>,
       render: (_: unknown, rec: GridRecord<T>) => (rec.row === undefined ? null : renderCell(c, rec.row)),
     })),
+    // Mũi tên ">" cuối dòng: bấm để mở chi tiết (cũng mở được bằng bấm đúp hoặc Enter).
+    ...(onOpenRow
+      ? [
+          {
+            key: '__nav',
+            width: NAV_COLUMN_WIDTH,
+            className: 'data-grid-nav',
+            onCell: (rec: GridRecord<T>) => (rec.group ? { colSpan: 0 } : {}),
+            render: (_: unknown, rec: GridRecord<T>) =>
+              rec.row === undefined ? null : (
+                <button
+                  type="button"
+                  className="data-grid-nav-button"
+                  aria-label="Mở chi tiết"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenRow(rec.row!)
+                  }}
+                >
+                  <RightOutlined />
+                </button>
+              ),
+          },
+        ]
+      : []),
   ]
 
   const handleChange: TableProps<GridRecord<T>>['onChange'] = (_p, _f, sorter) => {
@@ -237,7 +266,7 @@ export function DataGrid<T>({
     }
   }
 
-  const scrollX = MARK_COLUMN_WIDTH + orderedColumns.reduce((sum, c) => sum + widthOf(c), 0)
+  const scrollX = MARK_COLUMN_WIDTH + navWidth + orderedColumns.reduce((sum, c) => sum + widthOf(c), 0)
 
   return (
     <div className="data-grid-wrap">

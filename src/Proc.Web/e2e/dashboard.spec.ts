@@ -17,7 +17,6 @@ test('trang chủ: ô số liệu, mua hàng tháng này, bấm ô mở màn hì
   const spend = page.locator('.home-spend')
   await expect(spend).toContainText('Tháng này')
   await expect(spend.locator('.ant-table-row').first()).toBeVisible()
-  await expect(page.locator('.app-status-message')).toHaveText(/Sẵn sàng/)
   await page.screenshot({ path: 'e2e/screenshots/dashboard.png' })
 
   await page.getByRole('button', { name: 'PO đang chờ giao' }).click()

@@ -110,7 +110,7 @@ export function useCompany(id: string | null) {
 
 /**
  * Lưu công ty. Lưu xong tải lại danh sách và đọc lại danh sách công ty của người dùng: công ty mới (người thêm được gán vào)
- * hoặc công ty vừa ngừng dùng phải hiện/ẩn ngay ở ô chọn công ty trên thanh menu.
+ * hoặc công ty vừa ngừng dùng phải hiện/ẩn ngay ở ô chọn công ty trên Shellbar.
  */
 export function useCompanyMutations() {
   const queryClient = useQueryClient()

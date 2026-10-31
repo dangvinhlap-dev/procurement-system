@@ -4,6 +4,7 @@ import {
   FileExcelOutlined,
   PlusOutlined,
   SettingOutlined,
+  UpOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import { App, Button, Checkbox, Dropdown, Empty, Input, Popover, Select, Tabs, Typography } from 'antd'
@@ -67,9 +68,9 @@ export function FilterField({ label, width, children }: { label: string; width: 
 }
 
 /**
- * Khuôn chung của màn hình danh sách (ui-guide.md mục "Mẫu màn hình danh sách", design.md mục 17.2):
- * tiêu đề + mẫu hiển thị + tổng bản ghi; hàng nút lệnh; tab kiểu Windows; khung bộ lọc
- * (Tìm kiếm có/không dấu, ô lọc nghiệp vụ, Nhóm theo, Cột, Xóa bộ lọc); vùng nhóm và DataGrid.
+ * Khuôn chung của màn hình danh sách theo Dynamic Page của Fiori (ui-guide.md mục 4, 5; design.md mục 17.2):
+ * phần đầu trang (tiêu đề + mẫu hiển thị, nút lệnh bên phải, tổng bản ghi, khu bộ lọc – Tìm kiếm có/không dấu, ô lọc nghiệp vụ,
+ * Nhóm theo, Cột, Xóa bộ lọc – và thanh tab) thu gọn được; phần nội dung là thông báo, vùng nhóm và DataGrid trên khối trắng.
  */
 export function ListPage<T>({
   title,
@@ -96,6 +97,8 @@ export function ListPage<T>({
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState('list')
+  // Phần đầu trang thu gọn: ẩn khu bộ lọc, bảng được nhiều chỗ hơn (Dynamic Page của Fiori).
+  const [headerCollapsed, setHeaderCollapsed] = useState(false)
 
   const visibleColumns = useMemo(() => columns.filter((c) => !hidden.has(c.key)), [columns, hidden])
 
@@ -187,100 +190,114 @@ export function ListPage<T>({
 
   return (
     <div className="list-page">
-      <div className="list-page-header">
-        <Typography.Title level={4} className="list-page-title">
-          {title}
-        </Typography.Title>
-        <Dropdown menu={{ items: [{ key: 'standard', label: 'Chuẩn' }], selectable: true, defaultSelectedKeys: ['standard'] }}>
-          <Button type="text" className="list-page-template">
-            Chuẩn <DownOutlined />
+      {/* Dynamic Page (ui-guide.md mục 4, 5): phần đầu trang gồm tiêu đề, nút lệnh, khu bộ lọc – thu gọn được để dành chỗ cho bảng. */}
+      <div className={`dyn-header${headerCollapsed ? ' is-collapsed' : ''}`}>
+        <div className="dyn-title-row">
+          <div className="dyn-title">
+            <Typography.Title level={4} className="list-page-title">
+              {title}
+            </Typography.Title>
+            <Dropdown menu={{ items: [{ key: 'standard', label: 'Chuẩn' }], selectable: true, defaultSelectedKeys: ['standard'] }}>
+              <Button type="text" className="list-page-template">
+                Chuẩn <DownOutlined />
+              </Button>
+            </Dropdown>
+          </div>
+          <div className="list-page-actions">
+            {canCreate && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={onCreate ?? notYet}>
+                Tạo mới
+              </Button>
+            )}
+            <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
+              Xuất CSV
+            </Button>
+            <Button type="text" icon={<FileExcelOutlined />} onClick={exportExcel} loading={exporting}>
+              Xuất Excel
+            </Button>
+            {(!excel || excel.canImport) && (
+              <Button type="text" icon={<UploadOutlined />} onClick={excel ? () => setImporting(true) : notYet}>
+                Nhập Excel
+              </Button>
+            )}
+          </div>
+        </div>
+        <Typography.Text type="secondary" className="list-page-total">
+          Tổng {filteredRows.length.toLocaleString('vi-VN')} bản ghi
+        </Typography.Text>
+        {!headerCollapsed && tab === 'list' && (
+        <div className="list-filter-bar">
+          <FilterField label="Tìm kiếm" width={290}>
+            {(id) => (
+              <Input
+                id={id}
+                data-list-search
+                allowClear
+                placeholder="Gõ từ khóa — có dấu hoặc không dấu đều được"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
+            )}
+          </FilterField>
+          {filters}
+          <FilterField label="Nhóm theo" width={140}>
+            {(id) => (
+              <Select
+                id={id}
+                value={groupBy ?? ''}
+                onChange={(v) => setGroupBy(v || null)}
+                options={[
+                  { value: '', label: 'Không nhóm' },
+                  ...groupableColumns.map((c) => ({ value: c.key, label: c.title })),
+                ]}
+              />
+            )}
+          </FilterField>
+          <Popover trigger="click" placement="bottomRight" content={columnChooser} title="Chọn cột hiển thị">
+            <Button icon={<SettingOutlined />}>
+              Cột
+              {hiddenCount > 0 && (
+                <span className="list-hidden-count" data-testid="hidden-column-count">
+                  {hiddenCount}
+                </span>
+              )}
+            </Button>
+          </Popover>
+          <Button
+            onClick={() => {
+              setKeyword('')
+              onClearFilters?.()
+            }}
+          >
+            Xóa bộ lọc
           </Button>
-        </Dropdown>
-      </div>
-      <Typography.Text type="secondary" className="list-page-total">
-        Tổng {filteredRows.length.toLocaleString('vi-VN')} bản ghi
-      </Typography.Text>
-
-      <div className="list-page-actions">
-        {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate ?? notYet}>
-            Tạo mới
-          </Button>
+        </div>
         )}
-        <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
-          Xuất CSV
-        </Button>
-        <Button type="text" icon={<FileExcelOutlined />} onClick={exportExcel} loading={exporting}>
-          Xuất Excel
-        </Button>
-        {(!excel || excel.canImport) && (
-          <Button type="text" icon={<UploadOutlined />} onClick={excel ? () => setImporting(true) : notYet}>
-            Nhập Excel
-          </Button>
-        )}
+        <Tabs
+          size="small"
+          className="list-page-tabs"
+          activeKey={tab}
+          onChange={setTab}
+          items={[
+            { key: 'list', label: 'Danh sách' },
+            { key: 'summary', label: 'Tổng hợp' },
+            { key: 'analysis', label: 'Phân tích' },
+          ]}
+        />
+        <Button
+          size="small"
+          shape="circle"
+          className="dyn-header-toggle"
+          icon={headerCollapsed ? <DownOutlined /> : <UpOutlined />}
+          aria-label={headerCollapsed ? 'Mở rộng phần đầu trang' : 'Thu gọn phần đầu trang'}
+          title={headerCollapsed ? 'Mở rộng phần đầu trang (hiện bộ lọc)' : 'Thu gọn phần đầu trang (ẩn bộ lọc)'}
+          onClick={() => setHeaderCollapsed((v) => !v)}
+        />
       </div>
-
-      <Tabs
-        size="small"
-        className="list-page-tabs"
-        activeKey={tab}
-        onChange={setTab}
-        items={[
-          { key: 'list', label: 'Danh sách' },
-          { key: 'summary', label: 'Tổng hợp' },
-          { key: 'analysis', label: 'Phân tích' },
-        ]}
-      />
 
       <div className="list-page-panel">
         {tab === 'list' ? (
           <>
-            <div className="list-filter-bar">
-              <FilterField label="Tìm kiếm" width={290}>
-                {(id) => (
-                  <Input
-                    id={id}
-                    data-list-search
-                    allowClear
-                    placeholder="Gõ từ khóa — có dấu hoặc không dấu đều được"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                )}
-              </FilterField>
-              {filters}
-              <FilterField label="Nhóm theo" width={140}>
-                {(id) => (
-                  <Select
-                    id={id}
-                    value={groupBy ?? ''}
-                    onChange={(v) => setGroupBy(v || null)}
-                    options={[
-                      { value: '', label: 'Không nhóm' },
-                      ...groupableColumns.map((c) => ({ value: c.key, label: c.title })),
-                    ]}
-                  />
-                )}
-              </FilterField>
-              <Popover trigger="click" placement="bottomRight" content={columnChooser} title="Chọn cột hiển thị">
-                <Button icon={<SettingOutlined />}>
-                  Cột
-                  {hiddenCount > 0 && (
-                    <span className="list-hidden-count" data-testid="hidden-column-count">
-                      {hiddenCount}
-                    </span>
-                  )}
-                </Button>
-              </Popover>
-              <Button
-                onClick={() => {
-                  setKeyword('')
-                  onClearFilters?.()
-                }}
-              >
-                Xóa bộ lọc
-              </Button>
-            </div>
             {notice}
             <DataGrid
               rows={filteredRows}

@@ -113,12 +113,13 @@ export const appTheme: ThemeConfig = {
 /**
  * Kích thước cố định của khung ứng dụng và bảng (ui-guide.md mục 3, 9).
  * AppShell đưa chúng thành biến CSS (--app-*) để CSS các component dùng, không ghi số cứng.
- * Lát UI-a giữ bố cục cũ (thanh menu, thanh công cụ, thanh trạng thái); lát UI-b đổi sang Shellbar + Dynamic Page.
+ * Bố cục Shellbar + Dynamic Page (lát UI-b): Shellbar 48px, điều hướng trái 240px (kéo rộng/hẹp được).
  */
 export const layoutTokens = {
-  menuBarHeight: 28,
-  toolbarHeight: 32,
-  statusBarHeight: 22,
+  /** Shellbar trên cùng (logo, menu module, ô lệnh, công ty, người dùng). */
+  shellBarHeight: 48,
+  /** Dòng mục của điều hướng trái. */
+  navItemHeight: 32,
   navWidth: 240,
   navMinWidth: 180,
   navMaxWidth: 420,
@@ -137,13 +138,12 @@ export const layoutTokens = {
 
 /**
  * Chuyển layoutTokens thành biến CSS gắn vào phần tử gốc của AppShell.
- * @returns Đối tượng style, ví dụ { '--app-menu-bar-height': '28px', ... }.
+ * @returns Đối tượng style, ví dụ { '--app-shell-bar-height': '48px', ... }.
  */
 export function layoutCssVars(): Record<string, string> {
   return {
-    '--app-menu-bar-height': `${layoutTokens.menuBarHeight}px`,
-    '--app-toolbar-height': `${layoutTokens.toolbarHeight}px`,
-    '--app-status-bar-height': `${layoutTokens.statusBarHeight}px`,
+    '--app-shell-bar-height': `${layoutTokens.shellBarHeight}px`,
+    '--app-nav-item-height': `${layoutTokens.navItemHeight}px`,
     '--app-grid-row-height': `${layoutTokens.gridRowHeight}px`,
     '--app-grid-header-height': `${layoutTokens.gridHeaderHeight}px`,
     '--app-line-row-height': `${layoutTokens.lineRowHeight}px`,

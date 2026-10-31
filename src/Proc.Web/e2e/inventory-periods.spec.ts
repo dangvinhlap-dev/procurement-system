@@ -13,7 +13,7 @@ async function openByCommand(page: Page, code: string) {
 }
 
 async function switchCompany(page: Page, label: string) {
-  await page.getByTestId('menu-bar').locator('.app-company-select').click()
+  await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
 }
 

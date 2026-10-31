@@ -15,32 +15,39 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Danh sách đơn mua hàng (PO)' })).toBeVisible()
 })
 
-test('khung ứng dụng đúng kích thước và thành phần theo ui-guide', async ({ page }) => {
-  const menuBar = page.getByTestId('menu-bar')
-  const toolbar = page.getByTestId('toolbar')
+test('khung Shellbar + Dynamic Page đúng kích thước và thành phần theo ui-guide mục 4', async ({ page }) => {
+  const shellBar = page.getByTestId('shell-bar')
   const nav = page.getByTestId('nav-tree')
-  const statusBar = page.getByTestId('status-bar')
 
-  expect((await menuBar.boundingBox())?.height).toBe(28)
-  expect((await toolbar.boundingBox())?.height).toBe(32)
-  expect((await statusBar.boundingBox())?.height).toBe(22)
+  expect((await shellBar.boundingBox())?.height).toBe(48)
   expect((await nav.boundingBox())?.width).toBe(240)
+  // Bỏ thanh công cụ và thanh trạng thái kiểu Windows (lát UI-b).
+  await expect(page.getByTestId('toolbar')).toHaveCount(0)
+  await expect(page.getByTestId('status-bar')).toHaveCount(0)
 
   for (const name of ['Hằng ngày', 'Mua hàng', 'Kho', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống']) {
-    await expect(menuBar.getByRole('button', { name, exact: true })).toBeVisible()
+    await expect(shellBar.getByRole('menuitem', { name, exact: true })).toBeVisible()
   }
-  await expect(toolbar.getByPlaceholder('Ô lệnh – tên màn hình')).toBeVisible()
+  await expect(shellBar.getByPlaceholder('Ô lệnh – tên màn hình')).toBeVisible()
 
   // Mục đang mở trên cây điều hướng được đánh dấu. Số đếm là số thật từ /api/dashboard – kiểm tra ở dashboard.spec.ts.
   const active = nav.locator('[aria-current="page"]').first()
   await expect(active).toContainText('Đơn mua hàng')
 
-  // Thanh trạng thái: tên màn hình, người dùng, ngày làm việc, phiên bản, INS.
-  await expect(statusBar).toContainText('Danh sách đơn mua hàng (PO)')
-  await expect(statusBar).toContainText(ADMIN.fullName)
-  await expect(statusBar).toContainText(appVersion())
-  await expect(statusBar).toContainText('INS')
-  await expect(statusBar).toContainText(/\d{2}\/\d{2}\/\d{4}/)
+  // Menu người dùng thay thanh trạng thái cũ: họ tên, ngày làm việc, phiên bản.
+  await shellBar.getByRole('button', { name: `Người dùng: ${ADMIN.fullName}` }).click()
+  const userMenu = page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu')
+  await expect(userMenu).toContainText(ADMIN.fullName)
+  await expect(userMenu).toContainText(/Ngày làm việc: \d{2}\/\d{2}\/\d{4}/)
+  await expect(userMenu).toContainText(`Phiên bản ${appVersion()}`)
+  await page.keyboard.press('Escape')
+
+  // Dynamic Page: thu gọn phần đầu trang thì ẩn khu bộ lọc, bảng vẫn còn; mở rộng thì hiện lại.
+  await page.getByRole('button', { name: 'Thu gọn phần đầu trang' }).click()
+  await expect(page.locator('.list-filter-bar')).toHaveCount(0)
+  await expect(dataRows(page).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Mở rộng phần đầu trang' }).click()
+  await expect(page.locator('.list-filter-bar')).toBeVisible()
 })
 
 test('lưới hiện 30 dòng, định dạng ngày và tiền kiểu Việt Nam', async ({ page }) => {
@@ -116,6 +123,11 @@ test('bàn phím: mũi tên di chuyển dòng chọn, Enter mở chi tiết', as
   const poNo = (await dataRows(page).nth(1).locator('td').nth(1).textContent()) ?? ''
   await page.keyboard.press('Enter')
   await expect(page.locator('.ant-message')).toContainText(poNo)
+
+  // Mũi tên ">" cuối dòng cũng mở chi tiết (ui-guide.md mục 5).
+  const thirdNo = (await dataRows(page).nth(2).locator('td').nth(1).textContent()) ?? ''
+  await dataRows(page).nth(2).getByRole('button', { name: 'Mở chi tiết' }).click()
+  await expect(page.locator('.ant-message')).toContainText(thirdNo)
 })
 
 test('ô lệnh: gõ mã màn hình rồi Enter để mở', async ({ page }) => {

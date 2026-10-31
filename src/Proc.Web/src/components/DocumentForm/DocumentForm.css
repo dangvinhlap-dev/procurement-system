@@ -3,27 +3,29 @@
 .document-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
   height: 100%;
-  overflow: auto;
+  min-height: 0;
 }
 
-.document-form-actions {
+/* Phần đầu trang (Dynamic Page header): nền trắng, đổ bóng nhẹ; tiêu đề bên trái, nút lệnh bên phải. */
+.document-form-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: none;
+  padding: 16px;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
+  z-index: 1;
 }
-.document-form-actions .ant-btn-primary {
-  font-weight: 600;
-}
-
 .document-form-title {
   display: flex;
   align-items: baseline;
   gap: 16px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 .document-form-title h2 {
   margin: 0;
@@ -38,33 +40,70 @@
   color: var(--ant-color-text-secondary);
   font-size: var(--ant-font-size-sm);
 }
+.document-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* Nội dung phiếu cuộn riêng; phần đầu và thanh chân đứng yên. */
+.document-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+}
 .document-form-alert {
   margin: 0;
 }
 
-/* Đầu phiếu: khối form trắng bo góc 8px, đổ bóng nhẹ, tiêu đề khối 16px/600, lưới 3 cột. */
+/* Khối "Thông tin phiếu": trắng bo góc 8px, đổ bóng nhẹ, tiêu đề khối 16px/600, lưới 3 cột; thu gọn thì ẩn lưới. */
 .document-form-header {
-  border: none;
+  margin-bottom: 16px;
+  padding: 8px 16px;
   border-radius: var(--ant-border-radius-lg);
   box-shadow: var(--ant-box-shadow);
   background: var(--ant-color-bg-container);
-  padding: 8px 16px 8px;
-  margin: 0;
 }
-.document-form-header > legend {
-  float: left;
-  width: 100%;
-  padding: 0 0 8px;
+.document-form-header-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+.document-form-header-title h3 {
   margin: 0;
-  border: none;
   font-size: var(--ant-font-size-heading-5);
   font-weight: 600;
+}
+.document-form-header.is-collapsed .document-form-header-title {
+  padding-bottom: 0;
+}
+.document-form-header.is-collapsed .document-form-grid {
+  display: none;
+}
+
+/* Thanh chân khi đang sửa: nút Lưu / Gửi duyệt… căn phải, đứng yên ở đáy trang. */
+.document-form-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+  padding: 8px 16px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
 }
 .document-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 16px;
-  clear: both;
 }
 .document-form-grid .ant-form-item {
   margin-bottom: 8px;
