@@ -1,10 +1,20 @@
 ﻿# Procurement & Inventory – quy tắc dự án
 
+Khi bắt đầu phiên mới, đọc docs/TIEN_DO.md để biết tiến độ và tiếp tục từ đó.
+
 Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho cho tổng công ty và các công ty thành viên.
 
-Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đúng mục liên quan):
-- `docs/design.md` – đặc tả nghiệp vụ, form, CSDL, lộ trình (bản gốc của thiết kế).
-- `docs/ui-guide.md` – đặc tả giao diện; ảnh mẫu là các file .png trong `docs/`.
+Đọc đúng mục liên quan trước khi làm (dùng grep tìm mục, không đọc cả file):
+- Nghiệp vụ, form, CSDL, lộ trình: `docs/design.md` (bản gốc của thiết kế).
+- Giao diện: `docs/ui-guide.md` (nạp sẵn ở cuối file này); ảnh mẫu là các file .png trong `docs/`.
+- Khi phát hành hoặc quay lại phiên bản cũ: đọc `docs/phat-hanh.md` (bắt buộc làm đủ các bước trong đó).
+- Khi chạy, cài đặt, gỡ rối môi trường dev (chuỗi kết nối, cổng, migration, lỗi khóa file): đọc `docs/moi-truong-dev.md`.
+
+## 0. Cách làm việc tiết kiệm token
+- Tìm bằng grep/tìm kiếm có phạm vi (thư mục, mẫu file); chỉ đọc đoạn file cần, không đọc cả file lớn.
+- Chạy build/test và chỉ báo phần lỗi (lọc kết quả), không in toàn bộ.
+- Trả lời ngắn gọn, không lặp lại code vừa viết.
+- Xong mỗi lát: cập nhật docs/TIEN_DO.md, commit, rồi nhắc người dùng dùng /clear.
 
 ## 1. Giao tiếp
 - Luôn trả lời, lập kế hoạch và báo cáo cho tôi bằng tiếng Việt có dấu.
@@ -13,22 +23,15 @@ Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đú
   thêm thư viện trả phí, sửa quy tắc nghiệp vụ trong docs/design.md mà tôi chưa yêu cầu.
 - Gặp yêu cầu mâu thuẫn với docs/design.md: dừng lại, nêu rõ mâu thuẫn và hỏi tôi.
 
-## 2. Công nghệ
-- Backend: .NET 10, ASP.NET Core Web API, EF Core 10 + Npgsql, PostgreSQL 18, FluentValidation,
-  Hangfire, Serilog, ClosedXML (Excel), QuestPDF (in phiếu).
-- Frontend: React 19 + TypeScript + Vite + Ant Design + TanStack Query.
-- Test: xUnit; test tích hợp chạy trên PostgreSQL thật, database riêng `procurement_test`
-  (không dùng Testcontainers vì máy dev không có Docker). Playwright cho giao diện
-  (lần đầu cài trình duyệt: `npx playwright install chromium`).
+## 2. Công nghệ và lệnh
+- Backend: .NET 10, ASP.NET Core Web API, EF Core 10 + Npgsql, PostgreSQL 18, FluentValidation, Serilog,
+  ClosedXML (Excel), PDFsharp-MigraDoc 6.2.4 – bản MIT (in phiếu).
+- Frontend: React 19 + TypeScript + Vite + Ant Design + TanStack Query. Test: xUnit (tích hợp trên PostgreSQL thật,
+  database `procurement_test`), Playwright cho giao diện.
 - Chỉ dùng thư viện miễn phí/mã nguồn mở. Không dùng AG Grid Enterprise hoặc thư viện cần license trả phí.
-- Môi trường dev: Windows 11 Pro, thư mục `D:\Project\procurement-system`, PostgreSQL 18 cài trực tiếp trên máy.
-  - CSDL dev: `Host=localhost;Port=5432;Database=procurement;Username=proc;Password=proc_dev_only`
-  - CSDL test: `Host=localhost;Port=5432;Database=procurement_test;Username=proc;Password=proc_dev_only`
-  (mật khẩu này chỉ dùng cho dev). Chuỗi kết nối để trong `appsettings.Development.json`.
-- Lệnh chạy trong PowerShell; đường dẫn file dùng kiểu Windows khi hướng dẫn tôi.
-- Docker, docker-compose và `.devcontainer/` chỉ dùng khi triển khai server hoặc Codespaces (dự phòng),
-  không bắt buộc trên máy dev.
-- Cổng cố định: API http://localhost:5000, Web (Vite) http://localhost:5173.
+- Lệnh chạy trong PowerShell; đường dẫn file dùng kiểu Windows khi hướng dẫn tôi. Cổng: API 5000, Web 5173.
+- Kiểm tra mỗi lát (thư mục gốc): `dotnet build`, `dotnet test`; trong `src/Proc.Web`: `npm run build`, `npx tsc -b`,
+  `npx oxlint src e2e`, `npx playwright test`.
 
 ## 3. Kiến trúc
 - Modular monolith, Clean Architecture: Domain → Application → Infrastructure → Api, cộng Proc.Web.
@@ -58,13 +61,10 @@ Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đú
 - Tìm kiếm phải tìm được cả khi gõ có dấu hoặc không dấu.
 
 ## 6. Ghi chú trong code (bắt buộc)
-- Mọi ghi chú viết bằng tiếng Việt có dấu; file lưu UTF-8.
-- Mỗi lớp và hàm public có XML doc comment (`/// <summary>`): làm gì, tham số, giá trị trả về, ngoại lệ.
-- Mỗi quy tắc nghiệp vụ ghi rõ lý do và mục tương ứng trong docs/design.md
-  (ví dụ: `// Kho Sub không được chuyển sang công ty khác – xem design.md mục 4`).
-- Đoạn tính toán phức tạp (giá vốn, phân bổ chi phí, làm tròn) ghi công thức và ví dụ số.
-- React/TypeScript: JSDoc (`/** ... */`) tiếng Việt cho component và hàm.
-- Ghi chú giải thích "tại sao", không lặp lại tên hàm; không để ghi chú lỗi thời sau khi sửa code.
+- Ghi chú tiếng Việt có dấu, file UTF-8. Ghi chú giải thích "tại sao"; không để ghi chú lỗi thời sau khi sửa code.
+- Lớp và hàm public có XML doc (`/// <summary>`: làm gì, tham số, trả về, ngoại lệ); React/TypeScript có JSDoc (`/** */`).
+- Quy tắc nghiệp vụ ghi lý do và mục design.md (ví dụ `// Kho Sub không được chuyển sang công ty khác – xem design.md mục 4`).
+- Tính toán phức tạp (giá vốn, phân bổ chi phí, làm tròn) ghi công thức và ví dụ số.
 
 ## 7. Cách làm việc với Git
 - Mỗi tính năng hoặc sửa lỗi làm trên nhánh riêng: `feature/<ten-ngan>` hoặc `fix/<ten-ngan>`.
@@ -77,40 +77,19 @@ Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đú
 - Cấm: `git push --force`, `git reset --hard` trên main, xóa hoặc sửa tag đã tạo, viết lại lịch sử commit.
 - Khi đổi quy tắc nghiệp vụ hoặc cấu trúc dữ liệu: cập nhật docs/design.md trong cùng commit với code.
 
-## 8. Quản lý phiên bản và quay lại bản cũ (bắt buộc)
-- Số phiên bản MAJOR.MINOR.PATCH (Semantic Versioning):
-  PATCH = sửa lỗi; MINOR = thêm chức năng; MAJOR = thay đổi lớn, 1.0.0 = bản chạy thật đầu tiên.
-- Số phiên bản ghi trong `Directory.Build.props` (thẻ `<Version>`) và hiện trong menu người dùng trên Shellbar và trên màn hình đăng nhập.
-- Chỉ phát hành khi tôi yêu cầu. Mỗi lần phát hành làm đủ:
-  1. Cập nhật `CHANGELOG.md` (tiếng Việt), mẫu `## [x.y.z] - YYYY-MM-DD` với các mục:
-     Thêm mới / Thay đổi / Sửa lỗi / Thay đổi CSDL / Lưu ý khi nâng cấp / Cách quay lại bản trước.
-  2. Cập nhật `<Version>` trong `Directory.Build.props`.
-  3. Commit `Phát hành phiên bản x.y.z`.
-  4. `git tag -a vx.y.z -m "Phiên bản x.y.z: <tóm tắt>"`.
-  5. `git push` và `git push --tags`.
-  6. Báo cho tôi: số phiên bản, tóm tắt thay đổi, có thay đổi CSDL hay không, có cần sao lưu trước khi nâng cấp không.
-- Thay đổi CSDL chỉ qua EF Core migration, tên rõ nghĩa (ví dụ `V0_4_0_ThemBangGiaNoiBo`),
-  luôn có hàm `Down()` gỡ được; ghi chú nếu `Down()` làm mất dữ liệu.
+## 8. Phiên bản và CSDL (bắt buộc – chi tiết ở docs/phat-hanh.md)
+- Semantic Versioning, số phiên bản trong `Directory.Build.props`. Chỉ phát hành khi tôi yêu cầu, làm đủ các bước trong docs/phat-hanh.md.
+- Thay đổi CSDL chỉ qua EF Core migration tên rõ nghĩa (ví dụ `V0_4_0_ThemBangGiaNoiBo`), luôn có `Down()`; ghi chú nếu `Down()` mất dữ liệu.
 - Không xóa cột/bảng đang có dữ liệu trong cùng một bản: đánh dấu ngừng dùng trước, xóa ở bản sau.
-- Mỗi bản có thay đổi CSDL: sinh script `dotnet ef migrations script <bản-trước> <bản-mới>`
-  vào `db/scripts/<phiên-bản>.sql`.
-- Khi tôi yêu cầu "quay về phiên bản X":
-  1. Không xóa lịch sử. Liệt kê thay đổi giữa bản hiện tại và bản X (code và migration),
-     nêu rủi ro mất dữ liệu, chờ tôi đồng ý.
-  2. Sau khi tôi đồng ý: tạo nhánh `rollback/vX` từ tag X hoặc dùng `git revert` cho các commit cần gỡ;
-     chạy build và test.
-  3. Chỉ gỡ migration (`dotnet ef database update <migration-của-bản-X>`) khi tôi xác nhận đã sao lưu CSDL.
+- "Quay về phiên bản X": không xóa lịch sử, liệt kê thay đổi và rủi ro, chờ tôi đồng ý; chỉ gỡ migration khi tôi xác nhận đã sao lưu.
 
 ## 9. Giao diện (bắt buộc)
-- Phong cách **SAP Fiori, theme Horizon** theo `docs/ui-guide.md` (từ 31/10/2026, thay phong cách Windows XP): chữ 14px, bảng màu Horizon,
-  bo góc 4/8px, đổ bóng rất nhẹ, khoảng cách bội số của 4 (8/16px); bố cục Shellbar + Dynamic Page.
-  Giữ React + Ant Design (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica – không kèm file phông "72".
+- SAP Fiori theme Horizon theo `docs/ui-guide.md`; giữ React + Ant Design (không SAPUI5).
 - Mọi trang nằm trong `AppShell`; mọi danh sách dùng `ListPage` + `DataGrid`;
   mọi chứng từ dùng `DocumentForm` (docs/design.md mục 10.1). Không tự tạo bố cục riêng cho từng màn hình.
-- Màu, cỡ chữ, khoảng cách lấy từ theme token của Ant Design `ConfigProvider` (`src/Proc.Web/src/theme.ts`); không viết màu cứng trong component.
-- Ưu tiên dữ liệu lớn dễ đọc, thao tác được bằng bàn phím (ô lệnh, phím tắt giữ nguyên).
+- Màu, cỡ chữ, khoảng cách lấy từ theme token (`src/Proc.Web/src/theme.ts`); không viết màu cứng trong component.
 - Làm xong một màn hình: chạy lên, chụp bằng Playwright, đối chiếu `docs/ui-guide.md`, sửa đến khi đúng quy chuẩn.
-- Khi tôi đưa ảnh mẫu mới vào `docs/`, làm theo đúng ảnh đó.
+  Khi tôi đưa ảnh mẫu mới vào `docs/`, làm theo đúng ảnh đó.
 
 Toàn văn quy chuẩn giao diện (nạp tự động mỗi phiên):
 @docs/ui-guide.md

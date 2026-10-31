@@ -25,3 +25,17 @@ backups/
 
 # File khóa tạm của Word/Excel khi đang mở tài liệu
 ~$*
+
+# Log, bản sao lưu CSDL, kết quả test/độ phủ (bổ sung 31/10/2026)
+*.log
+logs/
+*.dump
+*.bak
+coverage/
+playwright-report/
+
+# IDE khác
+.idea/
+
+# Cấu hình Claude Code riêng từng máy (.claude/settings.json dùng chung thì vẫn commit)
+.claude/settings.local.json
