@@ -115,9 +115,11 @@ function ItemCategoryDrawer({
       inventoryAccount: values.inventoryAccount?.trim() || null,
     }
     try {
-      if (category) await mutations.update.mutateAsync({ id: category.id, input: { ...input, isActive: values.isActive } })
-      else await mutations.create.mutateAsync({ ...input, code: values.code })
-      message.success(`Đã lưu nhóm hàng ${(category?.code ?? values.code).toUpperCase()}.`)
+      // Thêm mới: mã do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+      const saved = category
+        ? await mutations.update.mutateAsync({ id: category.id, input: { ...input, isActive: values.isActive } })
+        : await mutations.create.mutateAsync({ ...input, code: null })
+      message.success(`Đã lưu nhóm hàng ${saved.code}.`)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được nhóm hàng.')
@@ -151,14 +153,9 @@ function ItemCategoryDrawer({
                 <Form.Item
                   label="Mã nhóm"
                   name="code"
-                  extra={category ? undefined : '2–20 chữ không dấu hoặc số. Không đổi được sau khi tạo.'}
-                  rules={[
-                    { required: true, message: 'Hãy nhập mã nhóm.' },
-                    { pattern: /^[A-Za-z0-9]{2,20}$/, message: 'Mã gồm 2–20 chữ không dấu hoặc số.' },
-                  ]}
-                  normalize={(v: string) => v.toUpperCase()}
+                  extra={category ? undefined : 'Mã do hệ thống tự cấp khi lưu, theo dải ở Hệ thống → Đánh số danh mục.'}
                 >
-                  <Input disabled={category !== null} autoFocus={category === null} autoComplete="off" />
+                  <Input disabled placeholder="(tự cấp khi lưu)" />
                 </Form.Item>
                 <Form.Item
                   label="Tài khoản kho mặc định"

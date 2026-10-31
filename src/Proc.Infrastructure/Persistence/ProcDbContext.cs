@@ -85,6 +85,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Đơn vị tính (dùng chung).</summary>
     public DbSet<Uom> Uoms => Set<Uom>();
 
+    /// <summary>Dải đánh số danh mục (design.md mục 5.11).</summary>
+    public DbSet<CatalogNumbering> CatalogNumberings => Set<CatalogNumbering>();
+
     /// <summary>Hạng xếp loại nhà cung cấp (design.md mục 11.3).</summary>
     public DbSet<SupplierRatingRule> SupplierRatingRules => Set<SupplierRatingRule>();
 

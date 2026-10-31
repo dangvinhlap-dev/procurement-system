@@ -18,6 +18,24 @@ public static class MasterDataEndpoints
     /// <returns>Chính <paramref name="app"/>.</returns>
     public static IEndpointRouteBuilder MapMasterDataEndpoints(this IEndpointRouteBuilder app)
     {
+        // Đánh số danh mục (design.md mục 5.11): xem cần quyền xem tham số; thêm/sửa/xóa cần quyền quản lý tham số, làm việc ở tổng công ty.
+        var numberings = app.MapGroup("/api/catalog-numberings").WithTags("Tham số");
+        numberings.MapGet("/", (ICatalogNumberingAdministration s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.System.ParameterView);
+        numberings.MapPost("/", (SaveCatalogNumberingRequest request, ICatalogNumberingAdministration s, CancellationToken ct) => s.CreateAsync(request, ct))
+            .RequirePermission(Permissions.System.ParameterManage)
+            .Validate<SaveCatalogNumberingRequest>();
+        numberings.MapPut("/{id:guid}", (Guid id, SaveCatalogNumberingRequest request, ICatalogNumberingAdministration s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.System.ParameterManage)
+            .Validate<SaveCatalogNumberingRequest>();
+        numberings.MapDelete("/{id:guid}", async (Guid id, ICatalogNumberingAdministration s, CancellationToken ct) =>
+            {
+                await s.DeleteAsync(id, ct);
+                return Results.NoContent();
+            })
+            .RequirePermission(Permissions.System.ParameterManage);
+
         var uoms = app.MapGroup("/api/uoms").WithTags("Danh mục hàng");
         uoms.MapGet("/", (IUomAdministration s, CancellationToken ct) => s.ListAsync(ct))
             .RequirePermission(Permissions.MasterData.ItemView);

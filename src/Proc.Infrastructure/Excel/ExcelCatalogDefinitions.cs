@@ -70,6 +70,24 @@ internal abstract class ExcelCatalog
         if (!result.IsValid) throw new ExcelRowException(result.Errors[0].ErrorMessage);
     }
 
+    /// <summary>
+    /// Lỗi khi dòng có mã nhưng mã chưa có: danh mục đánh số tự động không nhận mã người dùng tự đặt (design.md mục 5.11).
+    /// </summary>
+    /// <param name="code">Mã trên dòng.</param>
+    /// <param name="what">Danh mục, ví dụ "hàng hóa".</param>
+    /// <returns>Lỗi để ném.</returns>
+    protected static ExcelRowException MissingCode(string code, string what) =>
+        new($"Không có {what} mã {code}. Để trống mã khi thêm mới – hệ thống tự cấp mã theo dải đánh số.");
+
+    /// <summary>Id bản ghi theo mã; không có thì báo <see cref="MissingCode"/>.</summary>
+    /// <param name="query">Truy vấn Id theo mã.</param>
+    /// <param name="code">Mã trên dòng.</param>
+    /// <param name="what">Danh mục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Id.</returns>
+    protected static async Task<Guid?> ExistingIdAsync(IQueryable<Guid?> query, string code, string what, CancellationToken cancellationToken) =>
+        await query.FirstOrDefaultAsync(cancellationToken) ?? throw MissingCode(code, what);
+
     /// <summary>Đọc "Còn dùng" (trống = Có).</summary>
     /// <param name="row">Dòng.</param>
     /// <returns>Còn dùng.</returns>
@@ -171,7 +189,7 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     /// <inheritdoc />
     public override IReadOnlyList<ExcelColumn> Columns { get; } =
     [
-        new(Code, "2–20 chữ không dấu hoặc số.", Required: true, Text: true),
+        new(Code, "Để trống khi thêm mới – hệ thống tự cấp mã theo dải ở Hệ thống → Đánh số danh mục. Có mã thì cập nhật bản ghi đó.", Text: true),
         new(Name, "Tên nhóm hàng.", Required: true),
         new(Parent, "Để trống là nhóm gốc. Nhóm cha phải có sẵn hoặc nằm ở dòng phía trên.", Text: true),
         new(Account, "Tài khoản kho mặc định, 3–10 chữ số, ví dụ 152.", Text: true),
@@ -179,7 +197,11 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     ];
 
     /// <inheritdoc />
-    public override IReadOnlyList<string> Guide => ["Nhóm cha phải đứng trên nhóm con. File xuất ra đã xếp theo cây nên sửa rồi nhập lại được ngay."];
+    public override IReadOnlyList<string> Guide =>
+    [
+        "Nhóm cha phải đứng trên nhóm con. File xuất ra đã xếp theo cây nên sửa rồi nhập lại được ngay.",
+        "Nhóm mới (để trống mã) được cấp mã lúc nhập nên chưa làm nhóm cha được cho dòng khác cùng file – nhập nhóm cha trước, rồi xuất file để có mã và nhập nhóm con.",
+    ];
 
     /// <inheritdoc />
     public override async Task<IReadOnlyList<IReadOnlyList<object?>>> ExportAsync(CancellationToken cancellationToken) =>
@@ -193,7 +215,7 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     /// <inheritdoc />
     public override async Task<bool> ImportRowAsync(ExcelRowReader row, CancellationToken cancellationToken)
     {
-        var code = CodeRules.Normalize(row.RequiredText(Code));
+        var code = row.Text(Code) is { } c ? CodeRules.Normalize(c) : null;
         var name = row.RequiredText(Name);
         var parentCode = row.Text(Parent) is { } p ? CodeRules.Normalize(p) : null;
         Guid? parentId = null;
@@ -205,10 +227,10 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
 
         var account = row.Text(Account);
         var active = Active(row);
-        var id = await db.ItemCategories.Where(c => c.Code == code).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(cancellationToken);
+        var id = code is null ? null : await ExistingIdAsync(db.ItemCategories.Where(x => x.Code == code).Select(x => (Guid?)x.Id), code, "nhóm hàng", cancellationToken);
         if (id is null)
         {
-            var create = new CreateItemCategoryRequest(code, name, parentId, account);
+            var create = new CreateItemCategoryRequest(null, name, parentId, account);
             await ValidateAsync(services, create, cancellationToken);
             var created = await categories.CreateAsync(create, cancellationToken);
             if (!active) await categories.UpdateAsync(created.Id, new UpdateItemCategoryRequest(name, parentId, account, false), cancellationToken);
@@ -276,7 +298,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     /// <inheritdoc />
     public override IReadOnlyList<ExcelColumn> Columns { get; } =
     [
-        new(Code, "2–30 ký tự chữ không dấu, số, - . _ /. Đã có thì cập nhật.", Required: true, Text: true),
+        new(Code, "Để trống khi thêm mới – hệ thống tự cấp mã theo dải ở Hệ thống → Đánh số danh mục. Có mã thì cập nhật bản ghi đó.", Text: true),
         new(Name, "Tên hàng.", Required: true),
         new(EnglishName, ""),
         new(Type, "Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao.", Required: true),
@@ -334,7 +356,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     /// <inheritdoc />
     public override async Task<bool> ImportRowAsync(ExcelRowReader row, CancellationToken cancellationToken)
     {
-        var code = CodeRules.Normalize(row.RequiredText(Code));
+        var code = row.Text(Code) is { } c ? CodeRules.Normalize(c) : null;
         var typeText = row.RequiredText(Type);
         var type = TypeLabels.FirstOrDefault(t => SearchText.Normalize(t.Value) == SearchText.Normalize(typeText) || string.Equals(t.Key, typeText, StringComparison.OrdinalIgnoreCase)).Key
             ?? throw new ExcelRowException($"Loại hàng \"{typeText}\" không hợp lệ: ghi Hàng tồn kho, Dịch vụ, Tài sản hoặc Vật tư tiêu hao.");
@@ -353,11 +375,12 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
             conversions.Add(new ItemUomConversionInput(await UomIdAsync(uomCode, cancellationToken), factor));
         }
 
-        var existing = await db.Items.AsNoTracking().FirstOrDefaultAsync(i => i.Code == code, cancellationToken);
+        var existing = code is null ? null : await db.Items.AsNoTracking().FirstOrDefaultAsync(i => i.Code == code, cancellationToken)
+            ?? throw MissingCode(code, "hàng hóa");
         if (existing is null)
         {
             var create = new CreateItemRequest(
-                code, row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
+                null, row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
                 row.Text(Origin), row.Text(Barcode), vat, null, row.Bool(TrackLot) ?? false, row.Bool(TrackExpiry) ?? false,
                 row.Decimal(MinStock), row.Decimal(MaxStock), conversions);
             await ValidateAsync(services, create, cancellationToken);
@@ -415,7 +438,7 @@ internal sealed class SupplierGroupExcelCatalog(ProcDbContext db, ISupplierGroup
     /// <inheritdoc />
     public override IReadOnlyList<ExcelColumn> Columns { get; } =
     [
-        new(Code, "2–20 chữ không dấu hoặc số.", Required: true, Text: true),
+        new(Code, "Để trống khi thêm mới – hệ thống tự cấp mã theo dải ở Hệ thống → Đánh số danh mục. Có mã thì cập nhật bản ghi đó.", Text: true),
         new(Name, "", Required: true),
         new(CommonHeaders.Active, CommonHeaders.ActiveNote),
     ];
@@ -430,13 +453,13 @@ internal sealed class SupplierGroupExcelCatalog(ProcDbContext db, ISupplierGroup
     /// <inheritdoc />
     public override async Task<bool> ImportRowAsync(ExcelRowReader row, CancellationToken cancellationToken)
     {
-        var code = CodeRules.Normalize(row.RequiredText(Code));
+        var code = row.Text(Code) is { } c ? CodeRules.Normalize(c) : null;
         var name = row.RequiredText(Name);
         var active = Active(row);
-        var id = await db.SupplierGroups.Where(g => g.Code == code).Select(g => (Guid?)g.Id).FirstOrDefaultAsync(cancellationToken);
+        var id = code is null ? null : await ExistingIdAsync(db.SupplierGroups.Where(g => g.Code == code).Select(g => (Guid?)g.Id), code, "nhóm NCC", cancellationToken);
         if (id is null)
         {
-            var create = new CreateSupplierGroupRequest(code, name);
+            var create = new CreateSupplierGroupRequest(null, name);
             await ValidateAsync(services, create, cancellationToken);
             var created = await groups.CreateAsync(create, cancellationToken);
             if (!active) await groups.UpdateAsync(created.Id, new UpdateSupplierGroupRequest(name, false), cancellationToken);
@@ -503,7 +526,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
     /// <inheritdoc />
     public override IReadOnlyList<ExcelColumn> Columns { get; } =
     [
-        new(Code, "2–30 ký tự chữ không dấu, số, - . _ /. Đã có thì cập nhật.", Required: true, Text: true),
+        new(Code, "Để trống khi thêm mới – hệ thống tự cấp mã theo dải ở Hệ thống → Đánh số danh mục. Có mã thì cập nhật bản ghi đó.", Text: true),
         new(Name, "", Required: true),
         new(ShortName, ""),
         new(Group, "Mã nhóm NCC, ví dụ TN.", Required: true, Text: true),
@@ -562,7 +585,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
     /// <inheritdoc />
     public override async Task<bool> ImportRowAsync(ExcelRowReader row, CancellationToken cancellationToken)
     {
-        var code = CodeRules.Normalize(row.RequiredText(Code));
+        var code = row.Text(Code) is { } c ? CodeRules.Normalize(c) : null;
         var groupCode = CodeRules.Normalize(row.RequiredText(Group));
         var groupId = await db.SupplierGroups.Where(g => g.Code == groupCode).Select(g => (Guid?)g.Id).FirstOrDefaultAsync(cancellationToken)
             ?? throw new ExcelRowException($"Không có nhóm NCC {groupCode}.");
@@ -582,7 +605,8 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
                 ?? throw new ExcelRowException($"Trạng thái \"{statusText}\" không hợp lệ: ghi Tiềm năng, Đã duyệt, Tạm ngưng hoặc Danh sách đen.");
         }
 
-        var existing = await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Code == code, cancellationToken);
+        var existing = code is null ? null : await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Code == code, cancellationToken)
+            ?? throw MissingCode(code, "NCC");
         IReadOnlyList<SupplierContactDto> contacts;
         IReadOnlyList<SupplierBankAccountDto> banks;
         if (existing is null)
@@ -603,7 +627,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
         }
 
         var request = new SaveSupplierRequest(
-            existing is null ? code : null, groupId, row.RequiredText(Name), row.Text(ShortName), row.Bool(Foreign) ?? false,
+            null, groupId, row.RequiredText(Name), row.Text(ShortName), row.Bool(Foreign) ?? false,
             row.Text(TaxCode), row.Text(Address), row.Text(Phone), row.Text(Email), row.Text(Website), row.Text(PaymentTerms),
             row.Text(SupplyScope), row.Int(Rating), status ?? existing?.Status.ToString() ?? "Potential", row.Text(StatusNote), companyId,
             contacts, banks);

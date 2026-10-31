@@ -34,19 +34,21 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   const groups = await api.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const uoms = await api.get<{ id: string; code: string }[]>('/api/uoms')
   const uom = (code: string) => uoms.find((u) => u.code === code)!.id
-  const supplierCode = unique('NCC')
-  await api.post('/api/suppliers', {
-    code: supplierCode, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC liên kết ${supplierCode}`, shortName: null,
+  const supplierTag = unique('NCC')
+  const supplier = await api.post<{ id: string; code: string }>('/api/suppliers', {
+    code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC liên kết ${supplierTag}`, shortName: null,
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
-  const category = await api.post<{ id: string; code: string }>('/api/item-categories', { code: unique('N'), name: 'Nhóm thử liên kết', parentId: null, inventoryAccount: null })
-  const itemCode = `${category.code}-01`
-  await api.post('/api/items', {
-    code: itemCode, name: 'Dây cáp điện thử', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: uom('M'),
+  const supplierCode = supplier.code
+  const category = await api.post<{ id: string; code: string }>('/api/item-categories', { code: null, name: 'Nhóm thử liên kết', parentId: null, inventoryAccount: null })
+  // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+  const item = await api.post<{ id: string; code: string }>('/api/items', {
+    code: null, name: 'Dây cáp điện thử', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: uom('M'),
     specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
     trackExpiry: false, minStock: null, maxStock: null, conversions: [{ uomId: uom('CUON'), factor: 100 }],
   })
+  const itemCode = item.code
 
   await loginViaApi(page)
   await page.goto('/')

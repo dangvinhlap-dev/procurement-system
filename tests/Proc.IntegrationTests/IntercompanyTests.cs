@@ -47,13 +47,13 @@ public class IntercompanyTests
         var nmi = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "NMI");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("I"), "Nhóm nội bộ", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm nội bộ", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Vòng bi nội bộ", null, "Inventory", category.Id, cai, null, null, null,
+            new CreateItemRequest(null, "Vòng bi nội bộ", null, "Inventory", category.Id, cai, null, null, null,
                 null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC nội bộ", null, false, null, null, null, null, null, null, null, null,
+            new SaveSupplierRequest(null, groupId, "NCC nội bộ", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         var bhaWarehouses = (await bha.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!;

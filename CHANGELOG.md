@@ -9,12 +9,19 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Quyền mới `MasterData.Catalog.EditShared` – "Sửa thông tin danh mục dùng chung (trừ mã)" (design.md mục 5.6, 5.7, 5.9): sửa tên và
   thông tin công ty, đơn vị tính, nhóm hàng, hàng hóa, nhóm NCC, NCC ở bất kỳ công ty nào đang làm việc; mã không sửa được; thêm mới vẫn chỉ ở
   tổng công ty. Vai trò Quản trị tự có; vai trò khác gán tại Hệ thống → Vai trò. Màn hình danh mục báo rõ "chỉ xem" hay "được sửa thông tin".
+- Đánh số danh mục tự động (design.md mục 5.11): màn hình Hệ thống → Đánh số danh mục (DSDM) cấu hình dải mã (tiền tố, số chữ số, từ số – đến số)
+  cho nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa (riêng từng nhóm hàng hoặc dòng mặc định với `{NHOM}`). Thêm mới thì hệ thống cấp mã,
+  người dùng không tự đặt; chưa cấu hình dải thì không thêm được. Nhập Excel: để trống mã khi thêm mới. API `/api/catalog-numberings`.
 
 ### Thay đổi
+- Ô mã trên form thêm NCC, nhóm NCC, nhóm hàng, hàng hóa bị khóa, ghi "(tự cấp khi lưu)"; cột mã trong file Excel mẫu không còn bắt buộc.
 - Giao diện chuyển sang quy chuẩn SAP Fiori, theme Horizon – lát UI-a (docs/ui-guide.md, design.md mục 17): chữ 14px, bảng màu Horizon
   (chữ #1d2d3d, nền #f5f6f7, màu nhấn #0a6ed1, màu trạng thái ngữ nghĩa), bo góc 4/8px, đổ bóng nhẹ, khoảng cách 8/16px, dòng bảng 32px,
   thanh tab gạch chân, khối nội dung/form bo góc; màn hình đăng nhập dạng thẻ. Giữ React + Ant Design, bố cục khung giữ nguyên (lát UI-b
   sẽ đổi sang Shellbar + Dynamic Page). CLAUDE.md mục 9 nạp toàn văn docs/ui-guide.md mỗi phiên.
+
+### Thay đổi CSDL
+- Migration `V0_9_0_DanhSoDanhMuc`: bảng mới `CatalogNumbering` (dải đánh số danh mục). `Down()` xóa bảng – mất cấu hình dải, mã đã cấp không đổi.
 
 ## [0.8.0] - 2026-10-31
 

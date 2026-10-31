@@ -50,13 +50,13 @@ public class SupplierPricingTests
         var cai = uoms.Single(u => u.Code == "CAI").Id;
         var thung = uoms.Single(u => u.Code == "THUNG").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("G"), "Nhóm so sánh giá", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm so sánh giá", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Vòng bi 6205", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
+            new CreateItemRequest(null, "Vòng bi 6205", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, [new(thung, 12)]), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC vòng bi", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, groupId, "NCC vòng bi", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         return new Fixture(userName, head, item.Id, cai, thung, supplier.Id);
     }
 

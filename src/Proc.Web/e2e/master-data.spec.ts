@@ -43,21 +43,22 @@ test.describe('danh mục hàng hóa', () => {
 
   test('thêm nhóm hàng và hàng hóa có quy đổi ĐVT, tìm không dấu', async ({ page }) => {
     const drawer = page.locator('.detail-drawer')
-    const categoryCode = uniqueCode('N')
     await openByCommand(page, 'CAT')
     await expect(page.getByRole('heading', { name: 'Nhóm hàng' })).toBeVisible()
     await page.getByRole('button', { name: 'Tạo mới' }).click()
-    await drawer.getByLabel('Mã nhóm').fill(categoryCode)
+    // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11): ô mã bị khóa, ghi "(tự cấp khi lưu)".
+    await expect(drawer.getByLabel('Mã nhóm')).toBeDisabled()
     await drawer.getByLabel('Tên nhóm hàng').fill('Ống nhựa thử')
     await drawer.getByLabel('Tài khoản kho mặc định').fill('152')
     await page.keyboard.press('Control+s')
-    await expect(page.locator('.ant-message')).toContainText(`Đã lưu nhóm hàng ${categoryCode}.`)
+    const savedCategory = await page.locator('.ant-message').getByText(/Đã lưu nhóm hàng /).textContent()
+    const categoryCode = /Đã lưu nhóm hàng (\S+)\./.exec(savedCategory ?? '')![1]
+    expect(categoryCode).toMatch(/^NH\d{6}$/)
 
-    const itemCode = `${categoryCode}-01`
     await openByCommand(page, 'ITEM')
     await expect(page.getByRole('heading', { name: 'Danh mục hàng hóa' })).toBeVisible()
     await page.getByRole('button', { name: 'Tạo mới' }).click()
-    await drawer.getByLabel('Mã hàng').fill(itemCode.toLowerCase())
+    await expect(drawer.getByLabel('Mã hàng')).toBeDisabled()
     await drawer.getByLabel('Tên hàng', { exact: true }).fill('Ống nhựa PVC phi 21')
     await pick(page, 'Nhóm hàng', categoryCode)
     await pick(page, 'ĐVT cơ sở', 'M – Mét')
@@ -66,6 +67,7 @@ test.describe('danh mục hàng hóa', () => {
     await pick(page, 'ĐVT quy đổi', 'CUON – Cuộn')
     await drawer.getByLabel(/Hệ số/).fill('100')
     await page.keyboard.press('Control+s')
+    const itemCode = `${categoryCode}-00001`
     await expect(page.locator('.ant-message')).toContainText(`Đã thêm hàng ${itemCode}.`)
 
     // Gõ không dấu vẫn tìm được "Ống nhựa".

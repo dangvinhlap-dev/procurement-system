@@ -183,3 +183,18 @@ internal sealed class SupplierRatingRuleConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.MaxReturnPct).HasPrecision(5, 2);
     }
 }
+
+/// <summary>Cấu hình bảng CatalogNumbering (design.md mục 5.11).</summary>
+internal sealed class CatalogNumberingConfiguration : IEntityTypeConfiguration<CatalogNumbering>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<CatalogNumbering> builder)
+    {
+        builder.ToTable("CatalogNumbering");
+        builder.Property(x => x.Catalog).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Prefix).HasMaxLength(CatalogNumbering.PrefixMaxLength).IsRequired();
+        // Mỗi danh mục một dải; hàng hóa thêm mỗi nhóm hàng một dải (NULLS NOT DISTINCT: chỉ một dòng mặc định CategoryId null).
+        builder.HasIndex(x => new { x.Catalog, x.CategoryId }).IsUnique().AreNullsDistinct(false);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

@@ -45,13 +45,13 @@ public class GoodsReceiptTests
 
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("R"), "Nhóm phiếu nhập", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm phiếu nhập", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Bu lông lục giác M8", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
+            new CreateItemRequest(null, "Bu lông lục giác M8", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, "10", null, false, false, null, null, [new(uoms["THUNG"], 24m)]), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC phiếu nhập", null, false, null, null, null, null, null, null, null, null,
+            new SaveSupplierRequest(null, groupId, "NCC phiếu nhập", null, false, null, null, null, null, null, null, null, null,
                 supplierStatus, supplierStatus == "Approved" ? null : "Thử", null, [], []), Ct));
         if (applyAtBha)
         {

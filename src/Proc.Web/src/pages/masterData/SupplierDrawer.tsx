@@ -132,7 +132,8 @@ export function SupplierDrawer({
     setError(null)
     setSaving(true)
     const input = {
-      code: isNew ? values.code : null,
+      // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – không gửi mã.
+      code: null,
       groupId: values.groupId!,
       name: values.name.trim(),
       shortName: orNull(values.shortName),
@@ -167,8 +168,8 @@ export function SupplierDrawer({
     }
     try {
       if (isNew) {
-        await mutations.create.mutateAsync(input)
-        message.success(`Đã thêm NCC ${values.code.toUpperCase()}.`)
+        const created = await mutations.create.mutateAsync(input)
+        message.success(`Đã thêm NCC ${created.code}.`)
       } else if (detail) {
         await mutations.update.mutateAsync({ id: detail.id, input })
         message.success(`Đã lưu NCC ${detail.code}.`)
@@ -211,14 +212,9 @@ export function SupplierDrawer({
                 <Form.Item
                   label="Mã NCC"
                   name="code"
-                  extra={isNew ? '2–30 ký tự chữ không dấu, số, - . _ /. Không đổi được sau khi tạo.' : undefined}
-                  rules={[
-                    { required: true, message: 'Hãy nhập mã NCC.' },
-                    { pattern: /^[A-Za-z0-9][A-Za-z0-9._/-]{1,29}$/, message: 'Mã gồm 2–30 ký tự chữ không dấu, số, - . _ /.' },
-                  ]}
-                  normalize={(v: string) => v.toUpperCase()}
+                  extra={isNew ? 'Mã do hệ thống tự cấp khi lưu, theo dải ở Hệ thống → Đánh số danh mục.' : undefined}
                 >
-                  <Input disabled={!isNew} autoFocus={isNew} autoComplete="off" />
+                  <Input disabled placeholder="(tự cấp khi lưu)" />
                 </Form.Item>
                 <Form.Item label="Nhóm NCC" name="groupId" rules={[{ required: true, message: 'Hãy chọn nhóm NCC.' }]}>
                   <Select options={groupOptions} />

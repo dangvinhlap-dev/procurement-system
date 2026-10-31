@@ -58,13 +58,13 @@ public class PeriodClosingTests
 
         var uom = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("K"), "Nhóm đóng kỳ", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm đóng kỳ", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Vòng bi đóng kỳ", null, "Inventory", category.Id, uom, null, null, null,
+            new CreateItemRequest(null, "Vòng bi đóng kỳ", null, "Inventory", category.Id, uom, null, null, null,
                 null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC đóng kỳ", null, false, null, null, null, null, null, null, null, null,
+            new SaveSupplierRequest(null, groupId, "NCC đóng kỳ", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         return new Fixture(client, company.Id, kt, kp, item.Id, uom, supplier.Id, jan, feb);

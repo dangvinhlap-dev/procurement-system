@@ -16,16 +16,19 @@ public sealed class SupplierGroupAdministration : ISupplierGroupAdministration
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly CatalogNumberAllocator _numbers;
 
     /// <summary>
     /// Tạo dịch vụ.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    public SupplierGroupAdministration(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
+    public SupplierGroupAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
     {
         _db = db;
         _scope = scope;
+        _numbers = numbers;
     }
 
     /// <inheritdoc />
@@ -44,11 +47,13 @@ public sealed class SupplierGroupAdministration : ISupplierGroupAdministration
     public async Task<SupplierGroupDto> CreateAsync(CreateSupplierGroupRequest request, CancellationToken cancellationToken)
     {
         await HeadOffice.RequireAsync(_db, _scope, "nhóm NCC", cancellationToken);
-        var group = SupplierGroup.Create(request.Code, request.Name);
-        if (await _db.SupplierGroups.AnyAsync(g => g.Code == group.Code, cancellationToken))
-            throw new BusinessRuleException($"Mã nhóm NCC {group.Code} đã có.");
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – người dùng không tự đặt.
+        CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.SupplierGroup, request.Code);
+        await using var transaction = await _numbers.BeginAsync(cancellationToken);
+        var group = SupplierGroup.Create(await _numbers.NextAsync(NumberedCatalogs.SupplierGroup, null, cancellationToken), request.Name);
         _db.SupplierGroups.Add(group);
         await _db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return new SupplierGroupDto(group.Id, group.Code, group.Name, group.IsActive, 0);
     }
 
@@ -89,16 +94,19 @@ public sealed class SupplierAdministration : ISupplierAdministration
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly CatalogNumberAllocator _numbers;
 
     /// <summary>
     /// Tạo dịch vụ.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    public SupplierAdministration(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
+    public SupplierAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
     {
         _db = db;
         _scope = scope;
+        _numbers = numbers;
     }
 
     /// <inheritdoc />
@@ -181,14 +189,16 @@ public sealed class SupplierAdministration : ISupplierAdministration
     public async Task<SupplierDetailDto> CreateAsync(SaveSupplierRequest request, CancellationToken cancellationToken)
     {
         await HeadOffice.RequireAsync(_db, _scope, "nhà cung cấp", cancellationToken);
-        if (string.IsNullOrWhiteSpace(request.Code)) throw new BusinessRuleException("Hãy nhập mã NCC.");
-        var supplier = Supplier.Create(request.Code, await FindGroupAsync(request.GroupId, cancellationToken), ToInfo(request));
-        if (await _db.Suppliers.AnyAsync(s => s.Code == supplier.Code, cancellationToken))
-            throw new BusinessRuleException($"Mã NCC {supplier.Code} đã có.");
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – người dùng không tự đặt.
+        CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.Supplier, request.Code);
+        var group = await FindGroupAsync(request.GroupId, cancellationToken);
+        await using var transaction = await _numbers.BeginAsync(cancellationToken);
+        var supplier = Supplier.Create(await _numbers.NextAsync(NumberedCatalogs.Supplier, null, cancellationToken), group, ToInfo(request));
         await ApplyAsync(supplier, request, cancellationToken);
 
         _db.Suppliers.Add(supplier);
         await _db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return await GetAsync(supplier.Id, cancellationToken);
     }
 

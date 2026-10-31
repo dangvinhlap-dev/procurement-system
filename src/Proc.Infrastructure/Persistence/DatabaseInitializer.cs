@@ -62,6 +62,25 @@ public sealed class SeedItemCategory
     public string? Parent { get; set; }
 }
 
+/// <summary>Một dải đánh số danh mục mẫu (design.md mục 5.11).</summary>
+public sealed class SeedCatalogNumbering
+{
+    /// <summary>Danh mục: supplier, supplier-group, item-category, item.</summary>
+    public string Catalog { get; set; } = string.Empty;
+
+    /// <summary>Tiền tố (hàng hóa dùng được {NHOM}).</summary>
+    public string Prefix { get; set; } = string.Empty;
+
+    /// <summary>Số chữ số.</summary>
+    public int Digits { get; set; }
+
+    /// <summary>Số đầu dải.</summary>
+    public long From { get; set; } = 1;
+
+    /// <summary>Số cuối dải.</summary>
+    public long To { get; set; }
+}
+
 /// <summary>Một vai trò mẫu.</summary>
 public sealed class SeedRole
 {
@@ -140,6 +159,9 @@ public sealed class SeedOptions
 
     /// <summary>Nhóm NCC mẫu (mã → tên), ví dụ TN → Trong nước.</summary>
     public Dictionary<string, string> DemoSupplierGroups { get; set; } = [];
+
+    /// <summary>Dải đánh số danh mục mẫu (chỉ tạo khi danh mục chưa có dải) – môi trường chạy thật để trống, quản trị tự cấu hình.</summary>
+    public List<SeedCatalogNumbering> DemoCatalogNumberings { get; set; } = [];
 
     /// <summary>
     /// Tạo sẵn lịch kỳ kho năm hiện tại và mở kỳ tháng hiện tại cho mọi công ty (chỉ dev/test – để thử ghi sổ ngay);
@@ -282,6 +304,7 @@ internal sealed class DataSeeder
         var categories = await EnsureItemCategoriesAsync(ct);
         await EnsureUomsAsync(ct);
         await EnsureSupplierGroupsAsync(ct);
+        await EnsureCatalogNumberingsAsync(ct);
         if (_seed.DemoOpenCurrentPeriod)
         {
             foreach (var company in companies) await EnsureCurrentPeriodAsync(company.Id, ct);
@@ -388,6 +411,14 @@ internal sealed class DataSeeder
             if (!existing.Contains(group.Code)) _db.SupplierGroups.Add(group);
         }
 
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task EnsureCatalogNumberingsAsync(CancellationToken ct)
+    {
+        var existing = await _db.CatalogNumberings.Where(n => n.CategoryId == null).Select(n => n.Catalog).ToListAsync(ct);
+        foreach (var item in _seed.DemoCatalogNumberings.Where(i => !existing.Contains(i.Catalog)))
+            _db.CatalogNumberings.Add(CatalogNumbering.Create(item.Catalog, null, item.Prefix, item.Digits, item.From, item.To));
         await _db.SaveChangesAsync(ct);
     }
 

@@ -38,7 +38,7 @@ public sealed record ItemCategoryDetailDto(
 /// <param name="Name">Tên.</param>
 /// <param name="ParentId">Nhóm cha; null = nhóm gốc.</param>
 /// <param name="InventoryAccount">Tài khoản kho mặc định.</param>
-public sealed record CreateItemCategoryRequest(string Code, string Name, Guid? ParentId, string? InventoryAccount);
+public sealed record CreateItemCategoryRequest(string? Code, string Name, Guid? ParentId, string? InventoryAccount);
 
 /// <summary>Sửa nhóm hàng.</summary>
 /// <param name="Name">Tên.</param>

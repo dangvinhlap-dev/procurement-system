@@ -46,13 +46,13 @@ public class DashboardTests
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("D"), "Nhóm trang chủ", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm trang chủ", null, null), Ct));
         // Tồn tối thiểu 100, công ty chưa có tồn → dưới mức.
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Dầu thủy lực", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, 100, null, []), Ct));
+            new CreateItemRequest(null, "Dầu thủy lực", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, 100, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC trang chủ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, groupId, "NCC trang chủ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await buyer.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         var approverRole = UniqueCode("A");
         await _factory.CreateRoleAsync(approverRole, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove);
