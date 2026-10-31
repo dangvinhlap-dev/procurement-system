@@ -16,9 +16,10 @@ Cập nhật: 31/10/2026. Đọc file này đầu mỗi phiên để biết đan
 | UI-a, UI-b | Giao diện SAP Fiori Horizon: theme; Shellbar + Dynamic Page | 0baa4ca, ae24f71 |
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
+| SEC-1 | Tham số hệ thống: bảng `CompanyParameter`, số NCC tối thiểu khi gửi RFQ theo công ty (sửa được); giá vốn, kho cho tồn âm (chỉ xem) | feature/tham-so-he-thong |
 | Tối ưu Claude Code | CLAUDE.md gọn (124 → 95 dòng), tách `docs/phat-hanh.md`, `docs/moi-truong-dev.md`; `docs/TIEN_DO.md`; `.claude/settings.json`; `.gitignore` | chore/toi-uu-claude |
 
-Kiểm tra gần nhất (TB-1): 345 test .NET, 59 test Playwright, `npm run build` đều qua.
+Kiểm tra gần nhất (SEC-1): 347 test .NET, 60 test Playwright, `npm run build`, `tsc`, `oxlint` đều qua.
 
 ## Đang làm
 
@@ -26,11 +27,13 @@ Kiểm tra gần nhất (TB-1): 345 test .NET, 59 test Playwright, `npm run buil
 
 ## Việc tiếp theo
 
-1. Màn hình còn để trang tạm (chưa có đặc tả trong design.md, cần người dùng chọn): Tham số hệ thống (SEC), Hợp đồng khung (CTR).
-2. Phát hành 0.9.0 khi người dùng yêu cầu: gồm DM-1, DM-2, DM-3, UI-a, UI-b, TB-1; có 3 migration
-   (`V0_9_0_DanhSoDanhMuc`, `V0_9_0_DaiMaMacDinh`, `V0_9_0_ThongBao`) → cần sao lưu CSDL, sinh `db/scripts/0.9.0.sql`.
-3. Chờ người dùng cho phép xóa CSDL `procurement_perf`, `procurement_perf_mau` và file `D:\project\procurement_perf_nguon.dump`.
-4. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
+1. SEC-2 (đề xuất): % markup nội bộ mặc định + gợi ý giá bán nội bộ = giá vốn kỳ đóng gần nhất × (1 + % markup) khi chưa có bảng giá
+   (design.md mục 1 câu hỏi 2, mục 5.4) – cần người dùng chốt gợi ý hiện ở đâu (màn hình bảng giá nội bộ hay phiếu ICS).
+2. Hợp đồng khung (CTR) còn trang tạm – chưa có đặc tả trong design.md, cần người dùng mô tả.
+3. Phát hành 0.9.0 khi người dùng yêu cầu: gồm DM-1, DM-2, DM-3, UI-a, UI-b, TB-1, SEC-1; có 4 migration
+   (`V0_9_0_DanhSoDanhMuc`, `V0_9_0_DaiMaMacDinh`, `V0_9_0_ThongBao`, `V0_9_0_ThamSoCongTy`) → cần sao lưu CSDL, sinh `db/scripts/0.9.0.sql`.
+4. Chờ người dùng cho phép xóa CSDL `procurement_perf`, `procurement_perf_mau` và file `D:\project\procurement_perf_nguon.dump`.
+5. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
 
 ## Ghi nhớ môi trường dev
 

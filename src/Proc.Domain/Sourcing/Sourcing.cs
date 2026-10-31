@@ -293,18 +293,13 @@ public sealed record QuotationLineData(Guid RfqLineId, decimal UnitPrice, decima
 public sealed record AwardLineData(Guid RfqLineId, Guid? SupplierId, string? Reason);
 
 /// <summary>
-/// Yêu cầu báo giá / đấu thầu (design.md mục 8.4): danh sách mặt hàng, hạn nộp, trọng số tiêu chí; gửi cho ≥ <see cref="MinSuppliers"/>
-/// NCC; nhập báo giá từng NCC; chọn NCC trúng thầu theo dòng; từ kết quả sinh PO nháp.
+/// Yêu cầu báo giá / đấu thầu (design.md mục 8.4): danh sách mặt hàng, hạn nộp, trọng số tiêu chí; gửi cho đủ số NCC tối thiểu
+/// (tham số công ty <see cref="Organization.CompanyParameter.RfqMinSuppliers"/>); nhập báo giá từng NCC; chọn NCC trúng thầu theo dòng; từ kết quả sinh PO nháp.
 /// Vòng đời: Nháp → Đã gửi → Đã chọn thầu; hủy được khi Nháp/Đã gửi.
 /// </summary>
 [Auditable("Yêu cầu báo giá", LabelProperty = nameof(No))]
 public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
 {
-    /// <summary>
-    /// Số NCC tối thiểu khi gửi RFQ (design.md mục 8.4 bước 2 – "tham số cấu hình"; hệ thống chưa có bảng tham số nên tạm cố định).
-    /// </summary>
-    public const int MinSuppliers = 3;
-
     private readonly List<RfqLine> _lines = [];
     private readonly List<RfqSupplier> _suppliers = [];
 
@@ -434,14 +429,16 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
     }
 
     /// <summary>Gửi RFQ cho NCC: Nháp → Đã gửi.</summary>
-    /// <exception cref="BusinessRuleException">Khi không còn nháp, chưa có dòng hoặc mời ít hơn <see cref="MinSuppliers"/> NCC.</exception>
-    public void Send(DateTimeOffset at)
+    /// <param name="at">Thời điểm gửi.</param>
+    /// <param name="minSuppliers">Số NCC tối thiểu theo tham số của công ty lập RFQ.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp, chưa có dòng hoặc mời ít hơn <paramref name="minSuppliers"/> NCC.</exception>
+    public void Send(DateTimeOffset at, int minSuppliers)
     {
         EnsureDraft();
         if (_lines.Count == 0) throw new BusinessRuleException("RFQ phải có ít nhất một dòng hàng.");
-        // Đủ số NCC tối thiểu để có cạnh tranh – design.md mục 8.4 bước 2.
-        if (_suppliers.Count < MinSuppliers)
-            throw new BusinessRuleException($"Phải mời ít nhất {MinSuppliers} nhà cung cấp mới gửi RFQ được (đang có {_suppliers.Count}).");
+        // Đủ số NCC tối thiểu để có cạnh tranh – design.md mục 8.4 bước 2; con số là tham số công ty (mục 5.4).
+        if (_suppliers.Count < minSuppliers)
+            throw new BusinessRuleException($"Phải mời ít nhất {minSuppliers} nhà cung cấp mới gửi RFQ được (đang có {_suppliers.Count}).");
         Status = RfqStatus.Sent;
         SentAt = at;
     }

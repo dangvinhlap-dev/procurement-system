@@ -5,6 +5,20 @@ using Proc.Infrastructure.Identity;
 
 namespace Proc.Infrastructure.Persistence.Configurations;
 
+/// <summary>Bảng CompanyParameter: mỗi công ty tối đa một dòng tham số (design.md mục 5.4).</summary>
+internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<CompanyParameter>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<CompanyParameter> builder)
+    {
+        builder.ToTable("CompanyParameter");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => x.CompanyId).IsUnique();
+        builder.Property(x => x.RfqMinSuppliers).HasDefaultValue(CompanyParameter.DefaultRfqMinSuppliers);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng Company (design.md mục 5.1).</summary>
 internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
 {

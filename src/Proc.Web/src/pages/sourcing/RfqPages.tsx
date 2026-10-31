@@ -436,7 +436,7 @@ export function RfqPage() {
       label: 'NCC mời',
       children: (
         <Form.Item
-          label={`Nhà cung cấp được mời (tối thiểu ${doc?.minSuppliers ?? 3} NCC mới gửi được)`}
+          label={`Nhà cung cấp được mời (${doc ? `tối thiểu ${doc.minSuppliers} NCC` : 'số NCC tối thiểu theo tham số công ty'} mới gửi được)`}
           name="supplierIds"
           style={{ maxWidth: 900 }}
         >
