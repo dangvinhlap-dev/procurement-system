@@ -34,6 +34,7 @@ import {
   SourcingSavingsReportPage,
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
+import { AccountingExportPage } from './pages/reports/AccountingExportPage'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { ExpiringReportPage, GroupStockReportPage, SlowMovingReportPage } from './pages/reports/StockReportPages'
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -77,6 +78,7 @@ const implemented: Record<string, ReactNode> = {
   RPSUP: <PurchaseSpendReportPage />,
   SUPEVAL: <SupplierEvaluationReportPage />,
   SAVE: <SourcingSavingsReportPage />,
+  ACCX: <AccountingExportPage />,
   ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
   ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
   IPR: <InternalPriceListPage />,

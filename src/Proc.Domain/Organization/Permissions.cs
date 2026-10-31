@@ -147,6 +147,9 @@ public static class Permissions
 
         /// <summary>Xem báo cáo mua hàng, đánh giá NCC, tiết kiệm đấu thầu toàn tập đoàn (design.md mục 11.3).</summary>
         public const string PurchaseViewAllCompanies = "Report.Purchase.ViewAllCompanies";
+
+        /// <summary>Xuất chứng từ kho đã ghi sổ ra Excel cho kế toán (design.md mục 11.5).</summary>
+        public const string AccountingExport = "Report.Accounting.Export";
     }
 
     /// <summary>Toàn bộ quyền kèm tên tiếng Việt, theo thứ tự hiển thị.</summary>
@@ -197,6 +200,7 @@ public static class Permissions
         new(Report.PriceViewAllCompanies, "Xem so sánh giá toàn tập đoàn"),
         new(Report.StockViewAllCompanies, "Xem tồn kho toàn tập đoàn"),
         new(Report.PurchaseViewAllCompanies, "Xem báo cáo mua hàng toàn tập đoàn"),
+        new(Report.AccountingExport, "Xuất chứng từ cho kế toán"),
     ];
 
     /// <summary>

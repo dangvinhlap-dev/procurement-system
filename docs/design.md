@@ -45,7 +45,7 @@ Cột *Đề xuất* là phương án mặc định; chỉ cần sửa nếu cô
 | 3 | Có quản lý lô, hạn dùng, serial không | Thiết kế sẵn cột `LotNo`, `ExpiryDate`; bật/tắt theo từng mặt hàng |
 | 4 | Tiền tệ | VND là tiền hạch toán; PO ngoại tệ lưu thêm `CurrencyCode`, `ExchangeRate` |
 | 5 | Thuế GTGT | Lưu thuế suất và tiền thuế trên dòng chứng từ; giá vốn không gồm VAT được khấu trừ |
-| 6 | Kết nối kế toán (MISA, Fast, SAP…) | Giai đoạn sau: xuất file/API chứng từ đã ghi sổ; hệ thống này không làm sổ cái |
+| 6 | Kết nối kế toán (MISA, Fast, SAP…) | Xuất file Excel chứng từ đã ghi sổ (mục 11.5); hệ thống này không làm sổ cái |
 | 7 | Quy trình duyệt | Duyệt nhiều cấp, cấu hình theo công ty, loại chứng từ, ngưỡng giá trị |
 | 8 | Hóa đơn điện tử cho bán nội bộ | Chỉ lưu số/ngày hóa đơn và đính kèm; phát hành hóa đơn ở hệ thống HĐĐT hiện có |
 | 9 | Quy mô | Thiết kế cho ~50 công ty, ~500 người dùng, ~100.000 mã hàng, vài triệu dòng giao dịch/năm |
@@ -698,6 +698,18 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | Mỗi số tính bằng chính dịch vụ/truy vấn của màn hình chi tiết (qua global query filter) nên bấm ô mở màn hình thấy đúng con số. Riêng "hàng dưới tồn tối thiểu" đếm mặt hàng tồn kho đang dùng có tối thiểu > 0 mà tổng tồn mọi kho của công ty < tối thiểu, **gồm cả hàng chưa có tồn** (màn hình tồn kho chỉ gắn cờ trên dòng đang có tồn) | Mục 11.1 |
 | Cây điều hướng hiện số đếm thật lấy từ cùng API, tự cập nhật mỗi phút và ngay sau khi lưu/ghi sổ/duyệt phiếu: Việc cần làm, PR, PR chưa xử lý, Theo dõi giao hàng, RFQ, So sánh báo giá, phiếu nháp GRN/RTV/TRF/ICS, ICR chờ xác nhận nhận hàng, Tồn kho hiện tại (dưới tối thiểu), Sắp hết hạn, Hàng đi đường. Badge đỏ khi cần xử lý (chờ duyệt, quá hạn, dưới tối thiểu, đã hết hạn, ICR chờ nhận). Số 0 không hiện. Thông báo chưa làm nên không hiện số chưa đọc | ui-guide.md: số đếm, badge đỏ |
 
+
+### 11.5 Xuất chứng từ cho kế toán (giai đoạn 7)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Hệ thống không làm sổ cái: chứng từ kho **đã ghi sổ** (GRN, RTV, TRF, ICS, ICR) xuất ra **file Excel** để kế toán nhập vào phần mềm kế toán (MISA, Fast…) bằng chức năng nhập Excel và tự định khoản. Màn hình Báo cáo → Xuất cho kế toán (ACCX): chọn khoảng ngày (tối đa hai năm) và loại chứng từ, xem trước danh sách, bấm "Tải file Excel cho kế toán". Quyền mới `Report.Accounting.Export` | Mục 1 – quyết định 6; người dùng chọn định dạng Excel chung (31/10/2026) |
+| File có 3 sheet: **Chứng từ** – mỗi dòng hàng một dòng: ngày, số, loại CT, ngày ghi sổ, mã đối tượng (NCC hoặc công ty đối ứng), **mã NCC tại công ty** (khớp mã đối tượng trong phần mềm kế toán), tên, MST, số/ký hiệu/ngày hóa đơn, kho xuất/nhập, PO, chứng từ liên quan, mặt hàng, **TK kho**, ĐVT, SL, đơn giá, thành tiền, thuế suất, tiền thuế, tổng thanh toán, ĐVT và SL cơ sở, giá vốn đơn vị, tiền vốn, giá vốn chính thức / tạm tính, lô, hạn dùng, diễn giải; **Tổng hợp** – mỗi chứng từ một dòng; **Hướng dẫn** – ý nghĩa từng cột. Cột chữ kiểu Text (giữ số 0 đầu của MST, mã), cột số/ngày đúng kiểu. Tối đa 50.000 dòng hàng mỗi file | Kế toán ghép cột một lần rồi dùng lại |
+| TK kho = tài khoản kho mặc định của nhóm hàng; nhóm không khai báo thì lấy của nhóm cha gần nhất. Chưa có cấu hình cặp tài khoản Nợ/Có theo loại phiếu – kế toán định khoản trong phần mềm kế toán | Tránh thêm bảng tham số khi chưa cần |
+| Giá vốn của dòng lấy từ sổ kho đúng dòng chứng từ: phiếu xuất (RTV, ICS) và chuyển kho lấy chiều xuất, phiếu nhập (GRN, ICR) lấy chiều nhập (= giá nhập, chính thức ngay). Kỳ còn mở thì giá vốn xuất là tạm tính (tô màu trên màn hình) – nên xuất lại sau khi đóng kỳ | Mục 7 |
+| Dữ liệu qua global query filter: công ty đang làm việc, kho và nhóm hàng được phép; chứng từ liên quan thuộc công ty khác (phiếu xuất bán của bên bán) không in số | Mục 9.2 |
+
+## 12. Lược đồ CSDL chính
 
 Trái tim của kho là bảng **`StockLedger`** (sổ kho): mỗi dòng chứng từ khi ghi sổ sinh một hoặc hai dòng ledger (+ nhập, − xuất). Tồn kho, NXT, thẻ kho, giá vốn đều tính từ đây; chứng từ chỉ là nguồn.
 

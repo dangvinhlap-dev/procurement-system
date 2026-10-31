@@ -22,6 +22,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Trang chủ (design.md mục 11.4): ô số liệu của công ty đang làm việc theo quyền – phiếu chờ duyệt, PR chưa xử lý, PO chờ giao/trễ,
   RFQ, chứng từ kho nháp, hàng dưới tồn tối thiểu, lô hết hạn/sắp hết hạn, hàng đi đường, kỳ kho; mua hàng tháng này so với tháng trước,
   top 5 NCC. Bấm ô mở màn hình chi tiết. API `GET /api/dashboard`.
+- Xuất chứng từ cho kế toán (design.md mục 11.5): màn hình Báo cáo → Xuất cho kế toán (ACCX) xem trước chứng từ kho đã ghi sổ và tải file
+  Excel (sheet Chứng từ, Tổng hợp, Hướng dẫn) có mã NCC tại công ty, MST, hóa đơn, TK kho theo nhóm hàng, giá vốn chính thức/tạm tính.
+  Quyền mới `Report.Accounting.Export`. API `/api/accounting-export/documents`, `/api/accounting-export/file`.
 
 ### Thay đổi
 - Số đếm trên cây điều hướng là số thật (trước đây là dữ liệu mẫu), tự cập nhật; bỏ số thông báo giả trên thanh menu.
