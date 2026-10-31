@@ -136,6 +136,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Bảng giá nội bộ (lọc theo công ty bán).</summary>
     public DbSet<Proc.Domain.Pricing.InternalPrice> InternalPrices => Set<Proc.Domain.Pricing.InternalPrice>();
 
+    /// <summary>Bảng giá NCC (design.md mục 8.1).</summary>
+    public DbSet<Proc.Domain.Pricing.SupplierPriceList> SupplierPriceLists => Set<Proc.Domain.Pricing.SupplierPriceList>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 

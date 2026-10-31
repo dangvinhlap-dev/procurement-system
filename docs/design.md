@@ -451,6 +451,20 @@ Phiếu tìm NCC cho một sản phẩm cụ thể: mặt hàng (hoặc mô tả
 4. Hội đồng/người duyệt chọn NCC trúng thầu (có thể tách theo dòng hàng), ghi lý do nếu không chọn giá thấp nhất.
 5. Sinh **PO** hoặc **bảng giá/hợp đồng khung** từ kết quả; giá trúng thầu ghi vào lịch sử giá.
 
+### 8.5 Bảng giá NCC, lịch sử giá, so sánh giá – cách làm (giai đoạn 6)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Bảng giá NCC (`SupplierPriceList` + dòng) thuộc **công ty lập**; chỉ khi đang làm việc ở **tổng công ty** mới đánh dấu "áp dụng toàn tập đoàn" – mọi công ty đọc được (chỉ xem), chỉ công ty lập sửa/ngừng. Bảng riêng của công ty thành viên công ty khác không thấy | Mục 8.1 "công ty áp dụng (trống = toàn tập đoàn)"; mỗi công ty là pháp nhân độc lập |
+| Số bảng giá theo đánh số chứng từ, loại `PRL`. Vòng đời **Nháp → Hiệu lực → Ngừng**; bảng đã hiệu lực không sửa – muốn đổi giá thì ngừng và lập bảng mới (giữ lịch sử). NCC ở danh sách đen không lập/đưa vào hiệu lực được. Chỉ VND | Giá đã dùng để đặt hàng phải truy lại được |
+| Dòng: mặt hàng, ĐVT (cơ sở hoặc quy đổi), **bậc số lượng** (áp khi SL đặt ≥ bậc; 0 = mọi SL), đơn giá, % CK, VAT (trống = theo mặt hàng). Mỗi (mặt hàng, ĐVT, bậc) một dòng | Mục 8.1 "bậc số lượng, chiết khấu" |
+| Giá gợi ý cho PO: mỗi mặt hàng chọn **một** bảng giá hiệu lực vào ngày PO của NCC – bảng của công ty thắng bảng toàn tập đoàn, rồi bảng có ngày hiệu lực mới nhất; trong bảng đó chọn bậc cùng ĐVT lớn nhất ≤ SL đặt (không có bậc cùng ĐVT thì quy từ giá cơ sở). PO hiện cột "Giá bảng giá", nút "Áp giá bảng giá" chép giá vào dòng; người lập vẫn sửa tay | Thỏa thuận riêng của pháp nhân ưu tiên hơn thỏa thuận chung |
+| **Lịch sử giá không lưu bảng riêng** (`PriceHistory` của mục 8.1): tính thẳng từ bảng giá đang hiệu lực, PO đã duyệt/đã nhận đủ, phiếu nhập mua đã ghi sổ (giai đoạn 6b thêm báo giá trúng thầu) | Bỏ ghi sổ, hủy phiếu, ngừng bảng giá không bao giờ làm lịch sử lệch |
+| So sánh giá theo mặt hàng (màn hình PCMP): mọi giá quy về **ĐVT cơ sở, trước VAT, VND** (giá bảng giá = đơn giá × (100 − %CK) / 100 / hệ số; phiếu nhập = thành tiền / SL cơ sở). Mỗi công ty × NCC một dòng: giá gần nhất (phiếu nhập hoặc PO, cái nào mới hơn; cùng ngày lấy phiếu nhập), thấp nhất/cao nhất/bình quân gia quyền 12 tháng **chỉ trên phiếu nhập** (không đếm hai lần PO và phiếu nhập của PO đó). Tô màu dòng có giá gần nhất cao hơn giá gần nhất thấp nhất trong phạm vi quá X% (mặc định 10%, người dùng đổi trên màn hình) | Mục 8.2 |
+| Xem toàn tập đoàn cần quyền `Report.Price.ViewAllCompanies`; truy vấn khi đó bỏ filter công ty và filter kho (phạm vi kho khai báo theo từng công ty nên không áp được sang công ty khác), vẫn giữ filter nhóm hàng. Không có quyền thì chỉ thấy công ty đang làm việc (bảng giá: của mình + toàn tập đoàn) | Mục 9.2 |
+| Lưu ý kỹ thuật: `IgnoreQueryFilters` của EF Core tắt filter cho **cả câu truy vấn** (mọi bảng), nên truy vấn nào bỏ filter phải tự lọc công ty tường minh hoặc chỉ đi theo Id đã qua filter. Sửa lỗi giá tham khảo PR (giai đoạn 5) từng lấy cả giá nhập của công ty khác | CLAUDE.md mục 4 |
+| Chưa làm: so sánh theo công ty và theo NCC (mục 8.2 gạch 2, 3), cảnh báo giá cao trên PO, nhập bảng giá bằng Excel, ngoại tệ | Làm sau khi có yêu cầu |
+
 ## 9. Phân quyền và ghi log
 
 Phân quyền có hai chiều độc lập: **quyền chức năng** (được làm gì) và **phạm vi dữ liệu** (được thấy dữ liệu nào: công ty, kho, nhóm hàng). Một yêu cầu chỉ được thực hiện khi thỏa cả hai.

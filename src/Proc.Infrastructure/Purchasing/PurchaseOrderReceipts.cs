@@ -14,6 +14,7 @@ internal static class PurchaseOrderReceipts
     /// </summary>
     public static async Task<Dictionary<Guid, decimal>> ReceivedBaseByLineAsync(
         ProcDbContext db, IReadOnlyList<Guid> poLineIds, Guid? excludeDocumentId, CancellationToken cancellationToken) =>
+        // IgnoreQueryFilters tắt filter công ty cho cả câu truy vấn; an toàn vì poLineIds lấy từ PO đã qua filter công ty.
         await (
                 from l in db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
                 join d in db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]) on l.DocumentId equals d.Id

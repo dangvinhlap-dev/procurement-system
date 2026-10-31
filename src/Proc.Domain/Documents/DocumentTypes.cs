@@ -41,6 +41,12 @@ public static class DocumentTypes
     /// <summary>Phiếu điều chỉnh / kiểm kê.</summary>
     public const string Adjustment = "ADJ";
 
+    /// <summary>Bảng giá nhà cung cấp (design.md mục 8.1).</summary>
+    public const string PriceList = "PRL";
+
+    /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
+    public const string Sourcing = "SRC";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -54,6 +60,8 @@ public static class DocumentTypes
         new(IntercompanySale, "Phiếu xuất bán nội bộ"),
         new(IntercompanyReceipt, "Phiếu nhập mua nội bộ"),
         new(Adjustment, "Phiếu điều chỉnh, kiểm kê"),
+        new(PriceList, "Bảng giá nhà cung cấp"),
+        new(Sourcing, "Danh sách tìm nguồn"),
     ];
 
     /// <summary>

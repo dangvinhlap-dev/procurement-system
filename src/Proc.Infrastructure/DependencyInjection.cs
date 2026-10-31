@@ -75,6 +75,8 @@ public static class DependencyInjection
         services.AddScoped<IWarehouseAdministration, WarehouseAdministration>();
         services.AddScoped<IUomAdministration, UomAdministration>();
         services.AddScoped<Proc.Application.Pricing.IInternalPriceAdministration, Proc.Infrastructure.Pricing.InternalPriceAdministration>();
+        services.AddScoped<Proc.Application.Pricing.IPriceListService, Proc.Infrastructure.Pricing.PriceListService>();
+        services.AddScoped<Proc.Application.Pricing.IPriceComparisonService, Proc.Infrastructure.Pricing.PriceComparisonService>();
         services.AddScoped<IItemCategoryAdministration, ItemCategoryAdministration>();
         services.AddScoped<IItemAdministration, ItemAdministration>();
         services.AddScoped<ISupplierGroupAdministration, SupplierGroupAdministration>();

@@ -11,11 +11,21 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   dung sai nhận hàng; gửi duyệt, duyệt, từ chối có lý do; phiếu nhập mua theo PO (giá thực mua sau chiết khấu, chặn nhận vượt);
   PO tự đóng khi nhận đủ; Việc cần làm (phiếu chờ tôi duyệt); Theo dõi giao hàng. API `/api/approval-rules`,
   `/api/approvals/pending`, `/api/purchase-requests`, `/api/purchase-orders`.
+- Bảng giá NCC (design.md mục 8.1, 8.5): bảng giá theo công ty hoặc toàn tập đoàn (tổng công ty lập), bậc số lượng, chiết khấu,
+  VAT; Nháp → Hiệu lực → Ngừng. Đơn mua hàng gợi ý giá theo bảng giá (cột "Giá bảng giá", nút "Áp giá bảng giá").
+  API `/api/price-lists`.
+- So sánh giá (design.md mục 8.2): theo mặt hàng – giá thực mua theo công ty × NCC, thấp nhất/cao nhất/bình quân 12 tháng, tô màu
+  công ty mua cao hơn giá thấp nhất quá X%; giá bảng giá đang hiệu lực; lịch sử giá 12 tháng. Xem toàn tập đoàn cần quyền
+  `Report.Price.ViewAllCompanies`. API `/api/price-comparison`.
+
+### Sửa lỗi
+- Giá tham khảo trên đề nghị mua hàng lấy cả giá nhập của công ty khác; nay chỉ lấy giá nhập của công ty đang làm việc.
 
 ### Thay đổi CSDL
 - Migration `V0_6_0_MuaHang`: bảng `ApprovalRule`, `ApprovalStep`, `PurchaseRequest`, `PurchaseRequestLine`, `PurchaseOrder`,
   `PurchaseOrderLine`; cột `InventoryDocument.PurchaseOrderId`, `InventoryDocumentLine.PurchaseOrderLineId`. `Down()` xóa các
   bảng và cột – mất quy trình duyệt, lịch sử duyệt, mọi PR, PO và liên kết phiếu nhập ↔ PO.
+- Migration `V0_7_0_BangGiaNcc`: bảng `SupplierPriceList`, `SupplierPriceListLine`. `Down()` xóa hai bảng – mất mọi bảng giá NCC.
 
 ## [0.5.0] - 2026-10-30
 
