@@ -29,6 +29,14 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ### Thay đổi CSDL
 - Migration `V0_9_0_DanhSoDanhMuc`: bảng mới `CatalogNumbering` (dải đánh số danh mục). `Down()` xóa bảng – mất cấu hình dải, mã đã cấp không đổi.
+- Migration `V0_9_0_DaiMaMacDinh`: thêm 4 dải mặc định (NCC + 6 số, GN + 4 số, NH + 6 số, `{NHOM}-` + 5 số) cho danh mục chưa có dải mặc định;
+  không ghi đè dải đã có. `Down()` chỉ xóa các dải do migration này tạo và chưa bị sửa – không mất dữ liệu người dùng.
+
+### Lưu ý khi nâng cấp
+- Từ bản này mã nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa do hệ thống tự cấp. Ngay sau khi nâng cấp, quản trị đăng nhập ở tổng công ty,
+  gõ `DSDM` (Hệ thống → Đánh số danh mục), xem 4 dải mặc định và sửa tiền tố, số chữ số, khoảng số cho đúng quy ước mã của công ty trước khi
+  nhân viên thêm danh mục mới. Mã đang có không đổi; mã kế tiếp = số lớn nhất đang có trong dải + 1.
+- Cấp quyền "Sửa thông tin danh mục dùng chung (trừ mã)" cho vai trò cần sửa tên danh mục ở công ty thành viên (vai trò Quản trị tự có).
 
 ## [0.8.0] - 2026-10-31
 

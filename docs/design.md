@@ -271,7 +271,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Cấu hình dùng chung toàn tập đoàn: xem cần `System.Parameter.View`; thêm/sửa/xóa cần `System.Parameter.Manage` và làm việc ở tổng công ty; mọi thay đổi ghi nhật ký. Mỗi danh mục một dải (hàng hóa thêm mỗi nhóm một dải) | Mục 9 |
 | Nhập Excel (mục 5.10): dòng **để trống mã** = thêm mới, hệ thống cấp mã; dòng có mã phải là mã đã có (cập nhật), mã chưa có báo lỗi dòng. Nhóm hàng mới trong file chưa làm nhóm cha được cho dòng khác cùng file | Cùng quy tắc với nhập tay |
 | Không áp dụng cho đơn vị tính (CAI, HOP, KG là ký hiệu quen thuộc), công ty và kho (mã ngắn nằm trong số chứng từ, ví dụ PO-**BHA**-…), tên đăng nhập, mã vai trò – các mã này vẫn nhập tay và khóa sau khi tạo | Quyết định của người dùng 31/10/2026 |
-| Dữ liệu mẫu dev/test có sẵn dải: NCC + 6 số, GN + 4 số (nhóm NCC), NH + 6 số (nhóm hàng), `{NHOM}-` + 5 số (hàng hóa). Môi trường chạy thật không có sẵn – quản trị cấu hình trước khi thêm danh mục | |
+| Dải mặc định: NCC + 6 số, GN + 4 số (nhóm NCC), NH + 6 số (nhóm hàng), `{NHOM}-` + 5 số (hàng hóa). Có sẵn trong dữ liệu mẫu dev/test; máy chạy thật được migration `V0_9_0_DaiMaMacDinh` tạo một lần khi nâng cấp, chỉ cho danh mục chưa có dải mặc định (không ghi đè dải đã cấu hình; dải xóa sau đó không bị tạo lại). Quản trị sửa tiền tố/dải cho đúng quy ước công ty trước khi nhập liệu | Nâng cấp xong vẫn thêm được danh mục, không bị chặn vì bảng dải trống |
 
 ## 6. Chứng từ nghiệp vụ và luồng xử lý
 
