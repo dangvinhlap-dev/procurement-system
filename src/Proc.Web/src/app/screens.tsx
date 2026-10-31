@@ -5,6 +5,7 @@ import {
   BankOutlined,
   BellOutlined,
   ClusterOutlined,
+  ExportOutlined,
   TrophyOutlined,
   FieldTimeOutlined,
   FundOutlined,
@@ -132,6 +133,8 @@ export const screens: Screen[] = [
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SAVE', title: 'Tiết kiệm từ đấu thầu', navLabel: 'Tiết kiệm đấu thầu', path: '/bao-cao/tiet-kiem-dau-thau', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+
+  { code: 'ACCX', title: 'Xuất chứng từ cho kế toán', navLabel: 'Xuất cho kế toán', path: '/bao-cao/xuat-ke-toan', icon: <ExportOutlined />, group: 'reports', permission: Permission.AccountingExport },
 
   { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },
   { code: 'WH', title: 'Danh mục kho', navLabel: 'Kho', path: '/he-thong/kho', icon: <ApartmentOutlined />, group: 'system', permission: Permission.WarehouseView },

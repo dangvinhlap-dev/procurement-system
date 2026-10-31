@@ -44,6 +44,18 @@ public static class ReportEndpoints
                 s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
 
+        // Xuất chứng từ cho kế toán (mục 11.5): docTypes nhiều giá trị (?docTypes=GRN&docTypes=RTV), trống = tất cả.
+        var accounting = app.MapGroup("/api/accounting-export").WithTags("Xuất cho kế toán");
+        accounting.MapGet("/documents", (DateOnly from, DateOnly to, string[]? docTypes, IAccountingExportService s, CancellationToken ct) =>
+                s.ListAsync(new AccountingExportQuery(from, to, docTypes ?? []), ct))
+            .RequirePermission(Permissions.Report.AccountingExport);
+        accounting.MapGet("/file", async (DateOnly from, DateOnly to, string[]? docTypes, IAccountingExportService s, CancellationToken ct) =>
+            {
+                var file = await s.ExportAsync(new AccountingExportQuery(from, to, docTypes ?? []), ct);
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Report.AccountingExport);
+
         // Trang chủ: ai đăng nhập cũng xem được; từng phần kiểm quyền trong dịch vụ (thiếu quyền thì phần đó là null).
         app.MapGet("/api/dashboard", (IDashboardService s, CancellationToken ct) => s.GetAsync(ct)).WithTags("Trang chủ");
 

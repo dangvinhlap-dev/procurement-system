@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Reports.IStockReportService, Proc.Infrastructure.Reports.StockReportService>();
         services.AddScoped<Proc.Application.Reports.IPurchaseReportService, Proc.Infrastructure.Reports.PurchaseReportService>();
         services.AddScoped<Proc.Application.Reports.IDashboardService, Proc.Infrastructure.Reports.DashboardService>();
+        services.AddScoped<Proc.Application.Reports.IAccountingExportService, Proc.Infrastructure.Reports.AccountingExportService>();
         services.AddScoped<IExcelTransfer>(sp => new ExcelTransfer(
             sp.GetRequiredService<ProcDbContext>(), sp.GetRequiredService<ICurrentUserScope>(), sp.GetServices<ExcelCatalog>()));
         services.AddScoped<IUserAdministration, UserAdministration>();

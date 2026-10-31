@@ -283,3 +283,51 @@ export function useSourcingSavings(period: PurchaseReportPeriod) {
     placeholderData: keepPreviousData,
   })
 }
+
+/** Một chứng từ đã ghi sổ sẽ xuất cho kế toán. */
+export interface AccountingDocument {
+  documentId: string
+  docType: 'GRN' | 'RTV' | 'TRF' | 'ICS' | 'ICR'
+  no: string
+  date: string
+  partnerCode: string | null
+  partnerLocalCode: string | null
+  partnerName: string | null
+  partnerTaxCode: string | null
+  invoiceNo: string | null
+  invoiceSeries: string | null
+  invoiceDate: string | null
+  lineCount: number
+  amount: number
+  vatAmount: number
+  costAmount: number
+  isCostFinal: boolean
+}
+
+/** Điều kiện xuất cho kế toán. */
+export interface AccountingExportFilter {
+  from: string
+  to: string
+  docTypes: string[]
+}
+
+/** Chuỗi truy vấn của điều kiện xuất cho kế toán (dùng chung cho danh sách và file). */
+export function accountingExportQuery(filter: AccountingExportFilter) {
+  const params = new URLSearchParams({ from: filter.from, to: filter.to })
+  for (const t of filter.docTypes) params.append('docTypes', t)
+  return params.toString()
+}
+
+/**
+ * Chứng từ đã ghi sổ sẽ xuất cho kế toán (xem trước).
+ * @param filter Khoảng ngày, loại chứng từ.
+ */
+export function useAccountingDocuments(filter: AccountingExportFilter) {
+  const companyId = useCompanyId()
+  const query = accountingExportQuery(filter)
+  return useQuery({
+    queryKey: ['reports', companyId, 'accounting-export', query],
+    queryFn: () => apiFetch<AccountingDocument[]>(`/api/accounting-export/documents?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
