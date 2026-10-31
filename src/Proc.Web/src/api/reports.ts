@@ -134,3 +134,150 @@ export function useGroupStock(itemId: string | undefined) {
     enabled: !!itemId,
   })
 }
+
+/** Một dòng PR chưa xử lý: chờ duyệt, hoặc đã duyệt chưa đặt đủ. */
+export interface PendingRequestLine {
+  requestId: string
+  requestNo: string
+  date: string
+  department: string | null
+  status: 'Submitted' | 'Approved'
+  priority: 'Low' | 'Normal' | 'Urgent'
+  lineNo: number
+  itemId: string
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  orderedQty: number
+  remainingQty: number
+  estAmount: number
+  neededDate: string | null
+  overdueDays: number
+}
+
+/** Cách nhóm báo cáo mua hàng. */
+export type PurchaseSpendGroup = 'supplier' | 'category' | 'item' | 'company'
+
+/** Một dòng mua hàng theo nhóm. */
+export interface PurchaseSpendRow {
+  key: string
+  code: string
+  name: string
+  receiptCount: number
+  receiptAmount: number
+  returnAmount: number
+  netAmount: number
+  sharePct: number
+}
+
+/** Báo cáo mua hàng theo nhóm. */
+export interface PurchaseSpendResult {
+  groupBy: PurchaseSpendGroup
+  allCompanies: boolean
+  totalNet: number
+  items: PurchaseSpendRow[]
+}
+
+/** Chỉ số đánh giá một NCC. */
+export interface SupplierEvaluationRow {
+  supplierId: string
+  supplierCode: string
+  supplierName: string
+  receiptCount: number
+  receiptAmount: number
+  returnAmount: number
+  returnPct: number | null
+  deliveryLines: number
+  onTimeLines: number
+  onTimePct: number | null
+  avgLateDays: number | null
+}
+
+/** Một dòng RFQ đã chọn thầu và tiền tiết kiệm. */
+export interface SourcingSavingRow {
+  rfqId: string
+  rfqNo: string
+  title: string
+  awardDate: string
+  companyCode: string
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  supplierCode: string
+  supplierName: string
+  quoteCount: number
+  awardedPrice: number
+  minPrice: number
+  avgPrice: number
+  maxPrice: number
+  awardedAmount: number
+  savingVsAvg: number
+  savingVsMax: number
+  isLowest: boolean
+  awardReason: string | null
+}
+
+/** Khoảng ngày và phạm vi của báo cáo mua hàng. */
+export interface PurchaseReportPeriod {
+  from: string
+  to: string
+  allCompanies: boolean
+}
+
+const periodQuery = (p: PurchaseReportPeriod) => new URLSearchParams({ from: p.from, to: p.to, allCompanies: String(p.allCompanies) })
+
+/** Dòng PR chưa xử lý của công ty đang làm việc. */
+export function usePendingRequests() {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['reports', companyId, 'pending-requests'],
+    queryFn: () => apiFetch<PendingRequestLine[]>('/api/reports/pending-requests'),
+  })
+}
+
+/**
+ * Mua hàng thuần theo nhóm.
+ * @param period Khoảng ngày, phạm vi.
+ * @param groupBy Cách nhóm.
+ */
+export function usePurchaseSpend(period: PurchaseReportPeriod, groupBy: PurchaseSpendGroup) {
+  const companyId = useCompanyId()
+  const params = periodQuery(period)
+  params.set('groupBy', groupBy)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'purchase-spend', query],
+    queryFn: () => apiFetch<PurchaseSpendResult>(`/api/reports/purchase-spend?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * Đánh giá NCC trong khoảng ngày.
+ * @param period Khoảng ngày, phạm vi.
+ */
+export function useSupplierEvaluation(period: PurchaseReportPeriod) {
+  const companyId = useCompanyId()
+  const query = periodQuery(period).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'supplier-evaluation', query],
+    queryFn: () => apiFetch<SupplierEvaluationRow[]>(`/api/reports/supplier-evaluation?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * Tiết kiệm từ đấu thầu theo ngày chọn thầu.
+ * @param period Khoảng ngày, phạm vi.
+ */
+export function useSourcingSavings(period: PurchaseReportPeriod) {
+  const companyId = useCompanyId()
+  const query = periodQuery(period).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'sourcing-savings', query],
+    queryFn: () => apiFetch<SourcingSavingRow[]>(`/api/reports/sourcing-savings?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
