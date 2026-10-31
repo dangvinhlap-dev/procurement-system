@@ -12,6 +12,8 @@ import { useAuth } from '../../auth/useAuth'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatQuantity } from '../../utils/format'
+import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
+import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
 import { SupplierDrawer } from './SupplierDrawer'
 
 const statusTone: Record<SupplierStatus, StatusTone> = {
@@ -47,7 +49,7 @@ const baseColumns: GridColumn<SupplierListItem>[] = [
  * Nhóm và trạng thái lọc ở server; ô tìm kiếm (có dấu hay không dấu) lọc tiếp trên các dòng đã tải.
  */
 export function SupplierListPage() {
-  const { workingCompany, hasPermission } = useAuth()
+  const { workingCompany } = useAuth()
   const [groupId, setGroupId] = useState<string | undefined>()
   const [status, setStatus] = useState<SupplierStatus | undefined>()
   const [appliedOnly, setAppliedOnly] = useState(false)
@@ -63,7 +65,9 @@ export function SupplierListPage() {
     [companyCode],
   )
   const groups = useSupplierGroups()
-  const canManage = workingCompany?.isHeadOffice === true && hasPermission(Permission.SupplierManage)
+  // Thêm mới ở tổng công ty; sửa thông tin (trừ mã) theo quyền – ngăn kéo đọc canEdit từ API (design.md mục 5.7).
+  const rights = useSharedCatalogRights(Permission.SupplierManage)
+  const canManage = rights.canCreate
   // undefined = đóng; null = thêm mới; chuỗi = Id NCC đang mở.
   const [openId, setOpenId] = useState<string | null | undefined>(undefined)
 
@@ -74,9 +78,7 @@ export function SupplierListPage() {
       title={`Có hơn ${formatQuantity(suppliers.data.limit)} NCC khớp điều kiện, đang hiện ${formatQuantity(suppliers.data.limit)} mã đầu tiên. Chọn nhóm hoặc trạng thái để thu hẹp.`}
     />
   ) : (
-    !workingCompany?.isHeadOffice && (
-      <Alert type="info" showIcon title="Danh mục dùng chung toàn tập đoàn: chỉ thêm, sửa khi làm việc ở tổng công ty." />
-    )
+    <SharedCatalogNotice rights={rights} />
   )
 
   return (

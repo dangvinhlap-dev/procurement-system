@@ -79,10 +79,10 @@ test.describe('danh mục công ty và kho', () => {
     await page.screenshot({ path: 'e2e/screenshots/warehouse-list.png' })
   })
 
-  test('ở công ty thành viên chỉ xem được công ty mình', async ({ page }) => {
+  test('ở công ty thành viên chỉ thấy công ty mình, quản trị sửa được thông tin trừ mã', async ({ page }) => {
     await switchCompany(page, 'BHA')
     await openByCommand(page, 'COMP')
-    await expect(page.getByText('Đang làm việc ở công ty thành viên nên chỉ xem được công ty mình.', { exact: false })).toBeVisible()
+    await expect(page.getByText('chỉ thấy công ty mình, được sửa thông tin (trừ mã)', { exact: false })).toBeVisible()
     await expect(page.locator('.data-grid-row')).toHaveCount(1)
     await expect(gridRow(page, 'BHA')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Tạo mới' })).toHaveCount(0)
@@ -90,7 +90,8 @@ test.describe('danh mục công ty và kho', () => {
     await gridRow(page, 'BHA').dblclick()
     const drawer = page.locator('.detail-drawer')
     await expect(drawer.getByText('Công ty: BHA')).toBeVisible()
-    await expect(drawer.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
+    await expect(drawer.getByRole('button', { name: 'Lưu' })).toBeVisible()
+    await expect(drawer.getByLabel('Mã công ty')).toBeDisabled()
   })
 
   test('chụp danh mục công ty ở tổng công ty', async ({ page }) => {

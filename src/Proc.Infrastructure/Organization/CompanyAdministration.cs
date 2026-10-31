@@ -56,7 +56,7 @@ public sealed class CompanyAdministration : ICompanyAdministration
         if (!atHeadOffice && id != _scope.CompanyId) throw new NotFoundException("Không tìm thấy công ty.");
         var company = await _db.Companies.AsNoTracking().SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy công ty.");
-        return ToDetail(company, atHeadOffice && _scope.HasPermission(Permissions.System.CompanyManage));
+        return ToDetail(company, CanEdit(atHeadOffice));
     }
 
     /// <inheritdoc />
@@ -82,7 +82,12 @@ public sealed class CompanyAdministration : ICompanyAdministration
     /// <inheritdoc />
     public async Task<CompanyDetailDto> UpdateAsync(Guid id, UpdateCompanyRequest request, CancellationToken cancellationToken)
     {
-        await RequireHeadOfficeAsync(cancellationToken);
+        var atHeadOffice = await AtHeadOfficeAsync(cancellationToken);
+        // Ở công ty thành viên chỉ thấy (nên chỉ sửa) công ty mình; sửa cần quyền sửa danh mục dùng chung (design.md mục 5.7).
+        if (!atHeadOffice && id != _scope.CompanyId) throw new NotFoundException("Không tìm thấy công ty.");
+        if (!CanEdit(atHeadOffice))
+            throw new ForbiddenAccessException(
+                "Chỉ sửa được công ty khi làm việc ở tổng công ty, hoặc khi được cấp quyền \"Sửa thông tin danh mục dùng chung\".");
         var company = await _db.Companies.SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy công ty.");
 
@@ -129,6 +134,10 @@ public sealed class CompanyAdministration : ICompanyAdministration
         if (other is not null)
             throw new BusinessRuleException($"Mã số thuế {company.TaxCode} đã dùng cho công ty {other}.");
     }
+
+    /// <summary>Quyền quản lý công ty ở tổng công ty, hoặc quyền sửa danh mục dùng chung ở bất kỳ công ty nào.</summary>
+    private bool CanEdit(bool atHeadOffice) =>
+        _scope.HasPermission(Permissions.MasterData.CatalogEditShared) || (atHeadOffice && _scope.HasPermission(Permissions.System.CompanyManage));
 
     private Task<bool> AtHeadOfficeAsync(CancellationToken cancellationToken) =>
         HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);

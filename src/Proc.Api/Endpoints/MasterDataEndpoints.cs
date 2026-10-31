@@ -30,7 +30,7 @@ public static class MasterDataEndpoints
             .Validate<CreateUomRequest>();
         uoms.MapPut("/{id:guid}", (Guid id, UpdateUomRequest request, IUomAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.MasterData.ItemManage)
+            .RequireAnyPermission(Permissions.MasterData.ItemManage, Permissions.MasterData.CatalogEditShared)
             .Validate<UpdateUomRequest>();
 
         var categories = app.MapGroup("/api/item-categories").WithTags("Danh mục hàng");
@@ -45,7 +45,7 @@ public static class MasterDataEndpoints
             .Validate<CreateItemCategoryRequest>();
         categories.MapPut("/{id:guid}", (Guid id, UpdateItemCategoryRequest request, IItemCategoryAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.MasterData.ItemCategoryManage)
+            .RequireAnyPermission(Permissions.MasterData.ItemCategoryManage, Permissions.MasterData.CatalogEditShared)
             .Validate<UpdateItemCategoryRequest>();
 
         var items = app.MapGroup("/api/items").WithTags("Danh mục hàng");
@@ -67,7 +67,7 @@ public static class MasterDataEndpoints
             .Validate<CreateItemRequest>();
         items.MapPut("/{id:guid}", (Guid id, UpdateItemRequest request, IItemAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.MasterData.ItemManage)
+            .RequireAnyPermission(Permissions.MasterData.ItemManage, Permissions.MasterData.CatalogEditShared)
             .Validate<UpdateItemRequest>();
 
         var groups = app.MapGroup("/api/supplier-groups").WithTags("Nhà cung cấp");
@@ -82,7 +82,7 @@ public static class MasterDataEndpoints
             .Validate<CreateSupplierGroupRequest>();
         groups.MapPut("/{id:guid}", (Guid id, UpdateSupplierGroupRequest request, ISupplierGroupAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .RequireAnyPermission(Permissions.MasterData.SupplierManage, Permissions.MasterData.CatalogEditShared)
             .Validate<UpdateSupplierGroupRequest>();
 
         var suppliers = app.MapGroup("/api/suppliers").WithTags("Nhà cung cấp");
@@ -102,7 +102,7 @@ public static class MasterDataEndpoints
             .Validate<SaveSupplierRequest>();
         suppliers.MapPut("/{id:guid}", (Guid id, SaveSupplierRequest request, ISupplierAdministration s, CancellationToken ct) =>
                 s.UpdateAsync(id, request, ct))
-            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .RequireAnyPermission(Permissions.MasterData.SupplierManage, Permissions.MasterData.CatalogEditShared)
             .Validate<SaveSupplierRequest>();
 
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.

@@ -114,8 +114,7 @@ public sealed class ItemAdministration : IItemAdministration
     /// <inheritdoc />
     public async Task<ItemDetailDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
-        var canEdit = _scope.HasPermission(Permissions.MasterData.ItemManage)
-            && await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
+        var canEdit = await SharedCatalog.CanEditAsync(_db, _scope, Permissions.MasterData.ItemManage, cancellationToken);
         var item = await _db.Items.AsNoTracking().SingleOrDefaultAsync(i => i.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy mặt hàng.");
         var uomIds = item.Conversions.Select(c => c.UomId).ToList();
@@ -155,7 +154,7 @@ public sealed class ItemAdministration : IItemAdministration
     /// <inheritdoc />
     public async Task<ItemDetailDto> UpdateAsync(Guid id, UpdateItemRequest request, CancellationToken cancellationToken)
     {
-        await HeadOffice.RequireAsync(_db, _scope, "hàng hóa", cancellationToken);
+        await SharedCatalog.RequireEditAsync(_db, _scope, "hàng hóa", Permissions.MasterData.ItemManage, cancellationToken);
         var item = await _db.Items.SingleOrDefaultAsync(i => i.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy mặt hàng.");
         var type = ParseType(request.Type);

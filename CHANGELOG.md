@@ -5,6 +5,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+### Thêm mới
+- Quyền mới `MasterData.Catalog.EditShared` – "Sửa thông tin danh mục dùng chung (trừ mã)" (design.md mục 5.6, 5.7, 5.9): sửa tên và
+  thông tin công ty, đơn vị tính, nhóm hàng, hàng hóa, nhóm NCC, NCC ở bất kỳ công ty nào đang làm việc; mã không sửa được; thêm mới vẫn chỉ ở
+  tổng công ty. Vai trò Quản trị tự có; vai trò khác gán tại Hệ thống → Vai trò. Màn hình danh mục báo rõ "chỉ xem" hay "được sửa thông tin".
+
 ### Thay đổi
 - Giao diện chuyển sang quy chuẩn SAP Fiori, theme Horizon – lát UI-a (docs/ui-guide.md, design.md mục 17): chữ 14px, bảng màu Horizon
   (chữ #1d2d3d, nền #f5f6f7, màu nhấn #0a6ed1, màu trạng thái ngữ nghĩa), bo góc 4/8px, đổ bóng nhẹ, khoảng cách 8/16px, dòng bảng 32px,
