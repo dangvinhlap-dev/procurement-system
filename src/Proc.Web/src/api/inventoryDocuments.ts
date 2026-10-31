@@ -211,6 +211,8 @@ export function useInventoryDocumentMutations<TInput>(endpoint: string) {
   const onSuccess = () => {
     void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
     void queryClient.invalidateQueries({ queryKey: ['stock'] })
+    // Số đếm phiếu nháp trên cây điều hướng, trang chủ.
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
   return {
     create: useMutation({

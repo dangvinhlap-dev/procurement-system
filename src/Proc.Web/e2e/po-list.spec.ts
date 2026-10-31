@@ -31,10 +31,9 @@ test('khung ứng dụng đúng kích thước và thành phần theo ui-guide',
   }
   await expect(toolbar.getByPlaceholder('Ô lệnh – tên màn hình')).toBeVisible()
 
-  // Mục đang mở trên cây điều hướng được đánh dấu và có số đếm.
+  // Mục đang mở trên cây điều hướng được đánh dấu. Số đếm là số thật từ /api/dashboard – kiểm tra ở dashboard.spec.ts.
   const active = nav.locator('[aria-current="page"]').first()
   await expect(active).toContainText('Đơn mua hàng')
-  await expect(active).toContainText('30')
 
   // Thanh trạng thái: tên màn hình, người dùng, ngày làm việc, phiên bản, INS.
   await expect(statusBar).toContainText('Danh sách đơn mua hàng (PO)')

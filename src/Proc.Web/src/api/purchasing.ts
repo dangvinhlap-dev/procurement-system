@@ -339,7 +339,11 @@ export function usePurchaseOrder(id: string | null) {
  */
 export function usePurchaseMutations<TDoc extends { id: string; no: string }, TInput>(kind: PurchaseKind) {
   const queryClient = useQueryClient()
-  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
+    // Số đếm PR, PO, phiếu chờ duyệt trên cây điều hướng, trang chủ.
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
   const useAction = (name: string) =>
     useMutation({
       mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
@@ -400,7 +404,11 @@ export function useApprovalRules() {
 /** Thêm, sửa, xóa cấp duyệt. */
 export function useApprovalRuleMutations() {
   const queryClient = useQueryClient()
-  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
+    // Số đếm PR, PO, phiếu chờ duyệt trên cây điều hướng, trang chủ.
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
   return {
     create: useMutation({ mutationFn: (input: SaveApprovalRuleInput) => apiFetch<ApprovalRule>('/api/approval-rules', { method: 'POST', body: input }), onSuccess }),
     update: useMutation({
