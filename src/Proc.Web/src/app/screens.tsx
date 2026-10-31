@@ -124,6 +124,7 @@ export const screens: Screen[] = [
   { code: 'WH', title: 'Danh mục kho', navLabel: 'Kho', path: '/he-thong/kho', icon: <ApartmentOutlined />, group: 'system', permission: Permission.WarehouseView },
   { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system', permission: Permission.UserView },
   { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
+  { code: 'APRL', title: 'Quy trình duyệt', navLabel: 'Quy trình duyệt', path: '/he-thong/quy-trinh-duyet', icon: <CheckSquareOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'PER', title: 'Kỳ kho', navLabel: 'Kỳ kho', path: '/he-thong/ky-kho', icon: <CalendarOutlined />, group: 'system', permission: Permission.PeriodView },
   { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },

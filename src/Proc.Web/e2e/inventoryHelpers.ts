@@ -87,5 +87,5 @@ export async function seedPostedReceipt(request: APIRequestContext) {
     lines: [{ id: null, itemId: item.id, uomId: hop, qty: 10, unitPrice: 50000, vatCode: '10', lotNo: null, expiryDate: null, note: null }],
   })
   await bha.send('post', `/api/inventory-documents/${receipt.id}/post`, {})
-  return { itemCode, itemId: item.id, receiptNo: receipt.no }
+  return { itemCode, itemId: item.id, receiptNo: receipt.no, supplierCode }
 }

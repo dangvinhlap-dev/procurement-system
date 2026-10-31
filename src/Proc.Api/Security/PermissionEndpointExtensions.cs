@@ -38,4 +38,37 @@ public static class PermissionEndpointExtensions
         });
         return builder;
     }
+
+    /// <summary>
+    /// Bắt buộc có ít nhất một trong các quyền – dùng khi hai vai trò cùng cần đọc một dữ liệu (ví dụ thủ kho đọc đơn mua hàng để
+    /// lập phiếu nhập theo PO dù không có quyền xem danh sách đơn).
+    /// </summary>
+    /// <typeparam name="TBuilder">RouteHandlerBuilder hoặc RouteGroupBuilder.</typeparam>
+    /// <param name="builder">Endpoint cần bảo vệ.</param>
+    /// <param name="permissions">Các mã quyền, có một là đủ.</param>
+    /// <returns>Chính builder để gọi nối tiếp.</returns>
+    public static TBuilder RequireAnyPermission<TBuilder>(this TBuilder builder, params string[] permissions)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        builder.AddEndpointFilter(async (context, next) =>
+        {
+            var scope = context.HttpContext.RequestServices.GetRequiredService<ICurrentUserScope>();
+            if (scope.CompanyId is null)
+            {
+                return Results.Problem(
+                    title: $"Chưa chọn công ty làm việc (header {CompanyScopeMiddleware.CompanyHeader}).",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            if (!permissions.Any(scope.HasPermission))
+            {
+                return Results.Problem(
+                    title: $"Bạn không có quyền thực hiện chức năng này ({string.Join(" hoặc ", permissions)}).",
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            return await next(context);
+        });
+        return builder;
+    }
 }

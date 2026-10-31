@@ -1,4 +1,5 @@
-import { Alert, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { FileDoneOutlined } from '@ant-design/icons'
+import { Alert, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
@@ -14,6 +15,7 @@ import {
 } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
 import { useWarehouses } from '../../api/organization'
+import { usePurchaseOrder, useReceivableOrders } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
@@ -32,6 +34,7 @@ interface LineValues {
   lotNo?: string
   expiryDate?: Dayjs | null
   note?: string
+  purchaseOrderLineId?: string | null
 }
 
 interface ReceiptFormValues {
@@ -44,6 +47,7 @@ interface ReceiptFormValues {
   deliveryNoteNo?: string
   deliverer?: string
   note?: string
+  purchaseOrderId?: string | null
   lines: LineValues[]
 }
 
@@ -90,7 +94,11 @@ export function GoodsReceiptPage() {
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
-  const suppliers = useSupplierLookup(doc?.supplierId ? [doc.supplierId] : [])
+  // Nhập theo đơn mua hàng (design.md mục 6.7): chọn PO đã duyệt → NCC, kho theo PO; dòng lấy từ dòng PO còn lại.
+  const purchaseOrderId = Form.useWatch('purchaseOrderId', form) as string | null | undefined
+  const receivable = useReceivableOrders(!readOnly)
+  const order = usePurchaseOrder(purchaseOrderId ?? null)
+  const suppliers = useSupplierLookup([doc?.supplierId, order.data?.supplierId].filter((x): x is string => !!x))
 
   // Lập mới: ngày hôm nay, kho tổng (nếu trong phạm vi) làm kho nhập mặc định.
   const mainWarehouse = warehouses.data?.find((w) => w.type === 'Main' && w.isActive)?.id
@@ -110,6 +118,7 @@ export function GoodsReceiptPage() {
       deliveryNoteNo: doc.deliveryNoteNo ?? '',
       deliverer: doc.deliverer ?? '',
       note: doc.note ?? '',
+      purchaseOrderId: doc.purchaseOrderId ?? null,
       lines: doc.lines.map((l) => ({
         id: l.id,
         itemId: l.itemId,
@@ -120,6 +129,7 @@ export function GoodsReceiptPage() {
         lotNo: l.lotNo ?? '',
         expiryDate: l.expiryDate ? dayjs(l.expiryDate) : null,
         note: l.note ?? '',
+        purchaseOrderLineId: l.purchaseOrderLineId ?? null,
       })),
     })
   }, [doc, form])
@@ -154,6 +164,7 @@ export function GoodsReceiptPage() {
       deliveryNoteNo: orNull(values.deliveryNoteNo),
       deliverer: orNull(values.deliverer),
       note: orNull(values.note),
+      purchaseOrderId: values.purchaseOrderId ?? null,
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null,
         itemId: l.itemId!,
@@ -164,6 +175,7 @@ export function GoodsReceiptPage() {
         lotNo: orNull(l.lotNo),
         expiryDate: l.expiryDate ? l.expiryDate.format('YYYY-MM-DD') : null,
         note: orNull(l.note),
+        purchaseOrderLineId: l.purchaseOrderLineId ?? null,
       })),
     }
     try {
@@ -185,6 +197,28 @@ export function GoodsReceiptPage() {
     form.setFieldValue(['lines', index, 'vatCode'], item.vatCode)
   }
 
+  /** Chọn PO: NCC, kho nhận theo PO; xóa dòng cũ (dòng phải trỏ về dòng PO mới). */
+  const pickOrder = () => form.setFieldValue('lines', [])
+
+  useEffect(() => {
+    // PO vừa tải: NCC, kho nhận theo PO (server vẫn kiểm tra NCC phải trùng NCC của PO).
+    if (readOnly || !order.data) return
+    form.setFieldValue('supplierId', order.data.supplierId)
+    form.setFieldValue('warehouseId', order.data.warehouseId)
+  }, [order.data, readOnly, form])
+
+  /** Điền mọi dòng PO còn lại (SL = còn lại; đơn giá = giá thực mua sau chiết khấu, thuế suất theo PO – server gán lại khi lưu). */
+  const takeOrderLines = () =>
+    form.setFieldValue(
+      'lines',
+      (order.data?.lines ?? [])
+        .filter((l) => l.remainingQty > 0)
+        .map((l) => ({
+          id: null, itemId: l.itemId, uomId: l.uomId, qty: l.remainingQty, vatCode: l.vatCode, lotNo: '', expiryDate: null, note: '',
+          unitPrice: Math.round(l.unitPrice * (100 - l.discountPct) * 10_000) / 1_000_000, purchaseOrderLineId: l.id,
+        })),
+    )
+
   const columns: LineColumn[] = [
     {
       key: 'item',
@@ -195,10 +229,14 @@ export function GoodsReceiptPage() {
           <Form.Item name={[field.name, 'id']} hidden>
             <Input />
           </Form.Item>
+          <Form.Item name={[field.name, 'purchaseOrderLineId']} hidden>
+            <Input />
+          </Form.Item>
           <Form.Item name={[field.name, 'itemId']} noStyle rules={[{ required: true, message: 'Chọn mặt hàng.' }]}>
             <Select
               variant="borderless"
               style={{ width: '100%' }}
+              disabled={!!lines[field.name]?.purchaseOrderLineId}
               aria-label={`Mặt hàng dòng ${field.name + 1}`}
               showSearch={{ filterOption: false, onSearch: setSearch }}
               placeholder="Gõ mã hoặc tên hàng"
@@ -258,7 +296,7 @@ export function GoodsReceiptPage() {
       align: 'right',
       render: (field) => (
         <Form.Item name={[field.name, 'unitPrice']} noStyle rules={[{ required: true, type: 'number', min: 0, message: 'Nhập đơn giá.' }]}>
-          <InputNumber {...cellNumber} min={0} aria-label={`Đơn giá dòng ${field.name + 1}`} />
+          <InputNumber {...cellNumber} min={0} disabled={!!lines[field.name]?.purchaseOrderLineId} aria-label={`Đơn giá dòng ${field.name + 1}`} />
         </Form.Item>
       ),
     },
@@ -362,6 +400,19 @@ export function GoodsReceiptPage() {
           <Form.Item label="Ngày nhập" name="date" rules={[{ required: true, message: 'Chọn ngày nhập.' }]} extra="Quyết định kỳ kho khi ghi sổ.">
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
           </Form.Item>
+          <Form.Item label="Đơn mua hàng" name="purchaseOrderId" extra="Nhập theo PO đã duyệt (trống = nhập thẳng theo NCC).">
+            <Select
+              allowClear
+              showSearch={{ optionFilterProp: 'label' }}
+              onChange={pickOrder}
+              options={[
+                ...(receivable.data?.items ?? []).map((o) => ({ value: o.id, label: `${o.no} – ${o.description ?? ''}` })),
+                ...(doc?.purchaseOrderId && !(receivable.data?.items ?? []).some((o) => o.id === doc.purchaseOrderId)
+                  ? [{ value: doc.purchaseOrderId, label: doc.purchaseOrderNo ?? '' }]
+                  : []),
+              ]}
+            />
+          </Form.Item>
           <Form.Item label="Kho nhập" name="warehouseId" rules={[{ required: true, message: 'Chọn kho nhập.' }]}>
             <Select
               showSearch={{ optionFilterProp: 'label' }}
@@ -402,13 +453,20 @@ export function GoodsReceiptPage() {
         </>
       }
       lines={
-        <LineGrid
+        <>
+          {!readOnly && purchaseOrderId && (
+            <Button icon={<FileDoneOutlined />} onClick={takeOrderLines} disabled={!order.data} loading={order.isFetching} style={{ marginBottom: 6 }}>
+              Lấy các dòng còn lại của PO
+            </Button>
+          )}
+          <LineGrid
           name="lines"
           columns={columns}
           readOnly={readOnly}
           addRef={addRef}
           newLine={() => ({ id: null, qty: 1, unitPrice: 0 })}
         />
+        </>
       }
       footer={
         <>

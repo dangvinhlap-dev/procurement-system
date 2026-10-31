@@ -57,10 +57,11 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập).</param>
 /// <param name="SentQty">SL gửi theo dòng phiếu xuất bán (chỉ phiếu nhập mua nội bộ).</param>
+/// <param name="PurchaseOrderLineId">Dòng đơn mua hàng (phiếu nhập theo PO).</param>
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
-    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null);
+    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null, Guid? PurchaseOrderLineId = null);
 
 /// <summary>Chi tiết chứng từ kho.</summary>
 /// <param name="Id">Id.</param>
@@ -96,13 +97,16 @@ public sealed record InventoryLineDto(
 /// <param name="CounterCompanyCode">Mã công ty đối ứng.</param>
 /// <param name="CounterCompanyName">Tên công ty đối ứng.</param>
 /// <param name="ReceiveStatus">Trạng thái nhận hàng bán nội bộ: Pending (chờ nhận), Full (đã nhận đủ), Short (nhận thiếu).</param>
+/// <param name="PurchaseOrderId">Đơn mua hàng nguồn (phiếu nhập theo PO).</param>
+/// <param name="PurchaseOrderNo">Số đơn mua hàng nguồn.</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
     string? Deliverer, string? Note, decimal TotalAmount, decimal TotalVat, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost,
     string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null,
-    Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null);
+    Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null,
+    Guid? PurchaseOrderId = null, string? PurchaseOrderNo = null);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -114,8 +118,10 @@ public sealed record InventoryDocumentDto(
 /// <param name="LotNo">Số lô.</param>
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
+/// <param name="PurchaseOrderLineId">Dòng PO (phiếu nhập theo PO): đơn giá, thuế suất, ĐVT lấy theo dòng PO.</param>
 public sealed record SaveInventoryLineRequest(
-    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note);
+    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
+    Guid? PurchaseOrderLineId = null);
 
 /// <summary>Lưu phiếu nhập mua NCC (nháp).</summary>
 /// <param name="Date">Ngày nhập.</param>
@@ -128,9 +134,10 @@ public sealed record SaveInventoryLineRequest(
 /// <param name="Deliverer">Người giao.</param>
 /// <param name="Note">Ghi chú.</param>
 /// <param name="Lines">Toàn bộ dòng.</param>
+/// <param name="PurchaseOrderId">Đơn mua hàng nguồn; null = nhập thẳng theo NCC.</param>
 public sealed record SaveReceiptRequest(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
-    string? DeliveryNoteNo, string? Deliverer, string? Note, IReadOnlyList<SaveInventoryLineRequest> Lines);
+    string? DeliveryNoteNo, string? Deliverer, string? Note, IReadOnlyList<SaveInventoryLineRequest> Lines, Guid? PurchaseOrderId = null);
 
 /// <summary>Một dòng trả NCC gửi lên khi lưu: chỉ chọn dòng nhập gốc và số lượng trả; hàng, ĐVT, lô, giá lấy theo dòng gốc.</summary>
 /// <param name="Id">Id dòng đã có.</param>

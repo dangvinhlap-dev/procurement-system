@@ -11,7 +11,7 @@ const dataRows = (page: Page) => page.locator('.data-grid tbody tr.data-grid-row
 
 test.beforeEach(async ({ page }) => {
   await loginViaApi(page)
-  await page.goto('/mua-hang/po')
+  await page.goto('/mua-hang/po/mau')
   await expect(page.getByRole('heading', { name: 'Danh sách đơn mua hàng (PO)' })).toBeVisible()
 })
 

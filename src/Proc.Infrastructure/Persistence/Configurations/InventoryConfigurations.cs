@@ -31,6 +31,8 @@ internal sealed class InventoryDocumentConfiguration : IEntityTypeConfiguration<
     public void Configure(EntityTypeBuilder<InventoryDocument> builder)
     {
         builder.ToTable("InventoryDocument");
+        // Phiếu nhập mua theo đơn mua hàng (design.md mục 6.2 bước 4).
+        builder.HasOne<Proc.Domain.Purchasing.PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
         // Công ty đối ứng của bán nội bộ (ICS: công ty mua; ICR: công ty bán).
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CounterCompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.DocType).HasMaxLength(10).IsRequired();
@@ -90,6 +92,9 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
         // Dòng trả trỏ về dòng nhập gốc – tính số còn trả được.
         builder.HasOne<InventoryDocumentLine>().WithMany().HasForeignKey(x => x.SourceLineId).OnDelete(DeleteBehavior.Restrict);
+        // Dòng nhập theo PO trỏ về dòng PO – tính SL đã nhận.
+        builder.HasOne<Proc.Domain.Purchasing.PurchaseOrderLine>().WithMany().HasForeignKey(x => x.PurchaseOrderLineId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.PurchaseOrderLineId);
     }
 }
 

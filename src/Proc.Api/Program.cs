@@ -115,6 +115,7 @@ app.MapMasterDataEndpoints();
 app.MapExcelEndpoints();
 app.MapInventoryEndpoints();
 app.MapPricingEndpoints();
+app.MapPurchasingEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();

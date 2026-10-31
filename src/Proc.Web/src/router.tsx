@@ -25,7 +25,10 @@ import { PlaceholderPage } from './pages/PlaceholderPage'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
-import { PurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
+import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
+import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
+import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
+import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { CompanyListPage } from './pages/system/CompanyListPage'
@@ -37,7 +40,11 @@ import { WarehouseListPage } from './pages/system/WarehouseListPage'
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
-  PO: <PurchaseOrderListPage />,
+  PR: <PurchaseListPage kind="purchase-requests" title="Danh sách đề nghị mua hàng (PR)" path="/mua-hang/pr" exportFileName="de-nghi-mua-hang" />,
+  PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
+  POTRK: <DeliveryTrackingPage />,
+  TODO: <PendingApprovalsPage />,
+  APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
   SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
@@ -71,6 +78,8 @@ const documentPages = [
   { code: 'TRF', element: <StockTransferPage /> },
   { code: 'ICS', element: <IntercompanySalePage /> },
   { code: 'ICR', element: <IntercompanyReceiptPage /> },
+  { code: 'PR', element: <PurchaseRequestPage /> },
+  { code: 'PO', element: <PurchaseOrderPage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,
@@ -98,6 +107,11 @@ export const router = createBrowserRouter([
         path: `${d.screen.path}/:id`,
         element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
       })),
+      // Danh sách PO dữ liệu mẫu (30 dòng) giữ cho test giao diện chung AppShell/ListPage/DataGrid so với ảnh mẫu (e2e/po-list.spec.ts).
+      {
+        path: '/mua-hang/po/mau',
+        element: <ScreenGuard screen={screens.find((s) => s.code === 'PO')!}><DemoPurchaseOrderListPage /></ScreenGuard>,
+      },
       { path: '*', element: <PlaceholderPage /> },
     ],
   },

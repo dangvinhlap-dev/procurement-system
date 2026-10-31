@@ -27,9 +27,10 @@ public enum DocumentStatus
 /// <param name="DeliveryNoteNo">Số phiếu giao hàng.</param>
 /// <param name="Deliverer">Người giao.</param>
 /// <param name="Note">Ghi chú.</param>
+/// <param name="PurchaseOrderId">Đơn mua hàng nguồn (nhập theo PO – design.md mục 6.2 bước 4); null = nhập thẳng theo NCC.</param>
 public sealed record ReceiptHeader(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
-    string? DeliveryNoteNo, string? Deliverer, string? Note);
+    string? DeliveryNoteNo, string? Deliverer, string? Note, Guid? PurchaseOrderId = null);
 
 /// <summary>Đầu phiếu xuất trả NCC (design.md mục 10.5): kho xuất, NCC lấy theo phiếu nhập gốc.</summary>
 /// <param name="Date">Ngày xuất trả.</param>
@@ -76,9 +77,10 @@ public sealed record ReceiptConfirmLine(Guid LineId, decimal ReceivedQty, string
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập).</param>
+/// <param name="PurchaseOrderLineId">Dòng đơn mua hàng (phiếu nhập theo PO).</param>
 public sealed record InventoryLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
-    Guid? SourceLineId = null);
+    Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null);
 
 /// <summary>
 /// Chứng từ kho (design.md mục 6.1, 12.1): một bảng cho mọi loại phiếu (GRN, RTV, TRF…), phân biệt bằng DocType.
@@ -144,6 +146,9 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     /// <summary>Công ty đối ứng (ICS: công ty mua; ICR: công ty bán).</summary>
     public Guid? CounterCompanyId { get; private set; }
 
+    /// <summary>Đơn mua hàng nguồn (phiếu nhập mua theo PO).</summary>
+    public Guid? PurchaseOrderId { get; private set; }
+
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
 
@@ -202,6 +207,7 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         DeliveryNoteNo = Clean(header.DeliveryNoteNo);
         Deliverer = Clean(header.Deliverer);
         Note = Clean(header.Note);
+        PurchaseOrderId = header.PurchaseOrderId;
     }
 
     /// <summary>
@@ -544,6 +550,9 @@ public sealed class InventoryDocumentLine : Entity
     /// <summary>Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập) – để tính số còn trả được.</summary>
     public Guid? SourceLineId { get; private set; }
 
+    /// <summary>Dòng đơn mua hàng (phiếu nhập theo PO) – để tính SL đã nhận của PO.</summary>
+    public Guid? PurchaseOrderLineId { get; private set; }
+
     /// <summary>Chép dòng phiếu bán sang phiếu nhập mua nội bộ (SL nhận ban đầu = SL gửi).</summary>
     internal InventoryDocumentLine CopyFor(Guid documentId) =>
         new(documentId)
@@ -580,6 +589,7 @@ public sealed class InventoryDocumentLine : Entity
         if (docType == DocumentTypes.ReturnToVendor && data.SourceLineId is null)
             throw new BusinessRuleException($"Dòng {lineNo}: phiếu trả NCC phải chọn dòng của phiếu nhập gốc.");
         SourceLineId = data.SourceLineId;
+        PurchaseOrderLineId = data.PurchaseOrderLineId;
         var prefix = $"Dòng {lineNo} ({item.Code})";
         if (data.ItemId != item.Id) throw new BusinessRuleException($"{prefix}: mặt hàng không khớp.");
         // Chỉ hàng tồn kho mới đi qua kho (design.md mục 5.2).

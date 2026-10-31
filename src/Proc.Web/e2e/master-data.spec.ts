@@ -23,7 +23,11 @@ async function switchCompany(page: Page, label: string) {
 
 /** Chọn một mục trong Select/TreeSelect của antd đang mở trong ngăn kéo. */
 async function pick(page: Page, label: string, option: string) {
-  await page.locator('.detail-drawer').getByLabel(label, { exact: true }).click()
+  const box = page.locator('.detail-drawer').getByLabel(label, { exact: true })
+  await box.click()
+  // Danh sách thả xuống là danh sách ảo: dữ liệu test tích lũy nhiều mục thì mục cần chọn chưa được vẽ – gõ để lọc trước
+  // (ô không có tìm kiếm thì bỏ qua phím gõ).
+  if (await box.isEditable()) await box.pressSequentially(option.split(' – ')[0])
   await page.locator('.ant-select-dropdown:visible').getByTitle(option, { exact: false }).first().click()
 }
 
