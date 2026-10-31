@@ -5,6 +5,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+## [0.8.0] - 2026-10-31
+
 ### Thêm mới
 - Xuất Excel mọi danh sách, báo cáo (design.md mục 11.2): nút "Xuất Excel" xuất đúng các cột đang hiện và các dòng đã lọc ra file
   .xlsx (ô số, ô ngày đúng kiểu; dòng tiêu đề cố định, có lọc). API `POST /api/excel/grid`.
@@ -33,8 +35,30 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Image Docker cài thêm phông `fonts-dejavu-core` để in PDF tiếng Việt. Máy chủ không dùng Docker cần có Arial, DejaVu Sans hoặc
   Liberation Sans, hoặc khai báo thư mục phông ở `Printing:FontDirectories`.
 
+### Sửa lỗi
+- Đóng kỳ, báo cáo NXT chậm khi sổ kho lớn (quét lặp cả sổ kho cho từng mặt hàng) – xem mục Thay đổi.
+
 ### Thay đổi CSDL
 - Migration `V0_8_0_XepLoaiNcc`: bảng mới `SupplierRatingRule`. `Down()` xóa bảng – mất các hạng đã cấu hình (không ảnh hưởng chứng từ).
+
+### Lưu ý khi nâng cấp
+- **Có thay đổi CSDL – sao lưu trước khi nâng cấp** (1 migration mới `V0_8_0_XepLoaiNcc`, chỉ thêm bảng, không đổi dữ liệu cũ):
+  `pg_dump -h localhost -U proc -F c -f procurement_truoc_0.8.0.dump procurement`.
+- Môi trường Development tự áp migration khi chạy API. Môi trường chạy thật chạy script:
+  `$env:PGCLIENTENCODING='UTF8'; psql -h <máy> -U <user> -d procurement -v ON_ERROR_STOP=1 -f db\scripts\0.8.0.sql`
+  (script `--idempotent`, chạy lại không lỗi).
+- Quyền mới (vai trò Quản trị tự có; vai trò khác gán tại Hệ thống → Vai trò nếu cần): `Report.Stock.ViewAllCompanies`,
+  `Report.Purchase.ViewAllCompanies`, `Report.Accounting.Export`.
+- Cấu hình hạng xếp loại NCC ở tổng công ty (Hệ thống → Xếp loại NCC) – chưa cấu hình thì báo cáo Đánh giá NCC chưa xếp loại.
+- In PDF cần phông chữ tiếng Việt trên server: image Docker đã cài `fonts-dejavu-core`; server không dùng Docker cần Arial, DejaVu Sans hoặc
+  Liberation Sans, hoặc khai báo thư mục phông ở `Printing:FontDirectories`.
+- Thư viện PDFsharp-MigraDoc ghim ở 6.2.4 (bản MIT cuối cùng) – không nâng lên 6.5 trở đi (AGPL).
+
+### Cách quay lại bản trước
+- Code: không xóa lịch sử; tạo nhánh từ tag `git switch -c rollback/v0.7.0 v0.7.0`, build và chạy.
+- CSDL (chỉ khi đã sao lưu): `dotnet ef database update V0_7_0_TimNguonDauThau -p src\Proc.Infrastructure -s src\Proc.Api`.
+  **Mất dữ liệu**: các hạng xếp loại NCC đã cấu hình (không ảnh hưởng chứng từ). Muốn giữ dữ liệu thì khôi phục bản sao lưu:
+  `pg_restore -h localhost -U proc -d procurement --clean procurement_truoc_0.8.0.dump`.
 
 ## [0.7.0] - 2026-10-31
 
