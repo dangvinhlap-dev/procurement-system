@@ -243,6 +243,7 @@ export function GoodsReturnPage() {
     <DocumentForm
       title="Phiếu xuất trả hàng NCC"
       number={isNew ? null : (doc?.no ?? '')}
+      printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={document.isLoading}

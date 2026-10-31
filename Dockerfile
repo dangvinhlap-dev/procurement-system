@@ -30,8 +30,9 @@ RUN dotnet publish src/Proc.Api/Proc.Api.csproj -c Release -o /app --no-restore
 # --- Bước 3: image chạy ---
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 # Npgsql nạp thư viện GSSAPI khi kết nối; image .NET không có sẵn nên log báo lỗi "libgssapi_krb5.so.2" mỗi lần khởi động.
+# fonts-dejavu-core: phông có dấu tiếng Việt để in phiếu PDF (design.md mục 10.10) – image .NET không có phông nào.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api /app ./
