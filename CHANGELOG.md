@@ -3,7 +3,7 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
-## [Chưa phát hành]
+## [0.9.0] - 2026-10-31
 
 ### Thêm mới
 - Quyền mới `MasterData.Catalog.EditShared` – "Sửa thông tin danh mục dùng chung (trừ mã)" (design.md mục 5.6, 5.7, 5.9): sửa tên và
@@ -16,6 +16,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   PR/PO chờ mình duyệt (theo cấp và vai trò), phiếu mình lập được duyệt hoặc bị từ chối (kèm lý do), có phiếu nhập mua nội bộ chờ nhận
   (thủ kho công ty mua), kỳ kho được mở lại (người có quyền xuất dữ liệu kế toán). Bấm thông báo mở thẳng phiếu và đánh dấu đã đọc;
   có "Đánh dấu tất cả đã đọc". API `/api/notifications`.
+- Tham số hệ thống (design.md mục 5.4): màn hình Hệ thống → Tham số hệ thống (SEC) theo công ty đang làm việc. Sửa được "Số NCC tối thiểu
+  khi gửi RFQ" (1–20, mặc định 3, mỗi công ty một giá trị); xem phương pháp giá vốn và các kho cho phép tồn âm. API `/api/system-parameters`.
 
 ### Thay đổi
 - Ô mã trên form thêm NCC, nhóm NCC, nhóm hàng, hàng hóa bị khóa, ghi "(tự cấp khi lưu)"; cột mã trong file Excel mẫu không còn bắt buộc.
@@ -28,6 +30,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   điều hướng trái kiểu Side Navigation; danh sách dạng Dynamic Page (phần đầu thu gọn được để ẩn bộ lọc) và mũi tên ">" cuối dòng để mở chi tiết;
   chứng từ dạng Dynamic Page: nút In phiếu ở phải tiêu đề, khối "Thông tin phiếu" thu gọn được, phiếu đang sửa có thanh chân chứa Lưu / Gửi
   duyệt / Ghi sổ; ngăn kéo chi tiết có nhãn "Chỉ xem". Bỏ chế độ INS/OVR (phím Insert).
+- Gửi RFQ: số NCC tối thiểu lấy theo tham số công ty thay cho con số 3 cố định; RFQ đã gửi không bị ảnh hưởng.
 - Đơn mua hàng: khi chưa có NCC chọn được, phiếu báo rõ chỉ NCC đã duyệt và đang áp dụng tại công ty mới đặt hàng được, kèm liên kết tới
   Danh mục nhà cung cấp.
 
@@ -36,12 +39,25 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_9_0_DaiMaMacDinh`: thêm 4 dải mặc định (NCC + 6 số, GN + 4 số, NH + 6 số, `{NHOM}-` + 5 số) cho danh mục chưa có dải mặc định;
   không ghi đè dải đã có. `Down()` chỉ xóa các dải do migration này tạo và chưa bị sửa – không mất dữ liệu người dùng.
 - Migration `V0_9_0_ThongBao`: bảng mới `Notification`. `Down()` xóa bảng – mất các thông báo đã gửi (chứng từ, nhật ký không đổi).
+- Migration `V0_9_0_ThamSoCongTy`: bảng mới `CompanyParameter`. `Down()` xóa bảng – mất tham số đã sửa, mọi công ty về mặc định 3 NCC.
 
 ### Lưu ý khi nâng cấp
+- **Có thay đổi CSDL – sao lưu trước khi nâng cấp** (4 migration mới, chỉ thêm bảng và dải mã mặc định, không sửa dữ liệu cũ):
+  `pg_dump -h localhost -U proc -F c -f procurement_truoc_0.9.0.dump procurement`.
+- Môi trường Development tự áp migration khi chạy API. Môi trường chạy thật chạy script:
+  `$env:PGCLIENTENCODING='UTF8'; psql -h <máy> -U <user> -d procurement -v ON_ERROR_STOP=1 -f db\scripts\0.9.0.sql`
+  (script `--idempotent`, chạy lại không lỗi; đã chạy thử trên CSDL ở bản 0.8.0).
 - Từ bản này mã nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa do hệ thống tự cấp. Ngay sau khi nâng cấp, quản trị đăng nhập ở tổng công ty,
   gõ `DSDM` (Hệ thống → Đánh số danh mục), xem 4 dải mặc định và sửa tiền tố, số chữ số, khoảng số cho đúng quy ước mã của công ty trước khi
   nhân viên thêm danh mục mới. Mã đang có không đổi; mã kế tiếp = số lớn nhất đang có trong dải + 1.
 - Cấp quyền "Sửa thông tin danh mục dùng chung (trừ mã)" cho vai trò cần sửa tên danh mục ở công ty thành viên (vai trò Quản trị tự có).
+- Giao diện đổi sang SAP Fiori (Shellbar + Dynamic Page): báo người dùng biết thanh công cụ, thanh trạng thái không còn; phím tắt, ô lệnh giữ nguyên.
+
+### Cách quay lại bản trước
+- Code: không xóa lịch sử; tạo nhánh từ tag `git switch -c rollback/v0.8.0 v0.8.0`, build và chạy.
+- CSDL (chỉ khi đã sao lưu): `dotnet ef database update V0_8_0_XepLoaiNcc -p src\Proc.Infrastructure -s src\Proc.Api`.
+  **Mất dữ liệu**: dải đánh số danh mục, thông báo, tham số công ty đã sửa (không ảnh hưởng chứng từ, danh mục, mã đã cấp). Muốn giữ dữ liệu
+  thì khôi phục bản sao lưu: `pg_restore -h localhost -U proc -d procurement --clean procurement_truoc_0.9.0.dump`.
 
 ## [0.8.0] - 2026-10-31
 
