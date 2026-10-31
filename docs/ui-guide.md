@@ -1,72 +1,81 @@
-# Hướng dẫn giao diện – phong cách ứng dụng desktop kiểu Windows XP
+# Hướng dẫn giao diện – SAP Fiori, theme Horizon
 
-Ảnh mẫu: `docs/mau-man-hinh-danh-sach.png` – mọi màn hình danh sách phải giống ảnh này về bố cục.
+Từ 31/10/2026 giao diện theo quy chuẩn thiết kế **SAP Fiori (Horizon Theme)**, thay cho phong cách Windows XP trước đây (xem lịch sử Git
+nếu cần đối chiếu). Mọi màn hình mới hoặc sửa đều theo tài liệu này.
 
-## Tinh thần chung
-- Cảm giác như phần mềm kế toán/ERP chạy trên Windows XP: dày thông tin, nhiều dữ liệu trên một màn hình,
-  thao tác nhanh bằng bàn phím, không có khoảng trắng thừa.
-- Giữ bố cục và cảm giác Windows XP (thanh menu, thanh công cụ, cây điều hướng, thanh trạng thái,
-  viền ô rõ ràng) nhưng vẽ phẳng, sạch như ảnh mẫu: không gradient xanh Luna đậm, không bo góc lớn, không đổ bóng.
-- Chạy trên trình duyệt, tối ưu cho màn hình 1366×768 trở lên.
+## Quyết định áp dụng (31/10/2026)
+- **Công nghệ giữ nguyên**: React 19 + Ant Design + TanStack Query. Dựng phong cách Fiori bằng theme token của Ant Design
+  (`src/Proc.Web/src/theme.ts`) và CSS dùng biến token – **không** dùng SAPUI5/UI5 Web Components.
+- **Phông chữ**: khai báo `"72", "72full", Arial, Helvetica, sans-serif`. Phần mềm **không kèm file phông "72"** (phông có giấy phép riêng
+  của SAP); máy nào đã cài "72" thì hiện "72", còn lại dùng Arial/Helvetica.
+- **Lộ trình chuyển đổi**: lát UI-a đổi theme (màu, chữ, bo góc, đổ bóng, khoảng cách) và giữ bố cục cũ; lát UI-b đổi bố cục sang Shellbar
+  + Dynamic Page. Mỗi lát có ảnh chụp Playwright để duyệt.
+- Giữ các tính năng thao tác nhanh đã có: ô lệnh (gõ mã màn hình), phím tắt, cây điều hướng có số đếm.
 
-## Khung ứng dụng (AppShell) – cố định cho mọi trang
-1. Thanh menu trên cùng (cao 28px): nhóm chức năng theo module (Hằng ngày, Mua hàng, Kho, Giá và NCC,
-   Đấu thầu, Báo cáo, Hệ thống). Bấm mở menu thả xuống. Bên phải: công ty đang làm việc (chọn đổi được),
-   chuông thông báo có số, ngôn ngữ, tên người dùng.
-2. Thanh công cụ (cao 32px): ô lệnh "Ô lệnh – tên màn hình" (gõ mã hoặc tên màn hình rồi Enter để mở nhanh,
-   ví dụ PO, PR, NXT), sau đó các nút biểu tượng: Lưu, Quay lại, Trang chủ, Hủy, In, Tìm kiếm.
-   Nút không dùng được thì mờ đi.
-3. Cột trái – cây điều hướng (rộng 240px, kéo đổi được, thu gọn được):
-   - Nút "Thu gọn tất cả" và ghim ở đầu.
-   - Nhóm "Ghim" (màn hình người dùng tự ghim), sau đó các nhóm theo module.
-   - Mỗi mục: biểu tượng nhỏ + tên + số đếm bên phải (badge xám; đỏ nếu cần chú ý).
-   - Mục đang mở: nền xanh đậm, chữ trắng.
-4. Vùng nội dung chính (phải).
-5. Thanh trạng thái dưới cùng (cao 22px): bên trái là thông báo hệ thống; bên phải là các ô có viền:
-   tên màn hình hiện tại | tên người dùng | ngày làm việc | phiên bản phần mềm | INS.
+## 1. Chữ (Typography)
+| Dùng cho | Cỡ | Độ đậm |
+| --- | --- | --- |
+| Chữ thường, nội dung bảng (mặc định) | 14px (0.875rem) | 400 |
+| Nhãn, tiêu đề đối tượng nhỏ, chú thích | 12px (0.75rem) | 400 |
+| Tiêu đề nhóm / khối form (sub-header) | 16px (1rem) | 600 |
+| Tiêu đề trang (H1) | 24–28px (dùng 24px) | 700 |
 
-## Mẫu màn hình danh sách (ListPage + DataGrid)
-Dùng cho PR, PO, phiếu kho, NCC, hàng hóa… Từ trên xuống:
-1. Tiêu đề màn hình (đậm, 18px) + bộ chọn "Mẫu hiển thị" (Chuẩn, mẫu đã lưu) + dòng nhỏ "Tổng N bản ghi".
-2. Hàng nút lệnh: nút chính "+ Tạo mới" (màu xanh, duy nhất có màu đậm); nút phụ dạng chữ + biểu tượng:
-   Xuất CSV, Xuất Excel, Nhập CSV/Excel.
-3. Tab kiểu Windows (có viền, tab đang chọn liền với nội dung): Danh sách | Tổng hợp | Phân tích.
-4. Khung bộ lọc (có viền, nền xám rất nhạt): ô Tìm kiếm (gõ có dấu hoặc không dấu đều tìm được),
-   các ô lọc theo nghiệp vụ, "Nhóm theo", nút "Cột" (chọn cột hiển thị, có số cột đang ẩn), nút "Xóa bộ lọc".
-5. Vùng "Kéo tiêu đề cột vào đây để nhóm" (viền đứt nét) – tự viết bằng thư viện miễn phí,
-   không dùng AG Grid Enterprise.
-6. Lưới dữ liệu:
-   - Dòng cao 24px, chữ 12px, đường kẻ ngang và dọc mảnh màu xám, dòng xen kẽ hơi xám.
-   - Tiêu đề cột nền xám nhạt, bấm để sắp xếp (▲▼), kéo để đổi độ rộng và thứ tự.
-   - Cột đầu tiên nhỏ: biểu tượng ghim/đánh dấu.
-   - Cột Trạng thái: chấm tròn màu + chữ (xanh lá = đã xử lý/hoàn tất, xám = còn hạn,
-     đỏ = quá hạn/lỗi, cam = chờ duyệt). Màu không là thông tin duy nhất – luôn có chữ.
-   - Ngày dd/MM/yyyy, số kiểu 1.234.567,89, cột số căn phải.
-   - Chữ dài bị cắt "…" và hiện đầy đủ khi rê chuột.
-   - Bấm đúp hoặc Enter để mở chi tiết; mũi tên lên/xuống để di chuyển; dòng chọn nền xanh nhạt.
-   - Cuộn ảo hoặc phân trang khi trên 500 dòng.
+## 2. Bảng màu Horizon
+| Vai trò | Mã màu |
+| --- | --- |
+| Chữ chính | #1d2d3d |
+| Chữ phụ, ghi chú | #647987 |
+| Nền ứng dụng | #f5f6f7 |
+| Nền đối tượng (bảng, khối form, thẻ) | #ffffff |
+| Màu nhấn (nút chính, liên kết, mục chọn) | #0a6ed1 (đậm hơn khi rê/nhấn: #005a9e) |
+| Lỗi / khẩn cấp | chữ #b00e12, nền nhạt #fff1f1 |
+| Cảnh báo | chữ #b25900, nền nhạt #fff8eb |
+| Thành công / hợp lệ | chữ #1a7a24, nền nhạt #f0f9f1 |
+| Thông tin | chữ #02629b, nền nhạt #f2f9ff |
 
-## Màn hình đăng nhập
-Ngoại lệ duy nhất không nằm trong AppShell (chưa có người dùng và công ty). Vẽ như hộp thoại Windows giữa màn hình:
-thanh tiêu đề màu chính "Đăng nhập – Quản lý mua hàng và kho", nhãn bên trái ô nhập (Tên đăng nhập, Mật khẩu),
-nút "Đăng nhập" bên phải, dòng phiên bản ở chân hộp thoại. Enter để đăng nhập; lỗi hiện ngay trên form bằng tiếng Việt.
+Màu khai báo thành theme token, **không viết màu cứng trong component** (CLAUDE.md mục 9). Trạng thái luôn có chữ đi kèm, màu không là
+thông tin duy nhất.
 
-## Màn hình chứng từ (DocumentForm)
-Theo docs/design.md mục 10.1, cùng phong cách: thanh lệnh của phiếu, phần đầu phiếu 2–3 cột,
-lưới dòng nhập như Excel, chân phiếu tổng tiền, tab phụ (Đính kèm, Lịch sử duyệt, Nhật ký).
+## 3. Hình khối và khoảng cách
+- Khoảng cách theo **bội số của 4**: chủ yếu 8px (0.5rem) và 16px (1rem); 4px cho khoảng rất sát (biểu tượng – chữ).
+- Bo góc: 8px cho khối lớn (thẻ, bảng, khối form, hộp thoại); 4px cho ô nhập, nút, thẻ trạng thái.
+- Đổ bóng cực nhẹ cho khối nội dung: `0 0 2px rgba(34,53,72,.15), 0 2px 4px rgba(34,53,72,.15)`; bóng đậm hơn một chút cho lớp nổi
+  (menu thả xuống, hộp thoại).
+- Chiều cao: ô nhập, nút 28px; dòng bảng 32px; tiêu đề cột bảng 36px (mật độ "compact" của Fiori cho dữ liệu lớn, chuột + bàn phím).
 
-## Màu sắc và chữ (khai báo thành theme token, không viết màu cứng trong component)
-- Font: "Segoe UI", Tahoma, sans-serif; cỡ cơ bản 12px; tiêu đề 18px.
-- Nền ứng dụng #F3F3F3; nền vùng nội dung và lưới #FFFFFF; viền #C8C8C8.
-- Màu chính (nút chính, mục chọn, liên kết): #1F4FA0. Dòng chọn trong lưới: #DCE8F8.
-- Trạng thái: thành công #2E8B3E, cảnh báo #D9822B, lỗi/quá hạn #C62828, trung tính #8A8A8A.
-- Bo góc 2px; nút cao 26px; ô nhập cao 26px.
+## 4. Bố cục (lát UI-b)
+1. **Shellbar** trên cùng: logo + tên ứng dụng, ô tìm/ô lệnh (gõ mã màn hình như PO, PR, NXT rồi Enter), công ty đang làm việc,
+   thông báo, ảnh đại diện người dùng (menu: đổi mật khẩu, đăng xuất). Menu module (Hằng ngày, Mua hàng, Kho, Giá và NCC, Đấu thầu,
+   Báo cáo, Hệ thống) mở từ Shellbar hoặc cây điều hướng.
+2. **Điều hướng bên trái** (Side Navigation): nhóm Ghim + nhóm theo module, số đếm bên phải (đỏ khi cần chú ý), thu gọn được.
+3. **Dynamic Page** cho vùng nội dung:
+   - **Header** (đóng/mở được): tiêu đề trang (H1), dòng phụ (tổng số bản ghi, trạng thái phiếu), các chỉ số/tóm tắt, khu bộ lọc.
+   - **Content**: bảng (danh sách) hoặc form (chứng từ) trên khối nền trắng bo góc 8px, đổ bóng nhẹ.
+   - **Thanh lệnh**: nút chính (màu nhấn) ở phải tiêu đề; nút phụ dạng "transparent"; trên form chứng từ có thanh chân (footer bar) chứa
+     Lưu / Gửi duyệt khi đang sửa.
+4. Thông tin phiên bản, ngày làm việc chuyển vào menu người dùng / chân trang nhỏ (bỏ thanh trạng thái kiểu Windows ở lát UI-b).
 
-## Bàn phím
-F2 thêm dòng, F3 tìm, Ctrl+S lưu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt,
-Alt + chữ gạch chân để mở menu. Mọi thao tác chính làm được không cần chuột.
+## 5. Danh sách (ListPage + DataGrid)
+- Header: tiêu đề trang, "N bản ghi"; nút "Tạo mới" (nút chính duy nhất), Xuất CSV, Xuất Excel, Nhập Excel.
+- Khu bộ lọc trong header: Tìm kiếm (có dấu hoặc không dấu đều tìm được), các ô lọc nghiệp vụ, Nhóm theo, Cột, Xóa bộ lọc.
+- Bảng: nền trắng; tiêu đề cột chữ phụ đậm 600 trên nền trắng, kẻ dưới; dòng 32px, chữ 14px, kẻ ngang mảnh; dòng chọn nền xanh rất nhạt;
+  cột số căn phải; ngày dd/MM/yyyy; số kiểu 1.234.567,89; chữ dài cắt "…" và hiện đủ khi rê chuột; bấm đúp hoặc Enter để mở;
+  mũi tên lên/xuống để di chuyển; cột trạng thái dạng chấm/nhãn màu ngữ nghĩa + chữ; vùng kéo tiêu đề cột để nhóm; cuộn ảo khi nhiều dòng.
 
-## Kỹ thuật
-- Ant Design với ConfigProvider: theme token theo bảng màu trên, bật thuật toán compact, locale vi_VN.
-- Component dùng chung: `AppShell`, `ListPage`, `DataGrid`, `DocumentForm`.
-- Ảnh mẫu khác đặt trong `docs/` với tên rõ nghĩa, ví dụ `mau-form-don-mua-hang.png`.
+## 6. Chứng từ (DocumentForm)
+Theo docs/design.md mục 10.1: header là số phiếu, trạng thái (nhãn màu ngữ nghĩa), người lập; khối "Thông tin phiếu" dạng form 3 cột với
+tiêu đề khối 16px/600; lưới dòng nhập như Excel; khối tổng tiền; tab phụ (Lịch sử duyệt, Nhật ký…); nút In phiếu.
+
+## 7. Đăng nhập
+Ngoại lệ không nằm trong khung ứng dụng: thẻ trắng giữa nền #f5f6f7, bo góc 8px, đổ bóng nhẹ; tiêu đề ứng dụng, Tên đăng nhập, Mật khẩu,
+nút "Đăng nhập" màu nhấn; dòng phiên bản ở chân thẻ; lỗi hiện ngay trên form bằng tiếng Việt.
+
+## 8. Bàn phím (giữ nguyên)
+F2 thêm dòng, F3 tìm, Ctrl+S lưu, Ctrl+P in phiếu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu, Enter ở ô lệnh
+mở màn hình. Mọi thao tác chính làm được không cần chuột.
+
+## 9. Kỹ thuật
+- Ant Design `ConfigProvider` với theme token ở `src/Proc.Web/src/theme.ts` (màu, chữ, bo góc, đổ bóng, chiều cao); kích thước khung
+  (Shellbar, cây điều hướng, dòng bảng) ở `layoutTokens` cùng file, đưa thành biến CSS `--app-*`.
+- Component dùng chung: `AppShell`, `ListPage`, `DataGrid`, `DocumentForm`, `DetailDrawer` – không tự tạo bố cục riêng từng màn hình.
+- Làm xong một màn hình: chạy lên, chụp bằng Playwright (`e2e/screenshots`), đối chiếu tài liệu này (và ảnh mẫu Fiori nếu có trong `docs/`).

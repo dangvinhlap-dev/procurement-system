@@ -152,7 +152,6 @@ export function DocumentForm({
             <div className="document-form-grid">{header}</div>
           </fieldset>
           <Tabs
-            type="card"
             size="small"
             className="document-form-tabs"
             activeKey={tab}

@@ -1,10 +1,10 @@
-/* Khuôn chứng từ kiểu Windows (ui-guide.md mục DocumentForm); mọi màu lấy từ biến token của antd. */
+/* Khuôn chứng từ kiểu Fiori Horizon (ui-guide.md mục 6); màu, bo góc, đổ bóng lấy từ biến token của antd. */
 
 .document-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 16px;
   height: 100%;
   overflow: auto;
 }
@@ -12,9 +12,8 @@
 .document-form-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
+  gap: 8px;
+  padding-bottom: 8px;
 }
 .document-form-actions .ant-btn-primary {
   font-weight: 600;
@@ -23,7 +22,7 @@
 .document-form-title {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .document-form-title h2 {
@@ -43,43 +42,48 @@
   margin: 0;
 }
 
-/* Đầu phiếu: khung fieldset kiểu Windows, lưới 3 cột. */
+/* Đầu phiếu: khối form trắng bo góc 8px, đổ bóng nhẹ, tiêu đề khối 16px/600, lưới 3 cột. */
 .document-form-header {
-  border: 1px solid var(--ant-color-border-secondary);
-  padding: 4px 10px 0;
+  border: none;
+  border-radius: var(--ant-border-radius-lg);
+  box-shadow: var(--ant-box-shadow);
+  background: var(--ant-color-bg-container);
+  padding: 8px 16px 8px;
   margin: 0;
 }
 .document-form-header > legend {
-  width: auto;
-  padding: 0 4px;
+  float: left;
+  width: 100%;
+  padding: 0 0 8px;
   margin: 0;
   border: none;
-  font-size: var(--ant-font-size);
+  font-size: var(--ant-font-size-heading-5);
   font-weight: 600;
 }
 .document-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 12px;
+  gap: 0 16px;
+  clear: both;
 }
 .document-form-grid .ant-form-item {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .document-form-grid .document-form-wide {
   grid-column: 1 / -1;
 }
 
 .document-form-tabs > .ant-tabs-nav {
-  margin-bottom: 0;
+  margin-bottom: 8px;
 }
 .document-form-tabs > .ant-tabs-content-holder {
-  border: 1px solid var(--ant-color-border);
-  border-top: none;
-  padding: 6px;
+  border-radius: var(--ant-border-radius-lg);
+  box-shadow: var(--ant-box-shadow);
+  padding: 8px;
   background: var(--ant-color-bg-container);
 }
 
-/* Lưới dòng nhập như Excel: ô không viền, kẻ ô mảnh, dòng 26px. */
+/* Lưới dòng nhập như Excel: ô không viền, kẻ ô mảnh, dòng cao --app-line-row-height (32px). */
 .line-grid {
   overflow-x: auto;
 }
@@ -91,15 +95,16 @@
 .line-grid th {
   background: var(--ant-color-fill-alter);
   border: 1px solid var(--ant-color-border-secondary);
-  padding: 2px 6px;
+  padding: 4px 8px;
   font-weight: 600;
+  color: var(--ant-color-text-secondary);
   font-size: var(--ant-font-size-sm);
   white-space: nowrap;
 }
 .line-grid td {
   border: 1px solid var(--ant-color-border-secondary);
-  padding: 0 2px;
-  height: 26px;
+  padding: 0 4px;
+  height: var(--app-line-row-height);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

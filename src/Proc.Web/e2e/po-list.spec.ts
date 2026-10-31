@@ -53,8 +53,8 @@ test('lưới hiện 30 dòng, định dạng ngày và tiền kiểu Việt Nam
   // Tiền VND không số lẻ, phân cách hàng nghìn bằng dấu chấm.
   await expect(firstRow.locator('td.data-grid-col-money')).toHaveText(/^\d{1,3}(\.\d{3})+$/)
 
-  // Dòng cao 24px theo ui-guide.
-  expect((await firstRow.boundingBox())?.height).toBe(24)
+  // Dòng cao 32px theo ui-guide.md mục 3 (bảng Fiori, mật độ compact).
+  expect((await firstRow.boundingBox())?.height).toBe(32)
 })
 
 test('tìm kiếm không dấu vẫn ra kết quả có dấu', async ({ page }) => {

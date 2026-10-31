@@ -3,6 +3,7 @@ import { Button, Table, Tag } from 'antd'
 import type { TableColumnsType, TableProps, TableRef } from 'antd'
 import type { SortOrder } from 'antd/es/table/interface'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent, type RefObject } from 'react'
+import { layoutTokens } from '../../theme'
 import { COLUMN_DRAG_TYPE, GridHeaderCell, type GridHeaderCellProps } from './GridHeaderCell'
 import { cellText, compareCellValues, type GridColumn } from './types'
 import './DataGrid.css'
@@ -120,7 +121,8 @@ export function DataGrid<T>({
   const tableRef = useRef<TableRef>(null)
 
   const totalColumns = orderedColumns.length + 1
-  const widthOf = (c: GridColumn<T>) => widths[c.key] ?? c.width
+  // Độ rộng người dùng đã kéo giữ nguyên; độ rộng khai báo nhân hệ số theo cỡ chữ (theme.ts – layoutTokens.columnWidthScale).
+  const widthOf = (c: GridColumn<T>) => widths[c.key] ?? Math.round(c.width * layoutTokens.columnWidthScale)
 
   const antColumns: TableColumnsType<GridRecord<T>> = [
     {
@@ -215,7 +217,7 @@ export function DataGrid<T>({
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (visibleKeys.length === 0) return
     const current = selectedKey ? (visibleIndex.get(selectedKey) ?? -1) : -1
-    const pageSize = Math.max(1, Math.floor(bodyHeight / 24) - 1)
+    const pageSize = Math.max(1, Math.floor(bodyHeight / layoutTokens.gridRowHeight) - 1)
     const moves: Record<string, number> = {
       ArrowDown: current + 1,
       ArrowUp: current - 1,

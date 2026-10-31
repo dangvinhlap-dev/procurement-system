@@ -1,4 +1,4 @@
-/* Màn hình đăng nhập kiểu hộp thoại Windows; màu lấy từ biến token của antd. */
+/* Màn hình đăng nhập kiểu thẻ Fiori Horizon (ui-guide.md mục 7); màu, bo góc, đổ bóng lấy từ biến token của antd. */
 
 .login-page {
   display: flex;
@@ -12,45 +12,46 @@
 
 .login-dialog {
   width: 400px;
-  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius-lg);
+  box-shadow: var(--ant-box-shadow-secondary);
   background: var(--ant-color-bg-container);
+  overflow: hidden;
 }
 
+/* Dòng tiêu đề của thẻ: chữ phụ 12px, kẻ dưới mảnh. */
 .login-title-bar {
-  height: 26px;
-  padding: 0 10px;
-  background: var(--ant-color-primary);
-  color: var(--ant-color-text-light-solid);
+  padding: 16px 16px 8px;
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
   font-weight: 600;
-  line-height: 26px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
 .login-body {
-  padding: 16px 20px 4px;
+  padding: 16px 16px 0;
 }
 .login-body .login-app-name {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 .login-alert {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .login-body .ant-form-item {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .login-actions {
   display: flex;
   justify-content: flex-end;
-  padding-bottom: 12px;
+  padding-bottom: 16px;
 }
 .login-actions .ant-btn {
-  min-width: 100px;
+  min-width: 120px;
 }
 
 .login-footer {
-  padding: 4px 10px;
+  padding: 8px 16px;
   border-top: 1px solid var(--ant-color-border-secondary);
-  background: var(--ant-color-bg-layout);
   color: var(--ant-color-text-secondary);
   font-size: var(--ant-font-size-sm);
   text-align: right;
