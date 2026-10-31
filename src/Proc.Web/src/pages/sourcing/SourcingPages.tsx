@@ -109,6 +109,9 @@ export function SourcingPage() {
   const doc = sourcing.data
   const readOnly = isNew ? !hasPermission(Permission.RfqManage) : !doc?.canEdit
   const itemId = Form.useWatch('itemId', form) as string | undefined
+  const description = Form.useWatch('description', form) as string | undefined
+  // Phải có mặt hàng hoặc mô tả (Sourcing.Create ở Domain) – ô còn lại thôi bắt buộc khi đã nhập một trong hai.
+  const needsItemOrDescription = !itemId && !description?.trim()
   const lookup = useItemLookup(search, itemId ? [itemId] : [])
   const watched = Form.useWatch('candidates', form) as CandidateValues[] | undefined
   const usedSuppliers = useMemo(() => new Set((watched ?? []).map((c) => c?.supplierId).filter(Boolean)), [watched])
@@ -190,7 +193,7 @@ export function SourcingPage() {
   const columns: LineColumn[] = [
     {
       key: 'supplier',
-      title: 'Nhà cung cấp',
+      title: 'Nhà cung cấp', required: true,
       width: 300,
       render: (field) => (
         <>
@@ -286,7 +289,13 @@ export function SourcingPage() {
           <Form.Item label="Ngày lập" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="Mặt hàng" name="itemId" extra="Để trống nếu hàng chưa có mã – nhập mô tả.">
+          <Form.Item
+            label="Mặt hàng"
+            name="itemId"
+            extra="Để trống nếu hàng chưa có mã – nhập mô tả."
+            dependencies={['description']}
+            rules={[{ required: needsItemOrDescription, message: 'Chọn mặt hàng hoặc nhập mô tả hàng cần tìm.' }]}
+          >
             <Select
               allowClear
               showSearch={{ filterOption: false, onSearch: setSearch }}
@@ -295,7 +304,12 @@ export function SourcingPage() {
               popupMatchSelectWidth={420}
             />
           </Form.Item>
-          <Form.Item label="Mô tả hàng cần tìm" name="description" rules={[{ max: 500 }]}>
+          <Form.Item
+            label="Mô tả hàng cần tìm"
+            name="description"
+            dependencies={['itemId']}
+            rules={[{ required: needsItemOrDescription, whitespace: true, message: 'Chọn mặt hàng hoặc nhập mô tả hàng cần tìm.' }, { max: 500 }]}
+          >
             <Input />
           </Form.Item>
           <Form.Item label="Yêu cầu kỹ thuật" name="specification" rules={[{ max: 2000 }]}>

@@ -17,9 +17,11 @@ Cập nhật: 31/10/2026. Đọc file này đầu mỗi phiên để biết đan
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
 | SEC-1 | Tham số hệ thống: bảng `CompanyParameter`, số NCC tối thiểu khi gửi RFQ theo công ty (sửa được); giá vốn, kho cho tồn âm (chỉ xem) | feature/tham-so-he-thong |
+| UI-c | Dấu * đỏ sau nhãn ở mọi ô bắt buộc (form, ngăn kéo, hộp thoại, tiêu đề cột lưới dòng), ẩn khi chỉ xem | feature/dau-bat-buoc |
 | Tối ưu Claude Code | CLAUDE.md gọn (124 → 95 dòng), tách `docs/phat-hanh.md`, `docs/moi-truong-dev.md`; `docs/TIEN_DO.md`; `.claude/settings.json`; `.gitignore` | chore/toi-uu-claude |
 
-Kiểm tra gần nhất (SEC-1): 347 test .NET, 60 test Playwright, `npm run build`, `tsc`, `oxlint` đều qua.
+Kiểm tra gần nhất (UI-c, chỉ sửa Proc.Web): 59/61 Playwright qua – 2 test kiểm số phiên bản lỗi vì Vite dev server chạy từ trước khi nâng 0.9.0
+(khởi động lại `npm run dev` là hết); `npm run build`, `tsc`, `oxlint` qua. Lần chạy .NET gần nhất (SEC-1): 347 test qua.
 
 ## Đang làm
 

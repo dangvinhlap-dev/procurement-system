@@ -315,7 +315,7 @@ export function RfqPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 280,
       render: (field) => (
         <>
@@ -343,7 +343,7 @@ export function RfqPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 75,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -357,7 +357,7 @@ export function RfqPage() {
     },
     {
       key: 'qty',
-      title: 'Số lượng',
+      title: 'Số lượng', required: true,
       width: 100,
       align: 'right',
       render: (field) => (
@@ -751,7 +751,6 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
       <Form
         form={form}
         layout="vertical"
-        requiredMark={false}
         initialValues={{
           quoteDate: supplier.quoteDate ? dayjs(supplier.quoteDate) : dayjs(),
           validUntil: supplier.validUntil ? dayjs(supplier.validUntil) : null,

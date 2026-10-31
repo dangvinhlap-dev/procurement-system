@@ -16,6 +16,7 @@ import {
 } from '../../api/masterData'
 import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
+import { formRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 /** Khung cố định chiều cao cho lưới trong tab (DataGrid co giãn theo khung cha). Độ rộng cột cộng lại vừa ngăn kéo 720px. */
 const gridBoxStyle = { height: 320, display: 'flex', flexDirection: 'column' } as const
@@ -69,7 +70,7 @@ export function SupplierCompanyTab({ supplierId }: { supplierId: string }) {
   return (
     <Spin spinning={link.isLoading}>
       {/* Form riêng, tự bật/tắt theo quyền tại công ty – không theo chế độ chỉ xem của ngăn kéo NCC. */}
-      <Form form={form} layout="vertical" requiredMark={false} disabled={!data?.canEdit} component="div">
+      <Form form={form} layout="vertical" requiredMark={formRequiredMark(!!data?.canEdit)} disabled={!data?.canEdit} component="div">
         {data && !data.isApplied && (
           <Alert type="info" showIcon className="detail-section" title={`${data.companyCode} chưa khai báo mua hàng của NCC này. Bấm "Lưu áp dụng" để thêm.`} />
         )}
@@ -249,7 +250,6 @@ function SupplierItemDialog({ supplierId, row, onClose }: { supplierId: string; 
       <Form
         form={form}
         layout="vertical"
-        requiredMark={false}
         disabled={false}
         initialValues={
           row

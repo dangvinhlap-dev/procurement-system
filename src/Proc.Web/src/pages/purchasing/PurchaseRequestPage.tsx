@@ -129,7 +129,7 @@ export function PurchaseRequestPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 260,
       render: (field) => (
         <>
@@ -153,7 +153,7 @@ export function PurchaseRequestPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 80,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -167,7 +167,7 @@ export function PurchaseRequestPage() {
     },
     {
       key: 'qty',
-      title: 'SL đề nghị',
+      title: 'SL đề nghị', required: true,
       width: 100,
       align: 'right',
       render: (field) => (

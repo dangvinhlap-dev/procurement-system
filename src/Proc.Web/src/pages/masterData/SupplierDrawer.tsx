@@ -269,7 +269,7 @@ export function SupplierDrawer({
                   <Form.Item label="Xếp hạng" name="rating">
                     <Rate />
                   </Form.Item>
-                  <Form.Item label="Trạng thái" name="status">
+                  <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Chọn trạng thái.' }]}>
                     <Select options={Object.entries(supplierStatusLabels).map(([value, label]) => ({ value, label }))} />
                   </Form.Item>
                 </div>

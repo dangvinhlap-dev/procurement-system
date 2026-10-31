@@ -14,6 +14,7 @@ import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatDateTime } from '../../utils/format'
+import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 const statusTone: Record<PeriodStatus, StatusTone> = {
   NotOpened: 'neutral',
@@ -206,7 +207,7 @@ function PeriodDrawer({ period, canManage, onClose }: { period: InventoryPeriod;
               </Descriptions>
               {period.canReopen && (
                 <div className="detail-section" style={{ marginTop: 8 }}>
-                  <label htmlFor="reopen-reason">Lý do mở lại kỳ (bắt buộc)</label>
+                  <label htmlFor="reopen-reason">{renderRequiredMark('Lý do mở lại kỳ', { required: true })}</label>
                   <Input.TextArea id="reopen-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
                 </div>
               )}

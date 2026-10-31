@@ -73,7 +73,7 @@ test('đóng kỳ tháng, xem NXT đã chốt, mở lại kỳ có lý do', asyn
   await janRow.dblclick()
   const reopen = page.getByRole('button', { name: 'Mở lại kỳ' })
   await expect(reopen).toBeDisabled()
-  await page.getByLabel('Lý do mở lại kỳ (bắt buộc)').fill('Nhập sai đơn giá phiếu nhập')
+  await page.getByLabel('Lý do mở lại kỳ').fill('Nhập sai đơn giá phiếu nhập')
   await reopen.click()
   await expect(page.locator('.ant-message')).toContainText('Đã mở lại kỳ 01/2025.')
   await expect(janRow).toContainText('Nhập sai đơn giá phiếu nhập')

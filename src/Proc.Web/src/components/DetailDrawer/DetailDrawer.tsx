@@ -2,6 +2,7 @@ import { CloseOutlined, SaveOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { hasOpenPopup } from '../../utils/popup'
+import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DetailDrawer.css'
 
 /** Một tab của ngăn kéo chi tiết. */
@@ -116,7 +117,7 @@ export function DetailDrawer({
           form={form}
           component={false}
           layout="vertical"
-          requiredMark={false}
+          requiredMark={formRequiredMark(!readOnly)}
           initialValues={initialValues}
           disabled={readOnly}
         >

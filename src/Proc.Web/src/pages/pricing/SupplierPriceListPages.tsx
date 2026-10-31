@@ -214,7 +214,7 @@ export function SupplierPriceListPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 260,
       render: (field) => (
         <>
@@ -238,7 +238,7 @@ export function SupplierPriceListPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 75,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -263,7 +263,7 @@ export function SupplierPriceListPage() {
     },
     {
       key: 'price',
-      title: 'Đơn giá',
+      title: 'Đơn giá', required: true,
       width: 115,
       align: 'right',
       render: (field) => (

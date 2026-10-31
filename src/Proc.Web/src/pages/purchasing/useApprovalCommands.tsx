@@ -3,6 +3,7 @@ import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import type { PurchaseActions, PurchaseStatus } from '../../api/purchasing'
+import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 /** Phiếu mua hàng tối thiểu mà lệnh chung cần. */
 interface ApprovableDoc {
@@ -99,13 +100,16 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     modal.confirm({
       title: `Từ chối phiếu ${doc.no}?`,
       content: (
-        <Input.TextArea
-          aria-label="Lý do từ chối"
-          rows={3}
-          maxLength={500}
-          placeholder="Lý do từ chối (bắt buộc) – người lập sẽ thấy để sửa"
-          onChange={(e) => (reason = e.target.value)}
-        />
+        <>
+          <label htmlFor="reject-reason">{renderRequiredMark('Lý do từ chối', { required: true })}</label>
+          <Input.TextArea
+            id="reject-reason"
+            rows={3}
+            maxLength={500}
+            placeholder="Người lập sẽ thấy lý do để sửa"
+            onChange={(e) => (reason = e.target.value)}
+          />
+        </>
       ),
       okText: 'Từ chối',
       okButtonProps: { danger: true },

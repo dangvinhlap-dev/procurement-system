@@ -55,7 +55,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
       width={420}
     >
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 12 }} />}
-      <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={submit}>
         <Form.Item label="Mật khẩu hiện tại" name="currentPassword" rules={[{ required: true, message: 'Hãy nhập mật khẩu hiện tại.' }]}>
           <Input.Password autoFocus autoComplete="current-password" />
         </Form.Item>

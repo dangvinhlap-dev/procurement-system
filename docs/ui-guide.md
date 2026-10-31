@@ -71,6 +71,11 @@ dạng form 3 cột với tiêu đề khối 16px/600, thu gọn được; lư�
 Phiếu đang sửa: Lưu / Gửi duyệt / Ghi sổ… ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở phải tiêu đề. Ngăn kéo chi tiết có nhãn "Chỉ xem"
 khi người dùng không được sửa.
 
+**Ô bắt buộc** (yêu cầu 31/10/2026): nhãn có dấu **\*** màu lỗi (#b00e12) **sau** nhãn, cách 4px – cả form phiếu, ngăn kéo, hộp thoại và tiêu đề
+cột bắt buộc của lưới dòng (`LineColumn.required`). Khai báo bằng `rules={[{ required: … }]}` trên `Form.Item` (bắt buộc có điều kiện thì
+`required` động, ví dụ lý do khi NCC vào danh sách đen); dấu \* vẽ tự động qua `renderRequiredMark` gắn ở `ConfigProvider`, vẽ bằng CSS
+`::after` nên không lẫn vào tên ô khi đọc màn hình. Form chỉ xem thì ẩn dấu \* (`formRequiredMark(editable)`).
+
 ## 7. Đăng nhập
 Ngoại lệ không nằm trong khung ứng dụng: thẻ trắng giữa nền #f5f6f7, bo góc 8px, đổ bóng nhẹ; tiêu đề ứng dụng, Tên đăng nhập, Mật khẩu,
 nút "Đăng nhập" màu nhấn; dòng phiên bản ở chân thẻ; lỗi hiện ngay trên form bằng tiếng Việt.

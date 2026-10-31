@@ -1,0 +1,11 @@
+/*
+ * Dấu * ô bắt buộc sau nhãn: màu lỗi của theme (#b00e12), cách nhãn 4px – docs/ui-guide.md mục 2, 6.
+ * Văn bản thay thế rỗng (sau dấu /) để dấu * không lẫn vào tên ô khi đọc màn hình.
+ */
+.required-mark::after {
+  content: '*';
+  content: '*' / '';
+  color: var(--ant-color-error);
+  margin-inline-start: 4px;
+  font-weight: 600;
+}

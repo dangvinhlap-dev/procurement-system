@@ -112,7 +112,7 @@ export function IntercompanyReceiptPage() {
     { key: 'sent', title: 'SL gửi', width: 90, align: 'right', render: (_, index) => readonlyCell(formatQuantity(lineOf(index)?.sentQty ?? 0)) },
     {
       key: 'qty',
-      title: 'SL thực nhận',
+      title: 'SL thực nhận', required: true,
       width: 105,
       align: 'right',
       render: (field, index) => (

@@ -202,7 +202,7 @@ export function ItemDrawer({
                 >
                   <Input disabled placeholder="(tự cấp khi lưu)" />
                 </Form.Item>
-                <Form.Item label="Loại hàng" name="type" extra="Chỉ hàng tồn kho mới đi qua kho.">
+                <Form.Item label="Loại hàng" name="type" extra="Chỉ hàng tồn kho mới đi qua kho." rules={[{ required: true, message: 'Chọn loại hàng.' }]}>
                   <Select options={Object.entries(itemTypeLabels).map(([value, label]) => ({ value, label }))} />
                 </Form.Item>
               </div>
