@@ -222,7 +222,7 @@ export function GoodsReceiptPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 280,
       render: (field) => (
         <>
@@ -250,7 +250,7 @@ export function GoodsReceiptPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 90,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -268,7 +268,7 @@ export function GoodsReceiptPage() {
     },
     {
       key: 'qty',
-      title: 'Số lượng',
+      title: 'Số lượng', required: true,
       width: 100,
       align: 'right',
       render: (field) => (
@@ -291,7 +291,7 @@ export function GoodsReceiptPage() {
     },
     {
       key: 'price',
-      title: 'Đơn giá',
+      title: 'Đơn giá', required: true,
       width: 130,
       align: 'right',
       render: (field) => (

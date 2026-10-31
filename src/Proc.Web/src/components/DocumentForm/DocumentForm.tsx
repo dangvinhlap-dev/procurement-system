@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { apiOpenPdf } from '../../api/client'
 import type { StatusTone } from '../DataGrid/types'
 import { hasOpenPopup } from '../../utils/popup'
+import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DocumentForm.css'
 
 /** Màu thẻ trạng thái phiếu theo sắc thái (màu lấy từ bảng màu có sẵn của antd, không viết màu cứng). */
@@ -153,7 +154,7 @@ export function DocumentForm({
         {error && <Alert type="error" showIcon title={error} className="document-form-alert" />}
         {notice}
         <Spin spinning={loading}>
-          <Form form={form} component={false} layout="vertical" requiredMark={false} initialValues={initialValues} disabled={readOnly}>
+          <Form form={form} component={false} layout="vertical" requiredMark={formRequiredMark(!readOnly)} initialValues={initialValues} disabled={readOnly}>
             <section className={`document-form-header${headerCollapsed ? ' is-collapsed' : ''}`} aria-label="Thông tin phiếu">
               <div className="document-form-header-title">
                 <h3>Thông tin phiếu</h3>

@@ -452,7 +452,6 @@ function ResetPasswordDialog({
       <Form
         form={form}
         layout="vertical"
-        requiredMark={false}
         onFinish={async ({ newPassword }) => {
           setSaving(true)
           setError(null)

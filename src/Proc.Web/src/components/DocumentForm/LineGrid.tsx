@@ -10,6 +10,8 @@ export interface LineColumn {
   title: string
   width: number
   align?: 'left' | 'right' | 'center'
+  /** Ô bắt buộc nhập: tiêu đề cột có dấu * đỏ (ẩn khi lưới chỉ xem) – docs/ui-guide.md mục 6. */
+  required?: boolean
   /** Ô của một dòng: thường là Form.Item name={[field.name, '…']} noStyle bọc ô nhập; ô tính toán thì là chữ chỉ đọc. */
   render: (field: FormListFieldData, index: number) => ReactNode
 }
@@ -101,7 +103,7 @@ function LineGridBody({
             <th style={{ width: 44 }}>STT</th>
             {columns.map((c) => (
               <th key={c.key} style={{ width: Math.round(c.width * layoutTokens.columnWidthScale), textAlign: c.align ?? 'left' }}>
-                {c.title}
+                {c.required && !readOnly ? <span className="required-mark">{c.title}</span> : c.title}
               </th>
             ))}
             {!readOnly && <th style={{ width: 32 }} />}

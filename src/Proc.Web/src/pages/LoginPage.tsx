@@ -49,7 +49,7 @@ export function LoginPage() {
           {(error ?? logoutReason) && (
             <Alert className="login-alert" type={error ? 'error' : 'warning'} showIcon title={error ?? logoutReason} />
           )}
-          <Form layout="horizontal" labelCol={{ flex: '110px' }} labelAlign="left" colon={false} onFinish={submit} requiredMark={false}>
+          <Form layout="horizontal" labelCol={{ flex: '110px' }} labelAlign="left" colon={false} onFinish={submit}>
             <Form.Item
               label="Tên đăng nhập"
               name="userName"

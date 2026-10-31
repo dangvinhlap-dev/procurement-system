@@ -142,7 +142,7 @@ export function StockTransferPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 280,
       render: (field) => (
         <>
@@ -166,7 +166,7 @@ export function StockTransferPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 90,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -184,7 +184,7 @@ export function StockTransferPage() {
     },
     {
       key: 'qty',
-      title: 'Số lượng',
+      title: 'Số lượng', required: true,
       width: 100,
       align: 'right',
       render: (field) => (

@@ -223,7 +223,7 @@ export function PurchaseOrderPage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 250,
       render: (field) => (
         <>
@@ -254,7 +254,7 @@ export function PurchaseOrderPage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 75,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -268,7 +268,7 @@ export function PurchaseOrderPage() {
     },
     {
       key: 'qty',
-      title: 'SL đặt',
+      title: 'SL đặt', required: true,
       width: 90,
       align: 'right',
       render: (field) => (
@@ -279,7 +279,7 @@ export function PurchaseOrderPage() {
     },
     {
       key: 'price',
-      title: 'Đơn giá',
+      title: 'Đơn giá', required: true,
       width: 115,
       align: 'right',
       render: (field) => (

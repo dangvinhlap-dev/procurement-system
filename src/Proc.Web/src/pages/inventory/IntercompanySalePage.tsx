@@ -158,7 +158,7 @@ export function IntercompanySalePage() {
   const columns: LineColumn[] = [
     {
       key: 'item',
-      title: 'Mặt hàng',
+      title: 'Mặt hàng', required: true,
       width: 260,
       render: (field) => (
         <>
@@ -182,7 +182,7 @@ export function IntercompanySalePage() {
     },
     {
       key: 'uom',
-      title: 'ĐVT',
+      title: 'ĐVT', required: true,
       width: 80,
       render: (field) => {
         const item = lines[field.name]?.itemId ? itemsById.get(lines[field.name].itemId!) : undefined
@@ -196,7 +196,7 @@ export function IntercompanySalePage() {
     },
     {
       key: 'qty',
-      title: 'SL xuất',
+      title: 'SL xuất', required: true,
       width: 95,
       align: 'right',
       render: (field) => (

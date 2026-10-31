@@ -129,7 +129,7 @@ export function GoodsReturnPage() {
   const columns: LineColumn[] = [
     {
       key: 'source',
-      title: 'Dòng phiếu nhập',
+      title: 'Dòng phiếu nhập', required: true,
       width: 300,
       render: (field) => (
         <>
@@ -174,7 +174,7 @@ export function GoodsReturnPage() {
     },
     {
       key: 'qty',
-      title: 'SL trả',
+      title: 'SL trả', required: true,
       width: 100,
       align: 'right',
       render: (field) => {

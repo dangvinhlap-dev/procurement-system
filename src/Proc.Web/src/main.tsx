@@ -7,6 +7,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
+import { renderRequiredMark } from './components/RequiredMark/requiredMark'
 import './index.css'
 import { router } from './router'
 import { appTheme } from './theme'
@@ -18,7 +19,7 @@ const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider locale={viVN} theme={appTheme}>
+    <ConfigProvider locale={viVN} theme={appTheme} form={{ requiredMark: renderRequiredMark }}>
       {/* AntApp gắn lớp chứa biến CSS của theme, nên CSS của AppShell/ListPage/DataGrid đọc được var(--ant-*). */}
       <AntApp>
         <QueryClientProvider client={queryClient}>
