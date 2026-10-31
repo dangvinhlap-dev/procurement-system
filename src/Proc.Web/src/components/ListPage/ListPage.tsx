@@ -39,8 +39,10 @@ export interface ListPageProps<T> {
   /** Mở chi tiết dòng (bấm đúp hoặc Enter). */
   onOpenRow?: (row: T) => void
   isMarked?: (row: T) => boolean
-  /** Tên file khi xuất CSV (không gồm đuôi). */
+  /** Tên file khi xuất CSV/Excel (không gồm đuôi; chữ thường không dấu, số, gạch ngang). */
   exportFileName: string
+  /** Dòng điều kiện lọc ghi trên file Excel xuất ra (kỳ, kho, số ngày…). */
+  exportSubtitle?: string
   /**
    * Danh mục hỗ trợ nhập/xuất Excel ở server (design.md mục 5.10): catalog là mã trên API /api/excel/{catalog},
    * canImport = người dùng được nhập (có quyền quản lý, đúng công ty). Không truyền thì hai nút Excel chưa dùng được.
@@ -83,24 +85,13 @@ export function ListPage<T>({
   onOpenRow,
   isMarked,
   exportFileName,
+  exportSubtitle,
   excel,
 }: ListPageProps<T>) {
   const { message } = App.useApp()
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  /** Xuất cả danh mục (trong phạm vi người dùng) ra Excel ở server – cùng định dạng file nhập để sửa rồi nhập lại. */
-  const exportExcel = async () => {
-    if (!excel) return
-    setExporting(true)
-    try {
-      await apiDownload(`/api/excel/${excel.catalog}`, `${exportFileName}.xlsx`)
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : 'Không xuất được Excel.')
-    } finally {
-      setExporting(false)
-    }
-  }
   const [keyword, setKeyword] = useState('')
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
@@ -114,6 +105,40 @@ export function ListPage<T>({
     [rows, columns, keyword],
   )
 
+  /**
+   * Danh mục: xuất cả danh mục (trong phạm vi người dùng) ở server – cùng định dạng file nhập để sửa rồi nhập lại.
+   * Danh sách, báo cáo khác: gửi đúng các cột đang hiện và các dòng đã lọc lên server dựng file .xlsx (design.md mục 11.2) –
+   * số, ngày gửi giá trị thô để Excel giữ kiểu số, kiểu ngày.
+   */
+  const exportExcel = async () => {
+    setExporting(true)
+    try {
+      if (excel) {
+        await apiDownload(`/api/excel/${excel.catalog}`, `${exportFileName}.xlsx`)
+      } else {
+        await apiDownload('/api/excel/grid', `${exportFileName}.xlsx`, {
+          title,
+          subtitle: exportSubtitle ?? null,
+          fileName: exportFileName,
+          columns: visibleColumns.map((c) => ({ title: c.title, type: c.type ?? 'text', width: c.width })),
+          rows: filteredRows.map((row) =>
+            visibleColumns.map((c) => {
+              // Cột chữ, trạng thái gửi đúng chuỗi đang hiển thị; cột số, ngày gửi giá trị thô.
+              if (c.type === 'money' || c.type === 'quantity' || c.type === 'date' || c.type === 'datetime') {
+                const v = c.value(row)
+                return v == null ? null : String(v)
+              }
+              return cellText(c, row) || null
+            }),
+          ),
+        })
+      }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không xuất được Excel.')
+    } finally {
+      setExporting(false)
+    }
+  }
   const exportCsv = () => {
     const escape = (v: string) => (/[",\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v)
     const lines = [
@@ -185,7 +210,7 @@ export function ListPage<T>({
         <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
           Xuất CSV
         </Button>
-        <Button type="text" icon={<FileExcelOutlined />} onClick={excel ? exportExcel : notYet} loading={exporting}>
+        <Button type="text" icon={<FileExcelOutlined />} onClick={exportExcel} loading={exporting}>
           Xuất Excel
         </Button>
         {(!excel || excel.canImport) && (
