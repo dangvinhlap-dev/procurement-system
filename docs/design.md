@@ -331,6 +331,22 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Báo cáo hàng đi đường: ICS đã ghi sổ mà ICR chưa ghi sổ, cả chiều bán ra (Out) và mua vào (In). Đối chiếu nội bộ theo khoảng ngày ICS: bên này bán – bên kia đã nhận; bên kia bán – bên này đã nhận (giá trị trước VAT). Quyền `Report.Stock.View` | Mục 11 – nhóm Nội bộ |
 | Chưa làm: đơn đặt hàng nội bộ, duyệt ICS, thông báo cho thủ kho bên mua, nút Điều chuyển nhanh kho con → kho con khác công ty | Làm cùng luồng duyệt, thông báo |
 
+### 6.7 Mua hàng và duyệt – cách làm (giai đoạn 5)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
+| Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
+| Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
+| Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
+| PR: bộ phận ghi dạng chữ (chưa có danh mục bộ phận); dòng bắt buộc có mã hàng (chưa hỗ trợ "hàng mới chưa có mã"); **đơn giá tham khảo do server lấy** = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ, theo ĐVT cơ sở × hệ số ĐVT), chưa từng nhập thì 0; tồn hiện tại chỉ để xem | Mục 10.2 |
+| PO: NCC Đã duyệt và đang áp dụng tại công ty (kiểm tra lúc lưu và lúc gửi duyệt); chỉ VND; đơn giá nhập tay (mặc định lấy từ PR – bảng giá NCC ở giai đoạn 6); chiết khấu %, VAT; dòng có thể lấy từ PR đã duyệt – tổng SL đặt trên các PO chưa hủy không vượt SL đề nghị. Chưa gửi PDF/email cho NCC (giai đoạn 7) | Mục 10.3 |
+| Phiếu nhập mua theo PO: một phiếu theo một PO đã duyệt, cùng NCC; mỗi dòng trỏ một dòng PO (`PurchaseOrderLineId`), mặt hàng và ĐVT theo dòng PO, **đơn giá = giá thực mua sau chiết khấu**, thuế suất theo PO (server gán). SL nhận (đã ghi sổ + phiếu này) ≤ SL đặt × (1 + dung sai %) – dung sai đặt trên PO, mặc định 0%, tối đa 20%. Kiểm tra lúc lưu và lúc ghi sổ | Mục 6.1, 6.2 bước 4 |
+| SL đã nhận của PO **tính từ phiếu nhập đã ghi sổ** (không lưu riêng); ghi sổ làm mọi dòng nhận đủ thì PO Đã nhận đủ, bỏ ghi sổ làm thiếu lại thì PO về Đã duyệt | Bỏ ghi sổ không làm lệch số |
+| Hủy: PR đã lên PO (chưa hủy) không hủy được; PO đã có phiếu nhập (chưa hủy) không hủy được; hủy khi đang chờ duyệt thì các bước chờ bị bỏ qua | Không để chứng từ trỏ vào chứng từ đã hủy |
+| Việc cần làm: danh sách PR/PO đang chờ chính người dùng duyệt ở công ty đang làm việc. Theo dõi giao hàng: dòng PO đã duyệt còn chưa nhận đủ, hạn giao (dòng hoặc đầu phiếu), quá hạn | Mục 3 – nhóm Mua hàng |
+| Chưa làm: gộp PR nhiều công ty (mua tập trung), RFQ, hợp đồng khung, cảnh báo giá cao hơn giá thấp nhất tập đoàn, ngoại tệ, gửi mail duyệt | Giai đoạn 6, 7 |
+
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.

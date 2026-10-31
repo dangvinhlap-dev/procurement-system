@@ -5,6 +5,18 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+### Thêm mới
+- Mua hàng (design.md mục 6.2, 6.7, 10.2, 10.3): quy trình duyệt nhiều cấp theo ngưỡng giá trị và vai trò (Hệ thống → Quy trình
+  duyệt); đề nghị mua hàng (PR) với giá tham khảo là giá nhập gần nhất; đơn mua hàng (PO) lấy dòng từ PR đã duyệt, chiết khấu, VAT,
+  dung sai nhận hàng; gửi duyệt, duyệt, từ chối có lý do; phiếu nhập mua theo PO (giá thực mua sau chiết khấu, chặn nhận vượt);
+  PO tự đóng khi nhận đủ; Việc cần làm (phiếu chờ tôi duyệt); Theo dõi giao hàng. API `/api/approval-rules`,
+  `/api/approvals/pending`, `/api/purchase-requests`, `/api/purchase-orders`.
+
+### Thay đổi CSDL
+- Migration `V0_6_0_MuaHang`: bảng `ApprovalRule`, `ApprovalStep`, `PurchaseRequest`, `PurchaseRequestLine`, `PurchaseOrder`,
+  `PurchaseOrderLine`; cột `InventoryDocument.PurchaseOrderId`, `InventoryDocumentLine.PurchaseOrderLineId`. `Down()` xóa các
+  bảng và cột – mất quy trình duyệt, lịch sử duyệt, mọi PR, PO và liên kết phiếu nhập ↔ PO.
+
 ## [0.5.0] - 2026-10-30
 
 ### Thêm mới

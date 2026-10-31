@@ -31,8 +31,8 @@ const columns: GridColumn<PurchaseOrderRow>[] = [
 const allStatuses = Object.keys(statusTone) as PurchaseOrderStatus[]
 
 /**
- * Màn hình Danh sách đơn mua hàng (PO) – lát giao diện khung, dùng 30 dòng dữ liệu giả.
- * Bộ lọc nghiệp vụ: Công ty, Trạng thái. Mở chi tiết và Tạo mới sẽ nối với DocumentForm ở giai đoạn 5.
+ * Danh sách đơn mua hàng dữ liệu mẫu (30 dòng giả) ở /mua-hang/po/mau – chỉ để test giao diện chung AppShell/ListPage/DataGrid so với
+ * ảnh mẫu docs/mau-man-hinh-danh-sach.png (e2e/po-list.spec.ts). Danh sách PO thật là PurchaseListPage ở /mua-hang/po.
  */
 export function PurchaseOrderListPage() {
   const { message } = App.useApp()

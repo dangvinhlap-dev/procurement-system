@@ -121,6 +121,18 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Giá vốn kỳ theo mặt hàng (lọc theo công ty, nhóm hàng).</summary>
     public DbSet<ItemPeriodCost> ItemPeriodCosts => Set<ItemPeriodCost>();
 
+    /// <summary>Quy trình duyệt (lọc theo công ty).</summary>
+    public DbSet<Proc.Domain.Purchasing.ApprovalRule> ApprovalRules => Set<Proc.Domain.Purchasing.ApprovalRule>();
+
+    /// <summary>Lịch sử duyệt (lọc theo công ty).</summary>
+    public DbSet<Proc.Domain.Purchasing.ApprovalStep> ApprovalSteps => Set<Proc.Domain.Purchasing.ApprovalStep>();
+
+    /// <summary>Đề nghị mua hàng (lọc theo công ty).</summary>
+    public DbSet<Proc.Domain.Purchasing.PurchaseRequest> PurchaseRequests => Set<Proc.Domain.Purchasing.PurchaseRequest>();
+
+    /// <summary>Đơn mua hàng (lọc theo công ty).</summary>
+    public DbSet<Proc.Domain.Purchasing.PurchaseOrder> PurchaseOrders => Set<Proc.Domain.Purchasing.PurchaseOrder>();
+
     /// <summary>Bảng giá nội bộ (lọc theo công ty bán).</summary>
     public DbSet<Proc.Domain.Pricing.InternalPrice> InternalPrices => Set<Proc.Domain.Pricing.InternalPrice>();
 

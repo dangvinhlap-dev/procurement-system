@@ -84,7 +84,8 @@ export function AppShell() {
       <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
       <Toolbar />
       <div className="app-body">
-        <NavTree activePath={pathname} pinnedCodes={demoPinnedScreens} counts={demoNavCounts} />
+        {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
+        <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={demoNavCounts} />
         <main className="app-content">
           <Outlet />
         </main>

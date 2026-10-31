@@ -70,6 +70,8 @@ export interface InventoryLine {
   note: string | null
   /** Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập). */
   sourceLineId: string | null
+  /** Dòng đơn mua hàng (phiếu nhập theo PO). */
+  purchaseOrderLineId?: string | null
   /** SL gửi theo phiếu xuất bán (chỉ phiếu nhập mua nội bộ). */
   sentQty?: number | null
 }
@@ -115,6 +117,9 @@ export interface InventoryDocument {
   counterCompanyName?: string | null
   /** Trạng thái nhận hàng của cặp bán nội bộ: Pending, Full, Short. */
   receiveStatus?: ReceiveStatus | null
+  /** Đơn mua hàng nguồn (phiếu nhập theo PO). */
+  purchaseOrderId?: string | null
+  purchaseOrderNo?: string | null
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -128,6 +133,8 @@ export interface SaveLineInput {
   lotNo: string | null
   expiryDate: string | null
   note: string | null
+  /** Dòng PO (phiếu nhập theo PO) – đơn giá, thuế suất do server lấy theo PO. */
+  purchaseOrderLineId?: string | null
 }
 
 /** Nội dung phiếu nhập mua NCC gửi lên khi lưu. */
@@ -142,6 +149,8 @@ export interface SaveReceiptInput {
   deliverer: string | null
   note: string | null
   lines: SaveLineInput[]
+  /** Đơn mua hàng nguồn; null = nhập thẳng theo NCC. */
+  purchaseOrderId?: string | null
 }
 
 /** Mặt hàng cho ô chọn hàng trên chứng từ, kèm ĐVT chọn được. */
