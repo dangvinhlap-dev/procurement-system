@@ -29,6 +29,7 @@ public sealed class DashboardService : IDashboardService
     private readonly IPurchaseOrderService _orders;
     private readonly IStockReportService _stockReports;
     private readonly IInventoryDocumentService _inventory;
+    private readonly Proc.Application.Notifications.INotificationService _notifications;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đã gắn phạm vi người dùng).</param>
@@ -39,9 +40,11 @@ public sealed class DashboardService : IDashboardService
     /// <param name="orders">Đơn mua hàng (theo dõi giao hàng).</param>
     /// <param name="stockReports">Báo cáo kho.</param>
     /// <param name="inventory">Chứng từ kho (hàng đi đường).</param>
+    /// <param name="notifications">Thông báo (số chưa đọc).</param>
     public DashboardService(
         ProcDbContext db, ICurrentUserScope scope, IClock clock, IApprovalRuleAdministration approvals, IPurchaseReportService purchaseReports,
-        IPurchaseOrderService orders, IStockReportService stockReports, IInventoryDocumentService inventory)
+        IPurchaseOrderService orders, IStockReportService stockReports, IInventoryDocumentService inventory,
+        Proc.Application.Notifications.INotificationService notifications)
     {
         _db = db;
         _scope = scope;
@@ -51,6 +54,7 @@ public sealed class DashboardService : IDashboardService
         _orders = orders;
         _stockReports = stockReports;
         _inventory = inventory;
+        _notifications = notifications;
     }
 
     /// <inheritdoc />
@@ -61,7 +65,11 @@ public sealed class DashboardService : IDashboardService
         var purchase = await PurchaseAsync(cancellationToken);
         var stock = await StockAsync(today, cancellationToken);
         var spend = _scope.HasPermission(Permissions.Report.PurchaseView) ? await SpendAsync(today, cancellationToken) : null;
-        return new DashboardDto(today, purchase, stock, spend, NavCounts(purchase, stock));
+        var counts = NavCounts(purchase, stock);
+        // Thông báo chưa đọc: cùng API trang chủ để chuông trên Shellbar và cây điều hướng tự cập nhật mỗi phút (design.md mục 11.4, 11.6).
+        var unread = await _notifications.UnreadCountAsync(cancellationToken);
+        if (unread > 0) counts["NOTI"] = new NavCountDto(unread, Attention: true);
+        return new DashboardDto(today, purchase, stock, spend, counts);
     }
 
     private async Task<DashboardPurchaseDto> PurchaseAsync(CancellationToken cancellationToken)

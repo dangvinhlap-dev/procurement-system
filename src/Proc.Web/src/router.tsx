@@ -7,6 +7,7 @@ import { ScreenGuard } from './auth/ScreenGuard'
 import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { NotificationPage } from './pages/NotificationPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
@@ -54,6 +55,7 @@ import { WarehouseListPage } from './pages/system/WarehouseListPage'
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
+  NOTI: <NotificationPage />,
   PR: <PurchaseListPage kind="purchase-requests" title="Danh sách đề nghị mua hàng (PR)" path="/mua-hang/pr" exportFileName="de-nghi-mua-hang" />,
   PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
   POTRK: <DeliveryTrackingPage />,

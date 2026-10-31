@@ -12,6 +12,10 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Đánh số danh mục tự động (design.md mục 5.11): màn hình Hệ thống → Đánh số danh mục (DSDM) cấu hình dải mã (tiền tố, số chữ số, từ số – đến số)
   cho nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa (riêng từng nhóm hàng hoặc dòng mặc định với `{NHOM}`). Thêm mới thì hệ thống cấp mã,
   người dùng không tự đặt; chưa cấu hình dải thì không thêm được. Nhập Excel: để trống mã khi thêm mới. API `/api/catalog-numberings`.
+- Thông báo (design.md mục 11.6): màn hình Hằng ngày → Thông báo (NOTI) và chuông trên Shellbar có số chưa đọc. Hệ thống báo khi
+  PR/PO chờ mình duyệt (theo cấp và vai trò), phiếu mình lập được duyệt hoặc bị từ chối (kèm lý do), có phiếu nhập mua nội bộ chờ nhận
+  (thủ kho công ty mua), kỳ kho được mở lại (người có quyền xuất dữ liệu kế toán). Bấm thông báo mở thẳng phiếu và đánh dấu đã đọc;
+  có "Đánh dấu tất cả đã đọc". API `/api/notifications`.
 
 ### Thay đổi
 - Ô mã trên form thêm NCC, nhóm NCC, nhóm hàng, hàng hóa bị khóa, ghi "(tự cấp khi lưu)"; cột mã trong file Excel mẫu không còn bắt buộc.
@@ -31,6 +35,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Migration `V0_9_0_DanhSoDanhMuc`: bảng mới `CatalogNumbering` (dải đánh số danh mục). `Down()` xóa bảng – mất cấu hình dải, mã đã cấp không đổi.
 - Migration `V0_9_0_DaiMaMacDinh`: thêm 4 dải mặc định (NCC + 6 số, GN + 4 số, NH + 6 số, `{NHOM}-` + 5 số) cho danh mục chưa có dải mặc định;
   không ghi đè dải đã có. `Down()` chỉ xóa các dải do migration này tạo và chưa bị sửa – không mất dữ liệu người dùng.
+- Migration `V0_9_0_ThongBao`: bảng mới `Notification`. `Down()` xóa bảng – mất các thông báo đã gửi (chứng từ, nhật ký không đổi).
 
 ### Lưu ý khi nâng cấp
 - Từ bản này mã nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa do hệ thống tự cấp. Ngay sau khi nâng cấp, quản trị đăng nhập ở tổng công ty,

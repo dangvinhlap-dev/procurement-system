@@ -227,7 +227,9 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         {
             // Sinh phiếu nhập mua nội bộ "Chờ nhận" tại công ty mua, số theo mẫu số của công ty mua (design.md mục 6.3 bước 3).
             var receiptNo = await _numbers.NextForCompanyAsync(document.CounterCompanyId!.Value, DocumentTypes.IntercompanyReceipt, document.Date, cancellationToken);
-            _db.InventoryDocuments.Add(document.CreateIntercompanyReceipt(receiptNo, buyerMainWarehouseId!.Value));
+            var receipt = document.CreateIntercompanyReceipt(receiptNo, buyerMainWarehouseId!.Value);
+            _db.InventoryDocuments.Add(receipt);
+            await NotifyIntercompanyReceiptAsync(document, receipt, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);

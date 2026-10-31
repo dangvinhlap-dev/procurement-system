@@ -344,7 +344,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Đọc chứng từ công ty kia chỉ qua Id liên kết của đúng cặp ICS–ICR (hiện số phiếu, trạng thái nhận, SL gửi) và trong báo cáo hàng đi đường, đối chiếu (chỉ cặp có công ty đang làm việc, số tổng hợp) | Mỗi công ty là pháp nhân độc lập |
 | ICR chờ nhận là hàng đi đường: **không chặn** đóng kỳ bên mua (kiểm tra phiếu nháp bỏ qua ICR) | Mục 7.2 bước 1 |
 | Báo cáo hàng đi đường: ICS đã ghi sổ mà ICR chưa ghi sổ, cả chiều bán ra (Out) và mua vào (In). Đối chiếu nội bộ theo khoảng ngày ICS: bên này bán – bên kia đã nhận; bên kia bán – bên này đã nhận (giá trị trước VAT). Quyền `Report.Stock.View` | Mục 11 – nhóm Nội bộ |
-| Chưa làm: đơn đặt hàng nội bộ, duyệt ICS, thông báo cho thủ kho bên mua, nút Điều chuyển nhanh kho con → kho con khác công ty | Làm cùng luồng duyệt, thông báo |
+| Thông báo cho thủ kho bên mua khi có ICR chờ nhận: đã làm (mục 11.6). Chưa làm: đơn đặt hàng nội bộ, duyệt ICS, nút Điều chuyển nhanh kho con → kho con khác công ty | Làm cùng luồng duyệt |
 
 ### 6.7 Mua hàng và duyệt – cách làm (giai đoạn 5)
 
@@ -417,7 +417,7 @@ Tính theo công ty × mặt hàng, trên số lượng ở ĐVT cơ sở:
 | Giá vốn tính trên mọi kho, mọi nhóm hàng của công ty (bỏ qua phạm vi xem của người đóng kỳ, vẫn trong công ty) | Giá vốn theo công ty × mặt hàng (mục 7.3) |
 | Nhập có giá giai đoạn này: GRN (+), RTV (−, giá đích danh). Chuyển kho không tham gia; dòng xuất và nhập của phiếu chuyển nhận cùng giá vốn kỳ nên giá trị công ty không đổi. Mẫu số ≤ 0 thì dùng giá vốn kỳ trước (hoặc 0) | Mục 7.3 |
 | Chênh lệch làm tròn dồn vào dòng **xuất tiêu hao** cuối kỳ (không phải trả NCC, không phải chuyển kho). Chưa có loại phiếu xuất tiêu hao (xuất dùng, xuất bán nội bộ) nên hiện chưa phát sinh; SL tồn 0 mà còn giá trị thì chưa sinh bút toán điều chỉnh – làm cùng phiếu điều chỉnh (ADJ) | Mục 7.3 |
-| Mở lại kỳ (quyền `Inventory.Period.Reopen`): chỉ kỳ đã đóng gần nhất, bắt buộc lý do (≤ 500 ký tự, lưu ở kỳ và nhật ký thao tác); xóa số dư và giá vốn của kỳ; dòng xuất về tạm tính (giữ số cũ tới lần đóng sau). Chưa gửi thông báo cho kế toán (chưa có phân hệ thông báo) | Mục 7.4 |
+| Mở lại kỳ (quyền `Inventory.Period.Reopen`): chỉ kỳ đã đóng gần nhất, bắt buộc lý do (≤ 500 ký tự, lưu ở kỳ và nhật ký thao tác); xóa số dư và giá vốn của kỳ; dòng xuất về tạm tính (giữ số cũ tới lần đóng sau). Gửi thông báo cho người có quyền xuất dữ liệu kế toán (mục 11.6) | Mục 7.4 |
 | Tồn đầu của thẻ kho, báo cáo NXT = số dư kỳ đã đóng gần nhất kết thúc trước ngày bắt đầu + sổ kho sau kỳ đó; chưa có kỳ đóng thì cộng từ đầu sổ | Mục 11, đoạn Hiệu năng |
 
 ### 7.5 Giá vốn tạm tính trong kỳ
@@ -711,7 +711,7 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | --- | --- |
 | `GET /api/dashboard` – công ty đang làm việc, ai đăng nhập cũng gọi được; mỗi phần chỉ có khi người xem có quyền của màn hình tương ứng (không có quyền → null, không hiện ô): phiếu chờ tôi duyệt (mọi người); PR chưa xử lý / quá ngày cần (`Purchase.PR.View`); PO chờ giao / trễ hạn (`Purchase.PO.View`); RFQ đang nhận báo giá (`Sourcing.Rfq.View`); chứng từ kho nháp theo loại (`Inventory.Document.View`); hàng dưới tồn tối thiểu (`Inventory.Stock.View`); lô đã hết hạn / hết hạn trong 30 ngày, hàng đi đường (`Report.Stock.View`); trạng thái kỳ kho tháng hiện tại (`Inventory.Period.View`); mua thuần tháng này (đến hôm nay), tháng trước, top 5 NCC (`Report.Purchase.View`) | Mục 9.2: không lộ số liệu ngoài quyền |
 | Mỗi số tính bằng chính dịch vụ/truy vấn của màn hình chi tiết (qua global query filter) nên bấm ô mở màn hình thấy đúng con số. Riêng "hàng dưới tồn tối thiểu" đếm mặt hàng tồn kho đang dùng có tối thiểu > 0 mà tổng tồn mọi kho của công ty < tối thiểu, **gồm cả hàng chưa có tồn** (màn hình tồn kho chỉ gắn cờ trên dòng đang có tồn) | Mục 11.1 |
-| Cây điều hướng hiện số đếm thật lấy từ cùng API, tự cập nhật mỗi phút và ngay sau khi lưu/ghi sổ/duyệt phiếu: Việc cần làm, PR, PR chưa xử lý, Theo dõi giao hàng, RFQ, So sánh báo giá, phiếu nháp GRN/RTV/TRF/ICS, ICR chờ xác nhận nhận hàng, Tồn kho hiện tại (dưới tối thiểu), Sắp hết hạn, Hàng đi đường. Badge đỏ khi cần xử lý (chờ duyệt, quá hạn, dưới tối thiểu, đã hết hạn, ICR chờ nhận). Số 0 không hiện. Thông báo chưa làm nên không hiện số chưa đọc | ui-guide.md: số đếm, badge đỏ |
+| Cây điều hướng hiện số đếm thật lấy từ cùng API, tự cập nhật mỗi phút và ngay sau khi lưu/ghi sổ/duyệt phiếu: Việc cần làm, PR, PR chưa xử lý, Theo dõi giao hàng, RFQ, So sánh báo giá, phiếu nháp GRN/RTV/TRF/ICS, ICR chờ xác nhận nhận hàng, Tồn kho hiện tại (dưới tối thiểu), Sắp hết hạn, Hàng đi đường. Badge đỏ khi cần xử lý (chờ duyệt, quá hạn, dưới tối thiểu, đã hết hạn, ICR chờ nhận). Số 0 không hiện. Thông báo chưa đọc (NOTI) cũng đi cùng API này (mục 11.6) | ui-guide.md: số đếm, badge đỏ |
 
 
 ### 11.5 Xuất chứng từ cho kế toán (giai đoạn 7)
@@ -723,6 +723,17 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | TK kho = tài khoản kho mặc định của nhóm hàng; nhóm không khai báo thì lấy của nhóm cha gần nhất. Chưa có cấu hình cặp tài khoản Nợ/Có theo loại phiếu – kế toán định khoản trong phần mềm kế toán | Tránh thêm bảng tham số khi chưa cần |
 | Giá vốn của dòng lấy từ sổ kho đúng dòng chứng từ: phiếu xuất (RTV, ICS) và chuyển kho lấy chiều xuất, phiếu nhập (GRN, ICR) lấy chiều nhập (= giá nhập, chính thức ngay). Kỳ còn mở thì giá vốn xuất là tạm tính (tô màu trên màn hình) – nên xuất lại sau khi đóng kỳ | Mục 7 |
 | Dữ liệu qua global query filter: công ty đang làm việc, kho và nhóm hàng được phép; chứng từ liên quan thuộc công ty khác (phiếu xuất bán của bên bán) không in số | Mục 9.2 |
+
+### 11.6 Thông báo (yêu cầu 31/10/2026)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Hệ thống sinh thông báo khi: (1) PR/PO **gửi duyệt** hoặc qua một cấp mà còn cấp sau → người duyệt được cấp đang chờ (có quyền duyệt loại phiếu tại công ty; cấp gắn vai trò thì phải có vai trò đó); (2) phiếu **duyệt xong** hoặc **bị từ chối** (kèm lý do) → người lập; (3) **ghi sổ ICS sinh ICR** → người có quyền `Inventory.Document.Create` (xác nhận nhận hàng) tại công ty mua và được làm việc với kho tổng nhận hàng; (4) **mở lại kỳ kho** (kèm lý do) → người có quyền `Report.Accounting.Export` tại công ty | Mục 6.2, 6.3 bước 3, 7.4: người cần xử lý biết ngay, không phải dò danh sách |
+| Người gây ra sự kiện không nhận thông báo của chính mình; người lập không nhận "chờ duyệt" phiếu của mình (không tự duyệt được). Chỉ người dùng đang hoạt động, vai trò và công ty còn dùng | Tránh thông báo thừa |
+| Thông báo ghi **cùng giao dịch** với sự kiện (bảng `Notification`): thao tác lỗi thì không có thông báo, thao tác xong thì chắc chắn có. Lưu mã màn hình + Id đối tượng (không lưu đường dẫn web) | Không có thông báo "ma"; đổi đường dẫn giao diện không hỏng thông báo cũ |
+| Người dùng chỉ thấy thông báo **của mình tại công ty đang làm việc**; thông báo của người khác coi như không tồn tại (404). Không có API tạo thông báo. Đánh dấu đã đọc từng cái (tự đánh dấu khi mở) hoặc tất cả ở công ty đang làm việc | Mục 9.2 |
+| Màn hình Hằng ngày → Thông báo (NOTI): trạng thái Chưa đọc/Đã đọc, thời gian, loại, tiêu đề, nội dung; lọc "Chưa đọc"; bấm đúp/Enter/">" mở thẳng phiếu (kỳ kho mở màn hình Kỳ kho). Số chưa đọc trên chuông Shellbar và cây điều hướng (badge đỏ) lấy từ API trang chủ, tự cập nhật mỗi phút | Mục 11.4, ui-guide.md mục 4 |
+| Không ghi `AuditLog` cho thông báo (tin nhắn hệ thống – sự kiện gốc đã có nhật ký). Chưa làm: gửi email, thông báo đẩy, tự xóa thông báo cũ | Làm khi có yêu cầu |
 
 ## 12. Lược đồ CSDL chính
 
@@ -745,6 +756,7 @@ Trái tim của kho là bảng **`StockLedger`** (sổ kho): mỗi dòng chứng
 | `ApprovalRequest`, `ApprovalStep` | DocType, DocId, Level, ApproverId, Status, Comment, ActedAt |
 | `SupplierRatingRule` | Id, Code, Name, SortOrder, MinOnTimePct, MaxReturnPct (numeric(5,2)) – tham số xếp loại NCC dùng chung (mục 11.3) |
 | `AuditLog`, `AccessLog` | Mục 9.3 |
+| `Notification` | Id, CompanyId, UserId, Type, Title, Message, ScreenCode, TargetId, CreatedAt, ReadAt – thông báo (mục 11.6) |
 
 Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NCC), TRF_OUT/TRF_IN (chuyển kho), ICS (xuất bán nội bộ), ICR (nhập mua nội bộ), ADJ_IN/ADJ_OUT (điều chỉnh, kiểm kê), ISS (xuất dùng).
 

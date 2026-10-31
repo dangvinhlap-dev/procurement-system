@@ -36,7 +36,7 @@ public class PeriodClosingTests
     }
 
     /// <summary>Công ty mới (kho KT, kho phụ KP), lịch 2025 mở tháng 1 và 2, một mặt hàng (ĐVT cái), một NCC áp dụng tại công ty.</summary>
-    private sealed record Fixture(HttpClient Client, Guid CompanyId, Guid Kt, Guid Kp, Guid ItemId, Guid Uom, Guid SupplierId, Guid Jan, Guid Feb);
+    private sealed record Fixture(HttpClient Client, Guid CompanyId, Guid Kt, Guid Kp, Guid ItemId, Guid Uom, Guid SupplierId, Guid Jan, Guid Feb, string CompanyCode);
 
     private async Task<Fixture> ArrangeAsync()
     {
@@ -67,7 +67,7 @@ public class PeriodClosingTests
             new SaveSupplierRequest(null, groupId, "NCC đóng kỳ", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
-        return new Fixture(client, company.Id, kt, kp, item.Id, uom, supplier.Id, jan, feb);
+        return new Fixture(client, company.Id, kt, kp, item.Id, uom, supplier.Id, jan, feb, company.Code);
     }
 
     private static async Task<InventoryDocumentDto> PostedAsync(Fixture f, HttpResponseMessage created)
@@ -195,8 +195,19 @@ public class PeriodClosingTests
         Assert.Equal("Phải mở lại kỳ 02/2025 trước (chỉ mở lại kỳ đã đóng gần nhất).", await TitleAsync(await ReopenAsync(f, f.Jan, "Sửa giá")));
         Assert.Equal("Phải nhập lý do mở lại kỳ.", await TitleAsync(await ReopenAsync(f, f.Feb, " ")));
 
+        // Kế toán (quyền xuất dữ liệu kế toán) nhận thông báo kỳ mở lại (design.md mục 7.4, 11.6).
+        var accountantRole = $"KT{Guid.NewGuid():N}".ToUpperInvariant()[..10];
+        await _factory.CreateRoleAsync(accountantRole, Proc.Domain.Organization.Permissions.Report.AccountingExport);
+        var accountantName = $"ke.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(accountantName, f.CompanyCode, accountantRole);
+
         var reopened = await ReadAsync<InventoryPeriodDto>(await ReopenAsync(f, f.Feb, "Nhập sai giá phiếu tháng 2"));
         Assert.Equal(("Open", "Nhập sai giá phiếu tháng 2"), (reopened.Status, reopened.ReopenReason));
+        var accountant = await _factory.CreateClientInCompanyAsync(accountantName, ProcApiFactory.TestPassword, f.CompanyCode);
+        var note = Assert.Single(await NotificationApi.MineAsync(accountant, Ct));
+        Assert.Equal(("PeriodReopened", "PER", f.Feb), (note.Type, note.ScreenCode, note.TargetId));
+        Assert.Contains("02/2025", note.Message);
+        Assert.Contains("Nhập sai giá phiếu tháng 2", note.Message);
 
         var (balances, costs, final) = await InCompanyAsync(f, async db => (
             await db.StockPeriodBalances.CountAsync(b => b.PeriodId == f.Feb, Ct),

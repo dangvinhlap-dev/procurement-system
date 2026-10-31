@@ -201,4 +201,23 @@ public sealed partial class InventoryDocumentService
 
     private static SaleHeader ToSaleHeader(SaveSaleRequest r) =>
         new(r.Date, r.FromWarehouseId, r.BuyerCompanyId, r.InvoiceNo, r.InvoiceDate, r.Deliverer, r.Note);
+
+    /// <summary>
+    /// Báo thủ kho công ty mua có phiếu nhập mua nội bộ chờ nhận (design.md mục 6.3 bước 3, 11.6): người có quyền lập chứng từ kho
+    /// (quyền xác nhận nhận hàng) tại công ty mua và được làm việc với kho tổng nhận hàng.
+    /// </summary>
+    /// <param name="sale">Phiếu xuất bán vừa ghi sổ.</param>
+    /// <param name="receipt">Phiếu nhập mua nội bộ vừa sinh ở công ty mua.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    private async Task NotifyIntercompanyReceiptAsync(InventoryDocument sale, InventoryDocument receipt, CancellationToken cancellationToken)
+    {
+        var notifications = new Notifications.NotificationPublisher(_db, _scope, _clock);
+        var keepers = await notifications.UsersWithPermissionAsync(
+            receipt.CompanyId, Permissions.Inventory.DocumentCreate, null, receipt.ToWarehouseId, cancellationToken);
+        var seller = await _db.Companies.AsNoTracking().Where(c => c.Id == sale.CompanyId).Select(c => c.Code + " – " + c.Name).SingleAsync(cancellationToken);
+        notifications.Add(receipt.CompanyId, keepers, Proc.Domain.Notifications.NotificationTypes.IntercompanyReceipt,
+            $"Phiếu nhập mua nội bộ {receipt.No} chờ nhận hàng",
+            $"{seller} đã xuất bán nội bộ theo phiếu {sale.No}. Phiếu {receipt.No} đang chờ bạn xác nhận số lượng thực nhận và ghi sổ.",
+            DocumentTypes.IntercompanyReceipt, receipt.Id);
+    }
 }

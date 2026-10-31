@@ -166,6 +166,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Nhật ký thao tác (chỉ thêm).</summary>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    /// <summary>Thông báo (design.md mục 11.6).</summary>
+    public DbSet<Proc.Domain.Notifications.Notification> Notifications => Set<Proc.Domain.Notifications.Notification>();
+
     /// <summary>Nhật ký truy cập (chỉ thêm).</summary>
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
 

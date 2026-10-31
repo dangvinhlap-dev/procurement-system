@@ -159,6 +159,12 @@ public class PurchasingTests
         var pr = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 10));
         Assert.Equal((200_000m, 2_000_000m, 1m), (pr.Lines[0].EstPrice, pr.TotalAmount, pr.Lines[0].OnHandQty));
         await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
+        // Thông báo chờ duyệt chỉ tới người duyệt cấp đang chờ (design.md mục 11.6); người lập không nhận.
+        var pending = Assert.Single(await NotificationApi.MineAsync(head, Ct), n => n.TargetId == pr.Id);
+        Assert.Equal(("ApprovalPending", "PR", (DateTimeOffset?)null), (pending.Type, pending.ScreenCode, pending.ReadAt));
+        Assert.Contains(pr.No, pending.Message);
+        Assert.DoesNotContain(await NotificationApi.MineAsync(director, Ct), n => n.TargetId == pr.Id);
+        Assert.DoesNotContain(await NotificationApi.MineAsync(f.Buyer, Ct), n => n.TargetId == pr.Id);
 
         Assert.Contains("bạn không có vai trò này", await TitleAsync(await ActAsync(director, "purchase-requests", pr.Id, "approve")));
         Assert.DoesNotContain((await director.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!, p => p.DocumentId == pr.Id);
@@ -166,8 +172,11 @@ public class PurchasingTests
         Assert.Equal("Submitted", pr.Status);
         Assert.Contains("bạn không có vai trò này", await TitleAsync(await ActAsync(head, "purchase-requests", pr.Id, "approve")));
         Assert.Single((await director.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!, p => p.DocumentId == pr.Id && p.Level == 2);
+        Assert.Single(await NotificationApi.MineAsync(director, Ct), n => n.TargetId == pr.Id && n.Type == "ApprovalPending");
         pr = await ReadAsync<PurchaseRequestDto>(await ActAsync(director, "purchase-requests", pr.Id, "approve"));
         Assert.Equal(("Approved", 2), (pr.Status, pr.Approvals.Count(a => a.Status == "Approved")));
+        // Duyệt xong cấp cuối: người lập nhận "đã duyệt".
+        Assert.Equal("Approved", Assert.Single(await NotificationApi.MineAsync(f.Buyer, Ct), n => n.TargetId == pr.Id).Type);
 
         // PR nhỏ (1 cái = 200.000 < 1 triệu) chỉ qua cấp 1.
         var small = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 1));
@@ -185,6 +194,9 @@ public class PurchasingTests
 
         Assert.Equal("Phải nhập lý do từ chối.", await TitleAsync(await ActAsync(approver, "purchase-requests", pr.Id, "reject", " ")));
         await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "reject", "Thiếu báo giá"));
+        var rejected = Assert.Single(await NotificationApi.MineAsync(f.Buyer, Ct), n => n.TargetId == pr.Id);
+        Assert.Equal("Rejected", rejected.Type);
+        Assert.Contains("Thiếu báo giá", rejected.Message);
         // Người lập thấy phiếu về nháp, sửa được, kèm lý do từ chối.
         pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}", Ct));
         Assert.Equal(("Draft", "Thiếu báo giá", true), (pr.Status, pr.RejectReason, pr.Actions.CanEdit));
