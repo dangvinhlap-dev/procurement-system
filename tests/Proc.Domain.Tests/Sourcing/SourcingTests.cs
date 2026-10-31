@@ -43,12 +43,15 @@ public class SourcingTests
         Assert.False(list.AppliesOn(Today));
     }
 
-    private static Rfq SentRfq(Item item, params Guid[] suppliers)
+    private static Rfq SentRfq(Item item, params Guid[] suppliers) => SentRfq(item, 3, suppliers);
+
+    /// <summary>RFQ hai dòng đã gửi cho các NCC, số NCC tối thiểu theo tham số công ty.</summary>
+    private static Rfq SentRfq(Item item, int minSuppliers, params Guid[] suppliers)
     {
         var rfq = Rfq.Create(Company, "RFQ-1", new RfqHeader(Today, "Vòng bi quý 4", Today.AddDays(7), null, RfqWeights.Default, null));
         rfq.SetLines([(new RfqLineData(null, item.Id, Cai.Id, 100, null, null), item), (new RfqLineData(null, item.Id, Thung.Id, 10, null, null), item)]);
         rfq.SetSuppliers(suppliers);
-        rfq.Send(DateTimeOffset.UtcNow);
+        rfq.Send(DateTimeOffset.UtcNow, minSuppliers);
         return rfq;
     }
 
@@ -62,6 +65,8 @@ public class SourcingTests
             Rfq.Create(Company, "RFQ-1", new RfqHeader(Today, "Vòng bi", Today.AddDays(-1), null, RfqWeights.Default, null)));
         var ex = Assert.Throws<BusinessRuleException>(() => SentRfq(item, Guid.CreateVersion7(), Guid.CreateVersion7()));
         Assert.Contains("ít nhất 3", ex.Message);
+        // Công ty hạ tham số xuống 2 thì gửi được với 2 NCC.
+        Assert.Equal(RfqStatus.Sent, SentRfq(item, 2, Guid.CreateVersion7(), Guid.CreateVersion7()).Status);
     }
 
     [Fact]

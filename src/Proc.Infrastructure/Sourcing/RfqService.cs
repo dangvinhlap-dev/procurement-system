@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
+using Proc.Application.Organization;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
@@ -24,6 +25,7 @@ public sealed class RfqService : IRfqService
     private readonly IDocumentNumberService _numbers;
     private readonly IClock _clock;
     private readonly IPurchaseOrderService _orders;
+    private readonly ISystemParameterService _parameters;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -31,13 +33,17 @@ public sealed class RfqService : IRfqService
     /// <param name="numbers">Đánh số chứng từ.</param>
     /// <param name="clock">Đồng hồ.</param>
     /// <param name="orders">Dịch vụ đơn mua hàng.</param>
-    public RfqService(ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders)
+    /// <param name="parameters">Tham số công ty (số NCC tối thiểu khi gửi).</param>
+    public RfqService(
+        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders,
+        ISystemParameterService parameters)
     {
         _db = db;
         _scope = scope;
         _numbers = numbers;
         _clock = clock;
         _orders = orders;
+        _parameters = parameters;
     }
 
     /// <inheritdoc />
@@ -110,7 +116,7 @@ public sealed class RfqService : IRfqService
         var rfq = await LoadAsync(id, cancellationToken);
         // Kiểm tra lại lúc gửi: NCC có thể vào danh sách đen từ lúc soạn nháp.
         await CheckSuppliersAsync(rfq.Suppliers.Select(s => s.SupplierId).ToList(), cancellationToken);
-        rfq.Send(_clock.UtcNow);
+        rfq.Send(_clock.UtcNow, await _parameters.RfqMinSuppliersAsync(cancellationToken));
         await TrackSourcingAsync(rfq, rfq.Suppliers.Select(s => s.SupplierId), CandidateStatus.RfqSent, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -338,7 +344,7 @@ public sealed class RfqService : IRfqService
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,
             new RfqWeightsDto(weights.Price, weights.Quality, weights.Delivery, weights.Payment, weights.Warranty), rfq.Note, rfq.Status.ToString(),
-            rfq.CreatedAt, createdBy, rfq.SentAt, rfq.AwardedAt, Rfq.MinSuppliers, lines, supplierDtos, actions);
+            rfq.CreatedAt, createdBy, rfq.SentAt, rfq.AwardedAt, await _parameters.RfqMinSuppliersAsync(cancellationToken), lines, supplierDtos, actions);
     }
 
     private static RfqHeader ToHeader(SaveRfqRequest r) =>

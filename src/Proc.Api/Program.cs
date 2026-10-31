@@ -123,6 +123,7 @@ app.MapSourcingEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();
+app.MapSystemParameterEndpoints();
 app.MapNotificationEndpoints();
 
 // /api lạ trả 404 (không phải 401 do chính sách mặc định, cũng không rơi vào trang giao diện bên dưới).

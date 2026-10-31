@@ -157,6 +157,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phạm vi nhóm hàng của người dùng.</summary>
     public DbSet<UserItemCategoryScope> UserItemCategoryScopes => Set<UserItemCategoryScope>();
 
+    /// <summary>Tham số công ty (lọc theo công ty).</summary>
+    public DbSet<CompanyParameter> CompanyParameters => Set<CompanyParameter>();
+
     /// <summary>Cấu hình đánh số chứng từ (lọc theo công ty).</summary>
     public DbSet<DocumentNumbering> DocumentNumberings => Set<DocumentNumbering>();
 

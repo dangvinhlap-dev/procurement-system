@@ -168,7 +168,14 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Lý do nhập/xuất | Mã, tên, loại chứng từ áp dụng |
 | Đánh số chứng từ (`DocumentNumbering`) | Loại chứng từ, công ty, định dạng (`PO-{CTY}-{YYMM}-{0000}`); số hiện tại ở bảng `DocumentSequence` theo kỳ |
 | Cấu hình duyệt (`ApprovalRule`) | Loại chứng từ, công ty, ngưỡng giá trị, các cấp duyệt, người/vai trò duyệt |
-| Tham số công ty | Phương pháp giá vốn, cho tồn âm, % markup nội bộ mặc định |
+| Tham số công ty (`CompanyParameter`) | Phương pháp giá vốn, cho tồn âm, % markup nội bộ mặc định, số NCC tối thiểu khi gửi RFQ |
+
+- Màn hình **Hệ thống → Tham số hệ thống** (SEC, quyền xem/sửa tham số hệ thống) theo công ty đang làm việc, làm từ 31/10/2026 (lát SEC-1):
+  - **Số NCC tối thiểu khi gửi RFQ**: sửa được, 1–20, mặc định 3 (mục 8.4 bước 2). Mỗi công ty một giá trị (pháp nhân độc lập);
+    công ty chưa sửa thì chưa có dòng `CompanyParameter` và dùng mặc định. Đổi tham số không ảnh hưởng RFQ đã gửi.
+  - **Phương pháp giá vốn**: chỉ xem – cố định bình quân gia quyền cuối kỳ tháng (mục 7).
+  - **Kho cho phép tồn âm**: chỉ xem – khai báo trên từng kho (màn hình Kho), danh sách theo phạm vi kho của người dùng.
+  - Chưa làm: % markup nội bộ mặc định (cần đi cùng gợi ý giá bán nội bộ khi chưa có bảng giá – mục 1, câu hỏi số 2).
 
 ### 5.5 Đánh số chứng từ
 
@@ -487,7 +494,7 @@ Phiếu tìm NCC cho một sản phẩm cụ thể: mặt hàng (hoặc mô tả
 | Phiếu tìm nguồn (`SourcingRequest` + `SourcingCandidate`, số loại `SRC`): mặt hàng **hoặc** mô tả (hàng chưa có mã), yêu cầu kỹ thuật, SL dự kiến, hạn chót, người phụ trách (chữ); mỗi NCC một dòng ứng viên. NCC chưa có trong danh mục thì thêm ở danh mục NCC (Tiềm năng) rồi chọn. Đang tìm → Đã xong / Đã hủy | Mục 8.3 |
 | RFQ lập từ phiếu tìm nguồn mang sẵn mặt hàng, SL, các NCC chưa "Không đạt"; khi gửi RFQ, NCC ứng viên tự chuyển **Đã gửi RFQ**, nhập báo giá thì **Đã báo giá** – chỉ tiến lên, không lùi trạng thái Đạt/Không đạt người dùng đã chấm | Đỡ nhập lại; giữ đánh giá của người mua |
 | RFQ (`Rfq`, `RfqLine`, `RfqSupplier`, `QuotationLine`; số loại `RFQ`): dòng nhập tay hoặc lấy từ PR đã duyệt (cùng mặt hàng – SL đặt thật kiểm tra khi sinh PO); hạn nộp; **trọng số 5 tiêu chí** (giá, chất lượng, giao hàng, thanh toán, bảo hành) cộng bằng 100, mặc định 60/20/10/5/5. `Quotation` của mục 12.1 gộp vào `RfqSupplier` (mỗi NCC một báo giá cho một RFQ) | Mục 8.4 bước 1 |
-| Gửi RFQ cần **≥ 3 NCC** – chưa có bảng tham số nên tạm là hằng số `Rfq.MinSuppliers = 3`. NCC Tiềm năng mời được; NCC danh sách đen không. Nháp → **Đang nhận báo giá** → **Đã chọn thầu**; hủy được khi chưa chọn thầu | Mục 8.4 bước 2 |
+| Gửi RFQ cần **≥ số NCC tối thiểu** theo tham số công ty (mặc định 3, mục 5.4). NCC Tiềm năng mời được; NCC danh sách đen không. Nháp → **Đang nhận báo giá** → **Đã chọn thầu**; hủy được khi chưa chọn thầu | Mục 8.4 bước 2 |
 | Báo giá nhập tay theo từng NCC: ngày, hiệu lực, điều kiện thanh toán, đơn giá/% CK/VAT/thời gian giao từng dòng (để trống = không chào dòng đó), điểm 0–10 cho chất lượng, giao hàng, thanh toán, bảo hành (người mua chấm). Chưa có import Excel, cổng NCC | Mục 8.4 bước 2 |
 | Bảng so sánh: dòng × NCC, gắn nhãn **giá thấp nhất** theo giá quy về ĐVT cơ sở trước VAT. Điểm giá NCC = trung bình trên các dòng NCC chào của (giá thấp nhất dòng ÷ giá NCC) × 10. **Tổng điểm** = Σ trọng số × điểm / 100 (thang 10). Ví dụ trọng số 60/20/10/5/5, điểm 9/8/10/10/6 → 8,8 | Mục 8.4 bước 3 |
 | Chọn thầu theo **từng dòng** (có thể tách NCC); dòng không trao thì để trống; không chọn NCC giá thấp nhất của dòng thì **bắt buộc lý do**. Cần quyền `Sourcing.Rfq.Award` | Mục 8.4 bước 4 |
@@ -755,6 +762,7 @@ Trái tim của kho là bảng **`StockLedger`** (sổ kho): mỗi dòng chứng
 | `ItemPeriodCost` | PeriodId, CompanyId, ItemId, UnitCost, CalculatedAt |
 | `ApprovalRequest`, `ApprovalStep` | DocType, DocId, Level, ApproverId, Status, Comment, ActedAt |
 | `SupplierRatingRule` | Id, Code, Name, SortOrder, MinOnTimePct, MaxReturnPct (numeric(5,2)) – tham số xếp loại NCC dùng chung (mục 11.3) |
+| `CompanyParameter` | Id, CompanyId (duy nhất), RfqMinSuppliers (mặc định 3) – tham số công ty (mục 5.4) |
 | `AuditLog`, `AccessLog` | Mục 9.3 |
 | `Notification` | Id, CompanyId, UserId, Type, Title, Message, ScreenCode, TargetId, CreatedAt, ReadAt – thông báo (mục 11.6) |
 

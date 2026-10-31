@@ -37,7 +37,7 @@ public class SourcingTests
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;
     }
 
-    private sealed record Fixture(HttpClient Client, string CompanyCode, Guid ItemId, Guid Cai, Guid Thung, Guid[] Suppliers);
+    private sealed record Fixture(HttpClient Client, string CompanyCode, Guid ItemId, Guid Cai, Guid Thung, Guid[] Suppliers, HttpClient Head);
 
     /// <summary>Công ty mới, mặt hàng (cái, thùng = 12 cái), 4 NCC đã duyệt áp dụng tại công ty. Người dùng: quản trị.</summary>
     private async Task<Fixture> ArrangeAsync()
@@ -65,7 +65,7 @@ public class SourcingTests
             suppliers.Add(supplier.Id);
         }
 
-        return new Fixture(client, company.Code, item.Id, cai, thung, [.. suppliers]);
+        return new Fixture(client, company.Code, item.Id, cai, thung, [.. suppliers], head);
     }
 
     private static SaveRfqRequest Rfq(Fixture f, Guid? sourcingId, params Guid[] suppliers) =>
@@ -77,6 +77,38 @@ public class SourcingTests
 
     private static SaveQuotationRequest Quote(params List<SaveQuotationLineRequest> lines) =>
         new(Today, Today.AddDays(30), "Thanh toán 30 ngày", 8, 10, 10, 6, null, lines);
+
+    [Fact]
+    public async Task ThamSoSoNccToiThieu_TheoCongTy_ApDungKhiGuiRfq()
+    {
+        var f = await ArrangeAsync();
+        var (a, b) = (f.Suppliers[0], f.Suppliers[1]);
+        var list = await ReadAsync<List<SystemParameterDto>>(await f.Client.GetAsync("/api/system-parameters", Ct));
+        var rfqMin = list.Single(p => p.Code == SystemParameterCodes.RfqMinSuppliers);
+        Assert.Equal(("3", true, true), (rfqMin.Value, rfqMin.IsDefault, rfqMin.Editable));
+        Assert.False(list.Single(p => p.Code == SystemParameterCodes.CostingMethod).Editable);
+
+        // Giá trị sai, tham số chỉ xem, mã lạ đều bị chặn.
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest("0"), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest("2,5"), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/COSTING_METHOD", new UpdateSystemParameterRequest("FIFO"), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Client.PutAsJsonAsync("/api/system-parameters/KHONG_CO", new UpdateSystemParameterRequest("1"), Ct)).StatusCode);
+
+        // Hạ xuống 2: RFQ mời 2 NCC gửi được; công ty khác (tổng công ty) vẫn giữ mặc định 3.
+        rfqMin = await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync("/api/system-parameters/rfq_min_suppliers", new UpdateSystemParameterRequest("2"), Ct));
+        Assert.Equal(("2", false), (rfqMin.Value, rfqMin.IsDefault));
+        Assert.Equal("3", (await ReadAsync<List<SystemParameterDto>>(await f.Head.GetAsync("/api/system-parameters", Ct)))
+            .Single(p => p.Code == SystemParameterCodes.RfqMinSuppliers).Value);
+        var rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, null, a, b), Ct));
+        Assert.Equal(2, rfq.MinSuppliers);
+        Assert.Equal("Sent", (await ReadAsync<RfqDto>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct))).Status);
+
+        // Về mặc định (giá trị trống): lại cần 3 NCC.
+        rfqMin = await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest(null), Ct));
+        Assert.Equal(("3", true), (rfqMin.Value, rfqMin.IsDefault));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, null, a, b), Ct));
+        Assert.Contains("ít nhất 3", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct)));
+    }
 
     [Fact]
     public async Task TimNguon_Rfq_BaoGia_ChonThau_SinhPo()

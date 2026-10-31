@@ -49,6 +49,7 @@ import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
 import { CatalogNumberingPage } from './pages/system/CatalogNumberingPage'
 import { RoleListPage } from './pages/system/RoleListPage'
 import { SupplierRatingPage } from './pages/system/SupplierRatingPage'
+import { SystemParameterPage } from './pages/system/SystemParameterPage'
 import { UserListPage } from './pages/system/UserListPage'
 import { WarehouseListPage } from './pages/system/WarehouseListPage'
 
@@ -100,6 +101,7 @@ const implemented: Record<string, ReactNode> = {
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,
+  SEC: <SystemParameterPage />,
 }
 
 /** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */
