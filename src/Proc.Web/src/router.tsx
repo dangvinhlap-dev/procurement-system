@@ -23,6 +23,10 @@ import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
+import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
+import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
+import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
+import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -61,6 +65,11 @@ const implemented: Record<string, ReactNode> = {
   ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
   ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
   IPR: <InternalPriceListPage />,
+  PRL: <PriceListListPage />,
+  PCMP: <PriceComparisonPage />,
+  SRC: <SourcingListPage />,
+  RFQ: <RfqListPage />,
+  QCMP: <RfqListPage compare />,
   TRANSIT: <GoodsInTransitPage />,
   ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
@@ -80,6 +89,9 @@ const documentPages = [
   { code: 'ICR', element: <IntercompanyReceiptPage /> },
   { code: 'PR', element: <PurchaseRequestPage /> },
   { code: 'PO', element: <PurchaseOrderPage /> },
+  { code: 'PRL', element: <SupplierPriceListPage /> },
+  { code: 'SRC', element: <SourcingPage /> },
+  { code: 'RFQ', element: <RfqPage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,

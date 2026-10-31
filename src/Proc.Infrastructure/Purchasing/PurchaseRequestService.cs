@@ -220,13 +220,19 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         }).ToList();
     }
 
-    /// <summary>Giá nhập gần nhất theo ĐVT cơ sở (đơn giá dòng ÷ hệ số ĐVT) của các mặt hàng, từ phiếu nhập mua đã ghi sổ.</summary>
+    /// <summary>
+    /// Giá nhập gần nhất theo ĐVT cơ sở (đơn giá dòng ÷ hệ số ĐVT) của các mặt hàng, từ phiếu nhập mua đã ghi sổ của công ty đang
+    /// làm việc (mọi kho – giá không phụ thuộc phạm vi kho).
+    /// </summary>
     internal async Task<Dictionary<Guid, decimal>> LastPurchasePricesAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
     {
+        // IgnoreQueryFilters tắt filter công ty cho cả câu truy vấn (cả bảng phiếu) nên phải lọc công ty tường minh – mỗi công ty
+        // là pháp nhân độc lập, không lấy giá nhập của công ty khác (CLAUDE.md mục 4).
+        var companyId = _scope.RequireCompany();
         var rows = await (
                 from l in _db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
                 join d in _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]) on l.DocumentId equals d.Id
-                where itemIds.Contains(l.ItemId) && d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted
+                where d.CompanyId == companyId && itemIds.Contains(l.ItemId) && d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted
                 orderby d.Date descending, d.PostedAt descending
                 select new { l.ItemId, l.UnitPrice, l.UomFactor })
             .ToListAsync(cancellationToken);

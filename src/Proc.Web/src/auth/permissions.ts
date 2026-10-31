@@ -39,6 +39,9 @@ export const Permission = {
   PriceListManage: 'Pricing.PriceList.Manage',
   PriceCompareView: 'Pricing.Compare.View',
   RfqView: 'Sourcing.Rfq.View',
+  RfqManage: 'Sourcing.Rfq.Manage',
+  RfqAward: 'Sourcing.Rfq.Award',
+  PriceViewAllCompanies: 'Report.Price.ViewAllCompanies',
   ReportStockView: 'Report.Stock.View',
   ReportPurchaseView: 'Report.Purchase.View',
 } as const

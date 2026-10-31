@@ -1,11 +1,12 @@
-import { FileAddOutlined } from '@ant-design/icons'
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Table } from 'antd'
+import { DollarOutlined, FileAddOutlined } from '@ant-design/icons'
+import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
 import { useWarehouses } from '../../api/organization'
+import { pickSupplierPrice, useSupplierPrices } from '../../api/pricing'
 import {
   purchaseStatusLabels,
   purchaseStatusTone,
@@ -67,12 +68,14 @@ function computeLine(line: PoLineValues | undefined) {
 /**
  * Trang đơn mua hàng (design.md mục 10.3) trên khuôn DocumentForm: NCC đã duyệt và áp dụng tại công ty, kho nhận (mặc định kho tổng),
  * dòng nhập tay hoặc "Lấy dòng từ PR" (PR đã duyệt còn chưa đặt), chiết khấu, VAT, dung sai nhận hàng. Chỉ VND ở giai đoạn này.
- * Phiếu đã duyệt hiện SL đã nhận, còn lại theo phiếu nhập kho.
+ * Phiếu đã duyệt hiện SL đã nhận, còn lại theo phiếu nhập kho. Cột "Giá bảng giá" hiện giá gợi ý từ bảng giá NCC đang hiệu lực
+ * (design.md mục 8.1); nút "Áp giá bảng giá" chép giá gợi ý vào các dòng – người lập vẫn sửa tay được.
  */
 export function PurchaseOrderPage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
   const { hasPermission } = useAuth()
+  const { message } = App.useApp()
   const [form] = Form.useForm<PoFormValues>()
   const order = usePurchaseOrder(isNew ? null : id)
   const mutations = usePurchaseMutations<PurchaseOrder, SavePurchaseOrderInput>('purchase-orders')
@@ -91,6 +94,32 @@ export function PurchaseOrderPage() {
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
   const mainWarehouse = warehouses.data?.find((w) => w.type === 'Main' && w.isActive)?.id
+  const supplierId = Form.useWatch('supplierId', form) as string | undefined
+  const orderDate = Form.useWatch('date', form) as Dayjs | undefined
+  const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds)
+
+  /** Giá gợi ý của dòng theo bảng giá NCC: đúng ĐVT và bậc SL (xem pickSupplierPrice). */
+  const suggestedPrice = (line: PoLineValues | undefined) => {
+    if (!line?.itemId || !line.uomId) return undefined
+    const tiers = (supplierPrices.data ?? []).filter((t) => t.itemId === line.itemId)
+    const factor = itemsById.get(line.itemId)?.uoms.find((u) => u.uomId === line.uomId)?.factor ?? 1
+    return tiers.length ? pickSupplierPrice(tiers, line.uomId, factor, line.qty ?? 0) : undefined
+  }
+
+  /** Chép giá gợi ý (đơn giá, % CK, thuế suất) vào mọi dòng có giá bảng giá. */
+  const applyPriceList = () => {
+    const current = (form.getFieldValue('lines') as PoLineValues[] | undefined) ?? []
+    let count = 0
+    const next = current.map((l) => {
+      const p = suggestedPrice(l)
+      if (!p) return l
+      count++
+      return { ...l, unitPrice: p.unitPrice, discountPct: p.discountPct, vatCode: p.vatCode ?? l.vatCode }
+    })
+    form.setFieldValue('lines', next)
+    if (count) message.success(`Đã áp giá bảng giá cho ${count} dòng.`)
+    else message.info('Không có dòng nào có giá trong bảng giá đang hiệu lực của NCC này.')
+  }
 
   useEffect(() => {
     if (isNew && mainWarehouse && !form.getFieldValue('warehouseId')) form.setFieldValue('warehouseId', mainWarehouse)
@@ -273,6 +302,20 @@ export function PurchaseOrderPage() {
       ),
     },
     { key: 'amount', title: 'Thành tiền', width: 115, align: 'right', render: (field) => readonlyCell(formatMoney(computeLine(lines[field.name]).amount)) },
+    ...(readOnly
+      ? []
+      : ([
+          {
+            key: 'listPrice',
+            title: 'Giá bảng giá',
+            width: 110,
+            align: 'right',
+            render: (field) => {
+              const p = suggestedPrice(lines[field.name])
+              return readonlyCell(p ? `${formatMoney(p.unitPrice)}${p.discountPct ? ` −${p.discountPct}%` : ''}` : '')
+            },
+          },
+        ] as LineColumn[])),
     {
       key: 'delivery',
       title: 'Ngày giao',
@@ -353,9 +396,14 @@ export function PurchaseOrderPage() {
         lines={
           <>
             {!readOnly && (
-              <Button icon={<FileAddOutlined />} onClick={() => setPicking(true)} style={{ marginBottom: 6 }}>
-                Lấy dòng từ PR đã duyệt
-              </Button>
+              <Space style={{ marginBottom: 6 }}>
+                <Button icon={<FileAddOutlined />} onClick={() => setPicking(true)}>
+                  Lấy dòng từ PR đã duyệt
+                </Button>
+                <Button icon={<DollarOutlined />} onClick={applyPriceList} disabled={!supplierId}>
+                  Áp giá bảng giá
+                </Button>
+              </Space>
             )}
             <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef}
               newLine={() => ({ id: null, qty: 1, unitPrice: 0, discountPct: 0, sourcePrLineId: null })} />
@@ -381,7 +429,7 @@ export function PurchaseOrderPage() {
  * @param onPick Thêm các dòng đã chọn.
  * @param onCancel Đóng.
  */
-function RequestLinePicker({ onPick, onCancel }: { onPick: (lines: OpenRequestLine[]) => void; onCancel: () => void }) {
+export function RequestLinePicker({ onPick, onCancel }: { onPick: (lines: OpenRequestLine[]) => void; onCancel: () => void }) {
   const open = useOpenRequestLines(true)
   const [selected, setSelected] = useState<string[]>([])
   const rows = open.data ?? []

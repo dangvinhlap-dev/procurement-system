@@ -49,6 +49,10 @@ export interface DocumentFormProps {
   footer?: ReactNode
   /** Tab phụ sau tab "Dòng hàng". */
   extraTabs?: DocumentTab[]
+  /** Nhãn tab dòng (mặc định "Dòng hàng"; ví dụ phiếu tìm nguồn là "NCC ứng viên"). */
+  linesLabel?: string
+  /** Tab mở sẵn khi vào phiếu (mặc định tab dòng); ví dụ mở thẳng tab so sánh báo giá. */
+  defaultTab?: string
   /** Ctrl+S. */
   onSave?: () => void
   /** F2 – thêm dòng. */
@@ -76,10 +80,12 @@ export function DocumentForm({
   lines,
   footer,
   extraTabs = [],
+  linesLabel = 'Dòng hàng',
+  defaultTab = 'lines',
   onSave,
   onAddLine,
 }: DocumentFormProps) {
-  const [tab, setTab] = useState('lines')
+  const [tab, setTab] = useState(defaultTab)
 
   // Phím tắt của phiếu (design.md mục 10.1). F2 chỉ khi không có danh sách thả xuống đang mở, để không chen vào ô đang chọn.
   useEffect(() => {
@@ -120,7 +126,7 @@ export function DocumentForm({
             className="document-form-tabs"
             activeKey={tab}
             onChange={setTab}
-            items={[{ key: 'lines', label: 'Dòng hàng', children: lines }, ...extraTabs].map((t) => ({ ...t, forceRender: true }))}
+            items={[{ key: 'lines', label: linesLabel, children: lines }, ...extraTabs].map((t) => ({ ...t, forceRender: true }))}
           />
           {footer && <div className="document-form-footer">{footer}</div>}
         </Form>
