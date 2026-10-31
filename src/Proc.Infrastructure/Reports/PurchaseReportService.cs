@@ -4,6 +4,7 @@ using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Inventory;
+using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
@@ -150,6 +151,8 @@ public sealed class PurchaseReportService : IPurchaseReportService
             });
 
         var names = await NamesAsync(PurchaseSpendGroups.Supplier, lines.Select(l => l.SupplierId).Distinct().ToList(), cancellationToken);
+        // Ngưỡng xếp loại do người dùng cấu hình (mục 11.3), không code cứng.
+        var rules = await _db.SupplierRatingRules.AsNoTracking().ToListAsync(cancellationToken);
         return lines
             .GroupBy(l => l.SupplierId)
             .Select(g =>
@@ -159,10 +162,11 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 var d = delivery.GetValueOrDefault(g.Key);
                 var (code, name) = names.GetValueOrDefault(g.Key, ("?", "?"));
                 // Tỷ lệ trả, ví dụ nhập 10.000.000, trả 500.000 → 5,00%. Tỷ lệ đúng hạn, ví dụ 9/10 dòng → 90,00%.
+                decimal? returnPct = receipt == 0 ? null : Math.Round(returned / receipt * 100, 2, MidpointRounding.AwayFromZero);
+                decimal? onTimePct = d.Total == 0 ? null : Math.Round((decimal)d.OnTime / d.Total * 100, 2, MidpointRounding.AwayFromZero);
                 return new SupplierEvaluationRowDto(
-                    g.Key, code, name, g.Where(l => l.IsReceipt).Select(l => l.DocumentId).Distinct().Count(), receipt, returned,
-                    receipt == 0 ? null : Math.Round(returned / receipt * 100, 2, MidpointRounding.AwayFromZero),
-                    d.Total, d.OnTime, d.Total == 0 ? null : Math.Round((decimal)d.OnTime / d.Total * 100, 2, MidpointRounding.AwayFromZero), d.AvgLate);
+                    g.Key, code, name, g.Where(l => l.IsReceipt).Select(l => l.DocumentId).Distinct().Count(), receipt, returned, returnPct,
+                    d.Total, d.OnTime, onTimePct, d.AvgLate, SupplierRating.Evaluate(rules, onTimePct, returnPct));
             })
             .OrderByDescending(r => r.ReceiptAmount).ThenBy(r => r.SupplierCode)
             .ToList();
