@@ -25,6 +25,8 @@ import { PlaceholderPage } from './pages/PlaceholderPage'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
 import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
+import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
+import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
@@ -65,6 +67,9 @@ const implemented: Record<string, ReactNode> = {
   IPR: <InternalPriceListPage />,
   PRL: <PriceListListPage />,
   PCMP: <PriceComparisonPage />,
+  SRC: <SourcingListPage />,
+  RFQ: <RfqListPage />,
+  QCMP: <RfqListPage compare />,
   TRANSIT: <GoodsInTransitPage />,
   ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
@@ -85,6 +90,8 @@ const documentPages = [
   { code: 'PR', element: <PurchaseRequestPage /> },
   { code: 'PO', element: <PurchaseOrderPage /> },
   { code: 'PRL', element: <SupplierPriceListPage /> },
+  { code: 'SRC', element: <SourcingPage /> },
+  { code: 'RFQ', element: <RfqPage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,

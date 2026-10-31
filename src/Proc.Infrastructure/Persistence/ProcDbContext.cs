@@ -139,6 +139,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Bảng giá NCC (design.md mục 8.1).</summary>
     public DbSet<Proc.Domain.Pricing.SupplierPriceList> SupplierPriceLists => Set<Proc.Domain.Pricing.SupplierPriceList>();
 
+    /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
+    public DbSet<Proc.Domain.Sourcing.SourcingRequest> SourcingRequests => Set<Proc.Domain.Sourcing.SourcingRequest>();
+
+    /// <summary>Yêu cầu báo giá (design.md mục 8.4).</summary>
+    public DbSet<Proc.Domain.Sourcing.Rfq> Rfqs => Set<Proc.Domain.Sourcing.Rfq>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 

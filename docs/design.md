@@ -465,6 +465,21 @@ Phiếu tìm NCC cho một sản phẩm cụ thể: mặt hàng (hoặc mô tả
 | Lưu ý kỹ thuật: `IgnoreQueryFilters` của EF Core tắt filter cho **cả câu truy vấn** (mọi bảng), nên truy vấn nào bỏ filter phải tự lọc công ty tường minh hoặc chỉ đi theo Id đã qua filter. Sửa lỗi giá tham khảo PR (giai đoạn 5) từng lấy cả giá nhập của công ty khác | CLAUDE.md mục 4 |
 | Chưa làm: so sánh theo công ty và theo NCC (mục 8.2 gạch 2, 3), cảnh báo giá cao trên PO, nhập bảng giá bằng Excel, ngoại tệ | Làm sau khi có yêu cầu |
 
+### 8.6 Tìm nguồn, RFQ, báo giá, chọn thầu – cách làm (giai đoạn 6)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu tìm nguồn (`SourcingRequest` + `SourcingCandidate`, số loại `SRC`): mặt hàng **hoặc** mô tả (hàng chưa có mã), yêu cầu kỹ thuật, SL dự kiến, hạn chót, người phụ trách (chữ); mỗi NCC một dòng ứng viên. NCC chưa có trong danh mục thì thêm ở danh mục NCC (Tiềm năng) rồi chọn. Đang tìm → Đã xong / Đã hủy | Mục 8.3 |
+| RFQ lập từ phiếu tìm nguồn mang sẵn mặt hàng, SL, các NCC chưa "Không đạt"; khi gửi RFQ, NCC ứng viên tự chuyển **Đã gửi RFQ**, nhập báo giá thì **Đã báo giá** – chỉ tiến lên, không lùi trạng thái Đạt/Không đạt người dùng đã chấm | Đỡ nhập lại; giữ đánh giá của người mua |
+| RFQ (`Rfq`, `RfqLine`, `RfqSupplier`, `QuotationLine`; số loại `RFQ`): dòng nhập tay hoặc lấy từ PR đã duyệt (cùng mặt hàng – SL đặt thật kiểm tra khi sinh PO); hạn nộp; **trọng số 5 tiêu chí** (giá, chất lượng, giao hàng, thanh toán, bảo hành) cộng bằng 100, mặc định 60/20/10/5/5. `Quotation` của mục 12.1 gộp vào `RfqSupplier` (mỗi NCC một báo giá cho một RFQ) | Mục 8.4 bước 1 |
+| Gửi RFQ cần **≥ 3 NCC** – chưa có bảng tham số nên tạm là hằng số `Rfq.MinSuppliers = 3`. NCC Tiềm năng mời được; NCC danh sách đen không. Nháp → **Đang nhận báo giá** → **Đã chọn thầu**; hủy được khi chưa chọn thầu | Mục 8.4 bước 2 |
+| Báo giá nhập tay theo từng NCC: ngày, hiệu lực, điều kiện thanh toán, đơn giá/% CK/VAT/thời gian giao từng dòng (để trống = không chào dòng đó), điểm 0–10 cho chất lượng, giao hàng, thanh toán, bảo hành (người mua chấm). Chưa có import Excel, cổng NCC | Mục 8.4 bước 2 |
+| Bảng so sánh: dòng × NCC, gắn nhãn **giá thấp nhất** theo giá quy về ĐVT cơ sở trước VAT. Điểm giá NCC = trung bình trên các dòng NCC chào của (giá thấp nhất dòng ÷ giá NCC) × 10. **Tổng điểm** = Σ trọng số × điểm / 100 (thang 10). Ví dụ trọng số 60/20/10/5/5, điểm 9/8/10/10/6 → 8,8 | Mục 8.4 bước 3 |
+| Chọn thầu theo **từng dòng** (có thể tách NCC); dòng không trao thì để trống; không chọn NCC giá thấp nhất của dòng thì **bắt buộc lý do**. Cần quyền `Sourcing.Rfq.Award` | Mục 8.4 bước 4 |
+| "Tạo PO": mỗi NCC trúng thầu một **PO nháp** qua dịch vụ PO (đủ kiểm tra NCC đã duyệt + áp dụng tại công ty, SL PR): giá/CK/VAT theo báo giá, ngày giao = hôm nay + thời gian giao, kho nhận = kho tổng. Mỗi NCC chỉ một PO từ một RFQ; tạo lần lượt – NCC lỗi thì bấm lại chỉ tạo phần còn thiếu. Giá trúng thầu vào lịch sử giá (nguồn "Báo giá trúng thầu", ngày chọn thầu) | Mục 8.4 bước 5 |
+| Màn hình So sánh báo giá (QCMP) = danh sách RFQ đang nhận báo giá/đã chọn thầu, mở thẳng tab so sánh | Mục 3 – nhóm Đấu thầu |
+| Chưa làm: sinh bảng giá/hợp đồng khung từ kết quả thầu, hội đồng chấm thầu nhiều người, gửi RFQ qua email, cổng NCC, import báo giá Excel | Làm sau khi có yêu cầu |
+
 ## 9. Phân quyền và ghi log
 
 Phân quyền có hai chiều độc lập: **quyền chức năng** (được làm gì) và **phạm vi dữ liệu** (được thấy dữ liệu nào: công ty, kho, nhóm hàng). Một yêu cầu chỉ được thực hiện khi thỏa cả hai.

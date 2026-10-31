@@ -17,6 +17,10 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - So sánh giá (design.md mục 8.2): theo mặt hàng – giá thực mua theo công ty × NCC, thấp nhất/cao nhất/bình quân 12 tháng, tô màu
   công ty mua cao hơn giá thấp nhất quá X%; giá bảng giá đang hiệu lực; lịch sử giá 12 tháng. Xem toàn tập đoàn cần quyền
   `Report.Price.ViewAllCompanies`. API `/api/price-comparison`.
+- Tìm nguồn và đấu thầu (design.md mục 8.3, 8.4, 8.6): phiếu tìm nguồn với NCC ứng viên; RFQ (từ PR đã duyệt hoặc nhập tay, trọng số
+  5 tiêu chí, mời ≥ 3 NCC); nhập báo giá từng NCC; bảng so sánh đánh dấu giá thấp nhất, chấm điểm theo trọng số; chọn thầu theo dòng
+  (không chọn giá thấp nhất phải ghi lý do); tạo PO nháp từ kết quả; giá trúng thầu vào lịch sử giá. Màn hình Tìm nguồn, Yêu cầu
+  báo giá, So sánh báo giá. API `/api/sourcing`, `/api/rfqs`.
 
 ### Sửa lỗi
 - Giá tham khảo trên đề nghị mua hàng lấy cả giá nhập của công ty khác; nay chỉ lấy giá nhập của công ty đang làm việc.
@@ -26,6 +30,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   `PurchaseOrderLine`; cột `InventoryDocument.PurchaseOrderId`, `InventoryDocumentLine.PurchaseOrderLineId`. `Down()` xóa các
   bảng và cột – mất quy trình duyệt, lịch sử duyệt, mọi PR, PO và liên kết phiếu nhập ↔ PO.
 - Migration `V0_7_0_BangGiaNcc`: bảng `SupplierPriceList`, `SupplierPriceListLine`. `Down()` xóa hai bảng – mất mọi bảng giá NCC.
+- Migration `V0_7_0_TimNguonDauThau`: bảng `SourcingRequest`, `SourcingCandidate`, `Rfq`, `RfqLine`, `RfqSupplier`, `QuotationLine`.
+  `Down()` xóa các bảng – mất phiếu tìm nguồn, RFQ, báo giá, kết quả chọn thầu (PO đã tạo vẫn giữ).
+- Danh mục loại chứng từ thêm `PRL` (bảng giá NCC) và `SRC` (tìm nguồn) – không đổi bảng.
 
 ## [0.5.0] - 2026-10-30
 

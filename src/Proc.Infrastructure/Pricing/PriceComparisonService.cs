@@ -12,7 +12,7 @@ namespace Proc.Infrastructure.Pricing;
 
 /// <summary>
 /// So sánh giá theo mặt hàng (design.md mục 8.2). Lịch sử giá (mục 8.1 – PriceHistory) không lưu bảng riêng mà tính thẳng từ
-/// chứng từ nguồn: bảng giá đang hiệu lực, PO đã duyệt, phiếu nhập mua đã ghi sổ – để bỏ ghi sổ, hủy phiếu, ngừng bảng giá không
+/// chứng từ nguồn: bảng giá đang hiệu lực, PO đã duyệt, phiếu nhập mua đã ghi sổ, báo giá trúng thầu – để bỏ ghi sổ, hủy phiếu, ngừng bảng giá không
 /// bao giờ làm lịch sử lệch. Mọi giá quy về ĐVT cơ sở, trước VAT, VND (chỉ VND ở giai đoạn này).
 /// <para>
 /// Xem toàn tập đoàn (quyền <c>Report.Price.ViewAllCompanies</c>, design.md mục 9.2) thì bỏ filter công ty và filter kho trên
@@ -57,17 +57,18 @@ public sealed class PriceComparisonService : IPriceComparisonService
         var priceLists = await PriceListRowsAsync(companyId, allCompanies, itemId, today, cancellationToken);
         var receipts = await ReceiptEntriesAsync(allCompanies, itemId, since, cancellationToken);
         var orders = await OrderEntriesAsync(allCompanies, itemId, since, cancellationToken);
+        var quotations = await QuotationEntriesAsync(allCompanies, itemId, since, cancellationToken);
 
-        var companyIds = receipts.Select(r => r.CompanyId).Concat(orders.Select(o => o.CompanyId)).Concat(priceLists.Select(p => p.CompanyId)).Distinct().ToList();
-        var supplierIds = receipts.Select(r => r.SupplierId).Concat(orders.Select(o => o.SupplierId)).Concat(priceLists.Select(p => p.SupplierId)).Distinct().ToList();
+        var entries = receipts.Concat(orders).Concat(quotations).ToList();
+        var companyIds = entries.Select(e => e.CompanyId).Concat(priceLists.Select(p => p.CompanyId)).Distinct().ToList();
+        var supplierIds = entries.Select(e => e.SupplierId).Concat(priceLists.Select(p => p.SupplierId)).Distinct().ToList();
         var companies = await _db.Companies.AsNoTracking().Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => (s.Code, s.Name), cancellationToken);
 
         var purchases = BuildPurchaseRows(receipts, orders, thresholdPct, companies, suppliers);
         var receiptQty = receipts.Sum(r => r.BaseQty);
-        var history = receipts.Select(r => new PriceHistoryEntryDto(r.Date, companies[r.CompanyId], suppliers[r.SupplierId].Code, "Receipt", r.No, r.BaseQty, r.BasePrice))
-            .Concat(orders.Select(o => new PriceHistoryEntryDto(o.Date, companies[o.CompanyId], suppliers[o.SupplierId].Code, "PO", o.No, o.BaseQty, o.BasePrice)))
+        var history = entries.Select(e => new PriceHistoryEntryDto(e.Date, companies[e.CompanyId], suppliers[e.SupplierId].Code, e.Source, e.No, e.BaseQty, e.BasePrice))
             .Concat(priceLists.Select(p => new PriceHistoryEntryDto(
                 p.ValidFrom, companies[p.CompanyId], suppliers[p.SupplierId].Code, "PriceList", p.No, p.MinQty * p.UomFactor, p.BaseNetPrice)))
             .OrderByDescending(h => h.Date).ThenBy(h => h.CompanyCode).ThenBy(h => h.DocumentNo)
@@ -180,6 +181,29 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToListAsync(cancellationToken);
         return rows.Select(r => new Entry(
                 r.CompanyId, r.SupplierId, r.Date, "PO", r.No, r.BaseQty, r.Amount, PricingMath.BaseNetPrice(r.UnitPrice, r.DiscountPct, r.UomFactor)))
+            .ToList();
+    }
+
+    /// <summary>Giá trúng thầu (design.md mục 8.4 bước 5): dòng RFQ đã chọn thầu, ngày = ngày chọn thầu. Chỉ vào lịch sử giá.</summary>
+    private async Task<List<Entry>> QuotationEntriesAsync(bool allCompanies, Guid itemId, DateOnly since, CancellationToken cancellationToken)
+    {
+        // Toàn tập đoàn (đã kiểm quyền) – xem ghi chú lớp; IgnoreQueryFilters áp cho cả câu truy vấn.
+        var rfqs = allCompanies ? _db.Rfqs.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.Rfqs;
+        var rows = await (
+                from r in rfqs.AsNoTracking()
+                where r.Status == Proc.Domain.Sourcing.RfqStatus.Awarded && r.AwardDate >= since
+                from l in r.Lines
+                where l.ItemId == itemId && l.AwardedSupplierId != null
+                from s in r.Suppliers
+                where s.SupplierId == l.AwardedSupplierId
+                from q in s.QuotationLines
+                where q.RfqLineId == l.Id
+                select new { r.CompanyId, s.SupplierId, Date = r.AwardDate!.Value, r.No, l.Qty, l.UomFactor, q.UnitPrice, q.DiscountPct })
+            .ToListAsync(cancellationToken);
+        return rows.Select(r => new Entry(
+                r.CompanyId, r.SupplierId, r.Date, "Quotation", r.No, Math.Round(r.Qty * r.UomFactor, 4, MidpointRounding.AwayFromZero),
+                Math.Round(r.Qty * r.UnitPrice * (100m - r.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero),
+                PricingMath.BaseNetPrice(r.UnitPrice, r.DiscountPct, r.UomFactor)))
             .ToList();
     }
 

@@ -429,7 +429,7 @@ export function PurchaseOrderPage() {
  * @param onPick Thêm các dòng đã chọn.
  * @param onCancel Đóng.
  */
-function RequestLinePicker({ onPick, onCancel }: { onPick: (lines: OpenRequestLine[]) => void; onCancel: () => void }) {
+export function RequestLinePicker({ onPick, onCancel }: { onPick: (lines: OpenRequestLine[]) => void; onCancel: () => void }) {
   const open = useOpenRequestLines(true)
   const [selected, setSelected] = useState<string[]>([])
   const rows = open.data ?? []
