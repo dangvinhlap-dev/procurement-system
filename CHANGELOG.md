@@ -11,6 +11,9 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Báo cáo Hàng chậm luân chuyển (SLOW), Hàng sắp hết hạn (EXP), Tồn tập đoàn (GSTK – tồn một mặt hàng ở mọi công ty, chỉ số lượng,
   gợi ý mua nội bộ). Quyền mới `Report.Stock.ViewAllCompanies`. API `/api/reports/slow-moving`, `/api/reports/expiring`,
   `/api/reports/group-stock`.
+- Báo cáo mua hàng (design.md mục 11.3): PR chưa xử lý (PRPEND), Mua hàng theo NCC / nhóm hàng / mặt hàng / công ty (RPSUP),
+  Đánh giá NCC – tỷ lệ trả, tỷ lệ giao đúng hạn (SUPEVAL), Tiết kiệm từ đấu thầu (SAVE). Quyền mới `Report.Purchase.ViewAllCompanies`.
+  API `/api/reports/pending-requests`, `/api/reports/purchase-spend`, `/api/reports/supplier-evaluation`, `/api/reports/sourcing-savings`.
 
 ## [0.7.0] - 2026-10-31
 

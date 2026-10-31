@@ -31,6 +31,18 @@ public static class ReportEndpoints
         reports.MapGet("/group-stock", (Guid itemId, IStockReportService s, CancellationToken ct) => s.GetGroupStockAsync(itemId, ct))
             .RequirePermission(Permissions.Report.StockView);
 
+        reports.MapGet("/pending-requests", (IPurchaseReportService s, CancellationToken ct) => s.GetPendingRequestsAsync(ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/purchase-spend", (DateOnly from, DateOnly to, string? groupBy, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetPurchaseSpendAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), groupBy ?? PurchaseSpendGroups.Supplier, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/supplier-evaluation", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetSupplierEvaluationAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/sourcing-savings", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+
         // Xuất Excel lưới đang xem: chỉ định dạng lại dữ liệu người dùng đã nhận qua các API có kiểm quyền, không đọc CSDL –
         // nên chỉ cần đăng nhập (chính sách mặc định).
         app.MapPost("/api/excel/grid", (GridExportRequest request, IGridExcelExporter exporter) =>

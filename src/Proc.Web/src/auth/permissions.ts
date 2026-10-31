@@ -45,4 +45,5 @@ export const Permission = {
   ReportStockView: 'Report.Stock.View',
   StockViewAllCompanies: 'Report.Stock.ViewAllCompanies',
   ReportPurchaseView: 'Report.Purchase.View',
+  PurchaseViewAllCompanies: 'Report.Purchase.ViewAllCompanies',
 } as const

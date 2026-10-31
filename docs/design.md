@@ -486,7 +486,7 @@ Phân quyền có hai chiều độc lập: **quyền chức năng** (được l
 
 ### 9.1 Quyền chức năng (RBAC)
 
-- Quyền dạng `Module.Đối tượng.Hành động`, ví dụ `Purchase.PO.Create`, `Purchase.PO.Approve`, `Inventory.Period.Close`, `Inventory.Period.Reopen`, `Report.Stock.View`, `Report.Price.ViewAllCompanies`, `Report.Stock.ViewAllCompanies`.
+- Quyền dạng `Module.Đối tượng.Hành động`, ví dụ `Purchase.PO.Create`, `Purchase.PO.Approve`, `Inventory.Period.Close`, `Inventory.Period.Reopen`, `Report.Stock.View`, `Report.Price.ViewAllCompanies`, `Report.Stock.ViewAllCompanies`, `Report.Purchase.ViewAllCompanies`.
 - Vai trò (`Role`) = tập quyền. Vai trò mẫu: Quản trị hệ thống, Ban mua hàng tập đoàn, Trưởng mua hàng công ty, Nhân viên mua hàng, Thủ kho, Kế toán kho, Người đề nghị (PR), Người duyệt, Xem báo cáo.
 - Gán vai trò **theo công ty**: một người có thể là Thủ kho ở công ty A nhưng chỉ Xem báo cáo ở công ty B (`UserCompanyRole`).
 - Danh mục quyền khai báo **một nơi trong code** (`src/Proc.Domain/Organization/Permissions.cs`); khi khởi động, bảng `Permission` được đồng bộ theo danh mục này và vai trò `ADMIN` (Quản trị hệ thống) luôn có đủ mọi quyền. Quyền của vai trò lưu ở `RolePermission`; quyền tại một công ty = hợp quyền của mọi vai trò người dùng có ở công ty đó.
@@ -668,6 +668,16 @@ Mọi báo cáo lọc theo phạm vi quyền của người xem, có lọc công
 | **Hàng sắp hết hạn** (quyền `Report.Stock.View`): lô còn tồn > 0 có hạn dùng ≤ hôm nay + N ngày (mặc định 30, 0–3.650), luôn gồm lô đã hết hạn. Hạn dùng lấy từ dòng phiếu đã ghi sổ của công ty theo mặt hàng × lô (phiếu chuyển kho chép theo lô); một lô có nhiều hạn khác nhau thì lấy hạn sớm nhất | Không lưu hạn dùng trên tồn kho; báo sớm an toàn hơn báo muộn |
 | Hai báo cáo trên đi qua global query filter như màn hình tồn kho (công ty, kho, nhóm hàng được phép); giá trị theo sổ kho (tạm tính khi kỳ còn mở) | Mục 9.2, 11.1 |
 | **Tồn tập đoàn**: tồn một mặt hàng ở mọi công ty, cần quyền mới `Report.Stock.ViewAllCompanies` (kiểm tra trong dịch vụ, ngoài `Report.Stock.View` của màn hình). Chỉ số lượng – không giá trị, không giá vốn (số liệu riêng của từng pháp nhân). Tách tồn kho Main, phần kho Main chưa giữ chỗ (bán nội bộ được), tồn kho Sub. Truy vấn bỏ filter công ty và kho ở đúng một câu đọc `StockOnHand` của một mặt hàng; mặt hàng vẫn qua filter nhóm hàng | Mục 4: liên công ty chỉ đi kho Main → kho Main; gợi ý mua nội bộ thay vì mua mới (mục 11) |
+
+### 11.3 Báo cáo mua hàng, đánh giá NCC, tiết kiệm đấu thầu (giai đoạn 7)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Quyền `Report.Purchase.View`. Mặc định chỉ công ty đang làm việc; ô "Toàn tập đoàn" cần quyền mới `Report.Purchase.ViewAllCompanies` – khi đó truy vấn bỏ filter công ty và kho (như so sánh giá, mục 8.5), vẫn giữ filter nhóm hàng. Khoảng ngày tối đa hai năm | Mục 9.2 |
+| **PR chưa xử lý**: dòng PR Chờ duyệt, hoặc Đã duyệt mà SL đã lên PO chưa hủy < SL đề nghị (cùng cách tính với lập PO từ PR, mục 6.7); SL quy về ĐVT của dòng PR; giá trị ước tính = SL còn lại × giá tham khảo; quá ngày cần (của dòng, không có thì của PR) thì tô màu, ngày cần sớm nhất lên đầu | Theo dõi tiến độ mua hàng (mục 11) |
+| **Mua hàng theo NCC / nhóm hàng / mặt hàng / công ty**: giá trị trước VAT của phiếu nhập mua NCC (GRN) và phiếu trả NCC (RTV) đã ghi sổ theo ngày phiếu; mua thuần = nhập − trả; tỷ trọng = mua thuần ÷ tổng (%), 2 số lẻ. Không gồm nhập mua nội bộ (ICR) | Chi tiêu với NCC bên ngoài; mua nội bộ xem ở báo cáo đối chiếu nội bộ |
+| **Đánh giá NCC**: theo NCC – số phiếu nhập, giá trị nhập, giá trị trả, tỷ lệ trả = trả ÷ nhập; giao đúng hạn chấm trên từng dòng phiếu nhập theo PO: hạn = ngày giao của dòng PO, không có thì ngày giao dự kiến của PO; ngày phiếu nhập ≤ hạn là đúng hạn; dòng không theo PO hoặc PO không hẹn ngày thì không chấm; trễ bình quân = trung bình số ngày trễ của các dòng trễ. Chưa xếp loại A/B/C (chờ quy định ngưỡng) | Mục 5.3: đúng hạn, trả hàng |
+| **Tiết kiệm từ đấu thầu**: mỗi dòng RFQ đã chọn thầu (theo ngày chọn thầu); giá = đơn giá × (100 − CK%) / 100, trước VAT, theo ĐVT dòng RFQ; so với giá chào thấp nhất, bình quân (số học), cao nhất của các NCC có chào dòng đó; tiết kiệm = (bình quân − giá trúng) × SL và (cao nhất − giá trúng) × SL; dòng không chọn giá thấp nhất tô màu, kèm lý do | Mục 8.4 |
 
 ## 12. Lược đồ CSDL chính
 
