@@ -16,14 +16,13 @@ Cập nhật: 31/10/2026. Đọc file này đầu mỗi phiên để biết đan
 | UI-a, UI-b | Giao diện SAP Fiori Horizon: theme; Shellbar + Dynamic Page | 0baa4ca, ae24f71 |
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
+| Tối ưu Claude Code | CLAUDE.md gọn (124 → 95 dòng), tách `docs/phat-hanh.md`, `docs/moi-truong-dev.md`; `docs/TIEN_DO.md`; `.claude/settings.json`; `.gitignore` | chore/toi-uu-claude |
 
 Kiểm tra gần nhất (TB-1): 345 test .NET, 59 test Playwright, `npm run build` đều qua.
 
 ## Đang làm
 
-- Nhánh `chore/toi-uu-claude`: tối ưu cách làm việc với Claude Code (CLAUDE.md gọn, file tiến độ, `.claude/settings.json`,
-  `.gitignore`). Không đụng code nghiệp vụ.
-- Không có lát nghiệp vụ nào đang sửa dở.
+- Không có lát nào đang sửa dở.
 
 ## Việc tiếp theo
 
