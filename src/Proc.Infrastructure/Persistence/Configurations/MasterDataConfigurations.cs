@@ -167,3 +167,19 @@ internal sealed class SupplierItemConfiguration : IEntityTypeConfiguration<Suppl
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.PurchaseUomId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng SupplierRatingRule (design.md mục 11.3).</summary>
+internal sealed class SupplierRatingRuleConfiguration : IEntityTypeConfiguration<SupplierRatingRule>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierRatingRule> builder)
+    {
+        builder.ToTable("SupplierRatingRule");
+        builder.Property(x => x.Code).HasMaxLength(SupplierRatingRule.CodeMaxLength).IsRequired();
+        builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasIndex(x => x.SortOrder).IsUnique();
+        builder.Property(x => x.Name).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.MinOnTimePct).HasPrecision(5, 2);
+        builder.Property(x => x.MaxReturnPct).HasPrecision(5, 2);
+    }
+}

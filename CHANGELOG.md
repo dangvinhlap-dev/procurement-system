@@ -14,6 +14,11 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Báo cáo mua hàng (design.md mục 11.3): PR chưa xử lý (PRPEND), Mua hàng theo NCC / nhóm hàng / mặt hàng / công ty (RPSUP),
   Đánh giá NCC – tỷ lệ trả, tỷ lệ giao đúng hạn (SUPEVAL), Tiết kiệm từ đấu thầu (SAVE). Quyền mới `Report.Purchase.ViewAllCompanies`.
   API `/api/reports/pending-requests`, `/api/reports/purchase-spend`, `/api/reports/supplier-evaluation`, `/api/reports/sourcing-savings`.
+- Xếp loại nhà cung cấp theo ngưỡng do người dùng cấu hình (design.md mục 11.3): màn hình Hệ thống → Xếp loại NCC (RATE) thêm, sửa,
+  xóa hạng (mã, thứ tự, % đúng hạn tối thiểu, % trả hàng tối đa); báo cáo Đánh giá NCC có cột Xếp loại. API `/api/supplier-rating-rules`.
+
+### Thay đổi CSDL
+- Migration `V0_8_0_XepLoaiNcc`: bảng mới `SupplierRatingRule`. `Down()` xóa bảng – mất các hạng đã cấu hình (không ảnh hưởng chứng từ).
 
 ## [0.7.0] - 2026-10-31
 

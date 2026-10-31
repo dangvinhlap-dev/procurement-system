@@ -197,6 +197,15 @@ const evaluationColumns: GridColumn<SupplierEvaluationRow>[] = [
   { key: 'onTime', title: 'Đúng hạn', width: 90, type: 'quantity', value: (r) => r.onTimeLines },
   { key: 'onTimePct', title: 'Đúng hạn (%)', width: 100, type: 'quantity', value: (r) => r.onTimePct },
   { key: 'late', title: 'Trễ bình quân (ngày)', width: 130, type: 'quantity', value: (r) => r.avgLateDays },
+  {
+    key: 'rating',
+    title: 'Xếp loại',
+    width: 100,
+    type: 'status',
+    value: (r) => r.rating,
+    tone: (r) => (r.rating === 'Không đạt' ? 'error' : r.rating == null ? 'neutral' : 'success'),
+    groupable: true,
+  },
 ]
 
 /**
@@ -224,7 +233,7 @@ export function SupplierEvaluationReportPage() {
           <Alert
             type="info"
             showIcon
-            title="Đúng hạn: ngày phiếu nhập ≤ ngày giao của dòng PO (không có thì ngày giao dự kiến của PO). Tô màu: có giao trễ hoặc trả hàng."
+            title="Đúng hạn: ngày phiếu nhập ≤ ngày giao của dòng PO (không có thì ngày giao dự kiến của PO). Tô màu: có giao trễ hoặc trả hàng. Xếp loại theo ngưỡng ở Hệ thống → Xếp loại NCC."
           />
         )
       }

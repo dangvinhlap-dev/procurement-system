@@ -81,9 +81,10 @@ public sealed record PurchaseSpendResult(string GroupBy, bool AllCompanies, deci
 /// <param name="OnTimeLines">Số dòng giao đúng hoặc trước hạn.</param>
 /// <param name="OnTimePct">Tỷ lệ đúng hạn (%), null khi không có dòng nào có ngày hẹn.</param>
 /// <param name="AvgLateDays">Số ngày trễ bình quân của các dòng trễ (null nếu không trễ dòng nào).</param>
+/// <param name="Rating">Xếp loại theo hạng đã cấu hình: mã hạng, "Không đạt", hoặc null khi chưa cấu hình hạng.</param>
 public sealed record SupplierEvaluationRowDto(
     Guid SupplierId, string SupplierCode, string SupplierName, int ReceiptCount, decimal ReceiptAmount, decimal ReturnAmount, decimal? ReturnPct,
-    int DeliveryLines, int OnTimeLines, decimal? OnTimePct, decimal? AvgLateDays);
+    int DeliveryLines, int OnTimeLines, decimal? OnTimePct, decimal? AvgLateDays, string? Rating);
 
 /// <summary>Một dòng RFQ đã chọn thầu và tiền tiết kiệm so với các giá chào (giá sau chiết khấu, trước VAT, theo ĐVT của dòng RFQ).</summary>
 /// <param name="RfqId">RFQ.</param>

@@ -192,6 +192,8 @@ export interface SupplierEvaluationRow {
   onTimeLines: number
   onTimePct: number | null
   avgLateDays: number | null
+  /** Mã hạng, "Không đạt", hoặc null khi chưa cấu hình hạng. */
+  rating: string | null
 }
 
 /** Một dòng RFQ đã chọn thầu và tiền tiết kiệm. */

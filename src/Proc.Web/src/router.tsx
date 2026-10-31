@@ -45,6 +45,7 @@ import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { CompanyListPage } from './pages/system/CompanyListPage'
 import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
 import { RoleListPage } from './pages/system/RoleListPage'
+import { SupplierRatingPage } from './pages/system/SupplierRatingPage'
 import { UserListPage } from './pages/system/UserListPage'
 import { WarehouseListPage } from './pages/system/WarehouseListPage'
 
@@ -92,6 +93,7 @@ const implemented: Record<string, ReactNode> = {
   LOG: <AuditLogListPage />,
   ACC: <AccessLogListPage />,
   DSCT: <DocumentNumberingPage />,
+  RATE: <SupplierRatingPage />,
 }
 
 /** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */

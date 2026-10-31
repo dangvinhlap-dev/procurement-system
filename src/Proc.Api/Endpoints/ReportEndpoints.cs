@@ -1,6 +1,7 @@
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Excel;
+using Proc.Application.MasterData;
 using Proc.Application.Reports;
 using Proc.Domain.Organization;
 
@@ -42,6 +43,24 @@ public static class ReportEndpoints
         reports.MapGet("/sourcing-savings", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+
+        // Hạng xếp loại NCC (mục 11.3): xem cần quyền xem tham số; thêm/sửa/xóa cần quyền quản lý tham số, làm việc ở tổng công ty.
+        var ratings = app.MapGroup("/api/supplier-rating-rules").WithTags("Tham số");
+        ratings.MapGet("/", (ISupplierRatingAdministration s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.System.ParameterView);
+        ratings.MapPost("/", (SaveSupplierRatingRuleRequest request, ISupplierRatingAdministration s, CancellationToken ct) => s.CreateAsync(request, ct))
+            .RequirePermission(Permissions.System.ParameterManage)
+            .Validate<SaveSupplierRatingRuleRequest>();
+        ratings.MapPut("/{id:guid}", (Guid id, SaveSupplierRatingRuleRequest request, ISupplierRatingAdministration s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.System.ParameterManage)
+            .Validate<SaveSupplierRatingRuleRequest>();
+        ratings.MapDelete("/{id:guid}", async (Guid id, ISupplierRatingAdministration s, CancellationToken ct) =>
+            {
+                await s.DeleteAsync(id, ct);
+                return Results.NoContent();
+            })
+            .RequirePermission(Permissions.System.ParameterManage);
 
         // Xuất Excel lưới đang xem: chỉ định dạng lại dữ liệu người dùng đã nhận qua các API có kiểm quyền, không đọc CSDL –
         // nên chỉ cần đăng nhập (chính sách mặc định).

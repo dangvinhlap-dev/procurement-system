@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
+using Microsoft.AspNetCore.Mvc;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -162,6 +163,37 @@ public class PurchaseReportTests
         Assert.Equal((0m, 1, 1, 100m, (decimal?)null), (evaluation[a].ReturnPct!.Value, evaluation[a].DeliveryLines, evaluation[a].OnTimeLines, evaluation[a].OnTimePct!.Value, evaluation[a].AvgLateDays));
         Assert.Equal((20m, 1, 0, 0m, 2m), (evaluation[b].ReturnPct!.Value, evaluation[b].DeliveryLines, evaluation[b].OnTimeLines, evaluation[b].OnTimePct!.Value, evaluation[b].AvgLateDays!.Value));
         Assert.Equal((0, (decimal?)null), (evaluation[c].DeliveryLines, evaluation[c].OnTimePct));
+        Assert.All(evaluation.Values, r => Assert.Null(r.Rating));
+
+        // Hạng xếp loại do người dùng cấu hình ở tổng công ty (mục 11.3): A (95%, 1%), B (85%, 3%), C (70%, 5%).
+        var head = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
+        var created = new List<SupplierRatingRuleDto>();
+        foreach (var (code, name, order, onTime, returned) in new[] { ("A", "Tốt", 1, 95m, 1m), ("B", "Khá", 2, 85m, 3m), ("C", "Đạt", 3, 70m, 5m) })
+            created.Add(await ReadAsync<SupplierRatingRuleDto>(await head.PostAsJsonAsync("/api/supplier-rating-rules",
+                new SaveSupplierRatingRuleRequest(code, name, order, onTime, returned), Ct)));
+        try
+        {
+            async Task<string?> TitleAsync(HttpResponseMessage response) => (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))?.Title;
+            Assert.Contains("không được khắt khe hơn", await TitleAsync(await head.PostAsJsonAsync("/api/supplier-rating-rules",
+                new SaveSupplierRatingRuleRequest("D", "Yếu", 4, 90, 10), Ct)));
+            Assert.Contains("bị trùng", await TitleAsync(await head.PostAsJsonAsync("/api/supplier-rating-rules",
+                new SaveSupplierRatingRuleRequest("A", "Trùng", 5, 0, 100), Ct)));
+            Assert.Contains("không được khắt khe hơn", await TitleAsync(await head.PutAsJsonAsync($"/api/supplier-rating-rules/{created[1].Id}",
+                new SaveSupplierRatingRuleRequest("B", "Khá", 2, 96, 3), Ct)));
+            // Công ty thành viên không sửa được ngưỡng dùng chung.
+            Assert.Equal(HttpStatusCode.Forbidden, (await f.Buyer.PostAsJsonAsync("/api/supplier-rating-rules",
+                new SaveSupplierRatingRuleRequest("E", "Kém", 9, 0, 100), Ct)).StatusCode);
+
+            // A: đúng hạn 100%, trả 0% → A. B: đúng hạn 0%, trả 20% → Không đạt. C: không có dòng hẹn giao, chỉ xét trả 0% → A.
+            var rated = (await ReadAsync<List<SupplierEvaluationRowDto>>(await f.Buyer.GetAsync($"/api/reports/supplier-evaluation?{range}", Ct)))
+                .ToDictionary(r => r.SupplierId, r => r.Rating);
+            Assert.Equal(("A", "Không đạt", "A"), (rated[a], rated[b], rated[c]));
+        }
+        finally
+        {
+            // Trả CSDL test về trạng thái chưa cấu hình hạng cho các test khác.
+            foreach (var rule in created) await head.DeleteAsync($"/api/supplier-rating-rules/{rule.Id}", Ct);
+        }
 
         // Có quyền báo cáo mua hàng nhưng không có quyền toàn tập đoàn.
         var roleCode = UniqueCode("V");
