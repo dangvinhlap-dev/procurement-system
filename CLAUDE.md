@@ -1,5 +1,13 @@
 ﻿# Procurement & Inventory – quy tắc dự án
 
+Khi bắt đầu phiên mới, đọc docs/TIEN_DO.md để biết tiến độ và tiếp tục từ đó.
+
+## 0. Cách làm việc tiết kiệm token
+- Tìm bằng grep/tìm kiếm có phạm vi (thư mục, mẫu file); chỉ đọc đoạn file cần, không đọc cả file lớn (design.md, file code dài).
+- Chạy build/test và chỉ báo phần lỗi (lọc kết quả), không in toàn bộ.
+- Trả lời ngắn gọn, không lặp lại code vừa viết.
+- Xong mỗi lát: cập nhật docs/TIEN_DO.md, commit, rồi nhắc người dùng dùng /clear.
+
 Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho cho tổng công ty và các công ty thành viên.
 
 Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đúng mục liên quan):

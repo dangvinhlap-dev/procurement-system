@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test)",
+      "Bash(dotnet test *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git branch --show-current)",
+      "Bash(npm run build)",
+      "Bash(npx tsc -b)",
+      "Bash(npx oxlint *)",
+      "Bash(npx playwright test)",
+      "Bash(npx playwright test *)"
+    ],
+    "deny": [
+      "Read(**/bin/**)",
+      "Read(**/obj/**)",
+      "Read(**/node_modules/**)",
+      "Read(**/dist/**)",
+      "Read(**/TestResults/**)",
+      "Read(**/test-results/**)",
+      "Read(**/playwright-report/**)",
+      "Read(**/.vs/**)",
+      "Read(**/*.log)"
+    ]
+  }
+}
