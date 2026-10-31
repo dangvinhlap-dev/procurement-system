@@ -18,4 +18,16 @@ internal static class LikePatterns
         "%" + word.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("%", "\\%", StringComparison.Ordinal)
             .Replace("_", "\\_", StringComparison.Ordinal) + "%";
+
+    /// <summary>
+    /// Mẫu "bắt đầu bằng" (mã danh mục theo tiền tố).
+    /// </summary>
+    /// <param name="prefix">Tiền tố.</param>
+    /// <returns>Ví dụ "VT_" → "VT\_%".</returns>
+    public static string StartsWith(string prefix) => EscapeText(prefix) + "%";
+
+    private static string EscapeText(string text) =>
+        text.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 }

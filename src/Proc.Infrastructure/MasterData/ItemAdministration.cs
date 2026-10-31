@@ -20,16 +20,19 @@ public sealed class ItemAdministration : IItemAdministration
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly CatalogNumberAllocator _numbers;
 
     /// <summary>
     /// Tạo dịch vụ.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    public ItemAdministration(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
+    public ItemAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
     {
         _db = db;
         _scope = scope;
+        _numbers = numbers;
     }
 
     /// <inheritdoc />
@@ -135,19 +138,22 @@ public sealed class ItemAdministration : IItemAdministration
     {
         await HeadOffice.RequireAsync(_db, _scope, "hàng hóa", cancellationToken);
         var type = ParseType(request.Type);
+        // Mã do hệ thống cấp theo dải của nhóm hàng (design.md mục 5.11) – người dùng không tự đặt.
+        CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.Item, request.Code);
+        var category = await FindCategoryAsync(request.CategoryId, cancellationToken);
+        await using var transaction = await _numbers.BeginAsync(cancellationToken);
         var item = Item.Create(
-            request.Code, type,
-            await FindCategoryAsync(request.CategoryId, cancellationToken),
+            await _numbers.NextAsync(NumberedCatalogs.Item, category, cancellationToken), type,
+            category,
             await FindUomAsync(request.BaseUomId, cancellationToken),
             new ItemDescription(request.Name, request.EnglishName, request.Specification, request.Brand, request.Origin,
                 request.Barcode, request.VatCode, request.TechnicalSpecs));
         item.SetStockControl(type, request.TrackLot, request.TrackExpiry, request.MinStock, request.MaxStock);
         item.SetConversions(await ResolveConversionsAsync(request.Conversions, cancellationToken));
 
-        if (await _db.Items.AnyAsync(i => i.Code == item.Code, cancellationToken))
-            throw new BusinessRuleException($"Mã hàng {item.Code} đã có.");
         _db.Items.Add(item);
         await _db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return await GetAsync(item.Id, cancellationToken);
     }
 

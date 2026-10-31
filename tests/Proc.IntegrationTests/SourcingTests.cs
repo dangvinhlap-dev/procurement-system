@@ -51,16 +51,16 @@ public class SourcingTests
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("T"), "Nhóm đấu thầu", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm đấu thầu", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Vòng bi 6305", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
+            new CreateItemRequest(null, "Vòng bi 6305", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, [new(thung, 12)]), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var suppliers = new List<Guid>();
         foreach (var name in new[] { "A", "B", "C", "D" })
         {
             var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-                new SaveSupplierRequest(UniqueCode("N"), groupId, $"NCC thầu {name}", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+                new SaveSupplierRequest(null, groupId, $"NCC thầu {name}", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
             await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
             suppliers.Add(supplier.Id);
         }

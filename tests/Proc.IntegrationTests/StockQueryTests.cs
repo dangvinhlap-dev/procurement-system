@@ -44,13 +44,13 @@ public class StockQueryTests
         var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("T"), "Nhóm tồn kho", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm tồn kho", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Đai ốc xem tồn", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
+            new CreateItemRequest(null, "Đai ốc xem tồn", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, "10", null, false, false, minStock, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC xem tồn", null, false, null, null, null, null, null, null, null, null,
+            new SaveSupplierRequest(null, groupId, "NCC xem tồn", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         var warehouses = (await bha.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!;

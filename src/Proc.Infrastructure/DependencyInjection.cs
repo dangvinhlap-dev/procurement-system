@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddScoped<ISupplierAdministration, SupplierAdministration>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();
         services.AddScoped<ISupplierRatingAdministration, SupplierRatingAdministration>();
+        services.AddScoped<CatalogNumberAllocator>();
+        services.AddScoped<ICatalogNumberingAdministration, CatalogNumberingAdministration>();
         // Nhập/xuất Excel: mỗi danh mục một lớp; ExcelTransfer chọn theo mã danh mục.
         services.AddScoped<ExcelCatalog, UomExcelCatalog>();
         services.AddScoped<ExcelCatalog, ItemCategoryExcelCatalog>();

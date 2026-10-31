@@ -75,7 +75,8 @@ public class ExcelTransferTests
         Assert.Equal("mau-hang-hoa.xlsx", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
         using var workbook = new XLWorkbook(await response.Content.ReadAsStreamAsync(Ct));
         var sheet = workbook.Worksheet("Hàng hóa");
-        Assert.Equal("Mã hàng *", sheet.Cell(1, 1).GetString());
+        // Mã hàng không bắt buộc: để trống khi thêm mới, hệ thống cấp theo dải đánh số (design.md mục 5.11).
+        Assert.Equal("Mã hàng", sheet.Cell(1, 1).GetString());
         Assert.Equal(1, sheet.LastRowUsed()!.RowNumber());
         Assert.True(workbook.Worksheets.Contains("Hướng dẫn"));
     }
@@ -106,15 +107,16 @@ public class ExcelTransferTests
     public async Task CoLoi_BaoTheoDong_KhongLuuDongNaoKeCaDongDung()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(UniqueCode("R"), "Nhóm Excel", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Nhóm Excel", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
-        var good = $"{category!.Code}-01";
+        // Dòng mới để trống mã; dòng có mã phải là mã đã có (mã do hệ thống cấp – design.md mục 5.11).
+        var missing = $"{category!.Code}-99999";
         var file = Workbook("Hàng hóa", ItemHeaders,
-            [good, "Bu lông M8", "Hàng tồn kho", category.Code, "HOP", "10%", "THUNG", "24"],
-            [$"{category.Code}-02", "Đai ốc", "Hàng hoá", category.Code, "HOP", null, null, null],
-            [$"{category.Code}-03", "Vòng đệm", "Dịch vụ", "KHONGCO", "HOP", null, null, null],
-            [$"{category.Code}-04", "Long đền", "Hàng tồn kho", category.Code, "HOP", null, "THUNG", "abc"],
-            [good, "Trùng mã", "Hàng tồn kho", category.Code, "HOP", null, null, null]);
+            [null, "Bu lông M8", "Hàng tồn kho", category.Code, "HOP", "10%", "THUNG", "24"],
+            [null, "Đai ốc", "Hàng hoá", category.Code, "HOP", null, null, null],
+            [null, "Vòng đệm", "Dịch vụ", "KHONGCO", "HOP", null, null, null],
+            [null, "Long đền", "Hàng tồn kho", category.Code, "HOP", null, "THUNG", "abc"],
+            [missing, "Mã tự đặt", "Hàng tồn kho", category.Code, "HOP", null, null, null]);
 
         var result = await ImportAsync(head, ExcelCatalogs.Items, file, commit: true);
 
@@ -123,9 +125,9 @@ public class ExcelTransferTests
         Assert.Contains("Loại hàng", result.Errors[0].Message);
         Assert.Contains("KHONGCO", result.Errors[1].Message);
         Assert.Contains("Hệ số 1", result.Errors[2].Message);
-        Assert.Equal($"Mã {good} trùng với dòng 2.", result.Errors[3].Message);
+        Assert.Equal($"Không có hàng hóa mã {missing}. Để trống mã khi thêm mới – hệ thống tự cấp mã theo dải đánh số.", result.Errors[3].Message);
         // Dòng 2 hợp lệ nhưng cả file có lỗi nên cũng không được lưu.
-        var items = await head.GetFromJsonAsync<ItemListResult>($"/api/items?search={good}", Ct);
+        var items = await head.GetFromJsonAsync<ItemListResult>($"/api/items?categoryId={category.Id}", Ct);
         Assert.Empty(items!.Items);
     }
 
@@ -133,11 +135,12 @@ public class ExcelTransferTests
     public async Task XuatSuaNhapLai_CapNhatHangVaGiuQuyDoi()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(UniqueCode("R"), "Nhóm Excel", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Nhóm Excel", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
-        var code = $"{category!.Code}-01";
+        // Thêm mới để trống mã: nhóm mới nên mã hàng đầu tiên là {NHOM}-00001 (dữ liệu mẫu).
+        var code = $"{category!.Code}-00001";
         Assert.True((await ImportAsync(head, ExcelCatalogs.Items, Workbook("Hàng hóa", ItemHeaders,
-            [code, "Bu lông M8", "Hàng tồn kho", category.Code, "HOP", "10", "THUNG", "24"]), commit: true)).Committed);
+            [null, "Bu lông M8", "Hàng tồn kho", category.Code, "HOP", "10", "THUNG", "24"]), commit: true)).Committed);
 
         // Xuất toàn bộ, sửa tên đúng dòng của mặt hàng, nhập lại.
         using var exported = new XLWorkbook(new MemoryStream(await head.GetByteArrayAsync("/api/excel/items", Ct)));
@@ -161,16 +164,16 @@ public class ExcelTransferTests
     public async Task Ncc_ThemCoLienHeVaNganHang_GiuSo0DauCuaMaSoThue()
     {
         var head = await HeadOfficeAdminAsync();
-        var code = UniqueCode("N");
         var taxCode = $"0{Random.Shared.NextInt64(100_000_000, 999_999_999)}";
         var file = Workbook("Nhà cung cấp",
             ["Mã NCC", "Tên NCC", "Mã nhóm NCC", "Mã số thuế", "Trạng thái", "Người liên hệ chính", "ĐT người liên hệ", "Ngân hàng", "Số tài khoản"],
-            [code, "Công ty Excel", "TN", taxCode, "Đã duyệt", "Võ Thị Lan", "0909 111 222", "ACB", "0123 4567"]);
+            [null, "Công ty Excel", "TN", taxCode, "Đã duyệt", "Võ Thị Lan", "0909 111 222", "ACB", "0123 4567"]);
 
         var result = await ImportAsync(head, ExcelCatalogs.Suppliers, file, commit: true);
 
         Assert.True(result.Committed, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var row = (await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={code}", Ct))!.Items.Single();
+        var row = (await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={taxCode}", Ct))!.Items.Single();
+        Assert.Matches("^NCC\\d{6}$", row.Code);
         Assert.Equal((taxCode, "Approved", "Võ Thị Lan – 0909 111 222"), (row.TaxCode, row.Status, row.PrimaryContact));
         var detail = await head.GetFromJsonAsync<SupplierDetailDto>($"/api/suppliers/{row.Id}", Ct);
         Assert.Equal("01234567", Assert.Single(detail!.BankAccounts).AccountNumber);

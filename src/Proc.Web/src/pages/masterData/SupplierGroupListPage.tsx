@@ -74,9 +74,11 @@ function SupplierGroupDrawer({ group, canManage, onClose }: { group: SupplierGro
     setError(null)
     setSaving(true)
     try {
-      if (group) await mutations.update.mutateAsync({ id: group.id, input: { name: values.name.trim(), isActive: values.isActive } })
-      else await mutations.create.mutateAsync({ code: values.code, name: values.name.trim() })
-      message.success(`Đã lưu nhóm NCC ${(group?.code ?? values.code).toUpperCase()}.`)
+      // Thêm mới: mã do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+      const saved = group
+        ? await mutations.update.mutateAsync({ id: group.id, input: { name: values.name.trim(), isActive: values.isActive } })
+        : await mutations.create.mutateAsync({ code: null, name: values.name.trim() })
+      message.success(`Đã lưu nhóm NCC ${saved.code}.`)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được nhóm NCC.')
@@ -106,14 +108,9 @@ function SupplierGroupDrawer({ group, canManage, onClose }: { group: SupplierGro
                 <Form.Item
                   label="Mã nhóm"
                   name="code"
-                  extra={group ? undefined : '2–20 chữ không dấu hoặc số. Không đổi được sau khi tạo.'}
-                  rules={[
-                    { required: true, message: 'Hãy nhập mã nhóm.' },
-                    { pattern: /^[A-Za-z0-9]{2,20}$/, message: 'Mã gồm 2–20 chữ không dấu hoặc số.' },
-                  ]}
-                  normalize={(v: string) => v.toUpperCase()}
+                  extra={group ? undefined : 'Mã do hệ thống tự cấp khi lưu, theo dải ở Hệ thống → Đánh số danh mục.'}
                 >
-                  <Input disabled={group !== null} autoFocus={group === null} autoComplete="off" />
+                  <Input disabled placeholder="(tự cấp khi lưu)" />
                 </Form.Item>
                 <Form.Item label="Tên nhóm NCC" name="name" rules={[{ required: true, whitespace: true, message: 'Hãy nhập tên nhóm.' }, { max: 200 }]}>
                   <Input />

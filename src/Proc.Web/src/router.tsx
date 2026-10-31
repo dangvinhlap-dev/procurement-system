@@ -45,6 +45,7 @@ import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { CompanyListPage } from './pages/system/CompanyListPage'
 import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
+import { CatalogNumberingPage } from './pages/system/CatalogNumberingPage'
 import { RoleListPage } from './pages/system/RoleListPage'
 import { SupplierRatingPage } from './pages/system/SupplierRatingPage'
 import { UserListPage } from './pages/system/UserListPage'
@@ -96,6 +97,7 @@ const implemented: Record<string, ReactNode> = {
   ACC: <AccessLogListPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
+  DSDM: <CatalogNumberingPage />,
 }
 
 /** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */

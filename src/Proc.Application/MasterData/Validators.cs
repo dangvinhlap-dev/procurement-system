@@ -29,7 +29,7 @@ public sealed class CreateItemCategoryRequestValidator : AbstractValidator<Creat
     /// <summary>Khai báo các quy tắc.</summary>
     public CreateItemCategoryRequestValidator()
     {
-        RuleFor(x => x.Code).NotEmpty().WithMessage("Hãy nhập mã nhóm hàng.");
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – không bắt buộc nhập, nhập thì dịch vụ báo lỗi.
         RuleFor(x => x.Name).NotEmpty().WithMessage("Hãy nhập tên nhóm hàng.").MaximumLength(200);
     }
 }
@@ -50,7 +50,7 @@ public sealed class CreateItemRequestValidator : AbstractValidator<CreateItemReq
     /// <summary>Khai báo các quy tắc.</summary>
     public CreateItemRequestValidator()
     {
-        RuleFor(x => x.Code).NotEmpty().WithMessage("Hãy nhập mã hàng.");
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – không bắt buộc nhập, nhập thì dịch vụ báo lỗi.
         RuleFor(x => x.Name).NotEmpty().WithMessage("Hãy nhập tên hàng.").MaximumLength(300);
         RuleFor(x => x.EnglishName).MaximumLength(300);
         RuleFor(x => x.Specification).MaximumLength(500);
@@ -85,7 +85,7 @@ public sealed class CreateSupplierGroupRequestValidator : AbstractValidator<Crea
     /// <summary>Khai báo các quy tắc.</summary>
     public CreateSupplierGroupRequestValidator()
     {
-        RuleFor(x => x.Code).NotEmpty().WithMessage("Hãy nhập mã nhóm NCC.");
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – không bắt buộc nhập, nhập thì dịch vụ báo lỗi.
         RuleFor(x => x.Name).NotEmpty().WithMessage("Hãy nhập tên nhóm NCC.").MaximumLength(200);
     }
 }

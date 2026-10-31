@@ -7,7 +7,6 @@ import { loginViaApi } from './helpers.ts'
  * Dữ liệu Testing không bị xóa giữa các lần chạy Playwright nên mã và mã số thuế luôn mới.
  */
 
-const uniqueCode = (prefix: string) => `${prefix}${Date.now().toString(36).slice(-5)}${Math.floor(Math.random() * 100)}`.toUpperCase()
 const uniqueTaxCode = () => String(1_000_000_000 + Math.floor(Math.random() * 8_999_999_999))
 
 async function openByCommand(page: Page, code: string) {
@@ -33,12 +32,12 @@ test.describe('danh mục nhà cung cấp', () => {
 
   test('thêm NCC có người liên hệ, tài khoản; tìm không dấu; danh sách đen phải có lý do', async ({ page }) => {
     const drawer = page.locator('.detail-drawer')
-    const code = uniqueCode('NCC')
     await openByCommand(page, 'SUP')
     await expect(page.getByRole('heading', { name: 'Danh mục nhà cung cấp' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Tạo mới' }).click()
-    await drawer.getByLabel('Mã NCC').fill(code.toLowerCase())
+    // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+    await expect(drawer.getByLabel('Mã NCC')).toBeDisabled()
     await pick(page, 'Nhóm NCC', 'TN – Trong nước')
     await drawer.getByLabel('Tên nhà cung cấp').fill('Công ty TNHH Điện Quang Minh')
     await drawer.getByLabel('Mã số thuế', { exact: true }).fill(uniqueTaxCode())
@@ -54,7 +53,9 @@ test.describe('danh mục nhà cung cấp', () => {
     await drawer.getByRole('tabpanel').getByLabel('Ngân hàng', { exact: true }).fill('BIDV')
     await drawer.getByLabel('Số tài khoản').fill('1234 5678 90')
     await page.keyboard.press('Control+s')
-    await expect(page.locator('.ant-message')).toContainText(`Đã thêm NCC ${code}.`)
+    const saved = await page.locator('.ant-message').getByText(/Đã thêm NCC /).textContent()
+    const code = /Đã thêm NCC (\S+)\./.exec(saved ?? '')![1]
+    expect(code).toMatch(/^NCC\d{6}$/)
 
     await page.getByPlaceholder(/Gõ từ khóa/).fill('dien quang minh')
     const row = gridRow(page, code)

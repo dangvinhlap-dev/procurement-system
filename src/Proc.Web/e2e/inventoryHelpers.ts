@@ -64,19 +64,21 @@ export async function seedPostedReceipt(request: APIRequestContext) {
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: unique('R'), name: 'Nhóm trả/chuyển', parentId: null, inventoryAccount: null })
-  const itemCode = `${category.code}-01`
-  const item = await head.send<{ id: string }>('post', '/api/items', {
-    code: itemCode, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
+  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: null, name: 'Nhóm trả/chuyển', parentId: null, inventoryAccount: null })
+  // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+  const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
+    code: null, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
     specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
     trackExpiry: false, minStock: null, maxStock: null, conversions: [],
   })
-  const supplierCode = unique('NCC')
-  const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
-    code: supplierCode, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC trả hàng ${supplierCode}`, shortName: null,
+  const itemCode = item.code
+  const supplierTag = unique('NCC')
+  const supplier = await head.send<{ id: string; code: string }>('post', '/api/suppliers', {
+    code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC trả hàng ${supplierTag}`, shortName: null,
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
+  const supplierCode = supplier.code
   const bha = await api(request, 'BHA')
   await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
   const warehouses = await bha.get<{ id: string; code: string }[]>('/api/warehouses')

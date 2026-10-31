@@ -5,6 +5,7 @@ import {
   BankOutlined,
   BellOutlined,
   ClusterOutlined,
+  FieldNumberOutlined,
   ExportOutlined,
   TrophyOutlined,
   FieldTimeOutlined,
@@ -145,6 +146,7 @@ export const screens: Screen[] = [
   { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'RATE', title: 'Xếp loại nhà cung cấp', navLabel: 'Xếp loại NCC', path: '/he-thong/xep-loai-ncc', icon: <TrophyOutlined />, group: 'system', permission: Permission.ParameterView },
+  { code: 'DSDM', title: 'Đánh số danh mục', navLabel: 'Đánh số danh mục', path: '/he-thong/danh-so-danh-muc', icon: <FieldNumberOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'DSCT', title: 'Đánh số chứng từ', navLabel: 'Đánh số chứng từ', path: '/he-thong/danh-so-chung-tu', icon: <NumberOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'SEC', title: 'Tham số hệ thống', navLabel: 'Tham số hệ thống', path: '/he-thong/tham-so', icon: <SafetyOutlined />, group: 'system', permission: Permission.ParameterView },
 ]

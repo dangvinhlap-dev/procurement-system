@@ -59,13 +59,13 @@ public class PrintingTests
         var kp = (await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", kt, null, null, false), Ct))).Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("Q"), "Nhóm in phiếu", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm in phiếu", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Bu lông mạ kẽm M8 – loại dài để thử xuống dòng trong ô tên hàng", null, "Inventory", category.Id, cai,
+            new CreateItemRequest(null, "Bu lông mạ kẽm M8 – loại dài để thử xuống dòng trong ô tên hàng", null, "Inventory", category.Id, cai,
                 null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "Công ty TNHH Bu lông Việt", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, groupId, "Công ty TNHH Bu lông Việt", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
 
         // PO nháp nhiều dòng (thử tiêu đề cột lặp lại khi sang trang).

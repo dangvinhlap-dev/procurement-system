@@ -39,14 +39,15 @@ public class ItemCatalogTests
 
     private static async Task<ItemCategoryDetailDto> CreateCategoryAsync(HttpClient client, string code, Guid? parentId = null) =>
         await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync(
-            "/api/item-categories", new CreateItemCategoryRequest(code, $"Nhóm {code}", parentId, null), Ct));
+            "/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm {code}", parentId, null), Ct));
 
     private static async Task<Guid> UomIdAsync(HttpClient client, string code) =>
         (await client.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == code).Id;
 
-    private static CreateItemRequest NewItem(string code, Guid categoryId, Guid baseUomId, string name = "Bu lông lục giác M8",
+    /// <summary>Hàng mới – mã để trống, hệ thống cấp theo dải của nhóm hàng (design.md mục 5.11).</summary>
+    private static CreateItemRequest NewItem(Guid categoryId, Guid baseUomId, string name = "Bu lông lục giác M8",
         string type = "Inventory", IReadOnlyList<ItemUomConversionInput>? conversions = null, bool trackLot = false) =>
-        new(code, name, "Hex bolt M8", type, categoryId, baseUomId, "M8x50", "Đài Loan", "Đài Loan", null, "10", null,
+        new(null, name, "Hex bolt M8", type, categoryId, baseUomId, "M8x50", "Đài Loan", "Đài Loan", null, "10", null,
             trackLot, false, null, null, conversions ?? []);
 
     private static UpdateItemRequest Edit(ItemDetailDto d, bool? isActive = null) =>
@@ -116,7 +117,7 @@ public class ItemCatalogTests
         await _factory.CreateScopedUserAsync(userName, "TCT", roleCode, categoryCodes: [allowed.Code]);
         var limited = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
 
-        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(UniqueCode("X"), "Gốc mới", null, null), Ct);
+        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Gốc mới", null, null), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, root.StatusCode);
 
         var child = await CreateCategoryAsync(limited, UniqueCode("C"), allowed.Id);
@@ -132,10 +133,11 @@ public class ItemCatalogTests
         var child = await CreateCategoryAsync(head, UniqueCode("C"), root.Id);
         var hop = await UomIdAsync(head, "HOP");
         var thung = await UomIdAsync(head, "THUNG");
-        var code = $"{root.Code}-01";
+        // Dữ liệu mẫu: mã hàng = {NHOM}-5 chữ số, theo nhóm của chính mặt hàng (nhóm con).
+        var code = $"{child.Code}-00001";
 
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            NewItem(code.ToLowerInvariant(), child.Id, hop, conversions: [new(thung, 24m)], trackLot: true), Ct));
+            NewItem(child.Id, hop, conversions: [new(thung, 24m)], trackLot: true), Ct));
         Assert.Equal((code, "Inventory", true), (item.Code, item.Type, item.TrackLot));
         Assert.Equal(("THUNG", 24m), (Assert.Single(item.Conversions).UomCode, item.Conversions[0].Factor));
         Assert.True(item.CanEdit);
@@ -145,10 +147,11 @@ public class ItemCatalogTests
         var row = Assert.Single(found!.Items);
         Assert.Equal((code, child.Code, "HOP", false), (row.Code, row.CategoryCode, row.BaseUomCode, found.Truncated));
 
-        var duplicate = await head.PostAsJsonAsync("/api/items", NewItem(code, child.Id, hop), Ct);
-        Assert.Equal($"Mã hàng {code} đã có.", await TitleAsync(duplicate));
+        var manual = await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop) with { Code = $"{child.Code}-99999" }, Ct);
+        Assert.Equal("Mã hàng hóa do hệ thống tự cấp theo dải đã cấu hình – để trống mã.", await TitleAsync(manual));
+        Assert.Equal($"{child.Code}-00002", (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop), Ct))).Code);
 
-        var service = await head.PostAsJsonAsync("/api/items", NewItem($"{root.Code}-DV", child.Id, hop, type: "Service", trackLot: true), Ct);
+        var service = await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop, type: "Service", trackLot: true), Ct);
         Assert.Equal("Chỉ hàng tồn kho mới quản lý lô, hạn dùng và tồn tối thiểu/tối đa.", await TitleAsync(service));
     }
 
@@ -159,7 +162,7 @@ public class ItemCatalogTests
         var category = await CreateCategoryAsync(head, UniqueCode("R"));
         var (hop, thung, cai) = (await UomIdAsync(head, "HOP"), await UomIdAsync(head, "THUNG"), await UomIdAsync(head, "CAI"));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            NewItem($"{category.Code}-01", category.Id, hop, conversions: [new(thung, 24m)]), Ct));
+            NewItem(category.Id, hop, conversions: [new(thung, 24m)]), Ct));
 
         // Đổi ĐVT cơ sở sang Cái, Hộp thành ĐVT quy đổi (1 hộp = 10 cái), bỏ Thùng – trong một lần lưu.
         var edited = await ReadAsync<ItemDetailDto>(await head.PutAsJsonAsync($"/api/items/{item.Id}",
@@ -182,8 +185,8 @@ public class ItemCatalogTests
         var allowed = await CreateCategoryAsync(head, UniqueCode("R"));
         var hidden = await CreateCategoryAsync(head, UniqueCode("H"));
         var hop = await UomIdAsync(head, "HOP");
-        await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem($"{allowed.Code}-01", allowed.Id, hop), Ct));
-        var secret = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem($"{hidden.Code}-01", hidden.Id, hop), Ct));
+        var first = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(allowed.Id, hop), Ct));
+        var secret = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(hidden.Id, hop), Ct));
 
         var roleCode = UniqueCode("QLH");
         await _factory.CreateRoleAsync(roleCode, Permissions.MasterData.ItemView, Permissions.MasterData.ItemManage);
@@ -192,17 +195,16 @@ public class ItemCatalogTests
         var limited = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
 
         var mine = await limited.GetFromJsonAsync<ItemListResult>("/api/items", Ct);
-        Assert.Equal([$"{allowed.Code}-01"], mine!.Items.Select(i => i.Code));
+        Assert.Equal([first.Code], mine!.Items.Select(i => i.Code));
         Assert.Equal(HttpStatusCode.NotFound, (await limited.GetAsync($"/api/items/{secret.Id}", Ct)).StatusCode);
 
         // Đặt hàng mới vào nhóm ngoài phạm vi: như không có nhóm đó.
-        var intoHidden = await limited.PostAsJsonAsync("/api/items", NewItem($"{allowed.Code}-02", hidden.Id, hop), Ct);
+        var intoHidden = await limited.PostAsJsonAsync("/api/items", NewItem(hidden.Id, hop), Ct);
         Assert.Equal(HttpStatusCode.NotFound, intoHidden.StatusCode);
 
-        // Trùng mã với hàng mình không thấy: CSDL chặn, báo tiếng Việt (409) chứ không lỗi hệ thống.
-        var sameCode = await limited.PostAsJsonAsync("/api/items", NewItem(secret.Code, allowed.Id, hop), Ct);
-        Assert.Equal(HttpStatusCode.Conflict, sameCode.StatusCode);
-        Assert.StartsWith("Mã hàng đã có", await TitleAsync(sameCode));
+        // Người bị giới hạn nhóm hàng vẫn nhận mã kế tiếp đúng dải của nhóm mình (mã do hệ thống cấp, không tự đặt).
+        var next = await ReadAsync<ItemDetailDto>(await limited.PostAsJsonAsync("/api/items", NewItem(allowed.Id, hop), Ct));
+        Assert.Equal($"{allowed.Code}-00002", next.Code);
     }
 
     [Fact]
@@ -211,7 +213,7 @@ public class ItemCatalogTests
         var head = await HeadOfficeAdminAsync();
         var category = await CreateCategoryAsync(head, UniqueCode("R"));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            NewItem($"{category.Code}-01", category.Id, await UomIdAsync(head, "HOP")), Ct));
+            NewItem(category.Id, await UomIdAsync(head, "HOP")), Ct));
 
         var bha = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
         // Quản trị có quyền "Sửa thông tin danh mục dùng chung": sửa được ở công ty thành viên, mã giữ nguyên (design.md mục 5.7); người chỉ

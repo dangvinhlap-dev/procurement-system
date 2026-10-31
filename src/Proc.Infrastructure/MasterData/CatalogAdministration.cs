@@ -106,16 +106,19 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly CatalogNumberAllocator _numbers;
 
     /// <summary>
     /// Tạo dịch vụ.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    public ItemCategoryAdministration(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
+    public ItemCategoryAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
     {
         _db = db;
         _scope = scope;
+        _numbers = numbers;
     }
 
     /// <inheritdoc />
@@ -144,13 +147,15 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
             throw new ForbiddenAccessException("Bạn chỉ được làm việc với một số nhóm hàng nên chỉ thêm được nhóm con trong các nhóm đó.");
 
         var parent = request.ParentId is { } parentId ? await FindParentAsync(parentId, cancellationToken) : null;
-        var category = ItemCategory.Create(request.Code, request.Name, parent);
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – người dùng không tự đặt.
+        CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.ItemCategory, request.Code);
+        await using var transaction = await _numbers.BeginAsync(cancellationToken);
+        var category = ItemCategory.Create(await _numbers.NextAsync(NumberedCatalogs.ItemCategory, null, cancellationToken), request.Name, parent);
         category.Update(request.Name, request.InventoryAccount);
-        if (await _db.ItemCategories.AnyAsync(c => c.Code == category.Code, cancellationToken))
-            throw new BusinessRuleException($"Mã nhóm hàng {category.Code} đã có.");
 
         _db.ItemCategories.Add(category);
         await _db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         // Không đọc lại qua filter: danh sách nhóm được phép (gồm nhóm con) nạp từ đầu request, lúc nhóm mới chưa có,
         // nên người bị giới hạn chưa thấy nhóm vừa thêm cho tới request sau. Dựng kết quả từ nhóm cha thay vì đọc lại.

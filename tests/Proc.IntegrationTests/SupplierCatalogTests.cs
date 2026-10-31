@@ -42,9 +42,10 @@ public class SupplierCatalogTests
     private static async Task<Guid> GroupIdAsync(HttpClient client, string code) =>
         (await client.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == code).Id;
 
+    /// <summary>NCC mới – mã để trống, hệ thống cấp theo dải đánh số (design.md mục 5.11).</summary>
     private static SaveSupplierRequest NewSupplier(
-        string code, Guid groupId, string? taxCode = null, string status = "Potential", string? note = null, Guid? internalCompanyId = null) =>
-        new(code, groupId, "Công ty TNHH Thép Việt", "Thép Việt", false, taxCode ?? UniqueTaxCode(), "Hà Nội", "024 3888 9999",
+        Guid groupId, string? taxCode = null, string status = "Potential", string? note = null, Guid? internalCompanyId = null) =>
+        new(null, groupId, "Công ty TNHH Thép Việt", "Thép Việt", false, taxCode ?? UniqueTaxCode(), "Hà Nội", "024 3888 9999",
             "ban@thepviet.vn", "thepviet.vn", "Chuyển khoản 30 ngày", "Thép tấm", 4, status, note, internalCompanyId,
             [new(null, "Nguyễn Văn An", "Giám đốc kinh doanh", "0912 345 678", "an@thepviet.vn", true), new(null, "Trần Bình", null, null, null, false)],
             [new(null, "Vietcombank", "Hà Nội", "0011 0000 12345", "CTY TNHH THEP VIET", true)]);
@@ -59,13 +60,16 @@ public class SupplierCatalogTests
         var head = await HeadOfficeAdminAsync();
         Assert.Contains((await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!, g => g.Code == "TN");
 
-        var code = UniqueCode("G");
-        await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(code, "Nhóm thử"), Ct));
-        var duplicate = await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(code, "Trùng"), Ct);
-        Assert.Equal($"Mã nhóm NCC {code} đã có.", await TitleAsync(duplicate));
+        // Mã do hệ thống cấp theo dải (dữ liệu mẫu: GN + 4 chữ số), hai nhóm liên tiếp nhận hai số liên tiếp; tự nhập mã bị chặn.
+        var first = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm thử"), Ct));
+        var second = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm thử 2"), Ct));
+        Assert.Matches("^GN\\d{4}$", first.Code);
+        Assert.Equal(int.Parse(first.Code[2..]) + 1, int.Parse(second.Code[2..]));
+        var manual = await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest("TUDAT", "Tự đặt mã"), Ct);
+        Assert.Equal("Mã nhóm nhà cung cấp do hệ thống tự cấp theo dải đã cấu hình – để trống mã.", await TitleAsync(manual));
 
         var bha = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
-        var atMember = await bha.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(UniqueCode("G"), "Thử"), Ct);
+        var atMember = await bha.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Thử"), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, atMember.StatusCode);
     }
 
@@ -73,13 +77,14 @@ public class SupplierCatalogTests
     public async Task Ncc_ThemCoLienHeVaNganHang_TimKhongDauVaTheoMaSoThue()
     {
         var head = await HeadOfficeAdminAsync();
-        var code = UniqueCode("N");
         var taxCode = UniqueTaxCode();
 
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync(
-            "/api/suppliers", NewSupplier(code.ToLowerInvariant(), await GroupIdAsync(head, "TN"), taxCode), Ct));
+            "/api/suppliers", NewSupplier(await GroupIdAsync(head, "TN"), taxCode), Ct));
+        var code = supplier.Code;
 
-        Assert.Equal((code, "Potential", 4, true), (supplier.Code, supplier.Status, supplier.Rating, supplier.CanEdit));
+        Assert.Matches("^NCC\\d{6}$", code);
+        Assert.Equal(("Potential", 4, true), (supplier.Status, supplier.Rating, supplier.CanEdit));
         Assert.Equal(2, supplier.Contacts.Count);
         Assert.Equal("0011000012345", Assert.Single(supplier.BankAccounts).AccountNumber);
 
@@ -89,10 +94,10 @@ public class SupplierCatalogTests
         var byTax = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={taxCode}", Ct);
         Assert.Equal(code, Assert.Single(byTax!.Items).Code);
 
-        var sameTax = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(UniqueCode("N"), supplier.GroupId, taxCode), Ct);
+        var sameTax = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(supplier.GroupId, taxCode), Ct);
         Assert.Equal($"Mã số thuế {taxCode} đã dùng cho NCC {code}.", await TitleAsync(sameTax));
-        var sameCode = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(code, supplier.GroupId), Ct);
-        Assert.Equal($"Mã NCC {code} đã có.", await TitleAsync(sameCode));
+        var manualCode = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(supplier.GroupId) with { Code = code }, Ct);
+        Assert.Equal("Mã nhà cung cấp do hệ thống tự cấp theo dải đã cấu hình – để trống mã.", await TitleAsync(manualCode));
     }
 
     [Fact]
@@ -100,7 +105,7 @@ public class SupplierCatalogTests
     {
         var head = await HeadOfficeAdminAsync();
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync(
-            "/api/suppliers", NewSupplier(UniqueCode("N"), await GroupIdAsync(head, "TN")), Ct));
+            "/api/suppliers", NewSupplier(await GroupIdAsync(head, "TN")), Ct));
         var an = supplier.Contacts.Single(c => c.Name == "Nguyễn Văn An");
 
         var edited = await ReadAsync<SupplierDetailDto>(await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}",
@@ -124,12 +129,11 @@ public class SupplierCatalogTests
     {
         var head = await HeadOfficeAdminAsync();
         var groupId = await GroupIdAsync(head, "TN");
-        var noReason = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(UniqueCode("N"), groupId, status: "Blacklisted"), Ct);
+        var noReason = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(groupId, status: "Blacklisted"), Ct);
         Assert.Equal("Tạm ngưng hoặc đưa NCC vào danh sách đen phải ghi lý do.", await TitleAsync(noReason));
 
-        var code = UniqueCode("N");
-        await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            NewSupplier(code, groupId, status: "Blacklisted", note: "Giao hàng giả"), Ct));
+        var code = (await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
+            NewSupplier(groupId, status: "Blacklisted", note: "Giao hàng giả"), Ct))).Code;
         var blacklisted = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?status=Blacklisted&search={code}", Ct);
         Assert.Equal("Blacklisted", Assert.Single(blacklisted!.Items).Status);
         var approved = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?status=Approved&search={code}", Ct);
@@ -145,12 +149,12 @@ public class SupplierCatalogTests
         var groupId = await GroupIdAsync(head, "NB");
 
         var first = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            NewSupplier(UniqueCode("NB"), groupId, internalCompanyId: company.Id), Ct));
+            NewSupplier(groupId, internalCompanyId: company.Id), Ct));
         Assert.Equal(company.Id, first.InternalCompanyId);
         var list = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={first.Code}", Ct);
         Assert.Equal(company.Code, Assert.Single(list!.Items).InternalCompanyCode);
 
-        var second = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(UniqueCode("NB"), groupId, internalCompanyId: company.Id), Ct);
+        var second = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(groupId, internalCompanyId: company.Id), Ct);
         Assert.Equal($"Công ty {company.Code} đã có NCC nội bộ {first.Code}.", await TitleAsync(second));
     }
 
@@ -158,9 +162,8 @@ public class SupplierCatalogTests
     public async Task Ncc_CongTyThanhVienSuaTheoQuyenSuaDanhMucDungChung_NhomConNccKhongNgungDuoc()
     {
         var head = await HeadOfficeAdminAsync();
-        var groupCode = UniqueCode("G");
-        var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(groupCode, "Nhóm thử"), Ct));
-        var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers", NewSupplier(UniqueCode("N"), group.Id), Ct));
+        var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm thử"), Ct));
+        var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers", NewSupplier(group.Id), Ct));
 
         var stop = await head.PutAsJsonAsync($"/api/supplier-groups/{group.Id}", new UpdateSupplierGroupRequest("Nhóm thử", false), Ct);
         Assert.Equal(HttpStatusCode.BadRequest, stop.StatusCode);

@@ -180,7 +180,7 @@ export function useItemCategoryMutations() {
   type Input = { name: string; parentId: string | null; inventoryAccount: string | null }
   return {
     create: useMutation({
-      mutationFn: (input: Input & { code: string }) =>
+      mutationFn: (input: Input & { code: null }) =>
         apiFetch<ItemCategory>('/api/item-categories', { method: 'POST', body: input }),
       onSuccess,
     }),
@@ -233,7 +233,7 @@ export function useItemMutations() {
   }
   return {
     create: useMutation({
-      mutationFn: (input: ItemInput & { code: string }) => apiFetch<ItemDetail>('/api/items', { method: 'POST', body: input }),
+      mutationFn: (input: ItemInput & { code: null }) => apiFetch<ItemDetail>('/api/items', { method: 'POST', body: input }),
       onSuccess,
     }),
     update: useMutation({
@@ -356,7 +356,7 @@ export function useSupplierGroupMutations() {
   const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['supplier-groups'] })
   return {
     create: useMutation({
-      mutationFn: (input: { code: string; name: string }) =>
+      mutationFn: (input: { code: null; name: string }) =>
         apiFetch<SupplierGroup>('/api/supplier-groups', { method: 'POST', body: input }),
       onSuccess,
     }),

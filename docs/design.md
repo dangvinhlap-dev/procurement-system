@@ -222,7 +222,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Quy tắc | Lý do |
 | --- | --- |
 | **Thêm** nhóm NCC và NCC chỉ khi làm việc ở **tổng công ty**. **Sửa**: ở tổng công ty với quyền `MasterData.Supplier.Manage`, hoặc quyền `MasterData.Catalog.EditShared` ("Sửa thông tin danh mục dùng chung") cho **sửa thông tin (trừ mã)** ở bất kỳ công ty nào đang làm việc; mã không bao giờ sửa; mọi lần sửa ghi nhật ký (yêu cầu 31/10/2026); mọi công ty có quyền `MasterData.Supplier.View` đều xem được | Danh mục dùng chung để so sánh giá (mục 5). NCC áp dụng cho công ty nào (`SupplierCompany`) làm ở lát sau |
-| Mã NCC 2–30 ký tự chữ không dấu, số, `- . _ /`, không đổi sau khi tạo | Mã nằm trên chứng từ |
+| Mã NCC 2–30 ký tự chữ không dấu, số, `- . _ /`, **do hệ thống cấp theo dải đánh số** (mục 5.11), không đổi sau khi tạo | Mã nằm trên chứng từ |
 | Mã số thuế không trùng giữa các NCC. NCC trong nước: 10 hoặc 10-3 chữ số; NCC nước ngoài: mã thuế nước sở tại 3–20 ký tự | Một pháp nhân một NCC |
 | Trạng thái: Tiềm năng (mặc định) → Đã duyệt / Tạm ngưng / Danh sách đen; Tạm ngưng và Danh sách đen **bắt buộc ghi lý do** | Người mua sau biết vì sao không đặt hàng được (chặn lập PO làm ở giai đoạn mua hàng) |
 | Xếp hạng 1–5 sao; điều khoản thanh toán là chữ tự do cho tới khi có danh mục điều khoản (mục 5.4) | |
@@ -258,6 +258,20 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Nhóm hàng: nhóm cha đứng trên nhóm con (file xuất đã theo thứ tự cây) | |
 | Hàng hóa: tối đa 3 ĐVT quy đổi trên file; cập nhật mà để trống cả 3 cột quy đổi thì giữ quy đổi cũ; thông số kỹ thuật không có trên file nên giữ nguyên | Tránh nhập file thiếu cột làm mất dữ liệu |
 | NCC: một người liên hệ chính và một tài khoản ngân hàng, **chỉ dùng khi thêm NCC mới**; cập nhật giữ nguyên người liên hệ, tài khoản | Bảng con nhiều dòng sửa ở màn hình NCC |
+
+### 5.11 Đánh số danh mục tự động (yêu cầu 31/10/2026)
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Mã **nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa** do hệ thống cấp khi thêm mới theo **dải đánh số** cấu hình ở Hệ thống → Đánh số danh mục (bảng `CatalogNumbering`); người dùng **không tự đặt mã** (API báo lỗi nếu gửi mã). Mã không đổi sau khi tạo | Thống nhất mã toàn tập đoàn, tránh trùng và mã tùy tiện |
+| Dải = tiền tố + số thứ tự đủ N chữ số, trong khoảng "từ số – đến số". Ví dụ NCC, 6 chữ số, 1–999.999 → NCC000001. Tiền tố theo quy tắc mã của danh mục (nhóm hàng, nhóm NCC chỉ chữ không dấu và số; NCC, hàng hóa thêm `- . _ /`); mã sinh ra dài nhất không vượt độ dài mã của danh mục | Mã sinh ra luôn hợp lệ |
+| Hàng hóa: dải riêng cho từng nhóm hàng, hoặc **một dòng mặc định** cho mọi nhóm chưa có dải riêng, tiền tố dùng ký hiệu `{NHOM}` thay bằng mã nhóm của mặt hàng (ví dụ `{NHOM}-`, 5 chữ số → VT-00001) – mỗi nhóm một bộ đếm | Mã hàng gợi được nhóm hàng |
+| Mã kế tiếp = số lớn nhất **đang có** trong dải (mã khớp đúng tiền tố + N chữ số) + 1; chưa có thì là số đầu dải; vượt "đến số" thì báo hết dải, quản trị mở rộng dải. Không lưu bộ đếm riêng nên mã cũ, mã nhập trước khi cấu hình đều được tính, không bao giờ cấp trùng. Hai người thêm cùng lúc: khóa tư vấn (advisory lock) theo danh mục + tiền tố trong giao dịch thêm mới | Không trùng mã kể cả khi thêm đồng thời |
+| **Chưa cấu hình dải** cho danh mục (nhóm hàng không có dải riêng lẫn dòng mặc định) thì **không thêm mới được**, báo hướng dẫn vào màn hình Đánh số danh mục. Xóa dải không đổi mã đã cấp | Không có mã "tạm" phải sửa sau |
+| Cấu hình dùng chung toàn tập đoàn: xem cần `System.Parameter.View`; thêm/sửa/xóa cần `System.Parameter.Manage` và làm việc ở tổng công ty; mọi thay đổi ghi nhật ký. Mỗi danh mục một dải (hàng hóa thêm mỗi nhóm một dải) | Mục 9 |
+| Nhập Excel (mục 5.10): dòng **để trống mã** = thêm mới, hệ thống cấp mã; dòng có mã phải là mã đã có (cập nhật), mã chưa có báo lỗi dòng. Nhóm hàng mới trong file chưa làm nhóm cha được cho dòng khác cùng file | Cùng quy tắc với nhập tay |
+| Không áp dụng cho đơn vị tính (CAI, HOP, KG là ký hiệu quen thuộc), công ty và kho (mã ngắn nằm trong số chứng từ, ví dụ PO-**BHA**-…), tên đăng nhập, mã vai trò – các mã này vẫn nhập tay và khóa sau khi tạo | Quyết định của người dùng 31/10/2026 |
+| Dữ liệu mẫu dev/test có sẵn dải: NCC + 6 số, GN + 4 số (nhóm NCC), NH + 6 số (nhóm hàng), `{NHOM}-` + 5 số (hàng hóa). Môi trường chạy thật không có sẵn – quản trị cấu hình trước khi thêm danh mục | |
 
 ## 6. Chứng từ nghiệp vụ và luồng xử lý
 

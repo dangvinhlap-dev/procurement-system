@@ -161,8 +161,9 @@ export function ItemDrawer({
     }
     try {
       if (isNew) {
-        await mutations.create.mutateAsync({ ...input, code: values.code })
-        message.success(`Đã thêm hàng ${values.code.toUpperCase()}.`)
+        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+        const created = await mutations.create.mutateAsync({ ...input, code: null })
+        message.success(`Đã thêm hàng ${created.code}.`)
       } else if (detail) {
         await mutations.update.mutateAsync({ id: detail.id, input: { ...input, isActive: values.isActive } })
         message.success(`Đã lưu hàng ${detail.code}.`)
@@ -197,14 +198,9 @@ export function ItemDrawer({
                 <Form.Item
                   label="Mã hàng"
                   name="code"
-                  extra={isNew ? '2–30 ký tự chữ không dấu, số, - . _ /, ví dụ VT-0001. Không đổi được sau khi tạo.' : undefined}
-                  rules={[
-                    { required: true, message: 'Hãy nhập mã hàng.' },
-                    { pattern: /^[A-Za-z0-9][A-Za-z0-9._/-]{1,29}$/, message: 'Mã gồm 2–30 ký tự chữ không dấu, số, - . _ /.' },
-                  ]}
-                  normalize={(v: string) => v.toUpperCase()}
+                  extra={isNew ? 'Mã do hệ thống tự cấp khi lưu, theo dải ở Hệ thống → Đánh số danh mục.' : undefined}
                 >
-                  <Input disabled={!isNew} autoFocus={isNew} autoComplete="off" />
+                  <Input disabled placeholder="(tự cấp khi lưu)" />
                 </Form.Item>
                 <Form.Item label="Loại hàng" name="type" extra="Chỉ hàng tồn kho mới đi qua kho.">
                   <Select options={Object.entries(itemTypeLabels).map(([value, label]) => ({ value, label }))} />

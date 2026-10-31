@@ -48,12 +48,12 @@ public class SharedCatalogEditTests
             new CreateCompanyRequest(UniqueCode("S"), "Công ty thử sửa danh mục", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var uom = await ReadAsync<UomDto>(await head.PostAsJsonAsync("/api/uoms", new CreateUomRequest(UniqueCode("U")[..8], "Cuộn"), Ct));
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("C"), "Nhóm sửa tên", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm sửa tên", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{category.Code}-01", "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, []), Ct));
-        var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(UniqueCode("G"), "Nhóm NCC sửa tên"), Ct));
+            new CreateItemRequest(null, "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+        var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm NCC sửa tên"), Ct));
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), group.Id, "NCC cũ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, group.Id, "NCC cũ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
 
         var editor = await MemberUserAsync(company.Code,
             Permissions.MasterData.CatalogEditShared, Permissions.MasterData.ItemView, Permissions.MasterData.ItemCategoryView,
@@ -71,7 +71,7 @@ public class SharedCatalogEditTests
         Assert.Equal("Nhóm NCC điện", (await ReadAsync<SupplierGroupDto>(await editor.PutAsJsonAsync($"/api/supplier-groups/{group.Id}",
             new UpdateSupplierGroupRequest("Nhóm NCC điện", true), Ct))).Name);
         var updatedSupplier = await ReadAsync<SupplierDetailDto>(await editor.PutAsJsonAsync($"/api/suppliers/{supplier.Id}",
-            new SaveSupplierRequest("MA-KHAC", group.Id, "NCC mới", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, group.Id, "NCC mới", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         Assert.Equal((supplier.Code, "NCC mới"), (updatedSupplier.Code, updatedSupplier.Name));
         var ownCompany = await ReadAsync<CompanyDetailDto>(await editor.PutAsJsonAsync($"/api/companies/{company.Id}",
             new UpdateCompanyRequest("Công ty đã đổi tên", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), true), Ct));

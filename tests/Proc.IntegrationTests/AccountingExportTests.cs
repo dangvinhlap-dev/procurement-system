@@ -55,16 +55,16 @@ public class AccountingExportTests
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         // Nhóm cha khai báo TK 1521; nhóm con không khai báo → dùng TK của nhóm cha.
         var parent = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("V"), "Vật tư xuất kế toán", null, "1521"), Ct));
+            new CreateItemCategoryRequest(null, "Vật tư xuất kế toán", null, "1521"), Ct));
         var child = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("W"), "Vật tư con", parent.Id, null), Ct));
+            new CreateItemCategoryRequest(null, "Vật tư con", parent.Id, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{child.Code}-01", "Gioăng cao su", null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+            new CreateItemRequest(null, "Gioăng cao su", null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         // MST của NCC là duy nhất: sinh ngẫu nhiên 10 chữ số (bắt đầu bằng 0 để thử giữ số 0 đầu trong Excel).
         var taxCode = $"0{Random.Shared.NextInt64(100_000_000, 999_999_999)}";
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "Công ty TNHH Gioăng Việt", null, false, taxCode, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            new SaveSupplierRequest(null, groupId, "Công ty TNHH Gioăng Việt", null, false, taxCode, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest("331-GV", null, true), Ct));
 
         // Nhập 10 × 100.000 (VAT 10%), trả 2, chuyển 3 sang KP; một phiếu nhập nháp (không xuất).

@@ -33,14 +33,13 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const others: string[] = []
   for (const name of ['B', 'C']) {
-    const code = unique('NCC')
-    const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
-      code, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC thầu ${name} ${code}`, shortName: null, isForeign: false, taxCode: null,
+    const supplier = await head.send<{ id: string; code: string }>('post', '/api/suppliers', {
+      code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC thầu ${name} ${unique('T')}`, shortName: null, isForeign: false, taxCode: null,
       address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null, rating: null, status: 'Approved',
       statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
     })
     await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
-    others.push(code)
+    others.push(supplier.code)
   }
   const [s2, s3] = others
   await loginViaApi(page)

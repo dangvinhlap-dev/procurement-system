@@ -49,10 +49,10 @@ public class StockReportTests
         var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(UniqueCode("B"), "Nhóm báo cáo kho", null, null), Ct));
+            new CreateItemCategoryRequest(null, "Nhóm báo cáo kho", null, null), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(UniqueCode("N"), groupId, "NCC báo cáo kho", null, false, null, null, null, null, null, null, null, null,
+            new SaveSupplierRequest(null, groupId, "NCC báo cáo kho", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
         return new Fixture(userName, head, cai, category.Id, category.Code, supplier.Id);
     }
@@ -60,7 +60,7 @@ public class StockReportTests
     private async Task<Guid> ItemAsync(Fixture f, string suffix, bool trackLot)
     {
         var item = await ReadAsync<ItemDetailDto>(await f.Head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest($"{f.CategoryCode}-{suffix}", $"Hàng báo cáo {suffix}", null, "Inventory", f.CategoryId, f.Cai, null, null, null,
+            new CreateItemRequest(null, $"Hàng báo cáo {suffix}", null, "Inventory", f.CategoryId, f.Cai, null, null, null,
                 null, "10", null, trackLot, trackLot, null, null, []), Ct));
         return item.Id;
     }

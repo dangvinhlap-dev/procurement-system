@@ -11,7 +11,7 @@ public sealed record SupplierGroupDto(Guid Id, string Code, string Name, bool Is
 /// <summary>Thêm nhóm NCC.</summary>
 /// <param name="Code">Mã (2–20 chữ không dấu hoặc số).</param>
 /// <param name="Name">Tên.</param>
-public sealed record CreateSupplierGroupRequest(string Code, string Name);
+public sealed record CreateSupplierGroupRequest(string? Code, string Name);
 
 /// <summary>Sửa nhóm NCC.</summary>
 /// <param name="Name">Tên.</param>

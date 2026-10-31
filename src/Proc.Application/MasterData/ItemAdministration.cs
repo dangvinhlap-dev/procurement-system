@@ -90,7 +90,7 @@ public sealed record ItemDetailDto(
 /// <param name="MaxStock">Tồn tối đa.</param>
 /// <param name="Conversions">ĐVT quy đổi.</param>
 public sealed record CreateItemRequest(
-    string Code, string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
+    string? Code, string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
     string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs,
     bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, IReadOnlyList<ItemUomConversionInput> Conversions);
 

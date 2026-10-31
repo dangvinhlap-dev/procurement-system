@@ -21,15 +21,16 @@ test('đóng kỳ tháng, xem NXT đã chốt, mở lại kỳ có lý do', asyn
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const cai = uoms.find((u) => u.code === 'CAI')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: unique('K'), name: 'Nhóm đóng kỳ', parentId: null, inventoryAccount: null })
-  const itemCode = `${category.code}-01`
-  const item = await head.send<{ id: string }>('post', '/api/items', {
-    code: itemCode, name: 'Vòng bi đóng kỳ', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,
+  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: null, name: 'Nhóm đóng kỳ', parentId: null, inventoryAccount: null })
+  // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+  const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
+    code: null, name: 'Vòng bi đóng kỳ', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,
     specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
     trackExpiry: false, minStock: null, maxStock: null, conversions: [],
   })
+  const itemCode = item.code
   const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
-    code: unique('NCC'), groupId: groups.find((g) => g.code === 'TN')!.id, name: 'NCC đóng kỳ', shortName: null,
+    code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: 'NCC đóng kỳ', shortName: null,
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
