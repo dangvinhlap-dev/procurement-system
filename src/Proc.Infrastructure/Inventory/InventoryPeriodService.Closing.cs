@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
 using Proc.Domain.Common;
@@ -44,7 +46,8 @@ public sealed partial class InventoryPeriodService
         {
             await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
             var previous = periods.SingleOrDefault(p => !p.IsYear && p.StartDate == period.StartDate.AddMonths(-1) && p.Status is PeriodStatus.Closed or PeriodStatus.Locked);
-            await CalculateAsync(companyId, period, previous, cancellationToken);
+            var costed = await CalculateAsync(companyId, period, previous, cancellationToken);
+            await SaveLedgerCostsAsync(costed, cancellationToken);
             period.Close(_scope.UserId ?? Guid.Empty, _clock.UtcNow);
             await _db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -91,8 +94,13 @@ public sealed partial class InventoryPeriodService
     /// (chuyển kho đi và đến cùng giá nên giá trị công ty không đổi); chênh lệch làm tròn dồn vào dòng xuất tiêu hao cuối kỳ để
     /// giá trị tồn cuối = SL tồn cuối × giá. Số dư theo kho × hàng × lô = đầu kỳ (số dư kỳ trước) + nhập − xuất.
     /// </para>
+    /// <para>
+    /// Sổ kho đọc không theo dõi thay đổi: giá mới gán bằng chính phương thức domain trên đối tượng, rồi ghi một lượt bằng
+    /// <see cref="SaveLedgerCostsAsync"/> – để EF tự lưu thì mỗi dòng một câu UPDATE (200.000 dòng sổ kho mất ~18 giây – design.md mục 14.6).
+    /// </para>
     /// </summary>
-    private async Task CalculateAsync(Guid companyId, InventoryPeriod period, InventoryPeriod? previous, CancellationToken cancellationToken)
+    /// <returns>Các dòng sổ kho đã đổi giá vốn hoặc giá trị (cần ghi lại).</returns>
+    private async Task<List<StockLedgerEntry>> CalculateAsync(Guid companyId, InventoryPeriod period, InventoryPeriod? previous, CancellationToken cancellationToken)
     {
         var opening = previous is null
             ? []
@@ -101,17 +109,22 @@ public sealed partial class InventoryPeriodService
             ? []
             : await _db.ItemPeriodCosts.AsNoTracking().IgnoreQueryFilters(CompanyWide).Where(c => c.PeriodId == previous.Id)
                 .ToDictionaryAsync(c => c.ItemId, c => c.UnitCost, cancellationToken);
-        var ledger = await _db.StockLedger.IgnoreQueryFilters(CompanyWide)
+        var ledger = await _db.StockLedger.AsNoTracking().IgnoreQueryFilters(CompanyWide)
             .Where(l => l.PeriodId == period.Id)
             .OrderBy(l => l.PostingDate).ThenBy(l => l.Id)
             .ToListAsync(cancellationToken);
 
         var now = _clock.UtcNow;
+        var costed = new HashSet<StockLedgerEntry>();
         var itemIds = opening.Select(b => b.ItemId).Concat(ledger.Select(l => l.ItemId)).Distinct();
+        // Nhóm sẵn theo mặt hàng (ToLookup giữ thứ tự ngày ghi sổ của sổ kho): trước đây mỗi mặt hàng quét lại cả sổ kho của kỳ – 3.000 mặt
+        // hàng × 200.000 dòng làm đóng kỳ mất 39 giây (design.md mục 14.6).
+        var openingByItem = opening.ToLookup(b => b.ItemId);
+        var ledgerByItem = ledger.ToLookup(l => l.ItemId);
         foreach (var itemId in itemIds)
         {
-            var open = opening.Where(b => b.ItemId == itemId).ToList();
-            var rows = ledger.Where(l => l.ItemId == itemId).ToList();
+            var open = openingByItem[itemId].ToList();
+            var rows = ledgerByItem[itemId].ToList();
             var openQty = open.Sum(b => b.CloseQty);
             var openAmount = open.Sum(b => b.CloseAmount);
             var pricedRows = rows.Where(l => PeriodCosting.PricedDocTypes.Contains(l.DocType)).ToList();
@@ -119,7 +132,11 @@ public sealed partial class InventoryPeriodService
                 openQty, openAmount, pricedRows.Sum(l => l.Direction * l.BaseQty), pricedRows.Sum(l => l.Direction * l.Amount),
                 previousCosts.GetValueOrDefault(itemId));
 
-            foreach (var row in rows.Where(l => !l.IsCostFinal)) row.ApplyPeriodCost(cost);
+            foreach (var row in rows.Where(l => !l.IsCostFinal))
+            {
+                row.ApplyPeriodCost(cost);
+                costed.Add(row);
+            }
 
             // Chênh lệch làm tròn (design.md mục 7.3): ví dụ tồn đầu 100 × 10.000, nhập 50 × 13.000, trả 10 × 13.000, xuất 120 theo
             // giá 10.857,142857 = 1.302.857,14; tồn cuối 20 phải bằng 20 × 10.857,142857 = 217.142,86, nên dòng xuất cuối
@@ -129,15 +146,21 @@ public sealed partial class InventoryPeriodService
             var target = Math.Round(closeQty * cost, 2, MidpointRounding.AwayFromZero);
             var lastConsumption = rows.LastOrDefault(l =>
                 l.Direction < 0 && !PeriodCosting.PricedDocTypes.Contains(l.DocType) && l.DocType != DocumentTypes.Transfer);
-            if (closeAmount != target && lastConsumption is not null) lastConsumption.AdjustAmount(lastConsumption.Amount + closeAmount - target);
+            if (closeAmount != target && lastConsumption is not null)
+            {
+                lastConsumption.AdjustAmount(lastConsumption.Amount + closeAmount - target);
+                costed.Add(lastConsumption);
+            }
 
             _db.ItemPeriodCosts.Add(ItemPeriodCost.Create(companyId, period.Id, itemId, cost, now));
 
             var keys = open.Select(b => (b.WarehouseId, b.LotNo)).Concat(rows.Select(l => (l.WarehouseId, l.LotNo))).Distinct();
+            var openByKey = open.ToLookup(b => (b.WarehouseId, b.LotNo));
+            var movesByKey = rows.ToLookup(l => (l.WarehouseId, l.LotNo));
             foreach (var (warehouseId, lotNo) in keys)
             {
-                var start = open.Where(b => b.WarehouseId == warehouseId && b.LotNo == lotNo).ToList();
-                var moves = rows.Where(l => l.WarehouseId == warehouseId && l.LotNo == lotNo).ToList();
+                var start = openByKey[(warehouseId, lotNo)].ToList();
+                var moves = movesByKey[(warehouseId, lotNo)].ToList();
                 var balance = StockPeriodBalance.Create(
                     companyId, period.Id, warehouseId, itemId, lotNo,
                     start.Sum(b => b.CloseQty), start.Sum(b => b.CloseAmount),
@@ -150,6 +173,50 @@ public sealed partial class InventoryPeriodService
                 _db.StockPeriodBalances.Add(balance);
             }
         }
+
+        return [.. costed];
+    }
+
+    /// <summary>
+    /// Ghi giá vốn, giá trị, cờ chốt của các dòng sổ kho đã tính trong một lượt, trong giao dịch đóng kỳ đang mở: chép nhị phân (COPY) vào
+    /// bảng tạm rồi một câu UPDATE … FROM. Tên bảng, cột lấy từ mô hình EF nên đổi cấu hình bảng vẫn đúng.
+    /// </summary>
+    /// <param name="rows">Dòng sổ kho đã đổi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    private async Task SaveLedgerCostsAsync(IReadOnlyList<StockLedgerEntry> rows, CancellationToken cancellationToken)
+    {
+        if (rows.Count == 0) return;
+        var entity = _db.Model.FindEntityType(typeof(StockLedgerEntry))!;
+        var table = entity.GetTableName()!;
+        string Column(string property) => entity.FindProperty(property)!.GetColumnName();
+        var connection = (NpgsqlConnection)_db.Database.GetDbConnection();
+
+        await _db.Database.ExecuteSqlRawAsync(
+            "CREATE TEMP TABLE ledger_cost (id uuid PRIMARY KEY, unit_cost numeric(19,6), amount numeric(19,2), is_final boolean) ON COMMIT DROP",
+            cancellationToken);
+        await using (var import = await connection.BeginBinaryImportAsync(
+                         "COPY ledger_cost (id, unit_cost, amount, is_final) FROM STDIN (FORMAT BINARY)", cancellationToken))
+        {
+            foreach (var row in rows)
+            {
+                await import.StartRowAsync(cancellationToken);
+                await import.WriteAsync(row.Id, NpgsqlDbType.Uuid, cancellationToken);
+                await import.WriteAsync(row.UnitCost, NpgsqlDbType.Numeric, cancellationToken);
+                await import.WriteAsync(row.Amount, NpgsqlDbType.Numeric, cancellationToken);
+                await import.WriteAsync(row.IsCostFinal, NpgsqlDbType.Boolean, cancellationToken);
+            }
+
+            await import.CompleteAsync(cancellationToken);
+        }
+
+        // Tên bảng, cột từ mô hình EF (không phải dữ liệu người dùng) nên ghép chuỗi an toàn.
+#pragma warning disable EF1002
+        await _db.Database.ExecuteSqlRawAsync(
+            $"UPDATE \"{table}\" l SET \"{Column(nameof(StockLedgerEntry.UnitCost))}\" = c.unit_cost, " +
+            $"\"{Column(nameof(StockLedgerEntry.Amount))}\" = c.amount, \"{Column(nameof(StockLedgerEntry.IsCostFinal))}\" = c.is_final " +
+            $"FROM ledger_cost c WHERE l.\"{Column(nameof(StockLedgerEntry.Id))}\" = c.id",
+            cancellationToken);
+#pragma warning restore EF1002
     }
 
     /// <summary>

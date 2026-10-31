@@ -27,6 +27,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
   Quyền mới `Report.Accounting.Export`. API `/api/accounting-export/documents`, `/api/accounting-export/file`.
 
 ### Thay đổi
+- Hiệu năng (design.md mục 14.6, đo trên 200.000 dòng sổ kho): đóng kỳ từ 39 giây còn 7–10 giây (ghi giá vốn một lượt, bỏ quét lặp);
+  báo cáo NXT từ 1,2 giây còn 0,3 giây. Script đo ở `db/perf/`.
 - Số đếm trên cây điều hướng là số thật (trước đây là dữ liệu mẫu), tự cập nhật; bỏ số thông báo giả trên thanh menu.
 - Image Docker cài thêm phông `fonts-dejavu-core` để in PDF tiếng Việt. Máy chủ không dùng Docker cần có Arial, DejaVu Sans hoặc
   Liberation Sans, hoặc khai báo thư mục phông ở `Printing:FontDirectories`.

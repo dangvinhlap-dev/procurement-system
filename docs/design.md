@@ -884,6 +884,24 @@ Các bước chuyển lên server thật:
 | Hằng tháng | Cập nhật image vá bảo mật; khôi phục thử một bản sao lưu lên máy test |
 | Mỗi lần phát hành | Sao lưu CSDL trước; chạy migration; gắn version image; giữ image cũ để quay lại khi lỗi (mục 16.4) |
 
+### 14.6 Hiệu năng – kết quả đo (giai đoạn 7)
+
+Dữ liệu đo (CSDL riêng `procurement_perf`, script ở `db/perf/`): một công ty, 3.000 mặt hàng, 200 NCC, 20.000 phiếu nhập × 5 dòng và
+10.000 phiếu chuyển kho × 5 dòng trong một tháng → **200.000 dòng sổ kho**, 150.000 dòng chứng từ, 6.000 dòng tồn. Máy dev Windows 11,
+PostgreSQL 18 cài trực tiếp; thời gian là trung bình 3 lần gọi API sau 1 lần làm nóng.
+
+| Chức năng | Trước | Sau | Thay đổi |
+| --- | --- | --- | --- |
+| Đóng kỳ tháng (tính giá vốn, chốt số dư) | 39 giây | 7–10 giây | Nhóm sổ kho theo mặt hàng, theo kho × lô bằng tra cứu thay vì quét lại cả sổ kho cho từng mặt hàng; đọc sổ kho không theo dõi thay đổi; ghi giá vốn một lượt (COPY vào bảng tạm + một câu UPDATE) thay vì 100.000 câu UPDATE |
+| Báo cáo NXT một kỳ | 1,2 giây | 0,3 giây | Tra phát sinh theo kho × mặt hàng thay vì quét cả danh sách cho từng dòng; lọc sổ kho theo kỳ để dùng chỉ mục (CompanyId, PeriodId, ItemId) |
+| Tồn kho hiện tại, chậm luân chuyển, mua hàng theo NCC, đánh giá NCC, trang chủ, xuất kế toán (danh sách) | 0,2–0,5 giây | không đổi | Đạt |
+| Thẻ kho, sắp hết hạn, so sánh giá, danh sách phiếu | dưới 0,06 giây | không đổi | Đạt |
+| File Excel cho kế toán (23.000 dòng hàng) | – | 2,5 giây | Đạt (giới hạn 50.000 dòng mỗi file) |
+
+Chỉ mục: đã rà các truy vấn chính – sổ kho (CompanyId, WarehouseId, ItemId, PostingDate), (CompanyId, PeriodId, ItemId), DocumentLineId;
+chứng từ (CompanyId, DocType, Date); tồn (CompanyId, WarehouseId, ItemId, LotNo) – đủ dùng, **không thêm migration**. Đo lại khi số liệu
+thật vượt mức trên (ví dụ nhiều năm sổ kho, nhiều công ty) theo `db/perf/README.md`.
+
 ## 15. Môi trường lập trình: GitHub, máy Windows và Codespaces
 
 **Môi trường đang dùng (từ 29/10/2026): lập trình trực tiếp trên máy Windows 11 Pro**, thư mục `D:\Project\procurement-system`, PostgreSQL 18 cài trực tiếp (database `procurement` và `procurement_test`, user `proc`), Claude Code chạy trong PowerShell. Không cần Docker trên máy dev. Code vẫn lưu trên GitHub; Codespaces bên dưới chỉ là phương án dự phòng.
