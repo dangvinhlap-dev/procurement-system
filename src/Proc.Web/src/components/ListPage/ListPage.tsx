@@ -221,7 +221,6 @@ export function ListPage<T>({
       </div>
 
       <Tabs
-        type="card"
         size="small"
         className="list-page-tabs"
         activeKey={tab}

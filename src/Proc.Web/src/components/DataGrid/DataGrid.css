@@ -1,5 +1,5 @@
 /*
- * Kiểu của DataGrid theo ui-guide.md mục "Lưới dữ liệu".
+ * Kiểu của DataGrid theo ui-guide.md mục 5 (bảng Fiori Horizon).
  * Màu lấy từ biến CSS mà antd sinh ra từ theme token (src/theme.ts); không viết màu cứng.
  */
 
@@ -8,7 +8,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 6px;
+  gap: 8px;
 }
 
 /* Vùng "Kéo tiêu đề cột vào đây để nhóm" – viền đứt nét. */
@@ -16,9 +16,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 28px;
+  min-height: 32px;
   padding: 0 8px;
   border: 1px dashed var(--ant-color-border);
+  border-radius: var(--ant-border-radius);
   background: var(--ant-color-fill-alter);
   color: var(--ant-color-text-secondary);
 }
@@ -31,7 +32,9 @@
   flex: 1;
   min-height: 0;
   outline: none;
-  border: 1px solid var(--ant-color-border);
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  overflow: hidden;
   background: var(--ant-color-bg-container);
 }
 .data-grid:focus-visible {
@@ -44,9 +47,10 @@
   border-top: none !important;
 }
 
-/* Tiêu đề cột: nền xám nhạt, chữ đậm, cao 26px. */
+/* Tiêu đề cột: nền trắng, chữ phụ đậm 600, kẻ dưới; cao theo --app-grid-header-height. */
 .data-grid .ant-table-thead > tr > th {
-  height: 26px;
+  height: var(--app-grid-header-height);
+  color: var(--ant-color-text-secondary);
   padding-block: 0 !important;
   font-weight: 600;
   white-space: nowrap;
@@ -69,15 +73,15 @@
 }
 
 /*
- * Dòng dữ liệu cao 24px, chữ 12px. Dùng .ant-table-cell thay vì tr/td vì khi bật cuộn ảo
+ * Dòng dữ liệu cao --app-grid-row-height (32px), chữ 14px. Dùng .ant-table-cell thay vì tr/td vì khi bật cuộn ảo
  * antd vẽ dòng bằng div – một bộ selector áp cho cả hai chế độ.
  */
 .data-grid .ant-table-tbody .ant-table-cell,
 .data-grid .ant-table-tbody-virtual .ant-table-cell {
   box-sizing: border-box;
-  height: 24px;
+  height: var(--app-grid-row-height);
   padding-block: 0 !important;
-  line-height: 22px;
+  line-height: calc(var(--app-grid-row-height) - 2px);
   white-space: nowrap;
 }
 .data-grid .data-grid-row.is-alt > .ant-table-cell {

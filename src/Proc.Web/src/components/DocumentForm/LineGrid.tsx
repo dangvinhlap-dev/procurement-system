@@ -1,6 +1,7 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Form, type FormListFieldData } from 'antd'
 import { useEffect, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
+import { layoutTokens } from '../../theme'
 import { hasOpenPopup } from '../../utils/popup'
 
 /** Một cột của lưới dòng chứng từ. */
@@ -97,9 +98,9 @@ function LineGridBody({
       <table>
         <thead>
           <tr>
-            <th style={{ width: 36 }}>STT</th>
+            <th style={{ width: 44 }}>STT</th>
             {columns.map((c) => (
-              <th key={c.key} style={{ width: c.width, textAlign: c.align ?? 'left' }}>
+              <th key={c.key} style={{ width: Math.round(c.width * layoutTokens.columnWidthScale), textAlign: c.align ?? 'left' }}>
                 {c.title}
               </th>
             ))}

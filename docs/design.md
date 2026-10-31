@@ -1,12 +1,13 @@
 ﻿# Thiết kế hệ thống Quản lý Mua sắm – Đấu thầu – Kho tập đoàn
 
-Phiên bản tài liệu 1.1 · cập nhật 28/10/2026 · người lập: Đặng Vĩnh Lập.
+Phiên bản tài liệu 1.2 · cập nhật 31/10/2026 · người lập: Đặng Vĩnh Lập.
 Đây là **bản gốc** của thiết kế; mọi thay đổi nghiệp vụ cập nhật tại đây (xem mục 16).
 
 | Phiên bản | Ngày | Nội dung thay đổi |
 | --- | --- | --- |
 | 1.0 | 28/10/2026 | Mục 1–13: nghiệp vụ, công nghệ, kiến trúc, kho, master data, chứng từ, kỳ kho và giá vốn, giá và đấu thầu, phân quyền, form, báo cáo, CSDL, lộ trình |
 | 1.1 | 28/10/2026 | Chốt PostgreSQL + Ubuntu + Docker; thêm mục 14 (hạ tầng), 15 (GitHub Codespaces), 16 (quy tắc Claude Code), 17 (giao diện kiểu Windows XP); ví dụ số giá vốn |
+| 1.2 | 31/10/2026 | Mục 17 và docs/ui-guide.md: chuyển giao diện sang SAP Fiori, theme Horizon (giữ React + Ant Design, phông Arial thay "72", lát UI-a theme rồi UI-b bố cục) |
 
 ## 1. Phân tích nghiệp vụ và các quyết định cần chốt
 
@@ -1011,41 +1012,32 @@ Danh sách phiên bản xem trên GitHub ở mục **Tags** của repo.
 
 ## 17. Đặc tả giao diện (docs/ui-guide.md)
 
-Giao diện theo **phong cách ứng dụng desktop kiểu Windows XP**: dày thông tin, thao tác nhanh bằng bàn phím, có thanh menu, thanh công cụ, cây điều hướng, thanh trạng thái; vẽ phẳng, sạch như ảnh mẫu (không gradient xanh Luna đậm, không bo góc lớn, không đổ bóng). Ảnh mẫu lưu tại `docs/mau-man-hinh-danh-sach.png`; mọi màn hình danh sách phải giống ảnh này về bố cục.
+Từ 31/10/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
+Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica
+nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đổi hai lát – UI-a theme, UI-b bố cục Shellbar + Dynamic Page.
 
-### 17.1 Khung ứng dụng (AppShell) – cố định cho mọi trang
+### 17.1 Khung ứng dụng (sau lát UI-b)
 
-| Vùng | Kích thước | Nội dung |
-| --- | --- | --- |
-| Thanh menu trên cùng | Cao 28px | Nhóm chức năng theo module (Hằng ngày, Mua hàng, Kho, Giá và NCC, Đấu thầu, Báo cáo, Hệ thống); bên phải: công ty đang làm việc (đổi được), thông báo, ngôn ngữ, người dùng |
-| Thanh công cụ | Cao 32px | Ô lệnh "Ô lệnh – tên màn hình" (gõ mã như PO, PR, NXT rồi Enter để mở nhanh); nút Lưu, Quay lại, Trang chủ, Hủy, In, Tìm kiếm |
-| Cây điều hướng trái | Rộng 240px, kéo đổi được, thu gọn được | "Thu gọn tất cả"; nhóm Ghim; nhóm theo module; mỗi mục có biểu tượng, tên, số đếm (đỏ nếu cần chú ý); mục đang mở nền xanh đậm chữ trắng |
-| Vùng nội dung | Phần còn lại | Màn hình danh sách hoặc chứng từ |
-| Thanh trạng thái | Cao 22px | Trái: thông báo hệ thống; phải: tên màn hình, người dùng, ngày làm việc, INS |
+| Vùng | Nội dung |
+| --- | --- |
+| Shellbar | Logo, tên ứng dụng, ô tìm/ô lệnh (gõ mã màn hình), công ty đang làm việc, thông báo, người dùng |
+| Điều hướng trái | Nhóm Ghim, nhóm theo module, số đếm (đỏ khi cần chú ý), thu gọn được |
+| Dynamic Page | Header đóng/mở (tiêu đề H1, tóm tắt, bộ lọc, nút lệnh) + Content (bảng hoặc form trên khối trắng bo góc 8px) |
 
-### 17.2 Mẫu màn hình danh sách (ListPage + DataGrid)
+### 17.2 Danh sách và chứng từ
 
-1. Tiêu đề màn hình (đậm, 18px) + bộ chọn mẫu hiển thị (Chuẩn, mẫu đã lưu) + dòng "Tổng N bản ghi".
-2. Hàng nút lệnh: nút chính "+ Tạo mới" (xanh, duy nhất có màu đậm); nút phụ Xuất CSV, Xuất Excel, Nhập CSV/Excel.
-3. Tab kiểu Windows: Danh sách | Tổng hợp | Phân tích.
-4. Khung bộ lọc: ô Tìm kiếm (có dấu hoặc không dấu đều tìm được), các ô lọc nghiệp vụ, Nhóm theo, nút Cột (chọn cột hiển thị), Xóa bộ lọc.
-5. Vùng "Kéo tiêu đề cột vào đây để nhóm" (viền đứt nét).
-6. Lưới dữ liệu: dòng cao 24px, chữ 12px, kẻ ô mảnh, dòng xen kẽ hơi xám; tiêu đề cột bấm để sắp xếp, kéo đổi độ rộng; cột trạng thái có chấm màu + chữ (xanh lá đã xử lý, xám còn hạn, đỏ quá hạn, cam chờ duyệt); chữ dài cắt "…" và hiện đủ khi rê chuột; bấm đúp hoặc Enter để mở chi tiết; cuộn ảo khi trên 500 dòng.
+Danh sách dùng `ListPage` + `DataGrid` (dòng 32px, chữ 14px, tiêu đề cột 36px, kẻ ngang mảnh, trạng thái màu ngữ nghĩa + chữ; tìm có/không dấu;
+nhóm theo cột; cuộn ảo). Chứng từ dùng `DocumentForm` (design.md mục 10.1) với khối form 3 cột, tiêu đề khối 16px/600, lưới dòng nhập như Excel.
 
-### 17.3 Màu sắc, chữ và bàn phím
+### 17.3 Màu, chữ, hình khối, bàn phím
 
 | Thuộc tính | Giá trị |
 | --- | --- |
-| Font | "Segoe UI", Tahoma, sans-serif; cỡ cơ bản 12px; tiêu đề 18px |
-| Nền | Ứng dụng #F3F3F3; nội dung và lưới #FFFFFF; viền #C8C8C8 |
-| Màu chính | #1F4FA0 (nút chính, mục chọn, liên kết); dòng chọn trong lưới #DCE8F8 |
-| Trạng thái | Thành công #2E8B3E; cảnh báo #D9822B; lỗi/quá hạn #C62828; trung tính #8A8A8A |
-| Hình khối | Bo góc 2px; nút và ô nhập cao 26px |
-| Bàn phím | F2 thêm dòng, F3 tìm, Ctrl+S lưu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu |
-
-Kỹ thuật: Ant Design với `ConfigProvider` (theme token theo bảng trên, thuật toán compact); component dùng chung `AppShell`, `ListPage`, `DataGrid`, `DocumentForm`. Tính năng kéo cột để nhóm của AG Grid thuộc bản Enterprise (trả phí); nếu không mua, dùng ô "Nhóm theo" hoặc tự viết vùng kéo thả trên lưới miễn phí.
-
-Ảnh mẫu khác (form PO, phiếu kho…) đặt trong `docs/` với tên rõ nghĩa, ví dụ `mau-form-don-mua-hang.png`, và nói khi giao việc: *"Làm màn hình nhập PO giống ảnh docs/mau-form-don-mua-hang.png."*
+| Chữ | 14px nội dung; 12px nhãn; 16px/600 tiêu đề khối; 24px/700 tiêu đề trang |
+| Màu | Chữ #1d2d3d, chữ phụ #647987, nền ứng dụng #f5f6f7, nền đối tượng #ffffff, màu nhấn #0a6ed1 (#005a9e khi nhấn) |
+| Trạng thái | Lỗi #b00e12 / #fff1f1; cảnh báo #b25900 / #fff8eb; thành công #1a7a24 / #f0f9f1; thông tin #02629b / #f2f9ff |
+| Hình khối | Bo góc 8px khối lớn, 4px ô nhập/nút; đổ bóng rất nhẹ; khoảng cách 8/16px; ô nhập, nút cao 28px |
+| Bàn phím | F2 thêm dòng, F3 tìm, Ctrl+S lưu, Ctrl+P in phiếu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu |
 
 ## Nguồn tham khảo
 

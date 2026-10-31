@@ -5,6 +5,12 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [Chưa phát hành]
 
+### Thay đổi
+- Giao diện chuyển sang quy chuẩn SAP Fiori, theme Horizon – lát UI-a (docs/ui-guide.md, design.md mục 17): chữ 14px, bảng màu Horizon
+  (chữ #1d2d3d, nền #f5f6f7, màu nhấn #0a6ed1, màu trạng thái ngữ nghĩa), bo góc 4/8px, đổ bóng nhẹ, khoảng cách 8/16px, dòng bảng 32px,
+  thanh tab gạch chân, khối nội dung/form bo góc; màn hình đăng nhập dạng thẻ. Giữ React + Ant Design, bố cục khung giữ nguyên (lát UI-b
+  sẽ đổi sang Shellbar + Dynamic Page). CLAUDE.md mục 9 nạp toàn văn docs/ui-guide.md mỗi phiên.
+
 ## [0.8.0] - 2026-10-31
 
 ### Thêm mới

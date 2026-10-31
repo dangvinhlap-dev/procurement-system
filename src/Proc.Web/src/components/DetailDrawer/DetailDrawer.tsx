@@ -115,7 +115,6 @@ export function DetailDrawer({
           disabled={readOnly}
         >
           <Tabs
-            type="card"
             size="small"
             className="detail-drawer-tabs"
             activeKey={tab}

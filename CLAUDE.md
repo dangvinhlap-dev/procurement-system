@@ -102,12 +102,15 @@ Tài liệu bắt buộc đọc trước khi làm mỗi tính năng (đọc đú
   3. Chỉ gỡ migration (`dotnet ef database update <migration-của-bản-X>`) khi tôi xác nhận đã sao lưu CSDL.
 
 ## 9. Giao diện (bắt buộc)
-- Phong cách ứng dụng desktop kiểu Windows XP theo `docs/ui-guide.md`.
-  Ảnh mẫu: `docs/mau-man-hinh-danh-sach.png` – xem ảnh trước khi làm bất kỳ màn hình nào.
+- Phong cách **SAP Fiori, theme Horizon** theo `docs/ui-guide.md` (từ 31/10/2026, thay phong cách Windows XP): chữ 14px, bảng màu Horizon,
+  bo góc 4/8px, đổ bóng rất nhẹ, khoảng cách bội số của 4 (8/16px); bố cục Shellbar + Dynamic Page.
+  Giữ React + Ant Design (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica – không kèm file phông "72".
 - Mọi trang nằm trong `AppShell`; mọi danh sách dùng `ListPage` + `DataGrid`;
   mọi chứng từ dùng `DocumentForm` (docs/design.md mục 10.1). Không tự tạo bố cục riêng cho từng màn hình.
-- Màu, cỡ chữ, khoảng cách lấy từ theme token của Ant Design `ConfigProvider`; không viết màu cứng trong component.
-- Ưu tiên mật độ thông tin cao, gọn, thao tác được bằng bàn phím.
-- Làm xong một màn hình: chạy lên, chụp bằng Playwright, so với ảnh mẫu, sửa đến khi giống bố cục.
+- Màu, cỡ chữ, khoảng cách lấy từ theme token của Ant Design `ConfigProvider` (`src/Proc.Web/src/theme.ts`); không viết màu cứng trong component.
+- Ưu tiên dữ liệu lớn dễ đọc, thao tác được bằng bàn phím (ô lệnh, phím tắt giữ nguyên).
+- Làm xong một màn hình: chạy lên, chụp bằng Playwright, đối chiếu `docs/ui-guide.md`, sửa đến khi đúng quy chuẩn.
 - Khi tôi đưa ảnh mẫu mới vào `docs/`, làm theo đúng ảnh đó.
 
+Toàn văn quy chuẩn giao diện (nạp tự động mỗi phiên):
+@docs/ui-guide.md
