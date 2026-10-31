@@ -31,7 +31,7 @@ function todayInVietnam(): string {
  * Khung ứng dụng cố định cho mọi trang theo Fiori Horizon (ui-guide.md mục 4, design.md mục 17): Shellbar 48px trên cùng, điều hướng trái
  * 240px, vùng nội dung (Dynamic Page của ListPage/DocumentForm). Phiên bản và ngày làm việc nằm trong menu người dùng của Shellbar.
  * Phím tắt chung: F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
- * Người dùng và công ty lấy từ phiên đăng nhập; số đếm theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
+ * Người dùng và công ty lấy từ phiên đăng nhập; số đếm và số thông báo chưa đọc theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
  * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.
  */
 export function AppShell() {
@@ -74,8 +74,8 @@ export function AppShell() {
           const company = user.companies.find((c) => c.id === id)
           if (company) message.success(`Đang làm việc tại ${company.code} – ${company.name}.`)
         }}
-        // Chức năng Thông báo chưa làm: không hiện số chưa đọc giả.
-        unreadCount={0}
+        // Số thông báo chưa đọc đi cùng số liệu trang chủ (design.md mục 11.6).
+        unreadCount={navCounts.NOTI?.count ?? 0}
         userFullName={user.fullName}
         userName={user.userName}
         workingDate={todayInVietnam()}

@@ -85,12 +85,26 @@ public class IntercompanyTests
     {
         var f = await ArrangeAsync();
 
+        // Thủ kho NMI: một người mọi kho, một người chỉ kho phụ KP1 (không nhận thông báo phiếu vào kho tổng).
+        var keeperName = $"tk.{Guid.NewGuid():N}"[..16];
+        var subKeeperName = $"tk.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(keeperName, "NMI", "THUKHO");
+        await _factory.CreateScopedUserAsync(subKeeperName, "NMI", "THUKHO", ["KP1"]);
+
         var sale = await ReadAsync<InventoryDocumentDto>(await CreateSaleAsync(f, 10));
         Assert.Equal((15_000m, "10", 150_000m, 15_000m, "NMI"), (sale.Lines[0].UnitPrice, sale.Lines[0].VatCode, sale.TotalAmount, sale.TotalVat, sale.CounterCompanyCode));
         sale = await ReadAsync<InventoryDocumentDto>(await PostAsync(f.Bha, sale.Id));
         Assert.Equal(40m, await StockAsync(f.Bha, f.BhaKt, f.ItemId));
         Assert.Matches($"^ICR-NMI-{Today:yyMM}-\\d{{4}}$", sale.LinkedDocumentNo);
         Assert.Equal("Pending", sale.ReceiveStatus);
+        // Thông báo ICR chờ nhận tới thủ kho công ty mua có quyền ở kho tổng (design.md mục 6.3 bước 3, 11.6); người ghi sổ không nhận.
+        var keeper = await _factory.CreateClientInCompanyAsync(keeperName, ProcApiFactory.TestPassword, "NMI");
+        var note = Assert.Single(await NotificationApi.MineAsync(keeper, Ct), n => n.TargetId == sale.LinkedDocumentId);
+        Assert.Equal(("IntercompanyReceipt", "ICR"), (note.Type, note.ScreenCode));
+        Assert.Contains(sale.LinkedDocumentNo!, note.Message);
+        var subKeeper = await _factory.CreateClientInCompanyAsync(subKeeperName, ProcApiFactory.TestPassword, "NMI");
+        Assert.DoesNotContain(await NotificationApi.MineAsync(subKeeper, Ct), n => n.TargetId == sale.LinkedDocumentId);
+        Assert.DoesNotContain(await NotificationApi.MineAsync(f.Nmi, Ct), n => n.TargetId == sale.LinkedDocumentId);
 
         // Công ty mua thấy phiếu chờ nhận ở kho tổng của mình, SL gửi 10, giá bán nội bộ.
         var receipt = await ReadAsync<InventoryDocumentDto>(await f.Nmi.GetAsync($"/api/inventory-documents/{sale.LinkedDocumentId}", Ct));

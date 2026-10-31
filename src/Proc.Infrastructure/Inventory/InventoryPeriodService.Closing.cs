@@ -82,6 +82,13 @@ public sealed partial class InventoryPeriodService
         await _db.StockLedger.IgnoreQueryFilters(CompanyWide)
             .Where(l => l.PeriodId == id && !priced.Contains(l.DocType))
             .ExecuteUpdateAsync(u => u.SetProperty(l => l.IsCostFinal, false), cancellationToken);
+        // Báo kế toán (người có quyền xuất dữ liệu kế toán): số liệu kỳ này đã xuất có thể thay đổi (design.md mục 7.4, 11.6).
+        var notifications = new Proc.Infrastructure.Notifications.NotificationPublisher(_db, _scope, _clock);
+        var accountants = await notifications.UsersWithPermissionAsync(period.CompanyId, Proc.Domain.Organization.Permissions.Report.AccountingExport, null, null, cancellationToken);
+        notifications.Add(period.CompanyId, accountants, Proc.Domain.Notifications.NotificationTypes.PeriodReopened,
+            $"Kỳ kho {period.Label} được mở lại",
+            $"Kỳ kho {period.Label} được mở lại – lý do: {request.Reason.Trim()}. Giá vốn, số dư kỳ này sẽ tính lại khi đóng kỳ; số liệu đã xuất cho kế toán có thể thay đổi.",
+            "PER", period.Id);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return ToDto(period, canOpen: false);

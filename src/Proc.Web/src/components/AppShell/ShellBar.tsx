@@ -28,6 +28,7 @@ export interface ShellBarProps {
   /** Id công ty đang làm việc. */
   company: string
   onCompanyChange: (value: string) => void
+  /** Số thông báo chưa đọc; bấm chuông mở màn hình Thông báo. */
   unreadCount: number
   userFullName: string
   userName: string
@@ -190,7 +191,13 @@ export function ShellBar({
           popupMatchSelectWidth={false}
         />
         <Badge count={unreadCount} size="small" offset={[-4, 4]}>
-          <Button type="text" aria-label={`Thông báo (${unreadCount} chưa đọc)`} icon={<BellOutlined />} />
+          <Button
+            type="text"
+            aria-label={`Thông báo (${unreadCount} chưa đọc)`}
+            title="Thông báo"
+            icon={<BellOutlined />}
+            onClick={() => navigate('/hang-ngay/thong-bao')}
+          />
         </Badge>
         <Dropdown
           trigger={['click']}

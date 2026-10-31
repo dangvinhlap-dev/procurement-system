@@ -4,7 +4,9 @@ using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Organization;
+using Proc.Domain.Notifications;
 using Proc.Domain.Purchasing;
+using Proc.Infrastructure.Notifications;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
@@ -19,6 +21,7 @@ internal sealed class ApprovalEngine
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
+    private readonly NotificationPublisher _notifications;
 
     /// <summary>Tạo cơ chế duyệt.</summary>
     public ApprovalEngine(ProcDbContext db, ICurrentUserScope scope, IClock clock)
@@ -26,6 +29,7 @@ internal sealed class ApprovalEngine
         _db = db;
         _scope = scope;
         _clock = clock;
+        _notifications = new NotificationPublisher(db, scope, clock);
     }
 
     /// <summary>Quyền duyệt theo loại phiếu.</summary>
@@ -47,8 +51,9 @@ internal sealed class ApprovalEngine
             return;
         }
 
-        foreach (var (level, roleId) in levels)
-            _db.ApprovalSteps.Add(ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, level, roleId));
+        var steps = levels.Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId)).ToList();
+        _db.ApprovalSteps.AddRange(steps);
+        await NotifyApproversAsync(document, steps.MinBy(s => s.Level)!, cancellationToken);
     }
 
     /// <summary>Bước đang chờ của lượt hiện tại (cấp thấp nhất còn chờ), hoặc null.</summary>
@@ -91,7 +96,21 @@ internal sealed class ApprovalEngine
             s => s.DocType == document.DocType && s.DocumentId == document.Id && s.Round == document.ApprovalRound
                  && s.Status == ApprovalStepStatus.Pending && s.Id != step.Id,
             cancellationToken);
-        if (remaining == 0) document.MarkApproved(_clock.UtcNow);
+        if (remaining == 0)
+        {
+            document.MarkApproved(_clock.UtcNow);
+            NotifyCreator(document, NotificationTypes.Approved, $"{Noun(document)} {document.No} đã được duyệt",
+                $"{Noun(document)} {document.No} đã được duyệt xong, có thể xử lý bước tiếp theo.");
+            return;
+        }
+
+        // Còn cấp sau: báo người duyệt cấp kế tiếp (cấp thấp nhất còn chờ, khác bước vừa duyệt).
+        var next = await _db.ApprovalSteps
+            .Where(s => s.DocType == document.DocType && s.DocumentId == document.Id && s.Round == document.ApprovalRound
+                        && s.Status == ApprovalStepStatus.Pending && s.Id != step.Id)
+            .OrderBy(s => s.Level)
+            .FirstAsync(cancellationToken);
+        await NotifyApproversAsync(document, next, cancellationToken);
     }
 
     /// <summary>Từ chối ở cấp đang chờ: các cấp sau bỏ qua, phiếu về nháp kèm lý do.</summary>
@@ -103,7 +122,37 @@ internal sealed class ApprovalEngine
         step!.Reject(_scope.UserId!.Value, _clock.UtcNow, comment);
         await SkipPendingAsync(document, cancellationToken);
         document.ReturnToDraft(comment);
+        NotifyCreator(document, NotificationTypes.Rejected, $"{Noun(document)} {document.No} bị từ chối",
+            $"{Noun(document)} {document.No} bị từ chối ở cấp {step.Level}: {comment}. Phiếu đã về Nháp để sửa và gửi lại.");
     }
+
+    /// <summary>
+    /// Báo người duyệt được cấp đang chờ (design.md mục 11.6): có quyền duyệt loại phiếu tại công ty; cấp có vai trò thì phải có vai trò
+    /// đó – cùng điều kiện với <see cref="ApproveBlockerAsync"/>. Người lập không nhận (không tự duyệt được).
+    /// </summary>
+    private async Task NotifyApproversAsync(ApprovableDocument document, ApprovalStep step, CancellationToken cancellationToken)
+    {
+        var users = await _notifications.UsersWithPermissionAsync(
+            document.CompanyId, ApprovePermission(document.DocType), step.RoleId, null, cancellationToken);
+        _notifications.Add(document.CompanyId, users.Where(u => u != document.CreatedBy), NotificationTypes.ApprovalPending,
+            $"{Noun(document)} {document.No} chờ bạn duyệt",
+            $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
+            document.DocType, document.Id);
+    }
+
+    /// <summary>Báo người lập phiếu kết quả duyệt.</summary>
+    private void NotifyCreator(ApprovableDocument document, string type, string title, string message)
+    {
+        if (document.CreatedBy is { } creator)
+            _notifications.Add(document.CompanyId, [creator], type, title, message, document.DocType, document.Id);
+    }
+
+    /// <summary>Tên loại phiếu trong câu thông báo.</summary>
+    private static string Noun(ApprovableDocument document) =>
+        document.DocType == DocumentTypes.PurchaseRequest ? "Đề nghị mua hàng" : "Đơn mua hàng";
+
+    /// <summary>Số tiền trong thông báo theo kiểu Việt Nam, ví dụ 2.000.000 (CLAUDE.md mục 5).</summary>
+    private static readonly System.Globalization.CultureInfo VietnameseCulture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 
     /// <summary>Bỏ qua các bước còn chờ (phiếu bị từ chối hoặc hủy khi đang chờ duyệt).</summary>
     public async Task SkipPendingAsync(ApprovableDocument document, CancellationToken cancellationToken)
