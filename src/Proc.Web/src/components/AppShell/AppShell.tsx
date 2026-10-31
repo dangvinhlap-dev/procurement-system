@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { findScreenByPath } from '../../app/screens'
 import { useAuth } from '../../auth/useAuth'
-import { demoNavCounts, demoPinnedScreens, demoUnreadNotifications } from '../../mocks/session'
+import { useDashboard } from '../../api/dashboard'
+import { demoPinnedScreens } from '../../mocks/session'
 import { layoutCssVars } from '../../theme'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { MenuBar } from './MenuBar'
@@ -42,6 +43,8 @@ export function AppShell() {
   const { session, workingCompany, setWorkingCompany, logout } = useAuth()
   const { message } = App.useApp()
   const [insertMode, setInsertMode] = useState(true)
+  // Số đếm cây điều hướng lấy từ số liệu trang chủ (design.md mục 11.4), theo quyền và công ty đang làm việc.
+  const navCounts = useDashboard().data?.navCounts ?? {}
   const [changingPassword, setChangingPassword] = useState(false)
 
   useEffect(() => {
@@ -75,7 +78,8 @@ export function AppShell() {
           const company = user.companies.find((c) => c.id === id)
           if (company) message.success(`Đang làm việc tại ${company.code} – ${company.name}.`)
         }}
-        unreadCount={demoUnreadNotifications}
+        // Chức năng Thông báo chưa làm: không hiện số chưa đọc giả.
+        unreadCount={0}
         userFullName={user.fullName}
         userName={user.userName}
         onLogout={() => logout()}
@@ -85,13 +89,13 @@ export function AppShell() {
       <Toolbar />
       <div className="app-body">
         {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
-        <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={demoNavCounts} />
+        <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={navCounts} />
         <main className="app-content">
           <Outlet />
         </main>
       </div>
       <StatusBar
-        message="Danh sách, số đếm trên cây điều hướng còn là dữ liệu mẫu."
+        message="Sẵn sàng."
         screenTitle={screenTitle}
         userFullName={user.fullName}
         workingDate={todayInVietnam()}

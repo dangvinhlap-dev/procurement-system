@@ -44,6 +44,9 @@ public static class ReportEndpoints
                 s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
 
+        // Trang chủ: ai đăng nhập cũng xem được; từng phần kiểm quyền trong dịch vụ (thiếu quyền thì phần đó là null).
+        app.MapGet("/api/dashboard", (IDashboardService s, CancellationToken ct) => s.GetAsync(ct)).WithTags("Trang chủ");
+
         // Hạng xếp loại NCC (mục 11.3): xem cần quyền xem tham số; thêm/sửa/xóa cần quyền quản lý tham số, làm việc ở tổng công ty.
         var ratings = app.MapGroup("/api/supplier-rating-rules").WithTags("Tham số");
         ratings.MapGet("/", (ISupplierRatingAdministration s, CancellationToken ct) => s.ListAsync(ct))

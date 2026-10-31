@@ -19,8 +19,12 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - In phiếu PDF (design.md mục 10.10): PO, PR, phiếu nhập mua, trả NCC, chuyển kho, xuất bán / nhập mua nội bộ – nút "In phiếu" (Ctrl+P)
   trên mọi phiếu đã lưu, có số tiền bằng chữ và ô ký tên. Thư viện PDFsharp-MigraDoc 6.2.4 (MIT, ghim bản – bản mới hơn là AGPL).
   API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`.
+- Trang chủ (design.md mục 11.4): ô số liệu của công ty đang làm việc theo quyền – phiếu chờ duyệt, PR chưa xử lý, PO chờ giao/trễ,
+  RFQ, chứng từ kho nháp, hàng dưới tồn tối thiểu, lô hết hạn/sắp hết hạn, hàng đi đường, kỳ kho; mua hàng tháng này so với tháng trước,
+  top 5 NCC. Bấm ô mở màn hình chi tiết. API `GET /api/dashboard`.
 
 ### Thay đổi
+- Số đếm trên cây điều hướng là số thật (trước đây là dữ liệu mẫu), tự cập nhật; bỏ số thông báo giả trên thanh menu.
 - Image Docker cài thêm phông `fonts-dejavu-core` để in PDF tiếng Việt. Máy chủ không dùng Docker cần có Arial, DejaVu Sans hoặc
   Liberation Sans, hoặc khai báo thư mục phông ở `Printing:FontDirectories`.
 

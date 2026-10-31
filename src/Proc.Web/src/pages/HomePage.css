@@ -1,0 +1,35 @@
+/* Trang chủ (design.md mục 11.4): lưới ô số liệu gọn, mật độ cao kiểu ứng dụng desktop. */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.home-tile {
+  cursor: pointer;
+}
+
+.home-tile-note {
+  font-size: var(--ant-font-size-sm);
+  color: var(--ant-color-text-secondary);
+}
+
+.home-spend {
+  max-width: 820px;
+}
+
+.home-spend-totals {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 8px;
+}
+
+.home-health {
+  margin-top: 4px;
+}
