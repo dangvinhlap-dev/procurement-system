@@ -1,5 +1,5 @@
 /*
- * Kiểu của DataGrid theo ui-guide.md mục 5 (bảng Fiori Horizon).
+ * Kiểu nền của DataGrid; kẻ ô, tiêu đề cột, phông số kiểu ERP cổ điển ghi đè ở src/classic/classic-app.css (docs/ui-style.md mục 5).
  * Màu lấy từ biến CSS mà antd sinh ra từ theme token (src/theme.ts); không viết màu cứng.
  */
 

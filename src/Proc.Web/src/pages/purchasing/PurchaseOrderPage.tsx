@@ -22,7 +22,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
-import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { useApprovalCommands } from './useApprovalCommands'
 
@@ -334,7 +334,7 @@ export function PurchaseOrderPage() {
       width: 115,
       render: (field) => (
         <Form.Item name={[field.name, 'deliveryDate']} noStyle>
-          <DatePicker variant="borderless" format="DD/MM/YYYY" style={{ width: '100%' }} aria-label={`Ngày giao dòng ${field.name + 1}`} />
+          <DatePicker variant="borderless" format={DATE_INPUT_FORMATS} style={{ width: '100%' }} aria-label={`Ngày giao dòng ${field.name + 1}`} />
         </Form.Item>
       ),
     },
@@ -379,7 +379,7 @@ export function PurchaseOrderPage() {
         header={
           <>
             <Form.Item label="Ngày đặt hàng" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true, message: 'Chọn nhà cung cấp.' }]} extra="Chỉ NCC đã duyệt và đang áp dụng tại công ty.">
               <Select
@@ -393,7 +393,7 @@ export function PurchaseOrderPage() {
                 options={(warehouses.data ?? []).filter((w) => w.isActive || w.id === doc?.warehouseId).map((w) => ({ value: w.id, label: `${w.code} – ${w.name}` }))} />
             </Form.Item>
             <Form.Item label="Ngày giao dự kiến" name="expectedDate">
-              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item label="Điều khoản thanh toán" name="paymentTerms" rules={[{ max: 200 }]}>
               <Input />

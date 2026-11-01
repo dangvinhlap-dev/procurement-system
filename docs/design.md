@@ -1059,8 +1059,9 @@ Danh sách phiên bản xem trên GitHub ở mục **Tags** của repo.
 **Từ 01/11/2026** giao diện theo **phong cách ERP desktop cổ điển**; toàn văn ở `docs/ui-style.md` (ảnh mẫu `docs/imageSAP.png`, chỉ học phong
 cách). Bố cục chứng từ: thanh menu chữ → thanh công cụ icon (màu theo mức quan trọng) → tiêu đề → thanh lệnh phụ → header một dòng → tab
 (chữ in hoa) → lưới dòng hàng nhập như Excel (co giãn cột, Enter xuống dòng) → thanh trạng thái. Component dùng chung ở
-`src/Proc.Web/src/classic/`; màn hình mẫu `/thu-giao-dien/tao-po`. Các mục 17.1–17.x dưới đây mô tả giao diện Fiori của các màn hình
-chưa chuyển đổi, giữ để đối chiếu.
+`src/Proc.Web/src/classic/`; màn hình mẫu `/thu-giao-dien/tao-po`. Toàn bộ màn hình đã chuyển qua khung dùng chung (ui-style.md mục 8).
+Các mục 17.1–17.x dưới đây vẫn đúng về **chức năng** khung (menu module, ô lệnh, cây điều hướng, danh sách, chứng từ); kích thước và hình
+khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32px, không đổ bóng, bo 2px).
 
 Từ 31/10/2026 đến 01/11/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
 Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica

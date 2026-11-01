@@ -1,12 +1,7 @@
 import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
 import type { CSSProperties } from 'react'
-
-/**
- * Các kiểu gõ ngày được chấp nhận; kiểu đầu tiên là kiểu hiển thị (dd/MM/yyyy – CLAUDE.md mục 5).
- * Kiểu "DDMMYYYY" cho gõ nhanh không cần dấu "/": "05122026" → 05/12/2026.
- */
-const DATE_FORMATS = ['DD/MM/YYYY', 'DDMMYYYY', 'D/M/YYYY', 'DD.MM.YYYY', 'DD-MM-YYYY']
+import { DATE_INPUT_FORMATS } from '../utils/format'
 
 /**
  * Ô ngày: gõ tay hoặc chọn trên lịch (docs/ui-style.md mục 5). Dùng DatePicker của antd thay cho input type="date"
@@ -39,7 +34,7 @@ export function DateInput({
       style={style}
       className="erp-date"
       variant={borderless ? 'borderless' : 'outlined'}
-      format={DATE_FORMATS}
+      format={DATE_INPUT_FORMATS}
       placeholder="dd/mm/yyyy"
       value={value ? dayjs(value) : null}
       onChange={(d) => onChange(d ? d.format('YYYY-MM-DD') : null)}

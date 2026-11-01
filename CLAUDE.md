@@ -7,7 +7,7 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 Đọc đúng mục liên quan trước khi làm (dùng grep tìm mục, không đọc cả file):
 - Nghiệp vụ, form, CSDL, lộ trình: `docs/design.md` (bản gốc của thiết kế).
 - Giao diện: `docs/ui-style.md` – phong cách ERP desktop cổ điển (nạp sẵn ở cuối file này); ảnh mẫu `docs/imageSAP.png`.
-  `docs/ui-guide.md` (Fiori) chỉ để đối chiếu các màn hình chưa chuyển.
+  `docs/ui-guide.md` (Fiori) chỉ còn là lịch sử/tham chiếu hành vi.
 - Khi phát hành hoặc quay lại phiên bản cũ: đọc `docs/phat-hanh.md` (bắt buộc làm đủ các bước trong đó).
 - Khi sửa cách triển khai (Docker, Windows/IIS), cấu hình, đường dẫn file: đọc `docs/deploy-windows.md` và README mục "Triển khai server".
 - Khi chạy, cài đặt, gỡ rối môi trường dev (chuỗi kết nối, cổng, migration, lỗi khóa file): đọc `docs/moi-truong-dev.md`.
@@ -94,16 +94,17 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 
 ## 9. Giao diện (bắt buộc)
 - Từ 01/11/2026: **phong cách ERP desktop cổ điển** theo `docs/ui-style.md` (ảnh mẫu `docs/imageSAP.png` – chỉ học phong cách, không dùng
-  logo/tên/nhận diện thương hiệu). Thay cho SAP Fiori (`docs/ui-guide.md` chỉ còn để đối chiếu màn hình chưa chuyển). Giữ React + Ant Design.
-- Mọi màn hình mới hoặc màn hình đang sửa dùng component trong `src/Proc.Web/src/classic/`: `ClassicScreen`, `MenuBar`, `Toolbar`,
-  `ScreenTitle`, `CommandBar`/`CommandButton`, `HeaderFields`/`Field`/`Section`, `TabStrip`, `EntryGrid`/`SummaryRow`/`GridButtons`,
-  `StatusLight`, `StatusBar`, `DateInput`. Mẫu chuẩn: màn hình `/thu-giao-dien/tao-po`. Không tự tạo bố cục riêng cho từng màn hình;
-  thiếu component (ví dụ danh sách, tìm kiếm) thì bổ sung vào `classic/` và `docs/ui-style.md` trước.
-- Màn hình cũ (Fiori: `AppShell`, `ListPage`, `DataGrid`, `DocumentForm`) giữ nguyên đến khi chuyển đổi theo lát riêng;
-  không trộn hai phong cách trong một màn hình.
-- Màu, cỡ chữ, khoảng cách lấy từ biến `--erp-*` (`classic.css`) và `classicTheme.ts`; không viết màu cứng trong component.
-  Icon có màu theo mức quan trọng (`tone`: đỏ/xanh lá/vàng); mọi ô ngày dùng `DateInput` (gõ tay hoặc chọn lịch); cột lưới co giãn được;
-  chữ tab in hoa.
+  logo/tên/nhận diện thương hiệu). Thay cho SAP Fiori (`docs/ui-guide.md` chỉ còn là lịch sử). Giữ React + Ant Design.
+- Toàn bộ ứng dụng đã mang phong cách cổ điển (01/11/2026) qua khung dùng chung: mọi trang nằm trong `AppShell` (thanh menu chữ + thanh
+  công cụ + cây điều hướng); mọi danh sách dùng `ListPage` + `DataGrid`; mọi chứng từ dùng `DocumentForm` + `LineGrid` (design.md mục 10.1);
+  ngăn kéo chi tiết dùng `DetailDrawer`. Hình khối cổ điển của các component này nằm ở `src/classic/classic-app.css` + `src/theme.ts`.
+  Không tự tạo bố cục riêng cho từng màn hình.
+- Component trong `src/Proc.Web/src/classic/` (`TabStrip`, `EntryGrid`/`SummaryRow`/`GridButtons`, `StatusLight`, `StatusBar`, `DateInput`,
+  `HeaderFields`/`Field`/`Section`, `CommandButton`, `ClassicScreen`…) dùng khi màn hình cần đúng các thành phần đó; mẫu chuẩn về hình thức:
+  `/thu-giao-dien/tao-po`. Thiếu thành phần thì bổ sung vào `classic/` và `docs/ui-style.md` trước.
+- Màu, cỡ chữ, khoảng cách lấy từ theme token (`src/theme.ts`) và biến `--erp-*` (`classic-app.css`, `classic.css`); không viết màu cứng trong
+  component. Icon trong nút tự có màu theo mức quan trọng (đỏ: xóa/hủy/đóng/ngừng/bỏ ghi sổ; xanh lá: lưu/thêm/duyệt/gửi; vàng: còn lại);
+  mọi ô ngày dùng `format={DATE_INPUT_FORMATS}` (gõ tay hoặc chọn lịch) hoặc `DateInput`; cột lưới co giãn được; chữ tab in hoa.
 - Làm xong một màn hình: chạy lên, chụp bằng Playwright, đối chiếu `docs/ui-style.md`, sửa đến khi đúng quy chuẩn.
   Khi tôi đưa ảnh mẫu mới vào `docs/`, làm theo đúng ảnh đó.
 

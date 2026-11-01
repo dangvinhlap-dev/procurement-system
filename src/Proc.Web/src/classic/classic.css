@@ -398,12 +398,6 @@
   cursor: col-resize;
 }
 
-/* Gắn vào body chỉ trong lúc đang kéo cột (EntryGrid.startResize). */
-body.erp-col-resizing {
-  cursor: col-resize;
-  user-select: none;
-}
-
 .erp-grid__resizer:hover {
   background: var(--erp-input-focus);
 }

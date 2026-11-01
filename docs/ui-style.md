@@ -1,9 +1,9 @@
 # Design system – phong cách ERP desktop cổ điển
 
 > **Chính thức từ 01/11/2026** (người dùng duyệt bản thử). Thay cho `docs/ui-guide.md` (SAP Fiori Horizon) – tài liệu đó chỉ còn để đối chiếu
-> các màn hình chưa chuyển. Mọi màn hình mới hoặc đang sửa dùng component trong `src/Proc.Web/src/classic/` (CLAUDE.md mục 9);
+> lịch sử. Toàn bộ màn hình đã chuyển qua khung dùng chung (mục 8); màn hình mới làm theo CLAUDE.md mục 9;
 > màn hình mẫu chuẩn: `/thu-giao-dien/tao-po` (`src/Proc.Web/src/classic/preview/CreatePurchaseOrderPreview.tsx`).
-> Các màn hình Fiori cũ chuyển dần theo lát riêng; không trộn hai phong cách trong một màn hình.
+> Không trộn phong cách khác vào một màn hình.
 
 Ảnh tham khảo: `docs/imageSAP.png` (màn hình tạo đơn mua hàng của một ERP desktop). **Chỉ học phong cách** – không dùng logo, tên,
 biểu tượng hay nhận diện thương hiệu của hãng nào; mọi chữ trên giao diện là tiếng Việt của phần mềm này.
@@ -109,5 +109,21 @@ Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
 
 - Các quy tắc ở CLAUDE.md mục 5 (tiếng Việt, ngày, số, tìm có dấu/không dấu) giữ nguyên.
 - Thay thế `docs/ui-guide.md` (Fiori: chữ 14px, bo 8px, đổ bóng, Shellbar, Dynamic Page) từ 01/11/2026.
-- Chưa có quy chuẩn cổ điển cho: màn hình danh sách (tìm, lọc, xuất Excel), khung điều hướng chung, đăng nhập – bổ sung vào tài liệu này
-  khi làm lát chuyển đổi tương ứng.
+- Đăng nhập chưa đổi (vẫn thẻ trắng giữa nền) – bổ sung khi có yêu cầu.
+
+## 8. Áp dụng cho toàn ứng dụng (01/11/2026)
+
+Mọi màn hình đổi sang phong cách này qua khung dùng chung, không viết lại từng trang:
+
+| Thành phần | Cách đổi |
+| --- | --- |
+| Token antd (chữ, màu, bo góc, chiều cao, nút, tab, bảng, hộp thoại) | `src/theme.ts` |
+| Khung `AppShell`: hàng 1 menu module chữ, hàng 2 ô lệnh + công ty + thông báo + người dùng (54px); cây điều hướng 22px/dòng | `classic-app.css` |
+| `ListPage` + `DataGrid`: tiêu đề 18px xanh đậm, lưới kẻ ô, dòng 22px, cột số phông đơn cách, dòng chọn vàng nhạt, đèn trạng thái ô vuông, co giãn cột | `classic-app.css` |
+| `DocumentForm` + `LineGrid`: khối "Thông tin phiếu" có dải tiêu đề, lưới dòng kẻ ô co giãn cột, thanh chân dải màu | `classic-app.css`, `LineGrid.tsx` |
+| `DetailDrawer`, hộp thoại: thanh tiêu đề dải màu, viền 1px | `classic-app.css` |
+| Tab mọi nơi: ô vuông xanh, tab chọn đậm, chữ in hoa | `classic-app.css` |
+| Nút: nền be viền nâu (cả nút chính và nút chữ trên thanh lệnh); icon tô màu theo mức quan trọng | `classic-app.css` |
+| Ô ngày: `DATE_INPUT_FORMATS` (`utils/format.ts`) – gõ dd/MM/yyyy, ddMMyyyy, d/M/yyyy hoặc chọn lịch | các trang |
+
+Không còn hiệu ứng chuyển động (`motion: false`).

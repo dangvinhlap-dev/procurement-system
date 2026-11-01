@@ -19,7 +19,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
-import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { useApprovalCommands } from './useApprovalCommands'
 
@@ -218,7 +218,7 @@ export function PurchaseRequestPage() {
       width: 115,
       render: (field) => (
         <Form.Item name={[field.name, 'neededDate']} noStyle>
-          <DatePicker variant="borderless" format="DD/MM/YYYY" style={{ width: '100%' }} aria-label={`Ngày cần dòng ${field.name + 1}`} />
+          <DatePicker variant="borderless" format={DATE_INPUT_FORMATS} style={{ width: '100%' }} aria-label={`Ngày cần dòng ${field.name + 1}`} />
         </Form.Item>
       ),
     },
@@ -264,7 +264,7 @@ export function PurchaseRequestPage() {
       header={
         <>
           <Form.Item label="Ngày đề nghị" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             label="Bộ phận đề nghị"
@@ -287,7 +287,7 @@ export function PurchaseRequestPage() {
             <Input />
           </Form.Item>
           <Form.Item label="Ngày cần hàng" name="neededDate">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Kho nhận dự kiến" name="warehouseId">
             <Select allowClear showSearch={{ optionFilterProp: 'label' }}

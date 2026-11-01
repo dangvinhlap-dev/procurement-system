@@ -1,4 +1,4 @@
-/* Kiểu của ListPage theo Dynamic Page của Fiori Horizon (ui-guide.md mục 4, 5); màu, bo góc, đổ bóng lấy từ biến token của antd. */
+/* Kiểu nền của ListPage; hình khối ERP cổ điển (không đổ bóng, viền 1px) ghi đè ở src/classic/classic-app.css (docs/ui-style.md). Màu từ biến token antd. */
 
 .list-page {
   display: flex;

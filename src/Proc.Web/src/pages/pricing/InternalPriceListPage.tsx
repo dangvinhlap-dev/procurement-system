@@ -16,7 +16,7 @@ import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { vnNumberInput } from '../../utils/format'
+import { vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 
 const columns: GridColumn<InternalPrice>[] = [
   { key: 'code', title: 'Mã hàng', width: 130, value: (r) => r.itemCode },
@@ -175,10 +175,10 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
                 <Select options={[{ value: '', label: 'Theo mặt hàng' }, ...vatOptions]} />
               </Form.Item>
               <Form.Item label="Hiệu lực từ" name="validFrom" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
               </Form.Item>
               <Form.Item label="Hiệu lực đến" name="validTo" extra="Trống = tới khi có giá mới.">
-                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
               </Form.Item>
               <Form.Item label="Ghi chú" name="note" rules={[{ max: 500 }]}>
                 <Input />

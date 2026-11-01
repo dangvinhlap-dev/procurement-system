@@ -1,5 +1,5 @@
-/* Ngăn kéo chi tiết kiểu Fiori Horizon (ui-guide.md mục 3, 6): tiêu đề 16px/600, hàng nút lệnh, tab dạng gạch dưới, khối nhóm trường
-   trắng bo góc 8px; màu lấy từ biến token của antd. */
+/* Ngăn kéo chi tiết – kiểu nền; tiêu đề dải màu, tab ô vuông in hoa, khối viền 1px kiểu ERP cổ điển ghi đè ở src/classic/classic-app.css
+   (docs/ui-style.md); màu lấy từ biến token của antd. */
 
 .detail-drawer .ant-drawer-header {
   padding: 16px;

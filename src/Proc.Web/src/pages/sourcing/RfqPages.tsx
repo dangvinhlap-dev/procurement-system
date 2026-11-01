@@ -26,7 +26,7 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -486,13 +486,13 @@ export function RfqPage() {
         header={
           <>
             <Form.Item label="Ngày lập" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề.' }, { max: 200 }]}>
               <Input />
             </Form.Item>
             <Form.Item label="Hạn nộp báo giá" name="deadline" rules={[{ required: true, message: 'Chọn hạn nộp.' }]}>
-              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
             </Form.Item>
             {weight('priceWeight', 'Trọng số giá (%)')}
             {weight('qualityWeight', 'Trọng số chất lượng (%)')}
@@ -771,10 +771,10 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
       >
         <Space wrap align="start">
           <Form.Item label="Ngày báo giá" name="quoteDate" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format="DD/MM/YYYY" />
+            <DatePicker format={DATE_INPUT_FORMATS} />
           </Form.Item>
           <Form.Item label="Hiệu lực đến" name="validUntil">
-            <DatePicker format="DD/MM/YYYY" />
+            <DatePicker format={DATE_INPUT_FORMATS} />
           </Form.Item>
           <Form.Item label="Điều kiện thanh toán" name="paymentTerms" rules={[{ max: 200 }]} style={{ width: 260 }}>
             <Input />

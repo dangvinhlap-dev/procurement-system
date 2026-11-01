@@ -23,7 +23,7 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { formatDateTime, vnNumberInput } from '../../utils/format'
+import { formatDateTime, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 
 const LIST_PATH = '/dau-thau/tim-nguon'
 
@@ -287,7 +287,7 @@ export function SourcingPage() {
       header={
         <>
           <Form.Item label="Ngày lập" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             label="Mặt hàng"
@@ -319,7 +319,7 @@ export function SourcingPage() {
             <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} precision={4} />
           </Form.Item>
           <Form.Item label="Hạn chót" name="deadline">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Người phụ trách" name="responsible" rules={[{ max: 200 }]}>
             <Input />

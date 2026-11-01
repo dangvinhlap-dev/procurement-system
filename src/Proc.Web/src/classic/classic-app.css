@@ -1,0 +1,581 @@
+/*
+ * Phong cách ERP desktop cổ điển cho TOÀN ỨNG DỤNG (docs/ui-style.md, chính thức từ 01/11/2026).
+ * Nạp sau CSS của các component dùng chung (main.tsx) để đổi hình khối của AppShell, ListPage, DataGrid, DocumentForm, DetailDrawer
+ * và các component antd sang phong cách cổ điển mà không phải viết lại từng màn hình.
+ * Màu lấy từ biến token antd (--ant-*, src/theme.ts) và biến --erp-* khai báo dưới đây (trùng giá trị với classic.css);
+ * không viết màu cứng trong component.
+ */
+:root {
+  --erp-bar-bg-top: #eef3f9;
+  --erp-bar-bg-bottom: #d6e1ee;
+  --erp-bar-border: #a9bbd1;
+  --erp-title: #1f3d6b;
+  --erp-tab-bg: #b9cde8;
+  --erp-tab-active: #7fa2d1;
+  --erp-btn-bg: #f3efdf;
+  --erp-btn-bg-hover: #fbf8ec;
+  --erp-btn-border: #b5a97f;
+  --erp-btn-border-strong: #8f845e;
+  --erp-grid-head: #d3ddea;
+  --erp-grid-line: #b8c5d6;
+  --erp-grid-selected: #fff6c8;
+  --erp-panel-bg: #f4f7fb;
+  --erp-subtotal: #2a5db0;
+  --erp-required: #b00e12;
+  --erp-icon-danger: #d0281e;
+  --erp-icon-success: #1e8f2e;
+  --erp-icon-warning: #c48a00;
+  --erp-font-mono: Consolas, 'Courier New', monospace;
+}
+
+/* Gắn vào body chỉ trong lúc đang kéo đổi độ rộng cột (EntryGrid, LineGrid) – giữ con trỏ kéo ngang, không bôi đen chữ. */
+body.erp-col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ================= Khung ứng dụng: thanh menu chữ + thanh công cụ ================= */
+/*
+ * Shellbar cũ một hàng được xếp lại thành hai hàng kiểu desktop:
+ * hàng 1 – logo + menu module (Hằng ngày, Mua hàng, Kho…); hàng 2 – ô lệnh, công ty, thông báo, người dùng.
+ */
+.app-shell-bar {
+  display: grid;
+  grid-template-columns: minmax(160px, 360px) 1fr;
+  grid-template-rows: var(--app-menu-bar-height) 1fr;
+  align-items: center;
+  gap: 0 8px;
+  padding: 0 4px;
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+  box-shadow: none;
+}
+/* Vạch ngăn giữa hàng menu và hàng công cụ. */
+.app-shell-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--app-menu-bar-height);
+  border-top: 1px solid var(--erp-bar-border);
+}
+.app-shell-start {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  gap: 2px;
+}
+.app-command-box {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+.app-shell-end {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  gap: 4px;
+}
+.app-shell-brand {
+  height: 20px;
+  padding: 0 6px;
+  gap: 4px;
+}
+.app-shell-logo {
+  width: 18px;
+  height: 16px;
+  font-size: 9px;
+  background: var(--erp-title);
+}
+.app-shell-title {
+  font-size: var(--ant-font-size);
+  color: var(--erp-title);
+}
+/* Mục menu chữ: viền xuất hiện khi rê chuột như menu desktop. */
+.app-shell-menu-item {
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+}
+.app-shell-menu-item:hover,
+.app-shell-menu-item.ant-dropdown-open {
+  border-color: var(--erp-bar-border);
+  background: var(--ant-color-bg-container);
+}
+.app-shell-menu-item.is-active {
+  color: var(--erp-title);
+  font-weight: 700;
+  box-shadow: none;
+  text-decoration: underline;
+}
+.app-shell-user {
+  height: 24px;
+  padding: 0 2px;
+  border-radius: var(--ant-border-radius);
+}
+.app-shell-avatar.ant-avatar {
+  font-size: 10px;
+  background: var(--erp-title);
+}
+
+/* ================= Cây điều hướng trái ================= */
+.app-nav {
+  background: var(--erp-panel-bg);
+  border-right: 1px solid var(--erp-bar-border);
+}
+.app-nav-head {
+  height: 24px;
+  padding: 0 4px 0 8px;
+  background: var(--erp-grid-head);
+  border-bottom: 1px solid var(--erp-grid-line);
+  font-weight: 700;
+}
+.app-nav-icon {
+  width: 20px;
+  height: 20px;
+}
+.app-nav-scroll {
+  padding: 2px 0;
+}
+.app-nav-group + .app-nav-group {
+  margin-top: 2px;
+  padding-top: 2px;
+}
+.app-nav-group-head,
+.app-nav-item {
+  width: calc(100% - 4px);
+  margin: 0 2px;
+  border-radius: 0;
+  gap: 4px;
+}
+.app-nav-group-head {
+  color: var(--erp-title);
+  font-size: var(--ant-font-size);
+  font-weight: 700;
+}
+.app-nav-item {
+  padding: 0 4px 0 18px;
+}
+.app-nav-item.is-active,
+.app-nav-item.is-active:hover {
+  color: var(--erp-title);
+  font-weight: 700;
+}
+.app-nav-item.is-active::before {
+  top: 0;
+  bottom: 0;
+  border-radius: 0;
+  background: var(--erp-title);
+}
+.app-nav-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 0;
+  background: var(--ant-color-bg-container);
+  font-size: var(--ant-font-size-sm);
+  line-height: 14px;
+}
+.app-nav-count.is-attention {
+  border-color: var(--ant-color-error);
+}
+
+/* ================= Danh sách (ListPage) ================= */
+.dyn-header {
+  gap: 4px;
+  padding: 4px 8px 0;
+  background: transparent;
+  box-shadow: none;
+}
+.list-page .list-page-title,
+.document-form-title h2 {
+  font-size: var(--ant-font-size-heading-4);
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--erp-title);
+}
+.list-page-total {
+  margin-top: -2px;
+  line-height: 14px;
+}
+.dyn-header-toggle {
+  bottom: -10px;
+  box-shadow: none;
+}
+.list-page-actions {
+  gap: 4px;
+}
+.list-filter-bar {
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--erp-bar-border);
+}
+.list-filter-field {
+  gap: 1px;
+}
+.list-page-panel {
+  gap: 4px;
+  margin: 8px 8px 8px;
+  padding: 4px;
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--erp-panel-bg);
+}
+.list-hidden-count {
+  background: var(--erp-title);
+}
+
+/* ================= Lưới danh sách (DataGrid) ================= */
+.data-grid-wrap {
+  gap: 4px;
+}
+.data-grid-group-zone {
+  min-height: 22px;
+  border-radius: 0;
+}
+.data-grid {
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 0;
+}
+/* Kẻ ô đủ dọc ngang 1px như lưới desktop. */
+.data-grid .ant-table-thead > tr > th {
+  border-right: 1px solid var(--erp-grid-line);
+  border-bottom: 1px solid var(--erp-grid-line);
+  color: var(--ant-color-text);
+  font-weight: 400;
+}
+.data-grid .ant-table-thead > tr > th::before {
+  display: none;
+}
+.data-grid .ant-table-tbody .ant-table-cell,
+.data-grid .ant-table-tbody-virtual .ant-table-cell {
+  border-right: 1px solid var(--erp-grid-line);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+/* Cột số (căn phải) dùng phông đơn cách (docs/ui-style.md mục 3). */
+.data-grid .ant-table-tbody .ant-table-cell[style*='right'],
+.data-grid .ant-table-tbody-virtual .ant-table-cell[style*='right'] {
+  font-family: var(--erp-font-mono);
+}
+.data-grid .data-grid-row.is-alt > .ant-table-cell {
+  background: var(--ant-color-bg-container);
+}
+.data-grid .data-grid-row.is-selected > .ant-table-cell {
+  background: var(--erp-grid-selected);
+}
+.data-grid .data-grid-group-row > .ant-table-cell {
+  background: var(--erp-grid-head);
+  font-weight: 700;
+}
+/* Đèn trạng thái ô vuông thay chấm tròn. */
+.data-grid-status {
+  gap: 4px;
+  font-weight: 400;
+}
+.data-grid-status-dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(27, 42, 58, 0.35);
+  border-radius: 0;
+}
+.data-grid-status.tone-neutral .data-grid-status-dot {
+  background: var(--ant-color-bg-container);
+}
+.data-grid-status.tone-warning .data-grid-status-dot {
+  background: var(--ant-color-warning-border);
+}
+
+/* ================= Chứng từ (DocumentForm, LineGrid) ================= */
+.document-form-head {
+  gap: 8px;
+  padding: 4px 8px;
+  background: transparent;
+  border-bottom: 1px solid var(--erp-bar-border);
+  box-shadow: none;
+}
+.document-form-title {
+  gap: 12px;
+}
+.document-form-number {
+  color: var(--erp-title);
+  font-family: var(--erp-font-mono);
+}
+.document-form-actions {
+  gap: 4px;
+}
+.document-form-content {
+  gap: 6px;
+  padding: 6px 8px;
+}
+.document-form-header {
+  margin-bottom: 6px;
+  padding: 0 6px 4px;
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--erp-panel-bg);
+}
+.document-form-header-title {
+  margin: 0 -6px 4px;
+  padding: 0 6px;
+  background: var(--erp-grid-head);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+.document-form-header-title h3 {
+  font-size: var(--ant-font-size-heading-5);
+  font-weight: 700;
+  color: var(--ant-color-text);
+}
+.document-form-header.is-collapsed .document-form-header-title {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.document-form-grid {
+  gap: 0 12px;
+}
+.document-form-grid .ant-form-item {
+  margin-bottom: 4px;
+}
+.document-form-bar {
+  gap: 4px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--erp-bar-border);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  box-shadow: none;
+}
+.document-form-tabs > .ant-tabs-nav {
+  margin-bottom: 0;
+}
+.document-form-tabs > .ant-tabs-content-holder,
+.detail-drawer-tabs > .ant-tabs-content-holder {
+  padding: 6px;
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--erp-panel-bg);
+}
+.line-grid {
+  border: 1px solid var(--erp-grid-line);
+  background: var(--ant-color-bg-container);
+}
+.line-grid th {
+  position: relative;
+  padding: 0 4px;
+  height: var(--app-line-row-height);
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-grid-head);
+  color: var(--ant-color-text);
+  font-size: var(--ant-font-size);
+  font-weight: 400;
+}
+.line-grid td {
+  border: 1px solid var(--erp-grid-line);
+  padding: 0 2px;
+}
+.line-grid tbody tr:nth-child(even) {
+  background: transparent;
+}
+.line-grid td:focus-within {
+  outline: 1px solid var(--ant-color-primary);
+  outline-offset: -1px;
+}
+.line-grid td .ant-input-number-input,
+.document-total-value {
+  font-family: var(--erp-font-mono);
+}
+/* Ô nhập trong lưới dòng: thấp gọn theo dòng 22px. */
+.line-grid td .ant-input,
+.line-grid td .ant-input-number,
+.line-grid td .ant-select-selector,
+.line-grid td .ant-picker {
+  min-height: calc(var(--app-line-row-height) - 2px);
+}
+.line-grid-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+}
+.line-grid-resize-handle:hover {
+  background: var(--ant-color-primary);
+}
+.document-form-footer {
+  gap: 16px;
+  padding: 2px 4px;
+  border-top: none;
+}
+.document-total-strong {
+  color: var(--erp-subtotal);
+}
+
+/* ================= Ngăn kéo chi tiết, hộp thoại ================= */
+.detail-drawer .ant-drawer-header,
+.ant-modal .ant-modal-header {
+  margin: 0;
+  padding: 4px 8px;
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+.detail-drawer .ant-drawer-title {
+  font-size: var(--ant-font-size-heading-5);
+  font-weight: 700;
+  color: var(--erp-title);
+}
+.detail-drawer .ant-drawer-body {
+  padding: 6px 8px;
+}
+.detail-drawer-actions {
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.ant-modal .ant-modal-content {
+  padding: 0;
+  border: 1px solid var(--erp-bar-border);
+}
+.ant-modal .ant-modal-body {
+  padding: 8px;
+}
+.ant-modal .ant-modal-footer {
+  margin: 0;
+  padding: 4px 8px;
+  border-top: 1px solid var(--erp-grid-line);
+  background: var(--erp-panel-bg);
+}
+.ant-modal .ant-modal-close {
+  top: 4px;
+  inset-inline-end: 6px;
+  width: 18px;
+  height: 18px;
+}
+.ant-modal-confirm .ant-modal-body {
+  padding: 12px;
+}
+.ant-card {
+  border: 1px solid var(--erp-grid-line);
+  box-shadow: none;
+}
+.ant-card .ant-card-head {
+  min-height: 24px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+.ant-card .ant-card-body {
+  padding: 8px;
+}
+
+/* ================= Tab ô vuông, chữ in hoa (docs/ui-style.md mục 5a) ================= */
+.ant-tabs-top > .ant-tabs-nav::before {
+  border-bottom-color: var(--erp-grid-line);
+}
+.ant-tabs-top > .ant-tabs-nav .ant-tabs-tab {
+  height: 22px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-grid-line);
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+  background: var(--erp-tab-bg);
+  text-transform: uppercase;
+}
+.ant-tabs-top > .ant-tabs-nav .ant-tabs-tab-active {
+  background: var(--erp-tab-active);
+  font-weight: 700;
+}
+.ant-tabs .ant-tabs-tab-btn:focus-visible {
+  outline: 1px dotted var(--ant-color-text);
+  outline-offset: 1px;
+}
+
+/* ================= Nút lệnh: nền be, viền nâu xám ================= */
+/* Nút chính cũng nền be như mọi nút lệnh desktop, phân biệt bằng chữ đậm và viền đậm hơn. */
+.ant-btn.ant-btn-variant-solid.ant-btn-color-primary {
+  border-color: var(--erp-btn-border-strong);
+  background: var(--erp-btn-bg);
+  color: var(--ant-color-text);
+  font-weight: 700;
+}
+.ant-btn.ant-btn-variant-solid.ant-btn-color-primary:not(:disabled):hover {
+  background: var(--erp-btn-bg-hover);
+  color: var(--ant-color-text);
+}
+.ant-btn.ant-btn-variant-solid.ant-btn-color-primary:disabled {
+  background: var(--ant-color-bg-container-disabled);
+  border-color: var(--ant-color-border);
+  color: var(--ant-color-text-disabled);
+}
+.ant-btn:focus-visible {
+  outline: 1px dotted var(--ant-color-text) !important;
+  outline-offset: -3px !important;
+}
+
+/* Nút chữ trơn (type="text") ở các thanh lệnh cũng là nút lệnh nền be như desktop. */
+.list-page-actions .ant-btn-variant-text,
+.document-form-actions .ant-btn-variant-text,
+.document-form-bar .ant-btn-variant-text,
+.detail-drawer-actions .ant-btn-variant-text,
+.ant-modal-footer .ant-btn-variant-text,
+.line-grid-add.ant-btn {
+  border: 1px solid var(--erp-btn-border);
+  background: var(--erp-btn-bg);
+}
+.list-page-actions .ant-btn-variant-text:not(:disabled):hover,
+.document-form-actions .ant-btn-variant-text:not(:disabled):hover,
+.document-form-bar .ant-btn-variant-text:not(:disabled):hover,
+.detail-drawer-actions .ant-btn-variant-text:not(:disabled):hover,
+.ant-modal-footer .ant-btn-variant-text:not(:disabled):hover,
+.line-grid-add.ant-btn:not(:disabled):hover {
+  border-color: var(--erp-btn-border-strong);
+  background: var(--erp-btn-bg-hover);
+}
+
+/* ================= Icon theo mức quan trọng (docs/ui-style.md mục 2) ================= */
+/*
+ * Vàng: thao tác thường (mặc định cho mọi icon trong nút, thanh công cụ, menu).
+ * Đỏ: không hoàn tác được / mất dữ liệu đang nhập – xóa, hủy, đóng, ngừng, bỏ ghi sổ, đăng xuất.
+ * Xanh lá: ghi hoặc tạo dữ liệu – lưu, thêm, duyệt, gửi duyệt, nhập Excel, ghi nhận.
+ * Icon luôn đi cùng chữ hoặc chú thích (title), màu không là thông tin duy nhất.
+ */
+.ant-btn .anticon,
+.app-shell-end .anticon,
+.ant-dropdown-menu-item-icon {
+  color: var(--erp-icon-warning);
+  font-size: 14px;
+}
+.ant-btn .anticon-delete,
+.ant-btn .anticon-close,
+.ant-btn .anticon-close-circle,
+.ant-btn .anticon-stop,
+.ant-btn .anticon-rollback,
+.ant-btn .anticon-logout,
+.ant-btn-dangerous .anticon,
+.ant-dropdown-menu-item .anticon-logout,
+.ant-dropdown-menu-item-danger .anticon {
+  color: var(--erp-icon-danger);
+}
+.ant-btn .anticon-save,
+.ant-btn .anticon-plus,
+.ant-btn .anticon-plus-square,
+.ant-btn .anticon-file-add,
+.ant-btn .anticon-check,
+.ant-btn .anticon-check-circle,
+.ant-btn .anticon-send,
+.ant-btn .anticon-upload,
+.ant-btn .anticon-import,
+.ant-btn .anticon-file-done,
+.ant-btn .anticon-login {
+  color: var(--erp-icon-success);
+}
+.ant-btn:disabled .anticon {
+  color: inherit;
+  opacity: 0.6;
+}
+
+/* ================= Thông báo, thẻ ================= */
+.ant-alert {
+  padding: 2px 8px;
+}
+.ant-tag {
+  border-radius: 0;
+}

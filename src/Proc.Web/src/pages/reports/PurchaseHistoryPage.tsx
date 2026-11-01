@@ -14,7 +14,7 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
-import { formatDate, formatDateTime, formatMoney } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, DATE_INPUT_FORMATS } from '../../utils/format'
 
 /** Có / Không / trống (chưa đánh giá). */
 const yesNo = (value: boolean | null) => (value == null ? null : value ? 'Có' : 'Không')
@@ -164,7 +164,7 @@ export function PurchaseHistoryPage() {
             {(id) => (
               <DatePicker.RangePicker
                 id={id}
-                format="DD/MM/YYYY"
+                format={DATE_INPUT_FORMATS}
                 value={filter.from && filter.to ? [dayjs(filter.from), dayjs(filter.to)] : null}
                 onChange={(dates) => {
                   const [from, to] = (dates ?? []) as [Dayjs | null, Dayjs | null]
