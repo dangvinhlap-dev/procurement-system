@@ -2,19 +2,22 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Pricing;
+using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Pricing;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Pricing;
 
 /// <summary>
 /// Bảng giá NCC (design.md mục 8.1). Bảng giá thuộc công ty lập nên tự lọc theo công ty đang làm việc; bảng giá
 /// <c>IsGroupWide</c> của tổng công ty thì mọi công ty đọc được (chỉ đọc) – các truy vấn đó bỏ filter công ty có điều kiện
-/// IsGroupWide, ghi rõ tại chỗ.
+/// IsGroupWide, ghi rõ tại chỗ. Bảng giá phải duyệt mới hiệu lực (lát B1, design.md mục 8.5): duyệt tại công ty lập qua
+/// <see cref="ApprovalEngine"/>, theo quy trình loại PRL của công ty đó.
 /// </summary>
 public sealed class PriceListService : IPriceListService
 {
@@ -22,6 +25,10 @@ public sealed class PriceListService : IPriceListService
     private readonly ICurrentUserScope _scope;
     private readonly IDocumentNumberService _numbers;
     private readonly IClock _clock;
+    private readonly ApprovalEngine _approvals;
+
+    /// <summary>Số ngày trước ngày hết hiệu lực bắt đầu cảnh báo "sắp hết hiệu lực" (lát B1).</summary>
+    public const int ExpiryWarningDays = 30;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -34,12 +41,15 @@ public sealed class PriceListService : IPriceListService
         _scope = scope;
         _numbers = numbers;
         _clock = clock;
+        _approvals = new ApprovalEngine(db, scope, clock);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<PriceListListItemDto>> ListAsync(CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
+        var today = Today();
+        var warnUntil = today.AddDays(ExpiryWarningDays);
         return await (
                 from p in Visible().AsNoTracking()
                 join c in _db.Companies on p.CompanyId equals c.Id
@@ -47,7 +57,9 @@ public sealed class PriceListService : IPriceListService
                 orderby p.ValidFrom descending, p.No descending
                 select new PriceListListItemDto(
                     p.Id, p.No, p.Title, c.Code, p.IsGroupWide, s.Code, s.Name, p.ValidFrom, p.ValidTo, p.Status.ToString(), p.Lines.Count,
-                    p.CompanyId == companyId))
+                    p.CompanyId == companyId,
+                    // Cùng điều kiện với SupplierPriceList.ExpiresWithin, viết lại để EF dịch được sang SQL.
+                    p.Status == PriceListStatus.Active && p.ValidTo != null && p.ValidTo >= today && p.ValidTo <= warnUntil))
             .ToListAsync(cancellationToken);
     }
 
@@ -90,13 +102,44 @@ public sealed class PriceListService : IPriceListService
     }
 
     /// <inheritdoc />
-    public async Task<PriceListDto> ActivateAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<PriceListDto> SubmitAsync(Guid id, CancellationToken cancellationToken)
     {
         var list = await LoadOwnAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(list, cancellationToken);
-        // Kiểm tra lại lúc đưa vào hiệu lực: NCC có thể đã vào danh sách đen từ lúc soạn nháp.
+        // Kiểm tra lại lúc gửi: NCC có thể đã vào danh sách đen từ lúc soạn nháp.
         await CheckSupplierAsync(list.SupplierId, cancellationToken);
-        list.Activate(_clock.UtcNow);
+        await _approvals.SubmitAsync(list, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PriceListDto> ApproveAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken)
+    {
+        var list = await LoadOwnAsync(id, cancellationToken);
+        // Duyệt cấp cuối là đưa vào hiệu lực: không để bảng giá của NCC vừa vào danh sách đen có hiệu lực (design.md mục 5.8).
+        await CheckSupplierAsync(list.SupplierId, cancellationToken);
+        await _approvals.ApproveAsync(list, request.Comment, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PriceListDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken)
+    {
+        var list = await LoadOwnAsync(id, cancellationToken);
+        await _approvals.RejectAsync(list, request.Comment, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PriceListDto> RecallAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var list = await LoadOwnAsync(id, cancellationToken);
+        await EnsureItemsVisibleAsync(list, cancellationToken);
+        await _approvals.SkipPendingAsync(list, cancellationToken);
+        list.ReturnToDraft(null);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -142,15 +185,19 @@ public sealed class PriceListService : IPriceListService
 
     /// <summary>
     /// Bảng giá đọc được ở công ty đang làm việc: của công ty mình (filter công ty) cộng bảng toàn tập đoàn đã đưa vào hiệu lực của
-    /// công ty khác. Bỏ filter công ty ở nhánh thứ hai vì bảng toàn tập đoàn áp dụng cho mọi công ty (design.md mục 8.1); nháp của
-    /// công ty khác vẫn không thấy.
+    /// công ty khác. Bỏ filter công ty ở nhánh thứ hai vì bảng toàn tập đoàn áp dụng cho mọi công ty (design.md mục 8.1); nháp và bảng
+    /// đang chờ duyệt của công ty khác vẫn không thấy (chưa duyệt thì chưa công bố – lát B1).
     /// </summary>
     private IQueryable<SupplierPriceList> Visible()
     {
         var companyId = _scope.RequireCompany();
         return _db.SupplierPriceLists.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
-            .Where(p => p.CompanyId == companyId || (p.IsGroupWide && p.Status != PriceListStatus.Draft));
+            .Where(p => p.CompanyId == companyId
+                        || (p.IsGroupWide && (p.Status == PriceListStatus.Active || p.Status == PriceListStatus.Inactive)));
     }
+
+    /// <summary>Hôm nay theo giờ Việt Nam (CLAUDE.md mục 5).</summary>
+    private DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone).DateTime);
 
     private async Task<SupplierPriceList> LoadOwnAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -228,14 +275,22 @@ public sealed class PriceListService : IPriceListService
         string? readOnly = !own ? "Bảng giá toàn tập đoàn do công ty khác lập – chỉ xem."
             : items.Count < itemIds.Count ? "Bảng giá có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được."
             : !_scope.HasPermission(Permissions.Pricing.PriceListManage) ? "Bạn không có quyền thêm, sửa bảng giá." : null;
+        var canEdit = list.Status == PriceListStatus.Draft && readOnly is null;
+        // Người duyệt có thể chỉ có quyền xem + duyệt (không có quyền sửa) nên nút Duyệt tính riêng, không theo readOnly.
+        var canApprove = own && list.IsAwaitingApproval
+            && await _approvals.ApproveBlockerAsync(list, await _approvals.CurrentStepAsync(list, cancellationToken), cancellationToken) is null;
         var actions = new PriceListActions(
-            list.Status == PriceListStatus.Draft && readOnly is null,
-            list.Status == PriceListStatus.Draft && readOnly is null,
+            canEdit, canEdit, canApprove,
+            list.Status == PriceListStatus.Submitted && readOnly is null,
             list.Status == PriceListStatus.Active && readOnly is null,
             readOnly);
+        var today = Today();
+        // Công ty khác chỉ xem bảng toàn tập đoàn đã công bố – không cần (và không lộ) lịch sử duyệt nội bộ của công ty lập.
+        var approvals = own ? await _approvals.HistoryAsync(list.DocType, list.Id, cancellationToken) : [];
         return new PriceListDto(
             list.Id, list.No, list.Title, list.CompanyId, company, list.IsGroupWide, list.SupplierId, supplier.Code, supplier.Name, list.ValidFrom,
-            list.ValidTo, list.CurrencyCode, list.DeliveryTerms, list.Note, list.Status.ToString(), list.CreatedAt, createdBy, list.ActivatedAt, lines, actions);
+            list.ValidTo, list.CurrencyCode, list.DeliveryTerms, list.Note, list.Status.ToString(), list.CreatedAt, createdBy, list.ActivatedAt, lines, actions,
+            list.RejectReason, list.DaysToExpiry(today), list.ExpiresWithin(today, ExpiryWarningDays), approvals);
     }
 
     private static PriceListHeader ToHeader(SavePriceListRequest r) =>

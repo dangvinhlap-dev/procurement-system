@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { ApprovalStep } from './purchasing'
 
 /*
  * Kiểu dữ liệu và hàm gọi API bảng giá NCC, so sánh giá (khớp Proc.Application.Pricing – SupplierPrices.cs).
@@ -8,15 +9,16 @@ import { apiFetch } from './client'
 
 const useCompanyId = () => useAuth().workingCompany?.id ?? ''
 
-/** Trạng thái bảng giá NCC. */
-export type PriceListStatus = 'Draft' | 'Active' | 'Inactive'
+/** Trạng thái bảng giá NCC: Nháp → Chờ duyệt → Hiệu lực → Ngừng (lát B1 – design.md mục 8.5). */
+export type PriceListStatus = 'Draft' | 'Submitted' | 'Active' | 'Inactive'
 
 /** Nhãn trạng thái bảng giá. */
-export const priceListStatusLabels: Record<PriceListStatus, string> = { Draft: 'Nháp', Active: 'Hiệu lực', Inactive: 'Ngừng' }
+export const priceListStatusLabels: Record<PriceListStatus, string> = { Draft: 'Nháp', Submitted: 'Chờ duyệt', Active: 'Hiệu lực', Inactive: 'Ngừng' }
 
-/** Tông màu trạng thái bảng giá. */
+/** Tông màu trạng thái bảng giá (cùng cách với PR/PO: nháp xám, chờ duyệt vàng). */
 export const priceListStatusTone: Record<PriceListStatus, 'success' | 'warning' | 'neutral'> = {
-  Draft: 'warning',
+  Draft: 'neutral',
+  Submitted: 'warning',
   Active: 'success',
   Inactive: 'neutral',
 }
@@ -35,6 +37,8 @@ export interface PriceListListItem {
   status: PriceListStatus
   lineCount: number
   isOwn: boolean
+  /** Đang hiệu lực và còn ≤ 30 ngày tới ngày hết hạn. */
+  expiringSoon: boolean
 }
 
 /** Một dòng bảng giá. */
@@ -76,7 +80,22 @@ export interface PriceList {
   createdByName: string | null
   activatedAt: string | null
   lines: PriceListLine[]
-  actions: { canEdit: boolean; canActivate: boolean; canDeactivate: boolean; readOnlyReason: string | null }
+  actions: {
+    canEdit: boolean
+    canSubmit: boolean
+    canApprove: boolean
+    canRecall: boolean
+    canDeactivate: boolean
+    readOnlyReason: string | null
+  }
+  /** Lý do từ chối gần nhất. */
+  rejectReason: string | null
+  /** Số ngày còn tới ngày hết hiệu lực (null = không hạn). */
+  daysToExpiry: number | null
+  /** Đang hiệu lực và còn ≤ 30 ngày. */
+  expiringSoon: boolean
+  /** Lịch sử duyệt (công ty khác xem bảng toàn tập đoàn thì rỗng). */
+  approvals: ApprovalStep[]
 }
 
 /** Nội dung bảng giá gửi lên. */
@@ -115,7 +134,7 @@ export function usePriceList(id: string | null) {
   return useQuery({ queryKey: ['price-lists', companyId, id], queryFn: () => apiFetch<PriceList>(`/api/price-lists/${id}`), enabled: !!id })
 }
 
-/** Lập, sửa, đưa vào hiệu lực, ngừng bảng giá. */
+/** Lập, sửa, gửi duyệt, duyệt, từ chối, rút về nháp, ngừng bảng giá. */
 export function usePriceListMutations() {
   const queryClient = useQueryClient()
   const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['price-lists'] })
@@ -125,7 +144,18 @@ export function usePriceListMutations() {
       mutationFn: ({ id, input }: { id: string; input: SavePriceListInput }) => apiFetch<PriceList>(`/api/price-lists/${id}`, { method: 'PUT', body: input }),
       onSuccess,
     }),
-    activate: useMutation({ mutationFn: (id: string) => apiFetch<PriceList>(`/api/price-lists/${id}/activate`, { method: 'POST' }), onSuccess }),
+    submit: useMutation({ mutationFn: ({ id }: { id: string }) => apiFetch<PriceList>(`/api/price-lists/${id}/submit`, { method: 'POST' }), onSuccess }),
+    recall: useMutation({ mutationFn: ({ id }: { id: string }) => apiFetch<PriceList>(`/api/price-lists/${id}/recall`, { method: 'POST' }), onSuccess }),
+    approve: useMutation({
+      mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
+        apiFetch<PriceList>(`/api/price-lists/${id}/approve`, { method: 'POST', body: { comment: comment ?? null } }),
+      onSuccess,
+    }),
+    reject: useMutation({
+      mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
+        apiFetch<PriceList>(`/api/price-lists/${id}/reject`, { method: 'POST', body: { comment: comment ?? null } }),
+      onSuccess,
+    }),
     deactivate: useMutation({ mutationFn: (id: string) => apiFetch<PriceList>(`/api/price-lists/${id}/deactivate`, { method: 'POST' }), onSuccess }),
   }
 }

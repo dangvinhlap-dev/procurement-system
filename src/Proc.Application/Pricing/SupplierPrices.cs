@@ -1,4 +1,5 @@
 using FluentValidation;
+using Proc.Application.Purchasing;
 
 namespace Proc.Application.Pricing;
 
@@ -12,12 +13,13 @@ namespace Proc.Application.Pricing;
 /// <param name="SupplierName">Tên NCC.</param>
 /// <param name="ValidFrom">Hiệu lực từ.</param>
 /// <param name="ValidTo">Hiệu lực đến.</param>
-/// <param name="Status">Draft, Active, Inactive.</param>
+/// <param name="Status">Draft, Submitted, Active, Inactive.</param>
 /// <param name="LineCount">Số dòng.</param>
 /// <param name="IsOwn">Bảng giá của công ty đang làm việc (sửa được); false = bảng giá toàn tập đoàn do công ty khác lập.</param>
+/// <param name="ExpiringSoon">Đang hiệu lực và còn ≤ 30 ngày tới ngày hết hạn (lát B1).</param>
 public sealed record PriceListListItemDto(
     Guid Id, string No, string Title, string CompanyCode, bool IsGroupWide, string SupplierCode, string SupplierName, DateOnly ValidFrom,
-    DateOnly? ValidTo, string Status, int LineCount, bool IsOwn);
+    DateOnly? ValidTo, string Status, int LineCount, bool IsOwn, bool ExpiringSoon);
 
 /// <summary>Một dòng bảng giá.</summary>
 /// <param name="Id">Id dòng.</param>
@@ -40,16 +42,23 @@ public sealed record PriceListLineDto(
 
 /// <summary>Thao tác được phép trên bảng giá.</summary>
 /// <param name="CanEdit">Sửa (nháp, của công ty mình, có quyền).</param>
-/// <param name="CanActivate">Đưa vào hiệu lực.</param>
+/// <param name="CanSubmit">Gửi duyệt (như sửa).</param>
+/// <param name="CanApprove">Duyệt / từ chối: đến lượt công ty đang làm việc, có quyền duyệt, không phải người lập.</param>
+/// <param name="CanRecall">Rút về nháp khi đang chờ duyệt (có quyền sửa bảng giá).</param>
 /// <param name="CanDeactivate">Ngừng áp dụng.</param>
 /// <param name="ReadOnlyReason">Lý do chỉ xem.</param>
-public sealed record PriceListActions(bool CanEdit, bool CanActivate, bool CanDeactivate, string? ReadOnlyReason);
+public sealed record PriceListActions(bool CanEdit, bool CanSubmit, bool CanApprove, bool CanRecall, bool CanDeactivate, string? ReadOnlyReason);
 
 /// <summary>Chi tiết bảng giá NCC.</summary>
+/// <remarks>
+/// <paramref name="RejectReason"/>: lý do từ chối gần nhất; <paramref name="DaysToExpiry"/>: số ngày còn tới ngày hết hiệu lực (null = không
+/// hạn); <paramref name="ExpiringSoon"/>: hiệu lực và còn ≤ 30 ngày; <paramref name="Approvals"/>: lịch sử duyệt.
+/// </remarks>
 public sealed record PriceListDto(
     Guid Id, string No, string Title, Guid CompanyId, string CompanyCode, bool IsGroupWide, Guid SupplierId, string SupplierCode,
     string SupplierName, DateOnly ValidFrom, DateOnly? ValidTo, string CurrencyCode, string? DeliveryTerms, string? Note, string Status,
-    DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ActivatedAt, IReadOnlyList<PriceListLineDto> Lines, PriceListActions Actions);
+    DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ActivatedAt, IReadOnlyList<PriceListLineDto> Lines, PriceListActions Actions,
+    string? RejectReason, int? DaysToExpiry, bool ExpiringSoon, IReadOnlyList<ApprovalStepDto> Approvals);
 
 /// <summary>Lưu bảng giá.</summary>
 public sealed record SavePriceListRequest(
@@ -101,11 +110,33 @@ public interface IPriceListService
     /// <returns>Bảng giá sau khi sửa.</returns>
     Task<PriceListDto> UpdateAsync(Guid id, SavePriceListRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Đưa bảng giá vào hiệu lực.</summary>
+    /// <summary>Gửi duyệt bảng giá nháp (design.md mục 8.5, 18.6).</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bảng giá (Chờ duyệt).</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi không còn nháp, chưa có dòng hoặc NCC ở danh sách đen.</exception>
+    Task<PriceListDto> SubmitAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Duyệt cấp đến lượt; duyệt đủ thì bảng giá có hiệu lực.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Ý kiến.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bảng giá.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi không duyệt được (người lập, chưa đến lượt, NCC danh sách đen…).</exception>
+    Task<PriceListDto> ApproveAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Từ chối (bắt buộc lý do): bảng giá về nháp.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bảng giá.</returns>
+    Task<PriceListDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Rút bảng giá đang chờ duyệt về nháp (các bước chờ bỏ qua).</summary>
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Bảng giá.</returns>
-    Task<PriceListDto> ActivateAsync(Guid id, CancellationToken cancellationToken);
+    Task<PriceListDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Ngừng áp dụng bảng giá.</summary>
     /// <param name="id">Id.</param>

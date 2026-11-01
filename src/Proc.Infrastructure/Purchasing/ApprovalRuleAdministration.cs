@@ -4,6 +4,7 @@ using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
@@ -111,6 +112,23 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(change.CreatedAt, VietnamTime.Zone).DateTime),
                 $"{changeSuppliers.GetValueOrDefault(change.SupplierId)}: {change.ProposedSummary}", 0, step!.Level,
                 change.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
+        // Bảng giá NCC chờ duyệt (lát B1): duyệt tại công ty lập – filter công ty giữ nguyên.
+        var priceLists = await _db.SupplierPriceLists.Where(p => p.Status == PriceListStatus.Submitted).ToListAsync(cancellationToken);
+        var listSupplierIds = priceLists.Select(p => p.SupplierId).Distinct().ToList();
+        var listSuppliers = await _db.Suppliers.AsNoTracking().Where(s => listSupplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
+        var listCreatorIds = priceLists.Select(p => p.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => listCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var list in priceLists)
+        {
+            var step = await _approvals.CurrentStepAsync(list, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(list, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                list.DocType, ApprovalTypes.Get(list.DocType).Name, list.Id, list.No, list.ValidFrom,
+                $"{listSuppliers.GetValueOrDefault(list.SupplierId)}: {list.Title}", 0, step!.Level,
+                list.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();

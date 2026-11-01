@@ -28,6 +28,21 @@ export async function api(request: APIRequestContext, companyCode?: string) {
   }
 }
 
+/** Người duyệt bảng giá NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
+const PRICE_LIST_APPROVER = { userName: 'duyetgia.tct', password: 'Demo@2026' }
+
+/**
+ * Duyệt bảng giá NCC đang chờ duyệt ở Tổng công ty (lát B1 – người lập không tự duyệt) bằng tài khoản duyệt giá.
+ * @param priceListId Id bảng giá đã gửi duyệt.
+ */
+export async function approvePriceList(request: APIRequestContext, priceListId: string) {
+  const login = await request.post('/api/auth/login', { data: PRICE_LIST_APPROVER })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { defaultCompanyId: string } }
+  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.defaultCompanyId }
+  const response = await request.post(`/api/price-lists/${priceListId}/approve`, { headers, data: { comment: null } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+}
+
 /** Người duyệt NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
 const SUPPLIER_APPROVER = { userName: 'duyetncc.tct', password: 'Demo@2026' }
 

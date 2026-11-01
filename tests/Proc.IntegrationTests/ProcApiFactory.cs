@@ -203,6 +203,23 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Duyệt xong bảng giá NCC đang chờ duyệt ngay trong CSDL (bỏ qua các bước chờ, bảng có hiệu lực) – dùng khi test nghiệp vụ khác cần
+    /// bảng giá hiệu lực. Luồng duyệt thật (người lập không tự duyệt…) kiểm tra ở <c>PriceListApprovalTests</c>.
+    /// </summary>
+    /// <param name="priceListId">Id bảng giá đã gửi duyệt.</param>
+    public async Task FinishPriceListApprovalAsync(Guid priceListId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var list = await db.SupplierPriceLists.IgnoreQueryFilters().SingleAsync(p => p.Id == priceListId);
+        foreach (var step in await db.ApprovalSteps.IgnoreQueryFilters()
+                     .Where(st => st.DocumentId == priceListId && st.Status == Proc.Domain.Purchasing.ApprovalStepStatus.Pending).ToListAsync())
+            step.Skip();
+        list.MarkApproved(DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>
     public const string TestPassword = "matkhau123";
 

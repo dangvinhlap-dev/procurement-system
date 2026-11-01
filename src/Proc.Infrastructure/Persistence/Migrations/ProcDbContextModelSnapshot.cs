@@ -2112,6 +2112,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ActivatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -2141,6 +2144,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");

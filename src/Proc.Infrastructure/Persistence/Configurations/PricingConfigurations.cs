@@ -45,6 +45,11 @@ internal sealed class SupplierPriceListConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(x => x.DeliveryTerms).HasMaxLength(200);
         builder.Property(x => x.Note).HasMaxLength(1000);
+        // Thông tin duyệt (lát B1): lượt gửi, lý do từ chối; các thuộc tính tính toán của IApprovalSubject không lưu.
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.PriceListId).OnDelete(DeleteBehavior.Cascade);
