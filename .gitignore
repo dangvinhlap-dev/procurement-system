@@ -39,3 +39,6 @@ playwright-report/
 
 # Cấu hình Claude Code riêng từng máy (.claude/settings.json dùng chung thì vẫn commit)
 .claude/settings.local.json
+
+# File đính kèm khi chạy dev/test trên máy (design.md mục 18.4)
+src/Proc.Api/data/

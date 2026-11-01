@@ -187,6 +187,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Ánh xạ NCC cũ → NCC trong danh mục (design.md mục 18.2).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistorySupplierMapping> PurchaseHistorySupplierMappings => Set<Proc.Domain.Analysis.PurchaseHistorySupplierMapping>();
 
+    /// <summary>File đính kèm dùng chung (design.md mục 18.4).</summary>
+    public DbSet<Proc.Domain.Documents.Attachment> Attachments => Set<Proc.Domain.Documents.Attachment>();
+
     /// <summary>
     /// Cấu hình bảng Identity, áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure, rồi gắn filter phạm vi.
     /// </summary>

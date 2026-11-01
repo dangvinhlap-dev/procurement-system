@@ -16,6 +16,7 @@ import {
 } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -62,6 +63,8 @@ export function PurchaseRequestPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = request.data
   const readOnly = isNew ? !hasPermission(Permission.PrCreate) : !doc?.actions.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('PurchaseRequest', doc?.id, hasPermission(Permission.PrCreate))
 
   const watchedLines = Form.useWatch('lines', form) as PrLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -274,7 +277,10 @@ export function PurchaseRequestPage() {
       }
       lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />}
       footer={<DocumentTotal label="Tổng giá trị dự kiến" value={formatMoney(doc?.totalAmount ?? 0)} strong />}
-      extraTabs={doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : undefined}
+      extraTabs={[
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          attachmentTab,
+        ]}
     />
   )
 }

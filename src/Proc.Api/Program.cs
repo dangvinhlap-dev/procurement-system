@@ -37,6 +37,10 @@ builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddOptions<DatabaseOptions>().Bind(builder.Configuration.GetSection("Database"));
 builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection("Seed"));
 builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
+// Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
+builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()
+    .Bind(builder.Configuration.GetSection("Attachments"))
+    .PostConfigure(o => o.RootPath = Path.GetFullPath(o.RootPath, builder.Environment.ContentRootPath));
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection("Jwt"))
     .Validate(
@@ -126,6 +130,7 @@ app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();
 app.MapSystemParameterEndpoints();
 app.MapNotificationEndpoints();
+app.MapAttachmentEndpoints();
 
 // /api lạ trả 404 (không phải 401 do chính sách mặc định, cũng không rơi vào trang giao diện bên dưới).
 app.MapFallback("/api/{**path}", () => Results.NotFound()).AllowAnonymous();

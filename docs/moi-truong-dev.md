@@ -21,6 +21,8 @@ Tách từ CLAUDE.md (mục 2 cũ) ngày 31/10/2026. Đọc khi cần chạy, c�
 ## Gỡ rối hay gặp
 - `dotnet build` báo khóa DLL (MSB3027): API đang chạy giữ file → dừng API rồi build; chạy lại API bằng `--no-build`.
 - Khóa file `obj/*.dswa.cache.json`: đổi tên các file cache đó rồi build lại.
+- Vite dev (cổng 5173) đang chạy có thể không nhận file sửa bằng `sed -i` (thay file bằng đổi tên) → trang chạy code cũ, lỗi kiểu
+  "X is not defined" dù `tsc` qua. Sửa bằng công cụ ghi đè tại chỗ hoặc lưu lại file đó.
 - Playwright tự `dotnet run` (có build) – nếu vướng khóa file, bật sẵn API môi trường Testing bằng `--no-build` rồi chạy
   `npx playwright test` (cấu hình dùng lại server đang chạy).
 - Ảnh chụp Playwright bị mờ: chờ hiệu ứng chạy xong (`document.getAnimations()`) trước khi chụp.

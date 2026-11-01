@@ -10,6 +10,9 @@ import {
   type ConfirmReceiptInput,
   type InventoryDocument,
 } from '../../api/inventoryDocuments'
+import { Permission } from '../../auth/permissions'
+import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -44,6 +47,9 @@ export function IntercompanyReceiptPage() {
   const [error, setError] = useState<string | null>(null)
   const doc = document.data
   const readOnly = !doc?.canEdit
+  const { hasPermission } = useAuth()
+  // Đính kèm được cả khi phiếu đã ghi sổ (biên bản giao nhận) – quyền theo quyền lập phiếu kho, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('InventoryDocument', doc?.id, hasPermission(Permission.InventoryDocumentCreate))
   const watchedLines = Form.useWatch('lines', form) as ReceiveLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
 
@@ -168,6 +174,7 @@ export function IntercompanyReceiptPage() {
   return (
     <DocumentForm
       title="Phiếu nhập mua nội bộ"
+      extraTabs={[attachmentTab]}
       number={doc?.no ?? ''}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}

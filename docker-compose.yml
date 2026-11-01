@@ -41,6 +41,8 @@ services:
     volumes:
       # Khóa mã hóa của ASP.NET Core (Data Protection) phải giữ qua các lần nâng cấp image.
       - app_keys:/home/app/.aspnet/DataProtection-Keys
+      # File đính kèm (design.md mục 18.4): giữ qua các lần nâng cấp image; container backup chép sang ./backups/attachments mỗi đêm.
+      - attachments:/app/data/attachments
     depends_on:
       db:
         condition: service_healthy
@@ -90,6 +92,7 @@ services:
     volumes:
       - ./db/backup.sh:/backup.sh:ro
       - ./backups:/backups
+      - attachments:/attachments:ro
     depends_on:
       db:
         condition: service_healthy
@@ -100,3 +103,4 @@ volumes:
   pg_data: {}
   seq_data: {}
   app_keys: {}
+  attachments: {}
