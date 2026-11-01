@@ -47,11 +47,45 @@ internal sealed class PurchaseHistoryRecordConfiguration : IEntityTypeConfigurat
         builder.HasIndex(x => x.BatchId);
         builder.HasIndex(x => x.ItemId);
         builder.HasIndex(x => x.SupplierId);
+        // Ánh xạ (mục 18.2) gán lại mặt hàng/NCC cho mọi dòng cùng mã cũ, cùng MST của pháp nhân.
+        builder.HasIndex(x => new { x.CompanyId, x.ItemCode });
+        builder.HasIndex(x => new { x.CompanyId, x.SupplierTaxCode });
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         // Xóa lô thì xóa mọi dòng của lô (lô nhập nhầm); dịch vụ vẫn xóa dòng trước bằng một câu DELETE để không phụ thuộc cascade.
         builder.HasOne<PurchaseHistoryBatch>().WithMany().HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Cascade);
         // Mặt hàng, NCC chỉ là kết quả khớp; danh mục không xóa được khi đã dùng.
         builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseHistoryItemMapping – ánh xạ mã vật tư cũ → mã hàng chung (design.md mục 18.2).</summary>
+internal sealed class PurchaseHistoryItemMappingConfiguration : IEntityTypeConfiguration<PurchaseHistoryItemMapping>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseHistoryItemMapping> builder)
+    {
+        builder.ToTable("PurchaseHistoryItemMapping");
+        builder.Property(x => x.SourceCode).HasMaxLength(PurchaseHistoryRecord.MaxLengths[nameof(PurchaseHistoryRecord.ItemCode)]).IsRequired();
+        // Mỗi mã cũ của một pháp nhân chỉ trỏ tới một mã chung.
+        builder.HasIndex(x => new { x.CompanyId, x.SourceCode }).IsUnique();
+        builder.HasIndex(x => x.ItemId);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseHistorySupplierMapping – ánh xạ NCC cũ → NCC trong danh mục (design.md mục 18.2).</summary>
+internal sealed class PurchaseHistorySupplierMappingConfiguration : IEntityTypeConfiguration<PurchaseHistorySupplierMapping>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseHistorySupplierMapping> builder)
+    {
+        builder.ToTable("PurchaseHistorySupplierMapping");
+        builder.Property(x => x.SourceKey).HasMaxLength(PurchaseHistoryKeys.SupplierKeyMaxLength).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.SourceKey }).IsUnique();
+        builder.HasIndex(x => x.SupplierId);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
     }
 }

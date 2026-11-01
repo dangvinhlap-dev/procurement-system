@@ -276,7 +276,8 @@ public sealed class PurchaseHistoryService : IPurchaseHistoryService
         row.Text(H.Complaint));
 
     /// <summary>
-    /// Tự khớp danh mục: mã vật tư trùng mã hàng hóa chung → mặt hàng; MST trùng NCC → NCC. Không khớp vẫn nhập (lát E2 ánh xạ tiếp).
+    /// Tự khớp danh mục: trước hết theo ánh xạ đã lưu của pháp nhân (design.md mục 18.2); chưa có ánh xạ thì mã vật tư trùng mã hàng hóa
+    /// chung → mặt hàng, MST trùng NCC → NCC. Không khớp vẫn nhập (ánh xạ sau ở màn hình PHMAP).
     /// Tra theo danh sách mã khác nhau (vài nghìn) thay vì từng dòng.
     /// </summary>
     /// <returns>Số dòng khớp mặt hàng, số dòng khớp NCC.</returns>
@@ -285,15 +286,32 @@ public sealed class PurchaseHistoryService : IPurchaseHistoryService
         if (records.Count == 0) return (0, 0);
         var codes = records.Select(r => r.ItemCode).Distinct().ToList();
         var taxCodes = records.Where(r => r.SupplierTaxCode != null).Select(r => r.SupplierTaxCode!).Distinct().ToList();
+        var supplierKeys = records.Select(r => PurchaseHistoryKeys.Supplier(r.SupplierTaxCode, r.SupplierName)).Distinct().ToList();
+        var itemMappings = await _db.PurchaseHistoryItemMappings.AsNoTracking().Where(m => codes.Contains(m.SourceCode))
+            .ToDictionaryAsync(m => m.SourceCode, m => m.ItemId, cancellationToken);
+        var supplierMappings = await _db.PurchaseHistorySupplierMappings.AsNoTracking().Where(m => supplierKeys.Contains(m.SourceKey))
+            .ToDictionaryAsync(m => m.SourceKey, m => m.SupplierId, cancellationToken);
         // Items có filter nhóm hàng: người nhập chỉ khớp được mặt hàng thuộc nhóm mình được xem – đúng phạm vi (design.md mục 9.2).
-        var items = await _db.Items.AsNoTracking().Where(i => codes.Contains(i.Code)).ToDictionaryAsync(i => i.Code, i => i.Id, cancellationToken);
-        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => s.TaxCode != null && taxCodes.Contains(s.TaxCode))
-            .ToDictionaryAsync(s => s.TaxCode!, s => s.Id, cancellationToken);
+        // Ánh xạ trỏ tới mặt hàng ngoài nhóm được xem cũng không áp (lọc qua cùng truy vấn Items).
+        var mappedItemIds = itemMappings.Values.Distinct().ToList();
+        var visibleItems = await _db.Items.AsNoTracking().Where(i => codes.Contains(i.Code) || mappedItemIds.Contains(i.Id))
+            .Select(i => new { i.Id, i.Code }).ToListAsync(cancellationToken);
+        var visibleItemIds = visibleItems.Select(i => i.Id).ToHashSet();
+        var items = visibleItems.ToDictionary(i => i.Code, i => i.Id);
+        var mappedSupplierIds = supplierMappings.Values.Distinct().ToList();
+        var visibleSuppliers = await _db.Suppliers.AsNoTracking()
+            .Where(s => (s.TaxCode != null && taxCodes.Contains(s.TaxCode)) || mappedSupplierIds.Contains(s.Id))
+            .Select(s => new { s.Id, s.TaxCode }).ToListAsync(cancellationToken);
+        var visibleSupplierIds = visibleSuppliers.Select(s => s.Id).ToHashSet();
+        var suppliers = visibleSuppliers.Where(s => s.TaxCode != null).GroupBy(s => s.TaxCode!).ToDictionary(g => g.Key, g => g.First().Id);
         int matchedItems = 0, matchedSuppliers = 0;
         foreach (var record in records)
         {
-            Guid? itemId = items.TryGetValue(record.ItemCode, out var i) ? i : null;
-            Guid? supplierId = record.SupplierTaxCode is { } tax && suppliers.TryGetValue(tax, out var s) ? s : null;
+            Guid? itemId = itemMappings.TryGetValue(record.ItemCode, out var mi) && visibleItemIds.Contains(mi) ? mi
+                : items.TryGetValue(record.ItemCode, out var i) ? i : null;
+            Guid? supplierId = supplierMappings.TryGetValue(PurchaseHistoryKeys.Supplier(record.SupplierTaxCode, record.SupplierName), out var ms)
+                               && visibleSupplierIds.Contains(ms) ? ms
+                : record.SupplierTaxCode is { } tax && suppliers.TryGetValue(tax, out var s) ? s : null;
             record.Match(itemId, supplierId);
             if (itemId != null) matchedItems++;
             if (supplierId != null) matchedSuppliers++;
