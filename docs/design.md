@@ -1087,6 +1087,27 @@ Ghi sổ…) ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở ph�
 | Hình khối | Bo góc 8px khối lớn, 4px ô nhập/nút; đổ bóng rất nhẹ; khoảng cách 8/16px; ô nhập, nút cao 28px |
 | Bàn phím | F2 thêm dòng, F3 tìm, Ctrl+S lưu, Ctrl+P in phiếu, Esc đóng hộp thoại, Ctrl+Enter gửi duyệt, Alt + chữ gạch chân mở menu |
 
+## 18. Mô hình Ban Cung ứng Vật tư tập đoàn (yêu cầu 01/11/2026)
+
+Nguồn: đề xuất `docs/Bancungung.pdf`; phân tích đối chiếu và kế hoạch lát: `docs/Phantich_01112026.md`. Mô hình "Cung ứng tập trung –
+Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám sát độc lập": Nhóm Đàm phán & quản trị giá (tập trung) và Nhóm Vận hành
+(mua theo giá đã duyệt, theo từng pháp nhân), Hội đồng xét chọn/duyệt giá, Kiểm soát nội bộ độc lập.
+
+**Quyết định đã chốt** – mỗi dòng sửa quy tắc cũ ở mục ghi bên cạnh **khi làm lát tương ứng** (trước đó phần mềm chạy theo quy tắc cũ):
+
+| Quyết định | Thay quy tắc ở | Lát |
+| --- | --- | --- |
+| PO lấy giá hợp đồng/bảng giá; sửa giá bắt buộc lý do + duyệt ngoại lệ, đánh dấu "ngoài hợp đồng" | 6.7, 8.5 (giá PO nhập tay) | C1 |
+| Bảng giá NCC (cả bảng riêng công ty) phải duyệt mới hiệu lực; người lập không tự duyệt | 8.5 (vòng đời bảng giá) | B1 |
+| RFQ dưới số NCC tối thiểu vẫn gửi được khi có giải trình; kết quả chọn thầu phải được hội đồng duyệt | 8.6 | B3 |
+| Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 |
+| Hợp đồng nguyên tắc: mỗi pháp nhân một hợp đồng, dùng chung bảng giá; hiệu lực, sản lượng dự kiến, thanh toán, chiết khấu, chế tài, đơn vị được phép đặt; phụ lục; phải duyệt | 1.2 (hợp đồng khung) | B4 |
+| Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" | mới | C3 |
+| Đính kèm file: thư mục trên máy chủ, tối đa 20 MB/file | mới | A1 |
+| Đưa NCC vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng NCC phải qua duyệt | 5.8 | B2 |
+
+Thứ tự làm: E (nhập và phân tích dữ liệu mua lịch sử) → A (nền) → B (giá, NCC) → C (vận hành) → D (tồn kho) → F (báo cáo, KPI, KSNB).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

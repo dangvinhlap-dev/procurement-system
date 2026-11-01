@@ -30,8 +30,10 @@ Kiểm tra gần nhất (SEC-2, 01/11/2026): `dotnet test` 353 qua; Playwright 6
 
 ## Việc tiếp theo
 
-1. Bản 0.10.0 (có migration `V0_10_0_MarkupNoiBo`) – phát hành khi người dùng yêu cầu (docs/phat-hanh.md).
-2. Hợp đồng khung (CTR) còn trang tạm – **tạm bỏ qua** (31/10/2026): người dùng sẽ mô tả sau; không tự làm khi chưa có mô tả.
+1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. Lát kế tiếp: **E1 – nhập Excel dữ liệu mua lịch sử 12–24 tháng**.
+   Bản 0.10.0 (SEC-2 + đợt E) chỉ phát hành khi người dùng yêu cầu.
+2. Hợp đồng khung (CTR): đã có mô tả trong đề xuất Ban Cung ứng – làm ở lát B4 (phương án 2).
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
 4. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
