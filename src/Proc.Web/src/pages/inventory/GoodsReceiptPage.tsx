@@ -21,7 +21,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
-import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
 import { useDocumentCommands } from './useDocumentCommands'
 
@@ -362,7 +362,7 @@ export function GoodsReceiptPage() {
         const item = line?.itemId ? itemsById.get(line.itemId) : undefined
         return (
           <Form.Item name={[field.name, 'expiryDate']} noStyle rules={[{ required: item?.trackExpiry === true, message: 'Nhập hạn dùng.' }]}>
-            <DatePicker variant="borderless" format="DD/MM/YYYY" style={{ width: '100%' }} aria-label={`Hạn dùng dòng ${field.name + 1}`} />
+            <DatePicker variant="borderless" format={DATE_INPUT_FORMATS} style={{ width: '100%' }} aria-label={`Hạn dùng dòng ${field.name + 1}`} />
           </Form.Item>
         )
       },
@@ -403,7 +403,7 @@ export function GoodsReceiptPage() {
       header={
         <>
           <Form.Item label="Ngày nhập" name="date" rules={[{ required: true, message: 'Chọn ngày nhập.' }]} extra="Quyết định kỳ kho khi ghi sổ.">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Đơn mua hàng" name="purchaseOrderId" extra="Nhập theo PO đã duyệt (trống = nhập thẳng theo NCC).">
             <Select
@@ -444,7 +444,7 @@ export function GoodsReceiptPage() {
             <Input autoComplete="off" />
           </Form.Item>
           <Form.Item label="Ngày hóa đơn" name="invoiceDate">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Số phiếu giao hàng" name="deliveryNoteNo" rules={[{ max: 50 }]}>
             <Input autoComplete="off" />

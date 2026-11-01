@@ -17,6 +17,7 @@ import {
 import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { formRequiredMark } from '../../components/RequiredMark/requiredMark'
+import { DATE_INPUT_FORMATS } from '../../utils/format'
 
 /** Khung cố định chiều cao cho lưới trong tab (DataGrid co giãn theo khung cha). Độ rộng cột cộng lại vừa ngăn kéo 720px. */
 const gridBoxStyle = { height: 320, display: 'flex', flexDirection: 'column' } as const
@@ -86,7 +87,7 @@ export function SupplierCompanyTab({ supplierId }: { supplierId: string }) {
             <Input autoComplete="off" />
           </Form.Item>
           <Form.Item label="Ngày bắt đầu giao dịch" name="startDate">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
         </div>
         <Form.Item name="isActive" valuePropName="checked" extra="Bỏ chọn khi công ty ngừng mua của NCC này (vẫn giữ lịch sử).">

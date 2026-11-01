@@ -15,11 +15,12 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Danh sách đơn mua hàng (PO)' })).toBeVisible()
 })
 
-test('khung Shellbar + Dynamic Page đúng kích thước và thành phần theo ui-guide mục 4', async ({ page }) => {
+test('khung ERP cổ điển (thanh menu + thanh công cụ) đúng kích thước và thành phần theo ui-style mục 1', async ({ page }) => {
   const shellBar = page.getByTestId('shell-bar')
   const nav = page.getByTestId('nav-tree')
 
-  expect((await shellBar.boundingBox())?.height).toBe(48)
+  // Thanh menu chữ 24px + thanh công cụ 30px (theme.ts – layoutTokens.shellBarHeight).
+  expect((await shellBar.boundingBox())?.height).toBe(54)
   expect((await nav.boundingBox())?.width).toBe(240)
   // Bỏ thanh công cụ và thanh trạng thái kiểu Windows (lát UI-b).
   await expect(page.getByTestId('toolbar')).toHaveCount(0)
@@ -60,8 +61,8 @@ test('lưới hiện 30 dòng, định dạng ngày và tiền kiểu Việt Nam
   // Tiền VND không số lẻ, phân cách hàng nghìn bằng dấu chấm.
   await expect(firstRow.locator('td.data-grid-col-money')).toHaveText(/^\d{1,3}(\.\d{3})+$/)
 
-  // Dòng cao 32px theo ui-guide.md mục 3 (bảng Fiori, mật độ compact).
-  expect((await firstRow.boundingBox())?.height).toBe(32)
+  // Dòng cao 22px – lưới dày đặc kiểu desktop (docs/ui-style.md mục 4).
+  expect((await firstRow.boundingBox())?.height).toBe(22)
 })
 
 test('tìm kiếm không dấu vẫn ra kết quả có dấu', async ({ page }) => {

@@ -56,3 +56,9 @@ export const vnNumberInput = {
   },
   parser: (display: string | undefined) => (display ?? '').replace(/\./g, '').replace(',', '.'),
 } as const
+
+/**
+ * Các kiểu gõ ngày cho mọi ô ngày (DatePicker/RangePicker) – gõ tay hoặc chọn trên lịch (docs/ui-style.md mục 5).
+ * Kiểu đầu tiên là kiểu hiển thị dd/MM/yyyy (CLAUDE.md mục 5); các kiểu sau cho gõ nhanh, ví dụ "05122026" hoặc "5/12/2026" → 05/12/2026.
+ */
+export const DATE_INPUT_FORMATS = ['DD/MM/YYYY', 'DDMMYYYY', 'D/M/YYYY', 'DD.MM.YYYY', 'DD-MM-YYYY']

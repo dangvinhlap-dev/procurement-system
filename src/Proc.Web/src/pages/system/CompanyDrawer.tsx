@@ -5,6 +5,7 @@ import { useCompany, useCompanyMutations, type CompanyInfoInput } from '../../ap
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { DATE_INPUT_FORMATS } from '../../utils/format'
 
 interface CompanyFormValues {
   code: string
@@ -173,7 +174,7 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
               </Form.Item>
               <div className="detail-grid">
                 <Form.Item label="Ngày bắt đầu dùng hệ thống" name="startDate">
-                  <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                  <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item label="Tiền tệ hạch toán">
                   <Input value={detail?.accountingCurrency ?? 'VND'} disabled />

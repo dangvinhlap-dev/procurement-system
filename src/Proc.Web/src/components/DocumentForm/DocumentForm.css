@@ -1,4 +1,4 @@
-/* Khuôn chứng từ kiểu Fiori Horizon (ui-guide.md mục 6); màu, bo góc, đổ bóng lấy từ biến token của antd. */
+/* Khuôn chứng từ – kiểu nền; hình khối ERP cổ điển ghi đè ở src/classic/classic-app.css (docs/ui-style.md). Màu từ biến token antd. */
 
 .document-form {
   display: flex;

@@ -66,9 +66,9 @@ function HotkeyLabel({ group }: { group: ModuleGroup }) {
 }
 
 /**
- * Shellbar trên cùng (ui-guide.md mục 4, ý 1), cao 48px, thay cho thanh menu + thanh công cụ + thanh trạng thái kiểu Windows trước đây:
- * trái là logo + tên ứng dụng (về trang chủ; tên ẩn khi màn hình hẹp hơn 1440px), nút Quay lại, menu module (Alt + chữ gạch chân mở); giữa là ô lệnh (gõ mã màn hình như PO, PR,
- * NXT rồi Enter); phải là công ty đang làm việc, thông báo, avatar người dùng (tài khoản, ngày làm việc, phiên bản, đổi mật khẩu, đăng xuất).
+ * Thanh trên cùng kiểu ERP desktop cổ điển (docs/ui-style.md mục 1), cao 54px, hai hàng (xếp bằng CSS ở classic/classic-app.css):
+ * hàng 1 – thanh menu chữ: logo + tên ứng dụng (về trang chủ; tên ẩn khi màn hình hẹp hơn 1440px), nút Quay lại, menu module (Alt + chữ gạch chân mở); hàng 2 – thanh công cụ: ô lệnh (gõ mã màn hình như PO, PR,
+ * NXT rồi Enter) bên trái; bên phải là công ty đang làm việc, thông báo, avatar người dùng (tài khoản, ngày làm việc, phiên bản, đổi mật khẩu, đăng xuất).
  */
 export function ShellBar({
   appName,
@@ -218,7 +218,7 @@ export function ShellBar({
         >
           {/* Fiori chỉ hiện avatar; họ tên ở nhãn, chú thích và dòng đầu menu. */}
           <button type="button" className="app-shell-user" aria-label={`Người dùng: ${userFullName}`} title={userFullName}>
-            <Avatar size={32} className="app-shell-avatar">
+            <Avatar size={20} className="app-shell-avatar">
               {initialsOf(userFullName)}
             </Avatar>
           </button>

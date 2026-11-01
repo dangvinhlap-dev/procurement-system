@@ -17,7 +17,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
-import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
 import { useDocumentCommands } from './useDocumentCommands'
 
@@ -262,7 +262,7 @@ export function GoodsReturnPage() {
       header={
         <>
           <Form.Item label="Ngày trả" name="date" rules={[{ required: true, message: 'Chọn ngày trả.' }]} extra="Quyết định kỳ kho khi ghi sổ.">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             label="Phiếu nhập gốc"

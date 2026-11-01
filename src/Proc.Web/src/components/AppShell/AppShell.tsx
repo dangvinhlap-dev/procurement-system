@@ -28,8 +28,8 @@ function todayInVietnam(): string {
 }
 
 /**
- * Khung ứng dụng cố định cho mọi trang theo Fiori Horizon (ui-guide.md mục 4, design.md mục 17): Shellbar 48px trên cùng, điều hướng trái
- * 240px, vùng nội dung (Dynamic Page của ListPage/DocumentForm). Phiên bản và ngày làm việc nằm trong menu người dùng của Shellbar.
+ * Khung ứng dụng cố định cho mọi trang theo phong cách ERP desktop cổ điển (docs/ui-style.md, design.md mục 17): thanh menu chữ + thanh
+ * công cụ 54px trên cùng, cây điều hướng trái 240px, vùng nội dung (ListPage/DocumentForm). Phiên bản và ngày làm việc nằm trong menu người dùng.
  * Phím tắt chung: F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
  * Người dùng và công ty lấy từ phiên đăng nhập; số đếm và số thông báo chưa đọc theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
  * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.

@@ -2,6 +2,7 @@ import { Alert, DatePicker } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import type { DateRange } from '../../api/logs'
 import { FilterField } from '../../components/ListPage/ListPage'
+import { DATE_INPUT_FORMATS } from '../../utils/format'
 
 /**
  * Ô lọc "Từ ngày – Đến ngày" (dd/MM/yyyy) của màn hình nhật ký; lọc ở server vì nhật ký rất nhiều dòng.
@@ -14,7 +15,7 @@ export function LogDateRangeFilter({ value, onChange }: { value: DateRange; onCh
       {(id) => (
         <DatePicker.RangePicker
           id={id}
-          format="DD/MM/YYYY"
+          format={DATE_INPUT_FORMATS}
           allowClear={false}
           value={[dayjs(value.from), dayjs(value.to)]}
           onChange={(dates) => {

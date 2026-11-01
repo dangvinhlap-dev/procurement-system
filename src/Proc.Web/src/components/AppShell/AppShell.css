@@ -1,5 +1,5 @@
 /*
- * Kiểu của AppShell theo ui-guide.md mục 4 (Shellbar + điều hướng trái + Dynamic Page).
+ * Kiểu nền của AppShell (thanh trên + điều hướng trái + vùng nội dung); hình khối ERP cổ điển ghi đè ở src/classic/classic-app.css (docs/ui-style.md).
  * Màu và cỡ chữ lấy từ biến token của antd (--ant-*); kích thước khung từ layoutTokens (--app-*, src/theme.ts).
  */
 

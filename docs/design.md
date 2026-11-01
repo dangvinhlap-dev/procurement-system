@@ -8,6 +8,7 @@ Phiên bản tài liệu 1.2 · cập nhật 31/10/2026 · người lập: Đặ
 | 1.0 | 28/10/2026 | Mục 1–13: nghiệp vụ, công nghệ, kiến trúc, kho, master data, chứng từ, kỳ kho và giá vốn, giá và đấu thầu, phân quyền, form, báo cáo, CSDL, lộ trình |
 | 1.1 | 28/10/2026 | Chốt PostgreSQL + Ubuntu + Docker; thêm mục 14 (hạ tầng), 15 (GitHub Codespaces), 16 (quy tắc Claude Code), 17 (giao diện kiểu Windows XP); ví dụ số giá vốn |
 | 1.2 | 31/10/2026 | Mục 17 và docs/ui-guide.md: chuyển giao diện sang SAP Fiori, theme Horizon (giữ React + Ant Design, phông Arial thay "72", lát UI-a theme rồi UI-b bố cục) |
+| 1.3 | 01/11/2026 | Mục 17 và docs/ui-style.md: chuyển giao diện sang phong cách ERP desktop cổ điển (component `src/Proc.Web/src/classic/`); màn hình cũ chuyển dần theo lát riêng |
 
 ## 1. Phân tích nghiệp vụ và các quyết định cần chốt
 
@@ -1053,9 +1054,16 @@ Câu lệnh mẫu khi có sự cố:
 
 Danh sách phiên bản xem trên GitHub ở mục **Tags** của repo.
 
-## 17. Đặc tả giao diện (docs/ui-guide.md)
+## 17. Đặc tả giao diện (docs/ui-style.md)
 
-Từ 31/10/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
+**Từ 01/11/2026** giao diện theo **phong cách ERP desktop cổ điển**; toàn văn ở `docs/ui-style.md` (ảnh mẫu `docs/imageSAP.png`, chỉ học phong
+cách). Bố cục chứng từ: thanh menu chữ → thanh công cụ icon (màu theo mức quan trọng) → tiêu đề → thanh lệnh phụ → header một dòng → tab
+(chữ in hoa) → lưới dòng hàng nhập như Excel (co giãn cột, Enter xuống dòng) → thanh trạng thái. Component dùng chung ở
+`src/Proc.Web/src/classic/`; màn hình mẫu `/thu-giao-dien/tao-po`. Toàn bộ màn hình đã chuyển qua khung dùng chung (ui-style.md mục 8).
+Các mục 17.1–17.x dưới đây vẫn đúng về **chức năng** khung (menu module, ô lệnh, cây điều hướng, danh sách, chứng từ); kích thước và hình
+khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32px, không đổ bóng, bo 2px).
+
+Từ 31/10/2026 đến 01/11/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
 Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica
 nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đổi hai lát – UI-a theme, UI-b bố cục Shellbar + Dynamic Page.
 

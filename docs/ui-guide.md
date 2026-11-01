@@ -1,5 +1,8 @@
 # Hướng dẫn giao diện – SAP Fiori, theme Horizon
 
+> **Đã được thay thế từ 01/11/2026** bởi `docs/ui-style.md` (phong cách ERP desktop cổ điển); toàn bộ màn hình đã chuyển. Tài liệu này chỉ
+> giữ làm lịch sử và tham chiếu hành vi (phím tắt, số đếm, trạng thái); không dùng cho hình thức giao diện.
+
 Từ 31/10/2026 giao diện theo quy chuẩn thiết kế **SAP Fiori (Horizon Theme)**, thay cho phong cách Windows XP trước đây (xem lịch sử Git
 nếu cần đối chiếu). Mọi màn hình mới hoặc sửa đều theo tài liệu này.
 

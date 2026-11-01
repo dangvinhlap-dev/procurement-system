@@ -22,7 +22,7 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
+import { formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { confirmReject } from '../purchasing/useApprovalCommands'
 
@@ -468,10 +468,10 @@ export function SupplierPriceListPage() {
             <Input />
           </Form.Item>
           <Form.Item label="Hiệu lực từ" name="validFrom" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Hiệu lực đến" name="validTo" extra="Để trống = tới khi ngừng áp dụng.">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Điều kiện giao hàng" name="deliveryTerms" rules={[{ max: 200 }]}>
             <Input />

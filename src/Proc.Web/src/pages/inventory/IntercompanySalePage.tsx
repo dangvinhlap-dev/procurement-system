@@ -27,7 +27,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
-import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
 import { useDocumentCommands } from './useDocumentCommands'
 
@@ -369,7 +369,7 @@ export function IntercompanySalePage() {
       header={
         <>
           <Form.Item label="Ngày xuất" name="date" rules={[{ required: true, message: 'Chọn ngày xuất.' }]} extra="Quyết định kỳ kho và giá nội bộ áp dụng.">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Kho xuất (kho tổng)" name="fromWarehouseId" rules={[{ required: true, message: 'Chọn kho xuất.' }]}>
             <Select showSearch={{ optionFilterProp: 'label' }} options={mainWarehouses.map((w) => ({ value: w.id, label: `${w.code} – ${w.name}` }))} />
@@ -389,7 +389,7 @@ export function IntercompanySalePage() {
             <Input autoComplete="off" />
           </Form.Item>
           <Form.Item label="Ngày hóa đơn" name="invoiceDate">
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Người giao / phương tiện" name="deliverer" rules={[{ max: 200 }]}>
             <Input />

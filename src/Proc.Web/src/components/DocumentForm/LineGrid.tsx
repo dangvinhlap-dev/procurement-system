@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Form, type FormListFieldData } from 'antd'
-import { useEffect, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
+import { useEffect, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type MutableRefObject, type ReactNode } from 'react'
 import { layoutTokens } from '../../theme'
 import { hasOpenPopup } from '../../utils/popup'
 
@@ -10,7 +10,7 @@ export interface LineColumn {
   title: string
   width: number
   align?: 'left' | 'right' | 'center'
-  /** Ô bắt buộc nhập: tiêu đề cột có dấu * đỏ (ẩn khi lưới chỉ xem) – docs/ui-guide.md mục 6. */
+  /** Ô bắt buộc nhập: tiêu đề cột có dấu * đỏ (ẩn khi lưới chỉ xem) – docs/ui-style.md mục 3. */
   required?: boolean
   /** Ô của một dòng: thường là Form.Item name={[field.name, '…']} noStyle bọc ô nhập; ô tính toán thì là chữ chỉ đọc. */
   render: (field: FormListFieldData, index: number) => ReactNode
@@ -33,6 +33,7 @@ export interface LineGridProps {
 /**
  * Lưới dòng chứng từ nhập như Excel (design.md mục 10.1): mỗi ô là một ô nhập không viền, Enter sang ô tiếp theo
  * (hết dòng thì sang dòng dưới), F2 thêm dòng và đặt con trỏ vào ô đầu của dòng mới. Cột STT và nút xóa dòng có sẵn.
+ * Kéo mép phải tiêu đề cột để đổi độ rộng, bấm đúp mép để trả về độ rộng gốc (docs/ui-style.md mục 5).
  */
 export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false }: LineGridProps) {
   return (
@@ -66,6 +67,32 @@ function LineGridBody({
   onRemove: (index: number) => void
   addRef?: MutableRefObject<(() => void) | null>
 }) {
+  // Độ rộng cột người dùng đã kéo (theo key); cột chưa kéo dùng độ rộng khai báo.
+  const [widths, setWidths] = useState<Record<string, number>>({})
+  const widthOf = (c: LineColumn) => widths[c.key] ?? Math.round(c.width * layoutTokens.columnWidthScale)
+
+  /** Kéo mép phải tiêu đề cột; tối thiểu 32px để còn đọc được tiêu đề. */
+  const startResize = (e: ReactMouseEvent, c: LineColumn) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = widthOf(c)
+    const onMove = (ev: MouseEvent) => setWidths((w) => ({ ...w, [c.key]: Math.max(32, startWidth + ev.clientX - startX) }))
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.classList.remove('erp-col-resizing')
+    }
+    document.body.classList.add('erp-col-resizing')
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+  const resetWidth = (c: LineColumn) =>
+    setWidths((w) => {
+      const next = { ...w }
+      delete next[c.key]
+      return next
+    })
+
   // Thêm dòng rồi đặt con trỏ vào ô nhập đầu tiên của dòng mới (chờ React vẽ xong dòng).
   useEffect(() => {
     if (!addRef) return
@@ -102,8 +129,17 @@ function LineGridBody({
           <tr>
             <th style={{ width: 44 }}>STT</th>
             {columns.map((c) => (
-              <th key={c.key} style={{ width: Math.round(c.width * layoutTokens.columnWidthScale), textAlign: c.align ?? 'left' }}>
+              <th key={c.key} style={{ width: widthOf(c), textAlign: c.align ?? 'left' }}>
                 {c.required && !readOnly ? <span className="required-mark">{c.title}</span> : c.title}
+                <span
+                  className="line-grid-resize-handle"
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Đổi độ rộng cột ${c.title}`}
+                  title="Kéo để đổi độ rộng; bấm đúp để trả về mặc định"
+                  onMouseDown={(e) => startResize(e, c)}
+                  onDoubleClick={() => resetWidth(c)}
+                />
               </th>
             ))}
             {!readOnly && <th style={{ width: 32 }} />}
