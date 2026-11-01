@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
+import { api, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
 
 /**
  * Kê khai xung đột lợi ích (design.md mục 18.8): quản trị tự kê khai quan hệ với một NCC, thấy "Đang hiệu lực", rồi kết thúc kê khai
@@ -25,7 +25,10 @@ test('kê khai quan hệ với NCC, kết thúc kê khai, chụp màn hình', as
   const drawer = page.locator('.detail-drawer')
   await expect(drawer.getByText('Kê khai xung đột lợi ích')).toBeVisible()
   // Gõ không dấu vẫn tìm được NCC có dấu (CLAUDE.md mục 5).
-  await chooseOption(page, 'Nhà cung cấp', name.replace('kê khai', 'ke khai'))
+  const supplierBox = drawer.getByRole('combobox', { name: 'Nhà cung cấp', exact: true })
+  await supplierBox.click()
+  await supplierBox.fill(name.replace('kê khai', 'ke khai'))
+  await pickOption(page, name)
   await drawer.getByRole('combobox', { name: 'Loại quan hệ', exact: true }).click()
   await pickOption(page, 'Góp vốn, cổ phần')
   await drawer.getByLabel('Mô tả quan hệ').fill('Góp 10% vốn điều lệ')
