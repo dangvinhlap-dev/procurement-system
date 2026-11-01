@@ -655,6 +655,10 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <remarks>Người lập RFQ và người chọn thầu đều không tự duyệt kết quả (tách người đề xuất – người duyệt, design.md mục 18.6).</remarks>
     public bool IsPreparedBy(Guid userId) => CreatedBy == userId || AwardedBy == userId;
 
+    /// <inheritdoc />
+    /// <remarks>Mọi NCC được mời, không riêng NCC trúng: quan hệ với một NCC dự thầu đã đủ làm lệch việc so sánh (design.md mục 18.8).</remarks>
+    public IReadOnlyCollection<Guid> RelatedSupplierIds => _suppliers.Select(s => s.SupplierId).ToList();
+
     /// <summary>Ghi nhận PO đã sinh cho NCC trúng thầu (mỗi NCC một PO).</summary>
     /// <exception cref="BusinessRuleException">Khi RFQ chưa chọn thầu, NCC không trúng dòng nào hoặc đã có PO.</exception>
     public void LinkPurchaseOrder(Guid supplierId, Guid purchaseOrderId)

@@ -223,3 +223,20 @@ internal sealed class SupplierChangeRequestConfiguration : IEntityTypeConfigurat
         builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng ConflictDeclaration – kê khai xung đột lợi ích (design.md mục 18.8).</summary>
+internal sealed class ConflictDeclarationConfiguration : IEntityTypeConfiguration<ConflictDeclaration>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ConflictDeclaration> builder)
+    {
+        builder.ToTable("ConflictDeclaration");
+        builder.Property(x => x.Description).HasMaxLength(ConflictDeclaration.TextMaxLength).IsRequired();
+        builder.Property(x => x.EndReason).HasMaxLength(ConflictDeclaration.TextMaxLength);
+        // Tra theo người duyệt (mỗi lần kiểm tra quyền duyệt) và theo NCC (báo cáo KSNB).
+        builder.HasIndex(x => new { x.UserId, x.SupplierId });
+        builder.HasIndex(x => x.SupplierId);
+        builder.HasOne<Proc.Infrastructure.Identity.AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

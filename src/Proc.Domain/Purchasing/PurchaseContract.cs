@@ -198,6 +198,9 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
     public string DocType => DocumentTypes.Contract;
 
     /// <inheritdoc />
+    public IReadOnlyCollection<Guid> RelatedSupplierIds => [SupplierId];
+
+    /// <inheritdoc />
     /// <remarks>Giá trị dự kiến = Σ thành tiền dự kiến các dòng (xem <see cref="PurchaseContractLine.ExpectedAmount"/>).</remarks>
     public decimal ApprovalAmount => ExpectedAmount;
 

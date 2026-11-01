@@ -83,6 +83,9 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     public abstract string DocType { get; }
 
     /// <inheritdoc />
+    public virtual IReadOnlyCollection<Guid> RelatedSupplierIds => [];
+
+    /// <inheritdoc />
     public bool IsAwaitingApproval => Status == ApprovalDocumentStatus.Submitted;
 
     /// <summary>Gửi duyệt: Nháp → Chờ duyệt, tăng lượt gửi.</summary>
@@ -384,6 +387,9 @@ public sealed class PurchaseOrder : ApprovableDocument
 
     /// <inheritdoc />
     public override string DocType => DocumentTypes.PurchaseOrder;
+
+    /// <inheritdoc />
+    public override IReadOnlyCollection<Guid> RelatedSupplierIds => [SupplierId];
 
     /// <inheritdoc />
     protected override int LineCount => _lines.Count;

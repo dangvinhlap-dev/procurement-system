@@ -116,6 +116,8 @@ internal sealed class ApprovalEngine
         // Tách người lập và người duyệt – nguyên tắc kiểm soát nội bộ.
         if (document.IsPreparedBy(userId.Value)) return "Người lập không tự duyệt phiếu của mình.";
         if (!_scope.HasPermission(ApprovePermission(document.DocType))) return "Bạn không có quyền duyệt loại phiếu này.";
+        if (await ConflictBlockerAsync(userId.Value, await SupplierIdsAsync(document, cancellationToken), cancellationToken) is { } conflict)
+            return conflict;
         if (step.RoleId is { } roleId
             && !await _db.UserCompanyRoles.AnyAsync(u => u.UserId == userId && u.CompanyId == step.CompanyId && u.RoleId == roleId, cancellationToken))
         {
@@ -174,13 +176,53 @@ internal sealed class ApprovalEngine
     {
         var users = await _notifications.UsersWithPermissionAsync(
             step.CompanyId, ApprovePermission(document.DocType), step.RoleId, null, cancellationToken);
-        _notifications.Add(step.CompanyId, users.Where(u => !document.IsPreparedBy(u) && (document.CreatedBy is not null || u != _scope.UserId)), NotificationTypes.ApprovalPending,
+        // Người có kê khai xung đột lợi ích với NCC của phiếu không duyệt được nên không báo (design.md mục 18.8).
+        var conflicted = await ConflictedUsersAsync(users, await SupplierIdsAsync(document, cancellationToken), cancellationToken);
+        _notifications.Add(step.CompanyId, users.Where(u => !document.IsPreparedBy(u) && !conflicted.Contains(u) && (document.CreatedBy is not null || u != _scope.UserId)), NotificationTypes.ApprovalPending,
             $"{Noun(document)} {document.No} chờ bạn duyệt",
             ApprovalTypes.Get(document.DocType).AmountLabel is null
                 ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}."
                 : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
             document.DocType, document.Id);
     }
+
+    /// <summary>
+    /// Lý do người dùng không được tham gia quyết định (duyệt, chấm thầu, chọn thầu) vì có kê khai xung đột lợi ích còn hiệu lực hôm nay
+    /// với một trong các NCC (design.md mục 18.8 – đề xuất Ban CUVT N4), hoặc null. Kê khai dùng chung mọi công ty (gắn với con người).
+    /// </summary>
+    /// <param name="userId">Người dùng.</param>
+    /// <param name="supplierIds">NCC của phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Câu báo nêu mã NCC, hoặc null khi không vướng.</returns>
+    public async Task<string?> ConflictBlockerAsync(Guid userId, IReadOnlyCollection<Guid> supplierIds, CancellationToken cancellationToken)
+    {
+        if (supplierIds.Count == 0) return null;
+        var today = _clock.TodayInVietnam();
+        var codes = await _db.ConflictDeclarations.AsNoTracking()
+            .Where(d => d.UserId == userId && supplierIds.Contains(d.SupplierId) && d.ValidFrom <= today && (d.ValidTo == null || d.ValidTo >= today))
+            .Join(_db.Suppliers, d => d.SupplierId, s => s.Id, (_, s) => s.Code)
+            .Distinct().OrderBy(c => c).ToListAsync(cancellationToken);
+        return codes.Count == 0 ? null
+            : $"Bạn đã kê khai quan hệ lợi ích với NCC {string.Join(", ", codes)} nên không được duyệt, chấm thầu hoặc chọn thầu liên quan NCC này.";
+    }
+
+    /// <summary>Những người trong danh sách có kê khai xung đột lợi ích còn hiệu lực với một trong các NCC.</summary>
+    private async Task<HashSet<Guid>> ConflictedUsersAsync(IReadOnlyCollection<Guid> userIds, IReadOnlyCollection<Guid> supplierIds, CancellationToken cancellationToken)
+    {
+        if (userIds.Count == 0 || supplierIds.Count == 0) return [];
+        var today = _clock.TodayInVietnam();
+        return (await _db.ConflictDeclarations.AsNoTracking()
+            .Where(d => userIds.Contains(d.UserId) && supplierIds.Contains(d.SupplierId) && d.ValidFrom <= today && (d.ValidTo == null || d.ValidTo >= today))
+            .Select(d => d.UserId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+    }
+
+    /// <summary>NCC của đối tượng duyệt; phụ lục hợp đồng lấy NCC của hợp đồng gốc.</summary>
+    private async Task<IReadOnlyCollection<Guid>> SupplierIdsAsync(IApprovalSubject document, CancellationToken cancellationToken) => document switch
+    {
+        PurchaseContractAmendment amendment => await _db.PurchaseContracts.AsNoTracking()
+            .Where(c => c.Id == amendment.ContractId).Select(c => c.SupplierId).ToListAsync(cancellationToken),
+        _ => document.RelatedSupplierIds,
+    };
 
     /// <summary>Báo người lập phiếu kết quả duyệt.</summary>
     private void NotifyCreator(IApprovalSubject document, string type, string title, string message)

@@ -103,11 +103,12 @@ public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, G
 
 /// <summary>
 /// Thao tác được phép trên RFQ. CanAward = chọn thầu và gửi duyệt; CanApprove = người dùng duyệt/từ chối được bước đang đến lượt;
-/// CanRecall = rút kết quả đang chờ duyệt về để chọn lại.
+/// CanRecall = rút kết quả đang chờ duyệt về để chọn lại; ConflictReason = người dùng có kê khai xung đột lợi ích với NCC được mời nên
+/// không nhập báo giá, chọn thầu được (design.md mục 18.8).
 /// </summary>
 public sealed record RfqActions(
     bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
-    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false);
+    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null);
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);

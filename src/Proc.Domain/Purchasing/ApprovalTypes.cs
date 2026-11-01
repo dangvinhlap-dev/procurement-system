@@ -99,4 +99,10 @@ public interface IApprovalSubject
     /// </summary>
     /// <param name="userId">Người dùng.</param>
     bool IsPreparedBy(Guid userId) => CreatedBy == userId;
+
+    /// <summary>
+    /// NCC của đối tượng duyệt – người có kê khai xung đột lợi ích còn hiệu lực với một trong các NCC này không được duyệt
+    /// (design.md mục 18.8). Mặc định không có NCC (PR).
+    /// </summary>
+    IReadOnlyCollection<Guid> RelatedSupplierIds => [];
 }

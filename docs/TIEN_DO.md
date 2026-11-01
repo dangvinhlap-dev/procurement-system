@@ -80,14 +80,24 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. B4 (hợp đồng nguyên tắc) đã xong cả B4a, B4b, B4c. Lát kế tiếp **B5** – lập kế hoạch ngắn trước khi code.
+- **Lát B5a – Kê khai xung đột lợi ích (N4)**, nhánh `feature/xung-dot-loi-ich` (B5b – NCC độc quyền N6 làm sau). Log từng bước
+  (mỗi bước đã commit + push nhánh; máy khác: `git fetch; git checkout feature/xung-dot-loi-ich` rồi làm tiếp bước chưa xong):
+  1. [xong] Backend: entity `ConflictDeclaration` (người dùng × NCC, loại quan hệ, mô tả, hiệu lực từ–đến, lý do kết thúc; không xóa/sửa),
+     migration `V0_12_0_KeKhaiXungDotLoiIch`, `IApprovalSubject.RelatedSupplierIds` (PO, PRL, NCC, CTR; RFQ = mọi NCC mời; CTA lấy NCC
+     hợp đồng), `ApprovalEngine.ConflictBlockerAsync` chặn duyệt + không báo người vướng; RFQ chặn nhập báo giá/chọn thầu
+     (`RfqActions.ConflictReason`); quyền `MasterData.Conflict.View` (KSNB, Trưởng ban) / `.Manage` (Trưởng ban); API `/api/conflict-declarations`.
+  2. [xong] Test tích hợp `ConflictDeclarationTests` (3 test); `dotnet test` toàn bộ 458/458 qua.
+  3. [xong, chưa chạy e2e] Giao diện: màn hình COI (Giá và NCC → Xung đột lợi ích, `pages/pricing/ConflictListPage.tsx` + `ConflictDrawer.tsx`,
+     `api/conflicts.ts`), cảnh báo trên RFQ; `tsc`, `oxlint` qua. E2E `e2e/conflicts.spec.ts` đã viết.
+  4. [còn] Chạy `npm run build`, Playwright `conflicts.spec.ts` + chụp màn hình đối chiếu ui-style.md.
+  5. [còn] design.md mục 18.8 + bảng quyết định mục 18; merge `main`, xóa nhánh.
   Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
 
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c đã xong; lát kế tiếp: **B5**.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c đã xong; đang làm **B5a**, sau đó B5b.
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN).
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). Phần PO theo hợp đồng ở lát C1.
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0,

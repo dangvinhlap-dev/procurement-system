@@ -112,6 +112,9 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
     public string DocType => DocumentTypes.PriceList;
 
     /// <inheritdoc />
+    public IReadOnlyCollection<Guid> RelatedSupplierIds => [SupplierId];
+
+    /// <inheritdoc />
     /// <remarks>Bảng giá không xét giá trị: mọi bảng qua đủ các cấp đã cấu hình (design.md mục 18.6).</remarks>
     public decimal ApprovalAmount => 0;
 
