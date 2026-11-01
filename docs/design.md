@@ -1257,11 +1257,12 @@ Màn hình CTR (Mua hàng → Hợp đồng nguyên tắc, thay "Hợp đồng k
 | Đổi bảng giá trong phụ lục: bảng mới cùng NCC, dùng được như lúc lập hợp đồng, phải **đang hiệu lực** khi gửi/duyệt; mọi dòng sản lượng phải có giá trong bảng mới (bậc SL tối thiểu nhỏ nhất). **Giá trị dự kiến sau phụ lục** tính lại theo bảng mới, chốt lúc gửi, xét ngưỡng duyệt | Hợp đồng không ghi giá riêng ngoài bảng giá |
 | Duyệt phụ lục: loại duyệt riêng **CTA** "Phụ lục hợp đồng nguyên tắc" (cấu hình cấp riêng, quyền duyệt `Purchase.Contract.Approve`; người lập không tự duyệt; từ chối bắt buộc lý do về Nháp; rút về Nháp; hủy khi Nháp). Kiểm tra lại khi gửi và duyệt: hợp đồng còn hiệu lực, NCC Đã duyệt, gia hạn không chồng hiệu lực với hợp đồng khác (chờ duyệt/hiệu lực) cùng công ty × NCC. **Duyệt cấp cuối thì áp vào hợp đồng** trong cùng giao dịch: ngày hết hiệu lực, bảng giá (giá dòng lấy lại), điều khoản. Tóm tắt thay đổi chốt trên phụ lục để tra cứu; chi tiết trước/sau ở nhật ký thay đổi | Phụ lục gia hạn thường duyệt khác ký mới |
 | Đang có phụ lục mở thì không chấm dứt hợp đồng (hủy/rút phụ lục trước). Thông báo/Việc cần làm loại CTA mở `/mua-hang/hop-dong-khung/phu-luc/<Id>` (chuyển sang hợp đồng, mở sẵn ngăn kéo) | Tránh áp phụ lục vào hợp đồng đã chấm dứt |
-| Để lát **B4c**: nhập Excel hợp đồng hiện hữu (Bước 8). Lát C1: PO lấy giá/kiểm tra theo hợp đồng hiệu lực, cờ "ngoài hợp đồng". F4: theo dõi chiết khấu/tài trợ thực nhận | Tách lát |
+| **Nhập Excel hợp đồng hiện hữu** (lát B4c – nút Nhập Excel trên danh sách CTR, quyền `Purchase.Contract.Manage`): mỗi dòng file là một dòng sản lượng (mặt hàng × ĐVT), các dòng cùng **Số HĐ giấy** là một hợp đồng; cột đầu hợp đồng (mã NCC, số bảng giá, tên, ngày ký, hiệu lực, hạn mức, điều khoản, mã bộ phận được đặt, ghi chú) ghi ở dòng đầu, dòng sau để trống hoặc ghi giống hệt (khác thì lỗi). Dòng đầu không có mã hàng = hợp đồng chưa có sản lượng. Nhập vào **công ty đang làm việc** ở trạng thái **Nháp**, qua đúng quy tắc lập tay (giá theo bảng giá…), rồi gửi duyệt như thường. Không cập nhật: số HĐ giấy đã có (chưa hủy) với cùng NCC thì báo lỗi. Kiểm tra thử / nhập thật, có lỗi ở bất kỳ hợp đồng nào thì không lưu gì; lỗi báo theo dòng Excel; tối đa 5.000 dòng, 10 MB | Bước 8 – chuyển giao hợp đồng đang thực hiện; Q4 – hợp đồng phải duyệt nên không nhập thẳng Hiệu lực |
+| Lát C1: PO lấy giá/kiểm tra theo hợp đồng hiệu lực, cờ "ngoài hợp đồng". F4: theo dõi chiết khấu/tài trợ thực nhận | Tách lát |
 
 Migration `V0_12_0_HopDongNguyenTac` (bảng `PurchaseContract`, `PurchaseContractLine`, `PurchaseContractDepartment`; bảng mới –
 `Down()` xóa các bảng, mất hợp đồng đã lập). Migration `V0_12_0_PhuLucHopDong` (bảng `PurchaseContractAmendment`; bảng mới – `Down()` xóa
-bảng, mất phụ lục đã lập, nội dung đã áp vào hợp đồng vẫn giữ).
+bảng, mất phụ lục đã lập, nội dung đã áp vào hợp đồng vẫn giữ). Lát B4c không có migration.
 
 ## Nguồn tham khảo
 

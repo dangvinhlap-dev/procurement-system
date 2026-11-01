@@ -79,14 +79,15 @@ public sealed partial class ContractService : IContractService
         var priceList = await CheckHeaderAsync(request, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, priceList, cancellationToken);
         await CheckDepartmentsAsync(request.DepartmentIds, cancellationToken);
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        // Nhập Excel (lát B4c) gọi trong giao dịch chung của cả file – khi đó dùng giao dịch đó, không mở giao dịch lồng.
+        await using var transaction = _db.Database.CurrentTransaction is null ? await _db.Database.BeginTransactionAsync(cancellationToken) : null;
         var no = await _numbers.NextAsync(DocumentTypes.Contract, request.ValidFrom, cancellationToken);
         var contract = PurchaseContract.Create(companyId, no, ToHeader(request));
         contract.SetLines(lines);
         contract.SetDepartments(request.DepartmentIds);
         _db.PurchaseContracts.Add(contract);
         await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return await GetAsync(contract.Id, cancellationToken);
     }
 

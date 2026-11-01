@@ -8,6 +8,11 @@ namespace Proc.Api.Endpoints;
 /// <summary>API hợp đồng nguyên tắc (lát B4a – design.md mục 18.7).</summary>
 public static class ContractEndpoints
 {
+    /// <summary>Dung lượng tối đa file nhập Excel (như nhập danh mục).</summary>
+    private const long MaxFileBytes = 10 * 1024 * 1024;
+
+    private const string XlsxContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
     /// <summary>Đăng ký các endpoint.</summary>
     /// <param name="app">Ứng dụng.</param>
     /// <returns>Ứng dụng (để nối tiếp).</returns>
@@ -41,6 +46,25 @@ public static class ContractEndpoints
             .RequirePermission(Permissions.Purchase.ContractManage);
         contracts.MapPost("/{id:guid}/cancel", (Guid id, IContractService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Purchase.ContractManage);
+
+        // Nhập Excel hợp đồng hiện hữu (lát B4c): nhập thành hợp đồng nháp của công ty đang làm việc, quyền như lập hợp đồng.
+        contracts.MapGet("/import-template", (IContractImportService s) =>
+            {
+                var file = s.GetTemplate();
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Purchase.ContractManage);
+        contracts.MapPost("/import", async (bool? commit, IFormFile file, IContractImportService s, CancellationToken ct) =>
+            {
+                if (file.Length == 0) return Results.Problem(title: "File rỗng.", statusCode: StatusCodes.Status400BadRequest);
+                if (file.Length > MaxFileBytes)
+                    return Results.Problem(title: "File quá 10 MB. Hãy chia nhỏ file.", statusCode: StatusCodes.Status400BadRequest);
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.ImportAsync(stream, commit ?? false, ct));
+            })
+            .RequirePermission(Permissions.Purchase.ContractManage)
+            // API dùng JWT trong header, không dùng cookie, nên không có nguy cơ CSRF – tắt kiểm tra antiforgery cho form tải file.
+            .DisableAntiforgery();
 
         // Phụ lục hợp đồng (lát B4b): lập trên hợp đồng hiệu lực, mỗi phụ lục phải duyệt; quyền như hợp đồng.
         contracts.MapPost("/{id:guid}/amendments", async (Guid id, SaveContractAmendmentRequest request, IContractAmendmentService s, CancellationToken ct) =>

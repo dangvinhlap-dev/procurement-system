@@ -181,6 +181,35 @@ public interface IContractAmendmentService
     Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancellationToken cancellationToken);
 }
 
+/// <summary>Kết quả nhập Excel hợp đồng hiện hữu.</summary>
+/// <param name="TotalRows">Số dòng dữ liệu (bỏ dòng trống).</param>
+/// <param name="Contracts">Số hợp đồng sẽ tạo / đã tạo.</param>
+/// <param name="Lines">Số dòng sản lượng sẽ tạo / đã tạo.</param>
+/// <param name="Errors">Các lỗi (Code = số HĐ giấy); có lỗi thì không hợp đồng nào được lưu.</param>
+/// <param name="Committed">true khi đã lưu thật; false khi chỉ kiểm tra thử hoặc có lỗi.</param>
+public sealed record ContractImportResult(int TotalRows, int Contracts, int Lines, IReadOnlyList<Excel.ExcelImportError> Errors, bool Committed);
+
+/// <summary>
+/// Nhập Excel hợp đồng nguyên tắc hiện hữu (lát B4c – design.md mục 18.7, đề xuất Ban CUVT Bước 8: chuyển giao hợp đồng đang thực hiện).
+/// Mỗi dòng file là một dòng sản lượng; các dòng cùng số HĐ giấy là một hợp đồng. Hợp đồng nhập vào công ty đang làm việc ở trạng thái
+/// Nháp, qua đúng quy tắc lập tay, rồi gửi duyệt như thường. Cần quyền <c>Purchase.Contract.Manage</c>.
+/// </summary>
+public interface IContractImportService
+{
+    /// <summary>File mẫu trống kèm sheet Hướng dẫn.</summary>
+    /// <returns>File .xlsx.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không có quyền lập hợp đồng.</exception>
+    Excel.ExcelFile GetTemplate();
+
+    /// <summary>Nhập file: kiểm tra thử (không lưu) hoặc nhập thật (chỉ lưu khi mọi dòng đúng).</summary>
+    /// <param name="content">Nội dung file .xlsx.</param>
+    /// <param name="commit">false = kiểm tra thử; true = lưu nếu không có lỗi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số hợp đồng, số dòng và các lỗi theo dòng Excel.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không có quyền lập hợp đồng.</exception>
+    Task<ContractImportResult> ImportAsync(Stream content, bool commit, CancellationToken cancellationToken);
+}
+
 /// <summary>Kiểm tra dữ liệu lưu phụ lục hợp đồng.</summary>
 public sealed class SaveContractAmendmentRequestValidator : AbstractValidator<SaveContractAmendmentRequest>
 {

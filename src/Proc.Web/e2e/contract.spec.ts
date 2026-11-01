@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 import { api, approveContract, approveContractAmendment, approvePriceList, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
@@ -135,4 +136,31 @@ test('phụ lục hợp đồng: gia hạn, đổi điều khoản, duyệt thì
   await page.getByRole('tab', { name: 'Phụ lục (1)' }).click()
   await expect(page.getByRole('tabpanel')).toContainText('Đã duyệt – đã áp')
   await page.screenshot({ path: 'e2e/screenshots/contract-amendment-applied.png' })
+})
+
+/**
+ * Nhập Excel hợp đồng hiện hữu (lát B4c, design.md mục 18.7): nút Nhập Excel trên danh sách CTR, tải file mẫu, file sai mẫu báo thiếu cột
+ * bắt buộc (nhập đúng file đã có test tích hợp ContractTests.NhapExcel_*).
+ */
+test('hợp đồng nguyên tắc: hộp thoại nhập Excel hợp đồng hiện hữu', async ({ page }) => {
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+  await openByCommand(page, 'CTR')
+  await page.getByRole('button', { name: 'Nhập Excel' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Nhập hợp đồng nguyên tắc từ Excel' })
+  await expect(dialog.getByText(/các dòng cùng Số HĐ giấy là một hợp đồng/)).toBeVisible()
+  const downloading = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Tải file mẫu' }).click()
+  expect((await downloading).suggestedFilename()).toBe('mau-hop-dong-nguyen-tac.xlsx')
+
+  // File của màn hình khác (dữ liệu mua lịch sử) thiếu các cột của hợp đồng – báo lỗi, không lưu gì.
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'sai-mau.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: readFileSync('e2e/fixtures/du-lieu-mua-lich-su.xlsx'),
+  })
+  await dialog.getByRole('button', { name: 'Kiểm tra thử' }).click()
+  await expect(dialog.getByText(/File thiếu cột bắt buộc: Số HĐ giấy/)).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/contract-import.png' })
 })

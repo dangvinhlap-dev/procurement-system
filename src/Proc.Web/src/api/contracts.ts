@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
+import type { ExcelImportSource, ImportOutcome } from '../components/ListPage/excelImport'
 import { apiFetch } from './client'
 import type { ApprovalStep } from './purchasing'
 
@@ -310,4 +311,28 @@ export function useContractAmendmentMutations() {
     approve: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'approve', comment), onSuccess }),
     reject: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'reject', comment), onSuccess }),
   }
+}
+
+/** Kết quả nhập Excel hợp đồng hiện hữu – khớp ContractImportResult. */
+export interface ContractImportResult extends ImportOutcome {
+  contracts: number
+  lines: number
+}
+
+/**
+ * Nguồn nhập Excel hợp đồng hiện hữu (lát B4c, design.md mục 18.7): mỗi dòng một mặt hàng × ĐVT, các dòng cùng số HĐ giấy là một hợp
+ * đồng; nhập thành hợp đồng nháp của công ty đang làm việc, không cập nhật hợp đồng đã có.
+ */
+export const contractImportSource: ExcelImportSource<ContractImportResult> = {
+  importUrl: '/api/contracts/import',
+  templateUrl: '/api/contracts/import-template',
+  templateFileName: 'mau-hop-dong-nguyen-tac.xlsx',
+  hint:
+    'Mỗi dòng một mặt hàng × ĐVT; các dòng cùng Số HĐ giấy là một hợp đồng. Hợp đồng nhập vào ở trạng thái Nháp của công ty đang làm ' +
+    'việc – kiểm tra rồi gửi duyệt như lập tay. Số HĐ giấy đã có với cùng NCC thì báo lỗi, không nhập lại. Bấm "Kiểm tra thử" trước – ' +
+    '"Nhập thật" chỉ lưu khi mọi hợp đồng đều đúng.',
+  summary: (r) => ({
+    valid: `File hợp lệ: ${r.contracts.toLocaleString('vi-VN')} hợp đồng, ${r.lines.toLocaleString('vi-VN')} dòng sản lượng. Bấm "Nhập thật" để lưu.`,
+    committed: `Đã nhập ${r.contracts.toLocaleString('vi-VN')} hợp đồng nháp, ${r.lines.toLocaleString('vi-VN')} dòng sản lượng.`,
+  }),
 }
