@@ -43,6 +43,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Đang làm
 
 - Không có. Lát kế tiếp: **B1** – duyệt bảng giá NCC (Nháp → Chờ duyệt → Hiệu lực) dùng cơ chế duyệt A3 (`docs/Phantich_01112026.md` mục 5, 10; lập kế hoạch chi tiết trước khi code).
+  Đã ghi yêu cầu người dùng cho **B2**: duyệt NCC qua công ty liên quan rồi mới tới Tổng công ty (design.md 18.6) – khi làm B2 xác nhận lại
+  các mặc định đã đề xuất.
 
 ## Việc tiếp theo
 
