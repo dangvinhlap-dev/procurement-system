@@ -19,6 +19,7 @@ import {
 } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -86,6 +87,8 @@ export function PurchaseOrderPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = order.data
   const readOnly = isNew ? !hasPermission(Permission.PoCreate) : !doc?.actions.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('PurchaseOrder', doc?.id, hasPermission(Permission.PoCreate))
   const suppliers = useSupplierLookup(doc?.supplierId ? [doc.supplierId] : [])
   // Ô NCC chỉ liệt kê NCC đã duyệt và đang áp dụng tại công ty (design.md mục 5.9): không có NCC nào thì nói rõ lý do và chỗ xử lý,
   // tránh người dùng tưởng lỗi vì đã tạo NCC nhưng chưa duyệt hoặc chưa áp dụng cho công ty này.
@@ -433,7 +436,10 @@ export function PurchaseOrderPage() {
             <DocumentTotal label="Tổng thanh toán" value={formatMoney(totals.amount + totals.vat)} strong />
           </>
         }
-        extraTabs={doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : undefined}
+        extraTabs={[
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          attachmentTab,
+        ]}
       />
       {picking && <RequestLinePicker onCancel={() => setPicking(false)} onPick={addFromRequests} />}
     </>

@@ -80,7 +80,7 @@ Chốt: **ASP.NET Core trên .NET 10 (LTS) + PostgreSQL 18 + React/TypeScript**,
 | Xuất file | ClosedXML (Excel), QuestPDF (in phiếu, PO) | Thư viện .NET, không phụ thuộc Office |
 | Frontend | React 19 + TypeScript + Vite + Ant Design + TanStack Query | Form/bảng nhập liệu phong phú, có locale tiếng Việt |
 | Lưới nhập liệu | Component `DataGrid` dùng chung (Ant Design Table hoặc AG Grid Community) | Nhập dòng chứng từ nhanh như Excel |
-| Lưu file đính kèm | MinIO (S3) hoặc thư mục mạng | Báo giá, hợp đồng, hóa đơn |
+| Lưu file đính kèm | Thư mục trên máy chủ (quyết định Q6 – mục 18.4) | Báo giá, hợp đồng, hóa đơn |
 | Triển khai | Docker Compose, Caddy (HTTPS tự động), GitHub Actions | Dễ dựng môi trường dev/test/prod |
 | Kiểm thử | xUnit + PostgreSQL thật (database `procurement_test`), Playwright cho UI | Test giá vốn trên DB thật, so giao diện với ảnh mẫu |
 
@@ -1152,6 +1152,21 @@ Bước 4–5 của đề xuất: với từng mã hàng chung, so giá mua gi�
 | **Giá mục tiêu** = BQGQ thấp nhất giữa các pháp nhân × (100 − X) / 100, X nhập trên màn hình (mặc định 5%, 0 ≤ X < 100). **Tiết kiệm dự kiến** = Σ max(0, BQGQ pháp nhân − giá mục tiêu) × SL pháp nhân (tiền, 2 số lẻ); % = tiết kiệm / tổng giá trị. Ví dụ đề xuất: 12.000 × 100.000 đ + 8.000 × 110.000 đ, X = 5 → 95.000 đ, tiết kiệm 180.000.000 đ = 8,65% | Pháp nhân đã mua thấp hơn giá mục tiêu không tính âm |
 | Danh sách nhiều tiết kiệm trước; tô màu dòng chênh lệch quá ngưỡng (mặc định 10%); lọc "Nhiều pháp nhân cùng mua". Mở dòng → ngăn kéo chỉ xem: từng pháp nhân + dòng Hợp nhất, giá mục tiêu, chi phí sau đàm phán | Như bảng ví dụ của đề xuất |
 | Quyền: xem cần `Analysis.PurchaseHistory.View` (công ty đang làm việc). **Toàn tập đoàn** cần quyền mới `Analysis.PurchaseHistory.ViewAllCompanies`: bỏ filter công ty, giữ filter nhóm hàng (mặt hàng ngoài nhóm được xem không hiện) | Mục 9.2 |
+
+### 18.4 Đính kèm file dùng chung (lát A1, 01/11/2026)
+
+Đính kèm hồ sơ pháp lý, năng lực NCC, báo giá, biên bản, hợp đồng, hóa đơn scan vào: **NCC** (ngăn kéo NCC, tab "Hồ sơ đính kèm"),
+**bảng giá NCC, RFQ, PR, PO và mọi phiếu kho** (GRN, RTV, TRF, ICS, ICR – tab "Đính kèm (n)" trên DocumentForm). Hợp đồng nguyên tắc
+(lát B4) dùng lại cùng cơ chế.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| File nằm trong **thư mục trên máy chủ** (`Attachments:RootPath`, mặc định `data/attachments` tính từ thư mục ứng dụng; Docker: volume `attachments` gắn vào `/app/data/attachments`), đường dẫn `yyyy/MM/{Id}{đuôi}` – không dùng tên người dùng gửi. Bảng `Attachment`: loại chủ (`OwnerType`) + `OwnerId`, CompanyId của chủ (trống với NCC), tên file gốc, đuôi, loại nội dung, dung lượng, SHA-256, đường dẫn tương đối, ghi chú, người/giờ tải lên, cờ xóa + người/giờ xóa | Quyết định Q6; tên trên đĩa không chứa ký tự lạ hay "../" |
+| Tối đa **20 MB/file** (đo khi ghi, không tin dung lượng client báo); chỉ nhận pdf, doc(x), xls(x), csv, ppt(x), txt, xml, jpg/jpeg, png, gif, bmp, tif(f), zip, rar, 7z, msg, eml. Loại nội dung suy từ đuôi; tải xuống luôn dạng `attachment` | Chặn file chạy được, html/svg có thể chạy script trong trình duyệt |
+| **Quyền theo đối tượng chủ**, không thêm mã quyền: xem/tải xuống = quyền xem chủ (Supplier.View, PriceList.View, Rfq.View, PR.View, PO.View, Inventory.Document.View); tải lên/xóa = quyền sửa chủ (Supplier.Manage, PriceList.Manage, Rfq.Manage, PR.Create, PO.Create, Inventory.Document.Create). Chủ đọc qua global query filter: phiếu công ty khác hoặc kho ngoài phạm vi → 404. NCC là danh mục dùng chung nên hồ sơ NCC mọi công ty cùng thấy | Mục 9.2; không lộ việc phiếu có tồn tại |
+| Đính kèm được ở **mọi trạng thái** của chủ (kể cả đã duyệt, đã ghi sổ) | File không đổi số liệu; hóa đơn, biên bản thường có sau khi nhập |
+| **Xóa mềm**: ẩn khỏi danh sách, file giữ trên đĩa; tải lên/xóa vào Nhật ký (`Attachment` có [Auditable]). Ghi file trước, lưu CSDL sau; lưu CSDL lỗi thì xóa file vừa ghi | Đối chiếu, khôi phục khi xóa nhầm; không có file mồ côi |
+| Sao lưu: container `backup` mỗi đêm chép bổ sung (không ghi đè) volume đính kèm vào `backups/attachments/` | File chỉ thêm, không sửa trên đĩa nên chép bổ sung là đủ |
 
 ## Nguồn tham khảo
 

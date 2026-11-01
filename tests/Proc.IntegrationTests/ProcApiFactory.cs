@@ -35,6 +35,8 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        // File đính kèm của test ghi vào thư mục tạm, không lẫn vào thư mục ứng dụng (design.md mục 18.4).
+        builder.UseSetting("Attachments:RootPath", Path.Combine(Path.GetTempPath(), "proc-test-attachments"));
     }
 
     /// <summary>Khởi động host (migration + seed) rồi đưa dữ liệu về trạng thái sạch.</summary>

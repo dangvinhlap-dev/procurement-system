@@ -18,6 +18,7 @@ import {
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
@@ -107,6 +108,8 @@ export function SupplierPriceListPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = list.data
   const readOnly = isNew ? !hasPermission(Permission.PriceListManage) : !doc?.actions.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('SupplierPriceList', doc?.id, hasPermission(Permission.PriceListManage))
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -343,6 +346,7 @@ export function SupplierPriceListPage() {
   return (
     <DocumentForm
       title="Bảng giá nhà cung cấp"
+      extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
       status={status}
       meta={doc && `Công ty lập: ${doc.companyCode} · Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}

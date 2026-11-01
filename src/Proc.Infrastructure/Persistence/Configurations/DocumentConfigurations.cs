@@ -35,3 +35,25 @@ public sealed class DocumentSequenceConfiguration : IEntityTypeConfiguration<Doc
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng Attachment – file đính kèm dùng chung (design.md mục 18.4).</summary>
+public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachment>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Attachment> builder)
+    {
+        builder.ToTable("Attachment");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.OwnerType).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.FileName).HasMaxLength(Attachment.FileNameMaxLength).IsRequired();
+        builder.Property(x => x.Extension).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.StoragePath).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(Attachment.NoteMaxLength);
+        builder.HasIndex(x => x.StoragePath).IsUnique();
+        // Truy vấn chính: file của một đối tượng. Không khóa ngoại tới chủ vì chủ nằm ở nhiều bảng khác nhau (OwnerType).
+        builder.HasIndex(x => new { x.OwnerType, x.OwnerId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

@@ -15,6 +15,7 @@ import {
 import { useWarehouses } from '../../api/organization'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -66,6 +67,8 @@ export function StockTransferPage() {
 
   const doc = document.data
   const readOnly = isNew ? !hasPermission(Permission.InventoryDocumentCreate) : !doc?.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('InventoryDocument', doc?.id, hasPermission(Permission.InventoryDocumentCreate))
   const watchedLines = Form.useWatch('lines', form) as TransferLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
   const fromWarehouseId = Form.useWatch('fromWarehouseId', form) as string | undefined
@@ -255,6 +258,7 @@ export function StockTransferPage() {
   return (
     <DocumentForm
       title="Phiếu chuyển kho nội bộ"
+      extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}

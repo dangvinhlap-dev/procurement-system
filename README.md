@@ -62,6 +62,8 @@ Chi tiết hạ tầng: docs/design.md mục 14. Các lệnh dưới đây chạ
 
 **Sao lưu và khôi phục**
 - Container `backup` tự sao lưu mỗi đêm vào thư mục `backups/`, giữ 14 ngày; chép thư mục này ra máy khác.
+- File đính kèm nằm trong volume `attachments` (CSDL chỉ lưu đường dẫn); mỗi đêm được chép bổ sung vào `backups/attachments/`.
+  Khôi phục: chép lại vào volume, ví dụ `docker compose cp backups/attachments/. app:/app/data/attachments`.
 - Khôi phục vào CSDL trống: dừng app (`docker compose stop app`), rồi
   `docker compose exec backup pg_restore --clean --if-exists -d procurement /backups/<file>.dump`, sau đó `docker compose up -d`.
 

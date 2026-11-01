@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sao lưu CSDL mỗi ngày lúc BACKUP_TIME (giờ Việt Nam) vào /backups, giữ BACKUP_KEEP_DAYS ngày gần nhất.
+# Sao lưu CSDL mỗi ngày lúc BACKUP_TIME (giờ Việt Nam) vào /backups, giữ BACKUP_KEEP_DAYS ngày gần nhất; chép thêm file đính kèm.
 # Chạy trong container "backup" của docker-compose.yml; thông tin kết nối lấy từ PGHOST/PGUSER/PGPASSWORD/PGDATABASE.
 # Khôi phục: pg_restore --clean --if-exists -d <database> <file.dump> (README.md mục "Triển khai server").
 set -eu
@@ -18,6 +18,17 @@ backup_once() {
     echo "$(date '+%d/%m/%Y %H:%M') LỖI sao lưu CSDL $PGDATABASE" >&2
   fi
   find /backups -name "${PGDATABASE}_*.dump" -mtime +"$BACKUP_KEEP_DAYS" -delete
+
+  # File đính kèm (design.md mục 18.4): chỉ thêm, không bao giờ sửa hay xóa trên đĩa (xóa là xóa mềm trong CSDL), nên chép bổ sung
+  # file mới (-n: không ghi đè) là đủ có bản đầy đủ mà không phải nén lại toàn bộ mỗi đêm.
+  if [ -d /attachments ]; then
+    mkdir -p /backups/attachments
+    if cp -an /attachments/. /backups/attachments/; then
+      echo "$(date '+%d/%m/%Y %H:%M') Đã chép file đính kèm vào /backups/attachments"
+    else
+      echo "$(date '+%d/%m/%Y %H:%M') LỖI chép file đính kèm" >&2
+    fi
+  fi
 }
 
 while true; do

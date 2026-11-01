@@ -44,6 +44,8 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
 EXPOSE 8080
 # Tạo sẵn thư mục khóa Data Protection thuộc user app: volume mới gắn vào đây nhận quyền sở hữu này, app ghi được.
 RUN mkdir -p /home/app/.aspnet/DataProtection-Keys && chown -R app:app /home/app/.aspnet
+# Thư mục file đính kèm (design.md mục 18.4) cũng tạo sẵn thuộc user app vì lý do trên.
+RUN mkdir -p /app/data/attachments && chown -R app:app /app/data
 # Chạy bằng user không phải root có sẵn trong image .NET.
 USER app
 ENTRYPOINT ["dotnet", "Proc.Api.dll"]

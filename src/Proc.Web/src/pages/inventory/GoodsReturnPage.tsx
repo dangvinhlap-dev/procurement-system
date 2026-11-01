@@ -14,6 +14,7 @@ import {
 } from '../../api/inventoryDocuments'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -53,6 +54,8 @@ export function GoodsReturnPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = document.data
   const readOnly = isNew ? !hasPermission(Permission.InventoryDocumentCreate) : !doc?.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('InventoryDocument', doc?.id, hasPermission(Permission.InventoryDocumentCreate))
 
   // Phiếu nhập gốc chọn được: phiếu nhập đã ghi sổ trong 12 tháng gần nhất của kho được phép.
   const receipts = useInventoryDocuments({
@@ -242,6 +245,7 @@ export function GoodsReturnPage() {
   return (
     <DocumentForm
       title="Phiếu xuất trả hàng NCC"
+      extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}

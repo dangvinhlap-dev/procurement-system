@@ -11,7 +11,9 @@ import {
   type SupplierStatus,
 } from '../../api/masterData'
 import { useCompanies } from '../../api/organization'
+import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { SupplierCompanyTab, SupplierItemsTab } from './SupplierLinkTabs'
 
@@ -82,7 +84,7 @@ export function SupplierDrawer({
   onClose: () => void
 }) {
   const { message } = App.useApp()
-  const { workingCompany } = useAuth()
+  const { workingCompany, hasPermission } = useAuth()
   const [form] = Form.useForm<SupplierFormValues>()
   const supplier = useSupplier(supplierId)
   const companies = useCompanies()
@@ -381,6 +383,12 @@ export function SupplierDrawer({
           ? [
               { key: 'items', label: 'Sản phẩm/dịch vụ', children: <SupplierItemsTab supplierId={supplierId} canManage={editable} /> },
               { key: 'company', label: `Áp dụng tại ${workingCompany?.code ?? ''}`, children: <SupplierCompanyTab supplierId={supplierId} /> },
+              // Hồ sơ pháp lý, năng lực (design.md mục 18.4): NCC dùng chung nên mọi công ty cùng thấy; tải lên/xóa theo quyền sửa NCC.
+              {
+                key: 'attachments',
+                label: 'Hồ sơ đính kèm',
+                children: <AttachmentPanel ownerType="Supplier" ownerId={supplierId} canManage={hasPermission(Permission.SupplierManage)} />,
+              },
             ]
           : []),
       ]}

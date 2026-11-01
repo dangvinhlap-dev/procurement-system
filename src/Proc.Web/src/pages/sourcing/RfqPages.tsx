@@ -22,6 +22,7 @@ import {
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
@@ -122,6 +123,8 @@ export function RfqPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = rfq.data
   const readOnly = isNew ? !hasPermission(Permission.RfqManage) : !doc?.actions.canEdit
+  // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
+  const attachmentTab = useAttachmentTab('Rfq', doc?.id, hasPermission(Permission.RfqManage))
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -516,7 +519,7 @@ export function RfqPage() {
             <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1, sourcePrLineId: null })} />
           </>
         }
-        extraTabs={extraTabs}
+        extraTabs={[...extraTabs, attachmentTab]}
       />
       {picking && <RequestLinePicker onCancel={() => setPicking(false)} onPick={addFromRequests} />}
       {quoting && doc && <QuotationDialog rfq={doc} supplier={quoting} onClose={() => setQuoting(null)} />}

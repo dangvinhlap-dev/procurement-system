@@ -145,11 +145,13 @@ export async function apiOpenPdf(path: string): Promise<void> {
  * Gửi file lên API dạng multipart/form-data (trường "file").
  * @param path Đường dẫn API.
  * @param file File người dùng chọn.
+ * @param fields Trường chữ gửi kèm (ví dụ ownerType, ownerId của file đính kèm); bỏ qua trường rỗng.
  * @returns Dữ liệu JSON server trả về.
  * @throws ApiError khi server trả lỗi hoặc không kết nối được.
  */
-export async function apiUpload<T>(path: string, file: File): Promise<T> {
+export async function apiUpload<T>(path: string, file: File, fields: Record<string, string | undefined> = {}): Promise<T> {
   const form = new FormData()
+  for (const [key, value] of Object.entries(fields)) if (value) form.append(key, value)
   form.append('file', file)
   let response: Response
   try {
