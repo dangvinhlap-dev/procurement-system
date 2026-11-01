@@ -98,7 +98,8 @@ public class SupplierPricingTests
             L(f.ItemId, f.Cai, 0, 50_000, 0, null),
             L(f.ItemId, f.Cai, 100, 48_000, 0, null),
             L(f.ItemId, f.Thung, 0, 600_000, 5, "8")), Ct));
-        Assert.Matches($"^PRL-TCT-{Today:yyMM}-\\d{{4}}$", group.No);
+        // Số bảng giá đánh theo ngày hiệu lực (hôm qua) – ngày mùng 1 thì là tháng trước.
+        Assert.Matches($"^PRL-TCT-{Today.AddDays(-1):yyMM}-\\d{{4}}$", group.No);
         Assert.Equal(47_500m, group.Lines[2].BaseNetPrice);
         Assert.Contains("ít nhất một dòng", await TitleAsync(await f.Head.PostAsJsonAsync("/api/price-lists", PriceList(f, true), Ct)));
         Assert.Contains("cùng bậc", await TitleAsync(await f.Head.PostAsJsonAsync("/api/price-lists", PriceList(f, true,
