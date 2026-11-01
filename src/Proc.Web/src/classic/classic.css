@@ -1,5 +1,5 @@
 /*
- * Phong cách ERP desktop cổ điển – BẢN THỬ (docs/ui-style.md).
+ * Phong cách ERP desktop cổ điển – chính thức từ 01/11/2026 (docs/ui-style.md).
  * Mọi quy tắc bó trong .erp-classic để không chạm tới giao diện Fiori của các màn hình khác.
  * Màu, cỡ chữ, khoảng cách chỉ khai báo ở khối biến dưới đây; component đọc lại qua var(--erp-*).
  */

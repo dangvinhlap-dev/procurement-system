@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 
 /**
- * BẢN THỬ giao diện ERP desktop cổ điển (docs/ui-style.md): màn hình Tạo đơn mua hàng dữ liệu mẫu.
+ * Màn hình mẫu giao diện ERP desktop cổ điển (docs/ui-style.md): màn hình Tạo đơn mua hàng dữ liệu mẫu.
  * Chụp ảnh để người dùng duyệt và kiểm tra các thao tác bàn phím chính.
  */
-test.describe('Bản thử giao diện ERP cổ điển – Tạo đơn mua hàng', () => {
+test.describe('Màn hình mẫu giao diện ERP cổ điển – Tạo đơn mua hàng', () => {
   test.beforeEach(async ({ page }) => {
     await loginViaApi(page)
     await page.goto('/thu-giao-dien/tao-po')

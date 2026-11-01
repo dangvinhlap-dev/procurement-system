@@ -16,7 +16,7 @@ export interface ClassicShortcuts {
 }
 
 /**
- * Khung màn hình phong cách ERP desktop cổ điển (BẢN THỬ – docs/ui-style.md mục 1).
+ * Khung màn hình phong cách ERP desktop cổ điển (docs/ui-style.md mục 1).
  * Gắn lớp .erp-classic (biến CSS --erp-*), lồng theme antd riêng và bắt phím tắt toàn màn hình.
  * @param children Các vùng theo thứ tự: MenuBar, Toolbar, ScreenTitle, CommandBar, nội dung (ClassicBody), StatusBar.
  * @param shortcuts Hàm xử lý phím tắt.

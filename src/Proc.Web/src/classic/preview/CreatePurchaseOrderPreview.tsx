@@ -38,7 +38,7 @@ import { EntryGrid, GridButtons, SummaryRow, type EntryColumn } from '../EntryGr
 import { Field, HeaderFields, Section } from '../HeaderFields'
 import { TabStrip } from '../TabStrip'
 
-/** Một dòng hàng của đơn mua (chỉ trong bộ nhớ – bản thử). */
+/** Một dòng hàng của đơn mua (chỉ trong bộ nhớ – màn hình mẫu). */
 interface PoLine {
   id: string
   itemCode: string | null
@@ -138,7 +138,7 @@ function conditionValues(conditions: PriceCondition[], net: number): Map<string,
 }
 
 /**
- * Màn hình THỬ "Tạo đơn mua hàng" theo phong cách ERP desktop cổ điển (docs/ui-style.md, ảnh docs/imageSAP.png).
+ * Màn hình MẪU "Tạo đơn mua hàng" theo phong cách ERP desktop cổ điển (docs/ui-style.md, ảnh docs/imageSAP.png).
  * Dữ liệu mẫu trong bộ nhớ, không gọi API; Lưu chỉ kiểm tra hợp lệ và báo ở thanh trạng thái.
  */
 export function CreatePurchaseOrderPreview() {
@@ -156,7 +156,7 @@ export function CreatePurchaseOrderPreview() {
   const [held, setHeld] = useState(false)
   const [message, setMessage] = useState<{ level: StatusLevel; text: string } | null>({
     level: 'warning',
-    text: 'Bản thử giao diện – dữ liệu mẫu, không ghi vào CSDL.',
+    text: 'Màn hình mẫu giao diện – dữ liệu mẫu, không ghi vào CSDL.',
   })
 
   const supplier = demoSuppliers.find((s) => s.code === supplierCode)
@@ -190,14 +190,14 @@ export function CreatePurchaseOrderPreview() {
   }
 
   const save = () => {
-    // Kiểm tra như khi lưu thật; bản thử không gửi đi đâu.
+    // Kiểm tra như khi lưu thật; màn hình mẫu không gửi đi đâu.
     if (!supplierCode) return setMessage({ level: 'error', text: 'Chưa chọn nhà cung cấp.' })
     if (filledLines === 0) return setMessage({ level: 'error', text: 'Đơn mua hàng chưa có dòng hàng nào.' })
     const firstBad = lines.findIndex((l) => lineIssue(l) !== null)
     if (firstBad >= 0) {
       return setMessage({ level: 'error', text: `Dòng ${(firstBad + 1) * 10}: ${lineIssue(lines[firstBad])}.` })
     }
-    setMessage({ level: 'success', text: `Đơn mua hàng hợp lệ, tổng giá trị ${formatMoney(total)} VND (bản thử – không ghi CSDL).` })
+    setMessage({ level: 'success', text: `Đơn mua hàng hợp lệ, tổng giá trị ${formatMoney(total)} VND (màn hình mẫu – không ghi CSDL).` })
   }
 
   const back = () => navigate('/mua-hang/po')
@@ -215,7 +215,7 @@ export function CreatePurchaseOrderPreview() {
         setMessage({ level: 'warning', text: 'Đã hủy thay đổi.' })
       },
     })
-  const printPreview = () => setMessage({ level: 'warning', text: 'Xem trước in chưa có trong bản thử.' })
+  const printPreview = () => setMessage({ level: 'warning', text: 'Xem trước in chưa có trong màn hình mẫu.' })
   const focusCommand = () => document.querySelector<HTMLInputElement>('.erp-toolbar__command')?.focus()
 
   const lineColumns: EntryColumn<PoLine>[] = [
@@ -390,7 +390,7 @@ export function CreatePurchaseOrderPreview() {
         <CommandButton icon={<MessageOutlined />} tone="warning" onClick={() => setMessage({ level: 'success', text: 'Không có thông báo mới.' })}>
           Thông báo
         </CommandButton>
-        <span className="erp-preview-note">Bản thử giao diện – chưa áp dụng chính thức</span>
+        <span className="erp-preview-note">Màn hình mẫu – dữ liệu mẫu, không ghi CSDL</span>
       </CommandBar>
       <ClassicBody>
         <Section title="Thông tin chung">

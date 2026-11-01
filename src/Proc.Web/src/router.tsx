@@ -138,7 +138,7 @@ const documentPages = [
  */
 export const router = createBrowserRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },
-  // BẢN THỬ giao diện ERP desktop cổ điển (docs/ui-style.md): có khung riêng nên đứng ngoài AppShell; chờ người dùng duyệt.
+  // Màn hình mẫu chuẩn của giao diện ERP desktop cổ điển (docs/ui-style.md): có khung riêng nên đứng ngoài AppShell.
   {
     path: '/thu-giao-dien/tao-po',
     element: (

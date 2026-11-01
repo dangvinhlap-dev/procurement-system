@@ -1,7 +1,7 @@
 import { type ThemeConfig } from 'antd'
 
 /**
- * Bảng màu phong cách ERP desktop cổ điển (BẢN THỬ – docs/ui-style.md mục 2).
+ * Bảng màu phong cách ERP desktop cổ điển (docs/ui-style.md mục 2).
  * Giá trị trùng với biến --erp-* trong classic.css; giữ ở đây để dùng cho token antd (hộp thoại, ô chọn ngày)
  * khi các component antd được đặt bên trong ClassicScreen.
  */

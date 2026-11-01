@@ -14,6 +14,7 @@ Cập nhật: 01/11/2026 (B2). Đọc file này đầu mỗi phiên để biết
 | Giai đoạn 7 | 7a–7g: báo cáo kho, báo cáo mua hàng, xếp loại NCC, in PDF, trang chủ, xuất kế toán, hiệu năng | b433f06 … 7609e3a |
 | Phát hành | v0.1.0, v0.5.0, v0.7.0, v0.8.0, v0.9.0, v0.10.0 (bản mới nhất 01/11/2026, script `db/scripts/0.10.0.sql`, gói Windows trên GitHub Release https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.10.0) | tag |
 | UI-a, UI-b | Giao diện SAP Fiori Horizon: theme; Shellbar + Dynamic Page | 0baa4ca, ae24f71 |
+| UI-ERP | Giao diện **ERP desktop cổ điển** chính thức từ 01/11/2026 (người dùng duyệt bản thử): `docs/ui-style.md`, component `src/Proc.Web/src/classic/` (ô ngày gõ/lịch, co giãn cột, icon đỏ/xanh lá/vàng, tab in hoa), màn hình mẫu `/thu-giao-dien/tao-po`; ui-guide.md (Fiori) chỉ còn đối chiếu; màn hình cũ chưa chuyển | 75a4724 (ghi chú commit nhầm "Lát B2"), 8b3d50f |
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
 | SEC-1 | Tham số hệ thống: bảng `CompanyParameter`, số NCC tối thiểu khi gửi RFQ theo công ty (sửa được); giá vốn, kho cho tồn âm (chỉ xem) | feature/tham-so-he-thong |
@@ -53,11 +54,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- **Bản thử giao diện ERP desktop cổ điển** (01/11/2026, nhánh `feature/thu-giao-dien-erp` – **không merge vào main khi chưa được duyệt**):
-  `docs/ui-style.md`, component `src/Proc.Web/src/classic/`, màn hình thử `/thu-giao-dien/tao-po` (dữ liệu mẫu, không ghi CSDL),
-  ảnh `e2e/screenshots/classic-create-po.png`, test `e2e/classic-preview.spec.ts` 3/3 qua. Chờ người dùng xem: duyệt thì thay
-  ui-guide.md và chuyển dần các màn hình; không duyệt thì bỏ nhánh.
-- Lát kế tiếp: **B3** – RFQ: cho gửi thiếu NCC khi có giải trình; chọn thầu → Chờ duyệt hội đồng; tab hồ sơ trình; tạo bảng giá từ
+- Không có. Chờ người dùng chọn lát kế tiếp: **B3** (RFQ) hoặc chuyển đổi các màn hình cũ sang giao diện ERP cổ điển (UI-c…).
+- Lát B3 (khi được chọn): **B3** – RFQ: cho gửi thiếu NCC khi có giải trình; chọn thầu → Chờ duyệt hội đồng; tab hồ sơ trình; tạo bảng giá từ
   kết quả thầu (`docs/Phantich_01112026.md` mục 5 – lớn, tách 2 lát; lập kế hoạch chi tiết trước khi code).
 
 ## Việc tiếp theo

@@ -3,7 +3,7 @@
 Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho cho tổng công ty và các công ty thành viên.
 
 - Thiết kế: [docs/design.md](docs/design.md)
-- Giao diện: [docs/ui-guide.md](docs/ui-guide.md)
+- Giao diện: [docs/ui-style.md](docs/ui-style.md) – phong cách ERP desktop cổ điển (Fiori cũ: [docs/ui-guide.md](docs/ui-guide.md))
 - Quy tắc cho Claude Code: [CLAUDE.md](CLAUDE.md)
 - Nhật ký phiên bản: [CHANGELOG.md](CHANGELOG.md)
 

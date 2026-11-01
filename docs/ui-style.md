@@ -1,8 +1,9 @@
-# Design system – phong cách ERP desktop cổ điển (BẢN THỬ)
+# Design system – phong cách ERP desktop cổ điển
 
-> **Trạng thái: bản thử, chờ người dùng duyệt (01/11/2026).** Chỉ có trên nhánh `feature/thu-giao-dien-erp`, áp dụng cho một màn hình
-> thử `/thu-giao-dien/tao-po`. Khi chưa duyệt, giao diện chính thức vẫn là `docs/ui-guide.md` (SAP Fiori Horizon).
-> Nếu được duyệt: thay `docs/ui-guide.md`, chuyển dần từng màn hình sang các component trong `src/Proc.Web/src/classic/`.
+> **Chính thức từ 01/11/2026** (người dùng duyệt bản thử). Thay cho `docs/ui-guide.md` (SAP Fiori Horizon) – tài liệu đó chỉ còn để đối chiếu
+> các màn hình chưa chuyển. Mọi màn hình mới hoặc đang sửa dùng component trong `src/Proc.Web/src/classic/` (CLAUDE.md mục 9);
+> màn hình mẫu chuẩn: `/thu-giao-dien/tao-po` (`src/Proc.Web/src/classic/preview/CreatePurchaseOrderPreview.tsx`).
+> Các màn hình Fiori cũ chuyển dần theo lát riêng; không trộn hai phong cách trong một màn hình.
 
 Ảnh tham khảo: `docs/imageSAP.png` (màn hình tạo đơn mua hàng của một ERP desktop). **Chỉ học phong cách** – không dùng logo, tên,
 biểu tượng hay nhận diện thương hiệu của hãng nào; mọi chữ trên giao diện là tiếng Việt của phần mềm này.
@@ -107,5 +108,6 @@ Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
 ## 7. Đối chiếu với quy định hiện hành
 
 - Các quy tắc ở CLAUDE.md mục 5 (tiếng Việt, ngày, số, tìm có dấu/không dấu) giữ nguyên.
-- Mâu thuẫn với `docs/ui-guide.md` (Fiori: chữ 14px, bo 8px, đổ bóng, Shellbar, Dynamic Page) – đây là lựa chọn thay thế, chỉ chốt khi
-  người dùng duyệt bản thử.
+- Thay thế `docs/ui-guide.md` (Fiori: chữ 14px, bo 8px, đổ bóng, Shellbar, Dynamic Page) từ 01/11/2026.
+- Chưa có quy chuẩn cổ điển cho: màn hình danh sách (tìm, lọc, xuất Excel), khung điều hướng chung, đăng nhập – bổ sung vào tài liệu này
+  khi làm lát chuyển đổi tương ứng.
