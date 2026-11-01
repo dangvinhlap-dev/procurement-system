@@ -13,8 +13,11 @@ Tách từ CLAUDE.md (mục 8 cũ) ngày 31/10/2026. Đọc khi người dùng y
 3. Commit `Phát hành phiên bản x.y.z`.
 4. `git tag -a vx.y.z -m "Phiên bản x.y.z: <tóm tắt>"`.
 5. `git push` và `git push --tags`.
-6. Đóng gói bản Windows: `.\deploy\windows\publish.ps1` → `artifacts\procurement-x.y.z.zip` (không commit; gửi người cài theo
-   docs/deploy-windows.md). Bản Docker build trên server từ tag (README mục "Triển khai server").
+6. Đóng gói bản Windows: `.\deploy\windows\publish.ps1` → `artifacts\procurement-x.y.z.zip` (không commit), rồi tạo trang GitHub
+   Release kèm file zip, nội dung lấy từ mục CHANGELOG của bản:
+   `gh release create vx.y.z artifacts\procurement-x.y.z.zip --verify-tag --title "Phiên bản x.y.z" --notes-file <file>`
+   (`gh` ở `C:\Program Files\GitHub CLI\gh.exe`, đã đăng nhập). Gửi người dùng link Release; người cài theo docs/deploy-windows.md.
+   Bản Docker build trên server từ tag (README mục "Triển khai server").
 7. Báo người dùng: số phiên bản, tóm tắt thay đổi, có thay đổi CSDL hay không, có cần sao lưu trước khi nâng cấp không.
 
 ## Thay đổi CSDL
