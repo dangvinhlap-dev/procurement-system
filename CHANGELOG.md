@@ -3,6 +3,56 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.10.0] - 2026-11-01
+
+### Thêm mới
+- Dữ liệu mua lịch sử (design.md mục 18.1, màn hình Báo cáo → Dữ liệu mua lịch sử – PHIS): nhập Excel dữ liệu mua 12–24 tháng của từng
+  pháp nhân (tối đa 50.000 dòng, 20 MB/file; Kiểm tra thử rồi Nhập thật), tự khớp mã vật tư/MST với danh mục, lọc theo lô/ngày/trạng thái
+  khớp, xóa lô (có nhật ký). Chỉ để phân tích: không ghi sổ kho, không ảnh hưởng tồn, giá vốn, bảng giá.
+- Ánh xạ dữ liệu mua (design.md mục 18.2, màn hình PHMAP): mã vật tư cũ → mã hàng chung, NCC cũ (MST/tên) → NCC; gợi ý trùng gần đúng
+  theo tên không dấu; lưu ánh xạ áp cho mọi dòng cùng mã và cho lần nhập sau.
+- Phân tích giá hợp nhất (design.md mục 18.3, màn hình PHAN): so giá mua cùng mặt hàng giữa các pháp nhân – SL, giá trị, giá bình quân,
+  thấp/cao nhất, giá gần nhất, chênh lệch %, NCC giá tốt nhất, giá mục tiêu (giảm X% từ giá bình quân thấp nhất), tiết kiệm dự kiến;
+  ngăn kéo chi tiết từng pháp nhân.
+- Quyền mới: `Analysis.PurchaseHistory.View` (xem dữ liệu mua lịch sử), `Analysis.PurchaseHistory.Import` (nhập, xóa lô, ánh xạ),
+  `Analysis.PurchaseHistory.ViewAllCompanies` (phân tích toàn tập đoàn). Vai trò Quản trị tự có; vai trò khác gán tại Hệ thống → Vai trò.
+- Đính kèm file (design.md mục 18.4): NCC (tab "Hồ sơ đính kèm"), bảng giá NCC, RFQ, PR, PO và mọi phiếu kho (tab "Đính kèm (n)").
+  Tối đa 20 MB/file, chỉ nhận tài liệu, ảnh, file nén, thư; quyền theo quyền xem/sửa phiếu; đính kèm được cả khi phiếu đã duyệt/ghi sổ;
+  xóa mềm (file vẫn giữ), có nhật ký.
+- % markup nội bộ mặc định (tham số công ty, màn hình SEC): gợi ý giá bán nội bộ = giá vốn kỳ đã đóng gần nhất × (1 + %) ở Bảng giá nội bộ
+  và phiếu xuất bán nội bộ.
+- Cài trên Windows Server (IIS) thay cho Docker: hướng dẫn `docs/deploy-windows.md`; gói cài `procurement-0.10.0.zip` tạo bằng
+  `deploy\windows\publish.ps1`; sao lưu bằng `deploy\windows\backup.ps1` + Task Scheduler. Log kỹ thuật ghi được ra file.
+
+### Thay đổi
+- Dấu * đỏ sau nhãn ở mọi ô bắt buộc (form phiếu, ngăn kéo, hộp thoại, tiêu đề cột lưới dòng); ẩn khi chỉ xem.
+- Múi giờ Việt Nam tìm được trên cả Linux và Windows (kể cả Windows Server 2016).
+- Docker: file đính kèm lưu trong volume `attachments` gắn vào `/data/attachments`; container backup chép bổ sung vào `backups/attachments/` mỗi đêm.
+
+### Sửa lỗi
+- Đọc số trong file Excel nhập: "2.5" được hiểu là 2,5.
+- Test bảng giá NCC báo lỗi khi chạy vào ngày mùng 1.
+
+### Thay đổi CSDL
+- `V0_10_0_MarkupNoiBo`: cột % markup nội bộ trong tham số công ty. `Down()` xóa cột – mất % đã khai báo; bảng giá, chứng từ không đổi.
+- `V0_10_0_DuLieuMuaLichSu`: bảng `PurchaseHistoryBatch`, `PurchaseHistoryRecord`. `Down()` **mất** toàn bộ dữ liệu mua lịch sử đã nhập
+  (nhập lại được từ file Excel gốc).
+- `V0_10_0_AnhXaDuLieuMua`: bảng ánh xạ mã/NCC cũ. `Down()` **mất** các ánh xạ đã lưu; dòng mua lịch sử giữ mặt hàng/NCC đã gán.
+- `V0_10_0_DinhKemFile`: bảng `Attachment`. `Down()` **mất** thông tin file đính kèm (file trên đĩa vẫn còn).
+- Script nâng cấp: `db/scripts/0.10.0.sql` (từ 0.9.0); cài mới thì chạy lần lượt mọi script trong `db/scripts`.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước**, rồi chạy `db/scripts/0.10.0.sql`.
+- Docker: `docker-compose.yml` và `db/backup.sh` có thay đổi (volume `attachments`, biến `Attachments__RootPath`) – `git pull` trước khi
+  `docker compose build app` và `docker compose up -d`.
+- Windows/IIS: đặt `Attachments:RootPath` và đường dẫn log ra **ngoài** thư mục website (docs/deploy-windows.md mục 3.4).
+- Gán quyền `Analysis.PurchaseHistory.*` cho vai trò cần dùng dữ liệu mua lịch sử.
+
+### Cách quay lại bản trước
+- Code: triển khai lại tag `v0.9.0` (Docker: `APP_VERSION=0.9.0`; Windows: chép lại gói 0.9.0).
+- CSDL: chỉ khi đã sao lưu – khôi phục bản sao lưu trước nâng cấp, hoặc
+  `dotnet ef database update 20261031145516_V0_9_0_ThamSoCongTy` (mất dữ liệu như mục "Thay đổi CSDL").
+
 ## [0.9.0] - 2026-10-31
 
 ### Thêm mới
