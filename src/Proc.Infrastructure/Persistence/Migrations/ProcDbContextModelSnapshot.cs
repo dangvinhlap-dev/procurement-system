@@ -1665,6 +1665,52 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("CompanyParameter", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Organization.Department", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ManagerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Department", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.Permission", b =>
                 {
                     b.Property<string>("Code")
@@ -2407,9 +2453,13 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
-                    b.Property<string>("Department")
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LegacyDepartment")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Department");
 
                     b.Property<DateOnly?>("NeededDate")
                         .HasColumnType("date");
@@ -2459,6 +2509,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CompanyId", "No")
                         .IsUnique();
+
+                    b.HasIndex("DepartmentId", "CompanyId");
 
                     b.HasIndex("WarehouseId", "CompanyId");
 
@@ -3572,6 +3624,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Organization.Department", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.RolePermission", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Permission", null)
@@ -3804,6 +3865,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Organization.Warehouse", null)
                         .WithMany()

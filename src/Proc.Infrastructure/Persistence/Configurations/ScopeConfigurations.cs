@@ -64,6 +64,24 @@ internal sealed class WarehouseConfiguration : IEntityTypeConfiguration<Warehous
     }
 }
 
+/// <summary>Cấu hình bảng Department – bộ phận theo công ty (design.md mục 5.1, 18.5).</summary>
+internal sealed class DepartmentConfiguration : IEntityTypeConfiguration<Department>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Department> builder)
+    {
+        builder.ToTable("Department");
+        builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(Department.NameMaxLength).IsRequired();
+        builder.Property(x => x.ManagerName).HasMaxLength(Department.ManagerNameMaxLength);
+        builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+
+        // Khóa (Id, CompanyId) để PR trỏ tới bộ phận kèm công ty – CSDL tự chặn PR dùng bộ phận của công ty khác.
+        builder.HasAlternateKey(x => new { x.Id, x.CompanyId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng ItemCategory (design.md mục 5.2).</summary>
 internal sealed class ItemCategoryConfiguration : IEntityTypeConfiguration<ItemCategory>
 {

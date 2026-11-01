@@ -12,6 +12,8 @@ test('PR gửi duyệt → chuông có số → mở thông báo vào phiếu �
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
   const uoms = await bha.get<{ id: string; code: string }[]>('/api/uoms')
+  // PR bắt buộc chọn bộ phận của công ty (design.md mục 18.5).
+  const department = await bha.send<{ id: string }>('post', '/api/departments', { code: unique('TB'), name: 'Xưởng thông báo', managerName: null })
   const buyerName = unique('tb').toLowerCase()
   await bha.send('post', '/api/users', {
     userName: buyerName, fullName: 'Người lập thông báo', email: null, password: 'Demo@2026',
@@ -26,7 +28,7 @@ test('PR gửi duyệt → chuông có số → mở thông báo vào phiếu �
   const created = await request.post('/api/purchase-requests', {
     headers,
     data: {
-      date: today, department: 'Xưởng thông báo', purpose: 'Thử thông báo', neededDate: null, warehouseId: null, priority: 'Normal', note: null,
+      date: today, departmentId: department.id, purpose: 'Thử thông báo', neededDate: null, warehouseId: null, priority: 'Normal', note: null,
       lines: [{ id: null, itemId, uomId: uoms.find((u) => u.code === 'HOP')!.id, qty: 2, suggestedSupplierId: null, neededDate: null, note: null }],
     },
   })

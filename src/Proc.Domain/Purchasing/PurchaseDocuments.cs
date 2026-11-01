@@ -20,14 +20,14 @@ public enum PurchasePriority
 
 /// <summary>Đầu phiếu đề nghị mua hàng (design.md mục 10.2).</summary>
 /// <param name="Date">Ngày đề nghị.</param>
-/// <param name="Department">Bộ phận đề nghị (chữ – chưa có danh mục bộ phận).</param>
+/// <param name="DepartmentId">Bộ phận đề nghị, bắt buộc (danh mục bộ phận của công ty – design.md mục 18.5).</param>
 /// <param name="Purpose">Mục đích sử dụng.</param>
 /// <param name="NeededDate">Ngày cần hàng.</param>
 /// <param name="WarehouseId">Kho nhận dự kiến.</param>
 /// <param name="Priority">Mức ưu tiên.</param>
 /// <param name="Note">Ghi chú.</param>
 public sealed record PurchaseRequestHeader(
-    DateOnly Date, string? Department, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, PurchasePriority Priority, string? Note);
+    DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, PurchasePriority Priority, string? Note);
 
 /// <summary>Dữ liệu một dòng đề nghị mua hàng.</summary>
 public sealed record PurchaseRequestLineData(
@@ -145,8 +145,14 @@ public sealed class PurchaseRequest : ApprovableDocument
     {
     }
 
-    /// <summary>Bộ phận đề nghị.</summary>
-    public string? Department { get; private set; }
+    /// <summary>Bộ phận đề nghị (danh mục <see cref="Organization.Department"/> cùng công ty).</summary>
+    public Guid? DepartmentId { get; private set; }
+
+    /// <summary>
+    /// Bộ phận ghi dạng chữ trước khi có danh mục bộ phận – <b>ngừng dùng</b> từ lát A2 (design.md mục 18.5): chỉ đọc để hiện trên
+    /// phiếu cũ, không ghi mới. Giữ cột vì đang có dữ liệu (CLAUDE.md mục 8), xóa ở bản sau.
+    /// </summary>
+    public string? LegacyDepartment { get; private set; }
 
     /// <summary>Người đề nghị.</summary>
     public Guid? RequesterId { get; private set; }
@@ -190,15 +196,18 @@ public sealed class PurchaseRequest : ApprovableDocument
     }
 
     /// <summary>Sửa đầu phiếu.</summary>
-    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc ngày cần trước ngày đề nghị.</exception>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp, chưa chọn bộ phận hoặc ngày cần trước ngày đề nghị.</exception>
     public void Update(PurchaseRequestHeader header)
     {
         ArgumentNullException.ThrowIfNull(header);
         EnsureDraft();
+        // PR bắt buộc có bộ phận đề nghị (yêu cầu 01/11/2026): ngân sách công ty × bộ phận × tháng (lát C3) tính theo bộ phận
+        // của PR, PR không có bộ phận sẽ lọt ngoài ngân sách – design.md mục 18.5.
+        if (header.DepartmentId is null || header.DepartmentId == Guid.Empty) throw new BusinessRuleException("Hãy chọn bộ phận đề nghị.");
         if (header.NeededDate is { } needed && needed < header.Date) throw new BusinessRuleException("Ngày cần hàng không được trước ngày đề nghị.");
         if (!Enum.IsDefined(header.Priority)) throw new BusinessRuleException("Mức ưu tiên không hợp lệ.");
         Date = header.Date;
-        Department = Clean(header.Department);
+        DepartmentId = header.DepartmentId;
         Purpose = Clean(header.Purpose);
         NeededDate = header.NeededDate;
         WarehouseId = header.WarehouseId;

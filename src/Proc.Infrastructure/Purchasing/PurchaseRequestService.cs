@@ -52,7 +52,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 orderby r.Date descending, r.No descending
                 select new
                 {
-                    r.Id, r.No, r.Date, r.Status, r.Department, r.Purpose, r.NeededDate, r.TotalAmount, LineCount = r.Lines.Count,
+                    r.Id, r.No, r.Date, r.Status, r.Purpose, r.NeededDate, r.TotalAmount, LineCount = r.Lines.Count,
+                    // Tên bộ phận theo danh mục; PR cũ chưa có danh mục thì hiện chữ ghi trước đây (design.md mục 18.5).
+                    Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault() ?? r.LegacyDepartment,
                     CreatedBy = u == null ? null : u.FullName, r.Priority,
                     Base = r.Lines.Sum(l => l.BaseQty),
                 })
@@ -80,6 +82,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     {
         var companyId = _scope.RequireCompany();
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
+        await CheckDepartmentAsync(request.DepartmentId, null, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.PurchaseRequest, request.Date, cancellationToken);
@@ -97,6 +100,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var pr = await LoadAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(pr, cancellationToken);
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
+        await CheckDepartmentAsync(request.DepartmentId, pr.DepartmentId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
         pr.Update(ToHeader(request));
         pr.SetLines(lines);
@@ -164,7 +168,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 orderby r.Date, r.No, l.LineNo
                 select new
                 {
-                    l.Id, RequestId = r.Id, r.No, NeededDate = l.NeededDate ?? r.NeededDate, r.Department, l.ItemId, ItemCode = i.Code,
+                    l.Id, RequestId = r.Id, r.No, NeededDate = l.NeededDate ?? r.NeededDate, l.ItemId, ItemCode = i.Code,
+                    Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault() ?? r.LegacyDepartment,
                     ItemName = i.Name, l.UomId, UomCode = u.Code, l.Qty, l.UomFactor, l.BaseQty, l.EstPrice, i.VatCode, l.SuggestedSupplierId,
                 })
             .ToListAsync(cancellationToken);
@@ -245,6 +250,18 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             throw new NotFoundException("Không tìm thấy kho nhận (hoặc kho ngoài phạm vi, đã ngừng dùng).");
     }
 
+    /// <summary>
+    /// Bộ phận phải thuộc công ty đang làm việc (global query filter) và còn dùng; phiếu đã chọn bộ phận nay ngừng dùng thì
+    /// lưu lại vẫn được, để sửa dòng hàng không buộc đổi bộ phận (design.md mục 18.5).
+    /// </summary>
+    private async Task CheckDepartmentAsync(Guid? departmentId, Guid? currentId, CancellationToken cancellationToken)
+    {
+        if (departmentId is not { } id) return;
+        var active = await _db.Departments.Where(d => d.Id == id).Select(d => (bool?)d.IsActive).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy bộ phận đề nghị (hoặc bộ phận thuộc công ty khác).");
+        if (!active && id != currentId) throw new BusinessRuleException("Bộ phận đề nghị đã ngừng dùng.");
+    }
+
     private async Task<PurchaseRequest> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -272,6 +289,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var onHand = await _db.StockOnHand.AsNoTracking().Where(s => itemIds.Contains(s.ItemId))
             .GroupBy(s => s.ItemId).Select(g => new { g.Key, Qty = g.Sum(s => s.Qty) }).ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
         var ordered = await OrderedBaseByLineAsync(pr.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        var department = pr.DepartmentId is { } departmentId
+            ? await _db.Departments.Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken)
+            : null;
         var userIds = new[] { pr.CreatedBy, pr.RequesterId }.OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
@@ -299,7 +319,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             readOnly);
 
         return new PurchaseRequestDto(
-            pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.Department, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,
+            pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.DepartmentId, department ?? pr.LegacyDepartment, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,
             pr.NeededDate, pr.WarehouseId, pr.Priority.ToString(), pr.Note, pr.TotalAmount, pr.RejectReason, pr.CreatedAt,
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken), actions);
@@ -313,7 +333,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             : throw new BusinessRuleException("Trạng thái phải là Draft, Submitted, Approved, Closed hoặc Cancelled.");
 
     private static PurchaseRequestHeader ToHeader(SavePurchaseRequestRequest r) =>
-        new(r.Date, r.Department, r.Purpose, r.NeededDate, r.WarehouseId,
+        new(r.Date, r.DepartmentId, r.Purpose, r.NeededDate, r.WarehouseId,
             Enum.TryParse<PurchasePriority>(r.Priority, ignoreCase: true, out var p) && Enum.IsDefined(p)
                 ? p
                 : throw new BusinessRuleException("Mức ưu tiên phải là Low, Normal hoặc Urgent."),

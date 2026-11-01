@@ -6,7 +6,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Endpoint danh mục tổ chức: công ty, kho (design.md mục 5.1, 5.6). Dữ liệu đã được lọc theo phạm vi người dùng;
+/// Endpoint danh mục tổ chức: công ty, kho, bộ phận (design.md mục 5.1, 5.6, 18.5). Dữ liệu đã được lọc theo phạm vi người dùng;
 /// quy tắc thêm/sửa (chỉ ở tổng công ty, kho tổng, phạm vi kho) nằm ở dịch vụ.
 /// </summary>
 public static class OrganizationEndpoints
@@ -51,6 +51,24 @@ public static class OrganizationEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Organization.WarehouseManage)
             .Validate<UpdateWarehouseRequest>();
+
+        var departments = app.MapGroup("/api/departments").WithTags("Danh mục");
+        // Người lập/xem PR cần danh sách bộ phận để chọn và hiển thị, dù không có quyền xem danh mục bộ phận.
+        departments.MapGet("/", (IDepartmentAdministration s, CancellationToken ct) => s.ListAsync(ct))
+            .RequireAnyPermission(Permissions.Organization.DepartmentView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate);
+        departments.MapGet("/{id:guid}", (Guid id, IDepartmentAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Organization.DepartmentView);
+        departments.MapPost("/", async (CreateDepartmentRequest request, IDepartmentAdministration s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/departments/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Organization.DepartmentManage)
+            .Validate<CreateDepartmentRequest>();
+        departments.MapPut("/{id:guid}", (Guid id, UpdateDepartmentRequest request, IDepartmentAdministration s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Organization.DepartmentManage)
+            .Validate<UpdateDepartmentRequest>();
 
         return app;
     }

@@ -73,13 +73,15 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
         if (_scope.UserId is null) return [];
         var requests = await _db.PurchaseRequests.Where(r => r.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
         var orders = await _db.PurchaseOrders.Where(o => o.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
+        var departmentIds = requests.Select(r => r.DepartmentId).OfType<Guid>().Distinct().ToList();
+        var departments = await _db.Departments.AsNoTracking().Where(d => departmentIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
         var supplierIds = orders.Select(o => o.SupplierId).Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
         var creatorIds = requests.Select(r => r.CreatedBy).Concat(orders.Select(o => o.CreatedBy)).OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => creatorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         var result = new List<PendingApprovalDto>();
-        foreach (var (document, description) in requests.Select(r => ((ApprovableDocument)r, r.Department))
+        foreach (var (document, description) in requests.Select(r => ((ApprovableDocument)r, (r.DepartmentId is { } d ? departments.GetValueOrDefault(d) : null) ?? r.LegacyDepartment))
                      .Concat(orders.Select(o => ((ApprovableDocument)o, (string?)suppliers.GetValueOrDefault(o.SupplierId)))))
         {
             var step = await _approvals.CurrentStepAsync(document, cancellationToken);

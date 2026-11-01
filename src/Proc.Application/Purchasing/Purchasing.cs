@@ -115,18 +115,23 @@ public sealed record PurchaseRequestLineDto(
     decimal BaseQty, string BaseUomCode, decimal EstPrice, decimal Amount, Guid? SuggestedSupplierId, string? SuggestedSupplierCode,
     DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty);
 
-/// <summary>Chi tiết PR.</summary>
+/// <summary>
+/// Chi tiết PR. DepartmentId: bộ phận trong danh mục; Department: tên bộ phận để hiển thị, PR cũ chưa có danh mục thì là
+/// chữ ghi trước đây (design.md mục 18.5).
+/// </summary>
 public sealed record PurchaseRequestDto(
-    Guid Id, string No, DateOnly Date, string Status, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
+    Guid Id, string No, DateOnly Date, string Status, Guid? DepartmentId, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
     Guid? WarehouseId, string Priority, string? Note, decimal TotalAmount, string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions);
 
 /// <summary>Dòng PR gửi lên. Đơn giá tham khảo do server lấy (giá nhập gần nhất), không nhận từ client.</summary>
 public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
 
-/// <summary>Lưu PR nháp.</summary>
+/// <summary>
+/// Lưu PR nháp. DepartmentId: bắt buộc, bộ phận đang dùng của công ty (giữ nguyên bộ phận đã ngừng dùng nếu phiếu đã chọn trước đó).
+/// </summary>
 public sealed record SavePurchaseRequestRequest(
-    DateOnly Date, string? Department, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, string Priority, string? Note,
+    DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, string Priority, string? Note,
     IReadOnlyList<SavePurchaseRequestLineRequest> Lines);
 
 /// <summary>Dòng PR đã duyệt còn chưa đặt hàng (để lập PO). RemainingQty: SL còn chưa lên PO theo ĐVT của dòng PR.</summary>
@@ -244,7 +249,7 @@ public sealed class SavePurchaseRequestRequestValidator : AbstractValidator<Save
     /// <summary>Khai báo các quy tắc.</summary>
     public SavePurchaseRequestRequestValidator()
     {
-        RuleFor(x => x.Department).MaximumLength(200);
+        RuleFor(x => x.DepartmentId).NotEmpty().WithMessage("Hãy chọn bộ phận đề nghị.");
         RuleFor(x => x.Purpose).MaximumLength(500);
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")

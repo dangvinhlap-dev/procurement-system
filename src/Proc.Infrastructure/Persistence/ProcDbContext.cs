@@ -79,6 +79,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Kho (lọc theo công ty và phạm vi kho).</summary>
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
 
+    /// <summary>Bộ phận (lọc theo công ty).</summary>
+    public DbSet<Department> Departments => Set<Department>();
+
     /// <summary>Nhóm hàng (lọc theo phạm vi nhóm hàng).</summary>
     public DbSet<ItemCategory> ItemCategories => Set<ItemCategory>();
 

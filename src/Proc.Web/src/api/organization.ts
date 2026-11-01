@@ -159,3 +159,48 @@ export function useWarehouseMutations() {
     }),
   }
 }
+
+/** Bộ phận của công ty đang làm việc – khớp Proc.Application.Organization.DepartmentDto (design.md mục 18.5). */
+export interface Department {
+  id: string
+  code: string
+  name: string
+  managerName: string | null
+  isActive: boolean
+  /** Số PR đã ghi bộ phận này. */
+  requestCount: number
+}
+
+/** Thông tin bộ phận khi thêm/sửa. */
+export interface DepartmentInput {
+  name: string
+  managerName: string | null
+}
+
+/** Bộ phận của công ty đang làm việc (cả bộ phận ngừng dùng), theo mã. Người lập/xem PR cũng đọc được để chọn bộ phận. */
+export function useDepartments(enabled = true) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['departments', companyId],
+    queryFn: () => apiFetch<Department[]>('/api/departments'),
+    enabled,
+  })
+}
+
+/** Thêm, sửa bộ phận. Lưu xong tải lại danh sách bộ phận. */
+export function useDepartmentMutations() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['departments'] })
+  return {
+    create: useMutation({
+      mutationFn: (input: DepartmentInput & { code: string }) =>
+        apiFetch<Department>('/api/departments', { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: DepartmentInput & { isActive: boolean } }) =>
+        apiFetch<Department>(`/api/departments/${id}`, { method: 'PUT', body: input }),
+      onSuccess,
+    }),
+  }
+}

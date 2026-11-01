@@ -53,8 +53,10 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 where r.Status == ApprovalDocumentStatus.Submitted || r.Status == ApprovalDocumentStatus.Approved
                 select new
                 {
-                    l.Id, RequestId = r.Id, r.No, r.Date, r.Department, r.Status, r.Priority, l.LineNo, l.ItemId, ItemCode = i.Code, ItemName = i.Name,
+                    l.Id, RequestId = r.Id, r.No, r.Date, r.Status, r.Priority, l.LineNo, l.ItemId, ItemCode = i.Code, ItemName = i.Name,
                     UomCode = u.Code, l.Qty, l.UomFactor, l.BaseQty, l.EstPrice, NeededDate = l.NeededDate ?? r.NeededDate,
+                    // Tên bộ phận theo danh mục; PR cũ chưa có danh mục thì hiện chữ ghi trước đây (design.md mục 18.5).
+                    Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault() ?? r.LegacyDepartment,
                 })
             .ToListAsync(cancellationToken);
 

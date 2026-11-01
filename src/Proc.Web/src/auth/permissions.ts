@@ -14,6 +14,8 @@ export const Permission = {
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',
   WarehouseManage: 'Organization.Warehouse.Manage',
+  DepartmentView: 'Organization.Department.View',
+  DepartmentManage: 'Organization.Department.Manage',
   ItemCategoryView: 'MasterData.ItemCategory.View',
   ItemCategoryManage: 'MasterData.ItemCategory.Manage',
   ItemView: 'MasterData.Item.View',

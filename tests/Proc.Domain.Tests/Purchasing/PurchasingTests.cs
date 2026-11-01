@@ -57,7 +57,7 @@ public class PurchasingTests
     {
         var item = NewItem();
         var pr = PurchaseRequest.Create(Company, "PR-1",
-            new PurchaseRequestHeader(new DateOnly(2026, 10, 1), "Xưởng cán", "Bảo trì", new DateOnly(2026, 10, 15), null, PurchasePriority.Urgent, null),
+            new PurchaseRequestHeader(new DateOnly(2026, 10, 1), Guid.CreateVersion7(), "Bảo trì", new DateOnly(2026, 10, 15), null, PurchasePriority.Urgent, null),
             Guid.CreateVersion7());
         Assert.Throws<BusinessRuleException>(() => pr.Submit());
         pr.SetLines([(new PurchaseRequestLineData(null, item.Id, Hop.Id, 2, 120_000, null, null, null), item)]);
@@ -74,6 +74,15 @@ public class PurchasingTests
 
         Assert.Throws<BusinessRuleException>(() =>
             PurchaseRequest.Create(Company, "PR-2", new PurchaseRequestHeader(new DateOnly(2026, 10, 10), null, null, new DateOnly(2026, 10, 1), null, PurchasePriority.Normal, null), null));
+    }
+
+    [Fact]
+    public void DeNghiMuaHang_BatBuocChonBoPhan()
+    {
+        var header = new PurchaseRequestHeader(new DateOnly(2026, 10, 1), null, null, null, null, PurchasePriority.Normal, null);
+
+        var ex = Assert.Throws<BusinessRuleException>(() => PurchaseRequest.Create(Company, "PR-3", header, null));
+        Assert.Equal("Hãy chọn bộ phận đề nghị.", ex.Message);
     }
 
     [Fact]
