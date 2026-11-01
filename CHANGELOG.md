@@ -3,6 +3,63 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.11.0] - 2026-11-01
+
+### Thêm mới
+- Danh mục bộ phận theo công ty (design.md mục 18.5, màn hình Hệ thống → Bộ phận – DEPT): thêm/sửa/ngừng dùng bộ phận của từng công ty.
+  Phiếu đề nghị mua hàng (PR) **bắt buộc** chọn bộ phận trong danh mục; PR cũ vẫn hiện tên bộ phận đã gõ trước đây.
+  Quyền mới `Organization.Department.View`, `Organization.Department.Manage`.
+- Quy trình duyệt dùng chung (design.md mục 18.6): màn hình Quy tắc duyệt (APRL) khai báo được cho 6 loại – PR, PO, bảng giá NCC (PRL),
+  RFQ, NCC, hợp đồng khung (CTR); số cấp do người dùng cấu hình, ai duyệt do phân quyền. Quyền duyệt riêng từng loại:
+  `MasterData.Supplier.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `Purchase.Contract.Approve`.
+  Bộ 9 vai trò mẫu của Ban Cung ứng vật tư tạo nhanh ở màn hình Vai trò.
+- Duyệt nhà cung cấp hai chặng (design.md mục 18.6, màn hình Giá và NCC → Duyệt NCC – SUPAPR): đổi trạng thái Đã duyệt / Danh sách đen
+  và đổi tài khoản ngân hàng của NCC thành yêu cầu duyệt, duyệt xong mới áp vào NCC. Chặng 1: các công ty đang mua của NCC cùng duyệt
+  (2 công ty thì cả 2); chặng 2: Tổng công ty duyệt lần cuối. Một công ty từ chối là kết thúc yêu cầu; người lập rút được yêu cầu đang chờ.
+  Ngăn kéo NCC báo yêu cầu đang chờ; có trong Việc cần làm và thông báo.
+- Duyệt bảng giá NCC (design.md mục 8.5): Nháp → Chờ duyệt → Hiệu lực tại công ty lập bảng giá; người lập không tự duyệt; từ chối phải
+  ghi lý do và bảng giá về Nháp; người lập rút về Nháp được. Bỏ nút "Đưa vào hiệu lực". Bảng giá toàn tập đoàn chưa duyệt thì công ty
+  khác chưa thấy. Cảnh báo bảng giá sắp hết hiệu lực (≤ 30 ngày) ở danh sách và trên phiếu.
+
+### Thay đổi
+- **Giao diện mới – phong cách ERP desktop cổ điển** cho toàn bộ ứng dụng (docs/ui-style.md, thay SAP Fiori):
+  - Thanh trên hai hàng: menu chữ (Hằng ngày, Mua hàng, Kho…) và thanh công cụ (ô lệnh, công ty, thông báo, người dùng); cây điều hướng gọn.
+  - Chữ Tahoma 12px, nền xanh xám, tiêu đề xanh đậm; viền 1px, góc vuông, không đổ bóng, không hiệu ứng chuyển động.
+  - Lưới danh sách và lưới dòng chứng từ kẻ ô, dòng 22px, cột số canh phải phông đơn cách, dòng chọn vàng nhạt, đèn trạng thái ô vuông;
+    **kéo mép tiêu đề cột để co giãn**, bấm đúp để trả về độ rộng gốc.
+  - Tab ô vuông chữ in hoa; nút lệnh nền be viền nâu; icon tô màu theo mức quan trọng – đỏ (xóa, hủy, đóng, bỏ ghi sổ), xanh lá
+    (lưu, thêm, duyệt, gửi duyệt), vàng (thao tác thường).
+  - Mọi ô ngày gõ tay được dd/MM/yyyy, gõ nhanh `05122026` hoặc `5/12/2026`, hoặc chọn trên lịch.
+  - Màn hình mẫu `/thu-giao-dien/tao-po` (Tạo đơn mua hàng, dữ liệu mẫu, không ghi CSDL) làm chuẩn hình thức cho các màn hình sau.
+- Màn hình đăng nhập giữ kiểu cũ (thẻ trắng).
+
+### Sửa lỗi
+- Không có lỗi người dùng báo trong bản này. Đã biết: bấm Quay lại ngay lập tức (trong ~40ms) sau khi đăng xuất có thể để trang trắng –
+  không lộ dữ liệu (phiên đã xóa); tải lại trang là về màn hình đăng nhập. Sẽ sửa ở bản sau.
+
+### Thay đổi CSDL
+- `V0_11_0_DanhMucBoPhan`: bảng `Department`, cột `PurchaseRequest.DepartmentId`; cột chữ cũ `PurchaseRequest.Department` giữ nguyên
+  (ngừng dùng, xóa ở bản sau). `Down()` **mất** danh mục bộ phận và bộ phận đã chọn trên PR (chữ bộ phận cũ vẫn còn).
+- `V0_11_0_DuyetNhaCungCap`: bảng `SupplierChangeRequest`, cột `ApprovalStep.Stage` (bước duyệt cũ của PR/PO là chặng 1).
+  `Down()` **mất** các yêu cầu duyệt NCC và thông tin chặng; NCC giữ nguyên trạng thái và tài khoản đã áp.
+- `V0_11_0_DuyetBangGiaNcc`: cột lượt gửi duyệt và lý do từ chối của bảng giá NCC; trạng thái mới Chờ duyệt. Bảng giá đã hiệu lực trước
+  bản này giữ nguyên, không phải duyệt lại. `Down()` đưa bảng giá đang chờ duyệt về Nháp, **mất** lượt gửi và lý do từ chối.
+- Script nâng cấp: `db/scripts/0.11.0.sql` (từ 0.10.0); cài mới thì chạy lần lượt mọi script trong `db/scripts`. Đã chạy thử toàn bộ
+  chuỗi 0.1.0 → 0.11.0 trên CSDL trống (29 migration) và chạy lại 0.11.0 lần hai không lỗi.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước**, rồi chạy `db/scripts/0.11.0.sql`.
+- Sau nâng cấp: khai báo bộ phận cho từng công ty (màn hình DEPT) **trước khi** người dùng lập PR mới – PR bắt buộc chọn bộ phận.
+- Gán quyền mới cho vai trò cần dùng: `Organization.Department.*`, `MasterData.Supplier.Approve`, `Pricing.PriceList.Approve`,
+  `Sourcing.Rfq.ApproveAward`, `Purchase.Contract.Approve` (vai trò Quản trị tự có). Khai báo quy tắc duyệt NCC và bảng giá NCC ở APRL.
+- Bảng giá NCC lập mới phải qua duyệt mới có hiệu lực; bảng giá đang hiệu lực không bị ảnh hưởng.
+- Trình duyệt: tải lại trang bằng Ctrl+F5 để nhận giao diện mới. Không đổi cấu hình triển khai (Docker, IIS).
+
+### Cách quay lại bản trước
+- Code: triển khai lại tag `v0.10.0` (Docker: `APP_VERSION=0.10.0`; Windows: chép lại gói 0.10.0).
+- CSDL: chỉ khi đã sao lưu – khôi phục bản sao lưu trước nâng cấp, hoặc
+  `dotnet ef database update 20261101070150_V0_10_0_DinhKemFile` (mất dữ liệu như mục "Thay đổi CSDL").
+
 ## [0.10.0] - 2026-11-01
 
 ### Thêm mới
