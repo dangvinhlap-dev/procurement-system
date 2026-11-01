@@ -5,7 +5,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Dữ liệu mua lịch sử (design.md mục 18.1, 18.2): nhập Excel, xem, xóa lô, ánh xạ mã cũ → mã chung. Phạm vi công ty do global query filter và dịch vụ kiểm tra lại.
+/// Dữ liệu mua lịch sử (design.md mục 18.1–18.3): nhập Excel, xem, xóa lô, ánh xạ mã cũ → mã chung, phân tích giá hợp nhất. Phạm vi công ty do global query filter và dịch vụ kiểm tra lại.
 /// </summary>
 public static class AnalysisEndpoints
 {
@@ -64,6 +64,12 @@ public static class AnalysisEndpoints
         group.MapDelete("/mappings", (string kind, string key, IPurchaseHistoryMappingService s, CancellationToken ct) =>
                 s.DeleteAsync(kind, key, ct))
             .RequirePermission(Permissions.Analysis.PurchaseHistoryImport);
+
+        // Phân tích giá hợp nhất (design.md mục 18.3): chỉ đọc; xem toàn tập đoàn do dịch vụ kiểm thêm quyền ViewAllCompanies.
+        group.MapGet("/analysis", (DateOnly? from, DateOnly? to, decimal? targetDiscountPct, bool? allCompanies, IPurchaseAnalysisService s,
+                    CancellationToken ct) =>
+                s.AnalyzeAsync(new PurchaseAnalysisQuery(from, to, targetDiscountPct, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Analysis.PurchaseHistoryView);
 
         return app;
     }

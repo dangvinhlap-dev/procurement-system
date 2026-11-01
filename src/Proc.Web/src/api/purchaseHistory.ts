@@ -211,3 +211,89 @@ export function usePurchaseHistoryMapping() {
     }),
   }
 }
+
+/** Số liệu một pháp nhân cho một mặt hàng × ĐVT – khớp PurchaseAnalysisCompanyDto. */
+export interface PurchaseAnalysisCompany {
+  companyId: string
+  companyCode: string
+  companyName: string
+  quantity: number
+  amount: number
+  avgPrice: number
+  minPrice: number
+  maxPrice: number
+  lastPrice: number
+  lastDate: string
+  purchaseCount: number
+  supplierCount: number
+  savings: number
+}
+
+/** Một dòng phân tích hợp nhất (mặt hàng chung × ĐVT) – khớp PurchaseAnalysisRowDto. */
+export interface PurchaseAnalysisRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  uom: string
+  companyCount: number
+  quantity: number
+  amount: number
+  avgPrice: number
+  minPrice: number
+  maxPrice: number
+  lastDate: string
+  purchaseCount: number
+  supplierCount: number
+  priceGapPct: number
+  targetPrice: number
+  savings: number
+  savingsPct: number
+  bestSupplierName: string
+  bestSupplierPrice: number
+  companies: PurchaseAnalysisCompany[]
+}
+
+/** Kết quả phân tích giá hợp nhất – khớp PurchaseAnalysisDto. */
+export interface PurchaseAnalysis {
+  from: string
+  to: string
+  targetDiscountPct: number
+  allCompanies: boolean
+  companyCount: number
+  amount: number
+  savings: number
+  savingsPct: number
+  unmappedRecords: number
+  unmappedAmount: number
+  foreignCurrencyRecords: number
+  zeroPriceRecords: number
+  rows: PurchaseAnalysisRow[]
+}
+
+/** Điều kiện phân tích: khoảng ngày mua (yyyy-MM-dd), % giảm mục tiêu, toàn tập đoàn. */
+export interface PurchaseAnalysisFilter {
+  from: string
+  to: string
+  targetDiscountPct: number
+  allCompanies: boolean
+}
+
+/**
+ * Phân tích giá hợp nhất và tiết kiệm dự kiến (design.md mục 18.3). Khóa truy vấn nằm dưới 'purchase-history' nên lưu/bỏ ánh xạ hay nhập
+ * lô mới thì tự tải lại.
+ * @param filter Điều kiện phân tích.
+ */
+export function usePurchaseAnalysis(filter: PurchaseAnalysisFilter) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({
+    from: filter.from,
+    to: filter.to,
+    targetDiscountPct: String(filter.targetDiscountPct),
+    allCompanies: String(filter.allCompanies),
+  })
+  return useQuery({
+    queryKey: ['purchase-history', companyId, 'analysis', params.toString()],
+    queryFn: () => apiFetch<PurchaseAnalysis>(`/api/purchase-history/analysis?${params}`),
+    placeholderData: keepPreviousData,
+  })
+}
