@@ -19,8 +19,6 @@ public sealed class LogQueries : ILogQueries
     /// <summary>Khoảng ngày tối đa mỗi lần tìm – bảng phân vùng theo tháng, giới hạn để không quét quá nhiều phân vùng.</summary>
     public const int MaxDays = 366;
 
-    private static readonly TimeZoneInfo Vietnam = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
-
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
 
@@ -117,7 +115,7 @@ public sealed class LogQueries : ILogQueries
         static DateTimeOffset StartOfDay(DateOnly day)
         {
             var local = day.ToDateTime(TimeOnly.MinValue);
-            return new DateTimeOffset(local, Vietnam.GetUtcOffset(local)).ToUniversalTime();
+            return new DateTimeOffset(local, VietnamTime.Zone.GetUtcOffset(local)).ToUniversalTime();
         }
 
         return (StartOfDay(from), StartOfDay(to.AddDays(1)));

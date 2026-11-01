@@ -43,15 +43,16 @@ sửa quyền của vai trò ở **Hệ thống → Vai trò**.
 
 ## Triển khai server (Ubuntu + Docker)
 Chi tiết hạ tầng: docs/design.md mục 14. Các lệnh dưới đây chạy trên server Linux, tại thư mục chứa repo.
+Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md`.
 
 **Cài lần đầu**
 1. Cài Docker Engine + Compose plugin; tường lửa chỉ mở cổng 22, 80, 443.
 2. `cp .env.example .env` rồi sửa `.env`: đổi mọi mật khẩu, `JWT_SIGNING_KEY` (sinh bằng `openssl rand -base64 48`),
    `SITE_ADDRESS` (tên miền để có HTTPS, hoặc `:80` trong mạng nội bộ), `APP_VERSION` (ví dụ `0.1.0`).
 3. Build image: `docker compose build app`.
-4. Khởi động CSDL rồi tạo bảng bằng script của phiên bản:
-   `docker compose up -d db` rồi
-   `docker compose exec db psql -U proc -d procurement -v ON_ERROR_STOP=1 -f /db/scripts/0.1.0.sql`.
+4. Khởi động CSDL rồi tạo bảng bằng **lần lượt mọi script** trong `db/scripts` theo thứ tự phiên bản (mỗi script nâng từ bản trước):
+   `docker compose up -d db` rồi với từng file, ví dụ
+   `docker compose exec db psql -U proc -d procurement -v ON_ERROR_STOP=1 -f /db/scripts/0.1.0.sql` (tiếp 0.5.0, 0.7.0…).
 5. `docker compose up -d`, mở trang web, đăng nhập bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD` rồi **đổi mật khẩu ngay**.
 
 **Nâng cấp lên bản mới** (xem CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó)
@@ -63,7 +64,7 @@ Chi tiết hạ tầng: docs/design.md mục 14. Các lệnh dưới đây chạ
 **Sao lưu và khôi phục**
 - Container `backup` tự sao lưu mỗi đêm vào thư mục `backups/`, giữ 14 ngày; chép thư mục này ra máy khác.
 - File đính kèm nằm trong volume `attachments` (CSDL chỉ lưu đường dẫn); mỗi đêm được chép bổ sung vào `backups/attachments/`.
-  Khôi phục: chép lại vào volume, ví dụ `docker compose cp backups/attachments/. app:/app/data/attachments`.
+  Khôi phục: chép lại vào volume, ví dụ `docker compose cp backups/attachments/. app:/data/attachments`.
 - Khôi phục vào CSDL trống: dừng app (`docker compose stop app`), rồi
   `docker compose exec backup pg_restore --clean --if-exists -d procurement /backups/<file>.dump`, sau đó `docker compose up -d`.
 

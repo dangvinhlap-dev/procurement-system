@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-/** Địa chỉ API khi chạy dev (cổng cố định – CLAUDE.md mục 2). */
-const apiUrl = 'http://localhost:5000'
+/**
+ * Địa chỉ API khi chạy dev: mặc định cổng 5000 (CLAUDE.md mục 2); đổi bằng biến môi trường VITE_API_URL khi API chạy chỗ khác.
+ * Chỉ dùng cho proxy dev – bản build gọi API bằng đường dẫn tương đối /api trên cùng máy chủ.
+ */
+const apiUrl = process.env.VITE_API_URL ?? 'http://localhost:5000'
 
 /**
  * Đọc số phiên bản từ Directory.Build.props ở gốc repo – nơi duy nhất ghi phiên bản (CLAUDE.md mục 8),

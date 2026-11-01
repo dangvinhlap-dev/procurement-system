@@ -9,9 +9,6 @@ namespace Proc.Api.Endpoints;
 /// </summary>
 public static class AuthEndpoints
 {
-    /// <summary>Múi giờ hiển thị cho người dùng (CLAUDE.md mục 5).</summary>
-    private static readonly TimeZoneInfo VietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
-
     /// <summary>
     /// Khai báo các endpoint xác thực.
     /// </summary>
@@ -120,5 +117,5 @@ public static class AuthEndpoints
     private static IResult Problem(int status, string message) => Results.Problem(title: message, statusCode: status);
 
     private static string FormatVietnamTime(DateTimeOffset? utc) =>
-        utc is null ? "ít phút" : TimeZoneInfo.ConvertTime(utc.Value, VietnamTimeZone).ToString("HH:mm");
+        utc is null ? "ít phút" : TimeZoneInfo.ConvertTime(utc.Value, VietnamTime.Zone).ToString("HH:mm");
 }

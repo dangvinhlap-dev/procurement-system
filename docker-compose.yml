@@ -27,6 +27,8 @@ services:
       Database__MigrateOnStartup: "false"
       # Chỉ tạo Tổng công ty và tài khoản quản trị (chưa có thì tạo, có rồi thì thôi); không có dữ liệu mẫu.
       Seed__Enabled: "true"
+      # File đính kèm để ngoài thư mục ứng dụng /app (volume attachments) – design.md mục 18.4.
+      Attachments__RootPath: /data/attachments
       Seed__AdminUserName: ${ADMIN_USERNAME:-admin}
       Seed__AdminPassword: ${ADMIN_PASSWORD:?Chưa đặt ADMIN_PASSWORD}
       Seed__HeadOffice__Code: ${HEAD_OFFICE_CODE:-TCT}
@@ -42,7 +44,7 @@ services:
       # Khóa mã hóa của ASP.NET Core (Data Protection) phải giữ qua các lần nâng cấp image.
       - app_keys:/home/app/.aspnet/DataProtection-Keys
       # File đính kèm (design.md mục 18.4): giữ qua các lần nâng cấp image; container backup chép sang ./backups/attachments mỗi đêm.
-      - attachments:/app/data/attachments
+      - attachments:/data/attachments
     depends_on:
       db:
         condition: service_healthy

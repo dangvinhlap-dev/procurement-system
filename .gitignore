@@ -42,3 +42,6 @@ playwright-report/
 
 # File đính kèm khi chạy dev/test trên máy (design.md mục 18.4)
 src/Proc.Api/data/
+
+# Bản đóng gói cài Windows (deploy/windows/publish.ps1)
+artifacts/
