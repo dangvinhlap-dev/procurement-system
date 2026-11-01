@@ -20,7 +20,7 @@ public static class DocumentTypes
     /// <summary>Đơn mua hàng.</summary>
     public const string PurchaseOrder = "PO";
 
-    /// <summary>Hợp đồng khung.</summary>
+    /// <summary>Hợp đồng nguyên tắc (lát B4a).</summary>
     public const string Contract = "CTR";
 
     /// <summary>Phiếu nhập mua từ NCC.</summary>
@@ -53,7 +53,7 @@ public static class DocumentTypes
         new(PurchaseRequest, "Đề nghị mua hàng"),
         new(RequestForQuotation, "Yêu cầu báo giá"),
         new(PurchaseOrder, "Đơn mua hàng"),
-        new(Contract, "Hợp đồng khung"),
+        new(Contract, "Hợp đồng nguyên tắc"),
         new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
         new(ReturnToVendor, "Phiếu xuất trả NCC"),
         new(Transfer, "Phiếu chuyển kho nội bộ"),

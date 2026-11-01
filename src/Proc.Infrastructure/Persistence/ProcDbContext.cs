@@ -157,6 +157,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Yêu cầu báo giá (design.md mục 8.4).</summary>
     public DbSet<Proc.Domain.Sourcing.Rfq> Rfqs => Set<Proc.Domain.Sourcing.Rfq>();
 
+    /// <summary>Hợp đồng nguyên tắc (lát B4a – design.md mục 18.7).</summary>
+    public DbSet<Proc.Domain.Purchasing.PurchaseContract> PurchaseContracts => Set<Proc.Domain.Purchasing.PurchaseContract>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 

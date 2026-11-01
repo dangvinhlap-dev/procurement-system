@@ -41,14 +41,15 @@ public static class PricingEndpoints
             .RequirePermission(Permissions.Inventory.DocumentView);
 
         var lists = app.MapGroup("/api/price-lists").WithTags("Bảng giá NCC");
+        // Người lập hợp đồng nguyên tắc cần danh sách bảng giá để gắn bảng giá dùng chung (lát B4a).
         lists.MapGet("/", (IPriceListService s, CancellationToken ct) => s.ListAsync(ct))
-            .RequirePermission(Permissions.Pricing.PriceListView);
+            .RequireAnyPermission(Permissions.Pricing.PriceListView, Permissions.Purchase.ContractManage);
         // Người lập PO cần giá gợi ý dù không có quyền xem bảng giá.
         lists.MapGet("/resolve", (Guid supplierId, DateOnly date, Guid[]? itemIds, IPriceListService s, CancellationToken ct) =>
                 s.ResolveAsync(supplierId, date, itemIds ?? [], ct))
             .RequireAnyPermission(Permissions.Pricing.PriceListView, Permissions.Purchase.PoCreate);
         lists.MapGet("/{id:guid}", (Guid id, IPriceListService s, CancellationToken ct) => s.GetAsync(id, ct))
-            .RequirePermission(Permissions.Pricing.PriceListView);
+            .RequireAnyPermission(Permissions.Pricing.PriceListView, Permissions.Purchase.ContractManage);
         lists.MapPost("/", async (SavePriceListRequest request, IPriceListService s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

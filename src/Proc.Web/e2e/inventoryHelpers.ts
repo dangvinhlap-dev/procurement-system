@@ -58,6 +58,21 @@ export async function approveRfqAward(request: APIRequestContext, rfqId: string)
   expect(response.ok(), await response.text()).toBeTruthy()
 }
 
+/** Người duyệt hợp đồng nguyên tắc tại BHA (dữ liệu mẫu môi trường Testing). */
+const CONTRACT_APPROVER = { userName: 'duyethd.bha', password: 'Demo@2026' }
+
+/**
+ * Duyệt hợp đồng nguyên tắc đang chờ duyệt ở BHA (lát B4a – người lập không tự duyệt) bằng tài khoản duyệt hợp đồng.
+ * @param contractId Id hợp đồng đã gửi duyệt.
+ */
+export async function approveContract(request: APIRequestContext, contractId: string) {
+  const login = await request.post('/api/auth/login', { data: CONTRACT_APPROVER })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { defaultCompanyId: string } }
+  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.defaultCompanyId }
+  const response = await request.post(`/api/contracts/${contractId}/approve`, { headers, data: { comment: null } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+}
+
 /** Người duyệt NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
 const SUPPLIER_APPROVER = { userName: 'duyetncc.tct', password: 'Demo@2026' }
 

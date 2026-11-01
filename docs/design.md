@@ -31,7 +31,7 @@ Phiên bản tài liệu 1.2 · cập nhật 31/10/2026 · người lập: Đặ
 | Danh mục (master data) | Hàng hóa, nhóm hàng, ĐVT và quy đổi, nhà cung cấp, nhóm NCC, thuế, tiền tệ, lý do nhập xuất |
 | Nhà cung cấp và giá | Hồ sơ NCC, NCC – sản phẩm/dịch vụ – công ty, bảng giá, lịch sử giá, so sánh giá, đánh giá NCC |
 | Tìm nguồn và đấu thầu | Danh sách tìm NCC cho sản phẩm (sourcing list), RFQ/yêu cầu báo giá, bảng so sánh báo giá, chọn thầu |
-| Mua hàng | PR (đề nghị mua), duyệt PR, PO (đơn mua), theo dõi giao hàng, hợp đồng khung |
+| Mua hàng | PR (đề nghị mua), duyệt PR, PO (đơn mua), theo dõi giao hàng, hợp đồng nguyên tắc (mục 18.7) |
 | Kho | Nhập mua NCC, xuất trả NCC, chuyển kho nội bộ, xuất bán nội bộ, nhập mua nội bộ, điều chỉnh/kiểm kê, xuất dùng (tùy chọn) |
 | Kỳ kho và giá vốn | Kỳ năm, kỳ tháng, đóng/mở kỳ, tính giá vốn bình quân, số dư đầu kỳ |
 | Báo cáo | Nhập – xuất – tồn, thẻ kho, sổ chi tiết, so sánh giá, mua hàng theo NCC, giao dịch nội bộ, log người dùng |
@@ -1236,6 +1236,27 @@ kết quả = 5; `Down()` đưa RFQ đang chờ duyệt về Đang nhận báo g
 **Duyệt bảng giá NCC** (lát B1, 01/11/2026): dùng cơ chế trên, một chặng tại công ty lập bảng giá – quy tắc ở mục 8.5. Migration
 `V0_11_0_DuyetBangGiaNcc` (cột `SupplierPriceList.ApprovalRound`, `RejectReason`; trạng thái Chờ duyệt = 4; `Down()` đưa bảng đang chờ duyệt
 về Nháp, mất lượt gửi và lý do từ chối).
+
+### 18.7 Hợp đồng nguyên tắc phương án 2 (lát B4a, 01/11/2026)
+
+Nguồn: đề xuất Ban CUVT Bước 11 (nội dung bắt buộc khi đàm phán), Bước 13 (phương án 2: hai pháp nhân ký hai hợp đồng riêng với cùng NCC,
+dùng chung bảng giá và điều kiện đã đàm phán; không mặc nhiên cam kết mua toàn bộ sản lượng dự báo), Bước 14 (đơn vị được phép đặt hàng).
+Màn hình CTR (Mua hàng → Hợp đồng nguyên tắc, thay "Hợp đồng khung" tạm bỏ qua ở mục 1.2).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Hợp đồng (`PurchaseContract`, số loại `CTR`) thuộc **một công ty (pháp nhân ký)**, một NCC, gắn **một bảng giá NCC dùng chung**: bảng toàn tập đoàn đã hiệu lực hoặc bảng của chính công ty (chưa ngừng), cùng NCC | Phương án 2 – dùng chung bảng giá đã đàm phán |
+| Đầu: số HĐ giấy, tên, ngày ký, hiệu lực từ–đến (bắt buộc), hạn mức công nợ (VND). Điều khoản (chữ, tab Điều khoản): cơ chế điều chỉnh giá, thanh toán/công nợ, giao hàng, chiết khấu thương mại/sản lượng/doanh số, tài trợ, chế tài, điều khoản khác | Bước 11 – nội dung bắt buộc khi đàm phán |
+| **Sản lượng dự kiến** theo dòng (mặt hàng × ĐVT, mỗi cặp một dòng): SL dự kiến > 0, SL cam kết tối thiểu (không bắt buộc, ≤ SL dự kiến). Đơn giá, % CK **lấy từ bảng giá** (bậc có SL tối thiểu nhỏ nhất của cùng mặt hàng × ĐVT) lúc lưu; mặt hàng/ĐVT không có trong bảng giá thì chặn. Thành tiền = SL × đơn giá × (100 − %CK)/100, làm tròn 2 số; **giá trị dự kiến** = tổng, dùng xét ngưỡng duyệt | Hợp đồng không ghi giá riêng ngoài bảng giá; Q4: sản lượng dự kiến không bắt buộc cam kết |
+| **Bộ phận được phép đặt hàng** (tab riêng): bộ phận đang dùng của công ty; để trống = mọi bộ phận. Việc chặn PR/PO ngoài phạm vi làm ở lát C1 | G5 – chỉ giao dịch trong phạm vi đã duyệt |
+| Vòng đời: Nháp → **Chờ duyệt** (quy trình dùng chung loại CTR, mục 18.6; người lập không tự duyệt; từ chối bắt buộc lý do về Nháp; rút về Nháp) → **Hiệu lực** → **Chấm dứt** (ngày trong khoảng hiệu lực + lý do bắt buộc). Hủy khi Nháp. Quyền: xem `Purchase.Contract.View`, lập/sửa/gửi/rút/chấm dứt/hủy `Purchase.Contract.Manage`, duyệt `Purchase.Contract.Approve` | Q4: hợp đồng phải duyệt |
+| Gửi và duyệt: NCC phải **Đã duyệt** (mục 5.8); không chồng thời gian hiệu lực với hợp đồng chờ duyệt/hiệu lực khác của **cùng công ty × NCC** (nháp trùng thì lưu được, gửi bị chặn). Duyệt: bảng giá phải **đang hiệu lực** | Mỗi pháp nhân một hợp đồng với NCC trong một thời kỳ |
+| Cảnh báo **sắp hết hiệu lực** (còn ≤ 30 ngày) ở danh sách và trên hợp đồng; đính kèm (bản scan hợp đồng, biên bản) ở tab Đính kèm; Việc cần làm/thông báo có loại CTR; tab Lịch sử duyệt | Như bảng giá (lát B1) |
+| Người lập hợp đồng (chỉ có `Purchase.Contract.Manage`) xem được danh sách và chi tiết bảng giá, danh sách bộ phận để chọn | Không phải cấp thêm quyền bảng giá/bộ phận |
+| Để lát **B4b**: phụ lục hợp đồng (gia hạn, đổi bảng giá, đổi điều khoản – mỗi phụ lục phải duyệt), nhập Excel hợp đồng hiện hữu (Bước 8). Lát C1: PO lấy giá/kiểm tra theo hợp đồng hiệu lực, cờ "ngoài hợp đồng". F4: theo dõi chiết khấu/tài trợ thực nhận | Tách lát |
+
+Migration `V0_12_0_HopDongNguyenTac` (bảng `PurchaseContract`, `PurchaseContractLine`, `PurchaseContractDepartment`; bảng mới –
+`Down()` xóa các bảng, mất hợp đồng đã lập).
 
 ## Nguồn tham khảo
 

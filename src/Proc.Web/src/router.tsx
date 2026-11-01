@@ -25,6 +25,7 @@ import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { ContractListPage, ContractPage } from './pages/purchasing/ContractPages'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
 import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
@@ -100,6 +101,7 @@ const implemented: Record<string, ReactNode> = {
   PCMP: <PriceComparisonPage />,
   SRC: <SourcingListPage />,
   RFQ: <RfqListPage />,
+  CTR: <ContractListPage />,
   QCMP: <RfqListPage compare />,
   TRANSIT: <GoodsInTransitPage />,
   ICREC: <IntercompanyReconciliationPage />,
@@ -127,6 +129,7 @@ const documentPages = [
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'SRC', element: <SourcingPage /> },
   { code: 'RFQ', element: <RfqPage /> },
+  { code: 'CTR', element: <ContractPage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,

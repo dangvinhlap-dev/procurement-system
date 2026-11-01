@@ -138,6 +138,7 @@ app.MapInventoryEndpoints();
 app.MapPricingEndpoints();
 app.MapPurchasingEndpoints();
 app.MapSourcingEndpoints();
+app.MapContractEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapDocumentNumberingEndpoints();
