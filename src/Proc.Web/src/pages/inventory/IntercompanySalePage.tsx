@@ -1,8 +1,15 @@
-import { Alert, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Popconfirm, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
-import { useGroupCompanies, useResolvedPrices } from '../../api/intercompany'
+import {
+  describeSuggestion,
+  useGroupCompanies,
+  useInternalPriceMutations,
+  useInternalPriceSuggestions,
+  useResolvedPrices,
+  type InternalPriceSuggestion,
+} from '../../api/intercompany'
 import {
   documentStatusLabels,
   receiveStatusLabels,
@@ -76,6 +83,16 @@ export function IntercompanySalePage() {
   const stock = useAvailableStock(readOnly ? undefined : fromWarehouseId, itemIds)
   const prices = useResolvedPrices(readOnly ? undefined : buyerCompanyId, date?.format('YYYY-MM-DD'), itemIds)
   const priceById = useMemo(() => new Map((prices.data ?? []).map((p) => [p.itemId, p])), [prices.data])
+  // Mặt hàng chưa có giá bán nội bộ: gợi ý giá vốn kỳ đã đóng gần nhất × (1 + % markup) – design.md mục 1 câu hỏi 2. Gợi ý lộ
+  // giá vốn nên chỉ người xem được bảng giá mới thấy; áp dụng = thêm dòng vào Bảng giá nội bộ (phiếu vẫn chỉ lấy giá từ bảng giá).
+  const missingItemIds = useMemo(
+    () => (prices.isSuccess && !prices.isPlaceholderData ? itemIds.filter((i) => !priceById.has(i)) : []),
+    [itemIds, priceById, prices.isSuccess, prices.isPlaceholderData],
+  )
+  const suggestions = useInternalPriceSuggestions(missingItemIds, !readOnly && !!buyerCompanyId && hasPermission(Permission.PriceListView))
+  const suggestionById = useMemo(() => new Map((suggestions.data ?? []).map((p) => [p.itemId, p])), [suggestions.data])
+  const priceMutations = useInternalPriceMutations()
+  const { message } = App.useApp()
   // Liên công ty chỉ đi kho tổng → kho tổng (CLAUDE.md mục 4): chỉ cho chọn kho tổng.
   const mainWarehouses = (warehouses.data ?? []).filter((w) => w.type === 'Main' && (w.isActive || w.id === doc?.fromWarehouseId))
 
@@ -111,6 +128,27 @@ export function IntercompanySalePage() {
     const amount = Math.round((line?.qty ?? 0) * price * 100) / 100
     const rate = resolved.vatCode && resolved.vatCode !== 'KCT' ? Number(resolved.vatCode) : 0
     return { price, vat: resolved.vatCode, amount, vatAmount: Math.round(amount * rate) / 100 }
+  }
+  /**
+   * Áp dụng giá gợi ý: thêm giá riêng cho công ty mua vào Bảng giá nội bộ, hiệu lực từ ngày phiếu, không hạn – rồi phiếu tự lấy
+   * lại giá như mọi dòng khác (giữ quy tắc giá ICS lấy từ bảng giá, có vết trong nhật ký).
+   */
+  const applySuggestion = async (suggestion: InternalPriceSuggestion) => {
+    if (!buyerCompanyId || !date) return
+    try {
+      await priceMutations.create.mutateAsync({
+        buyerCompanyId,
+        itemId: suggestion.itemId,
+        unitPrice: suggestion.suggestedPrice,
+        vatCode: null,
+        validFrom: date.format('YYYY-MM-DD'),
+        validTo: null,
+        note: `Theo gợi ý – ${describeSuggestion(suggestion)}`,
+      })
+      message.success('Đã thêm giá vào Bảng giá nội bộ.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Không thêm được giá nội bộ.')
+    }
   }
   const totals = lines.reduce(
     (sum, line, index) => {
@@ -229,8 +267,30 @@ export function IntercompanySalePage() {
       render: (field, index) => {
         const line = lines[field.name]
         const m = lineMoney(index, line, line?.itemId ? itemsById.get(line.itemId) : undefined)
-        if (!m && line?.itemId && buyerCompanyId && !readOnly)
-          return <span className="line-grid-readonly line-grid-warning" title="Khai báo ở Giá và NCC → Bảng giá nội bộ">Chưa có giá</span>
+        if (!m && line?.itemId && buyerCompanyId && !readOnly) {
+          const suggestion = suggestionById.get(line.itemId)
+          if (!suggestion)
+            return <span className="line-grid-readonly line-grid-warning" title="Khai báo ở Giá và NCC → Bảng giá nội bộ">Chưa có giá</span>
+          const item = itemsById.get(line.itemId)
+          const baseUom = item?.uoms.find((u) => u.uomId === item.baseUomId)?.code ?? ''
+          const hint = `Chưa có giá. Gợi ý – ${describeSuggestion(suggestion)} đ/${baseUom}`
+          if (!hasPermission(Permission.PriceListManage))
+            return <span className="line-grid-readonly line-grid-warning" title={`${hint}. Nhờ người quản lý bảng giá khai báo.`}>Chưa có giá</span>
+          const buyer = companies.data?.find((c) => c.id === buyerCompanyId)?.code ?? ''
+          return (
+            <Popconfirm
+              title="Áp dụng giá gợi ý?"
+              description={`${describeSuggestion(suggestion)} đ/${baseUom}. Thêm giá riêng cho ${buyer} vào Bảng giá nội bộ, hiệu lực từ ${date?.format('DD/MM/YYYY') ?? ''}.`}
+              okText="Áp dụng"
+              cancelText="Không"
+              onConfirm={() => applySuggestion(suggestion)}
+            >
+              <Button type="link" size="small" className="line-grid-warning" title={hint} data-testid="ics-price-suggestion">
+                Gợi ý {formatMoney(suggestion.suggestedPrice)}
+              </Button>
+            </Popconfirm>
+          )
+        }
         return readonlyCell(m ? formatMoney(m.price) : '')
       },
     },

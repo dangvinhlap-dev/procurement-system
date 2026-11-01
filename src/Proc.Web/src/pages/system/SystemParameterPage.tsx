@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { ListPage } from '../../components/ListPage/ListPage'
+import { vnNumberInput } from '../../utils/format'
 
 const columns: GridColumn<SystemParameter>[] = [
   { key: 'group', title: 'Nhóm', width: 100, value: (r) => r.group, groupable: true },
@@ -50,7 +51,16 @@ export function SystemParameterPage() {
   )
 }
 
-/** Ngăn kéo xem/sửa một tham số. Hiện chỉ có tham số số nguyên nên ô nhập là InputNumber. */
+/**
+ * Giới hạn ô nhập theo tham số (khớp kiểm tra ở Proc.Domain.Organization.CompanyParameter): số NCC tối thiểu là số nguyên
+ * 1–20; % markup nội bộ 0–1000, tối đa 4 số lẻ (cột numeric(9,4)).
+ */
+const inputLimits: Record<string, { min: number; max: number; precision: number; suffix?: string }> = {
+  RFQ_MIN_SUPPLIERS: { min: 1, max: 20, precision: 0 },
+  INTERNAL_MARKUP_PERCENT: { min: 0, max: 1000, precision: 4, suffix: '%' },
+}
+
+/** Ngăn kéo xem/sửa một tham số. Các tham số sửa được đều là số nên ô nhập là InputNumber. */
 function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () => void }) {
   const { message } = App.useApp()
   const { hasPermission } = useAuth()
@@ -58,6 +68,7 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
   const update = useUpdateSystemParameter()
   const [error, setError] = useState<string | null>(null)
   const canEdit = row.editable && hasPermission(Permission.ParameterManage)
+  const limits = inputLimits[row.code] ?? { min: 0, max: Number.MAX_SAFE_INTEGER, precision: 0 }
 
   const save = async (value: string | null) => {
     setError(null)
@@ -79,7 +90,8 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
       saving={update.isPending}
       error={error}
       form={form}
-      initialValues={{ value: row.editable ? Number(row.value) : null }}
+      // Server trả số kiểu Việt Nam ("12,5") – đổi dấu phẩy về dấu chấm trước khi đọc thành số.
+      initialValues={{ value: row.editable ? Number(row.value.replace(',', '.')) : null }}
       readOnly={!canEdit}
       extraActions={
         canEdit &&
@@ -102,7 +114,15 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
                   rules={[{ required: true, message: 'Hãy nhập giá trị, hoặc bấm "Về mặc định".' }]}
                   extra={row.defaultValue != null ? `Mặc định: ${row.defaultValue}` : undefined}
                 >
-                  <InputNumber autoFocus min={1} max={20} precision={0} style={{ width: 120 }} />
+                  <InputNumber
+                    {...vnNumberInput}
+                    autoFocus
+                    min={limits.min}
+                    max={limits.max}
+                    precision={limits.precision}
+                    suffix={limits.suffix}
+                    style={{ width: 160 }}
+                  />
                 </Form.Item>
               ) : (
                 <Descriptions size="small" bordered column={1} items={[{ key: 'value', label: 'Giá trị', children: row.value }]} />

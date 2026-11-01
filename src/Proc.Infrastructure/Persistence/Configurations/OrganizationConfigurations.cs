@@ -15,6 +15,7 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.CompanyId).IsUnique();
         builder.Property(x => x.RfqMinSuppliers).HasDefaultValue(CompanyParameter.DefaultRfqMinSuppliers);
+        builder.Property(x => x.InternalMarkupPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultInternalMarkupPercent);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }

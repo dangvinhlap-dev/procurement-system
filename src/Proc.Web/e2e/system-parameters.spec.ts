@@ -5,7 +5,7 @@ import { loginViaApi } from './helpers.ts'
  * Màn hình Tham số hệ thống (SEC – design.md mục 5.4). Dùng công ty DTV (test đấu thầu chạy ở BHA nên không bị ảnh hưởng);
  * test tự trả tham số về mặc định ở cuối nên chạy lại được nhiều lần.
  */
-test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ, rồi về mặc định', async ({ page }) => {
+test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % markup nội bộ, rồi về mặc định', async ({ page }) => {
   await loginViaApi(page)
   await page.goto('/')
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
@@ -13,7 +13,7 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ, rồi 
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Tham số hệ thống' }).click()
 
   await expect(page.getByRole('heading', { name: 'Tham số hệ thống – DTV' })).toBeVisible()
-  await expect(page.locator('.data-grid-row')).toHaveCount(3)
+  await expect(page.locator('.data-grid-row')).toHaveCount(4)
   await expect(page.locator('.data-grid-row', { hasText: 'Phương pháp giá vốn' })).toContainText('Chỉ xem')
   const rfq = page.locator('.data-grid-row', { hasText: 'Số NCC tối thiểu khi gửi RFQ' })
   await expect(rfq).toContainText('Mặc định')
@@ -38,4 +38,16 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ, rồi 
   await drawer.getByRole('button', { name: 'Về mặc định' }).click()
   await expect(rfq).toContainText('Mặc định')
   await expect(rfq).toContainText('3')
+
+  // % markup nội bộ mặc định (SEC-2): gõ số lẻ kiểu Việt Nam, rồi về mặc định 0.
+  const markup = page.locator('.data-grid-row', { hasText: '% markup nội bộ mặc định' })
+  await expect(markup).toContainText('Mặc định')
+  await markup.dblclick()
+  await input.fill('12,5')
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText('Đã lưu "% markup nội bộ mặc định": 12,5.')
+  await expect(markup).toContainText('Riêng')
+  await markup.dblclick()
+  await drawer.getByRole('button', { name: 'Về mặc định' }).click()
+  await expect(markup).toContainText('Mặc định')
 })

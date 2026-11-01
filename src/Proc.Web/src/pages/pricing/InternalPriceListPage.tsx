@@ -1,7 +1,14 @@
-import { App, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
-import { useGroupCompanies, useInternalPriceMutations, useInternalPrices, type InternalPrice } from '../../api/intercompany'
+import {
+  describeSuggestion,
+  useGroupCompanies,
+  useInternalPriceMutations,
+  useInternalPrices,
+  useInternalPriceSuggestions,
+  type InternalPrice,
+} from '../../api/intercompany'
 import { useItemLookup } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
@@ -63,7 +70,9 @@ interface PriceFormValues {
 }
 
 /**
- * Ngăn kéo thêm/sửa giá nội bộ. Sửa thì công ty mua, mặt hàng giữ nguyên (muốn đổi thì thêm dòng mới).
+ * Ngăn kéo thêm/sửa giá nội bộ. Sửa thì công ty mua, mặt hàng giữ nguyên (muốn đổi thì thêm dòng mới). Dưới ô giá hiện giá gợi ý
+ * = giá vốn kỳ đã đóng gần nhất × (1 + % markup nội bộ mặc định – màn hình SEC); người dùng bấm "Áp dụng" nếu muốn dùng
+ * (design.md mục 1 câu hỏi 2).
  * @param price Dòng đang mở; null = thêm mới.
  * @param canManage Có quyền sửa.
  * @param onClose Đóng.
@@ -77,6 +86,9 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
   const lookup = useItemLookup(search, price ? [price.itemId] : [])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const itemId = Form.useWatch('itemId', form) as string | undefined
+  const suggestions = useInternalPriceSuggestions(itemId ? [itemId] : [], canManage)
+  const suggestion = itemId ? suggestions.data?.find((s) => s.itemId === itemId) : undefined
 
   const save = async () => {
     const values = await form.validateFields().catch(() => null)
@@ -142,7 +154,21 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
                   options={[{ value: '', label: 'Mọi công ty' }, ...(companies.data ?? []).map((c) => ({ value: c.id, label: `${c.code} – ${c.name}` }))]}
                 />
               </Form.Item>
-              <Form.Item label="Giá bán nội bộ (theo ĐVT cơ sở, chưa VAT)" name="unitPrice" rules={[{ required: true, type: 'number', min: 0, message: 'Nhập giá ≥ 0.' }]}>
+              <Form.Item
+                label="Giá bán nội bộ (theo ĐVT cơ sở, chưa VAT)"
+                name="unitPrice"
+                rules={[{ required: true, type: 'number', min: 0, message: 'Nhập giá ≥ 0.' }]}
+                extra={
+                  canManage && suggestion ? (
+                    <span data-testid="price-suggestion">
+                      Gợi ý – {describeSuggestion(suggestion)}{' '}
+                      <Button type="link" size="small" onClick={() => form.setFieldValue('unitPrice', suggestion.suggestedPrice)}>
+                        Áp dụng
+                      </Button>
+                    </span>
+                  ) : undefined
+                }
+              >
                 <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} />
               </Form.Item>
               <Form.Item label="Thuế suất" name="vatCode">

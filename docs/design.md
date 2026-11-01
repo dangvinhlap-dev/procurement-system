@@ -175,7 +175,14 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
     công ty chưa sửa thì chưa có dòng `CompanyParameter` và dùng mặc định. Đổi tham số không ảnh hưởng RFQ đã gửi.
   - **Phương pháp giá vốn**: chỉ xem – cố định bình quân gia quyền cuối kỳ tháng (mục 7).
   - **Kho cho phép tồn âm**: chỉ xem – khai báo trên từng kho (màn hình Kho), danh sách theo phạm vi kho của người dùng.
-  - Chưa làm: % markup nội bộ mặc định (cần đi cùng gợi ý giá bán nội bộ khi chưa có bảng giá – mục 1, câu hỏi số 2).
+  - **% markup nội bộ mặc định** (lát SEC-2, 01/11/2026): sửa được, 0–1000%, tối đa 4 số lẻ, mặc định 0%. Dùng **gợi ý giá bán nội
+    bộ** khi mặt hàng chưa có trong bảng giá nội bộ (mục 1, câu hỏi số 2): giá gợi ý (chưa VAT, theo ĐVT cơ sở) = giá vốn kỳ tháng
+    đã đóng gần nhất có giá vốn của mặt hàng đó tại công ty bán × (1 + % markup), làm tròn đồng. Ví dụ 10.857,142857 × 1,1 =
+    11.942,857143 → 11.943. Chưa có kỳ đã đóng thì không gợi ý. Gợi ý để lộ giá vốn nên chỉ người có quyền xem bảng giá thấy.
+    Gợi ý hiện ở hai nơi, người dùng tự chọn có áp dụng hay không:
+    - Bảng giá nội bộ: dưới ô giá, nút "Áp dụng" điền giá gợi ý vào ô (vẫn phải bấm Lưu).
+    - Phiếu xuất bán nội bộ (ICS): dòng chưa có giá hiện "Gợi ý …"; "Áp dụng" (cần quyền sửa bảng giá) **thêm giá riêng cho công ty
+      mua vào bảng giá nội bộ**, hiệu lực từ ngày phiếu, không hạn. Phiếu ICS vẫn chỉ lấy giá từ bảng giá, không nhập tay.
 
 ### 5.5 Đánh số chứng từ
 
@@ -638,7 +645,7 @@ Mọi form chứng từ dùng **một khuôn chung** (`DocumentForm`): thanh cô
 | Phần | Trường |
 | --- | --- |
 | Đầu phiếu | Số phiếu, ngày, công ty bán, kho xuất (**chỉ kho tổng**), công ty mua, kho nhận (**chỉ kho tổng** của công ty mua, chỉ đọc), đơn đặt hàng nội bộ (nếu có), bảng giá nội bộ áp dụng, số hóa đơn, ngày hóa đơn, phương tiện vận chuyển |
-| Dòng | Mã hàng, ĐVT, lô, tồn khả dụng, SL xuất, giá bán nội bộ (tự lấy từ bảng giá nội bộ), % VAT, thành tiền, giá vốn tạm tính (chỉ người có quyền thấy), lãi gộp tạm tính |
+| Dòng | Mã hàng, ĐVT, lô, tồn khả dụng, SL xuất, giá bán nội bộ (tự lấy từ bảng giá nội bộ; chưa có thì hiện gợi ý – mục 5.4), % VAT, thành tiền, giá vốn tạm tính (chỉ người có quyền thấy), lãi gộp tạm tính |
 | Liên kết | Số phiếu nhập mua nội bộ bên nhận, trạng thái bên nhận (Chờ nhận / Đã nhận đủ / Nhận thiếu) |
 
 ### 10.8 Phiếu nhập mua nội bộ (ICR – bên nhận)
@@ -762,7 +769,7 @@ Trái tim của kho là bảng **`StockLedger`** (sổ kho): mỗi dòng chứng
 | `ItemPeriodCost` | PeriodId, CompanyId, ItemId, UnitCost, CalculatedAt |
 | `ApprovalRequest`, `ApprovalStep` | DocType, DocId, Level, ApproverId, Status, Comment, ActedAt |
 | `SupplierRatingRule` | Id, Code, Name, SortOrder, MinOnTimePct, MaxReturnPct (numeric(5,2)) – tham số xếp loại NCC dùng chung (mục 11.3) |
-| `CompanyParameter` | Id, CompanyId (duy nhất), RfqMinSuppliers (mặc định 3) – tham số công ty (mục 5.4) |
+| `CompanyParameter` | Id, CompanyId (duy nhất), RfqMinSuppliers (mặc định 3), InternalMarkupPercent numeric(9,4) (mặc định 0) – tham số công ty (mục 5.4) |
 | `AuditLog`, `AccessLog` | Mục 9.3 |
 | `Notification` | Id, CompanyId, UserId, Type, Title, Message, ScreenCode, TargetId, CreatedAt, ReadAt – thông báo (mục 11.6) |
 

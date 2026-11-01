@@ -6,6 +6,9 @@ public static class SystemParameterCodes
     /// <summary>Số NCC tối thiểu khi gửi RFQ – sửa được.</summary>
     public const string RfqMinSuppliers = "RFQ_MIN_SUPPLIERS";
 
+    /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
+    public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
+
     /// <summary>Phương pháp giá vốn – chỉ xem (cố định bình quân gia quyền tháng, design.md mục 7).</summary>
     public const string CostingMethod = "COSTING_METHOD";
 
@@ -59,4 +62,11 @@ public interface ISystemParameterService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Giá trị tham số, hoặc mặc định nếu công ty chưa khai báo.</returns>
     Task<int> RfqMinSuppliersAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// % markup nội bộ mặc định của công ty đang làm việc (dùng gợi ý giá bán nội bộ).
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Giá trị tham số, hoặc mặc định nếu công ty chưa khai báo.</returns>
+    Task<decimal> InternalMarkupPercentAsync(CancellationToken cancellationToken);
 }
