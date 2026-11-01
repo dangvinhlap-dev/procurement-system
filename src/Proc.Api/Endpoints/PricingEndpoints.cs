@@ -27,6 +27,10 @@ public static class PricingEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage)
             .Validate<SaveInternalPriceRequest>();
+        // Gợi ý để lộ giá vốn nên chỉ cho người xem được bảng giá (người định giá bán nội bộ).
+        prices.MapGet("/suggest", (Guid[]? itemIds, IInternalPriceAdministration s, CancellationToken ct) =>
+                s.SuggestAsync(itemIds ?? [], ct))
+            .RequirePermission(Permissions.Pricing.PriceListView);
         // Người lập phiếu xuất bán nội bộ cần giá và danh sách công ty mua dù không có quyền xem bảng giá.
         prices.MapGet("/resolve", (Guid buyerCompanyId, DateOnly date, Guid[]? itemIds, IInternalPriceAdministration s, CancellationToken ct) =>
                 s.ResolveAsync(buyerCompanyId, date, itemIds ?? [], ct))

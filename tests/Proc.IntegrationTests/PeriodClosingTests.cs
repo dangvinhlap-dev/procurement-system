@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
+using Proc.Application.Pricing;
 using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Security;
 
@@ -137,6 +138,37 @@ public class PeriodClosingTests
         var late = await ReadAsync<InventoryDocumentDto>(await ReceiptAsync(f, new DateOnly(2025, 2, 20), 1, 1));
         Assert.Contains("đã đóng", await TitleAsync(await f.Client.PostAsync($"/api/inventory-documents/{late.Id}/post", null, Ct)));
         Assert.Contains("không còn mở", await TitleAsync(await f.Client.PostAsync($"/api/inventory-documents/{transfer.Id}/unpost", null, Ct)));
+    }
+
+    [Fact]
+    public async Task GoiYGiaNoiBo_GiaVonKyDongGanNhat_NhanMotCongMarkup()
+    {
+        var f = await ArrangeAsync();
+        await ArrangeDesignExampleAsync(f);
+        var url = $"/api/internal-prices/suggest?itemIds={f.ItemId}";
+
+        // Chưa có kỳ nào đóng: chưa có giá vốn chính thức nên không gợi ý.
+        Assert.Empty((await f.Client.GetFromJsonAsync<List<InternalPriceSuggestionDto>>(url, Ct))!);
+
+        await ReadAsync<InventoryPeriodDto>(await CloseAsync(f, f.Jan));
+        var jan = (await f.Client.GetFromJsonAsync<List<InternalPriceSuggestionDto>>(url, Ct))!.Single();
+        Assert.Equal((10_000m, 2025, 1, 0m, 10_000m), (jan.UnitCost, jan.PeriodYear, jan.PeriodMonth, jan.MarkupPercent, jan.SuggestedPrice));
+
+        // Markup 10% (gõ kiểu Việt Nam có dấu phẩy cũng được): 10.000 × 1,1 = 11.000.
+        var markup = await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.InternalMarkupPercent}", new UpdateSystemParameterRequest("10,0"), Ct));
+        Assert.Equal(("10", false), (markup.Value, markup.IsDefault));
+        Assert.Equal(11_000m, (await f.Client.GetFromJsonAsync<List<InternalPriceSuggestionDto>>(url, Ct))!.Single().SuggestedPrice);
+
+        // Đóng tháng 2: lấy kỳ đóng gần nhất – 10.857,142857 × 1,1 = 11.942,857143 → 11.943.
+        await ReadAsync<InventoryPeriodDto>(await CloseAsync(f, f.Feb));
+        var feb = (await f.Client.GetFromJsonAsync<List<InternalPriceSuggestionDto>>(url, Ct))!.Single();
+        Assert.Equal((10_857.142857m, 2, 11_943m), (feb.UnitCost, feb.PeriodMonth, feb.SuggestedPrice));
+
+        Assert.Contains("0 đến 1000", await TitleAsync(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.InternalMarkupPercent}", new UpdateSystemParameterRequest("-5"), Ct)));
+        Assert.Contains("là số", await TitleAsync(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.InternalMarkupPercent}", new UpdateSystemParameterRequest("abc"), Ct)));
     }
 
     [Fact]

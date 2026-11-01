@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 31/10/2026. Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 01/11/2026. Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -17,11 +17,12 @@ Cập nhật: 31/10/2026. Đọc file này đầu mỗi phiên để biết đan
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
 | SEC-1 | Tham số hệ thống: bảng `CompanyParameter`, số NCC tối thiểu khi gửi RFQ theo công ty (sửa được); giá vốn, kho cho tồn âm (chỉ xem) | feature/tham-so-he-thong |
+| SEC-2 | % markup nội bộ mặc định (tham số công ty, màn hình SEC); gợi ý giá bán nội bộ = giá vốn kỳ đã đóng gần nhất × (1 + %) ở Bảng giá nội bộ và phiếu ICS; migration `V0_10_0_MarkupNoiBo` | feature/markup-noi-bo |
 | UI-c | Dấu * đỏ sau nhãn ở mọi ô bắt buộc (form, ngăn kéo, hộp thoại, tiêu đề cột lưới dòng), ẩn khi chỉ xem | feature/dau-bat-buoc |
 | Tối ưu Claude Code | CLAUDE.md gọn (124 → 95 dòng), tách `docs/phat-hanh.md`, `docs/moi-truong-dev.md`; `docs/TIEN_DO.md`; `.claude/settings.json`; `.gitignore` | chore/toi-uu-claude |
 
-Kiểm tra gần nhất (UI-c, chỉ sửa Proc.Web): 59/61 Playwright qua – 2 test kiểm số phiên bản lỗi vì Vite dev server chạy từ trước khi nâng 0.9.0
-(khởi động lại `npm run dev` là hết); `npm run build`, `tsc`, `oxlint` qua. Lần chạy .NET gần nhất (SEC-1): 347 test qua.
+Kiểm tra gần nhất (SEC-2, 01/11/2026): `dotnet test` 353 qua; Playwright 61/61 qua; `npm run build`, `tsc`, `oxlint` qua.
+Đã sửa test `SupplierPricingTests` lỗi vào ngày mùng 1 (số bảng giá theo ngày hiệu lực = hôm qua).
 
 ## Đang làm
 
@@ -29,9 +30,7 @@ Kiểm tra gần nhất (UI-c, chỉ sửa Proc.Web): 59/61 Playwright qua – 2
 
 ## Việc tiếp theo
 
-1. SEC-2 (người dùng đã chốt 31/10/2026): % markup nội bộ mặc định (tham số công ty, màn hình SEC) + gợi ý giá bán nội bộ
-   = giá vốn kỳ đã đóng gần nhất × (1 + % markup) khi chưa có bảng giá. Gợi ý hiện **ở cả hai nơi** – màn hình bảng giá nội bộ và phiếu
-   ICS – người dùng tự chọn có áp dụng hay không (design.md mục 1 câu hỏi 2, mục 5.4). Đi vào bản 0.10.0.
+1. Bản 0.10.0 (có migration `V0_10_0_MarkupNoiBo`) – phát hành khi người dùng yêu cầu (docs/phat-hanh.md).
 2. Hợp đồng khung (CTR) còn trang tạm – **tạm bỏ qua** (31/10/2026): người dùng sẽ mô tả sau; không tự làm khi chưa có mô tả.
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.

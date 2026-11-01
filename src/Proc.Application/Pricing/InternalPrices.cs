@@ -29,6 +29,16 @@ public sealed record SaveInternalPriceRequest(
 /// <param name="VatCode">Thuế suất đã quy về (giá trống thì lấy của mặt hàng).</param>
 public sealed record ResolvedInternalPriceDto(Guid ItemId, decimal UnitPrice, string? VatCode);
 
+/// <summary>Giá bán nội bộ gợi ý cho một mặt hàng (design.md mục 1 câu hỏi 2).</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UnitCost">Giá vốn đơn vị kỳ đã đóng gần nhất theo ĐVT cơ sở.</param>
+/// <param name="PeriodYear">Năm của kỳ lấy giá vốn.</param>
+/// <param name="PeriodMonth">Tháng của kỳ lấy giá vốn.</param>
+/// <param name="MarkupPercent">% markup nội bộ mặc định của công ty bán.</param>
+/// <param name="SuggestedPrice">Giá gợi ý chưa VAT theo ĐVT cơ sở = giá vốn × (1 + % markup), làm tròn đồng.</param>
+public sealed record InternalPriceSuggestionDto(
+    Guid ItemId, decimal UnitCost, int PeriodYear, int PeriodMonth, decimal MarkupPercent, decimal SuggestedPrice);
+
 /// <summary>Một công ty trong tập đoàn (để chọn công ty mua/bán nội bộ).</summary>
 public sealed record GroupCompanyDto(Guid Id, string Code, string Name);
 
@@ -69,6 +79,16 @@ public interface IInternalPriceAdministration
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Giá theo mặt hàng.</returns>
     Task<IReadOnlyList<ResolvedInternalPriceDto>> ResolveAsync(Guid buyerCompanyId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Giá bán nội bộ gợi ý tại công ty đang làm việc (công ty bán): giá vốn kỳ tháng đã đóng gần nhất có giá vốn của mặt hàng
+    /// × (1 + % markup nội bộ mặc định). Chỉ là gợi ý – người dùng tự quyết có áp dụng (thêm vào bảng giá) hay không.
+    /// Mặt hàng chưa có giá vốn kỳ đã đóng thì không có trong kết quả.
+    /// </summary>
+    /// <param name="itemIds">Mặt hàng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Gợi ý theo mặt hàng.</returns>
+    Task<IReadOnlyList<InternalPriceSuggestionDto>> SuggestAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 
     /// <summary>Các công ty đang hoạt động trong tập đoàn, trừ công ty đang làm việc.</summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>

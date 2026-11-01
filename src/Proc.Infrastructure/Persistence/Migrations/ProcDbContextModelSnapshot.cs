@@ -1293,6 +1293,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("InternalMarkupPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(0m);
+
                     b.Property<int>("RfqMinSuppliers")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

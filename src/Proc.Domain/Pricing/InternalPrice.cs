@@ -71,6 +71,16 @@ public sealed class InternalPrice : AuditableEntity, ICompanyOwned
     public void Update(decimal unitPrice, string? vatCode, DateOnly validFrom, DateOnly? validTo, string? note) =>
         Set(unitPrice, vatCode, validFrom, validTo, note);
 
+    /// <summary>
+    /// Giá bán nội bộ gợi ý khi chưa có bảng giá (design.md mục 1 câu hỏi 2): giá vốn × (1 + markup ÷ 100), làm tròn đến đồng
+    /// (giá tiền VND, người dùng đọc và quyết định áp dụng). Ví dụ 10.857,142857 × (1 + 10 ÷ 100) = 11.942,857143 → 11.943.
+    /// </summary>
+    /// <param name="unitCost">Giá vốn đơn vị theo ĐVT cơ sở.</param>
+    /// <param name="markupPercent">% markup.</param>
+    /// <returns>Giá gợi ý theo ĐVT cơ sở.</returns>
+    public static decimal Suggest(decimal unitCost, decimal markupPercent) =>
+        Math.Round(unitCost * (1 + markupPercent / 100m), 0, MidpointRounding.AwayFromZero);
+
     /// <summary>Hai dòng giá cùng công ty mua, cùng mặt hàng có khoảng hiệu lực chồng nhau không.</summary>
     /// <param name="from">Từ ngày của dòng kia.</param>
     /// <param name="to">Đến ngày của dòng kia (null = không hạn).</param>
