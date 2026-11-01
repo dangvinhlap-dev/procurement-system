@@ -3,7 +3,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
-import { useWarehouses } from '../../api/organization'
+import { useDepartments, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
   purchaseStatusLabels,
@@ -35,7 +35,7 @@ interface PrLineValues {
 
 interface PrFormValues {
   date: Dayjs
-  department?: string
+  departmentId?: string
   purpose?: string
   neededDate?: Dayjs | null
   warehouseId?: string
@@ -58,6 +58,7 @@ export function PurchaseRequestPage() {
   const request = usePurchaseRequest(isNew ? null : id)
   const mutations = usePurchaseMutations<PurchaseRequest, SavePurchaseRequestInput>('purchase-requests')
   const warehouses = useWarehouses()
+  const departments = useDepartments()
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
@@ -74,11 +75,22 @@ export function PurchaseRequestPage() {
   const supplierIds = useMemo(() => (doc?.lines ?? []).map((l) => l.suggestedSupplierId).filter((x): x is string => !!x), [doc])
   const suppliers = useSupplierLookup(supplierIds)
 
+  // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ trong danh sách để hiện tên (design.md mục 18.5).
+  const departmentOptions = useMemo(
+    () =>
+      (departments.data ?? [])
+        .filter((d) => d.isActive || d.id === doc?.departmentId)
+        .map((d) => ({ value: d.id, label: `${d.code} – ${d.name}${d.isActive ? '' : ' (ngừng dùng)'}` })),
+    [departments.data, doc?.departmentId],
+  )
+  // PR lập trước khi có danh mục bộ phận chỉ có tên dạng chữ (cột cũ, chỉ đọc).
+  const legacyDepartment = doc && !doc.departmentId ? doc.department : null
+
   useEffect(() => {
     if (!doc) return
     form.setFieldsValue({
       date: dayjs(doc.date),
-      department: doc.department ?? '',
+      departmentId: doc.departmentId ?? undefined,
       purpose: doc.purpose ?? '',
       neededDate: doc.neededDate ? dayjs(doc.neededDate) : null,
       warehouseId: doc.warehouseId ?? undefined,
@@ -102,7 +114,7 @@ export function PurchaseRequestPage() {
     setError(null)
     const input: SavePurchaseRequestInput = {
       date: values.date.format('YYYY-MM-DD'),
-      department: orNull(values.department),
+      departmentId: values.departmentId ?? null,
       purpose: orNull(values.purpose),
       neededDate: values.neededDate ? values.neededDate.format('YYYY-MM-DD') : null,
       warehouseId: values.warehouseId ?? null,
@@ -254,8 +266,19 @@ export function PurchaseRequestPage() {
           <Form.Item label="Ngày đề nghị" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="Bộ phận đề nghị" name="department" rules={[{ max: 200 }]}>
-            <Input />
+          <Form.Item
+            label="Bộ phận đề nghị"
+            name="departmentId"
+            rules={[{ required: true, message: 'Chọn bộ phận đề nghị.' }]}
+            extra={legacyDepartment ? `Ghi trước khi có danh mục: ${legacyDepartment}` : undefined}
+          >
+            <Select
+              allowClear
+              showSearch={{ optionFilterProp: 'label' }}
+              options={departmentOptions}
+              loading={departments.isLoading}
+              placeholder="Chọn bộ phận"
+            />
           </Form.Item>
           <Form.Item label="Mức ưu tiên" name="priority">
             <Select options={Object.entries(priorityLabels).map(([value, label]) => ({ value, label }))} />

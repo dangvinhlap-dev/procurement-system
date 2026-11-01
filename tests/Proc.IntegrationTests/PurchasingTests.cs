@@ -36,7 +36,7 @@ public class PurchasingTests
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;
     }
 
-    private sealed record Fixture(HttpClient Buyer, string CompanyCode, Guid Kt, Guid ItemId, Guid Cai, Guid SupplierId);
+    private sealed record Fixture(HttpClient Buyer, string CompanyCode, Guid Kt, Guid ItemId, Guid Cai, Guid SupplierId, Guid DepartmentId);
 
     /// <summary>Công ty mới (kỳ tháng hiện tại đang mở), một mặt hàng (cái), một NCC đã duyệt áp dụng tại công ty. Người lập: quản trị.</summary>
     private async Task<Fixture> ArrangeAsync()
@@ -60,7 +60,7 @@ public class PurchasingTests
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC mua hàng", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         await ReadAsync<SupplierCompanyDto>(await buyer.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
-        return new Fixture(buyer, company.Code, kt, item.Id, cai, supplier.Id);
+        return new Fixture(buyer, company.Code, kt, item.Id, cai, supplier.Id, await TestDepartments.CreateAsync(buyer, "Xưởng cán"));
     }
 
     /// <summary>Người duyệt mới với một vai trò mới có quyền duyệt PR, PO tại công ty của fixture.</summary>
@@ -76,7 +76,7 @@ public class PurchasingTests
 
     private static Task<HttpResponseMessage> CreatePrAsync(Fixture f, decimal qty) =>
         f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, "Xưởng cán", "Bảo trì máy", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null)]), Ct);
+            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Bảo trì máy", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null)]), Ct);
 
     private static Task<HttpResponseMessage> CreatePoAsync(Fixture f, decimal qty, Guid? prLineId, decimal tolerance = 0) =>
         f.Buyer.PostAsJsonAsync("/api/purchase-orders",

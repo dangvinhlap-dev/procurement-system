@@ -136,7 +136,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | --- | --- | --- |
 | Công ty (`Company`) | Mã, tên, tên viết tắt, MST, địa chỉ, người đại diện, `IsHeadOffice`, tiền tệ hạch toán, ngày bắt đầu dùng hệ thống | Tổng công ty cũng là một bản ghi, `IsHeadOffice = true` |
 | Kho (`Warehouse`) | Mã, tên, `CompanyId`, `WarehouseType` (Main/Sub), `ParentWarehouseId`, địa chỉ, thủ kho, cho phép tồn âm (mặc định không) | Mỗi công ty đúng **một** kho tổng |
-| Bộ phận (`Department`) | Mã, tên, `CompanyId`, trưởng bộ phận | Dùng cho PR, phân bổ chi phí |
+| Bộ phận (`Department`) | Mã, tên, `CompanyId`, trưởng bộ phận, còn dùng | Mỗi công ty một danh mục riêng (màn hình DEPT); PR **bắt buộc** chọn bộ phận; dùng cho ngân sách, phân bổ chi phí – mục 18.5 |
 | Người dùng (`User`) | Tên đăng nhập, họ tên, email, công ty mặc định, trạng thái, 2FA | Một người có thể thuộc nhiều công ty |
 
 ### 5.2 Danh mục hàng hóa – dịch vụ (dùng chung)
@@ -368,7 +368,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
 | Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
 | Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
-| PR: bộ phận ghi dạng chữ (chưa có danh mục bộ phận); dòng bắt buộc có mã hàng (chưa hỗ trợ "hàng mới chưa có mã"); **đơn giá tham khảo do server lấy** = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ, theo ĐVT cơ sở × hệ số ĐVT), chưa từng nhập thì 0; tồn hiện tại chỉ để xem | Mục 10.2 |
+| PR: bộ phận **chọn từ danh mục bộ phận của công ty, bắt buộc** (mục 18.5; trước lát A2 ghi dạng chữ); dòng bắt buộc có mã hàng (chưa hỗ trợ "hàng mới chưa có mã"); **đơn giá tham khảo do server lấy** = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ, theo ĐVT cơ sở × hệ số ĐVT), chưa từng nhập thì 0; tồn hiện tại chỉ để xem | Mục 10.2 |
 | PO: NCC Đã duyệt và đang áp dụng tại công ty (kiểm tra lúc lưu và lúc gửi duyệt); chỉ VND; đơn giá nhập tay (mặc định lấy từ PR – bảng giá NCC ở giai đoạn 6); chiết khấu %, VAT; dòng có thể lấy từ PR đã duyệt – tổng SL đặt trên các PO chưa hủy không vượt SL đề nghị. In PDF đã làm (mục 10.10); chưa gửi email cho NCC | Mục 10.3 |
 | Phiếu nhập mua theo PO: một phiếu theo một PO đã duyệt, cùng NCC; mỗi dòng trỏ một dòng PO (`PurchaseOrderLineId`), mặt hàng và ĐVT theo dòng PO, **đơn giá = giá thực mua sau chiết khấu**, thuế suất theo PO (server gán). SL nhận (đã ghi sổ + phiếu này) ≤ SL đặt × (1 + dung sai %) – dung sai đặt trên PO, mặc định 0%, tối đa 20%. Kiểm tra lúc lưu và lúc ghi sổ | Mục 6.1, 6.2 bước 4 |
 | SL đã nhận của PO **tính từ phiếu nhập đã ghi sổ** (không lưu riêng); ghi sổ làm mọi dòng nhận đủ thì PO Đã nhận đủ, bỏ ghi sổ làm thiếu lại thì PO về Đã duyệt | Bỏ ghi sổ không làm lệch số |
@@ -605,7 +605,7 @@ Mọi form chứng từ dùng **một khuôn chung** (`DocumentForm`): thanh cô
 
 | Phần | Trường |
 | --- | --- |
-| Đầu phiếu | Số PR (tự sinh), ngày, công ty, bộ phận đề nghị, người đề nghị, mục đích sử dụng, ngày cần hàng, kho nhận dự kiến, mức ưu tiên, ghi chú |
+| Đầu phiếu | Số PR (tự sinh), ngày, công ty, bộ phận đề nghị (bắt buộc, từ danh mục bộ phận – mục 18.5), người đề nghị, mục đích sử dụng, ngày cần hàng, kho nhận dự kiến, mức ưu tiên, ghi chú |
 | Dòng | Mã hàng (hoặc mô tả hàng mới chưa có mã), ĐVT, SL đề nghị, tồn hiện tại (chỉ đọc), đơn giá tham khảo (giá mua gần nhất, chỉ đọc), thành tiền dự kiến, NCC đề xuất, ngày cần, ghi chú |
 | Chân | Tổng giá trị dự kiến, luồng duyệt |
 
@@ -1102,6 +1102,7 @@ Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám s�
 | RFQ dưới số NCC tối thiểu vẫn gửi được khi có giải trình; kết quả chọn thầu phải được hội đồng duyệt | 8.6 | B3 |
 | Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 |
 | Hợp đồng nguyên tắc: mỗi pháp nhân một hợp đồng, dùng chung bảng giá; hiệu lực, sản lượng dự kiến, thanh toán, chiết khấu, chế tài, đơn vị được phép đặt; phụ lục; phải duyệt | 1.2 (hợp đồng khung) | B4 |
+| Danh mục bộ phận theo công ty; PR bắt buộc chọn bộ phận | 5.1, 10.2 (bộ phận dạng chữ, không bắt buộc) | A2 |
 | Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" | mới | C3 |
 | Đính kèm file: thư mục trên máy chủ, tối đa 20 MB/file | mới | A1 |
 | Đưa NCC vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng NCC phải qua duyệt | 5.8 | B2 |
@@ -1167,6 +1168,19 @@ Bước 4–5 của đề xuất: với từng mã hàng chung, so giá mua gi�
 | Đính kèm được ở **mọi trạng thái** của chủ (kể cả đã duyệt, đã ghi sổ) | File không đổi số liệu; hóa đơn, biên bản thường có sau khi nhập |
 | **Xóa mềm**: ẩn khỏi danh sách, file giữ trên đĩa; tải lên/xóa vào Nhật ký (`Attachment` có [Auditable]). Ghi file trước, lưu CSDL sau; lưu CSDL lỗi thì xóa file vừa ghi | Đối chiếu, khôi phục khi xóa nhầm; không có file mồ côi |
 | Sao lưu: container `backup` mỗi đêm chép bổ sung (không ghi đè) volume đính kèm vào `backups/attachments/` | File chỉ thêm, không sửa trên đĩa nên chép bổ sung là đủ |
+
+### 18.5 Danh mục bộ phận theo công ty (lát A2, 01/11/2026)
+
+Bộ phận (phòng ban, phân xưởng) là đơn vị đề nghị mua hàng trên PR và là chiều ngân sách công ty × bộ phận × tháng (lát C3).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Bảng `Department` (CompanyId, mã, tên, trưởng bộ phận, còn dùng; [Auditable]). Mã 2–20 chữ không dấu/số, tự viết hoa, **duy nhất trong công ty**, không đổi sau khi tạo; không xóa – ngừng dùng | Mỗi công ty là pháp nhân độc lập; mã đã nằm trên PR |
+| Màn hình **DEPT** (Hệ thống → Bộ phận). Quyền mới `Organization.Department.View` (xem), `Organization.Department.Manage` (thêm, sửa). Danh sách bộ phận còn đọc được bằng quyền xem/lập PR để chọn trên phiếu | Người lập PR không cần quyền quản lý danh mục |
+| **PR bắt buộc chọn bộ phận** (yêu cầu 01/11/2026), chỉ bộ phận đang dùng của công ty đang làm việc; khóa ngoại (DepartmentId, CompanyId) chặn bộ phận công ty khác ở CSDL. PR đã chọn bộ phận nay ngừng dùng vẫn lưu lại được (không buộc đổi) | Ngân sách theo bộ phận (C3) không bỏ sót PR |
+| Cột chữ cũ `PurchaseRequest.Department` **ngừng dùng**: giữ dữ liệu, chỉ đọc; hiển thị = tên bộ phận trong danh mục, PR cũ chưa có thì hiện chữ cũ. Sửa lại PR cũ (còn nháp) phải chọn bộ phận từ danh mục. Xóa cột ở bản sau | CLAUDE.md mục 8: không xóa cột đang có dữ liệu trong cùng bản |
+
+Migration `V0_11_0_DanhMucBoPhan` (`Down()` mất danh mục bộ phận và bộ phận đã chọn trên PR; chữ cũ còn nguyên).
 
 ## Nguồn tham khảo
 

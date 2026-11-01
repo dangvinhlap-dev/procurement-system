@@ -55,7 +55,8 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.Property(x => x.No).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
         builder.HasIndex(x => new { x.CompanyId, x.Date });
-        builder.Property(x => x.Department).HasMaxLength(200);
+        // Cột chữ cũ "Department" giữ nguyên tên, chỉ đọc – ngừng dùng từ lát A2 (design.md mục 18.5).
+        builder.Property(x => x.LegacyDepartment).HasColumnName("Department").HasMaxLength(200);
         builder.Property(x => x.Purpose).HasMaxLength(500);
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
@@ -63,6 +64,10 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Warehouse>().WithMany()
             .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        // Bộ phận phải cùng công ty với PR: khóa ngoại kèm CompanyId như kho nhận.
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);

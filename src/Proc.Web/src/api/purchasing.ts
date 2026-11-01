@@ -115,6 +115,9 @@ export interface PurchaseRequest {
   no: string
   date: string
   status: PurchaseStatus
+  /** Bộ phận trong danh mục (design.md mục 18.5). */
+  departmentId: string | null
+  /** Tên bộ phận để hiển thị; PR cũ chưa có danh mục thì là chữ ghi trước đây. */
   department: string | null
   requesterName: string | null
   purpose: string | null
@@ -135,7 +138,7 @@ export interface PurchaseRequest {
 /** Nội dung PR gửi lên (đơn giá tham khảo do server lấy). */
 export interface SavePurchaseRequestInput {
   date: string
-  department: string | null
+  departmentId: string | null
   purpose: string | null
   neededDate: string | null
   warehouseId: string | null

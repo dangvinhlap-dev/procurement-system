@@ -77,7 +77,7 @@ public class PrintingTests
         Assert.True(poPdf.PageCount >= 2, $"60 dòng phải sang trang, có {poPdf.PageCount} trang.");
 
         var pr = await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, "Xưởng", "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)]), Ct));
         Assert.Equal($"PHIẾU ĐỀ NGHỊ MUA HÀNG {pr.No}", (await PdfAsync(await client.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct))).Info.Title);
 
         var grn = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",

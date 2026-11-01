@@ -39,13 +39,17 @@ public static class Permissions
         public const string ParameterManage = "System.Parameter.Manage";
     }
 
-    /// <summary>Tổ chức: kho.</summary>
+    /// <summary>Tổ chức: kho, bộ phận.</summary>
     public static class Organization
     {
         /// <summary>Quyền "Xem danh mục kho".</summary>
         public const string WarehouseView = "Organization.Warehouse.View";
         /// <summary>Quyền "Thêm, sửa kho".</summary>
         public const string WarehouseManage = "Organization.Warehouse.Manage";
+        /// <summary>Quyền "Xem danh mục bộ phận".</summary>
+        public const string DepartmentView = "Organization.Department.View";
+        /// <summary>Quyền "Thêm, sửa bộ phận".</summary>
+        public const string DepartmentManage = "Organization.Department.Manage";
     }
 
     /// <summary>Danh mục dùng chung: nhóm hàng, hàng hóa, nhà cung cấp.</summary>
@@ -183,6 +187,8 @@ public static class Permissions
         new(System.ParameterManage, "Sửa tham số hệ thống"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
+        new(Organization.DepartmentView, "Xem danh mục bộ phận"),
+        new(Organization.DepartmentManage, "Thêm, sửa bộ phận"),
         new(MasterData.ItemCategoryView, "Xem nhóm hàng"),
         new(MasterData.ItemCategoryManage, "Thêm, sửa nhóm hàng"),
         new(MasterData.ItemView, "Xem hàng hóa"),

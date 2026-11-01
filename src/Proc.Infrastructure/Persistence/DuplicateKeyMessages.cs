@@ -16,6 +16,7 @@ public static class DuplicateKeyMessages
         ["IX_Company_Code"] = "Mã công ty đã có.",
         ["IX_Company_TaxCode"] = "Mã số thuế đã dùng cho công ty khác.",
         ["IX_Warehouse_CompanyId_Code"] = "Mã kho đã có ở công ty này.",
+        ["IX_Department_CompanyId_Code"] = "Mã bộ phận đã có ở công ty này.",
         ["IX_ItemCategory_Code"] = "Mã nhóm hàng đã có (có thể thuộc nhóm bạn không được xem).",
         ["IX_Uom_Code"] = "Mã đơn vị tính đã có.",
         ["IX_Item_Code"] = "Mã hàng đã có (có thể thuộc nhóm hàng bạn không được xem).",

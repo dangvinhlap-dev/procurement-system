@@ -25,6 +25,9 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   // Người lập: tài khoản mới, vai trò quản trị tại BHA (người lập không tự duyệt được phiếu của mình).
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
+  // Bộ phận đề nghị chọn từ danh mục bộ phận của BHA (design.md mục 18.5).
+  const departmentCode = unique('BP')
+  await bha.send('post', '/api/departments', { code: departmentCode, name: `Xưởng cán ${departmentCode}`, managerName: null })
   const buyerName = unique('mh').toLowerCase()
   await bha.send('post', '/api/users', {
     userName: buyerName, fullName: 'Người lập mua hàng', email: null, password: 'Demo@2026',
@@ -42,7 +45,12 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await openByCommand(buyer, 'PR')
   await expect(buyer.getByRole('heading', { name: 'Danh sách đề nghị mua hàng (PR)' })).toBeVisible()
   await buyer.getByRole('button', { name: 'Tạo mới' }).click()
-  await buyer.getByLabel('Bộ phận đề nghị').fill('Xưởng cán 1')
+  // Bộ phận đề nghị bắt buộc: lưu khi chưa chọn thì báo ngay trên ô.
+  await expect(buyer.getByRole('combobox', { name: 'Bộ phận đề nghị', exact: true })).toBeVisible()
+  await buyer.getByLabel('Mục đích sử dụng').click()
+  await buyer.keyboard.press('Control+s')
+  await expect(buyer.getByText('Chọn bộ phận đề nghị.')).toBeVisible()
+  await chooseOption(buyer, 'Bộ phận đề nghị', departmentCode)
   await buyer.getByLabel('Mục đích sử dụng').fill('Thay thế định kỳ')
   await buyer.keyboard.press('F2')
   await buyer.getByLabel('Mặt hàng dòng 1').fill(itemCode.toLowerCase())

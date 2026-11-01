@@ -55,6 +55,7 @@ import { SupplierRatingPage } from './pages/system/SupplierRatingPage'
 import { SystemParameterPage } from './pages/system/SystemParameterPage'
 import { UserListPage } from './pages/system/UserListPage'
 import { WarehouseListPage } from './pages/system/WarehouseListPage'
+import { DepartmentListPage } from './pages/system/DepartmentListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
@@ -100,6 +101,7 @@ const implemented: Record<string, ReactNode> = {
   TRANSIT: <GoodsInTransitPage />,
   ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
+  DEPT: <DepartmentListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
   LOG: <AuditLogListPage />,
