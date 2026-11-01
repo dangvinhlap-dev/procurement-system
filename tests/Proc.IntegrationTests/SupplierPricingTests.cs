@@ -80,6 +80,14 @@ public class SupplierPricingTests
     private static SavePriceListRequest PriceList(Fixture f, bool groupWide, params SavePriceListLineRequest[] lines) =>
         new(f.SupplierId, "Bảng giá vòng bi", groupWide, Today.AddDays(-1), null, "Giao tại kho", null, lines);
 
+    /// <summary>Gửi duyệt rồi duyệt xong (bảng giá hiệu lực) – luồng duyệt thật kiểm tra ở PriceListApprovalTests.</summary>
+    private async Task<PriceListDto> ActivateAsync(HttpClient client, Guid id)
+    {
+        Assert.Equal("Submitted", (await ReadAsync<PriceListDto>(await client.PostAsync($"/api/price-lists/{id}/submit", null, Ct))).Status);
+        await _factory.FinishPriceListApprovalAsync(id);
+        return await ReadAsync<PriceListDto>(await client.GetAsync($"/api/price-lists/{id}", Ct));
+    }
+
     /// <summary>Nhập mua đã ghi sổ: qty cái × giá.</summary>
     private static async Task ReceiveAsync(Fixture f, Member m, decimal qty, decimal price)
     {
@@ -108,7 +116,7 @@ public class SupplierPricingTests
 
         var resolveUrl = $"/api/price-lists/resolve?supplierId={f.SupplierId}&date={Today:yyyy-MM-dd}&itemIds={f.ItemId}";
         Assert.Empty((await m.Client.GetFromJsonAsync<List<ResolvedSupplierPriceDto>>(resolveUrl, Ct))!);
-        group = await ReadAsync<PriceListDto>(await f.Head.PostAsync($"/api/price-lists/{group.Id}/activate", null, Ct));
+        group = await ActivateAsync(f.Head, group.Id);
         Assert.Equal("Active", group.Status);
         Assert.Contains("không còn ở trạng thái nháp", await TitleAsync(await f.Head.PutAsJsonAsync($"/api/price-lists/{group.Id}",
             PriceList(f, true, L(f.ItemId, f.Cai, 0, 1, 0, null)), Ct)));
@@ -126,7 +134,7 @@ public class SupplierPricingTests
         var own = await ReadAsync<PriceListDto>(await m.Client.PostAsJsonAsync("/api/price-lists",
             PriceList(f, false, L(f.ItemId, f.Cai, 0, 45_000, 0, null)), Ct));
         Assert.Equal(3, (await m.Client.GetFromJsonAsync<List<ResolvedSupplierPriceDto>>(resolveUrl, Ct))!.Count);
-        await ReadAsync<PriceListDto>(await m.Client.PostAsync($"/api/price-lists/{own.Id}/activate", null, Ct));
+        await ActivateAsync(m.Client, own.Id);
         Assert.Equal([45_000m], (await m.Client.GetFromJsonAsync<List<ResolvedSupplierPriceDto>>(resolveUrl, Ct))!.Select(r => r.UnitPrice));
         var list = (await m.Client.GetFromJsonAsync<List<PriceListListItemDto>>("/api/price-lists", Ct))!;
         Assert.Contains(list, l => l.Id == group.Id && !l.IsOwn && l.IsGroupWide);
@@ -149,7 +157,7 @@ public class SupplierPricingTests
         await ReceiveAsync(f, b, 30, 110_000);
         var group = await ReadAsync<PriceListDto>(await f.Head.PostAsJsonAsync("/api/price-lists",
             PriceList(f, true, L(f.ItemId, f.Thung, 0, 1_140_000, 0, null)), Ct));
-        await ReadAsync<PriceListDto>(await f.Head.PostAsync($"/api/price-lists/{group.Id}/activate", null, Ct));
+        await ActivateAsync(f.Head, group.Id);
 
         // B: giá gần nhất cùng ngày, phiếu sau (110.000) – cao hơn A 10% đúng ngưỡng nên chưa tô; ngưỡng 5% thì tô.
         var all = await ReadAsync<PriceComparisonDto>(await a.Client.GetAsync($"/api/price-comparison?itemId={f.ItemId}&allCompanies=true&thresholdPct=5", Ct));

@@ -1,6 +1,7 @@
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Pricing;
+using Proc.Application.Purchasing;
 using Proc.Domain.Organization;
 
 namespace Proc.Api.Endpoints;
@@ -58,8 +59,15 @@ public static class PricingEndpoints
         lists.MapPut("/{id:guid}", (Guid id, SavePriceListRequest request, IPriceListService s, CancellationToken ct) => s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage)
             .Validate<SavePriceListRequest>();
-        lists.MapPost("/{id:guid}/activate", (Guid id, IPriceListService s, CancellationToken ct) => s.ActivateAsync(id, ct))
+        // Bảng giá phải duyệt mới hiệu lực (lát B1, design.md mục 8.5): gửi duyệt/rút lại cần quyền sửa, duyệt/từ chối cần quyền duyệt.
+        lists.MapPost("/{id:guid}/submit", (Guid id, IPriceListService s, CancellationToken ct) => s.SubmitAsync(id, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage);
+        lists.MapPost("/{id:guid}/recall", (Guid id, IPriceListService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.PriceListManage);
+        lists.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPriceListService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.PriceListApprove);
+        lists.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPriceListService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.PriceListApprove);
         lists.MapPost("/{id:guid}/deactivate", (Guid id, IPriceListService s, CancellationToken ct) => s.DeactivateAsync(id, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage);
 

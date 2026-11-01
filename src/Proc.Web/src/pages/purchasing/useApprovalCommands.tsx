@@ -39,6 +39,44 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
   setError: (message: string | null) => void
 }
 
+type AppApi = ReturnType<typeof App.useApp>
+
+/**
+ * Hộp thoại từ chối có ô lý do bắt buộc (design.md mục 18.6: từ chối bắt buộc lý do) – dùng chung cho PR, PO, bảng giá NCC.
+ * @param modal Modal của App.useApp().
+ * @param message Message của App.useApp().
+ * @param title Câu hỏi, ví dụ "Từ chối phiếu PR-0001?".
+ * @param onReject Gọi với lý do đã cắt khoảng trắng khi người dùng bấm Từ chối.
+ */
+export function confirmReject(modal: AppApi['modal'], message: AppApi['message'], title: string, onReject: (reason: string) => Promise<void>) {
+  let reason = ''
+  modal.confirm({
+    title,
+    content: (
+      <>
+        <label htmlFor="reject-reason">{renderRequiredMark('Lý do từ chối', { required: true })}</label>
+        <Input.TextArea
+          id="reject-reason"
+          rows={3}
+          maxLength={500}
+          placeholder="Người lập sẽ thấy lý do để sửa"
+          onChange={(e) => (reason = e.target.value)}
+        />
+      </>
+    ),
+    okText: 'Từ chối',
+    okButtonProps: { danger: true },
+    cancelText: 'Không',
+    onOk: async () => {
+      if (!reason.trim()) {
+        message.error('Hãy nhập lý do từ chối.')
+        throw new Error('missing reason')
+      }
+      await onReject(reason.trim())
+    },
+  })
+}
+
 /**
  * Lệnh chung của phiếu có duyệt trên thanh lệnh DocumentForm (design.md mục 10.1): Lưu nháp · Gửi duyệt (lưu trước rồi gửi) · Duyệt ·
  * Từ chối (bắt buộc lý do) · Hủy · Đóng. Nút hiện theo quyền server trả về (actions) – server vẫn kiểm tra lại khi bấm.
@@ -96,37 +134,14 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
 
   const reject = () => {
     if (!doc) return
-    let reason = ''
-    modal.confirm({
-      title: `Từ chối phiếu ${doc.no}?`,
-      content: (
-        <>
-          <label htmlFor="reject-reason">{renderRequiredMark('Lý do từ chối', { required: true })}</label>
-          <Input.TextArea
-            id="reject-reason"
-            rows={3}
-            maxLength={500}
-            placeholder="Người lập sẽ thấy lý do để sửa"
-            onChange={(e) => (reason = e.target.value)}
-          />
-        </>
-      ),
-      okText: 'Từ chối',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
-        if (!reason.trim()) {
-          message.error('Hãy nhập lý do từ chối.')
-          throw new Error('missing reason')
-        }
-        setError(null)
-        try {
-          await mutations.reject.mutateAsync({ id: doc.id, comment: reason.trim() })
-          message.success(`Đã từ chối phiếu ${doc.no}.`)
-        } catch (e) {
-          fail(e, 'Không từ chối được.')
-        }
-      },
+    confirmReject(modal, message, `Từ chối phiếu ${doc.no}?`, async (reason) => {
+      setError(null)
+      try {
+        await mutations.reject.mutateAsync({ id: doc.id, comment: reason })
+        message.success(`Đã từ chối phiếu ${doc.no}.`)
+      } catch (e) {
+        fail(e, 'Không từ chối được.')
+      }
     })
   }
 

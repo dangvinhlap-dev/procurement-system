@@ -1,4 +1,5 @@
 using Proc.Domain.Common;
+using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Pricing;
 using Proc.Domain.Sourcing;
@@ -35,12 +36,47 @@ public class SourcingTests
             (new PriceListLineData(null, item.Id, Cai.Id, 10, 2, 0, null, null), item),
         ]));
         Assert.True(list.AppliesOn(Today) is false);
-        list.Activate(DateTimeOffset.UtcNow);
+        Assert.Equal(1, list.Submit());
+        Assert.False(list.AppliesOn(Today));
+        list.MarkApproved(DateTimeOffset.UtcNow);
         Assert.True(list.AppliesOn(Today));
         Assert.False(list.AppliesOn(Today.AddDays(-1)));
         Assert.Throws<BusinessRuleException>(() => list.SetLines([(new PriceListLineData(null, item.Id, Cai.Id, 0, 1, 0, null, null), item)]));
         list.Deactivate();
         Assert.False(list.AppliesOn(Today));
+    }
+
+    [Fact]
+    public void BangGia_GuiDuyet_TuChoiVeNhap_GuiLai_DuyetXongMoiHieuLuc()
+    {
+        var item = NewItem();
+        var list = SupplierPriceList.Create(Company, "PRL-2", new PriceListHeader(Guid.CreateVersion7(), "Bảng giá", false, Today, Today.AddDays(20), null, null));
+        // Chưa có dòng thì không gửi duyệt được.
+        Assert.Throws<BusinessRuleException>(() => list.Submit());
+        list.SetLines([(new PriceListLineData(null, item.Id, Cai.Id, 0, 50_000, 0, null, null), item)]);
+        Assert.Equal(DocumentTypes.PriceList, list.DocType);
+        Assert.Equal(0m, list.ApprovalAmount);
+
+        list.Submit();
+        Assert.Equal(PriceListStatus.Submitted, list.Status);
+        Assert.True(list.IsAwaitingApproval);
+        // Chờ duyệt thì không sửa, không ngừng được.
+        Assert.Throws<BusinessRuleException>(() => list.SetLines([(new PriceListLineData(null, item.Id, Cai.Id, 0, 1, 0, null, null), item)]));
+        Assert.Throws<BusinessRuleException>(list.Deactivate);
+
+        list.ReturnToDraft("  Giá cao hơn hợp đồng cũ ");
+        Assert.Equal((PriceListStatus.Draft, "Giá cao hơn hợp đồng cũ"), (list.Status, list.RejectReason));
+        Assert.Equal(2, list.Submit());
+        Assert.Null(list.RejectReason);
+        list.MarkApproved(DateTimeOffset.UtcNow);
+        Assert.Equal(PriceListStatus.Active, list.Status);
+        Assert.NotNull(list.ActivatedAt);
+        Assert.Throws<BusinessRuleException>(() => list.MarkApproved(DateTimeOffset.UtcNow));
+
+        // Sắp hết hiệu lực: còn ≤ 30 ngày tới ngày hết hạn (hết hạn sau 20 ngày).
+        Assert.Equal(20, list.DaysToExpiry(Today));
+        Assert.True(list.ExpiresWithin(Today, 30));
+        Assert.False(list.ExpiresWithin(Today, 10));
     }
 
     private static Rfq SentRfq(Item item, params Guid[] suppliers) => SentRfq(item, 3, suppliers);

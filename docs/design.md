@@ -485,7 +485,9 @@ Phiếu tìm NCC cho một sản phẩm cụ thể: mặt hàng (hoặc mô tả
 | Quy tắc | Lý do |
 | --- | --- |
 | Bảng giá NCC (`SupplierPriceList` + dòng) thuộc **công ty lập**; chỉ khi đang làm việc ở **tổng công ty** mới đánh dấu "áp dụng toàn tập đoàn" – mọi công ty đọc được (chỉ xem), chỉ công ty lập sửa/ngừng. Bảng riêng của công ty thành viên công ty khác không thấy | Mục 8.1 "công ty áp dụng (trống = toàn tập đoàn)"; mỗi công ty là pháp nhân độc lập |
-| Số bảng giá theo đánh số chứng từ, loại `PRL`. Vòng đời **Nháp → Hiệu lực → Ngừng**; bảng đã hiệu lực không sửa – muốn đổi giá thì ngừng và lập bảng mới (giữ lịch sử). NCC ở danh sách đen không lập/đưa vào hiệu lực được. Chỉ VND | Giá đã dùng để đặt hàng phải truy lại được |
+| Số bảng giá theo đánh số chứng từ, loại `PRL`. Vòng đời **Nháp → Chờ duyệt → Hiệu lực → Ngừng** (lát B1); bảng đã gửi duyệt/hiệu lực không sửa – muốn đổi giá thì ngừng và lập bảng mới (giữ lịch sử). NCC ở danh sách đen không lập, gửi duyệt hay duyệt được. Chỉ VND | Giá đã dùng để đặt hàng phải truy lại được |
+| **Duyệt bảng giá** (lát B1, quyết định M2 – mục 18): mọi bảng giá, cả bảng riêng công ty, phải duyệt mới hiệu lực. Gửi duyệt/rút về nháp cần `Pricing.PriceList.Manage`; duyệt tại **công ty lập** theo quy trình loại PRL của công ty đó (màn hình APRL, không xét giá trị), người duyệt cần `Pricing.PriceList.Approve` (vai trò duyệt có thể chỉ có quyền xem + duyệt); **người lập không tự duyệt**; từ chối bắt buộc lý do, bảng về Nháp kèm lý do; duyệt cấp cuối thì Hiệu lực (thời điểm duyệt = `ActivatedAt`). Bảng toàn tập đoàn chưa duyệt thì công ty khác không thấy; công ty khác không xem lịch sử duyệt. "Việc cần làm" và thông báo có loại PRL. Bảng đã hiệu lực trước bản 0.11.0 giữ nguyên | Tách người lập – người duyệt giá (G3) |
+| **Cảnh báo sắp hết hiệu lực** (lát B1): bảng đang hiệu lực còn 0–30 ngày tới ngày hết hạn – danh sách hiện trạng thái "Sắp hết hiệu lực" (nhãn vàng), phiếu hiện cảnh báo "còn N ngày" | Kịp đàm phán, lập bảng mới trước khi PO mất giá gợi ý |
 | Dòng: mặt hàng, ĐVT (cơ sở hoặc quy đổi), **bậc số lượng** (áp khi SL đặt ≥ bậc; 0 = mọi SL), đơn giá, % CK, VAT (trống = theo mặt hàng). Mỗi (mặt hàng, ĐVT, bậc) một dòng | Mục 8.1 "bậc số lượng, chiết khấu" |
 | Giá gợi ý cho PO: mỗi mặt hàng chọn **một** bảng giá hiệu lực vào ngày PO của NCC – bảng của công ty thắng bảng toàn tập đoàn, rồi bảng có ngày hiệu lực mới nhất; trong bảng đó chọn bậc cùng ĐVT lớn nhất ≤ SL đặt (không có bậc cùng ĐVT thì quy từ giá cơ sở). PO hiện cột "Giá bảng giá", nút "Áp giá bảng giá" chép giá vào dòng; người lập vẫn sửa tay | Thỏa thuận riêng của pháp nhân ưu tiên hơn thỏa thuận chung |
 | **Lịch sử giá không lưu bảng riêng** (`PriceHistory` của mục 8.1): tính thẳng từ bảng giá đang hiệu lực, PO đã duyệt/đã nhận đủ, phiếu nhập mua đã ghi sổ (giai đoạn 6b thêm báo giá trúng thầu) | Bỏ ghi sổ, hủy phiếu, ngừng bảng giá không bao giờ làm lịch sử lệch |
@@ -1211,6 +1213,10 @@ NCC là danh mục dùng chung, không thuộc một công ty):
 | Màn hình **SUPAPR** (Giá và NCC → Duyệt NCC): danh sách yêu cầu, ngăn kéo so sánh hiện tại – đề nghị, lịch sử duyệt theo chặng/công ty, nút Duyệt/Từ chối/Rút. Ngăn kéo NCC hiện "Đang chờ duyệt"; "Việc cần làm" và thông báo có loại NCC. Xem cần `MasterData.Supplier.View`; duyệt cần `MasterData.Supplier.Approve` | |
 
 Migration `V0_11_0_DuyetNhaCungCap` (bảng `SupplierChangeRequest`, cột `ApprovalStep.Stage` mặc định 1; `Down()` mất yêu cầu duyệt NCC).
+
+**Duyệt bảng giá NCC** (lát B1, 01/11/2026): dùng cơ chế trên, một chặng tại công ty lập bảng giá – quy tắc ở mục 8.5. Migration
+`V0_11_0_DuyetBangGiaNcc` (cột `SupplierPriceList.ApprovalRound`, `RejectReason`; trạng thái Chờ duyệt = 4; `Down()` đưa bảng đang chờ duyệt
+về Nháp, mất lượt gửi và lý do từ chối).
 
 ## Nguồn tham khảo
 

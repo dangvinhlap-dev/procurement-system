@@ -1,5 +1,5 @@
-import { CheckOutlined, CloseOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { CheckOutlined, CloseCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Checkbox, DatePicker, Flex, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
@@ -23,6 +23,8 @@ import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
+import { ApprovalHistory } from '../purchasing/ApprovalHistory'
+import { confirmReject } from '../purchasing/useApprovalCommands'
 
 const LIST_PATH = '/gia-ncc/bang-gia'
 
@@ -37,10 +39,11 @@ const listColumns: GridColumn<PriceListListItem>[] = [
   {
     key: 'status',
     title: 'Trạng thái',
-    width: 100,
+    width: 130,
     type: 'status',
-    value: (r) => priceListStatusLabels[r.status],
-    tone: (r) => priceListStatusTone[r.status],
+    // Sắp hết hiệu lực (còn ≤ 30 ngày – lát B1): nhãn vàng có chữ, không chỉ đổi màu (ui-guide mục 2).
+    value: (r) => (r.expiringSoon ? 'Sắp hết hiệu lực' : priceListStatusLabels[r.status]),
+    tone: (r) => (r.expiringSoon ? 'warning' : priceListStatusTone[r.status]),
     groupable: true,
   },
 ]
@@ -90,8 +93,30 @@ interface FormValues {
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /**
+ * Thông báo đầu phiếu bảng giá: lý do bị từ chối (đang nháp), sắp hết hiệu lực (còn ≤ 30 ngày – lát B1), lý do chỉ xem.
+ * @param doc Bảng giá đã tải.
+ */
+function PriceListNotices({ doc }: { doc: PriceList }) {
+  const notices = [
+    doc.rejectReason && doc.status === 'Draft' && <Alert key="reject" type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />,
+    doc.expiringSoon && (
+      <Alert
+        key="expiry"
+        type="warning"
+        showIcon
+        title={doc.daysToExpiry === 0 ? 'Bảng giá hết hiệu lực hôm nay.' : `Bảng giá sắp hết hiệu lực – còn ${doc.daysToExpiry} ngày.`}
+        description="Đàm phán và lập bảng giá mới để đơn mua hàng tiếp tục có giá gợi ý."
+      />
+    ),
+    doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
+  ].filter(Boolean)
+  return notices.length ? <Flex vertical gap={8}>{notices}</Flex> : null
+}
+
+/**
  * Trang bảng giá NCC trên khuôn DocumentForm: NCC, tên, hiệu lực, (tổng công ty) áp dụng toàn tập đoàn; dòng: mặt hàng, ĐVT, bậc SL,
- * đơn giá, % CK, VAT và giá quy về ĐVT cơ sở. Nháp → Đưa vào hiệu lực → Ngừng; bảng đã hiệu lực không sửa.
+ * đơn giá, % CK, VAT và giá quy về ĐVT cơ sở. Nháp → Gửi duyệt → (duyệt đủ cấp) Hiệu lực → Ngừng; từ chối hoặc rút lại về Nháp;
+ * bảng đã gửi duyệt/hiệu lực không sửa (lát B1 – design.md mục 8.5).
  */
 export function SupplierPriceListPage() {
   const { id = 'moi' } = useParams()
@@ -171,22 +196,74 @@ export function SupplierPriceListPage() {
     if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
   }
 
-  const activate = () =>
+  const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
+
+  // Bảng giá phải duyệt mới hiệu lực, người lập không tự duyệt (lát B1 – design.md mục 8.5, 18.6).
+  const submit = () =>
     modal.confirm({
-      title: 'Đưa bảng giá vào hiệu lực?',
-      content: 'Đơn mua hàng của NCC này sẽ gợi ý giá từ bảng giá; bảng giá không sửa được nữa (muốn đổi giá thì ngừng và lập bảng mới).',
-      okText: 'Đưa vào hiệu lực',
+      title: 'Gửi duyệt bảng giá?',
+      content: 'Bảng giá chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối hoặc rút về nháp. Duyệt xong mới có hiệu lực.',
+      okText: 'Gửi duyệt',
       cancelText: 'Không',
       onOk: async () => {
+        setError(null)
         const saved = await persist()
         if (!saved) return
         try {
-          await mutations.activate.mutateAsync(saved.id)
-          message.success(`Bảng giá ${saved.no} đã có hiệu lực.`)
+          const sent = await mutations.submit.mutateAsync({ id: saved.id })
+          message.success(sent.status === 'Active' ? `Bảng giá ${sent.no} đã có hiệu lực.` : `Đã gửi duyệt bảng giá ${sent.no}.`)
         } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không đưa vào hiệu lực được.')
+          fail(e, 'Không gửi duyệt được.')
         }
         if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
+      },
+    })
+
+  const approve = () =>
+    doc &&
+    modal.confirm({
+      title: `Duyệt bảng giá ${doc.no}?`,
+      content: 'Duyệt cấp cuối thì bảng giá có hiệu lực: đơn mua hàng của NCC này gợi ý giá từ bảng giá.',
+      okText: 'Duyệt',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          message.success(result.status === 'Active' ? `Đã duyệt xong – bảng giá ${doc.no} đã có hiệu lực.` : `Đã duyệt cấp của bạn – bảng giá ${doc.no} chuyển cấp tiếp theo.`)
+        } catch (e) {
+          fail(e, 'Không duyệt được.')
+        }
+      },
+    })
+
+  const reject = () =>
+    doc &&
+    confirmReject(modal, message, `Từ chối bảng giá ${doc.no}?`, async (reason) => {
+      setError(null)
+      try {
+        await mutations.reject.mutateAsync({ id: doc.id, comment: reason })
+        message.success(`Đã từ chối bảng giá ${doc.no}.`)
+      } catch (e) {
+        fail(e, 'Không từ chối được.')
+      }
+    })
+
+  const recall = () =>
+    doc &&
+    modal.confirm({
+      title: `Rút bảng giá ${doc.no} về nháp?`,
+      content: 'Các cấp đang chờ duyệt bỏ qua; sửa xong thì gửi duyệt lại từ đầu.',
+      okText: 'Rút về nháp',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          await mutations.recall.mutateAsync({ id: doc.id })
+          message.success(`Đã rút bảng giá ${doc.no} về nháp.`)
+        } catch (e) {
+          fail(e, 'Không rút về nháp được.')
+        }
       },
     })
 
@@ -327,9 +404,24 @@ export function SupplierPriceListPage() {
           Lưu nháp
         </Button>
       )}
-      {(isNew ? !readOnly : doc?.actions.canActivate) && (
-        <Button icon={<CheckOutlined />} onClick={activate} loading={mutations.activate.isPending}>
-          Đưa vào hiệu lực
+      {(isNew ? !readOnly : doc?.actions.canSubmit) && (
+        <Button icon={<SendOutlined />} onClick={submit} loading={mutations.submit.isPending}>
+          Gửi duyệt
+        </Button>
+      )}
+      {doc?.actions.canApprove && (
+        <>
+          <Button type="primary" icon={<CheckOutlined />} onClick={approve} loading={mutations.approve.isPending}>
+            Duyệt
+          </Button>
+          <Button danger icon={<CloseCircleOutlined />} onClick={reject} loading={mutations.reject.isPending}>
+            Từ chối
+          </Button>
+        </>
+      )}
+      {doc?.actions.canRecall && (
+        <Button icon={<RollbackOutlined />} onClick={recall} loading={mutations.recall.isPending}>
+          Rút về nháp
         </Button>
       )}
       {doc?.actions.canDeactivate && (
@@ -346,13 +438,16 @@ export function SupplierPriceListPage() {
   return (
     <DocumentForm
       title="Bảng giá nhà cung cấp"
-      extraTabs={[attachmentTab]}
+      extraTabs={[
+        attachmentTab,
+        ...(doc && doc.companyId === workingCompany?.id ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+      ]}
       number={isNew ? null : (doc?.no ?? '')}
       status={status}
       meta={doc && `Công ty lập: ${doc.companyCode} · Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={list.isLoading}
       error={error ?? (list.error ? list.error.message : null)}
-      notice={doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />}
+      notice={doc && <PriceListNotices doc={doc} />}
       form={form}
       initialValues={{ validFrom: dayjs(), isGroupWide: false, lines: [] }}
       readOnly={readOnly}

@@ -1,6 +1,7 @@
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
+using Proc.Domain.Purchasing;
 
 namespace Proc.Domain.Pricing;
 
@@ -15,6 +16,12 @@ public enum PriceListStatus
 
     /// <summary>Ngừng – không dùng nữa (giữ để tra cứu).</summary>
     Inactive = 3,
+
+    /// <summary>
+    /// Chờ duyệt – đã gửi duyệt, chưa dùng để gợi ý giá, không sửa được (lát B1, design.md mục 8.5). Giá trị 4 (thêm sau) để không đổi
+    /// số đã lưu của các trạng thái cũ.
+    /// </summary>
+    Submitted = 4,
 }
 
 /// <summary>Đầu bảng giá NCC.</summary>
@@ -43,10 +50,12 @@ public sealed record PriceListLineData(
 /// <summary>
 /// Bảng giá / thỏa thuận giá của một NCC (design.md mục 8.1). Thuộc công ty lập (<see cref="CompanyId"/>); khi
 /// <see cref="IsGroupWide"/> thì mọi công ty trong tập đoàn dùng được. Chỉ VND ở giai đoạn này.
-/// Vòng đời: Nháp → Hiệu lực → Ngừng; bảng đã hiệu lực không sửa – muốn đổi giá thì ngừng bảng cũ, lập bảng mới (giữ lịch sử).
+/// Vòng đời: Nháp → Chờ duyệt → Hiệu lực → Ngừng; bị từ chối (hoặc rút lại) về Nháp. Bảng phải duyệt mới hiệu lực, người lập không tự
+/// duyệt (lát B1, design.md mục 8.5, 18.6 – quyết định M2). Bảng đã hiệu lực không sửa – muốn đổi giá thì ngừng bảng cũ, lập bảng mới
+/// (giữ lịch sử).
 /// </summary>
 [Auditable("Bảng giá NCC", LabelProperty = nameof(No))]
-public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocumentNumber
+public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
 {
     private readonly List<SupplierPriceListLine> _lines = [];
 
@@ -90,8 +99,24 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
     /// <summary>Trạng thái.</summary>
     public PriceListStatus Status { get; private set; } = PriceListStatus.Draft;
 
-    /// <summary>Thời điểm đưa vào hiệu lực (UTC).</summary>
+    /// <summary>Thời điểm đưa vào hiệu lực – duyệt xong (UTC).</summary>
     public DateTimeOffset? ActivatedAt { get; private set; }
+
+    /// <inheritdoc />
+    public int ApprovalRound { get; private set; }
+
+    /// <summary>Lý do từ chối gần nhất (xóa khi gửi lại).</summary>
+    public string? RejectReason { get; private set; }
+
+    /// <inheritdoc />
+    public string DocType => DocumentTypes.PriceList;
+
+    /// <inheritdoc />
+    /// <remarks>Bảng giá không xét giá trị: mọi bảng qua đủ các cấp đã cấu hình (design.md mục 18.6).</remarks>
+    public decimal ApprovalAmount => 0;
+
+    /// <inheritdoc />
+    public bool IsAwaitingApproval => Status == PriceListStatus.Submitted;
 
     /// <summary>Các dòng giá.</summary>
     public IReadOnlyList<SupplierPriceListLine> Lines => _lines;
@@ -163,15 +188,36 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
         _lines.RemoveAll(l => !keep.Contains(l));
     }
 
-    /// <summary>Đưa vào hiệu lực: Nháp → Hiệu lực.</summary>
-    /// <param name="at">Thời điểm (UTC).</param>
+    /// <summary>Gửi duyệt: Nháp → Chờ duyệt, tăng lượt gửi, xóa lý do từ chối cũ.</summary>
+    /// <returns>Số lượt gửi mới.</returns>
     /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc chưa có dòng.</exception>
-    public void Activate(DateTimeOffset at)
+    public int Submit()
     {
         EnsureDraft();
-        if (_lines.Count == 0) throw new BusinessRuleException("Bảng giá phải có ít nhất một dòng mới đưa vào hiệu lực được.");
+        if (_lines.Count == 0) throw new BusinessRuleException("Bảng giá phải có ít nhất một dòng mới gửi duyệt được.");
+        Status = PriceListStatus.Submitted;
+        RejectReason = null;
+        return ++ApprovalRound;
+    }
+
+    /// <summary>Duyệt đủ các cấp: Chờ duyệt → Hiệu lực.</summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi bảng giá không chờ duyệt.</exception>
+    public void MarkApproved(DateTimeOffset at)
+    {
+        EnsureSubmitted();
         Status = PriceListStatus.Active;
         ActivatedAt = at;
+    }
+
+    /// <summary>Bị từ chối hoặc người lập rút lại: về Nháp để sửa, giữ lý do.</summary>
+    /// <param name="reason">Lý do (rút lại thì null).</param>
+    /// <exception cref="BusinessRuleException">Khi bảng giá không chờ duyệt.</exception>
+    public void ReturnToDraft(string? reason)
+    {
+        EnsureSubmitted();
+        Status = PriceListStatus.Draft;
+        RejectReason = Clean(reason);
     }
 
     /// <summary>Ngừng áp dụng: Hiệu lực → Ngừng.</summary>
@@ -186,6 +232,24 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
     /// <param name="date">Ngày cần tra.</param>
     /// <returns>true nếu đang hiệu lực và ngày nằm trong khoảng hiệu lực.</returns>
     public bool AppliesOn(DateOnly date) => Status == PriceListStatus.Active && ValidFrom <= date && (ValidTo is null || ValidTo >= date);
+
+    /// <summary>Số ngày còn tới ngày hết hiệu lực (0 = hết hạn hôm nay, âm = đã quá hạn); null nếu không hạn.</summary>
+    /// <param name="today">Ngày hôm nay (giờ Việt Nam).</param>
+    public int? DaysToExpiry(DateOnly today) => ValidTo is { } to ? to.DayNumber - today.DayNumber : null;
+
+    /// <summary>
+    /// Bảng đang hiệu lực sắp hết hạn: còn 0–<paramref name="days"/> ngày (cảnh báo để kịp đàm phán, lập bảng mới – lát B1).
+    /// Ví dụ hết hạn 30/11, hôm nay 01/11, ngưỡng 30 ngày → còn 29 ngày → cảnh báo.
+    /// </summary>
+    /// <param name="today">Ngày hôm nay.</param>
+    /// <param name="days">Ngưỡng cảnh báo (ngày).</param>
+    public bool ExpiresWithin(DateOnly today, int days) =>
+        Status == PriceListStatus.Active && DaysToExpiry(today) is { } left && left >= 0 && left <= days;
+
+    private void EnsureSubmitted()
+    {
+        if (Status != PriceListStatus.Submitted) throw new BusinessRuleException($"Bảng giá {No} không ở trạng thái chờ duyệt.");
+    }
 
     private void EnsureDraft()
     {

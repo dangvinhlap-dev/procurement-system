@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { approvePriceList, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
 
 /**
- * Bảng giá NCC và so sánh giá (design.md mục 8.1, 8.2): tổng công ty lập bảng giá toàn tập đoàn, đưa vào hiệu lực → màn hình so sánh
+ * Bảng giá NCC và so sánh giá (design.md mục 8.1, 8.2): tổng công ty lập bảng giá toàn tập đoàn, gửi duyệt, người duyệt giá duyệt → so sánh
  * giá thấy giá thực mua của BHA (phiếu nhập 50.000 đ/hộp) và giá bảng giá → PO ở BHA gợi ý giá theo bảng giá.
  */
 
@@ -38,8 +38,16 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO gợi ý giá', as
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu bảng giá PRL-TCT-\d{4}-\d{4}\./)
   await expect(page.locator('.document-form-number')).toHaveText(/^PRL-TCT-\d{4}-\d{4}$/)
-  await confirm(page, 'Đưa vào hiệu lực', 'đã có hiệu lực')
+  // Bảng giá phải duyệt mới hiệu lực, người lập không tự duyệt (lát B1): gửi duyệt → Chờ duyệt, không có nút Duyệt.
+  await confirm(page, 'Gửi duyệt', /Đã gửi duyệt bảng giá/)
+  await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt')
+  await expect(page.getByRole('button', { name: /(^| )Duyệt$/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Rút về nháp$/ })).toBeVisible()
+  await approvePriceList(request, page.url().split('/').pop()!)
+  await page.reload()
   await expect(page.locator('.document-form-title')).toContainText('Hiệu lực')
+  await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+  await expect(page.getByRole('tabpanel')).toContainText('Phan Thị Giá')
   await page.screenshot({ path: 'e2e/screenshots/supplier-price-list.png' })
 
   // 2. So sánh giá toàn tập đoàn: BHA mua 50.000; bảng giá 47.000.
