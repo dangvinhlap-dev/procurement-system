@@ -298,6 +298,42 @@ public sealed record QuotationLineData(Guid RfqLineId, decimal UnitPrice, decima
 public sealed record AwardLineData(Guid RfqLineId, Guid? SupplierId, string? Reason);
 
 /// <summary>
+/// Các mục của hồ sơ trình kết quả chọn thầu (lát B3b – design.md mục 8.6; đề xuất Ban CUVT: hồ sơ trình gồm so sánh, biên bản, kỹ thuật,
+/// chi phí, pháp lý, đề xuất, xác nhận ngân sách). Bảng so sánh do hệ thống lập nên tự tính, các mục còn lại người mua đánh dấu.
+/// </summary>
+public static class RfqDossier
+{
+    /// <summary>Bảng so sánh báo giá – tự có khi đã nhập ít nhất một báo giá.</summary>
+    public const string Comparison = "COMPARE";
+
+    /// <summary>Mọi mục theo thứ tự hiển thị (mã, tên).</summary>
+    public static readonly IReadOnlyList<(string Code, string Name)> Items =
+    [
+        (Comparison, "Bảng so sánh báo giá"),
+        ("MINUTES", "Biên bản đàm phán có xác nhận thành viên"),
+        ("TECHNICAL", "Đánh giá kỹ thuật"),
+        ("COST", "Phân tích chi phí"),
+        ("LEGAL", "Hồ sơ pháp lý NCC"),
+        ("PROPOSAL", "Tờ trình đề xuất lựa chọn"),
+        ("BUDGET", "Xác nhận ngân sách"),
+    ];
+}
+
+/// <summary>Đánh dấu một mục hồ sơ trình.</summary>
+/// <param name="Code">Mã mục (<see cref="RfqDossier.Items"/>, trừ bảng so sánh).</param>
+/// <param name="IsDone">Đã có.</param>
+/// <param name="Note">Ghi chú (số biên bản, nơi lưu…).</param>
+public sealed record RfqDossierData(string Code, bool IsDone, string? Note);
+
+/// <summary>Tình trạng một mục hồ sơ trình.</summary>
+/// <param name="Code">Mã mục.</param>
+/// <param name="Name">Tên mục.</param>
+/// <param name="IsDone">Đã có.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="IsAutomatic">Hệ thống tự tính (không đánh dấu tay).</param>
+public sealed record RfqDossierStatus(string Code, string Name, bool IsDone, string? Note, bool IsAutomatic);
+
+/// <summary>
 /// Yêu cầu báo giá / đấu thầu (design.md mục 8.4): danh sách mặt hàng, hạn nộp, trọng số tiêu chí; gửi cho đủ số NCC tối thiểu
 /// (tham số công ty <see cref="Organization.CompanyParameter.RfqMinSuppliers"/>); nhập báo giá từng NCC; chọn NCC trúng thầu theo dòng; từ kết quả sinh PO nháp.
 /// Vòng đời: Nháp → Đã gửi → Chờ duyệt kết quả → Đã chọn thầu; từ chối/rút về Đã gửi; hủy được khi Nháp/Đã gửi.
@@ -308,6 +344,7 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
 {
     private readonly List<RfqLine> _lines = [];
     private readonly List<RfqSupplier> _suppliers = [];
+    private readonly List<RfqDossierItem> _dossierItems = [];
 
     private Rfq()
     {
@@ -395,6 +432,21 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <summary>NCC được mời và báo giá của họ.</summary>
     public IReadOnlyList<RfqSupplier> Suppliers => _suppliers;
 
+    /// <summary>Các mục hồ sơ trình đã đánh dấu tay (lát B3b).</summary>
+    public IReadOnlyList<RfqDossierItem> DossierItems => _dossierItems;
+
+    /// <summary>
+    /// Tình trạng đủ các mục hồ sơ trình theo thứ tự <see cref="RfqDossier.Items"/>: bảng so sánh có khi đã có báo giá; mục chưa đánh dấu
+    /// là chưa có.
+    /// </summary>
+    public IReadOnlyList<RfqDossierStatus> Dossier =>
+        RfqDossier.Items.Select(i =>
+        {
+            if (i.Code == RfqDossier.Comparison) return new RfqDossierStatus(i.Code, i.Name, _suppliers.Any(s => s.HasQuoted), null, true);
+            var item = _dossierItems.FirstOrDefault(x => x.Code == i.Code);
+            return new RfqDossierStatus(i.Code, i.Name, item?.IsDone == true, item?.Note, false);
+        }).ToList();
+
     /// <summary>Trọng số hiện tại.</summary>
     public RfqWeights Weights => new(PriceWeight, QualityWeight, DeliveryWeight, PaymentWeight, WarrantyWeight);
 
@@ -478,6 +530,34 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         FewSuppliersReason = _suppliers.Count < minSuppliers ? reason : null;
         Status = RfqStatus.Sent;
         SentAt = at;
+    }
+
+    /// <summary>
+    /// Đánh dấu hồ sơ trình (Nháp hoặc Đang nhận báo giá – sau khi gửi duyệt hồ sơ khóa để hội đồng xét đúng hồ sơ đã trình). Thiếu mục
+    /// không chặn gửi duyệt; hội đồng thấy số mục còn thiếu (lát B3b).
+    /// </summary>
+    /// <param name="items">Các mục cần lưu (mục không gửi giữ nguyên).</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ đang chờ duyệt/đã chọn thầu/đã hủy, mã mục sai hoặc trùng, ghi chú quá dài.</exception>
+    public void SetDossier(IReadOnlyList<RfqDossierData> items)
+    {
+        if (Status is not (RfqStatus.Draft or RfqStatus.Sent))
+            throw new BusinessRuleException($"RFQ {No} đã gửi duyệt kết quả hoặc đã hủy – hồ sơ trình không sửa được.");
+        if (items.GroupBy(i => i.Code).Any(g => g.Count() > 1)) throw new BusinessRuleException("Mỗi mục hồ sơ trình chỉ lưu một lần.");
+        foreach (var data in items)
+        {
+            if (data.Code == RfqDossier.Comparison) throw new BusinessRuleException("Bảng so sánh báo giá do hệ thống lập – không đánh dấu tay.");
+            if (RfqDossier.Items.All(i => i.Code != data.Code)) throw new BusinessRuleException($"Mục hồ sơ trình {data.Code} không có.");
+            var note = Clean(data.Note);
+            if (note?.Length > 500) throw new BusinessRuleException("Ghi chú mục hồ sơ trình tối đa 500 ký tự.");
+            var item = _dossierItems.FirstOrDefault(x => x.Code == data.Code);
+            if (item is null)
+            {
+                item = new RfqDossierItem(Id, data.Code);
+                _dossierItems.Add(item);
+            }
+
+            item.Set(data.IsDone, note);
+        }
     }
 
     /// <summary>Nhập/sửa báo giá của một NCC (khi đã gửi, chưa chọn thầu). Dòng không có trong danh sách = NCC không chào dòng đó.</summary>
@@ -584,6 +664,17 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         if (_lines.All(l => l.AwardedSupplierId != supplierId)) throw new BusinessRuleException("NCC này không trúng dòng nào.");
         if (supplier.PurchaseOrderId is not null) throw new BusinessRuleException("Đã tạo đơn mua hàng cho NCC này từ RFQ.");
         supplier.LinkPurchaseOrder(purchaseOrderId);
+    }
+
+    /// <summary>Ghi nhận bảng giá NCC nháp đã sinh cho NCC trúng thầu (mỗi NCC một bảng giá từ một RFQ – lát B3b).</summary>
+    /// <exception cref="BusinessRuleException">Khi RFQ chưa duyệt kết quả, NCC không trúng dòng nào hoặc đã có bảng giá.</exception>
+    public void LinkPriceList(Guid supplierId, Guid priceListId)
+    {
+        if (Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {No} chưa được duyệt kết quả chọn thầu.");
+        var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId) ?? throw new BusinessRuleException("NCC không có trong RFQ.");
+        if (_lines.All(l => l.AwardedSupplierId != supplierId)) throw new BusinessRuleException("NCC này không trúng dòng nào.");
+        if (supplier.PriceListId is not null) throw new BusinessRuleException("Đã tạo bảng giá cho NCC này từ RFQ.");
+        supplier.LinkPriceList(priceListId);
     }
 
     /// <summary>Hủy RFQ (Nháp hoặc Đã gửi).</summary>
@@ -745,6 +836,9 @@ public sealed class RfqSupplier : Entity
     /// <summary>PO đã sinh từ kết quả chọn thầu.</summary>
     public Guid? PurchaseOrderId { get; private set; }
 
+    /// <summary>Bảng giá NCC nháp đã sinh từ kết quả chọn thầu (lát B3b).</summary>
+    public Guid? PriceListId { get; private set; }
+
     /// <summary>Giá từng dòng.</summary>
     public IReadOnlyList<QuotationLine> QuotationLines => _quotationLines;
 
@@ -775,6 +869,41 @@ public sealed class RfqSupplier : Entity
     }
 
     internal void LinkPurchaseOrder(Guid purchaseOrderId) => PurchaseOrderId = purchaseOrderId;
+
+    internal void LinkPriceList(Guid priceListId) => PriceListId = priceListId;
+}
+
+/// <summary>Một mục hồ sơ trình kết quả chọn thầu đã đánh dấu (lát B3b).</summary>
+[Auditable("Hồ sơ trình RFQ")]
+public sealed class RfqDossierItem : Entity
+{
+    private RfqDossierItem()
+    {
+    }
+
+    internal RfqDossierItem(Guid rfqId, string code)
+    {
+        RfqId = rfqId;
+        Code = code;
+    }
+
+    /// <summary>RFQ.</summary>
+    public Guid RfqId { get; private set; }
+
+    /// <summary>Mã mục (<see cref="RfqDossier.Items"/>).</summary>
+    public string Code { get; private set; } = string.Empty;
+
+    /// <summary>Đã có.</summary>
+    public bool IsDone { get; private set; }
+
+    /// <summary>Ghi chú (số biên bản, nơi lưu…).</summary>
+    public string? Note { get; private set; }
+
+    internal void Set(bool isDone, string? note)
+    {
+        IsDone = isDone;
+        Note = note;
+    }
 }
 
 /// <summary>Giá NCC chào cho một dòng RFQ (theo ĐVT của dòng RFQ).</summary>

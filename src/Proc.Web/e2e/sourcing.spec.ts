@@ -79,7 +79,17 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
   await expect(page.getByLabel('NCC trúng dòng 1')).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/rfq-comparison.png' })
 
-  // 4. Chọn thầu (mặc định NCC giá thấp nhất) → chờ hội đồng duyệt (người chọn thầu không tự duyệt) → duyệt → Tạo PO nháp cho B.
+  // 4. Hồ sơ trình (lát B3b): bảng so sánh tự có; đánh dấu biên bản đàm phán kèm ghi chú.
+  await page.getByRole('tab', { name: /Hồ sơ trình \(1\/7\)/ }).click()
+  await page.getByLabel('Đã có Biên bản đàm phán có xác nhận thành viên').check()
+  await page.getByLabel('Ghi chú Biên bản đàm phán có xác nhận thành viên').fill('BB số 12')
+  await page.getByRole('button', { name: /Lưu hồ sơ trình$/ }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã lưu hồ sơ trình.')
+  await expect(page.getByRole('tab', { name: /Hồ sơ trình \(2\/7\)/ })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/rfq-dossier.png' })
+  await page.getByRole('tab', { name: 'So sánh & chọn thầu' }).click()
+
+  // 5. Chọn thầu (mặc định NCC giá thấp nhất) → chờ hội đồng duyệt (người chọn thầu không tự duyệt) → duyệt → Tạo PO nháp cho B.
   await confirm(page, 'Chọn thầu, gửi duyệt', 'Chọn thầu, gửi duyệt', /Đã gửi duyệt kết quả chọn thầu RFQ/)
   await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt kết quả')
   await expect(page.getByText(/đang chờ hội đồng duyệt – giá trị trúng thầu/)).toBeVisible()
@@ -91,4 +101,8 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
   await expect(page.locator('.document-form-title')).toContainText('Đã chọn thầu')
   await confirm(page, 'Tạo PO', 'Tạo PO', new RegExp(`Đã tạo PO-BHA-\\d{4}-\\d{4} \\(${s2}\\)\\.`))
   await expect(page.getByRole('table', { name: 'Điểm nhà cung cấp' })).toContainText(/PO-BHA-\d{4}-\d{4}/)
+
+  // 6. Tạo bảng giá NCC nháp cho B từ kết quả đã duyệt (lát B3b).
+  await confirm(page, 'Tạo bảng giá', 'Tạo bảng giá', new RegExp(`Đã tạo PRL-BHA-\\d{4}-\\d{4} \\(${s2}\\)\\.`))
+  await expect(page.getByRole('table', { name: 'Điểm nhà cung cấp' })).toContainText(/PRL-BHA-\d{4}-\d{4}/)
 })

@@ -2802,6 +2802,34 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqDossierItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsDone")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RfqId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RfqId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("RfqDossierItem", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2880,6 +2908,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("PriceListId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
@@ -2904,6 +2935,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(5,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PriceListId");
 
                     b.HasIndex("PurchaseOrderId");
 
@@ -4049,6 +4082,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqDossierItem", b =>
+                {
+                    b.HasOne("Proc.Domain.Sourcing.Rfq", null)
+                        .WithMany("DossierItems")
+                        .HasForeignKey("RfqId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqLine", b =>
                 {
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)
@@ -4082,6 +4124,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqSupplier", b =>
                 {
+                    b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
                         .WithMany()
                         .HasForeignKey("PurchaseOrderId")
@@ -4159,6 +4206,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.Sourcing.Rfq", b =>
                 {
+                    b.Navigation("DossierItems");
+
                     b.Navigation("Lines");
 
                     b.Navigation("Suppliers");

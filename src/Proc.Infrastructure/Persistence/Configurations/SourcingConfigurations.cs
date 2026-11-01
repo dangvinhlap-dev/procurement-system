@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
 
@@ -71,8 +72,25 @@ internal sealed class RfqConfiguration : IEntityTypeConfiguration<Rfq>
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(x => x.Suppliers).WithOne().HasForeignKey(s => s.RfqId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Suppliers).HasField("_suppliers").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Ignore(x => x.Dossier);
+        builder.HasMany(x => x.DossierItems).WithOne().HasForeignKey(d => d.RfqId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.DossierItems).HasField("_dossierItems").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_Rfq_Weights", "\"PriceWeight\" + \"QualityWeight\" + \"DeliveryWeight\" + \"PaymentWeight\" + \"WarrantyWeight\" = 100"));
+    }
+}
+
+/// <summary>Cấu hình bảng RfqDossierItem – mục hồ sơ trình kết quả chọn thầu (lát B3b).</summary>
+internal sealed class RfqDossierItemConfiguration : IEntityTypeConfiguration<RfqDossierItem>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<RfqDossierItem> builder)
+    {
+        builder.ToTable("RfqDossierItem");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => new { x.RfqId, x.Code }).IsUnique();
+        builder.Property(x => x.Note).HasMaxLength(500);
     }
 }
 
@@ -113,6 +131,7 @@ internal sealed class RfqSupplierConfiguration : IEntityTypeConfiguration<RfqSup
         builder.Property(x => x.WarrantyScore).HasPrecision(5, 2);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.QuotationLines).WithOne().HasForeignKey(q => q.RfqSupplierId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.QuotationLines).HasField("_quotationLines").UsePropertyAccessMode(PropertyAccessMode.Field);
     }

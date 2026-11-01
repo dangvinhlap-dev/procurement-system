@@ -248,4 +248,45 @@ public class SourcingTests
         Assert.Equal(("Awarded", 4_900_000m + 6_000_000m), (rfq.Status, rfq.AwardAmount));
         Assert.Equal(["Rejected", "Skipped", "Approved"], rfq.Approvals.OrderBy(s => s.Round).Select(s => s.Status));
     }
+
+    [Fact]
+    public async Task HoSoTrinh_VaTaoBangGiaTuKetQuaThau()
+    {
+        // Lát B3b (design.md mục 8.6): đánh dấu hồ sơ trình trước khi gửi duyệt, khóa khi chờ duyệt; RFQ đã duyệt sinh bảng giá NCC nháp.
+        var f = await ArrangeAsync();
+        var (a, b, c) = (f.Suppliers[0], f.Suppliers[1], f.Suppliers[2]);
+        var rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, null, a, b, c), Ct));
+        Assert.Equal((7, true), (rfq.Dossier.Count, rfq.Actions.CanEditDossier));
+        Assert.False(rfq.Dossier.Single(d => d.Code == "COMPARE").IsDone);
+        Assert.Contains("không có", await TitleAsync(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/dossier",
+            new SaveRfqDossierRequest([new("KHAC", true, null)]), Ct)));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/dossier",
+            new SaveRfqDossierRequest([new("minutes", true, "BB số 12"), new("BUDGET", true, null)]), Ct));
+        Assert.Equal(("BB số 12", 2), (rfq.Dossier.Single(d => d.Code == "MINUTES").Note, rfq.Dossier.Count(d => d.IsDone)));
+
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct));
+        var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
+        await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000, 0, null, 7), Q(thung, 600_000, 5, "8", 7)), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 48_000)), Ct));
+        Assert.True(rfq.Dossier.Single(d => d.Code == "COMPARE").IsDone);
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
+            new AwardRfqRequest([new(cai, b, null), new(thung, a, null)]), Ct));
+        Assert.False(rfq.Actions.CanEditDossier);
+        Assert.Contains("không sửa được", await TitleAsync(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/dossier",
+            new SaveRfqDossierRequest([new("COST", true, null)]), Ct)));
+        Assert.Contains("chưa được duyệt", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-price-lists", null, Ct)));
+
+        await ReadAsync<RfqDto>(await (await ApproverAsync(f)).PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct));
+        Assert.True((await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct))).Actions.CanCreatePriceLists);
+        var created = await ReadAsync<List<CreatedPriceListDto>>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-price-lists", null, Ct));
+        Assert.Equal(2, created.Count);
+        var listA = await ReadAsync<PriceListDto>(await f.Client.GetAsync($"/api/price-lists/{created.Single(x => x.SupplierId == a).PriceListId}", Ct));
+        // Bảng giá nháp của công ty, hiệu lực từ hôm nay tới hết hiệu lực báo giá; dòng thùng: giá, % CK, VAT theo báo giá.
+        Assert.Equal(("Draft", false, Today, Today.AddDays(30)), (listA.Status, listA.IsGroupWide, listA.ValidFrom, listA.ValidTo));
+        Assert.Equal([(f.Thung, 0m, 600_000m, 5m, "8")], listA.Lines.Select(l => (l.UomId, l.MinQty, l.UnitPrice, l.DiscountPct, l.VatCode)));
+        Assert.Contains("đã có bảng giá", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-price-lists", null, Ct)));
+        rfq = await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct));
+        Assert.Equal(listA.No, rfq.Suppliers.Single(s => s.SupplierId == a).PriceListNo);
+        Assert.False(rfq.Actions.CanCreatePriceLists);
+    }
 }

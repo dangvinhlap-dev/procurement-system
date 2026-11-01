@@ -511,7 +511,9 @@ Phiếu tìm NCC cho một sản phẩm cụ thể: mặt hàng (hoặc mô tả
 | **Kết quả chọn thầu phải được hội đồng duyệt** (lát B3, quyết định M4 mục 18): bấm "Chọn thầu, gửi duyệt" là gửi luôn theo quy trình duyệt dùng chung loại **RFQ** của công ty lập (APRL – số cấp, vai trò, ngưỡng theo **giá trị trúng thầu** = Σ SL × đơn giá × (100 − %CK)/100, trước VAT). Người duyệt cần `Sourcing.Rfq.ApproveAward` tại công ty; **người lập RFQ và người chọn thầu không tự duyệt**. Từ chối bắt buộc lý do → về Đang nhận báo giá (giữ lựa chọn cũ làm gợi ý, hiện lý do); người có `Sourcing.Rfq.Award` rút về được khi còn chờ. Đang chờ duyệt: không nhập báo giá, không hủy, không tạo PO. NCC trúng thầu vào danh sách đen thì không duyệt được. Việc cần làm/thông báo có loại RFQ; tab Lịch sử duyệt trên RFQ | Đề xuất Ban CUVT: hội đồng xét chọn, không tự quyết |
 | "Tạo PO" (chỉ khi kết quả **đã duyệt**): mỗi NCC trúng thầu một **PO nháp** qua dịch vụ PO (đủ kiểm tra NCC đã duyệt + áp dụng tại công ty, SL PR): giá/CK/VAT theo báo giá, ngày giao = hôm nay + thời gian giao, kho nhận = kho tổng. Mỗi NCC chỉ một PO từ một RFQ; tạo lần lượt – NCC lỗi thì bấm lại chỉ tạo phần còn thiếu. Giá trúng thầu vào lịch sử giá (nguồn "Báo giá trúng thầu", ngày chọn thầu) **khi kết quả đã duyệt**; báo cáo tiết kiệm đấu thầu cũng chỉ tính RFQ đã duyệt | Mục 8.4 bước 5 |
 | Màn hình So sánh báo giá (QCMP) = danh sách RFQ đang nhận báo giá/đã chọn thầu, mở thẳng tab so sánh | Mục 3 – nhóm Đấu thầu |
-| Chưa làm: sinh bảng giá/hợp đồng khung từ kết quả thầu và tab hồ sơ trình (lát B3b), chấm điểm riêng từng thành viên hội đồng, gửi RFQ qua email, cổng NCC, import báo giá Excel | B3b; còn lại làm sau khi có yêu cầu |
+| **Hồ sơ trình** (lát B3b, tab "Hồ sơ trình (x/7)" trên RFQ): 7 mục – bảng so sánh báo giá (hệ thống tự đánh dấu khi có báo giá), biên bản đàm phán có xác nhận thành viên, đánh giá kỹ thuật, phân tích chi phí, hồ sơ pháp lý NCC, tờ trình đề xuất lựa chọn, xác nhận ngân sách; mỗi mục ô "Đã có" + ghi chú (≤ 500 ký tự), file ở tab Đính kèm. Sửa khi Nháp/Đang nhận báo giá (quyền `Sourcing.Rfq.Manage`), gửi duyệt thì khóa. **Thiếu mục không chặn gửi duyệt** – thông báo trên phiếu và hộp thoại duyệt ghi "đủ x/7, còn thiếu…" để hội đồng quyết | Đề xuất Ban CUVT: hồ sơ trình (P8); mặc định không chặn cứng – đổi khi người dùng yêu cầu |
+| **"Tạo bảng giá"** (lát B3b, RFQ đã duyệt kết quả, quyền `Pricing.PriceList.Manage`): mỗi NCC trúng thầu một **bảng giá NCC nháp** của công ty lập RFQ qua dịch vụ bảng giá (đủ kiểm tra NCC, mặt hàng): bậc từ SL 0, đơn giá/%CK/VAT theo báo giá (VAT trống thì theo mặt hàng), hai dòng cùng mặt hàng × ĐVT lấy giá sau CK thấp hơn; hiệu lực từ hôm nay tới ngày hết hiệu lực báo giá (báo giá đã hết hạn thì để trống + ghi chú để kiểm tra). Mỗi NCC một bảng giá từ một RFQ (`RfqSupplier.PriceListId`); bảng giá vẫn phải gửi duyệt (mục 8.5) | Mục 8.4 bước 5; đề xuất Ban CUVT P9 |
+| Chưa làm: sinh hợp đồng nguyên tắc từ kết quả thầu (lát B4), chấm điểm riêng từng thành viên hội đồng, gửi RFQ qua email, cổng NCC, import báo giá Excel | Làm sau khi có yêu cầu |
 
 ## 9. Phân quyền và ghi log
 
@@ -1227,6 +1229,9 @@ Migration `V0_11_0_DuyetNhaCungCap` (bảng `SupplierChangeRequest`, cột `Appr
 mục 8.6. `IApprovalSubject.IsPreparedBy` (mặc định người lập; RFQ tính cả người chọn thầu) dùng khi chặn tự duyệt và khi báo người duyệt.
 Migration `V0_12_0_DuyetKetQuaChonThau` (cột `Rfq.FewSuppliersReason`, `AwardedBy`, `ApprovalRound`, `RejectReason`; trạng thái Chờ duyệt
 kết quả = 5; `Down()` đưa RFQ đang chờ duyệt về Đang nhận báo giá, mất giải trình, người chọn thầu, lượt gửi, lý do từ chối).
+
+**Hồ sơ trình, tạo bảng giá từ kết quả thầu** (lát B3b, 01/11/2026): quy tắc ở mục 8.6. Migration `V0_12_0_HoSoTrinhThau` (bảng
+`RfqDossierItem`, cột `RfqSupplier.PriceListId`; `Down()` mất đánh dấu hồ sơ trình và liên kết RFQ – bảng giá, bảng giá đã sinh vẫn giữ).
 
 **Duyệt bảng giá NCC** (lát B1, 01/11/2026): dùng cơ chế trên, một chặng tại công ty lập bảng giá – quy tắc ở mục 8.5. Migration
 `V0_11_0_DuyetBangGiaNcc` (cột `SupplierPriceList.ApprovalRound`, `RejectReason`; trạng thái Chờ duyệt = 4; `Down()` đưa bảng đang chờ duyệt

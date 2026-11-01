@@ -171,6 +171,39 @@ public class SourcingTests
     }
 
     [Fact]
+    public void HoSoTrinh_DanhDauKhiChuaGuiDuyet_TaoBangGiaSauKhiDuyet()
+    {
+        // Lát B3b: hồ sơ trình đánh dấu được khi Nháp/Đang nhận báo giá; bảng so sánh tự có khi đã có báo giá; gửi duyệt thì khóa.
+        var item = NewItem();
+        Guid a = Guid.CreateVersion7(), b = Guid.CreateVersion7();
+        var rfq = SentRfq(item, 1, a, b);
+        Assert.Equal(7, rfq.Dossier.Count);
+        Assert.All(rfq.Dossier, d => Assert.False(d.IsDone));
+        Assert.Throws<BusinessRuleException>(() => rfq.SetDossier([new(RfqDossier.Comparison, true, null)]));
+        Assert.Throws<BusinessRuleException>(() => rfq.SetDossier([new("KHAC", true, null)]));
+        Assert.Throws<BusinessRuleException>(() => rfq.SetDossier([new("MINUTES", true, null), new("MINUTES", false, null)]));
+        rfq.SetDossier([new("MINUTES", true, " BB-01/11 "), new("BUDGET", false, null)]);
+        rfq.SetDossier([new("BUDGET", true, null)]);
+        var cai = rfq.Lines[0].Id;
+        rfq.SaveQuotation(a, new QuotationHeader(Today, null, null, 8, 8, 8, 8, null), [new(cai, 50_000, 0, null, null, null)]);
+        var dossier = rfq.Dossier.ToDictionary(d => d.Code);
+        Assert.Equal((true, true), (dossier[RfqDossier.Comparison].IsDone, dossier[RfqDossier.Comparison].IsAutomatic));
+        Assert.Equal((true, "BB-01/11"), (dossier["MINUTES"].IsDone, dossier["MINUTES"].Note));
+        Assert.True(dossier["BUDGET"].IsDone);
+        Assert.Equal(3, rfq.Dossier.Count(d => d.IsDone));
+
+        rfq.Award([new(cai, a, null)], Guid.CreateVersion7(), Today);
+        // Chưa duyệt kết quả thì chưa tạo bảng giá.
+        Assert.Throws<BusinessRuleException>(() => rfq.LinkPriceList(a, Guid.CreateVersion7()));
+        rfq.Submit();
+        Assert.Throws<BusinessRuleException>(() => rfq.SetDossier([new("COST", true, null)]));
+        rfq.MarkApproved(DateTimeOffset.UtcNow);
+        Assert.Throws<BusinessRuleException>(() => rfq.LinkPriceList(b, Guid.CreateVersion7()));
+        rfq.LinkPriceList(a, Guid.CreateVersion7());
+        Assert.Throws<BusinessRuleException>(() => rfq.LinkPriceList(a, Guid.CreateVersion7()));
+    }
+
+    [Fact]
     public void ChamDiem_TheoTrongSo()
     {
         // Dòng 1 thấp nhất (10 điểm), dòng 2 đắt hơn 25% (8 điểm) → 9.
