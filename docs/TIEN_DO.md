@@ -66,16 +66,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. Lát kế tiếp: **B4** – Hợp đồng nguyên tắc (CTR) phương án 2 (lớn – tách 2 lát; `docs/Phantich_01112026.md` mục 5, quyết định
-  Q4). Lập kế hoạch ngắn trước khi code. Từ nay mọi màn hình làm theo docs/ui-style.md.
+- Không có. **B4 (Hợp đồng nguyên tắc – CTR) TẠM TREO** theo yêu cầu người dùng 01/11/2026: không làm cho đến khi người dùng yêu cầu.
+  Lát kế tiếp theo thứ tự (bỏ qua B4): **B5** – xung đột lợi ích (kê khai, chặn chấm thầu/duyệt – N4) và NCC độc quyền (N6); hỏi người dùng
+  trước khi bắt đầu. Lập kế hoạch ngắn trước khi code. Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
 
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b đã xong; lát kế tiếp: **B4**.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b đã xong; **B4 tạm treo** (chờ người dùng yêu cầu); lát kế tiếp: **B5**.
+   Lưu ý: C1 (PO theo giá hợp đồng) và F4 phụ thuộc B4 – khi tới đó làm phần bảng giá trước, phần hợp đồng chờ B4.
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN).
-2. Hợp đồng khung (CTR): đã có mô tả trong đề xuất Ban Cung ứng – làm ở lát B4 (phương án 2).
+2. Hợp đồng khung (CTR): đã có mô tả trong đề xuất Ban Cung ứng – lát B4 (phương án 2) **tạm treo, chỉ làm khi người dùng yêu cầu**.
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
 4. **Lỗi tiềm ẩn đăng xuất**: bấm Quay lại trong vòng ~40ms sau khi đăng xuất (router còn đang chuyển trang) để lại trang trắng ở `/`
