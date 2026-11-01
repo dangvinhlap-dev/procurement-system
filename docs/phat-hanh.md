@@ -13,7 +13,9 @@ Tách từ CLAUDE.md (mục 8 cũ) ngày 31/10/2026. Đọc khi người dùng y
 3. Commit `Phát hành phiên bản x.y.z`.
 4. `git tag -a vx.y.z -m "Phiên bản x.y.z: <tóm tắt>"`.
 5. `git push` và `git push --tags`.
-6. Báo người dùng: số phiên bản, tóm tắt thay đổi, có thay đổi CSDL hay không, có cần sao lưu trước khi nâng cấp không.
+6. Đóng gói bản Windows: `.\deploy\windows\publish.ps1` → `artifacts\procurement-x.y.z.zip` (không commit; gửi người cài theo
+   docs/deploy-windows.md). Bản Docker build trên server từ tag (README mục "Triển khai server").
+7. Báo người dùng: số phiên bản, tóm tắt thay đổi, có thay đổi CSDL hay không, có cần sao lưu trước khi nâng cấp không.
 
 ## Thay đổi CSDL
 - Chỉ qua EF Core migration, tên rõ nghĩa (ví dụ `V0_4_0_ThemBangGiaNoiBo`), luôn có hàm `Down()` gỡ được; ghi chú nếu `Down()` làm mất dữ liệu.

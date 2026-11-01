@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Đo thời gian các API nặng trên CSDL procurement_perf (API ở cổng 5001). Mỗi API gọi 1 lần làm nóng + 3 lần đo, in thời gian (ms).
-BASE=http://localhost:5001
+# Địa chỉ API và kết nối CSDL lấy từ biến môi trường (mặc định như máy dev): PERF_API_URL; PGHOST, PGPORT, PGUSER, PGPASSWORD,
+# PGDATABASE – psql tự đọc các biến PG* này.
+BASE=${PERF_API_URL:-http://localhost:5001}
+export PGHOST=${PGHOST:-localhost} PGUSER=${PGUSER:-proc} PGPASSWORD=${PGPASSWORD:-proc_dev_only} PGDATABASE=${PGDATABASE:-procurement_perf}
 for i in $(seq 1 60); do curl -s "$BASE/health" >/dev/null && break; sleep 2; done
 LOGIN=$(curl -s -X POST "$BASE/api/auth/login" -H 'Content-Type: application/json' -d '{"userName":"admin","password":"Admin@2026"}')
 TOKEN=$(echo "$LOGIN" | python -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
 BHA=$(echo "$LOGIN" | python -c "import sys,json; print([c['id'] for c in json.load(sys.stdin)['user']['companies'] if c['code']=='BHA'][0])")
 H=(-H "Authorization: Bearer $TOKEN" -H "X-Company-Id: $BHA")
-ITEM=$(PGPASSWORD=proc_dev_only psql -h localhost -U proc -d procurement_perf -tAc "select \"Id\" from \"Item\" where \"Code\"='PERF-00042'")
-PERIOD=$(PGPASSWORD=proc_dev_only psql -h localhost -U proc -d procurement_perf -tAc "select p.\"Id\" from \"InventoryPeriod\" p join \"Company\" c on c.\"Id\"=p.\"CompanyId\" where c.\"Code\"='BHA' and p.\"Month\"=10")
+ITEM=$(psql -tAc "select \"Id\" from \"Item\" where \"Code\"='PERF-00042'")
+PERIOD=$(psql -tAc "select p.\"Id\" from \"InventoryPeriod\" p join \"Company\" c on c.\"Id\"=p.\"CompanyId\" where c.\"Code\"='BHA' and p.\"Month\"=10")
 run() {
   local name=$1 url=$2
   curl -s -o /dev/null "${H[@]}" "$BASE$url"

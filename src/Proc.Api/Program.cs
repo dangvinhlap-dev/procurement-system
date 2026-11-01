@@ -25,7 +25,8 @@ builder.Services.AddSerilog((services, logger) => logger
 
 var connectionString = builder.Configuration.GetConnectionString("Procurement")
     ?? throw new InvalidOperationException(
-        "Thiếu chuỗi kết nối 'ConnectionStrings:Procurement' (đặt trong appsettings.Development.json).");
+        "Thiếu chuỗi kết nối 'ConnectionStrings:Procurement': đặt trong appsettings.{Môi trường}.json (máy dev: appsettings.Development.json; " +
+        "Windows/IIS: appsettings.Production.json) hoặc biến môi trường ConnectionStrings__Procurement (Docker).");
 
 builder.Services.AddHttpContextAccessor();
 // Đăng ký trước AddInfrastructure để thay cho mặc định "không có người dùng".
@@ -72,6 +73,18 @@ builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Thư mục đính kèm nằm trong thư mục ứng dụng thì lần cài bản mới (chép đè/xóa thư mục web trên IIS) có thể làm mất file
+// (docs/deploy-windows.md). Chỉ cảnh báo, không chặn: máy dev cố ý để trong src/Proc.Api/data.
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+{
+    var attachmentRoot = app.Services.GetRequiredService<IOptions<Proc.Infrastructure.Documents.AttachmentOptions>>().Value.RootPath;
+    var contentRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(app.Environment.ContentRootPath)) + Path.DirectorySeparatorChar;
+    if (attachmentRoot.StartsWith(contentRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        app.Logger.LogWarning(
+            "Thư mục file đính kèm {AttachmentRoot} nằm trong thư mục ứng dụng – có thể mất file khi cài bản mới. Đặt Attachments:RootPath ra ngoài.",
+            attachmentRoot);
+}
 
 await DatabaseInitializer.InitializeAsync(app.Services);
 

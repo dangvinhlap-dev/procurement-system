@@ -8,6 +8,7 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - Nghiệp vụ, form, CSDL, lộ trình: `docs/design.md` (bản gốc của thiết kế).
 - Giao diện: `docs/ui-guide.md` (nạp sẵn ở cuối file này); ảnh mẫu là các file .png trong `docs/`.
 - Khi phát hành hoặc quay lại phiên bản cũ: đọc `docs/phat-hanh.md` (bắt buộc làm đủ các bước trong đó).
+- Khi sửa cách triển khai (Docker, Windows/IIS), cấu hình, đường dẫn file: đọc `docs/deploy-windows.md` và README mục "Triển khai server".
 - Khi chạy, cài đặt, gỡ rối môi trường dev (chuỗi kết nối, cổng, migration, lỗi khóa file): đọc `docs/moi-truong-dev.md`.
 
 ## 0. Cách làm việc tiết kiệm token
@@ -37,6 +38,13 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - Modular monolith, Clean Architecture: Domain → Application → Infrastructure → Api, cộng Proc.Web.
 - Cấu trúc thư mục theo mục 13.1 của docs/design.md. Module chỉ gọi nhau qua interface của lớp Application.
 - Ghi sổ kho là nguyên tử: lưu chứng từ, ghi StockLedger, cập nhật StockOnHand, ghi audit trong một transaction.
+- Chạy được cả trên Linux container (Docker) và Windows Server (IIS) từ cùng một bản build, không sửa code:
+  - Không viết cứng đường dẫn, host, cổng, chuỗi kết nối trong code; lấy từ appsettings/biến môi trường (Options), có giá trị mặc định
+    cho máy dev. Đường dẫn tương đối tính từ ContentRoot, không từ thư mục đang đứng.
+  - Ghép đường dẫn bằng `Path.Combine`/`Path.GetFullPath`, không nối chuỗi với `/` hay `\`; tên file so sánh theo hệ điều hành
+    (Linux phân biệt hoa thường). Dữ liệu ghi ra đĩa (đính kèm, log) để ngoài thư mục ứng dụng trên server.
+  - Không dùng API chỉ có trên một hệ điều hành (registry, tên múi giờ chỉ Linux/Windows – dùng `VietnamTime.Zone`); script triển khai
+    có bản cho cả hai (`db/backup.sh` – `deploy/windows/backup.ps1`). Script `.ps1` lưu UTF-8 có BOM.
 
 ## 4. Quy tắc nghiệp vụ bất biến
 - Mỗi công ty là pháp nhân độc lập. Mọi bảng giao dịch có CompanyId.

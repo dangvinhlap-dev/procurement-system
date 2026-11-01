@@ -40,8 +40,33 @@ public interface IClock
 /// <summary>Ngày giờ theo múi giờ Việt Nam (CLAUDE.md mục 5: lưu UTC, ngày chứng từ theo giờ Việt Nam).</summary>
 public static class VietnamTime
 {
-    /// <summary>Múi giờ Asia/Ho_Chi_Minh (UTC+7, không đổi giờ mùa hè).</summary>
-    public static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+    /// <summary>
+    /// Tên múi giờ thử lần lượt: tên IANA (Linux, Windows có ICU – Windows 10 1903 / Server 2019 trở lên) rồi tên Windows
+    /// (Windows Server 2016 trở về trước không đổi được tên IANA). Cả hai đều là UTC+7, không đổi giờ mùa hè.
+    /// </summary>
+    public static readonly IReadOnlyList<string> ZoneIds = ["Asia/Ho_Chi_Minh", "SE Asia Standard Time"];
+
+    /// <summary>Múi giờ Việt Nam (UTC+7) – mọi chỗ cần giờ Việt Nam dùng chung, không tự tìm theo tên.</summary>
+    public static readonly TimeZoneInfo Zone = FindZone(ZoneIds);
+
+    /// <summary>
+    /// Tìm múi giờ theo danh sách tên, lấy tên đầu tiên hệ điều hành nhận ra – để cùng một bản chạy được trên Linux container và
+    /// Windows Server.
+    /// </summary>
+    /// <param name="ids">Tên múi giờ theo thứ tự ưu tiên.</param>
+    /// <returns>Múi giờ tìm thấy.</returns>
+    /// <exception cref="TimeZoneNotFoundException">Khi hệ điều hành không có tên nào trong danh sách.</exception>
+    public static TimeZoneInfo FindZone(IEnumerable<string> ids)
+    {
+        var tried = new List<string>();
+        foreach (var id in ids)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone)) return zone;
+            tried.Add(id);
+        }
+
+        throw new TimeZoneNotFoundException($"Không tìm thấy múi giờ Việt Nam ({string.Join(", ", tried)}) trên máy chủ.");
+    }
 
     /// <summary>
     /// Hôm nay theo giờ Việt Nam – 0h–7h sáng ở Việt Nam vẫn là "hôm qua" theo UTC, nên không lấy ngày UTC.
