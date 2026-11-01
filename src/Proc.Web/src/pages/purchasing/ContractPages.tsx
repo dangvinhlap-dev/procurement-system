@@ -1,15 +1,17 @@
-import { CheckOutlined, CloseCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber, Select } from 'antd'
+import { CheckOutlined, CloseCircleOutlined, CloseOutlined, FileAddOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber, Select, Table, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
+  amendmentStatusLabels,
   contractStatusLabels,
   contractStatusTone,
   useContract,
   useContractMutations,
   useContracts,
   type Contract,
+  type ContractAmendmentListItem,
   type ContractListItem,
   type SaveContractInput,
 } from '../../api/contracts'
@@ -27,6 +29,8 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { formatDate, formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
+import { ContractAmendmentDrawer } from './ContractAmendmentDrawer'
+import { contractTermFields as termFields } from './contractTerms'
 import { confirmReject } from './useApprovalCommands'
 
 const LIST_PATH = '/mua-hang/hop-dong-khung'
@@ -104,17 +108,6 @@ interface FormValues {
 
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
-/** Các điều khoản bắt buộc khi đàm phán (đề xuất Ban CUVT Bước 11) – mỗi điều khoản một ô chữ trên tab Điều khoản. */
-const termFields: { name: keyof FormValues; label: string; max: number }[] = [
-  { name: 'priceAdjustmentTerms', label: 'Cơ chế điều chỉnh giá', max: 2000 },
-  { name: 'paymentTerms', label: 'Thanh toán, công nợ', max: 2000 },
-  { name: 'deliveryTerms', label: 'Giao hàng (thời gian, địa điểm từng đơn vị)', max: 2000 },
-  { name: 'discountTerms', label: 'Chiết khấu thương mại, theo sản lượng, doanh số', max: 2000 },
-  { name: 'sponsorshipTerms', label: 'Tài trợ, hỗ trợ, khuyến mại', max: 2000 },
-  { name: 'penaltyTerms', label: 'Chế tài chậm giao, giao sai, hàng lỗi', max: 2000 },
-  { name: 'otherTerms', label: 'Điều khoản khác (bảo mật, xung đột lợi ích, chấm dứt, gia hạn, tranh chấp)', max: 4000 },
-]
-
 /**
  * Thông báo đầu hợp đồng: lý do bị từ chối, sắp hết hiệu lực, đã chấm dứt, bảng giá chưa hiệu lực, lý do chỉ xem.
  * @param doc Hợp đồng đã tải.
@@ -143,6 +136,45 @@ function ContractNotices({ doc }: { doc: Contract }) {
 }
 
 /**
+ * Bảng phụ lục của hợp đồng (tab Phụ lục): bấm số phụ lục hoặc bấm đúp dòng để mở ngăn kéo phụ lục.
+ * @param rows Phụ lục, mới nhất trước.
+ * @param onOpen Mở phụ lục theo Id.
+ */
+function AmendmentTable({ rows, onOpen }: { rows: ContractAmendmentListItem[]; onOpen: (id: string) => void }) {
+  return (
+    <Table<ContractAmendmentListItem>
+      size="small"
+      pagination={false}
+      rowKey={(a) => a.id}
+      dataSource={rows}
+      // Độ rộng cột cố định, nhiều cột thì cuộn ngang (docs/ui-style.md mục 5) – tránh cột chữ dài bị ép thành một từ mỗi dòng.
+      tableLayout="fixed"
+      scroll={{ x: 1300 }}
+      locale={{ emptyText: 'Chưa có phụ lục. Gia hạn, đổi bảng giá hay điều khoản thì bấm "Lập phụ lục" (hợp đồng đang hiệu lực).' }}
+      onRow={(a) => ({ onDoubleClick: () => onOpen(a.id) })}
+      columns={[
+        {
+          title: 'Số phụ lục',
+          dataIndex: 'no',
+          width: 190,
+          // Liên kết chữ (không dùng Button): form hợp đồng hiệu lực ở chế độ chỉ đọc sẽ khóa mọi nút bên trong.
+          render: (v: string, a) => <Typography.Link onClick={() => onOpen(a.id)}>{v}</Typography.Link>,
+        },
+        { title: 'Số giấy', dataIndex: 'paperNo', width: 100 },
+        { title: 'Ngày ký', dataIndex: 'signDate', width: 95, render: (v: string | null) => formatDate(v) },
+        { title: 'Thay đổi', dataIndex: 'changeSummary', width: 340 },
+        { title: 'Lý do', dataIndex: 'reason', width: 240 },
+        { title: 'Giá trị dự kiến', dataIndex: 'expectedAmount', width: 120, align: 'right',
+          // Số tiền phông đơn cách (docs/ui-style.md mục 3).
+          render: (v: number) => <span style={{ fontFamily: 'var(--erp-font-mono)' }}>{formatMoney(v)}</span> },
+        { title: 'Trạng thái', dataIndex: 'status', width: 125, render: (v: ContractAmendmentListItem['status']) => amendmentStatusLabels[v] },
+        { title: 'Người lập', dataIndex: 'createdByName', width: 140 },
+      ]}
+    />
+  )
+}
+
+/**
  * Trang hợp đồng nguyên tắc trên khuôn DocumentForm (phương án 2 – mỗi công ty một hợp đồng với NCC, dùng chung bảng giá): đầu hợp đồng,
  * sản lượng dự kiến (giá theo bảng giá), điều khoản, bộ phận được phép đặt. Nháp → Gửi duyệt → Hiệu lực → Chấm dứt.
  */
@@ -162,6 +194,15 @@ export function ContractPage() {
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
   const doc = contract.data
+  // Ngăn kéo phụ lục mở theo ?phu-luc=<Id|moi> – mở thẳng được từ thông báo, Việc cần làm (lát B4b).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const amendmentId = searchParams.get('phu-luc')
+  const openAmendment = (value: string | null) =>
+    setSearchParams((params) => {
+      if (value) params.set('phu-luc', value)
+      else params.delete('phu-luc')
+      return params
+    }, { replace: true })
   const readOnly = isNew ? !hasPermission(Permission.ContractManage) : !doc?.actions.canEdit
   const attachmentTab = useAttachmentTab('PurchaseContract', doc?.id, hasPermission(Permission.ContractManage))
 
@@ -500,6 +541,11 @@ export function ContractPage() {
           Rút về nháp
         </Button>
       )}
+      {doc?.actions.canAmend && (
+        <Button icon={<FileAddOutlined />} onClick={() => openAmendment('moi')}>
+          Lập phụ lục
+        </Button>
+      )}
       {doc?.actions.canTerminate && (
         <Button danger icon={<StopOutlined />} onClick={terminate} loading={mutations.terminate.isPending}>
           Chấm dứt
@@ -523,90 +569,99 @@ export function ContractPage() {
     .map((d) => ({ value: d.id, label: `${d.code} – ${d.name}` }))
 
   return (
-    <DocumentForm
-      title="Hợp đồng nguyên tắc"
-      number={isNew ? null : (doc?.no ?? '')}
-      status={status}
-      meta={
-        doc &&
-        `Pháp nhân: ${doc.companyCode} · Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)} · Giá trị dự kiến ${formatMoney(doc.expectedAmount)} đ`
-      }
-      loading={contract.isLoading}
-      error={error ?? (contract.error ? contract.error.message : null)}
-      notice={doc && <ContractNotices doc={doc} />}
-      form={form}
-      initialValues={{ validFrom: dayjs(), departmentIds: [], lines: [] }}
-      readOnly={readOnly}
-      onSave={save}
-      onAddLine={() => addRef.current?.()}
-      actions={actions}
-      header={
-        <>
-          <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true, message: 'Chọn nhà cung cấp.' }]}>
-            <Select
-              showSearch={{ optionFilterProp: 'label' }}
-              options={(suppliers.data?.items ?? [])
-                .filter((s) => s.status === 'Approved' || s.id === doc?.supplierId)
-                .map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
-              onChange={() => form.setFieldValue('priceListId', undefined)}
-            />
-          </Form.Item>
-          <Form.Item label="Bảng giá dùng chung" name="priceListId" rules={[{ required: true, message: 'Chọn bảng giá.' }]}
-            extra={supplierId && priceListOptions.length === 0 ? 'NCC chưa có bảng giá dùng được – lập và duyệt bảng giá trước.' : undefined}>
-            <Select showSearch={{ optionFilterProp: 'label' }} options={priceListOptions} aria-label="Bảng giá dùng chung" />
-          </Form.Item>
-          <Form.Item label="Tên hợp đồng" name="title" rules={[{ required: true, message: 'Nhập tên hợp đồng.' }, { max: 200 }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label="Số HĐ giấy" name="contractNo" rules={[{ max: 100 }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label="Ngày ký" name="signDate">
-            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="Hiệu lực từ" name="validFrom" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="Hiệu lực đến" name="validTo" rules={[{ required: true, message: 'Chọn ngày.' }]}>
-            <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="Hạn mức công nợ (VND)" name="creditLimit" rules={[{ type: 'number', min: 0, message: '≥ 0.' }]}>
-            <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} precision={0} />
-          </Form.Item>
-          <Form.Item label="Ghi chú" name="note" rules={[{ max: 1000 }]}>
-            <Input />
-          </Form.Item>
-        </>
-      }
-      linesLabel="Sản lượng dự kiến"
-      lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />}
-      footer={<DocumentTotal label="Giá trị dự kiến (sau CK, trước VAT)" value={formatMoney(total)} strong />}
-      extraTabs={[
-        {
-          key: 'terms',
-          label: 'Điều khoản',
-          children: (
-            <div style={{ maxWidth: 900 }}>
-              {termFields.map((t) => (
-                <Form.Item key={t.name} label={t.label} name={t.name} rules={[{ max: t.max }]}>
-                  <Input.TextArea rows={2} />
-                </Form.Item>
-              ))}
-            </div>
-          ),
-        },
-        {
-          key: 'departments',
-          label: `Bộ phận được đặt (${(doc?.departmentIds.length ?? 0) || 'tất cả'})`,
-          children: (
-            <Form.Item label="Bộ phận được phép đặt hàng theo hợp đồng (để trống = mọi bộ phận của công ty)" name="departmentIds" style={{ maxWidth: 900 }}>
-              <Select mode="multiple" showSearch={{ optionFilterProp: 'label' }} options={departmentOptions} placeholder="Mọi bộ phận" aria-label="Bộ phận được đặt" />
+    <>
+      <DocumentForm
+        title="Hợp đồng nguyên tắc"
+        number={isNew ? null : (doc?.no ?? '')}
+        status={status}
+        meta={
+          doc &&
+          `Pháp nhân: ${doc.companyCode} · Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)} · Giá trị dự kiến ${formatMoney(doc.expectedAmount)} đ`
+        }
+        loading={contract.isLoading}
+        error={error ?? (contract.error ? contract.error.message : null)}
+        notice={doc && <ContractNotices doc={doc} />}
+        form={form}
+        initialValues={{ validFrom: dayjs(), departmentIds: [], lines: [] }}
+        readOnly={readOnly}
+        onSave={save}
+        onAddLine={() => addRef.current?.()}
+        actions={actions}
+        header={
+          <>
+            <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true, message: 'Chọn nhà cung cấp.' }]}>
+              <Select
+                showSearch={{ optionFilterProp: 'label' }}
+                options={(suppliers.data?.items ?? [])
+                  .filter((s) => s.status === 'Approved' || s.id === doc?.supplierId)
+                  .map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
+                onChange={() => form.setFieldValue('priceListId', undefined)}
+              />
             </Form.Item>
-          ),
-        },
-        ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
-        attachmentTab,
-      ]}
-    />
+            <Form.Item label="Bảng giá dùng chung" name="priceListId" rules={[{ required: true, message: 'Chọn bảng giá.' }]}
+              extra={supplierId && priceListOptions.length === 0 ? 'NCC chưa có bảng giá dùng được – lập và duyệt bảng giá trước.' : undefined}>
+              <Select showSearch={{ optionFilterProp: 'label' }} options={priceListOptions} aria-label="Bảng giá dùng chung" />
+            </Form.Item>
+            <Form.Item label="Tên hợp đồng" name="title" rules={[{ required: true, message: 'Nhập tên hợp đồng.' }, { max: 200 }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Số HĐ giấy" name="contractNo" rules={[{ max: 100 }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Ngày ký" name="signDate">
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Hiệu lực từ" name="validFrom" rules={[{ required: true, message: 'Chọn ngày.' }]}>
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Hiệu lực đến" name="validTo" rules={[{ required: true, message: 'Chọn ngày.' }]}>
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Hạn mức công nợ (VND)" name="creditLimit" rules={[{ type: 'number', min: 0, message: '≥ 0.' }]}>
+              <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} precision={0} />
+            </Form.Item>
+            <Form.Item label="Ghi chú" name="note" rules={[{ max: 1000 }]}>
+              <Input />
+            </Form.Item>
+          </>
+        }
+        linesLabel="Sản lượng dự kiến"
+        lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />}
+        footer={<DocumentTotal label="Giá trị dự kiến (sau CK, trước VAT)" value={formatMoney(total)} strong />}
+        extraTabs={[
+          {
+            key: 'terms',
+            label: 'Điều khoản',
+            children: (
+              <div style={{ maxWidth: 900 }}>
+                {termFields.map((t) => (
+                  <Form.Item key={t.name} label={t.label} name={t.name} rules={[{ max: t.max }]}>
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                ))}
+              </div>
+            ),
+          },
+          {
+            key: 'departments',
+            label: `Bộ phận được đặt (${(doc?.departmentIds.length ?? 0) || 'tất cả'})`,
+            children: (
+              <Form.Item label="Bộ phận được phép đặt hàng theo hợp đồng (để trống = mọi bộ phận của công ty)" name="departmentIds" style={{ maxWidth: 900 }}>
+                <Select mode="multiple" showSearch={{ optionFilterProp: 'label' }} options={departmentOptions} placeholder="Mọi bộ phận" aria-label="Bộ phận được đặt" />
+              </Form.Item>
+            ),
+          },
+          // Phụ lục (lát B4b): chỉ có khi hợp đồng đã gửi duyệt trở đi; lập phụ lục khi hợp đồng hiệu lực.
+          ...(doc && doc.status !== 'Draft' && doc.status !== 'Cancelled'
+            ? [{ key: 'amendments', label: `Phụ lục (${doc.amendments.length})`, children: <AmendmentTable rows={doc.amendments} onOpen={openAmendment} /> }]
+            : []),
+          ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          attachmentTab,
+        ]}
+      />
+      {doc && amendmentId && (
+        <ContractAmendmentDrawer contract={doc} amendmentId={amendmentId} onClose={() => openAmendment(null)} onCreated={(id) => openAmendment(id)} />
+      )}
+    </>
   )
 }

@@ -127,6 +127,7 @@ const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = 
   PRL: (id) => `/gia-ncc/bang-gia/${id}`,
   RFQ: (id) => `/dau-thau/rfq/${id}?tab=compare`,
   CTR: (id) => `/mua-hang/hop-dong-khung/${id}`,
+  CTA: (id) => `/mua-hang/hop-dong-khung/phu-luc/${id}`,
   NCC: (id) => `/gia-ncc/duyet-ncc?mo=${id}`,
 }
 

@@ -20,6 +20,12 @@ public static class ApprovalTypes
     /// <summary>Hồ sơ nhà cung cấp: đưa vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng (lát B2). Mã trùng mã màn hình NCC.</summary>
     public const string Supplier = "NCC";
 
+    /// <summary>
+    /// Phụ lục hợp đồng nguyên tắc (lát B4b): cấu hình cấp duyệt riêng với hợp đồng (phụ lục gia hạn thường duyệt nhẹ hơn ký mới), cùng
+    /// quyền duyệt hợp đồng. Chưa cấu hình cấp thì một cấp – ai có quyền duyệt hợp đồng tại công ty đều duyệt được (design.md mục 6.2).
+    /// </summary>
+    public const string ContractAmendment = "CTA";
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
@@ -29,6 +35,7 @@ public static class ApprovalTypes
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),
         new(DocumentTypes.Contract, "Hợp đồng nguyên tắc", Permissions.Purchase.ContractApprove, "Giá trị dự kiến"),
+        new(ContractAmendment, "Phụ lục hợp đồng nguyên tắc", Permissions.Purchase.ContractApprove, "Giá trị dự kiến sau phụ lục"),
     ];
 
     /// <summary>Tìm loại theo mã (không phân biệt hoa thường, bỏ khoảng trắng); null nếu không có duyệt.</summary>

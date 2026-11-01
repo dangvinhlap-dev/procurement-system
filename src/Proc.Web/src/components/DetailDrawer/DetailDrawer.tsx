@@ -33,6 +33,11 @@ export interface DetailDrawerProps {
   initialValues?: object
   /** Chỉ xem: mọi trường bị khóa. */
   readOnly?: boolean
+  /**
+   * Tên form – làm tiền tố id các ô (ví dụ amendment_paymentTerms). Cần khi ngăn kéo mở trên trang có form trùng tên trường, để nhãn
+   * trỏ đúng ô của ngăn kéo.
+   */
+  formName?: string
 }
 
 /**
@@ -53,6 +58,7 @@ export function DetailDrawer({
   form,
   initialValues,
   readOnly = false,
+  formName,
 }: DetailDrawerProps) {
   const [tab, setTab] = useState(tabs[0]?.key)
 
@@ -115,6 +121,7 @@ export function DetailDrawer({
       <Spin spinning={loading}>
         <Form
           form={form}
+          name={formName}
           component={false}
           layout="vertical"
           requiredMark={formRequiredMark(!readOnly)}
