@@ -1123,6 +1123,21 @@ Gom dữ liệu mua 12–24 tháng của từng pháp nhân để phân tích (l
 | Nhập nhầm thì **xóa cả lô** (xóa mọi dòng của lô). Lô ghi nhật ký khi nhập và khi xóa; từng dòng không ghi nhật ký | Lô tới 50.000 dòng; nhật ký lô đủ để truy vết |
 | Quyền: `Analysis.PurchaseHistory.View` (xem), `Analysis.PurchaseHistory.Import` (tải file mẫu, nhập, xóa lô). Danh sách hiện tối đa 5.000 dòng có ngày mua mới nhất – lọc theo lô, khoảng ngày, khớp danh mục để xem hết | Mục 9.1 |
 
+### 18.2 Ánh xạ dữ liệu mua lịch sử (lát E2, 01/11/2026)
+
+Chuẩn hóa mã (bước B3 của đề xuất): gán mã vật tư cũ của từng pháp nhân về **một mã hàng chung**, NCC cũ về NCC trong danh mục, để báo cáo
+phân tích (E3) cộng gộp được giữa các pháp nhân. Màn hình Báo cáo → **Ánh xạ dữ liệu mua** (mã PHMAP).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Bảng `PurchaseHistoryItemMapping` (CompanyId, mã cũ, ItemId; duy nhất theo công ty + mã cũ) và `PurchaseHistorySupplierMapping` (CompanyId, khóa NCC cũ, SupplierId). Ánh xạ **riêng từng pháp nhân**; ghi nhật ký khi tạo, đổi, bỏ | Mỗi pháp nhân tự đặt mã: cùng mã ở hai nơi có thể là hai hàng khác nhau |
+| Khóa mặt hàng cũ = mã vật tư (viết hoa). Khóa NCC cũ = `MST:<mã số thuế>`; dòng không có MST thì `TEN:<tên không dấu, chữ thường, gộp khoảng trắng>` | MST là định danh pháp lý; tên NCC mỗi nơi ghi một kiểu |
+| Màn hình liệt kê từng mã cũ / NCC cũ: số dòng, số dòng đã gán, tổng thành tiền (cộng thẳng, chưa quy đổi ngoại tệ), ngày mua gần nhất, trạng thái (Chưa gán / Gán một phần / Tự khớp / Đã ánh xạ), mã đích; nhiều tiền trước | Làm trước mã có giá trị lớn |
+| **Gợi ý trùng gần đúng**: so tập từ không dấu theo hệ số Dice (điểm = 2 × số từ trùng / tổng số từ × 100). Mặt hàng so tên + quy cách; NCC so tên, bỏ từ loại hình doanh nghiệp (công ty, TNHH, CP, MTV, JSC…). Chưa gõ từ khóa: 5 gợi ý điểm > 0; có từ khóa: tối đa 20 kết quả khớp mã/tên. Mặt hàng chỉ trong nhóm hàng người dùng được xem; NCC mọi trạng thái | Điểm chỉ để xếp hạng – người dùng luôn chọn; dữ liệu cũ có thể là NCC nay đã ngừng |
+| **Lưu ánh xạ** gán đích cho mọi dòng mua lịch sử cùng khóa của công ty (cùng giao dịch); **lần nhập sau** xét ánh xạ trước, rồi mới tự khớp theo mã/MST (mục 18.1). Ánh xạ trỏ tới mặt hàng ngoài nhóm được xem của người nhập thì không áp | Chuẩn hóa một lần, dùng mãi |
+| **Bỏ ánh xạ**: các dòng quay về kết quả tự khớp như lúc nhập (mã trùng mã chung, MST trùng NCC), không khớp thì để trống | Sửa chọn nhầm không mất dữ liệu |
+| Quyền: xem cần `Analysis.PurchaseHistory.View`; lưu/bỏ ánh xạ cần `Analysis.PurchaseHistory.Import` (cùng người lo dữ liệu mua lịch sử) | Không thêm quyền mới |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

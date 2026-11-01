@@ -127,6 +127,45 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("PurchaseHistoryBatch", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistoryItemMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("CompanyId", "SourceCode")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseHistoryItemMapping", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistoryRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -265,9 +304,52 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SupplierId");
 
+                    b.HasIndex("CompanyId", "ItemCode");
+
                     b.HasIndex("CompanyId", "PurchaseDate");
 
+                    b.HasIndex("CompanyId", "SupplierTaxCode");
+
                     b.ToTable("PurchaseHistoryRecord", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistorySupplierMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(310)
+                        .HasColumnType("character varying(310)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("CompanyId", "SourceKey")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseHistorySupplierMapping", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.Documents.DocumentNumbering", b =>
@@ -2933,6 +3015,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistoryItemMapping", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistoryRecord", b =>
                 {
                     b.HasOne("Proc.Domain.Analysis.PurchaseHistoryBatch", null)
@@ -2956,6 +3053,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Analysis.PurchaseHistorySupplierMapping", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Domain.Documents.DocumentNumbering", b =>

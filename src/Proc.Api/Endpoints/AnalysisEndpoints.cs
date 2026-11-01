@@ -5,7 +5,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Dữ liệu mua lịch sử (design.md mục 18.1): nhập Excel, xem, xóa lô. Phạm vi công ty do global query filter và dịch vụ kiểm tra lại.
+/// Dữ liệu mua lịch sử (design.md mục 18.1, 18.2): nhập Excel, xem, xóa lô, ánh xạ mã cũ → mã chung. Phạm vi công ty do global query filter và dịch vụ kiểm tra lại.
 /// </summary>
 public static class AnalysisEndpoints
 {
@@ -51,6 +51,19 @@ public static class AnalysisEndpoints
             .RequirePermission(Permissions.Analysis.PurchaseHistoryImport)
             // API dùng JWT trong header, không dùng cookie, nên không có nguy cơ CSRF – tắt kiểm tra antiforgery cho form tải file.
             .DisableAntiforgery();
+
+        // Ánh xạ mã cũ → mã chung (design.md mục 18.2): xem cần quyền xem, lưu/bỏ ánh xạ cần quyền nhập (cùng người lo dữ liệu này).
+        group.MapGet("/sources", (string kind, IPurchaseHistoryMappingService s, CancellationToken ct) => s.ListSourcesAsync(kind, ct))
+            .RequirePermission(Permissions.Analysis.PurchaseHistoryView);
+        group.MapGet("/candidates", (string kind, string key, string? search, IPurchaseHistoryMappingService s, CancellationToken ct) =>
+                s.ListCandidatesAsync(kind, key, search, ct))
+            .RequirePermission(Permissions.Analysis.PurchaseHistoryView);
+        group.MapPut("/mappings", (SavePurchaseHistoryMappingRequest request, IPurchaseHistoryMappingService s, CancellationToken ct) =>
+                s.SaveAsync(request, ct))
+            .RequirePermission(Permissions.Analysis.PurchaseHistoryImport);
+        group.MapDelete("/mappings", (string kind, string key, IPurchaseHistoryMappingService s, CancellationToken ct) =>
+                s.DeleteAsync(kind, key, ct))
+            .RequirePermission(Permissions.Analysis.PurchaseHistoryImport);
 
         return app;
     }

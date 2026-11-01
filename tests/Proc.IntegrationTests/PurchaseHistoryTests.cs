@@ -24,26 +24,28 @@ public class PurchaseHistoryTests
 
     public PurchaseHistoryTests(ProcApiFactory factory) => _factory = factory;
 
-    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+    internal static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static string Today => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7)).ToString("yyyy-MM-dd");
 
-    private async Task<(HttpClient Head, HttpClient Bha)> AdminAsync()
+    internal static async Task<(HttpClient Head, HttpClient Bha)> AdminAsync(ProcApiFactory factory)
     {
         var userName = $"ph.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA"]);
-        return (await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT"),
-            await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA"));
+        await factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA"]);
+        return (await factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT"),
+            await factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA"));
     }
 
-    private static async Task<T> ReadAsync<T>(HttpResponseMessage response)
+    private Task<(HttpClient Head, HttpClient Bha)> AdminAsync() => AdminAsync(_factory);
+
+    internal static async Task<T> ReadAsync<T>(HttpResponseMessage response)
     {
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(Ct)}");
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;
     }
 
     /// <summary>File .xlsx: dòng 1 tiêu đề, các dòng sau là ô chữ.</summary>
-    private static byte[] Workbook(params string?[][] rows)
+    internal static byte[] Workbook(params string?[][] rows)
     {
         using var workbook = new XLWorkbook();
         var sheet = workbook.Worksheets.Add("Dữ liệu mua");
@@ -61,10 +63,12 @@ public class PurchaseHistoryTests
         return stream.ToArray();
     }
 
-    private static string?[] Row(string itemCode, string date = "15/03/2026", string quantity = "10", string price = "1.234,5", string? taxCode = null) =>
-        ["Phân xưởng cán", itemCode, "Bu lông M8", "Cái", null, date, quantity, price, "10", "Công ty Thép Việt", taxCode, "Có", "khong"];
+    internal static string?[] Row(
+        string itemCode, string date = "15/03/2026", string quantity = "10", string price = "1.234,5", string? taxCode = null,
+        string itemName = "Bu lông M8", string supplierName = "Công ty Thép Việt") =>
+        ["Phân xưởng cán", itemCode, itemName, "Cái", null, date, quantity, price, "10", supplierName, taxCode, "Có", "khong"];
 
-    private static async Task<PurchaseHistoryImportResult> ImportAsync(HttpClient client, byte[] file, bool commit)
+    internal static async Task<PurchaseHistoryImportResult> ImportAsync(HttpClient client, byte[] file, bool commit)
     {
         using var content = new MultipartFormDataContent();
         var part = new ByteArrayContent(file);
@@ -74,27 +78,27 @@ public class PurchaseHistoryTests
             await client.PostAsync($"/api/purchase-history/import?commit={commit.ToString().ToLowerInvariant()}", content, Ct));
     }
 
-    private static async Task<PurchaseHistoryListResult> ListAsync(HttpClient client, string query = "") =>
+    internal static async Task<PurchaseHistoryListResult> ListAsync(HttpClient client, string query = "") =>
         (await client.GetFromJsonAsync<PurchaseHistoryListResult>($"/api/purchase-history?{query}", Ct))!;
 
     /// <summary>Mặt hàng mới ở danh mục chung (tạo ở tổng công ty).</summary>
-    private static async Task<ItemDetailDto> NewItemAsync(HttpClient head)
+    internal static async Task<ItemDetailDto> NewItemAsync(HttpClient head, string name = "Bu lông M8")
     {
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
             new CreateItemCategoryRequest(null, "Nhóm thử mua lịch sử", null, null), Ct));
         return await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Bu lông M8", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
+            new CreateItemRequest(null, name, null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, null, null, false, false, null, null, []), Ct));
     }
 
     /// <summary>NCC mới có MST ngẫu nhiên 10 chữ số.</summary>
-    private static async Task<SupplierDetailDto> NewSupplierAsync(HttpClient head)
+    internal static async Task<SupplierDetailDto> NewSupplierAsync(HttpClient head, string? name = null)
     {
         var taxCode = string.Concat(Guid.NewGuid().ToByteArray().Take(10).Select(b => (char)('0' + b % 10)));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         return await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(null, groupId, $"NCC thử {Guid.NewGuid():N}"[..20], null, false, taxCode, null, null, null,
+            new SaveSupplierRequest(null, groupId, name ?? $"NCC thử {Guid.NewGuid():N}"[..20], null, false, taxCode, null, null, null,
                 null, null, null, null, "Approved", null, null, [], []), Ct));
     }
 
