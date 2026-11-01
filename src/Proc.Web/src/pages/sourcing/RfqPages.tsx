@@ -2,6 +2,7 @@ import {
   CheckOutlined,
   CloseCircleOutlined,
   CloseOutlined,
+  DollarOutlined,
   EditOutlined,
   FileAddOutlined,
   RollbackOutlined,
@@ -10,7 +11,7 @@ import {
   ShoppingCartOutlined,
   StopOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
@@ -25,6 +26,7 @@ import {
   useRfqs,
   useSourcing,
   type Rfq,
+  type RfqDossierItem,
   type RfqListItem,
   type RfqSupplier,
   type SaveQuotationInput,
@@ -312,7 +314,12 @@ export function RfqPage() {
     doc &&
     modal.confirm({
       title: `Duyệt kết quả chọn thầu RFQ ${doc.no}?`,
-      content: `Giá trị trúng thầu ${formatMoney(doc.awardAmount)} đ. Duyệt cấp cuối thì giá trúng thầu vào lịch sử giá, tạo được đơn mua hàng.`,
+      content: (
+        <>
+          <p>Giá trị trúng thầu {formatMoney(doc.awardAmount)} đ. Duyệt cấp cuối thì giá trúng thầu vào lịch sử giá, tạo được đơn mua hàng.</p>
+          <p>{dossierSummary(doc.dossier)}</p>
+        </>
+      ),
       okText: 'Duyệt',
       cancelText: 'Không',
       onOk: async () => {
@@ -370,6 +377,24 @@ export function RfqPage() {
           message.success(`Đã tạo ${created.map((c) => `${c.purchaseOrderNo} (${c.supplierCode})`).join(', ')}.`)
         } catch (e) {
           fail(e, 'Không tạo được đơn mua hàng.')
+        }
+      },
+    })
+
+  const createPriceLists = () =>
+    doc &&
+    modal.confirm({
+      title: 'Tạo bảng giá NCC từ kết quả chọn thầu?',
+      content: 'Mỗi NCC trúng thầu một bảng giá nháp của công ty: giá, % CK, VAT theo báo giá, hiệu lực từ hôm nay tới hết hiệu lực báo giá. Mở bảng giá để kiểm tra rồi gửi duyệt.',
+      okText: 'Tạo bảng giá',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          const created = await mutations.createPriceLists.mutateAsync(doc.id)
+          message.success(`Đã tạo ${created.map((c) => `${c.priceListNo} (${c.supplierCode})`).join(', ')}.`)
+        } catch (e) {
+          fail(e, 'Không tạo được bảng giá.')
         }
       },
     })
@@ -517,6 +542,11 @@ export function RfqPage() {
           Tạo PO
         </Button>
       )}
+      {doc?.actions.canCreatePriceLists && (
+        <Button icon={<DollarOutlined />} onClick={createPriceLists} loading={mutations.createPriceLists.isPending}>
+          Tạo bảng giá
+        </Button>
+      )}
       {doc?.actions.canCancel && (
         <Button danger icon={<StopOutlined />} onClick={cancel}>
           Hủy RFQ
@@ -562,6 +592,15 @@ export function RfqPage() {
                 <ComparisonView rfq={doc} award={award} onAwardChange={setAwardEdits} onQuote={setQuoting} />
               </ConfigProvider>
             ),
+          },
+        ]
+      : []),
+    ...(doc
+      ? [
+          {
+            key: 'dossier',
+            label: `Hồ sơ trình (${doc.dossier.filter((d) => d.isDone).length}/${doc.dossier.length})`,
+            children: <DossierView rfq={doc} />,
           },
         ]
       : []),
@@ -638,13 +677,109 @@ export function RfqPage() {
 }
 
 /**
+ * Câu tóm tắt hồ sơ trình cho hội đồng: đủ bao nhiêu mục, thiếu mục nào (thiếu không chặn gửi duyệt – lát B3b).
+ * @param dossier Các mục hồ sơ trình.
+ */
+function dossierSummary(dossier: RfqDossierItem[]) {
+  const missing = dossier.filter((d) => !d.isDone)
+  return missing.length === 0
+    ? `Hồ sơ trình đủ ${dossier.length}/${dossier.length} mục.`
+    : `Hồ sơ trình đủ ${dossier.length - missing.length}/${dossier.length} mục – còn thiếu: ${missing.map((d) => d.name.toLowerCase()).join(', ')}.`
+}
+
+/**
+ * Tab hồ sơ trình (design.md mục 8.6): đánh dấu mục đã có + ghi chú khi RFQ còn Nháp/Đang nhận báo giá; file đính kèm ở tab Đính kèm.
+ * Bảng so sánh báo giá do hệ thống tự tính. Sau khi gửi duyệt chỉ xem.
+ * @param rfq RFQ đã tải.
+ */
+function DossierView({ rfq }: { rfq: Rfq }) {
+  const { message } = App.useApp()
+  const mutations = useRfqMutations()
+  const [edits, setEdits] = useState<Record<string, { isDone: boolean; note: string }>>({})
+  const editable = rfq.actions.canEditDossier
+  const value = (d: RfqDossierItem) => edits[d.code] ?? { isDone: d.isDone, note: d.note ?? '' }
+  const set = (d: RfqDossierItem, patch: Partial<{ isDone: boolean; note: string }>) => setEdits({ ...edits, [d.code]: { ...value(d), ...patch } })
+
+  const save = async () => {
+    try {
+      await mutations.saveDossier.mutateAsync({
+        id: rfq.id,
+        items: Object.entries(edits).map(([code, v]) => ({ code, isDone: v.isDone, note: orNull(v.note) })),
+      })
+      setEdits({})
+      message.success('Đã lưu hồ sơ trình.')
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không lưu được hồ sơ trình.')
+    }
+  }
+
+  return (
+    // Tab vẫn thao tác được dù đầu phiếu đã khóa sau khi gửi NCC – quyền sửa theo canEditDossier.
+    <ConfigProvider componentDisabled={!editable}>
+      <Flex vertical gap={6}>
+        <Table<RfqDossierItem>
+          aria-label="Hồ sơ trình"
+          size="small"
+          bordered
+          pagination={false}
+          rowKey="code"
+          dataSource={rfq.dossier}
+          columns={[
+            { title: 'Mục hồ sơ', key: 'name', width: 300, render: (_, d) => d.name },
+            {
+              title: 'Đã có',
+              key: 'done',
+              width: 80,
+              align: 'center',
+              render: (_, d) => (
+                <Checkbox
+                  aria-label={`Đã có ${d.name}`}
+                  checked={value(d).isDone}
+                  disabled={d.isAutomatic || !editable}
+                  onChange={(e) => set(d, { isDone: e.target.checked })}
+                />
+              ),
+            },
+            {
+              title: 'Ghi chú (số biên bản, nơi lưu…)',
+              key: 'note',
+              render: (_, d) =>
+                d.isAutomatic ? (
+                  'Hệ thống lập từ các báo giá đã nhập (tab So sánh & chọn thầu)'
+                ) : editable ? (
+                  <Input aria-label={`Ghi chú ${d.name}`} maxLength={500} value={value(d).note} onChange={(e) => set(d, { note: e.target.value })} />
+                ) : (
+                  d.note
+                ),
+            },
+          ]}
+        />
+        {editable && (
+          <Space>
+            <Button icon={<SaveOutlined />} onClick={save} disabled={Object.keys(edits).length === 0} loading={mutations.saveDossier.isPending}>
+              Lưu hồ sơ trình
+            </Button>
+            <span>File biên bản, tờ trình… đính kèm ở tab Đính kèm.</span>
+          </Space>
+        )}
+      </Flex>
+    </ConfigProvider>
+  )
+}
+
+/**
  * Thông báo đầu RFQ: chờ hội đồng duyệt kết quả, lý do bị từ chối (đang nhận báo giá lại), giải trình mời thiếu NCC (lát B3), lý do chỉ xem.
  * @param doc RFQ đã tải.
  */
 function RfqNotices({ doc }: { doc: Rfq }) {
   const notices = [
     doc.status === 'AwardPending' && (
-      <Alert key="pending" type="info" showIcon title={`Kết quả chọn thầu đang chờ hội đồng duyệt – giá trị trúng thầu ${formatMoney(doc.awardAmount)} đ.`} />
+      <Alert
+        key="pending"
+        type="info"
+        showIcon
+        title={`Kết quả chọn thầu đang chờ hội đồng duyệt – giá trị trúng thầu ${formatMoney(doc.awardAmount)} đ. ${dossierSummary(doc.dossier)}`}
+      />
     ),
     doc.rejectReason && doc.status === 'Sent' && <Alert key="reject" type="warning" showIcon title={`Kết quả chọn thầu bị từ chối: ${doc.rejectReason}`} />,
     doc.fewSuppliersReason && <Alert key="few" type="warning" showIcon title={`Mời ít hơn ${doc.minSuppliers} NCC – giải trình: ${doc.fewSuppliersReason}`} />,
@@ -754,6 +889,7 @@ function ComparisonView({
     { key: 'total', label: 'Tổng điểm (thang 10)', value: (s) => <strong>{formatQuantity(s.totalScore)}</strong> },
     { key: 'awarded', label: 'Giá trị trúng thầu', value: (s) => (s.awardedAmount ? formatMoney(s.awardedAmount) : '') },
     { key: 'po', label: 'Đơn mua hàng', value: (s) => s.purchaseOrderNo },
+    { key: 'priceList', label: 'Bảng giá NCC', value: (s) => s.priceListNo },
     ...(rfq.actions.canQuote
       ? [
           {

@@ -70,6 +70,11 @@ public static class SourcingEndpoints
             .RequirePermission(Permissions.Purchase.PoCreate);
         rfq.MapPost("/{id:guid}/cancel", (Guid id, IRfqService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
+        // Lát B3b: hồ sơ trình; sinh bảng giá nháp từ kết quả đã duyệt cần quyền lập bảng giá.
+        rfq.MapPut("/{id:guid}/dossier", (Guid id, SaveRfqDossierRequest request, IRfqService s, CancellationToken ct) => s.SaveDossierAsync(id, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
+        rfq.MapPost("/{id:guid}/create-price-lists", (Guid id, IRfqService s, CancellationToken ct) => s.CreatePriceListsAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.PriceListManage);
         return app;
     }
 }

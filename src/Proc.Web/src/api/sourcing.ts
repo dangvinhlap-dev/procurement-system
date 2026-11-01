@@ -204,6 +204,26 @@ export interface RfqSupplier {
   purchaseOrderId: string | null
   purchaseOrderNo: string | null
   lines: QuotationLine[]
+  /** Bảng giá NCC nháp sinh từ kết quả thầu (lát B3b). */
+  priceListId: string | null
+  priceListNo: string | null
+}
+
+/** Một mục hồ sơ trình kết quả chọn thầu (lát B3b); isAutomatic = hệ thống tự tính (bảng so sánh). */
+export interface RfqDossierItem {
+  code: string
+  name: string
+  isDone: boolean
+  note: string | null
+  isAutomatic: boolean
+}
+
+/** Bảng giá NCC nháp vừa sinh từ kết quả chọn thầu. */
+export interface CreatedPriceList {
+  supplierId: string
+  supplierCode: string
+  priceListId: string
+  priceListNo: string
 }
 
 /** Trọng số tiêu chí (%), tổng 100. */
@@ -247,6 +267,10 @@ export interface Rfq {
     canApprove: boolean
     /** Rút kết quả đang chờ duyệt về để chọn lại. */
     canRecall: boolean
+    /** Sửa hồ sơ trình (Nháp/Đang nhận báo giá). */
+    canEditDossier: boolean
+    /** Sinh bảng giá nháp từ kết quả đã duyệt. */
+    canCreatePriceLists: boolean
   }
   /** Giải trình khi mời ít hơn số NCC tối thiểu. */
   fewSuppliersReason: string | null
@@ -258,6 +282,8 @@ export interface Rfq {
   rejectReason: string | null
   /** Lịch sử duyệt kết quả chọn thầu. */
   approvals: ApprovalStep[]
+  /** Hồ sơ trình kết quả chọn thầu. */
+  dossier: RfqDossierItem[]
 }
 
 /** Nội dung RFQ gửi lên. */
@@ -347,6 +373,18 @@ export function useRfqMutations() {
     }),
     cancel: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/cancel`, { method: 'POST' }), onSuccess }),
     recall: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/recall`, { method: 'POST' }), onSuccess }),
+    saveDossier: useMutation({
+      mutationFn: ({ id, items }: { id: string; items: { code: string; isDone: boolean; note: string | null }[] }) =>
+        apiFetch<Rfq>(`/api/rfqs/${id}/dossier`, { method: 'PUT', body: { items } }),
+      onSuccess,
+    }),
+    createPriceLists: useMutation({
+      mutationFn: (id: string) => apiFetch<CreatedPriceList[]>(`/api/rfqs/${id}/create-price-lists`, { method: 'POST' }),
+      onSuccess: () => {
+        onSuccess()
+        void queryClient.invalidateQueries({ queryKey: ['price-lists'] })
+      },
+    }),
     approve: useMutation({
       mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
         apiFetch<Rfq>(`/api/rfqs/${id}/approve`, { method: 'POST', body: { comment: comment ?? null } }),

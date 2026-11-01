@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Organization;
+using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
@@ -28,6 +29,7 @@ public sealed class RfqService : IRfqService
     private readonly IClock _clock;
     private readonly IPurchaseOrderService _orders;
     private readonly ISystemParameterService _parameters;
+    private readonly IPriceListService _priceLists;
     private readonly ApprovalEngine _approvals;
 
     /// <summary>Tạo dịch vụ.</summary>
@@ -37,9 +39,10 @@ public sealed class RfqService : IRfqService
     /// <param name="clock">Đồng hồ.</param>
     /// <param name="orders">Dịch vụ đơn mua hàng.</param>
     /// <param name="parameters">Tham số công ty (số NCC tối thiểu khi gửi).</param>
+    /// <param name="priceLists">Dịch vụ bảng giá NCC (sinh bảng giá từ kết quả thầu).</param>
     public RfqService(
         ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders,
-        ISystemParameterService parameters)
+        ISystemParameterService parameters, IPriceListService priceLists)
     {
         _db = db;
         _scope = scope;
@@ -47,6 +50,7 @@ public sealed class RfqService : IRfqService
         _clock = clock;
         _orders = orders;
         _parameters = parameters;
+        _priceLists = priceLists;
         _approvals = new ApprovalEngine(db, scope, clock);
     }
 
@@ -229,6 +233,56 @@ public sealed class RfqService : IRfqService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<RfqDto> SaveDossierAsync(Guid id, SaveRfqDossierRequest request, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(id, cancellationToken);
+        rfq.SetDossier(request.Items.Select(i => new RfqDossierData((i.Code ?? string.Empty).Trim().ToUpperInvariant(), i.IsDone, i.Note)).ToList());
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CreatedPriceListDto>> CreatePriceListsAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(id, cancellationToken);
+        if (rfq.Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {rfq.No} chưa được duyệt kết quả chọn thầu.");
+        var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var vatByItem = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.VatCode, cancellationToken);
+        var codes = await _db.Suppliers.AsNoTracking().Where(s => rfq.Suppliers.Select(x => x.SupplierId).Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
+        var today = _clock.TodayInVietnam();
+        var created = new List<CreatedPriceListDto>();
+        // Mỗi NCC một bảng giá nháp, lưu lần lượt như "Tạo PO": lỗi ở NCC sau không xóa bảng đã tạo; bấm lại chỉ tạo phần còn thiếu.
+        foreach (var supplier in rfq.Suppliers.Where(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)))
+        {
+            // Hai dòng RFQ cùng mặt hàng × ĐVT thành một bậc giá (bậc từ SL 0): lấy giá sau CK thấp hơn – bảng giá không cho trùng bậc.
+            var lines = rfq.Lines.Where(l => l.AwardedSupplierId == supplier.SupplierId).OrderBy(l => l.LineNo)
+                .Select(l => (Line: l, Quote: supplier.QuotationLines.Single(q => q.RfqLineId == l.Id)))
+                .GroupBy(x => (x.Line.ItemId, x.Line.UomId))
+                .Select(g => g.OrderBy(x => x.Quote.UnitPrice * (100m - x.Quote.DiscountPct)).First())
+                .Select(x => new SavePriceListLineRequest(
+                    null, x.Line.ItemId, x.Line.UomId, 0, x.Quote.UnitPrice, x.Quote.DiscountPct, x.Quote.VatCode ?? vatByItem.GetValueOrDefault(x.Line.ItemId),
+                    $"Giá trúng thầu {rfq.No}"))
+                .ToList();
+            // Hiệu lực tới ngày hết hiệu lực của báo giá; báo giá đã hết hạn thì để trống và ghi chú để người lập bảng giá xem lại.
+            var validTo = supplier.ValidUntil is { } until && until >= today ? until : (DateOnly?)null;
+            var note = supplier.ValidUntil is { } expired && expired < today
+                ? $"Từ kết quả chọn thầu {rfq.No}. Báo giá hết hiệu lực ngày {expired:dd/MM/yyyy} – kiểm tra lại hiệu lực."
+                : $"Từ kết quả chọn thầu {rfq.No}.";
+            var title = $"Giá trúng thầu {rfq.No} – {rfq.Title}";
+            var list = await _priceLists.CreateAsync(
+                new SavePriceListRequest(supplier.SupplierId, title.Length > 200 ? title[..200] : title, false, today, validTo, null, note, lines),
+                cancellationToken);
+            rfq.LinkPriceList(supplier.SupplierId, list.Id);
+            await _db.SaveChangesAsync(cancellationToken);
+            created.Add(new CreatedPriceListDto(supplier.SupplierId, codes.GetValueOrDefault(supplier.SupplierId) ?? "", list.Id, list.No));
+        }
+
+        if (created.Count == 0) throw new BusinessRuleException("Mọi NCC trúng thầu đã có bảng giá.");
+        return created;
+    }
+
     /// <summary>Đọc trạng thái từ chuỗi.</summary>
     /// <exception cref="BusinessRuleException">Khi trạng thái không hợp lệ.</exception>
     internal static RfqStatus ParseStatus(string value) =>
@@ -237,7 +291,7 @@ public sealed class RfqService : IRfqService
             : throw new BusinessRuleException("Trạng thái phải là Draft, Sent, AwardPending, Awarded hoặc Cancelled.");
 
     private IQueryable<Rfq> Query() =>
-        _db.Rfqs.Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(s => s.QuotationLines).AsSplitQuery();
+        _db.Rfqs.Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(s => s.QuotationLines).Include(r => r.DossierItems).AsSplitQuery();
 
     private async Task<Rfq> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -324,6 +378,9 @@ public sealed class RfqService : IRfqService
             .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
         var orderIds = rfq.Suppliers.Select(s => s.PurchaseOrderId).OfType<Guid>().ToList();
         var orderNos = await _db.PurchaseOrders.AsNoTracking().Where(o => orderIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.No, cancellationToken);
+        var priceListIds = rfq.Suppliers.Select(s => s.PriceListId).OfType<Guid>().ToList();
+        var priceListNos = await _db.SupplierPriceLists.AsNoTracking().Where(p => priceListIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.No, cancellationToken);
         var sourcingNo = rfq.SourcingId is { } sid
             ? await _db.SourcingRequests.AsNoTracking().Where(s => s.Id == sid).Select(s => s.No).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -357,7 +414,8 @@ public sealed class RfqService : IRfqService
                 return new RfqSupplierDto(
                     s.SupplierId, info?.Code ?? "", info?.Name ?? "", info?.Status.ToString() ?? "", s.HasQuoted, s.QuoteDate, s.ValidUntil, s.PaymentTerms,
                     s.QualityScore, s.DeliveryScore, s.PaymentScore, s.WarrantyScore, s.Note, priceScore, total, quoteLines.Count, awarded,
-                    s.PurchaseOrderId, s.PurchaseOrderId is { } po ? orderNos.GetValueOrDefault(po) : null, quoteLines);
+                    s.PurchaseOrderId, s.PurchaseOrderId is { } po ? orderNos.GetValueOrDefault(po) : null, quoteLines,
+                    s.PriceListId, s.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null);
             })
             .OrderBy(s => s.SupplierCode)
             .ToList();
@@ -386,14 +444,18 @@ public sealed class RfqService : IRfqService
             rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null,
             readOnly,
             canApprove,
-            rfq.IsAwaitingApproval && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward));
+            rfq.IsAwaitingApproval && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward),
+            rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null,
+            rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Pricing.PriceListManage)
+                && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)));
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,
             new RfqWeightsDto(weights.Price, weights.Quality, weights.Delivery, weights.Payment, weights.Warranty), rfq.Note, rfq.Status.ToString(),
             rfq.CreatedAt, rfq.CreatedBy is { } c ? userNames.GetValueOrDefault(c) : null, rfq.SentAt, rfq.AwardedAt,
             await _parameters.RfqMinSuppliersAsync(cancellationToken), lines, supplierDtos, actions, rfq.FewSuppliersReason, rfq.ApprovalAmount,
-            rfq.AwardedBy is { } a ? userNames.GetValueOrDefault(a) : null, rfq.RejectReason, approvals);
+            rfq.AwardedBy is { } a ? userNames.GetValueOrDefault(a) : null, rfq.RejectReason, approvals,
+            rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList());
     }
 
     private static RfqHeader ToHeader(SaveRfqRequest r) =>

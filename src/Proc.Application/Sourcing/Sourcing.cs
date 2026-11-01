@@ -87,7 +87,19 @@ public sealed record RfqSupplierDto(
     Guid SupplierId, string SupplierCode, string SupplierName, string SupplierStatus, bool HasQuoted, DateOnly? QuoteDate, DateOnly? ValidUntil,
     string? PaymentTerms, decimal QualityScore, decimal DeliveryScore, decimal PaymentScore, decimal WarrantyScore, string? Note,
     decimal PriceScore, decimal TotalScore, int QuotedLineCount, decimal AwardedAmount, Guid? PurchaseOrderId, string? PurchaseOrderNo,
-    IReadOnlyList<QuotationLineDto> Lines);
+    IReadOnlyList<QuotationLineDto> Lines, Guid? PriceListId = null, string? PriceListNo = null);
+
+/// <summary>Một mục hồ sơ trình (lát B3b); IsAutomatic = hệ thống tự tính (bảng so sánh).</summary>
+public sealed record RfqDossierItemDto(string Code, string Name, bool IsDone, string? Note, bool IsAutomatic);
+
+/// <summary>Lưu đánh dấu hồ sơ trình (mục không gửi giữ nguyên).</summary>
+public sealed record SaveRfqDossierRequest(IReadOnlyList<SaveRfqDossierItemRequest> Items);
+
+/// <summary>Đánh dấu một mục hồ sơ trình.</summary>
+public sealed record SaveRfqDossierItemRequest(string Code, bool IsDone, string? Note);
+
+/// <summary>Bảng giá NCC nháp vừa sinh từ kết quả chọn thầu (lát B3b).</summary>
+public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, Guid PriceListId, string PriceListNo);
 
 /// <summary>
 /// Thao tác được phép trên RFQ. CanAward = chọn thầu và gửi duyệt; CanApprove = người dùng duyệt/từ chối được bước đang đến lượt;
@@ -95,7 +107,7 @@ public sealed record RfqSupplierDto(
 /// </summary>
 public sealed record RfqActions(
     bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
-    bool CanRecall);
+    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false);
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);
@@ -108,7 +120,8 @@ public sealed record RfqDto(
     Guid Id, string No, DateOnly Date, string Title, DateOnly Deadline, Guid? SourcingId, string? SourcingNo, RfqWeightsDto Weights, string? Note,
     string Status, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? SentAt, DateTimeOffset? AwardedAt, int MinSuppliers,
     IReadOnlyList<RfqLineDto> Lines, IReadOnlyList<RfqSupplierDto> Suppliers, RfqActions Actions, string? FewSuppliersReason,
-    decimal AwardAmount, string? AwardedByName, string? RejectReason, IReadOnlyList<ApprovalStepDto> Approvals);
+    decimal AwardAmount, string? AwardedByName, string? RejectReason, IReadOnlyList<ApprovalStepDto> Approvals,
+    IReadOnlyList<RfqDossierItemDto> Dossier);
 
 /// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
 public sealed record SendRfqRequest(string? Reason);
@@ -220,6 +233,22 @@ public interface IRfqService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
     Task<RfqDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lưu đánh dấu hồ sơ trình (Nháp/Đang nhận báo giá).</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Các mục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ.</returns>
+    Task<RfqDto> SaveDossierAsync(Guid id, SaveRfqDossierRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sinh bảng giá NCC nháp cho mỗi NCC trúng thầu chưa có bảng giá (RFQ đã duyệt kết quả): giá theo báo giá, hiệu lực từ hôm nay; bảng
+    /// giá vẫn phải gửi duyệt (design.md mục 8.5).
+    /// </summary>
+    /// <param name="id">Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các bảng giá vừa sinh.</returns>
+    Task<IReadOnlyList<CreatedPriceListDto>> CreatePriceListsAsync(Guid id, CancellationToken cancellationToken);
 }
 
 /// <summary>Kiểm tra dữ liệu lưu phiếu tìm nguồn.</summary>
