@@ -1197,6 +1197,17 @@ phân quyền** – phần mềm không viết cứng cấp duyệt hay người
 
 Không có migration (mã loại lưu ở cột `DocType` sẵn có; quyền mới đồng bộ khi khởi động).
 
+**Duyệt hồ sơ NCC qua nhiều công ty** (yêu cầu người dùng 01/11/2026 – làm ở lát B2; khác quy tắc "duyệt tại công ty của phiếu" ở trên vì
+NCC là danh mục dùng chung, không thuộc một công ty):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Yêu cầu duyệt NCC (đưa vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng) đi **hai chặng**: chặng 1 – mọi **công ty liên quan** duyệt xong; chặng 2 – **Tổng công ty** duyệt lần cuối. Chưa xong chặng 1 thì Tổng công ty chưa thấy để duyệt | Yêu cầu người dùng: công ty liên quan duyệt trước, tổng công ty duyệt cuối |
+| Công ty liên quan = công ty đã áp dụng NCC (`SupplierCompany`, mục 5.9) **đang giao dịch**, chốt lúc gửi duyệt (sau đó thêm/bớt áp dụng không đổi lượt đang chạy). Liên quan 2 công ty thì cả 2 phải duyệt xong. Không công ty nào liên quan thì chỉ có chặng Tổng công ty. Tổng công ty có áp dụng NCC thì không duyệt hai lần – chỉ chặng cuối | Mặc định do Claude đề xuất – người dùng xác nhận khi làm B2 |
+| Trong chặng 1, các công ty duyệt **song song** (không chờ nhau); trong mỗi công ty duyệt lần lượt các cấp theo quy trình NCC **của công ty đó** (APRL). Chặng 2 theo quy trình NCC của Tổng công ty. Công ty chưa cấu hình → một cấp, ai có quyền `MasterData.Supplier.Approve` tại công ty đó cũng duyệt được | Số cấp do người dùng cấu hình; công ty nào duyệt do phân quyền |
+| Bất kỳ công ty nào **từ chối** (bắt buộc lý do) → cả yêu cầu bị từ chối, các bước còn chờ ở mọi công ty bỏ qua, yêu cầu về nháp; gửi lại là lượt mới, duyệt lại từ đầu | Một công ty không đồng ý thì không đưa NCC vào dùng chung |
+| Người duyệt mỗi bước phải có quyền duyệt (và vai trò nếu cấp có vai trò) **tại công ty của bước đó**; người lập yêu cầu không tự duyệt ở bất kỳ chặng nào. CSDL: `ApprovalStep` đã có `CompanyId` từng bước; thêm cột chặng (`Stage`) – migration ở lát B2 | Tách người lập – người duyệt |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
