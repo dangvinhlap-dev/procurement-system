@@ -220,6 +220,23 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Duyệt xong kết quả chọn thầu đang chờ duyệt ngay trong CSDL (bỏ qua các bước chờ, RFQ Đã chọn thầu) – dùng khi test nghiệp vụ khác
+    /// cần RFQ đã chọn thầu. Luồng duyệt thật kiểm tra ở <c>SourcingTests</c>.
+    /// </summary>
+    /// <param name="rfqId">Id RFQ đã chọn thầu (chờ duyệt).</param>
+    public async Task FinishRfqAwardApprovalAsync(Guid rfqId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var rfq = await db.Rfqs.IgnoreQueryFilters().SingleAsync(r => r.Id == rfqId);
+        foreach (var step in await db.ApprovalSteps.IgnoreQueryFilters()
+                     .Where(st => st.DocumentId == rfqId && st.Status == Proc.Domain.Purchasing.ApprovalStepStatus.Pending).ToListAsync())
+            step.Skip();
+        rfq.MarkApproved(DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>
     public const string TestPassword = "matkhau123";
 

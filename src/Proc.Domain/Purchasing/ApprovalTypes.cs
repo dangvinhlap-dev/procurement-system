@@ -85,4 +85,11 @@ public interface IApprovalSubject
 
     /// <summary>Bị từ chối: về trạng thái sửa được, giữ lý do.</summary>
     void ReturnToDraft(string? reason);
+
+    /// <summary>
+    /// Người dùng có phải người lập (không được tự duyệt, không nhận thông báo chờ duyệt) không. Mặc định là người tạo; đối tượng có
+    /// người đề xuất riêng (ví dụ người chọn thầu của RFQ) thì tính cả người đó.
+    /// </summary>
+    /// <param name="userId">Người dùng.</param>
+    bool IsPreparedBy(Guid userId) => CreatedBy == userId;
 }

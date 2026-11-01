@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveRfqAward, approveSupplier, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
- * Tìm nguồn → RFQ → báo giá 3 NCC → so sánh → chọn thầu → PO nháp (design.md mục 8.3, 8.4), ở BHA.
+ * Tìm nguồn → RFQ → báo giá 3 NCC → so sánh → chọn thầu → hội đồng duyệt → PO nháp (design.md mục 8.3, 8.4, 8.6), ở BHA.
  * Mặt hàng và NCC thứ nhất lấy từ seedPostedReceipt; thêm 2 NCC đã duyệt, áp dụng tại BHA qua API.
  */
 
@@ -79,8 +79,15 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
   await expect(page.getByLabel('NCC trúng dòng 1')).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/rfq-comparison.png' })
 
-  // 4. Chọn thầu (mặc định NCC giá thấp nhất) → Tạo PO nháp cho B.
-  await confirm(page, 'Chọn thầu', 'Chọn thầu', /Đã chọn thầu RFQ/)
+  // 4. Chọn thầu (mặc định NCC giá thấp nhất) → chờ hội đồng duyệt (người chọn thầu không tự duyệt) → duyệt → Tạo PO nháp cho B.
+  await confirm(page, 'Chọn thầu, gửi duyệt', 'Chọn thầu, gửi duyệt', /Đã gửi duyệt kết quả chọn thầu RFQ/)
+  await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt kết quả')
+  await expect(page.getByText(/đang chờ hội đồng duyệt – giá trị trúng thầu/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Duyệt$/ })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+  await page.screenshot({ path: 'e2e/screenshots/rfq-award-pending.png' })
+  await approveRfqAward(request, page.url().split('/').pop()!.split('?')[0])
+  await page.reload()
   await expect(page.locator('.document-form-title')).toContainText('Đã chọn thầu')
   await confirm(page, 'Tạo PO', 'Tạo PO', new RegExp(`Đã tạo PO-BHA-\\d{4}-\\d{4} \\(${s2}\\)\\.`))
   await expect(page.getByRole('table', { name: 'Điểm nhà cung cấp' })).toContainText(/PO-BHA-\d{4}-\d{4}/)

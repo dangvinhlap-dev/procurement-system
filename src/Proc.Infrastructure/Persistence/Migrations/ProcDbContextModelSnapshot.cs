@@ -2708,11 +2708,17 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
                     b.Property<DateOnly?>("AwardDate")
                         .HasColumnType("date");
 
                     b.Property<DateTimeOffset?>("AwardedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AwardedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
@@ -2732,6 +2738,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("DeliveryWeight")
                         .HasColumnType("integer");
 
+                    b.Property<string>("FewSuppliersReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("No")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2749,6 +2759,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("QualityWeight")
                         .HasColumnType("integer");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("timestamp with time zone");

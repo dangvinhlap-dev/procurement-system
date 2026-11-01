@@ -1,6 +1,8 @@
 using Proc.Domain.Common;
+using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Pricing;
+using Proc.Domain.Purchasing;
 
 namespace Proc.Domain.Sourcing;
 
@@ -247,6 +249,9 @@ public enum RfqStatus
 
     /// <summary>Đã hủy.</summary>
     Cancelled = 4,
+
+    /// <summary>Đã chọn thầu, chờ hội đồng duyệt kết quả (lát B3 – design.md mục 8.6).</summary>
+    AwardPending = 5,
 }
 
 /// <summary>Trọng số tiêu chí đánh giá (%), tổng 100 (design.md mục 8.4 bước 1).</summary>
@@ -295,10 +300,11 @@ public sealed record AwardLineData(Guid RfqLineId, Guid? SupplierId, string? Rea
 /// <summary>
 /// Yêu cầu báo giá / đấu thầu (design.md mục 8.4): danh sách mặt hàng, hạn nộp, trọng số tiêu chí; gửi cho đủ số NCC tối thiểu
 /// (tham số công ty <see cref="Organization.CompanyParameter.RfqMinSuppliers"/>); nhập báo giá từng NCC; chọn NCC trúng thầu theo dòng; từ kết quả sinh PO nháp.
-/// Vòng đời: Nháp → Đã gửi → Đã chọn thầu; hủy được khi Nháp/Đã gửi.
+/// Vòng đời: Nháp → Đã gửi → Chờ duyệt kết quả → Đã chọn thầu; từ chối/rút về Đã gửi; hủy được khi Nháp/Đã gửi.
+/// Kết quả chọn thầu đi qua quy trình duyệt dùng chung loại RFQ (design.md mục 8.6, 18.6).
 /// </summary>
 [Auditable("Yêu cầu báo giá", LabelProperty = nameof(No))]
-public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
+public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
 {
     private readonly List<RfqLine> _lines = [];
     private readonly List<RfqSupplier> _suppliers = [];
@@ -355,8 +361,33 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
     /// <summary>Thời điểm chọn thầu (UTC).</summary>
     public DateTimeOffset? AwardedAt { get; private set; }
 
-    /// <summary>Ngày chọn thầu (giờ Việt Nam) – ngày của giá trúng thầu trong lịch sử giá.</summary>
+    /// <summary>Ngày chọn thầu (giờ Việt Nam) – ngày của giá trúng thầu trong lịch sử giá (chỉ tính khi kết quả đã duyệt).</summary>
     public DateOnly? AwardDate { get; private set; }
+
+    /// <summary>Người chọn thầu (đề xuất kết quả) – không tự duyệt kết quả của mình.</summary>
+    public Guid? AwardedBy { get; private set; }
+
+    /// <summary>Giải trình khi mời ít hơn số NCC tối thiểu (null = mời đủ).</summary>
+    public string? FewSuppliersReason { get; private set; }
+
+    /// <inheritdoc />
+    public int ApprovalRound { get; private set; }
+
+    /// <summary>Lý do từ chối kết quả chọn thầu gần nhất (xóa khi gửi duyệt lại).</summary>
+    public string? RejectReason { get; private set; }
+
+    /// <inheritdoc />
+    public string DocType => DocumentTypes.RequestForQuotation;
+
+    /// <inheritdoc />
+    public bool IsAwaitingApproval => Status == RfqStatus.AwardPending;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Giá trị trúng thầu (sau CK, trước VAT) = Σ SL × đơn giá × (100 − %CK)/100 của các dòng đã trao, làm tròn 2 số mỗi dòng.
+    /// Ví dụ 100 cái × 50.000 + 10 thùng × 600.000 × 95% = 5.000.000 + 5.700.000 = 10.700.000.
+    /// </remarks>
+    public decimal ApprovalAmount => _lines.Sum(AwardedAmount);
 
     /// <summary>Các dòng hàng.</summary>
     public IReadOnlyList<RfqLine> Lines => _lines;
@@ -431,14 +462,20 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
     /// <summary>Gửi RFQ cho NCC: Nháp → Đã gửi.</summary>
     /// <param name="at">Thời điểm gửi.</param>
     /// <param name="minSuppliers">Số NCC tối thiểu theo tham số của công ty lập RFQ.</param>
-    /// <exception cref="BusinessRuleException">Khi không còn nháp, chưa có dòng hoặc mời ít hơn <paramref name="minSuppliers"/> NCC.</exception>
-    public void Send(DateTimeOffset at, int minSuppliers)
+    /// <param name="fewSuppliersReason">Giải trình khi mời ít hơn <paramref name="minSuppliers"/> NCC (bỏ qua khi mời đủ).</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp, chưa có dòng, chưa mời NCC nào, hoặc mời thiếu mà không giải trình.</exception>
+    public void Send(DateTimeOffset at, int minSuppliers, string? fewSuppliersReason)
     {
         EnsureDraft();
         if (_lines.Count == 0) throw new BusinessRuleException("RFQ phải có ít nhất một dòng hàng.");
-        // Đủ số NCC tối thiểu để có cạnh tranh – design.md mục 8.4 bước 2; con số là tham số công ty (mục 5.4).
-        if (_suppliers.Count < minSuppliers)
-            throw new BusinessRuleException($"Phải mời ít nhất {minSuppliers} nhà cung cấp mới gửi RFQ được (đang có {_suppliers.Count}).");
+        if (_suppliers.Count == 0) throw new BusinessRuleException("Hãy mời ít nhất một nhà cung cấp.");
+        // Số NCC tối thiểu để có cạnh tranh là tham số công ty (mục 5.4). Lát B3 (M3): mời thiếu vẫn gửi được khi có giải trình –
+        // ngoại lệ được ghi lại, còn kết quả chọn thầu luôn phải qua duyệt (design.md mục 8.6).
+        var reason = Clean(fewSuppliersReason);
+        if (_suppliers.Count < minSuppliers && reason is null)
+            throw new BusinessRuleException(
+                $"Mời ít hơn {minSuppliers} nhà cung cấp (đang có {_suppliers.Count}) thì phải ghi giải trình mới gửi RFQ được.");
+        FewSuppliersReason = _suppliers.Count < minSuppliers ? reason : null;
         Status = RfqStatus.Sent;
         SentAt = at;
     }
@@ -447,7 +484,7 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
     /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi, NCC không được mời, dòng sai.</exception>
     public RfqSupplier SaveQuotation(Guid supplierId, QuotationHeader header, IReadOnlyList<QuotationLineData> lines)
     {
-        if (Status != RfqStatus.Sent) throw new BusinessRuleException($"RFQ {No} không ở trạng thái đang nhận báo giá.");
+        EnsureSent();
         var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)
             ?? throw new BusinessRuleException("NCC này không có trong danh sách được mời của RFQ.");
         foreach (var line in lines)
@@ -459,19 +496,25 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
 
     /// <summary>
     /// Chọn thầu: mỗi dòng chọn một NCC đã chào giá dòng đó (hoặc không trao). Không chọn NCC có giá quy đổi thấp nhất của dòng thì
-    /// bắt buộc ghi lý do (design.md mục 8.4 bước 4). Phải trao ít nhất một dòng. Đã gửi → Đã chọn thầu.
+    /// bắt buộc ghi lý do (design.md mục 8.4 bước 4). Phải trao ít nhất một dòng. Trạng thái chưa đổi – sau đó phải gửi duyệt
+    /// (<see cref="Submit"/>) để hội đồng duyệt kết quả (lát B3).
     /// </summary>
+    /// <param name="awards">Lựa chọn từng dòng.</param>
+    /// <param name="awardedBy">Người chọn thầu.</param>
+    /// <param name="today">Ngày chọn thầu (giờ Việt Nam).</param>
     /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi hoặc lựa chọn sai quy tắc.</exception>
-    public void Award(IReadOnlyList<AwardLineData> awards, DateTimeOffset at, DateOnly today)
+    public void Award(IReadOnlyList<AwardLineData> awards, Guid awardedBy, DateOnly today)
     {
-        if (Status != RfqStatus.Sent) throw new BusinessRuleException($"RFQ {No} không ở trạng thái đang nhận báo giá.");
+        EnsureSent();
         if (!awards.Any(a => a.SupplierId is not null)) throw new BusinessRuleException("Hãy chọn NCC trúng thầu cho ít nhất một dòng.");
+        // Kiểm tra hết các dòng trước rồi mới ghi, để lựa chọn sai không làm hỏng lựa chọn đang lưu.
+        var chosen = new List<(RfqLine Line, Guid? SupplierId, string? Reason)>();
         foreach (var line in _lines)
         {
             var award = awards.FirstOrDefault(a => a.RfqLineId == line.Id);
             if (award?.SupplierId is not { } supplierId)
             {
-                line.SetAward(null, null);
+                chosen.Add((line, null, null));
                 continue;
             }
 
@@ -479,19 +522,58 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
                 .Select(s => (s.SupplierId, Quote: s.QuotationLines.FirstOrDefault(q => q.RfqLineId == line.Id)))
                 .Where(x => x.Quote is not null)
                 .ToList();
-            var chosen = quotes.FirstOrDefault(x => x.SupplierId == supplierId).Quote
+            var quote = quotes.FirstOrDefault(x => x.SupplierId == supplierId).Quote
                 ?? throw new BusinessRuleException($"Dòng {line.LineNo}: NCC được chọn chưa chào giá dòng này.");
             var lowest = quotes.Min(x => x.Quote!.BaseNetPrice(line.UomFactor));
-            var reason = string.IsNullOrWhiteSpace(award.Reason) ? null : award.Reason.Trim();
-            if (chosen.BaseNetPrice(line.UomFactor) > lowest && reason is null)
+            var reason = Clean(award.Reason);
+            if (quote.BaseNetPrice(line.UomFactor) > lowest && reason is null)
                 throw new BusinessRuleException($"Dòng {line.LineNo}: không chọn giá thấp nhất thì phải ghi lý do.");
-            line.SetAward(supplierId, reason);
+            chosen.Add((line, supplierId, reason));
         }
 
-        Status = RfqStatus.Awarded;
-        AwardedAt = at;
+        foreach (var (line, supplierId, reason) in chosen) line.SetAward(supplierId, reason);
+        AwardedBy = awardedBy;
         AwardDate = today;
     }
+
+    /// <summary>Gửi duyệt kết quả chọn thầu: Đã gửi → Chờ duyệt, tăng lượt, xóa lý do từ chối cũ.</summary>
+    /// <returns>Số lượt gửi mới.</returns>
+    /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi hoặc chưa trao dòng nào.</exception>
+    public int Submit()
+    {
+        EnsureSent();
+        if (_lines.All(l => l.AwardedSupplierId is null) || AwardedBy is null)
+            throw new BusinessRuleException("Hãy chọn NCC trúng thầu cho ít nhất một dòng trước khi gửi duyệt.");
+        Status = RfqStatus.AwardPending;
+        RejectReason = null;
+        return ++ApprovalRound;
+    }
+
+    /// <summary>Hội đồng duyệt đủ các cấp: Chờ duyệt → Đã chọn thầu (giá trúng thầu từ đây mới vào lịch sử giá, sinh PO được).</summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ không chờ duyệt.</exception>
+    public void MarkApproved(DateTimeOffset at)
+    {
+        EnsureAwardPending();
+        Status = RfqStatus.Awarded;
+        AwardedAt = at;
+    }
+
+    /// <summary>
+    /// Bị từ chối hoặc người chọn thầu rút lại: về Đã gửi (đang nhận báo giá) để bổ sung báo giá, chọn lại. Lựa chọn cũ giữ làm gợi ý.
+    /// </summary>
+    /// <param name="reason">Lý do (rút lại thì null).</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ không chờ duyệt.</exception>
+    public void ReturnToDraft(string? reason)
+    {
+        EnsureAwardPending();
+        Status = RfqStatus.Sent;
+        RejectReason = Clean(reason);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Người lập RFQ và người chọn thầu đều không tự duyệt kết quả (tách người đề xuất – người duyệt, design.md mục 18.6).</remarks>
+    public bool IsPreparedBy(Guid userId) => CreatedBy == userId || AwardedBy == userId;
 
     /// <summary>Ghi nhận PO đã sinh cho NCC trúng thầu (mỗi NCC một PO).</summary>
     /// <exception cref="BusinessRuleException">Khi RFQ chưa chọn thầu, NCC không trúng dòng nào hoặc đã có PO.</exception>
@@ -505,9 +587,10 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
     }
 
     /// <summary>Hủy RFQ (Nháp hoặc Đã gửi).</summary>
-    /// <exception cref="BusinessRuleException">Khi đã chọn thầu hoặc đã hủy.</exception>
+    /// <exception cref="BusinessRuleException">Khi đang chờ duyệt kết quả, đã chọn thầu hoặc đã hủy.</exception>
     public void Cancel()
     {
+        if (Status == RfqStatus.AwardPending) throw new BusinessRuleException($"RFQ {No} đang chờ duyệt kết quả chọn thầu – rút về trước khi hủy.");
         if (Status is RfqStatus.Awarded or RfqStatus.Cancelled) throw new BusinessRuleException($"RFQ {No} đã chọn thầu hoặc đã hủy.");
         Status = RfqStatus.Cancelled;
     }
@@ -517,6 +600,26 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber
         var line = new RfqLine(Id);
         _lines.Add(line);
         return line;
+    }
+
+    /// <summary>Thành tiền trúng thầu của một dòng (0 nếu chưa trao) – xem <see cref="ApprovalAmount"/>.</summary>
+    private decimal AwardedAmount(RfqLine line)
+    {
+        if (line.AwardedSupplierId is not { } supplierId) return 0m;
+        var quote = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)?.QuotationLines.FirstOrDefault(q => q.RfqLineId == line.Id);
+        return quote is null ? 0m : Math.Round(line.Qty * quote.UnitPrice * (100m - quote.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private void EnsureSent()
+    {
+        if (Status != RfqStatus.Sent) throw new BusinessRuleException($"RFQ {No} không ở trạng thái đang nhận báo giá.");
+    }
+
+    private void EnsureAwardPending()
+    {
+        if (Status != RfqStatus.AwardPending) throw new BusinessRuleException($"RFQ {No} không ở trạng thái chờ duyệt kết quả chọn thầu.");
     }
 
     private void EnsureDraft()

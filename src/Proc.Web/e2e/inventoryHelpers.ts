@@ -43,6 +43,21 @@ export async function approvePriceList(request: APIRequestContext, priceListId: 
   expect(response.ok(), await response.text()).toBeTruthy()
 }
 
+/** Người duyệt kết quả chọn thầu tại BHA (dữ liệu mẫu môi trường Testing). */
+const RFQ_AWARD_APPROVER = { userName: 'duyetthau.bha', password: 'Demo@2026' }
+
+/**
+ * Hội đồng duyệt kết quả chọn thầu RFQ ở BHA (lát B3 – người lập, người chọn thầu không tự duyệt) bằng tài khoản duyệt thầu.
+ * @param rfqId Id RFQ đang chờ duyệt kết quả.
+ */
+export async function approveRfqAward(request: APIRequestContext, rfqId: string) {
+  const login = await request.post('/api/auth/login', { data: RFQ_AWARD_APPROVER })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { defaultCompanyId: string } }
+  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.defaultCompanyId }
+  const response = await request.post(`/api/rfqs/${rfqId}/approve`, { headers, data: { comment: null } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+}
+
 /** Người duyệt NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
 const SUPPLIER_APPROVER = { userName: 'duyetncc.tct', password: 'Demo@2026' }
 

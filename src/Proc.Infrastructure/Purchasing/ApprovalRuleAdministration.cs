@@ -6,6 +6,7 @@ using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
+using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
@@ -129,6 +130,20 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 list.DocType, ApprovalTypes.Get(list.DocType).Name, list.Id, list.No, list.ValidFrom,
                 $"{listSuppliers.GetValueOrDefault(list.SupplierId)}: {list.Title}", 0, step!.Level,
                 list.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
+        // Kết quả chọn thầu chờ hội đồng duyệt (lát B3): duyệt tại công ty lập RFQ; "Người lập" là người chọn thầu.
+        var rfqs = await _db.Rfqs.Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(s => s.QuotationLines).AsSplitQuery()
+            .Where(r => r.Status == RfqStatus.AwardPending).ToListAsync(cancellationToken);
+        var awarderIds = rfqs.Select(r => r.AwardedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => awarderIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var rfq in rfqs)
+        {
+            var step = await _approvals.CurrentStepAsync(rfq, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(rfq, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                rfq.DocType, ApprovalTypes.Get(rfq.DocType).Name, rfq.Id, rfq.No, rfq.AwardDate ?? rfq.Date, rfq.Title, rfq.ApprovalAmount, step!.Level,
+                rfq.AwardedBy is { } a ? users.GetValueOrDefault(a) : null));
         }
 
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();

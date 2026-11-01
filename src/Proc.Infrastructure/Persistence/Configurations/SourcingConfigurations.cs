@@ -59,6 +59,12 @@ internal sealed class RfqConfiguration : IEntityTypeConfiguration<Rfq>
         builder.HasIndex(x => new { x.CompanyId, x.Status });
         builder.Property(x => x.Title).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Note).HasMaxLength(1000);
+        // Lát B3: giải trình mời thiếu NCC, thông tin duyệt kết quả chọn thầu; các thuộc tính tính toán của IApprovalSubject không lưu.
+        builder.Property(x => x.FewSuppliersReason).HasMaxLength(500);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<SourcingRequest>().WithMany().HasForeignKey(x => x.SourcingId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.RfqId).OnDelete(DeleteBehavior.Cascade);
