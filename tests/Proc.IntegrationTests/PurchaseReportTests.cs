@@ -67,6 +67,7 @@ public class PurchaseReportTests
         {
             var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
                 new SaveSupplierRequest(null, groupId, $"NCC báo cáo {name}", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            await _factory.FinishSupplierApprovalAsync(supplier.Id);
             await ReadAsync<SupplierCompanyDto>(await buyer.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
             suppliers.Add(supplier);
         }

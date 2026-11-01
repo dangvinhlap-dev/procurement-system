@@ -38,12 +38,15 @@ public class SupplierLinkTests
             await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA"));
     }
 
-    private static async Task<SupplierDetailDto> NewSupplierAsync(HttpClient head, string status = "Approved", string? note = null)
+    /// <summary>NCC thử; trạng thái Đã duyệt / Danh sách đen được duyệt xong ngay (dựng dữ liệu – luồng duyệt ở SupplierApprovalTests).</summary>
+    private async Task<SupplierDetailDto> NewSupplierAsync(HttpClient head, string status = "Approved", string? note = null)
     {
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
-        return await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
+        var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, $"NCC thử {Guid.NewGuid():N}"[..20], null, false, null, null, null, null,
                 null, null, null, null, status, note, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
+        return supplier;
     }
 
     private static async Task<Dictionary<string, Guid>> UomsAsync(HttpClient client) =>

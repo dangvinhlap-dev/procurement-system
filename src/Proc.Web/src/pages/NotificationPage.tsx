@@ -28,6 +28,8 @@ const columns: GridColumn<AppNotification>[] = [
  * riêng. Mã màn hình không còn (đổi menu) thì mở trang chủ.
  */
 function targetPath(n: AppNotification): string {
+  // Yêu cầu duyệt NCC (mã loại NCC – design.md mục 18.6) mở trên màn hình Duyệt NCC.
+  if (n.screenCode === 'NCC') return n.targetId ? `/gia-ncc/duyet-ncc?mo=${n.targetId}` : '/gia-ncc/duyet-ncc'
   const screen = screens.find((s) => s.code === n.screenCode)
   if (!screen) return '/'
   return n.targetId && n.screenCode !== 'PER' ? `${screen.path}/${n.targetId}` : screen.path

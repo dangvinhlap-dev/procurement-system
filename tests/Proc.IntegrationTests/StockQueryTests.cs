@@ -52,6 +52,7 @@ public class StockQueryTests
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC xem tồn", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         var warehouses = (await bha.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!;
         var kt = warehouses.Single(w => w.Code == "KT").Id;

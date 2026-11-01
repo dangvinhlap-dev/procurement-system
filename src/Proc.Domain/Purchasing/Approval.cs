@@ -120,7 +120,13 @@ public sealed class ApprovalStep : Entity, ICompanyOwned
     /// <summary>Lượt gửi duyệt (1, 2… – mỗi lần gửi lại sau khi bị từ chối tăng 1).</summary>
     public int Round { get; private set; }
 
-    /// <summary>Cấp.</summary>
+    /// <summary>
+    /// Chặng duyệt (design.md mục 18.6): 1 = công ty của phiếu, hoặc các công ty liên quan đến NCC (duyệt song song); 2 = Tổng công ty
+    /// duyệt lần cuối, chỉ bắt đầu khi chặng 1 xong. PR, PO chỉ có chặng 1.
+    /// </summary>
+    public int Stage { get; private set; } = 1;
+
+    /// <summary>Cấp (trong công ty của bước).</summary>
     public int Level { get; private set; }
 
     /// <summary>Vai trò được duyệt; null = bất kỳ ai có quyền duyệt (công ty chưa cấu hình quy trình).</summary>
@@ -140,8 +146,8 @@ public sealed class ApprovalStep : Entity, ICompanyOwned
 
     /// <summary>Tạo bước chờ duyệt.</summary>
     /// <returns>Bước duyệt.</returns>
-    public static ApprovalStep Create(Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId) =>
-        new() { CompanyId = companyId, DocType = docType, DocumentId = documentId, Round = round, Level = level, RoleId = roleId };
+    public static ApprovalStep Create(Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId, int stage = 1) =>
+        new() { CompanyId = companyId, DocType = docType, DocumentId = documentId, Round = round, Level = level, RoleId = roleId, Stage = stage };
 
     /// <summary>Ghi kết quả duyệt.</summary>
     /// <exception cref="BusinessRuleException">Khi bước không còn chờ duyệt.</exception>
@@ -169,6 +175,28 @@ public sealed class ApprovalStep : Entity, ICompanyOwned
         ActedBy = userId;
         ActedAt = at;
         Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+    }
+}
+
+/// <summary>
+/// Các bước đang đến lượt duyệt của một lượt gửi (design.md mục 18.6): chỉ chặng thấp nhất còn bước chờ; trong chặng đó mỗi công ty một
+/// bước – cấp thấp nhất còn chờ của công ty đó. Ví dụ NCC liên quan BHA (2 cấp) và BHB (1 cấp): đầu tiên BHA cấp 1 và BHB cấp 1 cùng
+/// đến lượt; BHA cấp 1 duyệt xong thì BHA cấp 2; khi cả BHA, BHB xong mới tới chặng 2 (Tổng công ty). PR, PO: đúng một bước.
+/// </summary>
+public static class ApprovalProgress
+{
+    /// <summary>Các bước đang đến lượt.</summary>
+    /// <param name="steps">Các bước của lượt hiện tại (mọi trạng thái).</param>
+    /// <returns>Bước chờ đang đến lượt, mỗi công ty tối đa một.</returns>
+    public static IReadOnlyList<ApprovalStep> Active(IEnumerable<ApprovalStep> steps)
+    {
+        var pending = steps.Where(s => s.Status == ApprovalStepStatus.Pending).ToList();
+        if (pending.Count == 0) return [];
+        var stage = pending.Min(s => s.Stage);
+        return pending.Where(s => s.Stage == stage)
+            .GroupBy(s => s.CompanyId)
+            .Select(g => g.MinBy(s => s.Level)!)
+            .ToList();
     }
 }
 

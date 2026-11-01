@@ -57,6 +57,7 @@ public class SupplierPricingTests
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC vòng bi", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         return new Fixture(userName, head, item.Id, cai, thung, supplier.Id);
     }
 

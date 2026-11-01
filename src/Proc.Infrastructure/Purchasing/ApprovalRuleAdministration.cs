@@ -3,6 +3,7 @@ using Proc.Application.Common;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.MasterData;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
@@ -92,6 +93,24 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
             result.Add(new PendingApprovalDto(
                 document.DocType, ApprovalTypes.Get(document.DocType).Name, document.Id, document.No, document.Date, description, document.ApprovalAmount, step!.Level,
                 document.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
+        // Yêu cầu duyệt NCC (design.md mục 18.6): dùng chung toàn tập đoàn, hiện cho người duyệt khi đến lượt công ty đang làm việc.
+        var changes = await _db.SupplierChangeRequests.Where(r => r.Status == SupplierChangeRequestStatus.Submitted).ToListAsync(cancellationToken);
+        var changeSupplierIds = changes.Select(c => c.SupplierId).Distinct().ToList();
+        var changeSuppliers = await _db.Suppliers.AsNoTracking().Where(s => changeSupplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
+        var changeCreatorIds = changes.Select(c => c.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => changeCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var change in changes)
+        {
+            var step = await _approvals.CurrentStepAsync(change, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(change, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                change.DocType, ApprovalTypes.Get(change.DocType).Name, change.Id, change.No,
+                DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(change.CreatedAt, VietnamTime.Zone).DateTime),
+                $"{changeSuppliers.GetValueOrDefault(change.SupplierId)}: {change.ProposedSummary}", 0, step!.Level,
+                change.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();

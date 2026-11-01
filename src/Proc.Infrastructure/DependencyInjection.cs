@@ -86,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IItemAdministration, ItemAdministration>();
         services.AddScoped<ISupplierGroupAdministration, SupplierGroupAdministration>();
         services.AddScoped<ISupplierAdministration, SupplierAdministration>();
+        services.AddScoped<ISupplierChangeRequestService, SupplierChangeRequestService>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();
         services.AddScoped<ISupplierRatingAdministration, SupplierRatingAdministration>();
         services.AddScoped<CatalogNumberAllocator>();

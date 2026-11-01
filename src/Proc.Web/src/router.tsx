@@ -11,6 +11,7 @@ import { NotificationPage } from './pages/NotificationPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
+import { SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
 import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
@@ -67,6 +68,7 @@ const implemented: Record<string, ReactNode> = {
   TODO: <PendingApprovalsPage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
+  SUPAPR: <SupplierApprovalPage />,
   SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
   CAT: <ItemCategoryListPage />,

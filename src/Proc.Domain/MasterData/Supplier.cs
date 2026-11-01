@@ -288,17 +288,66 @@ public sealed partial class Supplier : AuditableEntity
     /// <exception cref="BusinessRuleException">Khi thiếu ngân hàng/số tài khoản, trùng số tài khoản, hơn một tài khoản mặc định.</exception>
     public void SetBankAccounts(IEnumerable<SupplierBankAccountData> accounts)
     {
+        var list = NormalizeBankAccounts(accounts);
+        Merge(_bankAccounts, list.ToList(), a => a.Id, d => d.Id, d => new SupplierBankAccount(Id), (row, d) => row.Set(d), "tài khoản ngân hàng");
+    }
+
+    /// <summary>
+    /// Áp danh sách tài khoản đã duyệt (design.md mục 18.6): dòng có Id còn tồn tại thì sửa, Id không còn (đã bị bỏ trong lúc chờ duyệt)
+    /// thì thêm mới – không làm hỏng yêu cầu đã được các cấp duyệt.
+    /// </summary>
+    /// <param name="accounts">Danh sách đã duyệt.</param>
+    public void ReplaceBankAccounts(IEnumerable<SupplierBankAccountData> accounts) =>
+        SetBankAccounts(accounts.Select(a => a.Id is { } id && _bankAccounts.All(b => b.Id != id) ? a with { Id = null } : a));
+
+    /// <summary>
+    /// Chuẩn hóa và kiểm tra danh sách tài khoản ngân hàng (bỏ khoảng trắng, chữ hoa số tài khoản; cắt khoảng trắng tên) – dùng khi lưu
+    /// và khi lập yêu cầu đổi tài khoản chờ duyệt (design.md mục 18.6).
+    /// </summary>
+    /// <param name="accounts">Danh sách gửi lên.</param>
+    /// <returns>Danh sách đã chuẩn hóa.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu ngân hàng/số tài khoản, trùng số tài khoản, hơn một tài khoản mặc định.</exception>
+    public static IReadOnlyList<SupplierBankAccountData> NormalizeBankAccounts(IEnumerable<SupplierBankAccountData> accounts)
+    {
         var list = accounts
-            .Select(a => a with { AccountNumber = (a.AccountNumber ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant() })
+            .Select(a => a with
+            {
+                BankName = (a.BankName ?? string.Empty).Trim(),
+                Branch = Clean(a.Branch),
+                AccountName = Clean(a.AccountName),
+                AccountNumber = (a.AccountNumber ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant(),
+            })
             .ToList();
-        if (list.Any(a => string.IsNullOrWhiteSpace(a.BankName))) throw new BusinessRuleException("Tài khoản ngân hàng phải có tên ngân hàng.");
+        if (list.Any(a => a.BankName.Length == 0)) throw new BusinessRuleException("Tài khoản ngân hàng phải có tên ngân hàng.");
         if (list.Any(a => !BankAccountRegex().IsMatch(a.AccountNumber)))
             throw new BusinessRuleException("Số tài khoản gồm 4–30 chữ số hoặc chữ không dấu.");
-        var duplicate = list.GroupBy(a => (Bank: a.BankName.Trim().ToUpperInvariant(), a.AccountNumber)).FirstOrDefault(g => g.Count() > 1);
+        var duplicate = list.GroupBy(a => (Bank: a.BankName.ToUpperInvariant(), a.AccountNumber)).FirstOrDefault(g => g.Count() > 1);
         if (duplicate is not null) throw new BusinessRuleException($"Số tài khoản {duplicate.Key.AccountNumber} bị khai báo hai lần.");
         if (list.Count(a => a.IsDefault) > 1) throw new BusinessRuleException("Chỉ chọn một tài khoản mặc định.");
-        Merge(_bankAccounts, list, a => a.Id, d => d.Id, d => new SupplierBankAccount(Id), (row, d) => row.Set(d), "tài khoản ngân hàng");
+        return list;
     }
+
+    /// <summary>
+    /// Danh sách tài khoản gửi lên có khác tài khoản hiện tại không (so theo nội dung, không theo thứ tự) – khác thì phải qua duyệt.
+    /// </summary>
+    /// <param name="accounts">Danh sách đã chuẩn hóa.</param>
+    /// <returns>true nếu có thêm, bớt hoặc sửa tài khoản.</returns>
+    public bool BankAccountsDifferFrom(IReadOnlyList<SupplierBankAccountData> accounts)
+    {
+        static string Key(string bank, string? branch, string number, string? name, bool isDefault) =>
+            $"{bank.ToUpperInvariant()}|{branch}|{number}|{name}|{isDefault}";
+        var current = _bankAccounts.Select(b => Key(b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).Order(StringComparer.Ordinal);
+        var proposed = accounts.Select(b => Key(b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).Order(StringComparer.Ordinal);
+        return !current.SequenceEqual(proposed);
+    }
+
+    /// <summary>
+    /// Đổi trạng thái này có phải qua duyệt không (design.md mục 18.6, quyết định Q7): đưa vào Đã duyệt hoặc Danh sách đen phải duyệt;
+    /// Tạm ngưng, về Tiềm năng làm ngay (để chặn mua kịp thời).
+    /// </summary>
+    /// <param name="to">Trạng thái mới.</param>
+    /// <returns>true nếu phải lập yêu cầu duyệt.</returns>
+    public bool StatusChangeNeedsApproval(SupplierStatus to) => to != Status && to is SupplierStatus.Approved or SupplierStatus.Blacklisted;
 
     private static void Merge<TRow, TData>(
         List<TRow> rows, List<TData> data, Func<TRow, Guid> rowId, Func<TData, Guid?> dataId,

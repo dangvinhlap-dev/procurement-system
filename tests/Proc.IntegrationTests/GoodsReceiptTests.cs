@@ -53,6 +53,7 @@ public class GoodsReceiptTests
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC phiếu nhập", null, false, null, null, null, null, null, null, null, null,
                 supplierStatus, supplierStatus == "Approved" ? null : "Thử", null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         if (applyAtBha)
         {
             await ReadAsync<SupplierCompanyDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company",

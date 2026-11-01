@@ -6,6 +6,7 @@ using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.MasterData;
 
@@ -95,6 +96,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly CatalogNumberAllocator _numbers;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Tạo dịch vụ.
@@ -102,11 +104,13 @@ public sealed class SupplierAdministration : ISupplierAdministration
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
     /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
-    public SupplierAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
+    /// <param name="clock">Đồng hồ (thời điểm duyệt).</param>
+    public SupplierAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers, IClock clock)
     {
         _db = db;
         _scope = scope;
         _numbers = numbers;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -182,7 +186,17 @@ public sealed class SupplierAdministration : ISupplierAdministration
             s.PaymentTerms, s.SupplyScope, s.Rating, s.Status.ToString(), s.StatusNote, s.InternalCompanyId,
             s.Contacts.Select(c => new SupplierContactDto(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)).ToList(),
             s.BankAccounts.Select(b => new SupplierBankAccountDto(b.Id, b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).ToList(),
-            canEdit);
+            canEdit, await PendingRequestsAsync(id, cancellationToken));
+    }
+
+    /// <summary>Yêu cầu duyệt đang chờ của NCC (design.md mục 18.6) – hiện trên ngăn kéo NCC.</summary>
+    private async Task<IReadOnlyList<SupplierChangeRequestDto>> PendingRequestsAsync(Guid supplierId, CancellationToken cancellationToken)
+    {
+        var pending = await _db.SupplierChangeRequests.AsNoTracking()
+            .Where(r => r.SupplierId == supplierId && r.Status == SupplierChangeRequestStatus.Submitted)
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync(cancellationToken);
+        return pending.Count == 0 ? [] : await new SupplierChangeRequestService(_db, _scope, _clock).ToDtosAsync(pending, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -194,9 +208,10 @@ public sealed class SupplierAdministration : ISupplierAdministration
         var group = await FindGroupAsync(request.GroupId, cancellationToken);
         await using var transaction = await _numbers.BeginAsync(cancellationToken);
         var supplier = Supplier.Create(await _numbers.NextAsync(NumberedCatalogs.Supplier, null, cancellationToken), group, ToInfo(request));
-        await ApplyAsync(supplier, request, cancellationToken);
+        var deferred = await ApplyAsync(supplier, request, isNew: true, cancellationToken);
 
         _db.Suppliers.Add(supplier);
+        await SubmitDeferredAsync(supplier, deferred, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return await GetAsync(supplier.Id, cancellationToken);
@@ -210,19 +225,32 @@ public sealed class SupplierAdministration : ISupplierAdministration
             ?? throw new NotFoundException("Không tìm thấy nhà cung cấp.");
         supplier.Update(ToInfo(request));
         if (request.GroupId != supplier.GroupId) supplier.ChangeGroup(await FindGroupAsync(request.GroupId, cancellationToken));
-        await ApplyAsync(supplier, request, cancellationToken);
+        var deferred = await ApplyAsync(supplier, request, isNew: false, cancellationToken);
 
+        await SubmitDeferredAsync(supplier, deferred, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
-    /// <summary>Trạng thái, NCC nội bộ, người liên hệ, tài khoản ngân hàng, kiểm tra trùng mã số thuế – chung cho thêm và sửa.</summary>
-    private async Task ApplyAsync(Supplier supplier, SaveSupplierRequest request, CancellationToken cancellationToken)
+    /// <summary>Thay đổi phải qua duyệt, tách khỏi lần lưu NCC (design.md mục 18.6).</summary>
+    private sealed record DeferredChanges(SupplierStatus? Status, string? StatusNote, IReadOnlyList<SupplierBankAccountData>? BankAccounts);
+
+    /// <summary>
+    /// Trạng thái, NCC nội bộ, người liên hệ, tài khoản ngân hàng, kiểm tra trùng mã số thuế – chung cho thêm và sửa. Đưa vào Đã duyệt /
+    /// Danh sách đen và đổi tài khoản ngân hàng của NCC đã có không áp ngay mà trả về để lập yêu cầu duyệt (quyết định Q7, mục 18.6);
+    /// NCC mới khai báo tài khoản ban đầu được ngay (NCC mới ở Tiềm năng, chưa mua được cho tới khi được duyệt).
+    /// </summary>
+    /// <returns>Thay đổi chờ duyệt.</returns>
+    private async Task<DeferredChanges> ApplyAsync(Supplier supplier, SaveSupplierRequest request, bool isNew, CancellationToken cancellationToken)
     {
-        supplier.SetStatus(ParseStatus(request.Status), request.StatusNote);
+        var status = ParseStatus(request.Status);
+        var deferStatus = supplier.StatusChangeNeedsApproval(status);
+        if (!deferStatus) supplier.SetStatus(status, request.StatusNote);
         supplier.SetContacts(request.Contacts.Select(c => new SupplierContactData(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)));
-        supplier.SetBankAccounts(request.BankAccounts.Select(b =>
+        var banks = Supplier.NormalizeBankAccounts(request.BankAccounts.Select(b =>
             new SupplierBankAccountData(b.Id, b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)));
+        var deferBanks = !isNew && supplier.BankAccountsDifferFrom(banks);
+        if (!deferBanks) supplier.SetBankAccounts(banks);
 
         if (supplier.TaxCode is { } taxCode)
         {
@@ -245,6 +273,25 @@ public sealed class SupplierAdministration : ISupplierAdministration
         }
 
         supplier.LinkInternalCompany(request.InternalCompanyId);
+        return new DeferredChanges(deferStatus ? status : null, request.StatusNote, deferBanks ? banks : null);
+    }
+
+    /// <summary>Lập yêu cầu duyệt cho phần thay đổi bị giữ lại (chưa lưu – lưu cùng NCC).</summary>
+    private async Task SubmitDeferredAsync(Supplier supplier, DeferredChanges deferred, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var engine = new ApprovalEngine(_db, _scope, _clock);
+        if (deferred.Status is { } status)
+        {
+            await SupplierChangeRequestService.SubmitAsync(_db, engine, supplier,
+                no => SupplierChangeRequest.ForStatus(supplier, companyId, no, status, deferred.StatusNote), cancellationToken);
+        }
+
+        if (deferred.BankAccounts is { } banks)
+        {
+            await SupplierChangeRequestService.SubmitAsync(_db, engine, supplier,
+                no => SupplierChangeRequest.ForBankAccounts(supplier, companyId, no, banks), cancellationToken);
+        }
     }
 
     private async Task<SupplierGroup> FindGroupAsync(Guid id, CancellationToken cancellationToken) =>

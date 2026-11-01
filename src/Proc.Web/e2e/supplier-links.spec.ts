@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 import { ADMIN, loginViaApi } from './helpers.ts'
+import { approveSupplier } from './inventoryHelpers.ts'
 
 /**
  * NCC – sản phẩm và NCC áp dụng tại công ty (design.md mục 5.3, 5.9). NCC và mặt hàng tạo sẵn qua API cho nhanh,
@@ -40,6 +41,7 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
+  await approveSupplier(request, supplier.id)
   const supplierCode = supplier.code
   const category = await api.post<{ id: string; code: string }>('/api/item-categories', { code: null, name: 'Nhóm thử liên kết', parentId: null, inventoryAccount: null })
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).

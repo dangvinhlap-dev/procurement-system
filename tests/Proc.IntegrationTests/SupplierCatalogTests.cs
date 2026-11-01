@@ -117,7 +117,10 @@ public class SupplierCatalogTests
 
         Assert.Equal(["Lê Cường", "Nguyễn Văn An"], edited.Contacts.Select(c => c.Name).Order(StringComparer.Ordinal));
         Assert.Equal((an.Id, "Phó giám đốc"), (edited.Contacts.Single(c => c.Name == "Nguyễn Văn An").Id, edited.Contacts.Single(c => c.Name == "Nguyễn Văn An").Position));
-        Assert.Empty(edited.BankAccounts);
+        // Bỏ tài khoản ngân hàng phải qua duyệt (design.md mục 18.6): người liên hệ lưu ngay, tài khoản giữ nguyên tới khi duyệt xong.
+        Assert.Single(edited.BankAccounts);
+        var pending = Assert.Single(edited.PendingRequests!);
+        Assert.Equal(("BankAccounts", "(không có tài khoản)"), (pending.Kind, pending.ProposedSummary));
 
         var twoPrimary = await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}",
             Edit(edited) with { Contacts = edited.Contacts.Select(c => c with { IsPrimary = true }).ToList() }, Ct);
@@ -130,10 +133,16 @@ public class SupplierCatalogTests
         var head = await HeadOfficeAdminAsync();
         var groupId = await GroupIdAsync(head, "TN");
         var noReason = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(groupId, status: "Blacklisted"), Ct);
-        Assert.Equal("Tạm ngưng hoặc đưa NCC vào danh sách đen phải ghi lý do.", await TitleAsync(noReason));
+        Assert.Equal("Đưa NCC vào danh sách đen phải ghi lý do.", await TitleAsync(noReason));
+        var suspendNoReason = await head.PostAsJsonAsync("/api/suppliers", NewSupplier(groupId, status: "Suspended"), Ct);
+        Assert.Equal("Tạm ngưng hoặc đưa NCC vào danh sách đen phải ghi lý do.", await TitleAsync(suspendNoReason));
 
-        var code = (await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            NewSupplier(groupId, status: "Blacklisted", note: "Giao hàng giả"), Ct))).Code;
+        // Danh sách đen phải qua duyệt (mục 18.6): NCC mới vẫn Tiềm năng kèm yêu cầu chờ duyệt; duyệt xong mới vào danh sách đen.
+        var created = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
+            NewSupplier(groupId, status: "Blacklisted", note: "Giao hàng giả"), Ct));
+        Assert.Equal(("Potential", "Danh sách đen – Giao hàng giả"), (created.Status, Assert.Single(created.PendingRequests!).ProposedSummary));
+        await _factory.FinishSupplierApprovalAsync(created.Id);
+        var code = created.Code;
         var blacklisted = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?status=Blacklisted&search={code}", Ct);
         Assert.Equal("Blacklisted", Assert.Single(blacklisted!.Items).Status);
         var approved = await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?status=Approved&search={code}", Ct);

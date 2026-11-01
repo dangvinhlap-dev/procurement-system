@@ -54,6 +54,7 @@ public class StockReportTests
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC báo cáo kho", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         return new Fixture(userName, head, cai, category.Id, category.Code, supplier.Id);
     }
 

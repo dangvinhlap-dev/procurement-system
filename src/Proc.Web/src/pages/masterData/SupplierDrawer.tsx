@@ -1,6 +1,8 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { App, Button, Checkbox, Form, Input, Rate, Select } from 'antd'
+import { Alert, App, Button, Checkbox, Form, Input, Rate, Select } from 'antd'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
+import { changeKindLabels } from '../../api/supplierApprovals'
 import {
   supplierStatusLabels,
   useSupplier,
@@ -169,12 +171,15 @@ export function SupplierDrawer({
       })),
     }
     try {
+      // Đã duyệt / Danh sách đen, đổi tài khoản ngân hàng không áp ngay mà thành yêu cầu duyệt (design.md mục 18.6).
+      const before = detail?.pendingRequests?.length ?? 0
       if (isNew) {
         const created = await mutations.create.mutateAsync(input)
-        message.success(`Đã thêm NCC ${created.code}.`)
+        message.success(`Đã thêm NCC ${created.code}.${(created.pendingRequests?.length ?? 0) > 0 ? ' Trạng thái đề nghị đã gửi duyệt.' : ''}`)
       } else if (detail) {
-        await mutations.update.mutateAsync({ id: detail.id, input })
-        message.success(`Đã lưu NCC ${detail.code}.`)
+        const saved = await mutations.update.mutateAsync({ id: detail.id, input })
+        const sent = (saved.pendingRequests?.length ?? 0) > before
+        message.success(`Đã lưu NCC ${detail.code}.${sent ? ' Thay đổi cần duyệt đã gửi duyệt (công ty liên quan, rồi Tổng công ty).' : ''}`)
       }
       onClose()
     } catch (e) {
@@ -210,6 +215,20 @@ export function SupplierDrawer({
           label: 'Thông tin chung',
           children: (
             <>
+              {(detail?.pendingRequests?.length ?? 0) > 0 && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  title="Đang chờ duyệt"
+                  description={detail!.pendingRequests!.map((r) => (
+                    <div key={r.id}>
+                      <Link to={`/gia-ncc/duyet-ncc?mo=${r.id}`}>{r.no}</Link>
+                      {`: ${changeKindLabels[r.kind]} → ${r.proposedSummary} (chờ ${r.waitingFor ?? ''})`}
+                    </div>
+                  ))}
+                />
+              )}
               <div className="detail-grid">
                 <Form.Item
                   label="Mã NCC"

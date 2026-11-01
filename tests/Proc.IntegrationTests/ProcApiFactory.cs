@@ -178,6 +178,31 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             .Roles.Where(r => r.Code == code).Select(r => r.Id).SingleAsync();
     }
 
+    /// <summary>
+    /// Dựng dữ liệu: duyệt xong ngay mọi yêu cầu duyệt NCC đang chờ của một NCC (bỏ qua các chặng) và áp vào NCC. Chỉ để chuẩn bị NCC
+    /// "Đã duyệt" cho test nghiệp vụ khác; luồng duyệt thật kiểm ở <c>SupplierApprovalTests</c> (design.md mục 18.6).
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <returns>Task.</returns>
+    public async Task FinishSupplierApprovalAsync(Guid supplierId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var supplier = await db.Suppliers.SingleAsync(s => s.Id == supplierId);
+        foreach (var request in await db.SupplierChangeRequests
+                     .Where(r => r.SupplierId == supplierId && r.Status == Proc.Domain.MasterData.SupplierChangeRequestStatus.Submitted)
+                     .OrderBy(r => r.CreatedAt).ToListAsync())
+        {
+            foreach (var step in await db.ApprovalSteps.IgnoreQueryFilters()
+                         .Where(st => st.DocumentId == request.Id && st.Status == Proc.Domain.Purchasing.ApprovalStepStatus.Pending).ToListAsync())
+                step.Skip();
+            request.MarkApproved(DateTimeOffset.UtcNow);
+            request.ApplyTo(supplier);
+        }
+
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>
     public const string TestPassword = "matkhau123";
 
