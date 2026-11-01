@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { ApprovalStep } from './purchasing'
 
 /*
  * Kiểu dữ liệu và hàm gọi API tìm nguồn, RFQ, báo giá, chọn thầu (khớp Proc.Application.Sourcing).
@@ -116,14 +117,26 @@ export function useSourcingMutations() {
   }
 }
 
-/** Trạng thái RFQ. */
-export type RfqStatus = 'Draft' | 'Sent' | 'Awarded' | 'Cancelled'
+/** Trạng thái RFQ; AwardPending = đã chọn thầu, chờ hội đồng duyệt kết quả (lát B3). */
+export type RfqStatus = 'Draft' | 'Sent' | 'AwardPending' | 'Awarded' | 'Cancelled'
 
 /** Nhãn trạng thái RFQ. */
-export const rfqStatusLabels: Record<RfqStatus, string> = { Draft: 'Nháp', Sent: 'Đang nhận báo giá', Awarded: 'Đã chọn thầu', Cancelled: 'Đã hủy' }
+export const rfqStatusLabels: Record<RfqStatus, string> = {
+  Draft: 'Nháp',
+  Sent: 'Đang nhận báo giá',
+  AwardPending: 'Chờ duyệt kết quả',
+  Awarded: 'Đã chọn thầu',
+  Cancelled: 'Đã hủy',
+}
 
 /** Tông màu trạng thái RFQ. */
-export const rfqStatusTone: Record<RfqStatus, 'success' | 'warning' | 'neutral'> = { Draft: 'neutral', Sent: 'warning', Awarded: 'success', Cancelled: 'neutral' }
+export const rfqStatusTone: Record<RfqStatus, 'success' | 'warning' | 'neutral'> = {
+  Draft: 'neutral',
+  Sent: 'warning',
+  AwardPending: 'warning',
+  Awarded: 'success',
+  Cancelled: 'neutral',
+}
 
 /** Một dòng danh sách RFQ. */
 export interface RfqListItem {
@@ -221,7 +234,30 @@ export interface Rfq {
   minSuppliers: number
   lines: RfqLine[]
   suppliers: RfqSupplier[]
-  actions: { canEdit: boolean; canSend: boolean; canQuote: boolean; canAward: boolean; canCreateOrders: boolean; canCancel: boolean; readOnlyReason: string | null }
+  actions: {
+    canEdit: boolean
+    canSend: boolean
+    canQuote: boolean
+    /** Chọn thầu và gửi hội đồng duyệt. */
+    canAward: boolean
+    canCreateOrders: boolean
+    canCancel: boolean
+    readOnlyReason: string | null
+    /** Duyệt/từ chối được bước đang đến lượt. */
+    canApprove: boolean
+    /** Rút kết quả đang chờ duyệt về để chọn lại. */
+    canRecall: boolean
+  }
+  /** Giải trình khi mời ít hơn số NCC tối thiểu. */
+  fewSuppliersReason: string | null
+  /** Giá trị trúng thầu (sau CK, trước VAT) – xét ngưỡng duyệt. */
+  awardAmount: number
+  /** Người chọn thầu. */
+  awardedByName: string | null
+  /** Lý do hội đồng từ chối kết quả gần nhất. */
+  rejectReason: string | null
+  /** Lịch sử duyệt kết quả chọn thầu. */
+  approvals: ApprovalStep[]
 }
 
 /** Nội dung RFQ gửi lên. */
@@ -288,7 +324,10 @@ export function useRfqMutations() {
       mutationFn: ({ id, input }: { id: string; input: SaveRfqInput }) => apiFetch<Rfq>(`/api/rfqs/${id}`, { method: 'PUT', body: input }),
       onSuccess,
     }),
-    send: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/send`, { method: 'POST' }), onSuccess }),
+    send: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string | null }) => apiFetch<Rfq>(`/api/rfqs/${id}/send`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
     quote: useMutation({
       mutationFn: ({ id, supplierId, input }: { id: string; supplierId: string; input: SaveQuotationInput }) =>
         apiFetch<Rfq>(`/api/rfqs/${id}/quotations/${supplierId}`, { method: 'PUT', body: input }),
@@ -307,5 +346,16 @@ export function useRfqMutations() {
       },
     }),
     cancel: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/cancel`, { method: 'POST' }), onSuccess }),
+    recall: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/recall`, { method: 'POST' }), onSuccess }),
+    approve: useMutation({
+      mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
+        apiFetch<Rfq>(`/api/rfqs/${id}/approve`, { method: 'POST', body: { comment: comment ?? null } }),
+      onSuccess,
+    }),
+    reject: useMutation({
+      mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
+        apiFetch<Rfq>(`/api/rfqs/${id}/reject`, { method: 'POST', body: { comment: comment ?? null } }),
+      onSuccess,
+    }),
   }
 }

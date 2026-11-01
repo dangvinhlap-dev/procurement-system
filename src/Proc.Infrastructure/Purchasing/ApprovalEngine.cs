@@ -114,7 +114,7 @@ internal sealed class ApprovalEngine
         var userId = _scope.UserId;
         if (userId is null) return "Chưa đăng nhập.";
         // Tách người lập và người duyệt – nguyên tắc kiểm soát nội bộ.
-        if (document.CreatedBy == userId) return "Người lập không tự duyệt phiếu của mình.";
+        if (document.IsPreparedBy(userId.Value)) return "Người lập không tự duyệt phiếu của mình.";
         if (!_scope.HasPermission(ApprovePermission(document.DocType))) return "Bạn không có quyền duyệt loại phiếu này.";
         if (step.RoleId is { } roleId
             && !await _db.UserCompanyRoles.AnyAsync(u => u.UserId == userId && u.CompanyId == step.CompanyId && u.RoleId == roleId, cancellationToken))
@@ -174,7 +174,7 @@ internal sealed class ApprovalEngine
     {
         var users = await _notifications.UsersWithPermissionAsync(
             step.CompanyId, ApprovePermission(document.DocType), step.RoleId, null, cancellationToken);
-        _notifications.Add(step.CompanyId, users.Where(u => u != (document.CreatedBy ?? _scope.UserId)), NotificationTypes.ApprovalPending,
+        _notifications.Add(step.CompanyId, users.Where(u => !document.IsPreparedBy(u) && (document.CreatedBy is not null || u != _scope.UserId)), NotificationTypes.ApprovalPending,
             $"{Noun(document)} {document.No} chờ bạn duyệt",
             ApprovalTypes.Get(document.DocType).AmountLabel is null
                 ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}."

@@ -1,5 +1,16 @@
-import { CheckOutlined, CloseOutlined, EditOutlined, FileAddOutlined, SaveOutlined, SendOutlined, ShoppingCartOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
+import {
+  CheckOutlined,
+  CloseCircleOutlined,
+  CloseOutlined,
+  EditOutlined,
+  FileAddOutlined,
+  RollbackOutlined,
+  SaveOutlined,
+  SendOutlined,
+  ShoppingCartOutlined,
+  StopOutlined,
+} from '@ant-design/icons'
+import { Alert, App, Button, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
@@ -27,7 +38,10 @@ import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
+import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
+import { confirmReject } from '../purchasing/useApprovalCommands'
+import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 const LIST_PATH = '/dau-thau/rfq'
 
@@ -51,7 +65,7 @@ const listColumns: GridColumn<RfqListItem>[] = [
 export function RfqListPage({ compare = false }: { compare?: boolean }) {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
-  const rfqs = useRfqs(compare ? 'Sent,Awarded' : undefined)
+  const rfqs = useRfqs(compare ? 'Sent,AwardPending,Awarded' : undefined)
   return (
     <ListPage
       title={compare ? 'So sánh báo giá' : 'Yêu cầu báo giá (RFQ)'}
@@ -227,17 +241,42 @@ export function RfqPage() {
     if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
   }
 
-  const send = () =>
+  const send = () => {
+    // Lát B3 (design.md mục 8.6): mời ít hơn số NCC tối thiểu vẫn gửi được khi có giải trình – server kiểm tra lại.
+    const invited = ((form.getFieldValue('supplierIds') as string[] | undefined) ?? []).length
+    const short = doc ? invited < doc.minSuppliers : false
+    let reason = ''
     modal.confirm({
       title: 'Gửi RFQ cho các NCC?',
-      content: 'RFQ chuyển sang Đang nhận báo giá; dòng hàng, NCC mời, trọng số không sửa được nữa.',
+      content: (
+        <>
+          <p>RFQ chuyển sang Đang nhận báo giá; dòng hàng, NCC mời, trọng số không sửa được nữa.</p>
+          <label htmlFor="few-suppliers-reason">
+            {renderRequiredMark(
+              doc ? `Giải trình mời ít hơn ${doc.minSuppliers} NCC (đang mời ${invited})` : 'Giải trình nếu mời ít hơn số NCC tối thiểu',
+              { required: short },
+            )}
+          </label>
+          <Input.TextArea
+            id="few-suppliers-reason"
+            rows={3}
+            maxLength={500}
+            placeholder="Ví dụ: hàng độc quyền, chỉ có 2 đại lý chính hãng"
+            onChange={(e) => (reason = e.target.value)}
+          />
+        </>
+      ),
       okText: 'Gửi NCC',
       cancelText: 'Không',
       onOk: async () => {
+        if (short && !reason.trim()) {
+          message.error('Mời ít hơn số NCC tối thiểu thì phải ghi giải trình.')
+          throw new Error('missing reason')
+        }
         const saved = await persist()
         if (!saved) return
         try {
-          await mutations.send.mutateAsync(saved.id)
+          await mutations.send.mutateAsync({ id: saved.id, reason: orNull(reason) })
           message.success(`Đã gửi RFQ ${saved.no}.`)
         } catch (e) {
           fail(e, 'Không gửi được RFQ.')
@@ -245,24 +284,74 @@ export function RfqPage() {
         if (isNew) navigate(`${LIST_PATH}/${saved.id}?tab=compare`, { replace: true })
       },
     })
+  }
 
   const confirmAward = () =>
     doc &&
     modal.confirm({
-      title: `Chốt kết quả chọn thầu RFQ ${doc.no}?`,
-      content: 'Sau khi chốt không nhập thêm báo giá được; từ kết quả có thể tạo đơn mua hàng.',
-      okText: 'Chọn thầu',
+      title: `Chọn thầu và gửi duyệt kết quả RFQ ${doc.no}?`,
+      content: 'Kết quả chuyển hội đồng duyệt (Chờ duyệt kết quả); trong lúc chờ không nhập thêm báo giá. Duyệt xong mới tạo được đơn mua hàng.',
+      okText: 'Chọn thầu, gửi duyệt',
       cancelText: 'Không',
       onOk: async () => {
         setError(null)
         try {
-          await mutations.award.mutateAsync({
+          const result = await mutations.award.mutateAsync({
             id: doc.id,
             lines: doc.lines.map((l) => ({ rfqLineId: l.id, supplierId: award[l.id]?.supplierId ?? null, reason: orNull(award[l.id]?.reason) })),
           })
-          message.success(`Đã chọn thầu RFQ ${doc.no}.`)
+          setAwardEdits({})
+          message.success(result.status === 'Awarded' ? `Kết quả RFQ ${doc.no} đã được duyệt ngay.` : `Đã gửi duyệt kết quả chọn thầu RFQ ${doc.no}.`)
         } catch (e) {
           fail(e, 'Không chọn thầu được.')
+        }
+      },
+    })
+
+  const approve = () =>
+    doc &&
+    modal.confirm({
+      title: `Duyệt kết quả chọn thầu RFQ ${doc.no}?`,
+      content: `Giá trị trúng thầu ${formatMoney(doc.awardAmount)} đ. Duyệt cấp cuối thì giá trúng thầu vào lịch sử giá, tạo được đơn mua hàng.`,
+      okText: 'Duyệt',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          message.success(result.status === 'Awarded' ? `Đã duyệt xong kết quả chọn thầu RFQ ${doc.no}.` : `Đã duyệt cấp của bạn – RFQ ${doc.no} chuyển cấp tiếp theo.`)
+        } catch (e) {
+          fail(e, 'Không duyệt được.')
+        }
+      },
+    })
+
+  const reject = () =>
+    doc &&
+    confirmReject(modal, message, `Từ chối kết quả chọn thầu RFQ ${doc.no}?`, async (reason) => {
+      setError(null)
+      try {
+        await mutations.reject.mutateAsync({ id: doc.id, comment: reason })
+        message.success(`Đã từ chối kết quả chọn thầu RFQ ${doc.no}.`)
+      } catch (e) {
+        fail(e, 'Không từ chối được.')
+      }
+    })
+
+  const recall = () =>
+    doc &&
+    modal.confirm({
+      title: `Rút kết quả chọn thầu RFQ ${doc.no} về?`,
+      content: 'Các cấp đang chờ duyệt bỏ qua; RFQ về Đang nhận báo giá để bổ sung báo giá, chọn lại và gửi duyệt lại.',
+      okText: 'Rút về',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          await mutations.recall.mutateAsync(doc.id)
+          message.success(`Đã rút kết quả chọn thầu RFQ ${doc.no} về.`)
+        } catch (e) {
+          fail(e, 'Không rút về được.')
         }
       },
     })
@@ -405,7 +494,22 @@ export function RfqPage() {
       )}
       {doc?.actions.canAward && (
         <Button type="primary" icon={<CheckOutlined />} onClick={confirmAward} loading={mutations.award.isPending}>
-          Chọn thầu
+          Chọn thầu, gửi duyệt
+        </Button>
+      )}
+      {doc?.actions.canApprove && (
+        <>
+          <Button type="primary" icon={<CheckOutlined />} onClick={approve} loading={mutations.approve.isPending}>
+            Duyệt
+          </Button>
+          <Button danger icon={<CloseCircleOutlined />} onClick={reject} loading={mutations.reject.isPending}>
+            Từ chối
+          </Button>
+        </>
+      )}
+      {doc?.actions.canRecall && (
+        <Button icon={<RollbackOutlined />} onClick={recall} loading={mutations.recall.isPending}>
+          Rút về
         </Button>
       )}
       {doc?.actions.canCreateOrders && (
@@ -439,7 +543,7 @@ export function RfqPage() {
       label: 'NCC mời',
       children: (
         <Form.Item
-          label={`Nhà cung cấp được mời (${doc ? `tối thiểu ${doc.minSuppliers} NCC` : 'số NCC tối thiểu theo tham số công ty'} mới gửi được)`}
+          label={`Nhà cung cấp được mời (${doc ? `tối thiểu ${doc.minSuppliers} NCC` : 'số NCC tối thiểu theo tham số công ty'}; mời ít hơn thì phải giải trình khi gửi)`}
           name="supplierIds"
           style={{ maxWidth: 900 }}
         >
@@ -461,6 +565,7 @@ export function RfqPage() {
           },
         ]
       : []),
+    ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
   ]
 
   return (
@@ -469,10 +574,15 @@ export function RfqPage() {
         title="Yêu cầu báo giá (RFQ)"
         number={isNew ? null : (doc?.no ?? '')}
         status={status}
-        meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}${doc.sourcingNo ? ` · Từ phiếu tìm nguồn ${doc.sourcingNo}` : ''}`}
+        meta={
+          doc &&
+          `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}${doc.sourcingNo ? ` · Từ phiếu tìm nguồn ${doc.sourcingNo}` : ''}${
+            doc.awardedByName && doc.status !== 'Sent' ? ` · Người chọn thầu: ${doc.awardedByName}` : ''
+          }`
+        }
         loading={rfq.isLoading}
         error={error ?? (rfq.error ? rfq.error.message : null)}
-        notice={doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />}
+        notice={doc && <RfqNotices doc={doc} />}
         form={form}
         initialValues={{
           date: dayjs(), deadline: dayjs().add(7, 'day'), priceWeight: 60, qualityWeight: 20, deliveryWeight: 10, paymentWeight: 5, warrantyWeight: 5,
@@ -525,6 +635,22 @@ export function RfqPage() {
       {quoting && doc && <QuotationDialog rfq={doc} supplier={quoting} onClose={() => setQuoting(null)} />}
     </>
   )
+}
+
+/**
+ * Thông báo đầu RFQ: chờ hội đồng duyệt kết quả, lý do bị từ chối (đang nhận báo giá lại), giải trình mời thiếu NCC (lát B3), lý do chỉ xem.
+ * @param doc RFQ đã tải.
+ */
+function RfqNotices({ doc }: { doc: Rfq }) {
+  const notices = [
+    doc.status === 'AwardPending' && (
+      <Alert key="pending" type="info" showIcon title={`Kết quả chọn thầu đang chờ hội đồng duyệt – giá trị trúng thầu ${formatMoney(doc.awardAmount)} đ.`} />
+    ),
+    doc.rejectReason && doc.status === 'Sent' && <Alert key="reject" type="warning" showIcon title={`Kết quả chọn thầu bị từ chối: ${doc.rejectReason}`} />,
+    doc.fewSuppliersReason && <Alert key="few" type="warning" showIcon title={`Mời ít hơn ${doc.minSuppliers} NCC – giải trình: ${doc.fewSuppliersReason}`} />,
+    doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
+  ].filter(Boolean)
+  return notices.length ? <Flex vertical gap={8}>{notices}</Flex> : null
 }
 
 /**

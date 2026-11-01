@@ -108,7 +108,7 @@ public class SourcingTests
         rfqMin = await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest(null), Ct));
         Assert.Equal(("3", true), (rfqMin.Value, rfqMin.IsDefault));
         rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, null, a, b), Ct));
-        Assert.Contains("ít nhất 3", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct)));
+        Assert.Contains("ít hơn 3", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct)));
     }
 
     [Fact]
@@ -120,9 +120,9 @@ public class SourcingTests
             new SaveSourcingRequest(Today, f.ItemId, null, "Chịu nhiệt 150°C", 220, Today.AddDays(10), "Anh Nam", null, [new(null, a, "Contacted", "Đã gửi hồ sơ")]), Ct));
         Assert.Matches($"^SRC-{f.CompanyCode}-{Today:yyMM}-\\d{{4}}$", sourcing.No);
 
-        // Mời 2 NCC: lưu nháp được, gửi bị chặn (tối thiểu 3).
+        // Mời 2 NCC: lưu nháp được, gửi không giải trình bị chặn (tối thiểu 3).
         var rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, sourcing.Id, a, b), Ct));
-        Assert.Contains("ít nhất 3", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct)));
+        Assert.Contains("ít hơn 3", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct)));
         rfq = await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}",
             Rfq(f, sourcing.Id, a, b, c) with { Lines = rfq.Lines.Select(l => new SaveRfqLineRequest(l.Id, l.ItemId, l.UomId, l.Qty, null, null)).ToList() }, Ct));
         rfq = await ReadAsync<RfqDto>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct));
@@ -150,8 +150,17 @@ public class SourcingTests
             new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct)));
         rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
             new AwardRfqRequest([new(cai, a, "Gộp một NCC để giao một lần"), new(thung, a, null)]), Ct));
-        Assert.Equal(("Awarded", true), (rfq.Status, rfq.Actions.CanCreateOrders));
+        // Lát B3: kết quả chọn thầu chờ hội đồng duyệt – chưa sinh PO, chưa vào lịch sử giá.
+        Assert.Equal(("AwardPending", false, true), (rfq.Status, rfq.Actions.CanCreateOrders, rfq.Actions.CanRecall));
         Assert.Equal(5_000_000m + 5_700_000m, rfq.Suppliers.Single(s => s.SupplierId == a).AwardedAmount);
+        Assert.Equal(10_700_000m, rfq.AwardAmount);
+        Assert.Contains("chưa chọn thầu", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-orders", null, Ct)));
+        var history = await ReadAsync<PriceComparisonDto>(await f.Client.GetAsync($"/api/price-comparison?itemId={f.ItemId}", Ct));
+        Assert.DoesNotContain(history.History, h => h.DocumentNo == rfq.No);
+        var approver = await ApproverAsync(f);
+        Assert.Equal("Awarded", (await ReadAsync<RfqDto>(await approver.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest("Đồng ý"), Ct))).Status);
+        rfq = await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct));
+        Assert.Equal(("Awarded", true), (rfq.Status, rfq.Actions.CanCreateOrders));
 
         // Sinh PO nháp cho A: giá theo báo giá, thuế suất trống thì theo mặt hàng; bấm lại thì báo đã có.
         var created = await ReadAsync<List<CreatedOrderDto>>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-orders", null, Ct));
@@ -186,5 +195,57 @@ public class SourcingTests
         var seen = await ReadAsync<RfqDto>(await staff.GetAsync($"/api/rfqs/{rfq.Id}", Ct));
         Assert.False(seen.Actions.CanAward);
         Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([]), Ct)).StatusCode);
+    }
+
+    /// <summary>Người duyệt kết quả chọn thầu tại công ty của fixture: chỉ có quyền xem RFQ và duyệt kết quả.</summary>
+    private async Task<HttpClient> ApproverAsync(Fixture f)
+    {
+        var roleCode = UniqueCode("H");
+        await _factory.CreateRoleAsync(roleCode, Permissions.Sourcing.RfqView, Permissions.Sourcing.RfqApproveAward);
+        var userName = $"hd.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(userName, f.CompanyCode, roleCode);
+        return await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, f.CompanyCode);
+    }
+
+    [Fact]
+    public async Task GuiThieuNccCoGiaiTrinh_ChonThauPhaiQuaHoiDongDuyet()
+    {
+        // Lát B3 (M3, M4 – design.md mục 8.6): mời 2 NCC (tối thiểu 3) vẫn gửi được khi có giải trình; kết quả chọn thầu phải được duyệt.
+        var f = await ArrangeAsync();
+        var (a, b) = (f.Suppliers[0], f.Suppliers[1]);
+        var rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync("/api/rfqs", Rfq(f, null, a, b), Ct));
+        Assert.Contains("giải trình", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/send", new SendRfqRequest(" "), Ct)));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/send", new SendRfqRequest("Chỉ 2 đại lý chính hãng"), Ct));
+        Assert.Equal(("Sent", "Chỉ 2 đại lý chính hãng"), (rfq.Status, rfq.FewSuppliersReason));
+
+        var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
+        await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000), Q(thung, 600_000)), Ct));
+        await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 52_000)), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        Assert.Equal(("AwardPending", false), (rfq.Status, rfq.Actions.CanApprove));
+        Assert.Single(rfq.Approvals);
+
+        // Người chọn thầu không tự duyệt (dù có quyền); đang chờ duyệt thì không nhập báo giá, không hủy.
+        Assert.Contains("không tự duyệt", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct)));
+        Assert.Contains("đang nhận báo giá", await TitleAsync(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 1)), Ct)));
+        Assert.Contains("rút về", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/cancel", null, Ct)));
+
+        // Hội đồng từ chối (bắt buộc lý do) → về Đang nhận báo giá, giữ lựa chọn cũ; bổ sung báo giá, chọn lại.
+        var approver = await ApproverAsync(f);
+        Assert.True((await ReadAsync<RfqDto>(await approver.GetAsync($"/api/rfqs/{rfq.Id}", Ct))).Actions.CanApprove);
+        Assert.Equal(HttpStatusCode.BadRequest, (await approver.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/reject", new ApprovalActionRequest(" "), Ct)).StatusCode);
+        rfq = await ReadAsync<RfqDto>(await approver.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/reject", new ApprovalActionRequest("Đàm phán lại giá dòng cái"), Ct));
+        Assert.Equal(("Sent", "Đàm phán lại giá dòng cái", a), (rfq.Status, rfq.RejectReason, rfq.Lines[0].AwardedSupplierId));
+        await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 49_000), Q(thung, 600_000)), Ct));
+
+        // Gửi lại rồi rút về, gửi lần nữa: mỗi lượt một bước mới; người duyệt chỉ có quyền xem + duyệt vẫn duyệt được.
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/recall", null, Ct));
+        Assert.Equal("Sent", rfq.Status);
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        Assert.Null(rfq.RejectReason);
+        rfq = await ReadAsync<RfqDto>(await approver.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct));
+        Assert.Equal(("Awarded", 4_900_000m + 6_000_000m), (rfq.Status, rfq.AwardAmount));
+        Assert.Equal(["Rejected", "Skipped", "Approved"], rfq.Approvals.OrderBy(s => s.Round).Select(s => s.Status));
     }
 }

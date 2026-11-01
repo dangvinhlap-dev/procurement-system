@@ -1,5 +1,6 @@
 using Proc.Api.Security;
 using Proc.Api.Validation;
+using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Organization;
 
@@ -44,7 +45,12 @@ public static class SourcingEndpoints
         rfq.MapPut("/{id:guid}", (Guid id, SaveRfqRequest request, IRfqService s, CancellationToken ct) => s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage)
             .Validate<SaveRfqRequest>();
-        rfq.MapPost("/{id:guid}/send", (Guid id, IRfqService s, CancellationToken ct) => s.SendAsync(id, ct))
+        // Thân lệnh không bắt buộc: chỉ cần khi mời thiếu NCC (giải trình).
+        rfq.MapPost("/{id:guid}/send", async (Guid id, HttpRequest http, IRfqService s, CancellationToken ct) =>
+            {
+                var request = http.HasJsonContentType() ? await http.ReadFromJsonAsync<SendRfqRequest>(ct) : null;
+                return await s.SendAsync(id, request ?? new SendRfqRequest(null), ct);
+            })
             .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapPut("/{id:guid}/quotations/{supplierId:guid}", (Guid id, Guid supplierId, SaveQuotationRequest request, IRfqService s, CancellationToken ct) =>
                 s.SaveQuotationAsync(id, supplierId, request, ct))
@@ -52,6 +58,13 @@ public static class SourcingEndpoints
             .Validate<SaveQuotationRequest>();
         rfq.MapPost("/{id:guid}/award", (Guid id, AwardRfqRequest request, IRfqService s, CancellationToken ct) => s.AwardAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
+        // Kết quả chọn thầu phải được hội đồng duyệt (lát B3 – design.md mục 8.6); người chọn thầu rút về được khi còn chờ.
+        rfq.MapPost("/{id:guid}/recall", (Guid id, IRfqService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqAward);
+        rfq.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqApproveAward);
+        rfq.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqApproveAward);
         // Sinh PO cần cả quyền lập PO (kiểm tra thêm trong dịch vụ PO qua endpoint này).
         rfq.MapPost("/{id:guid}/create-orders", (Guid id, IRfqService s, CancellationToken ct) => s.CreateOrdersAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);

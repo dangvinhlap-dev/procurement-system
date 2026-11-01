@@ -120,11 +120,12 @@ const pendingColumns: GridColumn<PendingApproval>[] = [
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
 
-/** Đường dẫn mở phiếu chờ duyệt theo loại; loại mới (thầu, hợp đồng) thêm khi làm lát B3, B4. */
+/** Đường dẫn mở phiếu chờ duyệt theo loại; loại mới (hợp đồng) thêm khi làm lát B4. */
 const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = {
   PR: (id) => `/mua-hang/pr/${id}`,
   PO: (id) => `/mua-hang/po/${id}`,
   PRL: (id) => `/gia-ncc/bang-gia/${id}`,
+  RFQ: (id) => `/dau-thau/rfq/${id}?tab=compare`,
   NCC: (id) => `/gia-ncc/duyet-ncc?mo=${id}`,
 }
 

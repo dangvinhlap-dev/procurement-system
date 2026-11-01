@@ -1,4 +1,5 @@
 using FluentValidation;
+using Proc.Application.Purchasing;
 
 namespace Proc.Application.Sourcing;
 
@@ -88,17 +89,29 @@ public sealed record RfqSupplierDto(
     decimal PriceScore, decimal TotalScore, int QuotedLineCount, decimal AwardedAmount, Guid? PurchaseOrderId, string? PurchaseOrderNo,
     IReadOnlyList<QuotationLineDto> Lines);
 
-/// <summary>Thao tác được phép trên RFQ.</summary>
-public sealed record RfqActions(bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason);
+/// <summary>
+/// Thao tác được phép trên RFQ. CanAward = chọn thầu và gửi duyệt; CanApprove = người dùng duyệt/từ chối được bước đang đến lượt;
+/// CanRecall = rút kết quả đang chờ duyệt về để chọn lại.
+/// </summary>
+public sealed record RfqActions(
+    bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
+    bool CanRecall);
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);
 
-/// <summary>Chi tiết RFQ.</summary>
+/// <summary>
+/// Chi tiết RFQ. FewSuppliersReason = giải trình khi mời thiếu NCC; AwardAmount = giá trị trúng thầu xét ngưỡng duyệt; AwardedByName =
+/// người chọn thầu; RejectReason = lý do từ chối kết quả gần nhất; Approvals = lịch sử duyệt kết quả chọn thầu (lát B3).
+/// </summary>
 public sealed record RfqDto(
     Guid Id, string No, DateOnly Date, string Title, DateOnly Deadline, Guid? SourcingId, string? SourcingNo, RfqWeightsDto Weights, string? Note,
     string Status, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? SentAt, DateTimeOffset? AwardedAt, int MinSuppliers,
-    IReadOnlyList<RfqLineDto> Lines, IReadOnlyList<RfqSupplierDto> Suppliers, RfqActions Actions);
+    IReadOnlyList<RfqLineDto> Lines, IReadOnlyList<RfqSupplierDto> Suppliers, RfqActions Actions, string? FewSuppliersReason,
+    decimal AwardAmount, string? AwardedByName, string? RejectReason, IReadOnlyList<ApprovalStepDto> Approvals);
+
+/// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
+public sealed record SendRfqRequest(string? Reason);
 
 /// <summary>Lưu RFQ (nháp).</summary>
 public sealed record SaveRfqRequest(
@@ -128,7 +141,7 @@ public sealed record CreatedOrderDto(Guid SupplierId, string SupplierCode, Guid 
 /// <summary>RFQ, báo giá, so sánh báo giá và chọn thầu (design.md mục 8.4).</summary>
 public interface IRfqService
 {
-    /// <summary>RFQ của công ty đang làm việc; <paramref name="status"/> lọc theo trạng thái (Draft, Sent, Awarded, Cancelled).</summary>
+    /// <summary>RFQ của công ty đang làm việc; <paramref name="status"/> lọc theo trạng thái (Draft, Sent, AwardPending, Awarded, Cancelled).</summary>
     /// <param name="status">Trạng thái (null = mọi trạng thái).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Danh sách, mới nhất trước.</returns>
@@ -153,11 +166,12 @@ public interface IRfqService
     /// <returns>RFQ sau khi sửa.</returns>
     Task<RfqDto> UpdateAsync(Guid id, SaveRfqRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Gửi RFQ cho NCC.</summary>
+    /// <summary>Gửi RFQ cho NCC; mời thiếu số NCC tối thiểu thì phải có giải trình.</summary>
     /// <param name="id">Id.</param>
+    /// <param name="request">Giải trình (nếu mời thiếu).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
-    Task<RfqDto> SendAsync(Guid id, CancellationToken cancellationToken);
+    Task<RfqDto> SendAsync(Guid id, SendRfqRequest request, CancellationToken cancellationToken);
 
     /// <summary>Nhập/sửa báo giá của một NCC.</summary>
     /// <param name="id">Id RFQ.</param>
@@ -167,12 +181,33 @@ public interface IRfqService
     /// <returns>RFQ.</returns>
     Task<RfqDto> SaveQuotationAsync(Guid id, Guid supplierId, SaveQuotationRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Chọn thầu.</summary>
+    /// <summary>Chọn thầu và gửi hội đồng duyệt kết quả (quy trình loại RFQ của công ty, xét giá trị trúng thầu).</summary>
     /// <param name="id">Id.</param>
     /// <param name="request">Lựa chọn theo dòng.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
     Task<RfqDto> AwardAsync(Guid id, AwardRfqRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Duyệt kết quả chọn thầu ở bước đến lượt; duyệt đủ thì RFQ Đã chọn thầu.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Ý kiến.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi người dùng không duyệt được (người lập/người chọn thầu, chưa đến lượt…).</exception>
+    Task<RfqDto> ApproveAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Từ chối kết quả chọn thầu (bắt buộc lý do): RFQ về Đang nhận báo giá.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ.</returns>
+    Task<RfqDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Rút kết quả đang chờ duyệt về Đang nhận báo giá để chọn lại.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ.</returns>
+    Task<RfqDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Sinh PO nháp cho mỗi NCC trúng thầu chưa có PO (giá theo báo giá, kho nhận = kho tổng).</summary>
     /// <param name="id">Id.</param>
