@@ -12,7 +12,7 @@ Cập nhật: 01/11/2026. Đọc file này đầu mỗi phiên để biết đan
 | Giai đoạn 3–4 | Đóng kỳ, giá vốn, NXT; mua bán nội bộ | 668a96e, 569b561 |
 | Giai đoạn 5–6 | Mua hàng (PR, duyệt, PO); giá và đấu thầu | 3acd25b, c51b5c9 |
 | Giai đoạn 7 | 7a–7g: báo cáo kho, báo cáo mua hàng, xếp loại NCC, in PDF, trang chủ, xuất kế toán, hiệu năng | b433f06 … 7609e3a |
-| Phát hành | v0.1.0, v0.5.0, v0.7.0, v0.8.0, v0.9.0 (bản mới nhất, script `db/scripts/0.9.0.sql`) | tag |
+| Phát hành | v0.1.0, v0.5.0, v0.7.0, v0.8.0, v0.9.0, v0.10.0 (bản mới nhất 01/11/2026, script `db/scripts/0.10.0.sql`, gói Windows trên GitHub Release) | tag |
 | UI-a, UI-b | Giao diện SAP Fiori Horizon: theme; Shellbar + Dynamic Page | 0baa4ca, ae24f71 |
 | DM-1, DM-2, DM-3 | Sửa danh mục theo quyền (trừ mã); đánh số danh mục tự động theo dải; dải mặc định khi nâng cấp | eed25dc, 6d177b1, 1cda3a5 |
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
@@ -39,11 +39,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
    E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1 đã xong; lát kế tiếp: **A2**.
-   Bản 0.10.0 (SEC-2 + đợt E + A1) chỉ phát hành khi người dùng yêu cầu.
+   Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN).
 2. Hợp đồng khung (CTR): đã có mô tả trong đề xuất Ban Cung ứng – làm ở lát B4 (phương án 2).
-3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows,
+3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
-4. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
+4. Test Playwright `supplier-links` chập chờn khi chạy cả bộ song song (hết thời gian ở bước chọn mặt hàng tìm từ server) – cần sửa cho ổn định.
+5. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
 
 ## Ghi nhớ môi trường dev
 
