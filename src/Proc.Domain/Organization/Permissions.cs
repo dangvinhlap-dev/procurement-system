@@ -77,7 +77,7 @@ public static class Permissions
         public const string CatalogEditShared = "MasterData.Catalog.EditShared";
     }
 
-    /// <summary>Mua hàng: PR, PO, hợp đồng khung.</summary>
+    /// <summary>Mua hàng: PR, PO, hợp đồng nguyên tắc.</summary>
     public static class Purchase
     {
         /// <summary>Quyền "Xem đề nghị mua hàng".</summary>
@@ -92,9 +92,9 @@ public static class Permissions
         public const string PoCreate = "Purchase.PO.Create";
         /// <summary>Quyền "Duyệt đơn mua hàng".</summary>
         public const string PoApprove = "Purchase.PO.Approve";
-        /// <summary>Quyền "Xem hợp đồng khung".</summary>
+        /// <summary>Quyền "Xem hợp đồng nguyên tắc".</summary>
         public const string ContractView = "Purchase.Contract.View";
-        /// <summary>Quyền "Thêm, sửa hợp đồng khung".</summary>
+        /// <summary>Quyền "Thêm, sửa hợp đồng nguyên tắc".</summary>
         public const string ContractManage = "Purchase.Contract.Manage";
         /// <summary>Quyền "Duyệt hợp đồng nguyên tắc" (design.md mục 18.6).</summary>
         public const string ContractApprove = "Purchase.Contract.Approve";
@@ -211,8 +211,8 @@ public static class Permissions
         new(Purchase.PoView, "Xem đơn mua hàng"),
         new(Purchase.PoCreate, "Lập đơn mua hàng"),
         new(Purchase.PoApprove, "Duyệt đơn mua hàng"),
-        new(Purchase.ContractView, "Xem hợp đồng khung"),
-        new(Purchase.ContractManage, "Thêm, sửa hợp đồng khung"),
+        new(Purchase.ContractView, "Xem hợp đồng nguyên tắc"),
+        new(Purchase.ContractManage, "Thêm, sửa hợp đồng nguyên tắc"),
         new(Purchase.ContractApprove, "Duyệt hợp đồng nguyên tắc"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),

@@ -31,6 +31,8 @@ export const Permission = {
   PoCreate: 'Purchase.PO.Create',
   PoApprove: 'Purchase.PO.Approve',
   ContractView: 'Purchase.Contract.View',
+  ContractManage: 'Purchase.Contract.Manage',
+  ContractApprove: 'Purchase.Contract.Approve',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',

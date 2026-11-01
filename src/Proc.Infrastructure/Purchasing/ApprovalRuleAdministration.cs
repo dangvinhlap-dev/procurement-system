@@ -146,6 +146,23 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 rfq.AwardedBy is { } a ? users.GetValueOrDefault(a) : null));
         }
 
+        // Hợp đồng nguyên tắc chờ duyệt (lát B4a): duyệt tại công ty ký – filter công ty giữ nguyên.
+        var contracts = await _db.PurchaseContracts.Include(c => c.Lines).Where(c => c.Status == ContractStatus.Submitted).ToListAsync(cancellationToken);
+        var contractSupplierIds = contracts.Select(c => c.SupplierId).Distinct().ToList();
+        var contractSuppliers = await _db.Suppliers.AsNoTracking().Where(s => contractSupplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
+        var contractCreatorIds = contracts.Select(c => c.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => contractCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var contract in contracts)
+        {
+            var step = await _approvals.CurrentStepAsync(contract, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(contract, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                contract.DocType, ApprovalTypes.Get(contract.DocType).Name, contract.Id, contract.No, contract.ValidFrom,
+                $"{contractSuppliers.GetValueOrDefault(contract.SupplierId)}: {contract.Title}", contract.ApprovalAmount, step!.Level,
+                contract.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();
     }
 

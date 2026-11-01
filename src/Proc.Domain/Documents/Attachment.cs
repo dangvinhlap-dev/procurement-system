@@ -26,8 +26,11 @@ public static class AttachmentOwnerTypes
     /// <summary>Phiếu kho mọi loại: nhập mua, trả NCC, chuyển kho, ICS, ICR (hóa đơn, biên bản giao nhận).</summary>
     public const string InventoryDocument = "InventoryDocument";
 
+    /// <summary>Hợp đồng nguyên tắc (bản scan hợp đồng, phụ lục – lát B4a).</summary>
+    public const string PurchaseContract = "PurchaseContract";
+
     /// <summary>Mọi loại hợp lệ.</summary>
-    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument];
+    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract];
 }
 
 /// <summary>
