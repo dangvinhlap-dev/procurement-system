@@ -69,6 +69,12 @@ public static class Permissions
         public const string SupplierManage = "MasterData.Supplier.Manage";
         /// <summary>Quyền "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp" (design.md mục 18.6).</summary>
         public const string SupplierApprove = "MasterData.Supplier.Approve";
+        /// <summary>
+        /// Quyền "Xem mọi kê khai xung đột lợi ích" (KSNB, Trưởng ban – design.md mục 18.8). Không có quyền này thì chỉ xem kê khai của mình.
+        /// </summary>
+        public const string ConflictView = "MasterData.Conflict.View";
+        /// <summary>Quyền "Ghi nhận kê khai thay người khác, kết thúc kê khai" (design.md mục 18.8).</summary>
+        public const string ConflictManage = "MasterData.Conflict.Manage";
 
         /// <summary>
         /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
@@ -204,6 +210,8 @@ public static class Permissions
         new(MasterData.SupplierView, "Xem nhà cung cấp"),
         new(MasterData.SupplierManage, "Thêm, sửa nhà cung cấp"),
         new(MasterData.SupplierApprove, "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp"),
+        new(MasterData.ConflictView, "Xem mọi kê khai xung đột lợi ích"),
+        new(MasterData.ConflictManage, "Ghi nhận thay, kết thúc kê khai xung đột lợi ích"),
         new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),

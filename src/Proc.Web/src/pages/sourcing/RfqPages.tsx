@@ -784,6 +784,7 @@ function RfqNotices({ doc }: { doc: Rfq }) {
     doc.rejectReason && doc.status === 'Sent' && <Alert key="reject" type="warning" showIcon title={`Kết quả chọn thầu bị từ chối: ${doc.rejectReason}`} />,
     doc.fewSuppliersReason && <Alert key="few" type="warning" showIcon title={`Mời ít hơn ${doc.minSuppliers} NCC – giải trình: ${doc.fewSuppliersReason}`} />,
     doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
+    doc.actions.conflictReason && <Alert key="conflict" type="warning" showIcon title={doc.actions.conflictReason} />,
   ].filter(Boolean)
   return notices.length ? <Flex vertical gap={8}>{notices}</Flex> : null
 }

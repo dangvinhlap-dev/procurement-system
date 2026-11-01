@@ -87,6 +87,9 @@ public sealed class SupplierChangeRequest : AuditableEntity, IApprovalSubject
     public string DocType => ApprovalTypes.Supplier;
 
     /// <inheritdoc />
+    public IReadOnlyCollection<Guid> RelatedSupplierIds => [SupplierId];
+
+    /// <inheritdoc />
     public decimal ApprovalAmount => 0;
 
     /// <inheritdoc />

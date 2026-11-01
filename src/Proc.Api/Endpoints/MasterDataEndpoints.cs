@@ -139,6 +139,25 @@ public static class MasterDataEndpoints
         changes.MapPost("/{id:guid}/cancel", (Guid id, ISupplierChangeRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
 
+        // Kê khai xung đột lợi ích (design.md mục 18.8): ai đăng nhập cũng tự kê khai, xem kê khai của mình được; dịch vụ tự giới hạn
+        // phạm vi xem. Ghi thay, kết thúc kê khai cần quyền quản lý kê khai.
+        var conflicts = app.MapGroup("/api/conflict-declarations").WithTags("Kê khai xung đột lợi ích").RequireAuthorization();
+        conflicts.MapGet("/", (IConflictDeclarationService s, CancellationToken ct) => s.ListAsync(ct));
+        conflicts.MapGet("/users", (IConflictDeclarationService s, CancellationToken ct) => s.UserOptionsAsync(ct))
+            .RequirePermission(Permissions.MasterData.ConflictManage);
+        conflicts.MapGet("/suppliers", (IConflictDeclarationService s, CancellationToken ct) => s.SupplierOptionsAsync(ct));
+        conflicts.MapGet("/{id:guid}", (Guid id, IConflictDeclarationService s, CancellationToken ct) => s.GetAsync(id, ct));
+        conflicts.MapPost("/", async (CreateConflictDeclarationRequest request, IConflictDeclarationService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/conflict-declarations/{created.Id}", created);
+            })
+            .Validate<CreateConflictDeclarationRequest>();
+        conflicts.MapPost("/{id:guid}/end", (Guid id, EndConflictDeclarationRequest request, IConflictDeclarationService s, CancellationToken ct) =>
+                s.EndAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.ConflictManage)
+            .Validate<EndConflictDeclarationRequest>();
+
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
         suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

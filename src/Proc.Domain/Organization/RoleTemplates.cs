@@ -43,6 +43,7 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies,
+            Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage,
         ]),
         new("DAMPHAN", "Nhóm Đàm phán & quản trị giá", "Quản lý hồ sơ NCC, lập bảng giá, RFQ, đề xuất chọn thầu, soạn hợp đồng, phân tích dữ liệu mua – không tự duyệt",
         [
@@ -96,7 +97,7 @@ public static class RoleTemplates
             Permissions.Report.StockView, Permissions.Report.PurchaseView,
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
-            Permissions.Analysis.PurchaseHistoryViewAllCompanies, Permissions.System.LogView,
+            Permissions.Analysis.PurchaseHistoryViewAllCompanies, Permissions.System.LogView, Permissions.MasterData.ConflictView,
         ]),
     ];
 }

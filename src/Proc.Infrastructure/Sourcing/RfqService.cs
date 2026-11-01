@@ -134,6 +134,7 @@ public sealed class RfqService : IRfqService
     public async Task<RfqDto> SaveQuotationAsync(Guid id, Guid supplierId, SaveQuotationRequest request, CancellationToken cancellationToken)
     {
         var rfq = await LoadAsync(id, cancellationToken);
+        await RequireNoConflictAsync(rfq, cancellationToken);
         rfq.SaveQuotation(
             supplierId,
             new QuotationHeader(
@@ -150,12 +151,23 @@ public sealed class RfqService : IRfqService
     {
         var rfq = await LoadAsync(id, cancellationToken);
         var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
+        await RequireNoConflictAsync(rfq, cancellationToken);
         rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam());
         await CheckAwardedSuppliersAsync(rfq, cancellationToken);
         // Lát B3 (M4): chọn thầu xong là gửi hội đồng duyệt ngay – không có trạng thái "đã chọn nhưng chưa gửi".
         await _approvals.SubmitAsync(rfq, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Chặn người có kê khai xung đột lợi ích với một NCC được mời nhập báo giá – chấm điểm và chọn thầu (design.md mục 18.8).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi người dùng vướng kê khai còn hiệu lực.</exception>
+    private async Task RequireNoConflictAsync(Rfq rfq, CancellationToken cancellationToken)
+    {
+        if (_scope.UserId is { } userId && await _approvals.ConflictBlockerAsync(userId, rfq.RelatedSupplierIds, cancellationToken) is { } reason)
+            throw new BusinessRuleException(reason);
     }
 
     /// <inheritdoc />
@@ -429,15 +441,17 @@ public sealed class RfqService : IRfqService
 
         string? readOnly = items.Count < itemIds.Count ? "RFQ có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được."
             : !_scope.HasPermission(Permissions.Sourcing.RfqManage) ? "Bạn không có quyền lập, sửa yêu cầu báo giá." : null;
+        var conflict = _scope.UserId is { } me && rfq.Status == RfqStatus.Sent
+            ? await _approvals.ConflictBlockerAsync(me, rfq.RelatedSupplierIds, cancellationToken) : null;
         var canAward = rfq.Status == RfqStatus.Sent && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward)
-                       && rfq.Suppliers.Any(s => s.HasQuoted);
+                       && rfq.Suppliers.Any(s => s.HasQuoted) && conflict is null;
         // Người duyệt có thể chỉ có quyền xem + duyệt (không có quyền sửa RFQ) nên nút Duyệt tính riêng, không theo readOnly.
         var canApprove = rfq.IsAwaitingApproval && items.Count == itemIds.Count
             && await _approvals.ApproveBlockerAsync(rfq, await _approvals.CurrentStepAsync(rfq, cancellationToken), cancellationToken) is null;
         var actions = new RfqActions(
             rfq.Status == RfqStatus.Draft && readOnly is null,
             rfq.Status == RfqStatus.Draft && readOnly is null,
-            rfq.Status == RfqStatus.Sent && readOnly is null,
+            rfq.Status == RfqStatus.Sent && readOnly is null && conflict is null,
             canAward,
             rfq.Status == RfqStatus.Awarded && readOnly is null && _scope.HasPermission(Permissions.Purchase.PoCreate)
                 && rfq.Suppliers.Any(s => s.PurchaseOrderId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
@@ -447,7 +461,8 @@ public sealed class RfqService : IRfqService
             rfq.IsAwaitingApproval && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward),
             rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null,
             rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Pricing.PriceListManage)
-                && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)));
+                && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
+            conflict);
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,

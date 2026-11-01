@@ -23,6 +23,8 @@ export const Permission = {
   SupplierView: 'MasterData.Supplier.View',
   SupplierManage: 'MasterData.Supplier.Manage',
   SupplierApprove: 'MasterData.Supplier.Approve',
+  ConflictView: 'MasterData.Conflict.View',
+  ConflictManage: 'MasterData.Conflict.Manage',
   CatalogEditShared: 'MasterData.Catalog.EditShared',
   PrView: 'Purchase.PR.View',
   PrCreate: 'Purchase.PR.Create',

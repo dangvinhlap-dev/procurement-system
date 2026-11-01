@@ -269,6 +269,8 @@ export interface Rfq {
     canRecall: boolean
     /** Sửa hồ sơ trình (Nháp/Đang nhận báo giá). */
     canEditDossier: boolean
+    /** Người dùng có kê khai xung đột lợi ích với NCC được mời – không nhập báo giá, chọn thầu được (design.md mục 18.8). */
+    conflictReason?: string | null
     /** Sinh bảng giá nháp từ kết quả đã duyệt. */
     canCreatePriceLists: boolean
   }

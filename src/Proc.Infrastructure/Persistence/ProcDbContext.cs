@@ -106,6 +106,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Yêu cầu duyệt NCC (design.md mục 18.6).</summary>
     public DbSet<SupplierChangeRequest> SupplierChangeRequests => Set<SupplierChangeRequest>();
 
+    /// <summary>Kê khai xung đột lợi ích (dùng chung, không lọc theo công ty – design.md mục 18.8).</summary>
+    public DbSet<ConflictDeclaration> ConflictDeclarations => Set<ConflictDeclaration>();
+
     /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
     public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
 
