@@ -366,28 +366,28 @@ export function CreatePurchaseOrderPreview() {
           else setMessage({ level: 'error', text: `Không có màn hình mã "${code}".` })
         }}
         items={[
-          { key: 'save', icon: <SaveOutlined />, title: 'Lưu (Ctrl+S)', onClick: save },
+          { key: 'save', icon: <SaveOutlined />, title: 'Lưu (Ctrl+S)', tone: 'success', onClick: save },
           { key: 's1', separator: true },
-          { key: 'back', icon: <ArrowLeftOutlined />, title: 'Quay lại (F3)', onClick: back },
-          { key: 'exit', icon: <LogoutOutlined />, title: 'Thoát', onClick: () => navigate('/') },
-          { key: 'cancel', icon: <CloseCircleOutlined />, title: 'Hủy', onClick: cancel },
+          { key: 'back', icon: <ArrowLeftOutlined />, title: 'Quay lại (F3)', tone: 'warning', onClick: back },
+          { key: 'exit', icon: <LogoutOutlined />, title: 'Thoát', tone: 'danger', onClick: () => navigate('/') },
+          { key: 'cancel', icon: <CloseCircleOutlined />, title: 'Hủy', tone: 'danger', onClick: cancel },
           { key: 's2', separator: true },
-          { key: 'print', icon: <PrinterOutlined />, title: 'In (Ctrl+P)', onClick: printPreview },
-          { key: 'find', icon: <SearchOutlined />, title: 'Tìm', onClick: focusCommand },
+          { key: 'print', icon: <PrinterOutlined />, title: 'In (Ctrl+P)', tone: 'warning', onClick: printPreview },
+          { key: 'find', icon: <SearchOutlined />, title: 'Tìm', tone: 'warning', onClick: focusCommand },
         ]}
       />
       <ScreenTitle>Tạo đơn mua hàng</ScreenTitle>
       <CommandBar>
-        <CommandButton icon={<FileSearchOutlined />} onClick={() => navigate('/mua-hang/po')}>
+        <CommandButton icon={<FileSearchOutlined />} tone="warning" onClick={() => navigate('/mua-hang/po')}>
           Tổng quan chứng từ
         </CommandButton>
-        <CommandButton icon={<PauseCircleOutlined />} onClick={() => setHeld(!held)}>
+        <CommandButton icon={<PauseCircleOutlined />} tone="warning" onClick={() => setHeld(!held)}>
           {held ? 'Bỏ giữ' : 'Giữ'}
         </CommandButton>
-        <CommandButton icon={<EyeOutlined />} onClick={printPreview}>
+        <CommandButton icon={<EyeOutlined />} tone="warning" onClick={printPreview}>
           Xem trước in
         </CommandButton>
-        <CommandButton icon={<MessageOutlined />} onClick={() => setMessage({ level: 'success', text: 'Không có thông báo mới.' })}>
+        <CommandButton icon={<MessageOutlined />} tone="warning" onClick={() => setMessage({ level: 'success', text: 'Không có thông báo mới.' })}>
           Thông báo
         </CommandButton>
         <span className="erp-preview-note">Bản thử giao diện – chưa áp dụng chính thức</span>
@@ -420,7 +420,7 @@ export function CreatePurchaseOrderPreview() {
             </Field>
             <Field label="Ngày chứng từ" required>
               {(id) => (
-                <DateInput id={id} className="erp-input" style={{ width: 96 }} value={docDate} onChange={(v) => v && setDocDate(v)} />
+                <DateInput id={id} style={{ width: 120 }} value={docDate} onChange={(v) => v && setDocDate(v)} />
               )}
             </Field>
           </HeaderFields>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { formatQuantity } from '../utils/format'
 import { CommandButton } from './ClassicScreen'
 import { DateInput } from './DateInput'
@@ -105,7 +105,36 @@ export function EntryGrid<T>({
     onSelectionChange(next)
   }
 
-  const totalWidth = 18 + (rowMarker ? 22 : 0) + columns.reduce((s, c) => s + c.width, 0)
+  // Độ rộng cột người dùng đã kéo (theo key); cột chưa kéo dùng độ rộng khai báo.
+  const [widths, setWidths] = useState<Record<string, number>>({})
+  const widthOf = (c: EntryColumn<T>) => widths[c.key] ?? c.width
+
+  /** Kéo mép phải tiêu đề cột để đổi độ rộng; tối thiểu 32px để còn đọc được tiêu đề. */
+  const startResize = (e: ReactMouseEvent, c: EntryColumn<T>) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = widthOf(c)
+    const onMove = (ev: MouseEvent) => setWidths((w) => ({ ...w, [c.key]: Math.max(32, startWidth + ev.clientX - startX) }))
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.classList.remove('erp-col-resizing')
+    }
+    // Giữ con trỏ dạng kéo ngang (và không bôi đen chữ) cả khi chuột ra khỏi mép cột.
+    document.body.classList.add('erp-col-resizing')
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  /** Bấm đúp mép cột: trả về độ rộng khai báo ban đầu. */
+  const resetWidth = (c: EntryColumn<T>) =>
+    setWidths((w) => {
+      const next = { ...w }
+      delete next[c.key]
+      return next
+    })
+
+  const totalWidth = 18 + (rowMarker ? 22 : 0) + columns.reduce((s, c) => s + widthOf(c), 0)
 
   return (
     <div className="erp-grid" style={maxHeight ? { maxHeight } : undefined}>
@@ -115,7 +144,7 @@ export function EntryGrid<T>({
           <col style={{ width: 18 }} />
           {rowMarker && <col style={{ width: 22 }} />}
           {columns.map((c) => (
-            <col key={c.key} style={{ width: c.width }} />
+            <col key={c.key} style={{ width: widthOf(c) }} />
           ))}
         </colgroup>
         <thead>
@@ -125,6 +154,15 @@ export function EntryGrid<T>({
             {columns.map((c) => (
               <th key={c.key} className={c.numeric ? 'erp-grid__num' : undefined}>
                 <span className={c.required ? 'erp-field__label--required' : undefined}>{c.title}</span>
+                <span
+                  className="erp-grid__resizer"
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Đổi độ rộng cột ${c.title}`}
+                  title="Kéo để đổi độ rộng; bấm đúp để trả về mặc định"
+                  onMouseDown={(e) => startResize(e, c)}
+                  onDoubleClick={() => resetWidth(c)}
+                />
               </th>
             ))}
           </tr>
@@ -156,7 +194,9 @@ export function EntryGrid<T>({
 
 /** Đưa con trỏ tới ô nhập ở (dòng, cột); bỏ qua nếu ô đó chỉ đọc. */
 function focusCell(table: HTMLTableElement | null, row: number, col: number) {
-  const el = table?.querySelector<HTMLElement>(`[data-row="${row}"][data-col="${col}"]`)
+  const found = table?.querySelector<HTMLElement>(`[data-row="${row}"][data-col="${col}"]`)
+  // Ô ngày (DatePicker) gắn data-* ở ô nhập bên trong hoặc ở khung bọc – lấy đúng phần tử nhận con trỏ.
+  const el = found && !found.matches('input, select') ? (found.querySelector<HTMLElement>('input') ?? found) : found
   el?.focus()
   if (el instanceof HTMLInputElement) el.select()
 }
@@ -200,7 +240,7 @@ function GridCell<T>({
           ))}
         </select>
       ) : c.kind === 'date' ? (
-        <DateInput value={value == null ? null : String(value)} onChange={set} {...dataAttrs} />
+        <DateInput borderless value={value == null ? null : String(value)} onChange={set} {...dataAttrs} />
       ) : (
         <input
           value={value == null ? '' : String(value)}
@@ -300,11 +340,11 @@ export function GridButtons({
 }) {
   return (
     <div className="erp-gridbuttons">
-      {onAdd && <CommandButton icon={icons.add} title="Thêm dòng (F2)" onClick={onAdd} />}
-      {onDelete && <CommandButton icon={icons.delete} title="Xóa dòng đã chọn" onClick={onDelete} disabled={!hasSelection} />}
-      {onSelectAll && <CommandButton icon={icons.selectAll} title="Chọn tất cả" onClick={onSelectAll} />}
+      {onAdd && <CommandButton icon={icons.add} tone="success" title="Thêm dòng (F2)" onClick={onAdd} />}
+      {onDelete && <CommandButton icon={icons.delete} tone="danger" title="Xóa dòng đã chọn" onClick={onDelete} disabled={!hasSelection} />}
+      {onSelectAll && <CommandButton icon={icons.selectAll} tone="warning" title="Chọn tất cả" onClick={onSelectAll} />}
       {onClearSelection && (
-        <CommandButton icon={icons.clear} title="Bỏ chọn" onClick={onClearSelection} disabled={!hasSelection} />
+        <CommandButton icon={icons.clear} tone="warning" title="Bỏ chọn" onClick={onClearSelection} disabled={!hasSelection} />
       )}
     </div>
   )

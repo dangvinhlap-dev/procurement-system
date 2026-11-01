@@ -125,9 +125,22 @@ function renderAccessLabel(label: string): ReactNode {
   )
 }
 
+/**
+ * Màu icon theo mức quan trọng của thao tác (docs/ui-style.md mục 2):
+ * - 'danger' (đỏ): không hoàn tác được hoặc làm mất dữ liệu đang nhập – Hủy, Thoát, Xóa dòng.
+ * - 'success' (xanh lá): ghi hoặc tạo dữ liệu – Lưu, Thêm dòng.
+ * - 'warning' (vàng): thao tác thường, không đổi dữ liệu – Quay lại, In, Tìm, Xem trước in…
+ */
+export type IconTone = 'danger' | 'success' | 'warning'
+
+/** Bọc icon trong lớp màu theo mức quan trọng. */
+function toned(icon: ReactNode, tone: IconTone | undefined): ReactNode {
+  return tone ? <span className={`erp-tone erp-tone--${tone}`}>{icon}</span> : icon
+}
+
 /** Một nút icon trên thanh công cụ; `separator` để chèn vạch dọc chia nhóm. */
 export type ToolbarItem =
-  | { key: string; icon: ReactNode; title: string; onClick?: () => void; disabled?: boolean }
+  | { key: string; icon: ReactNode; title: string; tone?: IconTone; onClick?: () => void; disabled?: boolean }
   | { key: string; separator: true }
 
 /**
@@ -164,7 +177,7 @@ export function Toolbar({ items, onCommand }: { items: ToolbarItem[]; onCommand?
             disabled={it.disabled}
             onClick={it.onClick}
           >
-            {it.icon}
+            {toned(it.icon, it.tone)}
           </button>
         ),
       )}
@@ -190,15 +203,18 @@ export function CommandBar({ children }: { children: ReactNode }) {
  * Nút lệnh nền be nhạt, viền nâu xám (docs/ui-style.md mục 2).
  * @param icon Biểu tượng tùy chọn; không có `children` thì nút vuông chỉ icon và bắt buộc có `title`.
  * @param title Chú thích khi rê chuột, đồng thời là tên đọc màn hình của nút chỉ icon.
+ * @param tone Màu icon theo mức quan trọng.
  */
 export function CommandButton({
   icon,
+  tone,
   children,
   title,
   onClick,
   disabled,
 }: {
   icon?: ReactNode
+  tone?: IconTone
   children?: ReactNode
   title?: string
   onClick?: () => void
@@ -213,7 +229,7 @@ export function CommandButton({
       onClick={onClick}
       disabled={disabled}
     >
-      {icon}
+      {toned(icon, tone)}
       {children}
     </button>
   )

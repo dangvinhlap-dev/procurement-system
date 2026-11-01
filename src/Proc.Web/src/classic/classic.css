@@ -31,6 +31,11 @@
   --erp-light-yellow: #e8b400;
   --erp-light-red: #d0281e;
   --erp-required: #b00e12;
+  /* Màu icon theo mức quan trọng; vàng đậm hơn đèn trạng thái để đủ tương phản trên nền sáng. */
+  --erp-icon-danger: #d0281e;
+  --erp-icon-success: #1e8f2e;
+  --erp-icon-warning: #c48a00;
+  --erp-icon-size: 16px;
   --erp-panel-bg: #f4f7fb;
 
   --erp-font: Tahoma, 'Segoe UI', Arial, sans-serif;
@@ -120,8 +125,30 @@
   border-radius: var(--erp-radius);
   background: none;
   color: var(--erp-title);
-  font-size: 14px;
+  font-size: var(--erp-icon-size);
   cursor: pointer;
+}
+
+/* ---------- Màu icon theo mức quan trọng (đỏ / xanh lá / vàng) ---------- */
+.erp-tone {
+  display: inline-flex;
+  font-size: var(--erp-icon-size);
+}
+
+.erp-cmdbtn .erp-tone {
+  font-size: 14px;
+}
+
+.erp-tone--danger {
+  color: var(--erp-icon-danger);
+}
+
+.erp-tone--success {
+  color: var(--erp-icon-success);
+}
+
+.erp-tone--warning {
+  color: var(--erp-icon-warning);
 }
 
 .erp-iconbtn:hover:not(:disabled),
@@ -296,6 +323,8 @@
   background: var(--erp-tab-bg);
   color: var(--erp-title);
   font: inherit;
+  /* Chữ trên tab mặc định in hoa (yêu cầu 01/11/2026); tên tab trong code vẫn viết thường để đọc màn hình tự nhiên. */
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -357,6 +386,38 @@
   background: var(--erp-grid-head);
   font-weight: 400;
   text-align: left;
+}
+
+/* Tay kéo đổi độ rộng cột ở mép phải tiêu đề. */
+.erp-grid__resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+/* Gắn vào body chỉ trong lúc đang kéo cột (EntryGrid.startResize). */
+body.erp-col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.erp-grid__resizer:hover {
+  background: var(--erp-input-focus);
+}
+
+/* Ô ngày (DatePicker) trong lưới: lấp đầy ô, cùng chiều cao dòng. */
+.erp-grid__cell-input .erp-date {
+  width: 100%;
+  height: calc(var(--erp-row-h) - 1px);
+  padding: 0 var(--erp-gap-sm);
+}
+
+.erp-grid__cell-input .erp-date input {
+  padding: 0;
+  height: auto;
 }
 
 .erp-grid th.erp-grid__num,

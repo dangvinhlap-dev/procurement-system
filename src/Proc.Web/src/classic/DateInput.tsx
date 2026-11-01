@@ -1,52 +1,48 @@
-import { useState, type InputHTMLAttributes } from 'react'
+import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
+import type { CSSProperties } from 'react'
 
 /**
- * Đổi chữ người dùng gõ thành ngày ISO "yyyy-MM-dd".
- * Nhận "dd/MM/yyyy", "d/M/yyyy", "dd.MM.yyyy", "ddMMyyyy" và "dd/MM" (lấy năm hiện tại) – gõ nhanh bằng bàn phím.
- * Ví dụ "15/11/2026" → "2026-11-15"; "1511" → "2026-11-15" nếu đang ở năm 2026; sai ngày → null.
+ * Các kiểu gõ ngày được chấp nhận; kiểu đầu tiên là kiểu hiển thị (dd/MM/yyyy – CLAUDE.md mục 5).
+ * Kiểu "DDMMYYYY" cho gõ nhanh không cần dấu "/": "05122026" → 05/12/2026.
  */
-function parseVnDate(text: string): string | null {
-  const t = text.trim()
-  if (!t) return null
-  const parts = /^\d{4}$|^\d{8}$/.test(t) ? [t.slice(0, 2), t.slice(2, 4), t.slice(4) || String(dayjs().year())] : t.split(/[/.-]/)
-  if (parts.length < 2 || parts.length > 3) return null
-  const [d, m, y = String(dayjs().year())] = parts.map(Number).map(String)
-  const iso = `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-  // Kiểm tra ngày có thật (31/02 không hợp lệ) bằng cách định dạng ngược lại.
-  return dayjs(iso, 'YYYY-MM-DD').format('YYYY-MM-DD') === iso ? iso : null
-}
+const DATE_FORMATS = ['DD/MM/YYYY', 'DDMMYYYY', 'D/M/YYYY', 'DD.MM.YYYY', 'DD-MM-YYYY']
 
 /**
- * Ô ngày gõ tay theo dd/MM/yyyy (CLAUDE.md mục 5). Không dùng input type="date" vì trình duyệt hiển thị theo ngôn ngữ hệ điều hành
- * (có máy ra mm/dd/yyyy). Giá trị chỉ ghi khi rời ô; gõ sai thì giữ ngày cũ.
+ * Ô ngày: gõ tay hoặc chọn trên lịch (docs/ui-style.md mục 5). Dùng DatePicker của antd thay cho input type="date"
+ * vì ô ngày của trình duyệt hiển thị theo ngôn ngữ hệ điều hành (có máy ra mm/dd/yyyy).
  * @param value Ngày ISO "yyyy-MM-dd" hoặc null.
  * @param onChange Nhận ngày ISO mới hoặc null khi xóa trắng.
+ * @param borderless Không viền – dùng trong ô của lưới nhập.
  */
 export function DateInput({
   value,
   onChange,
+  borderless,
+  id,
+  style,
   ...rest
-}: { value: string | null; onChange: (value: string | null) => void } & Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  'value' | 'onChange'
->) {
-  const [text, setText] = useState<string | null>(null)
-  const shown = value ? dayjs(value).format('DD/MM/YYYY') : ''
+}: {
+  value: string | null
+  onChange: (value: string | null) => void
+  borderless?: boolean
+  id?: string
+  style?: CSSProperties
+  'aria-label'?: string
+  'data-row'?: number
+  'data-col'?: number
+}) {
   return (
-    <input
+    <DatePicker
       {...rest}
+      id={id}
+      style={style}
+      className="erp-date"
+      variant={borderless ? 'borderless' : 'outlined'}
+      format={DATE_FORMATS}
       placeholder="dd/mm/yyyy"
-      value={text ?? shown}
-      onFocus={() => setText(shown)}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => {
-        if (text !== null && text !== shown) {
-          const parsed = parseVnDate(text)
-          if (parsed || !text.trim()) onChange(parsed)
-        }
-        setText(null)
-      }}
+      value={value ? dayjs(value) : null}
+      onChange={(d) => onChange(d ? d.format('YYYY-MM-DD') : null)}
     />
   )
 }

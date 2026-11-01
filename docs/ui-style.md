@@ -51,6 +51,16 @@ ngày khi dùng antd bên trong). Component không viết màu cứng.
 
 Trạng thái luôn có chữ đi kèm (tooltip/nhãn), màu không là thông tin duy nhất.
 
+**Màu icon theo mức quan trọng** (yêu cầu 01/11/2026) – khai báo `tone` trên `Toolbar`/`CommandButton`, icon 16px trên thanh công cụ:
+
+| Mức | Màu | Biến | Dùng cho |
+| --- | --- | --- | --- |
+| `danger` – không hoàn tác / mất dữ liệu đang nhập | đỏ #d0281e | `--erp-icon-danger` | Hủy, Thoát, Xóa dòng |
+| `success` – ghi hoặc tạo dữ liệu | xanh lá #1e8f2e | `--erp-icon-success` | Lưu, Thêm dòng |
+| `warning` – thao tác thường | vàng #c48a00 | `--erp-icon-warning` | Quay lại, In, Tìm, Tổng quan, Giữ, Xem trước in, Thông báo, Chọn/Bỏ chọn |
+
+Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
+
 ## 3. Chữ
 
 - Chữ chung: `Tahoma, "Segoe UI", Arial, sans-serif`, **12px**, độ đậm 400. Nhãn ô: 12px.
@@ -74,6 +84,13 @@ Trạng thái luôn có chữ đi kèm (tooltip/nhãn), màu không là thông t
 - Có sẵn vài dòng trống cuối lưới để gõ tiếp.
 - Dòng tổng chữ `--erp-subtotal`, đậm.
 - Thanh cuộn ngang khi nhiều cột; tiêu đề cột dính trên.
+- **Co giãn cột**: kéo mép phải tiêu đề cột (tối thiểu 32px); bấm đúp mép cột để trả về độ rộng mặc định.
+- **Ô ngày** (`DateInput`, mọi ô ngày – header và lưới): gõ tay dd/MM/yyyy (gõ nhanh `05122026`, `5/12/2026`, `05.12.2026`)
+  hoặc chọn trên lịch; không dùng ô ngày của trình duyệt (hiển thị theo ngôn ngữ hệ điều hành).
+
+## 5a. Tab
+
+- Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).
 
 ## 6. Bàn phím
 
