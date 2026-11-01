@@ -26,7 +26,8 @@ public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal 
 public sealed record ApprovalStepDto(int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment);
 
 /// <summary>Một phiếu đang chờ người dùng hiện tại duyệt (Việc cần làm).</summary>
-/// <param name="DocType">PR hoặc PO.</param>
+/// <param name="DocType">Loại phiếu duyệt (PR, PO…).</param>
+/// <param name="DocTypeName">Tên loại phiếu.</param>
 /// <param name="DocumentId">Id phiếu.</param>
 /// <param name="No">Số phiếu.</param>
 /// <param name="Date">Ngày phiếu.</param>
@@ -34,7 +35,13 @@ public sealed record ApprovalStepDto(int Round, int Level, string? RoleName, str
 /// <param name="Amount">Giá trị xét duyệt.</param>
 /// <param name="Level">Cấp đang chờ.</param>
 /// <param name="CreatedByName">Người lập.</param>
-public sealed record PendingApprovalDto(string DocType, Guid DocumentId, string No, DateOnly Date, string? Description, decimal Amount, int Level, string? CreatedByName);
+public sealed record PendingApprovalDto(string DocType, string DocTypeName, Guid DocumentId, string No, DateOnly Date, string? Description, decimal Amount, int Level, string? CreatedByName);
+
+/// <summary>Một loại phiếu có duyệt (design.md mục 18.6) – để chọn khi cấu hình quy trình.</summary>
+/// <param name="Code">Mã loại (PR, PO, PRL, RFQ, NCC, CTR).</param>
+/// <param name="Name">Tên loại.</param>
+/// <param name="AmountLabel">Giá trị xét ngưỡng; null = không xét giá trị (ngưỡng luôn 0).</param>
+public sealed record ApprovalTypeDto(string Code, string Name, string? AmountLabel);
 
 /// <summary>Duyệt/từ chối kèm ý kiến (bắt buộc khi từ chối).</summary>
 public sealed record ApprovalActionRequest(string? Comment);
@@ -65,6 +72,10 @@ public interface IApprovalRuleAdministration
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Các loại phiếu có duyệt, theo thứ tự hiển thị.</summary>
+    /// <returns>Danh sách loại.</returns>
+    IReadOnlyList<ApprovalTypeDto> Types();
 
     /// <summary>Các phiếu PR, PO đang chờ người dùng hiện tại duyệt ở công ty đang làm việc.</summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>

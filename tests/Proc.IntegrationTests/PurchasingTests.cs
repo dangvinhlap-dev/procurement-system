@@ -142,6 +142,27 @@ public class PurchasingTests
     }
 
     [Fact]
+    public async Task QuyTrinhDuyet_LoaiMoiPrlRfqNccCtr_CauHinhDuoc()
+    {
+        var f = await ArrangeAsync();
+        var (_, role) = await ApproverAsync(f);
+
+        var types = await f.Buyer.GetFromJsonAsync<List<ApprovalTypeDto>>("/api/approval-rules/types", Ct);
+        Assert.Equal(["PR", "PO", "PRL", "RFQ", "NCC", "CTR"], types!.Select(t => t.Code));
+        Assert.Null(types.Single(t => t.Code == "NCC").AmountLabel);
+
+        var prl = await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("prl", 1, 0, role), Ct));
+        Assert.Equal("PRL", prl.DocType);
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("RFQ", 1, 50_000_000, role), Ct));
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("CTR", 1, 0, role), Ct));
+        Assert.Contains("ngưỡng phải là 0", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("NCC", 1, 1, role), Ct)));
+        Assert.Contains("Loại phiếu duyệt phải là", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("GRN", 1, 0, role), Ct)));
+
+        var rules = await f.Buyer.GetFromJsonAsync<List<ApprovalRuleDto>>("/api/approval-rules", Ct);
+        Assert.Equal(["CTR", "PRL", "RFQ"], rules!.Select(r => r.DocType).Order());
+    }
+
+    [Fact]
     public async Task DuyetNhieuCap_TheoNguongVaVaiTro()
     {
         var f = await ArrangeAsync();

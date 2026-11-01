@@ -67,6 +67,9 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<ApprovalTypeDto> Types() => ApprovalTypes.All.Select(t => new ApprovalTypeDto(t.Code, t.Name, t.AmountLabel)).ToList();
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<PendingApprovalDto>> PendingForMeAsync(CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -87,7 +90,7 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
             var step = await _approvals.CurrentStepAsync(document, cancellationToken);
             if (await _approvals.ApproveBlockerAsync(document, step, cancellationToken) is not null) continue;
             result.Add(new PendingApprovalDto(
-                document.DocType, document.Id, document.No, document.Date, description, document.ApprovalAmount, step!.Level,
+                document.DocType, ApprovalTypes.Get(document.DocType).Name, document.Id, document.No, document.Date, description, document.ApprovalAmount, step!.Level,
                 document.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 

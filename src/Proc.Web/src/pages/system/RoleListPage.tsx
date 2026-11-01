@@ -1,3 +1,4 @@
+import { Alert, Button } from 'antd'
 import { useState } from 'react'
 import { useRoles, type RoleListItem } from '../../api/administration'
 import { Permission } from '../../auth/permissions'
@@ -5,6 +6,7 @@ import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { RoleDrawer } from './RoleDrawer'
+import { RoleTemplatesModal } from './RoleTemplatesModal'
 
 const columns: GridColumn<RoleListItem>[] = [
   { key: 'code', title: 'Mã vai trò', width: 120, value: (r) => r.code },
@@ -25,13 +27,15 @@ const columns: GridColumn<RoleListItem>[] = [
 
 /**
  * Màn hình Vai trò và phân quyền (design.md mục 9.1, 9.5): danh sách vai trò dùng chung cho mọi công ty;
- * bấm đúp mở ngăn kéo để sửa tên và tick quyền theo module.
+ * bấm đúp mở ngăn kéo để sửa tên và tick quyền theo module. Nút "Bộ vai trò mẫu" tạo các vai trò Ban Cung ứng còn thiếu (mục 18.6).
  */
 export function RoleListPage() {
   const { hasPermission } = useAuth()
   const roles = useRoles()
   // undefined = đóng; null = tạo mới; chuỗi = Id vai trò đang mở.
   const [openId, setOpenId] = useState<string | null | undefined>(undefined)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
+  const canManage = hasPermission(Permission.RoleManage)
 
   return (
     <>
@@ -42,11 +46,18 @@ export function RoleListPage() {
         columns={columns}
         rowKey={(r) => r.id}
         loading={roles.isLoading}
-        canCreate={hasPermission(Permission.RoleManage)}
+        canCreate={canManage}
         onCreate={() => setOpenId(null)}
         onOpenRow={(r) => setOpenId(r.id)}
+        notice={
+          canManage ? (
+            <Alert type="info" showIcon title="Bộ vai trò mẫu theo cơ cấu Ban Cung ứng Vật tư: Trưởng ban, Nhóm Đàm phán, Nhóm Vận hành, Hội đồng, Người đề nghị, Kho, Kế toán, Pháp chế, KSNB."
+              action={<Button size="small" onClick={() => setTemplatesOpen(true)}>Bộ vai trò mẫu…</Button>} />
+          ) : undefined
+        }
       />
       {openId !== undefined && <RoleDrawer roleId={openId} onClose={() => setOpenId(undefined)} />}
+      <RoleTemplatesModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
     </>
   )
 }

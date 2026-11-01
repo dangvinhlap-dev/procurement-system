@@ -16,6 +16,8 @@ public static class PurchasingEndpoints
         var rules = app.MapGroup("/api/approval-rules").WithTags("Quy trình duyệt");
         rules.MapGet("/", (IApprovalRuleAdministration s, CancellationToken ct) => s.ListAsync(ct))
             .RequirePermission(Permissions.System.ParameterView);
+        rules.MapGet("/types", (IApprovalRuleAdministration s) => s.Types())
+            .RequirePermission(Permissions.System.ParameterView);
         rules.MapPost("/", async (SaveApprovalRuleRequest request, IApprovalRuleAdministration s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

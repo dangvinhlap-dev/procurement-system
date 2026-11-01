@@ -51,6 +51,7 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Ignore(x => x.DocumentNumber);
         builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
         builder.Ignore(x => x.DocType);
         builder.Property(x => x.No).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
@@ -106,6 +107,7 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Ignore(x => x.DocumentNumber);
         builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
         builder.Ignore(x => x.DocType);
         builder.Property(x => x.No).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();

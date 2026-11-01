@@ -1,5 +1,4 @@
 using Proc.Domain.Common;
-using Proc.Domain.Documents;
 
 namespace Proc.Domain.Purchasing;
 
@@ -49,8 +48,6 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     /// <summary>Số cấp tối đa.</summary>
     public const int MaxLevel = 9;
 
-    /// <summary>Loại chứng từ có duyệt.</summary>
-    public static readonly IReadOnlyList<string> DocTypes = [DocumentTypes.PurchaseRequest, DocumentTypes.PurchaseOrder];
 
     private ApprovalRule()
     {
@@ -59,7 +56,7 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     /// <inheritdoc />
     public Guid CompanyId { get; private set; }
 
-    /// <summary>Loại chứng từ (PR, PO).</summary>
+    /// <summary>Loại phiếu duyệt (<see cref="ApprovalTypes"/>: PR, PO, PRL, RFQ, NCC, CTR).</summary>
     public string DocType { get; private set; } = string.Empty;
 
     /// <summary>Thứ tự cấp, từ 1.</summary>
@@ -79,19 +76,20 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     public static ApprovalRule Create(Guid companyId, string docType, int level, decimal minAmount, Guid roleId)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Quy trình duyệt phải thuộc một công ty.");
-        var type = (docType ?? string.Empty).Trim().ToUpperInvariant();
-        if (!DocTypes.Contains(type)) throw new BusinessRuleException($"Loại chứng từ duyệt phải là {string.Join(", ", DocTypes)}.");
-        var rule = new ApprovalRule { CompanyId = companyId, DocType = type };
+        var rule = new ApprovalRule { CompanyId = companyId, DocType = ApprovalTypes.Get(docType).Code };
         rule.Update(level, minAmount, roleId);
         return rule;
     }
 
     /// <summary>Sửa cấp, ngưỡng, vai trò.</summary>
-    /// <exception cref="BusinessRuleException">Khi cấp ngoài 1–9, ngưỡng âm hoặc chưa chọn vai trò.</exception>
+    /// <exception cref="BusinessRuleException">Khi cấp ngoài 1–9, ngưỡng âm (hoặc khác 0 với loại không xét giá trị) hoặc chưa chọn vai trò.</exception>
     public void Update(int level, decimal minAmount, Guid roleId)
     {
         if (level is < 1 or > MaxLevel) throw new BusinessRuleException($"Cấp duyệt phải từ 1 đến {MaxLevel}.");
         if (minAmount < 0) throw new BusinessRuleException("Ngưỡng giá trị không được âm.");
+        // Loại không có giá trị tiền (bảng giá, hồ sơ NCC) mọi phiếu đều qua đủ các cấp – ngưỡng khác 0 sẽ không bao giờ đạt.
+        if (minAmount != 0 && ApprovalTypes.Get(DocType).AmountLabel is null)
+            throw new BusinessRuleException($"Loại {DocType} không xét theo giá trị – ngưỡng phải là 0.");
         if (roleId == Guid.Empty) throw new BusinessRuleException("Hãy chọn vai trò duyệt.");
         Level = level;
         MinAmount = Math.Round(minAmount, 2, MidpointRounding.AwayFromZero);

@@ -112,6 +112,39 @@ test.describe('quản trị hệ thống', () => {
     await expect(gridRow(page, code)).toContainText('Kế toán kho thử')
     await expect(gridRow(page, code)).toContainText('8')
   })
+
+  test('bộ vai trò mẫu Ban Cung ứng: tạo vai trò còn thiếu, mở lại thì đã đủ', async ({ page }) => {
+    await openScreen(page, 'Vai trò')
+    await page.getByRole('button', { name: 'Bộ vai trò mẫu…' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Bộ vai trò mẫu Ban Cung ứng' })
+    await expect(dialog.getByText('HOIDONG – Hội đồng xét chọn & duyệt giá')).toBeVisible()
+    await page.screenshot({ path: 'e2e/screenshots/role-templates.png', animations: 'disabled' })
+    // CSDL Testing dùng chung giữa các lần chạy: có thể đã tạo từ trước.
+    const create = dialog.getByRole('button', { name: /Tạo \d+ vai trò còn thiếu/ })
+    if (await create.isVisible()) {
+      await create.click()
+      await expect(page.locator('.ant-message')).toContainText('Đã tạo')
+    } else {
+      await dialog.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+    }
+    await expect(gridRow(page, 'KSNB')).toContainText('Kiểm soát nội bộ')
+
+    await page.getByRole('button', { name: 'Bộ vai trò mẫu…' }).click()
+    await expect(dialog.getByRole('button', { name: 'Đã có đủ' })).toBeDisabled()
+  })
+
+  test('quy trình duyệt: chọn được loại bảng giá NCC, loại không xét giá trị khóa ngưỡng', async ({ page }) => {
+    await page.goto('/he-thong/quy-trinh-duyet')
+    await page.getByRole('button', { name: 'Tạo mới' }).click()
+    const drawer = page.locator('.detail-drawer')
+    await drawer.getByLabel('Loại phiếu').click()
+    for (const name of ['Bảng giá NCC (PRL)', 'Kết quả chọn thầu (RFQ)', 'Hồ sơ nhà cung cấp (NCC)', 'Hợp đồng nguyên tắc (CTR)'])
+      await expect(page.locator('.ant-select-item-option', { hasText: name })).toBeVisible()
+    await page.locator('.ant-select-item-option', { hasText: 'Hồ sơ nhà cung cấp (NCC)' }).click()
+    await expect(drawer.getByLabel('Từ giá trị (đ)')).toBeDisabled()
+    await expect(drawer.getByText('Loại này không xét giá trị')).toBeVisible()
+    await page.screenshot({ path: 'e2e/screenshots/approval-rule-types.png', animations: 'disabled' })
+  })
 })
 
 test('thủ kho không thấy màn hình Người dùng và Vai trò', async ({ page }) => {

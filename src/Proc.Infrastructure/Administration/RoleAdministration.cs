@@ -115,6 +115,47 @@ public sealed class RoleAdministration : IRoleAdministration
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken)
+    {
+        var codes = RoleTemplates.Procurement.Select(t => t.Code).ToList();
+        var existing = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code)).Select(r => r.Code).ToListAsync(cancellationToken);
+        return RoleTemplates.Procurement
+            .Select(t => new RoleTemplateDto(t.Code, t.Name, t.Description, t.Permissions.Distinct().ToList(), existing.Contains(t.Code)))
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(CancellationToken cancellationToken)
+    {
+        var created = new List<string>();
+        var skipped = new List<string>();
+        foreach (var template in await ListTemplatesAsync(cancellationToken))
+        {
+            if (template.Exists)
+            {
+                skipped.Add($"{template.Code}: đã có, giữ nguyên quyền hiện tại");
+                continue;
+            }
+
+            if (!_grants.WithinOwnPermissions(template.PermissionCodes))
+            {
+                skipped.Add($"{template.Code}: có quyền bạn không có");
+                continue;
+            }
+
+            var role = Role.Create(template.Code, template.Name);
+            _db.Roles.Add(role);
+            foreach (var code in CheckPermissions(template.PermissionCodes))
+                _db.RolePermissions.Add(RolePermission.Grant(role.Id, code));
+            created.Add(role.Code);
+        }
+
+        // Một lần lưu: lỗi giữa chừng thì không tạo vai trò nào (bộ mẫu không bị thiếu nửa chừng).
+        await _db.SaveChangesAsync(cancellationToken);
+        return new ApplyRoleTemplatesResult(created, skipped);
+    }
+
     /// <summary>
     /// Mã quyền phải có trong danh mục và nằm trong quyền của người thao tác (không cấp được quyền mình không có).
     /// </summary>

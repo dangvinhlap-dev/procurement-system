@@ -266,9 +266,21 @@ export interface DeliveryTracking {
   overdue: boolean
 }
 
+/** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
+export type ApprovalDocType = 'PR' | 'PO' | 'PRL' | 'RFQ' | 'NCC' | 'CTR'
+
+/** Một loại phiếu có duyệt. */
+export interface ApprovalType {
+  code: ApprovalDocType
+  name: string
+  /** Giá trị xét ngưỡng; null = không xét giá trị (ngưỡng luôn 0). */
+  amountLabel: string | null
+}
+
 /** Phiếu chờ tôi duyệt. */
 export interface PendingApproval {
-  docType: 'PR' | 'PO'
+  docType: ApprovalDocType
+  docTypeName: string
   documentId: string
   no: string
   date: string
@@ -281,7 +293,7 @@ export interface PendingApproval {
 /** Một cấp duyệt. */
 export interface ApprovalRule {
   id: string
-  docType: 'PR' | 'PO'
+  docType: ApprovalDocType
   level: number
   minAmount: number
   roleId: string
@@ -402,6 +414,11 @@ export function usePendingApprovals() {
 export function useApprovalRules() {
   const companyId = useCompanyId()
   return useQuery({ queryKey: ['purchasing', companyId, 'approval-rules'], queryFn: () => apiFetch<ApprovalRule[]>('/api/approval-rules') })
+}
+
+/** Các loại phiếu có duyệt (danh sách cố định phía máy chủ). */
+export function useApprovalTypes() {
+  return useQuery({ queryKey: ['approval-types'], queryFn: () => apiFetch<ApprovalType[]>('/api/approval-rules/types'), staleTime: Infinity })
 }
 
 /** Thêm, sửa, xóa cấp duyệt. */

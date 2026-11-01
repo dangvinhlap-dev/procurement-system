@@ -79,6 +79,22 @@ export interface RoleListItem {
   userCount: number
 }
 
+/** Một vai trò mẫu Ban Cung ứng (design.md mục 18.6). */
+export interface RoleTemplate {
+  code: string
+  name: string
+  description: string
+  permissionCodes: string[]
+  /** Đã có vai trò cùng mã – tạo bộ mẫu sẽ bỏ qua, không sửa. */
+  exists: boolean
+}
+
+/** Kết quả tạo vai trò từ bộ mẫu. */
+export interface ApplyRoleTemplatesResult {
+  created: string[]
+  skipped: string[]
+}
+
 /** Chi tiết vai trò. */
 export interface RoleDetail {
   id: string
@@ -223,5 +239,20 @@ export function useRoleMutations() {
         apiFetch<RoleDetail>(`/api/roles/${id}`, { method: 'PUT', body: input }),
       onSuccess,
     }),
+    createFromTemplates: useMutation({
+      mutationFn: () => apiFetch<ApplyRoleTemplatesResult>('/api/roles/templates', { method: 'POST' }),
+      onSuccess: () => {
+        onSuccess()
+        void queryClient.invalidateQueries({ queryKey: ['role-templates'] })
+      },
+    }),
   }
+}
+
+/**
+ * Bộ vai trò mẫu Ban Cung ứng kèm cờ đã có.
+ * @param enabled Chỉ tải khi mở hộp thoại.
+ */
+export function useRoleTemplates(enabled: boolean) {
+  return useQuery({ queryKey: ['role-templates'], queryFn: () => apiFetch<RoleTemplate[]>('/api/roles/templates'), enabled })
 }
