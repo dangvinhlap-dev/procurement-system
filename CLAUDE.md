@@ -99,5 +99,11 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - Làm xong một màn hình: chạy lên, chụp bằng Playwright, đối chiếu `docs/ui-guide.md`, sửa đến khi đúng quy chuẩn.
   Khi tôi đưa ảnh mẫu mới vào `docs/`, làm theo đúng ảnh đó.
 
+- **BẢN THỬ – chờ duyệt (01/11/2026, chỉ trên nhánh `feature/thu-giao-dien-erp`):** phong cách ERP desktop cổ điển theo `docs/ui-style.md`,
+  component dùng chung ở `src/Proc.Web/src/classic/` (ClassicScreen, MenuBar, Toolbar, ScreenTitle, CommandBar/CommandButton,
+  HeaderFields/Field/Section, TabStrip, EntryGrid/SummaryRow/GridButtons, StatusLight, StatusBar, DateInput); màn hình thử
+  `/thu-giao-dien/tao-po`. **Khi người dùng duyệt**: mọi màn hình mới phải dùng các component này và tuân theo `docs/ui-style.md`
+  (thay cho `docs/ui-guide.md`). Chưa duyệt thì không áp dụng cho màn hình nào khác.
+
 Toàn văn quy chuẩn giao diện (nạp tự động mỗi phiên):
 @docs/ui-guide.md

@@ -53,7 +53,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. Lát kế tiếp: **B3** – RFQ: cho gửi thiếu NCC khi có giải trình; chọn thầu → Chờ duyệt hội đồng; tab hồ sơ trình; tạo bảng giá từ
+- **Bản thử giao diện ERP desktop cổ điển** (01/11/2026, nhánh `feature/thu-giao-dien-erp` – **không merge vào main khi chưa được duyệt**):
+  `docs/ui-style.md`, component `src/Proc.Web/src/classic/`, màn hình thử `/thu-giao-dien/tao-po` (dữ liệu mẫu, không ghi CSDL),
+  ảnh `e2e/screenshots/classic-create-po.png`, test `e2e/classic-preview.spec.ts` 3/3 qua. Chờ người dùng xem: duyệt thì thay
+  ui-guide.md và chuyển dần các màn hình; không duyệt thì bỏ nhánh.
+- Lát kế tiếp: **B3** – RFQ: cho gửi thiếu NCC khi có giải trình; chọn thầu → Chờ duyệt hội đồng; tab hồ sơ trình; tạo bảng giá từ
   kết quả thầu (`docs/Phantich_01112026.md` mục 5 – lớn, tách 2 lát; lập kế hoạch chi tiết trước khi code).
 
 ## Việc tiếp theo

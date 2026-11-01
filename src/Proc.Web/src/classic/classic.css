@@ -1,0 +1,492 @@
+/*
+ * Phong cách ERP desktop cổ điển – BẢN THỬ (docs/ui-style.md).
+ * Mọi quy tắc bó trong .erp-classic để không chạm tới giao diện Fiori của các màn hình khác.
+ * Màu, cỡ chữ, khoảng cách chỉ khai báo ở khối biến dưới đây; component đọc lại qua var(--erp-*).
+ */
+.erp-classic {
+  --erp-bg: #e3eaf2;
+  --erp-bar-bg-top: #eef3f9;
+  --erp-bar-bg-bottom: #d6e1ee;
+  --erp-bar-border: #a9bbd1;
+  --erp-text: #1b2a3a;
+  --erp-text-muted: #5a6b7d;
+  --erp-title: #1f3d6b;
+  --erp-tab-bg: #b9cde8;
+  --erp-tab-active: #7fa2d1;
+  --erp-tab-text-active: #ffffff;
+  --erp-btn-bg: #f3efdf;
+  --erp-btn-bg-hover: #fbf8ec;
+  --erp-btn-bg-active: #e4dcc0;
+  --erp-btn-border: #b5a97f;
+  --erp-grid-head: #d3ddea;
+  --erp-grid-line: #b8c5d6;
+  --erp-grid-selected: #fff6c8;
+  --erp-grid-bg: #ffffff;
+  --erp-input-bg: #ffffff;
+  --erp-input-border: #7f9db9;
+  --erp-input-focus: #1f5fbf;
+  --erp-readonly-bg: #eef2f6;
+  --erp-subtotal: #2a5db0;
+  --erp-light-green: #2e9e3a;
+  --erp-light-yellow: #e8b400;
+  --erp-light-red: #d0281e;
+  --erp-required: #b00e12;
+  --erp-panel-bg: #f4f7fb;
+
+  --erp-font: Tahoma, 'Segoe UI', Arial, sans-serif;
+  --erp-font-mono: Consolas, 'Courier New', monospace;
+  --erp-font-size: 12px;
+  --erp-title-size: 18px;
+  --erp-row-h: 20px;
+  --erp-input-h: 20px;
+  --erp-btn-h: 22px;
+  --erp-toolbar-h: 28px;
+  --erp-radius: 2px;
+  --erp-gap-xs: 2px;
+  --erp-gap-sm: 4px;
+  --erp-gap: 8px;
+
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  font-family: var(--erp-font);
+  font-size: var(--erp-font-size);
+  line-height: 1.3;
+}
+
+.erp-classic * {
+  box-sizing: border-box;
+}
+
+/* ---------- Thanh menu chữ ---------- */
+.erp-menubar {
+  display: flex;
+  gap: var(--erp-gap-xs);
+  padding: 0 var(--erp-gap-sm);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-menubar__item {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+.erp-menubar__item:hover,
+.erp-menubar__item:focus-visible {
+  border-color: var(--erp-bar-border);
+  background: var(--erp-input-bg);
+  outline: none;
+}
+
+/* ---------- Thanh công cụ icon ---------- */
+.erp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-xs);
+  height: var(--erp-toolbar-h);
+  padding: 0 var(--erp-gap-sm);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-toolbar__command {
+  width: 160px;
+  height: var(--erp-input-h);
+  margin-right: var(--erp-gap-sm);
+}
+
+.erp-toolbar__sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--erp-gap-sm);
+  background: var(--erp-bar-border);
+}
+
+.erp-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius);
+  background: none;
+  color: var(--erp-title);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.erp-iconbtn:hover:not(:disabled),
+.erp-iconbtn:focus-visible {
+  border-color: var(--erp-input-border);
+  background: var(--erp-input-bg);
+  outline: none;
+}
+
+.erp-iconbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Tiêu đề màn hình ---------- */
+.erp-title {
+  margin: 0;
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  color: var(--erp-title);
+  font-size: var(--erp-title-size);
+  font-weight: 700;
+}
+
+/* ---------- Nút lệnh và thanh lệnh phụ ---------- */
+.erp-commandbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-gap-sm);
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  border-top: 1px solid var(--erp-bar-border);
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-cmdbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--erp-gap-sm);
+  height: var(--erp-btn-h);
+  padding: 0 var(--erp-gap);
+  border: 1px solid var(--erp-btn-border);
+  border-radius: var(--erp-radius);
+  background: var(--erp-btn-bg);
+  color: var(--erp-text);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.erp-cmdbtn:hover:not(:disabled) {
+  background: var(--erp-btn-bg-hover);
+}
+
+.erp-cmdbtn:active:not(:disabled) {
+  background: var(--erp-btn-bg-active);
+}
+
+.erp-cmdbtn:focus-visible {
+  outline: 1px dotted var(--erp-text);
+  outline-offset: -3px;
+}
+
+.erp-cmdbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.erp-cmdbtn--icon {
+  width: var(--erp-btn-h);
+  padding: 0;
+  justify-content: center;
+}
+
+/* ---------- Vùng nội dung cuộn ---------- */
+.erp-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--erp-gap-sm) var(--erp-gap);
+}
+
+/* ---------- Khối có nút thu gọn ---------- */
+.erp-section {
+  display: flex;
+  gap: var(--erp-gap-sm);
+  margin-bottom: var(--erp-gap-sm);
+}
+
+.erp-section__toggle {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid var(--erp-input-border);
+  border-radius: var(--erp-radius);
+  background: var(--erp-btn-bg);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.erp-section__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-section__collapsed {
+  color: var(--erp-text-muted);
+  padding-top: 2px;
+}
+
+/* ---------- Header chứng từ: các ô trên một dòng ---------- */
+.erp-header-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--erp-gap-sm) 24px;
+}
+
+.erp-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--erp-gap);
+}
+
+.erp-field__label--required::after {
+  content: '*';
+  margin-left: var(--erp-gap-sm);
+  color: var(--erp-required);
+}
+
+.erp-input {
+  height: var(--erp-input-h);
+  padding: 0 var(--erp-gap-sm);
+  border: 1px solid var(--erp-input-border);
+  border-radius: 0;
+  background: var(--erp-input-bg);
+  color: var(--erp-text);
+  font: inherit;
+}
+
+.erp-input:focus {
+  outline: none;
+  border-color: var(--erp-input-focus);
+  box-shadow: inset 0 0 0 1px var(--erp-input-focus);
+}
+
+.erp-input[readonly],
+.erp-input:disabled {
+  background: var(--erp-readonly-bg);
+}
+
+.erp-input--num {
+  text-align: right;
+  font-family: var(--erp-font-mono);
+}
+
+/* ---------- Tab ngang ---------- */
+.erp-tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding-left: var(--erp-gap-sm);
+}
+
+.erp-tabs__tab {
+  height: 20px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-grid-line);
+  border-bottom: none;
+  border-radius: var(--erp-radius) var(--erp-radius) 0 0;
+  background: var(--erp-tab-bg);
+  color: var(--erp-title);
+  font: inherit;
+  cursor: pointer;
+}
+
+.erp-tabs__tab[aria-selected='true'] {
+  background: var(--erp-tab-active);
+  color: var(--erp-tab-text-active);
+  font-weight: 700;
+}
+
+.erp-tabs__tab:focus-visible {
+  outline: 1px dotted var(--erp-text);
+  outline-offset: -3px;
+}
+
+.erp-tabs__panel {
+  padding: var(--erp-gap);
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-panel-bg);
+  min-height: 120px;
+}
+
+/* ---------- Lưới nhập ---------- */
+/* Lưới rộng đúng tổng độ rộng cột (không kéo giãn), cuộn ngang khi hẹp hơn màn hình. */
+.erp-grid {
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-grid-bg);
+}
+
+.erp-grid__caption {
+  padding: 2px var(--erp-gap-sm);
+  background: var(--erp-grid-head);
+  border-bottom: 1px solid var(--erp-grid-line);
+  font-weight: 700;
+  text-align: left;
+}
+
+.erp-grid table {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.erp-grid th,
+.erp-grid td {
+  height: var(--erp-row-h);
+  padding: 0 var(--erp-gap-sm);
+  border: 1px solid var(--erp-grid-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-grid th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--erp-grid-head);
+  font-weight: 400;
+  text-align: left;
+}
+
+.erp-grid th.erp-grid__num,
+.erp-grid td.erp-grid__num {
+  text-align: right;
+}
+
+.erp-grid td.erp-grid__num {
+  font-family: var(--erp-font-mono);
+}
+
+.erp-grid td.erp-grid__readonly {
+  background: var(--erp-readonly-bg);
+}
+
+.erp-grid td.erp-grid__cell-input {
+  padding: 0;
+}
+
+.erp-grid__cell-input input,
+.erp-grid__cell-input select {
+  width: 100%;
+  height: calc(var(--erp-row-h) - 1px);
+  padding: 0 var(--erp-gap-sm);
+  border: none;
+  background: transparent;
+  color: var(--erp-text);
+  font: inherit;
+}
+
+.erp-grid__num input {
+  text-align: right;
+  font-family: var(--erp-font-mono);
+}
+
+.erp-grid__cell-input input:focus,
+.erp-grid__cell-input select:focus {
+  outline: none;
+  background: var(--erp-input-bg);
+  box-shadow: inset 0 0 0 1px var(--erp-input-focus);
+}
+
+.erp-grid__selector {
+  width: 18px;
+  padding: 0 !important;
+  background: var(--erp-grid-head);
+  cursor: pointer;
+}
+
+.erp-grid tr[aria-selected='true'] > td {
+  background: var(--erp-grid-selected);
+}
+
+.erp-grid tr[aria-selected='true'] > td.erp-grid__selector {
+  background: var(--erp-input-focus);
+}
+
+.erp-grid tr.erp-grid__subtotal > td {
+  color: var(--erp-subtotal);
+  font-weight: 700;
+}
+
+.erp-grid__marker {
+  width: 22px;
+  text-align: center;
+  padding: 0 !important;
+}
+
+/* ---------- Đèn trạng thái và tam giác cảnh báo ---------- */
+.erp-light {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  vertical-align: middle;
+}
+
+.erp-light--green {
+  background: var(--erp-light-green);
+}
+
+.erp-light--yellow {
+  background: var(--erp-light-yellow);
+}
+
+.erp-light--red {
+  background: var(--erp-light-red);
+}
+
+.erp-warning {
+  color: var(--erp-light-yellow);
+  font-size: 12px;
+  cursor: help;
+}
+
+/* ---------- Nút dưới lưới ---------- */
+.erp-gridbuttons {
+  display: flex;
+  gap: var(--erp-gap-xs);
+  padding: var(--erp-gap-xs) 0;
+}
+
+/* ---------- Thanh trạng thái ---------- */
+.erp-statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap);
+  height: 22px;
+  padding: 0 var(--erp-gap);
+  border-top: 1px solid var(--erp-bar-border);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+}
+
+.erp-statusbar__right {
+  margin-left: auto;
+  color: var(--erp-text-muted);
+}
+
+/* ---------- Ô tổng (Net) trong tab Điều kiện giá ---------- */
+.erp-net {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--erp-gap);
+  margin-bottom: var(--erp-gap);
+}
+
+.erp-preview-note {
+  padding: 2px var(--erp-gap);
+  border: 1px solid var(--erp-btn-border);
+  background: var(--erp-btn-bg);
+  color: var(--erp-text-muted);
+}

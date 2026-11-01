@@ -4,6 +4,7 @@ import { screens } from './app/screens'
 import { LOGIN_PATH } from './auth/paths'
 import { RequireAuth } from './auth/RequireAuth'
 import { ScreenGuard } from './auth/ScreenGuard'
+import { CreatePurchaseOrderPreview } from './classic/preview/CreatePurchaseOrderPreview'
 import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -137,6 +138,15 @@ const documentPages = [
  */
 export const router = createBrowserRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },
+  // BẢN THỬ giao diện ERP desktop cổ điển (docs/ui-style.md): có khung riêng nên đứng ngoài AppShell; chờ người dùng duyệt.
+  {
+    path: '/thu-giao-dien/tao-po',
+    element: (
+      <RequireAuth>
+        <CreatePurchaseOrderPreview />
+      </RequireAuth>
+    ),
+  },
   {
     element: (
       <RequireAuth>
