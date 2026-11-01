@@ -1138,6 +1138,21 @@ phân tích (E3) cộng gộp được giữa các pháp nhân. Màn hình Báo 
 | **Bỏ ánh xạ**: các dòng quay về kết quả tự khớp như lúc nhập (mã trùng mã chung, MST trùng NCC), không khớp thì để trống | Sửa chọn nhầm không mất dữ liệu |
 | Quyền: xem cần `Analysis.PurchaseHistory.View`; lưu/bỏ ánh xạ cần `Analysis.PurchaseHistory.Import` (cùng người lo dữ liệu mua lịch sử) | Không thêm quyền mới |
 
+### 18.3 Phân tích giá hợp nhất & cơ hội tiết kiệm (lát E3, 01/11/2026)
+
+Bước 4–5 của đề xuất: với từng mã hàng chung, so giá mua giữa các pháp nhân và ước tính tiền tiết kiệm nếu mua tập trung. Màn hình Báo cáo →
+**Phân tích giá hợp nhất** (mã PHAN). Chỉ đọc dữ liệu PHIS, không thêm bảng.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Chỉ tính dòng **đã gán mặt hàng chung**, tiền tệ **VND**, đơn giá > 0, ngày mua trong khoảng chọn (mặc định 12 tháng gần nhất tính cả hai đầu). Dòng chưa ánh xạ (kèm giá trị), ngoại tệ, đơn giá 0 (hàng tặng) được đếm và báo đầu trang | Chưa quy đổi ngoại tệ; hàng tặng làm giá mục tiêu thành 0 đ |
+| Gom theo **mặt hàng chung × ĐVT**; ĐVT là chữ trên file cũ, so không dấu, không phân biệt hoa thường ("Cái" = "cai"); khác ĐVT thì tách dòng. ĐVT hiển thị là cách ghi gặp nhiều nhất | Không cộng SL khác đơn vị |
+| Mỗi pháp nhân: SL, giá trị (thành tiền trước VAT, không gồm chi phí liên quan), giá BQGQ = Σ thành tiền / Σ SL (6 số lẻ), thấp nhất – cao nhất (đơn giá dòng), giá gần nhất = BQGQ của ngày mua gần nhất, số lần mua (số dòng), số NCC | Đề xuất bước 4 |
+| Hợp nhất: tổng SL, tổng giá trị, BQGQ, thấp/cao nhất, chênh lệch % = (BQGQ cao nhất − BQGQ thấp nhất) / BQGQ thấp nhất giữa các pháp nhân; NCC giá tốt nhất = BQGQ thấp nhất trong kỳ trên mọi pháp nhân (bằng giá thì NCC bán nhiều hơn; NCC chưa ánh xạ gom theo khóa mục 18.2) | Danh sách NCC đề xuất (bước 5) |
+| **Giá mục tiêu** = BQGQ thấp nhất giữa các pháp nhân × (100 − X) / 100, X nhập trên màn hình (mặc định 5%, 0 ≤ X < 100). **Tiết kiệm dự kiến** = Σ max(0, BQGQ pháp nhân − giá mục tiêu) × SL pháp nhân (tiền, 2 số lẻ); % = tiết kiệm / tổng giá trị. Ví dụ đề xuất: 12.000 × 100.000 đ + 8.000 × 110.000 đ, X = 5 → 95.000 đ, tiết kiệm 180.000.000 đ = 8,65% | Pháp nhân đã mua thấp hơn giá mục tiêu không tính âm |
+| Danh sách nhiều tiết kiệm trước; tô màu dòng chênh lệch quá ngưỡng (mặc định 10%); lọc "Nhiều pháp nhân cùng mua". Mở dòng → ngăn kéo chỉ xem: từng pháp nhân + dòng Hợp nhất, giá mục tiêu, chi phí sau đàm phán | Như bảng ví dụ của đề xuất |
+| Quyền: xem cần `Analysis.PurchaseHistory.View` (công ty đang làm việc). **Toàn tập đoàn** cần quyền mới `Analysis.PurchaseHistory.ViewAllCompanies`: bỏ filter công ty, giữ filter nhóm hàng (mặt hàng ngoài nhóm được xem không hiện) | Mục 9.2 |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

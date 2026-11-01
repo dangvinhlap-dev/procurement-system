@@ -158,13 +158,15 @@ public static class Permissions
         public const string AccountingExport = "Report.Accounting.Export";
     }
 
-    /// <summary>Phân tích dữ liệu mua (design.md mục 18.1).</summary>
+    /// <summary>Phân tích dữ liệu mua (design.md mục 18.1–18.3).</summary>
     public static class Analysis
     {
         /// <summary>Quyền "Xem dữ liệu mua lịch sử" của công ty đang làm việc.</summary>
         public const string PurchaseHistoryView = "Analysis.PurchaseHistory.View";
         /// <summary>Quyền "Nhập, xóa lô dữ liệu mua lịch sử".</summary>
         public const string PurchaseHistoryImport = "Analysis.PurchaseHistory.Import";
+        /// <summary>Xem phân tích giá hợp nhất toàn tập đoàn (design.md mục 18.3, quyền *.ViewAllCompanies của mục 9.2).</summary>
+        public const string PurchaseHistoryViewAllCompanies = "Analysis.PurchaseHistory.ViewAllCompanies";
     }
 
     /// <summary>Toàn bộ quyền kèm tên tiếng Việt, theo thứ tự hiển thị.</summary>
@@ -219,6 +221,7 @@ public static class Permissions
         new(Report.AccountingExport, "Xuất chứng từ cho kế toán"),
         new(Analysis.PurchaseHistoryView, "Xem dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryImport, "Nhập, xóa lô dữ liệu mua lịch sử"),
+        new(Analysis.PurchaseHistoryViewAllCompanies, "Xem phân tích giá hợp nhất toàn tập đoàn"),
     ];
 
     /// <summary>

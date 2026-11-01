@@ -50,4 +50,5 @@ export const Permission = {
   AccountingExport: 'Report.Accounting.Export',
   PurchaseHistoryView: 'Analysis.PurchaseHistory.View',
   PurchaseHistoryImport: 'Analysis.PurchaseHistory.Import',
+  PurchaseHistoryViewAllCompanies: 'Analysis.PurchaseHistory.ViewAllCompanies',
 } as const

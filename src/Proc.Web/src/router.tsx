@@ -37,6 +37,7 @@ import {
 } from './pages/reports/PurchaseReportPages'
 import { AccountingExportPage } from './pages/reports/AccountingExportPage'
 import { PurchaseHistoryMappingPage } from './pages/reports/PurchaseHistoryMappingPage'
+import { PurchaseAnalysisPage } from './pages/reports/PurchaseAnalysisPage'
 import { PurchaseHistoryPage } from './pages/reports/PurchaseHistoryPage'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
 import { ExpiringReportPage, GroupStockReportPage, SlowMovingReportPage } from './pages/reports/StockReportPages'
@@ -87,6 +88,7 @@ const implemented: Record<string, ReactNode> = {
   ACCX: <AccountingExportPage />,
   PHIS: <PurchaseHistoryPage />,
   PHMAP: <PurchaseHistoryMappingPage />,
+  PHAN: <PurchaseAnalysisPage />,
   ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
   ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
   IPR: <InternalPriceListPage />,
