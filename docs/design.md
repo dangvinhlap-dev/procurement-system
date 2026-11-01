@@ -364,7 +364,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
+| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO; từ lát A3 thêm PRL, RFQ, NCC, CTR – mục 18.6): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
 | Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
 | Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
 | Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
@@ -1181,6 +1181,21 @@ Bộ phận (phòng ban, phân xưởng) là đơn vị đề nghị mua hàng t
 | Cột chữ cũ `PurchaseRequest.Department` **ngừng dùng**: giữ dữ liệu, chỉ đọc; hiển thị = tên bộ phận trong danh mục, PR cũ chưa có thì hiện chữ cũ. Sửa lại PR cũ (còn nháp) phải chọn bộ phận từ danh mục. Xóa cột ở bản sau | CLAUDE.md mục 8: không xóa cột đang có dữ liệu trong cùng bản |
 
 Migration `V0_11_0_DanhMucBoPhan` (`Down()` mất danh mục bộ phận và bộ phận đã chọn trên PR; chữ cũ còn nguyên).
+
+### 18.6 Quy trình duyệt dùng chung và bộ vai trò mẫu Ban CUVT (lát A3, 01/11/2026)
+
+Nguyên tắc (yêu cầu người dùng 01/11/2026): **ai được duyệt do phân quyền; duyệt mấy cấp do người quản trị cấu hình; công ty nào duyệt do
+phân quyền** – phần mềm không viết cứng cấp duyệt hay người duyệt.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
+| Mỗi loại có **quyền duyệt riêng**: `Purchase.PR.Approve`, `Purchase.PO.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `MasterData.Supplier.Approve`, `Purchase.Contract.Approve`. Người duyệt phải có quyền đó **tại công ty của phiếu** (quyền gán theo công ty – mục 9); cấp có vai trò thì phải có thêm vai trò đó tại công ty. Muốn người Tổng công ty duyệt phiếu của công ty thành viên thì gán vai trò cho họ tại công ty thành viên | Công ty nào duyệt do phân quyền |
+| Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến | Duyệt mấy cấp do người dùng quyết định |
+| Người lập không tự duyệt; từ chối bắt buộc lý do, về nháp; lịch sử `ApprovalStep` chỉ thêm – như PR/PO (mục 6.7) | Tách người lập – người duyệt (G3) |
+| **Bộ vai trò mẫu** (màn hình Vai trò → "Bộ vai trò mẫu…", quyền `System.Role.Manage`): TRUONGBANCUVT, DAMPHAN, VANHANH, HOIDONG, DENGHI, KHO, KETOAN, PHAPCHE, KSNB. Chỉ tạo vai trò chưa có, không sửa vai trò đã có, không tạo vai trò có quyền người thao tác không có. DAMPHAN không có quyền duyệt; KSNB chỉ xem. Vai trò mẫu là gợi ý – quản trị sửa quyền tùy ý | G2: dữ liệu khởi tạo, không đổi cơ chế phân quyền |
+
+Không có migration (mã loại lưu ở cột `DocType` sẵn có; quyền mới đồng bộ khi khởi động).
 
 ## Nguồn tham khảo
 

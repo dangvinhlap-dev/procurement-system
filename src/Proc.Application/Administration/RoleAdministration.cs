@@ -45,6 +45,19 @@ public sealed record CreateRoleRequest(string Code, string Name, IReadOnlyList<s
 /// <param name="PermissionCodes">Toàn bộ mã quyền mới.</param>
 public sealed record UpdateRoleRequest(string Name, bool IsActive, IReadOnlyList<string> PermissionCodes);
 
+/// <summary>Một vai trò mẫu (bộ vai trò Ban Cung ứng – design.md mục 18.6).</summary>
+/// <param name="Code">Mã vai trò.</param>
+/// <param name="Name">Tên.</param>
+/// <param name="Description">Việc của vai trò.</param>
+/// <param name="PermissionCodes">Mã quyền.</param>
+/// <param name="Exists">Đã có vai trò cùng mã (tạo bộ mẫu sẽ bỏ qua, không sửa).</param>
+public sealed record RoleTemplateDto(string Code, string Name, string Description, IReadOnlyList<string> PermissionCodes, bool Exists);
+
+/// <summary>Kết quả tạo vai trò từ bộ mẫu.</summary>
+/// <param name="Created">Mã vai trò vừa tạo.</param>
+/// <param name="Skipped">Vai trò không tạo, kèm lý do (đã có, hoặc có quyền người thao tác không có).</param>
+public sealed record ApplyRoleTemplatesResult(IReadOnlyList<string> Created, IReadOnlyList<string> Skipped);
+
 /// <summary>
 /// Quản lý vai trò và quyền của vai trò (design.md mục 9.1, 9.5). Vai trò dùng chung cho mọi công ty.
 /// Chống tự nâng quyền: chỉ cấp được quyền mà người thao tác đang có tại công ty làm việc, và chỉ sửa được vai trò
@@ -89,4 +102,19 @@ public interface IRoleAdministration
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Chi tiết sau khi sửa.</returns>
     Task<RoleDetailDto> UpdateAsync(Guid id, UpdateRoleRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bộ vai trò mẫu Ban Cung ứng kèm cờ đã có hay chưa.
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các vai trò mẫu theo thứ tự hiển thị.</returns>
+    Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tạo các vai trò mẫu còn thiếu. Vai trò đã có mã thì bỏ qua (không sửa quyền người quản trị đã chỉnh); vai trò mẫu có quyền
+    /// mà người thao tác không có cũng bỏ qua (chống tự nâng quyền). Gọi lại nhiều lần không sinh trùng.
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Mã đã tạo và các vai trò bỏ qua kèm lý do.</returns>
+    Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(CancellationToken cancellationToken);
 }

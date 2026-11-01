@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
-using Proc.Domain.Documents;
-using Proc.Domain.Organization;
 using Proc.Domain.Notifications;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Notifications;
@@ -12,9 +10,9 @@ using Proc.Infrastructure.Persistence;
 namespace Proc.Infrastructure.Purchasing;
 
 /// <summary>
-/// Cơ chế duyệt nhiều cấp dùng chung cho PR, PO (design.md mục 6.2, 7 của tổng quan – quy trình duyệt): gửi duyệt sinh các bước theo
-/// quy trình của công ty và tổng giá trị phiếu; duyệt lần lượt cấp thấp → cao; từ chối thì phiếu về nháp. Không tự lưu – dịch vụ gọi
-/// lưu cùng thay đổi của phiếu trong một lần SaveChanges.
+/// Cơ chế duyệt nhiều cấp dùng chung (design.md mục 6.2, 18.6) cho mọi loại trong <see cref="ApprovalTypes"/> – PR, PO, bảng giá,
+/// kết quả chọn thầu, hồ sơ NCC, hợp đồng: gửi duyệt sinh các bước theo quy trình của công ty và giá trị phiếu; duyệt lần lượt cấp
+/// thấp → cao; từ chối thì đối tượng về nháp. Không tự lưu – dịch vụ gọi lưu cùng thay đổi của đối tượng trong một lần SaveChanges.
 /// </summary>
 internal sealed class ApprovalEngine
 {
@@ -33,14 +31,14 @@ internal sealed class ApprovalEngine
     }
 
     /// <summary>Quyền duyệt theo loại phiếu.</summary>
-    public static string ApprovePermission(string docType) =>
-        docType == DocumentTypes.PurchaseRequest ? Permissions.Purchase.PrApprove : Permissions.Purchase.PoApprove;
+    /// <exception cref="BusinessRuleException">Khi loại không có duyệt.</exception>
+    public static string ApprovePermission(string docType) => ApprovalTypes.Get(docType).ApprovePermission;
 
     /// <summary>
     /// Gửi duyệt: phiếu sang Chờ duyệt, sinh các bước của lượt mới theo quy trình (design.md mục 6.2). Dưới mọi ngưỡng đã cấu
     /// hình thì phiếu được duyệt ngay.
     /// </summary>
-    public async Task SubmitAsync(ApprovableDocument document, CancellationToken cancellationToken)
+    public async Task SubmitAsync(IApprovalSubject document, CancellationToken cancellationToken)
     {
         var round = document.Submit();
         var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == document.DocType).ToListAsync(cancellationToken);
@@ -57,7 +55,7 @@ internal sealed class ApprovalEngine
     }
 
     /// <summary>Bước đang chờ của lượt hiện tại (cấp thấp nhất còn chờ), hoặc null.</summary>
-    public Task<ApprovalStep?> CurrentStepAsync(ApprovableDocument document, CancellationToken cancellationToken) =>
+    public Task<ApprovalStep?> CurrentStepAsync(IApprovalSubject document, CancellationToken cancellationToken) =>
         _db.ApprovalSteps
             .Where(s => s.DocType == document.DocType && s.DocumentId == document.Id && s.Round == document.ApprovalRound && s.Status == ApprovalStepStatus.Pending)
             .OrderBy(s => s.Level)
@@ -67,9 +65,9 @@ internal sealed class ApprovalEngine
     /// Lý do người dùng hiện tại chưa duyệt được phiếu (null = duyệt được): phiếu phải chờ duyệt; người lập không tự duyệt; phải có
     /// quyền duyệt loại phiếu; cấp có vai trò thì người duyệt phải được gán vai trò đó tại công ty.
     /// </summary>
-    public async Task<string?> ApproveBlockerAsync(ApprovableDocument document, ApprovalStep? step, CancellationToken cancellationToken)
+    public async Task<string?> ApproveBlockerAsync(IApprovalSubject document, ApprovalStep? step, CancellationToken cancellationToken)
     {
-        if (document.Status != ApprovalDocumentStatus.Submitted || step is null) return $"Phiếu {document.No} không ở trạng thái chờ duyệt.";
+        if (!document.IsAwaitingApproval || step is null) return $"Phiếu {document.No} không ở trạng thái chờ duyệt.";
         var userId = _scope.UserId;
         if (userId is null) return "Chưa đăng nhập.";
         // Tách người lập và người duyệt – nguyên tắc kiểm soát nội bộ.
@@ -87,7 +85,7 @@ internal sealed class ApprovalEngine
 
     /// <summary>Duyệt cấp đang chờ; hết cấp thì phiếu Đã duyệt.</summary>
     /// <exception cref="BusinessRuleException">Khi người dùng không duyệt được (lý do cụ thể).</exception>
-    public async Task ApproveAsync(ApprovableDocument document, string? comment, CancellationToken cancellationToken)
+    public async Task ApproveAsync(IApprovalSubject document, string? comment, CancellationToken cancellationToken)
     {
         var step = await CurrentStepAsync(document, cancellationToken);
         if (await ApproveBlockerAsync(document, step, cancellationToken) is { } reason) throw new BusinessRuleException(reason);
@@ -115,7 +113,7 @@ internal sealed class ApprovalEngine
 
     /// <summary>Từ chối ở cấp đang chờ: các cấp sau bỏ qua, phiếu về nháp kèm lý do.</summary>
     /// <exception cref="BusinessRuleException">Khi không duyệt được hoặc thiếu lý do.</exception>
-    public async Task RejectAsync(ApprovableDocument document, string? comment, CancellationToken cancellationToken)
+    public async Task RejectAsync(IApprovalSubject document, string? comment, CancellationToken cancellationToken)
     {
         var step = await CurrentStepAsync(document, cancellationToken);
         if (await ApproveBlockerAsync(document, step, cancellationToken) is { } reason) throw new BusinessRuleException(reason);
@@ -130,32 +128,33 @@ internal sealed class ApprovalEngine
     /// Báo người duyệt được cấp đang chờ (design.md mục 11.6): có quyền duyệt loại phiếu tại công ty; cấp có vai trò thì phải có vai trò
     /// đó – cùng điều kiện với <see cref="ApproveBlockerAsync"/>. Người lập không nhận (không tự duyệt được).
     /// </summary>
-    private async Task NotifyApproversAsync(ApprovableDocument document, ApprovalStep step, CancellationToken cancellationToken)
+    private async Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
     {
         var users = await _notifications.UsersWithPermissionAsync(
             document.CompanyId, ApprovePermission(document.DocType), step.RoleId, null, cancellationToken);
         _notifications.Add(document.CompanyId, users.Where(u => u != document.CreatedBy), NotificationTypes.ApprovalPending,
             $"{Noun(document)} {document.No} chờ bạn duyệt",
-            $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
+            ApprovalTypes.Get(document.DocType).AmountLabel is null
+                ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}."
+                : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
             document.DocType, document.Id);
     }
 
     /// <summary>Báo người lập phiếu kết quả duyệt.</summary>
-    private void NotifyCreator(ApprovableDocument document, string type, string title, string message)
+    private void NotifyCreator(IApprovalSubject document, string type, string title, string message)
     {
         if (document.CreatedBy is { } creator)
             _notifications.Add(document.CompanyId, [creator], type, title, message, document.DocType, document.Id);
     }
 
     /// <summary>Tên loại phiếu trong câu thông báo.</summary>
-    private static string Noun(ApprovableDocument document) =>
-        document.DocType == DocumentTypes.PurchaseRequest ? "Đề nghị mua hàng" : "Đơn mua hàng";
+    private static string Noun(IApprovalSubject document) => ApprovalTypes.Get(document.DocType).Name;
 
     /// <summary>Số tiền trong thông báo theo kiểu Việt Nam, ví dụ 2.000.000 (CLAUDE.md mục 5).</summary>
     private static readonly System.Globalization.CultureInfo VietnameseCulture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 
     /// <summary>Bỏ qua các bước còn chờ (phiếu bị từ chối hoặc hủy khi đang chờ duyệt).</summary>
-    public async Task SkipPendingAsync(ApprovableDocument document, CancellationToken cancellationToken)
+    public async Task SkipPendingAsync(IApprovalSubject document, CancellationToken cancellationToken)
     {
         var pending = await _db.ApprovalSteps
             .Where(s => s.DocType == document.DocType && s.DocumentId == document.Id && s.Status == ApprovalStepStatus.Pending)

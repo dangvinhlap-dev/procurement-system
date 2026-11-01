@@ -10,9 +10,11 @@ import {
   purchaseStatusTone,
   useApprovalRuleMutations,
   useApprovalRules,
+  useApprovalTypes,
   useDeliveryTracking,
   usePendingApprovals,
   usePurchaseDocuments,
+  type ApprovalDocType,
   type ApprovalRule,
   type DeliveryTracking,
   type PendingApproval,
@@ -109,7 +111,7 @@ export function PurchaseListPage({ kind, title, path, exportFileName }: { kind: 
 }
 
 const pendingColumns: GridColumn<PendingApproval>[] = [
-  { key: 'type', title: 'Loại', width: 120, value: (r) => (r.docType === 'PR' ? 'Đề nghị mua hàng' : 'Đơn mua hàng'), groupable: true },
+  { key: 'type', title: 'Loại', width: 120, value: (r) => r.docTypeName, groupable: true },
   { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'description', title: 'Bộ phận / NCC', width: 240, value: (r) => r.description },
@@ -117,6 +119,9 @@ const pendingColumns: GridColumn<PendingApproval>[] = [
   { key: 'level', title: 'Cấp chờ duyệt', width: 100, type: 'quantity', value: (r) => r.level },
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
+
+/** Màn hình mở phiếu chờ duyệt theo loại; loại mới (bảng giá, thầu, NCC, hợp đồng) thêm khi làm lát B1–B4. */
+const pendingRoutes: Partial<Record<ApprovalDocType, string>> = { PR: '/mua-hang/pr', PO: '/mua-hang/po' }
 
 /** Màn hình Việc cần làm: PR, PO đang chờ chính tôi duyệt ở công ty đang làm việc (design.md mục 6.7). Bấm đúp mở phiếu để duyệt. */
 export function PendingApprovalsPage() {
@@ -131,7 +136,10 @@ export function PendingApprovalsPage() {
       columns={pendingColumns}
       rowKey={(r) => r.documentId}
       loading={pending.isLoading}
-      onOpenRow={(r) => navigate(`${r.docType === 'PR' ? '/mua-hang/pr' : '/mua-hang/po'}/${r.documentId}`)}
+      onOpenRow={(r) => {
+        const route = pendingRoutes[r.docType]
+        if (route) navigate(`${route}/${r.documentId}`)
+      }}
       notice={<Alert type="info" showIcon title="Phiếu đang chờ cấp duyệt của bạn. Bấm đúp để mở và Duyệt / Từ chối." />}
     />
   )
@@ -176,20 +184,27 @@ export function DeliveryTrackingPage() {
   )
 }
 
-const ruleColumns: GridColumn<ApprovalRule>[] = [
-  { key: 'type', title: 'Loại phiếu', width: 160, value: (r) => (r.docType === 'PR' ? 'Đề nghị mua hàng (PR)' : 'Đơn mua hàng (PO)'), groupable: true },
+/**
+ * Cột danh sách cấp duyệt.
+ * @param typeName Tên loại phiếu theo mã (từ máy chủ).
+ */
+const ruleColumns = (typeName: (code: string) => string): GridColumn<ApprovalRule>[] => [
+  { key: 'type', title: 'Loại phiếu', width: 200, value: (r) => `${typeName(r.docType)} (${r.docType})`, groupable: true },
   { key: 'level', title: 'Cấp', width: 60, type: 'quantity', value: (r) => r.level },
   { key: 'min', title: 'Từ giá trị', width: 140, type: 'money', value: (r) => r.minAmount },
   { key: 'role', title: 'Vai trò duyệt', width: 240, value: (r) => `${r.roleCode} – ${r.roleName}`, groupable: true },
 ]
 
 /**
- * Màn hình Hệ thống → Quy trình duyệt (design.md mục 6.7): các cấp duyệt PR, PO của công ty đang làm việc – cấp, ngưỡng giá trị, vai
- * trò. Chưa có cấp nào cho một loại phiếu thì ai có quyền duyệt cũng duyệt được (một cấp).
+ * Màn hình Hệ thống → Quy trình duyệt (design.md mục 6.7, 18.6): các cấp duyệt của công ty đang làm việc cho PR, PO, bảng giá NCC,
+ * kết quả chọn thầu, hồ sơ NCC, hợp đồng – cấp, ngưỡng giá trị, vai trò. Chưa có cấp nào cho một loại phiếu thì ai có quyền duyệt
+ * cũng duyệt được (một cấp).
  */
 export function ApprovalRuleListPage() {
   const { workingCompany, hasPermission } = useAuth()
   const rules = useApprovalRules()
+  const types = useApprovalTypes()
+  const typeName = (code: string) => types.data?.find((t) => t.code === code)?.name ?? code
   const canManage = hasPermission(Permission.ParameterManage)
   const [open, setOpen] = useState<ApprovalRule | null | undefined>(undefined)
   return (
@@ -198,7 +213,7 @@ export function ApprovalRuleListPage() {
         title={`Quy trình duyệt – ${workingCompany?.code ?? ''}`}
         exportFileName="quy-trinh-duyet"
         rows={rules.data ?? []}
-        columns={ruleColumns}
+        columns={ruleColumns(typeName)}
         rowKey={(r) => r.id}
         loading={rules.isLoading}
         canCreate={canManage}
@@ -206,7 +221,7 @@ export function ApprovalRuleListPage() {
         onOpenRow={setOpen}
         notice={
           <Alert type="info" showIcon
-            title="Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị, duyệt từ cấp thấp lên. Loại phiếu chưa có cấp nào: ai có quyền duyệt cũng duyệt được." />
+            title="Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị, duyệt từ cấp thấp lên. Loại phiếu chưa có cấp nào: ai có quyền duyệt cũng duyệt được. Bảng giá, kết quả chọn thầu, hồ sơ NCC, hợp đồng: cấu hình sẵn, áp dụng khi các chức năng gửi duyệt tương ứng hoạt động." />
         }
       />
       {open !== undefined && <ApprovalRuleDrawer rule={open} canManage={canManage} onClose={() => setOpen(undefined)} />}
@@ -225,6 +240,11 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
   const [form] = Form.useForm<{ docType: string; level: number; minAmount: number; roleId?: string }>()
   const mutations = useApprovalRuleMutations()
   const roles = useRoles()
+  const types = useApprovalTypes()
+  const docType = Form.useWatch('docType', form) ?? rule?.docType ?? 'PR'
+  // Loại không xét giá trị (bảng giá, hồ sơ NCC): mọi phiếu qua đủ các cấp, ngưỡng cố định 0 – design.md mục 18.6.
+  const amountLabel = types.data?.find((t) => t.code === docType)?.amountLabel ?? null
+  const noAmount = types.data !== undefined && amountLabel === null
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -233,7 +253,7 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
     if (!values) return
     setError(null)
     setSaving(true)
-    const input = { docType: values.docType, level: values.level, minAmount: values.minAmount ?? 0, roleId: values.roleId! }
+    const input = { docType: values.docType, level: values.level, minAmount: noAmount ? 0 : (values.minAmount ?? 0), roleId: values.roleId! }
     try {
       if (rule) await mutations.update.mutateAsync({ id: rule.id, input })
       else await mutations.create.mutateAsync(input)
@@ -284,13 +304,16 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
           children: (
             <div className="detail-grid">
               <Form.Item label="Loại phiếu" name="docType">
-                <Select disabled={rule !== null} options={[{ value: 'PR', label: 'Đề nghị mua hàng (PR)' }, { value: 'PO', label: 'Đơn mua hàng (PO)' }]} />
+                <Select disabled={rule !== null} loading={types.isLoading}
+                  options={(types.data ?? []).map((t) => ({ value: t.code, label: `${t.name} (${t.code})` }))}
+                  onChange={() => form.setFieldValue('minAmount', 0)} />
               </Form.Item>
               <Form.Item label="Cấp" name="level" rules={[{ required: true, type: 'number', min: 1, max: 9, message: 'Cấp từ 1 đến 9.' }]}>
                 <InputNumber style={{ width: '100%' }} min={1} max={9} precision={0} />
               </Form.Item>
-              <Form.Item label="Từ giá trị (đ)" name="minAmount" extra="Phiếu có tổng giá trị từ số này trở lên mới phải qua cấp này.">
-                <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} />
+              <Form.Item label="Từ giá trị (đ)" name="minAmount"
+                extra={noAmount ? 'Loại này không xét giá trị: mọi phiếu đều qua cấp này.' : `Xét theo ${(amountLabel ?? 'tổng giá trị').toLowerCase()}: từ số này trở lên mới phải qua cấp này.`}>
+                <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} disabled={noAmount} />
               </Form.Item>
               <Form.Item label="Vai trò duyệt" name="roleId" rules={[{ required: true, message: 'Chọn vai trò.' }]}
                 extra="Người có vai trò này tại công ty và có quyền duyệt loại phiếu.">

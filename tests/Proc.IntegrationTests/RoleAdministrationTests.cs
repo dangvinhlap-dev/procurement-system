@@ -152,4 +152,35 @@ public class RoleAdministrationTests
         Assert.Equal(HttpStatusCode.Forbidden, editThukho.StatusCode);
         Assert.Equal(HttpStatusCode.Created, allowed.StatusCode);
     }
+
+    [Fact]
+    public async Task BoVaiTroMauBanCungUng_TaoVaiTroThieu_GoiLaiKhongTrung()
+    {
+        var admin = await AdminAsync();
+
+        // Lần đầu tạo phần còn thiếu (CSDL test dùng chung có thể đã có từ lần chạy trước); lần sau bỏ qua toàn bộ.
+        await ReadAsync<ApplyRoleTemplatesResult>(await admin.PostAsync("/api/roles/templates", null, Ct));
+        var again = await ReadAsync<ApplyRoleTemplatesResult>(await admin.PostAsync("/api/roles/templates", null, Ct));
+        Assert.Empty(again.Created);
+        Assert.Equal(RoleTemplates.Procurement.Count, again.Skipped.Count);
+
+        var templates = await admin.GetFromJsonAsync<List<RoleTemplateDto>>("/api/roles/templates", Ct);
+        Assert.All(templates!, t => Assert.True(t.Exists));
+        var roles = await admin.GetFromJsonAsync<List<RoleListItemDto>>("/api/roles", Ct);
+        var council = roles!.Single(r => r.Code == "HOIDONG");
+        var detail = await admin.GetFromJsonAsync<RoleDetailDto>($"/api/roles/{council.Id}", Ct);
+        Assert.Contains(Permissions.Sourcing.RfqApproveAward, detail!.PermissionCodes);
+
+        // Không kiêm nhiệm: nhóm đàm phán không có quyền duyệt; KSNB chỉ xem.
+        var negotiator = templates!.Single(t => t.Code == "DAMPHAN");
+        Assert.DoesNotContain(negotiator.PermissionCodes, p => p.EndsWith(".Approve", StringComparison.Ordinal) || p.EndsWith(".ApproveAward", StringComparison.Ordinal));
+        Assert.All(templates.Single(t => t.Code == "KSNB").PermissionCodes, p => Assert.EndsWith(".View", p.Replace("ViewAllCompanies", "View")));
+    }
+
+    [Fact]
+    public async Task BoVaiTroMauBanCungUng_KhongCoQuyenQuanLyVaiTro_Tra403()
+    {
+        var thukho = await _factory.CreateClientInCompanyAsync("thukho.bha", "Demo@2026", "BHA");
+        Assert.Equal(HttpStatusCode.Forbidden, (await thukho.PostAsync("/api/roles/templates", null, Ct)).StatusCode);
+    }
 }

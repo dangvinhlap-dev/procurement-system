@@ -67,6 +67,8 @@ public static class Permissions
         public const string SupplierView = "MasterData.Supplier.View";
         /// <summary>Quyền "Thêm, sửa nhà cung cấp".</summary>
         public const string SupplierManage = "MasterData.Supplier.Manage";
+        /// <summary>Quyền "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp" (design.md mục 18.6).</summary>
+        public const string SupplierApprove = "MasterData.Supplier.Approve";
 
         /// <summary>
         /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
@@ -94,6 +96,8 @@ public static class Permissions
         public const string ContractView = "Purchase.Contract.View";
         /// <summary>Quyền "Thêm, sửa hợp đồng khung".</summary>
         public const string ContractManage = "Purchase.Contract.Manage";
+        /// <summary>Quyền "Duyệt hợp đồng nguyên tắc" (design.md mục 18.6).</summary>
+        public const string ContractApprove = "Purchase.Contract.Approve";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -126,6 +130,8 @@ public static class Permissions
         public const string PriceListView = "Pricing.PriceList.View";
         /// <summary>Quyền "Thêm, sửa bảng giá".</summary>
         public const string PriceListManage = "Pricing.PriceList.Manage";
+        /// <summary>Quyền "Duyệt bảng giá nhà cung cấp" (design.md mục 18.6).</summary>
+        public const string PriceListApprove = "Pricing.PriceList.Approve";
         /// <summary>Quyền "So sánh giá".</summary>
         public const string CompareView = "Pricing.Compare.View";
     }
@@ -139,6 +145,8 @@ public static class Permissions
         public const string RfqManage = "Sourcing.Rfq.Manage";
         /// <summary>Quyền "Chọn nhà cung cấp trúng thầu".</summary>
         public const string RfqAward = "Sourcing.Rfq.Award";
+        /// <summary>Quyền "Duyệt kết quả chọn thầu" (hội đồng – design.md mục 18.6).</summary>
+        public const string RfqApproveAward = "Sourcing.Rfq.ApproveAward";
     }
 
     /// <summary>Báo cáo.</summary>
@@ -195,6 +203,7 @@ public static class Permissions
         new(MasterData.ItemManage, "Thêm, sửa hàng hóa"),
         new(MasterData.SupplierView, "Xem nhà cung cấp"),
         new(MasterData.SupplierManage, "Thêm, sửa nhà cung cấp"),
+        new(MasterData.SupplierApprove, "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp"),
         new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),
@@ -204,6 +213,7 @@ public static class Permissions
         new(Purchase.PoApprove, "Duyệt đơn mua hàng"),
         new(Purchase.ContractView, "Xem hợp đồng khung"),
         new(Purchase.ContractManage, "Thêm, sửa hợp đồng khung"),
+        new(Purchase.ContractApprove, "Duyệt hợp đồng nguyên tắc"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
@@ -215,10 +225,12 @@ public static class Permissions
         new(Inventory.PeriodReopen, "Mở lại kỳ kho"),
         new(Pricing.PriceListView, "Xem bảng giá nhà cung cấp"),
         new(Pricing.PriceListManage, "Thêm, sửa bảng giá"),
+        new(Pricing.PriceListApprove, "Duyệt bảng giá nhà cung cấp"),
         new(Pricing.CompareView, "So sánh giá"),
         new(Sourcing.RfqView, "Xem yêu cầu báo giá, tìm nguồn"),
         new(Sourcing.RfqManage, "Lập yêu cầu báo giá"),
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),
+        new(Sourcing.RfqApproveAward, "Duyệt kết quả chọn thầu"),
         new(Report.StockView, "Xem báo cáo nhập – xuất – tồn"),
         new(Report.PurchaseView, "Xem báo cáo mua hàng"),
         new(Report.PriceViewAllCompanies, "Xem so sánh giá toàn tập đoàn"),
