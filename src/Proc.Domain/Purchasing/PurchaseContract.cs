@@ -47,6 +47,48 @@ public sealed record ContractHeader(
     string? PriceAdjustmentTerms, string? PaymentTerms, decimal? CreditLimit, string? DeliveryTerms, string? DiscountTerms,
     string? SponsorshipTerms, string? PenaltyTerms, string? OtherTerms, string? Note);
 
+/// <summary>
+/// Điều khoản thương mại và hạn mức công nợ của hợp đồng – phần phụ lục được phép đổi (design.md mục 18.7). So sánh bằng giá trị sau
+/// <see cref="Normalized"/> (bỏ khoảng trắng thừa, chuỗi rỗng = null).
+/// </summary>
+public sealed record ContractTerms(
+    string? PriceAdjustmentTerms, string? PaymentTerms, decimal? CreditLimit, string? DeliveryTerms, string? DiscountTerms, string? SponsorshipTerms,
+    string? PenaltyTerms, string? OtherTerms)
+{
+    /// <summary>Bản đã chuẩn hóa để lưu và so sánh.</summary>
+    public ContractTerms Normalized() =>
+        new(Clean(PriceAdjustmentTerms), Clean(PaymentTerms), CreditLimit, Clean(DeliveryTerms), Clean(DiscountTerms), Clean(SponsorshipTerms),
+            Clean(PenaltyTerms), Clean(OtherTerms));
+
+    /// <summary>Tên các điều khoản khác nhau giữa hai bản (đã chuẩn hóa), ví dụ ["thanh toán", "hạn mức công nợ"].</summary>
+    /// <param name="other">Bản so sánh.</param>
+    public IReadOnlyList<string> DifferencesFrom(ContractTerms other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        var (a, b) = (Normalized(), other.Normalized());
+        var names = new List<string>();
+        if (a.PriceAdjustmentTerms != b.PriceAdjustmentTerms) names.Add("điều chỉnh giá");
+        if (a.PaymentTerms != b.PaymentTerms) names.Add("thanh toán");
+        if (a.CreditLimit != b.CreditLimit) names.Add("hạn mức công nợ");
+        if (a.DeliveryTerms != b.DeliveryTerms) names.Add("giao hàng");
+        if (a.DiscountTerms != b.DiscountTerms) names.Add("chiết khấu");
+        if (a.SponsorshipTerms != b.SponsorshipTerms) names.Add("tài trợ");
+        if (a.PenaltyTerms != b.PenaltyTerms) names.Add("chế tài");
+        if (a.OtherTerms != b.OtherTerms) names.Add("điều khoản khác");
+        return names;
+    }
+
+    /// <summary>Hạn mức công nợ hợp lệ: ≥ 0, tối đa 2 số lẻ (tiền numeric(19,2)).</summary>
+    /// <exception cref="BusinessRuleException">Khi hạn mức sai.</exception>
+    public void EnsureValid()
+    {
+        if (CreditLimit is { } limit && (limit < 0 || decimal.Round(limit, 2) != limit))
+            throw new BusinessRuleException("Hạn mức công nợ phải ≥ 0, tối đa 2 chữ số thập phân.");
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
 /// <summary>Sản lượng dự kiến một mặt hàng.</summary>
 /// <param name="Id">Id dòng đang có (null = dòng mới).</param>
 /// <param name="ItemId">Mặt hàng.</param>
@@ -165,6 +207,10 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
     /// <summary>Giá trị dự kiến của hợp đồng (sau CK, trước VAT).</summary>
     public decimal ExpectedAmount => _lines.Sum(l => l.ExpectedAmount);
 
+    /// <summary>Điều khoản, hạn mức công nợ hiện hành (phụ lục so sánh và thay phần này).</summary>
+    public ContractTerms Terms =>
+        new(PriceAdjustmentTerms, PaymentTerms, CreditLimit, DeliveryTerms, DiscountTerms, SponsorshipTerms, PenaltyTerms, OtherTerms);
+
     /// <summary>Sản lượng dự kiến theo mặt hàng.</summary>
     public IReadOnlyList<PurchaseContractLine> Lines => _lines;
 
@@ -192,8 +238,7 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         if (header.PriceListId == Guid.Empty) throw new BusinessRuleException("Hãy chọn bảng giá NCC dùng chung cho hợp đồng.");
         if (string.IsNullOrWhiteSpace(header.Title)) throw new BusinessRuleException("Hãy nhập tên hợp đồng.");
         if (header.ValidTo < header.ValidFrom) throw new BusinessRuleException("Ngày hết hiệu lực không được trước ngày bắt đầu.");
-        if (header.CreditLimit is { } limit && (limit < 0 || decimal.Round(limit, 2) != limit))
-            throw new BusinessRuleException("Hạn mức công nợ phải ≥ 0, tối đa 2 chữ số thập phân.");
+        ToTerms(header).EnsureValid();
         if (_lines.Count > 0 && header.SupplierId != SupplierId) throw new BusinessRuleException("Đổi NCC thì hãy xóa hết dòng sản lượng trước.");
         SupplierId = header.SupplierId;
         PriceListId = header.PriceListId;
@@ -202,14 +247,7 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         SignDate = header.SignDate;
         ValidFrom = header.ValidFrom;
         ValidTo = header.ValidTo;
-        PriceAdjustmentTerms = Clean(header.PriceAdjustmentTerms);
-        PaymentTerms = Clean(header.PaymentTerms);
-        CreditLimit = header.CreditLimit;
-        DeliveryTerms = Clean(header.DeliveryTerms);
-        DiscountTerms = Clean(header.DiscountTerms);
-        SponsorshipTerms = Clean(header.SponsorshipTerms);
-        PenaltyTerms = Clean(header.PenaltyTerms);
-        OtherTerms = Clean(header.OtherTerms);
+        SetTerms(ToTerms(header));
         Note = Clean(header.Note);
     }
 
@@ -291,6 +329,33 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         TerminationReason = why;
     }
 
+    /// <summary>
+    /// Áp phụ lục đã duyệt đủ vào hợp đồng đang hiệu lực (lát B4b – design.md mục 18.7): ngày hết hiệu lực, bảng giá, điều khoản. Đổi bảng
+    /// giá thì giá mọi dòng sản lượng lấy lại từ bảng giá mới (tầng trên tra theo Id dòng) – hợp đồng không ghi giá riêng ngoài bảng giá.
+    /// </summary>
+    /// <param name="amendment">Phụ lục đã duyệt của chính hợp đồng này.</param>
+    /// <param name="linePrices">Giá mới theo Id dòng (chỉ cần khi đổi bảng giá).</param>
+    /// <exception cref="BusinessRuleException">Khi hợp đồng không hiệu lực, phụ lục chưa duyệt/không thuộc hợp đồng, thiếu giá dòng.</exception>
+    public void ApplyAmendment(PurchaseContractAmendment amendment, IReadOnlyDictionary<Guid, ContractLinePrice> linePrices)
+    {
+        ArgumentNullException.ThrowIfNull(amendment);
+        ArgumentNullException.ThrowIfNull(linePrices);
+        if (amendment.ContractId != Id) throw new BusinessRuleException($"Phụ lục {amendment.No} không thuộc hợp đồng {No}.");
+        if (amendment.Status != ContractAmendmentStatus.Approved) throw new BusinessRuleException($"Phụ lục {amendment.No} chưa được duyệt.");
+        if (Status != ContractStatus.Active) throw new BusinessRuleException($"Hợp đồng {No} không ở trạng thái hiệu lực.");
+        if (amendment.NewValidTo < ValidFrom) throw new BusinessRuleException("Ngày hết hiệu lực mới không được trước ngày bắt đầu hiệu lực.");
+        if (amendment.NewPriceListId != PriceListId)
+        {
+            foreach (var line in _lines)
+                line.Reprice(linePrices.GetValueOrDefault(line.Id)
+                    ?? throw new BusinessRuleException($"Dòng {line.LineNo}: mặt hàng không có trong bảng giá mới của phụ lục {amendment.No}."));
+            PriceListId = amendment.NewPriceListId;
+        }
+
+        ValidTo = amendment.NewValidTo;
+        SetTerms(amendment.NewTerms);
+    }
+
     /// <summary>Hủy hợp đồng nháp (giữ số và lịch sử).</summary>
     /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
     public void Cancel()
@@ -322,6 +387,22 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static ContractTerms ToTerms(ContractHeader h) =>
+        new(h.PriceAdjustmentTerms, h.PaymentTerms, h.CreditLimit, h.DeliveryTerms, h.DiscountTerms, h.SponsorshipTerms, h.PenaltyTerms, h.OtherTerms);
+
+    private void SetTerms(ContractTerms terms)
+    {
+        var t = terms.Normalized();
+        PriceAdjustmentTerms = t.PriceAdjustmentTerms;
+        PaymentTerms = t.PaymentTerms;
+        CreditLimit = t.CreditLimit;
+        DeliveryTerms = t.DeliveryTerms;
+        DiscountTerms = t.DiscountTerms;
+        SponsorshipTerms = t.SponsorshipTerms;
+        PenaltyTerms = t.PenaltyTerms;
+        OtherTerms = t.OtherTerms;
+    }
 
     private void EnsureDraft()
     {
@@ -391,10 +472,28 @@ public sealed class PurchaseContractLine : Entity
         UomId = data.UomId;
         ExpectedQty = data.ExpectedQty;
         MinCommitQty = data.MinCommitQty;
+        Reprice(price);
+        Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+    }
+
+    /// <summary>Lấy giá mới (bảng giá của phụ lục), tính lại thành tiền dự kiến – công thức ở <see cref="ExpectedAmount"/>.</summary>
+    internal void Reprice(ContractLinePrice price)
+    {
         UnitPrice = price.UnitPrice;
         DiscountPct = price.DiscountPct;
-        ExpectedAmount = Math.Round(data.ExpectedQty * price.UnitPrice * (100m - price.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
-        Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+        ExpectedAmount = AmountOf(ExpectedQty, price);
+    }
+
+    /// <summary>
+    /// Thành tiền dự kiến = SL × đơn giá × (100 − %CK)/100, làm tròn 2 số; dùng chung cho dòng và giá trị dự kiến sau phụ lục.
+    /// Ví dụ 1.000 × 48.000 × 95% = 45.600.000.
+    /// </summary>
+    /// <param name="qty">SL dự kiến.</param>
+    /// <param name="price">Giá theo bảng giá.</param>
+    public static decimal AmountOf(decimal qty, ContractLinePrice price)
+    {
+        ArgumentNullException.ThrowIfNull(price);
+        return Math.Round(qty * price.UnitPrice * (100m - price.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
     }
 }
 

@@ -17,7 +17,7 @@ namespace Proc.Infrastructure.Purchasing;
 /// là bảng của chính công ty hoặc bảng toàn tập đoàn đã hiệu lực (đọc bỏ filter công ty có điều kiện – giống
 /// <see cref="Pricing.PriceListService"/>). Duyệt qua <see cref="ApprovalEngine"/> theo quy trình loại CTR của công ty, xét giá trị dự kiến.
 /// </summary>
-public sealed class ContractService : IContractService
+public sealed partial class ContractService : IContractService
 {
     /// <summary>Số ngày trước ngày hết hiệu lực bắt đầu cảnh báo "sắp hết hiệu lực" (như bảng giá – lát B1).</summary>
     public const int ExpiryWarningDays = 30;
@@ -150,6 +150,10 @@ public sealed class ContractService : IContractService
     public async Task<ContractDto> TerminateAsync(Guid id, TerminateContractRequest request, CancellationToken cancellationToken)
     {
         var contract = await LoadAsync(id, cancellationToken);
+        // Phụ lục đang mở sẽ áp vào hợp đồng đã chấm dứt – bắt hủy/rút phụ lục trước cho rõ ràng.
+        if (await _db.PurchaseContractAmendments.AnyAsync(
+                a => a.ContractId == id && (a.Status == ContractAmendmentStatus.Draft || a.Status == ContractAmendmentStatus.Submitted), cancellationToken))
+            throw new BusinessRuleException($"Hợp đồng {contract.No} đang có phụ lục chưa duyệt xong – hủy hoặc rút phụ lục trước khi chấm dứt.");
         contract.Terminate(request.Date, request.Reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -237,12 +241,7 @@ public sealed class ContractService : IContractService
         var supplier = await _db.Suppliers.AsNoTracking().Where(s => s.Id == contract.SupplierId).Select(s => new { s.Code, s.Status }).SingleAsync(cancellationToken);
         if (supplier.Status != SupplierStatus.Approved)
             throw new BusinessRuleException($"NCC {supplier.Code} chưa ở trạng thái Đã duyệt – chưa ký hợp đồng nguyên tắc được.");
-        var overlap = await _db.PurchaseContracts.AsNoTracking()
-            .Where(c => c.Id != contract.Id && c.SupplierId == contract.SupplierId
-                        && (c.Status == ContractStatus.Submitted || c.Status == ContractStatus.Active)
-                        && c.ValidFrom <= contract.ValidTo && contract.ValidFrom <= c.ValidTo)
-            .Select(c => c.No).FirstOrDefaultAsync(cancellationToken);
-        if (overlap is not null)
+        if (await OverlappingContractAsync(contract, contract.ValidFrom, contract.ValidTo, cancellationToken) is { } overlap)
             throw new BusinessRuleException($"Hợp đồng {overlap} với NCC {supplier.Code} đang chờ duyệt/hiệu lực trùng thời gian – mỗi công ty một hợp đồng với NCC trong một thời kỳ.");
         if (!approving) return;
         var priceList = await _db.SupplierPriceLists.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
@@ -250,6 +249,17 @@ public sealed class ContractService : IContractService
         if (priceList.Status != PriceListStatus.Active)
             throw new BusinessRuleException($"Bảng giá {priceList.No} chưa hiệu lực – duyệt bảng giá trước khi duyệt hợp đồng.");
     }
+
+    /// <summary>
+    /// Số hợp đồng khác (chờ duyệt/hiệu lực) của cùng công ty × NCC có hiệu lực chồng lên [<paramref name="from"/>, <paramref name="to"/>];
+    /// null nếu không có. Filter công ty tự áp.
+    /// </summary>
+    private Task<string?> OverlappingContractAsync(PurchaseContract contract, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
+        _db.PurchaseContracts.AsNoTracking()
+            .Where(c => c.Id != contract.Id && c.SupplierId == contract.SupplierId
+                        && (c.Status == ContractStatus.Submitted || c.Status == ContractStatus.Active)
+                        && c.ValidFrom <= to && from <= c.ValidTo)
+            .Select(c => c.No).FirstOrDefaultAsync(cancellationToken);
 
     private async Task<ContractDto> ToDtoAsync(PurchaseContract contract, CancellationToken cancellationToken)
     {
@@ -282,9 +292,12 @@ public sealed class ContractService : IContractService
         // Người duyệt có thể chỉ có quyền xem + duyệt nên nút Duyệt tính riêng, không theo readOnly.
         var canApprove = contract.IsAwaitingApproval && items.Count == itemIds.Count
             && await _approvals.ApproveBlockerAsync(contract, await _approvals.CurrentStepAsync(contract, cancellationToken), cancellationToken) is null;
+        var amendments = await AmendmentsOfAsync(contract.Id, cancellationToken);
+        var hasOpenAmendment = amendments.Any(a => a.Status is nameof(ContractAmendmentStatus.Draft) or nameof(ContractAmendmentStatus.Submitted));
+        var isActive = contract.Status == ContractStatus.Active && readOnly is null;
         var actions = new ContractActions(
             canEdit, canEdit, canApprove, contract.Status == ContractStatus.Submitted && readOnly is null,
-            contract.Status == ContractStatus.Active && readOnly is null, canEdit, readOnly);
+            isActive && !hasOpenAmendment, canEdit, isActive && !hasOpenAmendment, readOnly);
         var today = _clock.TodayInVietnam();
         return new ContractDto(
             contract.Id, contract.No, company, contract.SupplierId, supplier.Code, supplier.Name, contract.PriceListId, priceList.No, priceList.Title,
@@ -293,7 +306,8 @@ public sealed class ContractService : IContractService
             contract.SponsorshipTerms, contract.PenaltyTerms, contract.OtherTerms, contract.Note, contract.Status.ToString(), contract.ExpectedAmount,
             departments.Select(d => d.Id).ToList(), departments.Select(d => d.Label).ToList(), lines, contract.CreatedAt, createdBy,
             contract.ActivatedAt, contract.TerminatedOn, contract.TerminationReason, contract.RejectReason, contract.DaysToExpiry(today),
-            contract.ExpiresWithin(today, ExpiryWarningDays), await _approvals.HistoryAsync(contract.DocType, contract.Id, cancellationToken), actions);
+            contract.ExpiresWithin(today, ExpiryWarningDays), await _approvals.HistoryAsync(contract.DocType, contract.Id, cancellationToken), amendments,
+            actions);
     }
 
     private static ContractHeader ToHeader(SaveContractRequest r) =>

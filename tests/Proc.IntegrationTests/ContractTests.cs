@@ -141,6 +141,95 @@ public class ContractTests
         Assert.Equal(["Submitted", "Cancelled", "Terminated"], list.OrderByDescending(c => c.ValidFrom).ThenByDescending(c => c.No).Select(c => c.Status));
     }
 
+    /// <summary>Phụ lục điền sẵn giá trị hiện hành của hợp đồng (người dùng chỉ đổi phần cần đổi).</summary>
+    private static SaveContractAmendmentRequest Amendment(ContractDto c) =>
+        new("PL 01/2026", "Gia hạn và đổi bảng giá theo đàm phán", Today, c.ValidTo, c.PriceListId, c.PriceAdjustmentTerms, c.PaymentTerms, c.CreditLimit,
+            c.DeliveryTerms, c.DiscountTerms, c.SponsorshipTerms, c.PenaltyTerms, c.OtherTerms, null);
+
+    /// <summary>Bảng giá toàn tập đoàn khác của NCC A, đã hiệu lực.</summary>
+    private async Task<Guid> GroupPriceListAsync(Fixture f, string title, params SavePriceListLineRequest[] lines)
+    {
+        var list = await ReadAsync<PriceListDto>(await f.Head.PostAsJsonAsync("/api/price-lists",
+            new SavePriceListRequest(f.SupplierId, title, true, Today, Today.AddYears(1), null, null, lines), Ct));
+        await ReadAsync<PriceListDto>(await f.Head.PostAsync($"/api/price-lists/{list.Id}/submit", null, Ct));
+        await _factory.FinishPriceListApprovalAsync(list.Id);
+        return list.Id;
+    }
+
+    [Fact]
+    public async Task PhuLuc_GiaHan_DoiBangGia_DoiDieuKhoan_DuyetThiApVaoHopDong()
+    {
+        var f = await ArrangeAsync();
+        var approver = await ApproverAsync(f);
+        var contract = await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync("/api/contracts", Contract(f, Today, Today.AddMonths(6),
+            new SaveContractLineRequest(null, f.ItemId, f.Cai, 1_000, null, null)), Ct));
+        // Hợp đồng chưa hiệu lực: không lập phụ lục.
+        Assert.False(contract.Actions.CanAmend);
+        Assert.Contains("không ở trạng thái hiệu lực", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { NewValidTo = Today.AddYears(1) }, Ct)));
+        await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{contract.Id}/submit", null, Ct));
+        // Người duyệt (không có quyền sửa) không lập phụ lục được; người lập thì được.
+        Assert.False((await ReadAsync<ContractDto>(await approver.PostAsJsonAsync($"/api/contracts/{contract.Id}/approve", new ApprovalActionRequest(null), Ct))).Actions.CanAmend);
+        contract = await ReadAsync<ContractDto>(await f.Client.GetAsync($"/api/contracts/{contract.Id}", Ct));
+        Assert.Equal(("Active", true, 47_500_000m), (contract.Status, contract.Actions.CanAmend, contract.ExpectedAmount));
+
+        // Không đổi gì thì chặn; bảng giá mới thiếu mặt hàng của hợp đồng thì chặn.
+        Assert.Contains("chưa thay đổi gì", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments", Amendment(contract), Ct)));
+        var thungOnly = await GroupPriceListAsync(f, "Bảng giá chỉ có thùng", new SavePriceListLineRequest(null, f.ItemId, f.Thung, 0, 580_000, 0, null, null));
+        Assert.Contains("không có trong bảng giá", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { NewPriceListId = thungOnly }, Ct)));
+
+        // Gia hạn 1 năm, đổi bảng giá (cái 48.000 CK 5%), đổi thanh toán + hạn mức: 1.000 × 48.000 × 95% = 45.600.000.
+        var newList = await GroupPriceListAsync(f, "Bảng giá vòng bi 2027", new SavePriceListLineRequest(null, f.ItemId, f.Cai, 0, 48_000, 5, null, null));
+        var amendment = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { NewValidTo = Today.AddYears(1), NewPriceListId = newList, PaymentTerms = "45 ngày", CreditLimit = 800_000_000 }, Ct));
+        Assert.Equal(($"{contract.No}-PL01", "Draft", 45_600_000m, 47_500_000m), (amendment.No, amendment.Status, amendment.ExpectedAmount, amendment.CurrentExpectedAmount));
+        Assert.Contains($"Gia hạn đến {Today.AddYears(1):dd/MM/yyyy}", amendment.ChangeSummary);
+        Assert.Contains("Đổi bảng giá", amendment.ChangeSummary);
+        Assert.Contains("Đổi thanh toán, hạn mức công nợ", amendment.ChangeSummary);
+        // Công ty khác không thấy phụ lục.
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Head.GetAsync($"/api/contract-amendments/{amendment.Id}", Ct)).StatusCode);
+
+        // Đang có phụ lục mở: không lập phụ lục khác, không chấm dứt hợp đồng.
+        Assert.Contains("đang có phụ lục", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { PaymentTerms = "60 ngày" }, Ct)));
+        contract = await ReadAsync<ContractDto>(await f.Client.GetAsync($"/api/contracts/{contract.Id}", Ct));
+        Assert.Equal((false, false, "Draft"), (contract.Actions.CanAmend, contract.Actions.CanTerminate, contract.Amendments.Single().Status));
+        Assert.Contains("đang có phụ lục", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/terminate",
+            new TerminateContractRequest(Today, "Thử"), Ct)));
+
+        // Gửi duyệt; người lập không tự duyệt; người duyệt thấy ở Việc cần làm loại CTA; từ chối về nháp, gửi lại, duyệt.
+        amendment = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsync($"/api/contract-amendments/{amendment.Id}/submit", null, Ct));
+        Assert.Equal(("Submitted", false), (amendment.Status, amendment.Actions.CanApprove));
+        Assert.Contains("không tự duyệt", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/contract-amendments/{amendment.Id}/approve", new ApprovalActionRequest(null), Ct)));
+        var pending = await ReadAsync<List<PendingApprovalDto>>(await approver.GetAsync("/api/approvals/pending", Ct));
+        Assert.Contains(pending, p => p.DocType == "CTA" && p.DocumentId == amendment.Id && p.Amount == 45_600_000m);
+        amendment = await ReadAsync<ContractAmendmentDto>(await approver.PostAsJsonAsync($"/api/contract-amendments/{amendment.Id}/reject",
+            new ApprovalActionRequest("Thiếu biên bản đàm phán giá"), Ct));
+        Assert.Equal(("Draft", "Thiếu biên bản đàm phán giá"), (amendment.Status, amendment.RejectReason));
+        await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsync($"/api/contract-amendments/{amendment.Id}/submit", null, Ct));
+        amendment = await ReadAsync<ContractAmendmentDto>(await approver.PostAsJsonAsync($"/api/contract-amendments/{amendment.Id}/approve",
+            new ApprovalActionRequest("Đồng ý"), Ct));
+        Assert.Equal("Approved", amendment.Status);
+
+        // Duyệt xong: hợp đồng đổi hiệu lực, bảng giá, điều khoản; giá dòng lấy lại theo bảng mới.
+        contract = await ReadAsync<ContractDto>(await f.Client.GetAsync($"/api/contracts/{contract.Id}", Ct));
+        Assert.Equal((Today.AddYears(1), newList, "45 ngày", 800_000_000m, 45_600_000m, 48_000m),
+            (contract.ValidTo, contract.PriceListId, contract.PaymentTerms, contract.CreditLimit, contract.ExpectedAmount, contract.Lines[0].UnitPrice));
+        Assert.Equal((true, "Approved"), (contract.Actions.CanAmend, contract.Amendments.Single().Status));
+
+        // Gia hạn chồng lên hợp đồng khác (chờ duyệt) của cùng NCC thì gửi bị chặn; hủy phụ lục nháp thì lập được phụ lục mới (số PL03).
+        var next = await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync("/api/contracts", Contract(f, Today.AddYears(1).AddDays(1), Today.AddYears(2)) with { PriceListId = newList }, Ct));
+        await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{next.Id}/submit", null, Ct));
+        var extend = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { NewValidTo = Today.AddYears(1).AddMonths(3) }, Ct));
+        Assert.Contains("trùng thời gian", await TitleAsync(await f.Client.PostAsync($"/api/contract-amendments/{extend.Id}/submit", null, Ct)));
+        Assert.Equal("Cancelled", (await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsync($"/api/contract-amendments/{extend.Id}/cancel", null, Ct))).Status);
+        var terms = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
+            Amendment(contract) with { PenaltyTerms = "Phạt 0,2%/ngày chậm giao" }, Ct));
+        Assert.Equal(($"{contract.No}-PL03", "Đổi chế tài"), (terms.No, terms.ChangeSummary));
+    }
+
     [Fact]
     public async Task GuiDuyet_NccChuaDuyet_BiChan_CongTyKhacKhongThay()
     {

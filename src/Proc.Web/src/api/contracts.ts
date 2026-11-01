@@ -102,6 +102,7 @@ export interface Contract {
   daysToExpiry: number
   expiringSoon: boolean
   approvals: ApprovalStep[]
+  amendments: ContractAmendmentListItem[]
   actions: {
     canEdit: boolean
     canSubmit: boolean
@@ -109,8 +110,103 @@ export interface Contract {
     canRecall: boolean
     canTerminate: boolean
     canCancel: boolean
+    /** Lập phụ lục được: hợp đồng hiệu lực, chưa có phụ lục đang mở, có quyền sửa. */
+    canAmend: boolean
     readOnlyReason: string | null
   }
+}
+
+/** Trạng thái phụ lục hợp đồng (lát B4b). */
+export type ContractAmendmentStatus = 'Draft' | 'Submitted' | 'Approved' | 'Cancelled'
+
+/** Nhãn trạng thái phụ lục. */
+export const amendmentStatusLabels: Record<ContractAmendmentStatus, string> = {
+  Draft: 'Nháp',
+  Submitted: 'Chờ duyệt',
+  Approved: 'Đã duyệt – đã áp',
+  Cancelled: 'Đã hủy',
+}
+
+/** Tông màu trạng thái phụ lục. */
+export const amendmentStatusTone: Record<ContractAmendmentStatus, 'success' | 'warning' | 'neutral'> = {
+  Draft: 'neutral',
+  Submitted: 'warning',
+  Approved: 'success',
+  Cancelled: 'neutral',
+}
+
+/** Một phụ lục trong tab Phụ lục của hợp đồng. */
+export interface ContractAmendmentListItem {
+  id: string
+  no: string
+  paperNo: string | null
+  signDate: string | null
+  reason: string
+  /** Tóm tắt thay đổi, ví dụ "Gia hạn đến 30/06/2027 (trước: 31/12/2026); Đổi thanh toán". */
+  changeSummary: string
+  expectedAmount: number
+  status: ContractAmendmentStatus
+  createdAt: string
+  createdByName: string | null
+  approvedAt: string | null
+}
+
+/** Điều khoản, hạn mức công nợ. */
+export interface ContractTerms {
+  priceAdjustmentTerms: string | null
+  paymentTerms: string | null
+  creditLimit: number | null
+  deliveryTerms: string | null
+  discountTerms: string | null
+  sponsorshipTerms: string | null
+  penaltyTerms: string | null
+  otherTerms: string | null
+}
+
+/** Chi tiết phụ lục: terms là điều khoản sau phụ lục, currentTerms của hợp đồng hiện hành. */
+export interface ContractAmendment {
+  id: string
+  no: string
+  contractId: string
+  contractNo: string
+  contractTitle: string
+  supplierCode: string
+  supplierName: string
+  paperNo: string | null
+  reason: string
+  signDate: string | null
+  validFrom: string
+  oldValidTo: string
+  newValidTo: string
+  oldPriceListId: string
+  oldPriceListNo: string
+  newPriceListId: string
+  newPriceListNo: string
+  newPriceListTitle: string
+  newPriceListStatus: string
+  terms: ContractTerms
+  currentTerms: ContractTerms
+  note: string | null
+  currentExpectedAmount: number
+  expectedAmount: number
+  changeSummary: string
+  status: ContractAmendmentStatus
+  rejectReason: string | null
+  createdAt: string
+  createdByName: string | null
+  approvedAt: string | null
+  approvals: ApprovalStep[]
+  actions: { canEdit: boolean; canSubmit: boolean; canApprove: boolean; canRecall: boolean; canCancel: boolean; readOnlyReason: string | null }
+}
+
+/** Nội dung phụ lục gửi lên: giá trị của hợp đồng sau phụ lục. */
+export interface SaveContractAmendmentInput extends ContractTerms {
+  paperNo: string | null
+  reason: string
+  signDate: string | null
+  newValidTo: string
+  newPriceListId: string
+  note: string | null
 }
 
 /** Nội dung hợp đồng gửi lên. */
@@ -177,5 +273,41 @@ export function useContractMutations() {
         apiFetch<Contract>(`/api/contracts/${id}/terminate`, { method: 'POST', body: { date, reason } }),
       onSuccess,
     }),
+  }
+}
+
+/** Chi tiết phụ lục; null thì không tải (đang lập mới). */
+export function useContractAmendment(id: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['contracts', companyId, 'amendment', id],
+    queryFn: () => apiFetch<ContractAmendment>(`/api/contract-amendments/${id}`),
+    enabled: !!id,
+  })
+}
+
+/** Lập, sửa, gửi duyệt, duyệt, từ chối, rút, hủy phụ lục; xong thì tải lại hợp đồng (phụ lục duyệt xong đổi hợp đồng). */
+export function useContractAmendmentMutations() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['contracts'] })
+  const post = (id: string, name: string) => apiFetch<ContractAmendment>(`/api/contract-amendments/${id}/${name}`, { method: 'POST' })
+  const decide = (id: string, name: string, comment?: string | null) =>
+    apiFetch<ContractAmendment>(`/api/contract-amendments/${id}/${name}`, { method: 'POST', body: { comment: comment ?? null } })
+  return {
+    create: useMutation({
+      mutationFn: ({ contractId, input }: { contractId: string; input: SaveContractAmendmentInput }) =>
+        apiFetch<ContractAmendment>(`/api/contracts/${contractId}/amendments`, { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: SaveContractAmendmentInput }) =>
+        apiFetch<ContractAmendment>(`/api/contract-amendments/${id}`, { method: 'PUT', body: input }),
+      onSuccess,
+    }),
+    submit: useMutation({ mutationFn: (id: string) => post(id, 'submit'), onSuccess }),
+    recall: useMutation({ mutationFn: (id: string) => post(id, 'recall'), onSuccess }),
+    cancel: useMutation({ mutationFn: (id: string) => post(id, 'cancel'), onSuccess }),
+    approve: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'approve', comment), onSuccess }),
+    reject: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'reject', comment), onSuccess }),
   }
 }

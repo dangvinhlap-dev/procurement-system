@@ -25,6 +25,7 @@ import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { ContractAmendmentRedirect } from './pages/purchasing/ContractAmendmentDrawer'
 import { ContractListPage, ContractPage } from './pages/purchasing/ContractPages'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
@@ -166,6 +167,11 @@ export const router = createBrowserRouter([
         path: `${d.screen.path}/:id`,
         element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
       })),
+      // Phụ lục hợp đồng mở từ thông báo / Việc cần làm (chỉ có Id phụ lục) – cùng quyền màn hình CTR.
+      {
+        path: '/mua-hang/hop-dong-khung/phu-luc/:id',
+        element: <ScreenGuard screen={screens.find((s) => s.code === 'CTR')!}><ContractAmendmentRedirect /></ScreenGuard>,
+      },
       // Danh sách PO dữ liệu mẫu (30 dòng) giữ cho test giao diện chung AppShell/ListPage/DataGrid so với ảnh mẫu (e2e/po-list.spec.ts).
       {
         path: '/mua-hang/po/mau',

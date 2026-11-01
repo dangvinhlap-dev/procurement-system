@@ -163,6 +163,28 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 contract.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
+        // Phụ lục hợp đồng chờ duyệt (lát B4b): duyệt tại công ty ký – filter công ty giữ nguyên; mô tả kèm tóm tắt thay đổi.
+        var amendments = await _db.PurchaseContractAmendments.Where(a => a.Status == ContractAmendmentStatus.Submitted).ToListAsync(cancellationToken);
+        var amendedIds = amendments.Select(a => a.ContractId).Distinct().ToList();
+        var amended = await (
+                from c in _db.PurchaseContracts.AsNoTracking()
+                where amendedIds.Contains(c.Id)
+                join s in _db.Suppliers on c.SupplierId equals s.Id
+                select new { c.Id, Label = s.Code + " – " + s.Name + ": " + c.Title })
+            .ToDictionaryAsync(c => c.Id, c => c.Label, cancellationToken);
+        var amendmentCreatorIds = amendments.Select(a => a.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => amendmentCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var amendment in amendments)
+        {
+            var step = await _approvals.CurrentStepAsync(amendment, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(amendment, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                amendment.DocType, ApprovalTypes.Get(amendment.DocType).Name, amendment.Id, amendment.No,
+                DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(amendment.CreatedAt, VietnamTime.Zone).DateTime),
+                $"{amended.GetValueOrDefault(amendment.ContractId)} – {amendment.ChangeSummary}", amendment.ApprovalAmount, step!.Level,
+                amendment.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();
     }
 

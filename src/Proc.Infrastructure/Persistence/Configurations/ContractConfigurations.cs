@@ -38,6 +38,7 @@ internal sealed class PurchaseContractConfiguration : IEntityTypeConfiguration<P
         builder.Ignore(x => x.ApprovalAmount);
         builder.Ignore(x => x.IsAwaitingApproval);
         builder.Ignore(x => x.ExpectedAmount);
+        builder.Ignore(x => x.Terms);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
@@ -80,5 +81,44 @@ internal sealed class PurchaseContractDepartmentConfiguration : IEntityTypeConfi
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.HasIndex(x => new { x.ContractId, x.DepartmentId }).IsUnique();
         builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseContractAmendment – phụ lục hợp đồng nguyên tắc (lát B4b, design.md mục 18.7).</summary>
+internal sealed class PurchaseContractAmendmentConfiguration : IEntityTypeConfiguration<PurchaseContractAmendment>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseContractAmendment> builder)
+    {
+        builder.ToTable("PurchaseContractAmendment");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.No).HasMaxLength(60).IsRequired();
+        builder.HasIndex(x => new { x.ContractId, x.Seq }).IsUnique();
+        // Mỗi hợp đồng một lúc chỉ một phụ lục đang mở (nháp/chờ duyệt) – chặn cả khi hai người lập cùng lúc.
+        builder.HasIndex(x => x.ContractId).IsUnique().HasFilter("\"Status\" IN (1, 2)").HasDatabaseName("UX_PurchaseContractAmendment_Open");
+        builder.Property(x => x.PaperNo).HasMaxLength(100);
+        builder.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.PriceAdjustmentTerms).HasMaxLength(2000);
+        builder.Property(x => x.PaymentTerms).HasMaxLength(2000);
+        builder.Property(x => x.DeliveryTerms).HasMaxLength(2000);
+        builder.Property(x => x.DiscountTerms).HasMaxLength(2000);
+        builder.Property(x => x.SponsorshipTerms).HasMaxLength(2000);
+        builder.Property(x => x.PenaltyTerms).HasMaxLength(2000);
+        builder.Property(x => x.OtherTerms).HasMaxLength(4000);
+        builder.Property(x => x.Note).HasMaxLength(1000);
+        builder.Property(x => x.ChangeSummary).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        // Tiền numeric(19,2) – CLAUDE.md mục 4.
+        builder.Property(x => x.CreditLimit).HasPrecision(19, 2);
+        builder.Property(x => x.ExpectedAmount).HasPrecision(19, 2);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.IsOpen);
+        builder.Ignore(x => x.NewTerms);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.OldPriceListId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.NewPriceListId).OnDelete(DeleteBehavior.Restrict);
     }
 }

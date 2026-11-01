@@ -12,9 +12,16 @@ public sealed record ContractLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal ExpectedQty, decimal? MinCommitQty,
     decimal UnitPrice, decimal DiscountPct, decimal ExpectedAmount, string? Note);
 
-/// <summary>Thao tác được phép trên hợp đồng.</summary>
+/// <summary>
+/// Thao tác được phép trên hợp đồng. CanAmend: lập phụ lục được (hợp đồng hiệu lực, chưa có phụ lục đang mở, có quyền sửa).
+/// </summary>
 public sealed record ContractActions(
-    bool CanEdit, bool CanSubmit, bool CanApprove, bool CanRecall, bool CanTerminate, bool CanCancel, string? ReadOnlyReason);
+    bool CanEdit, bool CanSubmit, bool CanApprove, bool CanRecall, bool CanTerminate, bool CanCancel, bool CanAmend, string? ReadOnlyReason);
+
+/// <summary>Một phụ lục trong tab Phụ lục của hợp đồng.</summary>
+public sealed record ContractAmendmentListItemDto(
+    Guid Id, string No, string? PaperNo, DateOnly? SignDate, string Reason, string ChangeSummary, decimal ExpectedAmount, string Status,
+    DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ApprovedAt);
 
 /// <summary>Chi tiết hợp đồng nguyên tắc (design.md mục 18.7).</summary>
 public sealed record ContractDto(
@@ -24,7 +31,32 @@ public sealed record ContractDto(
     string? PenaltyTerms, string? OtherTerms, string? Note, string Status, decimal ExpectedAmount, IReadOnlyList<Guid> DepartmentIds,
     IReadOnlyList<string> DepartmentNames, IReadOnlyList<ContractLineDto> Lines, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ActivatedAt, DateOnly? TerminatedOn, string? TerminationReason, string? RejectReason, int DaysToExpiry, bool ExpiringSoon,
-    IReadOnlyList<ApprovalStepDto> Approvals, ContractActions Actions);
+    IReadOnlyList<ApprovalStepDto> Approvals, IReadOnlyList<ContractAmendmentListItemDto> Amendments, ContractActions Actions);
+
+/// <summary>Điều khoản, hạn mức công nợ (để so sánh trước/sau phụ lục).</summary>
+public sealed record ContractTermsDto(
+    string? PriceAdjustmentTerms, string? PaymentTerms, decimal? CreditLimit, string? DeliveryTerms, string? DiscountTerms, string? SponsorshipTerms,
+    string? PenaltyTerms, string? OtherTerms);
+
+/// <summary>Thao tác được phép trên phụ lục.</summary>
+public sealed record ContractAmendmentActions(bool CanEdit, bool CanSubmit, bool CanApprove, bool CanRecall, bool CanCancel, string? ReadOnlyReason);
+
+/// <summary>
+/// Chi tiết phụ lục hợp đồng (lát B4b – design.md mục 18.7). Terms là điều khoản sau phụ lục; CurrentTerms, CurrentExpectedAmount là của
+/// hợp đồng hiện hành (duyệt xong thì trùng giá trị mới – xem ChangeSummary để biết đã đổi gì).
+/// </summary>
+public sealed record ContractAmendmentDto(
+    Guid Id, string No, Guid ContractId, string ContractNo, string ContractTitle, string SupplierCode, string SupplierName, string? PaperNo,
+    string Reason, DateOnly? SignDate, DateOnly ValidFrom, DateOnly OldValidTo, DateOnly NewValidTo, Guid OldPriceListId, string OldPriceListNo,
+    Guid NewPriceListId, string NewPriceListNo, string NewPriceListTitle, string NewPriceListStatus, ContractTermsDto Terms,
+    ContractTermsDto CurrentTerms, string? Note, decimal CurrentExpectedAmount, decimal ExpectedAmount, string ChangeSummary, string Status,
+    string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<ApprovalStepDto> Approvals,
+    ContractAmendmentActions Actions);
+
+/// <summary>Lưu phụ lục nháp: giá trị của hợp đồng sau phụ lục (điền sẵn bằng giá trị hiện hành).</summary>
+public sealed record SaveContractAmendmentRequest(
+    string? PaperNo, string Reason, DateOnly? SignDate, DateOnly NewValidTo, Guid NewPriceListId, string? PriceAdjustmentTerms, string? PaymentTerms,
+    decimal? CreditLimit, string? DeliveryTerms, string? DiscountTerms, string? SponsorshipTerms, string? PenaltyTerms, string? OtherTerms, string? Note);
 
 /// <summary>Lưu hợp đồng nháp.</summary>
 public sealed record SaveContractRequest(
@@ -96,6 +128,77 @@ public interface IContractService
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     Task<ContractDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Phụ lục hợp đồng nguyên tắc (lát B4b – design.md mục 18.7): gia hạn, đổi bảng giá, đổi điều khoản của hợp đồng hiệu lực; mỗi phụ lục
+/// duyệt qua quy trình loại CTA, duyệt xong áp vào hợp đồng.
+/// </summary>
+public interface IContractAmendmentService
+{
+    /// <summary>Chi tiết phụ lục (không thấy hoặc thuộc công ty khác thì báo không tìm thấy).</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> GetAmendmentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lập phụ lục nháp cho hợp đồng đang hiệu lực (mỗi lúc một phụ lục đang mở).</summary>
+    /// <param name="contractId">Hợp đồng.</param>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> CreateAmendmentAsync(Guid contractId, SaveContractAmendmentRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sửa phụ lục nháp.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> UpdateAmendmentAsync(Guid id, SaveContractAmendmentRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Gửi duyệt phụ lục; giá trị dưới mọi ngưỡng đã cấu hình thì duyệt và áp vào hợp đồng ngay.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> SubmitAmendmentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Duyệt bước đến lượt; cấp cuối thì áp phụ lục vào hợp đồng.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="request">Ý kiến.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> ApproveAmendmentAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Từ chối (bắt buộc lý do): phụ lục về nháp.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> RejectAmendmentAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Rút phụ lục đang chờ duyệt về nháp.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> RecallAmendmentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Hủy phụ lục nháp.</summary>
+    /// <param name="id">Id phụ lục.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancellationToken cancellationToken);
+}
+
+/// <summary>Kiểm tra dữ liệu lưu phụ lục hợp đồng.</summary>
+public sealed class SaveContractAmendmentRequestValidator : AbstractValidator<SaveContractAmendmentRequest>
+{
+    /// <summary>Khai báo quy tắc.</summary>
+    public SaveContractAmendmentRequestValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().WithMessage("Phụ lục phải ghi lý do.").MaximumLength(500);
+        RuleFor(x => x.NewPriceListId).NotEmpty().WithMessage("Hãy chọn bảng giá dùng chung sau phụ lục.");
+        RuleFor(x => x.PaperNo).MaximumLength(100);
+        RuleFor(x => x.PriceAdjustmentTerms).MaximumLength(2000);
+        RuleFor(x => x.PaymentTerms).MaximumLength(2000);
+        RuleFor(x => x.DeliveryTerms).MaximumLength(2000);
+        RuleFor(x => x.DiscountTerms).MaximumLength(2000);
+        RuleFor(x => x.SponsorshipTerms).MaximumLength(2000);
+        RuleFor(x => x.PenaltyTerms).MaximumLength(2000);
+        RuleFor(x => x.OtherTerms).MaximumLength(4000);
+        RuleFor(x => x.Note).MaximumLength(1000);
+    }
 }
 
 /// <summary>Kiểm tra dữ liệu lưu hợp đồng.</summary>

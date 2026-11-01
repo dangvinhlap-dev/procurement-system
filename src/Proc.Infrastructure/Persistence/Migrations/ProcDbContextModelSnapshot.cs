@@ -2453,6 +2453,138 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContractAmendment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ChangeSummary")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CreditLimit")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("DeliveryTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("DiscountTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<decimal>("ExpectedAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<Guid>("NewPriceListId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("NewValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("OldPriceListId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("OldValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("OtherTerms")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("PaperNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PenaltyTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PriceAdjustmentTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("SignDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("SponsorshipTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ContractId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PurchaseContractAmendment_Open")
+                        .HasFilter("\"Status\" IN (1, 2)");
+
+                    b.HasIndex("NewPriceListId");
+
+                    b.HasIndex("OldPriceListId");
+
+                    b.HasIndex("ContractId", "Seq")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseContractAmendment", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContractDepartment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4171,6 +4303,33 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)
                         .WithMany()
                         .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContractAmendment", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
+                        .WithMany()
+                        .HasForeignKey("NewPriceListId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
+                        .WithMany()
+                        .HasForeignKey("OldPriceListId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

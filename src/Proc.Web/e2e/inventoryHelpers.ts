@@ -73,6 +73,18 @@ export async function approveContract(request: APIRequestContext, contractId: st
   expect(response.ok(), await response.text()).toBeTruthy()
 }
 
+/**
+ * Duyệt phụ lục hợp đồng đang chờ duyệt ở BHA (lát B4b – cùng quyền duyệt hợp đồng) bằng tài khoản duyệt hợp đồng.
+ * @param amendmentId Id phụ lục đã gửi duyệt.
+ */
+export async function approveContractAmendment(request: APIRequestContext, amendmentId: string) {
+  const login = await request.post('/api/auth/login', { data: CONTRACT_APPROVER })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { defaultCompanyId: string } }
+  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.defaultCompanyId }
+  const response = await request.post(`/api/contract-amendments/${amendmentId}/approve`, { headers, data: { comment: null } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+}
+
 /** Người duyệt NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
 const SUPPLIER_APPROVER = { userName: 'duyetncc.tct', password: 'Demo@2026' }
 
