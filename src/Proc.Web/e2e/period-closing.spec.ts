@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, openByCommand, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Đóng kỳ, báo cáo nhập – xuất – tồn, mở lại kỳ (design.md mục 7.2–7.4a, 11.1). Dùng một công ty mới (lịch năm 2025, mở tháng 1,
@@ -34,6 +34,7 @@ test('đóng kỳ tháng, xem NXT đã chốt, mở lại kỳ có lý do', asyn
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
+  await approveSupplier(request, supplier.id)
   await company.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
   const warehouses = await company.get<{ id: string }[]>('/api/warehouses')
   const receipt = await company.send<{ id: string }>('post', '/api/goods-receipts', {

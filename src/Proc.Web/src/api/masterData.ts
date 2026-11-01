@@ -1,3 +1,4 @@
+import type { SupplierChangeRequest } from './supplierApprovals'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
@@ -342,6 +343,8 @@ export interface SupplierDetail extends Omit<SupplierInput, 'code'> {
   code: string
   /** Sửa được: có quyền và đang làm việc ở tổng công ty. */
   canEdit: boolean
+  /** Yêu cầu duyệt đang chờ (trạng thái, tài khoản ngân hàng) – design.md mục 18.6. */
+  pendingRequests: SupplierChangeRequest[] | null
 }
 
 /** Danh sách nhóm NCC. */

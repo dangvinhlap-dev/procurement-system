@@ -54,6 +54,7 @@ public class SharedCatalogEditTests
         var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm NCC sửa tên"), Ct));
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, group.Id, "NCC cũ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
 
         var editor = await MemberUserAsync(company.Code,
             Permissions.MasterData.CatalogEditShared, Permissions.MasterData.ItemView, Permissions.MasterData.ItemCategoryView,

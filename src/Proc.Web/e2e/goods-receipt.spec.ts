@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, chooseOption, openByCommand, pickOption, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Phiếu nhập mua từ NCC (design.md mục 10.1, 10.4) trên khuôn DocumentForm: lập phiếu nháp ở BHA, F2 thêm dòng, chọn hàng
@@ -27,6 +27,7 @@ test('lập phiếu nhập mua nháp, tính tiền, lưu cấp số, hủy phi�
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
+  await approveSupplier(request, supplier.id)
   const supplierCode = supplier.code
   const bha = await api(request, 'BHA')
   await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })

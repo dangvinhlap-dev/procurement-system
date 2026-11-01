@@ -22,6 +22,7 @@ export const Permission = {
   ItemManage: 'MasterData.Item.Manage',
   SupplierView: 'MasterData.Supplier.View',
   SupplierManage: 'MasterData.Supplier.Manage',
+  SupplierApprove: 'MasterData.Supplier.Approve',
   CatalogEditShared: 'MasterData.Catalog.EditShared',
   PrView: 'Purchase.PR.View',
   PrCreate: 'Purchase.PR.Create',

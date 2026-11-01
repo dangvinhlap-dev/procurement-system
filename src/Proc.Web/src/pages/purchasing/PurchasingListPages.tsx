@@ -120,8 +120,12 @@ const pendingColumns: GridColumn<PendingApproval>[] = [
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
 
-/** Màn hình mở phiếu chờ duyệt theo loại; loại mới (bảng giá, thầu, NCC, hợp đồng) thêm khi làm lát B1–B4. */
-const pendingRoutes: Partial<Record<ApprovalDocType, string>> = { PR: '/mua-hang/pr', PO: '/mua-hang/po' }
+/** Đường dẫn mở phiếu chờ duyệt theo loại; loại mới (bảng giá, thầu, hợp đồng) thêm khi làm lát B1, B3, B4. */
+const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = {
+  PR: (id) => `/mua-hang/pr/${id}`,
+  PO: (id) => `/mua-hang/po/${id}`,
+  NCC: (id) => `/gia-ncc/duyet-ncc?mo=${id}`,
+}
 
 /** Màn hình Việc cần làm: PR, PO đang chờ chính tôi duyệt ở công ty đang làm việc (design.md mục 6.7). Bấm đúp mở phiếu để duyệt. */
 export function PendingApprovalsPage() {
@@ -138,7 +142,7 @@ export function PendingApprovalsPage() {
       loading={pending.isLoading}
       onOpenRow={(r) => {
         const route = pendingRoutes[r.docType]
-        if (route) navigate(`${route}/${r.documentId}`)
+        if (route) navigate(route(r.documentId))
       }}
       notice={<Alert type="info" showIcon title="Phiếu đang chờ cấp duyệt của bạn. Bấm đúp để mở và Duyệt / Từ chối." />}
     />

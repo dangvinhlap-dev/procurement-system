@@ -198,3 +198,28 @@ internal sealed class CatalogNumberingConfiguration : IEntityTypeConfiguration<C
         builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng SupplierChangeRequest – yêu cầu duyệt NCC (design.md mục 18.6).</summary>
+internal sealed class SupplierChangeRequestConfiguration : IEntityTypeConfiguration<SupplierChangeRequest>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierChangeRequest> builder)
+    {
+        builder.ToTable("SupplierChangeRequest");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.ProposedBankAccounts);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.No).IsUnique();
+        builder.Property(x => x.StatusNote).HasMaxLength(500);
+        builder.Property(x => x.BankAccountsJson).HasColumnType("jsonb");
+        builder.Property(x => x.CurrentSummary).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.ProposedSummary).HasMaxLength(1100).IsRequired();
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.HasIndex(x => new { x.SupplierId, x.Status });
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

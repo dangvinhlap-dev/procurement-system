@@ -28,6 +28,26 @@ export async function api(request: APIRequestContext, companyCode?: string) {
   }
 }
 
+/** Người duyệt NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
+const SUPPLIER_APPROVER = { userName: 'duyetncc.tct', password: 'Demo@2026' }
+
+/**
+ * Duyệt xong các yêu cầu duyệt NCC đang chờ (design.md mục 18.6) bằng tài khoản duyệt NCC ở Tổng công ty – dùng khi dựng NCC "Đã duyệt"
+ * cho test nghiệp vụ khác. Gọi ngay sau khi tạo NCC, trước khi áp dụng NCC cho công ty, nên yêu cầu chỉ có chặng Tổng công ty.
+ * @param supplierId Id NCC.
+ */
+export async function approveSupplier(request: APIRequestContext, supplierId: string) {
+  const login = await request.post('/api/auth/login', { data: SUPPLIER_APPROVER })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { defaultCompanyId: string } }
+  const headers = { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.defaultCompanyId }
+  const pending = (await (await request.get(`/api/supplier-change-requests?supplierId=${supplierId}`, { headers })).json()) as
+    { id: string; status: string }[]
+  for (const r of pending.filter((x) => x.status === 'Submitted')) {
+    const response = await request.post(`/api/supplier-change-requests/${r.id}/approve`, { headers, data: { comment: null } })
+    expect(response.ok(), await response.text()).toBeTruthy()
+  }
+}
+
 /** Mở màn hình bằng ô lệnh. */
 export async function openByCommand(page: Page, code: string) {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
@@ -78,6 +98,7 @@ export async function seedPostedReceipt(request: APIRequestContext) {
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
+  await approveSupplier(request, supplier.id)
   const supplierCode = supplier.code
   const bha = await api(request, 'BHA')
   await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })

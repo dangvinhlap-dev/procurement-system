@@ -174,9 +174,11 @@ public class ExcelTransferTests
         Assert.True(result.Committed, string.Join("; ", result.Errors.Select(e => e.Message)));
         var row = (await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={taxCode}", Ct))!.Items.Single();
         Assert.Matches("^NCC\\d{6}$", row.Code);
-        Assert.Equal((taxCode, "Approved", "Võ Thị Lan – 0909 111 222"), (row.TaxCode, row.Status, row.PrimaryContact));
+        // Trạng thái "Đã duyệt" trong file cũng phải qua duyệt (design.md mục 18.6): NCC vào Tiềm năng kèm yêu cầu chờ duyệt.
+        Assert.Equal((taxCode, "Potential", "Võ Thị Lan – 0909 111 222"), (row.TaxCode, row.Status, row.PrimaryContact));
         var detail = await head.GetFromJsonAsync<SupplierDetailDto>($"/api/suppliers/{row.Id}", Ct);
         Assert.Equal("01234567", Assert.Single(detail!.BankAccounts).AccountNumber);
+        Assert.Equal("Đã duyệt", Assert.Single(detail.PendingRequests!).ProposedSummary);
     }
 
     [Fact]

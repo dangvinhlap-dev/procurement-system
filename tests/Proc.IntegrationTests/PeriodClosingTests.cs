@@ -67,6 +67,7 @@ public class PeriodClosingTests
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC đóng kỳ", null, false, null, null, null, null, null, null, null, null,
                 "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         return new Fixture(client, company.Id, kt, kp, item.Id, uom, supplier.Id, jan, feb, company.Code);
     }

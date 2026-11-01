@@ -59,6 +59,7 @@ public class PurchasingTests
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC mua hàng", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await buyer.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         return new Fixture(buyer, company.Code, kt, item.Id, cai, supplier.Id, await TestDepartments.CreateAsync(buyer, "Xưởng cán"));
     }

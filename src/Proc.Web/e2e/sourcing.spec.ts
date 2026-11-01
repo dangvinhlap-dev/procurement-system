@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Tìm nguồn → RFQ → báo giá 3 NCC → so sánh → chọn thầu → PO nháp (design.md mục 8.3, 8.4), ở BHA.
@@ -38,6 +38,7 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
       address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null, rating: null, status: 'Approved',
       statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
     })
+    await approveSupplier(request, supplier.id)
     await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
     others.push(supplier.code)
   }

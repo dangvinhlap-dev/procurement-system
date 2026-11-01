@@ -65,6 +65,7 @@ public class AccountingExportTests
         var taxCode = $"0{Random.Shared.NextInt64(100_000_000, 999_999_999)}";
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "Công ty TNHH Gioăng Việt", null, false, taxCode, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+        await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest("331-GV", null, true), Ct));
 
         // Nhập 10 × 100.000 (VAT 10%), trả 2, chuyển 3 sang KP; một phiếu nhập nháp (không xuất).

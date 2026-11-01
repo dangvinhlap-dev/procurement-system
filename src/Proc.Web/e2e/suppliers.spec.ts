@@ -3,7 +3,7 @@ import { loginViaApi } from './helpers.ts'
 
 /**
  * Danh mục nhà cung cấp (design.md mục 5.3, 5.8): thêm NCC kèm người liên hệ và tài khoản ngân hàng, tìm không dấu,
- * trạng thái danh sách đen phải có lý do.
+ * trạng thái danh sách đen phải có lý do và phải qua duyệt (mục 18.6).
  * Dữ liệu Testing không bị xóa giữa các lần chạy Playwright nên mã và mã số thuế luôn mới.
  */
 
@@ -71,11 +71,28 @@ test.describe('danh mục nhà cung cấp', () => {
     await expect(drawer.getByText('Hãy ghi lý do.')).toBeVisible()
     await drawer.getByLabel('Lý do').fill('Giao hàng không đúng xuất xứ')
     await drawer.getByRole('button', { name: 'Lưu' }).click()
-    await expect(page.locator('.ant-message')).toContainText(`Đã lưu NCC ${code}.`)
-    await expect(gridRow(page, code)).toContainText('Danh sách đen')
+    // Danh sách đen phải qua duyệt (design.md mục 18.6): NCC vẫn Tiềm năng, yêu cầu chờ Tổng công ty (NCC chưa áp dụng công ty nào).
+    await expect(page.locator('.ant-message')).toContainText(`Đã lưu NCC ${code}. Thay đổi cần duyệt đã gửi duyệt`)
+    await expect(gridRow(page, code)).toContainText('Tiềm năng')
 
     await page.waitForLoadState('networkidle')
     await page.screenshot({ path: 'e2e/screenshots/supplier-list.png' })
+
+    await gridRow(page, code).dblclick()
+    await expect(drawer.getByText('Đang chờ duyệt')).toBeVisible()
+    await expect(drawer.getByText(/Đổi trạng thái → Danh sách đen – Giao hàng không đúng xuất xứ \(chờ TCT\)/)).toBeVisible()
+    await drawer.getByRole('link', { name: new RegExp(`^${code}-`) }).click()
+
+    // Màn hình Duyệt NCC: người lập không tự duyệt, chỉ rút được yêu cầu.
+    await expect(page.getByRole('heading', { name: 'Yêu cầu duyệt nhà cung cấp' })).toBeVisible()
+    const approval = page.locator('.detail-drawer')
+    await expect(approval.getByText('Giao hàng không đúng xuất xứ').first()).toBeVisible()
+    await expect(approval.getByRole('button', { name: 'Duyệt' })).toHaveCount(0)
+    await approval.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+    await expect(approval.getByText('Tổng công ty (cuối)')).toBeVisible()
+    await page.screenshot({ path: 'e2e/screenshots/supplier-approval.png', animations: 'disabled' })
+    await approval.getByRole('button', { name: 'Rút yêu cầu' }).click()
+    await expect(page.locator('.ant-message')).toContainText('Đã rút yêu cầu.')
   })
 
   test('nhóm NCC có sẵn nhóm mẫu', async ({ page }) => {

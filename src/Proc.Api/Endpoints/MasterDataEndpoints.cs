@@ -1,6 +1,7 @@
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.MasterData;
+using Proc.Application.Purchasing;
 using Proc.Domain.Organization;
 
 namespace Proc.Api.Endpoints;
@@ -122,6 +123,21 @@ public static class MasterDataEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequireAnyPermission(Permissions.MasterData.SupplierManage, Permissions.MasterData.CatalogEditShared)
             .Validate<SaveSupplierRequest>();
+
+        // Yêu cầu duyệt NCC (design.md mục 18.6): ai xem được NCC thì xem được yêu cầu; duyệt cần quyền duyệt NCC tại công ty đang làm việc.
+        var changes = app.MapGroup("/api/supplier-change-requests").WithTags("Yêu cầu duyệt NCC");
+        changes.MapGet("/", (Guid? supplierId, ISupplierChangeRequestService s, CancellationToken ct) => s.ListAsync(supplierId, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        changes.MapGet("/{id:guid}", (Guid id, ISupplierChangeRequestService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        changes.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, ISupplierChangeRequestService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierApprove);
+        changes.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, ISupplierChangeRequestService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierApprove);
+        changes.MapPost("/{id:guid}/cancel", (Guid id, ISupplierChangeRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
 
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
         suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))

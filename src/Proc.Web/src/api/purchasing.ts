@@ -44,6 +44,10 @@ export interface ApprovalStep {
   actedByName: string | null
   actedAt: string | null
   comment: string | null
+  /** Công ty duyệt bước này. */
+  companyCode: string | null
+  /** Chặng: 1 = công ty của phiếu / công ty liên quan; 2 = Tổng công ty duyệt lần cuối (design.md mục 18.6). */
+  stage: number
 }
 
 /** Nhãn kết quả bước duyệt. */
