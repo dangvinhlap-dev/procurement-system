@@ -26,7 +26,7 @@ Kiểm tra gần nhất (SEC-2, 01/11/2026): `dotnet test` 353 qua; Playwright 6
 
 ## Đang làm
 
-- Không có lát nào đang sửa dở.
+- Lát E1 đã có kế hoạch chi tiết (`docs/Phantich_01112026.md` mục 7), chưa code. Phiên mới: tạo nhánh `feature/du-lieu-mua-lich-su` và làm theo kế hoạch đó.
 
 ## Việc tiếp theo
 
