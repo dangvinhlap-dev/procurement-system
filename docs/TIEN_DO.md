@@ -28,7 +28,7 @@ Kiểm tra gần nhất (E2, 01/11/2026): `dotnet test` 388 qua; Playwright 63/6
 
 ## Đang làm
 
-- Không có. Lát kế tiếp: **E3 – báo cáo phân tích hợp nhất & cơ hội tiết kiệm** (dùng dữ liệu PHIS đã ánh xạ); lập kế hoạch chi tiết trước khi code.
+- **E3 – phân tích giá hợp nhất & cơ hội tiết kiệm** (nhánh `feature/phan-tich-hop-nhat`): kế hoạch ở `docs/Phantich_01112026.md` mục 8.
 
 ## Việc tiếp theo
 
