@@ -158,6 +158,15 @@ public static class Permissions
         public const string AccountingExport = "Report.Accounting.Export";
     }
 
+    /// <summary>Phân tích dữ liệu mua (design.md mục 18.1).</summary>
+    public static class Analysis
+    {
+        /// <summary>Quyền "Xem dữ liệu mua lịch sử" của công ty đang làm việc.</summary>
+        public const string PurchaseHistoryView = "Analysis.PurchaseHistory.View";
+        /// <summary>Quyền "Nhập, xóa lô dữ liệu mua lịch sử".</summary>
+        public const string PurchaseHistoryImport = "Analysis.PurchaseHistory.Import";
+    }
+
     /// <summary>Toàn bộ quyền kèm tên tiếng Việt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<PermissionDefinition> All =
     [
@@ -208,6 +217,8 @@ public static class Permissions
         new(Report.StockViewAllCompanies, "Xem tồn kho toàn tập đoàn"),
         new(Report.PurchaseViewAllCompanies, "Xem báo cáo mua hàng toàn tập đoàn"),
         new(Report.AccountingExport, "Xuất chứng từ cho kế toán"),
+        new(Analysis.PurchaseHistoryView, "Xem dữ liệu mua lịch sử"),
+        new(Analysis.PurchaseHistoryImport, "Nhập, xóa lô dữ liệu mua lịch sử"),
     ];
 
     /// <summary>
@@ -229,6 +240,7 @@ public static class Permissions
         ("Pricing", "Giá và nhà cung cấp"),
         ("Sourcing", "Tìm nguồn và đấu thầu"),
         ("Report", "Báo cáo"),
+        ("Analysis", "Phân tích dữ liệu mua"),
     ];
 
     private static readonly HashSet<string> KnownCodes = [.. All.Select(p => p.Code)];

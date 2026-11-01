@@ -5,23 +5,7 @@ import { useState } from 'react'
 import { apiDownload, apiUpload } from '../../api/client'
 import { DataGrid } from '../DataGrid/DataGrid'
 import type { GridColumn } from '../DataGrid/types'
-
-/** Một lỗi nhập Excel – khớp Proc.Application.Excel.ExcelImportError. */
-interface ImportError {
-  row: number
-  code: string | null
-  message: string
-}
-
-/** Kết quả nhập Excel – khớp Proc.Application.Excel.ExcelImportResult. */
-interface ImportResult {
-  catalog: string
-  totalRows: number
-  created: number
-  updated: number
-  errors: ImportError[]
-  committed: boolean
-}
+import type { ExcelImportSource, ImportError, ImportOutcome } from './excelImport'
 
 const errorColumns: GridColumn<ImportError & { key: string }>[] = [
   { key: 'row', title: 'Dòng', width: 60, type: 'quantity', value: (r) => (r.row > 0 ? r.row : null) },
@@ -30,17 +14,25 @@ const errorColumns: GridColumn<ImportError & { key: string }>[] = [
 ]
 
 /**
- * Hộp thoại nhập danh mục từ Excel (design.md mục 5.10): tải file mẫu → chọn file → "Kiểm tra thử" (không lưu gì, báo lỗi
+ * Hộp thoại nhập Excel (design.md mục 5.10, 18.1): tải file mẫu → chọn file → "Kiểm tra thử" (không lưu gì, báo lỗi
  * theo dòng) → "Nhập thật" (chỉ lưu khi mọi dòng đúng). Nhập xong tải lại mọi danh sách đang mở.
- * @param catalog Mã danh mục trên API, ví dụ "items".
- * @param title Tên danh mục hiển thị.
+ * @param source Nơi nhập (danh mục: {@link catalogImportSource}).
+ * @param title Tên dữ liệu hiển thị, ví dụ "hàng hóa".
  * @param onClose Đóng hộp thoại.
  */
-export function ExcelImportDialog({ catalog, title, onClose }: { catalog: string; title: string; onClose: () => void }) {
+export function ExcelImportDialog<R extends ImportOutcome>({
+  source,
+  title,
+  onClose,
+}: {
+  source: ExcelImportSource<R>
+  title: string
+  onClose: () => void
+}) {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
-  const [result, setResult] = useState<ImportResult | null>(null)
+  const [result, setResult] = useState<R | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<'check' | 'commit' | 'template' | null>(null)
 
@@ -49,10 +41,10 @@ export function ExcelImportDialog({ catalog, title, onClose }: { catalog: string
     setBusy(commit ? 'commit' : 'check')
     setError(null)
     try {
-      const r = await apiUpload<ImportResult>(`/api/excel/${catalog}/import?commit=${commit}`, file)
+      const r = await apiUpload<R>(`${source.importUrl}?commit=${commit}`, file)
       setResult(r)
       if (r.committed) {
-        message.success(`Đã nhập ${r.created} dòng mới, cập nhật ${r.updated} dòng.`)
+        message.success(source.summary(r).committed)
         void queryClient.invalidateQueries()
       }
     } catch (e) {
@@ -65,7 +57,7 @@ export function ExcelImportDialog({ catalog, title, onClose }: { catalog: string
   const downloadTemplate = async () => {
     setBusy('template')
     try {
-      await apiDownload(`/api/excel/${catalog}?template=true`, `mau-${catalog}.xlsx`)
+      await apiDownload(source.templateUrl, source.templateFileName)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không tải được file mẫu.')
     } finally {
@@ -95,8 +87,7 @@ export function ExcelImportDialog({ catalog, title, onClose }: { catalog: string
       }
     >
       <div className="detail-hint" style={{ marginBottom: 8 }}>
-        Mã đã có thì cập nhật, chưa có thì thêm mới; không xóa bản ghi nào. Bấm "Kiểm tra thử" trước – "Nhập thật" chỉ lưu khi mọi
-        dòng đều đúng. Dễ nhất: bấm "Xuất Excel" trên danh sách, sửa file đó rồi nhập lại.
+        {source.hint}
       </div>
       <Button icon={<DownloadOutlined />} onClick={downloadTemplate} loading={busy === 'template'} style={{ marginBottom: 8 }}>
         Tải file mẫu
@@ -130,10 +121,10 @@ export function ExcelImportDialog({ catalog, title, onClose }: { catalog: string
           type={result.committed ? 'success' : result.errors.length > 0 ? 'error' : 'info'}
           title={
             result.committed
-              ? `Đã nhập xong ${result.totalRows} dòng: ${result.created} dòng mới, ${result.updated} dòng cập nhật.`
+              ? source.summary(result).committed
               : result.errors.length > 0
                 ? `Có ${result.errors.length} lỗi – chưa lưu dòng nào. Sửa file rồi kiểm tra lại.`
-                : `File hợp lệ: ${result.totalRows} dòng (${result.created} dòng mới, ${result.updated} dòng cập nhật). Bấm "Nhập thật" để lưu.`
+                : source.summary(result).valid
           }
         />
       )}

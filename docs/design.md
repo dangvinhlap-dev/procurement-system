@@ -1108,6 +1108,21 @@ Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám s�
 
 Thứ tự làm: E (nhập và phân tích dữ liệu mua lịch sử) → A (nền) → B (giá, NCC) → C (vận hành) → D (tồn kho) → F (báo cáo, KPI, KSNB).
 
+### 18.1 Dữ liệu mua lịch sử (lát E1, 01/11/2026)
+
+Gom dữ liệu mua 12–24 tháng của từng pháp nhân để phân tích (lát E2, E3). Màn hình Báo cáo → **Dữ liệu mua lịch sử** (mã PHIS).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Chỉ để phân tích: **không** ghi sổ kho, không ảnh hưởng tồn, giá vốn, lịch sử giá, bảng giá | Dữ liệu cũ từ nhiều nguồn, chưa chuẩn hóa |
+| Bảng `PurchaseHistoryBatch` (lô nhập: công ty, tên file, số dòng, ngày mua từ – đến, người/giờ nhập) và `PurchaseHistoryRecord` (CompanyId = pháp nhân mua) với 12 nhóm trường: bộ phận sử dụng; mã, tên vật tư theo pháp nhân; quy cách, thương hiệu, xuất xứ, tiêu chuẩn; ĐVT (chữ); ngày yêu cầu, ngày mua; SL numeric(18,4); đơn giá trước VAT numeric(19,6), % VAT, tiền tệ (mặc định VND); thành tiền = SL × đơn giá làm tròn 2 số lẻ; chi phí liên quan numeric(19,2) + ghi chú; NCC (tên, MST, liên hệ); điều kiện thanh toán, chiết khấu, tài trợ; kết quả (đúng hạn, đạt chất lượng, đổi trả/khiếu nại). `ItemId`, `SupplierId` có thể trống | Đủ trường của đề xuất Ban Cung ứng; E2 ánh xạ phần chưa khớp |
+| Mỗi pháp nhân nhập ở **công ty làm việc** của mình; chỉ thấy dữ liệu của công ty đó (global query filter) | Mục 9.2 |
+| Nhập Excel như mục 5.10: file mẫu có sheet Hướng dẫn, đọc cột theo tiêu đề, **Kiểm tra thử** không lưu, **Nhập thật** chỉ lưu khi không có dòng lỗi (báo tối đa 500 lỗi đầu). Khác danh mục: **tối đa 50.000 dòng, 20 MB/file**, mỗi lần nhập là một lô mới (không cập nhật theo mã), ghi bằng COPY nhị phân trong một giao dịch | Dữ liệu lớn; dòng mua không đụng bản ghi khác nên không cần đi từng dòng qua dịch vụ |
+| Kiểm tra dòng: bắt buộc mã, tên vật tư, ĐVT, ngày mua, SL, đơn giá, tên NCC; SL > 0; đơn giá ≥ 0 (hàng tặng = 0); ngày mua không sau hôm nay; ngày yêu cầu không sau ngày mua; % VAT 0–100; chi phí ≥ 0; tiền tệ mã 3 chữ cái. Số nhận 1.234,5 và 1234.5 (dấu chấm đứng trước đúng 3 chữ số là phân cách nghìn, còn lại là dấu thập phân: "2.5" = 2,5) | Dữ liệu sai làm lệch phân tích |
+| **Tự khớp khi nhập**: mã vật tư trùng mã hàng hóa chung (trong phạm vi nhóm hàng người nhập được xem) → gán mặt hàng; MST trùng NCC → gán NCC. Không khớp vẫn nhập; lọc "Chưa khớp đủ" để xem | Không chặn nhập vì danh mục chưa đủ |
+| Nhập nhầm thì **xóa cả lô** (xóa mọi dòng của lô). Lô ghi nhật ký khi nhập và khi xóa; từng dòng không ghi nhật ký | Lô tới 50.000 dòng; nhật ký lô đủ để truy vết |
+| Quyền: `Analysis.PurchaseHistory.View` (xem), `Analysis.PurchaseHistory.Import` (tải file mẫu, nhập, xóa lô). Danh sách hiện tối đa 5.000 dòng có ngày mua mới nhất – lọc theo lô, khoảng ngày, khớp danh mục để xem hết | Mục 9.1 |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
