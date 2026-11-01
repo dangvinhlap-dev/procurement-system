@@ -145,7 +145,8 @@ public sealed class ExcelTransfer : IExcelTransfer
         }
     }
 
-    private static Dictionary<string, int> ReadHeader(IXLWorksheet sheet)
+    /// <summary>Đọc dòng tiêu đề (dòng 1): tiêu đề đã chuẩn hóa → số thứ tự cột. Dùng chung cho nhập dữ liệu mua lịch sử.</summary>
+    internal static Dictionary<string, int> ReadHeader(IXLWorksheet sheet)
     {
         var columns = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var cell in sheet.Row(1).CellsUsed())

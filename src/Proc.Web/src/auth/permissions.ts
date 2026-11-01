@@ -48,4 +48,6 @@ export const Permission = {
   ReportPurchaseView: 'Report.Purchase.View',
   PurchaseViewAllCompanies: 'Report.Purchase.ViewAllCompanies',
   AccountingExport: 'Report.Accounting.Export',
+  PurchaseHistoryView: 'Analysis.PurchaseHistory.View',
+  PurchaseHistoryImport: 'Analysis.PurchaseHistory.Import',
 } as const

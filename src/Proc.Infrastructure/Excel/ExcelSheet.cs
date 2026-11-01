@@ -18,7 +18,7 @@ internal sealed class ExcelRowException(string message) : Exception(message);
 /// <summary>
 /// Đọc giá trị một dòng theo tiêu đề cột. Chấp nhận cả ô số lẫn ô chữ kiểu Việt Nam (1.234,5) hay kiểu quốc tế (1234.5).
 /// </summary>
-internal sealed class ExcelRowReader
+internal sealed partial class ExcelRowReader
 {
     private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
     private readonly IXLRow _row;
@@ -82,8 +82,16 @@ internal sealed class ExcelRowReader
         if (cell.DataType == XLDataType.Number) return Math.Round((decimal)cell.GetDouble(), 10);
         var text = cell.GetFormattedString().Trim();
         if (text.Length == 0) return null;
-        if (decimal.TryParse(text, NumberStyles.Number, Vietnamese, out var vi)) return vi;
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var inv)) return inv;
+        // Có dấu phẩy, hoặc dấu chấm chỉ đứng trước đúng 3 chữ số (1.234, 1.234.567) → kiểu Việt Nam; còn lại (2.5, 1234.5) → kiểu quốc tế.
+        // Không thử kiểu Việt Nam trước cho mọi chuỗi vì vi-VN coi "2.5" là 25 (dấu chấm phân cách nghìn đặt sai chỗ vẫn được chấp nhận).
+        var vietnameseStyle = text.Contains(',', StringComparison.Ordinal) || ThousandsOnlyRegex().IsMatch(text);
+        // Kiểu ưu tiên không đọc được thì thử kiểu còn lại (1,234.5 kiểu Mỹ vẫn nhận).
+        CultureInfo[] cultures = vietnameseStyle ? [Vietnamese, CultureInfo.InvariantCulture] : [CultureInfo.InvariantCulture, Vietnamese];
+        foreach (var culture in cultures)
+        {
+            if (decimal.TryParse(text, NumberStyles.Number, culture, out var value)) return value;
+        }
+
         throw new ExcelRowException($"\"{header}\" phải là số (đang là \"{text}\").");
     }
 
@@ -138,6 +146,9 @@ internal sealed class ExcelRowReader
             return date;
         throw new ExcelRowException($"\"{header}\" phải là ngày dd/MM/yyyy (đang là \"{text}\").");
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?\d{1,3}(\.\d{3})+$")]
+    private static partial System.Text.RegularExpressions.Regex ThousandsOnlyRegex();
 }
 
 /// <summary>Chuẩn hóa tiêu đề cột để so khớp: bỏ dấu *, bỏ dấu tiếng Việt, chữ thường.</summary>

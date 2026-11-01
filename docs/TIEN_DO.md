@@ -18,20 +18,21 @@ Cập nhật: 01/11/2026. Đọc file này đầu mỗi phiên để biết đan
 | TB-1 | Thông báo: chuông Shellbar, màn hình NOTI, báo duyệt / ICR chờ nhận / mở lại kỳ | d1a4550 |
 | SEC-1 | Tham số hệ thống: bảng `CompanyParameter`, số NCC tối thiểu khi gửi RFQ theo công ty (sửa được); giá vốn, kho cho tồn âm (chỉ xem) | feature/tham-so-he-thong |
 | SEC-2 | % markup nội bộ mặc định (tham số công ty, màn hình SEC); gợi ý giá bán nội bộ = giá vốn kỳ đã đóng gần nhất × (1 + %) ở Bảng giá nội bộ và phiếu ICS; migration `V0_10_0_MarkupNoiBo` | feature/markup-noi-bo |
+| E1 | Dữ liệu mua lịch sử (PHIS): nhập Excel tối đa 50.000 dòng/20 MB (kiểm tra thử, COPY nhị phân), tự khớp mã vật tư/MST, lọc lô/ngày/khớp, xóa lô có nhật ký; quyền `Analysis.PurchaseHistory.*`; migration `V0_10_0_DuLieuMuaLichSu`; design.md 18.1. Sửa đọc số Excel: "2.5" = 2,5 | feature/du-lieu-mua-lich-su |
 | UI-c | Dấu * đỏ sau nhãn ở mọi ô bắt buộc (form, ngăn kéo, hộp thoại, tiêu đề cột lưới dòng), ẩn khi chỉ xem | feature/dau-bat-buoc |
 | Tối ưu Claude Code | CLAUDE.md gọn (124 → 95 dòng), tách `docs/phat-hanh.md`, `docs/moi-truong-dev.md`; `docs/TIEN_DO.md`; `.claude/settings.json`; `.gitignore` | chore/toi-uu-claude |
 
-Kiểm tra gần nhất (SEC-2, 01/11/2026): `dotnet test` 353 qua; Playwright 61/61 qua; `npm run build`, `tsc`, `oxlint` qua.
+Kiểm tra gần nhất (E1, 01/11/2026): `dotnet test` 374 qua; Playwright 62/62 qua; `npm run build`, `tsc`, `oxlint` qua.
 Đã sửa test `SupplierPricingTests` lỗi vào ngày mùng 1 (số bảng giá theo ngày hiệu lực = hôm qua).
 
 ## Đang làm
 
-- Lát E1 đã có kế hoạch chi tiết (`docs/Phantich_01112026.md` mục 7), chưa code. Phiên mới: tạo nhánh `feature/du-lieu-mua-lich-su` và làm theo kế hoạch đó.
+- Không có. Lát kế tiếp: **E2 – chuẩn hóa/ánh xạ dữ liệu mua lịch sử** (dòng chưa khớp mặt hàng/NCC ở PHIS); lập kế hoạch chi tiết trước khi code.
 
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. Lát kế tiếp: **E1 – nhập Excel dữ liệu mua lịch sử 12–24 tháng**.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1 đã xong; lát kế tiếp: **E2**.
    Bản 0.10.0 (SEC-2 + đợt E) chỉ phát hành khi người dùng yêu cầu.
 2. Hợp đồng khung (CTR): đã có mô tả trong đề xuất Ban Cung ứng – làm ở lát B4 (phương án 2).
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0,

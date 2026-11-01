@@ -14,6 +14,7 @@ import { DataGrid } from '../DataGrid/DataGrid'
 import { cellText, type GridColumn } from '../DataGrid/types'
 import { apiDownload } from '../../api/client'
 import { ExcelImportDialog } from './ExcelImportDialog'
+import { catalogImportSource, type ExcelImportSource, type ImportOutcome } from './excelImport'
 import './ListPage.css'
 
 /** Thuộc tính của ListPage. */
@@ -49,6 +50,11 @@ export interface ListPageProps<T> {
    * canImport = người dùng được nhập (có quyền quản lý, đúng công ty). Không truyền thì hai nút Excel chưa dùng được.
    */
   excel?: { catalog: string; title: string; canImport: boolean }
+  /**
+   * Nhập Excel dữ liệu giao dịch (không phải danh mục, ví dụ dữ liệu mua lịch sử – design.md mục 18.1): nút "Nhập Excel" mở hộp thoại
+   * với nguồn nhập riêng; "Xuất Excel" vẫn xuất đúng lưới đang xem. Không dùng cùng `excel`.
+   */
+  excelImport?: { source: ExcelImportSource<ImportOutcome>; title: string; canImport: boolean }
 }
 
 /**
@@ -88,6 +94,7 @@ export function ListPage<T>({
   exportFileName,
   exportSubtitle,
   excel,
+  excelImport,
 }: ListPageProps<T>) {
   const { message } = App.useApp()
   const [importing, setImporting] = useState(false)
@@ -215,8 +222,8 @@ export function ListPage<T>({
             <Button type="text" icon={<FileExcelOutlined />} onClick={exportExcel} loading={exporting}>
               Xuất Excel
             </Button>
-            {(!excel || excel.canImport) && (
-              <Button type="text" icon={<UploadOutlined />} onClick={excel ? () => setImporting(true) : notYet}>
+            {(excelImport ? excelImport.canImport : !excel || excel.canImport) && (
+              <Button type="text" icon={<UploadOutlined />} onClick={excel || excelImport ? () => setImporting(true) : notYet}>
                 Nhập Excel
               </Button>
             )}
@@ -315,7 +322,10 @@ export function ListPage<T>({
           <Empty className="list-page-empty" description="Chưa có nội dung – sẽ làm ở giai đoạn báo cáo." />
         )}
       </div>
-      {importing && excel && <ExcelImportDialog catalog={excel.catalog} title={excel.title} onClose={() => setImporting(false)} />}
+      {importing && excelImport && <ExcelImportDialog source={excelImport.source} title={excelImport.title} onClose={() => setImporting(false)} />}
+      {importing && excel && !excelImport && (
+        <ExcelImportDialog source={catalogImportSource(excel.catalog)} title={excel.title} onClose={() => setImporting(false)} />
+      )}
     </div>
   )
 }
