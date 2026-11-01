@@ -1264,6 +1264,23 @@ Migration `V0_12_0_HopDongNguyenTac` (bảng `PurchaseContract`, `PurchaseContra
 `Down()` xóa các bảng, mất hợp đồng đã lập). Migration `V0_12_0_PhuLucHopDong` (bảng `PurchaseContractAmendment`; bảng mới – `Down()` xóa
 bảng, mất phụ lục đã lập, nội dung đã áp vào hợp đồng vẫn giữ). Lát B4c không có migration.
 
+### 18.8 Kê khai xung đột lợi ích (lát B5a, 01/11/2026)
+
+Nguồn: đề xuất Ban CUVT – bảo mật, xung đột lợi ích; người đàm phán kiêm hội đồng duyệt giá không tự quyết định kết quả; KSNB kiểm tra quan
+hệ lợi ích giữa nhân sự mua hàng, người duyệt và NCC (`docs/Phantich_01112026.md` N4). Màn hình **COI** (Giá và NCC → Xung đột lợi ích).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Kê khai (`ConflictDeclaration`) = một **người dùng × một NCC**: loại quan hệ (người thân sở hữu/làm việc tại NCC, góp vốn/cổ phần, đang/từng làm việc cho NCC, khác), mô tả (bắt buộc), hiệu lực từ ngày (mặc định hôm nay) – đến ngày. **Không thuộc công ty** (gắn với con người, chặn ở mọi công ty) | Quan hệ lợi ích theo người, không theo pháp nhân |
+| Ai đăng nhập cũng **tự kê khai** và xem kê khai của mình (không cần quyền). `MasterData.Conflict.View` (vai trò mẫu KSNB, Trưởng ban): xem mọi kê khai. `MasterData.Conflict.Manage` (Trưởng ban): ghi thay người khác, **kết thúc** kê khai | Kê khai là nghĩa vụ của mọi người; KSNB kiểm tra |
+| Không xóa, không sửa nội dung; mỗi người × NCC chỉ một kê khai chưa kết thúc. Hết quan hệ: người có quyền quản lý kết thúc kèm ngày cuối còn quan hệ + lý do (bắt buộc); người kê khai **không tự kết thúc** | Kết thúc là gỡ chặn duyệt nên phải có người kiểm soát xác nhận; giữ dấu vết cho KSNB (cùng AuditLog) |
+| Kê khai **còn hiệu lực hôm nay** (từ ngày ≤ hôm nay, chưa kết thúc hoặc ngày kết thúc ≥ hôm nay) với NCC của phiếu thì người đó **không duyệt/từ chối** được (báo rõ mã NCC), không nhận thông báo chờ duyệt, phiếu không hiện ở Việc cần làm. NCC của phiếu: PO, bảng giá, yêu cầu duyệt NCC, hợp đồng – NCC của phiếu; phụ lục – NCC của hợp đồng; RFQ – **mọi NCC được mời** | Người có quan hệ không tham gia quyết định |
+| RFQ đang nhận báo giá: người vướng kê khai với bất kỳ NCC được mời nào không **nhập báo giá/chấm điểm**, không **chọn thầu** (thông báo trên RFQ). Lập, gửi, hủy RFQ không chặn | Chấm thầu là so sánh giữa các NCC – quan hệ với một NCC đã đủ làm lệch |
+| Không có cấp duyệt nào thay thế tự động: nếu mọi người duyệt ở một cấp đều vướng kê khai thì quản trị gán thêm người duyệt (mục 18.6) | Không viết cứng người duyệt |
+| Lát B5b: NCC độc quyền (N6). Báo cáo "Dấu hiệu bất thường" của KSNB (NCC có quan hệ lợi ích) ở đợt F | Tách lát |
+
+Migration `V0_12_0_KeKhaiXungDotLoiIch` (bảng `ConflictDeclaration`; bảng mới – `Down()` xóa bảng, mất kê khai, AuditLog vẫn giữ).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

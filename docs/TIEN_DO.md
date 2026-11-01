@@ -91,7 +91,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
      `api/conflicts.ts`), cảnh báo trên RFQ; `tsc`, `oxlint` qua. E2E `e2e/conflicts.spec.ts` đã viết.
   4. [xong] `npm run build` qua; Playwright `conflicts.spec.ts` qua, ảnh `e2e/screenshots/conflict-list.png` đúng ui-style.md.
      Lưu ý: thêm endpoint thì phải dừng API Testing, `dotnet build`, bật lại rồi mới chạy e2e.
-  5. [còn] design.md mục 18.8 + bảng quyết định mục 18; merge `main`, xóa nhánh.
+  5. [xong] design.md mục 18.8. [còn] chạy Playwright cả bộ, merge `main`, xóa nhánh.
   Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
 
