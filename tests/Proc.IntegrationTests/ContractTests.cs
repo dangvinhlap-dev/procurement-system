@@ -16,7 +16,7 @@ namespace Proc.IntegrationTests;
 /// sản lượng dự kiến lấy giá theo bảng giá; duyệt loại CTR; không chồng hiệu lực.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class ContractTests
+public partial class ContractTests
 {
     private readonly ProcApiFactory _factory;
 

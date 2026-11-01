@@ -6,6 +6,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   amendmentStatusLabels,
   contractStatusLabels,
+  contractImportSource,
   contractStatusTone,
   useContract,
   useContractMutations,
@@ -72,6 +73,8 @@ export function ContractListPage() {
       canCreate={hasPermission(Permission.ContractManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}
       onOpenRow={(r) => navigate(`${LIST_PATH}/${r.id}`)}
+      // Nhập hợp đồng đang thực hiện khi chuyển giao (lát B4c) – thành hợp đồng nháp, quyền như lập hợp đồng.
+      excelImport={{ source: contractImportSource, title: 'hợp đồng nguyên tắc', canImport: hasPermission(Permission.ContractManage) }}
     />
   )
 }
