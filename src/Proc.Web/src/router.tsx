@@ -37,6 +37,7 @@ import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import {
   PendingRequestsReportPage,
+  PurchaseSlaReportPage,
   PurchaseSpendReportPage,
   SourcingSavingsReportPage,
   SupplierEvaluationReportPage,
@@ -92,6 +93,7 @@ const implemented: Record<string, ReactNode> = {
   EXP: <ExpiringReportPage />,
   GSTK: <GroupStockReportPage />,
   PRPEND: <PendingRequestsReportPage />,
+  SLA: <PurchaseSlaReportPage />,
   RPSUP: <PurchaseSpendReportPage />,
   SUPEVAL: <SupplierEvaluationReportPage />,
   SAVE: <SourcingSavingsReportPage />,

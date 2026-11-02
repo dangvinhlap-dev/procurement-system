@@ -119,6 +119,8 @@ export interface PurchaseRequestLine {
   note: string | null
   orderedQty: number
   onHandQty: number
+  /** SL đang đặt của mặt hàng tại công ty (PO đã duyệt chưa nhận đủ, ĐVT cơ sở) – design.md mục 18.13. */
+  onOrderQty: number
 }
 
 /** Chi tiết PR. */

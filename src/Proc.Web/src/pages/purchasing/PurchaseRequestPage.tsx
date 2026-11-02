@@ -220,6 +220,8 @@ export function PurchaseRequestPage() {
       ),
     },
     { key: 'onHand', title: 'Tồn hiện tại', width: 95, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onHandQty) : '') },
+    // Hàng đang đặt (PO đã duyệt chưa nhận đủ) – kiểm tra trước khi đề nghị thêm (design.md mục 18.13, V2).
+    { key: 'onOrder', title: 'Đang đặt', width: 90, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onOrderQty) : '') },
     { key: 'price', title: 'Giá tham khảo', width: 115, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.estPrice) : 'Tự lấy khi lưu') },
     { key: 'amount', title: 'Thành tiền dự kiến', width: 125, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.amount) : '') },
     {

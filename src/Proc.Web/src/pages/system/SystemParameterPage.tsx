@@ -58,6 +58,10 @@ export function SystemParameterPage() {
 const inputLimits: Record<string, { min: number; max: number; precision: number; suffix?: string }> = {
   RFQ_MIN_SUPPLIERS: { min: 1, max: 20, precision: 0 },
   INTERNAL_MARKUP_PERCENT: { min: 0, max: 1000, precision: 4, suffix: '%' },
+  // SLA mua hàng theo ngày làm việc (design.md mục 18.13).
+  SLA_PRICED_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
+  SLA_SOURCING_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
+  SLA_URGENT_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
 }
 
 /** Ngăn kéo xem/sửa một tham số. Các tham số sửa được đều là số nên ô nhập là InputNumber. */

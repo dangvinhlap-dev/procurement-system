@@ -284,6 +284,55 @@ export function useSourcingSavings(period: PurchaseReportPeriod) {
   })
 }
 
+/** Loại yêu cầu tính SLA (design.md mục 18.13). */
+export type SlaCategory = 'Priced' | 'Sourcing' | 'Urgent'
+
+/** Trạng thái SLA của một dòng PR. */
+export type SlaStatus = 'OnTime' | 'Late' | 'InProgress' | 'Overdue'
+
+/** Một dòng báo cáo SLA mua hàng. */
+export interface PurchaseSlaRow {
+  requestId: string
+  requestNo: string
+  approvedDate: string
+  department: string | null
+  lineNo: number
+  itemCode: string
+  itemName: string
+  category: SlaCategory
+  slaDays: number
+  dueDate: string
+  orderId: string | null
+  orderNo: string | null
+  orderApprovedDate: string | null
+  status: SlaStatus
+}
+
+/** Báo cáo SLA mua hàng: dòng và tổng hợp. */
+export interface PurchaseSlaResult {
+  rows: PurchaseSlaRow[]
+  onTime: number
+  late: number
+  inProgress: number
+  overdue: number
+  /** % đúng SLA; null khi chưa có dòng nào đến hạn hoặc có PO. */
+  onTimePct: number | null
+}
+
+/**
+ * Báo cáo SLA mua hàng của công ty đang làm việc theo ngày PR được duyệt.
+ * @param range Khoảng ngày yyyy-MM-dd.
+ */
+export function usePurchaseSla(range: { from: string; to: string }) {
+  const companyId = useCompanyId()
+  const query = new URLSearchParams(range).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'purchase-sla', query],
+    queryFn: () => apiFetch<PurchaseSlaResult>(`/api/reports/purchase-sla?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Một chứng từ đã ghi sổ sẽ xuất cho kế toán. */
 export interface AccountingDocument {
   documentId: string

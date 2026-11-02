@@ -13,7 +13,9 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % m
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Tham số hệ thống' }).click()
 
   await expect(page.getByRole('heading', { name: 'Tham số hệ thống – DTV' })).toBeVisible()
-  await expect(page.locator('.data-grid-row')).toHaveCount(4)
+  // 2 tham số sửa được + 3 SLA mua hàng (design.md mục 18.13) + 2 chỉ xem.
+  await expect(page.locator('.data-grid-row')).toHaveCount(7)
+  await expect(page.locator('.data-grid-row', { hasText: 'SLA – hàng chưa có NCC được duyệt' })).toContainText('5')
   await expect(page.locator('.data-grid-row', { hasText: 'Phương pháp giá vốn' })).toContainText('Chỉ xem')
   const rfq = page.locator('.data-grid-row', { hasText: 'Số NCC tối thiểu khi gửi RFQ' })
   await expect(rfq).toContainText('Mặc định')
