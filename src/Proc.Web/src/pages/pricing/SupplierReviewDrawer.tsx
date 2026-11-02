@@ -3,6 +3,7 @@ import { Alert, App, Button, DatePicker, Form, Input } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router'
 import { useConflictSupplierOptions } from '../../api/conflicts'
 import {
   reviewCriteria,
@@ -68,23 +69,46 @@ function averageScore(values: Partial<Record<ReviewScoreKey, number | null>>): n
  * @param fresh NCC × quý khi lập mới.
  * @param onClose Đóng ngăn kéo.
  * @param onOpen Mở phiếu vừa lập.
+ * @param asPage Vẽ thành trang đầy đủ thay cho ngăn kéo.
  */
 export function SupplierReviewDrawer({
   id,
   fresh,
   onClose,
   onOpen,
+  asPage = false,
 }: {
   id: string | null
   fresh?: NewSupplierReview
   onClose: () => void
   onOpen: (id: string) => void
+  asPage?: boolean
 }) {
   const review = useSupplierReview(id)
   if (id && !review.data) {
-    return <DetailDrawer open loading title="Đánh giá NCC" tabs={[]} onClose={onClose} error={review.error?.message ?? null} />
+    return <DetailDrawer open asPage={asPage} loading title="Đánh giá NCC" tabs={[]} onClose={onClose} error={review.error?.message ?? null} />
   }
-  return <ReviewForm key={review.data?.id ?? 'new'} review={review.data ?? null} fresh={fresh} onClose={onClose} onOpen={onOpen} />
+  return (
+    <ReviewForm key={review.data?.id ?? 'new'} review={review.data ?? null} fresh={fresh} onClose={onClose} onOpen={onOpen} asPage={asPage} />
+  )
+}
+
+/** Đường dẫn màn hình đánh giá NCC định kỳ; trang đầy đủ một phiếu là `${SUPPLIER_REVIEW_PATH}/:id`. */
+export const SUPPLIER_REVIEW_PATH = '/gia-ncc/danh-gia-ncc-dinh-ky'
+
+/** Trang đầy đủ một phiếu đánh giá NCC định kỳ (`/gia-ncc/danh-gia-ncc-dinh-ky/:id`) – mở từ Tra cứu chứng từ. */
+export function SupplierReviewDetailPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  return (
+    <SupplierReviewDrawer
+      key={id}
+      id={id}
+      asPage
+      onClose={() => navigate(SUPPLIER_REVIEW_PATH)}
+      onOpen={(other) => navigate(`${SUPPLIER_REVIEW_PATH}/${other}`)}
+    />
+  )
 }
 
 function ReviewForm({
@@ -92,11 +116,13 @@ function ReviewForm({
   fresh,
   onClose,
   onOpen,
+  asPage,
 }: {
   review: SupplierReview | null
   fresh?: NewSupplierReview
   onClose: () => void
   onOpen: (id: string) => void
+  asPage: boolean
 }) {
   const { message, modal } = App.useApp()
   const { hasPermission } = useAuth()
@@ -249,6 +275,7 @@ function ReviewForm({
 
   return (
     <DetailDrawer
+      asPage={asPage}
       open
       title={isNew ? `Lập phiếu đánh giá NCC quý ${period.quarter}/${period.year}` : `Phiếu ${review.no} – ${reviewStatusLabels[review.status]}`}
       audit={{ entityType: 'SupplierReview', id: review?.id }}
