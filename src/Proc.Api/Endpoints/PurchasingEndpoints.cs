@@ -65,6 +65,14 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PrApprove);
         pr.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PrCreate);
+        // Hàng mới chưa có mã của PR đã duyệt (design.md mục 18.12): nhóm Đàm phán lập phiếu tìm nguồn; người mua gắn mã hàng khi đã có mã.
+        pr.MapPost("/{id:guid}/new-items/{newItemId:guid}/sourcing", (Guid id, Guid newItemId, IPurchaseRequestNewItemService s, CancellationToken ct) =>
+                s.CreateSourcingAsync(id, newItemId, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
+        pr.MapPost("/{id:guid}/new-items/{newItemId:guid}/link-item",
+                (Guid id, Guid newItemId, LinkNewItemRequest request, IPurchaseRequestNewItemService s, CancellationToken ct) =>
+                    s.LinkItemAsync(id, newItemId, request, ct))
+            .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PrCreate);
 
         var po = app.MapGroup("/api/purchase-orders").WithTags("Đơn mua hàng");
         po.MapGet("/", (DateOnly? from, DateOnly? to, string? status, IPurchaseOrderService s, CancellationToken ct) =>
