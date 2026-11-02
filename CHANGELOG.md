@@ -3,6 +3,32 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.13.1] - 2026-11-02
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- **Form chứng từ ghi đè chữ đang gõ**: sau khi lưu, lượt tải lại phiếu không còn nạp đè nội dung người dùng vừa gõ (PO, PR, phiếu nhập
+  mua, trả hàng, ICS, ICR, TRF, bảng giá NCC, hợp đồng, RFQ, phiếu tìm nguồn).
+- **Tạo trùng phiếu**: bấm lệnh (ví dụ Gửi duyệt) ngay sau khi tạo phiếu mới lúc máy bận không còn tạo thêm một phiếu.
+- **Trang trắng sau đăng xuất**: bấm Quay lại ngay sau khi đăng xuất nay về màn hình đăng nhập.
+- Nút **"Lấy các dòng còn lại của PO"** (phiếu nhập mua) và **"Lấy tất cả"** (trả hàng) bị bỏ qua cú bấm khi đang tải lại – nay nút khóa
+  trong lúc tải, bấm sau khi tải xong là lấy được dòng.
+
+### Thay đổi CSDL
+- Không có (giữ nguyên 47 migration của 0.13.0, không có script `db/scripts/0.13.1.sql`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng (giao diện); không cần chạy script CSDL. Vẫn nên sao lưu CSDL theo thói quen trước mỗi lần nâng cấp.
+- Trình duyệt: tải lại trang bằng Ctrl+F5. Không đổi cấu hình triển khai (Docker, IIS).
+
+### Cách quay lại bản trước
+- Triển khai lại tag `v0.13.0` (Docker: `APP_VERSION=0.13.0`; Windows: chép lại gói 0.13.0). Không cần đụng CSDL.
+
 ## [0.13.0] - 2026-11-02
 
 ### Thêm mới
