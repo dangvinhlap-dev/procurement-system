@@ -466,10 +466,9 @@ public class PurchaseOrderPriceSourceTests
         var emergency = kpi.Items.Single(i => i.Code == "Emergency");
         // 300.000 ÷ 1.269.000 = 23,64% > trần 5%.
         Assert.Equal((23.64m, (decimal?)0m, 5m, (bool?)false), (emergency.Value, emergency.PreviousValue, emergency.Target, emergency.Met));
-        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả; đánh giá NCC chưa đo (lát F4); chưa có vi phạm KSNB → 0 vụ, đạt.
-        Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SlowMoving"),
+        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả (đánh giá NCC: chưa NCC nào thuộc diện); chưa có vi phạm KSNB → 0 vụ, đạt.
+        Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SlowMoving" or "SupplierReview"),
             i => Assert.Equal((true, (decimal?)null, (bool?)null), (i.Measured, i.Value, i.Met)));
-        Assert.False(kpi.Items.Single(i => i.Code == "SupplierReview").Measured);
         var violation = kpi.Items.Single(i => i.Code == "Violation");
         Assert.Equal((true, (decimal?)0m, (bool?)true), (violation.Measured, violation.Value, violation.Met));
         Assert.Equal((3, 1), (kpi.MeasuredCount, kpi.MetCount));

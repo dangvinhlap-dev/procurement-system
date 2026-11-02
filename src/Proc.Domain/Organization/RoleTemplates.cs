@@ -28,7 +28,7 @@ public static class RoleTemplates
     [
         Permissions.Purchase.PrView, Permissions.Purchase.PoView, Permissions.Purchase.ContractView,
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
-        Permissions.MasterData.SoleSourceView,
+        Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -45,6 +45,7 @@ public static class RoleTemplates
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies,
             Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage, Permissions.MasterData.SoleSourceApprove,
+            Permissions.MasterData.SupplierReviewManage,
         ]),
         new("DAMPHAN", "Nhóm Đàm phán & quản trị giá", "Quản lý hồ sơ NCC, lập bảng giá, RFQ, đề xuất chọn thầu, soạn hợp đồng, phân tích dữ liệu mua – không tự duyệt",
         [
@@ -54,13 +55,13 @@ public static class RoleTemplates
             Permissions.Purchase.ContractManage, Permissions.Report.PurchaseView,
             Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
-            Permissions.MasterData.SoleSourceManage,
+            Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
         ]),
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PoCreate, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
-            Permissions.Report.PurchaseView,
+            Permissions.Report.PurchaseView, Permissions.MasterData.SupplierReviewManage,
         ]),
         new("HOIDONG", "Hội đồng xét chọn & duyệt giá", "Duyệt kết quả chọn thầu, bảng giá, hồ sơ NCC, hợp đồng nguyên tắc",
         [

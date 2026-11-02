@@ -1787,6 +1787,120 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("SupplierRatingRule", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ComplianceScore")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("DeliveryScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("OnTimePct")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("PaymentScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PriceScore")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("QualityPct")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("QualityScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quarter")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("ReceiptAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<int?>("Result")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("ReturnPct")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("numeric(9,2)");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SystemRating")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("WarrantyScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("CompanyId", "No")
+                        .IsUnique();
+
+                    b.HasIndex("CompanyId", "SupplierId", "Year", "Quarter")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SupplierReview_Quarter")
+                        .HasFilter("\"Status\" <> 3");
+
+                    b.ToTable("SupplierReview", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.MasterData.Uom", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4585,6 +4699,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.MasterData.Uom", null)
                         .WithMany()
                         .HasForeignKey("PurchaseUomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierReview", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

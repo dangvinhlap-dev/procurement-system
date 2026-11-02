@@ -81,6 +81,10 @@ public static class Permissions
         public const string SoleSourceManage = "MasterData.SoleSource.Manage";
         /// <summary>Quyền "Duyệt NCC độc quyền" (design.md mục 18.9) – người lập không tự duyệt.</summary>
         public const string SoleSourceApprove = "MasterData.SoleSource.Approve";
+        /// <summary>Quyền "Xem đánh giá NCC định kỳ" (design.md mục 18.20).</summary>
+        public const string SupplierReviewView = "MasterData.SupplierReview.View";
+        /// <summary>Quyền "Lập, hoàn thành, hủy phiếu đánh giá NCC định kỳ" (design.md mục 18.20).</summary>
+        public const string SupplierReviewManage = "MasterData.SupplierReview.Manage";
 
         /// <summary>
         /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
@@ -234,6 +238,8 @@ public static class Permissions
         new(MasterData.SoleSourceView, "Xem phê duyệt NCC độc quyền"),
         new(MasterData.SoleSourceManage, "Lập, gửi duyệt, kết thúc phê duyệt NCC độc quyền"),
         new(MasterData.SoleSourceApprove, "Duyệt NCC độc quyền"),
+        new(MasterData.SupplierReviewView, "Xem đánh giá NCC định kỳ"),
+        new(MasterData.SupplierReviewManage, "Lập, hoàn thành, hủy phiếu đánh giá NCC định kỳ"),
         new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),

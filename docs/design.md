@@ -1486,7 +1486,7 @@ như báo cáo biến động giá – mục 18.17). Mỗi chỉ số dùng đú
 | Hàng đạt chất lượng | Dòng Đạt ÷ dòng đã kiểm tra (QCDEV) | ≥ 98% | QCDEV |
 | Tỷ lệ mua khẩn cấp | Giá trị dòng PO khẩn ÷ tổng giá trị dòng PO Đã duyệt/Đã đóng theo ngày PO, trước VAT | ≤ 5% (đề xuất "giảm dần" – xem cột kỳ trước) | PO |
 | Tồn kho chậm luân chuyển | Giá trị tồn không xuất từ N ngày (tham số, mặc định 90) ÷ tổng giá trị tồn, **tại hôm nay** (không theo kỳ, không có kỳ trước) | ≤ 10% | SLOW |
-| Hoàn thành đánh giá NCC | Chưa đo – cần phiếu đánh giá NCC theo quý (lát F4) | 100% | – |
+| Hoàn thành đánh giá NCC | NCC thuộc diện có phiếu đánh giá **Hoàn thành** ÷ NCC thuộc diện phải đánh giá, cộng dồn các **quý kết thúc trong kỳ** (mục 18.20); kỳ không chứa ngày cuối quý nào → "Chưa có dữ liệu". Ví dụ quý 3: 8 NCC thuộc diện, 6 đã hoàn thành → 75% | 100% | SUPREV |
 | Vi phạm nghiêm trọng | Số vụ mức Nghiêm trọng **đã kết luận** trong sổ vi phạm KSNB, theo ngày phát hiện (mẫu số hiển thị: mọi vi phạm ghi nhận trong kỳ); 0 vụ là kết quả đo được (lát F3, mục 18.19) | 0 vụ | VIOL |
 
 | Quy tắc | Lý do |
@@ -1519,6 +1519,25 @@ hiệu bất thường, kết quả gửi thẳng lãnh đạo, không qua Nhóm
 | KPI **Vi phạm nghiêm trọng** (mục 18.18) đếm vụ Nghiêm trọng đã kết luận theo ngày phát hiện | "Số vụ được xác minh" |
 
 Migration `V0_13_0_GhiNhanViPham` (bảng `ControlFinding` – `Down()` xóa bảng, mất vi phạm đã ghi nhận; AuditLog còn giữ lịch sử).
+
+### 18.20 Đánh giá NCC định kỳ theo quý (lát F4a, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT – Bước 10 (không chọn chỉ vì giá thấp nhất: tổng chi phí, chất lượng, giao hàng, bảo hành, công nợ, năng lực tài chính,
+lịch sử tuân thủ), bảng báo cáo ("Hiệu suất NCC & chất lượng giao hàng – hàng quý – hai nhóm") và KPI "Hoàn thành đánh giá NCC 100%" (N5).
+Màn hình **SUPREV** (Nhà cung cấp → Đánh giá NCC định kỳ), API `/api/supplier-reviews`. Báo cáo SUPEVAL (mục 11.3) vẫn giữ – là số liệu tự tính.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu đánh giá (`SupplierReview`, số loại **DGN**) thuộc **công ty đang làm việc**, một NCC, một **quý** (năm + quý 1–4). Mỗi công ty × NCC × quý chỉ **một phiếu chưa hủy** (chỉ mục duy nhất có lọc chặn cả khi lập đồng thời). Quý phải đã bắt đầu; ngày đánh giá từ đầu quý đến hôm nay | Mỗi pháp nhân tự đánh giá NCC của mình theo kỳ |
+| **NCC thuộc diện phải đánh giá** của một quý: có ít nhất một phiếu nhập mua NCC (GRN) **đã ghi sổ** trong quý tại công ty (trong phạm vi kho của người xem, như báo cáo SUPEVAL). NCC không thuộc diện vẫn lập phiếu được (không tính vào KPI) | Mẫu số KPI "NCC thuộc diện phải đánh giá" |
+| Chấm **6 tiêu chí**, thang **1–5**: giá/tổng chi phí, chất lượng, giao hàng, bảo hành/hỗ trợ, công nợ/thanh toán, năng lực tài chính/tuân thủ. **Điểm** = bình quân 6 tiêu chí, 2 số lẻ (ví dụ 4, 5, 4, 3, 4, 2 → 22 ÷ 6 = 3,67). Kết luận: **Tiếp tục hợp tác / Theo dõi, yêu cầu cải thiện / Đề xuất ngừng hợp tác** | Bước 10 |
+| **Số liệu hệ thống** đi kèm (tham khảo): giá trị nhập trước VAT, % đúng hạn, % trả hàng, xếp loại (cùng công thức SUPEVAL – mục 11.3), % dòng kiểm tra đạt (cùng cách đếm QCDEV – mục 18.14) của NCC trong quý; tính lại mỗi lần lưu nháp, **chốt lúc hoàn thành** | Người đánh giá chấm có căn cứ; phiếu giữ đúng số liệu lúc kết luận |
+| Vòng đời: **Nháp** (sửa được) → **Hoàn thành** (khóa; người và thời điểm hoàn thành). Hoàn thành cần đủ 6 điểm và kết luận; kết luận khác "Tiếp tục" hoặc có tiêu chí **≤ 2 điểm** thì **bắt buộc nhận xét**. **Hủy** chỉ khi Nháp, bắt buộc lý do (hủy rồi lập lại được). Không hủy phiếu đã hoàn thành. Mọi thay đổi vào AuditLog (F1 xem lịch sử). Không có bước duyệt | Kết quả đã dùng cho KPI không bị xóa; nhận xét là căn cứ yêu cầu NCC cải thiện |
+| Quyền: `MasterData.SupplierReview.View` (xem), `MasterData.SupplierReview.Manage` (lập, sửa, hoàn thành, hủy – cũng xem được). Vai trò mẫu: quyền xem trong nhóm quyền xem nghiệp vụ mua (Trưởng ban, Đàm phán, Vận hành, Hội đồng, KSNB, Lãnh đạo); quyền lập cho **Trưởng ban, Đàm phán, Vận hành** ("hai nhóm"). Vai trò đã tạo trước bản này không tự thêm quyền | Đánh giá hàng quý do hai nhóm thực hiện |
+| Màn hình SUPREV: chọn năm, quý (mặc định **quý trước**); lưới NCC thuộc diện và NCC đã có phiếu – NCC thuộc diện chưa hoàn thành lên đầu, rồi giá trị nhập giảm dần; dòng tóm tắt "Đã hoàn thành x/y NCC thuộc diện (z%)". Bấm đúp: mở phiếu (chưa có thì lập mới, điền sẵn số liệu hệ thống) | Việc còn phải làm thấy ngay |
+| KPI **Hoàn thành đánh giá NCC** (mục 18.18): cộng dồn các quý có ngày cuối quý nằm trong kỳ KPI; kỳ trước tính như vậy | Quý chưa kết thúc thì chưa đến hạn đánh giá – không báo "chưa hoàn thành" giả |
+
+Migration `V0_13_0_DanhGiaNccDinhKy` (bảng `SupplierReview` – bảng mới, `Down()` xóa bảng, mất phiếu đánh giá đã lập; AuditLog còn giữ lịch sử).
 
 ## Nguồn tham khảo
 

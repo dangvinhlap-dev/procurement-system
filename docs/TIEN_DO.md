@@ -118,8 +118,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F4** (đánh giá NCC định kỳ theo quý – N5; chiết khấu doanh số/tài trợ trên hợp đồng –
-  P10), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- **F4a (đang làm, nhánh `feature/f4a-danh-gia-ncc-quy`): đánh giá NCC định kỳ theo quý (N5)** – design.md mục 18.20. F4 tách: F4a (đánh giá
+  NCC theo quý) → F4b (chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận, P10; dấu hiệu KSNB "chiết khấu chưa ghi nhận").
+  - Bước 1 (xong): `SupplierReview` (số DGN, 6 tiêu chí 1–5, kết luận, số liệu SUPEVAL/QCDEV chốt lúc hoàn thành, Nháp → Hoàn thành/Hủy),
+    quyền `MasterData.SupplierReview.View/Manage` (vai trò mẫu), API `/api/supplier-reviews` (bảng theo quý, lập/sửa/hoàn thành/hủy),
+    migration `V0_13_0_DanhGiaNccDinhKy`; KPI "Hoàn thành đánh giá NCC" đo theo quý kết thúc trong kỳ (báo cáo SUPREV). Test: domain
+    `SupplierReviewTests`, tích hợp `SupplierReviewTests`, sửa `BangKpi_…`. `dotnet test` 500 qua.
+  - Bước 2 (tiếp theo): màn hình SUPREV (ListPage + DataGrid, ngăn kéo phiếu), sửa e2e `kpi` (không còn "Chưa đo"), `document-numbering`
+    (15 loại), e2e mới `supplier-review.spec.ts`.
 - **F3 (xong, đã merge `main` 02/11/2026): Kiểm soát nội bộ – dấu hiệu bất thường, sổ vi phạm, thông báo thẳng lãnh đạo** – design.md mục 18.19.
   - Quyền `Control.Anomaly.View`/`Control.Finding.Manage`/`Control.Finding.Receive`; vai trò mẫu KSNB thêm quyền, vai trò mẫu mới LANHDAO
     (vai trò KSNB đã tạo trước đó phải gán tay quyền mới).
@@ -189,7 +195,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F4** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; đang làm **F4a**, sau đó F4b (có thể phát hành 0.13.0 khi người dùng yêu cầu).
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);
