@@ -34,9 +34,10 @@ public sealed record PurchaseRequestLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal EstPrice, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
 
 /// <summary>Đầu phiếu đơn mua hàng (design.md mục 10.3). Giai đoạn 5 chỉ dùng VND.</summary>
+/// <param name="DepartmentId">Bộ phận đặt hàng (không bắt buộc) – xét phạm vi "bộ phận được phép đặt" của hợp đồng (design.md mục 18.10).</param>
 public sealed record PurchaseOrderHeader(
     DateOnly Date, Guid SupplierId, Guid WarehouseId, DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms,
-    string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note);
+    string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note, Guid? DepartmentId = null);
 
 /// <summary>Dữ liệu một dòng đơn mua hàng.</summary>
 /// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt (bắt buộc khi gửi duyệt nếu lệch – design.md mục 18.10).</param>
@@ -416,6 +417,12 @@ public sealed class PurchaseOrder : ApprovableDocument
     /// <summary>Kho nhận.</summary>
     public Guid WarehouseId { get; private set; }
 
+    /// <summary>
+    /// Bộ phận đặt hàng (danh mục bộ phận cùng công ty), không bắt buộc. Hợp đồng nguyên tắc có danh sách bộ phận được phép đặt thì
+    /// chỉ áp giá hợp đồng cho PO của bộ phận trong danh sách (design.md mục 18.10 – G5).
+    /// </summary>
+    public Guid? DepartmentId { get; private set; }
+
     /// <summary>Ngày giao dự kiến.</summary>
     public DateOnly? ExpectedDate { get; private set; }
 
@@ -486,6 +493,7 @@ public sealed class PurchaseOrder : ApprovableDocument
         Date = header.Date;
         SupplierId = header.SupplierId;
         WarehouseId = header.WarehouseId;
+        DepartmentId = header.DepartmentId == Guid.Empty ? null : header.DepartmentId;
         ExpectedDate = header.ExpectedDate;
         PaymentTerms = Clean(header.PaymentTerms);
         DeliveryTerms = Clean(header.DeliveryTerms);
@@ -546,6 +554,19 @@ public sealed class PurchaseOrder : ApprovableDocument
         EnsureDraft();
         foreach (var line in _lines) line.ApplyApprovedPrice(resolve(line));
         RefreshPriceFlags();
+    }
+
+    /// <summary>
+    /// Ghi phiếu NCC độc quyền còn tác dụng của từng dòng (design.md mục 18.10 – ghi nhận mua theo độc quyền cho KSNB), tính cùng lúc
+    /// với giá đã duyệt.
+    /// </summary>
+    /// <param name="resolve">Phiếu độc quyền của dòng, null nếu không có.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
+    public void ApplySoleSources(Func<PurchaseOrderLine, Guid?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(resolve);
+        EnsureDraft();
+        foreach (var line in _lines) line.SoleSourceApprovalId = resolve(line);
     }
 
     private void RefreshPriceFlags()
@@ -666,6 +687,9 @@ public sealed class PurchaseOrderLine : Entity
 
     /// <summary>Lý do đơn giá khác giá đã duyệt.</summary>
     public string? PriceDeviationReason { get; private set; }
+
+    /// <summary>Phiếu NCC độc quyền còn tác dụng vào ngày PO cho NCC × mặt hàng của dòng (design.md mục 18.9, 18.10).</summary>
+    public Guid? SoleSourceApprovalId { get; internal set; }
 
     /// <summary>
     /// Giá thực (sau chiết khấu) khác giá đã duyệt (sau chiết khấu). So sau chiết khấu để "đơn giá 100.000, CK 5%" và "đơn giá 95.000,

@@ -2830,6 +2830,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateOnly?>("ExpectedDate")
                         .HasColumnType("date");
 
@@ -2892,6 +2895,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("SupplierId");
 
@@ -2971,6 +2976,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<Guid?>("SoleSourceApprovalId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SourcePrLineId")
                         .HasColumnType("uuid");
 
@@ -3003,6 +3011,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasIndex("ItemId");
 
                     b.HasIndex("PriceListId");
+
+                    b.HasIndex("SoleSourceApprovalId");
 
                     b.HasIndex("SourcePrLineId");
 
@@ -4590,6 +4600,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)
                         .WithMany()
                         .HasForeignKey("SupplierId")
@@ -4626,6 +4641,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
                         .WithMany()
                         .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.MasterData.SoleSourceApproval", null)
+                        .WithMany()
+                        .HasForeignKey("SoleSourceApprovalId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Purchasing.PurchaseRequestLine", null)

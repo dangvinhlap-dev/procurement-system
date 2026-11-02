@@ -88,9 +88,10 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var companyId = _scope.RequireCompany();
         await CheckHeaderAsync(request.SupplierId, request.WarehouseId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, null, cancellationToken);
+        var departmentId = await ResolveDepartmentAsync(request.DepartmentId, lines, null, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.PurchaseOrder, request.Date, cancellationToken);
-        var order = PurchaseOrder.Create(companyId, no, ToHeader(request));
+        var order = PurchaseOrder.Create(companyId, no, ToHeader(request, departmentId));
         order.SetLines(lines);
         await ApplyApprovedPricesAsync(order, cancellationToken);
         _db.PurchaseOrders.Add(order);
@@ -106,7 +107,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         await EnsureItemsVisibleAsync(order, cancellationToken);
         await CheckHeaderAsync(request.SupplierId, request.WarehouseId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, id, cancellationToken);
-        order.Update(ToHeader(request));
+        var departmentId = await ResolveDepartmentAsync(request.DepartmentId, lines, order.DepartmentId, cancellationToken);
+        order.Update(ToHeader(request, departmentId));
         order.SetLines(lines);
         await ApplyApprovedPricesAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -203,11 +205,11 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     // IgnoreQueryFilters tắt filter công ty cho cả câu truy vấn; an toàn vì orderIds đã lấy qua filter công ty.
     /// <inheritdoc />
     public async Task<IReadOnlyList<PoApprovedPriceDto>> ApprovedPricesAsync(
-        Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
+        Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, Guid? departmentId, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
         if (itemIds.Count == 0) return [];
-        var contract = await EffectiveContractAsync(supplierId, date, cancellationToken);
+        var contract = await EffectiveContractAsync(supplierId, date, cancellationToken) is { } c && c.Allows(departmentId) ? c : null;
         var tiers = await _prices.ResolveAsync(supplierId, date, itemIds, cancellationToken, contract?.PriceListId);
         return tiers.Select(t =>
             {
@@ -229,8 +231,46 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .Where(c => c.SupplierId == supplierId && c.ValidFrom <= date && c.ValidTo >= date
                         && (c.Status == ContractStatus.Active || (c.Status == ContractStatus.Terminated && c.TerminatedOn > date)))
             .OrderByDescending(c => c.ValidFrom)
-            .Select(c => new EffectiveContract(c.Id, c.No, c.PriceListId))
+            .Select(c => new EffectiveContract(c.Id, c.No, c.PriceListId, c.Departments.Select(d => d.DepartmentId).ToList()))
             .FirstOrDefaultAsync(cancellationToken);
+
+    /// <summary>
+    /// Bộ phận đặt hàng của PO (design.md mục 18.10): dòng lấy từ PR thì mọi PR nguồn phải cùng một bộ phận, trùng bộ phận đã chọn; chưa
+    /// chọn thì lấy bộ phận của PR. Bộ phận chọn mới phải thuộc công ty và đang dùng (giữ nguyên bộ phận cũ đã ngừng thì được).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi trộn PR nhiều bộ phận, PR khác bộ phận của PO hoặc bộ phận ngừng dùng.</exception>
+    private async Task<Guid?> ResolveDepartmentAsync(
+        Guid? requested, IReadOnlyList<(PurchaseOrderLineData Data, Item Item)> lines, Guid? current, CancellationToken cancellationToken)
+    {
+        var departmentId = requested == Guid.Empty ? null : requested;
+        var prLineIds = lines.Select(l => l.Data.SourcePrLineId).OfType<Guid>().Distinct().ToList();
+        var prDepartments = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where prLineIds.Contains(l.Id) && r.DepartmentId != null
+                select r.DepartmentId!.Value)
+            .Distinct().ToListAsync(cancellationToken);
+        var ids = prDepartments.Append(departmentId ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
+        var departments = await _db.Departments.AsNoTracking().Where(d => ids.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, d => new { d.Code, d.IsActive }, cancellationToken);
+        string Code(Guid id) => departments.GetValueOrDefault(id)?.Code ?? "(không tìm thấy)";
+        if (prDepartments.Count > 1)
+            throw new BusinessRuleException($"Các dòng lấy từ PR của nhiều bộ phận ({string.Join(", ", prDepartments.Select(Code).Order())}) – mỗi đơn mua hàng một bộ phận đặt hàng.");
+        if (prDepartments.Count == 1)
+        {
+            if (departmentId is { } chosen && chosen != prDepartments[0])
+                throw new BusinessRuleException($"Dòng lấy từ PR của bộ phận {Code(prDepartments[0])}, khác bộ phận đặt hàng {Code(chosen)} của đơn.");
+            departmentId = prDepartments[0];
+        }
+
+        if (departmentId is { } id && id != current)
+        {
+            var department = departments.GetValueOrDefault(id) ?? throw new NotFoundException("Không tìm thấy bộ phận đặt hàng ở công ty đang làm việc.");
+            if (!department.IsActive) throw new BusinessRuleException($"Bộ phận {department.Code} đã ngừng dùng.");
+        }
+
+        return departmentId;
+    }
 
     /// <summary>
     /// Gán giá đã duyệt cho các dòng PO theo thứ tự ưu tiên (design.md mục 18.10): giá trúng thầu của dòng RFQ nguồn (cùng mặt hàng, ĐVT;
@@ -239,7 +279,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     /// </summary>
     private async Task ApplyApprovedPricesAsync(PurchaseOrder order, CancellationToken cancellationToken)
     {
-        var contract = await EffectiveContractAsync(order.SupplierId, order.Date, cancellationToken);
+        // Hợp đồng giới hạn bộ phận được phép đặt mà PO của bộ phận khác (hoặc chưa chọn bộ phận) thì không tính giá theo hợp đồng – G5.
+        var contract = await EffectiveContractAsync(order.SupplierId, order.Date, cancellationToken) is { } c && c.Allows(order.DepartmentId) ? c : null;
         var itemIds = order.Lines.Select(l => l.ItemId).Distinct().ToList();
         var tiers = (await _prices.ResolveAsync(order.SupplierId, order.Date, itemIds, cancellationToken, contract?.PriceListId))
             .GroupBy(t => t.ItemId).ToDictionary(g => g.Key, g => g.ToList());
@@ -259,10 +300,38 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 fromContract ? PurchasePriceSource.Contract : PurchasePriceSource.PriceList, price.UnitPrice, price.DiscountPct, listId,
                 fromContract ? contract!.Id : null);
         });
+
+        // Ghi nhận mua theo NCC độc quyền: phiếu còn tác dụng vào ngày PO của công ty × NCC × mặt hàng (điều kiện như
+        // SoleSourceApproval.IsEffectiveOn, viết lại để EF dịch sang SQL); nhiều phiếu thì lấy phiếu hiệu lực muộn nhất.
+        var soleSources = (await _db.SoleSourceApprovals.AsNoTracking()
+                .Where(x => x.CompanyId == order.CompanyId && x.SupplierId == order.SupplierId && itemIds.Contains(x.ItemId)
+                            && x.Status == SoleSourceStatus.Approved && x.ValidFrom <= order.Date && x.ReviewDate >= order.Date)
+                .Select(x => new { x.Id, x.ItemId, x.ValidFrom })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.MaxBy(x => x.ValidFrom)!.Id);
+        order.ApplySoleSources(line => soleSources.TryGetValue(line.ItemId, out var id) ? id : null);
     }
 
-    /// <summary>Hợp đồng nguyên tắc dùng làm nguồn giá.</summary>
-    private sealed record EffectiveContract(Guid Id, string No, Guid PriceListId);
+    /// <summary>Hợp đồng nguyên tắc dùng làm nguồn giá; DepartmentIds rỗng = mọi bộ phận được đặt.</summary>
+    private sealed record EffectiveContract(Guid Id, string No, Guid PriceListId, IReadOnlyList<Guid> DepartmentIds)
+    {
+        /// <summary>Bộ phận được đặt theo hợp đồng: hợp đồng không giới hạn, hoặc bộ phận có trong danh sách.</summary>
+        public bool Allows(Guid? departmentId) => DepartmentIds.Count == 0 || (departmentId is { } d && DepartmentIds.Contains(d));
+    }
+
+    /// <summary>
+    /// Ghi chú khi hợp đồng hiệu lực với NCC không cho bộ phận của PO đặt hàng (design.md mục 18.10), ví dụ "Hợp đồng CTR-… chỉ cho bộ
+    /// phận PX1 đặt hàng – đơn của bộ phận PX2 không tính giá theo hợp đồng."; null nếu không vướng.
+    /// </summary>
+    private async Task<string?> ContractScopeNoteAsync(PurchaseOrder order, string? departmentCode, CancellationToken cancellationToken)
+    {
+        if (await EffectiveContractAsync(order.SupplierId, order.Date, cancellationToken) is not { } contract || contract.Allows(order.DepartmentId))
+            return null;
+        var allowed = await _db.Departments.AsNoTracking().Where(d => contract.DepartmentIds.Contains(d.Id)).Select(d => d.Code)
+            .OrderBy(x => x).ToListAsync(cancellationToken);
+        var who = departmentCode is null ? "đơn chưa chọn bộ phận đặt hàng" : $"đơn của bộ phận {departmentCode}";
+        return $"Hợp đồng {contract.No} chỉ cho bộ phận {string.Join(", ", allowed)} đặt hàng – {who} không tính giá theo hợp đồng.";
+    }
 
     private async Task<Dictionary<Guid, decimal>> ReceivedBaseByOrderAsync(IReadOnlyList<Guid> orderIds, CancellationToken cancellationToken) =>
         await (
@@ -382,6 +451,12 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .ToDictionaryAsync(c => c.Id, c => c.No, cancellationToken);
         var rfqLineIds = order.Lines.Select(l => l.SourceRfqLineId).OfType<Guid>().Distinct().ToList();
         var rfqNos = (await _awards.GetAsync(order.SupplierId, rfqLineIds, cancellationToken)).ToDictionary(a => a.RfqLineId, a => a.RfqNo);
+        var soleSourceIds = order.Lines.Select(l => l.SoleSourceApprovalId).OfType<Guid>().Distinct().ToList();
+        var soleSourceNos = await _db.SoleSourceApprovals.AsNoTracking().Where(x => soleSourceIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
+        var department = order.DepartmentId is { } departmentId
+            ? await _db.Departments.AsNoTracking().Where(d => d.Id == departmentId).Select(d => new { d.Code, d.Name }).SingleOrDefaultAsync(cancellationToken)
+            : null;
         var createdBy = order.CreatedBy is { } uid
             ? await _db.Users.AsNoTracking().Where(u => u.Id == uid).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -396,7 +471,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 l.Note, l.SourcePrLineId, l.SourcePrLineId is { } p ? prNos.GetValueOrDefault(p) : null, receivedQty, Math.Max(0, l.Qty - receivedQty),
                 l.PriceSource.ToString(), l.ApprovedUnitPrice, l.ApprovedDiscountPct, l.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null,
                 l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqNos.GetValueOrDefault(rl) : null,
-                l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract);
+                l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract,
+                l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null);
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;
@@ -417,9 +493,11 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.ExpectedDate, order.PaymentTerms, order.DeliveryTerms, order.DeliveryAddress, order.CurrencyCode, order.ReceiveTolerancePct, order.Note,
             order.GrossAmount, order.TotalDiscount, order.TotalAmount, order.TotalVat, order.RejectReason, order.CreatedAt, createdBy, order.ApprovedAt,
             lines, await _approvals.HistoryAsync(DocumentTypes.PurchaseOrder, order.Id, cancellationToken), actions, order.HasPriceException,
-            order.IsOutOfContract);
+            order.IsOutOfContract, order.DepartmentId, department is null ? null : $"{department.Code} – {department.Name}",
+            await ContractScopeNoteAsync(order, department?.Code, cancellationToken));
     }
 
-    private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r) =>
-        new(r.Date, r.SupplierId, r.WarehouseId, r.ExpectedDate, r.PaymentTerms, r.DeliveryTerms, r.DeliveryAddress, r.ReceiveTolerancePct, r.Note);
+    private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>
+        new(r.Date, r.SupplierId, r.WarehouseId, r.ExpectedDate, r.PaymentTerms, r.DeliveryTerms, r.DeliveryAddress, r.ReceiveTolerancePct, r.Note,
+            departmentId);
 }

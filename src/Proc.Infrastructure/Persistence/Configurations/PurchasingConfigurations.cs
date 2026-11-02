@@ -105,6 +105,8 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
     {
         builder.ToTable("PurchaseOrder");
         builder.Property(x => x.Id).ValueGeneratedNever();
+        // Bộ phận đặt hàng (lát C1b – design.md mục 18.10).
+        builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(x => x.DocumentNumber);
         builder.Ignore(x => x.ApprovalAmount);
         builder.Ignore(x => x.IsAwaitingApproval);
@@ -167,5 +169,7 @@ internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<
         builder.HasOne<Proc.Domain.Pricing.SupplierPriceList>().WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Proc.Domain.Sourcing.RfqLine>().WithMany().HasForeignKey(x => x.SourceRfqLineId).OnDelete(DeleteBehavior.Restrict);
+        // Ghi nhận mua theo NCC độc quyền (lát C1b – design.md mục 18.10).
+        builder.HasOne<Proc.Domain.MasterData.SoleSourceApproval>().WithMany().HasForeignKey(x => x.SoleSourceApprovalId).OnDelete(DeleteBehavior.Restrict);
     }
 }
