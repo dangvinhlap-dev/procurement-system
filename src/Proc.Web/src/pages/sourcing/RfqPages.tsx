@@ -12,7 +12,8 @@ import {
   ShoppingCartOutlined,
   StopOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Space, Table, Tag } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'

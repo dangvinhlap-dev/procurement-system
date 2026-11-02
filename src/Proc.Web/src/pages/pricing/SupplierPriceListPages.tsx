@@ -1,6 +1,7 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { CheckOutlined, CloseCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, DatePicker, Flex, Form, Input, InputNumber, Select } from 'antd'
+import { Alert, App, Button, Checkbox, DatePicker, Flex, Form, Input, InputNumber } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'

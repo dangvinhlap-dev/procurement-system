@@ -9,12 +9,14 @@ import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
+import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
-import { SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
+import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
+import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
 import { SupplierReviewPage } from './pages/pricing/SupplierReviewPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
@@ -28,7 +30,7 @@ import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
-import { ContractAmendmentRedirect } from './pages/purchasing/ContractAmendmentDrawer'
+import { ContractAmendmentPage } from './pages/purchasing/ContractAmendmentDrawer'
 import { ContractListPage, ContractPage } from './pages/purchasing/ContractPages'
 import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
@@ -69,12 +71,14 @@ import { SystemParameterPage } from './pages/system/SystemParameterPage'
 import { UserListPage } from './pages/system/UserListPage'
 import { WarehouseListPage } from './pages/system/WarehouseListPage'
 import { AnomalyReportPage, ControlFindingListPage } from './pages/reports/ControlPages'
+import { ControlFindingDetailPage } from './pages/reports/ControlFindingDrawer'
 import { DepartmentListPage } from './pages/system/DepartmentListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
   NOTI: <NotificationPage />,
+  DOCS: <DocumentRegistryPage />,
   PR: <PurchaseListPage kind="purchase-requests" title="Danh sách đề nghị mua hàng (PR)" path="/mua-hang/pr" exportFileName="de-nghi-mua-hang" />,
   PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
   POTRK: <DeliveryTrackingPage />,
@@ -158,6 +162,14 @@ const documentPages = [
   element: d.element,
 }))
 
+/** Trang đầy đủ của phiếu vốn mở trong ngăn kéo danh sách (yêu cầu sau test 0.14.0 – TC-3). */
+const drawerPages = [
+  { code: 'CTR', path: '/mua-hang/hop-dong-khung/phu-luc/:id', element: <ContractAmendmentPage /> },
+  { code: 'SUPAPR', path: '/gia-ncc/duyet-ncc/:id', element: <SupplierApprovalDetailPage /> },
+  { code: 'NDQ', path: '/gia-ncc/ncc-doc-quyen/:id', element: <SoleSourceDetailPage /> },
+  { code: 'VIOL', path: '/bao-cao/so-vi-pham/:id', element: <ControlFindingDetailPage /> },
+]
+
 /**
  * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9) và yêu cầu đăng nhập;
  * riêng màn hình đăng nhập đứng ngoài khung.
@@ -189,11 +201,12 @@ export const router = createBrowserRouter([
         path: `${d.screen.path}/:id`,
         element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
       })),
-      // Phụ lục hợp đồng mở từ thông báo / Việc cần làm (chỉ có Id phụ lục) – cùng quyền màn hình CTR.
-      {
-        path: '/mua-hang/hop-dong-khung/phu-luc/:id',
-        element: <ScreenGuard screen={screens.find((s) => s.code === 'CTR')!}><ContractAmendmentRedirect /></ScreenGuard>,
-      },
+      // Trang đầy đủ của phiếu vốn mở trong ngăn kéo – mở thẳng từ thông báo, Việc cần làm, Tra cứu chứng từ; cùng quyền màn hình
+      // danh sách. Phụ lục hợp đồng chỉ có Id phụ lục nên dùng quyền màn hình CTR.
+      ...drawerPages.map((d) => ({
+        path: d.path,
+        element: <ScreenGuard screen={screens.find((s) => s.code === d.code)!}>{d.element}</ScreenGuard>,
+      })),
       // Danh sách PO dữ liệu mẫu (30 dòng) giữ cho test giao diện chung AppShell/ListPage/DataGrid so với ảnh mẫu (e2e/po-list.spec.ts).
       {
         path: '/mua-hang/po/mau',

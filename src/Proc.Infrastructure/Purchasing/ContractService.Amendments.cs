@@ -226,7 +226,7 @@ public sealed partial class ContractService : IContractAmendmentService
             a.Id, a.No, contract.Id, contract.No, contract.Title, supplier.Code, supplier.Name, a.PaperNo, a.Reason, a.SignDate, contract.ValidFrom,
             a.OldValidTo, a.NewValidTo, a.OldPriceListId, lists[a.OldPriceListId].No, a.NewPriceListId, newList.No, newList.Title, newList.Status.ToString(),
             TermsDto(a.NewTerms), TermsDto(contract.Terms), a.Note, contract.ExpectedAmount, a.ExpectedAmount, a.ChangeSummary, a.Status.ToString(),
-            a.RejectReason, a.CreatedAt, createdBy, a.ApprovedAt, await _approvals.HistoryAsync(a.DocType, a.Id, cancellationToken),
+            a.RejectReason, a.CreatedAt, createdBy, a.ApprovedAt, await _approvals.HistoryAsync(a.DocType, a.Id, cancellationToken, a),
             new ContractAmendmentActions(canEdit, canEdit, canApprove, a.Status == ContractAmendmentStatus.Submitted && readOnly is null, canEdit, readOnly));
     }
 

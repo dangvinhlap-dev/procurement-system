@@ -91,8 +91,23 @@ test.describe('danh mục nhà cung cấp', () => {
     await approval.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
     await expect(approval.getByText('Tổng công ty (cuối)')).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/supplier-approval.png', animations: 'disabled' })
-    await approval.getByRole('button', { name: 'Rút yêu cầu' }).click()
+
+    // Trang đầy đủ (mở từ thông báo, Việc cần làm – TC-3): có hồ sơ NCC chỉ xem để người duyệt xem đủ trước khi duyệt.
+    const requestId = new URL(page.url()).searchParams.get('mo')!
+    await page.goto(`/gia-ncc/duyet-ncc/${requestId}`)
+    const full = page.locator('.detail-page')
+    await expect(full.locator('.document-form-title')).toContainText('Chờ duyệt')
+    await expect(page.locator('.detail-drawer')).toHaveCount(0)
+    await full.getByRole('tab', { name: 'Hồ sơ NCC' }).click()
+    const profile = full.getByTestId('supplier-profile')
+    await expect(profile).toContainText('Công ty TNHH Điện Quang Minh')
+    await expect(profile).toContainText('Phạm Thu Hà')
+    await expect(full.getByRole('tab', { name: 'Hồ sơ đính kèm' })).toBeVisible()
+    await page.screenshot({ path: 'e2e/screenshots/supplier-approval-page.png', animations: 'disabled' })
+    await full.getByRole('button', { name: 'Rút yêu cầu' }).click()
     await expect(page.locator('.ant-message')).toContainText('Đã rút yêu cầu.')
+    await full.getByRole('button', { name: 'Quay lại' }).click()
+    await expect(page).toHaveURL(/\/gia-ncc\/duyet-ncc$/)
   })
 
   test('nhóm NCC có sẵn nhóm mẫu', async ({ page }) => {

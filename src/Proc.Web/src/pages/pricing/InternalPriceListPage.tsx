@@ -1,4 +1,5 @@
-import { App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { App, Button, DatePicker, Form, Input, InputNumber } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import {

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
+using Proc.Application.Documents;
 using Proc.Application.Inventory;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
@@ -298,6 +299,55 @@ public class PurchasingTests
         var small = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 1));
         small = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{small.Id}/submit", null, Ct));
         Assert.Single(small.Approvals);
+    }
+
+    /// <summary>
+    /// Người duyệt tiếp theo (TC-4): bước đang chờ nêu tên những người duyệt được – có vai trò của cấp tại công ty, không phải người lập,
+    /// không vướng kê khai xung đột lợi ích với NCC; bước chưa tới lượt và phiếu đã duyệt xong thì không có. Tra cứu chứng từ cùng kết quả.
+    /// </summary>
+    [Fact]
+    public async Task NguoiDuyetTiepTheo_TheoCapDangCho_BoNguoiLapVaXungDot()
+    {
+        var f = await ArrangeAsync();
+        async Task<(HttpClient Client, string FullName)> UserAsync(string roleCode)
+        {
+            var userName = $"nd.{Guid.NewGuid():N}"[..16];
+            await _factory.CreateScopedUserAsync(userName, f.CompanyCode, roleCode);
+            return (await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, f.CompanyCode), $"Người thử {userName}");
+        }
+
+        var headCode = UniqueCode("T");
+        var headRole = await _factory.CreateRoleAsync(headCode, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove);
+        var directorCode = UniqueCode("G");
+        var directorRole = await _factory.CreateRoleAsync(directorCode, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove);
+        var (head, headName) = await UserAsync(headCode);
+        var (conflicted, _) = await UserAsync(headCode);
+        var (director, directorName) = await UserAsync(directorCode);
+        // Người có cùng vai trò nhưng đã kê khai quan hệ lợi ích với NCC của PO: không duyệt được nên không phải "người duyệt tiếp theo".
+        var declared = await conflicted.PostAsJsonAsync("/api/conflict-declarations",
+            new CreateConflictDeclarationRequest(null, f.SupplierId, "Family", "Em trai làm ở NCC", null), Ct);
+        Assert.True(declared.IsSuccessStatusCode, await declared.Content.ReadAsStringAsync(Ct));
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 1, 0, headRole), Ct));
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 2, 500_000, directorRole), Ct));
+
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        Assert.Equal([headName], po.Approvals.Single(a => a.Level == 1).NextApprovers);
+        Assert.Null(po.Approvals.Single(a => a.Level == 2).NextApprovers);
+        var range = $"from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&docTypes=PO";
+        async Task<IReadOnlyList<string>?> RegistryAsync() =>
+            (await f.Buyer.GetFromJsonAsync<DocumentRegistryResult>($"/api/document-registry?{range}", Ct))!.Rows.Single(r => r.Id == po.Id).NextApprovers;
+        Assert.Equal([headName], await RegistryAsync());
+
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(head, "purchase-orders", po.Id, "approve"));
+        Assert.Null(po.Approvals.Single(a => a.Level == 1).NextApprovers);
+        Assert.Equal([directorName], po.Approvals.Single(a => a.Level == 2).NextApprovers);
+        Assert.Equal([directorName], await RegistryAsync());
+
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(director, "purchase-orders", po.Id, "approve"));
+        Assert.Equal("Approved", po.Status);
+        Assert.All(po.Approvals, a => Assert.Null(a.NextApprovers));
+        Assert.Null(await RegistryAsync());
     }
 
     [Fact]

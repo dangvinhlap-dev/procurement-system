@@ -1,6 +1,6 @@
 import { Alert, App, Button, Descriptions, Input, Modal } from 'antd'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   changeKindLabels,
   changeStatusLabels,
@@ -14,7 +14,12 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime } from '../../utils/format'
+import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
+import { SupplierProfile } from './SupplierProfile'
+
+/** Đường dẫn màn hình duyệt NCC; trang đầy đủ một yêu cầu là `${SUPPLIER_APPROVAL_PATH}/:id`. */
+export const SUPPLIER_APPROVAL_PATH = '/gia-ncc/duyet-ncc'
 
 const statusTone: Record<SupplierChangeStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
   Submitted: 'warning',
@@ -39,7 +44,8 @@ const columns: GridColumn<SupplierChangeRequest>[] = [
 
 /**
  * Màn hình Giá và NCC → Duyệt NCC (design.md mục 18.6): yêu cầu đưa NCC vào Đã duyệt/Danh sách đen và đổi tài khoản ngân hàng. Duyệt
- * hai chặng: các công ty đang mua của NCC duyệt xong mới tới Tổng công ty duyệt lần cuối. Mở từ "Việc cần làm" bằng `?mo=<id>`.
+ * hai chặng: các công ty đang mua của NCC duyệt xong mới tới Tổng công ty duyệt lần cuối. Bấm đúp trong danh sách mở ngăn kéo (`?mo=<id>`);
+ * thông báo, Việc cần làm, Tra cứu chứng từ mở trang đầy đủ `/gia-ncc/duyet-ncc/:id` ({@link SupplierApprovalDetailPage}).
  */
 export function SupplierApprovalPage() {
   const requests = useSupplierChangeRequests()
@@ -69,12 +75,21 @@ export function SupplierApprovalPage() {
   )
 }
 
+/** Trang đầy đủ một yêu cầu duyệt NCC (`/gia-ncc/duyet-ncc/:id`) – mở từ thông báo, Việc cần làm, Tra cứu chứng từ. */
+export function SupplierApprovalDetailPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  return <SupplierApprovalDrawer id={id} asPage onClose={() => navigate(SUPPLIER_APPROVAL_PATH)} />
+}
+
 /**
- * Ngăn kéo một yêu cầu: so sánh hiện tại – đề nghị, lịch sử duyệt theo chặng/công ty, nút Duyệt / Từ chối / Rút yêu cầu.
+ * Một yêu cầu: so sánh hiện tại – đề nghị, hồ sơ NCC (thông tin, liên hệ, ngân hàng, file đính kèm) để người duyệt xem đủ trước khi duyệt,
+ * lịch sử duyệt theo chặng/công ty, nút Duyệt / Từ chối / Rút yêu cầu.
  * @param id Id yêu cầu.
- * @param onClose Đóng.
+ * @param asPage Vẽ thành trang đầy đủ thay cho ngăn kéo.
+ * @param onClose Đóng / quay lại danh sách.
  */
-function SupplierApprovalDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; asPage?: boolean; onClose: () => void }) {
   const { message } = App.useApp()
   const request = useSupplierChangeRequest(id)
   const actions = useSupplierChangeActions()
@@ -113,6 +128,7 @@ function SupplierApprovalDrawer({ id, onClose }: { id: string; onClose: () => vo
     <>
       <DetailDrawer
         open
+        asPage={asPage}
         title={r ? `Yêu cầu ${r.no} – ${changeStatusLabels[r.status]}` : 'Yêu cầu duyệt NCC'}
         audit={{ entityType: 'SupplierChangeRequest', id: r?.id }}
         onClose={onClose}
@@ -135,6 +151,13 @@ function SupplierApprovalDrawer({ id, onClose }: { id: string; onClose: () => vo
                 {r.rejectReason && <Descriptions.Item label="Lý do từ chối">{r.rejectReason}</Descriptions.Item>}
               </Descriptions>
             ),
+          },
+          { key: 'profile', label: 'Hồ sơ NCC', children: r && <SupplierProfile supplierId={r.supplierId} /> },
+          {
+            key: 'attachments',
+            label: 'Hồ sơ đính kèm',
+            // Người duyệt chỉ xem/tải file; tải lên, xóa làm ở màn hình NCC (design.md mục 18.4).
+            children: r && <AttachmentPanel ownerType="Supplier" ownerId={r.supplierId} canManage={false} />,
           },
           { key: 'history', label: 'Lịch sử duyệt', children: r && <ApprovalHistory steps={r.approvals} byCompany /> },
         ]}

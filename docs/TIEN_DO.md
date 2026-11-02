@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 02/11/2026 (C5a). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 02/11/2026 (TC-2 tra cứu chứng từ). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -118,6 +118,28 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026), nhánh `feature/tra-cuu-chung-tu`** – làm lần lượt:
+  - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
+    mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
+    Test: tích hợp `TimHang_DauSao_…`, e2e `lookup-wildcard.spec.ts`. Kiểm tra: `dotnet test` 506 qua; Playwright 88/88.
+  - **TC-2 (xong)**: màn hình **Tra cứu chứng từ** (DOCS, Hằng ngày; API `GET /api/document-registry`, `DocumentRegistryService`) – 17
+    loại (PR, PO, GRN, RTV, TRF, ICS, ICR, ADJ, PRL, SRC, RFQ, CTR, CTA, NCC, NDQ, DGN, VP) theo quyền xem từng loại, tình trạng Chưa hoàn
+    thành/Hoàn thành/Đã hủy, trạng thái gốc, cấp đang chờ duyệt, lọc Tôi lập/Tôi đã duyệt (phiếu kho = tôi ghi sổ); bấm đúp mở trang phiếu;
+    design.md 18.22. Test: tích hợp `TraCuuChungTu_…`, e2e `document-registry.spec.ts`. Kiểm tra: `dotnet test` 507; Playwright 89/89.
+  - **TC-3 (xong)**: thông báo, Việc cần làm, Tra cứu chứng từ, liên kết KSNB mở **trang đầy đủ** thay ngăn kéo cho yêu cầu duyệt NCC
+    (`/gia-ncc/duyet-ncc/:id`, thêm tab HỒ SƠ NCC + HỒ SƠ ĐÍNH KÈM chỉ xem – `SupplierProfile.tsx`), NDQ (`/gia-ncc/ncc-doc-quyen/:id`),
+    vi phạm (`/bao-cao/so-vi-pham/:id`), phụ lục HĐ (`/mua-hang/hop-dong-khung/phu-luc/:id` – thôi chuyển hướng). `DetailDrawer` thêm
+    `asPage` (khung tiêu đề + nút lệnh như DocumentForm, nút Quay lại, Esc không đóng). design.md 18.22. Chỉ sửa Proc.Web, không migration.
+    e2e sửa `suppliers`, `sole-sources`, `control`, `contract`. Kiểm tra: Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
+  - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
+    Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
+    cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người
+    khác". design.md 18.22. Không migration. Test: tích hợp `NguoiDuyetTiepTheo_TheoCapDangCho_BoNguoiLapVaXungDot`, e2e `purchasing`
+    (người lập có họ tên riêng). Kiểm tra: `dotnet test` 508; Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
+  - Môi trường lần này: API dev (5000) và API Testing cũ (5010) cùng khóa `src/Proc.Api/bin` – không được dừng; build/test bằng
+    `--artifacts-path <scratchpad>rtifacts`, e2e chạy API Testing bản mới từ đó ở cổng 5011 + Vite 5180.
+  - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
+    (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).
   - Công cụ `tools/du-lieu-thu` (Node.js, gọi API, chạy lại không trùng): bộ phận, vai trò (mẫu Ban CUVT + TOANQUYEN), 38 tài khoản
     (mỗi công ty 12: cặp lap/duyet toàn quyền + 10 vai trò; aph.khokp1, bmi.denghi.bhld giới hạn phạm vi; mật khẩu Test@2026), xếp loại

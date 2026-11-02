@@ -1,5 +1,6 @@
 import { StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Flex, Form, Input, Select } from 'antd'
+import { Alert, App, Button, DatePicker, Flex, Form, Input } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import {

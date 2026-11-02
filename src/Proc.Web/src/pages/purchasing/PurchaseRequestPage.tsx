@@ -1,6 +1,7 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
-import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd'
+import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'

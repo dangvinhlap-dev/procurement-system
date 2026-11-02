@@ -1,4 +1,5 @@
-import { Alert, App, Checkbox, Form, Input, Select } from 'antd'
+import { Alert, App, Checkbox, Form, Input } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useWarehouseMutations, type WarehouseDetail } from '../../api/organization'
 import { Permission } from '../../auth/permissions'

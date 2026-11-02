@@ -48,6 +48,26 @@ export interface ApprovalStep {
   companyCode: string | null
   /** Chặng: 1 = công ty của phiếu / công ty liên quan; 2 = Tổng công ty duyệt lần cuối (design.md mục 18.6). */
   stage: number
+  /**
+   * Người duyệt tiếp theo (TC-4, design.md mục 18.22): họ tên những người duyệt được bước này – chỉ có ở bước đang đến lượt; rỗng khi chưa ai
+   * đủ điều kiện (thiếu vai trò, chỉ có người lập hoặc người vướng xung đột lợi ích).
+   */
+  nextApprovers?: string[] | null
+}
+
+/** Số tên hiện tối đa – cấp "ai có quyền duyệt" có thể có rất nhiều người, ô lưới chỉ cần đủ để biết nhắc ai. */
+const NEXT_APPROVERS_SHOWN = 5
+
+/**
+ * Chữ hiển thị "người duyệt tiếp theo", ví dụ "Lê B, Trần A" hoặc "A, B, C, D, E và 3 người khác".
+ * @param names Danh sách họ tên từ máy chủ (đã xếp theo chữ cái).
+ * @returns Chuỗi nối bằng dấu phẩy; null khi không chờ; câu báo khi chưa ai đủ điều kiện duyệt.
+ */
+export function nextApproversText(names: string[] | null | undefined): string | null {
+  if (!names) return null
+  if (names.length === 0) return 'Chưa có người đủ điều kiện duyệt'
+  const shown = names.slice(0, NEXT_APPROVERS_SHOWN).join(', ')
+  return names.length > NEXT_APPROVERS_SHOWN ? `${shown} và ${names.length - NEXT_APPROVERS_SHOWN} người khác` : shown
 }
 
 /** Nhãn kết quả bước duyệt. */

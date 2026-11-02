@@ -1,4 +1,4 @@
-import { CloseOutlined, SaveOutlined } from '@ant-design/icons'
+import { CloseOutlined, RollbackOutlined, SaveOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { hasOpenPopup } from '../../utils/popup'
@@ -45,6 +45,12 @@ export interface DetailDrawerProps {
    * dòng con như người liên hệ, tài khoản ngân hàng).
    */
   audit?: AuditScope
+  /**
+   * Vẽ thành **trang đầy đủ** trong AppShell thay cho ngăn kéo – dùng khi mở thẳng phiếu từ thông báo, Việc cần làm, Tra cứu chứng từ
+   * (đường dẫn `<màn hình>/:id`). Cùng nội dung, nút lệnh và phím Ctrl+S/F1 như ngăn kéo; Esc không đóng trang (tránh rời trang do lỡ
+   * tay), nút "Quay lại" gọi `onClose`.
+   */
+  asPage?: boolean
 }
 
 /**
@@ -67,6 +73,7 @@ export function DetailDrawer({
   readOnly = false,
   formName,
   audit,
+  asPage = false,
 }: DetailDrawerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(tabs[0]?.key)
@@ -87,7 +94,7 @@ export function DetailDrawer({
   // Esc đóng ngăn kéo, nghe ở cấp cửa sổ: Drawer của antd chỉ nhận Esc khi tiêu điểm nằm trong ngăn kéo, mà chọn xong một mục
   // trong ô chọn thì tiêu điểm có thể rơi ra ngoài (danh sách thả xuống vẽ ở cuối trang) – khi đó Esc không đóng được.
   useEffect(() => {
-    if (!open) return
+    if (!open || asPage) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       // Đang mở danh sách thả xuống, lịch hay hộp thoại con thì Esc đóng cái đó trước, chưa đóng ngăn kéo.
@@ -96,37 +103,16 @@ export function DetailDrawer({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, asPage])
 
-  return (
-    <Drawer
-      open={open}
-      title={
-        <span className="detail-drawer-title">
-          {title}
-          {/* Trạng thái luôn có chữ, không chỉ dựa vào ô bị mờ (ui-guide.md mục 2). */}
-          {readOnly && <Tag>Chỉ xem</Tag>}
-        </span>
-      }
-      onClose={onClose}
-      keyboard={false}
-      size={720}
-      destroyOnHidden
-      className="detail-drawer"
-      closeIcon={null}
-    >
-      <div className="detail-drawer-actions">
-        {onSave && (
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={onSave} disabled={loading}>
-            Lưu
-          </Button>
-        )}
-        {extraActions}
-        {audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />}
-        <Button type="text" icon={<CloseOutlined />} onClick={onClose}>
-          Đóng
-        </Button>
-      </div>
+  const saveButton = onSave && (
+    <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={onSave} disabled={loading}>
+      Lưu
+    </Button>
+  )
+  const historyButton = audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />
+  const body = (
+    <>
       {error && <Alert type="error" showIcon title={error} className="detail-drawer-error" />}
       <Spin spinning={loading}>
         <div ref={rootRef} {...auditScopeProps(audit)}>
@@ -150,6 +136,58 @@ export function DetailDrawer({
           </Form>
         </div>
       </Spin>
+    </>
+  )
+
+  if (asPage) {
+    // Bố cục trang dùng lại khung tiêu đề + nút lệnh của DocumentForm để trang mở thẳng trông như mọi trang chứng từ (ui-style.md mục 8).
+    return (
+      <div className="document-form detail-page">
+        <div className="document-form-head">
+          <div className="document-form-title">
+            <h2>{title}</h2>
+            {readOnly && <Tag>Chỉ xem</Tag>}
+          </div>
+          <div className="document-form-actions">
+            {saveButton}
+            {extraActions}
+            {historyButton}
+            <Button icon={<RollbackOutlined />} onClick={onClose} title="Quay lại danh sách">
+              Quay lại
+            </Button>
+          </div>
+        </div>
+        <div className="document-form-content">{body}</div>
+      </div>
+    )
+  }
+
+  return (
+    <Drawer
+      open={open}
+      title={
+        <span className="detail-drawer-title">
+          {title}
+          {/* Trạng thái luôn có chữ, không chỉ dựa vào ô bị mờ (ui-guide.md mục 2). */}
+          {readOnly && <Tag>Chỉ xem</Tag>}
+        </span>
+      }
+      onClose={onClose}
+      keyboard={false}
+      size={720}
+      destroyOnHidden
+      className="detail-drawer"
+      closeIcon={null}
+    >
+      <div className="detail-drawer-actions">
+        {saveButton}
+        {extraActions}
+        {historyButton}
+        <Button type="text" icon={<CloseOutlined />} onClick={onClose}>
+          Đóng
+        </Button>
+      </div>
+      {body}
     </Drawer>
   )
 }

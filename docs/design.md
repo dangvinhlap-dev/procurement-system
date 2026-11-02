@@ -231,6 +231,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Quy đổi ĐVT: 1 ĐVT quy đổi = hệ số × ĐVT cơ sở, hệ số > 0, numeric(18,6); không trùng ĐVT cơ sở, mỗi ĐVT một dòng | Tồn kho luôn lưu theo ĐVT cơ sở; 6 chữ số thập phân để quy đổi g → kg |
 | Thuế suất mặc định: KCT, 0, 5, 8, 10 (%) | Danh mục thuế suất đầy đủ (mục 5.4) làm sau, giữ đúng các mã này |
 | Tìm hàng: mỗi lần tối đa 5.000 dòng; tìm theo mã, tên, tên tiếng Anh, mã vạch, có dấu hay không dấu (cột `SearchText`); lọc nhóm gồm nhóm con | Danh mục tới ~100.000 mã (mục 1.3) |
+| Tìm kiểu SAP ECC (02/11/2026): `*` là ký tự đại diện ở mọi ô tìm; ô chọn danh mục gõ `*` + Enter liệt kê toàn bộ (ô chọn hàng tối đa 500 dòng, tìm thường 50) – docs/ui-style.md mục 5b | Người dùng quen F4 của SAP |
 
 ### 5.8 Quản lý nhóm NCC và nhà cung cấp
 
@@ -1555,6 +1556,44 @@ chưa ghi nhận" (mục 18.19). Điều khoản chữ "Chiết khấu", "Tài t
 
 Migration `V0_13_0_ChietKhauTaiTroHopDong` (bảng `PurchaseContractRebate`, `ContractRebateReceipt` – bảng mới, `Down()` xóa bảng, mất cam kết
 và thực nhận; AuditLog còn giữ lịch sử).
+
+### 18.22 Tra cứu chứng từ – mọi loại, đã/chưa hoàn thành (lát TC-2, 02/11/2026)
+
+Yêu cầu người dùng sau khi test 0.14.0: có một chỗ xem **tất cả các loại chứng từ** đã hoàn thành hoặc chưa, kể cả phiếu nhập/xuất kho.
+
+| Quy tắc | Ghi chú |
+| --- | --- |
+| Màn hình **DOCS** (Hằng ngày → Tra cứu chứng từ), API `GET /api/document-registry?from&to&docTypes&progress&mine` | Ai đăng nhập cũng mở được |
+| Loại: PR, PO, GRN, RTV, TRF, ICS, ICR, ADJ, PRL, SRC, RFQ, CTR, CTA, NCC (yêu cầu duyệt NCC), NDQ, DGN, VP. Mỗi loại chỉ hiện khi có **quyền xem** loại đó; dữ liệu qua global query filter (công ty, kho) | Không lộ chứng từ ngoài phạm vi |
+| **Tình trạng chung**: Chưa hoàn thành (nháp, chờ duyệt, đang nhận báo giá…), Hoàn thành (đã ghi sổ, đã duyệt, đã đóng, hiệu lực/chấm dứt, đã chọn thầu, đã kết luận…), Đã hủy/từ chối; kèm trạng thái gốc và cấp đang chờ duyệt | |
+| Lọc "Tôi lập" (người tạo) / "Tôi đã duyệt" (bước duyệt/từ chối do tôi; phiếu kho = tôi ghi sổ) | |
+| Ngày: ngày chứng từ; bảng giá = hiệu lực từ; hợp đồng = ngày ký (chưa ký: hiệu lực từ); loại không có ngày (phụ lục, duyệt NCC, độc quyền) = ngày lập giờ VN. Khoảng tối đa 366 ngày, tối đa 5.000 dòng | Tránh quét cả CSDL |
+| Bấm đúp mở **trang đầy đủ** của chứng từ (đánh giá NCC định kỳ DGN vẫn mở ngăn kéo `?mo=<Id>`); điều chỉnh kho (ADJ) chưa có trang | |
+
+Không có migration.
+
+**Trang đầy đủ cho phiếu vốn mở trong ngăn kéo (lát TC-3, 02/11/2026).** Thông báo, Việc cần làm, Tra cứu chứng từ, liên kết từ dấu hiệu
+bất thường mở **trang đầy đủ** (trong AppShell, tiêu đề + nút lệnh như trang chứng từ, nút "Quay lại" về danh sách) thay cho ngăn kéo:
+
+| Loại | Trang | Ghi chú |
+| --- | --- | --- |
+| NCC – yêu cầu duyệt NCC | `/gia-ncc/duyet-ncc/:id` | Thêm tab **Hồ sơ NCC** (thông tin chung, người liên hệ, tài khoản ngân hàng – chỉ xem) và **Hồ sơ đính kèm** (chỉ xem/tải) để người duyệt xem đủ trước khi duyệt; cùng quyền `MasterData.Supplier.View`. Ngăn kéo trên danh sách cũng có hai tab này |
+| NDQ – NCC độc quyền | `/gia-ncc/ncc-doc-quyen/:id` | |
+| VP – vi phạm KSNB | `/bao-cao/so-vi-pham/:id` | |
+| CTA – phụ lục hợp đồng | `/mua-hang/hop-dong-khung/phu-luc/:id` | Trước đây chuyển sang hợp đồng kèm ngăn kéo; "Quay lại" về trang hợp đồng |
+
+Bấm đúp trên danh sách của chính màn hình đó vẫn mở ngăn kéo (`?mo=<Id>`). Quyền trang = quyền màn hình danh sách (phụ lục: quyền CTR).
+
+**Người duyệt tiếp theo (lát TC-4, 02/11/2026).** Phiếu đang chờ duyệt nêu tên những người **duyệt được** cấp đang đến lượt:
+
+| Quy tắc | Ghi chú |
+| --- | --- |
+| Người duyệt được = còn hoạt động, có quyền duyệt loại phiếu tại công ty của bước, có vai trò của cấp (nếu cấp gắn vai trò), không phải người lập (RFQ: cả người chọn thầu), không có kê khai xung đột lợi ích còn hiệu lực với NCC của phiếu | Cùng điều kiện với nút Duyệt và người nhận thông báo chờ duyệt (`NextApproverResolver` dùng chung) |
+| Chỉ bước đang đến lượt (chặng nhỏ nhất, cấp nhỏ nhất mỗi công ty) có danh sách; bước sau để trống; không ai đủ điều kiện thì báo "Chưa có người đủ điều kiện duyệt" | Duyệt NCC hai chặng: chặng Tổng công ty chỉ hiện khi các công ty liên quan đã duyệt |
+| Tab **Lịch sử duyệt** mọi phiếu có duyệt: cột Người duyệt hiện "Chờ: …" (`ApprovalStepDto.NextApprovers`); Tra cứu chứng từ thêm cột **Người duyệt tiếp theo** | Hiện tối đa 5 tên + "và N người khác"; rê chuột xem đủ ở Lịch sử duyệt |
+| Tra cứu chứng từ không tải cả phiếu: người lập = người tạo, NCC = NCC của dòng | RFQ xét đủ (người chọn thầu, mọi NCC được mời) trong tab Lịch sử duyệt |
+
+Không có migration.
 
 ## Nguồn tham khảo
 

@@ -116,6 +116,7 @@ export const screens: Screen[] = [
   { code: 'HOME', title: 'Trang chủ', navLabel: 'Trang chủ', path: '/', icon: <HomeOutlined />, group: 'daily' },
   { code: 'TODO', title: 'Việc cần làm', navLabel: 'Việc cần làm', path: '/hang-ngay/viec-can-lam', icon: <CheckSquareOutlined />, group: 'daily' },
   { code: 'NOTI', title: 'Thông báo', navLabel: 'Thông báo', path: '/hang-ngay/thong-bao', icon: <BellOutlined />, group: 'daily' },
+  { code: 'DOCS', title: 'Tra cứu chứng từ', navLabel: 'Tra cứu chứng từ', path: '/hang-ngay/tra-cuu-chung-tu', icon: <FileSearchOutlined />, group: 'daily' },
 
   { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing', permission: Permission.PrView },
   { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },

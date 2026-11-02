@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Proc.Application.Documents;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
@@ -178,6 +179,64 @@ public class GoodsReceiptTests
 
         var byId = await f.Bha.GetFromJsonAsync<List<ItemLookupDto>>($"/api/items/lookup?ids={f.Item.Id}", Ct);
         Assert.Equal(f.Item.Id, Assert.Single(byId!).Id);
+    }
+
+    [Fact]
+    public async Task TraCuuChungTu_PhieuKho_HoanThanhVaChuaHoanThanh_TheoQuyenXem()
+    {
+        var f = await ArrangeAsync();
+        var draft = await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsJsonAsync("/api/goods-receipts", Receipt(f), Ct));
+        var posted = await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsJsonAsync("/api/goods-receipts", Receipt(f), Ct));
+        await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsync($"/api/inventory-documents/{posted.Id}/post", null, Ct));
+        var cancelled = await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsJsonAsync("/api/goods-receipts", Receipt(f), Ct));
+        await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsync($"/api/inventory-documents/{cancelled.Id}/cancel", null, Ct));
+        var range = $"from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}";
+
+        // Tôi lập: đủ 3 phiếu với tình trạng Chưa hoàn thành / Hoàn thành / Đã hủy, đối tác là NCC.
+        var mine = await f.Bha.GetFromJsonAsync<DocumentRegistryResult>($"/api/document-registry?{range}&docTypes=GRN&mine=created", Ct);
+        Assert.Contains("GRN", mine!.DocTypes);
+        Assert.Contains("PO", mine.DocTypes);
+        var byId = mine.Rows.ToDictionary(r => r.Id);
+        Assert.Equal((DocumentProgress.Open, "Nháp"), (byId[draft.Id].Progress, byId[draft.Id].StatusName));
+        Assert.Equal((DocumentProgress.Done, "Đã ghi sổ"), (byId[posted.Id].Progress, byId[posted.Id].StatusName));
+        Assert.Equal(DocumentProgress.Cancelled, byId[cancelled.Id].Progress);
+        Assert.Equal((draft.No, $"{f.Supplier.Code} – NCC phiếu nhập", 1_116_000m), (byId[draft.Id].No, byId[draft.Id].Partner, byId[draft.Id].Amount));
+        Assert.All(mine.Rows, r => Assert.Equal("GRN", r.DocType));
+
+        // Lọc hoàn thành: chỉ phiếu đã ghi sổ. "Tôi đã duyệt" với phiếu kho = tôi ghi sổ.
+        var done = await f.Bha.GetFromJsonAsync<DocumentRegistryResult>($"/api/document-registry?{range}&docTypes=GRN&mine=created&progress=Done", Ct);
+        Assert.Equal(posted.Id, Assert.Single(done!.Rows).Id);
+        var acted = await f.Bha.GetFromJsonAsync<DocumentRegistryResult>($"/api/document-registry?{range}&mine=acted", Ct);
+        Assert.Equal(posted.Id, Assert.Single(acted!.Rows).Id);
+
+        // Không có quyền xem chứng từ kho: không có loại GRN, không thấy phiếu kho.
+        var roleCode = $"R{Guid.NewGuid():N}"[..10].ToUpperInvariant();
+        await _factory.CreateRoleAsync(roleCode, Permissions.Purchase.PrView);
+        var viewer = $"tc.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(viewer, "BHA", roleCode);
+        var limited = await _factory.CreateClientInCompanyAsync(viewer, ProcApiFactory.TestPassword, "BHA");
+        var none = await limited.GetFromJsonAsync<DocumentRegistryResult>($"/api/document-registry?{range}", Ct);
+        Assert.Equal(["PR"], none!.DocTypes);
+        Assert.DoesNotContain(none.Rows, r => r.DocType == "GRN");
+
+        // Khoảng ngày quá 366 ngày: báo lỗi nghiệp vụ.
+        var tooLong = await f.Bha.GetAsync($"/api/document-registry?from={Today.AddDays(-400):yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+    }
+
+    [Fact]
+    public async Task TimHang_DauSao_LietKeTatCa_VaLamKyTuDaiDien()
+    {
+        var f = await ArrangeAsync();
+
+        // "*" (kiểu SAP ECC): liệt kê toàn bộ, vượt giới hạn 50 dòng của tìm thường (tối đa 500).
+        var all = await f.Bha.GetFromJsonAsync<List<ItemLookupDto>>("/api/items/lookup?search=*&inventoryOnly=true", Ct);
+        Assert.Contains(all!, i => i.Id == f.Item.Id);
+        Assert.InRange(all!.Count, 1, 500);
+
+        // "*" giữa từ khóa là ký tự đại diện: "b*long" khớp "Bu lông".
+        var wild = await f.Bha.GetFromJsonAsync<List<ItemLookupDto>>($"/api/items/lookup?search=b*long%20{f.Category.Code}&inventoryOnly=true", Ct);
+        Assert.Equal(f.Item.Id, Assert.Single(wild!).Id);
     }
 
     [Fact]

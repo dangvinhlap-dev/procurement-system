@@ -127,10 +127,14 @@ test('phụ lục hợp đồng: gia hạn, đổi điều khoản, duyệt thì
   const amendmentId = new URL(page.url()).searchParams.get('phu-luc')!
   await approveContractAmendment(request, amendmentId)
 
-  // Mở từ đường dẫn của thông báo (chỉ có Id phụ lục) → chuyển sang hợp đồng, mở sẵn ngăn kéo.
+  // Mở từ đường dẫn của thông báo (chỉ có Id phụ lục) → trang đầy đủ của phụ lục (TC-3); "Quay lại" về trang hợp đồng.
   await page.goto(`/mua-hang/hop-dong-khung/phu-luc/${amendmentId}`)
-  await expect(drawer).toContainText('Đã duyệt – đã áp')
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+  const amendmentPage = page.locator('.detail-page')
+  await expect(amendmentPage).toContainText('Đã duyệt – đã áp')
+  await expect(page.locator('.detail-drawer')).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/screenshots/contract-amendment-page.png' })
+  await amendmentPage.getByRole('button', { name: 'Quay lại' }).click()
+  await expect(page).toHaveURL(new RegExp(`/mua-hang/hop-dong-khung/${contract.id}$`))
   await expect(page.locator('.document-form')).toBeVisible()
   await expect(page.getByLabel('Hiệu lực đến', { exact: true })).toHaveValue(newTo)
   await page.getByRole('tab', { name: 'Phụ lục (1)' }).click()

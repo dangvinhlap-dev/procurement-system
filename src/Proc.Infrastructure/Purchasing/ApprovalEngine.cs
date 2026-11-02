@@ -20,6 +20,7 @@ internal sealed class ApprovalEngine
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
     private readonly NotificationPublisher _notifications;
+    private readonly NextApproverResolver _approvers;
 
     /// <summary>Tạo cơ chế duyệt.</summary>
     public ApprovalEngine(ProcDbContext db, ICurrentUserScope scope, IClock clock)
@@ -28,6 +29,7 @@ internal sealed class ApprovalEngine
         _scope = scope;
         _clock = clock;
         _notifications = new NotificationPublisher(db, scope, clock);
+        _approvers = new NextApproverResolver(db, scope, clock);
     }
 
     /// <summary>Quyền duyệt theo loại phiếu.</summary>
@@ -213,17 +215,19 @@ internal sealed class ApprovalEngine
     /// </summary>
     private async Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
     {
-        var users = await _notifications.UsersWithPermissionAsync(
-            step.CompanyId, ApprovePermission(document.DocType), step.RoleId, null, cancellationToken);
-        // Người có kê khai xung đột lợi ích với NCC của phiếu không duyệt được nên không báo (design.md mục 18.8).
-        var conflicted = await ConflictedUsersAsync(users, await SupplierIdsAsync(document, cancellationToken), cancellationToken);
-        _notifications.Add(step.CompanyId, users.Where(u => !document.IsPreparedBy(u) && !conflicted.Contains(u) && (document.CreatedBy is not null || u != _scope.UserId)), NotificationTypes.ApprovalPending,
+        // Người nhận = "người duyệt tiếp theo" (NextApproverResolver: quyền, vai trò, không phải người lập, không vướng xung đột lợi ích).
+        var users = (await _approvers.CandidateIdsAsync([await PendingStepAsync(document, step, cancellationToken)], cancellationToken))[step.Id];
+        _notifications.Add(step.CompanyId, users.Where(u => document.CreatedBy is not null || u != _scope.UserId), NotificationTypes.ApprovalPending,
             $"{Noun(document)} {document.No} chờ bạn duyệt",
             ApprovalTypes.Get(document.DocType).AmountLabel is null
                 ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}."
                 : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
             document.DocType, document.Id);
     }
+
+    /// <summary>Bước đang chờ kèm điều kiện loại người lập và NCC của phiếu, để tìm người duyệt.</summary>
+    private async Task<NextApproverResolver.PendingStep> PendingStepAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken) =>
+        new(step.Id, document.DocType, step.CompanyId, step.RoleId, document.IsPreparedBy, await SupplierIdsAsync(document, cancellationToken));
 
     /// <summary>
     /// Lý do người dùng không được tham gia quyết định (duyệt, chấm thầu, chọn thầu) vì có kê khai xung đột lợi ích còn hiệu lực hôm nay
@@ -243,16 +247,6 @@ internal sealed class ApprovalEngine
             .Distinct().OrderBy(c => c).ToListAsync(cancellationToken);
         return codes.Count == 0 ? null
             : $"Bạn đã kê khai quan hệ lợi ích với NCC {string.Join(", ", codes)} nên không được duyệt, chấm thầu hoặc chọn thầu liên quan NCC này.";
-    }
-
-    /// <summary>Những người trong danh sách có kê khai xung đột lợi ích còn hiệu lực với một trong các NCC.</summary>
-    private async Task<HashSet<Guid>> ConflictedUsersAsync(IReadOnlyCollection<Guid> userIds, IReadOnlyCollection<Guid> supplierIds, CancellationToken cancellationToken)
-    {
-        if (userIds.Count == 0 || supplierIds.Count == 0) return [];
-        var today = _clock.TodayInVietnam();
-        return (await _db.ConflictDeclarations.AsNoTracking()
-            .Where(d => userIds.Contains(d.UserId) && supplierIds.Contains(d.SupplierId) && d.ValidFrom <= today && (d.ValidTo == null || d.ValidTo >= today))
-            .Select(d => d.UserId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
     }
 
     /// <summary>NCC của đối tượng duyệt; phụ lục hợp đồng lấy NCC của hợp đồng gốc.</summary>
@@ -286,7 +280,15 @@ internal sealed class ApprovalEngine
     }
 
     /// <summary>Lịch sử duyệt của phiếu, theo lượt rồi cấp.</summary>
-    public async Task<IReadOnlyList<ApprovalStepDto>> HistoryAsync(string docType, Guid documentId, CancellationToken cancellationToken)
+    /// <param name="docType">Loại phiếu duyệt.</param>
+    /// <param name="documentId">Id phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="document">
+    /// Phiếu (khi có): bước đang đến lượt kèm "người duyệt tiếp theo" (TC-4, design.md mục 18.22); null thì không tính.
+    /// </param>
+    /// <returns>Các bước.</returns>
+    public async Task<IReadOnlyList<ApprovalStepDto>> HistoryAsync(
+        string docType, Guid documentId, CancellationToken cancellationToken, IApprovalSubject? document = null)
     {
         // Lịch sử gồm bước của mọi công ty (duyệt nhiều công ty – mục 18.6); chỉ lấy bước của đúng phiếu người dùng đã xem được.
         var steps = await _db.ApprovalSteps.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
@@ -299,9 +301,20 @@ internal sealed class ApprovalEngine
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         var companyIds = steps.Select(s => s.CompanyId).Distinct().ToList();
         var companies = await _db.Companies.AsNoTracking().Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
+        // Chỉ bước đang đến lượt (chặng nhỏ nhất, cấp nhỏ nhất mỗi công ty) mới có người duyệt tiếp theo; bước sau chưa tới lượt để trống.
+        var next = new Dictionary<Guid, IReadOnlyList<string>>();
+        if (document is { IsAwaitingApproval: true })
+        {
+            var active = ApprovalProgress.Active(steps.Where(s => s.Round == document.ApprovalRound));
+            var pendingSteps = new List<NextApproverResolver.PendingStep>();
+            foreach (var step in active) pendingSteps.Add(await PendingStepAsync(document, step, cancellationToken));
+            next = await _approvers.NamesAsync(pendingSteps, cancellationToken);
+        }
+
         return steps.Select(s => new ApprovalStepDto(
                 s.Round, s.Level, s.RoleId is { } r ? roles.GetValueOrDefault(r) : null, s.Status.ToString(),
-                s.ActedBy is { } u ? users.GetValueOrDefault(u) : null, s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage))
+                s.ActedBy is { } u ? users.GetValueOrDefault(u) : null, s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
+                next.GetValueOrDefault(s.Id)))
             .ToList();
     }
 }

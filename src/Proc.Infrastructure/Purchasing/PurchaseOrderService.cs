@@ -519,7 +519,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.Id, order.No, order.Date, order.Status.ToString(), order.SupplierId, supplier.Code, supplier.Name, order.WarehouseId, warehouse,
             order.ExpectedDate, order.PaymentTerms, order.DeliveryTerms, order.DeliveryAddress, order.CurrencyCode, order.ReceiveTolerancePct, order.Note,
             order.GrossAmount, order.TotalDiscount, order.TotalAmount, order.TotalVat, order.RejectReason, order.CreatedAt, createdBy, order.ApprovedAt,
-            lines, await _approvals.HistoryAsync(DocumentTypes.PurchaseOrder, order.Id, cancellationToken), actions, order.HasPriceException,
+            lines, await _approvals.HistoryAsync(DocumentTypes.PurchaseOrder, order.Id, cancellationToken, order), actions, order.HasPriceException,
             order.IsOutOfContract, order.DepartmentId, department is null ? null : $"{department.Code} – {department.Name}",
             await ContractScopeNoteAsync(order, department?.Code, cancellationToken), order.PurchaseType.ToString(), order.EmergencyReason,
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),

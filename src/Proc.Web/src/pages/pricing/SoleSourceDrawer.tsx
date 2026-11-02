@@ -1,7 +1,9 @@
 import { CheckOutlined, CloseCircleOutlined, FileAddOutlined, RollbackOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Form, Input, Modal, Select, Spin } from 'antd'
+import { Alert, App, Button, DatePicker, Form, Input, Modal, Spin } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router'
 import { useItemSearch, useSuppliers } from '../../api/masterData'
 import {
   soleSourceMaxReviewMonths,
@@ -34,20 +36,62 @@ const filterByLabel = (input: string, option?: { label?: unknown }) => matchesKe
  * @param id Id phiếu; null = lập mới.
  * @param onClose Đóng ngăn kéo.
  * @param onOpen Mở phiếu khác (phiếu đánh giá lại vừa lập, phiếu trước/sau).
+ * @param asPage Vẽ thành trang đầy đủ thay cho ngăn kéo.
  */
-export function SoleSourceDrawer({ id, onClose, onOpen }: { id: string | null; onClose: () => void; onOpen: (id: string) => void }) {
+export function SoleSourceDrawer({
+  id,
+  onClose,
+  onOpen,
+  asPage = false,
+}: {
+  id: string | null
+  onClose: () => void
+  onOpen: (id: string) => void
+  asPage?: boolean
+}) {
   const detail = useSoleSource(id)
   if (id !== null && !detail.data) {
-    return <DetailDrawer open title="Phiếu NCC độc quyền" onClose={onClose} loading tabs={[{ key: 'general', label: 'Thông tin chung', children: <Spin /> }]} />
+    return (
+      <DetailDrawer open asPage={asPage} title="Phiếu NCC độc quyền" onClose={onClose} loading error={detail.error?.message}
+        tabs={[{ key: 'general', label: 'Thông tin chung', children: <Spin /> }]} />
+    )
   }
-  return <SoleSourceForm key={detail.data?.id ?? 'new'} data={id === null ? null : detail.data!} onClose={onClose} onOpen={onOpen} />
+  return <SoleSourceForm key={detail.data?.id ?? 'new'} data={id === null ? null : detail.data!} onClose={onClose} onOpen={onOpen} asPage={asPage} />
+}
+
+/** Đường dẫn màn hình NCC độc quyền; trang đầy đủ một phiếu là `${SOLE_SOURCE_PATH}/:id`. */
+export const SOLE_SOURCE_PATH = '/gia-ncc/ncc-doc-quyen'
+
+/** Trang đầy đủ một phiếu NCC độc quyền (`/gia-ncc/ncc-doc-quyen/:id`) – mở từ thông báo, Việc cần làm, Tra cứu chứng từ. */
+export function SoleSourceDetailPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  return (
+    <SoleSourceDrawer
+      key={id}
+      id={id}
+      asPage
+      onClose={() => navigate(SOLE_SOURCE_PATH)}
+      onOpen={(other) => navigate(`${SOLE_SOURCE_PATH}/${other}`)}
+    />
+  )
 }
 
 /**
  * Nội dung phiếu: nháp thì sửa được (người có quyền lập); chờ duyệt thì người đến lượt Duyệt/Từ chối, người lập rút về; đã duyệt thì kết
  * thúc sớm (bắt buộc lý do) hoặc lập phiếu đánh giá lại.
  */
-function SoleSourceForm({ data, onClose, onOpen }: { data: SoleSource | null; onClose: () => void; onOpen: (id: string) => void }) {
+function SoleSourceForm({
+  data,
+  onClose,
+  onOpen,
+  asPage,
+}: {
+  data: SoleSource | null
+  onClose: () => void
+  onOpen: (id: string) => void
+  asPage: boolean
+}) {
   const { message, modal } = App.useApp()
   const { hasPermission } = useAuth()
   const [form] = Form.useForm<SoleSourceFormValues>()
@@ -209,6 +253,7 @@ function SoleSourceForm({ data, onClose, onOpen }: { data: SoleSource | null; on
     <>
       <DetailDrawer
         open
+        asPage={asPage}
         title={isNew ? 'Lập phiếu NCC độc quyền' : `Phiếu ${data.no} – ${soleSourceStateLabel(data)}`}
         audit={{ entityType: 'SoleSourceApproval', id: data?.id }}
         onClose={onClose}

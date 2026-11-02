@@ -1,5 +1,6 @@
 import { DeleteOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Form, Input, InputNumber, Select, TreeSelect } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import {
   numberedCatalogLabels,

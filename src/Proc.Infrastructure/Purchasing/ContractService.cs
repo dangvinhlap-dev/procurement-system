@@ -309,7 +309,7 @@ public sealed partial class ContractService : IContractService
             contract.SponsorshipTerms, contract.PenaltyTerms, contract.OtherTerms, contract.Note, contract.Status.ToString(), contract.ExpectedAmount,
             departments.Select(d => d.Id).ToList(), departments.Select(d => d.Label).ToList(), lines, contract.CreatedAt, createdBy,
             contract.ActivatedAt, contract.TerminatedOn, contract.TerminationReason, contract.RejectReason, contract.DaysToExpiry(today),
-            contract.ExpiresWithin(today, ExpiryWarningDays), await _approvals.HistoryAsync(contract.DocType, contract.Id, cancellationToken), amendments,
+            contract.ExpiresWithin(today, ExpiryWarningDays), await _approvals.HistoryAsync(contract.DocType, contract.Id, cancellationToken, contract), amendments,
             actions, contract.Rebates.OrderBy(r => r.LineNo).Select(ToRebateDto).ToList());
     }
 

@@ -1,5 +1,6 @@
 import { CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Form, Input, Select } from 'antd'
+import { Alert, App, Button, DatePicker, Form, Input } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { useConflictSupplierOptions } from '../../api/conflicts'

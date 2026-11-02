@@ -134,7 +134,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
         var result = new List<SupplierChangeRequestDto>();
         foreach (var r in requests)
         {
-            var approvals = await _approvals.HistoryAsync(r.DocType, r.Id, cancellationToken);
+            var approvals = await _approvals.HistoryAsync(r.DocType, r.Id, cancellationToken, r);
             var waiting = r.IsAwaitingApproval ? await WaitingForAsync(r, cancellationToken) : null;
             var canApprove = r.IsAwaitingApproval
                 && await _approvals.ApproveBlockerAsync(r, await _approvals.CurrentStepAsync(r, cancellationToken), cancellationToken) is null;

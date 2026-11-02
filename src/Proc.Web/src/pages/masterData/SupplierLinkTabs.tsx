@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, Spin } from 'antd'
+import { Alert, App, Button, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Spin } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import {
