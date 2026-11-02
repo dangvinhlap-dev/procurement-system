@@ -1,4 +1,4 @@
-import { FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
+import { AuditOutlined, FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -26,6 +26,7 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
+import { ReceiptInvoiceDialog } from './ReceiptInvoiceDialog'
 import { useDocumentCommands } from './useDocumentCommands'
 
 interface LineValues {
@@ -52,6 +53,7 @@ interface ReceiptFormValues {
   invoiceNo?: string
   invoiceSeries?: string
   invoiceDate?: Dayjs | null
+  invoiceAmount?: number | null
   deliveryNoteNo?: string
   deliverer?: string
   note?: string
@@ -93,6 +95,7 @@ export function GoodsReceiptPage() {
   const warehouses = useWarehouses()
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [editingInvoice, setEditingInvoice] = useState(false)
   const addRef = useRef<(() => void) | null>(null)
 
   const doc = document.data
@@ -125,6 +128,7 @@ export function GoodsReceiptPage() {
       invoiceNo: doc.invoiceNo ?? '',
       invoiceSeries: doc.invoiceSeries ?? '',
       invoiceDate: doc.invoiceDate ? dayjs(doc.invoiceDate) : null,
+      invoiceAmount: doc.invoiceAmount ?? null,
       deliveryNoteNo: doc.deliveryNoteNo ?? '',
       deliverer: doc.deliverer ?? '',
       note: doc.note ?? '',
@@ -175,6 +179,7 @@ export function GoodsReceiptPage() {
       invoiceNo: orNull(values.invoiceNo),
       invoiceSeries: orNull(values.invoiceSeries),
       invoiceDate: values.invoiceDate ? values.invoiceDate.format('YYYY-MM-DD') : null,
+      invoiceAmount: values.invoiceAmount ?? null,
       deliveryNoteNo: orNull(values.deliveryNoteNo),
       deliverer: orNull(values.deliverer),
       note: orNull(values.note),
@@ -224,6 +229,11 @@ export function GoodsReceiptPage() {
   }
   const actions = (
     <>
+      {doc?.canUpdateInvoice && (
+        <Button icon={<AuditOutlined />} onClick={() => setEditingInvoice(true)} title="Cập nhật số, ngày, tiền hóa đơn NCC về sau khi ghi sổ">
+          Cập nhật hóa đơn
+        </Button>
+      )}
       {doc && (
         <Button icon={<FileProtectOutlined />} onClick={() => void printRecord()} loading={printingRecord} title="In biên bản giao nhận / sai lệch">
           In biên bản
@@ -479,6 +489,7 @@ export function GoodsReceiptPage() {
     : { label: doc ? documentStatusLabels[doc.status] : '', tone: doc ? documentStatusTone[doc.status] : ('neutral' as const) }
 
   return (
+    <>
     <DocumentForm
       title="Phiếu nhập mua từ NCC"
       extraTabs={[attachmentTab]}
@@ -541,6 +552,9 @@ export function GoodsReceiptPage() {
           <Form.Item label="Ngày hóa đơn" name="invoiceDate">
             <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
+          <Form.Item label="Tiền hóa đơn (gồm VAT)" name="invoiceAmount" extra="Tổng thanh toán trên hóa đơn NCC – đối chiếu với tiền phiếu nhập.">
+            <InputNumber {...vnNumberInput} min={0} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
           <Form.Item label="Số phiếu giao hàng" name="deliveryNoteNo" rules={[{ max: 50 }]}>
             <Input autoComplete="off" />
           </Form.Item>
@@ -576,5 +590,7 @@ export function GoodsReceiptPage() {
         </>
       }
     />
+    {doc?.canUpdateInvoice && <ReceiptInvoiceDialog doc={doc} open={editingInvoice} onClose={() => setEditingInvoice(false)} />}
+    </>
   )
 }

@@ -27,6 +27,7 @@ public sealed class SaveReceiptRequestValidator : AbstractValidator<SaveReceiptR
         RuleFor(x => x.SupplierId).NotEmpty().WithMessage("Hãy chọn nhà cung cấp.");
         RuleFor(x => x.InvoiceNo).MaximumLength(50);
         RuleFor(x => x.InvoiceSeries).MaximumLength(20);
+        RuleFor(x => x.InvoiceAmount).GreaterThanOrEqualTo(0).WithMessage("Tiền hóa đơn không được âm.");
         RuleFor(x => x.DeliveryNoteNo).MaximumLength(50);
         RuleFor(x => x.Deliverer).MaximumLength(200);
         RuleFor(x => x.Note).MaximumLength(1000);
@@ -122,5 +123,17 @@ public sealed class ConfirmIntercompanyReceiptRequestValidator : AbstractValidat
             l.RuleFor(x => x.LotNo).MaximumLength(50);
             l.RuleFor(x => x.Note).MaximumLength(500);
         });
+    }
+}
+
+/// <summary>Kiểm tra cập nhật hóa đơn NCC của phiếu nhập mua.</summary>
+public sealed class UpdateReceiptInvoiceRequestValidator : AbstractValidator<UpdateReceiptInvoiceRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public UpdateReceiptInvoiceRequestValidator()
+    {
+        RuleFor(x => x.InvoiceNo).MaximumLength(50);
+        RuleFor(x => x.InvoiceSeries).MaximumLength(20);
+        RuleFor(x => x.InvoiceAmount).GreaterThanOrEqualTo(0).WithMessage("Tiền hóa đơn không được âm.");
     }
 }

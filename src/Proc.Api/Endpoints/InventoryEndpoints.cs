@@ -57,6 +57,11 @@ public static class InventoryEndpoints
                 s.UpdateReceiptAsync(id, request, ct))
             .RequirePermission(Permissions.Inventory.DocumentCreate)
             .Validate<SaveReceiptRequest>();
+        // Hóa đơn NCC thường về sau khi nhập: cập nhật được cả phiếu đã ghi sổ – design.md mục 18.15.
+        receipts.MapPut("/{id:guid}/invoice", (Guid id, UpdateReceiptInvoiceRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.UpdateReceiptInvoiceAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.DocumentCreate)
+            .Validate<UpdateReceiptInvoiceRequest>();
 
         receipts.MapGet("/{id:guid}/returnable", (Guid id, Guid? excludeDocumentId, IInventoryDocumentService s, CancellationToken ct) =>
                 s.GetReturnableLinesAsync(id, excludeDocumentId, ct))

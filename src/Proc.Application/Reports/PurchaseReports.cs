@@ -56,6 +56,68 @@ public sealed record ReceiptQualityRowDto(
 public sealed record ReceiptQualityResult(
     IReadOnlyList<ReceiptQualityRowDto> Rows, int TotalLines, int CheckedLines, int PassedLines, decimal? PassedPct);
 
+/// <summary>Mã cảnh báo trên báo cáo đối chiếu PO – nhận – hóa đơn (design.md mục 18.15); giao diện đổi sang chữ tiếng Việt.</summary>
+public static class ThreeWayMatchIssues
+{
+    /// <summary>Chưa nhập số hóa đơn hoặc tiền hóa đơn.</summary>
+    public const string NoInvoice = "NoInvoice";
+
+    /// <summary>Tiền hóa đơn lệch tiền phiếu nhập quá dung sai.</summary>
+    public const string AmountMismatch = "AmountMismatch";
+
+    /// <summary>Có dòng nhận ít hơn chứng từ giao (thiếu hoặc không đạt) mà hóa đơn vẫn cao hơn tiền thực nhận – V7, V8.</summary>
+    public const string InvoiceIncludesShortage = "InvoiceIncludesShortage";
+
+    /// <summary>Phiếu nhập không theo đơn mua hàng.</summary>
+    public const string NoPurchaseOrder = "NoPurchaseOrder";
+
+    /// <summary>Ngày nhập trước ngày đơn mua hàng – dấu hiệu lập PO hợp thức hóa (mục 18.11).</summary>
+    public const string ReceivedBeforeOrder = "ReceivedBeforeOrder";
+
+    /// <summary>Ngày nhập trước ngày PO được duyệt (nhưng không trước ngày PO).</summary>
+    public const string ReceivedBeforeApproval = "ReceivedBeforeApproval";
+
+    /// <summary>Ngày hóa đơn trước ngày đơn mua hàng.</summary>
+    public const string InvoiceBeforeOrder = "InvoiceBeforeOrder";
+}
+
+/// <summary>Một phiếu nhập mua trên báo cáo đối chiếu PO – nhận – hóa đơn (design.md mục 18.15).</summary>
+/// <param name="DocumentId">Phiếu nhập mua.</param>
+/// <param name="DocumentNo">Số phiếu nhập.</param>
+/// <param name="Date">Ngày nhập.</param>
+/// <param name="SupplierCode">Mã NCC.</param>
+/// <param name="SupplierName">Tên NCC.</param>
+/// <param name="PurchaseOrderId">Đơn mua hàng nguồn (null = nhập không theo PO).</param>
+/// <param name="PurchaseOrderNo">Số PO.</param>
+/// <param name="PurchaseOrderDate">Ngày PO.</param>
+/// <param name="PurchaseOrderApprovedDate">Ngày PO được duyệt (giờ Việt Nam).</param>
+/// <param name="OrderTotal">Tổng thanh toán của PO (gồm VAT) – cả PO, có thể nhận nhiều lần.</param>
+/// <param name="ReceiptTotal">Tổng thanh toán của phiếu nhập (tiền hàng + VAT) theo SL thực nhận đạt.</param>
+/// <param name="InvoiceNo">Số hóa đơn.</param>
+/// <param name="InvoiceSeries">Ký hiệu hóa đơn.</param>
+/// <param name="InvoiceDate">Ngày hóa đơn.</param>
+/// <param name="InvoiceAmount">Tổng tiền thanh toán trên hóa đơn (null = chưa nhập).</param>
+/// <param name="Difference">Hóa đơn − phiếu nhập (null khi chưa có tiền hóa đơn).</param>
+/// <param name="Result">Matched (khớp), NoInvoice (chưa có hóa đơn), Mismatch (lệch tiền).</param>
+/// <param name="Issues">Các mã cảnh báo <see cref="ThreeWayMatchIssues"/>.</param>
+public sealed record ThreeWayMatchRowDto(
+    Guid DocumentId, string DocumentNo, DateOnly Date, string SupplierCode, string SupplierName, Guid? PurchaseOrderId, string? PurchaseOrderNo,
+    DateOnly? PurchaseOrderDate, DateOnly? PurchaseOrderApprovedDate, decimal? OrderTotal, decimal ReceiptTotal, string? InvoiceNo,
+    string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount, decimal? Difference, string Result, IReadOnlyList<string> Issues);
+
+/// <summary>Báo cáo đối chiếu PO – nhận – hóa đơn: dòng và tổng hợp.</summary>
+/// <param name="Rows">Phiếu nhập (đã lọc nếu chỉ lấy phiếu có cảnh báo).</param>
+/// <param name="Matched">Số phiếu khớp (trên toàn bộ phiếu trong khoảng ngày, trước khi lọc).</param>
+/// <param name="NoInvoice">Số phiếu chưa có hóa đơn.</param>
+/// <param name="Mismatch">Số phiếu lệch tiền.</param>
+/// <param name="WithIssues">Số phiếu có ít nhất một cảnh báo.</param>
+/// <param name="ReceiptTotal">Tổng tiền phiếu nhập.</param>
+/// <param name="InvoiceTotal">Tổng tiền hóa đơn đã nhập.</param>
+/// <param name="HiddenDocuments">Số phiếu bỏ qua vì có mặt hàng ngoài phạm vi nhóm hàng của người xem (không đối chiếu được tiền cả phiếu).</param>
+public sealed record ThreeWayMatchResult(
+    IReadOnlyList<ThreeWayMatchRowDto> Rows, int Matched, int NoInvoice, int Mismatch, int WithIssues, decimal ReceiptTotal, decimal InvoiceTotal,
+    int HiddenDocuments);
+
 /// <summary>Cách nhóm báo cáo mua hàng.</summary>
 public static class PurchaseSpendGroups
 {
@@ -197,4 +259,17 @@ public interface IPurchaseReportService
     /// với chứng từ giao; tỷ lệ dòng đạt chất lượng trên các dòng đã kiểm tra (KPI "lô đạt chất lượng").
     /// </summary>
     Task<ReceiptQualityResult> GetReceiptQualityAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Đối chiếu PO – phiếu nhận – hóa đơn (design.md mục 18.15, báo cáo cho kế toán): mỗi phiếu nhập mua NCC đã ghi sổ trong khoảng ngày
+    /// tại công ty đang làm việc – so tiền hóa đơn NCC với tiền phiếu nhập, ngày nhận/hóa đơn với ngày PO.
+    /// </summary>
+    /// <param name="from">Từ ngày nhập.</param>
+    /// <param name="to">Đến ngày nhập.</param>
+    /// <param name="tolerance">Dung sai tiền (đ) – lệch tuyệt đối không quá mức này coi là khớp (chênh làm tròn VAT); ≥ 0.</param>
+    /// <param name="onlyIssues">true = chỉ trả phiếu có cảnh báo.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Dòng và tổng hợp.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai, quá 1 năm hoặc dung sai âm.</exception>
+    Task<ThreeWayMatchResult> GetThreeWayMatchAsync(DateOnly from, DateOnly to, decimal tolerance, bool onlyIssues, CancellationToken cancellationToken);
 }
