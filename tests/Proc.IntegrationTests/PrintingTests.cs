@@ -89,10 +89,19 @@ public class PrintingTests
             new SaveTransferRequest(Today, kt, kp, "Anh Bình", "Chị Lan", null, [new(null, item.Id, cai, 4, null, null)]), Ct));
         Assert.Equal($"PHIẾU CHUYỂN KHO NỘI BỘ {trf.No}", (await PdfAsync(await client.GetAsync($"/api/inventory-documents/{trf.Id}/pdf", Ct))).Info.Title);
 
+        // Biên bản giao nhận / sai lệch (design.md mục 18.14): phiếu nhập mua có dòng thiếu + không đạt; phiếu loại khác bị từ chối.
+        var deviated = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
+            new SaveReceiptRequest(Today, kt, supplier.Id, "0001235", "1C26TBL", Today, null, "Anh Bình", null,
+                [new(null, item.Id, cai, 8, 12_500, "10", null, null, null, DeliveredQty: 10, RejectedQty: 1, QcResult: "Failed", QcNote: "Thiếu 1, vỡ 1")]), Ct));
+        var record = await PdfAsync(await client.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct));
+        Assert.Equal($"BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA {deviated.No}", record.Info.Title);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"/api/goods-receipts/{trf.Id}/record-pdf", Ct)).StatusCode);
+
         // Phiếu của công ty khác: không thấy (404) – như khi mở phiếu.
         var other = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/inventory-documents/{grn.Id}/pdf", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct)).StatusCode);
 
         // Chỉ có quyền xem chứng từ kho: in được phiếu kho, không in được PO.
         var roleCode = UniqueCode("K");
@@ -102,5 +111,6 @@ public class PrintingTests
         var keeper = await _factory.CreateClientInCompanyAsync(keeperName, ProcApiFactory.TestPassword, company.Code);
         Assert.Equal(HttpStatusCode.Forbidden, (await keeper.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct)).StatusCode);
         await PdfAsync(await keeper.GetAsync($"/api/inventory-documents/{grn.Id}/pdf", Ct));
+        await PdfAsync(await keeper.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct));
     }
 }

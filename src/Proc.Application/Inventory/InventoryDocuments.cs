@@ -58,6 +58,11 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 /// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả: dòng phiếu nhập).</param>
 /// <param name="SentQty">SL gửi theo dòng phiếu xuất bán (chỉ phiếu nhập mua nội bộ).</param>
 /// <param name="PurchaseOrderLineId">Dòng đơn mua hàng (phiếu nhập theo PO).</param>
+/// <param name="DeliveredQty">Phiếu nhập mua: SL theo chứng từ giao của NCC (design.md mục 18.14).</param>
+/// <param name="RejectedQty">Phiếu nhập mua: SL không đạt, không nhập kho.</param>
+/// <param name="QcResult">Phiếu nhập mua: NotChecked, Passed, Failed.</param>
+/// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
+/// <param name="DiscrepancyQty">Thiếu/thừa = SL thực nhận + SL không đạt − SL chứng từ (âm = thiếu; 0 khi không có SL chứng từ).</param>
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,

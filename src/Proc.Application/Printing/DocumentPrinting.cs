@@ -31,4 +31,15 @@ public interface IDocumentPdfService
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> InventoryDocumentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// In biên bản giao nhận và kiểm tra hàng hóa của phiếu nhập mua NCC (design.md mục 18.14): SL theo chứng từ giao, SL đạt nhập kho,
+    /// SL không đạt, thiếu/thừa, kết quả và ghi chú kiểm tra từng dòng; dùng làm biên bản sai lệch gửi NCC khi có dòng lệch/không đạt.
+    /// </summary>
+    /// <param name="id">Phiếu nhập mua.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu không phải phiếu nhập mua NCC.</exception>
+    Task<PdfFile> GoodsReceiptRecordAsync(Guid id, CancellationToken cancellationToken);
 }

@@ -35,10 +35,11 @@ internal sealed record PrintTotal(string Label, string Value, bool Strong = fals
 /// <param name="Note">Ghi chú phiếu.</param>
 /// <param name="Signers">Chức danh ký tên, ví dụ "Người lập phiếu".</param>
 /// <param name="SignerNames">Tên in sẵn dưới chữ ký (cùng thứ tự, null = để trống).</param>
+/// <param name="Conclusion">Kết luận in đậm nhãn trước ghi chú (biên bản giao nhận); null thì bỏ.</param>
 internal sealed record PrintDocument(
     string Title, string No, DateOnly Date, string? StatusNote, IReadOnlyList<(string Label, string? Value)> Info,
     IReadOnlyList<PrintColumn> Columns, IReadOnlyList<string[]> Rows, IReadOnlyList<PrintTotal> Totals, string? AmountInWords, string? Note,
-    IReadOnlyList<string> Signers, IReadOnlyList<string?> SignerNames);
+    IReadOnlyList<string> Signers, IReadOnlyList<string?> SignerNames, string? Conclusion = null);
 
 /// <summary>
 /// Khuôn phiếu in A4 dọc (design.md mục 10.10): đầu trang công ty (tên, địa chỉ, MST); tên phiếu, số, ngày; thông tin phiếu; bảng dòng hàng
@@ -110,6 +111,14 @@ internal static class PdfLayout
             words.Format.SpaceBefore = Unit.FromMillimeter(2);
             words.AddFormattedText("Số tiền bằng chữ: ", TextFormat.Bold);
             words.AddFormattedText(doc.AmountInWords + ".", TextFormat.Italic);
+        }
+
+        if (!string.IsNullOrWhiteSpace(doc.Conclusion))
+        {
+            var conclusion = section.AddParagraph();
+            conclusion.Format.SpaceBefore = Unit.FromMillimeter(1);
+            conclusion.AddFormattedText("Kết luận: ", TextFormat.Bold);
+            conclusion.AddText(doc.Conclusion);
         }
 
         if (!string.IsNullOrWhiteSpace(doc.Note))

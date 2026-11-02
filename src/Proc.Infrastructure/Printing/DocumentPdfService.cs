@@ -179,6 +179,62 @@ public sealed class DocumentPdfService : IDocumentPdfService
         return new PdfFile($"{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
     }
 
+    /// <inheritdoc />
+    public async Task<PdfFile> GoodsReceiptRecordAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var d = await _inventory.GetAsync(id, cancellationToken);
+        // Chỉ phiếu nhập mua NCC có kiểm đếm, kiểm tra chất lượng – design.md mục 18.14.
+        if (d.DocType != DocumentTypes.GoodsReceipt)
+            throw new BusinessRuleException("Chỉ in biên bản giao nhận cho phiếu nhập mua từ nhà cung cấp.");
+
+        var to = d.ToWarehouseId is { } t ? await WarehouseNameAsync(t, cancellationToken) : null;
+        var invoice = d.InvoiceNo is null ? null : $"{d.InvoiceSeries} {d.InvoiceNo}".Trim() + (d.InvoiceDate is { } at ? $" ngày {at:dd/MM/yyyy}" : "");
+        // Dòng sai lệch: có hàng không đạt, thiếu/thừa so với chứng từ giao, hoặc kết quả Không đạt (cùng điều kiện báo cáo QCDEV).
+        var deviations = d.Lines.Count(l => l.RejectedQty > 0 || l.DiscrepancyQty != 0 || l.QcResult == "Failed");
+        // Chưa ghi SL chứng từ / chưa kiểm tra thì không kết luận "đúng, đạt" – chỉ nêu phần còn thiếu.
+        var pending = new List<string>();
+        var noDelivered = d.Lines.Count(l => l.DeliveredQty is null);
+        if (noDelivered > 0) pending.Add($"{noDelivered} dòng chưa ghi SL theo chứng từ giao");
+        var notChecked = d.Lines.Count(l => l.QcResult == "NotChecked");
+        if (notChecked > 0) pending.Add($"{notChecked} dòng chưa kiểm tra chất lượng");
+        var conclusion = deviations == 0
+            ? pending.Count == 0 ? "Hàng giao đúng số lượng theo chứng từ, đạt chất lượng." : $"Không ghi nhận sai lệch; còn {string.Join(", ", pending)}."
+            : $"Có {deviations}/{d.Lines.Count} dòng sai lệch hoặc không đạt (xem cột Thiếu/thừa, Không đạt, Ghi chú). "
+              + "Hàng không đạt không nhập kho; đề nghị nhà cung cấp xử lý theo hợp đồng.";
+        var doc = new PrintDocument(
+            "BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA", d.No, d.Date, d.Status switch
+            {
+                "Draft" => "BẢN NHÁP – phiếu nhập chưa ghi sổ",
+                "Cancelled" => "ĐÃ HỦY",
+                _ => null,
+            },
+            [
+                ("Bên giao (nhà cung cấp)", d.SupplierCode is null ? null : $"{d.SupplierCode} – {d.SupplierName}"),
+                ("Người giao hàng", d.Deliverer),
+                ("Bên nhận (kho)", to),
+                ("Theo đơn mua hàng", d.PurchaseOrderNo),
+                ("Phiếu giao hàng", d.DeliveryNoteNo),
+                ("Hóa đơn", invoice),
+            ],
+            [
+                new("STT", 8), new("Mã hàng", 22), new("Tên hàng", 36), new("ĐVT", 10), new("SL chứng từ", 15, true), new("SL đạt nhập kho", 15, true),
+                new("SL không đạt", 15, true), new("Thiếu/ thừa", 15, true), new("Kết quả", 16), new("Ghi chú kiểm tra", 28),
+            ],
+            d.Lines.Select(l => new[]
+            {
+                l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (l.LotNo is null ? "" : $" (lô {l.LotNo})"), l.UomCode,
+                l.DeliveredQty is { } q ? Qty(q) : "", Qty(l.Qty), l.RejectedQty > 0 ? Qty(l.RejectedQty) : "",
+                // Dấu + là thừa, − là thiếu so với chứng từ giao.
+                l.DiscrepancyQty == 0 ? "" : (l.DiscrepancyQty > 0 ? "+" : "") + Qty(l.DiscrepancyQty),
+                l.QcResult switch { "Passed" => "Đạt", "Failed" => "Không đạt", _ => "Chưa kiểm tra" }, l.QcNote ?? "",
+            }).ToList(),
+            [],
+            null, d.Note,
+            // Người lập PO không một mình xác nhận giao nhận (G4) – biên bản có đủ bên giao, thủ kho và người kiểm tra.
+            ["Đại diện bên giao", "Thủ kho", "Người kiểm tra", "Người lập biên bản"], [d.Deliverer, null, null, d.CreatedByName], conclusion);
+        return new PdfFile($"BB-{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
+    }
+
     /// <summary>Ghi chú trạng thái của PR/PO chưa có hiệu lực.</summary>
     private static string? ApprovalNote(string status) => status switch
     {
