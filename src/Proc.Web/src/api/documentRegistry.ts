@@ -71,7 +71,7 @@ export const docTypeLabels: Record<string, string> = {
 
 /**
  * Đường dẫn mở trang đầy đủ của một chứng từ; null khi loại chưa có trang (điều chỉnh kho).
- * Duyệt NCC, NCC độc quyền, vi phạm KSNB có trang đầy đủ `<màn hình>/:id` (TC-3); đánh giá NCC định kỳ (DGN) mở ngăn kéo `?mo=<Id>`.
+ * Duyệt NCC, NCC độc quyền, đánh giá NCC định kỳ, vi phạm KSNB có trang đầy đủ `<màn hình>/:id` (TC-3).
  * @param docType Mã loại.
  * @param id Id chứng từ.
  */
@@ -80,13 +80,9 @@ export function documentPath(docType: string, id: string): string | null {
     PR: '/mua-hang/pr', PO: '/mua-hang/po', GRN: '/kho/grn', RTV: '/kho/rtv', TRF: '/kho/trf', ICS: '/kho/ics', ICR: '/kho/icr',
     PRL: '/gia-ncc/bang-gia', SRC: '/dau-thau/tim-nguon', RFQ: '/dau-thau/rfq', CTR: '/mua-hang/hop-dong-khung',
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
-  }
-  const drawers: Record<string, string> = {
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky',
   }
-  if (pages[docType]) return `${pages[docType]}/${id}`
-  if (drawers[docType]) return `${drawers[docType]}?mo=${id}`
-  return null
+  return pages[docType] ? `${pages[docType]}/${id}` : null
 }
 
 /**

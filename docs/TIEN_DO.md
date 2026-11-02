@@ -131,6 +131,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     vi phạm (`/bao-cao/so-vi-pham/:id`), phụ lục HĐ (`/mua-hang/hop-dong-khung/phu-luc/:id` – thôi chuyển hướng). `DetailDrawer` thêm
     `asPage` (khung tiêu đề + nút lệnh như DocumentForm, nút Quay lại, Esc không đóng). design.md 18.22. Chỉ sửa Proc.Web, không migration.
     e2e sửa `suppliers`, `sole-sources`, `control`, `contract`. Kiểm tra: Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
+  - **DGN trang đầy đủ (xong 02/11/2026, nhánh `feature/trang-dgn`)**: `/gia-ncc/danh-gia-ncc-dinh-ky/:id` (`SupplierReviewDetailPage`),
+    Tra cứu chứng từ mở trang này thay ngăn kéo. e2e `supplier-review`. Kiểm tra: Playwright 89/89; `tsc`, `oxlint`, `npm run build` qua.
+  - **ADJ – phiếu điều chỉnh/kiểm kê kho**: phát hiện chỉ mới có mã loại, chưa có chức năng; người dùng chốt 02/11/2026 làm thành
+    **tính năng riêng** (nhánh `feature/dieu-chinh-kho`).
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người

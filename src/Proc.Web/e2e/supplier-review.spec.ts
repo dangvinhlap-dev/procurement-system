@@ -44,7 +44,19 @@ test('đánh giá NCC theo quý: lập phiếu, chấm điểm, hoàn thành', a
   await page.locator('.ant-modal-confirm').getByRole('button', { name: 'Hoàn thành' }).click()
   await expect(page.locator('.ant-message')).toContainText(/Đã hoàn thành phiếu đánh giá DGN-BHA-\d{4}-\d{4}/)
   await expect(drawer).toContainText('Hoàn thành')
+  const reviewId = new URL(page.url()).searchParams.get('mo')!
   await drawer.getByRole('button', { name: 'Đóng' }).click()
   await expect(row).toContainText('Hoàn thành')
   await expect(row).toContainText('Tiếp tục hợp tác')
+
+  // Trang đầy đủ của phiếu (mở từ Tra cứu chứng từ): cùng nội dung, "Quay lại" về danh sách (quý mặc định).
+  await page.goto(`/gia-ncc/danh-gia-ncc-dinh-ky/${reviewId}`)
+  const full = page.locator('.detail-page')
+  await expect(full.locator('.document-form-title')).toContainText(/DGN-BHA-\d{4}-\d{4}/)
+  await expect(full.getByLabel('Điểm', { exact: true })).toHaveValue('4')
+  await expect(page.locator('.detail-drawer')).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/screenshots/supplier-review-page.png' })
+  await full.getByRole('button', { name: 'Quay lại' }).click()
+  await expect(page).toHaveURL(/\/gia-ncc\/danh-gia-ncc-dinh-ky$/)
+  await expect(page.getByRole('heading', { name: 'Đánh giá NCC định kỳ' })).toBeVisible()
 })

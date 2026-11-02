@@ -17,6 +17,7 @@ import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/master
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
+import { SupplierReviewDetailPage } from './pages/pricing/SupplierReviewDrawer'
 import { SupplierReviewPage } from './pages/pricing/SupplierReviewPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
@@ -167,6 +168,7 @@ const drawerPages = [
   { code: 'CTR', path: '/mua-hang/hop-dong-khung/phu-luc/:id', element: <ContractAmendmentPage /> },
   { code: 'SUPAPR', path: '/gia-ncc/duyet-ncc/:id', element: <SupplierApprovalDetailPage /> },
   { code: 'NDQ', path: '/gia-ncc/ncc-doc-quyen/:id', element: <SoleSourceDetailPage /> },
+  { code: 'SUPREV', path: '/gia-ncc/danh-gia-ncc-dinh-ky/:id', element: <SupplierReviewDetailPage /> },
   { code: 'VIOL', path: '/bao-cao/so-vi-pham/:id', element: <ControlFindingDetailPage /> },
 ]
 
