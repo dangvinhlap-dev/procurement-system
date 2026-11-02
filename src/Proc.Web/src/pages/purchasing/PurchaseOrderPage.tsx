@@ -1,5 +1,5 @@
-import { DollarOutlined, FileAddOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table } from 'antd'
+import { DollarOutlined, FileAddOutlined, WarningFilled } from '@ant-design/icons'
+import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table, Tooltip } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -8,6 +8,7 @@ import { vatOptions } from '../../api/masterData'
 import { useWarehouses } from '../../api/organization'
 import { pickSupplierPrice, useSupplierPrices } from '../../api/pricing'
 import {
+  priceSourceLabels,
   purchaseStatusLabels,
   purchaseStatusTone,
   useOpenRequestLines,
@@ -37,7 +38,12 @@ interface PoLineValues {
   deliveryDate?: Dayjs | null
   note?: string
   sourcePrLineId?: string | null
+  priceDeviationReason?: string
+  sourceRfqLineId?: string | null
 }
+
+/** Giá sau chiết khấu, làm tròn 6 số như server (PurchaseOrderLine.NetUnitPrice). */
+const netPrice = (price: number, discountPct: number) => Math.round(price * (100 - discountPct) * 10_000) / 1_000_000_000
 
 interface PoFormValues {
   date: Dayjs
@@ -69,8 +75,9 @@ function computeLine(line: PoLineValues | undefined) {
 /**
  * Trang đơn mua hàng (design.md mục 10.3) trên khuôn DocumentForm: NCC đã duyệt và áp dụng tại công ty, kho nhận (mặc định kho tổng),
  * dòng nhập tay hoặc "Lấy dòng từ PR" (PR đã duyệt còn chưa đặt), chiết khấu, VAT, dung sai nhận hàng. Chỉ VND ở giai đoạn này.
- * Phiếu đã duyệt hiện SL đã nhận, còn lại theo phiếu nhập kho. Cột "Giá bảng giá" hiện giá gợi ý từ bảng giá NCC đang hiệu lực
- * (design.md mục 8.1); nút "Áp giá bảng giá" chép giá gợi ý vào các dòng – người lập vẫn sửa tay được.
+ * Phiếu đã duyệt hiện SL đã nhận, còn lại theo phiếu nhập kho. Giá đã duyệt (design.md mục 18.10): cột "Giá đã duyệt" và "Nguồn giá"
+ * theo kết quả chọn thầu / hợp đồng nguyên tắc / bảng giá NCC hiệu lực; nút "Áp giá đã duyệt" chép giá vào các dòng. Người lập vẫn sửa
+ * được đơn giá, nhưng dòng lệch giá đã duyệt (tam giác vàng) phải ghi lý do và PO qua thêm chặng duyệt ngoại lệ giá.
  */
 export function PurchaseOrderPage() {
   const { id = 'moi' } = useParams()
@@ -110,7 +117,7 @@ export function PurchaseOrderPage() {
   const orderDate = Form.useWatch('date', form) as Dayjs | undefined
   const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds)
 
-  /** Giá gợi ý của dòng theo bảng giá NCC: đúng ĐVT và bậc SL (xem pickSupplierPrice). */
+  /** Giá gợi ý của dòng theo bảng giá hợp đồng/bảng giá NCC: đúng ĐVT và bậc SL (xem pickSupplierPrice). */
   const suggestedPrice = (line: PoLineValues | undefined) => {
     if (!line?.itemId || !line.uomId) return undefined
     const tiers = (supplierPrices.data ?? []).filter((t) => t.itemId === line.itemId)
@@ -118,19 +125,48 @@ export function PurchaseOrderPage() {
     return tiers.length ? pickSupplierPrice(tiers, line.uomId, factor, line.qty ?? 0) : undefined
   }
 
-  /** Chép giá gợi ý (đơn giá, % CK, thuế suất) vào mọi dòng có giá bảng giá. */
+  /**
+   * Giá đã duyệt của dòng để hiện và so lệch: phiếu chỉ đọc lấy giá server đã chốt; dòng từ kết quả chọn thầu giữ giá trúng thầu đã lưu;
+   * còn lại theo bảng giá hợp đồng/bảng giá NCC hiện hành (server tính lại khi lưu, gửi).
+   */
+  const approvedPrice = (index: number) => {
+    const saved = savedLine(index)
+    const line = lines[index]
+    if (readOnly || (line?.sourceRfqLineId && saved?.priceSource === 'Rfq')) {
+      if (!saved) return undefined
+      if (saved.approvedUnitPrice == null)
+        return saved.priceSource === 'None' ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
+      const ref = saved.priceSource === 'Rfq' ? saved.sourceRfqNo : saved.priceSource === 'Contract' ? saved.contractNo : saved.priceListNo
+      return { unitPrice: saved.approvedUnitPrice, discountPct: saved.approvedDiscountPct ?? 0, sourceText: `${priceSourceLabels[saved.priceSource]} ${ref ?? ''}`.trim() }
+    }
+    if (!line?.itemId || !line.uomId || !supplierId) return undefined
+    const p = suggestedPrice(line)
+    if (!p) return supplierPrices.isSuccess ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
+    return { unitPrice: p.unitPrice, discountPct: p.discountPct, sourceText: p.source === 'Contract' ? `Hợp đồng ${p.contractNo ?? ''}` : `Bảng giá ${p.priceListNo}` }
+  }
+
+  /** Dòng có giá đã duyệt mà giá sau CK khác – cần lý do lệch giá (so như server: sau chiết khấu, 6 số lẻ). */
+  const isDeviation = (index: number) => {
+    const a = approvedPrice(index)
+    const line = lines[index]
+    if (!a || a.unitPrice == null || !line) return false
+    return netPrice(line.unitPrice ?? 0, line.discountPct ?? 0) !== netPrice(a.unitPrice, a.discountPct)
+  }
+
+  /** Chép giá đã duyệt (đơn giá, % CK, thuế suất) vào mọi dòng có giá hợp đồng/bảng giá (dòng từ kết quả chọn thầu giữ nguyên). */
   const applyPriceList = () => {
     const current = (form.getFieldValue('lines') as PoLineValues[] | undefined) ?? []
     let count = 0
     const next = current.map((l) => {
+      if (l.sourceRfqLineId) return l
       const p = suggestedPrice(l)
       if (!p) return l
       count++
       return { ...l, unitPrice: p.unitPrice, discountPct: p.discountPct, vatCode: p.vatCode ?? l.vatCode }
     })
     form.setFieldValue('lines', next)
-    if (count) message.success(`Đã áp giá bảng giá cho ${count} dòng.`)
-    else message.info('Không có dòng nào có giá trong bảng giá đang hiệu lực của NCC này.')
+    if (count) message.success(`Đã áp giá đã duyệt cho ${count} dòng.`)
+    else message.info('Không có dòng nào có giá trong hợp đồng/bảng giá đang hiệu lực của NCC này.')
   }
 
   useEffect(() => {
@@ -152,6 +188,7 @@ export function PurchaseOrderPage() {
       lines: doc.lines.map((l) => ({
         id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode,
         deliveryDate: l.deliveryDate ? dayjs(l.deliveryDate) : null, note: l.note ?? '', sourcePrLineId: l.sourcePrLineId,
+        priceDeviationReason: l.priceDeviationReason ?? '', sourceRfqLineId: l.sourceRfqLineId,
       })),
     })
   }, [doc, form])
@@ -186,7 +223,7 @@ export function PurchaseOrderPage() {
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, qty: l.qty ?? 0, unitPrice: l.unitPrice ?? 0, discountPct: l.discountPct ?? 0,
         vatCode: l.vatCode ?? null, deliveryDate: l.deliveryDate ? l.deliveryDate.format('YYYY-MM-DD') : null, note: orNull(l.note),
-        sourcePrLineId: l.sourcePrLineId ?? null,
+        sourcePrLineId: l.sourcePrLineId ?? null, priceDeviationReason: orNull(l.priceDeviationReason), sourceRfqLineId: l.sourceRfqLineId ?? null,
       })),
     }
     try {
@@ -220,6 +257,7 @@ export function PurchaseOrderPage() {
   }
 
   const savedLine = (index: number) => (lines[index]?.id ? doc?.lines.find((l) => l.id === lines[index].id) : undefined)
+  const hasDeviation = lines.some((_, i) => isDeviation(i))
   const readonlyCell = (text: string) => <span className="line-grid-readonly">{text}</span>
   const showReceiving = doc && doc.status !== 'Draft'
 
@@ -234,6 +272,9 @@ export function PurchaseOrderPage() {
             <Input />
           </Form.Item>
           <Form.Item name={[field.name, 'sourcePrLineId']} hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name={[field.name, 'sourceRfqLineId']} hidden>
             <Input />
           </Form.Item>
           <Form.Item name={[field.name, 'itemId']} noStyle rules={[{ required: true, message: 'Chọn mặt hàng.' }]}>
@@ -314,20 +355,42 @@ export function PurchaseOrderPage() {
       ),
     },
     { key: 'amount', title: 'Thành tiền', width: 115, align: 'right', render: (field) => readonlyCell(formatMoney(computeLine(lines[field.name]).amount)) },
-    ...(readOnly
-      ? []
-      : ([
-          {
-            key: 'listPrice',
-            title: 'Giá bảng giá',
-            width: 110,
-            align: 'right',
-            render: (field) => {
-              const p = suggestedPrice(lines[field.name])
-              return readonlyCell(p ? `${formatMoney(p.unitPrice)}${p.discountPct ? ` −${p.discountPct}%` : ''}` : '')
-            },
-          },
-        ] as LineColumn[])),
+    {
+      key: 'approvedPrice',
+      title: 'Giá đã duyệt',
+      width: 120,
+      align: 'right',
+      render: (field) => {
+        const p = approvedPrice(field.name)
+        const deviation = isDeviation(field.name)
+        return (
+          <span className="line-grid-readonly">
+            {deviation && (
+              <Tooltip title="Đơn giá khác giá đã duyệt – phải ghi lý do lệch giá; PO qua thêm chặng duyệt ngoại lệ giá.">
+                <WarningFilled className="line-grid-alert-icon" aria-label={`Lệch giá đã duyệt dòng ${field.name + 1}`} />{' '}
+              </Tooltip>
+            )}
+            {p?.unitPrice != null ? `${formatMoney(p.unitPrice)}${p.discountPct ? ` −${p.discountPct}%` : ''}` : ''}
+          </span>
+        )
+      },
+    },
+    { key: 'priceSource', title: 'Nguồn giá', width: 150, render: (field) => readonlyCell(approvedPrice(field.name)?.sourceText ?? '') },
+    {
+      key: 'deviationReason',
+      title: 'Lý do lệch giá',
+      width: 180,
+      render: (field) =>
+        isDeviation(field.name) || lines[field.name]?.priceDeviationReason ? (
+          <Form.Item name={[field.name, 'priceDeviationReason']} noStyle rules={[{ max: 500, message: 'Tối đa 500 ký tự.' }]}>
+            <Input variant="borderless" placeholder="Bắt buộc khi gửi duyệt" aria-label={`Lý do lệch giá dòng ${field.name + 1}`} />
+          </Form.Item>
+        ) : (
+          <Form.Item name={[field.name, 'priceDeviationReason']} noStyle>
+            <Input variant="borderless" disabled aria-label={`Lý do lệch giá dòng ${field.name + 1}`} />
+          </Form.Item>
+        ),
+    },
     {
       key: 'delivery',
       title: 'Ngày giao',
@@ -366,6 +429,8 @@ export function PurchaseOrderPage() {
             <Alert type="warning" showIcon title={supplierHint} />
           ) : doc?.rejectReason && doc.status === 'Draft' ? (
             <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
+          ) : (!readOnly && hasDeviation) || (readOnly && doc?.hasPriceException) ? (
+            <Alert type="warning" showIcon title="Có dòng lệch giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu): ghi lý do ở từng dòng; PO phải qua thêm chặng duyệt ngoại lệ giá." />
           ) : (
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
           )
@@ -420,7 +485,7 @@ export function PurchaseOrderPage() {
                   Lấy dòng từ PR đã duyệt
                 </Button>
                 <Button icon={<DollarOutlined />} onClick={applyPriceList} disabled={!supplierId}>
-                  Áp giá bảng giá
+                  Áp giá đã duyệt
                 </Button>
               </Space>
             )}
@@ -437,7 +502,7 @@ export function PurchaseOrderPage() {
           </>
         }
         extraTabs={[
-          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} exceptionStage="Ngoại lệ giá" /> }] : []),
           attachmentTab,
         ]}
       />

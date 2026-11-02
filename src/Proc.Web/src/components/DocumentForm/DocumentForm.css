@@ -176,6 +176,10 @@
   color: var(--ant-color-error);
   font-weight: 600;
 }
+/* Tam giác vàng đầu ô báo dòng cần xử lý (ví dụ lệch giá đã duyệt – ui-style.md mục 5); luôn kèm chú thích khi rê chuột. */
+.line-grid-alert-icon {
+  color: var(--ant-color-warning);
+}
 .line-grid-add {
   margin-top: 4px;
 }

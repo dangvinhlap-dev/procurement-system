@@ -6,8 +6,11 @@ import { formatDateTime } from '../../utils/format'
  * Bảng lịch sử duyệt của phiếu (tab "Lịch sử duyệt" – design.md mục 10.1): lượt gửi, cấp, vai trò, kết quả, người, thời điểm, ý kiến.
  * @param steps Các bước theo lượt rồi cấp.
  * @param byCompany Duyệt nhiều công ty (duyệt NCC – design.md mục 18.6): hiện thêm cột Chặng và Công ty.
+ * @param exceptionStage Tên chặng 2 khi phiếu có chặng duyệt ngoại lệ ở cùng công ty (PO lệch giá – design.md mục 18.10); cột Chặng
+ *   chỉ hiện khi có bước chặng 2.
  */
-export function ApprovalHistory({ steps, byCompany = false }: { steps: ApprovalStep[]; byCompany?: boolean }) {
+export function ApprovalHistory({ steps, byCompany = false, exceptionStage }: { steps: ApprovalStep[]; byCompany?: boolean; exceptionStage?: string }) {
+  const showException = !byCompany && !!exceptionStage && steps.some((s) => s.stage === 2)
   return (
     <Table<ApprovalStep>
       size="small"
@@ -22,6 +25,9 @@ export function ApprovalHistory({ steps, byCompany = false }: { steps: ApprovalS
               { title: 'Chặng', dataIndex: 'stage', width: 150, render: (v: number) => (v === 2 ? 'Tổng công ty (cuối)' : 'Công ty liên quan') },
               { title: 'Công ty', dataIndex: 'companyCode', width: 90 },
             ]
+          : []),
+        ...(showException
+          ? [{ title: 'Chặng', dataIndex: 'stage', width: 130, render: (v: number) => (v === 2 ? exceptionStage : 'Duyệt thường') }]
           : []),
         { title: 'Cấp', dataIndex: 'level', width: 60 },
         { title: 'Vai trò duyệt', dataIndex: 'roleName', width: 180, render: (v: string | null) => v ?? 'Người có quyền duyệt' },

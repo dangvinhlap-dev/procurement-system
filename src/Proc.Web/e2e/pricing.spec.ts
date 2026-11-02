@@ -4,7 +4,8 @@ import { approvePriceList, chooseOption, openByCommand, pickOption, seedPostedRe
 
 /**
  * Bảng giá NCC và so sánh giá (design.md mục 8.1, 8.2): tổng công ty lập bảng giá toàn tập đoàn, gửi duyệt, người duyệt giá duyệt → so sánh
- * giá thấy giá thực mua của BHA (phiếu nhập 50.000 đ/hộp) và giá bảng giá → PO ở BHA gợi ý giá theo bảng giá.
+ * giá thấy giá thực mua của BHA (phiếu nhập 50.000 đ/hộp) và giá bảng giá → PO ở BHA lấy giá đã duyệt theo bảng giá; sửa giá thì phải
+ * ghi lý do lệch giá và PO qua thêm chặng duyệt ngoại lệ giá (design.md mục 18.10).
  */
 
 /** Bấm nút lệnh rồi nút cùng tên trong hộp xác nhận, chờ thông báo. */
@@ -16,7 +17,7 @@ async function confirm(page: Page, button: string, messageText: string | RegExp)
   await expect(page.locator('.ant-modal-confirm')).toHaveCount(0)
 }
 
-test('bảng giá toàn tập đoàn → so sánh giá → PO gợi ý giá', async ({ page, request }) => {
+test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duyệt, lệch giá qua duyệt ngoại lệ', async ({ page, request }) => {
   test.setTimeout(90_000)
   const { itemCode, supplierCode } = await seedPostedReceipt(request)
   await loginViaApi(page)
@@ -66,7 +67,7 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO gợi ý giá', as
   await expect(page.locator('.data-grid-row', { hasText: supplierCode })).toContainText('47.000')
   await expect(page.locator('.data-grid-row', { hasText: supplierCode })).toContainText('Toàn tập đoàn')
 
-  // 3. PO ở BHA: cột Giá bảng giá gợi ý 47.000, bấm Áp giá bảng giá.
+  // 3. PO ở BHA: cột Giá đã duyệt 47.000 nguồn Bảng giá; đơn giá 0 là lệch giá (tam giác vàng), bấm Áp giá đã duyệt thì hết lệch.
   await switchCompany(page, 'BHA')
   await openByCommand(page, 'PO')
   await page.getByRole('button', { name: 'Tạo mới' }).click()
@@ -76,8 +77,31 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO gợi ý giá', as
   await pickOption(page, itemCode)
   await page.getByLabel('SL đặt dòng 1').fill('5')
   await page.getByLabel('SL đặt dòng 1').press('Tab')
-  await expect(page.locator('.line-grid-row').first()).toContainText('47.000')
-  await page.getByRole('button', { name: /Áp giá bảng giá$/ }).click()
+  const line = page.locator('.line-grid-row').first()
+  await expect(line).toContainText('47.000')
+  await expect(line).toContainText(/Bảng giá PRL-TCT-\d{4}-\d{4}/)
+  await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toBeVisible()
+  await page.getByRole('button', { name: /Áp giá đã duyệt$/ }).click()
   await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('47.000')
   await expect(page.locator('.document-form-footer')).toContainText('258.500')
+  await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toHaveCount(0)
+
+  // 4. Sửa giá 48.000: lệch giá → cảnh báo, gửi duyệt khi chưa có lý do bị chặn; ghi lý do thì gửi được, có chặng "Ngoại lệ giá".
+  await page.getByLabel('Đơn giá dòng 1').fill('48000')
+  await page.getByLabel('Đơn giá dòng 1').press('Tab')
+  await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'lệch giá đã duyệt' })).toBeVisible()
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu PO-BHA-\d{4}-\d{4}\./)
+  await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible()
+  await page.getByLabel('Lý do lệch giá dòng 1').fill('NCC báo tăng giá nguyên liệu')
+  await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu/)
+  await confirm(page, 'Gửi duyệt', /Đã gửi duyệt/)
+  await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt')
+  await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+  await expect(page.getByRole('tabpanel')).toContainText('Ngoại lệ giá')
 })

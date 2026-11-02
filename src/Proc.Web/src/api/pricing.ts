@@ -122,6 +122,12 @@ export interface ResolvedSupplierPrice {
   priceListNo: string
 }
 
+/** Bậc giá đã duyệt cho PO: bảng giá của hợp đồng nguyên tắc hiệu lực (Contract) hoặc bảng giá NCC hiệu lực (PriceList). */
+export interface ApprovedPoPrice extends ResolvedSupplierPrice {
+  source: 'Contract' | 'PriceList'
+  contractNo: string | null
+}
+
 /** Danh sách bảng giá (của công ty và toàn tập đoàn). */
 export function usePriceLists() {
   const companyId = useCompanyId()
@@ -161,7 +167,8 @@ export function usePriceListMutations() {
 }
 
 /**
- * Bậc giá gợi ý từ bảng giá hiệu lực của NCC vào ngày đặt hàng (PO).
+ * Bậc giá đã duyệt của NCC vào ngày đặt hàng (PO – design.md mục 18.10): bảng giá của hợp đồng nguyên tắc hiệu lực ưu tiên, rồi bảng giá
+ * NCC hiệu lực.
  * @param supplierId NCC; trống thì không tải.
  * @param date Ngày yyyy-MM-dd.
  * @param itemIds Mặt hàng trên phiếu.
@@ -172,8 +179,8 @@ export function useSupplierPrices(supplierId: string | undefined, date: string |
   for (const id of [...new Set(itemIds)].sort()) params.append('itemIds', id)
   const query = params.toString()
   return useQuery({
-    queryKey: ['price-lists', companyId, 'resolve', query],
-    queryFn: () => apiFetch<ResolvedSupplierPrice[]>(`/api/price-lists/resolve?${query}`),
+    queryKey: ['price-lists', companyId, 'approved-prices', query],
+    queryFn: () => apiFetch<ApprovedPoPrice[]>(`/api/purchase-orders/approved-prices?${query}`),
     enabled: !!supplierId && !!date && itemIds.length > 0,
     placeholderData: keepPreviousData,
   })
@@ -187,16 +194,16 @@ export function useSupplierPrices(supplierId: string | undefined, date: string |
  * @param uomId ĐVT dòng.
  * @param uomFactor Hệ số ĐVT dòng.
  * @param qty SL đặt.
- * @returns Đơn giá, % CK, thuế suất gợi ý; undefined nếu không có bậc nào.
+ * @returns Đơn giá, % CK, thuế suất, nguồn gợi ý; undefined nếu không có bậc nào.
  */
-export function pickSupplierPrice(tiers: ResolvedSupplierPrice[], uomId: string, uomFactor: number, qty: number) {
+export function pickSupplierPrice(tiers: ApprovedPoPrice[], uomId: string, uomFactor: number, qty: number) {
   const same = tiers.filter((t) => t.uomId === uomId && t.minQty <= qty).sort((a, b) => b.minQty - a.minQty)[0]
-  if (same) return { unitPrice: same.unitPrice, discountPct: same.discountPct, vatCode: same.vatCode, priceListNo: same.priceListNo }
+  if (same) return { unitPrice: same.unitPrice, discountPct: same.discountPct, vatCode: same.vatCode, priceListNo: same.priceListNo, source: same.source, contractNo: same.contractNo }
   const baseQty = qty * uomFactor
   const other = tiers.filter((t) => t.minQty * t.uomFactor <= baseQty).sort((a, b) => b.minQty * b.uomFactor - a.minQty * a.uomFactor)[0]
   if (!other) return undefined
   const unitPrice = Math.round((other.unitPrice / other.uomFactor) * uomFactor * 1_000_000) / 1_000_000
-  return { unitPrice, discountPct: other.discountPct, vatCode: other.vatCode, priceListNo: other.priceListNo }
+  return { unitPrice, discountPct: other.discountPct, vatCode: other.vatCode, priceListNo: other.priceListNo, source: other.source, contractNo: other.contractNo }
 }
 
 /** Giá bảng giá đang hiệu lực khi so sánh. */

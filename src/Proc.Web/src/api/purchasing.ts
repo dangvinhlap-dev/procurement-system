@@ -81,6 +81,10 @@ export interface PurchaseListItem {
   createdByName: string | null
   progress: number
   priority: PurchasePriority | null
+  /** PO: có dòng ngoài hợp đồng (null với PR). */
+  outOfContract: boolean | null
+  /** PO: có dòng lệch giá đã duyệt. */
+  priceException: boolean | null
 }
 
 /** Kết quả tìm PR/PO. */
@@ -176,6 +180,32 @@ export interface PurchaseOrderLine {
   sourcePrNo: string | null
   receivedQty: number
   remainingQty: number
+  /** Nguồn giá (design.md mục 18.10). */
+  priceSource: PriceSource
+  /** Đơn giá đã duyệt theo ĐVT dòng, trước CK; null khi ngoài hợp đồng. */
+  approvedUnitPrice: number | null
+  approvedDiscountPct: number | null
+  priceListNo: string | null
+  contractNo: string | null
+  sourceRfqNo: string | null
+  sourceRfqLineId: string | null
+  priceDeviationReason: string | null
+  /** Giá thực (sau CK) khác giá đã duyệt – cần lý do và chặng duyệt ngoại lệ. */
+  isPriceDeviation: boolean
+  /** Không có giá đã duyệt hoặc lệch giá đã duyệt. */
+  isOutOfContract: boolean
+}
+
+/** Nguồn giá của dòng PO: kết quả chọn thầu, hợp đồng nguyên tắc, bảng giá, ngoài hợp đồng; Unknown = PO trước bản 0.12.0. */
+export type PriceSource = 'Unknown' | 'Rfq' | 'Contract' | 'PriceList' | 'None'
+
+/** Nhãn nguồn giá. */
+export const priceSourceLabels: Record<PriceSource, string> = {
+  Unknown: '',
+  Rfq: 'Kết quả chọn thầu',
+  Contract: 'Hợp đồng',
+  PriceList: 'Bảng giá',
+  None: 'Ngoài hợp đồng',
 }
 
 /** Chi tiết PO. */
@@ -207,6 +237,10 @@ export interface PurchaseOrder {
   lines: PurchaseOrderLine[]
   approvals: ApprovalStep[]
   actions: PurchaseActions
+  /** Có dòng lệch giá đã duyệt – gửi duyệt phải qua thêm chặng ngoại lệ giá (loại POX). */
+  hasPriceException: boolean
+  /** Có dòng mua ngoài hợp đồng. */
+  isOutOfContract: boolean
 }
 
 /** Nội dung PO gửi lên. */
@@ -231,6 +265,8 @@ export interface SavePurchaseOrderInput {
     deliveryDate: string | null
     note: string | null
     sourcePrLineId: string | null
+    priceDeviationReason: string | null
+    sourceRfqLineId: string | null
   }[]
 }
 
@@ -271,7 +307,7 @@ export interface DeliveryTracking {
 }
 
 /** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
-export type ApprovalDocType = 'PR' | 'PO' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ'
+export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ'
 
 /** Một loại phiếu có duyệt. */
 export interface ApprovalType {
