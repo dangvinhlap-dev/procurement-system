@@ -175,6 +175,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phụ lục hợp đồng nguyên tắc (lát B4b – design.md mục 18.7).</summary>
     public DbSet<Proc.Domain.Purchasing.PurchaseContractAmendment> PurchaseContractAmendments => Set<Proc.Domain.Purchasing.PurchaseContractAmendment>();
 
+    /// <summary>Chiết khấu/tài trợ thực nhận theo hợp đồng (lát F4b – design.md mục 18.21).</summary>
+    public DbSet<Proc.Domain.Purchasing.ContractRebateReceipt> ContractRebateReceipts => Set<Proc.Domain.Purchasing.ContractRebateReceipt>();
+
     /// <summary>Phạm vi kho của người dùng.</summary>
     public DbSet<UserWarehouseScope> UserWarehouseScopes => Set<UserWarehouseScope>();
 

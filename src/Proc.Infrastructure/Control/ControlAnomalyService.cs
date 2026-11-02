@@ -9,6 +9,7 @@ using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 using Proc.Infrastructure.Reports;
 
 namespace Proc.Infrastructure.Control;
@@ -30,14 +31,17 @@ public sealed class ControlAnomalyService : IControlAnomalyService
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly IClock _clock;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext đã gắn phạm vi người dùng.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
-    public ControlAnomalyService(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="clock">Đồng hồ (hạn ghi nhận chiết khấu/tài trợ so với hôm nay).</param>
+    public ControlAnomalyService(ProcDbContext db, ICurrentUserScope scope, IClock clock)
     {
         _db = db;
         _scope = scope;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -61,6 +65,7 @@ public sealed class ControlAnomalyService : IControlAnomalyService
         items.AddRange(OffContract(lines, query.OffContractPct));
         items.AddRange(await ReceiptIssuesAsync(query, companies, cancellationToken));
         items.AddRange(await ConflictsAsync(query, companies, cancellationToken));
+        items.AddRange(await UnrecordedRebatesAsync(query, companies, cancellationToken));
 
         // Họ tên người liên quan: dịch vụ ghi Id người dùng vào UserName, đổi sang họ tên một lần ở đây.
         var userIds = items.Select(i => Guid.TryParse(i.UserName, out var id) ? id : (Guid?)null).OfType<Guid>().Distinct().ToList();
@@ -80,11 +85,48 @@ public sealed class ControlAnomalyService : IControlAnomalyService
             Summary(AnomalyCodes.InvoiceShortage, "Hóa đơn cao hơn tiền thực nhận dù có hàng nhận thiếu/không đạt (như báo cáo MATCH3, dung sai 0 đ)."),
             Summary(AnomalyCodes.BackdatedOrder, "Hàng nhận hoặc hóa đơn có trước ngày PO, hàng nhận trước khi PO được duyệt."),
             Summary(AnomalyCodes.ConflictOfInterest, "Người lập hoặc người duyệt PO có kê khai quan hệ lợi ích với NCC còn hiệu lực vào ngày PO."),
-            new(AnomalyCodes.UnrecordedRebate, 0, false, "Chưa đo – cần chiết khấu doanh số/tài trợ trên hợp đồng (lát F4)."),
+            Summary(AnomalyCodes.UnrecordedRebate,
+                $"Kỳ quyết toán chiết khấu/tài trợ của hợp đồng nguyên tắc quá hạn ghi nhận (cuối kỳ + {ContractRebateTracker.GraceDays} ngày) trong khoảng xem mà thực nhận ít hơn phải nhận."),
         };
         return new AnomalyResult(query.From, query.To, query.AllCompanies, summary, result);
 
         AnomalySummaryDto Summary(string code, string note) => new(code, result.Count(i => i.Code == code), true, note);
+    }
+
+    /// <summary>
+    /// Chiết khấu/tài trợ chưa ghi nhận (P10): kỳ quyết toán của cam kết trên hợp đồng nguyên tắc có hạn ghi nhận (cuối kỳ + 30 ngày) nằm
+    /// trong khoảng xem và đã qua, mà thực nhận ít hơn phải nhận – cùng số với tab Chiết khấu – tài trợ của hợp đồng (mục 18.21). Chưa ghi
+    /// nhận đồng nào → Cao; nhận thiếu → Trung bình. Tiền = còn thiếu. Ví dụ quý 3 phải nhận 25.000.000, đã nhận 10.000.000, hạn 30/10 →
+    /// dấu hiệu Trung bình, thiếu 15.000.000.
+    /// </summary>
+    private async Task<IEnumerable<AnomalyDto>> UnrecordedRebatesAsync(
+        AnomalyQuery query, Dictionary<Guid, string> companies, CancellationToken cancellationToken)
+    {
+        var today = _clock.TodayInVietnam();
+        // Kỳ có hạn trong khoảng xem thì cuối kỳ ≥ From − hạn; hợp đồng kết thúc trước đó không cần nạp.
+        var earliestEnd = query.From.AddDays(-ContractRebateTracker.GraceDays);
+        var source = query.AllCompanies ? _db.PurchaseContracts.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseContracts;
+        var contracts = await source.AsNoTracking().Include(c => c.Rebates)
+            .Where(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Terminated) && c.Rebates.Any()
+                        && (c.TerminatedOn ?? c.ValidTo) >= earliestEnd && c.ValidFrom <= query.To)
+            .ToListAsync(cancellationToken);
+        var rows = await ContractRebateTracker.TrackAsync(_db, contracts, query.AllCompanies, today, cancellationToken);
+        var supplierIds = contracts.Select(c => c.SupplierId).Distinct().ToList();
+        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => (s.Code, s.Name), cancellationToken);
+        return rows
+            .Where(r => r.Status == "Short" && r.Due >= query.From && r.Due <= query.To)
+            .Select(r =>
+            {
+                var supplier = suppliers.GetValueOrDefault(r.Contract.SupplierId);
+                return new AnomalyDto(
+                    AnomalyCodes.UnrecordedRebate, r.Received == 0 ? AnomalySeverities.High : AnomalySeverities.Medium, r.Contract.CompanyId,
+                    companies.GetValueOrDefault(r.Contract.CompanyId, string.Empty), r.Due, "CTR", r.Contract.Id, r.Contract.No, supplier.Code,
+                    supplier.Name, r.Contract.CreatedBy?.ToString(), r.Short,
+                    $"{r.Rebate.Description} – kỳ {r.From:dd/MM/yyyy}–{r.To:dd/MM/yyyy}: doanh số {Money(r.Purchase)}, phải nhận {Money(r.Expected)}, " +
+                    $"đã ghi nhận {Money(r.Received)}, hạn ghi nhận {r.Due:dd/MM/yyyy}.");
+            })
+            .ToList();
     }
 
     /// <summary>

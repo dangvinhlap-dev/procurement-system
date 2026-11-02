@@ -46,6 +46,9 @@ internal sealed class PurchaseContractConfiguration : IEntityTypeConfiguration<P
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(x => x.Departments).WithOne().HasForeignKey(d => d.ContractId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Departments).HasField("_departments").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Rebates).WithOne().HasForeignKey(r => r.ContractId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Rebates).HasField("_rebates").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Ignore(x => x.EndDate);
         builder.ToTable(t => t.HasCheckConstraint("CK_PurchaseContract_Validity", "\"ValidTo\" >= \"ValidFrom\""));
     }
 }
@@ -120,5 +123,42 @@ internal sealed class PurchaseContractAmendmentConfiguration : IEntityTypeConfig
         builder.HasOne<PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.OldPriceListId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.NewPriceListId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseContractRebate – cam kết chiết khấu doanh số/tài trợ (lát F4b, design.md mục 18.21).</summary>
+internal sealed class PurchaseContractRebateConfiguration : IEntityTypeConfiguration<PurchaseContractRebate>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseContractRebate> builder)
+    {
+        builder.ToTable("PurchaseContractRebate");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.ContractId, x.LineNo });
+        // % như DiscountPct numeric(9,4); tiền numeric(19,2) – CLAUDE.md mục 4.
+        builder.Property(x => x.Rate).HasPrecision(9, 4);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.MinPurchaseAmount).HasPrecision(19, 2);
+        builder.Property(x => x.Description).HasMaxLength(PurchaseContractRebate.DescriptionMaxLength).IsRequired();
+    }
+}
+
+/// <summary>Cấu hình bảng ContractRebateReceipt – chiết khấu/tài trợ thực nhận (lát F4b, design.md mục 18.21).</summary>
+internal sealed class ContractRebateReceiptConfiguration : IEntityTypeConfiguration<ContractRebateReceipt>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ContractRebateReceipt> builder)
+    {
+        builder.ToTable("ContractRebateReceipt");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.ContractId, x.RebateId, x.PeriodFrom });
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.RefNo).HasMaxLength(100);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+        // Cam kết không xóa được khi đã có thực nhận (hợp đồng chỉ sửa cam kết khi nháp, lúc đó chưa ghi nhận được).
+        builder.HasOne<PurchaseContractRebate>().WithMany().HasForeignKey(x => x.RebateId).OnDelete(DeleteBehavior.Restrict);
     }
 }

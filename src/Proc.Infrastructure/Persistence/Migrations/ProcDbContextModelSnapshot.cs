@@ -2777,6 +2777,71 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("ApprovalStep", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ContractRebateReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Form")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("PeriodFrom")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RebateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ReceivedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RefNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("RebateId");
+
+                    b.HasIndex("ContractId", "RebateId", "PeriodFrom");
+
+                    b.ToTable("ContractRebateReceipt", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContract", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3103,6 +3168,50 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PurchaseContractLine", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContractRebate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("MinPurchaseAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<int>("Period")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Rate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractId", "LineNo");
+
+                    b.ToTable("PurchaseContractRebate", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrder", b =>
@@ -4934,6 +5043,27 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ContractRebateReceipt", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContractRebate", null)
+                        .WithMany()
+                        .HasForeignKey("RebateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContract", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -5015,6 +5145,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UomId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseContractRebate", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
+                        .WithMany("Rebates")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -5314,6 +5453,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("Departments");
 
                     b.Navigation("Lines");
+
+                    b.Navigation("Rebates");
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrder", b =>

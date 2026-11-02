@@ -118,8 +118,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có lát đang dở. Lát kế tiếp: **F4b** (chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận – P10; dấu hiệu KSNB
-  "Chiết khấu/tài trợ chưa ghi nhận" hiện "Chưa đo"), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu.
+- **F4b (đang làm, nhánh `feature/f4b-chiet-khau-tai-tro`): chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận (P10)** –
+  design.md mục 18.21.
+  - Bước 1 (xong 02/11/2026): `PurchaseContractRebate` (cam kết: loại, % hoặc số tiền cố định, doanh số tối thiểu, kỳ Quý/Năm/Cả HĐ – sửa khi
+    Nháp qua `SaveContractRequest.Rebates`, null = giữ nguyên), `ContractRebateReceipt` (thực nhận, hủy có lý do), `ContractRebateTracker`
+    (doanh số = PO Đã duyệt/Đã đóng công ty × NCC trong kỳ; tình trạng NotDue/Waiting/Received/NotReached/Short, hạn 30 ngày), API
+    `GET /api/contracts/{id}/rebates`, `POST .../rebate-receipts`, `POST /api/contract-rebate-receipts/{id}/cancel`; migration
+    `V0_13_0_ChietKhauTaiTroHopDong`. Dấu hiệu KSNB "Chiết khấu/tài trợ chưa ghi nhận" đã đo (ScreenCode `CTR`).
+    Test: domain `ContractRebateTests`, tích hợp `ContractRebateTests`, sửa `ControlAnomalyTests`. `dotnet test` 505 qua.
+  - Bước 2 (tiếp theo): giao diện tab CHIẾT KHẤU – TÀI TRỢ trên hợp đồng (lưới cam kết, lưới theo dõi kỳ, hộp thoại ghi nhận/hủy), ANOM mở
+    hợp đồng (`controlRefPath` thêm `CTR`), e2e. Sau đó merge, có thể phát hành 0.13.0 khi người dùng yêu cầu.
 - **F4a (xong, đã merge `main` 02/11/2026): đánh giá NCC định kỳ theo quý (N5)** – design.md mục 18.20.
   - `SupplierReview` (số DGN, 6 tiêu chí 1–5, kết luận, số liệu SUPEVAL/QCDEV chốt lúc hoàn thành, Nháp → Hoàn thành/Hủy), quyền
     `MasterData.SupplierReview.View/Manage` (vai trò mẫu; vai trò đã tạo trước phải gán tay), API `/api/supplier-reviews`, migration

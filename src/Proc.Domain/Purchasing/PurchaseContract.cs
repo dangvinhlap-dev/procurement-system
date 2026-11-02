@@ -114,6 +114,7 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
 {
     private readonly List<PurchaseContractLine> _lines = [];
     private readonly List<PurchaseContractDepartment> _departments = [];
+    private readonly List<PurchaseContractRebate> _rebates = [];
 
     private PurchaseContract()
     {
@@ -220,6 +221,12 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
     /// <summary>Bộ phận được phép đặt hàng theo hợp đồng (trống = mọi bộ phận của công ty).</summary>
     public IReadOnlyList<PurchaseContractDepartment> Departments => _departments;
 
+    /// <summary>Cam kết chiết khấu doanh số/tài trợ (lát F4b – design.md mục 18.21).</summary>
+    public IReadOnlyList<PurchaseContractRebate> Rebates => _rebates;
+
+    /// <summary>Ngày kết thúc thực tế: ngày chấm dứt nếu đã chấm dứt, không thì ngày hết hiệu lực – giới hạn các kỳ quyết toán chiết khấu.</summary>
+    public DateOnly EndDate => TerminatedOn ?? ValidTo;
+
     /// <summary>Lập hợp đồng nháp.</summary>
     /// <exception cref="BusinessRuleException">Khi thiếu công ty, số hoặc đầu hợp đồng sai.</exception>
     public static PurchaseContract Create(Guid companyId, string no, ContractHeader header)
@@ -287,6 +294,38 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         if (departmentIds.Distinct().Count() != departmentIds.Count) throw new BusinessRuleException("Mỗi bộ phận chỉ chọn một lần.");
         _departments.RemoveAll(d => !departmentIds.Contains(d.DepartmentId));
         foreach (var id in departmentIds.Where(id => _departments.All(d => d.DepartmentId != id))) _departments.Add(new PurchaseContractDepartment(Id, id));
+    }
+
+    /// <summary>
+    /// Thay toàn bộ cam kết chiết khấu doanh số/tài trợ (nháp) – là nội dung hợp đồng nên duyệt cùng hợp đồng (P10 đề xuất Ban CUVT).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp, không tìm thấy cam kết cần sửa hoặc dữ liệu sai.</exception>
+    public void SetRebates(IReadOnlyList<ContractRebateData> rebates)
+    {
+        ArgumentNullException.ThrowIfNull(rebates);
+        EnsureDraft();
+        var keep = new List<PurchaseContractRebate>();
+        var lineNo = 0;
+        foreach (var data in rebates)
+        {
+            lineNo++;
+            PurchaseContractRebate rebate;
+            if (data.Id is { } id)
+            {
+                rebate = _rebates.FirstOrDefault(r => r.Id == id)
+                    ?? throw new BusinessRuleException($"Cam kết {lineNo}: không tìm thấy cam kết cần sửa – hãy tải lại hợp đồng.");
+            }
+            else
+            {
+                rebate = new PurchaseContractRebate(Id);
+                _rebates.Add(rebate);
+            }
+
+            rebate.Set(lineNo, data);
+            keep.Add(rebate);
+        }
+
+        _rebates.RemoveAll(r => !keep.Contains(r));
     }
 
     /// <summary>Gửi duyệt: Nháp → Chờ duyệt, tăng lượt, xóa lý do từ chối cũ.</summary>
