@@ -21,6 +21,9 @@ function tone(r: SoleSourceListItem): 'success' | 'warning' | 'error' | 'neutral
 
 const columns: GridColumn<SoleSourceListItem>[] = [
   { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  {
+    key: 'status', title: 'Trạng thái', width: 170, type: 'status', value: (r) => soleSourceStateLabel(r), tone, groupable: true,
+  },
   { key: 'supplierCode', title: 'Mã NCC', width: 110, value: (r) => r.supplierCode },
   { key: 'supplierName', title: 'Tên NCC', width: 220, value: (r) => r.supplierName, groupable: true },
   { key: 'itemCode', title: 'Mã hàng', width: 120, value: (r) => r.itemCode },
@@ -28,9 +31,6 @@ const columns: GridColumn<SoleSourceListItem>[] = [
   { key: 'from', title: 'Hiệu lực từ', width: 100, type: 'date', value: (r) => r.validFrom },
   { key: 'review', title: 'Hạn đánh giá lại', width: 120, type: 'date', value: (r) => r.reviewDate },
   { key: 'days', title: 'Còn (ngày)', width: 90, type: 'quantity', value: (r) => r.daysToReview },
-  {
-    key: 'status', title: 'Trạng thái', width: 170, type: 'status', value: (r) => soleSourceStateLabel(r), tone, groupable: true,
-  },
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
 

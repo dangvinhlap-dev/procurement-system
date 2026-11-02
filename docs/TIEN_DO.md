@@ -92,7 +92,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `dotnet test` 461/461 qua.
   - [x] Bước 3: giao diện màn hình NDQ (Giá và NCC → NCC độc quyền: `SoleSourceListPage` + `SoleSourceDrawer`, mở bằng `?mo=<id>`;
     Việc cần làm/thông báo mở đúng phiếu; tab Lịch sử duyệt, Đính kèm). `tsc`, `oxlint`, `npm run build` qua.
-  - [ ] Bước 4: e2e Playwright + ảnh chụp. Bước 5: design.md mục 18.9, merge main.
+  - [x] Bước 4: e2e `sole-sources.spec.ts` (ảnh `sole-source-list.png`, `sole-source-drawer.png`); tài khoản mẫu Testing
+    `duyetdq.tct` (vai trò DUYETDQ); `document-numbering.spec.ts` đếm 13 loại chứng từ. Playwright cả bộ 75/76 + chạy lại 1/1 qua.
+  - [ ] Bước 5: design.md mục 18.9, merge main.
   Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
 

@@ -198,7 +198,9 @@ function SoleSourceForm({ data, onClose, onOpen }: { data: SoleSource | null; on
               ? `Đang hiệu lực đến ${formatDate(data.reviewDate)} – gửi RFQ mặt hàng này cho NCC ${data.supplierCode} không cần giải trình mời thiếu NCC.`
               : data.rejectReason
                 ? `Bị từ chối: ${data.rejectReason}`
-                : `Trạng thái: ${soleSourceStateLabel(data)}.`
+                : data.status === 'Draft'
+                  ? 'Nháp – kiểm tra giải trình, đính kèm văn bản xác nhận độc quyền (nếu có) rồi bấm "Gửi duyệt".'
+                  : `Trạng thái: ${soleSourceStateLabel(data)}.`
       }
     />
   )
