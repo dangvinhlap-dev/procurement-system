@@ -369,7 +369,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
 | Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
 | Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
-| PR: bộ phận **chọn từ danh mục bộ phận của công ty, bắt buộc** (mục 18.5; trước lát A2 ghi dạng chữ); dòng bắt buộc có mã hàng (chưa hỗ trợ "hàng mới chưa có mã"); **đơn giá tham khảo do server lấy** = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ, theo ĐVT cơ sở × hệ số ĐVT), chưa từng nhập thì 0; tồn hiện tại chỉ để xem | Mục 10.2 |
+| PR: bộ phận **chọn từ danh mục bộ phận của công ty, bắt buộc** (mục 18.5; trước lát A2 ghi dạng chữ); dòng có mã hàng; hàng chưa có trong danh mục ghi ở danh sách **hàng mới chưa có mã** (lát C2b, mục 18.12) – không lên PO/RFQ cho tới khi gắn mã; **đơn giá tham khảo do server lấy** = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ, theo ĐVT cơ sở × hệ số ĐVT), chưa từng nhập thì 0; tồn hiện tại chỉ để xem | Mục 10.2 |
 | PO: NCC Đã duyệt và đang áp dụng tại công ty (kiểm tra lúc lưu và lúc gửi duyệt); chỉ VND; đơn giá mặc định từ PR, **giá đã duyệt** (kết quả chọn thầu/hợp đồng/bảng giá) áp bằng nút – sửa được nhưng lệch giá phải có lý do và qua chặng duyệt ngoại lệ (lát C1, mục 18.10); chiết khấu %, VAT; dòng có thể lấy từ PR đã duyệt – tổng SL đặt trên các PO chưa hủy không vượt SL đề nghị. In PDF đã làm (mục 10.10); chưa gửi email cho NCC | Mục 10.3 |
 | Phiếu nhập mua theo PO: một phiếu theo một PO đã duyệt, cùng NCC; mỗi dòng trỏ một dòng PO (`PurchaseOrderLineId`), mặt hàng và ĐVT theo dòng PO, **đơn giá = giá thực mua sau chiết khấu**, thuế suất theo PO (server gán). SL nhận (đã ghi sổ + phiếu này) ≤ SL đặt × (1 + dung sai %) – dung sai đặt trên PO, mặc định 0%, tối đa 20%. Kiểm tra lúc lưu và lúc ghi sổ | Mục 6.1, 6.2 bước 4 |
 | SL đã nhận của PO **tính từ phiếu nhập đã ghi sổ** (không lưu riêng); ghi sổ làm mọi dòng nhận đủ thì PO Đã nhận đủ, bỏ ghi sổ làm thiếu lại thì PO về Đã duyệt | Bỏ ghi sổ không làm lệch số |
@@ -1336,6 +1336,21 @@ Nguồn: đề xuất Ban CUVT V4 (mua khẩn cấp: duyệt theo cơ chế kh�
 
 Migration `V0_13_0_MuaKhanCap` (cột `PurchaseType` – PO cũ nhận 1 = mua thường, `EmergencyReason`, `DocsDueDate`, `DocsCompletedAt`,
 `DocsCompletedBy`, `DocsCompletionNote` trên `PurchaseOrder` – `Down()` xóa các cột, mất thông tin mua khẩn và xác nhận hồ sơ).
+
+### 18.12 Hàng ngoài danh mục trên PR (lát C2b, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT V3 (hàng chưa có trong danh mục → chuyển nhóm Đàm phán tìm nguồn trước khi đặt).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| PR có tab **Hàng mới chưa có mã**: mỗi dòng mô tả (bắt buộc, ≤ 500), quy cách (≤ 1.000), ĐVT (danh mục ĐVT), SL > 0, **giá dự kiến** do người lập ước (≥ 0; chưa có lịch sử giá), ngày cần, ghi chú; tối đa 100 dòng. PR chỉ gồm hàng mới vẫn hợp lệ. Tổng PR (xét ngưỡng duyệt) = dòng có mã + hàng mới chưa gắn mã. Người lập PR đọc được danh mục ĐVT | Nhu cầu hàng mới cũng phải được duyệt như hàng có mã |
+| Hàng mới **không lên PO/RFQ** (không có trong dòng PR mở để lấy) cho tới khi gắn mã | Không đặt hàng khi chưa xác định mặt hàng, NCC (V3) |
+| PR **đã duyệt**: nút **Tìm nguồn** (quyền `Sourcing.Rfq.Manage` – nhóm Đàm phán) lập phiếu tìm nguồn (TIMNGUON) với mô tả, quy cách, SL, hạn = ngày cần, ghi chú "Từ đề nghị PR-… – hàng mới dòng n: SL ĐVT"; mỗi dòng một phiếu, dòng hiện số phiếu (mở được) | Chuyển nhóm Đàm phán tìm nguồn |
+| Có mã hàng (sau khi tìm nguồn, đã tạo mặt hàng): nút **Gắn mã** (quyền lập PO hoặc lập PR) chọn mặt hàng trong phạm vi nhóm hàng, đang dùng; ĐVT của dòng phải là ĐVT cơ sở/quy đổi của mặt hàng. Gắn mã **sinh dòng PR có mã** cùng SL, ĐVT, giá dự kiến, ngày cần (ghi chú = ghi chú hoặc mô tả) – lên PO/RFQ như dòng thường. SL đã được duyệt nên không duyệt lại; tổng PR không đổi (dòng đã gắn không đếm hai lần). Mỗi dòng gắn một lần | Nối nhu cầu đã duyệt với mã hàng mà không phải lập PR mới |
+| Chưa làm: in PR (PDF) chưa in hàng mới; phiếu tìm nguồn chưa hiện ngược PR nguồn (chỉ ghi chú) | Làm khi có yêu cầu |
+
+Migration `V0_13_0_HangMoiChuaCoMa` (bảng `PurchaseRequestNewItem` – `Down()` xóa bảng, mất hàng mới chưa có mã đã ghi trên PR; dòng có mã
+sinh ra khi gắn mã vẫn giữ).
 
 ## Nguồn tham khảo
 

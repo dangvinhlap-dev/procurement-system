@@ -145,6 +145,31 @@ export interface PurchaseRequest {
   lines: PurchaseRequestLine[]
   approvals: ApprovalStep[]
   actions: PurchaseActions
+  /** Hàng mới chưa có mã (design.md mục 18.12). */
+  newItems: PurchaseRequestNewItem[]
+  /** PR đã duyệt còn hàng mới chưa gắn mã và người dùng lập được phiếu tìm nguồn. */
+  canCreateSourcing: boolean
+  /** PR đã duyệt còn hàng mới chưa gắn mã và người dùng gắn mã được. */
+  canLinkItem: boolean
+}
+
+/** Hàng mới chưa có mã trên PR: không lên PO/RFQ cho tới khi gắn mã hàng. */
+export interface PurchaseRequestNewItem {
+  id: string
+  lineNo: number
+  description: string
+  specification: string | null
+  uomId: string
+  uomCode: string
+  qty: number
+  estPrice: number
+  amount: number
+  neededDate: string | null
+  note: string | null
+  sourcingRequestId: string | null
+  sourcingNo: string | null
+  itemId: string | null
+  itemCode: string | null
 }
 
 /** Nội dung PR gửi lên (đơn giá tham khảo do server lấy). */
@@ -157,6 +182,16 @@ export interface SavePurchaseRequestInput {
   priority: PurchasePriority
   note: string | null
   lines: { id: string | null; itemId: string; uomId: string; qty: number; suggestedSupplierId: string | null; neededDate: string | null; note: string | null }[]
+  newItems: {
+    id: string | null
+    description: string
+    specification: string | null
+    uomId: string
+    qty: number
+    estPrice: number
+    neededDate: string | null
+    note: string | null
+  }[]
 }
 
 /** Dòng PO. */
@@ -418,6 +453,29 @@ export function usePurchaseOrder(id: string | null) {
     queryFn: () => apiFetch<PurchaseOrder>(`/api/purchase-orders/${id}`),
     enabled: id !== null,
   })
+}
+
+/**
+ * Xử lý hàng mới chưa có mã của PR đã duyệt (design.md mục 18.12): lập phiếu tìm nguồn, gắn mã hàng. Xong tải lại dữ liệu mua hàng.
+ */
+export function usePrNewItemActions() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
+    void queryClient.invalidateQueries({ queryKey: ['sourcing'] })
+  }
+  return {
+    createSourcing: useMutation({
+      mutationFn: ({ requestId, newItemId }: { requestId: string; newItemId: string }) =>
+        apiFetch<PurchaseRequest>(`/api/purchase-requests/${requestId}/new-items/${newItemId}/sourcing`, { method: 'POST' }),
+      onSuccess,
+    }),
+    linkItem: useMutation({
+      mutationFn: ({ requestId, newItemId, itemId }: { requestId: string; newItemId: string; itemId: string }) =>
+        apiFetch<PurchaseRequest>(`/api/purchase-requests/${requestId}/new-items/${newItemId}/link-item`, { method: 'POST', body: { itemId } }),
+      onSuccess,
+    }),
+  }
 }
 
 /** Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11); xong tải lại dữ liệu mua hàng. */
