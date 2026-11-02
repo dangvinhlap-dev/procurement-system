@@ -55,6 +55,45 @@ public sealed record PurchaseOrderHeader(
     string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note, Guid? DepartmentId = null,
     PurchaseType PurchaseType = PurchaseType.Normal, string? EmergencyReason = null, DateOnly? DocsDueDate = null);
 
+/// <summary>Loại yêu cầu tính SLA mua hàng (design.md mục 18.13 – đề xuất Ban CUVT V6).</summary>
+public enum SlaCategory
+{
+    /// <summary>Hàng đã có hợp đồng/bảng giá hiệu lực.</summary>
+    Priced = 1,
+
+    /// <summary>Hàng chưa có NCC được duyệt (phải tìm nguồn).</summary>
+    Sourcing = 2,
+
+    /// <summary>Hàng khẩn (PR mức ưu tiên Khẩn).</summary>
+    Urgent = 3,
+}
+
+/// <summary>Tính hạn SLA theo ngày làm việc (design.md mục 18.13).</summary>
+public static class PurchaseSla
+{
+    /// <summary>
+    /// Ngày đến hạn = ngày bắt đầu cộng N ngày làm việc (thứ 2–6; chưa có lịch nghỉ lễ). Bắt đầu vào thứ 7/CN thì tính từ thứ 2 kế tiếp.
+    /// Ví dụ PR duyệt thứ 6 06/11/2026, SLA 1 ngày → hạn thứ 2 09/11; SLA 0 → hạn thứ 6 06/11; duyệt thứ 7 07/11, SLA 0 → hạn thứ 2 09/11.
+    /// </summary>
+    /// <param name="start">Ngày PR đủ duyệt (giờ Việt Nam).</param>
+    /// <param name="workingDays">Số ngày làm việc (≥ 0).</param>
+    /// <returns>Ngày đến hạn.</returns>
+    public static DateOnly DueDate(DateOnly start, int workingDays)
+    {
+        var day = start;
+        while (!IsWorkingDay(day)) day = day.AddDays(1);
+        for (var added = 0; added < workingDays;)
+        {
+            day = day.AddDays(1);
+            if (IsWorkingDay(day)) added++;
+        }
+
+        return day;
+    }
+
+    private static bool IsWorkingDay(DateOnly day) => day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+}
+
 /// <summary>Loại mua của PO (design.md mục 18.11 – đề xuất Ban CUVT V4).</summary>
 public enum PurchaseType
 {

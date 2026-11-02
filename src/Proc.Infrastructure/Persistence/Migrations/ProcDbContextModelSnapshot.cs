@@ -1862,6 +1862,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(3);
 
+                    b.Property<int>("SlaPricedDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("SlaSourcingDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5);
+
+                    b.Property<int>("SlaUrgentDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 

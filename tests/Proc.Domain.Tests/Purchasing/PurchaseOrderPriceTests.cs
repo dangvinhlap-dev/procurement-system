@@ -118,6 +118,25 @@ public class PurchaseOrderPriceTests
     }
 
     [Fact]
+    public void HanSla_TinhNgayLamViec_BoQuaThu7ChuNhat()
+    {
+        var friday = new DateOnly(2026, 11, 6);
+        Assert.Equal(friday, PurchaseSla.DueDate(friday, 0));
+        Assert.Equal(new DateOnly(2026, 11, 9), PurchaseSla.DueDate(friday, 1));
+        Assert.Equal(new DateOnly(2026, 11, 13), PurchaseSla.DueDate(friday, 5));
+        Assert.Equal(new DateOnly(2026, 11, 9), PurchaseSla.DueDate(new DateOnly(2026, 11, 7), 0));
+        Assert.Equal(new DateOnly(2026, 11, 10), PurchaseSla.DueDate(new DateOnly(2026, 11, 8), 1));
+
+        var parameter = Proc.Domain.Organization.CompanyParameter.Create(Company);
+        Assert.Equal((1, 5, 1), (parameter.SlaPricedDays, parameter.SlaSourcingDays, parameter.SlaUrgentDays));
+        parameter.ChangeSlaDays(SlaCategory.Sourcing, 3);
+        Assert.Equal(3, parameter.SlaSourcingDays);
+        Assert.Throws<BusinessRuleException>(() => parameter.ChangeSlaDays(SlaCategory.Priced, 61));
+        parameter.ChangeSlaDays(SlaCategory.Sourcing, null);
+        Assert.Equal(5, parameter.SlaSourcingDays);
+    }
+
+    [Fact]
     public void CapDuyetNgoaiLe_LuonItNhatMotCap()
     {
         var role1 = Guid.CreateVersion7();

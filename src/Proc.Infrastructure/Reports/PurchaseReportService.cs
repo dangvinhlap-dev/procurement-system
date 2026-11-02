@@ -41,6 +41,101 @@ public sealed class PurchaseReportService : IPurchaseReportService
     }
 
     /// <inheritdoc />
+    public async Task<PurchaseSlaResult> GetPurchaseSlaAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        if (to < from) throw new BusinessRuleException("Đến ngày phải sau từ ngày.");
+        if (to.DayNumber - from.DayNumber > 366) throw new BusinessRuleException("Khoảng ngày tối đa 1 năm.");
+        var today = _clock.TodayInVietnam();
+        var parameter = await _db.CompanyParameters.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var slaDays = new Dictionary<SlaCategory, int>
+        {
+            [SlaCategory.Priced] = parameter?.SlaPricedDays ?? CompanyParameter.DefaultSlaPricedDays,
+            [SlaCategory.Sourcing] = parameter?.SlaSourcingDays ?? CompanyParameter.DefaultSlaSourcingDays,
+            [SlaCategory.Urgent] = parameter?.SlaUrgentDays ?? CompanyParameter.DefaultSlaUrgentDays,
+        };
+
+        // Lấy rộng một ngày mỗi đầu rồi lọc theo ngày giờ Việt Nam (ApprovedAt lưu UTC).
+        var fromUtc = new DateTimeOffset(from.AddDays(-1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var toUtc = new DateTimeOffset(to.AddDays(2).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var requests = (await _db.PurchaseRequests.AsNoTracking().Include(r => r.Lines).Include(r => r.NewItems).AsSplitQuery()
+                .Where(r => (r.Status == ApprovalDocumentStatus.Approved || r.Status == ApprovalDocumentStatus.Closed)
+                            && r.ApprovedAt != null && r.ApprovedAt >= fromUtc && r.ApprovedAt < toUtc)
+                .ToListAsync(cancellationToken))
+            .Select(r => (Request: r, Approved: DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(r.ApprovedAt!.Value, VietnamTime.Zone).DateTime)))
+            .Where(x => x.Approved >= from && x.Approved <= to)
+            .ToList();
+
+        var itemIds = requests.SelectMany(x => x.Request.Lines).Select(l => l.ItemId).Distinct().ToList();
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => new { i.Code, i.Name }, cancellationToken);
+        var departmentIds = requests.Select(x => x.Request.DepartmentId).OfType<Guid>().Distinct().ToList();
+        var departments = await _db.Departments.AsNoTracking().Where(d => departmentIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
+        // Hàng "đã có hợp đồng/bảng giá": có trong bảng giá NCC hiệu lực vào ngày PR duyệt mà công ty dùng được (bảng của công ty hoặc toàn
+        // tập đoàn – hợp đồng nguyên tắc luôn gắn một bảng giá). Bỏ filter công ty cho bảng toàn tập đoàn nên lọc công ty tường minh.
+        var priced = await (
+                from p in _db.SupplierPriceLists.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+                where (p.CompanyId == companyId || p.IsGroupWide)
+                      && (p.Status == Proc.Domain.Pricing.PriceListStatus.Active || p.Status == Proc.Domain.Pricing.PriceListStatus.Inactive)
+                      && p.ActivatedAt != null
+                from l in p.Lines
+                where itemIds.Contains(l.ItemId)
+                select new { l.ItemId, p.ValidFrom, p.ValidTo, p.ActivatedAt })
+            .ToListAsync(cancellationToken);
+        var lineIds = requests.SelectMany(x => x.Request.Lines).Select(l => l.Id).ToList();
+        var orders = (await (
+                    from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                    join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                    where ol.SourcePrLineId != null && lineIds.Contains(ol.SourcePrLineId.Value)
+                          && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.ApprovedAt != null
+                    select new { PrLineId = ol.SourcePrLineId!.Value, o.Id, o.No, ApprovedAt = o.ApprovedAt!.Value })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.PrLineId)
+            .ToDictionary(g => g.Key, g => g.MinBy(x => x.ApprovedAt)!);
+
+        var rows = new List<PurchaseSlaRowDto>();
+        foreach (var (pr, approved) in requests)
+        {
+            var department = pr.DepartmentId is { } d ? departments.GetValueOrDefault(d) : pr.LegacyDepartment;
+            var urgent = pr.Priority == PurchasePriority.Urgent;
+            foreach (var line in pr.Lines)
+            {
+                var hasPrice = priced.Any(p => p.ItemId == line.ItemId && p.ValidFrom <= approved && (p.ValidTo == null || p.ValidTo >= approved)
+                                               && p.ActivatedAt <= pr.ApprovedAt);
+                var category = urgent ? SlaCategory.Urgent : hasPrice ? SlaCategory.Priced : SlaCategory.Sourcing;
+                var item = items.GetValueOrDefault(line.ItemId);
+                orders.TryGetValue(line.Id, out var order);
+                rows.Add(Row(pr, approved, department, line.LineNo, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", category, order?.Id, order?.No,
+                    order is null ? null : DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(order.ApprovedAt, VietnamTime.Zone).DateTime)));
+            }
+
+            // Hàng mới chưa gắn mã (mục 18.12): chưa có NCC được duyệt, chưa thể có PO.
+            foreach (var n in pr.NewItems.Where(n => n.LinkedLineId is null))
+                rows.Add(Row(pr, approved, department, n.LineNo, "(hàng mới)", n.Description, urgent ? SlaCategory.Urgent : SlaCategory.Sourcing, null, null, null));
+        }
+
+        var onTime = rows.Count(r => r.Status == "OnTime");
+        var late = rows.Count(r => r.Status == "Late");
+        var overdue = rows.Count(r => r.Status == "Overdue");
+        var measured = onTime + late + overdue;
+        return new PurchaseSlaResult(
+            rows.OrderBy(r => r.DueDate).ThenBy(r => r.RequestNo).ThenBy(r => r.LineNo).ToList(),
+            onTime, late, rows.Count(r => r.Status == "InProgress"), overdue,
+            measured == 0 ? null : Math.Round(onTime * 100m / measured, 1, MidpointRounding.AwayFromZero));
+
+        PurchaseSlaRowDto Row(
+            PurchaseRequest pr, DateOnly approved, string? department, int lineNo, string code, string name, SlaCategory category, Guid? orderId,
+            string? orderNo, DateOnly? orderDate)
+        {
+            var days = slaDays[category];
+            var due = PurchaseSla.DueDate(approved, days);
+            // Đúng hạn: PO được duyệt chậm nhất vào ngày đến hạn. Chưa có PO: còn hạn là đang xử lý, qua hạn là quá hạn.
+            var status = orderDate is { } od ? (od <= due ? "OnTime" : "Late") : today <= due ? "InProgress" : "Overdue";
+            return new PurchaseSlaRowDto(pr.Id, pr.No, approved, department, lineNo, code, name, category.ToString(), days, due, orderId, orderNo,
+                orderDate, status);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<PendingRequestLineDto>> GetPendingRequestsAsync(CancellationToken cancellationToken)
     {
         _scope.RequireCompany();

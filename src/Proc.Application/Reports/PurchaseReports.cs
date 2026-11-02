@@ -23,6 +23,21 @@ public sealed record PendingRequestLineDto(
     Guid ItemId, string ItemCode, string ItemName, string UomCode, decimal Qty, decimal OrderedQty, decimal RemainingQty, decimal EstAmount,
     DateOnly? NeededDate, int OverdueDays);
 
+/// <summary>Một dòng báo cáo SLA mua hàng (design.md mục 18.13).</summary>
+/// <param name="Category">Priced (đã có hợp đồng/bảng giá), Sourcing (chưa có NCC được duyệt), Urgent (PR khẩn).</param>
+/// <param name="SlaDays">Số ngày làm việc theo tham số công ty.</param>
+/// <param name="DueDate">Hạn = ngày PR duyệt + SlaDays ngày làm việc.</param>
+/// <param name="OrderNo">PO đầu tiên được duyệt có dòng lấy từ dòng PR này.</param>
+/// <param name="Status">OnTime, Late, InProgress (chưa có PO, còn hạn), Overdue (chưa có PO, quá hạn).</param>
+public sealed record PurchaseSlaRowDto(
+    Guid RequestId, string RequestNo, DateOnly ApprovedDate, string? Department, int LineNo, string ItemCode, string ItemName, string Category,
+    int SlaDays, DateOnly DueDate, Guid? OrderId, string? OrderNo, DateOnly? OrderApprovedDate, string Status);
+
+/// <summary>Báo cáo SLA mua hàng: dòng và tổng hợp.</summary>
+/// <param name="OnTimePct">% đúng SLA = đúng hạn / (đúng hạn + trễ + quá hạn), 1 số lẻ; null khi chưa có dòng nào đến hạn hoặc có PO.</param>
+public sealed record PurchaseSlaResult(
+    IReadOnlyList<PurchaseSlaRowDto> Rows, int OnTime, int Late, int InProgress, int Overdue, decimal? OnTimePct);
+
 /// <summary>Cách nhóm báo cáo mua hàng.</summary>
 public static class PurchaseSpendGroups
 {
@@ -148,4 +163,14 @@ public interface IPurchaseReportService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<IReadOnlyList<SourcingSavingRowDto>> GetSourcingSavingsAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// SLA mua hàng (design.md mục 18.13): mỗi dòng PR (cả hàng mới chưa gắn mã) của PR được duyệt trong khoảng ngày tại công ty đang làm
+    /// việc – loại yêu cầu, hạn SLA, PO đầu tiên được duyệt, trạng thái đúng hạn/trễ/đang xử lý/quá hạn; tỷ lệ đúng SLA.
+    /// </summary>
+    /// <param name="from">Từ ngày PR được duyệt.</param>
+    /// <param name="to">Đến ngày PR được duyệt.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Dòng và tổng hợp.</returns>
+    Task<PurchaseSlaResult> GetPurchaseSlaAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
 }

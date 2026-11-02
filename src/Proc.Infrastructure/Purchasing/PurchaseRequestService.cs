@@ -275,6 +275,25 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             ?? throw new NotFoundException("Không tìm thấy đề nghị mua hàng.");
     }
 
+    /// <summary>
+    /// SL đang đặt (ĐVT cơ sở) theo mặt hàng tại công ty – design.md mục 18.13 (V2: kiểm tra hàng đang đặt trước khi đề nghị): tổng trên
+    /// các PO đã duyệt còn chờ nhận (chưa nhận đủ) của SL đặt − SL đã nhận theo phiếu nhập đã ghi sổ, mỗi dòng không âm.
+    /// Ví dụ PO 100 cái đã nhận 30 → đang đặt 70.
+    /// </summary>
+    private async Task<Dictionary<Guid, decimal>> OnOrderBaseByItemAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
+    {
+        if (itemIds.Count == 0) return [];
+        var lines = await (
+                from l in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on l.OrderId equals o.Id
+                where o.Status == ApprovalDocumentStatus.Approved && itemIds.Contains(l.ItemId)
+                select new { l.Id, l.ItemId, l.BaseQty })
+            .ToListAsync(cancellationToken);
+        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        return lines.GroupBy(l => l.ItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(l => Math.Max(0, l.BaseQty - received.GetValueOrDefault(l.Id))));
+    }
+
     /// <summary>Hàng mới chưa có mã gửi lên: ĐVT phải có trong danh mục ĐVT.</summary>
     /// <exception cref="NotFoundException">Khi ĐVT không có.</exception>
     private async Task<List<PurchaseRequestNewItemData>> ResolveNewItemsAsync(
@@ -310,6 +329,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var onHand = await _db.StockOnHand.AsNoTracking().Where(s => itemIds.Contains(s.ItemId))
             .GroupBy(s => s.ItemId).Select(g => new { g.Key, Qty = g.Sum(s => s.Qty) }).ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
         var ordered = await OrderedBaseByLineAsync(pr.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        var onOrder = await OnOrderBaseByItemAsync(itemIds, cancellationToken);
         var department = pr.DepartmentId is { } departmentId
             ? await _db.Departments.Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -323,7 +343,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.EstPrice, l.Amount,
                 l.SuggestedSupplierId, l.SuggestedSupplierId is { } s ? suppliers.GetValueOrDefault(s) : null, l.NeededDate, l.Note,
-                Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), onHand.GetValueOrDefault(l.ItemId));
+                Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), onHand.GetValueOrDefault(l.ItemId),
+                onOrder.GetValueOrDefault(l.ItemId));
         }).ToList();
 
         var sourcingIds = pr.NewItems.Select(n => n.SourcingRequestId).OfType<Guid>().ToList();

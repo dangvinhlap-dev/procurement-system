@@ -37,6 +37,27 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// </summary>
     public decimal InternalMarkupPercent { get; private set; } = DefaultInternalMarkupPercent;
 
+    /// <summary>SLA mặc định (ngày làm việc): hàng đã có hợp đồng/bảng giá – phát hành PO trong 1 ngày sau khi PR đủ duyệt (Ban CUVT).</summary>
+    public const int DefaultSlaPricedDays = 1;
+
+    /// <summary>SLA mặc định: hàng chưa có NCC được duyệt – 3–5 ngày tìm nguồn, so sánh, trình duyệt; lấy mức trên 5 ngày.</summary>
+    public const int DefaultSlaSourcingDays = 5;
+
+    /// <summary>SLA mặc định: hàng khẩn (PR mức ưu tiên Khẩn) – tiếp nhận ngay, 1 ngày làm việc.</summary>
+    public const int DefaultSlaUrgentDays = 1;
+
+    /// <summary>SLA tối đa (ngày làm việc) – lớn hơn gần như chắc chắn là gõ nhầm.</summary>
+    public const int MaxSlaDays = 60;
+
+    /// <summary>SLA hàng đã có hợp đồng/bảng giá (ngày làm việc từ lúc PR đủ duyệt đến lúc PO được duyệt) – design.md mục 18.13.</summary>
+    public int SlaPricedDays { get; private set; } = DefaultSlaPricedDays;
+
+    /// <summary>SLA hàng chưa có NCC được duyệt (ngày làm việc).</summary>
+    public int SlaSourcingDays { get; private set; } = DefaultSlaSourcingDays;
+
+    /// <summary>SLA hàng khẩn (ngày làm việc; 0 = trong ngày PR được duyệt).</summary>
+    public int SlaUrgentDays { get; private set; } = DefaultSlaUrgentDays;
+
     /// <summary>
     /// Tạo bộ tham số với giá trị mặc định.
     /// </summary>
@@ -75,5 +96,26 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         if (v < 0 || v > MaxInternalMarkupPercent)
             throw new BusinessRuleException($"% markup nội bộ phải từ 0 đến {MaxInternalMarkupPercent:0}.");
         InternalMarkupPercent = v;
+    }
+
+    /// <summary>Đổi SLA một loại yêu cầu (design.md mục 18.13).</summary>
+    /// <param name="category">Loại yêu cầu.</param>
+    /// <param name="days">Số ngày làm việc; null = về mặc định.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài khoảng 0–<see cref="MaxSlaDays"/>.</exception>
+    public void ChangeSlaDays(Purchasing.SlaCategory category, int? days)
+    {
+        var v = days ?? category switch
+        {
+            Purchasing.SlaCategory.Priced => DefaultSlaPricedDays,
+            Purchasing.SlaCategory.Sourcing => DefaultSlaSourcingDays,
+            _ => DefaultSlaUrgentDays,
+        };
+        if (v < 0 || v > MaxSlaDays) throw new BusinessRuleException($"SLA phải từ 0 đến {MaxSlaDays} ngày làm việc.");
+        switch (category)
+        {
+            case Purchasing.SlaCategory.Priced: SlaPricedDays = v; break;
+            case Purchasing.SlaCategory.Sourcing: SlaSourcingDays = v; break;
+            default: SlaUrgentDays = v; break;
+        }
     }
 }
