@@ -28,6 +28,8 @@ export const Permission = {
   SoleSourceView: 'MasterData.SoleSource.View',
   SoleSourceManage: 'MasterData.SoleSource.Manage',
   SoleSourceApprove: 'MasterData.SoleSource.Approve',
+  SupplierReviewView: 'MasterData.SupplierReview.View',
+  SupplierReviewManage: 'MasterData.SupplierReview.Manage',
   CatalogEditShared: 'MasterData.Catalog.EditShared',
   PrView: 'Purchase.PR.View',
   PrCreate: 'Purchase.PR.Create',

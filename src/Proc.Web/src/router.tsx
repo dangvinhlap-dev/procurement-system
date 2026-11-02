@@ -15,6 +15,7 @@ import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
+import { SupplierReviewPage } from './pages/pricing/SupplierReviewPage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
 import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
@@ -83,6 +84,7 @@ const implemented: Record<string, ReactNode> = {
   SUPAPR: <SupplierApprovalPage />,
   COI: <ConflictListPage />,
   NDQ: <SoleSourceListPage />,
+  SUPREV: <SupplierReviewPage />,
   SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
   CAT: <ItemCategoryListPage />,
