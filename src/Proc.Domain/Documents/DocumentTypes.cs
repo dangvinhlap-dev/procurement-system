@@ -53,6 +53,9 @@ public static class DocumentTypes
     /// <summary>Vi phạm do Kiểm soát nội bộ ghi nhận (lát F3, design.md mục 18.19).</summary>
     public const string ControlFinding = "VP";
 
+    /// <summary>Phiếu đánh giá NCC định kỳ theo quý (lát F4a, design.md mục 18.20).</summary>
+    public const string SupplierReview = "DGN";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -70,6 +73,7 @@ public static class DocumentTypes
         new(Sourcing, "Danh sách tìm nguồn"),
         new(SoleSource, "Phê duyệt NCC độc quyền"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
+        new(SupplierReview, "Đánh giá nhà cung cấp định kỳ"),
     ];
 
     /// <summary>

@@ -197,6 +197,32 @@ public static class MasterDataEndpoints
             })
             .RequirePermission(Permissions.MasterData.SoleSourceManage);
 
+        // Đánh giá NCC định kỳ theo quý (design.md mục 18.20): công ty đang làm việc; người lập phiếu cũng xem được bảng.
+        var reviews = app.MapGroup("/api/supplier-reviews").WithTags("Đánh giá NCC định kỳ").RequireAuthorization();
+        reviews.MapGet("/", (int year, int quarter, ISupplierReviewService s, CancellationToken ct) => s.GetBoardAsync(year, quarter, ct))
+            .RequireAnyPermission(Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage);
+        reviews.MapGet("/{id:guid}", (Guid id, ISupplierReviewService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage);
+        reviews.MapPost("/", async (SaveSupplierReviewRequest request, ISupplierReviewService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/supplier-reviews/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.MasterData.SupplierReviewManage)
+            .Validate<SaveSupplierReviewRequest>();
+        reviews.MapPut("/{id:guid}", (Guid id, SaveSupplierReviewRequest request, ISupplierReviewService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierReviewManage)
+            .Validate<SaveSupplierReviewRequest>();
+        reviews.MapPost("/{id:guid}/complete", (Guid id, SaveSupplierReviewRequest request, ISupplierReviewService s, CancellationToken ct) =>
+                s.CompleteAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierReviewManage)
+            .Validate<SaveSupplierReviewRequest>();
+        reviews.MapPost("/{id:guid}/cancel", (Guid id, CancelSupplierReviewRequest request, ISupplierReviewService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierReviewManage)
+            .Validate<CancelSupplierReviewRequest>();
+
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
         suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

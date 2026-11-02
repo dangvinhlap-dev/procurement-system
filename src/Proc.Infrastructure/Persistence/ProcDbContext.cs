@@ -115,6 +115,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Vi phạm KSNB (lọc theo công ty – design.md mục 18.19).</summary>
     public DbSet<Proc.Domain.Control.ControlFinding> ControlFindings => Set<Proc.Domain.Control.ControlFinding>();
 
+    /// <summary>Phiếu đánh giá NCC định kỳ theo quý (lọc theo công ty – design.md mục 18.20).</summary>
+    public DbSet<SupplierReview> SupplierReviews => Set<SupplierReview>();
+
     /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
     public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
 

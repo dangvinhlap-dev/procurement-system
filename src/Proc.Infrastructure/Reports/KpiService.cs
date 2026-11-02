@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
+using Proc.Application.MasterData;
 using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Control;
@@ -20,6 +21,7 @@ public sealed class KpiService : IKpiService
     private readonly ICurrentUserScope _scope;
     private readonly IPurchaseReportService _purchase;
     private readonly IStockReportService _stock;
+    private readonly ISupplierReviewService _reviews;
 
     /// <summary>
     /// Tạo dịch vụ.
@@ -28,12 +30,15 @@ public sealed class KpiService : IKpiService
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="purchase">Báo cáo mua hàng.</param>
     /// <param name="stock">Báo cáo kho.</param>
-    public KpiService(ProcDbContext db, ICurrentUserScope scope, IPurchaseReportService purchase, IStockReportService stock)
+    /// <param name="reviews">Đánh giá NCC định kỳ.</param>
+    public KpiService(
+        ProcDbContext db, ICurrentUserScope scope, IPurchaseReportService purchase, IStockReportService stock, ISupplierReviewService reviews)
     {
         _db = db;
         _scope = scope;
         _purchase = purchase;
         _stock = stock;
+        _reviews = reviews;
     }
 
     /// <inheritdoc />
@@ -52,6 +57,9 @@ public sealed class KpiService : IKpiService
         var previous = await PeriodAsync(prevFrom, prevTo, cancellationToken);
         var slow = await _stock.GetSlowMovingAsync(new(null, null, slowDays), cancellationToken);
         var slowAmount = slow.Items.Sum(i => i.Amount);
+        // Hoàn thành đánh giá NCC tính theo quý kết thúc trong kỳ (design.md mục 18.20) – kỳ không chứa ngày cuối quý thì "Chưa có dữ liệu".
+        var review = await _reviews.CompletionAsync(from, to, cancellationToken);
+        var reviewBefore = await _reviews.CompletionAsync(prevFrom, prevTo, cancellationToken);
 
         KpiRowDto Row(KpiCode code, Ratio? now, Ratio? before, string unit, string? note, string? report)
         {
@@ -59,13 +67,6 @@ public sealed class KpiService : IKpiService
             var target = Target(code);
             return new KpiRowDto(code.ToString(), k.Name, k.Formula, k.HigherIsBetter, k.IsCount, target, true, now?.Pct, before?.Pct,
                 now?.Numerator, now?.Denominator, unit, KpiCatalog.IsMet(code, now?.Pct, target), note, report);
-        }
-
-        KpiRowDto NotMeasured(KpiCode code, string note)
-        {
-            var k = KpiCatalog.Get(code);
-            return new KpiRowDto(code.ToString(), k.Name, k.Formula, k.HigherIsBetter, k.IsCount, Target(code), false, null, null, null, null,
-                k.IsCount ? "Count" : "Money", null, note, null);
         }
 
         List<KpiRowDto> items =
@@ -80,7 +81,12 @@ public sealed class KpiService : IKpiService
             Row(KpiCode.Emergency, current.Emergency, previous.Emergency, "Money", "PO Đã duyệt/Đã đóng theo ngày PO, trước VAT.", "PO"),
             Row(KpiCode.SlowMoving, Ratio.Of(slowAmount, slow.StockAmount), null, "Money",
                 $"Tính tại hôm nay {slow.AsOf:dd/MM/yyyy}, hàng không xuất từ {slowDays} ngày trở lên (không theo kỳ).", "SLOW"),
-            NotMeasured(KpiCode.SupplierReview, "Chưa đo – cần phiếu đánh giá NCC định kỳ theo quý (lát F4)."),
+            Row(KpiCode.SupplierReview, Ratio.Of(review.CompletedCount, review.DueCount), Ratio.Of(reviewBefore.CompletedCount, reviewBefore.DueCount),
+                "Count",
+                review.Quarters.Count == 0
+                    ? "Tính theo quý kết thúc trong kỳ – kỳ này không chứa ngày cuối quý nào. NCC phải đánh giá: có phiếu nhập mua đã ghi sổ trong quý."
+                    : $"Quý {string.Join(", ", review.Quarters)}: NCC có phiếu nhập mua đã ghi sổ trong quý, đã có phiếu đánh giá hoàn thành.",
+                "SUPREV"),
             Row(KpiCode.Violation, current.Violation, previous.Violation, "Count",
                 "Vi phạm mức Nghiêm trọng đã kết luận, theo ngày phát hiện; mẫu số là mọi vi phạm ghi nhận trong kỳ (sổ vi phạm KSNB).", "VIOL"),
         ];

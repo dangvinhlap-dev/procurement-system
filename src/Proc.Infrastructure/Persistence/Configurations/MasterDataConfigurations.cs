@@ -270,3 +270,30 @@ internal sealed class SoleSourceApprovalConfiguration : IEntityTypeConfiguration
         builder.HasOne<SoleSourceApproval>().WithMany().HasForeignKey(x => x.RenewedFromId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng SupplierReview – phiếu đánh giá NCC định kỳ theo quý (design.md mục 18.20).</summary>
+internal sealed class SupplierReviewConfiguration : IEntityTypeConfiguration<SupplierReview>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierReview> builder)
+    {
+        builder.ToTable("SupplierReview");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        // Mỗi công ty × NCC × quý một phiếu chưa hủy (3 = Cancelled) – chặn cả khi hai người lập cùng lúc.
+        builder.HasIndex(x => new { x.CompanyId, x.SupplierId, x.Year, x.Quarter }).IsUnique().HasFilter("\"Status\" <> 3")
+            .HasDatabaseName("UX_SupplierReview_Quarter");
+        builder.Property(x => x.Score).HasPrecision(5, 2);
+        builder.Property(x => x.ReceiptAmount).HasPrecision(19, 2);
+        builder.Property(x => x.OnTimePct).HasPrecision(5, 2);
+        builder.Property(x => x.ReturnPct).HasPrecision(9, 2);
+        builder.Property(x => x.QualityPct).HasPrecision(5, 2);
+        builder.Property(x => x.SystemRating).HasMaxLength(50);
+        builder.Property(x => x.Comment).HasMaxLength(SupplierReview.TextMaxLength);
+        builder.Property(x => x.CancelReason).HasMaxLength(SupplierReview.TextMaxLength);
+        builder.Ignore(x => x.Scores);
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

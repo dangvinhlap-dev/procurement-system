@@ -134,6 +134,7 @@ export const screens: Screen[] = [
   { code: 'SUPAPR', title: 'Yêu cầu duyệt nhà cung cấp', navLabel: 'Duyệt NCC', path: '/gia-ncc/duyet-ncc', icon: <AuditOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'COI', title: 'Kê khai xung đột lợi ích', navLabel: 'Xung đột lợi ích', path: '/gia-ncc/xung-dot-loi-ich', icon: <AlertOutlined />, group: 'pricing' },
   { code: 'NDQ', title: 'NCC độc quyền', navLabel: 'NCC độc quyền', path: '/gia-ncc/ncc-doc-quyen', icon: <SafetyCertificateOutlined />, group: 'pricing', permission: Permission.SoleSourceView },
+  { code: 'SUPREV', title: 'Đánh giá NCC định kỳ', navLabel: 'Đánh giá NCC định kỳ', path: '/gia-ncc/danh-gia-ncc-dinh-ky', icon: <StarOutlined />, group: 'pricing', anyPermission: [Permission.SupplierReviewView, Permission.SupplierReviewManage] },
   { code: 'SGRP', title: 'Nhóm nhà cung cấp', navLabel: 'Nhóm NCC', path: '/gia-ncc/nhom-ncc', icon: <GroupOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },
   { code: 'CAT', title: 'Nhóm hàng', navLabel: 'Nhóm hàng', path: '/gia-ncc/nhom-hang', icon: <ClusterOutlined />, group: 'pricing', permission: Permission.ItemCategoryView },
