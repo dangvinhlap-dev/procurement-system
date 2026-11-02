@@ -365,7 +365,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO; từ lát A3 thêm PRL, RFQ, NCC, CTR; lát B4b thêm CTA – phụ lục hợp đồng – mục 18.6, 18.7): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
+| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO; từ lát A3 thêm PRL, RFQ, NCC, CTR; lát B4b thêm CTA – phụ lục hợp đồng; lát B5b thêm NDQ – NCC độc quyền – mục 18.6, 18.7, 18.9): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
 | Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
 | Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
 | Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
@@ -1202,9 +1202,9 @@ phân quyền** – phần mềm không viết cứng cấp duyệt hay người
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
+| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
 | Mỗi loại có **quyền duyệt riêng**: `Purchase.PR.Approve`, `Purchase.PO.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `MasterData.Supplier.Approve`, `Purchase.Contract.Approve`. Người duyệt phải có quyền đó **tại công ty của phiếu** (quyền gán theo công ty – mục 9); cấp có vai trò thì phải có thêm vai trò đó tại công ty. Muốn người Tổng công ty duyệt phiếu của công ty thành viên thì gán vai trò cho họ tại công ty thành viên | Công ty nào duyệt do phân quyền |
-| Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến, CTA giá trị dự kiến sau phụ lục | Duyệt mấy cấp do người dùng quyết định |
+| Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC, NDQ không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến, CTA giá trị dự kiến sau phụ lục | Duyệt mấy cấp do người dùng quyết định |
 | Người lập không tự duyệt; từ chối bắt buộc lý do, về nháp; lịch sử `ApprovalStep` chỉ thêm – như PR/PO (mục 6.7) | Tách người lập – người duyệt (G3) |
 | **Bộ vai trò mẫu** (màn hình Vai trò → "Bộ vai trò mẫu…", quyền `System.Role.Manage`): TRUONGBANCUVT, DAMPHAN, VANHANH, HOIDONG, DENGHI, KHO, KETOAN, PHAPCHE, KSNB. Chỉ tạo vai trò chưa có, không sửa vai trò đã có, không tạo vai trò có quyền người thao tác không có. DAMPHAN không có quyền duyệt; KSNB chỉ xem. Vai trò mẫu là gợi ý – quản trị sửa quyền tùy ý | G2: dữ liệu khởi tạo, không đổi cơ chế phân quyền |
 
@@ -1277,9 +1277,27 @@ hệ lợi ích giữa nhân sự mua hàng, người duyệt và NCC (`docs/Pha
 | Kê khai **còn hiệu lực hôm nay** (từ ngày ≤ hôm nay, chưa kết thúc hoặc ngày kết thúc ≥ hôm nay) với NCC của phiếu thì người đó **không duyệt/từ chối** được (báo rõ mã NCC), không nhận thông báo chờ duyệt, phiếu không hiện ở Việc cần làm. NCC của phiếu: PO, bảng giá, yêu cầu duyệt NCC, hợp đồng – NCC của phiếu; phụ lục – NCC của hợp đồng; RFQ – **mọi NCC được mời** | Người có quan hệ không tham gia quyết định |
 | RFQ đang nhận báo giá: người vướng kê khai với bất kỳ NCC được mời nào không **nhập báo giá/chấm điểm**, không **chọn thầu** (thông báo trên RFQ). Lập, gửi, hủy RFQ không chặn | Chấm thầu là so sánh giữa các NCC – quan hệ với một NCC đã đủ làm lệch |
 | Không có cấp duyệt nào thay thế tự động: nếu mọi người duyệt ở một cấp đều vướng kê khai thì quản trị gán thêm người duyệt (mục 18.6) | Không viết cứng người duyệt |
-| Lát B5b: NCC độc quyền (N6). Báo cáo "Dấu hiệu bất thường" của KSNB (NCC có quan hệ lợi ích) ở đợt F | Tách lát |
+| NCC độc quyền (N6): lát B5b, mục 18.9. Báo cáo "Dấu hiệu bất thường" của KSNB (NCC có quan hệ lợi ích) ở đợt F | Tách lát |
 
 Migration `V0_12_0_KeKhaiXungDotLoiIch` (bảng `ConflictDeclaration`; bảng mới – `Down()` xóa bảng, mất kê khai, AuditLog vẫn giữ).
+
+### 18.9 Phê duyệt NCC độc quyền (lát B5b, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT – NCC độc quyền phải giải trình, phê duyệt riêng, đánh giá định kỳ (`docs/Phantich_01112026.md` N6). Màn hình
+**NDQ** (Giá và NCC → NCC độc quyền, quyền xem `MasterData.SoleSource.View`).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu `SoleSourceApproval` (số loại **NDQ**, ví dụ NDQ-TCT-2611-0001, theo ngày hiệu lực) = **một NCC × một mặt hàng** của **công ty lập**: giải trình (bắt buộc, ≤ 1.000 ký tự), hiệu lực từ ngày, **hạn đánh giá lại** (bắt buộc, sau ngày hiệu lực, **tối đa 12 tháng**; mặc định +12 tháng). Lọc theo công ty đang làm việc và phạm vi nhóm hàng của mặt hàng. Đính kèm văn bản xác nhận độc quyền ở tab Đính kèm (quyền theo phiếu) | Mỗi công ty tự chịu trách nhiệm quyết định mua (mục 4); đánh giá lại tối thiểu hằng năm |
+| Nháp → **Chờ duyệt** → **Đã duyệt**; từ chối bắt buộc lý do, về Nháp giữ lý do; rút về Nháp khi đang chờ. Duyệt theo quy trình dùng chung loại **NDQ** của công ty lập (cấu hình ở APRL, không xét giá trị – ngưỡng 0), quyền `MasterData.SoleSource.Approve`; **người lập không tự duyệt**; người có kê khai xung đột lợi ích còn hiệu lực với NCC không duyệt (mục 18.8). Việc cần làm/thông báo loại NDQ mở `/gia-ncc/ncc-doc-quyen?mo=<Id>` | "Phê duyệt riêng" (N6); tách người lập – người duyệt |
+| NCC danh sách đen không lập/gửi/duyệt được. Mỗi công ty × NCC × mặt hàng: các phiếu **chưa kết thúc** (Nháp, Chờ duyệt, Đã duyệt) **không trùng thời gian** [hiệu lực, hạn đánh giá lại] | Một giải trình cho một khoảng thời gian |
+| Phiếu **còn tác dụng** vào ngày D: Đã duyệt, hiệu lực ≤ D ≤ hạn đánh giá lại. Qua hạn: hiện "Quá hạn đánh giá lại", hết tác dụng. Danh sách nhắc phiếu quá hạn hoặc còn ≤ 30 ngày tới hạn | Đánh giá định kỳ (N6) |
+| Đã duyệt không sửa. **Đánh giá lại**: lập phiếu nháp mới chép NCC, mặt hàng, giải trình; hiệu lực từ ngày sau hạn cũ (đã quá hạn thì từ hôm nay), hạn +12 tháng; hai phiếu liên kết nhau; mỗi phiếu chỉ một phiếu đánh giá lại. **Kết thúc sớm** (hết độc quyền): bắt buộc lý do, hết tác dụng từ hôm nay | Giữ lịch sử từng lần giải trình, duyệt |
+| **Tác dụng – RFQ**: gửi RFQ mời ít hơn số NCC tối thiểu mà không ghi giải trình, nếu **mọi dòng** RFQ có phiếu còn tác dụng hôm nay (của công ty lập RFQ) với một NCC được mời thì gửi được, hệ thống tự ghi giải trình "NCC độc quyền đã duyệt: <số phiếu>"; thiếu một dòng thì vẫn phải tự ghi giải trình (mục 8.6). Kết quả chọn thầu vẫn phải duyệt như thường | Độc quyền đã được duyệt là giải trình hợp lệ, không bắt nhập lại |
+| Quyền: `MasterData.SoleSource.View` (vai trò mẫu: mọi vai trò Ban CUVT có quyền xem nghiệp vụ mua, KSNB), `.Manage` – lập, sửa, gửi, rút, kết thúc, đánh giá lại (DAMPHAN), `.Approve` – duyệt (HOIDONG, TRUONGBANCUVT) | Không kiêm nhiệm: người đàm phán không tự duyệt độc quyền |
+| Chưa làm: PO kiểm tra/ghi nhận mua theo độc quyền (lát C1 – nguồn giá), báo cáo KSNB tỷ lệ mua độc quyền (đợt F) | Làm khi tới lát tương ứng |
+
+Migration `V0_12_0_NccDocQuyen` (bảng `SoleSourceApproval`; bảng mới – `Down()` xóa bảng, mất phiếu NCC độc quyền, AuditLog vẫn giữ).
 
 ## Nguồn tham khảo
 

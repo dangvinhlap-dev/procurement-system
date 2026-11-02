@@ -240,3 +240,31 @@ internal sealed class ConflictDeclarationConfiguration : IEntityTypeConfiguratio
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng SoleSourceApproval – phê duyệt NCC độc quyền (design.md mục 18.9).</summary>
+internal sealed class SoleSourceApprovalConfiguration : IEntityTypeConfiguration<SoleSourceApproval>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SoleSourceApproval> builder)
+    {
+        builder.ToTable("SoleSourceApproval");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        // Tra phiếu còn tác dụng khi gửi RFQ và kiểm tra trùng thời gian: công ty × NCC × mặt hàng.
+        builder.HasIndex(x => new { x.CompanyId, x.SupplierId, x.ItemId });
+        builder.Property(x => x.Reason).HasMaxLength(SoleSourceApproval.TextMaxLength).IsRequired();
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.EndReason).HasMaxLength(SoleSourceApproval.TextMaxLength);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.RelatedSupplierIds);
+        builder.ToTable(t => t.HasCheckConstraint("CK_SoleSourceApproval_Review", "\"ReviewDate\" > \"ValidFrom\""));
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SoleSourceApproval>().WithMany().HasForeignKey(x => x.RenewedFromId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

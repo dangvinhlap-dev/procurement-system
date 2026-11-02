@@ -91,6 +91,7 @@ public static class DependencyInjection
         services.AddScoped<ISupplierAdministration, SupplierAdministration>();
         services.AddScoped<ISupplierChangeRequestService, SupplierChangeRequestService>();
         services.AddScoped<IConflictDeclarationService, ConflictDeclarationService>();
+        services.AddScoped<ISoleSourceService, SoleSourceService>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();
         services.AddScoped<ISupplierRatingAdministration, SupplierRatingAdministration>();
         services.AddScoped<CatalogNumberAllocator>();

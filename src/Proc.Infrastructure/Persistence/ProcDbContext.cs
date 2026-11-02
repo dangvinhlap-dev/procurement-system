@@ -109,6 +109,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Kê khai xung đột lợi ích (dùng chung, không lọc theo công ty – design.md mục 18.8).</summary>
     public DbSet<ConflictDeclaration> ConflictDeclarations => Set<ConflictDeclaration>();
 
+    /// <summary>Phê duyệt NCC độc quyền (lọc theo công ty và phạm vi nhóm hàng của mặt hàng – design.md mục 18.9).</summary>
+    public DbSet<SoleSourceApproval> SoleSourceApprovals => Set<SoleSourceApproval>();
+
     /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
     public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
 
@@ -278,5 +281,8 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         // NCC – sản phẩm theo phạm vi của mặt hàng: Items đã có filter nhóm hàng, nên chỉ thấy dòng của hàng mình được xem.
         modelBuilder.Entity<SupplierItem>().HasQueryFilter(
             ItemCategoryFilter, si => ScopeAllItemCategories || Items.Any(i => i.Id == si.ItemId));
+        // Phiếu NCC độc quyền cũng theo phạm vi nhóm hàng của mặt hàng (filter công ty đã có vì ICompanyOwned).
+        modelBuilder.Entity<SoleSourceApproval>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
     }
 }

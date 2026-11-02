@@ -124,10 +124,36 @@ public sealed class RfqService : IRfqService
         var rfq = await LoadAsync(id, cancellationToken);
         // Kiểm tra lại lúc gửi: NCC có thể vào danh sách đen từ lúc soạn nháp.
         await CheckSuppliersAsync(rfq.Suppliers.Select(s => s.SupplierId).ToList(), cancellationToken);
-        rfq.Send(_clock.UtcNow, await _parameters.RfqMinSuppliersAsync(cancellationToken), request.Reason);
+        var minSuppliers = await _parameters.RfqMinSuppliersAsync(cancellationToken);
+        var reason = request.Reason;
+        if (rfq.Suppliers.Count < minSuppliers && string.IsNullOrWhiteSpace(reason))
+            reason = await SoleSourceReasonAsync(rfq, cancellationToken);
+        rfq.Send(_clock.UtcNow, minSuppliers, reason);
         await TrackSourcingAsync(rfq, rfq.Suppliers.Select(s => s.SupplierId), CandidateStatus.RfqSent, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Giải trình tự động khi mời thiếu NCC (design.md mục 18.9): mọi dòng RFQ đều có phiếu NCC độc quyền còn tác dụng hôm nay (của công ty
+    /// lập RFQ) với một NCC được mời thì phiếu đó thay cho giải trình, ví dụ "NCC độc quyền đã duyệt: NDQ-TCT-2611-0001". Thiếu một dòng
+    /// thì trả null – người dùng phải tự ghi giải trình như cũ.
+    /// </summary>
+    private async Task<string?> SoleSourceReasonAsync(Rfq rfq, CancellationToken cancellationToken)
+    {
+        var today = _clock.TodayInVietnam();
+        var supplierIds = rfq.Suppliers.Select(s => s.SupplierId).ToList();
+        var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
+        // Điều kiện "còn tác dụng" giống SoleSourceApproval.IsEffectiveOn, viết lại để EF dịch sang SQL.
+        var approvals = await _db.SoleSourceApprovals.AsNoTracking()
+            .Where(x => x.CompanyId == rfq.CompanyId && x.Status == SoleSourceStatus.Approved && x.ValidFrom <= today && x.ReviewDate >= today
+                && supplierIds.Contains(x.SupplierId) && itemIds.Contains(x.ItemId))
+            .Select(x => new { x.ItemId, x.No })
+            .ToListAsync(cancellationToken);
+        if (itemIds.Any(i => approvals.All(a => a.ItemId != i))) return null;
+        var text = "NCC độc quyền đã duyệt: " + string.Join(", ", approvals.Select(a => a.No).Distinct().Order());
+        // Cột FewSuppliersReason tối đa 500 ký tự.
+        return text.Length > 500 ? text[..497] + "..." : text;
     }
 
     /// <inheritdoc />
