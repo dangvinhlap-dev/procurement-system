@@ -85,6 +85,7 @@ public sealed partial class ContractService : IContractService
         var contract = PurchaseContract.Create(companyId, no, ToHeader(request));
         contract.SetLines(lines);
         contract.SetDepartments(request.DepartmentIds);
+        if (request.Rebates is { } rebates) contract.SetRebates(ToRebates(rebates));
         _db.PurchaseContracts.Add(contract);
         await _db.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
@@ -103,6 +104,7 @@ public sealed partial class ContractService : IContractService
         contract.Update(ToHeader(request));
         contract.SetLines(lines);
         contract.SetDepartments(request.DepartmentIds);
+        if (request.Rebates is { } rebates) contract.SetRebates(ToRebates(rebates));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -170,7 +172,7 @@ public sealed partial class ContractService : IContractService
     }
 
     private IQueryable<PurchaseContract> Query() =>
-        _db.PurchaseContracts.Include(c => c.Lines).Include(c => c.Departments).AsSplitQuery();
+        _db.PurchaseContracts.Include(c => c.Lines).Include(c => c.Departments).Include(c => c.Rebates).AsSplitQuery();
 
     private async Task<PurchaseContract> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -308,8 +310,24 @@ public sealed partial class ContractService : IContractService
             departments.Select(d => d.Id).ToList(), departments.Select(d => d.Label).ToList(), lines, contract.CreatedAt, createdBy,
             contract.ActivatedAt, contract.TerminatedOn, contract.TerminationReason, contract.RejectReason, contract.DaysToExpiry(today),
             contract.ExpiresWithin(today, ExpiryWarningDays), await _approvals.HistoryAsync(contract.DocType, contract.Id, cancellationToken), amendments,
-            actions);
+            actions, contract.Rebates.OrderBy(r => r.LineNo).Select(ToRebateDto).ToList());
     }
+
+    /// <summary>Cam kết chiết khấu/tài trợ ra DTO: Value là % hoặc số tiền mỗi kỳ tùy cách tính.</summary>
+    internal static ContractRebateDto ToRebateDto(PurchaseContractRebate r) =>
+        new(r.Id, r.LineNo, r.Kind.ToString(), r.Method.ToString(), (r.Method == RebateMethod.Percent ? r.Rate : r.Amount) ?? 0m, r.MinPurchaseAmount,
+            r.Period.ToString(), r.Description);
+
+    private static List<ContractRebateData> ToRebates(IReadOnlyList<SaveContractRebateRequest> rebates) =>
+        rebates.Select((r, index) => new ContractRebateData(
+                r.Id, Parse<RebateKind>(r.Kind, index, "loại"), Parse<RebateMethod>(r.Method, index, "cách tính"), r.Value, r.MinPurchaseAmount,
+                Parse<RebatePeriod>(r.Period, index, "kỳ quyết toán"), r.Description))
+            .ToList();
+
+    private static T Parse<T>(string? value, int index, string field) where T : struct, Enum =>
+        Enum.TryParse<T>(value, true, out var result) && Enum.IsDefined(result)
+            ? result
+            : throw new BusinessRuleException($"Cam kết {index + 1}: {field} không hợp lệ.");
 
     private static ContractHeader ToHeader(SaveContractRequest r) =>
         new(r.SupplierId, r.PriceListId, r.ContractNo, r.Title, r.SignDate, r.ValidFrom, r.ValidTo, r.PriceAdjustmentTerms, r.PaymentTerms, r.CreditLimit,

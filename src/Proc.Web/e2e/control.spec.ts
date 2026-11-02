@@ -30,7 +30,7 @@ test('dấu hiệu bất thường → ghi nhận vi phạm → kết luận', a
   await expect(page.getByRole('heading', { name: 'Dấu hiệu bất thường (KSNB)' })).toBeVisible()
   const row = page.locator('.data-grid-row', { hasText: po.no }).filter({ hasText: 'Xung đột lợi ích' })
   await expect(row).toContainText('Cao')
-  await expect(page.getByRole('alert').first()).toContainText('Chiết khấu/tài trợ chưa ghi nhận: chưa đo')
+  await expect(page.getByRole('alert').first()).toContainText(/Chiết khấu\/tài trợ chưa ghi nhận: \d+/)
   await page.screenshot({ path: 'e2e/screenshots/anomalies.png' })
 
   await row.dblclick()

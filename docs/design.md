@@ -1293,7 +1293,7 @@ Màn hình CTR (Mua hàng → Hợp đồng nguyên tắc, thay "Hợp đồng k
 | Duyệt phụ lục: loại duyệt riêng **CTA** "Phụ lục hợp đồng nguyên tắc" (cấu hình cấp riêng, quyền duyệt `Purchase.Contract.Approve`; người lập không tự duyệt; từ chối bắt buộc lý do về Nháp; rút về Nháp; hủy khi Nháp). Kiểm tra lại khi gửi và duyệt: hợp đồng còn hiệu lực, NCC Đã duyệt, gia hạn không chồng hiệu lực với hợp đồng khác (chờ duyệt/hiệu lực) cùng công ty × NCC. **Duyệt cấp cuối thì áp vào hợp đồng** trong cùng giao dịch: ngày hết hiệu lực, bảng giá (giá dòng lấy lại), điều khoản. Tóm tắt thay đổi chốt trên phụ lục để tra cứu; chi tiết trước/sau ở nhật ký thay đổi | Phụ lục gia hạn thường duyệt khác ký mới |
 | Đang có phụ lục mở thì không chấm dứt hợp đồng (hủy/rút phụ lục trước). Thông báo/Việc cần làm loại CTA mở `/mua-hang/hop-dong-khung/phu-luc/<Id>` (chuyển sang hợp đồng, mở sẵn ngăn kéo) | Tránh áp phụ lục vào hợp đồng đã chấm dứt |
 | **Nhập Excel hợp đồng hiện hữu** (lát B4c – nút Nhập Excel trên danh sách CTR, quyền `Purchase.Contract.Manage`): mỗi dòng file là một dòng sản lượng (mặt hàng × ĐVT), các dòng cùng **Số HĐ giấy** là một hợp đồng; cột đầu hợp đồng (mã NCC, số bảng giá, tên, ngày ký, hiệu lực, hạn mức, điều khoản, mã bộ phận được đặt, ghi chú) ghi ở dòng đầu, dòng sau để trống hoặc ghi giống hệt (khác thì lỗi). Dòng đầu không có mã hàng = hợp đồng chưa có sản lượng. Nhập vào **công ty đang làm việc** ở trạng thái **Nháp**, qua đúng quy tắc lập tay (giá theo bảng giá…), rồi gửi duyệt như thường. Không cập nhật: số HĐ giấy đã có (chưa hủy) với cùng NCC thì báo lỗi. Kiểm tra thử / nhập thật, có lỗi ở bất kỳ hợp đồng nào thì không lưu gì; lỗi báo theo dòng Excel; tối đa 5.000 dòng, 10 MB | Bước 8 – chuyển giao hợp đồng đang thực hiện; Q4 – hợp đồng phải duyệt nên không nhập thẳng Hiệu lực |
-| Lát C1: PO lấy giá/kiểm tra theo hợp đồng hiệu lực, cờ "ngoài hợp đồng". F4: theo dõi chiết khấu/tài trợ thực nhận | Tách lát |
+| Lát C1: PO lấy giá/kiểm tra theo hợp đồng hiệu lực, cờ "ngoài hợp đồng". F4b: cam kết chiết khấu/tài trợ và thực nhận – mục 18.21 | Tách lát |
 
 Migration `V0_12_0_HopDongNguyenTac` (bảng `PurchaseContract`, `PurchaseContractLine`, `PurchaseContractDepartment`; bảng mới –
 `Down()` xóa các bảng, mất hợp đồng đã lập). Migration `V0_12_0_PhuLucHopDong` (bảng `PurchaseContractAmendment`; bảng mới – `Down()` xóa
@@ -1510,7 +1510,7 @@ hiệu bất thường, kết quả gửi thẳng lãnh đạo, không qua Nhóm
 | **Mua ngoài hợp đồng cao theo người lập PO** (P5): như PRCW (mục 18.17) – ngoài = lệch giá + không có giá đã duyệt, mẫu số bỏ dòng không xác định; vượt **5%** (= KPI ≥ 95%, chỉnh được) là dấu hiệu, từ gấp đôi → Cao | Người mua thường xuyên mua ngoài giá được duyệt |
 | **Hóa đơn tính cả hàng thiếu/không đạt** (V7, V8) và **hàng/hóa đơn có trước PO** (hợp thức hóa – mục 18.11): lấy từ đối chiếu MATCH3 (mục 18.15) dung sai 0 đ. Hóa đơn tính cả hàng thiếu, nhận hàng hoặc hóa đơn trước ngày PO → Cao; chỉ nhận hàng trước ngày duyệt PO → Trung bình | Dùng đúng số liệu báo cáo kế toán đã xem |
 | **Xung đột lợi ích** (N4): PO (trừ nháp, hủy) có người lập hoặc người đã duyệt có kê khai (mục 18.8) với NCC còn hiệu lực vào ngày PO; Cao | Chặn duyệt chỉ áp từ lúc kê khai; dấu hiệu bắt cả kê khai lùi ngày hiệu lực và người lập |
-| **Chiết khấu/tài trợ chưa ghi nhận** (P10): "Chưa đo" – cần chiết khấu doanh số/tài trợ trên hợp đồng (lát F4) | Không báo 0 giả |
+| **Chiết khấu/tài trợ chưa ghi nhận** (P10, lát F4b): kỳ quyết toán của cam kết trên hợp đồng có **hạn ghi nhận** (cuối kỳ + 30 ngày) trong khoảng xem, đã qua, mà thực nhận < phải nhận (cùng số tab Chiết khấu – tài trợ, mục 18.21). Chưa ghi nhận đồng nào → Cao; thiếu một phần → Trung bình; tiền = còn thiếu; mở hợp đồng (CTR) | Không báo 0 giả |
 | PO không có filter nhóm hàng ở đầu phiếu: dấu hiệu sát ngưỡng và xung đột lợi ích tính theo đầu PO (giá trị cả phiếu) | Người có phạm vi nhóm hàng hẹp vẫn thấy số phiếu, giá trị PO như ở danh sách PO |
 | **Sổ vi phạm** (màn hình VIOL, `/api/control/findings`, bảng `ControlFinding`, số loại **VP** theo mẫu đánh số chứng từ): KSNB (`Control.Finding.Manage`) ghi nhận tại công ty đang làm việc – ngày phát hiện, mức **Thường/Nghiêm trọng**, tiêu đề (≤ 200), mô tả/bằng chứng (≤ 2.000), NCC; lập từ dấu hiệu thì giữ loại dấu hiệu và chứng từ liên quan (không sửa được). Dấu hiệu của công ty khác: chuyển công ty làm việc rồi ghi nhận | Mỗi pháp nhân một sổ; không ghi chéo công ty |
 | Màn hình ANOM mặc định từ đầu tháng trước đến hôm nay; bấm đúp một dấu hiệu: xem chi tiết, **Mở chứng từ**, **Ghi nhận vi phạm** (mở sổ vi phạm với phiếu mới điền sẵn tiêu đề, mô tả, mức – Cao → Nghiêm trọng). Sổ vi phạm thuộc nhóm Báo cáo, mở được khi có một trong hai quyền xem; thông báo mở thẳng phiếu (`?mo=`) | KSNB đi từ dấu hiệu tới ghi nhận trong một thao tác |
@@ -1538,6 +1538,23 @@ Màn hình **SUPREV** (Nhà cung cấp → Đánh giá NCC định kỳ), API `/
 | KPI **Hoàn thành đánh giá NCC** (mục 18.18): cộng dồn các quý có ngày cuối quý nằm trong kỳ KPI; kỳ trước tính như vậy | Quý chưa kết thúc thì chưa đến hạn đánh giá – không báo "chưa hoàn thành" giả |
 
 Migration `V0_13_0_DanhGiaNccDinhKy` (bảng `SupplierReview` – bảng mới, `Down()` xóa bảng, mất phiếu đánh giá đã lập; AuditLog còn giữ lịch sử).
+
+### 18.21 Chiết khấu doanh số/tài trợ trên hợp đồng – theo dõi thực nhận (lát F4b, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT P10 – chiết khấu thương mại, theo sản lượng/doanh số, tài trợ phải ghi nhận minh bạch; KSNB rà "chiết khấu/tài trợ
+chưa ghi nhận" (mục 18.19). Điều khoản chữ "Chiết khấu", "Tài trợ" của hợp đồng (mục 18.7) vẫn giữ để ghi nguyên văn.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Cam kết** (`PurchaseContractRebate`, tab CHIẾT KHẤU – TÀI TRỢ của hợp đồng): loại **Chiết khấu doanh số / Tài trợ / Khác**; cách tính **% doanh số** (0 < % ≤ 100, 4 số lẻ) hoặc **số tiền cố định mỗi kỳ** (> 0); **doanh số tối thiểu** để được hưởng (không bắt buộc); **kỳ quyết toán** Quý / Năm (dương lịch) / Cả hợp đồng; nội dung bắt buộc (≤ 500). Là nội dung hợp đồng: chỉ sửa khi **Nháp**, duyệt cùng hợp đồng. Đổi cam kết của hợp đồng đã hiệu lực qua phụ lục: **làm khi có yêu cầu**. Nhập Excel hợp đồng (B4c) không có cam kết | Ghi nhận minh bạch từ lúc ký |
+| **Kỳ quyết toán** cắt theo thời hạn: từ ngày hiệu lực đến ngày hết hiệu lực, hoặc ngày chấm dứt nếu đã chấm dứt. Ví dụ hiệu lực 15/02/2026 – 10/08/2026 theo quý → 15/02–31/03, 01/04–30/06, 01/07–10/08 | Kỳ đầu/cuối không trọn |
+| **Doanh số kỳ** = Σ thành tiền trước VAT các dòng PO **Đã duyệt/Đã đóng** của cùng công ty × NCC có ngày PO trong kỳ (mỗi công ty một hợp đồng với NCC trong một thời kỳ – mục 18.7, nên là doanh số theo hợp đồng); theo phạm vi nhóm hàng của người xem | Cùng nguồn số với PRCW (mục 18.17) |
+| **Phải nhận**: chưa đạt doanh số tối thiểu → 0; theo % = doanh số × % ÷ 100 làm tròn 2 số (ví dụ 1.250.000.000 × 2% = 25.000.000); cố định = số tiền mỗi kỳ (không chia theo ngày khi kỳ bị cắt) | |
+| **Thực nhận** (`ContractRebateReceipt`): ghi cho một kỳ của một cam kết – ngày nhận (từ đầu kỳ đến hôm nay), số tiền > 0, hình thức **Giảm trừ công nợ / Chuyển khoản / Hàng (quy ra tiền) / Khác**, số chứng từ đối chiếu, ghi chú. Chỉ khi hợp đồng **Hiệu lực hoặc Chấm dứt**; quyền `Purchase.Contract.Manage` (xem: `Purchase.Contract.View`); mặt hàng của hợp đồng trong phạm vi nhóm hàng. Kỳ nhận diện bằng **ngày bắt đầu kỳ** (không đổi khi gia hạn/chấm dứt). **Không xóa**: ghi sai thì **hủy** (bắt buộc lý do), bản hủy giữ lại, không tính. Mọi thay đổi vào AuditLog | KSNB đối chiếu được |
+| **Tình trạng kỳ**: Đủ (đã nhận ≥ phải nhận > 0); Chưa hết kỳ; Không phải nhận (hết kỳ, phải nhận 0); Chờ ghi nhận (hết kỳ, trong **30 ngày** sau cuối kỳ); **Thiếu** (quá hạn mà còn thiếu) – dấu hiệu KSNB mục 18.19 | Cho NCC thời gian quyết toán |
+
+Migration `V0_13_0_ChietKhauTaiTroHopDong` (bảng `PurchaseContractRebate`, `ContractRebateReceipt` – bảng mới, `Down()` xóa bảng, mất cam kết
+và thực nhận; AuditLog còn giữ lịch sử).
 
 ## Nguồn tham khảo
 

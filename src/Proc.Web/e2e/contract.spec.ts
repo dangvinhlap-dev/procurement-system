@@ -164,3 +164,72 @@ test('hợp đồng nguyên tắc: hộp thoại nhập Excel hợp đồng hi�
   await expect(dialog.getByText(/File thiếu cột bắt buộc: Số HĐ giấy/)).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/contract-import.png' })
 })
+
+/**
+ * Chiết khấu doanh số/tài trợ (lát F4b – design.md mục 18.21): nhập cam kết trên hợp đồng nháp (tab Chiết khấu – tài trợ), duyệt → hợp
+ * đồng hiệu lực hiện bảng theo dõi theo kỳ; ghi nhận thực nhận rồi hủy (bắt buộc lý do).
+ */
+test('hợp đồng nguyên tắc: cam kết chiết khấu, theo dõi và ghi nhận thực nhận', async ({ page, request }) => {
+  test.setTimeout(120_000)
+  const { itemId, supplierCode } = await seedPostedReceipt(request)
+  const head = await api(request)
+  const bha = await api(request, 'BHA')
+  const suppliers = await head.get<{ items: { id: string; code: string }[] }>(`/api/suppliers?search=${supplierCode}`)
+  const supplierId = suppliers.items.find((s) => s.code === supplierCode)!.id
+  const hop = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const list = await head.send<{ id: string; no: string }>('post', '/api/price-lists', {
+    supplierId, title: 'Bảng giá bulông chiết khấu', isGroupWide: true, validFrom: day(0), validTo: null, deliveryTerms: null, note: null,
+    lines: [{ id: null, itemId, uomId: hop, minQty: 0, unitPrice: 50000, discountPct: 0, vatCode: null, note: null }],
+  })
+  await head.send('post', `/api/price-lists/${list.id}/submit`, {})
+  await approvePriceList(request, list.id)
+  // Hiệu lực từ 200 ngày trước để có kỳ quý đã kết thúc.
+  const contract = await bha.send<{ id: string; no: string }>('post', '/api/contracts', {
+    supplierId, priceListId: list.id, contractNo: 'HĐNT-03/2026', title: 'Hợp đồng bulông có chiết khấu', signDate: day(-200), validFrom: day(-200),
+    validTo: day(160), priceAdjustmentTerms: null, paymentTerms: null, creditLimit: null, deliveryTerms: null, discountTerms: '2% doanh số quý',
+    sponsorshipTerms: null, penaltyTerms: null, otherTerms: null, note: null, departmentIds: [],
+    lines: [{ id: null, itemId, uomId: hop, expectedQty: 1000, minCommitQty: null, note: null }],
+  })
+
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+  await page.goto(`/mua-hang/hop-dong-khung/${contract.id}`)
+  await expect(page.locator('.document-form-title')).toContainText('Nháp')
+  await page.getByRole('tab', { name: 'Chiết khấu – tài trợ (0)' }).click()
+  const panel = page.getByRole('tabpanel', { name: 'Chiết khấu – tài trợ (0)' })
+  await panel.getByRole('button', { name: 'Thêm dòng' }).click()
+  await page.getByLabel('Mức cam kết 1').fill('2')
+  await page.getByLabel('Nội dung cam kết 1').fill('Chiết khấu 2% doanh số mỗi quý, trừ vào công nợ')
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText(`Đã lưu hợp đồng ${contract.no}.`)
+  await expect(page.getByRole('tab', { name: 'Chiết khấu – tài trợ (1)' })).toBeVisible()
+
+  await bha.send('post', `/api/contracts/${contract.id}/submit`, {})
+  await approveContract(request, contract.id)
+  await page.reload()
+  await expect(page.locator('.document-form-title')).toContainText('Hiệu lực')
+  await page.getByRole('tab', { name: 'Chiết khấu – tài trợ (1)' }).click()
+  const periods = page.getByRole('table', { name: 'Theo dõi chiết khấu tài trợ theo kỳ' })
+  // Kỳ đầu (từ ngày hiệu lực) không có mua → phải nhận 0, "Không phải nhận".
+  await expect(periods.locator('tr.ant-table-row').first()).toContainText('Không phải nhận')
+  await periods.getByRole('button', { name: /^Ghi nhận kỳ/ }).first().click()
+  const dialog = page.getByRole('dialog', { name: /Ghi nhận thực nhận/ })
+  await dialog.getByLabel('Số tiền thực nhận (VND)').fill('1500000')
+  await dialog.getByLabel('Số chứng từ đối chiếu').fill('BB-CK-01')
+  await dialog.getByRole('button', { name: 'Ghi nhận' }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã ghi nhận thực nhận.')
+  const receipts = page.getByRole('table', { name: 'Các lần ghi nhận thực nhận' })
+  await expect(receipts).toContainText('1.500.000')
+  await expect(receipts).toContainText('Giảm trừ công nợ')
+  await expect(periods.locator('tr.ant-table-row').first()).toContainText('1.500.000')
+  await page.screenshot({ path: 'e2e/screenshots/contract-rebates.png' })
+
+  await receipts.getByRole('button', { name: 'Hủy' }).click()
+  const confirm = page.getByRole('dialog', { name: /Hủy ghi nhận/ })
+  await confirm.getByLabel('Lý do hủy').fill('Ghi nhầm kỳ')
+  await confirm.getByRole('button', { name: 'Hủy ghi nhận' }).click()
+  await expect(receipts).toContainText('Đã hủy: Ghi nhầm kỳ')
+  await expect(receipts.getByRole('button', { name: 'Hủy' })).toHaveCount(0)
+})

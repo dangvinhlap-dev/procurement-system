@@ -66,6 +66,18 @@ public static class ContractEndpoints
             // API dùng JWT trong header, không dùng cookie, nên không có nguy cơ CSRF – tắt kiểm tra antiforgery cho form tải file.
             .DisableAntiforgery();
 
+        // Chiết khấu doanh số/tài trợ thực nhận (lát F4b): xem theo quyền xem hợp đồng; ghi nhận/hủy theo quyền sửa hợp đồng.
+        contracts.MapGet("/{id:guid}/rebates", (Guid id, IContractRebateService s, CancellationToken ct) => s.GetTrackingAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.ContractView);
+        contracts.MapPost("/{id:guid}/rebate-receipts", (Guid id, SaveContractRebateReceiptRequest request, IContractRebateService s, CancellationToken ct) =>
+                s.RecordAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ContractManage)
+            .Validate<SaveContractRebateReceiptRequest>();
+        app.MapPost("/api/contract-rebate-receipts/{id:guid}/cancel",
+                (Guid id, CancelContractRebateReceiptRequest request, IContractRebateService s, CancellationToken ct) => s.CancelReceiptAsync(id, request, ct))
+            .WithTags("Hợp đồng nguyên tắc")
+            .RequirePermission(Permissions.Purchase.ContractManage);
+
         // Phụ lục hợp đồng (lát B4b): lập trên hợp đồng hiệu lực, mỗi phụ lục phải duyệt; quyền như hợp đồng.
         contracts.MapPost("/{id:guid}/amendments", async (Guid id, SaveContractAmendmentRequest request, IContractAmendmentService s, CancellationToken ct) =>
             {

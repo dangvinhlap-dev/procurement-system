@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
@@ -135,7 +135,7 @@ public class ControlAnomalyTests
                 (AnomalyCodes.InvoiceShortage, 1), (AnomalyCodes.BackdatedOrder, 1), (AnomalyCodes.ConflictOfInterest, 4), (AnomalyCodes.UnrecordedRebate, 0),
             ],
             result.Summary.Select(s => (s.Code, s.Count)));
-        Assert.False(result.Summary.Single(s => s.Code == AnomalyCodes.UnrecordedRebate).Measured);
+        Assert.True(result.Summary.Single(s => s.Code == AnomalyCodes.UnrecordedRebate).Measured);
 
         var price = result.Items.Single(i => i.Code == AnomalyCodes.HighPriceRepeat);
         Assert.Equal((AnomalySeverities.Medium, "PO", (decimal?)150_000m, f.SupplierA.Code), (price.Severity, price.ScreenCode, price.Amount, price.SupplierCode));
