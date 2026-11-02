@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Reports;
 using Proc.Domain.Common;
+using Proc.Domain.Control;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
@@ -80,7 +81,8 @@ public sealed class KpiService : IKpiService
             Row(KpiCode.SlowMoving, Ratio.Of(slowAmount, slow.StockAmount), null, "Money",
                 $"Tính tại hôm nay {slow.AsOf:dd/MM/yyyy}, hàng không xuất từ {slowDays} ngày trở lên (không theo kỳ).", "SLOW"),
             NotMeasured(KpiCode.SupplierReview, "Chưa đo – cần phiếu đánh giá NCC định kỳ theo quý (lát F4)."),
-            NotMeasured(KpiCode.Violation, "Chưa đo – cần ghi nhận vi phạm của Kiểm soát nội bộ (lát F3)."),
+            Row(KpiCode.Violation, current.Violation, previous.Violation, "Count",
+                "Vi phạm mức Nghiêm trọng đã kết luận, theo ngày phát hiện; mẫu số là mọi vi phạm ghi nhận trong kỳ (sổ vi phạm KSNB).", "VIOL"),
         ];
 
         return new KpiResult(from, to, prevFrom, prevTo, items.Count(i => i.Value is not null), items.Count(i => i.Met == true), items);
@@ -94,7 +96,7 @@ public sealed class KpiService : IKpiService
     }
 
     /// <summary>Các chỉ số theo kỳ của một khoảng ngày.</summary>
-    private sealed record PeriodKpi(Ratio Saving, Ratio Contract, Ratio Sla, Ratio OnTime, Ratio Quality, Ratio Emergency);
+    private sealed record PeriodKpi(Ratio Saving, Ratio Contract, Ratio Sla, Ratio OnTime, Ratio Quality, Ratio Emergency, Ratio Violation);
 
     private async Task<PeriodKpi> PeriodAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
@@ -126,12 +128,22 @@ public sealed class KpiService : IKpiService
                 select new { Emergency = g.Key, Amount = g.Sum() })
             .ToListAsync(cancellationToken);
 
+        // Vi phạm nghiêm trọng = số vụ mức Nghiêm trọng đã kết luận (đã xác minh), theo ngày phát hiện – design.md mục 18.19. Giá trị là số vụ
+        // (không phải %), 0 vụ vẫn là kết quả đo được (đạt mục tiêu 0), nên không dùng Ratio.Of (mẫu số 0 = chưa có dữ liệu).
+        var findings = await _db.ControlFindings.AsNoTracking().Where(f => f.Date >= start && f.Date <= end)
+            .GroupBy(f => f.Severity == FindingSeverity.Serious && f.Status == FindingStatus.Concluded)
+            .Select(g => new { Serious = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+        var serious = findings.Where(f => f.Serious).Sum(f => f.Count);
+        var violation = new Ratio(serious, findings.Sum(f => f.Count), serious);
+
         return new PeriodKpi(
             saving,
             Ratio.Of(compliant, known),
             Ratio.Of(sla.OnTime, sla.OnTime + sla.Late + sla.Overdue),
             Ratio.Of(evaluation.Sum(e => e.OnTimeLines), evaluation.Sum(e => e.DeliveryLines)),
             Ratio.Of(quality.PassedLines, quality.CheckedLines),
-            Ratio.Of(amounts.Where(a => a.Emergency).Sum(a => a.Amount), amounts.Sum(a => a.Amount)));
+            Ratio.Of(amounts.Where(a => a.Emergency).Sum(a => a.Amount), amounts.Sum(a => a.Amount)),
+            violation);
     }
 }

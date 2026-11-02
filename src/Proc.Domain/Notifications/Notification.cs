@@ -19,6 +19,9 @@ public static class NotificationTypes
 
     /// <summary>Kỳ kho được mở lại – số liệu đã xuất cho kế toán có thể thay đổi.</summary>
     public const string PeriodReopened = "PeriodReopened";
+
+    /// <summary>KSNB ghi nhận hoặc kết luận vi phạm – gửi thẳng lãnh đạo (design.md mục 18.19).</summary>
+    public const string ControlFinding = "ControlFinding";
 }
 
 /// <summary>

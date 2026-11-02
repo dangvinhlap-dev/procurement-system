@@ -123,8 +123,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     mới LANHDAO; API `GET /api/control/anomalies` (`ControlAnomalyService`): giá cao lặp lại 1 NCC, PO sát dưới ngưỡng duyệt, đổi TK ngân
     hàng NCC, mua ngoài hợp đồng cao theo người lập, hóa đơn tính cả hàng thiếu, hàng/hóa đơn trước PO, xung đột lợi ích; chiết khấu "Chưa đo".
     `PurchaseReportService.OrderLinesAsync`/`ThreeWayRowsAsync` thành hàm tĩnh dùng chung. Test `ControlAnomalyTests`, sửa `RoleAdministrationTests`.
-  - Còn: bước 2 sổ vi phạm `ControlFinding` (migration `V0_13_0_GhiNhanViPham`, thông báo lãnh đạo, KPI vi phạm nghiêm trọng); bước 3 màn
-    hình ANOM + sổ vi phạm + e2e; cuối lát chạy đủ kiểm tra, merge.
+  - Bước 2 (xong): sổ vi phạm `ControlFinding` (loại số VP, migration `V0_13_0_GhiNhanViPham`), API `/api/control/findings` (ghi nhận, sửa khi
+    mở, kết luận khóa phiếu, không xóa), thông báo thẳng người có quyền `Control.Finding.Receive`; KPI "Vi phạm nghiêm trọng" đo từ sổ (vụ
+    Nghiêm trọng đã kết luận). Test domain `ControlFindingTests`, tích hợp `SoViPham_…`; sửa `BangKpi_…` (vi phạm đã đo).
+  - Còn: bước 3 màn hình ANOM + VIOL (sổ vi phạm) + thông báo mở VIOL + e2e (sửa `document-numbering` đếm 14 loại); cuối lát chạy đủ kiểm tra, merge.
 - **F2 (xong, đã merge `main` 02/11/2026): bảng KPI cung ứng 9 chỉ số** – design.md mục 18.18.
   - API `GET /api/reports/kpi` (`KpiService` ghép PRCW, SLA, QCDEV, đánh giá NCC, tiết kiệm thầu, tồn chậm, tỷ lệ PO khẩn; so kỳ trước);
     màn hình KPI (Báo cáo, mặc định tháng trước, bấm đúp mở báo cáo chi tiết, nút "Mục tiêu KPI"). Đánh giá NCC (F4), vi phạm (F3): "Chưa đo".

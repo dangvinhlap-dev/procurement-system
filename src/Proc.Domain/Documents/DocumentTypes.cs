@@ -50,6 +50,9 @@ public static class DocumentTypes
     /// <summary>Phê duyệt NCC độc quyền (lát B5b, design.md mục 18.9).</summary>
     public const string SoleSource = "NDQ";
 
+    /// <summary>Vi phạm do Kiểm soát nội bộ ghi nhận (lát F3, design.md mục 18.19).</summary>
+    public const string ControlFinding = "VP";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -66,6 +69,7 @@ public static class DocumentTypes
         new(PriceList, "Bảng giá nhà cung cấp"),
         new(Sourcing, "Danh sách tìm nguồn"),
         new(SoleSource, "Phê duyệt NCC độc quyền"),
+        new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
     ];
 
     /// <summary>

@@ -110,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Reports.IPurchaseReportService, Proc.Infrastructure.Reports.PurchaseReportService>();
         services.AddScoped<Proc.Application.Reports.IKpiService, Proc.Infrastructure.Reports.KpiService>();
         services.AddScoped<Proc.Application.Control.IControlAnomalyService, Proc.Infrastructure.Control.ControlAnomalyService>();
+        services.AddScoped<Proc.Application.Control.IControlFindingService, Proc.Infrastructure.Control.ControlFindingService>();
         services.AddScoped<Proc.Application.Reports.IDashboardService, Proc.Infrastructure.Reports.DashboardService>();
         services.AddScoped<Proc.Application.Reports.IAccountingExportService, Proc.Infrastructure.Reports.AccountingExportService>();
         services.AddScoped<Proc.Application.Notifications.INotificationService, Proc.Infrastructure.Notifications.NotificationService>();

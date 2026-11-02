@@ -5,8 +5,10 @@ using Proc.Application.Common;
 using Proc.Application.Control;
 using Proc.Application.Inventory;
 using Proc.Application.MasterData;
+using Proc.Application.Notifications;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
+using Proc.Application.Reports;
 using Proc.Domain.Organization;
 
 namespace Proc.IntegrationTests;
@@ -181,5 +183,63 @@ public class ControlAnomalyTests
         // Toàn tập đoàn (quản trị): vẫn thấy dấu hiệu của công ty này.
         var all = await ReadAsync<AnomalyResult>(await f.Buyer.GetAsync(url + "&allCompanies=true", Ct));
         Assert.Contains(all.Items, i => i.Code == AnomalyCodes.InvoiceShortage && i.TargetId == grn.Id);
+    }
+    /// <summary>Người dùng mới tại công ty của fixture với vai trò mới có các quyền cho trước.</summary>
+    private async Task<HttpClient> UserAsync(Fixture f, params string[] permissions)
+    {
+        var role = UniqueCode("R");
+        await _factory.CreateRoleAsync(role, permissions);
+        var name = $"u.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(name, f.CompanyCode, role);
+        return await _factory.CreateClientInCompanyAsync(name, ProcApiFactory.TestPassword, f.CompanyCode);
+    }
+
+    [Fact]
+    public async Task SoViPham_KsnbGhiNhan_LanhDaoNhanThongBao_KetLuanKhoaPhieu_TinhKpi()
+    {
+        var f = await ArrangeAsync();
+        var ksnb = await UserAsync(f, Permissions.Control.AnomalyView, Permissions.Control.FindingManage);
+        var leader = await UserAsync(f, Permissions.Control.FindingReceive, Permissions.Report.PurchaseView);
+        var staff = await UserAsync(f, Permissions.Purchase.PoView);
+        var refId = Guid.NewGuid();
+        var request = new SaveControlFindingRequest(Today, "Serious", "Chia nhỏ PO né cấp duyệt", "3 PO sát ngưỡng cùng NCC trong tuần", f.SupplierB,
+            AnomalyCodes.NearThreshold, "PO", refId, "PO-THU-0003");
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await ksnb.PostAsJsonAsync("/api/control/findings", request with { Title = "" }, Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await leader.PostAsJsonAsync("/api/control/findings", request, Ct)).StatusCode);
+        var created = await ReadAsync<ControlFindingDto>(await ksnb.PostAsJsonAsync("/api/control/findings", request, Ct));
+        Assert.Matches($"^VP-{f.CompanyCode}-{Today:yyMM}-\\d{{4}}$", created.No);
+        Assert.Equal(("Open", "Serious", refId, f.SupplierB), (created.Status, created.Severity, created.RefId, created.SupplierId));
+
+        // Lãnh đạo nhận thông báo thẳng, mở màn hình sổ vi phạm; người ghi nhận không tự nhận thông báo của mình.
+        var notice = Assert.Single((await leader.GetFromJsonAsync<List<NotificationDto>>("/api/notifications", Ct))!, n => n.TargetId == created.Id);
+        Assert.Equal(("ControlFinding", "VIOL"), (notice.Type, notice.ScreenCode));
+        Assert.Contains(created.No, notice.Title);
+        Assert.DoesNotContain((await ksnb.GetFromJsonAsync<List<NotificationDto>>("/api/notifications", Ct))!, n => n.TargetId == created.Id);
+
+        // Xem: KSNB và lãnh đạo; người khác không.
+        Assert.Contains((await leader.GetFromJsonAsync<List<ControlFindingDto>>("/api/control/findings", Ct))!, x => x.Id == created.Id);
+        Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync("/api/control/findings", Ct)).StatusCode);
+
+        var updated = await ReadAsync<ControlFindingDto>(await ksnb.PutAsJsonAsync($"/api/control/findings/{created.Id}",
+            request with { Title = "Chia nhỏ PO – đã đối chiếu hồ sơ", RefId = null }, Ct));
+        Assert.Equal(("Chia nhỏ PO – đã đối chiếu hồ sơ", (Guid?)refId), (updated.Title, updated.RefId));
+
+        // KPI trước khi kết luận: chưa có vi phạm nghiêm trọng đã xác minh → 0 vụ, đạt.
+        var kpiUrl = $"/api/reports/kpi?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}";
+        var violation = (await ReadAsync<KpiResult>(await leader.GetAsync(kpiUrl, Ct))).Items.Single(i => i.Code == "Violation");
+        Assert.Equal((true, (decimal?)0m, (decimal?)1m, (bool?)true), (violation.Measured, violation.Value, violation.Denominator, violation.Met));
+
+        Assert.Contains("kết luận", await TitleAsync(await ksnb.PostAsJsonAsync($"/api/control/findings/{created.Id}/conclude",
+            new ConcludeControlFindingRequest(" ", "Serious"), Ct)));
+        var concluded = await ReadAsync<ControlFindingDto>(await ksnb.PostAsJsonAsync($"/api/control/findings/{created.Id}/conclude",
+            new ConcludeControlFindingRequest("Xác minh: cố ý chia nhỏ đơn; đề nghị kỷ luật người lập", "Serious"), Ct));
+        Assert.Equal(("Concluded", "Serious"), (concluded.Status, concluded.Severity));
+        Assert.NotNull(concluded.ConcludedByName);
+        Assert.Contains("đã kết luận", await TitleAsync(await ksnb.PutAsJsonAsync($"/api/control/findings/{created.Id}", request, Ct)));
+        Assert.Equal(2, (await leader.GetFromJsonAsync<List<NotificationDto>>("/api/notifications", Ct))!.Count(n => n.TargetId == created.Id));
+
+        violation = (await ReadAsync<KpiResult>(await leader.GetAsync(kpiUrl, Ct))).Items.Single(i => i.Code == "Violation");
+        Assert.Equal(((decimal?)1m, (decimal?)0m, (bool?)false, "VIOL"), (violation.Value, violation.PreviousValue, violation.Met, violation.Report));
     }
 }
