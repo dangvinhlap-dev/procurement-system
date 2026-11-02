@@ -1451,7 +1451,7 @@ Nguồn: đề xuất Ban CUVT K1 (mục 3.5 `docs/Phantich_01112026.md`). Thôn
 | Mức **Khẩn** khi tồn hiện có < tồn an toàn (hàng đang đặt chưa về chưa dùng được); còn lại **Cần đặt** | Ưu tiên xử lý; đèn đỏ/vàng có chữ đi kèm |
 | Báo cáo **Gợi ý đặt hàng** (màn hình REORD, nhóm Kho, quyền `Report.Stock.View`, `GET /api/reports/reorder-suggestions?categoryId=&criticalOnly=&includeAll=`): lọc nhóm hàng (gồm nhóm con), chỉ trọng yếu, gồm cả hàng còn đủ; trọng yếu lên đầu, rồi khẩn, rồi mã hàng; tối đa 5.000 dòng; kèm NCC ưu tiên | Người mua rà soát hằng ngày |
 | Tồn cộng mọi kho của công ty (bỏ filter kho chỉ ở phép cộng này, như tồn tối thiểu mục 11.1); mặt hàng vẫn qua filter nhóm hàng; chỉ trả số lượng, không trả giá trị, không chia theo kho | Đặt hàng là việc của cả công ty |
-| **Lập đề nghị mua** từ các dòng chọn (người có quyền lập PR): mở PR mới điền sẵn mặt hàng, ĐVT cơ sở, SL gợi ý, NCC ưu tiên; người dùng sửa rồi lưu như PR thường | Giữ nguyên quy trình duyệt PR |
+| **Lập đề nghị mua** (nút trên báo cáo, người có quyền lập PR): mở PR mới điền sẵn **mọi dòng cần đặt đang hiển thị theo bộ lọc** (mặt hàng, ĐVT cơ sở, SL gợi ý, NCC ưu tiên); người dùng sửa/xóa dòng rồi lưu như PR thường. PR nháp đã tính vào "đề nghị còn mở" nên không bị gợi ý lại | Giữ nguyên quy trình duyệt PR |
 
 Migration `V0_13_0_DiemDatHangLai` (3 cột của `Item` – `Down()` xóa cột, mất thông số đã khai báo).
 

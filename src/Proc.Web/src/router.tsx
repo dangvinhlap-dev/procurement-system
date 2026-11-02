@@ -49,7 +49,7 @@ import { PurchaseHistoryMappingPage } from './pages/reports/PurchaseHistoryMappi
 import { PurchaseAnalysisPage } from './pages/reports/PurchaseAnalysisPage'
 import { PurchaseHistoryPage } from './pages/reports/PurchaseHistoryPage'
 import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
-import { ExpiringReportPage, GroupStockReportPage, SlowMovingReportPage } from './pages/reports/StockReportPages'
+import { ExpiringReportPage, GroupStockReportPage, ReorderSuggestionReportPage, SlowMovingReportPage } from './pages/reports/StockReportPages'
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
 import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
@@ -92,6 +92,7 @@ const implemented: Record<string, ReactNode> = {
   CARD: <StockCardPage />,
   NXT: <StockMovementReportPage />,
   SLOW: <SlowMovingReportPage />,
+  REORD: <ReorderSuggestionReportPage />,
   EXP: <ExpiringReportPage />,
   GSTK: <GroupStockReportPage />,
   PRPEND: <PendingRequestsReportPage />,

@@ -33,6 +33,9 @@ interface ItemFormValues {
   trackExpiry: boolean
   minStock: number | null
   maxStock: number | null
+  safetyStock: number | null
+  reorderPoint: number | null
+  isCritical: boolean
   conversions: { uomId: string | undefined; factor: number | null }[]
   isActive: boolean
 }
@@ -54,6 +57,9 @@ const emptyValues: ItemFormValues = {
   trackExpiry: false,
   minStock: null,
   maxStock: null,
+  safetyStock: null,
+  reorderPoint: null,
+  isCritical: false,
   conversions: [],
   isActive: true,
 }
@@ -122,14 +128,20 @@ export function ItemDrawer({
       trackExpiry: detail.trackExpiry,
       minStock: detail.minStock,
       maxStock: detail.maxStock,
+      safetyStock: detail.safetyStock,
+      reorderPoint: detail.reorderPoint,
+      isCritical: detail.isCritical,
       conversions: detail.conversions.map((c) => ({ uomId: c.uomId, factor: c.factor })),
       isActive: detail.isActive,
     })
   }, [detail, form])
 
-  // Hàng không phải tồn kho thì không quản lý lô/hạn dùng/tồn tối thiểu – xóa luôn để khỏi bị API từ chối khi lưu.
+  // Hàng không phải tồn kho thì không quản lý lô/hạn dùng/tồn tối thiểu/đặt hàng lại – xóa luôn để khỏi bị API từ chối khi lưu.
   useEffect(() => {
-    if (type && type !== 'Inventory') form.setFieldsValue({ trackLot: false, trackExpiry: false, minStock: null, maxStock: null })
+    if (type && type !== 'Inventory')
+      form.setFieldsValue({
+        trackLot: false, trackExpiry: false, minStock: null, maxStock: null, safetyStock: null, reorderPoint: null, isCritical: false,
+      })
   }, [type, form])
 
   const save = async () => {
@@ -158,6 +170,9 @@ export function ItemDrawer({
       trackExpiry: values.trackExpiry,
       minStock: values.minStock ?? null,
       maxStock: values.maxStock ?? null,
+      safetyStock: values.safetyStock ?? null,
+      reorderPoint: values.reorderPoint ?? null,
+      isCritical: values.isCritical,
       conversions: (values.conversions ?? []).map((c) => ({ uomId: c.uomId!, factor: c.factor! })),
     }
     try {
@@ -281,6 +296,35 @@ export function ItemDrawer({
                 >
                   <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
                 </Form.Item>
+                {/* Đặt hàng lại (design.md mục 18.16): tồn an toàn ≤ điểm đặt hàng lại ≤ tồn tối đa. */}
+                <Form.Item label={`Tồn an toàn (${baseUomCode})`} name="safetyStock">
+                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
+                </Form.Item>
+                <Form.Item
+                  label={`Điểm đặt hàng lại (${baseUomCode})`}
+                  name="reorderPoint"
+                  dependencies={['safetyStock', 'maxStock']}
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      validator: (_, v: number | null) => {
+                        const safety = getFieldValue('safetyStock') as number | null
+                        const max = getFieldValue('maxStock') as number | null
+                        if (safety != null && v != null && safety > v) return Promise.reject(new Error('Phải ≥ tồn an toàn.'))
+                        if (max != null && (v ?? safety) != null && (v ?? safety)! > max) return Promise.reject(new Error('Phải ≤ tồn tối đa.'))
+                        return Promise.resolve()
+                      },
+                    }),
+                  ]}
+                >
+                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
+                </Form.Item>
+              </div>
+              <Form.Item name="isCritical" valuePropName="checked">
+                <Checkbox disabled={!isInventory}>Vật tư trọng yếu (thiếu sẽ dừng sản xuất/vận hành)</Checkbox>
+              </Form.Item>
+              <div className="detail-hint">
+                Khả dụng (tồn + đang đặt + đề nghị còn mở) dưới điểm đặt hàng lại thì mặt hàng hiện ở Báo cáo → Gợi ý đặt hàng; chưa nhập
+                điểm đặt hàng lại thì dùng tồn tối thiểu.
               </div>
             </>
           ),

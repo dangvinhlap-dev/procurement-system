@@ -34,6 +34,8 @@ export interface ListPageProps<T> {
   onCreate?: () => void
   /** false thì ẩn nút "Tạo mới" (người dùng không có quyền thêm). Mặc định true. */
   canCreate?: boolean
+  /** Nút lệnh riêng của màn hình, đặt sau "Tạo mới" (ví dụ "Lập đề nghị mua" ở Gợi ý đặt hàng). */
+  actions?: ReactNode
   /** Đang tải dữ liệu từ server. */
   loading?: boolean
   /** Thông báo hiện ngay trên lưới, ví dụ "kết quả bị cắt, hãy thu hẹp bộ lọc". */
@@ -89,6 +91,7 @@ export function ListPage<T>({
   onClearFilters,
   onCreate,
   canCreate = true,
+  actions,
   loading = false,
   notice,
   onOpenRow,
@@ -219,6 +222,7 @@ export function ListPage<T>({
                 Tạo mới
               </Button>
             )}
+            {actions}
             <Button type="text" icon={<DownloadOutlined />} onClick={exportCsv}>
               Xuất CSV
             </Button>

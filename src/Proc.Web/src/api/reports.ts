@@ -135,6 +135,63 @@ export function useGroupStock(itemId: string | undefined) {
   })
 }
 
+/** Mức của dòng gợi ý đặt hàng: Urgent – tồn dưới tồn an toàn; Reorder – khả dụng dưới ngưỡng; Ok – còn đủ. */
+export type ReorderLevel = 'Urgent' | 'Reorder' | 'Ok'
+
+/** Một mặt hàng trong báo cáo gợi ý đặt hàng (design.md mục 18.16) – số lượng theo ĐVT cơ sở, cộng mọi kho của công ty. */
+export interface ReorderSuggestionRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  categoryCode: string
+  categoryName: string
+  baseUomId: string
+  uomCode: string
+  isCritical: boolean
+  safetyStock: number | null
+  /** Ngưỡng đang áp dụng: điểm đặt hàng lại, chưa có thì tồn tối thiểu. */
+  reorderPoint: number
+  maxStock: number | null
+  onHandQty: number
+  onOrderQty: number
+  openRequestQty: number
+  availableQty: number
+  suggestedQty: number
+  level: ReorderLevel
+  preferredSupplierId: string | null
+  preferredSupplierCode: string | null
+}
+
+/** Kết quả báo cáo gợi ý đặt hàng. */
+export interface ReorderSuggestionResult {
+  items: ReorderSuggestionRow[]
+  truncated: boolean
+  limit: number
+}
+
+/** Điều kiện báo cáo gợi ý đặt hàng. */
+export interface ReorderSuggestionFilter {
+  categoryId?: string
+  criticalOnly: boolean
+  includeAll: boolean
+}
+
+/**
+ * Gợi ý đặt hàng: mặt hàng có khả dụng (tồn + đang đặt + đề nghị còn mở) dưới điểm đặt hàng lại, kèm SL gợi ý.
+ * @param filter Nhóm hàng, chỉ trọng yếu, gồm cả hàng còn đủ.
+ */
+export function useReorderSuggestions(filter: ReorderSuggestionFilter) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({ criticalOnly: String(filter.criticalOnly), includeAll: String(filter.includeAll) })
+  if (filter.categoryId) params.set('categoryId', filter.categoryId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'reorder-suggestions', query],
+    queryFn: () => apiFetch<ReorderSuggestionResult>(`/api/reports/reorder-suggestions?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Một dòng PR chưa xử lý: chờ duyệt, hoặc đã duyệt chưa đặt đủ. */
 export interface PendingRequestLine {
   requestId: string

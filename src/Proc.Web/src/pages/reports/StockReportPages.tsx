@@ -1,4 +1,5 @@
-import { Alert, InputNumber, Select, TreeSelect } from 'antd'
+import { FileAddOutlined } from '@ant-design/icons'
+import { Alert, Button, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
@@ -7,17 +8,24 @@ import { useWarehouses } from '../../api/organization'
 import {
   useExpiring,
   useGroupStock,
+  useReorderSuggestions,
   useSlowMoving,
   type ExpiringRow,
   type GroupStockResult,
   type GroupStockRow,
+  type ReorderLevel,
+  type ReorderSuggestionFilter,
+  type ReorderSuggestionRow,
   type SlowMovingRow,
   type StockReportFilter,
 } from '../../api/reports'
-import type { GridColumn } from '../../components/DataGrid/types'
+import { Permission } from '../../auth/permissions'
+import { useAuth } from '../../auth/useAuth'
+import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
 import { buildCategoryTree } from '../masterData/categoryTree'
+import type { PrPrefillState } from '../purchasing/PurchaseRequestPage'
 
 /**
  * Ô lọc chung của báo cáo kho: kho, nhóm hàng (gồm nhóm con), số ngày.
@@ -264,6 +272,119 @@ export function GroupStockReportPage() {
             />
           )}
         </FilterField>
+      }
+    />
+  )
+}
+
+const reorderLevelLabels: Record<ReorderLevel, string> = { Urgent: 'Khẩn – dưới tồn an toàn', Reorder: 'Cần đặt', Ok: 'Còn đủ' }
+const reorderLevelTone: Record<ReorderLevel, StatusTone> = { Urgent: 'error', Reorder: 'warning', Ok: 'success' }
+
+const reorderColumns: GridColumn<ReorderSuggestionRow>[] = [
+  { key: 'level', title: 'Mức', width: 170, type: 'status', value: (r) => reorderLevelLabels[r.level], tone: (r) => reorderLevelTone[r.level], groupable: true },
+  { key: 'code', title: 'Mã hàng', width: 130, value: (r) => r.itemCode },
+  { key: 'name', title: 'Tên hàng', width: 230, value: (r) => r.itemName },
+  { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
+  { key: 'onHand', title: 'Tồn hiện tại', width: 95, type: 'quantity', value: (r) => r.onHandQty },
+  { key: 'onOrder', title: 'Đang đặt', width: 90, type: 'quantity', value: (r) => r.onOrderQty },
+  { key: 'openRequest', title: 'Đề nghị mở', width: 90, type: 'quantity', value: (r) => r.openRequestQty },
+  { key: 'available', title: 'Khả dụng', width: 90, type: 'quantity', value: (r) => r.availableQty },
+  { key: 'suggested', title: 'SL gợi ý', width: 90, type: 'quantity', value: (r) => r.suggestedQty },
+  { key: 'reorder', title: 'Điểm đặt lại', width: 95, type: 'quantity', value: (r) => r.reorderPoint },
+  { key: 'safety', title: 'Tồn an toàn', width: 95, type: 'quantity', value: (r) => r.safetyStock },
+  { key: 'max', title: 'Tồn tối đa', width: 95, type: 'quantity', value: (r) => r.maxStock },
+  { key: 'supplier', title: 'NCC ưu tiên', width: 110, value: (r) => r.preferredSupplierCode, groupable: true },
+  { key: 'critical', title: 'Trọng yếu', width: 80, value: (r) => (r.isCritical ? 'Có' : ''), groupable: true },
+  { key: 'category', title: 'Nhóm hàng', width: 150, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true },
+]
+
+const defaultReorderFilter: ReorderSuggestionFilter = { criticalOnly: false, includeAll: false }
+
+/**
+ * Báo cáo → Gợi ý đặt hàng (design.md mục 18.16, đề xuất Ban CUVT K1): mặt hàng có khả dụng (tồn mọi kho + đang đặt + đề nghị còn
+ * mở) dưới điểm đặt hàng lại (chưa có thì tồn tối thiểu), SL gợi ý đưa lên tồn tối đa. Dòng trọng yếu tô màu. "Lập đề nghị mua" mở PR
+ * mới điền sẵn các dòng cần đặt đang hiển thị (ĐVT cơ sở, SL gợi ý, NCC ưu tiên). Bấm đúp mở thẻ kho.
+ */
+export function ReorderSuggestionReportPage() {
+  const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const [filter, setFilter] = useState<ReorderSuggestionFilter>(defaultReorderFilter)
+  const categories = useItemCategories()
+  const tree = useMemo(() => buildCategoryTree(categories.data ?? []), [categories.data])
+  const report = useReorderSuggestions(filter)
+  const rows = report.data?.items ?? []
+  const toOrder = rows.filter((r) => r.suggestedQty > 0)
+  const urgent = toOrder.filter((r) => r.level === 'Urgent').length
+
+  const createRequest = () => {
+    const state: PrPrefillState = {
+      prefillLines: toOrder.map((r) => ({ itemId: r.itemId, uomId: r.baseUomId, qty: r.suggestedQty, suggestedSupplierId: r.preferredSupplierId })),
+    }
+    navigate('/mua-hang/pr/moi', { state })
+  }
+
+  return (
+    <ListPage
+      title="Gợi ý đặt hàng"
+      exportFileName="goi-y-dat-hang"
+      exportSubtitle={filter.criticalOnly ? 'Chỉ vật tư trọng yếu' : undefined}
+      canCreate={false}
+      actions={
+        hasPermission(Permission.PrCreate) && (
+          <Button type="primary" icon={<FileAddOutlined />} disabled={toOrder.length === 0} onClick={createRequest}>
+            Lập đề nghị mua
+          </Button>
+        )
+      }
+      rows={rows}
+      columns={reorderColumns}
+      rowKey={(r) => r.itemId}
+      loading={report.isLoading}
+      isMarked={(r) => r.isCritical}
+      onOpenRow={(r) => navigate(`/kho/the-kho?itemId=${r.itemId}`)}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : report.data?.truncated ? (
+          <Alert type="warning" showIcon title={`Chỉ hiện ${report.data.limit.toLocaleString('vi-VN')} dòng đầu – hãy lọc theo nhóm hàng.`} />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            title={`${toOrder.length.toLocaleString('vi-VN')} mặt hàng cần đặt, ${urgent.toLocaleString('vi-VN')} mặt hàng khẩn. Khả dụng = tồn mọi kho + đang đặt (PO chưa nhận) + đề nghị còn mở; SL gợi ý đưa khả dụng lên tồn tối đa. Dòng tô màu: vật tư trọng yếu.`}
+          />
+        )
+      }
+      onClearFilters={() => setFilter(defaultReorderFilter)}
+      filters={
+        <>
+          <FilterField label="Nhóm hàng (gồm nhóm con)" width={220}>
+            {(id) => (
+              <TreeSelect
+                id={id}
+                value={filter.categoryId}
+                onChange={(v) => setFilter({ ...filter, categoryId: v })}
+                treeData={tree}
+                allowClear
+                showSearch
+                treeNodeFilterProp="title"
+                placeholder="Tất cả"
+              />
+            )}
+          </FilterField>
+          <FilterField label="Phạm vi" width={260}>
+            {(id) => (
+              <div id={id} style={{ display: 'flex', gap: 8, alignItems: 'center', height: '100%' }}>
+                <Checkbox checked={filter.criticalOnly} onChange={(e) => setFilter({ ...filter, criticalOnly: e.target.checked })}>
+                  Chỉ trọng yếu
+                </Checkbox>
+                <Checkbox checked={filter.includeAll} onChange={(e) => setFilter({ ...filter, includeAll: e.target.checked })}>
+                  Gồm hàng còn đủ
+                </Checkbox>
+              </div>
+            )}
+          </FilterField>
+        </>
       }
     />
   )
