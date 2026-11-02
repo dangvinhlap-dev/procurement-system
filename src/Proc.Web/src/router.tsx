@@ -44,6 +44,7 @@ import {
   SourcingSavingsReportPage,
   ContractComplianceReportPage,
   PriceVarianceReportPage,
+  KpiReportPage,
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
 import { AccountingExportPage } from './pages/reports/AccountingExportPage'
@@ -106,6 +107,7 @@ const implemented: Record<string, ReactNode> = {
   SAVE: <SourcingSavingsReportPage />,
   PRCW: <ContractComplianceReportPage />,
   PRVAR: <PriceVarianceReportPage />,
+  KPI: <KpiReportPage />,
   ACCX: <AccountingExportPage />,
   PHIS: <PurchaseHistoryPage />,
   PHMAP: <PurchaseHistoryMappingPage />,

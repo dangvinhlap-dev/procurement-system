@@ -654,3 +654,51 @@ export function useAccountingDocuments(filter: AccountingExportFilter) {
     placeholderData: keepPreviousData,
   })
 }
+
+/** Một chỉ số trên bảng KPI cung ứng (design.md mục 18.18). */
+export interface KpiRow {
+  code: string
+  name: string
+  formula: string
+  /** true: đạt khi ≥ mục tiêu; false: đạt khi ≤ mục tiêu. */
+  higherIsBetter: boolean
+  /** true: số vụ; false: tỷ lệ %. */
+  isCount: boolean
+  target: number
+  /** false: chưa đo được trong phần mềm (chờ lát sau). */
+  measured: boolean
+  value: number | null
+  previousValue: number | null
+  numerator: number | null
+  denominator: number | null
+  unit: 'Money' | 'Count'
+  met: boolean | null
+  note: string | null
+  /** Mã màn hình báo cáo chi tiết. */
+  report: string | null
+}
+
+/** Bảng KPI cung ứng của công ty đang làm việc. */
+export interface KpiResult {
+  from: string
+  to: string
+  previousFrom: string
+  previousTo: string
+  measuredCount: number
+  metCount: number
+  items: KpiRow[]
+}
+
+/**
+ * Bảng KPI cung ứng trong khoảng ngày, so kỳ trước liền trước (design.md mục 18.18).
+ * @param range Khoảng ngày yyyy-MM-dd.
+ */
+export function useKpi(range: { from: string; to: string }) {
+  const companyId = useCompanyId()
+  const query = new URLSearchParams(range).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'kpi', query],
+    queryFn: () => apiFetch<KpiResult>(`/api/reports/kpi?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}

@@ -70,7 +70,7 @@ public sealed class KpiService : IKpiService
         List<KpiRowDto> items =
         [
             Row(KpiCode.Saving, current.Saving, previous.Saving, "Money",
-                "Theo RFQ đã chọn thầu trong kỳ; giá cơ sở = giá chào bình quân × SL.", "SAVING"),
+                "Theo RFQ đã chọn thầu trong kỳ; giá cơ sở = giá chào bình quân × SL.", "SAVE"),
             Row(KpiCode.ContractCompliance, current.Contract, previous.Contract, "Money",
                 "PO Đã duyệt/Đã đóng theo ngày PO; không tính dòng PO lập trước bản 0.12.0 (không xác định nguồn giá).", "PRCW"),
             Row(KpiCode.PurchaseSla, current.Sla, previous.Sla, "Count", "Dòng PR đủ duyệt trong kỳ; dòng chưa đến hạn chưa tính.", "SLA"),

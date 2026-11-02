@@ -62,6 +62,17 @@ const inputLimits: Record<string, { min: number; max: number; precision: number;
   SLA_PRICED_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
   SLA_SOURCING_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
   SLA_URGENT_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
+  // Mục tiêu KPI cung ứng (design.md mục 18.18): tỷ lệ 0–100%, vi phạm là số vụ nguyên.
+  KPI_TARGET_SAVING: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_CONTRACTCOMPLIANCE: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_PURCHASESLA: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_ONTIMEDELIVERY: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_QUALITY: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_EMERGENCY: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_SLOWMOVING: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_SUPPLIERREVIEW: { min: 0, max: 100, precision: 4, suffix: '%' },
+  KPI_TARGET_VIOLATION: { min: 0, max: 1000, precision: 0, suffix: 'vụ' },
+  KPI_SLOW_MOVING_DAYS: { min: 1, max: 3650, precision: 0, suffix: 'ngày' },
 }
 
 /** Tham số bật/tắt (giá trị "Bật"/"Tắt" – design.md mục 18.14): ô nhập là công tắc, gửi "true"/"false". */
