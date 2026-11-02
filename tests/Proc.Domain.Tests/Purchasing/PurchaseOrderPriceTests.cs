@@ -65,6 +65,35 @@ public class PurchaseOrderPriceTests
     }
 
     [Fact]
+    public void MuaKhanCap_BatBuocLyDoVaHanHoSo_QuaHanKhiChuaXacNhan()
+    {
+        var item = NewItem();
+        var date = new DateOnly(2026, 11, 2);
+        PurchaseOrderHeader Header(string? reason, DateOnly? due) =>
+            new(date, Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, null, 0, null, null, PurchaseType.Emergency, reason, due);
+        Assert.Contains("lý do khẩn cấp", Assert.Throws<BusinessRuleException>(() => PurchaseOrder.Create(Company, "PO-K", Header(" ", date.AddDays(7)))).Message);
+        Assert.Contains("hạn bổ sung hồ sơ", Assert.Throws<BusinessRuleException>(() => PurchaseOrder.Create(Company, "PO-K", Header("Hỏng máy", null))).Message);
+        Assert.Throws<BusinessRuleException>(() => PurchaseOrder.Create(Company, "PO-K", Header("Hỏng máy", date.AddDays(31))));
+
+        var po = PurchaseOrder.Create(Company, "PO-K", Header(" Hỏng máy cán số 2 ", date.AddDays(7)));
+        Assert.Equal((PurchaseType.Emergency, "Hỏng máy cán số 2"), (po.PurchaseType, po.EmergencyReason));
+        po.SetLines([(new PurchaseOrderLineData(null, item.Id, Cai.Id, 1, 100, 0, "10", null, null, null), item)]);
+        Assert.Throws<BusinessRuleException>(() => po.CompleteDocs(Guid.CreateVersion7(), DateTimeOffset.UtcNow, "Đã đủ"));
+        po.Submit();
+        po.MarkApproved(DateTimeOffset.UtcNow);
+        Assert.False(po.IsDocsOverdue(date.AddDays(7)));
+        Assert.True(po.IsDocsOverdue(date.AddDays(8)));
+        Assert.Throws<BusinessRuleException>(() => po.CompleteDocs(Guid.CreateVersion7(), DateTimeOffset.UtcNow, " "));
+        po.CompleteDocs(Guid.CreateVersion7(), DateTimeOffset.UtcNow, "Biên bản sự cố, 3 báo giá so sánh");
+        Assert.False(po.IsDocsOverdue(date.AddDays(8)));
+        Assert.Throws<BusinessRuleException>(() => po.CompleteDocs(Guid.CreateVersion7(), DateTimeOffset.UtcNow, "Lần hai"));
+
+        // Đổi về mua thường thì xóa lý do và hạn.
+        var normal = PurchaseOrder.Create(Company, "PO-T", Header("Hỏng máy", date.AddDays(7)) with { PurchaseType = PurchaseType.Normal });
+        Assert.Equal(((string?)null, (DateOnly?)null), (normal.EmergencyReason, normal.DocsDueDate));
+    }
+
+    [Fact]
     public void CapDuyetNgoaiLe_LuonItNhatMotCap()
     {
         var role1 = Guid.CreateVersion7();

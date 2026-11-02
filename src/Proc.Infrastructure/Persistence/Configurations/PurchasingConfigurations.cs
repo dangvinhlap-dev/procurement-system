@@ -105,6 +105,8 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
     {
         builder.ToTable("PurchaseOrder");
         builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.EmergencyReason).HasMaxLength(500);
+        builder.Property(x => x.DocsCompletionNote).HasMaxLength(500);
         // Bộ phận đặt hàng (lát C1b – design.md mục 18.10).
         builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(x => x.DocumentNumber);

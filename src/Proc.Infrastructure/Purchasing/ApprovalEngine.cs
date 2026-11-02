@@ -38,10 +38,13 @@ internal sealed class ApprovalEngine
     /// Gửi duyệt: phiếu sang Chờ duyệt, sinh các bước của lượt mới theo quy trình của công ty phiếu (design.md mục 6.2). Dưới mọi
     /// ngưỡng đã cấu hình thì phiếu được duyệt ngay.
     /// </summary>
-    public async Task SubmitAsync(IApprovalSubject document, CancellationToken cancellationToken)
+    /// <param name="document">Đối tượng duyệt.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="ruleType">Bộ cấp duyệt thay thế (ví dụ POK – PO khẩn cấp, design.md mục 18.11); chưa cấu hình thì dùng cấp của loại phiếu.</param>
+    public async Task SubmitAsync(IApprovalSubject document, CancellationToken cancellationToken, string? ruleType = null)
     {
         var round = document.Submit();
-        var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == document.DocType).ToListAsync(cancellationToken);
+        var rules = await BaseRulesAsync(document, ruleType, cancellationToken);
         var steps = ApprovalPlan.Levels(rules, document.ApprovalAmount)
             .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
             .ToList();
@@ -56,17 +59,32 @@ internal sealed class ApprovalEngine
     /// <param name="document">Đối tượng duyệt.</param>
     /// <param name="exceptionType">Mã loại ngoại lệ trong <see cref="ApprovalTypes"/> (ví dụ POX).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    public async Task SubmitWithExceptionAsync(IApprovalSubject document, string exceptionType, CancellationToken cancellationToken)
+    /// <param name="ruleType">Bộ cấp duyệt thay thế cho chặng 1 (như <see cref="SubmitAsync"/>).</param>
+    public async Task SubmitWithExceptionAsync(IApprovalSubject document, string exceptionType, CancellationToken cancellationToken, string? ruleType = null)
     {
         var round = document.Submit();
-        var rules = await _db.ApprovalRules.AsNoTracking()
-            .Where(r => r.DocType == document.DocType || r.DocType == exceptionType).ToListAsync(cancellationToken);
-        var steps = ApprovalPlan.Levels(rules.Where(r => r.DocType == document.DocType).ToList(), document.ApprovalAmount)
+        var exceptionRules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == exceptionType).ToListAsync(cancellationToken);
+        var steps = ApprovalPlan.Levels(await BaseRulesAsync(document, ruleType, cancellationToken), document.ApprovalAmount)
             .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
-            .Concat(ApprovalPlan.ExceptionLevels(rules.Where(r => r.DocType == exceptionType).ToList(), document.ApprovalAmount)
+            .Concat(ApprovalPlan.ExceptionLevels(exceptionRules, document.ApprovalAmount)
                 .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, 2)))
             .ToList();
         await StartAsync(document, steps, cancellationToken);
+    }
+
+    /// <summary>
+    /// Cấp duyệt chặng thường: bộ cấp thay thế nếu công ty đã cấu hình (ví dụ PO khẩn cấp – POK), không thì cấp của loại phiếu. Không cấu
+    /// hình bộ thay thế thì không làm PO khẩn thoát duyệt – vẫn qua quy trình PO thường.
+    /// </summary>
+    private async Task<List<ApprovalRule>> BaseRulesAsync(IApprovalSubject document, string? ruleType, CancellationToken cancellationToken)
+    {
+        if (ruleType is not null)
+        {
+            var alternative = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == ruleType).ToListAsync(cancellationToken);
+            if (alternative.Count > 0) return alternative;
+        }
+
+        return await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == document.DocType).ToListAsync(cancellationToken);
     }
 
     /// <summary>

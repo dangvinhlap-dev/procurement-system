@@ -100,6 +100,10 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PoApprove);
         po.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
+        // Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11) – người lập PO.
+        po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
+                s.CompleteDocsAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PoCreate);
         return app;
     }
 }

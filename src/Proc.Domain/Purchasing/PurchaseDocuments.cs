@@ -35,9 +35,23 @@ public sealed record PurchaseRequestLineData(
 
 /// <summary>Đầu phiếu đơn mua hàng (design.md mục 10.3). Giai đoạn 5 chỉ dùng VND.</summary>
 /// <param name="DepartmentId">Bộ phận đặt hàng (không bắt buộc) – xét phạm vi "bộ phận được phép đặt" của hợp đồng (design.md mục 18.10).</param>
+/// <param name="PurchaseType">Loại mua: thường hoặc khẩn cấp (design.md mục 18.11).</param>
+/// <param name="EmergencyReason">Lý do mua khẩn cấp (bắt buộc khi khẩn cấp).</param>
+/// <param name="DocsDueDate">Hạn bổ sung hồ sơ của PO khẩn cấp (bắt buộc khi khẩn cấp).</param>
 public sealed record PurchaseOrderHeader(
     DateOnly Date, Guid SupplierId, Guid WarehouseId, DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms,
-    string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note, Guid? DepartmentId = null);
+    string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note, Guid? DepartmentId = null,
+    PurchaseType PurchaseType = PurchaseType.Normal, string? EmergencyReason = null, DateOnly? DocsDueDate = null);
+
+/// <summary>Loại mua của PO (design.md mục 18.11 – đề xuất Ban CUVT V4).</summary>
+public enum PurchaseType
+{
+    /// <summary>Mua thường.</summary>
+    Normal = 1,
+
+    /// <summary>Mua khẩn cấp: duyệt theo cơ chế khẩn (loại POK), hoàn thiện hồ sơ sau trong hạn.</summary>
+    Emergency = 2,
+}
 
 /// <summary>Dữ liệu một dòng đơn mua hàng.</summary>
 /// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt (bắt buộc khi gửi duyệt nếu lệch – design.md mục 18.10).</param>
@@ -405,6 +419,9 @@ public sealed class PurchaseOrder : ApprovableDocument
     /// <summary>Dung sai nhận hàng tối đa (%).</summary>
     public const decimal MaxTolerancePct = 20m;
 
+    /// <summary>Hạn bổ sung hồ sơ PO khẩn cấp tối đa (ngày sau ngày PO).</summary>
+    public const int MaxDocsDueDays = 30;
+
     private readonly List<PurchaseOrderLine> _lines = [];
 
     private PurchaseOrder()
@@ -425,6 +442,24 @@ public sealed class PurchaseOrder : ApprovableDocument
 
     /// <summary>Ngày giao dự kiến.</summary>
     public DateOnly? ExpectedDate { get; private set; }
+
+    /// <summary>Loại mua (design.md mục 18.11).</summary>
+    public PurchaseType PurchaseType { get; private set; } = PurchaseType.Normal;
+
+    /// <summary>Lý do mua khẩn cấp.</summary>
+    public string? EmergencyReason { get; private set; }
+
+    /// <summary>Hạn bổ sung hồ sơ của PO khẩn cấp.</summary>
+    public DateOnly? DocsDueDate { get; private set; }
+
+    /// <summary>Thời điểm xác nhận đã bổ sung đủ hồ sơ (PO khẩn cấp).</summary>
+    public DateTimeOffset? DocsCompletedAt { get; private set; }
+
+    /// <summary>Người xác nhận đã bổ sung hồ sơ.</summary>
+    public Guid? DocsCompletedBy { get; private set; }
+
+    /// <summary>Ghi chú hồ sơ đã bổ sung (ví dụ biên bản, báo giá so sánh đã đính kèm).</summary>
+    public string? DocsCompletionNote { get; private set; }
 
     /// <summary>Điều khoản thanh toán.</summary>
     public string? PaymentTerms { get; private set; }
@@ -490,6 +525,24 @@ public sealed class PurchaseOrder : ApprovableDocument
         if (header.ExpectedDate is { } expected && expected < header.Date) throw new BusinessRuleException("Ngày giao dự kiến không được trước ngày đặt hàng.");
         if (header.ReceiveTolerancePct is < 0 or > MaxTolerancePct)
             throw new BusinessRuleException($"Dung sai nhận hàng phải từ 0 đến {MaxTolerancePct:0}%.");
+        // Mua khẩn cấp phải ghi lý do và hạn bổ sung hồ sơ (≤ 30 ngày) – V4: duyệt theo cơ chế khẩn, hoàn thiện hồ sơ sau.
+        var emergencyReason = Clean(header.EmergencyReason);
+        if (header.PurchaseType == PurchaseType.Emergency)
+        {
+            if (emergencyReason is null) throw new BusinessRuleException("Mua khẩn cấp phải ghi lý do khẩn cấp.");
+            if (emergencyReason.Length > 500) throw new BusinessRuleException("Lý do khẩn cấp tối đa 500 ký tự.");
+            if (header.DocsDueDate is not { } due) throw new BusinessRuleException("Mua khẩn cấp phải có hạn bổ sung hồ sơ.");
+            if (due < header.Date || due > header.Date.AddDays(MaxDocsDueDays))
+                throw new BusinessRuleException($"Hạn bổ sung hồ sơ phải từ ngày đặt hàng đến tối đa {MaxDocsDueDays} ngày sau.");
+        }
+        else if (header.PurchaseType != PurchaseType.Normal)
+        {
+            throw new BusinessRuleException("Loại mua không hợp lệ.");
+        }
+
+        PurchaseType = header.PurchaseType;
+        EmergencyReason = header.PurchaseType == PurchaseType.Emergency ? emergencyReason : null;
+        DocsDueDate = header.PurchaseType == PurchaseType.Emergency ? header.DocsDueDate : null;
         Date = header.Date;
         SupplierId = header.SupplierId;
         WarehouseId = header.WarehouseId;
@@ -585,6 +638,33 @@ public sealed class PurchaseOrder : ApprovableDocument
         if (missing.Count > 0)
             throw new BusinessRuleException(
                 $"Dòng {string.Join(", ", missing)}: đơn giá khác giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu) – phải nhập lý do lệch giá trước khi gửi duyệt.");
+    }
+
+    /// <summary>
+    /// PO khẩn cấp đã duyệt mà quá hạn bổ sung hồ sơ chưa xác nhận (design.md mục 18.11). Ví dụ hạn 09/11/2026: ngày 10/11 còn chưa xác
+    /// nhận là quá hạn.
+    /// </summary>
+    /// <param name="today">Hôm nay.</param>
+    public bool IsDocsOverdue(DateOnly today) =>
+        PurchaseType == PurchaseType.Emergency && DocsCompletedAt is null && DocsDueDate is { } due && today > due
+        && Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed;
+
+    /// <summary>Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (kể cả quá hạn – vẫn ghi nhận ngày thực tế).</summary>
+    /// <param name="userId">Người xác nhận.</param>
+    /// <param name="at">Thời điểm.</param>
+    /// <param name="note">Ghi chú hồ sơ đã bổ sung, bắt buộc.</param>
+    /// <exception cref="BusinessRuleException">Khi không phải PO khẩn, chưa duyệt, đã xác nhận hoặc thiếu ghi chú.</exception>
+    public void CompleteDocs(Guid userId, DateTimeOffset at, string? note)
+    {
+        if (PurchaseType != PurchaseType.Emergency) throw new BusinessRuleException($"Đơn {No} không phải mua khẩn cấp.");
+        if (Status is not (ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed))
+            throw new BusinessRuleException($"Đơn {No} chưa được duyệt – chỉ bổ sung hồ sơ sau khi duyệt.");
+        if (DocsCompletedAt is not null) throw new BusinessRuleException($"Đơn {No} đã xác nhận bổ sung hồ sơ.");
+        var text = Clean(note) ?? throw new BusinessRuleException("Hãy ghi hồ sơ đã bổ sung.");
+        if (text.Length > 500) throw new BusinessRuleException("Ghi chú hồ sơ tối đa 500 ký tự.");
+        DocsCompletedAt = at;
+        DocsCompletedBy = userId;
+        DocsCompletionNote = text;
     }
 
     /// <summary>Nhận đủ hàng: Đã duyệt → Đã nhận đủ (đóng).</summary>

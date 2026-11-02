@@ -45,7 +45,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     public async Task<PurchaseDocumentListResult> SearchAsync(PurchaseDocumentQuery query, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        var to = query.To ?? _clock.TodayInVietnam();
+        var today = _clock.TodayInVietnam();
+        var to = query.To ?? today;
         var from = query.From ?? to.AddDays(-90);
         var orders = _db.PurchaseOrders.AsNoTracking().Where(o => o.Date >= from && o.Date <= to);
         if (!string.IsNullOrWhiteSpace(query.Status)) orders = orders.Where(o => o.Status == PurchaseRequestService.ParseStatus(query.Status));
@@ -60,7 +61,10 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 {
                     o.Id, o.No, o.Date, o.Status, Supplier = s.Code + " – " + s.Name, Warehouse = w.Code, o.ExpectedDate,
                     Amount = o.TotalAmount + o.TotalVat, LineCount = o.Lines.Count, CreatedBy = u == null ? null : u.FullName,
-                    Base = o.Lines.Sum(l => l.BaseQty), o.IsOutOfContract, o.HasPriceException,
+                    Base = o.Lines.Sum(l => l.BaseQty), o.IsOutOfContract, o.HasPriceException, o.PurchaseType,
+                    // Như PurchaseOrder.IsDocsOverdue, viết lại để EF dịch sang SQL.
+                    DocsOverdue = o.PurchaseType == PurchaseType.Emergency && o.DocsCompletedAt == null && o.DocsDueDate < today
+                                  && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed),
                 })
             .Take(PurchaseRequestService.SearchLimit + 1)
             .ToListAsync(cancellationToken);
@@ -68,7 +72,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var items = rows.Take(PurchaseRequestService.SearchLimit).Select(r => new PurchaseDocumentListItemDto(
                 r.Id, r.No, r.Date, r.Status.ToString(), r.Supplier, r.Warehouse, r.ExpectedDate, r.Amount, r.LineCount, r.CreatedBy,
                 r.Base > 0 ? Math.Min(100m, Math.Round(received.GetValueOrDefault(r.Id) * 100m / r.Base, 1)) : 0m, null, r.IsOutOfContract,
-                r.HasPriceException))
+                r.HasPriceException, r.PurchaseType.ToString(), r.DocsOverdue))
             .ToList();
         return new PurchaseDocumentListResult(items, rows.Count > PurchaseRequestService.SearchLimit, PurchaseRequestService.SearchLimit);
     }
@@ -127,8 +131,28 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         // ngoại lệ – design.md mục 18.10 (quyết định M1).
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.EnsurePriceDeviationsExplained();
-        if (order.HasPriceException) await _approvals.SubmitWithExceptionAsync(order, ApprovalTypes.PurchaseOrderPriceException, cancellationToken);
-        else await _approvals.SubmitAsync(order, cancellationToken);
+        // Mua khẩn cấp (design.md mục 18.11 – V4): không lập lùi ngày để hợp thức hóa hàng đã mua; duyệt theo bộ cấp POK nếu đã cấu hình.
+        string? ruleType = null;
+        if (order.PurchaseType == PurchaseType.Emergency)
+        {
+            if (order.Date < _clock.TodayInVietnam())
+                throw new BusinessRuleException("Đơn mua khẩn cấp không được lập lùi ngày (không dùng mua khẩn để hợp thức hóa hàng đã mua) – sửa ngày đặt hàng là hôm nay.");
+            ruleType = ApprovalTypes.PurchaseOrderEmergency;
+        }
+
+        if (order.HasPriceException)
+            await _approvals.SubmitWithExceptionAsync(order, ApprovalTypes.PurchaseOrderPriceException, cancellationToken, ruleType);
+        else await _approvals.SubmitAsync(order, cancellationToken, ruleType);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PurchaseOrderDto> CompleteDocsAsync(Guid id, CompleteDocsRequest request, CancellationToken cancellationToken)
+    {
+        var order = await LoadAsync(id, cancellationToken);
+        await EnsureItemsVisibleAsync(order, cancellationToken);
+        order.CompleteDocs(_scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập."), _clock.UtcNow, request.Note);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -441,6 +465,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 select new { l.Id, r.No })
             .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
         var received = await ReceivedBaseByLineAsync(order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        var docsCompletedBy = order.DocsCompletedBy is { } completedBy
+            ? await _db.Users.AsNoTracking().Where(u => u.Id == completedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
+            : null;
         // Số bảng giá/hợp đồng/RFQ nguồn để hiện trên dòng. Bảng giá toàn tập đoàn của công ty khác: bỏ filter công ty, chỉ lấy đúng Id
         // đã ghi trên dòng của PO người dùng xem được (CLAUDE.md mục 4).
         var priceListIds = order.Lines.Select(l => l.PriceListId).OfType<Guid>().Distinct().ToList();
@@ -494,10 +521,20 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.GrossAmount, order.TotalDiscount, order.TotalAmount, order.TotalVat, order.RejectReason, order.CreatedAt, createdBy, order.ApprovedAt,
             lines, await _approvals.HistoryAsync(DocumentTypes.PurchaseOrder, order.Id, cancellationToken), actions, order.HasPriceException,
             order.IsOutOfContract, order.DepartmentId, department is null ? null : $"{department.Code} – {department.Name}",
-            await ContractScopeNoteAsync(order, department?.Code, cancellationToken));
+            await ContractScopeNoteAsync(order, department?.Code, cancellationToken), order.PurchaseType.ToString(), order.EmergencyReason,
+            order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
+            order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
+            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed);
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>
         new(r.Date, r.SupplierId, r.WarehouseId, r.ExpectedDate, r.PaymentTerms, r.DeliveryTerms, r.DeliveryAddress, r.ReceiveTolerancePct, r.Note,
-            departmentId);
+            departmentId, ParsePurchaseType(r.PurchaseType), r.EmergencyReason, r.DocsDueDate);
+
+    /// <summary>Loại mua gửi lên: trống = mua thường.</summary>
+    /// <exception cref="BusinessRuleException">Khi không phải Normal/Emergency.</exception>
+    private static PurchaseType ParsePurchaseType(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? PurchaseType.Normal
+        : Enum.TryParse<PurchaseType>(value, true, out var type) && Enum.IsDefined(type) ? type
+        : throw new BusinessRuleException("Loại mua phải là Normal (thường) hoặc Emergency (khẩn cấp).");
 }
