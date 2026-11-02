@@ -93,6 +93,8 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.getByRole('alert').filter({ hasText: 'lệch giá đã duyệt' })).toBeVisible()
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu PO-BHA-\d{4}-\d{4}\./)
+  // Chờ chuyển từ /moi sang trang phiếu đã lưu – bấm Gửi duyệt sớm hơn thì thông báo lỗi mất khi trang dựng lại (máy bận khi chạy song song).
+  await expect(page).not.toHaveURL(/\/moi$/)
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible()
@@ -100,8 +102,10 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu/)
-  await confirm(page, 'Gửi duyệt', /Đã gửi duyệt/)
-  await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt')
+  // Gửi duyệt = lưu rồi gửi (hai lượt gọi API) – khi chạy song song có thể quá 5 giây, chờ trạng thái thay vì thông báo thoáng qua.
+  await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt', { timeout: 20_000 })
   await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
   await expect(page.getByRole('tabpanel')).toContainText('Ngoại lệ giá')
 })
