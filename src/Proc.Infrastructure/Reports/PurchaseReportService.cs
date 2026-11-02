@@ -8,6 +8,7 @@ using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
+using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Reports;
@@ -434,6 +435,133 @@ public sealed class PurchaseReportService : IPurchaseReportService
         }
 
         return rows.OrderByDescending(r => r.AwardDate).ThenBy(r => r.RfqNo).ThenBy(r => r.ItemCode).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<ContractComplianceResult> GetContractComplianceAsync(PurchaseReportPeriod period, CancellationToken cancellationToken)
+    {
+        Check(period);
+        var lines = await OrderLinesAsync(period.From, period.To, period.AllCompanies, null, cancellationToken);
+        var total = lines.Sum(l => l.Amount);
+        var order = new[] { "Rfq", "Contract", "PriceList", "Deviation", "None", "Unknown" };
+        var sources = lines.GroupBy(l => l.Kind)
+            .Select(g => new PriceSourceSummaryDto(g.Key, g.Count(), g.Sum(l => l.Amount), Share(g.Sum(l => l.Amount), total)))
+            .OrderBy(x => Array.IndexOf(order, x.Source))
+            .ToList();
+
+        // Tỷ lệ mua theo giá đã duyệt (P5, KPI ≥ 95%): dòng không xác định nguồn (PO trước 0.12.0) không tính vào mẫu số.
+        // Ví dụ theo bảng giá 475.000, lệch giá 494.000, không có giá 300.000 → 475.000 ÷ 1.269.000 = 37,43%.
+        var known = lines.Where(l => l.Kind != "Unknown").Sum(l => l.Amount);
+        var compliant = lines.Where(l => l.Kind is "Rfq" or "Contract" or "PriceList").Sum(l => l.Amount);
+        decimal? compliancePct = known > 0 ? Math.Round(compliant * 100m / known, 2, MidpointRounding.AwayFromZero) : null;
+
+        var outLines = lines
+            .Where(l => l.Kind is "Deviation" or "None")
+            .Select(l =>
+            {
+                var deviation = l.ApprovedNet is { } a ? (decimal?)Money((l.NetPrice - a) * l.Qty) : null;
+                // % lệch so với giá đã duyệt, ví dụ 49.400 so 47.500 → 4,00%.
+                var pct = l.ApprovedNet is { } b && b != 0 ? (decimal?)Math.Round((l.NetPrice - b) * 100m / b, 2, MidpointRounding.AwayFromZero) : null;
+                return new OutOfContractLineDto(
+                    l.OrderId, l.OrderNo, l.Date, l.CompanyCode, l.Department, l.SupplierCode, l.SupplierName, l.LineNo, l.ItemCode, l.ItemName,
+                    l.UomCode, l.Qty, l.NetPrice, l.ApprovedNet, pct, l.Amount, deviation, l.Kind, l.Reason);
+            })
+            .OrderByDescending(l => Math.Abs(l.DeviationAmount ?? 0m)).ThenByDescending(l => l.Amount).ThenBy(l => l.OrderNo).ThenBy(l => l.LineNo)
+            .ToList();
+        return new ContractComplianceResult(lines.Select(l => l.OrderId).Distinct().Count(), total, compliancePct, sources, outLines);
+    }
+
+    /// <inheritdoc />
+    public async Task<PriceVarianceResult> GetPriceVarianceAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken)
+    {
+        Check(period);
+        // Kỳ trước cùng số ngày, liền trước kỳ này: kỳ 09/11–15/11 → kỳ trước 02/11–08/11.
+        var days = period.To.DayNumber - period.From.DayNumber + 1;
+        var (prevFrom, prevTo) = (period.From.AddDays(-days), period.From.AddDays(-1));
+        List<Guid>? categoryIds = null;
+        if (categoryId is { } c)
+        {
+            var parents = await _db.ItemCategories.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.ParentId, cancellationToken);
+            categoryIds = parents.Keys.Where(id => ItemAdministration.IsUnder(id, c, parents)).ToList();
+        }
+
+        var lines = (await OrderLinesAsync(prevFrom, period.To, period.AllCompanies, categoryIds, cancellationToken)).Where(l => l.BaseQty > 0).ToList();
+        var previous = lines.Where(l => l.Date <= prevTo).GroupBy(l => l.ItemId)
+            .ToDictionary(g => g.Key, g => (Qty: g.Sum(l => l.BaseQty), Amount: g.Sum(l => l.Amount)));
+
+        // Giá bình quân gia quyền theo ĐVT cơ sở = Σ thành tiền ÷ Σ SL cơ sở (6 số lẻ). Ví dụ 10 cái 475.000 + 10 cái 494.000 + 5 cái 300.000
+        // → 1.269.000 ÷ 25 = 50.760; kỳ trước 45.000 → +12,80%, ảnh hưởng (50.760 − 45.000) × 25 = 144.000.
+        static decimal Avg(decimal amount, decimal qty) => Math.Round(amount / qty, 6, MidpointRounding.AwayFromZero);
+        var rows = lines.Where(l => l.Date >= period.From).GroupBy(l => l.ItemId)
+            .Select(g =>
+            {
+                var first = g.First();
+                var qty = g.Sum(l => l.BaseQty);
+                var avg = Avg(g.Sum(l => l.Amount), qty);
+                var unitPrices = g.Select(l => Avg(l.Amount, l.BaseQty)).ToList();
+                var prev = previous.GetValueOrDefault(g.Key);
+                decimal? prevAvg = prev.Qty > 0 ? Avg(prev.Amount, prev.Qty) : null;
+                decimal? change = prevAvg is { } pa && pa != 0 ? Math.Round((avg - pa) * 100m / pa, 2, MidpointRounding.AwayFromZero) : null;
+                decimal? impact = prevAvg is { } pb ? Money((avg - pb) * qty) : null;
+                return new PriceVarianceRowDto(
+                    g.Key, first.ItemCode, first.ItemName, first.BaseUomCode, prev.Qty, prevAvg, qty, avg, unitPrices.Min(), unitPrices.Max(), change,
+                    impact, g.Select(l => l.OrderId).Distinct().Count(), g.Select(l => l.SupplierCode).Distinct().Count());
+            })
+            .OrderByDescending(r => Math.Abs(r.ImpactAmount ?? 0m)).ThenBy(r => r.ItemCode)
+            .ToList();
+        return new PriceVarianceResult(prevFrom, prevTo, rows.Sum(r => r.ImpactAmount ?? 0m), rows);
+    }
+
+    private static decimal Share(decimal part, decimal total) => total == 0 ? 0 : Math.Round(part * 100m / total, 2, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Một dòng PO đã duyệt cho báo cáo giá mua. <c>Kind</c>: nguồn giá (Rfq, Contract, PriceList, None, Unknown), riêng dòng lệch giá đã
+    /// duyệt là Deviation – không còn mua theo giá được duyệt nên không tính là theo nguồn đó.
+    /// </summary>
+    private sealed record OrderLine(
+        Guid OrderId, string OrderNo, DateOnly Date, string CompanyCode, string? Department, string SupplierCode, string SupplierName, int LineNo,
+        Guid ItemId, string ItemCode, string ItemName, string BaseUomCode, string UomCode, decimal Qty, decimal BaseQty, decimal NetPrice,
+        decimal Amount, string Kind, decimal? ApprovedNet, string? Reason);
+
+    /// <summary>
+    /// Dòng PO Đã duyệt hoặc Đã đóng có ngày PO trong khoảng – đơn hàng đã cam kết với NCC. PO nháp/chờ duyệt chưa phải giá mua; PO hủy không mua.
+    /// </summary>
+    private async Task<List<OrderLine>> OrderLinesAsync(
+        DateOnly fromDate, DateOnly toDate, bool allCompanies, List<Guid>? categoryIds, CancellationToken cancellationToken)
+    {
+        // Toàn tập đoàn (đã kiểm quyền ở Check) – xem ghi chú lớp; filter nhóm hàng giữ nhờ join mặt hàng.
+        var orders = allCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
+        var items = categoryIds is null ? _db.Items : _db.Items.Where(i => categoryIds.Contains(i.CategoryId));
+        var rows = await (
+                from o in orders.AsNoTracking()
+                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.Date >= fromDate && o.Date <= toDate
+                from l in o.Lines
+                join i in items on l.ItemId equals i.Id
+                join bu in _db.Uoms on i.BaseUomId equals bu.Id
+                join u in _db.Uoms on l.UomId equals u.Id
+                join s in _db.Suppliers on o.SupplierId equals s.Id
+                join c in _db.Companies on o.CompanyId equals c.Id
+                select new
+                {
+                    OrderId = o.Id, o.No, o.Date, CompanyCode = c.Code,
+                    Department = _db.Departments.Where(d => d.Id == o.DepartmentId).Select(d => d.Name).FirstOrDefault(),
+                    SupplierCode = s.Code, SupplierName = s.Name, l.LineNo, l.ItemId, ItemCode = i.Code, ItemName = i.Name, BaseUomCode = bu.Code,
+                    UomCode = u.Code, l.Qty, l.BaseQty, l.UnitPrice, l.DiscountPct, l.Amount, l.PriceSource, l.ApprovedUnitPrice,
+                    l.ApprovedDiscountPct, l.PriceDeviationReason,
+                })
+            .ToListAsync(cancellationToken);
+        // Giá sau chiết khấu làm tròn 6 số như PurchaseOrderLine.NetUnitPrice / IsPriceDeviation (design.md mục 18.10).
+        static decimal Net(decimal price, decimal discount) => Math.Round(price * (100m - discount) / 100m, 6, MidpointRounding.AwayFromZero);
+        return rows.Select(r =>
+            {
+                var net = Net(r.UnitPrice, r.DiscountPct);
+                decimal? approved = r.ApprovedUnitPrice is { } a ? Net(a, r.ApprovedDiscountPct ?? 0m) : null;
+                var kind = approved is { } ap && ap != net ? "Deviation" : r.PriceSource.ToString();
+                return new OrderLine(
+                    r.OrderId, r.No, r.Date, r.CompanyCode, r.Department, r.SupplierCode, r.SupplierName, r.LineNo, r.ItemId, r.ItemCode, r.ItemName,
+                    r.BaseUomCode, r.UomCode, r.Qty, r.BaseQty, net, r.Amount, kind, approved, r.PriceDeviationReason);
+            })
+            .ToList();
     }
 
     private static decimal Money(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);

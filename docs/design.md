@@ -1455,6 +1455,22 @@ Nguồn: đề xuất Ban CUVT K1 (mục 3.5 `docs/Phantich_01112026.md`). Thôn
 
 Migration `V0_13_0_DiemDatHangLai` (3 cột của `Item` – `Down()` xóa cột, mất thông số đã khai báo).
 
+### 18.17 Báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá (lát F1, 02/11/2026)
+
+Nguồn: báo cáo "Giá mua & phát sinh ngoài hợp đồng" (tuần) và "Biến động giá" (tháng) của đề xuất Ban CUVT (mục 3.6 `docs/Phantich_01112026.md`),
+P5 (KPI ≥ 95% mua theo hợp đồng). Dùng nguồn giá đã ghi trên dòng PO ở lát C1 (mục 18.10).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Dữ liệu: dòng PO **Đã duyệt hoặc Đã đóng**, ngày PO trong khoảng; giá trị = thành tiền dòng sau chiết khấu, trước VAT. PO nháp/chờ duyệt/hủy không tính | Chỉ đơn đã cam kết với NCC mới là giá mua; đo ngay khi đặt, không chờ nhận hàng |
+| **Giá mua & mua ngoài hợp đồng** (màn hình PRCW, `GET /api/reports/contract-compliance?from=&to=&allCompanies=`): tổng hợp theo nguồn – Chọn thầu, Hợp đồng, Bảng giá (đúng giá đã duyệt), **Lệch giá** (có giá đã duyệt mà giá thực sau CK khác), **Không có giá đã duyệt**, Không xác định (PO trước 0.12.0) | Lệch giá tách khỏi nguồn vì đã không còn mua theo giá được duyệt (M1) |
+| **Tỷ lệ mua theo giá đã duyệt** = giá trị theo giá đã duyệt ÷ (tổng − không xác định) × 100. Ví dụ bảng giá 475.000, lệch giá 494.000, không có giá 300.000 → 37,43%. Dưới 95% hiện cảnh báo | KPI P5; dòng cũ không đoán ngược nguồn giá |
+| Danh sách dòng ngoài hợp đồng: PO, ngày, công ty, bộ phận, NCC, mặt hàng, SL, giá thực, giá đã duyệt (sau CK), % lệch, tiền chênh = (giá thực − giá đã duyệt) × SL, lý do lệch giá; tiền chênh lớn lên đầu. Mặc định tuần trước (thứ Hai – Chủ nhật) | Báo cáo tuần; ưu tiên khoản ảnh hưởng lớn |
+| **Biến động giá mua** (màn hình PRVAR, `GET /api/reports/price-variance?from=&to=&allCompanies=&categoryId=`): theo mặt hàng, giá bình quân gia quyền theo ĐVT cơ sở = Σ thành tiền ÷ Σ SL cơ sở, **kỳ này** so **kỳ trước cùng số ngày liền trước**; % thay đổi, ảnh hưởng = (giá kỳ này − kỳ trước) × SL kỳ này, giá thấp/cao nhất kỳ này, số PO, số NCC. Ví dụ kỳ trước 45.000, kỳ này 50.760 × 25 → +12,80%, ảnh hưởng 144.000. Mặc định tháng trước | Phát hiện mặt hàng tăng giá; ảnh hưởng tiền để ưu tiên đàm phán lại |
+| Phạm vi: công ty đang làm việc; "Toàn tập đoàn" cần quyền `Report.Purchase.ViewAllCompanies` (như các báo cáo mua hàng mục 11.3); mặt hàng theo phạm vi nhóm hàng; quyền xem `Report.Purchase.View`; tối đa hai năm mỗi lần | Giữ nguyên mô hình phân quyền báo cáo |
+
+Không có migration.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
