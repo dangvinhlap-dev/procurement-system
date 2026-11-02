@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
+using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -334,5 +335,65 @@ public class PurchasingTests
 
         Assert.Equal(HttpStatusCode.Forbidden, (await ActAsync(buyer, "purchase-requests", Guid.NewGuid(), "approve")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ActAsync(buyer, "purchase-orders", Guid.NewGuid(), "approve")).StatusCode);
+    }
+
+    /// <summary>
+    /// Phím F1 – lịch sử theo ô và "Lịch sử thay đổi" cả phiếu (design.md mục 9.3a): người tạo/sửa, giá trị cũ/mới, tham chiếu đổi
+    /// sang mã – tên, dòng đã xóa vẫn thấy trong lịch sử phiếu; người ngoài phạm vi công ty không xem được.
+    /// </summary>
+    [Fact]
+    public async Task LichSuThayDoi_TheoO_TheoPhieu_CaDongDaXoa_ChanNgoaiPhamVi()
+    {
+        var f = await ArrangeAsync();
+        var po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-orders",
+            new SavePurchaseOrderRequest(Today, f.SupplierId, f.Kt, null, "30 ngày", null, null, 0, null,
+                [new(null, f.ItemId, f.Cai, 5, 100_000, 0, "10", null, null, null), new(null, f.ItemId, f.Cai, 2, 50_000, 0, "10", null, null, null)]), Ct));
+        var keep = po.Lines.Single(l => l.LineNo == 1);
+        var removed = po.Lines.Single(l => l.LineNo == 2);
+        // Sửa: đổi điều khoản thanh toán, SL dòng 1 từ 5 thành 8, xóa dòng 2.
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PutAsJsonAsync($"/api/purchase-orders/{po.Id}",
+            new SavePurchaseOrderRequest(Today, f.SupplierId, f.Kt, null, "45 ngày", null, null, 0, null,
+                [new(keep.Id, f.ItemId, f.Cai, 8, 100_000, 0, "10", null, null, null)]), Ct));
+
+        var terms = await f.Buyer.GetFromJsonAsync<FieldHistoryDto>(
+            $"/api/change-history/field?entityType=PurchaseOrder&entityId={po.Id}&field=paymentTerms", Ct);
+        Assert.Equal("PaymentTerms", terms!.Info.Field);
+        Assert.Equal("PurchaseOrder", terms.Info.Table);
+        Assert.Equal(["Update", "Create"], terms.Changes.Select(c => c.Action));
+        Assert.Equal(("30 ngày", "45 ngày"), (terms.Changes[0].OldValue, terms.Changes[0].NewValue));
+        Assert.NotNull(terms.Changes[0].UserName);
+        Assert.NotNull(terms.Record.CreatedBy);
+
+        // Ô "supplier" lưu ở SupplierId: giá trị đổi sang mã – tên NCC.
+        var supplier = await f.Buyer.GetFromJsonAsync<FieldHistoryDto>(
+            $"/api/change-history/field?entityType=PurchaseOrder&entityId={po.Id}&field=supplier", Ct);
+        Assert.Equal(FieldValueKinds.Reference, supplier!.Info.Kind);
+        Assert.Contains("NCC mua hàng", Assert.Single(supplier.Changes).NewText);
+
+        var qty = await f.Buyer.GetFromJsonAsync<FieldHistoryDto>(
+            $"/api/change-history/field?entityType=PurchaseOrderLine&entityId={keep.Id}&field=qty", Ct);
+        Assert.Equal(FieldValueKinds.Number, qty!.Info.Kind);
+        Assert.Equal(("5", "8"), (qty.Changes[0].OldValue, qty.Changes[0].NewValue));
+
+        // Ô không lưu thẳng vào bản ghi: có thông tin ô, không có lịch sử.
+        var computed = await f.Buyer.GetFromJsonAsync<FieldHistoryDto>(
+            $"/api/change-history/field?entityType=PurchaseOrder&entityId={po.Id}&field=khongCo", Ct);
+        Assert.Null(computed!.Info.Field);
+        Assert.Empty(computed.Changes);
+
+        var history = await f.Buyer.GetFromJsonAsync<RecordHistoryDto>(
+            $"/api/change-history/record?entityType=PurchaseOrder&entityId={po.Id}", Ct);
+        Assert.Contains(history!.Changes, c => c.EntityId == removed.Id.ToString() && c.Action == "Delete" && c.LineNo == 2 && c.Field == "Qty");
+        Assert.Contains(history.Changes, c => c.EntityId == keep.Id.ToString() && c.Action == "Update" && c.Field == "Qty" && c.LineNo == 1);
+        Assert.Contains(history.Changes, c => c.EntityType == "PurchaseOrder" && c.Field == "PaymentTerms" && c.Action == "Update");
+
+        // Người dùng ở công ty khác không xem được lịch sử phiếu, cũng không xem được qua dòng của phiếu.
+        var other = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync(
+            $"/api/change-history/field?entityType=PurchaseOrder&entityId={po.Id}&field=paymentTerms", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync(
+            $"/api/change-history/field?entityType=PurchaseOrderLine&entityId={keep.Id}&field=qty", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync(
+            $"/api/change-history/record?entityType=PurchaseOrder&entityId={po.Id}", Ct)).StatusCode);
     }
 }

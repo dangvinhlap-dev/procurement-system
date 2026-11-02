@@ -118,9 +118,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C6 (đối chiếu PO – nhận – hóa đơn, design.md 18.15) đã xong 02/11/2026. Lát kế tiếp theo lộ trình: **D1** (điểm đặt hàng lại, tồn an toàn – xem
-  `docs/Phantich_01112026.md` mục 6) – lập kế hoạch ngắn trước khi code. Người dùng vừa yêu cầu **phân tích** tính năng F1 xem lịch sử
-  tạo/sửa/xóa từng ô (kiểu SAP ECC6) – chờ người dùng duyệt phân tích rồi mới làm.
+- **G1–G3: phím F1 xem lịch sử tạo/sửa/xóa từng ô (kiểu ERP), nhánh `feature/f1-lich-su-o`** – người dùng chốt 02/11/2026: hộp thoại
+  trợ giúp ô kiểu SAP (tab LỊCH SỬ THAY ĐỔI + THÔNG TIN Ô); ai đăng nhập cũng xem được (vẫn theo phạm vi công ty/kho/nhóm hàng của bản ghi);
+  mọi ô do người dùng nhập đều xem được; làm G1 → G3.
+  - Bước 1 (xong): API `GET /api/change-history/field` và `/record` (`ChangeHistoryQueries`) – lịch sử theo ô, cả phiếu kèm dòng đã xóa,
+    tham chiếu đổi sang mã – tên, thông tin kỹ thuật ô; test tích hợp `LichSuThayDoi_TheoO_TheoPhieu_CaDongDaXoa_ChanNgoaiPhamVi`.
+  - Bước 2: phím F1 + hộp thoại, gắn cho DocumentForm/LineGrid (G1). Bước 3: DetailDrawer (G2). Bước 4: lịch sử cả phiếu, F1 trên lưới danh sách (G3).
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi
