@@ -75,3 +75,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
 }
+
+/* Chế độ trang đầy đủ (asPage): nội dung cuộn trong vùng trang, tiêu đề + nút lệnh giữ ở trên như DocumentForm. */
+.detail-page .document-form-content {
+  overflow: auto;
+}
+.supplier-profile-heading {
+  margin: 8px 0 4px;
+  font-size: var(--ant-font-size);
+  font-weight: 700;
+  color: var(--erp-title, inherit);
+}

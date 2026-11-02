@@ -140,8 +140,9 @@ const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = 
   RFQ: (id) => `/dau-thau/rfq/${id}?tab=compare`,
   CTR: (id) => `/mua-hang/hop-dong-khung/${id}`,
   CTA: (id) => `/mua-hang/hop-dong-khung/phu-luc/${id}`,
-  NCC: (id) => `/gia-ncc/duyet-ncc?mo=${id}`,
-  NDQ: (id) => `/gia-ncc/ncc-doc-quyen?mo=${id}`,
+  // Trang đầy đủ (TC-3): duyệt NCC kèm hồ sơ NCC; NCC độc quyền.
+  NCC: (id) => `/gia-ncc/duyet-ncc/${id}`,
+  NDQ: (id) => `/gia-ncc/ncc-doc-quyen/${id}`,
 }
 
 /** Màn hình Việc cần làm: PR, PO đang chờ chính tôi duyệt ở công ty đang làm việc (design.md mục 6.7). Bấm đúp mở phiếu để duyệt. */

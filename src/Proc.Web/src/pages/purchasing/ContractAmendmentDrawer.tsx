@@ -3,9 +3,10 @@ import { Alert, App, Button, DatePicker, Descriptions, Form, Input, InputNumber,
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
-import { Navigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import {
   amendmentStatusLabels,
+  useContract,
   useContractAmendment,
   useContractAmendmentMutations,
   type Contract,
@@ -20,7 +21,7 @@ import { ApprovalHistory } from './ApprovalHistory'
 import { contractTermFields } from './contractTerms'
 import { confirmReject } from './useApprovalCommands'
 
-/** Đường dẫn mở phụ lục từ thông báo / Việc cần làm (chỉ biết Id phụ lục) – trang này chuyển tiếp sang hợp đồng của nó. */
+/** Đường dẫn trang đầy đủ một phụ lục (`AMENDMENT_PATH/:id`) – mở từ thông báo / Việc cần làm / Tra cứu chứng từ (chỉ biết Id phụ lục). */
 export const AMENDMENT_PATH = '/mua-hang/hop-dong-khung/phu-luc'
 
 interface FormValues extends Partial<Record<keyof ContractTerms, string | number | null>> {
@@ -43,17 +44,20 @@ const orNull = (value: unknown) => (typeof value === 'string' && value.trim() ? 
  * @param amendmentId Id phụ lục, 'moi' khi lập mới, null khi đóng.
  * @param onClose Đóng ngăn kéo.
  * @param onCreated Lập xong phụ lục mới (để đổi đường dẫn sang Id vừa tạo).
+ * @param asPage Vẽ thành trang đầy đủ thay cho ngăn kéo.
  */
 export function ContractAmendmentDrawer({
   contract,
   amendmentId,
   onClose,
   onCreated,
+  asPage = false,
 }: {
   contract: Contract
   amendmentId: string | null
   onClose: () => void
   onCreated: (id: string) => void
+  asPage?: boolean
 }) {
   const isNew = amendmentId === 'moi'
   const { message, modal } = App.useApp()
@@ -260,6 +264,7 @@ export function ContractAmendmentDrawer({
   return (
     <DetailDrawer
       open={!!amendmentId}
+      asPage={asPage}
       title={isNew ? `Lập phụ lục – hợp đồng ${contract.no}` : `Phụ lục ${doc?.no ?? ''} · ${statusLabel}`}
       audit={{ entityType: 'PurchaseContractAmendment', id: doc?.id }}
       onClose={onClose}
@@ -340,12 +345,25 @@ export function ContractAmendmentDrawer({
 }
 
 /**
- * Mở phụ lục từ thông báo / Việc cần làm (đường dẫn chỉ có Id phụ lục): tải phụ lục rồi chuyển sang trang hợp đồng của nó, mở sẵn ngăn kéo.
+ * Trang đầy đủ một phụ lục (`/mua-hang/hop-dong-khung/phu-luc/:id`) – mở từ thông báo, Việc cần làm, Tra cứu chứng từ (đường dẫn chỉ có Id
+ * phụ lục): tải phụ lục rồi tải hợp đồng của nó; "Quay lại" về trang hợp đồng.
  */
-export function ContractAmendmentRedirect() {
+export function ContractAmendmentPage() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const amendment = useContractAmendment(id)
-  if (amendment.data) return <Navigate to={`/mua-hang/hop-dong-khung/${amendment.data.contractId}?phu-luc=${id}`} replace />
-  if (amendment.error) return <Alert type="error" showIcon title={amendment.error.message} style={{ margin: 16 }} />
-  return <Spin style={{ margin: 32 }} />
+  const contract = useContract(amendment.data?.contractId ?? null)
+  const error = amendment.error ?? contract.error
+  if (error) return <Alert type="error" showIcon title={error.message} style={{ margin: 16 }} />
+  if (!contract.data) return <Spin style={{ margin: 32 }} />
+  const contractPath = `/mua-hang/hop-dong-khung/${contract.data.id}`
+  return (
+    <ContractAmendmentDrawer
+      contract={contract.data}
+      amendmentId={id}
+      asPage
+      onClose={() => navigate(contractPath)}
+      onCreated={(created) => navigate(`${AMENDMENT_PATH}/${created}`)}
+    />
+  )
 }

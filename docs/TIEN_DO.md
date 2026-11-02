@@ -126,7 +126,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     loại (PR, PO, GRN, RTV, TRF, ICS, ICR, ADJ, PRL, SRC, RFQ, CTR, CTA, NCC, NDQ, DGN, VP) theo quyền xem từng loại, tình trạng Chưa hoàn
     thành/Hoàn thành/Đã hủy, trạng thái gốc, cấp đang chờ duyệt, lọc Tôi lập/Tôi đã duyệt (phiếu kho = tôi ghi sổ); bấm đúp mở trang phiếu;
     design.md 18.22. Test: tích hợp `TraCuuChungTu_…`, e2e `document-registry.spec.ts`. Kiểm tra: `dotnet test` 507; Playwright 89/89.
-  - **TC-3**: thông báo/Việc cần làm mở trang đầy đủ (duyệt NCC thêm hồ sơ NCC; NDQ, VIOL, CTA). **TC-4**: người duyệt tiếp theo.
+  - **TC-3 (xong)**: thông báo, Việc cần làm, Tra cứu chứng từ, liên kết KSNB mở **trang đầy đủ** thay ngăn kéo cho yêu cầu duyệt NCC
+    (`/gia-ncc/duyet-ncc/:id`, thêm tab HỒ SƠ NCC + HỒ SƠ ĐÍNH KÈM chỉ xem – `SupplierProfile.tsx`), NDQ (`/gia-ncc/ncc-doc-quyen/:id`),
+    vi phạm (`/bao-cao/so-vi-pham/:id`), phụ lục HĐ (`/mua-hang/hop-dong-khung/phu-luc/:id` – thôi chuyển hướng). `DetailDrawer` thêm
+    `asPage` (khung tiêu đề + nút lệnh như DocumentForm, nút Quay lại, Esc không đóng). design.md 18.22. Chỉ sửa Proc.Web, không migration.
+    e2e sửa `suppliers`, `sole-sources`, `control`, `contract`. Kiểm tra: Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
+  - **TC-4**: người duyệt tiếp theo.
   - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
     (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).

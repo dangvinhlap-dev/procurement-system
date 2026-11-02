@@ -1568,9 +1568,21 @@ Yêu cầu người dùng sau khi test 0.14.0: có một chỗ xem **tất cả 
 | **Tình trạng chung**: Chưa hoàn thành (nháp, chờ duyệt, đang nhận báo giá…), Hoàn thành (đã ghi sổ, đã duyệt, đã đóng, hiệu lực/chấm dứt, đã chọn thầu, đã kết luận…), Đã hủy/từ chối; kèm trạng thái gốc và cấp đang chờ duyệt | |
 | Lọc "Tôi lập" (người tạo) / "Tôi đã duyệt" (bước duyệt/từ chối do tôi; phiếu kho = tôi ghi sổ) | |
 | Ngày: ngày chứng từ; bảng giá = hiệu lực từ; hợp đồng = ngày ký (chưa ký: hiệu lực từ); loại không có ngày (phụ lục, duyệt NCC, độc quyền) = ngày lập giờ VN. Khoảng tối đa 366 ngày, tối đa 5.000 dòng | Tránh quét cả CSDL |
-| Bấm đúp mở **trang đầy đủ** của chứng từ (loại mở trong ngăn kéo: `?mo=<Id>`); điều chỉnh kho (ADJ) chưa có trang | |
+| Bấm đúp mở **trang đầy đủ** của chứng từ (đánh giá NCC định kỳ DGN vẫn mở ngăn kéo `?mo=<Id>`); điều chỉnh kho (ADJ) chưa có trang | |
 
 Không có migration.
+
+**Trang đầy đủ cho phiếu vốn mở trong ngăn kéo (lát TC-3, 02/11/2026).** Thông báo, Việc cần làm, Tra cứu chứng từ, liên kết từ dấu hiệu
+bất thường mở **trang đầy đủ** (trong AppShell, tiêu đề + nút lệnh như trang chứng từ, nút "Quay lại" về danh sách) thay cho ngăn kéo:
+
+| Loại | Trang | Ghi chú |
+| --- | --- | --- |
+| NCC – yêu cầu duyệt NCC | `/gia-ncc/duyet-ncc/:id` | Thêm tab **Hồ sơ NCC** (thông tin chung, người liên hệ, tài khoản ngân hàng – chỉ xem) và **Hồ sơ đính kèm** (chỉ xem/tải) để người duyệt xem đủ trước khi duyệt; cùng quyền `MasterData.Supplier.View`. Ngăn kéo trên danh sách cũng có hai tab này |
+| NDQ – NCC độc quyền | `/gia-ncc/ncc-doc-quyen/:id` | |
+| VP – vi phạm KSNB | `/bao-cao/so-vi-pham/:id` | |
+| CTA – phụ lục hợp đồng | `/mua-hang/hop-dong-khung/phu-luc/:id` | Trước đây chuyển sang hợp đồng kèm ngăn kéo; "Quay lại" về trang hợp đồng |
+
+Bấm đúp trên danh sách của chính màn hình đó vẫn mở ngăn kéo (`?mo=<Id>`). Quyền trang = quyền màn hình danh sách (phụ lục: quyền CTR).
 
 ## Nguồn tham khảo
 

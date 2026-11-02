@@ -52,6 +52,13 @@ test('dấu hiệu bất thường → ghi nhận vi phạm → kết luận', a
   await expect(page.locator('.ant-message')).toContainText(/Đã kết luận vi phạm VP-/)
   await expect(drawer).toContainText('Đã kết luận')
   await page.screenshot({ path: 'e2e/screenshots/control-finding.png' })
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+
+  // Trang đầy đủ của vi phạm (mở từ thông báo, Tra cứu chứng từ – TC-3).
+  const findingId = new URL(page.url()).searchParams.get('mo')!
+  await page.goto(`/bao-cao/so-vi-pham/${findingId}`)
+  await expect(page.locator('.detail-page')).toContainText('Đã kết luận')
+  await expect(page.locator('.detail-drawer')).toHaveCount(0)
+  await page.locator('.detail-page').getByRole('button', { name: 'Quay lại' }).click()
+  await expect(page).toHaveURL(/\/bao-cao\/so-vi-pham$/)
   await expect(page.locator('.data-grid-row', { hasText: `Xung đột lợi ích – ${po.no}` })).toContainText('Đã kết luận')
 })

@@ -3,7 +3,7 @@ import { Alert, App, Button, DatePicker, Flex, Form, Input } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useConflictSupplierOptions } from '../../api/conflicts'
 import {
   anomalyLabels,
@@ -42,23 +42,47 @@ const severityOptions = Object.entries(findingSeverityLabels).map(([value, label
  * @param prefill Nội dung điền sẵn khi ghi nhận từ dấu hiệu bất thường.
  * @param onClose Đóng ngăn kéo.
  * @param onOpen Mở vi phạm vừa ghi nhận.
+ * @param asPage Vẽ thành trang đầy đủ thay cho ngăn kéo.
  */
 export function ControlFindingDrawer({
   id,
   prefill,
   onClose,
   onOpen,
+  asPage = false,
 }: {
   id: string | null
   prefill?: FindingPrefillState['findingPrefill']
   onClose: () => void
   onOpen: (id: string) => void
+  asPage?: boolean
 }) {
   const finding = useControlFinding(id)
   if (id && !finding.data) {
-    return <DetailDrawer open loading title="Vi phạm KSNB" tabs={[]} onClose={onClose} error={finding.error?.message ?? null} />
+    return <DetailDrawer open asPage={asPage} loading title="Vi phạm KSNB" tabs={[]} onClose={onClose} error={finding.error?.message ?? null} />
   }
-  return <FindingForm key={finding.data?.id ?? 'new'} finding={finding.data ?? null} prefill={prefill} onClose={onClose} onOpen={onOpen} />
+  return (
+    <FindingForm key={finding.data?.id ?? 'new'} finding={finding.data ?? null} prefill={prefill} onClose={onClose} onOpen={onOpen}
+      asPage={asPage} />
+  )
+}
+
+/** Đường dẫn sổ vi phạm; trang đầy đủ một vi phạm là `${VIOLATION_PATH}/:id`. */
+export const VIOLATION_PATH = '/bao-cao/so-vi-pham'
+
+/** Trang đầy đủ một vi phạm KSNB (`/bao-cao/so-vi-pham/:id`) – mở từ thông báo, Tra cứu chứng từ. */
+export function ControlFindingDetailPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  return (
+    <ControlFindingDrawer
+      key={id}
+      id={id}
+      asPage
+      onClose={() => navigate(VIOLATION_PATH)}
+      onOpen={(other) => navigate(`${VIOLATION_PATH}/${other}`)}
+    />
+  )
 }
 
 function FindingForm({
@@ -66,11 +90,13 @@ function FindingForm({
   prefill,
   onClose,
   onOpen,
+  asPage,
 }: {
   finding: ControlFinding | null
   prefill?: FindingPrefillState['findingPrefill']
   onClose: () => void
   onOpen: (id: string) => void
+  asPage: boolean
 }) {
   const { message, modal } = App.useApp()
   const navigate = useNavigate()
@@ -180,6 +206,7 @@ function FindingForm({
   return (
     <DetailDrawer
       open
+      asPage={asPage}
       title={isNew ? 'Ghi nhận vi phạm' : `Vi phạm ${finding.no}`}
       audit={{ entityType: 'ControlFinding', id: finding?.id }}
       onClose={onClose}

@@ -67,7 +67,12 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
   const approved = await request.post(`/api/sole-sources/${id}/approve`, { headers, data: { comment: null } })
   expect(approved.ok(), await approved.text()).toBeTruthy()
 
-  await page.reload()
+  // Trang đầy đủ của phiếu (mở từ thông báo, Việc cần làm, Tra cứu chứng từ – TC-3).
+  await page.goto(`/gia-ncc/ncc-doc-quyen/${id}`)
+  await expect(page.locator('.detail-page')).toContainText('Đang hiệu lực đến')
+  await expect(page.locator('.detail-drawer')).toHaveCount(0)
+  await page.locator('.detail-page').getByRole('button', { name: 'Quay lại' }).click()
+  await expect(page).toHaveURL(/\/gia-ncc\/ncc-doc-quyen$/)
   await expect(row).toContainText('Đang hiệu lực')
   await row.dblclick()
   await expect(drawer.getByText('Đang hiệu lực đến')).toBeVisible()

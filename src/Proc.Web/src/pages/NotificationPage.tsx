@@ -28,14 +28,13 @@ const columns: GridColumn<AppNotification>[] = [
  * riêng. Mã màn hình không còn (đổi menu) thì mở trang chủ.
  */
 function targetPath(n: AppNotification): string {
-  // Yêu cầu duyệt NCC (mã loại NCC – design.md mục 18.6) mở trên màn hình Duyệt NCC.
-  if (n.screenCode === 'NCC') return n.targetId ? `/gia-ncc/duyet-ncc?mo=${n.targetId}` : '/gia-ncc/duyet-ncc'
-  // Phiếu NCC độc quyền (loại NDQ – lát B5b) mở trong ngăn kéo của danh sách, không có trang riêng.
-  if (n.screenCode === 'NDQ') return n.targetId ? `/gia-ncc/ncc-doc-quyen?mo=${n.targetId}` : '/gia-ncc/ncc-doc-quyen'
-  // Vi phạm KSNB (lát F3) mở trong ngăn kéo của sổ vi phạm.
-  if (n.screenCode === 'VIOL') return n.targetId ? `/bao-cao/so-vi-pham?mo=${n.targetId}` : '/bao-cao/so-vi-pham'
-  // Phụ lục hợp đồng (loại CTA – lát B4b) không có màn hình riêng: trang chuyển tiếp mở hợp đồng kèm ngăn kéo phụ lục.
-  if (n.screenCode === 'CTA' && n.targetId) return `/mua-hang/hop-dong-khung/phu-luc/${n.targetId}`
+  // Phiếu vốn mở trong ngăn kéo danh sách (yêu cầu duyệt NCC, NCC độc quyền, vi phạm KSNB, phụ lục hợp đồng) mở trang đầy đủ của nó
+  // (TC-3) – xem đủ nội dung và duyệt ngay trên trang. Mã thông báo NCC/CTA không trùng mã màn hình nên tra riêng.
+  const drawerPaths: Record<string, string> = {
+    NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VIOL: '/bao-cao/so-vi-pham', CTA: '/mua-hang/hop-dong-khung/phu-luc',
+  }
+  const drawerPath = drawerPaths[n.screenCode]
+  if (drawerPath) return n.targetId ? `${drawerPath}/${n.targetId}` : n.screenCode === 'CTA' ? '/mua-hang/hop-dong-khung' : drawerPath
   const screen = screens.find((s) => s.code === n.screenCode)
   if (!screen) return '/'
   return n.targetId && n.screenCode !== 'PER' ? `${screen.path}/${n.targetId}` : screen.path
