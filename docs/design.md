@@ -1116,7 +1116,7 @@ Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám s�
 | Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 |
 | Hợp đồng nguyên tắc: mỗi pháp nhân một hợp đồng, dùng chung bảng giá; hiệu lực, sản lượng dự kiến, thanh toán, chiết khấu, chế tài, đơn vị được phép đặt; phụ lục; phải duyệt | 1.2 (hợp đồng khung) | B4 |
 | Danh mục bộ phận theo công ty; PR bắt buộc chọn bộ phận | 5.1, 10.2 (bộ phận dạng chữ, không bắt buộc) | A2 |
-| Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" | mới | C3 |
+| Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" (**hoãn 02/11/2026 – chỉ làm khi người dùng ra lệnh**) | mới | C3 |
 | Đính kèm file: thư mục trên máy chủ, tối đa 20 MB/file | mới | A1 |
 | Đưa NCC vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng NCC phải qua duyệt | 5.8 | B2 |
 

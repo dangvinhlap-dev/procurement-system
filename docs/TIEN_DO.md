@@ -104,8 +104,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C2 (C2a mua khẩn cấp, C2b hàng ngoài danh mục) đã xong. Lát kế tiếp **C3** – ngân sách công ty × bộ phận × tháng; PR/PO
-  kiểm tra, vượt không chặn mà thêm cấp duyệt "vượt ngân sách" (design.md mục 18 quyết định đã chốt). Lập kế hoạch ngắn trước khi code.
+- Không có. C2 (C2a mua khẩn cấp, C2b hàng ngoài danh mục) đã xong. Lát kế tiếp **C4** – SLA theo loại yêu cầu; cột "đang đặt" trên PR
+  (V2, V6 – docs/Phantich_01112026.md mục 5). Lập kế hoạch ngắn trước khi code.
+- **HOÃN – chờ lệnh người dùng: lát C3 (ngân sách công ty × bộ phận × tháng)**. Người dùng yêu cầu 02/11/2026: không làm ngân sách lúc
+  này, **chỉ làm khi người dùng ra lệnh**. Nội dung đã chốt để làm sau: ngân sách theo công ty × bộ phận × tháng; PR/PO kiểm tra, vượt
+  ngân sách không chặn mà thêm cấp duyệt "vượt ngân sách" (design.md mục 18 bảng quyết định; Phantich V1). Không tự đề xuất làm C3 khi
+  "làm tiếp" – bỏ qua sang lát kế tiếp.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
@@ -114,7 +118,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b đã xong; lát kế tiếp: **C3**.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b đã xong; **C3 hoãn chờ lệnh người dùng**; lát kế tiếp: **C4**.
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);
