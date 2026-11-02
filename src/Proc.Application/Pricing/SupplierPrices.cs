@@ -78,8 +78,10 @@ public sealed record SavePriceListLineRequest(
 /// <param name="DiscountPct">% chiết khấu.</param>
 /// <param name="VatCode">Thuế suất (đã thay bằng thuế suất mặt hàng nếu dòng để trống).</param>
 /// <param name="PriceListNo">Số bảng giá nguồn.</param>
+/// <param name="PriceListId">Bảng giá nguồn.</param>
 public sealed record ResolvedSupplierPriceDto(
-    Guid ItemId, Guid UomId, decimal UomFactor, decimal MinQty, decimal UnitPrice, decimal DiscountPct, string? VatCode, string PriceListNo);
+    Guid ItemId, Guid UomId, decimal UomFactor, decimal MinQty, decimal UnitPrice, decimal DiscountPct, string? VatCode, string PriceListNo,
+    Guid PriceListId);
 
 /// <summary>Bảng giá NCC (design.md mục 8.1).</summary>
 public interface IPriceListService
@@ -146,14 +148,18 @@ public interface IPriceListService
 
     /// <summary>
     /// Giá gợi ý cho PO: với mỗi mặt hàng, chọn một bảng giá hiệu lực vào ngày <paramref name="date"/> của NCC – bảng của công ty
-    /// ưu tiên hơn bảng toàn tập đoàn, rồi bảng có ngày hiệu lực mới nhất – và trả mọi bậc của mặt hàng trong bảng đó.
+    /// ưu tiên hơn bảng toàn tập đoàn, rồi bảng có ngày hiệu lực mới nhất – và trả mọi bậc của mặt hàng trong bảng đó. Có
+    /// <paramref name="preferredPriceListId"/> (bảng giá của hợp đồng nguyên tắc – design.md mục 18.10) thì mặt hàng có trong bảng đó
+    /// lấy bảng đó trước, nếu bảng đang hiệu lực vào ngày đặt hàng.
     /// </summary>
     /// <param name="supplierId">NCC.</param>
     /// <param name="date">Ngày đặt hàng.</param>
     /// <param name="itemIds">Các mặt hàng.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="preferredPriceListId">Bảng giá ưu tiên (của hợp đồng), hoặc null.</param>
     /// <returns>Các bậc giá.</returns>
-    Task<IReadOnlyList<ResolvedSupplierPriceDto>> ResolveAsync(Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ResolvedSupplierPriceDto>> ResolveAsync(
+        Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken, Guid? preferredPriceListId = null);
 }
 
 /// <summary>Giá hiện hành của một bảng giá cho mặt hàng đang so sánh.</summary>

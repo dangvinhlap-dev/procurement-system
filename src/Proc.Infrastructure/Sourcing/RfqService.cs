@@ -248,7 +248,7 @@ public sealed class RfqService : IRfqService
                 var quote = supplier.QuotationLines.Single(q => q.RfqLineId == l.Id);
                 return new SavePurchaseOrderLineRequest(
                     null, l.ItemId, l.UomId, l.Qty, quote.UnitPrice, quote.DiscountPct, quote.VatCode ?? vatByItem.GetValueOrDefault(l.ItemId),
-                    quote.LeadTimeDays is { } days ? today.AddDays(days) : null, null, l.SourcePrLineId);
+                    quote.LeadTimeDays is { } days ? today.AddDays(days) : null, null, l.SourcePrLineId, SourceRfqLineId: l.Id);
             }).ToList();
             var order = await _orders.CreateAsync(
                 new SavePurchaseOrderRequest(today, supplier.SupplierId, warehouseId, null, supplier.PaymentTerms, null, null, 0, $"Từ kết quả chọn thầu {rfq.No}", lines),

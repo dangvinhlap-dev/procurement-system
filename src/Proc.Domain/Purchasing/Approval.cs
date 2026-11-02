@@ -215,4 +215,18 @@ public static class ApprovalPlan
         rules.Count == 0
             ? [(1, null)]
             : rules.Where(r => r.MinAmount <= total).OrderBy(r => r.Level).Select(r => (r.Level, (Guid?)r.RoleId)).ToList();
+
+    /// <summary>
+    /// Các cấp của chặng duyệt ngoại lệ (design.md mục 18.10): như <see cref="Levels"/>, nhưng chặng ngoại lệ **luôn có ít nhất một cấp** –
+    /// tổng dưới mọi ngưỡng thì vẫn qua cấp thấp nhất (ngoại lệ phải có người duyệt, không tự qua vì phiếu nhỏ).
+    /// Ví dụ cấu hình POX cấp 1 ngưỡng 50.000.000, cấp 2 ngưỡng 500.000.000: PO 10.000.000 → cấp 1; PO 600.000.000 → cấp 1, 2.
+    /// </summary>
+    /// <param name="rules">Các cấp đã cấu hình của loại ngoại lệ tại công ty.</param>
+    /// <param name="total">Tổng giá trị phiếu.</param>
+    /// <returns>(Cấp, vai trò) theo thứ tự duyệt, không rỗng.</returns>
+    public static IReadOnlyList<(int Level, Guid? RoleId)> ExceptionLevels(IReadOnlyList<ApprovalRule> rules, decimal total)
+    {
+        var levels = Levels(rules, total);
+        return levels.Count > 0 ? levels : [rules.OrderBy(r => r.Level).Select(r => (r.Level, (Guid?)r.RoleId)).First()];
+    }
 }

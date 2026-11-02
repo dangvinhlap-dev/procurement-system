@@ -39,9 +39,76 @@ public sealed record PurchaseOrderHeader(
     string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note);
 
 /// <summary>Dữ liệu một dòng đơn mua hàng.</summary>
+/// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt (bắt buộc khi gửi duyệt nếu lệch – design.md mục 18.10).</param>
+/// <param name="SourceRfqLineId">Dòng RFQ đã chọn thầu mà dòng PO lấy giá (chỉ khi lập PO từ kết quả chọn thầu; server kiểm tra lại).</param>
 public sealed record PurchaseOrderLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, decimal DiscountPct, string? VatCode, DateOnly? DeliveryDate,
-    string? Note, Guid? SourcePrLineId);
+    string? Note, Guid? SourcePrLineId, string? PriceDeviationReason = null, Guid? SourceRfqLineId = null);
+
+/// <summary>
+/// Nguồn giá của dòng PO (design.md mục 18.10 – đề xuất Ban CUVT M1, P5): thứ tự ưu tiên kết quả chọn thầu → hợp đồng nguyên tắc →
+/// bảng giá NCC → ngoài hợp đồng (không có giá đã duyệt).
+/// </summary>
+public enum PurchasePriceSource
+{
+    /// <summary>Dòng lập trước bản có nguồn giá (0.12.0) – không xác định.</summary>
+    Unknown = 0,
+
+    /// <summary>Giá trúng thầu của RFQ đã chọn thầu (kết quả đã được hội đồng duyệt).</summary>
+    Rfq = 1,
+
+    /// <summary>Giá theo bảng giá của hợp đồng nguyên tắc đang hiệu lực của công ty với NCC.</summary>
+    Contract = 2,
+
+    /// <summary>Giá theo bảng giá NCC đang hiệu lực (không có hợp đồng).</summary>
+    PriceList = 3,
+
+    /// <summary>Không có giá đã duyệt – mua ngoài hợp đồng.</summary>
+    None = 4,
+}
+
+/// <summary>Giá đã duyệt tìm được cho một dòng PO.</summary>
+/// <param name="Source">Nguồn giá (Rfq, Contract hoặc PriceList).</param>
+/// <param name="UnitPrice">Đơn giá theo ĐVT của dòng PO, trước chiết khấu.</param>
+/// <param name="DiscountPct">% chiết khấu.</param>
+/// <param name="PriceListId">Bảng giá nguồn (nguồn hợp đồng hoặc bảng giá).</param>
+/// <param name="ContractId">Hợp đồng nguyên tắc (nguồn hợp đồng).</param>
+/// <param name="RfqLineId">Dòng RFQ (nguồn chọn thầu).</param>
+public sealed record ApprovedPrice(
+    PurchasePriceSource Source, decimal UnitPrice, decimal DiscountPct, Guid? PriceListId = null, Guid? ContractId = null, Guid? RfqLineId = null);
+
+/// <summary>Một bậc giá của bảng giá NCC.</summary>
+/// <param name="UomId">ĐVT của bậc.</param>
+/// <param name="UomFactor">Hệ số ĐVT của bậc về ĐVT cơ sở.</param>
+/// <param name="MinQty">Bậc số lượng (theo ĐVT của bậc).</param>
+/// <param name="UnitPrice">Đơn giá theo ĐVT của bậc.</param>
+/// <param name="DiscountPct">% chiết khấu.</param>
+public sealed record PriceTier(Guid UomId, decimal UomFactor, decimal MinQty, decimal UnitPrice, decimal DiscountPct);
+
+/// <summary>Chọn bậc giá cho dòng PO – cùng quy tắc với giá gợi ý trên giao diện (<c>pickSupplierPrice</c>, design.md mục 8.5).</summary>
+public static class PriceTierPicker
+{
+    /// <summary>
+    /// Cùng ĐVT: bậc SL lớn nhất ≤ SL đặt. Không có bậc cùng ĐVT thì quy từ bậc theo ĐVT khác: đơn giá = giá bậc / hệ số bậc × hệ số
+    /// dòng (làm tròn 6 số), chọn bậc lớn nhất có SL quy về cơ sở ≤ SL cơ sở của dòng. Ví dụ bậc 0 cái 50.000, bậc 100 cái 48.000: đặt
+    /// 120 cái → 48.000; đặt 2 thùng 12 cái (không có bậc theo thùng) → bậc 0 cái → 600.000/thùng.
+    /// </summary>
+    /// <param name="tiers">Các bậc của mặt hàng trong một bảng giá.</param>
+    /// <param name="uomId">ĐVT dòng.</param>
+    /// <param name="uomFactor">Hệ số ĐVT dòng.</param>
+    /// <param name="qty">SL đặt theo ĐVT dòng.</param>
+    /// <returns>(Đơn giá theo ĐVT dòng, % CK), hoặc null nếu không bậc nào áp được.</returns>
+    public static (decimal UnitPrice, decimal DiscountPct)? Pick(IEnumerable<PriceTier> tiers, Guid uomId, decimal uomFactor, decimal qty)
+    {
+        var list = tiers.ToList();
+        var same = list.Where(t => t.UomId == uomId && t.MinQty <= qty).OrderByDescending(t => t.MinQty).FirstOrDefault();
+        if (same is not null) return (same.UnitPrice, same.DiscountPct);
+        var baseQty = qty * uomFactor;
+        var other = list.Where(t => t.MinQty * t.UomFactor <= baseQty).OrderByDescending(t => t.MinQty * t.UomFactor).FirstOrDefault();
+        if (other is null) return null;
+        return (Math.Round(other.UnitPrice / other.UomFactor * uomFactor, 6, MidpointRounding.AwayFromZero), other.DiscountPct);
+    }
+}
 
 /// <summary>
 /// Phần chung của chứng từ mua hàng có duyệt (PR, PO): số phiếu, trạng thái, lượt gửi duyệt, lý do từ chối gần nhất.
@@ -458,6 +525,45 @@ public sealed class PurchaseOrder : ApprovableDocument
         TotalDiscount = _lines.Sum(l => l.DiscountAmount);
         TotalAmount = _lines.Sum(l => l.Amount);
         TotalVat = _lines.Sum(l => l.VatAmount);
+        RefreshPriceFlags();
+    }
+
+    /// <summary>
+    /// Có dòng đơn giá khác giá đã duyệt – PO phải qua chặng duyệt ngoại lệ giá (design.md mục 18.10). Lưu thành cột để lọc danh sách,
+    /// báo cáo mà không tính lại từ dòng.
+    /// </summary>
+    public bool HasPriceException { get; private set; }
+
+    /// <summary>Có dòng mua ngoài hợp đồng (không có giá đã duyệt hoặc lệch giá đã duyệt) – đo tỷ lệ mua theo hợp đồng (P5).</summary>
+    public bool IsOutOfContract { get; private set; }
+
+    /// <summary>Gán giá đã duyệt cho từng dòng (server tính lúc lưu và lúc gửi duyệt – giá có thể đổi giữa hai lần).</summary>
+    /// <param name="resolve">Giá đã duyệt của dòng, null nếu không có.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
+    public void ApplyApprovedPrices(Func<PurchaseOrderLine, ApprovedPrice?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(resolve);
+        EnsureDraft();
+        foreach (var line in _lines) line.ApplyApprovedPrice(resolve(line));
+        RefreshPriceFlags();
+    }
+
+    private void RefreshPriceFlags()
+    {
+        HasPriceException = _lines.Any(l => l.IsPriceDeviation);
+        IsOutOfContract = _lines.Any(l => l.IsOutOfContract);
+    }
+
+    /// <summary>
+    /// Kiểm tra trước khi gửi duyệt: dòng lệch giá đã duyệt phải có lý do (quyết định M1 – Nhóm Vận hành không tự đổi giá đã đàm phán).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi có dòng lệch giá chưa nhập lý do (liệt kê số dòng).</exception>
+    public void EnsurePriceDeviationsExplained()
+    {
+        var missing = _lines.Where(l => l.IsPriceDeviation && l.PriceDeviationReason is null).OrderBy(l => l.LineNo).Select(l => l.LineNo).ToList();
+        if (missing.Count > 0)
+            throw new BusinessRuleException(
+                $"Dòng {string.Join(", ", missing)}: đơn giá khác giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu) – phải nhập lý do lệch giá trước khi gửi duyệt.");
     }
 
     /// <summary>Nhận đủ hàng: Đã duyệt → Đã nhận đủ (đóng).</summary>
@@ -540,6 +646,38 @@ public sealed class PurchaseOrderLine : Entity
     /// </summary>
     public decimal NetUnitPrice => Math.Round(UnitPrice * (100m - DiscountPct) / 100m, 6, MidpointRounding.AwayFromZero);
 
+    /// <summary>Nguồn giá (design.md mục 18.10).</summary>
+    public PurchasePriceSource PriceSource { get; private set; }
+
+    /// <summary>Đơn giá đã duyệt theo ĐVT dòng, trước chiết khấu – numeric(19,6); null khi không có giá đã duyệt.</summary>
+    public decimal? ApprovedUnitPrice { get; private set; }
+
+    /// <summary>% chiết khấu đã duyệt – numeric(9,4).</summary>
+    public decimal? ApprovedDiscountPct { get; private set; }
+
+    /// <summary>Bảng giá nguồn (nguồn hợp đồng hoặc bảng giá).</summary>
+    public Guid? PriceListId { get; private set; }
+
+    /// <summary>Hợp đồng nguyên tắc nguồn.</summary>
+    public Guid? ContractId { get; private set; }
+
+    /// <summary>Dòng RFQ đã chọn thầu (nguồn chọn thầu).</summary>
+    public Guid? SourceRfqLineId { get; private set; }
+
+    /// <summary>Lý do đơn giá khác giá đã duyệt.</summary>
+    public string? PriceDeviationReason { get; private set; }
+
+    /// <summary>
+    /// Giá thực (sau chiết khấu) khác giá đã duyệt (sau chiết khấu). So sau chiết khấu để "đơn giá 100.000, CK 5%" và "đơn giá 95.000,
+    /// CK 0%" coi là như nhau. Lệch cả khi rẻ hơn: giá đã đàm phán là giá mua, đổi giá phải được duyệt (quyết định M1).
+    /// </summary>
+    public bool IsPriceDeviation =>
+        ApprovedUnitPrice is { } approved
+        && NetUnitPrice != Math.Round(approved * (100m - (ApprovedDiscountPct ?? 0m)) / 100m, 6, MidpointRounding.AwayFromZero);
+
+    /// <summary>Mua ngoài hợp đồng: không có giá đã duyệt hoặc lệch giá đã duyệt (P5). Dòng lập trước bản 0.12.0 không tính.</summary>
+    public bool IsOutOfContract => PriceSource == PurchasePriceSource.None || IsPriceDeviation;
+
     /// <summary>
     /// Gán dòng và tính tiền: tiền hàng = SL × đơn giá; chiết khấu = tiền hàng × %; thành tiền = tiền hàng − chiết khấu;
     /// VAT = thành tiền × thuế suất; mỗi bước làm tròn 2 số (0,5 lên). Ví dụ 10 × 100.000, CK 5%, VAT 10% →
@@ -579,5 +717,23 @@ public sealed class PurchaseOrderLine : Entity
         DeliveryDate = data.DeliveryDate;
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
         SourcePrLineId = data.SourcePrLineId;
+        var reason = string.IsNullOrWhiteSpace(data.PriceDeviationReason) ? null : data.PriceDeviationReason.Trim();
+        if (reason is { Length: > 500 }) throw new BusinessRuleException($"{prefix}: lý do lệch giá tối đa 500 ký tự.");
+        PriceDeviationReason = reason;
+        SourceRfqLineId = data.SourceRfqLineId;
+    }
+
+    /// <summary>
+    /// Ghi giá đã duyệt của dòng; không có thì nguồn "ngoài hợp đồng". Hết lệch giá thì xóa lý do cũ để báo cáo không ghi nhầm.
+    /// </summary>
+    internal void ApplyApprovedPrice(ApprovedPrice? price)
+    {
+        PriceSource = price?.Source ?? PurchasePriceSource.None;
+        ApprovedUnitPrice = price?.UnitPrice;
+        ApprovedDiscountPct = price?.DiscountPct;
+        PriceListId = price?.PriceListId;
+        ContractId = price?.ContractId;
+        SourceRfqLineId = price?.RfqLineId;
+        if (!IsPriceDeviation) PriceDeviationReason = null;
     }
 }

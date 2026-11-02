@@ -155,7 +155,7 @@ public sealed class PriceListService : IPriceListService
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ResolvedSupplierPriceDto>> ResolveAsync(
-        Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
+        Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken, Guid? preferredPriceListId = null)
     {
         var companyId = _scope.RequireCompany();
         var rows = await (
@@ -170,16 +170,18 @@ public sealed class PriceListService : IPriceListService
                     l.DiscountPct, VatCode = l.VatCode ?? i.VatCode,
                 })
             .ToListAsync(cancellationToken);
-        // Mỗi mặt hàng lấy một bảng giá: bảng của công ty thắng bảng toàn tập đoàn (thỏa thuận riêng), rồi bảng hiệu lực mới nhất.
+        // Mỗi mặt hàng lấy một bảng giá: bảng của hợp đồng nguyên tắc (nếu có mặt hàng), rồi bảng của công ty thắng bảng toàn tập đoàn
+        // (thỏa thuận riêng), rồi bảng hiệu lực mới nhất.
         return rows
             .GroupBy(r => r.ItemId)
             .SelectMany(g =>
             {
-                var chosen = g.OrderByDescending(r => r.Own).ThenByDescending(r => r.ValidFrom).ThenByDescending(r => r.ActivatedAt).First().Id;
+                var chosen = g.OrderByDescending(r => r.Id == preferredPriceListId).ThenByDescending(r => r.Own).ThenByDescending(r => r.ValidFrom)
+                    .ThenByDescending(r => r.ActivatedAt).First().Id;
                 return g.Where(r => r.Id == chosen);
             })
             .OrderBy(r => r.ItemId).ThenBy(r => r.UomFactor).ThenBy(r => r.MinQty)
-            .Select(r => new ResolvedSupplierPriceDto(r.ItemId, r.UomId, r.UomFactor, r.MinQty, r.UnitPrice, r.DiscountPct, r.VatCode, r.No))
+            .Select(r => new ResolvedSupplierPriceDto(r.ItemId, r.UomId, r.UomFactor, r.MinQty, r.UnitPrice, r.DiscountPct, r.VatCode, r.No, r.Id))
             .ToList();
     }
 

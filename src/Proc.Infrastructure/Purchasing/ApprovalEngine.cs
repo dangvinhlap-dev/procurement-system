@@ -49,6 +49,27 @@ internal sealed class ApprovalEngine
     }
 
     /// <summary>
+    /// Gửi duyệt có chặng ngoại lệ (design.md mục 18.10 – PO lệch giá đã duyệt): chặng 1 các cấp thường của loại phiếu (có thể không
+    /// có cấp nào nếu dưới mọi ngưỡng), chặng 2 các cấp của loại ngoại lệ tại cùng công ty – luôn ít nhất một cấp
+    /// (<see cref="ApprovalPlan.ExceptionLevels"/>). Bước chặng 2 vẫn mang loại phiếu gốc nên người duyệt cần quyền duyệt loại phiếu đó.
+    /// </summary>
+    /// <param name="document">Đối tượng duyệt.</param>
+    /// <param name="exceptionType">Mã loại ngoại lệ trong <see cref="ApprovalTypes"/> (ví dụ POX).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    public async Task SubmitWithExceptionAsync(IApprovalSubject document, string exceptionType, CancellationToken cancellationToken)
+    {
+        var round = document.Submit();
+        var rules = await _db.ApprovalRules.AsNoTracking()
+            .Where(r => r.DocType == document.DocType || r.DocType == exceptionType).ToListAsync(cancellationToken);
+        var steps = ApprovalPlan.Levels(rules.Where(r => r.DocType == document.DocType).ToList(), document.ApprovalAmount)
+            .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
+            .Concat(ApprovalPlan.ExceptionLevels(rules.Where(r => r.DocType == exceptionType).ToList(), document.ApprovalAmount)
+                .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, 2)))
+            .ToList();
+        await StartAsync(document, steps, cancellationToken);
+    }
+
+    /// <summary>
     /// Gửi duyệt hai chặng (design.md mục 18.6 – duyệt NCC): chặng 1 mỗi công ty liên quan duyệt theo quy trình của công ty đó (các công
     /// ty song song), chặng 2 Tổng công ty duyệt lần cuối theo quy trình của Tổng công ty. Tổng công ty có trong danh sách liên quan thì
     /// chỉ duyệt ở chặng 2 (không duyệt hai lần). Công ty chưa cấu hình quy trình loại này → một cấp, ai có quyền duyệt tại đó cũng duyệt.

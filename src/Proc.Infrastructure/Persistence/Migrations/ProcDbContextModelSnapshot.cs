@@ -2837,6 +2837,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
+                    b.Property<bool>("HasPriceException")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsOutOfContract")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("No")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2908,9 +2914,20 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
+                    b.Property<decimal?>("ApprovedDiscountPct")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)");
+
+                    b.Property<decimal?>("ApprovedUnitPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
                     b.Property<decimal>("BaseQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid?>("ContractId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly?>("DeliveryDate")
                         .HasColumnType("date");
@@ -2940,11 +2957,24 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PriceDeviationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("PriceListId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PriceSource")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("Qty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
                     b.Property<Guid?>("SourcePrLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceRfqLineId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("UnitPrice")
@@ -2968,9 +2998,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ContractId");
+
                     b.HasIndex("ItemId");
 
+                    b.HasIndex("PriceListId");
+
                     b.HasIndex("SourcePrLineId");
+
+                    b.HasIndex("SourceRfqLineId");
 
                     b.HasIndex("UomId");
 
@@ -4570,6 +4606,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderLine", b =>
                 {
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.MasterData.Item", null)
                         .WithMany()
                         .HasForeignKey("ItemId")
@@ -4582,9 +4623,19 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Purchasing.PurchaseRequestLine", null)
                         .WithMany()
                         .HasForeignKey("SourcePrLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Sourcing.RfqLine", null)
+                        .WithMany()
+                        .HasForeignKey("SourceRfqLineId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.MasterData.Uom", null)

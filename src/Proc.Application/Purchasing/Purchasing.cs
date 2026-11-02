@@ -107,7 +107,7 @@ public sealed record PurchaseDocumentQuery(DateOnly? From, DateOnly? To, string?
 /// <param name="Priority">Mức ưu tiên (PR).</param>
 public sealed record PurchaseDocumentListItemDto(
     Guid Id, string No, DateOnly Date, string Status, string? Description, string? Purpose, DateOnly? NeededDate, decimal Amount,
-    int LineCount, string? CreatedByName, decimal Progress, string? Priority);
+    int LineCount, string? CreatedByName, decimal Progress, string? Priority, bool? OutOfContract = null, bool? PriceException = null);
 
 /// <summary>Kết quả tìm PR/PO.</summary>
 public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentListItemDto> Items, bool Truncated, int Limit);
@@ -159,7 +159,9 @@ public sealed record OpenRequestLineDto(
 public sealed record PurchaseOrderLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, decimal UnitPrice, decimal DiscountPct, decimal GrossAmount, decimal DiscountAmount, decimal Amount, string? VatCode,
-    decimal VatAmount, DateOnly? DeliveryDate, string? Note, Guid? SourcePrLineId, string? SourcePrNo, decimal ReceivedQty, decimal RemainingQty);
+    decimal VatAmount, DateOnly? DeliveryDate, string? Note, Guid? SourcePrLineId, string? SourcePrNo, decimal ReceivedQty, decimal RemainingQty,
+    string PriceSource, decimal? ApprovedUnitPrice, decimal? ApprovedDiscountPct, string? PriceListNo, string? ContractNo, string? SourceRfqNo,
+    Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract);
 
 /// <summary>Chi tiết PO.</summary>
 public sealed record PurchaseOrderDto(
@@ -167,12 +169,32 @@ public sealed record PurchaseOrderDto(
     DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms, string? DeliveryAddress, string CurrencyCode, decimal ReceiveTolerancePct,
     string? Note, decimal GrossAmount, decimal TotalDiscount, decimal TotalAmount, decimal TotalVat, string? RejectReason, DateTimeOffset CreatedAt,
     string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseOrderLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals,
-    PurchaseDocumentActions Actions);
+    PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract);
+
+/// <summary>
+/// Bậc giá đã duyệt cho PO (design.md mục 18.10): bảng giá của hợp đồng nguyên tắc đang hiệu lực (Source = Contract) hoặc bảng giá NCC
+/// đang hiệu lực (Source = PriceList). Giao diện chọn bậc theo ĐVT và SL như server (<c>PriceTierPicker</c>).
+/// </summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT của bậc.</param>
+/// <param name="UomFactor">Hệ số ĐVT.</param>
+/// <param name="MinQty">Bậc số lượng.</param>
+/// <param name="UnitPrice">Đơn giá.</param>
+/// <param name="DiscountPct">% chiết khấu.</param>
+/// <param name="VatCode">Thuế suất.</param>
+/// <param name="Source">Contract hoặc PriceList.</param>
+/// <param name="PriceListNo">Số bảng giá.</param>
+/// <param name="ContractNo">Số hợp đồng (nguồn Contract).</param>
+public sealed record PoApprovedPriceDto(
+    Guid ItemId, Guid UomId, decimal UomFactor, decimal MinQty, decimal UnitPrice, decimal DiscountPct, string? VatCode, string Source,
+    string PriceListNo, string? ContractNo);
 
 /// <summary>Dòng PO gửi lên.</summary>
+/// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt.</param>
+/// <param name="SourceRfqLineId">Dòng RFQ đã chọn thầu (chỉ khi lập PO từ kết quả chọn thầu).</param>
 public sealed record SavePurchaseOrderLineRequest(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, decimal DiscountPct, string? VatCode, DateOnly? DeliveryDate, string? Note,
-    Guid? SourcePrLineId);
+    Guid? SourcePrLineId, string? PriceDeviationReason = null, Guid? SourceRfqLineId = null);
 
 /// <summary>Lưu PO nháp.</summary>
 public sealed record SavePurchaseOrderRequest(
@@ -244,6 +266,17 @@ public interface IPurchaseOrderService
 
     /// <summary>Dòng PO còn chờ giao của công ty đang làm việc.</summary>
     Task<IReadOnlyList<DeliveryTrackingDto>> TrackingAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bậc giá đã duyệt của NCC vào ngày đặt hàng cho các mặt hàng (design.md mục 18.10): hợp đồng nguyên tắc đang hiệu lực của công ty
+    /// với NCC thì bảng giá của hợp đồng ưu tiên; không có thì bảng giá NCC đang hiệu lực.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="date">Ngày đặt hàng.</param>
+    /// <param name="itemIds">Các mặt hàng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các bậc giá kèm nguồn.</returns>
+    Task<IReadOnlyList<PoApprovedPriceDto>> ApprovedPricesAsync(Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 }
 
 /// <summary>Kiểm tra cấp duyệt.</summary>
