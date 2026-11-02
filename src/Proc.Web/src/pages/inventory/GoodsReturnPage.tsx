@@ -297,7 +297,8 @@ export function GoodsReturnPage() {
       lines={
         <>
           {!readOnly && (
-            <Button icon={<DownloadOutlined />} onClick={takeAll} disabled={!returnable.data} loading={returnable.isFetching} style={{ marginBottom: 6 }}>
+            // Khóa cả khi đang tải lại: nút antd đang loading bỏ qua cú bấm mà không báo gì, và số còn được trả cũ có thể sai.
+            <Button icon={<DownloadOutlined />} onClick={takeAll} disabled={!returnable.data || returnable.isFetching} loading={returnable.isFetching} style={{ marginBottom: 6 }}>
               Lấy mọi dòng còn trả được
             </Button>
           )}

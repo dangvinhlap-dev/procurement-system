@@ -571,7 +571,8 @@ export function GoodsReceiptPage() {
       lines={
         <>
           {!readOnly && purchaseOrderId && (
-            <Button icon={<FileDoneOutlined />} onClick={takeOrderLines} disabled={!order.data} loading={order.isFetching} style={{ marginBottom: 6 }}>
+            // Khóa cả khi đang tải lại PO: nút antd đang loading bỏ qua cú bấm mà không báo gì, và số còn lại cũ có thể sai.
+            <Button icon={<FileDoneOutlined />} onClick={takeOrderLines} disabled={!order.data || order.isFetching} loading={order.isFetching} style={{ marginBottom: 6 }}>
               Lấy các dòng còn lại của PO
             </Button>
           )}

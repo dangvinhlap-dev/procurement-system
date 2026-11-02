@@ -120,8 +120,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 - Không có lát đang dở. Đợt đề xuất Ban Cung ứng (E1 → F4) đã xong hết trừ **C3 (hoãn chờ lệnh)**. Bản **0.13.0** đã phát hành
   02/11/2026: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0 (bản cài thử ở http://localhost:5005).
-  Lỗi form nạp đè chữ đang gõ đã sửa (bên dưới). Lát kế tiếp đề xuất: lỗi trang trắng sau đăng xuất, test `supplier-links` chập chờn
-  (mục Việc tiếp theo 4–5) – lập kế hoạch ngắn trước khi code.
+  Đã sửa (chưa phát hành): form nạp đè chữ đang gõ, trang trắng sau đăng xuất, nút lấy dòng PO/trả hàng bỏ qua cú bấm. Việc tiếp theo:
+  chờ người dùng chọn (phát hành 0.13.1, C3 khi có lệnh, hoặc việc "làm khi có yêu cầu" ở design.md).
+- **Sửa lỗi nút lấy dòng bị bỏ qua cú bấm (02/11/2026, cùng nhánh)**: nút "Lấy các dòng còn lại của PO" (GRN) và "Lấy tất cả" (trả hàng)
+  có `loading` khi đang tải lại nền nhưng vẫn bật – antd bỏ qua cú bấm lúc loading, người dùng bấm mà không có dòng (lộ ra ở e2e
+  `purchasing` khi ép tải 10 luồng: hỏng 3/6). Nay khóa nút khi đang tải lại. Ép tải lại 6/6 qua; cả bộ Playwright 87/87.
 - **Sửa lỗi trang trắng sau đăng xuất (02/11/2026, nhánh `fix/dang-xuat-trang-trang`)**: đăng xuất xong router đổi URL sang
   `/dang-nhap` nhưng lượt vẽ (transition) chưa xong; bấm Quay lại ngay thì router trở về đúng vị trí `/` nó còn giữ nên không vẽ lại,
   `<Navigate>` không chạy lại → trang trắng. `RequireAuth` nay tự chuyển trang trong hiệu ứng, đọc đường dẫn từ `window.location`,
@@ -227,7 +230,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0, `procurement_kiemtra_0130` – CSDL bản cài thử 0.13.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
 4. ~~Lỗi trang trắng sau đăng xuất~~ – đã sửa 02/11/2026 (nhánh `fix/dang-xuat-trang-trang`, xem mục Đang làm).
-5. Test Playwright `supplier-links` chập chờn khi chạy cả bộ song song (hết thời gian ở bước chọn mặt hàng tìm từ server) – cần sửa cho ổn định.
+5. ~~Test Playwright `supplier-links` chập chờn~~ – 02/11/2026 chạy riêng 12/12, ép tải 10 luồng 6/6, cả bộ 87/87 đều qua, không tái
+   hiện được; khi ép tải tìm ra lỗi thật ở nút "Lấy các dòng còn lại của PO" (đã sửa, xem mục Đang làm). Lỗi lại thì xem tiếp.
 6. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
 
 ## Ghi nhớ môi trường dev
