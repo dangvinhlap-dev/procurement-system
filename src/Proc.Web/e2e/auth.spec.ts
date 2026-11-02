@@ -70,12 +70,11 @@ test('đăng xuất thì về màn hình đăng nhập và không vào lại đ�
   await page.getByRole('menuitem', { name: 'Đăng xuất' }).click()
 
   await expect(page).toHaveURL(/\/dang-nhap$/)
-  // Chờ form đăng nhập hiện hẳn rồi mới bấm Quay lại như người dùng thật. Bấm Quay lại trong vòng ~40ms sau khi đăng xuất
-  // (lúc router còn đang chuyển trang) có thể để trang trắng – lỗi tiềm ẩn ghi ở docs/TIEN_DO.md; giao diện cổ điển tắt hiệu ứng
-  // (motion: false) nên không còn khoảng chờ đóng menu che lỗi này.
-  await expect(page.getByLabel('Tên đăng nhập')).toBeVisible()
+  // Bấm Quay lại ngay khi URL vừa đổi, không chờ form đăng nhập: lúc này router có thể chưa vẽ xong lượt chuyển trang – trước đây
+  // để lại trang trắng ở "/" (RequireAuth bắt popstate để sửa).
   await page.goBack()
   await expect(page).toHaveURL(/\/dang-nhap$/)
+  await expect(page.getByLabel('Tên đăng nhập')).toBeVisible()
 })
 
 test('chụp màn hình đăng nhập', async ({ page }) => {

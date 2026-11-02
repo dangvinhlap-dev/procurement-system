@@ -122,6 +122,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   02/11/2026: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0 (bản cài thử ở http://localhost:5005).
   Lỗi form nạp đè chữ đang gõ đã sửa (bên dưới). Lát kế tiếp đề xuất: lỗi trang trắng sau đăng xuất, test `supplier-links` chập chờn
   (mục Việc tiếp theo 4–5) – lập kế hoạch ngắn trước khi code.
+- **Sửa lỗi trang trắng sau đăng xuất (02/11/2026, nhánh `fix/dang-xuat-trang-trang`)**: đăng xuất xong router đổi URL sang
+  `/dang-nhap` nhưng lượt vẽ (transition) chưa xong; bấm Quay lại ngay thì router trở về đúng vị trí `/` nó còn giữ nên không vẽ lại,
+  `<Navigate>` không chạy lại → trang trắng. `RequireAuth` nay tự chuyển trang trong hiệu ứng, đọc đường dẫn từ `window.location`,
+  bắt thêm `popstate`; bỏ qua khi URL đã là `/dang-nhap` (StrictMode chạy hiệu ứng hai lần). e2e `auth.spec.ts` bấm Quay lại ngay khi URL
+  đổi (không chờ form) – tắt bản sửa thì hỏng 3/6 lần, có bản sửa 36/36 qua. `npm run build`, `tsc`, `oxlint` qua.
 - **F4b (xong, đã merge `main` 02/11/2026): chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận (P10)** – design.md mục 18.21.
   - `PurchaseContractRebate` (cam kết: loại, % hoặc số tiền cố định mỗi kỳ, doanh số tối thiểu, kỳ Quý/Năm/Cả HĐ – sửa khi Nháp qua
     `SaveContractRequest.Rebates`, null = giữ nguyên), `ContractRebateReceipt` (thực nhận, hủy có lý do, kỳ nhận diện bằng ngày đầu kỳ),
@@ -221,8 +226,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
    phạm vi bộ phận được đặt của hợp đồng: C1b xong.
 3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0, `procurement_kiemtra_0130` – CSDL bản cài thử 0.13.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
-4. **Lỗi tiềm ẩn đăng xuất**: bấm Quay lại trong vòng ~40ms sau khi đăng xuất (router còn đang chuyển trang) để lại trang trắng ở `/`
-   (không lộ dữ liệu, phiên đã xóa). Có từ trước, lộ ra khi giao diện cổ điển tắt hiệu ứng; test `auth.spec.ts` đã chờ form đăng nhập. Cần sửa.
+4. ~~Lỗi trang trắng sau đăng xuất~~ – đã sửa 02/11/2026 (nhánh `fix/dang-xuat-trang-trang`, xem mục Đang làm).
 5. Test Playwright `supplier-links` chập chờn khi chạy cả bộ song song (hết thời gian ở bước chọn mặt hàng tìm từ server) – cần sửa cho ổn định.
 6. Việc "làm khi có yêu cầu" ghi trong design.md (gửi email, ngoại tệ, cổng NCC, gộp PR mua tập trung…).
 
