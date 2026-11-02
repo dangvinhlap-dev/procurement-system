@@ -118,16 +118,19 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- **F4b (đang làm, nhánh `feature/f4b-chiet-khau-tai-tro`): chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận (P10)** –
-  design.md mục 18.21.
-  - Bước 1 (xong 02/11/2026): `PurchaseContractRebate` (cam kết: loại, % hoặc số tiền cố định, doanh số tối thiểu, kỳ Quý/Năm/Cả HĐ – sửa khi
-    Nháp qua `SaveContractRequest.Rebates`, null = giữ nguyên), `ContractRebateReceipt` (thực nhận, hủy có lý do), `ContractRebateTracker`
-    (doanh số = PO Đã duyệt/Đã đóng công ty × NCC trong kỳ; tình trạng NotDue/Waiting/Received/NotReached/Short, hạn 30 ngày), API
-    `GET /api/contracts/{id}/rebates`, `POST .../rebate-receipts`, `POST /api/contract-rebate-receipts/{id}/cancel`; migration
-    `V0_13_0_ChietKhauTaiTroHopDong`. Dấu hiệu KSNB "Chiết khấu/tài trợ chưa ghi nhận" đã đo (ScreenCode `CTR`).
-    Test: domain `ContractRebateTests`, tích hợp `ContractRebateTests`, sửa `ControlAnomalyTests`. `dotnet test` 505 qua.
-  - Bước 2 (tiếp theo): giao diện tab CHIẾT KHẤU – TÀI TRỢ trên hợp đồng (lưới cam kết, lưới theo dõi kỳ, hộp thoại ghi nhận/hủy), ANOM mở
-    hợp đồng (`controlRefPath` thêm `CTR`), e2e. Sau đó merge, có thể phát hành 0.13.0 khi người dùng yêu cầu.
+- Không có lát đang dở. Đợt đề xuất Ban Cung ứng (E1 → F4) đã xong hết trừ **C3 (hoãn chờ lệnh)**. Có thể phát hành **0.13.0** khi người
+  dùng yêu cầu (F1–F4b, D1, G1–G3…). Lát kế tiếp đề xuất: sửa **lỗi form chứng từ nạp đè chữ đang gõ** (mục "Lỗi cần sửa" bên dưới), rồi
+  lỗi trang trắng sau đăng xuất, test `supplier-links` chập chờn (mục Việc tiếp theo 4–5) – lập kế hoạch ngắn trước khi code.
+- **F4b (xong, đã merge `main` 02/11/2026): chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận (P10)** – design.md mục 18.21.
+  - `PurchaseContractRebate` (cam kết: loại, % hoặc số tiền cố định mỗi kỳ, doanh số tối thiểu, kỳ Quý/Năm/Cả HĐ – sửa khi Nháp qua
+    `SaveContractRequest.Rebates`, null = giữ nguyên), `ContractRebateReceipt` (thực nhận, hủy có lý do, kỳ nhận diện bằng ngày đầu kỳ),
+    `ContractRebateTracker` (doanh số = PO Đã duyệt/Đã đóng công ty × NCC trong kỳ; NotDue/Waiting/Received/NotReached/Short, hạn 30 ngày);
+    API `GET /api/contracts/{id}/rebates`, `POST .../rebate-receipts`, `POST /api/contract-rebate-receipts/{id}/cancel`; migration
+    `V0_13_0_ChietKhauTaiTroHopDong`. Dấu hiệu KSNB "Chiết khấu/tài trợ chưa ghi nhận" đã đo (mở hợp đồng – `controlRefPath` `CTR`).
+  - Giao diện: tab CHIẾT KHẤU – TÀI TRỢ trên hợp đồng (`ContractRebatePanel.tsx`: lưới cam kết; hợp đồng hiệu lực/chấm dứt có lưới theo
+    dõi theo kỳ, hộp thoại ghi nhận, hủy ghi nhận). Đổi cam kết qua phụ lục: làm khi có yêu cầu.
+  - Test: domain + tích hợp `ContractRebateTests`, sửa `ControlAnomalyTests`; e2e `contract.spec.ts` (test mới), sửa `control.spec.ts`.
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 505 qua; Playwright 87/87; `npm run build`, `tsc`, `oxlint` qua.
 - **F4a (xong, đã merge `main` 02/11/2026): đánh giá NCC định kỳ theo quý (N5)** – design.md mục 18.20.
   - `SupplierReview` (số DGN, 6 tiêu chí 1–5, kết luận, số liệu SUPEVAL/QCDEV chốt lúc hoàn thành, Nháp → Hoàn thành/Hủy), quyền
     `MasterData.SupplierReview.View/Manage` (vai trò mẫu; vai trò đã tạo trước phải gán tay), API `/api/supplier-reviews`, migration
@@ -204,7 +207,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; F4a đã xong; lát kế tiếp **F4b** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong (có thể phát hành 0.13.0 khi người dùng yêu cầu).
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);

@@ -104,6 +104,8 @@ export interface Contract {
   expiringSoon: boolean
   approvals: ApprovalStep[]
   amendments: ContractAmendmentListItem[]
+  /** Cam kết chiết khấu doanh số/tài trợ (lát F4b). */
+  rebates: ContractRebate[]
   actions: {
     canEdit: boolean
     canSubmit: boolean
@@ -230,6 +232,125 @@ export interface SaveContractInput {
   note: string | null
   departmentIds: string[]
   lines: { id: string | null; itemId: string; uomId: string; expectedQty: number; minCommitQty: number | null; note: string | null }[]
+  rebates: SaveContractRebateInput[]
+}
+
+/** Loại cam kết chiết khấu/tài trợ (design.md mục 18.21). */
+export type RebateKind = 'SalesVolume' | 'Sponsorship' | 'Other'
+/** Cách tính: % doanh số hoặc số tiền cố định mỗi kỳ. */
+export type RebateMethod = 'Percent' | 'FixedAmount'
+/** Kỳ quyết toán. */
+export type RebatePeriod = 'Quarter' | 'Year' | 'WholeContract'
+/** Hình thức NCC trả. */
+export type RebateReceiptForm = 'DebtOffset' | 'Transfer' | 'Goods' | 'Other'
+/** Tình trạng một kỳ quyết toán. */
+export type RebatePeriodStatus = 'NotDue' | 'Waiting' | 'Received' | 'NotReached' | 'Short'
+
+export const rebateKindLabels: Record<RebateKind, string> = {
+  SalesVolume: 'Chiết khấu doanh số',
+  Sponsorship: 'Tài trợ',
+  Other: 'Chiết khấu/hỗ trợ khác',
+}
+
+export const rebateMethodLabels: Record<RebateMethod, string> = {
+  Percent: '% doanh số',
+  FixedAmount: 'Số tiền mỗi kỳ',
+}
+
+export const rebatePeriodLabels: Record<RebatePeriod, string> = {
+  Quarter: 'Quý',
+  Year: 'Năm',
+  WholeContract: 'Cả hợp đồng',
+}
+
+export const rebateReceiptFormLabels: Record<RebateReceiptForm, string> = {
+  DebtOffset: 'Giảm trừ công nợ',
+  Transfer: 'Chuyển khoản',
+  Goods: 'Hàng (quy ra tiền)',
+  Other: 'Khác',
+}
+
+export const rebatePeriodStatusLabels: Record<RebatePeriodStatus, string> = {
+  NotDue: 'Chưa hết kỳ',
+  Waiting: 'Chờ ghi nhận',
+  Received: 'Đủ',
+  NotReached: 'Không phải nhận',
+  Short: 'Thiếu',
+}
+
+export const rebatePeriodStatusTone: Record<RebatePeriodStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
+  NotDue: 'neutral',
+  Waiting: 'warning',
+  Received: 'success',
+  NotReached: 'neutral',
+  Short: 'error',
+}
+
+/** Cam kết chiết khấu/tài trợ: value là % (Percent) hoặc số tiền mỗi kỳ (FixedAmount). */
+export interface ContractRebate {
+  id: string
+  lineNo: number
+  kind: RebateKind
+  method: RebateMethod
+  value: number
+  minPurchaseAmount: number | null
+  period: RebatePeriod
+  description: string
+}
+
+/** Lưu cam kết (id null = mới). */
+export type SaveContractRebateInput = Omit<ContractRebate, 'id' | 'lineNo'> & { id: string | null }
+
+/** Một kỳ quyết toán: phải nhận, đã nhận, còn thiếu. */
+export interface ContractRebatePeriodRow {
+  rebateId: string
+  rebateLineNo: number
+  kind: RebateKind
+  description: string
+  periodFrom: string
+  periodTo: string
+  dueDate: string
+  purchaseAmount: number
+  expectedAmount: number
+  receivedAmount: number
+  shortAmount: number
+  status: RebatePeriodStatus
+}
+
+/** Một lần ghi nhận thực nhận. */
+export interface ContractRebateReceipt {
+  id: string
+  rebateId: string
+  rebateLineNo: number
+  periodFrom: string
+  receivedOn: string
+  amount: number
+  form: RebateReceiptForm
+  refNo: string | null
+  note: string | null
+  isCancelled: boolean
+  cancelReason: string | null
+  createdAt: string
+  createdByName: string | null
+}
+
+/** Theo dõi chiết khấu/tài trợ của hợp đồng. */
+export interface ContractRebateTracking {
+  graceDays: number
+  periods: ContractRebatePeriodRow[]
+  receipts: ContractRebateReceipt[]
+  canRecord: boolean
+}
+
+/** Ghi nhận thực nhận. */
+export interface SaveRebateReceiptInput {
+  rebateId: string
+  periodFrom: string
+  receivedOn: string
+  amount: number
+  form: RebateReceiptForm
+  refNo: string | null
+  note: string | null
 }
 
 const useCompanyId = () => useAuth().workingCompany?.id
@@ -335,4 +456,32 @@ export const contractImportSource: ExcelImportSource<ContractImportResult> = {
     valid: `File hợp lệ: ${r.contracts.toLocaleString('vi-VN')} hợp đồng, ${r.lines.toLocaleString('vi-VN')} dòng sản lượng. Bấm "Nhập thật" để lưu.`,
     committed: `Đã nhập ${r.contracts.toLocaleString('vi-VN')} hợp đồng nháp, ${r.lines.toLocaleString('vi-VN')} dòng sản lượng.`,
   }),
+}
+
+/** Theo dõi chiết khấu/tài trợ theo kỳ của hợp đồng (lát F4b); chỉ tải khi hợp đồng đã hiệu lực. */
+export function useContractRebates(contractId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['contracts', companyId, contractId, 'rebates'],
+    queryFn: () => apiFetch<ContractRebateTracking>(`/api/contracts/${contractId}/rebates`),
+    enabled: !!contractId,
+  })
+}
+
+/** Ghi nhận và hủy thực nhận chiết khấu/tài trợ. */
+export function useContractRebateMutations() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => void queryClient.invalidateQueries({ queryKey: ['contracts'] })
+  return {
+    record: useMutation({
+      mutationFn: ({ contractId, input }: { contractId: string; input: SaveRebateReceiptInput }) =>
+        apiFetch<ContractRebateTracking>(`/api/contracts/${contractId}/rebate-receipts`, { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    cancel: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<ContractRebateTracking>(`/api/contract-rebate-receipts/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
+  }
 }

@@ -31,6 +31,7 @@ import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { formatDate, formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { ContractAmendmentDrawer } from './ContractAmendmentDrawer'
+import { RebateGrid, RebateTracking, type RebateValues } from './ContractRebatePanel'
 import { contractTermFields as termFields } from './contractTerms'
 import { confirmReject } from './useApprovalCommands'
 
@@ -108,6 +109,7 @@ interface FormValues {
   otherTerms?: string
   departmentIds: string[]
   lines: LineValues[]
+  rebates: RebateValues[]
 }
 
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
@@ -215,6 +217,7 @@ export function ContractPage() {
   const priceList = usePriceList(priceListId ?? null)
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
+  const rebates = (Form.useWatch('rebates', form) as RebateValues[] | undefined) ?? []
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
@@ -250,6 +253,9 @@ export function ContractPage() {
       lines: doc.lines.map((l) => ({
         id: l.id, itemId: l.itemId, uomId: l.uomId, expectedQty: l.expectedQty, minCommitQty: l.minCommitQty, note: l.note ?? '',
       })),
+      rebates: doc.rebates.map((r) => ({
+        id: r.id, kind: r.kind, method: r.method, value: r.value, minPurchaseAmount: r.minPurchaseAmount, period: r.period, description: r.description,
+      })),
     })
   }, [doc, form])
 
@@ -270,7 +276,7 @@ export function ContractPage() {
     try {
       values = await form.validateFields()
     } catch {
-      setError('Còn ô chưa hợp lệ – xem các ô báo đỏ ở đầu hợp đồng, tab Điều khoản và dòng sản lượng.')
+      setError('Còn ô chưa hợp lệ – xem các ô báo đỏ ở đầu hợp đồng, tab Điều khoản, Chiết khấu – tài trợ và dòng sản lượng.')
       return null
     }
     setError(null)
@@ -294,6 +300,10 @@ export function ContractPage() {
       departmentIds: values.departmentIds ?? [],
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, expectedQty: l.expectedQty ?? 0, minCommitQty: l.minCommitQty ?? null, note: orNull(l.note),
+      })),
+      rebates: (values.rebates ?? []).map((r) => ({
+        id: r.id ?? null, kind: r.kind!, method: r.method!, value: r.value ?? 0, minPurchaseAmount: r.minPurchaseAmount ?? null, period: r.period!,
+        description: r.description?.trim() ?? '',
       })),
     }
     try {
@@ -587,7 +597,7 @@ export function ContractPage() {
         error={error ?? (contract.error ? contract.error.message : null)}
         notice={doc && <ContractNotices doc={doc} />}
         form={form}
-        initialValues={{ validFrom: dayjs(), departmentIds: [], lines: [] }}
+        initialValues={{ validFrom: dayjs(), departmentIds: [], lines: [], rebates: [] }}
         readOnly={readOnly}
         onSave={save}
         onAddLine={() => addRef.current?.()}
@@ -645,6 +655,17 @@ export function ContractPage() {
                   </Form.Item>
                 ))}
               </div>
+            ),
+          },
+          {
+            // Cam kết chiết khấu doanh số/tài trợ (lát F4b): sửa khi nháp; hợp đồng đã hiệu lực thì theo dõi thực nhận theo kỳ.
+            key: 'rebates',
+            label: `Chiết khấu – tài trợ (${doc?.rebates.length ?? rebates.length})`,
+            children: (
+              <>
+                <RebateGrid readOnly={readOnly} rebates={rebates} />
+                {doc && (doc.status === 'Active' || doc.status === 'Terminated') && <RebateTracking contract={doc} />}
+              </>
             ),
           },
           {
