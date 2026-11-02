@@ -84,7 +84,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. B5a (kê khai xung đột lợi ích) đã xong. Lát kế tiếp **B5b** (NCC độc quyền – N6) – lập kế hoạch ngắn trước khi code.
+- **B5b – NCC độc quyền (N6)**, nhánh `feature/ncc-doc-quyen` (02/11/2026). Kế hoạch: phiếu `SoleSourceApproval` (NCC × mặt hàng,
+  công ty lập, giải trình, hiệu lực, hạn đánh giá lại ≤ 12 tháng), Nháp → Chờ duyệt → Đã duyệt (loại duyệt/màn hình **NDQ**), kết thúc
+  sớm, đánh giá lại (phiếu mới nối tiếp); phiếu còn tác dụng cho mọi dòng RFQ thì gửi RFQ mời thiếu NCC không cần giải trình.
+  - [x] Bước 1–2: backend (domain, quyền `MasterData.SoleSource.View/Manage/Approve`, vai trò mẫu, migration `V0_12_0_NccDocQuyen`,
+    API `/api/sole-sources`, Việc cần làm, RFQ gửi, đính kèm) + test `SoleSourceTests` (3); sửa 2 test `AuthTests` phụ thuộc thứ tự chạy.
+    `dotnet test` 461/461 qua.
+  - [ ] Bước 3: giao diện màn hình NDQ (ListPage + DetailDrawer, Việc cần làm/thông báo mở đúng phiếu).
+  - [ ] Bước 4: e2e Playwright + ảnh chụp. Bước 5: design.md mục 18.9, merge main.
   Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
 

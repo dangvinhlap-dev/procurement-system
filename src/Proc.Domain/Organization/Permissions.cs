@@ -75,6 +75,12 @@ public static class Permissions
         public const string ConflictView = "MasterData.Conflict.View";
         /// <summary>Quyền "Ghi nhận kê khai thay người khác, kết thúc kê khai" (design.md mục 18.8).</summary>
         public const string ConflictManage = "MasterData.Conflict.Manage";
+        /// <summary>Quyền "Xem phê duyệt NCC độc quyền" (design.md mục 18.9).</summary>
+        public const string SoleSourceView = "MasterData.SoleSource.View";
+        /// <summary>Quyền "Lập, gửi duyệt, kết thúc phê duyệt NCC độc quyền" (design.md mục 18.9).</summary>
+        public const string SoleSourceManage = "MasterData.SoleSource.Manage";
+        /// <summary>Quyền "Duyệt NCC độc quyền" (design.md mục 18.9) – người lập không tự duyệt.</summary>
+        public const string SoleSourceApprove = "MasterData.SoleSource.Approve";
 
         /// <summary>
         /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
@@ -212,6 +218,9 @@ public static class Permissions
         new(MasterData.SupplierApprove, "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp"),
         new(MasterData.ConflictView, "Xem mọi kê khai xung đột lợi ích"),
         new(MasterData.ConflictManage, "Ghi nhận thay, kết thúc kê khai xung đột lợi ích"),
+        new(MasterData.SoleSourceView, "Xem phê duyệt NCC độc quyền"),
+        new(MasterData.SoleSourceManage, "Lập, gửi duyệt, kết thúc phê duyệt NCC độc quyền"),
+        new(MasterData.SoleSourceApprove, "Duyệt NCC độc quyền"),
         new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),

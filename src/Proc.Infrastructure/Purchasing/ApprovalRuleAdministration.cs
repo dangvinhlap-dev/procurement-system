@@ -185,6 +185,27 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 amendment.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
+        // Phê duyệt NCC độc quyền chờ duyệt (lát B5b): duyệt tại công ty lập – filter công ty và nhóm hàng giữ nguyên.
+        var soleSources = await _db.SoleSourceApprovals.Where(x => x.Status == SoleSourceStatus.Submitted).ToListAsync(cancellationToken);
+        var soleIds = soleSources.Select(x => x.Id).ToList();
+        var soleLabels = await (
+                from x in _db.SoleSourceApprovals.AsNoTracking()
+                where soleIds.Contains(x.Id)
+                join s in _db.Suppliers on x.SupplierId equals s.Id
+                join i in _db.Items on x.ItemId equals i.Id
+                select new { x.Id, Label = s.Code + " – " + s.Name + ": " + i.Code + " " + i.Name })
+            .ToDictionaryAsync(x => x.Id, x => x.Label, cancellationToken);
+        var soleCreatorIds = soleSources.Select(x => x.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => soleCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var sole in soleSources)
+        {
+            var step = await _approvals.CurrentStepAsync(sole, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(sole, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                sole.DocType, ApprovalTypes.Get(sole.DocType).Name, sole.Id, sole.No, sole.ValidFrom, soleLabels.GetValueOrDefault(sole.Id), 0,
+                step!.Level, sole.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();
     }
 

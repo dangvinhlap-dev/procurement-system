@@ -47,6 +47,9 @@ public static class DocumentTypes
     /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
     public const string Sourcing = "SRC";
 
+    /// <summary>Phê duyệt NCC độc quyền (lát B5b, design.md mục 18.9).</summary>
+    public const string SoleSource = "NDQ";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -62,6 +65,7 @@ public static class DocumentTypes
         new(Adjustment, "Phiếu điều chỉnh, kiểm kê"),
         new(PriceList, "Bảng giá nhà cung cấp"),
         new(Sourcing, "Danh sách tìm nguồn"),
+        new(SoleSource, "Phê duyệt NCC độc quyền"),
     ];
 
     /// <summary>

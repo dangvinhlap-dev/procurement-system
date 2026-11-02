@@ -28,6 +28,7 @@ public static class RoleTemplates
     [
         Permissions.Purchase.PrView, Permissions.Purchase.PoView, Permissions.Purchase.ContractView,
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
+        Permissions.MasterData.SoleSourceView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -43,7 +44,7 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies,
-            Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage,
+            Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage, Permissions.MasterData.SoleSourceApprove,
         ]),
         new("DAMPHAN", "Nhóm Đàm phán & quản trị giá", "Quản lý hồ sơ NCC, lập bảng giá, RFQ, đề xuất chọn thầu, soạn hợp đồng, phân tích dữ liệu mua – không tự duyệt",
         [
@@ -53,6 +54,7 @@ public static class RoleTemplates
             Permissions.Purchase.ContractManage, Permissions.Report.PurchaseView,
             Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
+            Permissions.MasterData.SoleSourceManage,
         ]),
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [
@@ -65,7 +67,7 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Sourcing.RfqApproveAward, Permissions.Pricing.PriceListApprove,
             Permissions.MasterData.SupplierApprove, Permissions.Purchase.ContractApprove,
-            Permissions.Report.PriceViewAllCompanies,
+            Permissions.Report.PriceViewAllCompanies, Permissions.MasterData.SoleSourceApprove,
         ]),
         new("DENGHI", "Người đề nghị mua (bộ phận)", "Lập đề nghị mua hàng cho bộ phận",
         [

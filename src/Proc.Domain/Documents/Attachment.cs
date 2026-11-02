@@ -29,8 +29,12 @@ public static class AttachmentOwnerTypes
     /// <summary>Hợp đồng nguyên tắc (bản scan hợp đồng, phụ lục – lát B4a).</summary>
     public const string PurchaseContract = "PurchaseContract";
 
+    /// <summary>Phê duyệt NCC độc quyền (văn bản xác nhận độc quyền, phân phối – lát B5b).</summary>
+    public const string SoleSourceApproval = "SoleSourceApproval";
+
     /// <summary>Mọi loại hợp lệ.</summary>
-    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract];
+    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
+        SoleSourceApproval];
 }
 
 /// <summary>

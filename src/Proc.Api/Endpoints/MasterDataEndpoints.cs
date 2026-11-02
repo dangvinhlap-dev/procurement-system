@@ -158,6 +158,44 @@ public static class MasterDataEndpoints
             .RequirePermission(Permissions.MasterData.ConflictManage)
             .Validate<EndConflictDeclarationRequest>();
 
+        // Phê duyệt NCC độc quyền (design.md mục 18.9): thuộc công ty đang làm việc, duyệt theo quy trình loại NDQ.
+        var soleSources = app.MapGroup("/api/sole-sources").WithTags("NCC độc quyền").RequireAuthorization();
+        soleSources.MapGet("/", (ISoleSourceService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceView);
+        soleSources.MapGet("/{id:guid}", (Guid id, ISoleSourceService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceView);
+        soleSources.MapPost("/", async (SaveSoleSourceRequest request, ISoleSourceService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/sole-sources/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.MasterData.SoleSourceManage)
+            .Validate<SaveSoleSourceRequest>();
+        soleSources.MapPut("/{id:guid}", (Guid id, SaveSoleSourceRequest request, ISoleSourceService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceManage)
+            .Validate<SaveSoleSourceRequest>();
+        soleSources.MapPost("/{id:guid}/submit", (Guid id, ISoleSourceService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceManage);
+        soleSources.MapPost("/{id:guid}/recall", (Guid id, ISoleSourceService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceManage);
+        soleSources.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, ISoleSourceService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceApprove);
+        soleSources.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, ISoleSourceService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceApprove);
+        soleSources.MapPost("/{id:guid}/end", (Guid id, EndSoleSourceRequest request, ISoleSourceService s, CancellationToken ct) =>
+                s.EndAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SoleSourceManage)
+            .Validate<EndSoleSourceRequest>();
+        soleSources.MapPost("/{id:guid}/renew", async (Guid id, ISoleSourceService s, CancellationToken ct) =>
+            {
+                var created = await s.RenewAsync(id, ct);
+                return Results.Created($"/api/sole-sources/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.MasterData.SoleSourceManage);
+
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
         suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

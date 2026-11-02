@@ -41,8 +41,12 @@ public class AuthTests
         Assert.True(login.ExpiresAt > DateTimeOffset.UtcNow.AddHours(7));
         Assert.Equal("Quản trị hệ thống", login.User.FullName);
 
-        // Tổng công ty đứng đầu, rồi các công ty theo mã; mặc định là tổng công ty.
-        Assert.Equal(["TCT", "BHA", "DTV", "NMI"], login.User.Companies.Select(c => c.Code));
+        // Tổng công ty đứng đầu, rồi các công ty theo mã; mặc định là tổng công ty. Test khác chạy trước có thể đã tạo thêm công ty (quản trị
+        // được gán mọi công ty) nên chỉ so thứ tự của các công ty mẫu, không so đúng số lượng.
+        var codes = login.User.Companies.Select(c => c.Code).ToList();
+        Assert.Equal(["TCT", "BHA", "DTV", "NMI"], codes.Where(c => c is "TCT" or "BHA" or "DTV" or "NMI"));
+        Assert.Equal("TCT", codes[0]);
+        Assert.Equal(codes.Skip(1).Order(StringComparer.Ordinal), codes.Skip(1));
         Assert.True(login.User.Companies[0].IsHeadOffice);
         Assert.Equal(login.User.Companies[0].Id, login.User.DefaultCompanyId);
         Assert.All(login.User.Companies, c => Assert.Equal([Role.AdminCode], c.RoleCodes));
@@ -173,7 +177,8 @@ public class AuthTests
         var me = await client.GetFromJsonAsync<CurrentUserInfo>("/api/auth/me", Ct);
 
         Assert.Equal(ProcApiFactory.AdminUserName, me!.UserName);
-        Assert.Equal(4, me.Companies.Count);
+        // Ít nhất 4 công ty mẫu; test khác chạy trước có thể đã tạo thêm công ty.
+        Assert.Superset(new HashSet<string> { "TCT", "BHA", "DTV", "NMI" }, me.Companies.Select(c => c.Code).ToHashSet());
     }
 
     [Fact]
