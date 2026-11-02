@@ -32,12 +32,19 @@ public static class ApprovalTypes
     /// </summary>
     public const string PurchaseOrderPriceException = "POX";
 
+    /// <summary>
+    /// Đơn mua hàng khẩn cấp (lát C2a, design.md mục 18.11): PO khẩn duyệt theo bộ cấp riêng (thường gọn hơn) thay cho cấp duyệt PO
+    /// thường; chưa cấu hình thì dùng cấp duyệt PO. Cùng quyền duyệt PO.
+    /// </summary>
+    public const string PurchaseOrderEmergency = "POK";
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
         new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
         new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
+        new(PurchaseOrderEmergency, "Đơn mua hàng khẩn cấp", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),

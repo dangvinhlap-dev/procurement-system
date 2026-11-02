@@ -107,7 +107,8 @@ public sealed record PurchaseDocumentQuery(DateOnly? From, DateOnly? To, string?
 /// <param name="Priority">Mức ưu tiên (PR).</param>
 public sealed record PurchaseDocumentListItemDto(
     Guid Id, string No, DateOnly Date, string Status, string? Description, string? Purpose, DateOnly? NeededDate, decimal Amount,
-    int LineCount, string? CreatedByName, decimal Progress, string? Priority, bool? OutOfContract = null, bool? PriceException = null);
+    int LineCount, string? CreatedByName, decimal Progress, string? Priority, bool? OutOfContract = null, bool? PriceException = null,
+    string? PurchaseType = null, bool? DocsOverdue = null);
 
 /// <summary>Kết quả tìm PR/PO.</summary>
 public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentListItemDto> Items, bool Truncated, int Limit);
@@ -170,7 +171,12 @@ public sealed record PurchaseOrderDto(
     string? Note, decimal GrossAmount, decimal TotalDiscount, decimal TotalAmount, decimal TotalVat, string? RejectReason, DateTimeOffset CreatedAt,
     string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseOrderLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals,
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
-    string? ContractScopeNote);
+    string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
+    string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs);
+
+/// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
+/// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>
+public sealed record CompleteDocsRequest(string? Note);
 
 /// <summary>
 /// Bậc giá đã duyệt cho PO (design.md mục 18.10): bảng giá của hợp đồng nguyên tắc đang hiệu lực (Source = Contract) hoặc bảng giá NCC
@@ -201,7 +207,8 @@ public sealed record SavePurchaseOrderLineRequest(
 /// <param name="DepartmentId">Bộ phận đặt hàng (không bắt buộc; trống mà các dòng lấy từ PR của một bộ phận thì lấy bộ phận đó).</param>
 public sealed record SavePurchaseOrderRequest(
     DateOnly Date, Guid SupplierId, Guid WarehouseId, DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms, string? DeliveryAddress,
-    decimal ReceiveTolerancePct, string? Note, IReadOnlyList<SavePurchaseOrderLineRequest> Lines, Guid? DepartmentId = null);
+    decimal ReceiveTolerancePct, string? Note, IReadOnlyList<SavePurchaseOrderLineRequest> Lines, Guid? DepartmentId = null,
+    string? PurchaseType = null, string? EmergencyReason = null, DateOnly? DocsDueDate = null);
 
 /// <summary>Một dòng PO còn chờ giao (theo dõi giao hàng – design.md mục 3, nhóm Mua hàng).</summary>
 public sealed record DeliveryTrackingDto(
@@ -265,6 +272,9 @@ public interface IPurchaseOrderService
 
     /// <summary>Hủy PO (chưa nhận hàng).</summary>
     Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11).</summary>
+    Task<PurchaseOrderDto> CompleteDocsAsync(Guid id, CompleteDocsRequest request, CancellationToken cancellationToken);
 
     /// <summary>Dòng PO còn chờ giao của công ty đang làm việc.</summary>
     Task<IReadOnlyList<DeliveryTrackingDto>> TrackingAsync(CancellationToken cancellationToken);

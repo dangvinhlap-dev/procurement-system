@@ -104,6 +104,49 @@ public class PurchaseOrderPriceSourceTests
     }
 
     [Fact]
+    public async Task MuaKhanCap_DuyetTheoCapPok_KhongLapLuiNgay_BoSungHoSoSau()
+    {
+        var f = await ArrangeAsync();
+        var urgentRole = await RoleAsync();
+        await ReadAsync<ApprovalRuleDto>(await f.Client.PostAsJsonAsync("/api/approval-rules",
+            new SaveApprovalRuleRequest("POK", 1, 0, await _factory.GetRoleIdAsync(urgentRole)), Ct));
+        var emergency = Po(f, f.SupplierId, Line(f, 10, 50_000, 5)) with { PurchaseType = "Emergency", EmergencyReason = "Hỏng vòng bi máy cán", DocsDueDate = Today.AddDays(7) };
+
+        Assert.Contains("lý do khẩn cấp", await TitleAsync(await f.Client.PostAsJsonAsync("/api/purchase-orders", emergency with { EmergencyReason = null }, Ct)));
+        // Lập lùi ngày: lưu nháp được, gửi duyệt bị chặn (không hợp thức hóa hàng đã mua).
+        var backdated = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
+            emergency with { Date = Today.AddDays(-1), DocsDueDate = Today.AddDays(5) }, Ct));
+        Assert.Contains("không được lập lùi ngày", await TitleAsync(await f.Client.PostAsync($"/api/purchase-orders/{backdated.Id}/submit", null, Ct)));
+
+        var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", emergency, Ct));
+        Assert.Equal(("Emergency", "Hỏng vòng bi máy cán", (DateOnly?)Today.AddDays(7), false), (po.PurchaseType, po.EmergencyReason, po.DocsDueDate, po.CanCompleteDocs));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        // Duyệt theo cấp POK (vai trò riêng), không phải "ai có quyền duyệt PO".
+        Assert.NotNull(Assert.Single(po.Approvals).RoleName);
+        var urgentApprover = await ApproverAsync(f, urgentRole);
+        po = await ReadAsync<PurchaseOrderDto>(await urgentApprover.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        Assert.Equal(("Approved", false), (po.Status, po.CanCompleteDocs));
+        // Người lập PO (quyền lập) mới xác nhận bổ sung hồ sơ.
+        po = await ReadAsync<PurchaseOrderDto>(await f.Client.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
+        Assert.Equal((true, false), (po.CanCompleteDocs, po.IsDocsOverdue));
+
+        var list = await ReadAsync<PurchaseDocumentListResult>(await f.Client.GetAsync("/api/purchase-orders", Ct));
+        Assert.Equal(("Emergency", (bool?)false), (list.Items.Single(i => i.Id == po.Id).PurchaseType, list.Items.Single(i => i.Id == po.Id).DocsOverdue));
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest,
+            (await f.Client.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/complete-docs", new CompleteDocsRequest(null), Ct)).StatusCode);
+        po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/complete-docs",
+            new CompleteDocsRequest("Biên bản sự cố, 3 báo giá so sánh"), Ct));
+        Assert.Equal(("Biên bản sự cố, 3 báo giá so sánh", false), (po.DocsCompletionNote, po.CanCompleteDocs));
+        Assert.NotNull(po.DocsCompletedAt);
+
+        // PO thường không dùng cấp POK: chưa cấu hình cấp PO → một cấp, ai có quyền duyệt.
+        var normal = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", Po(f, f.SupplierId, Line(f, 1, 50_000, 5)), Ct));
+        normal = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{normal.Id}/submit", null, Ct));
+        Assert.Equal(("Normal", (string?)null), (normal.PurchaseType, Assert.Single(normal.Approvals).RoleName));
+    }
+
+    [Fact]
     public async Task BoPhanNgoaiPhamViHopDong_KhongTinhGiaHopDong_GhiNhanNccDocQuyen()
     {
         var f = await ArrangeAsync();

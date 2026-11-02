@@ -2833,6 +2833,23 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("DocsCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DocsCompletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DocsCompletionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly?>("DocsDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EmergencyReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateOnly?>("ExpectedDate")
                         .HasColumnType("date");
 
@@ -2858,6 +2875,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("PaymentTerms")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PurchaseType")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ReceiveTolerancePct")
                         .HasPrecision(9, 4)

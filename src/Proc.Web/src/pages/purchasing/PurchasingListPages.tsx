@@ -65,6 +65,11 @@ const columnsByKind: Record<PurchaseKind, Column[]> = {
     { key: 'amount', title: 'Tổng thanh toán', width: 130, type: 'money', value: (r) => r.amount },
     { key: 'progress', title: '% đã nhận', width: 85, type: 'quantity', value: (r) => r.progress },
     // Mua ngoài hợp đồng / lệch giá đã duyệt (design.md mục 18.10) – đo tỷ lệ mua theo hợp đồng.
+    // Mua khẩn cấp và hạn bổ sung hồ sơ (design.md mục 18.11) – đo tỷ lệ mua khẩn.
+    {
+      key: 'purchaseType', title: 'Loại mua', width: 150, groupable: true,
+      value: (r) => (r.purchaseType === 'Emergency' ? (r.docsOverdue ? 'Khẩn – quá hạn hồ sơ' : 'Khẩn cấp') : ''),
+    },
     {
       key: 'priceFlag', title: 'Nguồn giá', width: 130, groupable: true,
       value: (r) => (r.priceException ? 'Lệch giá đã duyệt' : r.outOfContract ? 'Ngoài hợp đồng' : ''),
