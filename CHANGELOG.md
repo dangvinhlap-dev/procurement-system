@@ -3,6 +3,62 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.13.0] - 2026-11-02
+
+### Thêm mới
+- **Bộ phận đặt hàng trên PO** (design.md mục 18.10): tự lấy theo PR nguồn; hợp đồng giới hạn bộ phận được đặt thì PO của bộ phận khác
+  không tính giá hợp đồng (ghi chú, không chặn); dòng PO ghi phiếu **NCC độc quyền** còn tác dụng vào ngày PO.
+- **Mua khẩn cấp** trên PO (mục 18.11): loại mua Thường/Khẩn cấp, lý do, hạn bổ sung hồ sơ (≤ 30 ngày); duyệt theo loại **POK** nếu đã
+  cấu hình; không gửi duyệt PO khẩn lập lùi ngày; lệnh "Đã bổ sung hồ sơ", cờ quá hạn.
+- **Hàng mới chưa có mã trên PR** (mục 18.12): tab "Hàng mới chưa có mã", duyệt cùng PR; PR đã duyệt có nút Tìm nguồn và Gắn mã.
+- **SLA mua hàng** (màn hình SLA, mục 18.13) theo tham số ngày làm việc; cột **Đang đặt** trên dòng PR.
+- **Kiểm tra chất lượng, sai lệch nhận hàng** (mục 18.14): SL chứng từ giao, SL không đạt, kết quả kiểm tra trên phiếu nhập mua; tham số
+  bắt buộc kiểm tra và "người lập PO không ghi sổ nhận hàng của PO đó"; báo cáo **Sai lệch nhận hàng** (QCDEV).
+- **In biên bản giao nhận và kiểm tra hàng hóa** (PDF) từ phiếu nhập mua.
+- **Đối chiếu PO – nhận hàng – hóa đơn** (MATCH3, mục 18.15): ghi tiền hóa đơn NCC trên phiếu nhập, cập nhật hóa đơn sau ghi sổ.
+- **Phím F1 xem lịch sử ô** (mục 9.3a): ai tạo/sửa/xóa, giá trị cũ → mới trên mọi chứng từ, ngăn kéo danh mục và lưới danh sách; nút
+  "Lịch sử thay đổi" cả phiếu (kể cả dòng đã xóa).
+- **Điểm đặt hàng lại, tồn an toàn, vật tư trọng yếu** trên mặt hàng (mục 18.16) và báo cáo **Gợi ý đặt hàng** (REORD) – nút
+  "Lập đề nghị mua" điền sẵn PR.
+- Báo cáo **Giá mua & mua ngoài hợp đồng** theo tuần (PRCW) và **Biến động giá mua** (PRVAR) (mục 18.17).
+- **Bảng KPI cung ứng** 9 chỉ số (màn hình KPI, mục 18.18) so với kỳ trước; mục tiêu KPI là tham số công ty.
+- **Kiểm soát nội bộ** (mục 18.19): màn hình **Dấu hiệu bất thường** (ANOM – giá cao lặp lại, PO sát ngưỡng duyệt, đổi TK ngân hàng NCC,
+  mua ngoài hợp đồng cao, hóa đơn tính cả hàng thiếu, chứng từ trước PO, xung đột lợi ích, chiết khấu/tài trợ chưa ghi nhận) và **Sổ vi
+  phạm** (VIOL) với thông báo thẳng lãnh đạo. Vai trò mẫu mới **LANHDAO**.
+- **Đánh giá NCC định kỳ theo quý** (màn hình SUPREV, mục 18.20): 6 tiêu chí 1–5, kết luận, số liệu hệ thống chốt khi hoàn thành.
+- **Chiết khấu doanh số/tài trợ trên hợp đồng** (tab Chiết khấu – tài trợ của CTR, mục 18.21): cam kết theo % doanh số hoặc số tiền cố
+  định, kỳ Quý/Năm/Cả hợp đồng; theo dõi phải nhận – đã nhận – còn thiếu theo kỳ; ghi nhận và hủy thực nhận.
+- Quyền mới: `Control.Anomaly.View`, `Control.Finding.Manage`, `Control.Finding.Receive`, `MasterData.SupplierReview.View`,
+  `MasterData.SupplierReview.Manage`. Loại duyệt mới ở APRL: **POK** (PO khẩn). Loại số chứng từ mới: VP, DGN.
+
+### Thay đổi
+- Bảng KPI: chỉ số "Hoàn thành đánh giá NCC" và "Vi phạm nghiêm trọng" nay đo được (trước là "Chưa đo").
+- Excel hàng hóa thêm 3 cột (tồn an toàn, điểm đặt hàng lại, trọng yếu); file mẫu cũ thiếu cột thì giữ giá trị đang có.
+
+### Sửa lỗi
+- Không có lỗi người dùng báo trong bản này. Còn biết: form chứng từ có thể ghi đè chữ vừa gõ nếu gõ trước khi phiếu tải lại xong sau khi
+  lưu; bấm Quay lại ngay sau khi đăng xuất có thể để trang trắng (tải lại trang là hết).
+
+### Thay đổi CSDL
+- 11 migration, chỉ **thêm** bảng/cột, không xóa dữ liệu cũ: `V0_13_0_BoPhanPoDocQuyen`, `V0_13_0_MuaKhanCap`, `V0_13_0_HangMoiChuaCoMa`,
+  `V0_13_0_ThamSoSla`, `V0_13_0_KiemTraNhanHang`, `V0_13_0_TienHoaDonPhieuNhap`, `V0_13_0_DiemDatHangLai`, `V0_13_0_MucTieuKpi`,
+  `V0_13_0_GhiNhanViPham`, `V0_13_0_DanhGiaNccDinhKy`, `V0_13_0_ChietKhauTaiTroHopDong`.
+- `Down()` của từng migration **mất** dữ liệu tạo ở bản này (bộ phận/loại mua/hồ sơ khẩn trên PO, hàng mới trên PR, kết quả kiểm tra nhận
+  hàng, tiền hóa đơn, điểm đặt hàng lại, mục tiêu KPI, vi phạm KSNB, phiếu đánh giá NCC, cam kết chiết khấu và thực nhận); AuditLog vẫn giữ.
+- Script nâng cấp: `db/scripts/0.13.0.sql` (từ 0.12.0) – đã chạy thử chuỗi 0.1.0 → 0.13.0 trên CSDL trống (47 migration).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước**, rồi chạy `db/scripts/0.13.0.sql`.
+- Gán quyền mới cho vai trò cần dùng (vai trò Quản trị tự có; vai trò đã tạo trước bản này không tự thêm quyền – gán tay cho KSNB, Lãnh
+  đạo, Trưởng ban, Đàm phán, Vận hành). Khai báo quy tắc duyệt **POK** ở APRL nếu cần luồng duyệt khẩn riêng.
+- Tham số mới (SLA, kiểm tra nhận hàng, mục tiêu KPI) có giá trị mặc định; xem lại ở Tham số hệ thống.
+- Trình duyệt: tải lại trang bằng Ctrl+F5. Không đổi cấu hình triển khai (Docker, IIS).
+
+### Cách quay lại bản trước
+- Code: triển khai lại tag `v0.12.0` (Docker: `APP_VERSION=0.12.0`; Windows: chép lại gói 0.12.0).
+- CSDL: chỉ khi đã sao lưu – khôi phục bản sao lưu trước nâng cấp, hoặc
+  `dotnet ef database update 20261102011909_V0_12_0_NguonGiaPo` (mất dữ liệu như mục "Thay đổi CSDL").
+
 ## [0.12.0] - 2026-11-02
 
 ### Thêm mới
