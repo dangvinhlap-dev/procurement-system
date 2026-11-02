@@ -27,6 +27,10 @@ public static class PrintingEndpoints
         app.MapGet("/api/inventory-documents/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.InventoryDocumentAsync(id, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Inventory.DocumentView);
+        app.MapGet("/api/goods-receipts/{id:guid}/record-pdf",
+                async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.GoodsReceiptRecordAsync(id, ct)))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Inventory.DocumentView);
         return app;
     }
 

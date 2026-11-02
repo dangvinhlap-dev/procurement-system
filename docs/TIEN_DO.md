@@ -95,6 +95,9 @@ Kiểm tra trước (B3a, 01/11/2026): `dotnet test` 443 qua; Playwright 69/71 �
 bản 0.9.0 (khởi động lại `npm run dev` là hết); `npm run build`, `tsc`, `oxlint` qua. Test tích hợp dựng RFQ đã chọn thầu bằng
 `ProcApiFactory.FinishRfqAwardApprovalAsync`, e2e duyệt bằng `approveRfqAward` (tài khoản `duyetthau.bha`).
 
+Kiểm tra gần nhất (C5b, 02/11/2026): `dotnet test` 475 qua; Playwright 78/78 qua; `npm run build`, `tsc`, `oxlint` qua. Mẫu biên bản PDF
+lưu ở `src/Proc.Web/e2e/screenshots/bien-ban-giao-nhan.pdf` khi chạy e2e `printing`.
+
 Kiểm tra trước (B2, 01/11/2026): `dotnet test` 438 qua; Playwright 66/68 – 2 lỗi "Phiên bản 0.10.0" do Vite dev cũ; `npm run build`, `tsc`,
 `oxlint` qua. Test tích hợp dựng NCC "Đã duyệt" bằng `ProcApiFactory.FinishSupplierApprovalAsync`, e2e bằng `approveSupplier` (inventoryHelpers).
 
@@ -112,8 +115,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C5a (kiểm tra chất lượng, sai lệch nhận hàng, tách người lập PO) đã xong. Lát kế tiếp **C5b** – in biên bản giao nhận /
-  sai lệch (PDF) từ phiếu nhập mua (design.md 18.14 dòng "Chưa làm"), rồi **C6**. Lập kế hoạch ngắn trước khi code.
+- Không có. C5b (in biên bản giao nhận và kiểm tra hàng hóa – PDF từ phiếu nhập mua, design.md 18.14) đã xong 02/11/2026.
+  Lát kế tiếp **C6** (đối chiếu PO – nhận – hóa đơn). Lập kế hoạch ngắn trước khi code.
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi
@@ -130,7 +133,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a đã xong; **C3 hoãn chờ lệnh người dùng**; lát kế tiếp: **C5b**, rồi C6.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b đã xong; **C3 hoãn chờ lệnh người dùng**; lát kế tiếp: **C6**.
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);

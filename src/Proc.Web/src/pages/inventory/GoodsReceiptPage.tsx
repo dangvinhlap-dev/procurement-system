@@ -1,8 +1,9 @@
-import { FileDoneOutlined } from '@ant-design/icons'
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
+import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
+import { apiOpenPdf } from '../../api/client'
 import {
   documentStatusLabels,
   qcResultLabels,
@@ -203,9 +204,34 @@ export function GoodsReceiptPage() {
     }
   }
 
-  const { save, actions } = useDocumentCommands({
+  const { save, actions: commands } = useDocumentCommands({
     isNew, doc, readOnly, persist, mutations, listPath: '/kho/grn', noun: 'phiếu nhập', setError,
   })
+
+  const { message } = App.useApp()
+  const [printingRecord, setPrintingRecord] = useState(false)
+  /** In biên bản giao nhận và kiểm tra hàng hóa (sai lệch, không đạt) của phiếu đã lưu – design.md mục 18.14. */
+  const printRecord = async () => {
+    if (!doc) return
+    setPrintingRecord(true)
+    try {
+      await apiOpenPdf(`/api/goods-receipts/${doc.id}/record-pdf`)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không in được biên bản.')
+    } finally {
+      setPrintingRecord(false)
+    }
+  }
+  const actions = (
+    <>
+      {doc && (
+        <Button icon={<FileProtectOutlined />} onClick={() => void printRecord()} loading={printingRecord} title="In biên bản giao nhận / sai lệch">
+          In biên bản
+        </Button>
+      )}
+      {commands}
+    </>
+  )
 
   const pickItem = (index: number, itemId: string) => {
     const item = itemsById.get(itemId)
