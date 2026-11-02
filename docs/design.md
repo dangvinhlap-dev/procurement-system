@@ -145,7 +145,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Nhóm hàng (`ItemCategory`) | Mã, tên, `ParentId` (cây nhiều cấp), tài khoản kho mặc định | Dùng để phân quyền theo nhóm hàng |
-| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, quản lý lô (Y/N), quản lý hạn dùng (Y/N), tồn tối thiểu/tối đa, ảnh, thông số kỹ thuật | Chỉ `ItemType = Hàng tồn kho` mới đi qua kho |
+| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, quản lý lô (Y/N), quản lý hạn dùng (Y/N), tồn tối thiểu/tối đa, tồn an toàn, điểm đặt hàng lại, vật tư trọng yếu (mục 18.16), ảnh, thông số kỹ thuật | Chỉ `ItemType = Hàng tồn kho` mới đi qua kho |
 | Đơn vị tính (`Uom`) | Mã, tên | Cái, hộp, thùng, kg… |
 | Quy đổi ĐVT (`ItemUomConversion`) | `ItemId`, ĐVT, hệ số về ĐVT cơ sở | 1 thùng = 24 hộp; tồn kho luôn lưu theo ĐVT cơ sở |
 | Thuộc tính mở rộng | Bộ thuộc tính theo nhóm hàng (key–value) | Tránh phải sửa bảng khi thêm thông số |
@@ -1436,6 +1436,24 @@ lệch còn lại là **hóa đơn NCC** và **ngày**.
 | Chưa làm: trừ phiếu xuất trả NCC / hóa đơn điều chỉnh khỏi tiền nhận; một hóa đơn cho nhiều phiếu nhập; đối chiếu theo PO gộp nhiều lần nhận | Làm khi kế toán yêu cầu |
 
 Migration `V0_13_0_TienHoaDonPhieuNhap` (cột `InvoiceAmount` của `InventoryDocument` – `Down()` xóa cột, mất tiền hóa đơn đã nhập).
+
+### 18.16 Điểm đặt hàng lại, tồn an toàn, vật tư trọng yếu (lát D1, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT K1 (mục 3.5 `docs/Phantich_01112026.md`). Thông số đặt trên mặt hàng (danh mục dùng chung) như tồn tối thiểu/tối
+đa, áp cho **từng công ty** (mỗi công ty tự so với tồn, đơn đặt của mình).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Mặt hàng có thêm **Tồn an toàn**, **Điểm đặt hàng lại** (ĐVT cơ sở, numeric(18,4), không bắt buộc) và cờ **Vật tư trọng yếu** – chỉ hàng tồn kho. Ràng buộc: tồn an toàn ≤ điểm đặt hàng lại ≤ tồn tối đa (khi có). Nhập/xuất Excel danh mục hàng hóa có 3 cột tương ứng; file mẫu cũ thiếu cột thì giữ nguyên giá trị đang có | K1 – vật tư trọng yếu cần mức đặt lại và dự phòng |
+| **Ngưỡng đặt hàng** = điểm đặt hàng lại; chưa khai báo thì dùng tồn tối thiểu (hàng cũ vẫn được gợi ý) | Không bắt khai báo lại toàn bộ danh mục |
+| **Khả dụng** = tồn mọi kho của công ty (mọi lô) + **đang đặt** (PO nháp/chờ duyệt: cả SL; PO đã duyệt: SL chưa nhận theo phiếu nhập đã ghi sổ; PO hủy/đã đóng: 0) + **đề nghị còn mở** (PR chưa hủy, kể cả nháp: SL chưa lên PO chưa hủy) | Không gợi ý trùng hàng đã đặt hoặc đã đề nghị |
+| Cần đặt khi khả dụng < ngưỡng. **SL gợi ý** = (tồn tối đa, không có thì ngưỡng) − khả dụng. Ví dụ đặt lại 50, tối đa 200, tồn 15, đang đặt 10, PR mở 5 → khả dụng 30 → gợi ý 170 | Đặt lên mức tối đa để giảm số lần mua |
+| Mức **Khẩn** khi tồn hiện có < tồn an toàn (hàng đang đặt chưa về chưa dùng được); còn lại **Cần đặt** | Ưu tiên xử lý; đèn đỏ/vàng có chữ đi kèm |
+| Báo cáo **Gợi ý đặt hàng** (màn hình REORD, nhóm Kho, quyền `Report.Stock.View`, `GET /api/reports/reorder-suggestions?categoryId=&criticalOnly=&includeAll=`): lọc nhóm hàng (gồm nhóm con), chỉ trọng yếu, gồm cả hàng còn đủ; trọng yếu lên đầu, rồi khẩn, rồi mã hàng; tối đa 5.000 dòng; kèm NCC ưu tiên | Người mua rà soát hằng ngày |
+| Tồn cộng mọi kho của công ty (bỏ filter kho chỉ ở phép cộng này, như tồn tối thiểu mục 11.1); mặt hàng vẫn qua filter nhóm hàng; chỉ trả số lượng, không trả giá trị, không chia theo kho | Đặt hàng là việc của cả công ty |
+| **Lập đề nghị mua** (nút trên báo cáo, người có quyền lập PR): mở PR mới điền sẵn **mọi dòng cần đặt đang hiển thị theo bộ lọc** (mặt hàng, ĐVT cơ sở, SL gợi ý, NCC ưu tiên); người dùng sửa/xóa dòng rồi lưu như PR thường. PR nháp đã tính vào "đề nghị còn mở" nên không bị gợi ý lại | Giữ nguyên quy trình duyệt PR |
+
+Migration `V0_13_0_DiemDatHangLai` (3 cột của `Item` – `Down()` xóa cột, mất thông số đã khai báo).
 
 ## Nguồn tham khảo
 

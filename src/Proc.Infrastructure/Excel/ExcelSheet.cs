@@ -38,6 +38,11 @@ internal sealed partial class ExcelRowReader
     /// <summary>Số dòng trên sheet.</summary>
     public int RowNumber => _row.RowNumber();
 
+    /// <summary>File có cột này (để phân biệt "ô trống" với "file mẫu cũ không có cột").</summary>
+    /// <param name="header">Tiêu đề cột.</param>
+    /// <returns>true nếu có cột.</returns>
+    public bool HasColumn(string header) => _columns.ContainsKey(ExcelHeaders.Normalize(header));
+
     /// <summary>Mọi ô của các cột đã biết đều trống.</summary>
     public bool IsEmpty => _columns.Values.All(c => _row.Cell(c).IsEmpty() || string.IsNullOrWhiteSpace(_row.Cell(c).GetFormattedString()));
 

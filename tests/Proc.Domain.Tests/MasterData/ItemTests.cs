@@ -68,6 +68,26 @@ public class ItemTests
     }
 
     [Fact]
+    public void DatHangLai_AnToanNhoHonDiemDatLaiNhoHonToiDa_ChiHangTonKho()
+    {
+        // Đề xuất Ban CUVT K1 – design.md mục 18.16.
+        var service = NewItem(ItemType.Service);
+        Assert.Throws<BusinessRuleException>(() => service.SetReorderControl(null, null, isCritical: true));
+        Assert.Throws<BusinessRuleException>(() => service.SetReorderControl(null, 5, false));
+
+        var item = NewItem();
+        item.SetStockControl(ItemType.Inventory, false, false, 10, 200);
+        item.SetReorderControl(20, 50, true);
+        Assert.Equal((20m, 50m, true), (item.SafetyStock, item.ReorderPoint, item.IsCritical));
+
+        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(60, 50, false));
+        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(null, 250, false));
+        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(-1, null, false));
+        item.SetReorderControl(null, null, false);
+        Assert.Equal(((decimal?)null, (decimal?)null, false), (item.SafetyStock, item.ReorderPoint, item.IsCritical));
+    }
+
+    [Fact]
     public void QuyDoi_ThemSuaXoaTheoDanhSachMoi()
     {
         var item = NewItem();

@@ -107,6 +107,12 @@ export interface ItemDetail {
   trackExpiry: boolean
   minStock: number | null
   maxStock: number | null
+  /** Tồn an toàn (design.md mục 18.16). */
+  safetyStock: number | null
+  /** Điểm đặt hàng lại: khả dụng dưới mức này thì gợi ý lập PR. */
+  reorderPoint: number | null
+  /** Vật tư trọng yếu. */
+  isCritical: boolean
   isActive: boolean
   conversions: ItemConversion[]
   /** Sửa được: có quyền và đang làm việc ở tổng công ty. */
@@ -130,6 +136,9 @@ export interface ItemInput {
   trackExpiry: boolean
   minStock: number | null
   maxStock: number | null
+  safetyStock: number | null
+  reorderPoint: number | null
+  isCritical: boolean
   conversions: { uomId: string; factor: number }[]
 }
 

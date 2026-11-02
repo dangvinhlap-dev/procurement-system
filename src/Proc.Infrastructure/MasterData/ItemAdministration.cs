@@ -130,7 +130,8 @@ public sealed class ItemAdministration : IItemAdministration
         return new ItemDetailDto(
             item.Id, item.Code, item.Name, item.EnglishName, item.Type.ToString(), item.CategoryId, item.BaseUomId,
             item.Specification, item.Brand, item.Origin, item.Barcode, item.VatCode, item.TechnicalSpecs,
-            item.TrackLot, item.TrackExpiry, item.MinStock, item.MaxStock, item.IsActive, conversions, canEdit);
+            item.TrackLot, item.TrackExpiry, item.MinStock, item.MaxStock, item.IsActive, conversions, canEdit,
+            item.SafetyStock, item.ReorderPoint, item.IsCritical);
     }
 
     /// <inheritdoc />
@@ -149,6 +150,7 @@ public sealed class ItemAdministration : IItemAdministration
             new ItemDescription(request.Name, request.EnglishName, request.Specification, request.Brand, request.Origin,
                 request.Barcode, request.VatCode, request.TechnicalSpecs));
         item.SetStockControl(type, request.TrackLot, request.TrackExpiry, request.MinStock, request.MaxStock);
+        item.SetReorderControl(request.SafetyStock, request.ReorderPoint, request.IsCritical);
         item.SetConversions(await ResolveConversionsAsync(request.Conversions, cancellationToken));
 
         _db.Items.Add(item);
@@ -179,6 +181,7 @@ public sealed class ItemAdministration : IItemAdministration
 
         item.SetConversions(conversions);
         item.SetStockControl(type, request.TrackLot, request.TrackExpiry, request.MinStock, request.MaxStock);
+        item.SetReorderControl(request.SafetyStock, request.ReorderPoint, request.IsCritical);
         if (request.IsActive) item.Activate();
         else item.Deactivate();
 

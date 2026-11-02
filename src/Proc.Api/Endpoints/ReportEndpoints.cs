@@ -31,6 +31,9 @@ public static class ReportEndpoints
             .RequirePermission(Permissions.Report.StockView);
         reports.MapGet("/group-stock", (Guid itemId, IStockReportService s, CancellationToken ct) => s.GetGroupStockAsync(itemId, ct))
             .RequirePermission(Permissions.Report.StockView);
+        reports.MapGet("/reorder-suggestions", (Guid? categoryId, bool? criticalOnly, bool? includeAll, IStockReportService s, CancellationToken ct) =>
+                s.GetReorderSuggestionsAsync(new ReorderSuggestionQuery(categoryId, criticalOnly ?? false, includeAll ?? false), ct))
+            .RequirePermission(Permissions.Report.StockView);
 
         reports.MapGet("/pending-requests", (IPurchaseReportService s, CancellationToken ct) => s.GetPendingRequestsAsync(ct))
             .RequirePermission(Permissions.Report.PurchaseView);

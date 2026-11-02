@@ -120,7 +120,7 @@ Mọi màn hình đổi sang phong cách này qua khung dùng chung, không vi�
 | --- | --- |
 | Token antd (chữ, màu, bo góc, chiều cao, nút, tab, bảng, hộp thoại) | `src/theme.ts` |
 | Khung `AppShell`: hàng 1 menu module chữ, hàng 2 ô lệnh + công ty + thông báo + người dùng (54px); cây điều hướng 22px/dòng | `classic-app.css` |
-| `ListPage` + `DataGrid`: tiêu đề 18px xanh đậm, lưới kẻ ô, dòng 22px, cột số phông đơn cách, dòng chọn vàng nhạt, đèn trạng thái ô vuông, co giãn cột | `classic-app.css` |
+| `ListPage` + `DataGrid`: tiêu đề 18px xanh đậm, lưới kẻ ô, dòng 22px, cột số phông đơn cách, dòng chọn vàng nhạt, đèn trạng thái ô vuông, co giãn cột; nút lệnh riêng của màn hình truyền qua `actions` (đặt sau "Tạo mới", ví dụ "Lập đề nghị mua") | `classic-app.css` |
 | `DocumentForm` + `LineGrid`: khối "Thông tin phiếu" có dải tiêu đề, lưới dòng kẻ ô co giãn cột, thanh chân dải màu | `classic-app.css`, `LineGrid.tsx` |
 | `DetailDrawer`, hộp thoại: thanh tiêu đề dải màu, viền 1px | `classic-app.css` |
 | Tab mọi nơi: ô vuông xanh, tab chọn đậm, chữ in hoa | `classic-app.css` |

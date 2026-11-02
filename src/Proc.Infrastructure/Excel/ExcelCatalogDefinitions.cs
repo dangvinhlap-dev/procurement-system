@@ -262,6 +262,9 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     private const string TrackExpiry = "Quản lý hạn dùng";
     private const string MinStock = "Tồn tối thiểu";
     private const string MaxStock = "Tồn tối đa";
+    private const string SafetyStock = "Tồn an toàn";
+    private const string ReorderPoint = "Điểm đặt hàng lại";
+    private const string IsCritical = "Trọng yếu";
     private const string Uom1 = "ĐVT quy đổi 1";
     private const string Factor1 = "Hệ số 1";
     private const string Uom2 = "ĐVT quy đổi 2";
@@ -313,6 +316,9 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         new(TrackExpiry, "Có / Không – chỉ hàng tồn kho."),
         new(MinStock, "Theo ĐVT cơ sở, tối đa 4 chữ số thập phân – chỉ hàng tồn kho."),
         new(MaxStock, "Theo ĐVT cơ sở, ≥ tồn tối thiểu – chỉ hàng tồn kho."),
+        new(SafetyStock, "Theo ĐVT cơ sở, ≤ điểm đặt hàng lại – chỉ hàng tồn kho."),
+        new(ReorderPoint, "Theo ĐVT cơ sở, ≤ tồn tối đa: khả dụng xuống tới mức này thì gợi ý lập đề nghị mua – chỉ hàng tồn kho."),
+        new(IsCritical, "Có / Không – vật tư trọng yếu, chỉ hàng tồn kho."),
         new(Uom1, "Mã ĐVT quy đổi, ví dụ THUNG.", Text: true),
         new(Factor1, "Số ĐVT cơ sở trong 1 ĐVT quy đổi, ví dụ 24 (1 thùng = 24 cái)."),
         new(Uom2, "", Text: true),
@@ -345,6 +351,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
                 i.Code, i.Name, i.EnglishName, TypeLabels[i.Type.ToString()], categories.GetValueOrDefault(i.CategoryId),
                 uomCodes[i.BaseUomId], i.Specification, i.Brand, i.Origin, i.Barcode, i.VatCode,
                 ExcelHeaders.YesNo(i.TrackLot), ExcelHeaders.YesNo(i.TrackExpiry), i.MinStock, i.MaxStock,
+                i.SafetyStock, i.ReorderPoint, ExcelHeaders.YesNo(i.IsCritical),
                 ConvUom(0), ConvFactor(0), ConvUom(1), ConvFactor(1), ConvUom(2), ConvFactor(2), ExcelHeaders.YesNo(i.IsActive),
             ];
         }).ToList();
@@ -382,7 +389,8 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
             var create = new CreateItemRequest(
                 null, row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
                 row.Text(Origin), row.Text(Barcode), vat, null, row.Bool(TrackLot) ?? false, row.Bool(TrackExpiry) ?? false,
-                row.Decimal(MinStock), row.Decimal(MaxStock), conversions);
+                row.Decimal(MinStock), row.Decimal(MaxStock), conversions,
+                row.Decimal(SafetyStock), row.Decimal(ReorderPoint), row.Bool(IsCritical) ?? false);
             await ValidateAsync(services, create, cancellationToken);
             var created = await items.CreateAsync(create, cancellationToken);
             if (!Active(row)) await items.UpdateAsync(created.Id, ToUpdate(created, conversions, false), cancellationToken);
@@ -396,7 +404,11 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         var update = new UpdateItemRequest(
             row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
             row.Text(Origin), row.Text(Barcode), vat, existing.TechnicalSpecs, row.Bool(TrackLot) ?? false, row.Bool(TrackExpiry) ?? false,
-            row.Decimal(MinStock), row.Decimal(MaxStock), keptConversions, Active(row));
+            row.Decimal(MinStock), row.Decimal(MaxStock), keptConversions, Active(row),
+            // File mẫu cũ (trước lát D1) không có 3 cột đặt hàng lại: giữ nguyên giá trị đang có thay vì xóa.
+            row.HasColumn(SafetyStock) ? row.Decimal(SafetyStock) : existing.SafetyStock,
+            row.HasColumn(ReorderPoint) ? row.Decimal(ReorderPoint) : existing.ReorderPoint,
+            row.HasColumn(IsCritical) ? row.Bool(IsCritical) ?? false : existing.IsCritical);
         await ValidateAsync(services, update, cancellationToken);
         await items.UpdateAsync(existing.Id, update, cancellationToken);
         return false;
@@ -404,7 +416,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
 
     private static UpdateItemRequest ToUpdate(ItemDetailDto d, IReadOnlyList<ItemUomConversionInput> conversions, bool isActive) =>
         new(d.Name, d.EnglishName, d.Type, d.CategoryId, d.BaseUomId, d.Specification, d.Brand, d.Origin, d.Barcode, d.VatCode,
-            d.TechnicalSpecs, d.TrackLot, d.TrackExpiry, d.MinStock, d.MaxStock, conversions, isActive);
+            d.TechnicalSpecs, d.TrackLot, d.TrackExpiry, d.MinStock, d.MaxStock, conversions, isActive, d.SafetyStock, d.ReorderPoint, d.IsCritical);
 
     private async Task<Guid> UomIdAsync(string code, CancellationToken cancellationToken)
     {

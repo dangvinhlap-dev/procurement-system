@@ -2,7 +2,7 @@ import { FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { useUoms } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
@@ -62,6 +62,19 @@ interface PrFormValues {
 
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
+/** Dòng điền sẵn cho PR mới, truyền qua state khi điều hướng (Gợi ý đặt hàng – design.md mục 18.16). */
+export interface PrPrefillLine {
+  itemId: string
+  uomId: string
+  qty: number
+  suggestedSupplierId: string | null
+}
+
+/** State điều hướng tới PR mới: các dòng điền sẵn. */
+export interface PrPrefillState {
+  prefillLines?: PrPrefillLine[]
+}
+
 /**
  * Trang đề nghị mua hàng (design.md mục 10.2) trên khuôn DocumentForm. Đơn giá tham khảo = giá nhập gần nhất do server lấy khi lưu
  * (chỉ đọc); tồn hiện tại chỉ để xem. Gửi duyệt theo quy trình duyệt của công ty; tab Lịch sử duyệt.
@@ -69,6 +82,12 @@ const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim
 export function PurchaseRequestPage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
+  // Chỉ PR mới nhận dòng điền sẵn; người dùng sửa/xóa dòng rồi lưu như PR thường.
+  const location = useLocation()
+  const prefill = useMemo(
+    () => (isNew ? ((location.state as PrPrefillState | null)?.prefillLines ?? []) : []),
+    [isNew, location.state],
+  )
   const { hasPermission } = useAuth()
   const [form] = Form.useForm<PrFormValues>()
   const request = usePurchaseRequest(isNew ? null : id)
@@ -92,7 +111,10 @@ export function PurchaseRequestPage() {
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
-  const supplierIds = useMemo(() => (doc?.lines ?? []).map((l) => l.suggestedSupplierId).filter((x): x is string => !!x), [doc])
+  const supplierIds = useMemo(
+    () => [...(doc?.lines ?? []), ...prefill].map((l) => l.suggestedSupplierId).filter((x): x is string => !!x),
+    [doc, prefill],
+  )
   const suppliers = useSupplierLookup(supplierIds)
 
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ trong danh sách để hiện tên (design.md mục 18.5).
@@ -397,7 +419,11 @@ export function PurchaseRequestPage() {
         )
       }
       form={form}
-      initialValues={{ date: dayjs(), priority: 'Normal', lines: [] }}
+      initialValues={{
+        date: dayjs(),
+        priority: 'Normal',
+        lines: prefill.map((l) => ({ id: null, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined })),
+      }}
       readOnly={readOnly}
       onSave={save}
       onAddLine={() => addRef.current?.()}

@@ -135,6 +135,7 @@ export const screens: Screen[] = [
   { code: 'NXT', title: 'Báo cáo nhập – xuất – tồn', navLabel: 'Nhập – xuất – tồn', path: '/bao-cao/nxt', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'SLOW', title: 'Hàng chậm luân chuyển', navLabel: 'Chậm luân chuyển', path: '/bao-cao/cham-luan-chuyen', icon: <HourglassOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'EXP', title: 'Hàng sắp hết hạn', navLabel: 'Sắp hết hạn', path: '/bao-cao/sap-het-han', icon: <ClockCircleOutlined />, group: 'reports', permission: Permission.ReportStockView },
+  { code: 'REORD', title: 'Gợi ý đặt hàng', navLabel: 'Gợi ý đặt hàng', path: '/bao-cao/goi-y-dat-hang', icon: <ShoppingCartOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'GSTK', title: 'Tồn tập đoàn', navLabel: 'Tồn tập đoàn', path: '/bao-cao/ton-tap-doan', icon: <GlobalOutlined />, group: 'reports', permission: Permission.StockViewAllCompanies },
   { code: 'TRANSIT', title: 'Hàng đi đường nội bộ', navLabel: 'Hàng đi đường', path: '/bao-cao/hang-di-duong', icon: <CarOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'ICREC', title: 'Đối chiếu mua bán nội bộ', navLabel: 'Đối chiếu nội bộ', path: '/bao-cao/doi-chieu-noi-bo', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportStockView },
