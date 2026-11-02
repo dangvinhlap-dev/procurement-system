@@ -118,6 +118,17 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).
+  - Công cụ `tools/du-lieu-thu` (Node.js, gọi API, chạy lại không trùng): bộ phận, vai trò (mẫu Ban CUVT + TOANQUYEN), 38 tài khoản
+    (mỗi công ty 12: cặp lap/duyet toàn quyền + 10 vai trò; aph.khokp1, bmi.denghi.bhld giới hạn phạm vi; mật khẩu Test@2026), xếp loại
+    NCC A/B/C, duyệt PO 2 cấp ở APH/BMI (cấp 1 TOANQUYEN, cấp 2 TRUONGBANCUVT từ 200 triệu), 22 NCC (4 dùng chung + 6 riêng/công ty; 1
+    chưa duyệt ở TCT, 1 tạm ngưng ở BMI) + 3 NCC nội bộ, 30 vật tư (10/công ty theo nhóm), NCC – sản phẩm (chỉ khai ở TCT).
+  - Tài liệu `docs/DuLieuThu_KichBanTest_0.14.0.docx` (38 kịch bản). Người dùng chốt: thêm tài khoản để test đủ quy trình (người lập
+    không tự duyệt – không gỡ quy tắc).
+  - Bản test: `D:\project\procurement-thu-0.14.0` (Production, CSDL `procurement_uat`, 47 migration), chạy
+    `app\Proc.Api.exe --urls http://0.0.0.0:5006` → http://192.168.1.199:5006; admin / Admin@2026; dừng:
+    `Stop-Process -Id (Get-Content D:\project\procurement-thu-0.14.0\pid.txt)`. Mã sinh ra: `ket-qua.json` cùng thư mục.
+    **Tường lửa cổng 5006 chưa mở** (cần quyền Administrator – người dùng tự chạy lệnh trong README công cụ).
 - Không có lát đang dở. Đợt đề xuất Ban Cung ứng (E1 → F4) đã xong hết trừ **C3 (hoãn chờ lệnh)**. Bản **0.13.0** đã phát hành
   02/11/2026: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0 (bản cài thử ở http://localhost:5005).
   Bản **0.13.1** (sửa lỗi giao diện, không đổi CSDL) phát hành 02/11/2026:
