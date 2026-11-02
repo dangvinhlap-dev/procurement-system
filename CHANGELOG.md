@@ -3,6 +3,32 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.14.0] - 2026-11-02
+
+### Thêm mới
+- **Công cụ tạo dữ liệu thử** cho môi trường test (`tools/du-lieu-thu`, có trong gói cài ở `tools\du-lieu-thu`): script Node.js 22 chạy
+  được trên Windows và Linux, tạo dữ liệu qua API (đi qua mọi quy tắc nghiệp vụ, NCC được duyệt bằng tài khoản khác người lập; chạy lại
+  không tạo trùng) – bộ phận, vai trò (bộ vai trò mẫu Ban Cung ứng + vai trò toàn quyền), 38 tài khoản test, xếp loại NCC, quy trình duyệt
+  PO 2 cấp, 22 nhà cung cấp + 3 NCC nội bộ, 30 vật tư, NCC – sản phẩm. Dữ liệu ở `du-lieu.json`; hướng dẫn và mục `Seed` mẫu ở `README.md`.
+- **Tài liệu dữ liệu thử, tài khoản và 38 kịch bản test**: `docs/DuLieuThu_KichBanTest_0.14.0.docx`.
+- Hướng dẫn mở ứng dụng cho máy khác trong mạng nội bộ (nghe `--urls http://0.0.0.0:<cổng>`, mở cổng tường lửa) – không viết cứng địa
+  chỉ IP trong code.
+
+### Thay đổi
+- Gói cài Windows có thêm thư mục `tools\du-lieu-thu`.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (giữ nguyên 47 migration của 0.13.x, không có script `db/scripts/0.14.0.sql`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng; không cần chạy script CSDL. **Không chạy công cụ tạo dữ liệu thử trên CSDL thật.**
+
+### Cách quay lại bản trước
+- Triển khai lại tag `v0.13.1`. Không cần đụng CSDL.
+
 ## [0.13.1] - 2026-11-02
 
 ### Thêm mới

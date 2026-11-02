@@ -1,0 +1,129 @@
+{
+  "matKhau": "Test@2026",
+  "congTy": [
+    { "ma": "TCT", "ten": "Tổng công ty Cung ứng Thử nghiệm", "laTongCongTy": true, "mst": "0399100001",
+      "kho": [ { "ma": "KT", "ten": "Kho tổng Tổng công ty", "loai": "Main" } ] },
+    { "ma": "APH", "ten": "Công ty TNHH An Phú (thành viên)", "mst": "0399100002",
+      "kho": [ { "ma": "KT", "ten": "Kho tổng An Phú", "loai": "Main" },
+               { "ma": "KP1", "ten": "Kho phụ xưởng cơ điện", "loai": "Sub" },
+               { "ma": "KP2", "ten": "Kho phụ xưởng lắp ráp", "loai": "Sub" } ] },
+    { "ma": "BMI", "ten": "Công ty CP Bình Minh (thành viên)", "mst": "0399100003",
+      "kho": [ { "ma": "KT", "ten": "Kho tổng Bình Minh", "loai": "Main" },
+               { "ma": "KP1", "ten": "Kho phụ xưởng cán", "loai": "Sub" },
+               { "ma": "KP2", "ten": "Kho phụ xưởng sơn", "loai": "Sub" } ] }
+  ],
+  "boPhan": [
+    { "ma": "VT", "ten": "Phòng Vật tư", "truongBoPhan": "Nguyễn Văn Vật" },
+    { "ma": "KTH", "ten": "Phòng Kỹ thuật", "truongBoPhan": "Trần Kỹ Thuật" },
+    { "ma": "SX", "ten": "Xưởng sản xuất", "truongBoPhan": "Lê Sản Xuất" },
+    { "ma": "HC", "ten": "Phòng Hành chính", "truongBoPhan": "Phạm Hành Chính" }
+  ],
+  "donViTinh": { "CAI": "Cái", "BO": "Bộ", "DOI": "Đôi", "HOP": "Hộp", "THUNG": "Thùng", "KG": "Kg", "M": "Mét", "CUON": "Cuộn",
+                 "LIT": "Lít", "TAM": "Tấm", "RAM": "Ram", "CHAI": "Chai" },
+  "nhomNcc": { "TN": "Trong nước", "NK": "Nhập khẩu", "NB": "Nội bộ" },
+  "nhomHang": [
+    { "ma": "VT", "ten": "Vật tư" },
+    { "ma": "VTD", "ten": "Vật tư điện", "cha": "VT" },
+    { "ma": "VTC", "ten": "Vật tư cơ khí", "cha": "VT" },
+    { "ma": "BHLD", "ten": "Bảo hộ lao động" },
+    { "ma": "VPP", "ten": "Văn phòng phẩm" },
+    { "ma": "NVL", "ten": "Nguyên vật liệu" },
+    { "ma": "HCH", "ten": "Hóa chất" }
+  ],
+  "danhSoDanhMuc": [
+    { "danhMuc": "supplier", "tienTo": "NCC", "soChuSo": 6 },
+    { "danhMuc": "supplier-group", "tienTo": "GN", "soChuSo": 4 },
+    { "danhMuc": "item-category", "tienTo": "NH", "soChuSo": 6 },
+    { "danhMuc": "item", "tienTo": "{NHOM}-", "soChuSo": 5 }
+  ],
+  "xepLoaiNcc": [
+    { "ma": "A", "ten": "Tốt", "thuTu": 1, "dungHanToiThieu": 95, "traHangToiDa": 1 },
+    { "ma": "B", "ten": "Khá", "thuTu": 2, "dungHanToiThieu": 85, "traHangToiDa": 3 },
+    { "ma": "C", "ten": "Trung bình", "thuTu": 3, "dungHanToiThieu": 70, "traHangToiDa": 5 }
+  ],
+  "vatTu": [
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Giấy A4 Double A 70gsm", "dvt": "RAM", "quyDoi": [["THUNG", 5]], "thue": "10", "tonMin": 20, "tonMax": 200, "tonAnToan": 10, "diemDatLai": 30 },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Bút bi xanh 0.5mm", "dvt": "HOP", "thue": "10", "tonMin": 5, "tonMax": 50 },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Hộp mực in laser 12A", "dvt": "HOP", "thue": "10", "tonMin": 2, "tonMax": 20, "trongYeu": true },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Bìa hồ sơ nhựa A4", "dvt": "CAI", "quyDoi": [["HOP", 10]], "thue": "10" },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Ghim bấm số 10", "dvt": "HOP", "thue": "10" },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Sổ tay bìa da A5", "dvt": "CAI", "thue": "10" },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Băng keo trong 5cm", "dvt": "CUON", "quyDoi": [["THUNG", 72]], "thue": "10" },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Pin tiểu AA", "dvt": "HOP", "thue": "10", "theoLo": true, "hanDung": true },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "Chuột máy tính quang không dây", "dvt": "CAI", "thue": "10" },
+    { "congTy": "TCT", "nhom": "VPP", "ten": "USB lưu trữ 32GB", "dvt": "CAI", "thue": "10" },
+
+    { "congTy": "APH", "nhom": "VTD", "ten": "Cáp điện CV 2.5mm²", "dvt": "M", "quyDoi": [["CUON", 100]], "thue": "10", "tonMin": 200, "tonMax": 2000, "tonAnToan": 100, "diemDatLai": 300 },
+    { "congTy": "APH", "nhom": "VTD", "ten": "Aptomat 1 pha 32A", "dvt": "CAI", "thue": "10", "tonMin": 5, "tonMax": 40 },
+    { "congTy": "APH", "nhom": "VTD", "ten": "Bóng đèn LED tuýp 18W", "dvt": "CAI", "quyDoi": [["THUNG", 25]], "thue": "10", "tonMin": 20, "tonMax": 200 },
+    { "congTy": "APH", "nhom": "VTD", "ten": "Ổ cắm điện 3 lỗ", "dvt": "CAI", "thue": "10" },
+    { "congTy": "APH", "nhom": "VTD", "ten": "Băng keo cách điện", "dvt": "CUON", "quyDoi": [["HOP", 10]], "thue": "10" },
+    { "congTy": "APH", "nhom": "VTC", "ten": "Bu lông lục giác M12x50", "dvt": "CAI", "quyDoi": [["HOP", 100]], "thue": "10", "tonMin": 500, "tonMax": 5000 },
+    { "congTy": "APH", "nhom": "VTC", "ten": "Vòng bi 6205-2RS", "dvt": "CAI", "thue": "10", "tonMin": 10, "tonMax": 60, "tonAnToan": 5, "diemDatLai": 15, "trongYeu": true },
+    { "congTy": "APH", "nhom": "VTC", "ten": "Dầu thủy lực ISO VG46", "dvt": "LIT", "quyDoi": [["THUNG", 18]], "thue": "10", "theoLo": true, "hanDung": true },
+    { "congTy": "APH", "nhom": "VTC", "ten": "Mỡ bôi trơn chịu nhiệt", "dvt": "KG", "thue": "10", "theoLo": true },
+    { "congTy": "APH", "nhom": "VTC", "ten": "Đá cắt sắt 355mm", "dvt": "CAI", "quyDoi": [["HOP", 25]], "thue": "10" },
+
+    { "congTy": "BMI", "nhom": "NVL", "ten": "Thép tấm SS400 dày 5mm", "dvt": "KG", "thue": "10", "tonMin": 1000, "tonMax": 20000, "tonAnToan": 500, "diemDatLai": 3000, "trongYeu": true },
+    { "congTy": "BMI", "nhom": "NVL", "ten": "Thép cuộn cán nóng 2mm", "dvt": "KG", "thue": "10", "tonMin": 2000, "tonMax": 30000 },
+    { "congTy": "BMI", "nhom": "NVL", "ten": "Hạt nhựa PP nguyên sinh", "dvt": "KG", "quyDoi": [["THUNG", 25]], "thue": "10", "theoLo": true },
+    { "congTy": "BMI", "nhom": "HCH", "ten": "Sơn chống gỉ màu xám", "dvt": "LIT", "quyDoi": [["THUNG", 20]], "thue": "10", "theoLo": true, "hanDung": true },
+    { "congTy": "BMI", "nhom": "HCH", "ten": "Dung môi pha sơn", "dvt": "LIT", "thue": "10", "theoLo": true, "hanDung": true },
+    { "congTy": "BMI", "nhom": "HCH", "ten": "Keo dán công nghiệp 2 thành phần", "dvt": "CHAI", "quyDoi": [["THUNG", 24]], "thue": "10", "theoLo": true, "hanDung": true },
+    { "congTy": "BMI", "nhom": "BHLD", "ten": "Găng tay vải bảo hộ", "dvt": "DOI", "quyDoi": [["THUNG", 120]], "thue": "8" },
+    { "congTy": "BMI", "nhom": "BHLD", "ten": "Mũ bảo hộ có quai", "dvt": "CAI", "thue": "8" },
+    { "congTy": "BMI", "nhom": "BHLD", "ten": "Giày bảo hộ mũi thép", "dvt": "DOI", "thue": "8" },
+    { "congTy": "BMI", "nhom": "BHLD", "ten": "Khẩu trang than hoạt tính", "dvt": "HOP", "thue": "8", "tonMin": 10, "tonMax": 100 }
+  ],
+  "nhaCungCap": [
+    { "khoa": "C1", "dung": ["TCT", "APH", "BMI"], "nhom": "TN", "ten": "Công ty TNHH Thương mại Tổng hợp Phú Thịnh", "tenNgan": "Phú Thịnh", "mst": "0399200001", "diaChi": "12 Đường số 3, KCN Thử nghiệm, TP. Thủ Đức", "phamVi": "Văn phòng phẩm, vật tư tiêu hao", "vatTu": ["TCT:0", "TCT:1", "TCT:4", "APH:4", "BMI:9"] },
+    { "khoa": "C2", "dung": ["TCT", "APH", "BMI"], "nhom": "TN", "ten": "Công ty CP Thiết bị Công nghiệp Đông Á Việt", "tenNgan": "Đông Á Việt", "mst": "0399200002", "diaChi": "45 Quốc lộ 1A, Q. Bình Tân, TP. HCM", "phamVi": "Thiết bị điện, cơ khí", "vatTu": ["APH:0", "APH:1", "APH:6", "BMI:0", "TCT:8"] },
+    { "khoa": "C3", "dung": ["TCT", "APH", "BMI"], "nhom": "TN", "ten": "Công ty TNHH Bảo hộ Lao động An Toàn Xanh", "tenNgan": "An Toàn Xanh", "mst": "0399200003", "diaChi": "8 Lê Văn Việt, TP. Thủ Đức", "phamVi": "Bảo hộ lao động", "vatTu": ["BMI:6", "BMI:7", "BMI:8", "BMI:9", "APH:9"] },
+    { "khoa": "C4", "dung": ["TCT", "APH", "BMI"], "nhom": "NK", "nuocNgoai": true, "ten": "Global Industrial Supply Pte. Ltd. (thử nghiệm)", "tenNgan": "Global Supply", "mst": "SG2026TEST01", "diaChi": "1 Test Avenue, Singapore", "phamVi": "Vòng bi, hóa chất nhập khẩu", "vatTu": ["APH:6", "APH:7", "BMI:3", "BMI:5"] },
+
+    { "khoa": "T1", "dung": ["TCT"], "nhom": "TN", "ten": "Công ty TNHH Văn phòng phẩm Thành Công", "tenNgan": "VPP Thành Công", "mst": "0399210001", "diaChi": "20 Nguyễn Trãi, Q.1", "phamVi": "Văn phòng phẩm", "vatTu": ["TCT:0", "TCT:1", "TCT:3", "TCT:5", "TCT:6"] },
+    { "khoa": "T2", "dung": ["TCT"], "nhom": "TN", "ten": "Công ty CP Giấy Hưng Long", "tenNgan": "Giấy Hưng Long", "mst": "0399210002", "diaChi": "5 KCN Tân Bình", "phamVi": "Giấy in, bìa", "vatTu": ["TCT:0", "TCT:3"] },
+    { "khoa": "T3", "dung": ["TCT"], "nhom": "TN", "ten": "Công ty TNHH Tin học Sao Khuê", "tenNgan": "Tin học Sao Khuê", "mst": "0399210003", "diaChi": "77 Cách Mạng Tháng 8, Q.3", "phamVi": "Thiết bị tin học, mực in", "vatTu": ["TCT:2", "TCT:8", "TCT:9"] },
+    { "khoa": "T4", "dung": ["TCT"], "nhom": "TN", "ten": "Công ty TNHH Mực in Kỹ thuật số Việt", "tenNgan": "Mực in KTS Việt", "mst": "0399210004", "diaChi": "3 Hoàng Văn Thụ, Q. Phú Nhuận", "phamVi": "Mực in", "vatTu": ["TCT:2"] },
+    { "khoa": "T5", "dung": ["TCT"], "nhom": "TN", "ten": "Công ty TNHH Pin và Ắc quy Nam Phương", "tenNgan": "Pin Nam Phương", "mst": "0399210005", "diaChi": "9 KCN Hiệp Phước", "phamVi": "Pin, ắc quy", "vatTu": ["TCT:7"] },
+    { "khoa": "T6", "dung": ["TCT"], "nhom": "TN", "trangThai": "Potential", "ten": "Công ty TNHH Thương mại Dịch vụ Lạc Hồng (chưa duyệt)", "tenNgan": "Lạc Hồng", "mst": "0399210006", "diaChi": "15 Lý Thường Kiệt, Q.10", "phamVi": "Văn phòng phẩm", "vatTu": [] },
+
+    { "khoa": "A1", "dung": ["APH"], "nhom": "TN", "ten": "Công ty CP Dây cáp điện Phương Đông", "tenNgan": "Cáp Phương Đông", "mst": "0399220001", "diaChi": "KCN Sóng Thần, Bình Dương", "phamVi": "Dây cáp điện", "vatTu": ["APH:0", "APH:4"] },
+    { "khoa": "A2", "dung": ["APH"], "nhom": "TN", "ten": "Công ty TNHH Thiết bị điện Hoàng Gia", "tenNgan": "Điện Hoàng Gia", "mst": "0399220002", "diaChi": "102 Trường Chinh, Q. Tân Bình", "phamVi": "Thiết bị đóng cắt, chiếu sáng", "vatTu": ["APH:1", "APH:2", "APH:3"] },
+    { "khoa": "A3", "dung": ["APH"], "nhom": "TN", "ten": "Công ty TNHH Bu lông Ốc vít Tiến Đạt", "tenNgan": "Bu lông Tiến Đạt", "mst": "0399220003", "diaChi": "KCN Tân Tạo", "phamVi": "Bu lông, ốc vít", "vatTu": ["APH:5"] },
+    { "khoa": "A4", "dung": ["APH"], "nhom": "TN", "ten": "Công ty CP Vòng bi Công nghiệp Minh Khang", "tenNgan": "Vòng bi Minh Khang", "mst": "0399220004", "diaChi": "21 Kinh Dương Vương, Q. Bình Tân", "phamVi": "Vòng bi, truyền động", "vatTu": ["APH:6"] },
+    { "khoa": "A5", "dung": ["APH"], "nhom": "TN", "ten": "Công ty TNHH Dầu nhớt Kỹ thuật Thái Bình Dương", "tenNgan": "Dầu nhớt TBD", "mst": "0399220005", "diaChi": "KCN Cát Lái", "phamVi": "Dầu, mỡ công nghiệp", "vatTu": ["APH:7", "APH:8"] },
+    { "khoa": "A6", "dung": ["APH"], "nhom": "TN", "ten": "Công ty TNHH Dụng cụ Cơ khí Phát Đạt", "tenNgan": "Cơ khí Phát Đạt", "mst": "0399220006", "diaChi": "33 Tô Ký, Q.12", "phamVi": "Dụng cụ cắt, mài", "vatTu": ["APH:9", "APH:5"] },
+
+    { "khoa": "B1", "dung": ["BMI"], "nhom": "TN", "ten": "Công ty CP Thép Phú Mỹ Thử nghiệm", "tenNgan": "Thép Phú Mỹ TN", "mst": "0399230001", "diaChi": "KCN Phú Mỹ, Bà Rịa – Vũng Tàu", "phamVi": "Thép tấm, thép cuộn", "vatTu": ["BMI:0", "BMI:1"] },
+    { "khoa": "B2", "dung": ["BMI"], "nhom": "TN", "ten": "Công ty TNHH Thép Đại Dương", "tenNgan": "Thép Đại Dương", "mst": "0399230002", "diaChi": "KCN Nhơn Trạch, Đồng Nai", "phamVi": "Thép tấm, thép cuộn", "vatTu": ["BMI:0", "BMI:1"] },
+    { "khoa": "B3", "dung": ["BMI"], "nhom": "TN", "ten": "Công ty TNHH Hạt nhựa Việt Thắng", "tenNgan": "Nhựa Việt Thắng", "mst": "0399230003", "diaChi": "KCN Vĩnh Lộc", "phamVi": "Hạt nhựa", "vatTu": ["BMI:2"] },
+    { "khoa": "B4", "dung": ["BMI"], "nhom": "TN", "ten": "Công ty CP Sơn Công nghiệp Rạng Đông Thử nghiệm", "tenNgan": "Sơn Rạng Đông TN", "mst": "0399230004", "diaChi": "KCN Biên Hòa 2", "phamVi": "Sơn, dung môi", "vatTu": ["BMI:3", "BMI:4"] },
+    { "khoa": "B5", "dung": ["BMI"], "nhom": "TN", "ten": "Công ty TNHH Hóa chất Kỹ thuật Hưng Phát", "tenNgan": "Hóa chất Hưng Phát", "mst": "0399230005", "diaChi": "KCN Lê Minh Xuân", "phamVi": "Keo, hóa chất", "vatTu": ["BMI:5", "BMI:4"] },
+    { "khoa": "B6", "dung": ["BMI"], "nhom": "TN", "trangThai": "Suspended", "ten": "Công ty TNHH Bảo hộ Thành Đạt (tạm ngưng)", "tenNgan": "Bảo hộ Thành Đạt", "mst": "0399230006", "diaChi": "18 Phan Văn Trị, Gò Vấp", "phamVi": "Bảo hộ lao động", "vatTu": [] }
+  ],
+  "vaiTroToanQuyen": { "ma": "TOANQUYEN", "ten": "Toàn quyền (tài khoản test)" },
+  "taiKhoan": [
+    { "hauTo": "lap", "ten": "Người lập (toàn quyền)", "vaiTro": "TOANQUYEN", "viec": "Lập mọi phiếu: PR, PO, RFQ, bảng giá, hợp đồng, phiếu kho, đánh giá NCC" },
+    { "hauTo": "duyet", "ten": "Người duyệt (toàn quyền)", "vaiTro": "TOANQUYEN", "viec": "Duyệt phiếu do tài khoản .lap lập (người lập không tự duyệt); duyệt cấp 1 PO ở APH, BMI" },
+    { "hauTo": "truongban", "ten": "Trưởng ban Cung ứng", "vaiTro": "TRUONGBANCUVT", "toanTapDoan": true, "viec": "Duyệt PR, PO (cấp 2 từ 200.000.000 đ ở APH, BMI), bảng giá, kết quả thầu, hồ sơ NCC, hợp đồng; báo cáo toàn tập đoàn" },
+    { "hauTo": "damphan", "ten": "Nhóm Đàm phán & quản trị giá", "vaiTro": "DAMPHAN", "viec": "Hồ sơ NCC, hàng hóa (ở TCT), bảng giá, RFQ, chọn thầu, soạn hợp đồng" },
+    { "hauTo": "vanhanh", "ten": "Nhóm Vận hành mua hàng", "vaiTro": "VANHANH", "viec": "Lập PO theo giá đã duyệt, theo dõi giao hàng, đánh giá NCC" },
+    { "hauTo": "hoidong", "ten": "Hội đồng xét chọn & duyệt giá", "vaiTro": "HOIDONG", "viec": "Duyệt kết quả thầu, bảng giá, hồ sơ NCC, hợp đồng, NCC độc quyền" },
+    { "hauTo": "denghi", "ten": "Người đề nghị mua (bộ phận)", "vaiTro": "DENGHI", "viec": "Lập đề nghị mua hàng (PR)" },
+    { "hauTo": "kho", "ten": "Thủ kho", "vaiTro": "KHO", "viec": "Nhập/xuất/chuyển kho, ghi sổ, xem tồn – mọi kho của công ty" },
+    { "hauTo": "ketoan", "ten": "Kế toán", "vaiTro": "KETOAN", "viec": "Đối chiếu PO – nhận – hóa đơn, đóng kỳ kho, xuất chứng từ kế toán" },
+    { "hauTo": "phapche", "ten": "Pháp chế", "vaiTro": "PHAPCHE", "viec": "Xem hồ sơ NCC, thầu, hợp đồng" },
+    { "hauTo": "ksnb", "ten": "Kiểm soát nội bộ", "vaiTro": "KSNB", "toanTapDoan": true, "viec": "Dấu hiệu bất thường, ghi nhận/kết luận vi phạm" },
+    { "hauTo": "lanhdao", "ten": "Lãnh đạo", "vaiTro": "LANHDAO", "toanTapDoan": true, "viec": "Nhận thông báo vi phạm KSNB, xem sổ vi phạm, báo cáo" }
+  ],
+  "taiKhoanPhamVi": [
+    { "tenDangNhap": "aph.khokp1", "ten": "Thủ kho xưởng cơ điện (chỉ kho KP1)", "congTy": "APH", "vaiTro": "KHO", "kho": ["KP1"], "viec": "Kiểm tra phạm vi kho: chỉ thấy, lập phiếu kho KP1" },
+    { "tenDangNhap": "bmi.denghi.bhld", "ten": "Đề nghị mua bảo hộ (chỉ nhóm BHLĐ)", "congTy": "BMI", "vaiTro": "DENGHI", "nhomHang": ["BHLD"], "viec": "Kiểm tra phạm vi nhóm hàng: chỉ thấy mặt hàng nhóm Bảo hộ lao động" }
+  ],
+  "quyTrinhDuyetPoCongTy": ["APH", "BMI"],
+  "quyTrinhDuyetPo": [
+    { "cap": 1, "tuSoTien": 0, "vaiTro": "TOANQUYEN" },
+    { "cap": 2, "tuSoTien": 200000000, "vaiTro": "TRUONGBANCUVT" }
+  ]
+}
