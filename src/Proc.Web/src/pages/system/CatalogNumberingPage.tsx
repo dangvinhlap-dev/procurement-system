@@ -54,6 +54,7 @@ export function CatalogNumberingPage() {
         rows={rows.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="CatalogNumbering"
         loading={rows.isLoading}
         canCreate={canManage}
         onCreate={() => setOpen(null)}
@@ -137,6 +138,7 @@ function NumberingDrawer({ numbering, canManage, onClose }: { numbering: Catalog
     <DetailDrawer
       open
       title={numbering ? `Đánh số: ${numbering.catalogName}${numbering.categoryCode ? ` – ${numbering.categoryCode}` : ''}` : 'Thêm dải đánh số'}
+      audit={{ entityType: 'CatalogNumbering', id: numbering?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

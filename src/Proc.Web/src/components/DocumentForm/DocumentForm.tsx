@@ -1,8 +1,10 @@
 import { DownOutlined, PrinterOutlined, UpOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { apiOpenPdf } from '../../api/client'
 import type { StatusTone } from '../DataGrid/types'
+import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
+import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
 import { hasOpenPopup } from '../../utils/popup'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DocumentForm.css'
@@ -62,6 +64,11 @@ export interface DocumentFormProps {
   onAddLine?: () => void
   /** API PDF của phiếu đã lưu, ví dụ "/api/purchase-orders/{id}/pdf": hiện nút "In phiếu" (Ctrl+P) – design.md mục 10.10. */
   printPath?: string
+  /**
+   * Bản ghi của đầu phiếu trong nhật ký (design.md mục 9.3a): bấm F1 ở ô đầu phiếu xem lịch sử ô; có id thì hiện nút "Lịch sử thay đổi"
+   * (cả phiếu và các dòng). Dòng khai báo riêng ở LineGrid (auditEntity).
+   */
+  audit?: AuditScope
 }
 
 /**
@@ -69,7 +76,7 @@ export interface DocumentFormProps {
  * phần đầu trang gồm tên loại phiếu, số phiếu, trạng thái (nhãn màu + chữ), người lập, nút In phiếu ở bên phải;
  * nội dung gồm khối "Thông tin phiếu" 3 cột (thu gọn được), lưới dòng nhập như Excel, tổng tiền, tab phụ.
  * Phiếu đang sửa: nút lệnh (Lưu, Gửi duyệt…) ở thanh chân dính đáy; phiếu chỉ xem: nút lệnh ở phải tiêu đề.
- * Bàn phím: Ctrl+S lưu, F2 thêm dòng, Ctrl+P in phiếu PDF.
+ * Bàn phím: Ctrl+S lưu, F2 thêm dòng, Ctrl+P in phiếu PDF, F1 lịch sử thay đổi của ô (khai báo audit).
  */
 export function DocumentForm({
   title,
@@ -92,7 +99,9 @@ export function DocumentForm({
   onSave,
   onAddLine,
   printPath,
+  audit,
 }: DocumentFormProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(defaultTab)
   const { message } = App.useApp()
   const [printing, setPrinting] = useState(false)
@@ -133,7 +142,7 @@ export function DocumentForm({
   }, [onSave, onAddLine, readOnly, printPath, print])
 
   return (
-    <div className="document-form">
+    <div className="document-form" ref={rootRef} {...auditScopeProps(audit)}>
       <div className="document-form-head">
         <div className="document-form-title">
           <h2>{title}</h2>
@@ -143,6 +152,7 @@ export function DocumentForm({
         </div>
         <div className="document-form-actions">
           {readOnly && actions}
+          {audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />}
           {printPath && (
             <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
               In phiếu

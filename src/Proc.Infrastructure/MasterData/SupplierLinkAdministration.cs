@@ -40,7 +40,7 @@ public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
         var canEdit = _scope.HasPermission(Permissions.MasterData.SupplierManage);
         return link is null
             ? new SupplierCompanyDto(supplierId, companyCode, false, null, null, false, canEdit)
-            : new SupplierCompanyDto(supplierId, companyCode, true, link.LocalCode, link.StartDate, link.IsActive, canEdit);
+            : new SupplierCompanyDto(supplierId, companyCode, true, link.LocalCode, link.StartDate, link.IsActive, canEdit, link.Id);
     }
 
     /// <inheritdoc />

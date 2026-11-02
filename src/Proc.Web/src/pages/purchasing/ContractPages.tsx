@@ -69,6 +69,7 @@ export function ContractListPage() {
       rows={contracts.data ?? []}
       columns={listColumns}
       rowKey={(r) => r.id}
+      auditEntity="PurchaseContract"
       loading={contracts.isLoading}
       canCreate={hasPermission(Permission.ContractManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}
@@ -576,6 +577,7 @@ export function ContractPage() {
       <DocumentForm
         title="Hợp đồng nguyên tắc"
         number={isNew ? null : (doc?.no ?? '')}
+        audit={{ entityType: 'PurchaseContract', id: doc?.id }}
         status={status}
         meta={
           doc &&
@@ -629,7 +631,7 @@ export function ContractPage() {
           </>
         }
         linesLabel="Sản lượng dự kiến"
-        lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />}
+        lines={<LineGrid name="lines" auditEntity="PurchaseContractLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />}
         footer={<DocumentTotal label="Giá trị dự kiến (sau CK, trước VAT)" value={formatMoney(total)} strong />}
         extraTabs={[
           {

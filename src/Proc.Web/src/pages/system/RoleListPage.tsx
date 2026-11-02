@@ -45,6 +45,7 @@ export function RoleListPage() {
         rows={roles.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Role"
         loading={roles.isLoading}
         canCreate={canManage}
         onCreate={() => setOpenId(null)}

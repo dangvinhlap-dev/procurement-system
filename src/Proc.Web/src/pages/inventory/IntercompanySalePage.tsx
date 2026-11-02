@@ -354,6 +354,7 @@ export function IntercompanySalePage() {
       title="Phiếu xuất bán nội bộ"
       extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'InventoryDocument', id: doc?.id, fields: { buyerCompanyId: 'CounterCompanyId' } }}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -402,7 +403,7 @@ export function IntercompanySalePage() {
           </Form.Item>
         </>
       }
-      lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />}
+      lines={<LineGrid name="lines" auditEntity="InventoryDocumentLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />}
       footer={
         <>
           <DocumentTotal label="Tiền hàng" value={formatMoney(totals.amount)} />

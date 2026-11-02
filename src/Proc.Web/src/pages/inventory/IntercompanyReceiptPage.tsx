@@ -176,6 +176,7 @@ export function IntercompanyReceiptPage() {
       title="Phiếu nhập mua nội bộ"
       extraTabs={[attachmentTab]}
       number={doc?.no ?? ''}
+      audit={{ entityType: 'InventoryDocument', id: doc?.id }}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Sinh từ phiếu xuất ${doc.linkedDocumentNo ?? ''} của ${doc.counterCompanyCode ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -213,7 +214,7 @@ export function IntercompanyReceiptPage() {
           </Form.Item>
         </>
       }
-      lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} fixedRows newLine={() => ({})} />}
+      lines={<LineGrid name="lines" auditEntity="InventoryDocumentLine" columns={columns} readOnly={readOnly} fixedRows newLine={() => ({})} />}
       footer={
         <>
           <DocumentTotal label="Tiền hàng" value={formatMoney(totals.amount)} />

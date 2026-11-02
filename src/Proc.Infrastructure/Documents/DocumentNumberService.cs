@@ -62,13 +62,16 @@ public sealed class DocumentNumberService : IDocumentNumberService
     {
         var companyId = _scope.RequireCompany();
         var companyCode = await CompanyCodeAsync(companyId, cancellationToken);
-        var configured = await _db.DocumentNumberings.AsNoTracking()
-            .ToDictionaryAsync(x => x.DocType, x => x.Format, cancellationToken);
+        var rows = await _db.DocumentNumberings.AsNoTracking()
+            .ToDictionaryAsync(x => x.DocType, x => new { x.Id, x.Format }, cancellationToken);
         var sequences = await _db.DocumentSequences.AsNoTracking()
             .ToDictionaryAsync(x => (x.DocType, x.Period), x => x.CurrentNumber, cancellationToken);
 
         return DocumentTypes.All
-            .Select(t => ToDto(t, configured.GetValueOrDefault(t.Code), companyCode, today, sequences))
+            .Select(t => ToDto(t, rows.GetValueOrDefault(t.Code)?.Format, companyCode, today, sequences) with
+            {
+                Id = rows.GetValueOrDefault(t.Code)?.Id,
+            })
             .ToList();
     }
 

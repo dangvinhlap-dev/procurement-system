@@ -55,6 +55,7 @@ export function SupplierApprovalPage() {
         rows={requests.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="SupplierChangeRequest"
         loading={requests.isLoading}
         isMarked={(r) => r.canApprove}
         onOpenRow={(r) => open(r.id)}
@@ -113,6 +114,7 @@ function SupplierApprovalDrawer({ id, onClose }: { id: string; onClose: () => vo
       <DetailDrawer
         open
         title={r ? `Yêu cầu ${r.no} – ${changeStatusLabels[r.status]}` : 'Yêu cầu duyệt NCC'}
+        audit={{ entityType: 'SupplierChangeRequest', id: r?.id }}
         onClose={onClose}
         loading={request.isLoading}
         error={error}

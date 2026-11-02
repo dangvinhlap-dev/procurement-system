@@ -50,6 +50,7 @@ export function WarehouseListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Warehouse"
         loading={warehouses.isLoading}
         canCreate={hasPermission(Permission.WarehouseManage)}
         onCreate={() => setOpen(null)}

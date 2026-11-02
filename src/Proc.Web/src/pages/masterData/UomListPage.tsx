@@ -42,6 +42,7 @@ export function UomListPage() {
         rows={uoms.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Uom"
         loading={uoms.isLoading}
         canCreate={rights.canCreate}
         onCreate={() => setOpen(null)}
@@ -89,6 +90,7 @@ function UomDrawer({ uom, canManage, onClose }: { uom: Uom | null; canManage: bo
     <DetailDrawer
       open
       title={uom ? `Đơn vị tính: ${uom.code}` : 'Thêm đơn vị tính'}
+      audit={{ entityType: 'Uom', id: uom?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

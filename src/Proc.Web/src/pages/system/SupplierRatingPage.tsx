@@ -37,6 +37,7 @@ export function SupplierRatingPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="SupplierRatingRule"
         loading={rules.isLoading}
         canCreate={canManage}
         onCreate={() => setOpen(null)}
@@ -129,6 +130,7 @@ function RatingDrawer({ rule, nextOrder, canManage, onClose }: { rule: SupplierR
     <DetailDrawer
       open
       title={rule ? `Hạng xếp loại: ${rule.code}` : 'Thêm hạng xếp loại'}
+      audit={{ entityType: 'SupplierRatingRule', id: rule?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

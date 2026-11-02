@@ -63,6 +63,7 @@ export function UserListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="User"
         loading={users.isLoading}
         canCreate={hasPermission(Permission.UserManage)}
         onCreate={() => setOpenId(null)}

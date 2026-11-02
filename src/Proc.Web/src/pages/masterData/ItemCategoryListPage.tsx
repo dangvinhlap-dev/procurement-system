@@ -48,6 +48,7 @@ export function ItemCategoryListPage() {
         rows={categories.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="ItemCategory"
         loading={categories.isLoading}
         canCreate={rights.canCreate}
         onCreate={() => setOpen(null)}
@@ -132,6 +133,7 @@ function ItemCategoryDrawer({
     <DetailDrawer
       open
       title={category ? `Nhóm hàng: ${category.code}` : 'Thêm nhóm hàng'}
+      audit={{ entityType: 'ItemCategory', id: category?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<AuditLogInterceptor>();
         services.AddScoped<IAccessLog, AccessLogWriter>();
         services.AddScoped<ILogQueries, LogQueries>();
+        services.AddScoped<IChangeHistoryQueries, ChangeHistoryQueries>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
         services.AddScoped<Proc.Application.Organization.ISystemParameterService, Proc.Infrastructure.Organization.SystemParameterService>();
         services.AddScoped<IInventoryPeriodService, InventoryPeriodService>();

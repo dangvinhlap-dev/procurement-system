@@ -33,6 +33,18 @@ public static class LogEndpoints
                 logs.SearchAccessAsync(new AccessLogQuery(from, to, userName, @event), ct))
             .RequirePermission(Permissions.System.LogView);
 
+        // Lịch sử thay đổi theo ô (F1) và theo bản ghi (design.md mục 9.3a): ai đăng nhập cũng xem được – không cần quyền xem nhật ký;
+        // phạm vi công ty/kho/nhóm hàng kiểm tra ở tầng truy vấn qua bản ghi được xem.
+        group.MapGet("/change-history/field", (
+                string entityType, string entityId, string field, IChangeHistoryQueries history, CancellationToken ct) =>
+                history.GetFieldHistoryAsync(entityType, entityId, field, ct))
+            .RequireAuthorization();
+
+        group.MapGet("/change-history/record", (
+                string entityType, string entityId, IChangeHistoryQueries history, CancellationToken ct) =>
+                history.GetRecordHistoryAsync(entityType, entityId, ct))
+            .RequireAuthorization();
+
         return app;
     }
 }

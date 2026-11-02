@@ -1,0 +1,33 @@
+/* Hộp thoại "Trợ giúp ô" (F1) và "Lịch sử thay đổi" – design.md mục 9.3a, docs/ui-style.md mục 6. Màu lấy từ biến --erp-*. */
+
+.field-help-stamp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 4px;
+}
+
+.field-help-empty {
+  color: var(--erp-text-muted);
+  font-style: italic;
+}
+
+.field-help-alert {
+  margin: 4px 0;
+}
+
+.field-help-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.field-help-count {
+  color: var(--erp-text-muted);
+}
+
+.field-help-info .ant-descriptions-item-label {
+  width: 160px;
+}

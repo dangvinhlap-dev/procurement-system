@@ -51,6 +51,7 @@ export function PurchaseOrderListPage() {
       rows={rows}
       columns={columns}
       rowKey={(r) => r.id}
+      auditEntity="PurchaseOrder"
       isMarked={(r) => r.pinned}
       onOpenRow={(r) => message.info(`Mở đơn mua hàng ${r.number} – form PO sẽ làm ở giai đoạn 5.`)}
       onClearFilters={() => {

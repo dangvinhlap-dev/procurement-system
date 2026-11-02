@@ -149,6 +149,7 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
       <DetailDrawer
         open
         title={title}
+        audit={{ entityType: 'User', id: detail?.id, fields: { password: null, newPassword: null, confirmPassword: null } }}
         onClose={onClose}
         onSave={canManage && (canEditInfo || canEditAccess) ? save : undefined}
         saving={saving}

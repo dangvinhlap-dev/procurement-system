@@ -99,6 +99,7 @@ export function PurchaseListPage({ kind, title, path, exportFileName }: { kind: 
       rows={documents.data?.items ?? []}
       columns={columnsByKind[kind]}
       rowKey={(r) => r.id}
+      auditEntity={kind === 'purchase-requests' ? 'PurchaseRequest' : 'PurchaseOrder'}
       loading={documents.isLoading}
       canCreate={hasPermission(kind === 'purchase-requests' ? Permission.PrCreate : Permission.PoCreate)}
       onCreate={() => navigate(`${path}/moi`)}
@@ -196,6 +197,7 @@ export function DeliveryTrackingPage() {
       rows={tracking.data ?? []}
       columns={trackingColumns}
       rowKey={(r) => r.lineId}
+      auditEntity="PurchaseOrderLine"
       loading={tracking.isLoading}
       isMarked={(r) => r.overdue}
       onOpenRow={(r) => navigate(`/mua-hang/po/${r.orderId}`)}
@@ -234,6 +236,7 @@ export function ApprovalRuleListPage() {
         rows={rules.data ?? []}
         columns={ruleColumns(typeName)}
         rowKey={(r) => r.id}
+        auditEntity="ApprovalRule"
         loading={rules.isLoading}
         canCreate={canManage}
         onCreate={() => setOpen(null)}
@@ -308,6 +311,7 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
     <DetailDrawer
       open
       title={rule ? `Cấp duyệt ${rule.docType} – cấp ${rule.level}` : 'Thêm cấp duyệt'}
+      audit={{ entityType: 'ApprovalRule', id: rule?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

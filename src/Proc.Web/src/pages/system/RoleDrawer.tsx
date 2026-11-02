@@ -72,6 +72,7 @@ export function RoleDrawer({ roleId, onClose }: { roleId: string | null; onClose
     <DetailDrawer
       open
       title={isNew ? 'Thêm vai trò' : `Vai trò: ${detail?.code ?? ''}`}
+      audit={{ entityType: 'Role', id: detail?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}

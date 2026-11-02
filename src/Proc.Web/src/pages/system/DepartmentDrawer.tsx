@@ -67,6 +67,7 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
     <DetailDrawer
       open
       title={isNew ? 'Thêm bộ phận' : `Bộ phận: ${department.code}`}
+      audit={{ entityType: 'Department', id: department?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}

@@ -17,6 +17,7 @@ import {
 import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { formRequiredMark } from '../../components/RequiredMark/requiredMark'
+import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { DATE_INPUT_FORMATS } from '../../utils/format'
 
 /** Khung cố định chiều cao cho lưới trong tab (DataGrid co giãn theo khung cha). Độ rộng cột cộng lại vừa ngăn kéo 720px. */
@@ -71,7 +72,15 @@ export function SupplierCompanyTab({ supplierId }: { supplierId: string }) {
   return (
     <Spin spinning={link.isLoading}>
       {/* Form riêng, tự bật/tắt theo quyền tại công ty – không theo chế độ chỉ xem của ngăn kéo NCC. */}
-      <Form form={form} layout="vertical" requiredMark={formRequiredMark(!!data?.canEdit)} disabled={!data?.canEdit} component="div">
+      {/* Dòng áp dụng tại công ty là bản ghi riêng (SupplierCompany): F1 ở các ô này xem lịch sử của dòng đó, không phải của NCC. */}
+      <Form
+        form={form}
+        layout="vertical"
+        requiredMark={formRequiredMark(!!data?.canEdit)}
+        disabled={!data?.canEdit}
+        component="div"
+        {...auditScopeProps({ entityType: 'SupplierCompany', id: data?.id })}
+      >
         {data && !data.isApplied && (
           <Alert type="info" showIcon className="detail-section" title={`${data.companyCode} chưa khai báo mua hàng của NCC này. Bấm "Lưu áp dụng" để thêm.`} />
         )}
@@ -143,6 +152,7 @@ export function SupplierItemsTab({ supplierId, canManage }: { supplierId: string
           onGroupByChange={() => {}}
           onOpenRow={canManage ? setEditing : undefined}
           loading={rows.isLoading}
+          auditEntity="SupplierItem"
         />
       </div>
       {editing !== undefined && <SupplierItemDialog supplierId={supplierId} row={editing} onClose={() => setEditing(undefined)} />}
@@ -252,6 +262,8 @@ function SupplierItemDialog({ supplierId, row, onClose }: { supplierId: string; 
         form={form}
         layout="vertical"
         disabled={false}
+        // Hộp thoại vẽ ngoài ngăn kéo: tự khai báo bản ghi để F1 xem lịch sử dòng NCC – sản phẩm.
+        {...auditScopeProps({ entityType: 'SupplierItem', id: row?.id })}
         initialValues={
           row
             ? { itemId: row.itemId, supplierItemCode: row.supplierItemCode ?? '', purchaseUomId: row.purchaseUomId, moq: row.moq, leadTimeDays: row.leadTimeDays, isPreferred: row.isPreferred }

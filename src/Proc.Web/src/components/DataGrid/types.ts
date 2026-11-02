@@ -19,6 +19,11 @@ export interface GridColumn<T> {
   tone?: (row: T) => StatusTone
   /** Cho phép nhóm theo cột này. */
   groupable?: boolean
+  /**
+   * Trường của bản ghi mà cột hiển thị, để F1 trên ô xem lịch sử (design.md mục 9.3a); mặc định là key (server tự thử thêm hậu tố Id:
+   * cột "supplier" → SupplierId). false = cột tính toán/ghép, không gắn trường nào.
+   */
+  auditField?: string | false
 }
 
 /**

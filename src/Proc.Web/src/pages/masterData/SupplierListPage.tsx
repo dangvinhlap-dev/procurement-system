@@ -90,6 +90,7 @@ export function SupplierListPage() {
         rows={suppliers.data?.items ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Supplier"
         loading={suppliers.isLoading}
         canCreate={canManage}
         onCreate={() => setOpenId(null)}

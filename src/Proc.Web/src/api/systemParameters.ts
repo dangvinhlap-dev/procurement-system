@@ -4,6 +4,10 @@ import { apiFetch } from './client'
 
 /** Một tham số tại công ty đang làm việc – khớp Proc.Application.Organization.SystemParameterDto. */
 export interface SystemParameter {
+  /** Khóa dòng tham số công ty lưu giá trị (null khi chưa lưu) – F1 xem lịch sử. */
+  auditId: string | null
+  /** Cột lưu giá trị; null = tham số chỉ xem, lưu nơi khác. */
+  auditField: string | null
   code: string
   group: string
   name: string

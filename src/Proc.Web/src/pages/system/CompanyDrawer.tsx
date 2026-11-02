@@ -120,6 +120,7 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
     <DetailDrawer
       open
       title={isNew ? 'Thêm công ty' : `Công ty: ${detail?.code ?? ''}`}
+      audit={{ entityType: 'Company', id: detail?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}

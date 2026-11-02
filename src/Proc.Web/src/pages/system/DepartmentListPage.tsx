@@ -47,6 +47,7 @@ export function DepartmentListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Department"
         loading={departments.isLoading}
         canCreate={hasPermission(Permission.DepartmentManage)}
         onCreate={() => setOpen(null)}

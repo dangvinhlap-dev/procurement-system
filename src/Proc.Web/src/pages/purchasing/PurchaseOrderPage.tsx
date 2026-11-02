@@ -497,6 +497,7 @@ export function PurchaseOrderPage() {
       <DocumentForm
         title="Đơn mua hàng"
         number={isNew ? null : (doc?.no ?? '')}
+        audit={{ entityType: 'PurchaseOrder', id: doc?.id }}
         printPath={doc ? `/api/purchase-orders/${doc.id}/pdf` : undefined}
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -602,7 +603,7 @@ export function PurchaseOrderPage() {
                 </Button>
               </Space>
             )}
-            <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef}
+            <LineGrid name="lines" auditEntity="PurchaseOrderLine" columns={columns} readOnly={readOnly} addRef={addRef}
               newLine={() => ({ id: null, qty: 1, unitPrice: 0, discountPct: 0, sourcePrLineId: null })} />
           </>
         }

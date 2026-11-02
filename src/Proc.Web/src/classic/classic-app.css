@@ -26,6 +26,8 @@
   --erp-icon-success: #1e8f2e;
   --erp-icon-warning: #c48a00;
   --erp-font-mono: Consolas, 'Courier New', monospace;
+  /* Chữ phụ (giá trị trống trong lịch sử thay đổi…) – cùng mã màu với --erp-text-muted của classic.css, dùng được cả trong hộp thoại. */
+  --erp-text-muted: #5a6b7d;
 }
 
 /* Gắn vào body chỉ trong lúc đang kéo đổi độ rộng cột (EntryGrid, LineGrid) – giữ con trỏ kéo ngang, không bôi đen chữ. */

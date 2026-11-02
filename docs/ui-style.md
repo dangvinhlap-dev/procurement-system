@@ -97,6 +97,7 @@ Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
 
 | Phím | Tác dụng |
 | --- | --- |
+| F1 | Trợ giúp ô: lịch sử thay đổi (ai tạo/sửa/xóa, giá trị cũ → mới) và thông tin ô – ô đang có con trỏ hoặc ô dưới chuột (design.md mục 9.3a) |
 | Tab / Shift+Tab | Chuyển ô (thứ tự trái → phải, trên → dưới) |
 | Enter trong lưới | Xuống ô cùng cột ở dòng dưới; dòng cuối thì thêm dòng mới |
 | Ctrl+S | Lưu |

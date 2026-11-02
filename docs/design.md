@@ -566,6 +566,41 @@ Mỗi request mang **công ty đang làm việc** (header `X-Company-Id`, chọn
   nhật ký truy cập, kể cả đăng nhập sai bằng tên không tồn tại.
 - Mỗi lần tìm tối đa 366 ngày và 2.000 dòng mới nhất; nhiều hơn thì báo người dùng thu hẹp khoảng ngày.
 
+### 9.3a Lịch sử thay đổi theo ô (phím F1) và theo chứng từ
+
+Yêu cầu người dùng 02/11/2026, làm như trợ giúp ô và "Hiển thị thay đổi" của ERP (SAP ECC6): bấm **F1** vào bất kỳ ô dữ liệu nào do người
+dùng nhập thì thấy ai tạo, ai sửa, ai xóa giá trị, lúc nào, giá trị cũ → mới.
+
+- **Nguồn dữ liệu**: chính `AuditLog` (mục 9.3) – nhật ký đã ghi giá trị cũ/mới theo từng trường của mọi entity `[Auditable]`, kể cả dòng
+  chứng từ. Không thêm bảng.
+- **Hộp thoại "Trợ giúp ô"** (F1): tab **LỊCH SỬ THAY ĐỔI** (mở sẵn) gồm dòng "Tạo: … lúc …; Sửa gần nhất: …" của bản ghi và bảng
+  Ngày giờ – Người thao tác – Thao tác – Giá trị cũ – Giá trị mới; tab **THÔNG TIN Ô** ghi nhãn ô, giá trị hiện tại, đối tượng, tên kỹ thuật
+  (Loại.Trường), bảng/cột CSDL, kiểu dữ liệu, độ dài, bắt buộc, tham chiếu tới (như "Thông tin kỹ thuật").
+  - Thao tác: Tạo; Sửa; **Nhập giá trị** (trống → có); **Xóa giá trị** (có → trống); **Xóa** (xóa cả dòng/bản ghi).
+  - Giá trị định dạng theo mục 5 CLAUDE.md (ngày dd/MM/yyyy, số kiểu Việt Nam); ô tham chiếu (NCC, kho, mặt hàng, ĐVT…) hiện **mã – tên**;
+    cột người thao tác (PostedBy, ApprovedBy…) hiện tên đăng nhập – họ tên; giá trị liệt kê hiện nhãn tiếng Việt.
+  - Ô khóa (phiếu chỉ xem) không nhận con trỏ: F1 lấy ô đang có con trỏ, nếu không thì ô dưới chuột. F1 mặc định của trình duyệt bị chặn.
+  - Ô hệ thống tính (thành tiền, tổng tiền…) không lưu thẳng: báo xem ở ô gốc hoặc lịch sử cả phiếu. Ô bảo mật (đã ghi `***`) vẫn che.
+  - Bản ghi tạo trước khi có nhật ký (dữ liệu khởi tạo): người/thời điểm tạo lấy từ cột CreatedAt/CreatedBy.
+- **Nút "Lịch sử thay đổi"** trên phiếu (DocumentForm) và ngăn kéo danh mục (DetailDrawer): mọi thay đổi của đầu phiếu và các dòng con,
+  **kể cả dòng đã xóa** (tìm qua khóa cha ghi trong dòng nhật ký tạo/xóa của dòng); cột Đối tượng ghi "Đầu phiếu" hoặc "… – dòng n (đã xóa)";
+  lọc theo ô, người thao tác, khoảng ngày. Dòng con = entity `[Auditable]` không phải AuditableEntity, xóa theo cha (cascade), sâu tối đa 2 cấp.
+- **F1 trên lưới danh sách** (ListPage khai báo `auditEntity`): ô của dòng danh sách xem lịch sử trường tương ứng (cột "supplier" → SupplierId).
+- **Danh mục**: ngăn kéo (DetailDrawer) khai báo `audit`; dòng con là bản ghi riêng (người liên hệ, tài khoản ngân hàng NCC, quy đổi ĐVT,
+  NCC áp dụng tại công ty, NCC – sản phẩm) gắn vùng bản ghi riêng để F1 không lẫn với ô của bản ghi chính. Entity "owned" (người liên hệ,
+  TK ngân hàng, quy đổi ĐVT) tra qua bản ghi chủ. Tham số hệ thống: F1 trên ô giá trị xem cột tương ứng của dòng tham số công ty; đánh số
+  chứng từ: dòng cấu hình riêng (đang dùng mẫu mặc định thì chưa có lịch sử).
+- **Chưa làm**: ô của báo cáo (số liệu tính toán, không phải dữ liệu nhập); ô phân quyền dạng cây của vai trò và ô gán vai trò/phạm vi của
+  người dùng (bản ghi riêng nhiều dòng) – xem ở nút "Lịch sử thay đổi" hoặc màn hình Nhật ký thao tác.
+- **Ai được xem**: mọi người đã đăng nhập – không cần quyền `System.Log.View` (người dùng chốt 02/11/2026). Nhưng chỉ xem được bản ghi
+  mình thấy được: bản ghi nạp qua global query filter (công ty, kho, nhóm hàng); dòng con kiểm tra cả bản ghi cha. Không thấy → "Không tìm
+  thấy". Nhật ký của bản ghi lấy đủ, không lọc theo công ty lúc ghi (danh mục dùng chung có thể do tổng công ty sửa).
+- **API**: `GET /api/change-history/field?entityType=&entityId=&field=` (tên ô ở giao diện, tự thêm hậu tố Id khi cần) và
+  `GET /api/change-history/record?entityType=&entityId=`; tối đa 2.000 dòng mới nhất.
+- **Giao diện**: vùng bản ghi gắn `data-audit-entity`/`data-audit-id` (DocumentForm, DetailDrawer khai báo `audit`; LineGrid khai báo
+  `auditEntity`; DataGrid gắn theo dòng); tên ô lấy từ id ô nhập antd; tên ô khác tên trường thì khai báo `fields` (ví dụ GRN
+  `warehouseId` → `ToWarehouseId`).
+
 ### 9.4 Đăng nhập
 
 | Quy tắc | Giá trị |

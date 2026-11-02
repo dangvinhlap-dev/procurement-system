@@ -118,9 +118,19 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C6 (đối chiếu PO – nhận – hóa đơn, design.md 18.15) đã xong 02/11/2026. Lát kế tiếp theo lộ trình: **D1** (điểm đặt hàng lại, tồn an toàn – xem
-  `docs/Phantich_01112026.md` mục 6) – lập kế hoạch ngắn trước khi code. Người dùng vừa yêu cầu **phân tích** tính năng F1 xem lịch sử
-  tạo/sửa/xóa từng ô (kiểu SAP ECC6) – chờ người dùng duyệt phân tích rồi mới làm.
+- **G1–G3: phím F1 xem lịch sử tạo/sửa/xóa từng ô (kiểu ERP), nhánh `feature/f1-lich-su-o`** – người dùng chốt 02/11/2026: hộp thoại
+  trợ giúp ô kiểu SAP (tab LỊCH SỬ THAY ĐỔI + THÔNG TIN Ô); ai đăng nhập cũng xem được (vẫn theo phạm vi công ty/kho/nhóm hàng của bản ghi);
+  mọi ô do người dùng nhập đều xem được; làm G1 → G3.
+  - Bước 1 (xong): API `GET /api/change-history/field` và `/record` (`ChangeHistoryQueries`) – lịch sử theo ô, cả phiếu kèm dòng đã xóa,
+    tham chiếu đổi sang mã – tên, thông tin kỹ thuật ô; test tích hợp `LichSuThayDoi_TheoO_TheoPhieu_CaDongDaXoa_ChanNgoaiPhamVi`.
+  - Bước 2 (xong – G1): `FieldHelpHost` (F1 trong AppShell, ô có con trỏ hoặc ô dưới chuột), hộp thoại "Trợ giúp ô" 2 tab, nút
+    "Lịch sử thay đổi" (cả phiếu, cả dòng đã xóa, lọc ô/người/ngày); khung dùng chung DocumentForm/LineGrid/DetailDrawer/DataGrid nhận
+    `audit`/`auditEntity`; gắn cho 11 chứng từ. design.md mục 9.3a, ui-style.md mục 6 (F1). e2e `field-help.spec.ts`. Kiểm tra: Playwright 80/80.
+  - Bước 3 (xong – G2 + G3): 21 ngăn kéo danh mục/hệ thống khai báo `audit`; dòng con là bản ghi riêng (người liên hệ, TK ngân hàng NCC,
+    quy đổi ĐVT, NCC áp dụng tại công ty, NCC – sản phẩm) gắn vùng riêng; entity owned tra qua bản ghi chủ; tham số hệ thống và đánh số
+    chứng từ trả khóa dòng + cột. F1 trên ô lưới danh sách của 26 màn hình (`auditEntity` của ListPage/DataGrid). Test tích hợp
+    `ChangeHistoryTests`, e2e `field-help-catalog.spec.ts`.
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 480 qua; Playwright 81/81; `npm run build`, `tsc`, `oxlint` qua. Không có migration.
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi

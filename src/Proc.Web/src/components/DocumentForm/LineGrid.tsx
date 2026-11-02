@@ -14,6 +14,11 @@ export interface LineColumn {
   required?: boolean
   /** Ô của một dòng: thường là Form.Item name={[field.name, '…']} noStyle bọc ô nhập; ô tính toán thì là chữ chỉ đọc. */
   render: (field: FormListFieldData, index: number) => ReactNode
+  /**
+   * Trường của dòng mà ô này hiển thị khi ô không phải ô nhập (ví dụ cột "Tên hàng" chỉ đọc → itemId), để F1 xem được lịch sử
+   * (design.md mục 9.3a). Ô nhập thì tự lấy tên từ Form.Item, không cần khai báo.
+   */
+  auditField?: string
 }
 
 /** Thuộc tính của LineGrid. */
@@ -28,6 +33,8 @@ export interface LineGridProps {
   addRef?: MutableRefObject<(() => void) | null>
   /** Sửa được ô nhưng không thêm/xóa dòng (phiếu sinh từ phiếu khác, ví dụ phiếu nhập mua nội bộ). */
   fixedRows?: boolean
+  /** Mã loại đối tượng của dòng trong nhật ký (ví dụ PurchaseOrderLine): bấm F1 ở ô của dòng đã lưu xem lịch sử ô đó. */
+  auditEntity?: string
 }
 
 /**
@@ -35,7 +42,7 @@ export interface LineGridProps {
  * (hết dòng thì sang dòng dưới), F2 thêm dòng và đặt con trỏ vào ô đầu của dòng mới. Cột STT và nút xóa dòng có sẵn.
  * Kéo mép phải tiêu đề cột để đổi độ rộng, bấm đúp mép để trả về độ rộng gốc (docs/ui-style.md mục 5).
  */
-export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false }: LineGridProps) {
+export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false, auditEntity }: LineGridProps) {
   return (
     <Form.List name={name}>
       {(fields, { add, remove }) => (
@@ -46,6 +53,8 @@ export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fix
           onAdd={() => add(newLine())}
           onRemove={remove}
           addRef={fixedRows ? undefined : addRef}
+          listName={name}
+          auditEntity={auditEntity}
         />
       )}
     </Form.List>
@@ -59,7 +68,11 @@ function LineGridBody({
   onAdd,
   onRemove,
   addRef,
+  listName,
+  auditEntity,
 }: {
+  listName: string
+  auditEntity?: string
   fields: FormListFieldData[]
   columns: LineColumn[]
   readOnly: boolean
@@ -67,6 +80,7 @@ function LineGridBody({
   onRemove: (index: number) => void
   addRef?: MutableRefObject<(() => void) | null>
 }) {
+  const form = Form.useFormInstance()
   // Độ rộng cột người dùng đã kéo (theo key); cột chưa kéo dùng độ rộng khai báo.
   const [widths, setWidths] = useState<Record<string, number>>({})
   const widthOf = (c: LineColumn) => widths[c.key] ?? Math.round(c.width * layoutTokens.columnWidthScale)
@@ -147,10 +161,15 @@ function LineGridBody({
         </thead>
         <tbody>
           {fields.map((field, index) => (
-            <tr key={field.key} className="line-grid-row">
+            <tr
+              key={field.key}
+              className="line-grid-row"
+              // Mỗi dòng là một bản ghi trong nhật ký: khóa dòng lấy từ ô ẩn "id" (dòng mới chưa lưu thì rỗng).
+              {...(auditEntity ? { 'data-audit-entity': auditEntity, 'data-audit-id': form.getFieldValue([listName, field.name, 'id']) ?? '' } : {})}
+            >
               <td className="line-grid-stt">{index + 1}</td>
               {columns.map((c) => (
-                <td key={c.key} style={{ textAlign: c.align ?? 'left' }}>
+                <td key={c.key} style={{ textAlign: c.align ?? 'left' }} data-audit-field={c.auditField}>
                   {c.render(field, index)}
                 </td>
               ))}

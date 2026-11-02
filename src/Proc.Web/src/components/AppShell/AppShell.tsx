@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useDashboard } from '../../api/dashboard'
 import { demoPinnedScreens } from '../../mocks/session'
 import { layoutCssVars } from '../../theme'
+import { FieldHelpHost } from '../FieldHelp/FieldHelpHost'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { NavTree } from './NavTree'
 import { ShellBar } from './ShellBar'
@@ -30,7 +31,7 @@ function todayInVietnam(): string {
 /**
  * Khung ứng dụng cố định cho mọi trang theo phong cách ERP desktop cổ điển (docs/ui-style.md, design.md mục 17): thanh menu chữ + thanh
  * công cụ 54px trên cùng, cây điều hướng trái 240px, vùng nội dung (ListPage/DocumentForm). Phiên bản và ngày làm việc nằm trong menu người dùng.
- * Phím tắt chung: F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
+ * Phím tắt chung: F1 xem lịch sử thay đổi của ô (FieldHelpHost), F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
  * Người dùng và công ty lấy từ phiên đăng nhập; số đếm và số thông báo chưa đọc theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
  * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.
  */
@@ -84,6 +85,7 @@ export function AppShell() {
         onChangePassword={() => setChangingPassword(true)}
       />
       <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
+      <FieldHelpHost />
       <div className="app-body">
         {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
         <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={navCounts} />

@@ -42,6 +42,7 @@ export function SupplierGroupListPage() {
         rows={groups.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="SupplierGroup"
         loading={groups.isLoading}
         canCreate={rights.canCreate}
         onCreate={() => setOpen(null)}
@@ -91,6 +92,7 @@ function SupplierGroupDrawer({ group, canManage, onClose }: { group: SupplierGro
     <DetailDrawer
       open
       title={group ? `Nhóm NCC: ${group.code}` : 'Thêm nhóm NCC'}
+      audit={{ entityType: 'SupplierGroup', id: group?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

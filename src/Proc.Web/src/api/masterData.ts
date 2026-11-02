@@ -84,6 +84,8 @@ export interface ItemConversion {
   uomCode: string
   uomName: string
   factor: number
+  /** Khóa dòng quy đổi – để F1 xem lịch sử (design.md mục 9.3a). */
+  id: string | null
 }
 
 /** Chi tiết hàng hóa. */
@@ -432,6 +434,8 @@ export interface SupplierCompanyLink {
   startDate: string | null
   isActive: boolean
   canEdit: boolean
+  /** Khóa dòng áp dụng (null khi chưa khai báo) – để F1 xem lịch sử. */
+  id: string | null
 }
 
 /** Một dòng NCC – sản phẩm. */
