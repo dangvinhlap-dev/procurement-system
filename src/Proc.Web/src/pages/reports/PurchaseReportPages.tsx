@@ -1,4 +1,5 @@
-import { Alert, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
+import { SettingOutlined } from '@ant-design/icons'
+import { Alert, Button, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
 import dayjs from 'dayjs'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
@@ -6,6 +7,8 @@ import { useItemCategories } from '../../api/masterData'
 import { priorityLabels } from '../../api/purchasing'
 import {
   useContractCompliance,
+  useKpi,
+  type KpiRow,
   usePendingRequests,
   usePriceVariance,
   type OutOfContractLine,
@@ -31,6 +34,7 @@ import {
   type SourcingSavingRow,
   type SupplierEvaluationRow,
 } from '../../api/reports'
+import { screens } from '../../app/screens'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
@@ -720,6 +724,91 @@ export function PriceVarianceReportPage() {
           }
         />
       }
+    />
+  )
+}
+
+/** Số % hoặc số vụ của một KPI theo kiểu Việt Nam: 37,43% · 0 vụ. */
+const kpiText = (r: KpiRow, v: number | null) => (v == null ? null : r.isCount ? `${formatQuantity(v)} vụ` : `${formatQuantity(v)}%`)
+
+/** Trạng thái một KPI: Đạt / Không đạt / Chưa có dữ liệu (mẫu số = 0) / Chưa đo (chờ lát sau). */
+const kpiStatus = (r: KpiRow) => (!r.measured ? 'Chưa đo' : r.met == null ? 'Chưa có dữ liệu' : r.met ? 'Đạt' : 'Không đạt')
+
+const kpiColumns: GridColumn<KpiRow>[] = [
+  { key: 'name', title: 'Chỉ số', width: 220, value: (r) => r.name, auditField: false },
+  {
+    key: 'status',
+    title: 'Trạng thái',
+    width: 130,
+    type: 'status',
+    value: kpiStatus,
+    tone: (r) => (r.met == null ? 'neutral' : r.met ? 'success' : 'error'),
+    auditField: false,
+  },
+  // Kết quả là số canh phải (ui-style.md mục 3); đơn vị % hay vụ đọc ở cột Mục tiêu.
+  { key: 'value', title: 'Kết quả kỳ này', width: 110, type: 'quantity', value: (r) => r.value, auditField: false },
+  { key: 'target', title: 'Mục tiêu', width: 90, value: (r) => `${r.higherIsBetter ? '≥' : '≤'} ${kpiText(r, r.target)}`, auditField: false },
+  { key: 'previous', title: 'Kỳ trước', width: 100, type: 'quantity', value: (r) => r.previousValue, auditField: false },
+  { key: 'numerator', title: 'Tử số', width: 130, type: 'quantity', value: (r) => r.numerator, auditField: false },
+  { key: 'denominator', title: 'Mẫu số', width: 130, type: 'quantity', value: (r) => r.denominator, auditField: false },
+  { key: 'unit', title: 'Đơn vị', width: 70, value: (r) => (r.measured ? (r.unit === 'Money' ? 'VND' : 'Dòng') : null), auditField: false },
+  { key: 'formula', title: 'Cách đo', width: 340, value: (r) => r.formula, auditField: false },
+  { key: 'note', title: 'Ghi chú', width: 380, value: (r) => r.note, auditField: false },
+]
+
+/**
+ * Báo cáo → Bảng KPI cung ứng (design.md mục 18.18): 9 KPI của đề xuất Ban CUVT cho công ty đang làm việc, kỳ chọn so kỳ trước liền trước,
+ * so mục tiêu ở Tham số hệ thống (nhóm KPI). Mặc định tháng trước. Bấm đúp mở báo cáo chi tiết của chỉ số; dòng không đạt được tô màu.
+ */
+export function KpiReportPage() {
+  const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const [range, setRange] = useState(() => {
+    const { from, to } = lastMonth()
+    return { from, to }
+  })
+  const report = useKpi(range)
+  const data = report.data
+  const previous = data ? `kỳ trước từ ${formatDate(data.previousFrom)} đến ${formatDate(data.previousTo)}` : 'kỳ trước'
+  return (
+    <ListPage
+      title="Bảng KPI cung ứng"
+      exportFileName="bang-kpi-cung-ung"
+      exportSubtitle={`Từ ${formatDate(range.from)} đến ${formatDate(range.to)} – so ${previous}`}
+      canCreate={false}
+      actions={
+        hasPermission(Permission.ParameterView) && (
+          <Button icon={<SettingOutlined />} onClick={() => navigate('/he-thong/tham-so')}>
+            Mục tiêu KPI
+          </Button>
+        )
+      }
+      rows={data?.items ?? []}
+      columns={kpiColumns}
+      rowKey={(r) => r.code}
+      loading={report.isLoading}
+      isMarked={(r) => r.met === false}
+      onOpenRow={(r) => {
+        const path = screens.find((s) => s.code === r.report)?.path
+        if (path) navigate(path)
+      }}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : (
+          <Alert
+            type={data && data.metCount < data.measuredCount ? 'warning' : 'info'}
+            showIcon
+            title={`Đạt ${data?.metCount ?? 0}/${data?.measuredCount ?? 0} chỉ số có kết quả; so với ${previous}.`}
+            description="Mục tiêu sửa ở Tham số hệ thống, nhóm KPI. Tô màu: không đạt. Bấm đúp để mở báo cáo chi tiết của chỉ số."
+          />
+        )
+      }
+      onClearFilters={() => {
+        const { from, to } = lastMonth()
+        setRange({ from, to })
+      }}
+      filters={<LogDateRangeFilter value={range} onChange={(r) => setRange({ ...range, ...r })} />}
     />
   )
 }

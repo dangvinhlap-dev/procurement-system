@@ -13,8 +13,9 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % m
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Tham số hệ thống' }).click()
 
   await expect(page.getByRole('heading', { name: 'Tham số hệ thống – DTV' })).toBeVisible()
-  // 2 tham số sửa được + 2 bật/tắt nhận hàng (mục 18.14) + 3 SLA mua hàng (mục 18.13) + 2 chỉ xem.
-  await expect(page.locator('.data-grid-row')).toHaveCount(9)
+  // 2 tham số sửa được + 2 bật/tắt nhận hàng (mục 18.14) + 3 SLA mua hàng (mục 18.13) + 2 chỉ xem + 10 tham số KPI (mục 18.18).
+  await expect(page.locator('.data-grid-row')).toHaveCount(19)
+  await expect(page.locator('.data-grid-row', { hasText: 'Mục tiêu KPI – Hàng đạt chất lượng (≥)' })).toContainText('98')
   await expect(page.locator('.data-grid-row', { hasText: 'Bắt buộc kiểm tra chất lượng khi nhận hàng' })).toContainText('Tắt')
   await expect(page.locator('.data-grid-row', { hasText: 'SLA – hàng chưa có NCC được duyệt' })).toContainText('5')
   await expect(page.locator('.data-grid-row', { hasText: 'Phương pháp giá vốn' })).toContainText('Chỉ xem')

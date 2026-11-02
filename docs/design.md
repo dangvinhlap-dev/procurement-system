@@ -1471,6 +1471,30 @@ P5 (KPI ≥ 95% mua theo hợp đồng). Dùng nguồn giá đã ghi trên dòng
 
 Không có migration.
 
+### 18.18 Bảng KPI cung ứng (lát F2, 02/11/2026)
+
+Nguồn: bảng "Đánh giá KPI" của đề xuất Ban CUVT (9 chỉ số, mục 3.6 `docs/Phantich_01112026.md`). Màn hình **KPI** (Báo cáo, quyền
+`Report.Purchase.View`, `GET /api/reports/kpi?from=&to=`), công ty đang làm việc, mặc định tháng trước, so **kỳ trước liền trước** (cách lùi kỳ
+như báo cáo biến động giá – mục 18.17). Mỗi chỉ số dùng đúng số liệu của báo cáo chi tiết; bấm đúp mở báo cáo đó.
+
+| Chỉ số | Cách đo | Mục tiêu mặc định | Báo cáo chi tiết |
+| --- | --- | --- | --- |
+| Tiết kiệm mua hàng | Σ tiết kiệm chọn thầu so giá chào bình quân ÷ Σ (giá chào bình quân × SL), RFQ chọn thầu trong kỳ. Ví dụ chào 100.000/110.000/120.000, trúng 100.000 × 10 → 100.000 ÷ 1.100.000 = 9,09% | ≥ 3% (đề xuất 3–8%) | SAVE |
+| Mua theo giá/hợp đồng đã duyệt | Như PRCW: theo giá đã duyệt ÷ (tổng − không xác định) | ≥ 95% | PRCW |
+| Đơn hàng đúng SLA | Như báo cáo SLA: đúng hạn ÷ (đúng hạn + trễ + quá hạn), PR duyệt trong kỳ | ≥ 95% | SLA |
+| NCC giao đúng hạn | Σ dòng nhận đúng/trước hạn ÷ Σ dòng nhận có ngày hẹn (đánh giá NCC) | ≥ 95% | SUPEVAL |
+| Hàng đạt chất lượng | Dòng Đạt ÷ dòng đã kiểm tra (QCDEV) | ≥ 98% | QCDEV |
+| Tỷ lệ mua khẩn cấp | Giá trị dòng PO khẩn ÷ tổng giá trị dòng PO Đã duyệt/Đã đóng theo ngày PO, trước VAT | ≤ 5% (đề xuất "giảm dần" – xem cột kỳ trước) | PO |
+| Tồn kho chậm luân chuyển | Giá trị tồn không xuất từ N ngày (tham số, mặc định 90) ÷ tổng giá trị tồn, **tại hôm nay** (không theo kỳ, không có kỳ trước) | ≤ 10% | SLOW |
+| Hoàn thành đánh giá NCC | Chưa đo – cần phiếu đánh giá NCC theo quý (lát F4) | 100% | – |
+| Vi phạm nghiêm trọng | Chưa đo – cần ghi nhận vi phạm của KSNB (lát F3) | 0 vụ | – |
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Mục tiêu từng chỉ số và số ngày tồn chậm là **tham số công ty** (Tham số hệ thống, nhóm KPI; tỷ lệ 0–100%, vi phạm số nguyên 0–1.000); trống = về mặc định. Migration `V0_13_0_MucTieuKpi` | Mỗi pháp nhân tự đặt mục tiêu; F1 xem lịch sử đổi mục tiêu |
+| Chỉ số cao là tốt đạt khi kết quả ≥ mục tiêu; thấp là tốt (mua khẩn, tồn chậm, vi phạm) đạt khi ≤ mục tiêu. Mẫu số = 0 → "Chưa có dữ liệu", không tính đạt/không đạt | Không báo đạt giả khi kỳ không phát sinh |
+| Phạm vi: công ty đang làm việc, kho và nhóm hàng của người xem (như các báo cáo nguồn); chưa có bảng KPI toàn tập đoàn | Báo cáo SLA, chất lượng chỉ theo công ty |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

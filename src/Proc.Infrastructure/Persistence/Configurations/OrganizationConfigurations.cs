@@ -21,6 +21,17 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.SeparatePoCreatorFromReceipt).HasDefaultValue(false);
         builder.Property(x => x.SlaSourcingDays).HasDefaultValue(CompanyParameter.DefaultSlaSourcingDays);
         builder.Property(x => x.SlaUrgentDays).HasDefaultValue(CompanyParameter.DefaultSlaUrgentDays);
+        // Mục tiêu KPI (design.md mục 18.18): mặc định cột = mục tiêu mặc định của danh mục để dòng tham số cũ có ngay giá trị đúng.
+        builder.Property(x => x.KpiSavingTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Saving).DefaultTarget);
+        builder.Property(x => x.KpiContractTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.ContractCompliance).DefaultTarget);
+        builder.Property(x => x.KpiSlaTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.PurchaseSla).DefaultTarget);
+        builder.Property(x => x.KpiOnTimeTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.OnTimeDelivery).DefaultTarget);
+        builder.Property(x => x.KpiQualityTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Quality).DefaultTarget);
+        builder.Property(x => x.KpiEmergencyTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Emergency).DefaultTarget);
+        builder.Property(x => x.KpiSlowMovingTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.SlowMoving).DefaultTarget);
+        builder.Property(x => x.KpiSupplierReviewTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.SupplierReview).DefaultTarget);
+        builder.Property(x => x.KpiViolationTarget).HasDefaultValue(0);
+        builder.Property(x => x.KpiSlowMovingDays).HasDefaultValue(KpiCatalog.DefaultSlowMovingDays);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }

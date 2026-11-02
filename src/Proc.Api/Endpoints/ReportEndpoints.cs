@@ -60,6 +60,9 @@ public static class ReportEndpoints
         reports.MapGet("/price-variance", (DateOnly from, DateOnly to, bool? allCompanies, Guid? categoryId, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetPriceVarianceAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), categoryId, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Bảng KPI Ban Cung ứng, mục tiêu theo tham số công ty (design.md mục 18.18).
+        reports.MapGet("/kpi", (DateOnly from, DateOnly to, IKpiService s, CancellationToken ct) => s.GetAsync(from, to, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
 
         // Xuất chứng từ cho kế toán (mục 11.5): docTypes nhiều giá trị (?docTypes=GRN&docTypes=RTV), trống = tất cả.
         var accounting = app.MapGroup("/api/accounting-export").WithTags("Xuất cho kế toán");

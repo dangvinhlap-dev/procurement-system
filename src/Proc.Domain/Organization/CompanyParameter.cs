@@ -136,4 +136,91 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
             default: SlaUrgentDays = v; break;
         }
     }
+
+    /// <summary>Mục tiêu KPI tiết kiệm mua hàng (%) – numeric(9,4) (design.md mục 18.18).</summary>
+    public decimal KpiSavingTarget { get; private set; } = KpiCatalog.Get(KpiCode.Saving).DefaultTarget;
+
+    /// <summary>Mục tiêu KPI mua theo giá/hợp đồng đã duyệt (%).</summary>
+    public decimal KpiContractTarget { get; private set; } = KpiCatalog.Get(KpiCode.ContractCompliance).DefaultTarget;
+
+    /// <summary>Mục tiêu KPI đơn hàng đúng SLA (%).</summary>
+    public decimal KpiSlaTarget { get; private set; } = KpiCatalog.Get(KpiCode.PurchaseSla).DefaultTarget;
+
+    /// <summary>Mục tiêu KPI NCC giao đúng hạn (%).</summary>
+    public decimal KpiOnTimeTarget { get; private set; } = KpiCatalog.Get(KpiCode.OnTimeDelivery).DefaultTarget;
+
+    /// <summary>Mục tiêu KPI hàng đạt chất lượng (%).</summary>
+    public decimal KpiQualityTarget { get; private set; } = KpiCatalog.Get(KpiCode.Quality).DefaultTarget;
+
+    /// <summary>Mức trần KPI tỷ lệ mua khẩn cấp (%).</summary>
+    public decimal KpiEmergencyTarget { get; private set; } = KpiCatalog.Get(KpiCode.Emergency).DefaultTarget;
+
+    /// <summary>Mức trần KPI tồn kho chậm luân chuyển (%).</summary>
+    public decimal KpiSlowMovingTarget { get; private set; } = KpiCatalog.Get(KpiCode.SlowMoving).DefaultTarget;
+
+    /// <summary>Mục tiêu KPI hoàn thành đánh giá NCC (%).</summary>
+    public decimal KpiSupplierReviewTarget { get; private set; } = KpiCatalog.Get(KpiCode.SupplierReview).DefaultTarget;
+
+    /// <summary>Mức trần KPI vi phạm nghiêm trọng (số vụ).</summary>
+    public int KpiViolationTarget { get; private set; }
+
+    /// <summary>Số ngày không xuất để coi là tồn chậm luân chuyển khi tính KPI.</summary>
+    public int KpiSlowMovingDays { get; private set; } = KpiCatalog.DefaultSlowMovingDays;
+
+    /// <summary>Mục tiêu đang dùng của một KPI.</summary>
+    /// <param name="code">Mã chỉ số.</param>
+    /// <returns>Mục tiêu.</returns>
+    public decimal KpiTarget(KpiCode code) => code switch
+    {
+        KpiCode.Saving => KpiSavingTarget,
+        KpiCode.ContractCompliance => KpiContractTarget,
+        KpiCode.PurchaseSla => KpiSlaTarget,
+        KpiCode.OnTimeDelivery => KpiOnTimeTarget,
+        KpiCode.Quality => KpiQualityTarget,
+        KpiCode.Emergency => KpiEmergencyTarget,
+        KpiCode.SlowMoving => KpiSlowMovingTarget,
+        KpiCode.SupplierReview => KpiSupplierReviewTarget,
+        _ => KpiViolationTarget,
+    };
+
+    /// <summary>Đổi mục tiêu một KPI (design.md mục 18.18).</summary>
+    /// <param name="code">Mã chỉ số.</param>
+    /// <param name="value">Mục tiêu mới (tỷ lệ làm tròn 4 số lẻ); null = về mặc định.</param>
+    /// <exception cref="BusinessRuleException">Tỷ lệ ngoài 0–100; số vụ không nguyên hoặc ngoài 0–<see cref="KpiCatalog.MaxViolationTarget"/>.</exception>
+    public void ChangeKpiTarget(KpiCode code, decimal? value)
+    {
+        var definition = KpiCatalog.Get(code);
+        var v = Math.Round(value ?? definition.DefaultTarget, 4, MidpointRounding.AwayFromZero);
+        if (definition.IsCount)
+        {
+            if (v != decimal.Truncate(v) || v < 0 || v > KpiCatalog.MaxViolationTarget)
+                throw new BusinessRuleException($"Mục tiêu \"{definition.Name}\" phải là số nguyên từ 0 đến {KpiCatalog.MaxViolationTarget}.");
+            KpiViolationTarget = (int)v;
+            return;
+        }
+
+        if (v < 0 || v > 100) throw new BusinessRuleException($"Mục tiêu \"{definition.Name}\" phải từ 0 đến 100%.");
+        switch (code)
+        {
+            case KpiCode.Saving: KpiSavingTarget = v; break;
+            case KpiCode.ContractCompliance: KpiContractTarget = v; break;
+            case KpiCode.PurchaseSla: KpiSlaTarget = v; break;
+            case KpiCode.OnTimeDelivery: KpiOnTimeTarget = v; break;
+            case KpiCode.Quality: KpiQualityTarget = v; break;
+            case KpiCode.Emergency: KpiEmergencyTarget = v; break;
+            case KpiCode.SlowMoving: KpiSlowMovingTarget = v; break;
+            default: KpiSupplierReviewTarget = v; break;
+        }
+    }
+
+    /// <summary>Đổi số ngày không xuất để tính KPI tồn chậm luân chuyển.</summary>
+    /// <param name="days">Số ngày; null = về mặc định <see cref="KpiCatalog.DefaultSlowMovingDays"/>.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài 1–<see cref="KpiCatalog.MaxSlowMovingDays"/>.</exception>
+    public void ChangeKpiSlowMovingDays(int? days)
+    {
+        var v = days ?? KpiCatalog.DefaultSlowMovingDays;
+        if (v < 1 || v > KpiCatalog.MaxSlowMovingDays)
+            throw new BusinessRuleException($"Số ngày tồn chậm luân chuyển phải từ 1 đến {KpiCatalog.MaxSlowMovingDays}.");
+        KpiSlowMovingDays = v;
+    }
 }

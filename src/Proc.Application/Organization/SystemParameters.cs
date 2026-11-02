@@ -24,6 +24,18 @@ public static class SystemParameterCodes
     /// <summary>SLA hàng khẩn (ngày làm việc) – sửa được.</summary>
     public const string SlaUrgentDays = "SLA_URGENT_DAYS";
 
+    /// <summary>Tiền tố mã tham số mục tiêu KPI: KPI_TARGET_ + tên <see cref="Proc.Domain.Organization.KpiCode"/> in hoa, ví dụ
+    /// KPI_TARGET_CONTRACTCOMPLIANCE (design.md mục 18.18).</summary>
+    public const string KpiTargetPrefix = "KPI_TARGET_";
+
+    /// <summary>Số ngày không xuất để tính KPI tồn chậm luân chuyển – sửa được.</summary>
+    public const string KpiSlowMovingDays = "KPI_SLOW_MOVING_DAYS";
+
+    /// <summary>Mã tham số mục tiêu của một KPI.</summary>
+    /// <param name="code">Mã chỉ số.</param>
+    /// <returns>Ví dụ KPI_TARGET_SAVING.</returns>
+    public static string KpiTarget(Proc.Domain.Organization.KpiCode code) => KpiTargetPrefix + code.ToString().ToUpperInvariant();
+
     /// <summary>Phương pháp giá vốn – chỉ xem (cố định bình quân gia quyền tháng, design.md mục 7).</summary>
     public const string CostingMethod = "COSTING_METHOD";
 

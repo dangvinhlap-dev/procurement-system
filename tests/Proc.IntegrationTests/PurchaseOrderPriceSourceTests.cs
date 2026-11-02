@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
@@ -429,5 +429,63 @@ public class PurchaseOrderPriceSourceTests
         var viewer = await ApproverAsync(f, plainRole);
         Assert.Equal(System.Net.HttpStatusCode.Forbidden, (await viewer.GetAsync(
             $"/api/reports/contract-compliance?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&allCompanies=true", Ct)).StatusCode);
+    }
+
+    [Fact]
+    public async Task BangKpi_TheoKy_SoKyTruoc_MucTieuCauHinhDuoc()
+    {
+        var f = await ArrangeAsync();
+        var approver = await ApproverAsync(f, await RoleAsync());
+        async Task ApprovedAsync(SavePurchaseOrderRequest request)
+        {
+            var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", request, Ct));
+            po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+            while (po.Status == "Submitted")
+                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            Assert.Equal("Approved", po.Status);
+        }
+
+        // Kỳ này: theo bảng giá 475.000 + lệch giá 494.000; PO khẩn không có giá 300.000. Kỳ trước (hôm qua): PO thường không có giá 450.000.
+        await ApprovedAsync(Po(f, f.SupplierId, Line(f, 10, 50_000, 5), Line(f, 10, 52_000, 5, "NCC tăng giá thép")));
+        await ApprovedAsync(Po(f, f.NoPriceSupplierId, Line(f, 5, 60_000, 0)) with
+        {
+            PurchaseType = "Emergency", EmergencyReason = "Hỏng vòng bi máy cán", DocsDueDate = Today.AddDays(7),
+        });
+        await ApprovedAsync(Po(f, f.NoPriceSupplierId, Line(f, 10, 45_000, 0)) with { Date = Today.AddDays(-1) });
+
+        var url = $"/api/reports/kpi?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}";
+        var kpi = await ReadAsync<KpiResult>(await f.Client.GetAsync(url, Ct));
+        Assert.Equal((Today.AddDays(-1), Today.AddDays(-1)), (kpi.PreviousFrom, kpi.PreviousTo));
+        Assert.Equal(
+            ["Saving", "ContractCompliance", "PurchaseSla", "OnTimeDelivery", "Quality", "Emergency", "SlowMoving", "SupplierReview", "Violation"],
+            kpi.Items.Select(i => i.Code));
+        var contract = kpi.Items.Single(i => i.Code == "ContractCompliance");
+        // 475.000 ÷ 1.269.000 = 37,43% – khớp báo cáo PRCW; kỳ trước chỉ có dòng không có giá đã duyệt → 0%.
+        Assert.Equal((37.43m, (decimal?)0m, (decimal?)475_000m, (decimal?)1_269_000m, 95m, (bool?)false),
+            (contract.Value, contract.PreviousValue, contract.Numerator, contract.Denominator, contract.Target, contract.Met));
+        var emergency = kpi.Items.Single(i => i.Code == "Emergency");
+        // 300.000 ÷ 1.269.000 = 23,64% > trần 5%.
+        Assert.Equal((23.64m, (decimal?)0m, 5m, (bool?)false), (emergency.Value, emergency.PreviousValue, emergency.Target, emergency.Met));
+        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả; đánh giá NCC và vi phạm chưa đo (lát F4, F3).
+        Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SlowMoving"),
+            i => Assert.Equal((true, (decimal?)null, (bool?)null), (i.Measured, i.Value, i.Met)));
+        Assert.All(kpi.Items.Where(i => i.Code is "SupplierReview" or "Violation"), i => Assert.False(i.Measured));
+        Assert.Equal((2, 0), (kpi.MeasuredCount, kpi.MetCount));
+
+        // Mục tiêu sửa được ở Tham số hệ thống (nhóm KPI): hạ mục tiêu mua theo hợp đồng xuống 30% → đạt.
+        var code = SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance);
+        var saved = await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync($"/api/system-parameters/{code}", new UpdateSystemParameterRequest("30"), Ct));
+        Assert.Equal(("KPI", "30", false), (saved.Group, saved.Value, saved.IsDefault));
+        kpi = await ReadAsync<KpiResult>(await f.Client.GetAsync(url, Ct));
+        Assert.Equal((30m, (bool?)true), (kpi.Items.Single(i => i.Code == "ContractCompliance").Target, kpi.Items.Single(i => i.Code == "ContractCompliance").Met));
+        Assert.Equal(1, kpi.MetCount);
+        Assert.Contains("0 đến 100%", await TitleAsync(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.KpiTarget(KpiCode.Emergency)}", new UpdateSystemParameterRequest("150"), Ct)));
+        Assert.Contains("số nguyên", await TitleAsync(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.KpiTarget(KpiCode.Violation)}", new UpdateSystemParameterRequest("1,5"), Ct)));
+        var parameters = (await f.Client.GetFromJsonAsync<List<SystemParameterDto>>("/api/system-parameters", Ct))!;
+        Assert.Equal(10, parameters.Count(p => p.Group == "KPI"));
+        Assert.Contains("trước hoặc bằng", await TitleAsync(await f.Client.GetAsync(
+            $"/api/reports/kpi?from={Today:yyyy-MM-dd}&to={Today.AddDays(-1):yyyy-MM-dd}", Ct)));
     }
 }

@@ -118,8 +118,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F2** (bảng KPI 9 chỉ số, mục tiêu cấu hình được – `docs/Phantich_01112026.md` mục 3.6, 5),
-  lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F3** (KSNB: quyền riêng, màn hình dấu hiệu bất thường, thông báo lãnh đạo –
+  `docs/Phantich_01112026.md` mục 3.7, 5), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- **F2 (xong, đã merge `main` 02/11/2026): bảng KPI cung ứng 9 chỉ số** – design.md mục 18.18.
+  - API `GET /api/reports/kpi` (`KpiService` ghép PRCW, SLA, QCDEV, đánh giá NCC, tiết kiệm thầu, tồn chậm, tỷ lệ PO khẩn; so kỳ trước);
+    màn hình KPI (Báo cáo, mặc định tháng trước, bấm đúp mở báo cáo chi tiết, nút "Mục tiêu KPI"). Đánh giá NCC (F4), vi phạm (F3): "Chưa đo".
+  - Mục tiêu 9 KPI + số ngày tồn chậm: tham số công ty nhóm KPI (`KpiCatalog`, `CompanyParameter.ChangeKpiTarget`); migration
+    `V0_13_0_MucTieuKpi`. `SlowMovingResult` thêm `StockAmount`.
+  - Test: domain `MucTieuKpi_…`, tích hợp `BangKpi_TheoKy_SoKyTruoc_MucTieuCauHinhDuoc`, e2e `kpi.spec.ts`; `system-parameters` đếm 19 dòng.
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 490 qua; Playwright 84/84 (system-parameters sửa rồi chạy lại qua); `npm run build`, `tsc`, `oxlint` qua.
 - **F1 (xong, đã merge `main` 02/11/2026): báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá** – design.md mục 18.17.
   - API `GET /api/reports/contract-compliance` (màn hình PRCW, mặc định tuần trước): dòng PO Đã duyệt/Đã đóng theo nguồn giá (chọn thầu,
     hợp đồng, bảng giá, lệch giá, không có giá đã duyệt, không xác định), tỷ lệ mua theo giá đã duyệt (cảnh báo khi < 95%), dòng ngoài hợp
@@ -170,7 +177,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F2** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F3** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);

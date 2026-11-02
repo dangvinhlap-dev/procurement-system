@@ -53,4 +53,32 @@ public class InternalMarkupTests
     [InlineData(1_000.5, 0, 1_001)]
     public void GiaGoiY_BangGiaVonNhanMotCongMarkup_LamTronDong(double cost, double markup, double expected) =>
         Assert.Equal((decimal)expected, InternalPrice.Suggest((decimal)cost, (decimal)markup));
+
+    [Fact]
+    public void MucTieuKpi_MacDinhTheoDeXuat_DoiTrongGioiHan_DanhGiaDatTheoChieu()
+    {
+        var p = CompanyParameter.Create(Guid.CreateVersion7());
+        Assert.Equal((3m, 95m, 98m, 5m, 0m, 90), (p.KpiTarget(KpiCode.Saving), p.KpiTarget(KpiCode.ContractCompliance),
+            p.KpiTarget(KpiCode.Quality), p.KpiTarget(KpiCode.Emergency), p.KpiTarget(KpiCode.Violation), p.KpiSlowMovingDays));
+
+        p.ChangeKpiTarget(KpiCode.ContractCompliance, 97.12345m);
+        Assert.Equal(97.1235m, p.KpiTarget(KpiCode.ContractCompliance));
+        p.ChangeKpiTarget(KpiCode.ContractCompliance, null);
+        Assert.Equal(95m, p.KpiTarget(KpiCode.ContractCompliance));
+        p.ChangeKpiTarget(KpiCode.Violation, 2);
+        Assert.Equal(2, p.KpiViolationTarget);
+        Assert.Throws<BusinessRuleException>(() => p.ChangeKpiTarget(KpiCode.Quality, 100.01m));
+        Assert.Throws<BusinessRuleException>(() => p.ChangeKpiTarget(KpiCode.Saving, -1));
+        Assert.Throws<BusinessRuleException>(() => p.ChangeKpiTarget(KpiCode.Violation, 1.5m));
+        Assert.Throws<BusinessRuleException>(() => p.ChangeKpiSlowMovingDays(0));
+        p.ChangeKpiSlowMovingDays(180);
+        Assert.Equal(180, p.KpiSlowMovingDays);
+
+        // Cao là tốt: 96,2% ≥ 95% đạt; thấp là tốt: mua khẩn 7% > 5% không đạt; chưa có dữ liệu → null.
+        Assert.True(KpiCatalog.IsMet(KpiCode.ContractCompliance, 96.2m, 95m));
+        Assert.False(KpiCatalog.IsMet(KpiCode.Emergency, 7m, 5m));
+        Assert.True(KpiCatalog.IsMet(KpiCode.Violation, 0m, 0m));
+        Assert.Null(KpiCatalog.IsMet(KpiCode.Quality, null, 98m));
+        Assert.Equal(9, KpiCatalog.All.Count);
+    }
 }
