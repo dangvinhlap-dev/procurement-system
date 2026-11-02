@@ -37,6 +37,24 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// </summary>
     public decimal InternalMarkupPercent { get; private set; } = DefaultInternalMarkupPercent;
 
+    /// <summary>
+    /// Bắt buộc mọi dòng phiếu nhập mua có kết quả kiểm tra chất lượng mới ghi sổ được (design.md mục 18.14 – V7). Mặc định tắt để công ty
+    /// chưa tổ chức kiểm tra không bị chặn nhận hàng.
+    /// </summary>
+    public bool RequireReceiptQc { get; private set; }
+
+    /// <summary>
+    /// Người lập đơn mua hàng không được ghi sổ phiếu nhập của chính đơn đó (design.md mục 18.14 – G4: người đặt hàng không một mình xác
+    /// nhận giao nhận). Mặc định tắt (công ty nhỏ một người kiêm).
+    /// </summary>
+    public bool SeparatePoCreatorFromReceipt { get; private set; }
+
+    /// <summary>Bật/tắt bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng; null = về mặc định (tắt).</summary>
+    public void ChangeRequireReceiptQc(bool? value) => RequireReceiptQc = value ?? false;
+
+    /// <summary>Bật/tắt tách người lập PO và người ghi sổ nhận hàng; null = về mặc định (tắt).</summary>
+    public void ChangeSeparatePoCreatorFromReceipt(bool? value) => SeparatePoCreatorFromReceipt = value ?? false;
+
     /// <summary>SLA mặc định (ngày làm việc): hàng đã có hợp đồng/bảng giá – phát hành PO trong 1 ngày sau khi PR đủ duyệt (Ban CUVT).</summary>
     public const int DefaultSlaPricedDays = 1;
 

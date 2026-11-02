@@ -54,6 +54,10 @@ public sealed class SystemParameterService : ISystemParameterService
                 markup == CompanyParameter.DefaultInternalMarkupPercent, true,
                 $"Mặt hàng chưa có trong Bảng giá nội bộ thì gợi ý giá bán = giá vốn kỳ đã đóng gần nhất × (1 + % markup), làm tròn đồng " +
                 $"(0–{CompanyParameter.MaxInternalMarkupPercent:0}%). Chỉ là gợi ý ở Bảng giá nội bộ và phiếu xuất bán nội bộ; giá đã khai báo không bị ảnh hưởng."),
+            Toggle(SystemParameterCodes.ReceiptQcRequired, "Bắt buộc kiểm tra chất lượng khi nhận hàng", parameter?.RequireReceiptQc ?? false,
+                "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
+            Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
+                "Bật: người lập đơn mua hàng không ghi sổ được phiếu nhập theo đơn của mình – người khác xác nhận giao nhận (tách nhiệm)."),
             Sla(SystemParameterCodes.SlaPricedDays, "SLA – hàng đã có hợp đồng/bảng giá", parameter?.SlaPricedDays, CompanyParameter.DefaultSlaPricedDays,
                 "Số ngày làm việc từ lúc PR đủ duyệt đến lúc PO được duyệt cho hàng đã có bảng giá/hợp đồng hiệu lực."),
             Sla(SystemParameterCodes.SlaSourcingDays, "SLA – hàng chưa có NCC được duyệt", parameter?.SlaSourcingDays, CompanyParameter.DefaultSlaSourcingDays,
@@ -100,6 +104,14 @@ public sealed class SystemParameterService : ISystemParameterService
                 }
 
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeInternalMarkupPercent(percent);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.ReceiptQcRequired:
+            case SystemParameterCodes.ReceiptSeparatePoCreator:
+                var on = ParseToggle(request.Value);
+                var row = await GetOrCreateAsync(companyId, cancellationToken);
+                if (key == SystemParameterCodes.ReceiptQcRequired) row.ChangeRequireReceiptQc(on);
+                else row.ChangeSeparatePoCreatorFromReceipt(on);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             case SystemParameterCodes.SlaPricedDays:
@@ -151,6 +163,20 @@ public sealed class SystemParameterService : ISystemParameterService
         _db.CompanyParameters.Add(parameter);
         return parameter;
     }
+
+    /// <summary>Tham số bật/tắt (nhóm "Nhận hàng"): giá trị "Bật"/"Tắt", mặc định tắt.</summary>
+    private static SystemParameterDto Toggle(string code, string name, bool value, string note) =>
+        new(code, "Nhận hàng", name, value ? "Bật" : "Tắt", "Tắt", !value, true, note);
+
+    /// <summary>Giá trị bật/tắt gửi lên: true/false, 1/0, bật/tắt; trống = về mặc định.</summary>
+    /// <exception cref="BusinessRuleException">Khi không đọc được.</exception>
+    private static bool? ParseToggle(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        null or "" => null,
+        "true" or "1" or "bật" or "bat" => true,
+        "false" or "0" or "tắt" or "tat" => false,
+        _ => throw new BusinessRuleException("Giá trị phải là Bật hoặc Tắt."),
+    };
 
     /// <summary>Một tham số SLA (nhóm "Mua hàng"): giá trị hiện hành hoặc mặc định.</summary>
     private static SystemParameterDto Sla(string code, string name, int? value, int defaultValue, string note)

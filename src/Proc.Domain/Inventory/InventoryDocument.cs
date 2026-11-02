@@ -78,9 +78,27 @@ public sealed record ReceiptConfirmLine(Guid LineId, decimal ReceivedQty, string
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="SourceLineId">Dòng chứng từ gốc (phiếu trả NCC: dòng phiếu nhập).</param>
 /// <param name="PurchaseOrderLineId">Dòng đơn mua hàng (phiếu nhập theo PO).</param>
+/// <param name="DeliveredQty">Phiếu nhập mua: SL theo chứng từ giao của NCC (null = bằng SL thực nhận + SL không đạt) – design.md mục 18.14.</param>
+/// <param name="RejectedQty">Phiếu nhập mua: SL NCC giao nhưng không đạt chất lượng, không nhập kho.</param>
+/// <param name="QcResult">Phiếu nhập mua: kết quả kiểm tra chất lượng của dòng.</param>
+/// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
 public sealed record InventoryLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
-    Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null);
+    Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null, decimal? DeliveredQty = null, decimal RejectedQty = 0,
+    QcResult QcResult = QcResult.NotChecked, string? QcNote = null);
+
+/// <summary>Kết quả kiểm tra chất lượng dòng phiếu nhập mua (design.md mục 18.14 – đề xuất Ban CUVT V7).</summary>
+public enum QcResult
+{
+    /// <summary>Chưa kiểm tra.</summary>
+    NotChecked = 0,
+
+    /// <summary>Đạt.</summary>
+    Passed = 1,
+
+    /// <summary>Không đạt (toàn bộ hoặc một phần – SL không đạt ghi riêng, không nhập kho).</summary>
+    Failed = 2,
+}
 
 /// <summary>
 /// Chứng từ kho (design.md mục 6.1, 12.1): một bảng cho mọi loại phiếu (GRN, RTV, TRF…), phân biệt bằng DocType.
@@ -433,6 +451,17 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     }
 
     /// <summary>
+    /// Kiểm tra trước khi ghi sổ phiếu nhập mua khi công ty bật "bắt buộc kiểm tra chất lượng" (design.md mục 18.14): mọi dòng phải có kết quả.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi còn dòng chưa kiểm tra (liệt kê số dòng).</exception>
+    public void EnsureQcChecked()
+    {
+        var missing = _lines.Where(l => l.QcResult == QcResult.NotChecked).OrderBy(l => l.LineNo).Select(l => l.LineNo).ToList();
+        if (missing.Count > 0)
+            throw new BusinessRuleException($"Dòng {string.Join(", ", missing)}: chưa có kết quả kiểm tra chất lượng – công ty bắt buộc kiểm tra trước khi ghi sổ nhận hàng.");
+    }
+
+    /// <summary>
     /// Đánh dấu đã ghi sổ (dòng sổ kho, tồn kho do tầng Infrastructure ghi trong cùng giao dịch – design.md mục 12.2).
     /// </summary>
     /// <param name="periodId">Kỳ tháng đang mở chứa ngày chứng từ.</param>
@@ -553,6 +582,24 @@ public sealed class InventoryDocumentLine : Entity
     /// <summary>Dòng đơn mua hàng (phiếu nhập theo PO) – để tính SL đã nhận của PO.</summary>
     public Guid? PurchaseOrderLineId { get; private set; }
 
+    /// <summary>Phiếu nhập mua: SL theo chứng từ giao của NCC (null = không ghi riêng) – numeric(18,4).</summary>
+    public decimal? DeliveredQty { get; private set; }
+
+    /// <summary>Phiếu nhập mua: SL không đạt chất lượng, không nhập kho – numeric(18,4).</summary>
+    public decimal RejectedQty { get; private set; }
+
+    /// <summary>Phiếu nhập mua: kết quả kiểm tra chất lượng.</summary>
+    public QcResult QcResult { get; private set; }
+
+    /// <summary>Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</summary>
+    public string? QcNote { get; private set; }
+
+    /// <summary>
+    /// Thiếu (âm) / thừa (dương) so với chứng từ giao = SL thực nhận + SL không đạt − SL chứng từ; 0 khi không ghi SL chứng từ.
+    /// Ví dụ chứng từ 100, nhận đạt 90, không đạt 5 → thiếu 5 (−5).
+    /// </summary>
+    public decimal DiscrepancyQty => DeliveredQty is { } delivered ? Qty + RejectedQty - delivered : 0m;
+
     /// <summary>Chép dòng phiếu bán sang phiếu nhập mua nội bộ (SL nhận ban đầu = SL gửi).</summary>
     internal InventoryDocumentLine CopyFor(Guid documentId) =>
         new(documentId)
@@ -630,5 +677,37 @@ public sealed class InventoryDocumentLine : Entity
         LotNo = lot;
         ExpiryDate = data.ExpiryDate;
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+        SetQc(prefix, data, docType);
+    }
+
+    /// <summary>
+    /// Kiểm tra chất lượng, sai lệch (chỉ phiếu nhập mua NCC – design.md mục 18.14): SL không đạt &gt; 0 thì kết quả là Không đạt; không đạt
+    /// hoặc thiếu/thừa so với chứng từ giao thì bắt buộc ghi chú. Phiếu loại khác không ghi các trường này.
+    /// </summary>
+    private void SetQc(string prefix, InventoryLineData data, string docType)
+    {
+        if (docType != DocumentTypes.GoodsReceipt)
+        {
+            DeliveredQty = null;
+            RejectedQty = 0;
+            QcResult = QcResult.NotChecked;
+            QcNote = null;
+            return;
+        }
+
+        if (data.DeliveredQty is { } delivered && (delivered < 0 || decimal.Round(delivered, 4) != delivered || delivered >= 100_000_000_000_000m))
+            throw new BusinessRuleException($"{prefix}: SL theo chứng từ giao phải ≥ 0, tối đa 4 chữ số thập phân.");
+        if (data.RejectedQty < 0 || decimal.Round(data.RejectedQty, 4) != data.RejectedQty || data.RejectedQty >= 100_000_000_000_000m)
+            throw new BusinessRuleException($"{prefix}: SL không đạt phải ≥ 0, tối đa 4 chữ số thập phân.");
+        if (!Enum.IsDefined(data.QcResult)) throw new BusinessRuleException($"{prefix}: kết quả kiểm tra không hợp lệ.");
+        var note = string.IsNullOrWhiteSpace(data.QcNote) ? null : data.QcNote.Trim();
+        if (note is { Length: > 500 }) throw new BusinessRuleException($"{prefix}: ghi chú kiểm tra tối đa 500 ký tự.");
+        DeliveredQty = data.DeliveredQty;
+        RejectedQty = data.RejectedQty;
+        // Có hàng không đạt thì kết quả dòng là Không đạt, dù người nhập chọn gì – tránh "đạt" nhưng vẫn loại hàng.
+        QcResult = data.RejectedQty > 0 ? QcResult.Failed : data.QcResult;
+        QcNote = note;
+        if ((QcResult == QcResult.Failed || DiscrepancyQty != 0) && note is null)
+            throw new BusinessRuleException($"{prefix}: hàng không đạt hoặc thiếu/thừa so với chứng từ giao – hãy ghi chú kiểm tra (nội dung biên bản sai lệch).");
     }
 }

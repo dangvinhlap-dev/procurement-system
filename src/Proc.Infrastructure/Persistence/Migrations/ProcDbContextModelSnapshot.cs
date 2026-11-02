@@ -629,6 +629,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<decimal?>("DeliveredQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid");
 
@@ -652,7 +656,18 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PurchaseOrderLineId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("QcNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("QcResult")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("Qty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("RejectedQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
@@ -1857,10 +1872,20 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(9,4)")
                         .HasDefaultValue(0m);
 
+                    b.Property<bool>("RequireReceiptQc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<int>("RfqMinSuppliers")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(3);
+
+                    b.Property<bool>("SeparatePoCreatorFromReceipt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("SlaPricedDays")
                         .ValueGeneratedOnAdd()

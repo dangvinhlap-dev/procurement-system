@@ -61,7 +61,8 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
-    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null, Guid? PurchaseOrderLineId = null);
+    DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null, Guid? PurchaseOrderLineId = null,
+    decimal? DeliveredQty = null, decimal RejectedQty = 0, string QcResult = "NotChecked", string? QcNote = null, decimal DiscrepancyQty = 0);
 
 /// <summary>Chi tiết chứng từ kho.</summary>
 /// <param name="Id">Id.</param>
@@ -119,9 +120,13 @@ public sealed record InventoryDocumentDto(
 /// <param name="ExpiryDate">Hạn dùng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="PurchaseOrderLineId">Dòng PO (phiếu nhập theo PO): đơn giá, thuế suất, ĐVT lấy theo dòng PO.</param>
+/// <param name="DeliveredQty">Phiếu nhập mua: SL theo chứng từ giao của NCC (design.md mục 18.14).</param>
+/// <param name="RejectedQty">Phiếu nhập mua: SL không đạt, không nhập kho.</param>
+/// <param name="QcResult">Phiếu nhập mua: NotChecked, Passed, Failed (trống = NotChecked).</param>
+/// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
 public sealed record SaveInventoryLineRequest(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
-    Guid? PurchaseOrderLineId = null);
+    Guid? PurchaseOrderLineId = null, decimal? DeliveredQty = null, decimal RejectedQty = 0, string? QcResult = null, string? QcNote = null);
 
 /// <summary>Lưu phiếu nhập mua NCC (nháp).</summary>
 /// <param name="Date">Ngày nhập.</param>

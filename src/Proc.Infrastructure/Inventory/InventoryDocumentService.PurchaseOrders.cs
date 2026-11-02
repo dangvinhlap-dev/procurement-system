@@ -42,6 +42,26 @@ public sealed partial class InventoryDocumentService
         return result;
     }
 
+    /// <summary>
+    /// Kiểm soát nhận hàng theo tham số công ty (design.md mục 18.14): bắt buộc kết quả kiểm tra chất lượng mọi dòng (V7); người lập đơn mua
+    /// hàng không ghi sổ phiếu nhập của chính đơn đó (G4 – tách người đặt hàng và người xác nhận giao nhận).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi vi phạm tham số đang bật.</exception>
+    private async Task CheckReceiptControlsAsync(InventoryDocument document, CancellationToken cancellationToken)
+    {
+        var parameter = await _db.CompanyParameters.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        if (parameter is null) return;
+        if (parameter.RequireReceiptQc) document.EnsureQcChecked();
+        if (parameter.SeparatePoCreatorFromReceipt && document.PurchaseOrderId is { } orderId)
+        {
+            var order = await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == orderId).Select(o => new { o.No, o.CreatedBy })
+                .SingleOrDefaultAsync(cancellationToken);
+            if (order?.CreatedBy is { } creator && creator == _scope.UserId)
+                throw new BusinessRuleException(
+                    $"Bạn là người lập đơn mua hàng {order.No} nên không ghi sổ phiếu nhập của đơn này – người khác phải xác nhận nhận hàng (tham số công ty).");
+        }
+    }
+
     /// <summary>Kiểm tra lại SL theo PO lúc ghi sổ (phiếu nhập khác có thể đã nhận bớt từ lúc lưu nháp).</summary>
     private async Task CheckOrderOnPostAsync(InventoryDocument document, CancellationToken cancellationToken)
     {

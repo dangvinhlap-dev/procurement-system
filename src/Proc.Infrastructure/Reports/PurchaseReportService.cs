@@ -41,6 +41,43 @@ public sealed class PurchaseReportService : IPurchaseReportService
     }
 
     /// <inheritdoc />
+    public async Task<ReceiptQualityResult> GetReceiptQualityAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        if (to < from) throw new BusinessRuleException("Đến ngày phải sau từ ngày.");
+        if (to.DayNumber - from.DayNumber > 366) throw new BusinessRuleException("Khoảng ngày tối đa 1 năm.");
+        // Đi qua phiếu (filter công ty, kho) và mặt hàng (filter nhóm hàng) – chỉ thấy dòng trong phạm vi của người dùng.
+        var lines = await (
+                from l in _db.InventoryDocumentLines.AsNoTracking()
+                join d in _db.InventoryDocuments on l.DocumentId equals d.Id
+                join i in _db.Items on l.ItemId equals i.Id
+                join u in _db.Uoms on l.UomId equals u.Id
+                join s in _db.Suppliers on d.SupplierId equals s.Id
+                where d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= @from && d.Date <= to
+                select new
+                {
+                    d.Id, d.No, d.Date, SupplierCode = s.Code, SupplierName = s.Name, d.PurchaseOrderId, l.LineNo, ItemCode = i.Code, ItemName = i.Name,
+                    UomCode = u.Code, l.DeliveredQty, l.Qty, l.RejectedQty, l.QcResult, l.QcNote,
+                })
+            .ToListAsync(cancellationToken);
+        var orderIds = lines.Select(l => l.PurchaseOrderId).OfType<Guid>().Distinct().ToList();
+        var orderNos = await _db.PurchaseOrders.AsNoTracking().Where(o => orderIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.No, cancellationToken);
+        var rows = lines
+            .Select(l => new ReceiptQualityRowDto(
+                l.Id, l.No, l.Date, l.SupplierCode, l.SupplierName, l.PurchaseOrderId is { } o ? orderNos.GetValueOrDefault(o) : null, l.LineNo,
+                l.ItemCode, l.ItemName, l.UomCode, l.DeliveredQty, l.Qty, l.RejectedQty,
+                // Như InventoryDocumentLine.DiscrepancyQty: thực nhận + không đạt − chứng từ giao.
+                l.DeliveredQty is { } delivered ? l.Qty + l.RejectedQty - delivered : 0m, l.QcResult.ToString(), l.QcNote))
+            .Where(r => r.RejectedQty > 0 || r.DiscrepancyQty != 0 || r.QcResult == nameof(QcResult.Failed))
+            .OrderBy(r => r.Date).ThenBy(r => r.DocumentNo).ThenBy(r => r.LineNo)
+            .ToList();
+        var checkedLines = lines.Count(l => l.QcResult != QcResult.NotChecked);
+        var passed = lines.Count(l => l.QcResult == QcResult.Passed);
+        return new ReceiptQualityResult(rows, lines.Count, checkedLines, passed,
+            checkedLines == 0 ? null : Math.Round(passed * 100m / checkedLines, 1, MidpointRounding.AwayFromZero));
+    }
+
+    /// <inheritdoc />
     public async Task<PurchaseSlaResult> GetPurchaseSlaAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();

@@ -9,6 +9,12 @@ public static class SystemParameterCodes
     /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
     public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
 
+    /// <summary>Bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng – bật/tắt (design.md mục 18.14).</summary>
+    public const string ReceiptQcRequired = "RECEIPT_QC_REQUIRED";
+
+    /// <summary>Người lập PO không ghi sổ phiếu nhập của PO đó – bật/tắt (design.md mục 18.14).</summary>
+    public const string ReceiptSeparatePoCreator = "RECEIPT_SEPARATE_PO_CREATOR";
+
     /// <summary>SLA hàng đã có hợp đồng/bảng giá (ngày làm việc) – sửa được (design.md mục 18.13).</summary>
     public const string SlaPricedDays = "SLA_PRICED_DAYS";
 

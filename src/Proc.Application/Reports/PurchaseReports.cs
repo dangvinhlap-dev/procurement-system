@@ -38,6 +38,24 @@ public sealed record PurchaseSlaRowDto(
 public sealed record PurchaseSlaResult(
     IReadOnlyList<PurchaseSlaRowDto> Rows, int OnTime, int Late, int InProgress, int Overdue, decimal? OnTimePct);
 
+/// <summary>Một dòng nhận hàng có sai lệch (design.md mục 18.14).</summary>
+/// <param name="DeliveredQty">SL theo chứng từ giao của NCC (null = không ghi).</param>
+/// <param name="Qty">SL thực nhận đạt, nhập kho.</param>
+/// <param name="RejectedQty">SL không đạt, không nhập kho.</param>
+/// <param name="DiscrepancyQty">Thiếu (âm) / thừa (dương) so với chứng từ giao.</param>
+/// <param name="QcResult">NotChecked, Passed, Failed.</param>
+public sealed record ReceiptQualityRowDto(
+    Guid DocumentId, string DocumentNo, DateOnly Date, string SupplierCode, string SupplierName, string? PurchaseOrderNo, int LineNo,
+    string ItemCode, string ItemName, string UomCode, decimal? DeliveredQty, decimal Qty, decimal RejectedQty, decimal DiscrepancyQty,
+    string QcResult, string? QcNote);
+
+/// <summary>Báo cáo sai lệch nhận hàng: dòng sai lệch và tỷ lệ đạt chất lượng.</summary>
+/// <param name="CheckedLines">Số dòng phiếu nhập mua đã ghi sổ trong kỳ có kết quả kiểm tra.</param>
+/// <param name="PassedLines">Số dòng đạt.</param>
+/// <param name="PassedPct">% đạt = đạt / đã kiểm tra, 1 số lẻ; null khi chưa có dòng nào kiểm tra.</param>
+public sealed record ReceiptQualityResult(
+    IReadOnlyList<ReceiptQualityRowDto> Rows, int TotalLines, int CheckedLines, int PassedLines, decimal? PassedPct);
+
 /// <summary>Cách nhóm báo cáo mua hàng.</summary>
 public static class PurchaseSpendGroups
 {
@@ -173,4 +191,10 @@ public interface IPurchaseReportService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Dòng và tổng hợp.</returns>
     Task<PurchaseSlaResult> GetPurchaseSlaAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sai lệch nhận hàng (design.md mục 18.14): dòng phiếu nhập mua NCC đã ghi sổ trong khoảng ngày có hàng không đạt hoặc thiếu/thừa so
+    /// với chứng từ giao; tỷ lệ dòng đạt chất lượng trên các dòng đã kiểm tra (KPI "lô đạt chất lượng").
+    /// </summary>
+    Task<ReceiptQualityResult> GetReceiptQualityAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
 }
