@@ -53,10 +53,12 @@ public static class OrganizationEndpoints
             .Validate<UpdateWarehouseRequest>();
 
         var departments = app.MapGroup("/api/departments").WithTags("Danh mục");
-        // Người lập/xem PR, hợp đồng nguyên tắc cần danh sách bộ phận để chọn và hiển thị, dù không có quyền xem danh mục bộ phận.
+        // Người lập/xem PR, PO (bộ phận đặt hàng – design.md mục 18.10), hợp đồng nguyên tắc cần danh sách bộ phận để chọn và hiển thị,
+        // dù không có quyền xem danh mục bộ phận.
         departments.MapGet("/", (IDepartmentAdministration s, CancellationToken ct) => s.ListAsync(ct))
             .RequireAnyPermission(
-                Permissions.Organization.DepartmentView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate, Permissions.Purchase.ContractManage);
+                Permissions.Organization.DepartmentView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate, Permissions.Purchase.PoCreate,
+                Permissions.Purchase.ContractManage);
         departments.MapGet("/{id:guid}", (Guid id, IDepartmentAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.Organization.DepartmentView);
         departments.MapPost("/", async (CreateDepartmentRequest request, IDepartmentAdministration s, CancellationToken ct) =>

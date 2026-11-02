@@ -95,6 +95,8 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await buyer.keyboard.press('Control+s')
   await expect(buyer.locator('.ant-message')).toContainText(/Đã lưu phiếu PO-BHA-\d{4}-\d{4}\./)
   await expect(buyer.locator('.document-form-number')).toHaveText(/^PO-BHA-\d{4}-\d{4}$/)
+  // Bộ phận đặt hàng tự lấy theo bộ phận của PR nguồn (design.md mục 18.10).
+  await expect(buyer.locator('.ant-form-item', { hasText: 'Bộ phận đặt hàng' })).toContainText(departmentCode)
   const poNo = (await buyer.locator('.document-form-number').textContent())!
   await confirm(buyer, 'Gửi duyệt', `Đã gửi duyệt phiếu ${poNo}.`)
   await buyer.screenshot({ path: 'e2e/screenshots/purchase-order.png' })

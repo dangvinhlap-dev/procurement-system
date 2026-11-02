@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
-import { useWarehouses } from '../../api/organization'
+import { useDepartments, useWarehouses } from '../../api/organization'
 import { pickSupplierPrice, useSupplierPrices } from '../../api/pricing'
 import {
   priceSourceLabels,
@@ -47,6 +47,7 @@ const netPrice = (price: number, discountPct: number) => Math.round(price * (100
 
 interface PoFormValues {
   date: Dayjs
+  departmentId?: string | null
   supplierId?: string
   warehouseId?: string
   expectedDate?: Dayjs | null
@@ -115,7 +116,17 @@ export function PurchaseOrderPage() {
   const mainWarehouse = warehouses.data?.find((w) => w.type === 'Main' && w.isActive)?.id
   const supplierId = Form.useWatch('supplierId', form) as string | undefined
   const orderDate = Form.useWatch('date', form) as Dayjs | undefined
-  const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds)
+  const departmentId = Form.useWatch('departmentId', form) as string | null | undefined
+  const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds, departmentId)
+  const departments = useDepartments()
+  // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn hiện tên (như PR – design.md mục 18.5).
+  const departmentOptions = useMemo(
+    () =>
+      (departments.data ?? [])
+        .filter((d) => d.isActive || d.id === doc?.departmentId)
+        .map((d) => ({ value: d.id, label: `${d.code} – ${d.name}${d.isActive ? '' : ' (ngừng dùng)'}` })),
+    [departments.data, doc?.departmentId],
+  )
 
   /** Giá gợi ý của dòng theo bảng giá hợp đồng/bảng giá NCC: đúng ĐVT và bậc SL (xem pickSupplierPrice). */
   const suggestedPrice = (line: PoLineValues | undefined) => {
@@ -177,6 +188,7 @@ export function PurchaseOrderPage() {
     if (!doc) return
     form.setFieldsValue({
       date: dayjs(doc.date),
+      departmentId: doc.departmentId,
       supplierId: doc.supplierId,
       warehouseId: doc.warehouseId,
       expectedDate: doc.expectedDate ? dayjs(doc.expectedDate) : null,
@@ -212,6 +224,7 @@ export function PurchaseOrderPage() {
     setError(null)
     const input: SavePurchaseOrderInput = {
       date: values.date.format('YYYY-MM-DD'),
+      departmentId: values.departmentId ?? null,
       supplierId: values.supplierId!,
       warehouseId: values.warehouseId!,
       expectedDate: values.expectedDate ? values.expectedDate.format('YYYY-MM-DD') : null,
@@ -375,7 +388,16 @@ export function PurchaseOrderPage() {
         )
       },
     },
-    { key: 'priceSource', title: 'Nguồn giá', width: 150, render: (field) => readonlyCell(approvedPrice(field.name)?.sourceText ?? '') },
+    {
+      key: 'priceSource',
+      title: 'Nguồn giá',
+      width: 150,
+      // Phiếu NCC độc quyền ghi nhận lúc lưu (design.md mục 18.10) – hiện kèm nguồn giá.
+      render: (field, index) => {
+        const sole = savedLine(index)?.soleSourceNo
+        return readonlyCell([approvedPrice(field.name)?.sourceText, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '))
+      },
+    },
     {
       key: 'deviationReason',
       title: 'Lý do lệch giá',
@@ -429,6 +451,8 @@ export function PurchaseOrderPage() {
             <Alert type="warning" showIcon title={supplierHint} />
           ) : doc?.rejectReason && doc.status === 'Draft' ? (
             <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
+          ) : doc?.contractScopeNote && doc.status === 'Draft' ? (
+            <Alert type="info" showIcon title={doc.contractScopeNote} />
           ) : (!readOnly && hasDeviation) || (readOnly && doc?.hasPriceException) ? (
             <Alert type="warning" showIcon title="Có dòng lệch giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu): ghi lý do ở từng dòng; PO phải qua thêm chặng duyệt ngoại lệ giá." />
           ) : (
@@ -452,6 +476,9 @@ export function PurchaseOrderPage() {
                 notFoundContent="Không có NCC đã duyệt và đang áp dụng tại công ty này."
                 options={(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
               />
+            </Form.Item>
+            <Form.Item label="Bộ phận đặt hàng" name="departmentId" extra="Trống mà lấy dòng từ PR thì theo bộ phận của PR. Hợp đồng giới hạn bộ phận chỉ áp giá cho bộ phận được phép.">
+              <Select allowClear showSearch={{ optionFilterProp: 'label' }} options={departmentOptions} loading={departments.isLoading} placeholder="Chọn bộ phận" />
             </Form.Item>
             <Form.Item label="Kho nhận" name="warehouseId" rules={[{ required: true, message: 'Chọn kho nhận.' }]}>
               <Select showSearch={{ optionFilterProp: 'label' }}
