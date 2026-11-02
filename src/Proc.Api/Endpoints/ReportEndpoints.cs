@@ -53,6 +53,13 @@ public static class ReportEndpoints
         reports.MapGet("/sourcing-savings", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá theo kỳ (design.md mục 18.17).
+        reports.MapGet("/contract-compliance", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetContractComplianceAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/price-variance", (DateOnly from, DateOnly to, bool? allCompanies, Guid? categoryId, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetPriceVarianceAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), categoryId, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
 
         // Xuất chứng từ cho kế toán (mục 11.5): docTypes nhiều giá trị (?docTypes=GRN&docTypes=RTV), trống = tất cả.
         var accounting = app.MapGroup("/api/accounting-export").WithTags("Xuất cho kế toán");

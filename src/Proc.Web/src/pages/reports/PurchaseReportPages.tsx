@@ -1,10 +1,16 @@
-import { Alert, Checkbox, InputNumber, Select } from 'antd'
+import { Alert, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
 import dayjs from 'dayjs'
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
+import { useItemCategories } from '../../api/masterData'
 import { priorityLabels } from '../../api/purchasing'
 import {
+  useContractCompliance,
   usePendingRequests,
+  usePriceVariance,
+  type OutOfContractLine,
+  type PriceSourceKind,
+  type PriceVarianceRow,
   usePurchaseSla,
   useReceiptQuality,
   useThreeWayMatch,
@@ -29,7 +35,8 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
-import { formatDate, formatMoney, vnNumberInput } from '../../utils/format'
+import { formatDate, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { buildCategoryTree } from '../masterData/categoryTree'
 import { LogDateRangeFilter } from '../system/logFilters'
 
 const pendingColumns: GridColumn<PendingRequestLine>[] = [
@@ -531,6 +538,188 @@ export function SourcingSavingsReportPage() {
       }
       onClearFilters={() => setPeriod(defaultPeriod())}
       filters={<PeriodFilters value={period} onChange={setPeriod} />}
+    />
+  )
+}
+
+/** Tên nguồn giá trên báo cáo giá mua (design.md mục 18.17). */
+const priceSourceLabels: Record<PriceSourceKind, string> = {
+  Rfq: 'Chọn thầu',
+  Contract: 'Hợp đồng',
+  PriceList: 'Bảng giá',
+  Deviation: 'Lệch giá đã duyệt',
+  None: 'Không có giá đã duyệt',
+  Unknown: 'Không xác định',
+}
+
+/** Mục tiêu tỷ lệ mua theo giá đã duyệt của Ban CUVT (P5). */
+const COMPLIANCE_TARGET = 95
+
+/** Tuần trước, thứ Hai đến Chủ nhật – kỳ mặc định của báo cáo tuần. */
+const lastWeek = (): PurchaseReportPeriod => {
+  // dayjs().day(): 0 = Chủ nhật; quy về 0 = thứ Hai để không phụ thuộc ngôn ngữ của dayjs.
+  const monday = dayjs().subtract((dayjs().day() + 6) % 7, 'day')
+  return {
+    from: monday.subtract(7, 'day').format('YYYY-MM-DD'),
+    to: monday.subtract(1, 'day').format('YYYY-MM-DD'),
+    allCompanies: false,
+  }
+}
+
+/** Tháng trước – kỳ mặc định của báo cáo biến động giá. */
+const lastMonth = (): PurchaseReportPeriod => {
+  const month = dayjs().subtract(1, 'month')
+  return { from: month.startOf('month').format('YYYY-MM-DD'), to: month.endOf('month').format('YYYY-MM-DD'), allCompanies: false }
+}
+
+const outOfContractColumns: GridColumn<OutOfContractLine>[] = [
+  { key: 'date', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.date },
+  { key: 'no', title: 'Số PO', width: 130, value: (r) => r.orderNo, groupable: true },
+  { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
+  { key: 'department', title: 'Bộ phận', width: 130, value: (r) => r.department, groupable: true },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 200, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  { key: 'item', title: 'Mặt hàng', width: 220, value: (r) => `${r.itemCode} – ${r.itemName}` },
+  { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
+  { key: 'qty', title: 'SL', width: 80, type: 'quantity', value: (r) => r.qty },
+  { key: 'price', title: 'Giá mua (sau CK)', width: 120, type: 'money', value: (r) => r.netUnitPrice },
+  { key: 'approved', title: 'Giá đã duyệt (sau CK)', width: 140, type: 'money', value: (r) => r.approvedNetPrice },
+  { key: 'pct', title: 'Lệch (%)', width: 80, type: 'quantity', value: (r) => r.deviationPct },
+  { key: 'amount', title: 'Thành tiền', width: 130, type: 'money', value: (r) => r.amount },
+  { key: 'deviation', title: 'Tiền chênh', width: 120, type: 'money', value: (r) => r.deviationAmount },
+  {
+    key: 'kind',
+    title: 'Loại',
+    width: 160,
+    type: 'status',
+    value: (r) => priceSourceLabels[r.kind],
+    tone: (r) => (r.kind === 'Deviation' ? 'warning' : 'error'),
+    groupable: true,
+  },
+  { key: 'reason', title: 'Lý do lệch giá', width: 220, value: (r) => r.reason },
+]
+
+/**
+ * Báo cáo → Giá mua & mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17): dòng PO đã duyệt trong kỳ theo nguồn giá, tỷ lệ mua theo
+ * giá đã duyệt (KPI ≥ 95%), danh sách dòng lệch giá hoặc không có giá đã duyệt. Mặc định tuần trước. Bấm đúp mở PO.
+ */
+export function ContractComplianceReportPage() {
+  const navigate = useNavigate()
+  const [period, setPeriod] = useState(lastWeek)
+  const report = useContractCompliance(period)
+  const data = report.data
+  const pct = data?.compliancePct
+  const sources = (data?.sources ?? [])
+    .map((s) => `${priceSourceLabels[s.source]} ${formatMoney(s.amount)} đ (${formatQuantity(s.sharePct)}%)`)
+    .join('; ')
+  return (
+    <ListPage
+      title="Giá mua & mua ngoài hợp đồng"
+      exportFileName="gia-mua-ngoai-hop-dong"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={data?.lines ?? []}
+      columns={outOfContractColumns}
+      rowKey={(r) => `${r.orderId}|${r.lineNo}`}
+      loading={report.isLoading}
+      isMarked={(r) => (r.deviationAmount ?? 0) > 0}
+      onOpenRow={(r) => navigate(`/mua-hang/po/${r.orderId}`)}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : (
+          <Alert
+            type={pct != null && pct < COMPLIANCE_TARGET ? 'warning' : 'info'}
+            showIcon
+            title={
+              `${data?.orderCount ?? 0} PO đã duyệt, ${formatMoney(data?.totalAmount ?? 0)} đ (trước VAT). ` +
+              `Mua theo giá đã duyệt: ${pct == null ? '–' : `${formatQuantity(pct)}%`} (mục tiêu ≥ ${COMPLIANCE_TARGET}%).`
+            }
+            description={sources ? `${sources}. Tô màu: mua cao hơn giá đã duyệt. Bấm đúp để mở PO.` : undefined}
+          />
+        )
+      }
+      onClearFilters={() => setPeriod(lastWeek())}
+      filters={<PeriodFilters value={period} onChange={setPeriod} />}
+    />
+  )
+}
+
+const varianceColumns: GridColumn<PriceVarianceRow>[] = [
+  { key: 'code', title: 'Mã hàng', width: 120, value: (r) => r.itemCode },
+  { key: 'name', title: 'Tên hàng', width: 240, value: (r) => r.itemName },
+  { key: 'uom', title: 'ĐVT cơ sở', width: 80, value: (r) => r.baseUomCode },
+  { key: 'prevQty', title: 'SL kỳ trước', width: 100, type: 'quantity', value: (r) => r.previousQty },
+  { key: 'prevPrice', title: 'Giá BQ kỳ trước', width: 120, type: 'money', value: (r) => r.previousAvgPrice },
+  { key: 'qty', title: 'SL kỳ này', width: 100, type: 'quantity', value: (r) => r.currentQty },
+  { key: 'price', title: 'Giá BQ kỳ này', width: 120, type: 'money', value: (r) => r.currentAvgPrice },
+  { key: 'change', title: 'Thay đổi (%)', width: 100, type: 'quantity', value: (r) => r.changePct },
+  { key: 'impact', title: 'Ảnh hưởng', width: 130, type: 'money', value: (r) => r.impactAmount },
+  { key: 'min', title: 'Giá thấp nhất', width: 110, type: 'money', value: (r) => r.minPrice },
+  { key: 'max', title: 'Giá cao nhất', width: 110, type: 'money', value: (r) => r.maxPrice },
+  { key: 'orders', title: 'Số PO', width: 70, type: 'quantity', value: (r) => r.orderCount },
+  { key: 'suppliers', title: 'Số NCC', width: 70, type: 'quantity', value: (r) => r.supplierCount },
+]
+
+/**
+ * Báo cáo → Biến động giá mua (design.md mục 18.17): giá bình quân gia quyền theo ĐVT cơ sở (sau CK, trước VAT) của dòng PO đã duyệt
+ * kỳ này so với kỳ trước liền trước (trọn tháng thì lùi theo tháng, còn lại cùng số ngày); ảnh hưởng = chênh giá × SL kỳ này. Mặc định tháng trước. Dòng tăng giá được tô màu.
+ */
+export function PriceVarianceReportPage() {
+  const [period, setPeriod] = useState(lastMonth)
+  const [categoryId, setCategoryId] = useState<string>()
+  const categories = useItemCategories()
+  const tree = useMemo(() => buildCategoryTree(categories.data ?? []), [categories.data])
+  const report = usePriceVariance(period, categoryId)
+  const data = report.data
+  const previous = data ? `kỳ trước từ ${formatDate(data.previousFrom)} đến ${formatDate(data.previousTo)}` : 'kỳ trước'
+  return (
+    <ListPage
+      title="Biến động giá mua"
+      exportFileName="bien-dong-gia-mua"
+      exportSubtitle={`${periodText(period)} – so ${previous}`}
+      canCreate={false}
+      rows={data?.items ?? []}
+      columns={varianceColumns}
+      rowKey={(r) => r.itemId}
+      loading={report.isLoading}
+      isMarked={(r) => (r.changePct ?? 0) > 0}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            title={`So với ${previous}: ảnh hưởng ${formatMoney(data?.impactAmount ?? 0)} đ (dương là mua đắt hơn). Giá theo PO đã duyệt, ĐVT cơ sở, sau chiết khấu, trước VAT. Tô màu: tăng giá.`}
+          />
+        )
+      }
+      onClearFilters={() => {
+        setPeriod(lastMonth())
+        setCategoryId(undefined)
+      }}
+      filters={
+        <PeriodFilters
+          value={period}
+          onChange={setPeriod}
+          extra={
+            <FilterField label="Nhóm hàng (gồm nhóm con)" width={220}>
+              {(id) => (
+                <TreeSelect
+                  id={id}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  treeData={tree}
+                  allowClear
+                  showSearch
+                  treeNodeFilterProp="title"
+                  placeholder="Tất cả"
+                />
+              )}
+            </FilterField>
+          }
+        />
+      }
     />
   )
 }

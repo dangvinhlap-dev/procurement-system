@@ -118,8 +118,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có lát đang dở. Hết đợt D; lát kế tiếp theo lộ trình: **F1** (báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá – `docs/Phantich_01112026.md`
-  mục 5), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F2** (bảng KPI 9 chỉ số, mục tiêu cấu hình được – `docs/Phantich_01112026.md` mục 3.6, 5),
+  lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- **F1 (xong, đã merge `main` 02/11/2026): báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá** – design.md mục 18.17.
+  - API `GET /api/reports/contract-compliance` (màn hình PRCW, mặc định tuần trước): dòng PO Đã duyệt/Đã đóng theo nguồn giá (chọn thầu,
+    hợp đồng, bảng giá, lệch giá, không có giá đã duyệt, không xác định), tỷ lệ mua theo giá đã duyệt (cảnh báo khi < 95%), dòng ngoài hợp
+    đồng kèm giá đã duyệt, % lệch, tiền chênh, lý do. Bấm đúp mở PO.
+  - API `GET /api/reports/price-variance` (màn hình PRVAR, mặc định tháng trước, lọc nhóm hàng): giá BQ gia quyền ĐVT cơ sở kỳ này so kỳ
+    trước (trọn tháng lùi theo tháng, còn lại cùng số ngày – `PurchaseReportService.PreviousPeriod`), % thay đổi, ảnh hưởng tiền.
+  - Test: tích hợp `BaoCaoTuan_GiaMuaNgoaiHopDong_BienDongGia`, `BienDongGia_KyTruoc_…`; e2e `price-reports.spec.ts`
+    (`seedPostedReceipt` trả thêm `supplierId`). Không có migration.
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 488 qua; Playwright 82/83 – `po-list` "nhóm theo công ty" lỗi khi chạy song song, chạy riêng
+    9/9 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlint` qua.
 - **D1 (xong, đã merge `main` 02/11/2026): điểm đặt hàng lại, tồn an toàn, vật tư trọng yếu (K1)** – design.md mục 18.16.
   - Mặt hàng thêm `SafetyStock`, `ReorderPoint`, `IsCritical` (chỉ hàng tồn kho; an toàn ≤ đặt lại ≤ tối đa); migration
     `V0_13_0_DiemDatHangLai`; Excel hàng hóa thêm 3 cột (file mẫu cũ thiếu cột thì giữ giá trị đang có – `ExcelRowReader.HasColumn`).
@@ -160,7 +170,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F1** (hết đợt C trừ C3 và đợt D – có thể phát hành 0.13.0 khi người dùng yêu cầu).
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F2** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);

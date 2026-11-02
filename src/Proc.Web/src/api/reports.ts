@@ -341,6 +341,106 @@ export function useSourcingSavings(period: PurchaseReportPeriod) {
   })
 }
 
+/** Nguồn giá trong báo cáo giá mua (design.md mục 18.17); Deviation = lệch giá đã duyệt. */
+export type PriceSourceKind = 'Rfq' | 'Contract' | 'PriceList' | 'Deviation' | 'None' | 'Unknown'
+
+/** Tổng hợp giá trị dòng PO theo một nguồn giá. */
+export interface PriceSourceSummary {
+  source: PriceSourceKind
+  lineCount: number
+  amount: number
+  sharePct: number
+}
+
+/** Một dòng PO mua ngoài hợp đồng: không có giá đã duyệt hoặc lệch giá đã duyệt. */
+export interface OutOfContractLine {
+  orderId: string
+  orderNo: string
+  date: string
+  companyCode: string
+  department: string | null
+  supplierCode: string
+  supplierName: string
+  lineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  netUnitPrice: number
+  approvedNetPrice: number | null
+  deviationPct: number | null
+  amount: number
+  deviationAmount: number | null
+  kind: 'Deviation' | 'None'
+  reason: string | null
+}
+
+/** Báo cáo tuần giá mua & mua ngoài hợp đồng. */
+export interface ContractComplianceResult {
+  orderCount: number
+  totalAmount: number
+  compliancePct: number | null
+  sources: PriceSourceSummary[]
+  lines: OutOfContractLine[]
+}
+
+/**
+ * Giá mua & mua ngoài hợp đồng theo ngày PO (design.md mục 18.17).
+ * @param period Khoảng ngày, phạm vi.
+ */
+export function useContractCompliance(period: PurchaseReportPeriod) {
+  const companyId = useCompanyId()
+  const query = periodQuery(period).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'contract-compliance', query],
+    queryFn: () => apiFetch<ContractComplianceResult>(`/api/reports/contract-compliance?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Biến động giá mua một mặt hàng: kỳ này so kỳ trước liền trước – trọn tháng thì lùi theo tháng (giá theo ĐVT cơ sở, sau CK, trước VAT). */
+export interface PriceVarianceRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  baseUomCode: string
+  previousQty: number
+  previousAvgPrice: number | null
+  currentQty: number
+  currentAvgPrice: number
+  minPrice: number
+  maxPrice: number
+  changePct: number | null
+  impactAmount: number | null
+  orderCount: number
+  supplierCount: number
+}
+
+/** Báo cáo biến động giá mua theo kỳ. */
+export interface PriceVarianceResult {
+  previousFrom: string
+  previousTo: string
+  impactAmount: number
+  items: PriceVarianceRow[]
+}
+
+/**
+ * Biến động giá mua kỳ này so kỳ trước (design.md mục 18.17).
+ * @param period Kỳ này, phạm vi.
+ * @param categoryId Nhóm hàng (gồm nhóm con), không có = mọi nhóm.
+ */
+export function usePriceVariance(period: PurchaseReportPeriod, categoryId?: string) {
+  const companyId = useCompanyId()
+  const params = periodQuery(period)
+  if (categoryId) params.set('categoryId', categoryId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'price-variance', query],
+    queryFn: () => apiFetch<PriceVarianceResult>(`/api/reports/price-variance?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Một dòng nhận hàng có sai lệch (design.md mục 18.14). */
 export interface ReceiptQualityRow {
   documentId: string

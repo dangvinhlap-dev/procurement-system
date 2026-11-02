@@ -208,6 +208,75 @@ public sealed record SourcingSavingRowDto(
     string SupplierCode, string SupplierName, int QuoteCount, decimal AwardedPrice, decimal MinPrice, decimal AvgPrice, decimal MaxPrice,
     decimal AwardedAmount, decimal SavingVsAvg, decimal SavingVsMax, bool IsLowest, string? AwardReason);
 
+/// <summary>Tổng hợp giá trị dòng PO theo một nguồn giá (design.md mục 18.17).</summary>
+/// <param name="Source">Rfq, Contract, PriceList (theo giá đã duyệt); Deviation (lệch giá đã duyệt); None (không có giá đã duyệt);
+/// Unknown (PO lập trước bản 0.12.0).</param>
+/// <param name="LineCount">Số dòng PO.</param>
+/// <param name="Amount">Thành tiền sau chiết khấu, trước VAT.</param>
+/// <param name="SharePct">Tỷ trọng trong tổng (%), 2 số lẻ.</param>
+public sealed record PriceSourceSummaryDto(string Source, int LineCount, decimal Amount, decimal SharePct);
+
+/// <summary>Một dòng PO mua ngoài hợp đồng: không có giá đã duyệt hoặc lệch giá đã duyệt (design.md mục 18.10, 18.17).</summary>
+/// <param name="OrderId">PO.</param>
+/// <param name="OrderNo">Số PO.</param>
+/// <param name="Date">Ngày PO.</param>
+/// <param name="CompanyCode">Công ty.</param>
+/// <param name="Department">Bộ phận đặt hàng (nếu có).</param>
+/// <param name="SupplierCode">Mã NCC.</param>
+/// <param name="SupplierName">Tên NCC.</param>
+/// <param name="LineNo">Số dòng trên PO.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="UomCode">ĐVT dòng.</param>
+/// <param name="Qty">SL.</param>
+/// <param name="NetUnitPrice">Đơn giá thực sau chiết khấu (theo ĐVT dòng).</param>
+/// <param name="ApprovedNetPrice">Giá đã duyệt sau chiết khấu; null khi không có giá đã duyệt.</param>
+/// <param name="DeviationPct">% lệch = (giá thực − giá đã duyệt) ÷ giá đã duyệt × 100, 2 số lẻ; null khi không có giá đã duyệt hoặc giá đã duyệt = 0.</param>
+/// <param name="Amount">Thành tiền sau chiết khấu, trước VAT.</param>
+/// <param name="DeviationAmount">Tiền chênh so với giá đã duyệt = (giá thực − giá đã duyệt) × SL; null khi không có giá đã duyệt.</param>
+/// <param name="Kind">Deviation (lệch giá) hoặc None (không có giá đã duyệt).</param>
+/// <param name="Reason">Lý do lệch giá.</param>
+public sealed record OutOfContractLineDto(
+    Guid OrderId, string OrderNo, DateOnly Date, string CompanyCode, string? Department, string SupplierCode, string SupplierName, int LineNo,
+    string ItemCode, string ItemName, string UomCode, decimal Qty, decimal NetUnitPrice, decimal? ApprovedNetPrice, decimal? DeviationPct,
+    decimal Amount, decimal? DeviationAmount, string Kind, string? Reason);
+
+/// <summary>Báo cáo giá mua & mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17).</summary>
+/// <param name="OrderCount">Số PO đã duyệt trong kỳ.</param>
+/// <param name="TotalAmount">Tổng thành tiền dòng PO (trước VAT).</param>
+/// <param name="CompliancePct">Tỷ lệ mua theo giá đã duyệt = giá trị theo giá đã duyệt (không lệch) ÷ (tổng − dòng không xác định) × 100,
+/// 2 số lẻ; null khi không có dòng xác định được nguồn giá. KPI Ban CUVT ≥ 95%.</param>
+/// <param name="Sources">Tổng hợp theo nguồn giá (chỉ nguồn có dòng).</param>
+/// <param name="Lines">Các dòng ngoài hợp đồng, tiền chênh/thành tiền giảm dần.</param>
+public sealed record ContractComplianceResult(
+    int OrderCount, decimal TotalAmount, decimal? CompliancePct, IReadOnlyList<PriceSourceSummaryDto> Sources, IReadOnlyList<OutOfContractLineDto> Lines);
+
+/// <summary>Biến động giá mua một mặt hàng: kỳ này so kỳ trước liền trước (design.md mục 18.17). Giá theo ĐVT cơ sở, sau chiết khấu, trước VAT.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="BaseUomCode">ĐVT cơ sở.</param>
+/// <param name="PreviousQty">SL kỳ trước (ĐVT cơ sở); 0 khi không mua.</param>
+/// <param name="PreviousAvgPrice">Giá bình quân gia quyền kỳ trước; null khi không mua.</param>
+/// <param name="CurrentQty">SL kỳ này.</param>
+/// <param name="CurrentAvgPrice">Giá bình quân gia quyền kỳ này.</param>
+/// <param name="MinPrice">Giá thấp nhất kỳ này.</param>
+/// <param name="MaxPrice">Giá cao nhất kỳ này.</param>
+/// <param name="ChangePct">% thay đổi = (kỳ này − kỳ trước) ÷ kỳ trước × 100, 2 số lẻ; null khi kỳ trước không mua.</param>
+/// <param name="ImpactAmount">Ảnh hưởng = (kỳ này − kỳ trước) × SL kỳ này; dương là mua đắt hơn; null khi kỳ trước không mua.</param>
+/// <param name="OrderCount">Số PO kỳ này có mặt hàng.</param>
+/// <param name="SupplierCount">Số NCC kỳ này.</param>
+public sealed record PriceVarianceRowDto(
+    Guid ItemId, string ItemCode, string ItemName, string BaseUomCode, decimal PreviousQty, decimal? PreviousAvgPrice, decimal CurrentQty,
+    decimal CurrentAvgPrice, decimal MinPrice, decimal MaxPrice, decimal? ChangePct, decimal? ImpactAmount, int OrderCount, int SupplierCount);
+
+/// <summary>Báo cáo biến động giá mua theo kỳ.</summary>
+/// <param name="PreviousFrom">Đầu kỳ trước.</param>
+/// <param name="PreviousTo">Cuối kỳ trước (ngày liền trước kỳ này).</param>
+/// <param name="ImpactAmount">Tổng ảnh hưởng của các mặt hàng có giá kỳ trước.</param>
+/// <param name="Items">Các mặt hàng mua trong kỳ này, |ảnh hưởng| giảm dần.</param>
+public sealed record PriceVarianceResult(DateOnly PreviousFrom, DateOnly PreviousTo, decimal ImpactAmount, IReadOnlyList<PriceVarianceRowDto> Items);
+
 /// <summary>
 /// Báo cáo mua hàng, đánh giá NCC, tiết kiệm từ đấu thầu (design.md mục 11, 11.3). Mặc định chỉ công ty đang làm việc; xem toàn tập đoàn cần
 /// quyền <c>Report.Purchase.ViewAllCompanies</c>.
@@ -272,4 +341,26 @@ public interface IPurchaseReportService
     /// <returns>Dòng và tổng hợp.</returns>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai, quá 1 năm hoặc dung sai âm.</exception>
     Task<ThreeWayMatchResult> GetThreeWayMatchAsync(DateOnly from, DateOnly to, decimal tolerance, bool onlyIssues, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Giá mua & mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17): dòng PO đã duyệt (Đã duyệt, Đã đóng) có ngày PO trong khoảng,
+    /// tổng hợp theo nguồn giá, tỷ lệ mua theo giá đã duyệt và các dòng ngoài hợp đồng.
+    /// </summary>
+    /// <param name="period">Khoảng ngày PO, phạm vi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
+    Task<ContractComplianceResult> GetContractComplianceAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Biến động giá mua (design.md mục 18.17): giá bình quân gia quyền theo ĐVT cơ sở của dòng PO đã duyệt kỳ này so với kỳ trước liền trước (khoảng trọn tháng thì lùi cùng số tháng, còn lại cùng số ngày).
+    /// </summary>
+    /// <param name="period">Kỳ này (khoảng ngày PO), phạm vi.</param>
+    /// <param name="categoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
+    Task<PriceVarianceResult> GetPriceVarianceAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken);
 }

@@ -372,4 +372,62 @@ public class PurchaseOrderPriceSourceTests
         normal = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{normal.Id}/submit", null, Ct));
         Assert.Equal([1], normal.Approvals.Select(s => s.Stage));
     }
+
+    [Theory]
+    [InlineData("2026-10-01", "2026-10-31", "2026-09-01", "2026-09-30")]
+    [InlineData("2026-10-01", "2026-12-31", "2026-07-01", "2026-09-30")]
+    [InlineData("2026-03-01", "2026-03-31", "2026-02-01", "2026-02-28")]
+    [InlineData("2026-11-09", "2026-11-15", "2026-11-02", "2026-11-08")]
+    [InlineData("2026-10-05", "2026-10-31", "2026-09-08", "2026-10-04")]
+    public void BienDongGia_KyTruoc_TronThangLuiTheoThang_ConLaiLuiTheoNgay(string from, string to, string prevFrom, string prevTo) =>
+        Assert.Equal((DateOnly.Parse(prevFrom), DateOnly.Parse(prevTo)),
+            Proc.Infrastructure.Reports.PurchaseReportService.PreviousPeriod(DateOnly.Parse(from), DateOnly.Parse(to)));
+
+    [Fact]
+    public async Task BaoCaoTuan_GiaMuaNgoaiHopDong_BienDongGia()
+    {
+        var f = await ArrangeAsync();
+        var approver = await ApproverAsync(f, await RoleAsync());
+        async Task<PurchaseOrderDto> ApprovedAsync(SavePurchaseOrderRequest request)
+        {
+            var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", request, Ct));
+            po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+            // PO lệch giá có thêm chặng ngoại lệ (chưa cấu hình POX → một cấp, ai có quyền duyệt PO): duyệt đến khi xong.
+            while (po.Status == "Submitted")
+                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            Assert.Equal("Approved", po.Status);
+            return po;
+        }
+
+        // Kỳ này (hôm nay): NCC A theo bảng giá 47.500 sau CK (475.000) + lệch giá 49.400 (494.000); NCC C không có giá 60.000 × 5 (300.000).
+        var po1 = await ApprovedAsync(Po(f, f.SupplierId, Line(f, 10, 50_000, 5), Line(f, 10, 52_000, 5, "NCC tăng giá thép")));
+        await ApprovedAsync(Po(f, f.NoPriceSupplierId, Line(f, 5, 60_000, 0)));
+        // PO nháp không tính; kỳ trước (hôm qua): 10 cái 45.000.
+        await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", Po(f, f.SupplierId, Line(f, 100, 10_000, 0)), Ct));
+        await ApprovedAsync(Po(f, f.NoPriceSupplierId, Line(f, 10, 45_000, 0)) with { Date = Today.AddDays(-1) });
+
+        var report = await ReadAsync<ContractComplianceResult>(await f.Client.GetAsync(
+            $"/api/reports/contract-compliance?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
+        Assert.Equal((2, 1_269_000m, 37.43m), (report.OrderCount, report.TotalAmount, report.CompliancePct));
+        Assert.Equal([("PriceList", 475_000m), ("Deviation", 494_000m), ("None", 300_000m)], report.Sources.Select(s => (s.Source, s.Amount)));
+        var deviation = report.Lines[0];
+        Assert.Equal((po1.No, "Deviation", 49_400m, 47_500m, 4.00m, 19_000m, "NCC tăng giá thép"),
+            (deviation.OrderNo, deviation.Kind, deviation.NetUnitPrice, deviation.ApprovedNetPrice, deviation.DeviationPct, deviation.DeviationAmount, deviation.Reason));
+        Assert.Equal(("None", (decimal?)null, 300_000m), (report.Lines[1].Kind, report.Lines[1].ApprovedNetPrice, report.Lines[1].Amount));
+        Assert.Equal(2, report.Lines.Count);
+
+        var variance = await ReadAsync<PriceVarianceResult>(await f.Client.GetAsync(
+            $"/api/reports/price-variance?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
+        Assert.Equal((Today.AddDays(-1), Today.AddDays(-1), 144_000m), (variance.PreviousFrom, variance.PreviousTo, variance.ImpactAmount));
+        var row = Assert.Single(variance.Items);
+        Assert.Equal((10m, 45_000m, 25m, 50_760m, 47_500m, 60_000m, 12.80m, 2, 2),
+            (row.PreviousQty, row.PreviousAvgPrice, row.CurrentQty, row.CurrentAvgPrice, row.MinPrice, row.MaxPrice, row.ChangePct, row.OrderCount, row.SupplierCount));
+
+        // Xem toàn tập đoàn cần quyền riêng.
+        var plainRole = UniqueCode("V");
+        await _factory.CreateRoleAsync(plainRole, Permissions.Report.PurchaseView);
+        var viewer = await ApproverAsync(f, plainRole);
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, (await viewer.GetAsync(
+            $"/api/reports/contract-compliance?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&allCompanies=true", Ct)).StatusCode);
+    }
 }
