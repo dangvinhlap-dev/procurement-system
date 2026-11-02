@@ -1495,6 +1495,24 @@ như báo cáo biến động giá – mục 18.17). Mỗi chỉ số dùng đú
 | Chỉ số cao là tốt đạt khi kết quả ≥ mục tiêu; thấp là tốt (mua khẩn, tồn chậm, vi phạm) đạt khi ≤ mục tiêu. Mẫu số = 0 → "Chưa có dữ liệu", không tính đạt/không đạt | Không báo đạt giả khi kỳ không phát sinh |
 | Phạm vi: công ty đang làm việc, kho và nhóm hàng của người xem (như các báo cáo nguồn); chưa có bảng KPI toàn tập đoàn | Báo cáo SLA, chất lượng chỉ theo công ty |
 
+### 18.19 Kiểm soát nội bộ – dấu hiệu bất thường, sổ vi phạm (lát F3, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT – "Giám sát độc lập" (mục 3.7 `docs/Phantich_01112026.md`): KSNB có quyền riêng (chỉ xem, toàn tập đoàn), rà dấu
+hiệu bất thường, kết quả gửi thẳng lãnh đạo, không qua Nhóm Đàm phán/Vận hành.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Quyền mới (module **Kiểm soát nội bộ**): `Control.Anomaly.View` – xem dấu hiệu bất thường, sổ vi phạm; `Control.Finding.Manage` – ghi nhận, kết luận vi phạm; `Control.Finding.Receive` – lãnh đạo nhận thông báo vi phạm, xem sổ vi phạm. Vai trò mẫu: KSNB thêm 2 quyền đầu; vai trò mẫu mới **LANHDAO** (Lãnh đạo – nhận báo cáo KSNB) có quyền nhận. Trưởng ban **không** có quyền nhận. Vai trò KSNB đã tạo trước bản này không tự thêm quyền (bộ vai trò mẫu không sửa vai trò đã có) – quản trị gán tay | Giám sát độc lập; kết quả không đi qua người bị giám sát |
+| Màn hình **Dấu hiệu bất thường** (ANOM, `GET /api/control/anomalies?from=&to=&allCompanies=&priceGapPct=&nearThresholdPct=&nearThresholdCount=&offContractPct=`): chỉ đọc, tối đa 1 năm mỗi lần; công ty đang làm việc hoặc **toàn tập đoàn** (cần thêm `Report.Purchase.ViewAllCompanies`, như báo cáo mua hàng mục 11.3); mặt hàng theo phạm vi nhóm hàng của người xem. Mức **Cao** (đèn đỏ) / **Trung bình** (đèn vàng); cao lên đầu, rồi ngày mới trước | KSNB rà định kỳ; ngưỡng chỉnh được ngay trên bộ lọc |
+| **Giá cao lặp lại một NCC**: công ty × NCC × mặt hàng có từ 2 PO Đã duyệt/Đã đóng trong kỳ, giá BQ theo ĐVT cơ sở (Σ thành tiền trước VAT ÷ Σ SL cơ sở) cao hơn giá BQ thấp nhất của NCC khác cùng mặt hàng (trong phạm vi đang xem) từ **10%** (chỉnh được). Tiền = chênh giá × SL. Ví dụ A 95.000, B 80.000 → 18,75%, chênh 15.000 × 10 = 150.000. Từ gấp đôi mức → Cao | Mua lặp lại giá cao bất thường |
+| **PO sát dưới ngưỡng duyệt** (V5): PO đã gửi duyệt trở đi (trừ hủy), tổng gồm VAT trong [ngưỡng × 90%, ngưỡng) của một cấp duyệt PO có ngưỡng > 0 (APRL); cùng công ty × người lập × NCC × ngưỡng từ **3 phiếu** (chỉnh được % và số phiếu). Từ gấp đôi số phiếu → Cao | Chia nhỏ đơn để né cấp duyệt cao |
+| **Đổi tài khoản ngân hàng NCC**: yêu cầu đổi tài khoản (mục 18.6, B2) được duyệt trong kỳ, kèm tài khoản cũ → mới; Trung bình | N2 – KSNB đối chiếu với chứng từ thanh toán ở phần mềm kế toán |
+| **Mua ngoài hợp đồng cao theo người lập PO** (P5): như PRCW (mục 18.17) – ngoài = lệch giá + không có giá đã duyệt, mẫu số bỏ dòng không xác định; vượt **5%** (= KPI ≥ 95%, chỉnh được) là dấu hiệu, từ gấp đôi → Cao | Người mua thường xuyên mua ngoài giá được duyệt |
+| **Hóa đơn tính cả hàng thiếu/không đạt** (V7, V8) và **hàng/hóa đơn có trước PO** (hợp thức hóa – mục 18.11): lấy từ đối chiếu MATCH3 (mục 18.15) dung sai 0 đ. Hóa đơn tính cả hàng thiếu, nhận hàng hoặc hóa đơn trước ngày PO → Cao; chỉ nhận hàng trước ngày duyệt PO → Trung bình | Dùng đúng số liệu báo cáo kế toán đã xem |
+| **Xung đột lợi ích** (N4): PO (trừ nháp, hủy) có người lập hoặc người đã duyệt có kê khai (mục 18.8) với NCC còn hiệu lực vào ngày PO; Cao | Chặn duyệt chỉ áp từ lúc kê khai; dấu hiệu bắt cả kê khai lùi ngày hiệu lực và người lập |
+| **Chiết khấu/tài trợ chưa ghi nhận** (P10): "Chưa đo" – cần chiết khấu doanh số/tài trợ trên hợp đồng (lát F4) | Không báo 0 giả |
+| PO không có filter nhóm hàng ở đầu phiếu: dấu hiệu sát ngưỡng và xung đột lợi ích tính theo đầu PO (giá trị cả phiếu) | Người có phạm vi nhóm hàng hẹp vẫn thấy số phiếu, giá trị PO như ở danh sách PO |
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

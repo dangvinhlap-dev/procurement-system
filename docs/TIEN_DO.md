@@ -118,8 +118,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F3** (KSNB: quyền riêng, màn hình dấu hiệu bất thường, thông báo lãnh đạo –
-  `docs/Phantich_01112026.md` mục 3.7, 5), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- **F3 (đang làm, nhánh `feature/f3-ksnb`): Kiểm soát nội bộ – dấu hiệu bất thường, sổ vi phạm, thông báo lãnh đạo** – design.md mục 18.19.
+  - Bước 1 (xong): quyền `Control.Anomaly.View`/`Control.Finding.Manage`/`Control.Finding.Receive`, vai trò mẫu KSNB thêm quyền, vai trò mẫu
+    mới LANHDAO; API `GET /api/control/anomalies` (`ControlAnomalyService`): giá cao lặp lại 1 NCC, PO sát dưới ngưỡng duyệt, đổi TK ngân
+    hàng NCC, mua ngoài hợp đồng cao theo người lập, hóa đơn tính cả hàng thiếu, hàng/hóa đơn trước PO, xung đột lợi ích; chiết khấu "Chưa đo".
+    `PurchaseReportService.OrderLinesAsync`/`ThreeWayRowsAsync` thành hàm tĩnh dùng chung. Test `ControlAnomalyTests`, sửa `RoleAdministrationTests`.
+  - Còn: bước 2 sổ vi phạm `ControlFinding` (migration `V0_13_0_GhiNhanViPham`, thông báo lãnh đạo, KPI vi phạm nghiêm trọng); bước 3 màn
+    hình ANOM + sổ vi phạm + e2e; cuối lát chạy đủ kiểm tra, merge.
 - **F2 (xong, đã merge `main` 02/11/2026): bảng KPI cung ứng 9 chỉ số** – design.md mục 18.18.
   - API `GET /api/reports/kpi` (`KpiService` ghép PRCW, SLA, QCDEV, đánh giá NCC, tiết kiệm thầu, tồn chậm, tỷ lệ PO khẩn; so kỳ trước);
     màn hình KPI (Báo cáo, mặc định tháng trước, bấm đúp mở báo cáo chi tiết, nút "Mục tiêu KPI"). Đánh giá NCC (F4), vi phạm (F3): "Chưa đo".

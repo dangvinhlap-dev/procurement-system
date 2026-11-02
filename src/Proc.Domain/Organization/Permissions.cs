@@ -193,6 +193,19 @@ public static class Permissions
         public const string PurchaseHistoryViewAllCompanies = "Analysis.PurchaseHistory.ViewAllCompanies";
     }
 
+    /// <summary>Kiểm soát nội bộ – KSNB (design.md mục 18.19).</summary>
+    public static class Control
+    {
+        /// <summary>Quyền "Xem dấu hiệu bất thường và sổ vi phạm" (KSNB). Xem toàn tập đoàn cần thêm <see cref="Report.PurchaseViewAllCompanies"/>.</summary>
+        public const string AnomalyView = "Control.Anomaly.View";
+        /// <summary>Quyền "Ghi nhận, kết luận vi phạm" (KSNB).</summary>
+        public const string FindingManage = "Control.Finding.Manage";
+        /// <summary>
+        /// Quyền "Nhận thông báo vi phạm, xem sổ vi phạm" (lãnh đạo) – kết quả KSNB gửi thẳng lãnh đạo, không qua Nhóm Đàm phán/Vận hành.
+        /// </summary>
+        public const string FindingReceive = "Control.Finding.Receive";
+    }
+
     /// <summary>Toàn bộ quyền kèm tên tiếng Việt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<PermissionDefinition> All =
     [
@@ -257,6 +270,9 @@ public static class Permissions
         new(Analysis.PurchaseHistoryView, "Xem dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryImport, "Nhập, xóa lô dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryViewAllCompanies, "Xem phân tích giá hợp nhất toàn tập đoàn"),
+        new(Control.AnomalyView, "Xem dấu hiệu bất thường, sổ vi phạm (KSNB)"),
+        new(Control.FindingManage, "Ghi nhận, kết luận vi phạm (KSNB)"),
+        new(Control.FindingReceive, "Nhận thông báo vi phạm, xem sổ vi phạm (lãnh đạo)"),
     ];
 
     /// <summary>
@@ -279,6 +295,7 @@ public static class Permissions
         ("Sourcing", "Tìm nguồn và đấu thầu"),
         ("Report", "Báo cáo"),
         ("Analysis", "Phân tích dữ liệu mua"),
+        ("Control", "Kiểm soát nội bộ"),
     ];
 
     private static readonly HashSet<string> KnownCodes = [.. All.Select(p => p.Code)];

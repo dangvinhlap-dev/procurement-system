@@ -171,10 +171,14 @@ public class RoleAdministrationTests
         var detail = await admin.GetFromJsonAsync<RoleDetailDto>($"/api/roles/{council.Id}", Ct);
         Assert.Contains(Permissions.Sourcing.RfqApproveAward, detail!.PermissionCodes);
 
-        // Không kiêm nhiệm: nhóm đàm phán không có quyền duyệt; KSNB chỉ xem.
+        // Không kiêm nhiệm: nhóm đàm phán không có quyền duyệt; KSNB chỉ xem nghiệp vụ (ghi được sổ vi phạm của chính KSNB – mục 18.19).
         var negotiator = templates!.Single(t => t.Code == "DAMPHAN");
         Assert.DoesNotContain(negotiator.PermissionCodes, p => p.EndsWith(".Approve", StringComparison.Ordinal) || p.EndsWith(".ApproveAward", StringComparison.Ordinal));
-        Assert.All(templates.Single(t => t.Code == "KSNB").PermissionCodes, p => Assert.EndsWith(".View", p.Replace("ViewAllCompanies", "View")));
+        Assert.All(templates.Single(t => t.Code == "KSNB").PermissionCodes.Where(p => p != Permissions.Control.FindingManage),
+            p => Assert.EndsWith(".View", p.Replace("ViewAllCompanies", "View")));
+        // Kết quả KSNB gửi thẳng lãnh đạo, không qua Trưởng ban.
+        Assert.Contains(Permissions.Control.FindingReceive, templates.Single(t => t.Code == "LANHDAO").PermissionCodes);
+        Assert.DoesNotContain(Permissions.Control.FindingReceive, templates.Single(t => t.Code == "TRUONGBANCUVT").PermissionCodes);
     }
 
     [Fact]
