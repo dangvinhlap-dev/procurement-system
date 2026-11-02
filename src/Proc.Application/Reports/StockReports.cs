@@ -88,6 +88,45 @@ public sealed record GroupStockRowDto(
 /// <param name="Items">Các công ty còn tồn (khác 0), theo mã công ty.</param>
 public sealed record GroupStockResult(Guid ItemId, string ItemCode, string ItemName, string UomCode, decimal? MinStock, IReadOnlyList<GroupStockRowDto> Items);
 
+/// <summary>Điều kiện báo cáo gợi ý đặt hàng (lát D1, design.md mục 18.16).</summary>
+/// <param name="CategoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm được phép.</param>
+/// <param name="CriticalOnly">Chỉ vật tư trọng yếu.</param>
+/// <param name="IncludeAll">Gồm cả mặt hàng còn đủ (để rà soát thông số); mặc định chỉ hàng cần đặt.</param>
+public sealed record ReorderSuggestionQuery(Guid? CategoryId, bool CriticalOnly, bool IncludeAll);
+
+/// <summary>
+/// Một mặt hàng trong báo cáo gợi ý đặt hàng – số lượng theo ĐVT cơ sở, cộng mọi kho của công ty đang làm việc.
+/// </summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="CategoryCode">Mã nhóm hàng.</param>
+/// <param name="CategoryName">Tên nhóm hàng.</param>
+/// <param name="BaseUomId">ĐVT cơ sở (để lập PR).</param>
+/// <param name="UomCode">Mã ĐVT cơ sở.</param>
+/// <param name="IsCritical">Vật tư trọng yếu.</param>
+/// <param name="SafetyStock">Tồn an toàn.</param>
+/// <param name="ReorderPoint">Ngưỡng đặt hàng đang áp dụng: điểm đặt hàng lại, chưa khai báo thì lấy tồn tối thiểu.</param>
+/// <param name="MaxStock">Tồn tối đa.</param>
+/// <param name="OnHandQty">Tồn hiện tại (mọi kho, mọi lô).</param>
+/// <param name="OnOrderQty">Đang đặt: PO chưa nhận (PO nháp/chờ duyệt tính cả, PO đã duyệt tính phần chưa nhận).</param>
+/// <param name="OpenRequestQty">Đề nghị còn mở: PR chưa hủy, phần chưa lên PO.</param>
+/// <param name="AvailableQty">Khả dụng = tồn + đang đặt + đề nghị còn mở.</param>
+/// <param name="SuggestedQty">SL gợi ý đặt = (tồn tối đa, không có thì ngưỡng) − khả dụng; 0 khi chưa cần đặt.</param>
+/// <param name="Level">Mức: <c>Urgent</c> (tồn hiện tại dưới tồn an toàn), <c>Reorder</c> (khả dụng dưới ngưỡng), <c>Ok</c>.</param>
+/// <param name="PreferredSupplierId">NCC ưu tiên của mặt hàng (gợi ý NCC trên PR).</param>
+/// <param name="PreferredSupplierCode">Mã NCC ưu tiên.</param>
+public sealed record ReorderSuggestionRowDto(
+    Guid ItemId, string ItemCode, string ItemName, string CategoryCode, string CategoryName, Guid BaseUomId, string UomCode,
+    bool IsCritical, decimal? SafetyStock, decimal ReorderPoint, decimal? MaxStock, decimal OnHandQty, decimal OnOrderQty,
+    decimal OpenRequestQty, decimal AvailableQty, decimal SuggestedQty, string Level, Guid? PreferredSupplierId, string? PreferredSupplierCode);
+
+/// <summary>Báo cáo gợi ý đặt hàng.</summary>
+/// <param name="Items">Các dòng: trọng yếu trước, rồi mức khẩn, rồi mã hàng.</param>
+/// <param name="Truncated">Còn dòng chưa trả về (vượt giới hạn) – cần lọc hẹp hơn.</param>
+/// <param name="Limit">Số dòng tối đa mỗi lần.</param>
+public sealed record ReorderSuggestionResult(IReadOnlyList<ReorderSuggestionRowDto> Items, bool Truncated, int Limit);
+
 /// <summary>
 /// Báo cáo kho còn lại của design.md mục 11 (nhóm Kho, Tồn tập đoàn) – chi tiết quy tắc ở mục 11.2.
 /// </summary>
@@ -114,4 +153,13 @@ public interface IStockReportService
     /// <exception cref="Common.ForbiddenAccessException">Khi thiếu quyền xem toàn tập đoàn.</exception>
     /// <exception cref="Common.NotFoundException">Khi mặt hàng không có hoặc ngoài phạm vi nhóm hàng.</exception>
     Task<GroupStockResult> GetGroupStockAsync(Guid itemId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Mặt hàng tồn kho có ngưỡng đặt hàng (điểm đặt hàng lại hoặc tồn tối thiểu) mà khả dụng của công ty đang làm việc dưới ngưỡng,
+    /// kèm SL gợi ý để lập đề nghị mua (design.md mục 18.16).
+    /// </summary>
+    /// <param name="query">Điều kiện.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    Task<ReorderSuggestionResult> GetReorderSuggestionsAsync(ReorderSuggestionQuery query, CancellationToken cancellationToken);
 }

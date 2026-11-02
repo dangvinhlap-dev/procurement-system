@@ -3,9 +3,12 @@ using Proc.Application.Common;
 using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Inventory;
+using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Purchasing;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Reports;
 
@@ -18,6 +21,9 @@ public sealed class StockReportService : IStockReportService
 {
     /// <summary>Số ngày lớn nhất của tham số báo cáo (10 năm).</summary>
     public const int MaxDays = 3650;
+
+    /// <summary>Số dòng tối đa của báo cáo gợi ý đặt hàng (như màn hình tồn kho).</summary>
+    public const int ReorderLimit = 5000;
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
@@ -184,6 +190,107 @@ public sealed class StockReportService : IStockReportService
             .OrderBy(r => r.CompanyCode)
             .ToList();
         return new GroupStockResult(item.Id, item.Code, item.Name, item.Uom, item.MinStock, rows);
+    }
+
+    /// <inheritdoc />
+    public async Task<ReorderSuggestionResult> GetReorderSuggestionsAsync(ReorderSuggestionQuery query, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        // Mặt hàng đi qua filter nhóm hàng của người xem; ngưỡng = điểm đặt hàng lại, chưa khai báo thì dùng tồn tối thiểu (hàng cũ chỉ có
+        // tối thiểu vẫn được gợi ý) – design.md mục 18.16.
+        var items = _db.Items.AsNoTracking()
+            .Where(i => i.IsActive && i.Type == ItemType.Inventory && (i.ReorderPoint ?? i.MinStock) > 0);
+        if (query.CriticalOnly) items = items.Where(i => i.IsCritical);
+        if (query.CategoryId is { } c)
+        {
+            var parents = await _db.ItemCategories.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.ParentId, cancellationToken);
+            var categoryIds = parents.Keys.Where(id => ItemAdministration.IsUnder(id, c, parents)).ToList();
+            items = items.Where(i => categoryIds.Contains(i.CategoryId));
+        }
+
+        var list = await (
+                from i in items
+                join g in _db.ItemCategories on i.CategoryId equals g.Id
+                join u in _db.Uoms on i.BaseUomId equals u.Id
+                select new
+                {
+                    i.Id, i.Code, i.Name, CategoryCode = g.Code, CategoryName = g.Name, i.BaseUomId, Uom = u.Code, i.IsCritical,
+                    i.SafetyStock, Threshold = (i.ReorderPoint ?? i.MinStock)!.Value, i.MaxStock,
+                })
+            .ToListAsync(cancellationToken);
+        var ids = list.Select(i => i.Id).ToList();
+
+        // Đặt hàng là việc của cả công ty nên cộng tồn mọi kho: bỏ filter kho chỉ ở phép cộng này (cùng lý do tồn tối thiểu – mục 11.1);
+        // chỉ trả số lượng của mặt hàng đã qua filter nhóm hàng, không trả giá trị, không chia theo kho.
+        var onHand = await _db.StockOnHand.AsNoTracking()
+            .IgnoreQueryFilters([ProcDbContext.WarehouseFilter])
+            .Where(s => ids.Contains(s.ItemId))
+            .GroupBy(s => s.ItemId)
+            .Select(g => new { g.Key, Qty = g.Sum(s => s.Qty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
+
+        // Đang đặt: PO chưa hủy, chưa đóng. PO nháp/chờ duyệt tính đủ SL (đã định mua, tránh gợi ý trùng); PO đã duyệt tính phần chưa
+        // nhận theo phiếu nhập đã ghi sổ. Ví dụ PO 100 đã nhận 30 → 70.
+        var poLines = await (
+                from l in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on l.OrderId equals o.Id
+                where ids.Contains(l.ItemId) && (o.Status == ApprovalDocumentStatus.Draft || o.Status == ApprovalDocumentStatus.Submitted
+                                                 || o.Status == ApprovalDocumentStatus.Approved)
+                select new { l.Id, l.ItemId, l.BaseQty, o.Status })
+            .ToListAsync(cancellationToken);
+        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(
+            _db, poLines.Where(l => l.Status == ApprovalDocumentStatus.Approved).Select(l => l.Id).ToList(), null, cancellationToken);
+        var onOrder = poLines.GroupBy(l => l.ItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(l => Math.Max(0, l.BaseQty - received.GetValueOrDefault(l.Id))));
+
+        // Đề nghị còn mở: PR chưa hủy (cả nháp – vừa lập từ gợi ý mà chưa gửi thì không gợi ý lại), phần chưa lên PO chưa hủy.
+        var prLines = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where ids.Contains(l.ItemId) && r.Status != ApprovalDocumentStatus.Cancelled && r.Status != ApprovalDocumentStatus.Closed
+                select new { l.Id, l.ItemId, l.BaseQty })
+            .ToListAsync(cancellationToken);
+        var prLineIds = prLines.Select(l => l.Id).ToList();
+        var ordered = await (
+                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where ol.SourcePrLineId != null && prLineIds.Contains(ol.SourcePrLineId.Value) && o.Status != ApprovalDocumentStatus.Cancelled
+                group ol by ol.SourcePrLineId!.Value into g
+                select new { g.Key, Qty = g.Sum(x => x.BaseQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
+        var openRequests = prLines.GroupBy(l => l.ItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(l => Math.Max(0, l.BaseQty - ordered.GetValueOrDefault(l.Id))));
+
+        var preferred = await (
+                from si in _db.SupplierItems.AsNoTracking()
+                join s in _db.Suppliers on si.SupplierId equals s.Id
+                where si.IsPreferred && ids.Contains(si.ItemId)
+                select new { si.ItemId, s.Id, s.Code })
+            .ToDictionaryAsync(x => x.ItemId, cancellationToken);
+
+        // Khả dụng = tồn + đang đặt + đề nghị còn mở; cần đặt khi khả dụng < ngưỡng; SL gợi ý đưa khả dụng lên tồn tối đa (không có thì lên
+        // ngưỡng). Ví dụ điểm đặt lại 50, tối đa 200, tồn 30, đang đặt 10 → khả dụng 40 < 50 → gợi ý 200 − 40 = 160.
+        // Mức khẩn xét tồn thực có (hàng đang đặt chưa về chưa dùng được): tồn 30 < tồn an toàn 40 → Urgent.
+        var rows = list.Select(i =>
+            {
+                var qty = onHand.GetValueOrDefault(i.Id);
+                var ordering = onOrder.GetValueOrDefault(i.Id);
+                var requested = openRequests.GetValueOrDefault(i.Id);
+                var available = qty + ordering + requested;
+                var target = Math.Max(i.MaxStock ?? i.Threshold, i.Threshold);
+                var suggested = available < i.Threshold ? target - available : 0;
+                var level = suggested <= 0 ? "Ok" : i.SafetyStock is { } safety && qty < safety ? "Urgent" : "Reorder";
+                var supplier = preferred.GetValueOrDefault(i.Id);
+                return new ReorderSuggestionRowDto(
+                    i.Id, i.Code, i.Name, i.CategoryCode, i.CategoryName, i.BaseUomId, i.Uom, i.IsCritical, i.SafetyStock, i.Threshold,
+                    i.MaxStock, qty, ordering, requested, available, suggested, level, supplier?.Id, supplier?.Code);
+            })
+            .Where(r => query.IncludeAll || r.SuggestedQty > 0)
+            .OrderByDescending(r => r.IsCritical)
+            .ThenBy(r => r.Level switch { "Urgent" => 0, "Reorder" => 1, _ => 2 })
+            .ThenBy(r => r.ItemCode, StringComparer.Ordinal)
+            .ToList();
+        return new ReorderSuggestionResult(rows.Take(ReorderLimit).ToList(), rows.Count > ReorderLimit, ReorderLimit);
     }
 
     /// <summary>Tồn hiện tại (qua global query filter) theo kho, nhóm hàng (gồm nhóm con).</summary>

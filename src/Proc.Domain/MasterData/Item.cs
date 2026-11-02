@@ -106,6 +106,19 @@ public sealed class Item : AuditableEntity
     /// <summary>Tồn tối đa theo ĐVT cơ sở.</summary>
     public decimal? MaxStock { get; private set; }
 
+    /// <summary>
+    /// Tồn an toàn theo ĐVT cơ sở: mức dự phòng – khả dụng xuống dưới mức này là cần mua gấp (lát D1, design.md mục 18.16).
+    /// </summary>
+    public decimal? SafetyStock { get; private set; }
+
+    /// <summary>
+    /// Điểm đặt hàng lại theo ĐVT cơ sở: khả dụng (tồn + đang đặt + đề nghị còn mở) ≤ mức này thì gợi ý lập PR (design.md mục 18.16).
+    /// </summary>
+    public decimal? ReorderPoint { get; private set; }
+
+    /// <summary>Vật tư trọng yếu: thiếu sẽ dừng sản xuất/vận hành – được lọc riêng trên báo cáo gợi ý đặt hàng (design.md mục 18.16).</summary>
+    public bool IsCritical { get; private set; }
+
     /// <summary>Còn sử dụng.</summary>
     public bool IsActive { get; private set; } = true;
 
@@ -216,6 +229,30 @@ public sealed class Item : AuditableEntity
         TrackExpiry = trackExpiry;
         MinStock = minStock;
         MaxStock = maxStock;
+    }
+
+    /// <summary>
+    /// Đặt thông số đặt hàng lại (đề xuất Ban CUVT K1 – design.md mục 18.16). Gọi sau <see cref="SetStockControl"/> vì chỉ hàng tồn kho mới có.
+    /// Ràng buộc: tồn an toàn ≤ điểm đặt hàng lại ≤ tồn tối đa (khi có) – ví dụ an toàn 20, đặt lại 50, tối đa 200.
+    /// </summary>
+    /// <param name="safetyStock">Tồn an toàn (≥ 0, tối đa 4 chữ số thập phân).</param>
+    /// <param name="reorderPoint">Điểm đặt hàng lại.</param>
+    /// <param name="isCritical">Vật tư trọng yếu.</param>
+    /// <exception cref="BusinessRuleException">Khi không phải hàng tồn kho hoặc các mức không theo thứ tự.</exception>
+    public void SetReorderControl(decimal? safetyStock, decimal? reorderPoint, bool isCritical)
+    {
+        if (Type != ItemType.Inventory && (safetyStock is not null || reorderPoint is not null || isCritical))
+            throw new BusinessRuleException("Chỉ hàng tồn kho mới có tồn an toàn, điểm đặt hàng lại và cờ vật tư trọng yếu.");
+        CheckQuantity(safetyStock, "Tồn an toàn");
+        CheckQuantity(reorderPoint, "Điểm đặt hàng lại");
+        if (safetyStock is { } safety && reorderPoint is { } point && safety > point)
+            throw new BusinessRuleException("Tồn an toàn không được lớn hơn điểm đặt hàng lại.");
+        if (MaxStock is { } max && (reorderPoint ?? safetyStock) is { } level && level > max)
+            throw new BusinessRuleException("Điểm đặt hàng lại và tồn an toàn không được lớn hơn tồn tối đa.");
+
+        SafetyStock = safetyStock;
+        ReorderPoint = reorderPoint;
+        IsCritical = isCritical;
     }
 
     /// <summary>

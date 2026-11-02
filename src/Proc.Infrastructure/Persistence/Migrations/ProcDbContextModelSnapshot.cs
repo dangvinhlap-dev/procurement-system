@@ -1127,6 +1127,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsCritical")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal?>("MaxStock")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
@@ -1143,6 +1146,14 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("Origin")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("ReorderPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("SafetyStock")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("SearchText")
                         .IsRequired()
