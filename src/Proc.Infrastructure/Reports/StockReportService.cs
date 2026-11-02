@@ -90,8 +90,10 @@ public sealed class StockReportService : IStockReportService
                 qty, move!.Amount, move.FirstIn, move.LastIn, move.LastOut, idle));
         }
 
+        // Tổng giá trị tồn của mọi kho × hàng còn tồn trong phạm vi – mẫu số KPI tồn chậm luân chuyển (design.md mục 18.18).
+        var stockAmount = stock.Sum(s => moves.GetValueOrDefault(s.Key)?.Amount ?? 0m);
         return new SlowMovingResult(today, query.Days,
-            rows.OrderByDescending(r => r.IdleDays).ThenBy(r => r.WarehouseCode).ThenBy(r => r.ItemCode).ToList());
+            rows.OrderByDescending(r => r.IdleDays).ThenBy(r => r.WarehouseCode).ThenBy(r => r.ItemCode).ToList(), stockAmount);
     }
 
     /// <inheritdoc />

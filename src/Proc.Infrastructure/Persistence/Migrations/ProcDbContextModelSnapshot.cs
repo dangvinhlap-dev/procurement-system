@@ -1887,6 +1887,64 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(9,4)")
                         .HasDefaultValue(0m);
 
+                    b.Property<decimal>("KpiContractTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(95m);
+
+                    b.Property<decimal>("KpiEmergencyTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(5m);
+
+                    b.Property<decimal>("KpiOnTimeTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(95m);
+
+                    b.Property<decimal>("KpiQualityTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(98m);
+
+                    b.Property<decimal>("KpiSavingTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(3m);
+
+                    b.Property<decimal>("KpiSlaTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(95m);
+
+                    b.Property<int>("KpiSlowMovingDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(90);
+
+                    b.Property<decimal>("KpiSlowMovingTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(10m);
+
+                    b.Property<decimal>("KpiSupplierReviewTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(100m);
+
+                    b.Property<int>("KpiViolationTarget")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("RequireReceiptQc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

@@ -33,7 +33,8 @@ public sealed record SlowMovingRowDto(
 /// <param name="AsOf">Ngày tính (hôm nay theo giờ Việt Nam).</param>
 /// <param name="Days">Ngưỡng số ngày đã dùng.</param>
 /// <param name="Items">Các dòng, số ngày không xuất giảm dần.</param>
-public sealed record SlowMovingResult(DateOnly AsOf, int Days, IReadOnlyList<SlowMovingRowDto> Items);
+/// <param name="StockAmount">Tổng giá trị tồn theo sổ kho của mọi kho × hàng còn tồn trong điều kiện lọc (cả hàng không chậm).</param>
+public sealed record SlowMovingResult(DateOnly AsOf, int Days, IReadOnlyList<SlowMovingRowDto> Items, decimal StockAmount = 0m);
 
 /// <summary>Điều kiện báo cáo hàng sắp hết hạn.</summary>
 /// <param name="WarehouseId">Một kho; null = mọi kho được phép.</param>

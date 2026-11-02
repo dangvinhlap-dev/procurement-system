@@ -71,6 +71,7 @@ public sealed class SystemParameterService : ISystemParameterService
                 negative.Count == 0 ? "Không kho nào" : string.Join(", ", negative), null, negative.Count == 0, false,
                 "Khai báo trên từng kho ở màn hình Danh mục kho; mặc định không cho tồn âm."),
         ];
+        list.AddRange(KpiParameters(parameter));
         // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
         return list.Select(p => AuditFields.TryGetValue(p.Code, out var field) ? p with { AuditId = parameter?.Id, AuditField = field } : p).ToList();
     }
@@ -85,7 +86,37 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
         [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
         [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
+        [SystemParameterCodes.KpiTarget(KpiCode.Saving)] = nameof(CompanyParameter.KpiSavingTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance)] = nameof(CompanyParameter.KpiContractTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.PurchaseSla)] = nameof(CompanyParameter.KpiSlaTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.OnTimeDelivery)] = nameof(CompanyParameter.KpiOnTimeTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.Quality)] = nameof(CompanyParameter.KpiQualityTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.Emergency)] = nameof(CompanyParameter.KpiEmergencyTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.SlowMoving)] = nameof(CompanyParameter.KpiSlowMovingTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.SupplierReview)] = nameof(CompanyParameter.KpiSupplierReviewTarget),
+        [SystemParameterCodes.KpiTarget(KpiCode.Violation)] = nameof(CompanyParameter.KpiViolationTarget),
+        [SystemParameterCodes.KpiSlowMovingDays] = nameof(CompanyParameter.KpiSlowMovingDays),
     };
+
+    /// <summary>
+    /// Tham số nhóm "KPI": mục tiêu 9 chỉ số và số ngày tính tồn chậm (design.md mục 18.18). Chỉ số cao là tốt ghi "≥", thấp là tốt ghi "≤".
+    /// </summary>
+    private static IEnumerable<SystemParameterDto> KpiParameters(CompanyParameter? parameter)
+    {
+        foreach (var k in KpiCatalog.All)
+        {
+            var value = parameter?.KpiTarget(k.Code) ?? k.DefaultTarget;
+            var sign = k.HigherIsBetter ? "≥" : "≤";
+            var range = k.IsCount ? $"số nguyên 0–{KpiCatalog.MaxViolationTarget}" : "0–100%";
+            yield return new(SystemParameterCodes.KpiTarget(k.Code), "KPI", $"Mục tiêu KPI – {k.Name} ({sign})", FormatPercent(value),
+                FormatPercent(k.DefaultTarget), value == k.DefaultTarget, true, $"Cách đo: {k.Formula}. Đạt khi kết quả {sign} mục tiêu; {range}.");
+        }
+
+        var days = parameter?.KpiSlowMovingDays ?? KpiCatalog.DefaultSlowMovingDays;
+        yield return new(SystemParameterCodes.KpiSlowMovingDays, "KPI", "Số ngày không xuất tính tồn chậm luân chuyển",
+            days.ToString(CultureInfo.InvariantCulture), KpiCatalog.DefaultSlowMovingDays.ToString(CultureInfo.InvariantCulture),
+            days == KpiCatalog.DefaultSlowMovingDays, true, $"Mặt hàng còn tồn mà không xuất từ số ngày này trở lên; 1–{KpiCatalog.MaxSlowMovingDays}.");
+    }
 
     /// <inheritdoc />
     public async Task<SystemParameterDto> UpdateAsync(string code, UpdateSystemParameterRequest request, CancellationToken cancellationToken)
@@ -151,8 +182,34 @@ public sealed class SystemParameterService : ISystemParameterService
             case SystemParameterCodes.CostingMethod:
             case SystemParameterCodes.NegativeStock:
                 throw new BusinessRuleException("Tham số này chỉ xem, không sửa ở màn hình Tham số hệ thống.");
+            case SystemParameterCodes.KpiSlowMovingDays:
+                int? idleDays = null;
+                if (!string.IsNullOrWhiteSpace(request.Value))
+                {
+                    if (!int.TryParse(request.Value.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsedIdle))
+                        throw new BusinessRuleException("Số ngày phải là số nguyên.");
+                    idleDays = parsedIdle;
+                }
+
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeKpiSlowMovingDays(idleDays);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
             default:
-                throw new NotFoundException($"Không có tham số {key}.");
+                var kpi = KpiCatalog.All.FirstOrDefault(k => SystemParameterCodes.KpiTarget(k.Code) == key)
+                    ?? throw new NotFoundException($"Không có tham số {key}.");
+                decimal? target = null;
+                if (!string.IsNullOrWhiteSpace(request.Value))
+                {
+                    // Nhận "97,5" lẫn "97.5" như % markup nội bộ.
+                    var text = request.Value.Trim().Replace(',', '.');
+                    if (!decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsedTarget))
+                        throw new BusinessRuleException("Mục tiêu KPI phải là số, ví dụ 95 hoặc 97,5.");
+                    target = parsedTarget;
+                }
+
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeKpiTarget(kpi.Code, target);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
         }
 
         return (await ListAsync(cancellationToken)).Single(x => x.Code == key);
