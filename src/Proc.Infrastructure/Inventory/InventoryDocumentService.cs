@@ -150,6 +150,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         _scope.RequireCompany();
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
+        RequireDocumentPermission(document, Permissions.Inventory.DocumentCreate, Permissions.Inventory.AdjustmentCreate, "hủy");
         document.Cancel();
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -163,6 +164,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
         if (document.Status != DocumentStatus.Draft)
             throw new BusinessRuleException($"Phiếu {document.No} không ở trạng thái nháp nên không ghi sổ được.");
+        RequireDocumentPermission(document, Permissions.Inventory.DocumentPost, Permissions.Inventory.AdjustmentPost, "ghi sổ");
         await EnsureAllItemsVisibleAsync(document, cancellationToken);
         var itemIds = document.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
@@ -192,15 +194,19 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 // Bên bán đã bỏ ghi sổ phiếu xuất thì phiếu nhập không còn hàng để nhận.
                 await LinkedSaleAsync(document, cancellationToken);
                 break;
+            case DocumentTypes.Adjustment:
+                await CheckAdjustmentWarehouseAsync(document.ToWarehouseId!.Value, cancellationToken);
+                EnsureItemsActive(document, items);
+                break;
             default:
                 throw new BusinessRuleException($"Chưa hỗ trợ ghi sổ chứng từ loại {document.DocType}.");
         }
 
         var periodId = await _periods.RequireOpenPeriodAsync(document.Date, cancellationToken);
-        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().ToList();
+        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().Distinct().ToList();
         var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
         // Giá vốn tạm tính của phiếu chuyển tính trước khi ghi các dòng sổ của chính phiếu này.
-        var costs = document.DocType is DocumentTypes.Transfer or DocumentTypes.IntercompanySale
+        var costs = document.DocType is DocumentTypes.Transfer or DocumentTypes.IntercompanySale or DocumentTypes.Adjustment
             ? await ProvisionalCostsAsync(itemIds, cancellationToken)
             : [];
 
@@ -225,6 +231,11 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 case DocumentTypes.IntercompanySale:
                     _db.StockLedger.Add(StockLedgerEntry.Sale(document, line, periodId, costs[item.Id]));
                     await ApplyStockAsync(companyId, warehouses[document.FromWarehouseId!.Value], item, line.LotNo, -line.BaseQty, cancellationToken);
+                    break;
+                case DocumentTypes.Adjustment:
+                    // Tăng: nhập theo giá nhập tay; giảm: xuất theo giá vốn tạm tính, chặn tồn âm như mọi phiếu xuất (design.md mục 6.1).
+                    _db.StockLedger.Add(StockLedgerEntry.Adjustment(document, line, periodId, costs.GetValueOrDefault(item.Id)));
+                    await ApplyStockAsync(companyId, warehouses[document.ToWarehouseId!.Value], item, line.LotNo, line.Direction!.Value * line.BaseQty, cancellationToken);
                     break;
                 default:
                     var (outEntry, inEntry) = StockLedgerEntry.Transfer(document, line, periodId, costs[item.Id]);
@@ -257,6 +268,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
         if (document.Status != DocumentStatus.Posted) throw new BusinessRuleException($"Phiếu {document.No} chưa ghi sổ.");
+        RequireDocumentPermission(document, Permissions.Inventory.DocumentUnpost, Permissions.Inventory.AdjustmentPost, "bỏ ghi sổ");
         await EnsureAllItemsVisibleAsync(document, cancellationToken);
 
         // Chỉ bỏ ghi sổ khi kỳ còn mở; kỳ đã đóng thì lập chứng từ điều chỉnh ở kỳ đang mở (CLAUDE.md mục 4).
@@ -275,7 +287,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
 
         // Phiếu chuyển kho hiện với người được một trong hai kho, nhưng sổ kho của kho kia bị filter che – bỏ ghi sổ khi đó chỉ
         // đảo được một nửa. Bắt buộc thấy đủ mọi kho của phiếu.
-        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().ToList();
+        var warehouseIds = new[] { document.FromWarehouseId, document.ToWarehouseId }.OfType<Guid>().Distinct().ToList();
         var warehouses = await _db.Warehouses.AsNoTracking().Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, cancellationToken);
         if (warehouses.Count < warehouseIds.Count)
             throw new ForbiddenAccessException($"Phiếu {document.No} có kho ngoài phạm vi của bạn nên bạn không bỏ ghi sổ được.");
@@ -446,16 +458,21 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.UnitPrice, l.Amount,
                 l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId,
                 sentQty is not null && l.SourceLineId is { } src ? sentQty.GetValueOrDefault(src) : null, l.PurchaseOrderLineId,
-                l.DeliveredQty, l.RejectedQty, l.QcResult.ToString(), l.QcNote, l.DiscrepancyQty);
+                l.DeliveredQty, l.RejectedQty, l.QcResult.ToString(), l.QcNote, l.DiscrepancyQty, l.Direction);
         }).ToList();
 
         string? readOnlyReason = null;
         if (items.Count < itemIds.Count) readOnlyReason = "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được.";
-        else if (!_scope.HasPermission(Permissions.Inventory.DocumentCreate)) readOnlyReason = "Bạn không có quyền lập, sửa chứng từ kho.";
+        // Phiếu điều chỉnh dùng quyền riêng (design.md mục 6.1).
+        var isAdjustment = d.DocType == DocumentTypes.Adjustment;
+        if (readOnlyReason is null && !_scope.HasPermission(isAdjustment ? Permissions.Inventory.AdjustmentCreate : Permissions.Inventory.DocumentCreate))
+            readOnlyReason = isAdjustment ? "Bạn không có quyền lập, sửa phiếu điều chỉnh, kiểm kê kho." : "Bạn không có quyền lập, sửa chứng từ kho.";
         var canEdit = d.Status == DocumentStatus.Draft && readOnlyReason is null;
         var itemsVisible = items.Count == itemIds.Count;
-        var canPost = d.Status == DocumentStatus.Draft && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentPost);
-        var canUnpost = d.Status == DocumentStatus.Posted && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentUnpost);
+        var canPost = d.Status == DocumentStatus.Draft && itemsVisible
+            && _scope.HasPermission(isAdjustment ? Permissions.Inventory.AdjustmentPost : Permissions.Inventory.DocumentPost);
+        var canUnpost = d.Status == DocumentStatus.Posted && itemsVisible
+            && _scope.HasPermission(isAdjustment ? Permissions.Inventory.AdjustmentPost : Permissions.Inventory.DocumentUnpost);
         // Phiếu nháp sửa hóa đơn ngay trên form; đã ghi sổ thì qua lệnh "Cập nhật hóa đơn" (design.md mục 18.15).
         var canUpdateInvoice = d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && readOnlyReason is null;
 
@@ -465,7 +482,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo,
             d.CounterCompanyId, counterCompany?.Code, counterCompany?.Name, receiveStatus, d.PurchaseOrderId,
             d.PurchaseOrderId is { } poId ? await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == poId).Select(o => o.No).SingleOrDefaultAsync(cancellationToken) : null,
-            d.InvoiceAmount, canUpdateInvoice);
+            d.InvoiceAmount, canUpdateInvoice, d.Reason, d.CountReportNo);
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>

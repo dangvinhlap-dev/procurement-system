@@ -47,6 +47,9 @@ internal sealed class InventoryDocumentConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Deliverer).HasMaxLength(200);
         builder.Property(x => x.Receiver).HasMaxLength(200);
         builder.Property(x => x.Note).HasMaxLength(1000);
+        // Phiếu điều chỉnh / kiểm kê (design.md mục 6.1): lý do, số biên bản bắt buộc ở tầng domain; loại phiếu khác để trống.
+        builder.Property(x => x.Reason).HasMaxLength(500);
+        builder.Property(x => x.CountReportNo).HasMaxLength(50);
         // Phiếu trả NCC trỏ về phiếu nhập gốc (design.md mục 10.5).
         builder.HasOne<InventoryDocument>().WithMany().HasForeignKey(x => x.LinkedDocumentId).OnDelete(DeleteBehavior.Restrict);
         // Tiền numeric(19,2) – CLAUDE.md mục 4.
@@ -89,6 +92,8 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.Property(x => x.RejectedQty).HasPrecision(18, 4);
         builder.Property(x => x.QcNote).HasMaxLength(500);
         builder.Ignore(x => x.DiscrepancyQty);
+        // Chiều dòng phiếu điều chỉnh: +1 tăng, −1 giảm; loại phiếu khác null (design.md mục 6.1).
+        builder.ToTable(t => t.HasCheckConstraint("CK_InventoryDocumentLine_Direction", "\"Direction\" IS NULL OR \"Direction\" IN (-1, 1)"));
         builder.Property(x => x.Amount).HasPrecision(19, 2);
         builder.Property(x => x.VatAmount).HasPrecision(19, 2);
         builder.Property(x => x.VatCode).HasMaxLength(5);

@@ -135,6 +135,27 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
     }
 
     /// <summary>
+    /// Dòng sổ của phiếu điều chỉnh (design.md mục 6.1): dòng tăng nhập kho theo giá nhập tay, đã chốt (tham gia giá vốn như nhập có giá –
+    /// mục 7.3); dòng giảm xuất kho theo giá vốn tạm tính, chưa chốt – đóng kỳ gán giá vốn kỳ và dồn chênh lệch làm tròn như xuất tiêu hao.
+    /// </summary>
+    /// <param name="document">Phiếu điều chỉnh.</param>
+    /// <param name="line">Dòng phiếu (có chiều tăng/giảm).</param>
+    /// <param name="periodId">Kỳ ghi sổ.</param>
+    /// <param name="provisionalCost">Giá vốn tạm tính (chỉ dùng cho dòng giảm).</param>
+    /// <returns>Dòng sổ kho.</returns>
+    /// <exception cref="BusinessRuleException">Khi phiếu chưa có kho hoặc dòng chưa có chiều.</exception>
+    public static StockLedgerEntry Adjustment(InventoryDocument document, InventoryDocumentLine line, Guid periodId, decimal provisionalCost)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(line);
+        var warehouseId = document.ToWarehouseId ?? throw new BusinessRuleException($"Phiếu {document.No} chưa có kho điều chỉnh.");
+        if (line.Direction == 1) return Create(document, line, warehouseId, 1, periodId, line.Amount, isCostFinal: true);
+        if (line.Direction != -1) throw new BusinessRuleException($"Dòng {line.LineNo} của phiếu {document.No} chưa chọn Tăng hoặc Giảm.");
+        var amount = Math.Round(line.BaseQty * provisionalCost, 2, MidpointRounding.AwayFromZero);
+        return Create(document, line, warehouseId, -1, periodId, amount, isCostFinal: false, provisionalCost);
+    }
+
+    /// <summary>
     /// Dòng xuất bán nội bộ tại kho tổng công ty bán (design.md mục 6.1): theo giá vốn tạm tính của công ty bán, chưa chốt – đóng kỳ
     /// gán giá vốn kỳ. Doanh thu theo giá bán nội bộ nằm trên phiếu, không ở sổ kho.
     /// </summary>

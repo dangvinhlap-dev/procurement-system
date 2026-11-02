@@ -97,9 +97,23 @@ public static class PeriodCosting
 {
     /// <summary>
     /// Chứng từ "nhập có giá" tham gia công thức: nhập mua NCC, nhập mua nội bộ (giá bán nội bộ) cộng vào, trả NCC trừ ra theo giá
-    /// đích danh. Chuyển kho trong công ty không tham gia (chỉ đổi vị trí). Nhập điều chỉnh thêm khi có loại phiếu đó.
+    /// đích danh. Chuyển kho trong công ty không tham gia (chỉ đổi vị trí). Nhập điều chỉnh (dòng tăng của ADJ) xét riêng ở
+    /// <see cref="IsPriced"/> vì dòng giảm của cùng phiếu là xuất theo giá vốn.
     /// </summary>
     public static readonly IReadOnlySet<string> PricedDocTypes = new HashSet<string> { "GRN", "RTV", "ICR" };
+
+    /// <summary>Mã loại phiếu điều chỉnh / kiểm kê (trùng <c>DocumentTypes.Adjustment</c>).</summary>
+    public const string AdjustmentDocType = "ADJ";
+
+    /// <summary>
+    /// Dòng sổ có tham gia công thức giá vốn không (design.md mục 7.3): loại trong <see cref="PricedDocTypes"/>, hoặc dòng tăng của phiếu
+    /// điều chỉnh ("nhập điều chỉnh có giá"). Dòng giảm của phiếu điều chỉnh là xuất tiêu hao, nhận giá vốn kỳ.
+    /// </summary>
+    /// <param name="docType">Mã loại chứng từ của dòng sổ.</param>
+    /// <param name="direction">+1 nhập, −1 xuất.</param>
+    /// <returns>true khi là nhập/xuất có giá riêng (giá đã chốt, không gán lại khi đóng kỳ).</returns>
+    public static bool IsPriced(string docType, int direction) =>
+        PricedDocTypes.Contains(docType) || (docType == AdjustmentDocType && direction > 0);
 
     /// <summary>
     /// Giá vốn đơn vị kỳ = (giá trị tồn đầu + giá trị nhập có giá) ÷ (SL tồn đầu + SL nhập có giá), làm tròn 6 số lẻ (0,5 lên).

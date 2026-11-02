@@ -67,6 +67,14 @@ public sealed record TransferHeader(DateOnly Date, Guid FromWarehouseId, Guid To
 public sealed record SaleHeader(
     DateOnly Date, Guid FromWarehouseId, Guid BuyerCompanyId, string? InvoiceNo, DateOnly? InvoiceDate, string? Deliverer, string? Note);
 
+/// <summary>Đầu phiếu điều chỉnh / kiểm kê kho (ADJ – design.md mục 6.1).</summary>
+/// <param name="Date">Ngày điều chỉnh (phải thuộc kỳ đang mở khi ghi sổ).</param>
+/// <param name="WarehouseId">Kho điều chỉnh – kho bất kỳ của công ty (kho tổng hoặc kho con).</param>
+/// <param name="Reason">Lý do điều chỉnh (bắt buộc).</param>
+/// <param name="CountReportNo">Số biên bản kiểm kê / biên bản xử lý chênh lệch (bắt buộc).</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record AdjustmentHeader(DateOnly Date, Guid WarehouseId, string? Reason, string? CountReportNo, string? Note);
+
 /// <summary>Bên nhận xác nhận một dòng phiếu nhập mua nội bộ.</summary>
 /// <param name="LineId">Dòng phiếu nhập mua nội bộ.</param>
 /// <param name="ReceivedQty">SL thực nhận theo ĐVT trên phiếu (0 = không nhận được dòng này).</param>
@@ -90,10 +98,11 @@ public sealed record ReceiptConfirmLine(Guid LineId, decimal ReceivedQty, string
 /// <param name="RejectedQty">Phiếu nhập mua: SL NCC giao nhưng không đạt chất lượng, không nhập kho.</param>
 /// <param name="QcResult">Phiếu nhập mua: kết quả kiểm tra chất lượng của dòng.</param>
 /// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
+/// <param name="Direction">Phiếu điều chỉnh: +1 tăng (thừa), −1 giảm (thiếu); loại phiếu khác để null.</param>
 public sealed record InventoryLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
     Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null, decimal? DeliveredQty = null, decimal RejectedQty = 0,
-    QcResult QcResult = QcResult.NotChecked, string? QcNote = null);
+    QcResult QcResult = QcResult.NotChecked, string? QcNote = null, int? Direction = null);
 
 /// <summary>Kết quả kiểm tra chất lượng dòng phiếu nhập mua (design.md mục 18.14 – đề xuất Ban CUVT V7).</summary>
 public enum QcResult
@@ -183,6 +192,12 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
 
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
+
+    /// <summary>Phiếu điều chỉnh: lý do điều chỉnh (bắt buộc, tối đa 500 ký tự).</summary>
+    public string? Reason { get; private set; }
+
+    /// <summary>Phiếu điều chỉnh: số biên bản kiểm kê / biên bản xử lý chênh lệch (bắt buộc, tối đa 50 ký tự).</summary>
+    public string? CountReportNo { get; private set; }
 
     /// <summary>Kỳ kho đã ghi sổ (gán khi ghi sổ).</summary>
     public Guid? PeriodId { get; private set; }
@@ -354,6 +369,45 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     /// <param name="header">Đầu phiếu.</param>
     /// <returns>Phiếu nháp.</returns>
     /// <exception cref="BusinessRuleException">Khi thiếu kho, công ty mua hoặc bán cho chính mình.</exception>
+    /// <summary>
+    /// Lập phiếu điều chỉnh / kiểm kê kho nháp (ADJ – design.md mục 6.1): một kho bất kỳ của công ty, dòng tăng (+) hoặc giảm (−).
+    /// Kho ghi ở cả kho xuất và kho nhập để sổ kho, bộ lọc phạm vi kho và báo cáo dùng chung cột như các phiếu khác.
+    /// </summary>
+    /// <param name="companyId">Công ty.</param>
+    /// <param name="no">Số phiếu do hệ thống cấp.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <returns>Phiếu nháp chưa có dòng.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu công ty, số phiếu, kho, lý do hoặc số biên bản.</exception>
+    public static InventoryDocument CreateAdjustment(Guid companyId, string no, AdjustmentHeader header)
+    {
+        if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");
+        if (string.IsNullOrWhiteSpace(no)) throw new BusinessRuleException("Chứng từ phải có số.");
+        var document = new InventoryDocument { CompanyId = companyId, DocType = DocumentTypes.Adjustment, No = no };
+        document.UpdateAdjustment(header);
+        return document;
+    }
+
+    /// <summary>Sửa đầu phiếu điều chỉnh nháp.</summary>
+    /// <param name="header">Đầu phiếu mới.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp, thiếu kho, lý do hoặc số biên bản kiểm kê.</exception>
+    public void UpdateAdjustment(AdjustmentHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        EnsureDraft();
+        if (header.WarehouseId == Guid.Empty) throw new BusinessRuleException("Hãy chọn kho điều chỉnh.");
+        // Điều chỉnh tồn phải có căn cứ: lý do và biên bản kiểm kê (design.md mục 6.1).
+        var reason = Clean(header.Reason) ?? throw new BusinessRuleException("Hãy nhập lý do điều chỉnh.");
+        var report = Clean(header.CountReportNo) ?? throw new BusinessRuleException("Hãy nhập số biên bản kiểm kê.");
+        if (reason.Length > 500) throw new BusinessRuleException("Lý do điều chỉnh tối đa 500 ký tự.");
+        if (report.Length > 50) throw new BusinessRuleException("Số biên bản kiểm kê tối đa 50 ký tự.");
+        Date = header.Date;
+        FromWarehouseId = header.WarehouseId;
+        ToWarehouseId = header.WarehouseId;
+        Reason = reason;
+        CountReportNo = report;
+        Note = Clean(header.Note);
+    }
+
     public static InventoryDocument CreateSale(Guid companyId, string no, SaleHeader header)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");
@@ -633,6 +687,9 @@ public sealed class InventoryDocumentLine : Entity
     /// <summary>Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</summary>
     public string? QcNote { get; private set; }
 
+    /// <summary>Phiếu điều chỉnh: +1 tăng (hàng thừa), −1 giảm (hàng thiếu); loại phiếu khác là null.</summary>
+    public int? Direction { get; private set; }
+
     /// <summary>
     /// Thiếu (âm) / thừa (dương) so với chứng từ giao = SL thực nhận + SL không đạt − SL chứng từ; 0 khi không ghi SL chứng từ.
     /// Ví dụ chứng từ 100, nhận đạt 90, không đạt 5 → thiếu 5 (−5).
@@ -670,6 +727,20 @@ public sealed class InventoryDocumentLine : Entity
     internal void Set(int lineNo, InventoryLineData data, Item item, string docType)
     {
         // Phiếu chuyển kho không có đơn giá nhập tay: giá vốn tạm tính ghi ở sổ kho, chốt khi đóng kỳ (design.md mục 10.6).
+        // Phiếu điều chỉnh (design.md mục 6.1): mỗi dòng là tăng hoặc giảm; tăng nhập giá tay (tham gia giá vốn như nhập có giá), giảm
+        // xuất theo giá vốn nên không nhập giá; không có thuế (không phải mua bán).
+        if (docType == DocumentTypes.Adjustment)
+        {
+            if (data.Direction is not (1 or -1)) throw new BusinessRuleException($"Dòng {lineNo}: hãy chọn Tăng hoặc Giảm.");
+            if (data.Direction == -1 && data.UnitPrice != 0)
+                throw new BusinessRuleException($"Dòng {lineNo}: dòng giảm không nhập đơn giá – xuất theo giá vốn, chốt khi đóng kỳ.");
+            if (!string.IsNullOrWhiteSpace(data.VatCode)) throw new BusinessRuleException($"Dòng {lineNo}: phiếu điều chỉnh không có thuế suất.");
+        }
+        else if (data.Direction is not null)
+        {
+            throw new BusinessRuleException($"Dòng {lineNo}: chỉ phiếu điều chỉnh mới có chiều tăng/giảm.");
+        }
+
         if (docType == DocumentTypes.Transfer && (data.UnitPrice != 0 || !string.IsNullOrWhiteSpace(data.VatCode)))
             throw new BusinessRuleException($"Dòng {lineNo}: phiếu chuyển kho không nhập đơn giá, thuế suất.");
         if (docType == DocumentTypes.ReturnToVendor && data.SourceLineId is null)
@@ -696,7 +767,8 @@ public sealed class InventoryDocumentLine : Entity
         var lot = string.IsNullOrWhiteSpace(data.LotNo) ? null : data.LotNo.Trim();
         if (item.TrackLot && lot is null) throw new BusinessRuleException($"{prefix}: mặt hàng quản lý theo lô – hãy nhập số lô.");
         // Hạn dùng ghi lúc nhập; phiếu xuất/chuyển xác định hàng qua số lô nên không bắt buộc.
-        if (item.TrackExpiry && data.ExpiryDate is null && docType == DocumentTypes.GoodsReceipt)
+        if (item.TrackExpiry && data.ExpiryDate is null
+            && (docType == DocumentTypes.GoodsReceipt || (docType == DocumentTypes.Adjustment && data.Direction == 1)))
             throw new BusinessRuleException($"{prefix}: mặt hàng quản lý hạn dùng – hãy nhập hạn dùng.");
         if (lot?.Length > 50) throw new BusinessRuleException($"{prefix}: số lô tối đa 50 ký tự.");
 
@@ -716,6 +788,7 @@ public sealed class InventoryDocumentLine : Entity
         LotNo = lot;
         ExpiryDate = data.ExpiryDate;
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+        Direction = docType == DocumentTypes.Adjustment ? data.Direction : null;
         SetQc(prefix, data, docType);
     }
 

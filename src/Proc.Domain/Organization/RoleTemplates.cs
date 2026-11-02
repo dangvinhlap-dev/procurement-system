@@ -78,7 +78,7 @@ public static class RoleTemplates
         new("KHO", "Kho", "Nhận hàng, ghi sổ phiếu kho, xem tồn",
         [
             .. CatalogView, Permissions.Purchase.PoView, Permissions.Inventory.DocumentView,
-            Permissions.Inventory.DocumentCreate, Permissions.Inventory.DocumentPost,
+            Permissions.Inventory.DocumentCreate, Permissions.Inventory.DocumentPost, Permissions.Inventory.AdjustmentCreate,
             Permissions.Inventory.StockView, Permissions.Inventory.PeriodView, Permissions.Report.StockView,
         ]),
         new("KETOAN", "Kế toán", "Đối chiếu PO – phiếu nhận, đóng kỳ kho, xuất chứng từ cho phần mềm kế toán",
@@ -86,6 +86,8 @@ public static class RoleTemplates
             .. CatalogView, Permissions.Purchase.PoView, Permissions.Purchase.ContractView,
             Permissions.Pricing.PriceListView, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Inventory.PeriodView, Permissions.Inventory.PeriodClose,
+            // Kho lập phiếu điều chỉnh/kiểm kê, kế toán ghi sổ – tách người kiểm kê và người ghi tăng/giảm tồn (design.md mục 6.1).
+            Permissions.Inventory.AdjustmentPost,
             Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.AccountingExport,
         ]),
         new("PHAPCHE", "Pháp chế", "Xem hồ sơ NCC, hồ sơ thầu, hợp đồng để rà soát pháp lý",
