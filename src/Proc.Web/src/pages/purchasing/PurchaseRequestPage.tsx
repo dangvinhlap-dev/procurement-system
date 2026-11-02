@@ -1,7 +1,8 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { useUoms } from '../../api/masterData'
@@ -128,26 +129,23 @@ export function PurchaseRequestPage() {
   // PR lập trước khi có danh mục bộ phận chỉ có tên dạng chữ (cột cũ, chỉ đọc).
   const legacyDepartment = doc && !doc.departmentId ? doc.department : null
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      departmentId: doc.departmentId ?? undefined,
-      purpose: doc.purpose ?? '',
-      neededDate: doc.neededDate ? dayjs(doc.neededDate) : null,
-      warehouseId: doc.warehouseId ?? undefined,
-      priority: doc.priority,
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({
-        id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
-        neededDate: l.neededDate ? dayjs(l.neededDate) : null, note: l.note ?? '',
-      })),
-      newItems: doc.newItems.map((n) => ({
-        id: n.id, description: n.description, specification: n.specification ?? '', uomId: n.uomId, qty: n.qty, estPrice: n.estPrice,
-        neededDate: n.neededDate ? dayjs(n.neededDate) : null, note: n.note ?? '',
-      })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    departmentId: doc.departmentId ?? undefined,
+    purpose: doc.purpose ?? '',
+    neededDate: doc.neededDate ? dayjs(doc.neededDate) : null,
+    warehouseId: doc.warehouseId ?? undefined,
+    priority: doc.priority,
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({
+      id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
+      neededDate: l.neededDate ? dayjs(l.neededDate) : null, note: l.note ?? '',
+    })),
+    newItems: doc.newItems.map((n) => ({
+      id: n.id, description: n.description, specification: n.specification ?? '', uomId: n.uomId, qty: n.qty, estPrice: n.estPrice,
+      neededDate: n.neededDate ? dayjs(n.neededDate) : null, note: n.note ?? '',
+    })),
+  }))
 
   const persist = async (): Promise<PurchaseRequest | null> => {
     let values: PrFormValues
@@ -176,7 +174,10 @@ export function PurchaseRequestPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

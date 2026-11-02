@@ -1,7 +1,8 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { DownloadOutlined } from '@ant-design/icons'
 import { Alert, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import {
   documentStatusLabels,
@@ -71,16 +72,13 @@ export function GoodsReturnPage() {
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
   const receipt = receipts.data?.items.find((r) => r.id === sourceId)
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      sourceDocumentId: doc.linkedDocumentId ?? undefined,
-      invoiceNo: doc.invoiceNo ?? '',
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({ id: l.id, sourceLineId: l.sourceLineId ?? undefined, qty: l.qty, note: l.note ?? '' })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    sourceDocumentId: doc.linkedDocumentId ?? undefined,
+    invoiceNo: doc.invoiceNo ?? '',
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({ id: l.id, sourceLineId: l.sourceLineId ?? undefined, qty: l.qty, note: l.note ?? '' })),
+  }))
 
   /** Thành tiền, VAT của một dòng trả theo đơn giá, thuế suất của dòng nhập gốc (làm tròn như server). */
   const lineMoney = (line: ReturnLineValues | undefined) => {
@@ -111,7 +109,10 @@ export function GoodsReturnPage() {
       lines: (values.lines ?? []).map((l) => ({ id: l.id ?? null, sourceLineId: l.sourceLineId!, qty: l.qty ?? 0, note: orNull(l.note) })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

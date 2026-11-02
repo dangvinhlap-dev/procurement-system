@@ -1,3 +1,4 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import {
   CheckOutlined,
   CloseCircleOutlined,
@@ -149,23 +150,20 @@ export function RfqPage() {
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      title: doc.title,
-      deadline: dayjs(doc.deadline),
-      sourcingId: doc.sourcingId,
-      priceWeight: doc.weights.price,
-      qualityWeight: doc.weights.quality,
-      deliveryWeight: doc.weights.delivery,
-      paymentWeight: doc.weights.payment,
-      warrantyWeight: doc.weights.warranty,
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, sourcePrLineId: l.sourcePrLineId, note: l.note ?? '' })),
-      supplierIds: doc.suppliers.map((s) => s.supplierId),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    title: doc.title,
+    deadline: dayjs(doc.deadline),
+    sourcingId: doc.sourcingId,
+    priceWeight: doc.weights.price,
+    qualityWeight: doc.weights.quality,
+    deliveryWeight: doc.weights.delivery,
+    paymentWeight: doc.weights.payment,
+    warrantyWeight: doc.weights.warranty,
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, sourcePrLineId: l.sourcePrLineId, note: l.note ?? '' })),
+    supplierIds: doc.suppliers.map((s) => s.supplierId),
+  }))
 
   // Lựa chọn chọn thầu = mặc định (đã chọn thầu thì theo kết quả; chưa thì NCC giá thấp nhất của dòng) đè bởi các ô người dùng đã sửa.
   const award = useMemo<AwardDraft>(() => {
@@ -227,7 +225,10 @@ export function RfqPage() {
       supplierIds: values.supplierIds ?? [],
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được RFQ.')
       return null

@@ -1,3 +1,4 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { AuditOutlined, FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -119,38 +120,35 @@ export function GoodsReceiptPage() {
     if (isNew && mainWarehouse && !form.getFieldValue('warehouseId')) form.setFieldValue('warehouseId', mainWarehouse)
   }, [isNew, mainWarehouse, form])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      warehouseId: doc.toWarehouseId ?? undefined,
-      supplierId: doc.supplierId ?? undefined,
-      invoiceNo: doc.invoiceNo ?? '',
-      invoiceSeries: doc.invoiceSeries ?? '',
-      invoiceDate: doc.invoiceDate ? dayjs(doc.invoiceDate) : null,
-      invoiceAmount: doc.invoiceAmount ?? null,
-      deliveryNoteNo: doc.deliveryNoteNo ?? '',
-      deliverer: doc.deliverer ?? '',
-      note: doc.note ?? '',
-      purchaseOrderId: doc.purchaseOrderId ?? null,
-      lines: doc.lines.map((l) => ({
-        id: l.id,
-        itemId: l.itemId,
-        uomId: l.uomId,
-        qty: l.qty,
-        unitPrice: l.unitPrice,
-        vatCode: l.vatCode,
-        lotNo: l.lotNo ?? '',
-        expiryDate: l.expiryDate ? dayjs(l.expiryDate) : null,
-        note: l.note ?? '',
-        purchaseOrderLineId: l.purchaseOrderLineId ?? null,
-        deliveredQty: l.deliveredQty ?? null,
-        rejectedQty: l.rejectedQty ?? 0,
-        qcResult: l.qcResult ?? 'NotChecked',
-        qcNote: l.qcNote ?? '',
-      })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    warehouseId: doc.toWarehouseId ?? undefined,
+    supplierId: doc.supplierId ?? undefined,
+    invoiceNo: doc.invoiceNo ?? '',
+    invoiceSeries: doc.invoiceSeries ?? '',
+    invoiceDate: doc.invoiceDate ? dayjs(doc.invoiceDate) : null,
+    invoiceAmount: doc.invoiceAmount ?? null,
+    deliveryNoteNo: doc.deliveryNoteNo ?? '',
+    deliverer: doc.deliverer ?? '',
+    note: doc.note ?? '',
+    purchaseOrderId: doc.purchaseOrderId ?? null,
+    lines: doc.lines.map((l) => ({
+      id: l.id,
+      itemId: l.itemId,
+      uomId: l.uomId,
+      qty: l.qty,
+      unitPrice: l.unitPrice,
+      vatCode: l.vatCode,
+      lotNo: l.lotNo ?? '',
+      expiryDate: l.expiryDate ? dayjs(l.expiryDate) : null,
+      note: l.note ?? '',
+      purchaseOrderLineId: l.purchaseOrderLineId ?? null,
+      deliveredQty: l.deliveredQty ?? null,
+      rejectedQty: l.rejectedQty ?? 0,
+      qcResult: l.qcResult ?? 'NotChecked',
+      qcNote: l.qcNote ?? '',
+    })),
+  }))
 
   const totals = lines.reduce(
     (sum, line) => {
@@ -202,7 +200,10 @@ export function GoodsReceiptPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

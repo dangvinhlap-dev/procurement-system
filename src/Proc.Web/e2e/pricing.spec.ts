@@ -95,16 +95,27 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu PO-BHA-\d{4}-\d{4}\./)
   // Chờ chuyển từ /moi sang trang phiếu đã lưu – bấm Gửi duyệt sớm hơn thì thông báo lỗi mất khi trang dựng lại (máy bận khi chạy song song).
   await expect(page).not.toHaveURL(/\/moi$/)
+  // Làm chậm lượt tải lại phiếu (sau lưu/gửi) để chắc chắn người dùng gõ lý do TRƯỚC khi phiếu tải về: phiếu tải về trùng nội dung
+  // đã lưu thì không được nạp đè chữ đang gõ (useDocumentFormSync).
+  const poDetail = /\/api\/purchase-orders\/[0-9a-f-]{36}$/
+  await page.route(poDetail, async (route) => {
+    if (route.request().method() !== 'GET') return route.continue()
+    await new Promise((r) => setTimeout(r, 1500))
+    await route.continue()
+  })
+  // Đổi giá sau lần lưu đầu: "Gửi duyệt" lưu thay đổi này nên phiếu tải về khác bản đang có – trước đây chính lượt này ghi đè form.
+  await page.getByLabel('Đơn giá dòng 1').fill('48500')
+  await page.getByLabel('Đơn giá dòng 1').press('Tab')
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   // Lưu rồi gửi (hai lượt gọi API) – khi máy bận có thể quá 5 giây mới báo lỗi.
   await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible({ timeout: 20_000 })
-  // Tải lại trang cho trạng thái ổn định rồi mới gõ lý do: phiếu tải lại sau lần gửi bị chặn có thể nạp đè form lúc đang gõ (lỗi đã ghi
-  // ở TIEN_DO); "Gửi duyệt" tự lưu trước khi gửi.
   await expect(page.locator('.ant-modal-confirm')).toHaveCount(0)
-  await page.reload()
-  await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('48.000')
+  const reloaded = page.waitForResponse((r) => poDetail.test(new URL(r.url()).pathname) && r.request().method() === 'GET')
   await page.getByLabel('Lý do lệch giá dòng 1').fill('NCC báo tăng giá nguyên liệu')
+  await reloaded
+  await page.unroute(poDetail)
+  await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('48.500')
   await expect(page.getByLabel('Lý do lệch giá dòng 1')).toHaveValue('NCC báo tăng giá nguyên liệu')
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
   // Gửi duyệt = lưu rồi gửi (hai lượt gọi API) – khi chạy song song có thể quá 5 giây, chờ trạng thái thay vì thông báo thoáng qua.

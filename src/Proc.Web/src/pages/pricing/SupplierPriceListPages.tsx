@@ -1,7 +1,8 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { CheckOutlined, CloseCircleOutlined, CloseOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Checkbox, DatePicker, Flex, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
 import { useSuppliers, vatOptions } from '../../api/masterData'
@@ -143,21 +144,18 @@ export function SupplierPriceListPage() {
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      supplierId: doc.supplierId,
-      title: doc.title,
-      isGroupWide: doc.isGroupWide,
-      validFrom: dayjs(doc.validFrom),
-      validTo: doc.validTo ? dayjs(doc.validTo) : null,
-      deliveryTerms: doc.deliveryTerms ?? '',
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({
-        id: l.id, itemId: l.itemId, uomId: l.uomId, minQty: l.minQty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode, note: l.note ?? '',
-      })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    supplierId: doc.supplierId,
+    title: doc.title,
+    isGroupWide: doc.isGroupWide,
+    validFrom: dayjs(doc.validFrom),
+    validTo: doc.validTo ? dayjs(doc.validTo) : null,
+    deliveryTerms: doc.deliveryTerms ?? '',
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({
+      id: l.id, itemId: l.itemId, uomId: l.uomId, minQty: l.minQty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode, note: l.note ?? '',
+    })),
+  }))
 
   const persist = async (): Promise<PriceList | null> => {
     let values: FormValues
@@ -182,7 +180,10 @@ export function SupplierPriceListPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được bảng giá.')
       return null

@@ -1,6 +1,7 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { Alert, DatePicker, Form, Input, InputNumber } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import {
   documentStatusLabels,
@@ -53,14 +54,11 @@ export function IntercompanyReceiptPage() {
   const watchedLines = Form.useWatch('lines', form) as ReceiveLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({ id: l.id, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
-    })
-  }, [doc, form])
+  const { loadSaved } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({ id: l.id, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
+  }))
 
   const lineOf = (index: number) => doc?.lines[index]
   const amountOf = (index: number) => Math.round((lines[index]?.qty ?? 0) * (lineOf(index)?.unitPrice ?? 0) * 100) / 100
@@ -87,7 +85,9 @@ export function IntercompanyReceiptPage() {
       lines: values.lines.map((l) => ({ lineId: l.id, receivedQty: l.qty ?? 0, lotNo: orNull(l.lotNo), note: orNull(l.note) })),
     }
     try {
-      return await mutations.update.mutateAsync({ id, input })
+      const saved = await mutations.update.mutateAsync({ id, input })
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

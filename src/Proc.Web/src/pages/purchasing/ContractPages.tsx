@@ -1,7 +1,8 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { CheckOutlined, CloseCircleOutlined, CloseOutlined, FileAddOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber, Select, Table, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   amendmentStatusLabels,
@@ -230,34 +231,31 @@ export function ContractPage() {
   if (doc && !priceListOptions.some((o) => o.value === doc.priceListId))
     priceListOptions.push({ value: doc.priceListId, label: `${doc.priceListNo} – ${doc.priceListTitle}` })
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      supplierId: doc.supplierId,
-      priceListId: doc.priceListId,
-      contractNo: doc.contractNo ?? '',
-      title: doc.title,
-      signDate: doc.signDate ? dayjs(doc.signDate) : null,
-      validFrom: dayjs(doc.validFrom),
-      validTo: dayjs(doc.validTo),
-      creditLimit: doc.creditLimit,
-      note: doc.note ?? '',
-      priceAdjustmentTerms: doc.priceAdjustmentTerms ?? '',
-      paymentTerms: doc.paymentTerms ?? '',
-      deliveryTerms: doc.deliveryTerms ?? '',
-      discountTerms: doc.discountTerms ?? '',
-      sponsorshipTerms: doc.sponsorshipTerms ?? '',
-      penaltyTerms: doc.penaltyTerms ?? '',
-      otherTerms: doc.otherTerms ?? '',
-      departmentIds: doc.departmentIds,
-      lines: doc.lines.map((l) => ({
-        id: l.id, itemId: l.itemId, uomId: l.uomId, expectedQty: l.expectedQty, minCommitQty: l.minCommitQty, note: l.note ?? '',
-      })),
-      rebates: doc.rebates.map((r) => ({
-        id: r.id, kind: r.kind, method: r.method, value: r.value, minPurchaseAmount: r.minPurchaseAmount, period: r.period, description: r.description,
-      })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    supplierId: doc.supplierId,
+    priceListId: doc.priceListId,
+    contractNo: doc.contractNo ?? '',
+    title: doc.title,
+    signDate: doc.signDate ? dayjs(doc.signDate) : null,
+    validFrom: dayjs(doc.validFrom),
+    validTo: dayjs(doc.validTo),
+    creditLimit: doc.creditLimit,
+    note: doc.note ?? '',
+    priceAdjustmentTerms: doc.priceAdjustmentTerms ?? '',
+    paymentTerms: doc.paymentTerms ?? '',
+    deliveryTerms: doc.deliveryTerms ?? '',
+    discountTerms: doc.discountTerms ?? '',
+    sponsorshipTerms: doc.sponsorshipTerms ?? '',
+    penaltyTerms: doc.penaltyTerms ?? '',
+    otherTerms: doc.otherTerms ?? '',
+    departmentIds: doc.departmentIds,
+    lines: doc.lines.map((l) => ({
+      id: l.id, itemId: l.itemId, uomId: l.uomId, expectedQty: l.expectedQty, minCommitQty: l.minCommitQty, note: l.note ?? '',
+    })),
+    rebates: doc.rebates.map((r) => ({
+      id: r.id, kind: r.kind, method: r.method, value: r.value, minPurchaseAmount: r.minPurchaseAmount, period: r.period, description: r.description,
+    })),
+  }))
 
   /** Giá cơ bản của dòng theo bảng giá đang chọn: bậc có SL tối thiểu nhỏ nhất của cùng mặt hàng × ĐVT (như server). */
   const tierOf = (line: LineValues | undefined) =>
@@ -307,7 +305,10 @@ export function ContractPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được hợp đồng.')
       return null
