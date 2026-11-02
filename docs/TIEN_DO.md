@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 02/11/2026 (TC-1 tìm kiểu SAP). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 02/11/2026 (TC-2 tra cứu chứng từ). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -122,8 +122,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
     mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
     Test: tích hợp `TimHang_DauSao_…`, e2e `lookup-wildcard.spec.ts`. Kiểm tra: `dotnet test` 506 qua; Playwright 88/88.
-  - **TC-2 (tiếp theo)**: màn hình **Tra cứu chứng từ** (Hằng ngày) – mọi loại chứng từ (PR, PO, GRN, RTV, TRF, ICS, ICR, bảng giá,
-    RFQ, hợp đồng, phụ lục, NCC, độc quyền…), đã/chưa hoàn thành, lọc Tôi lập/Tôi đã duyệt, bấm đúp mở cả trang phiếu.
+  - **TC-2 (xong)**: màn hình **Tra cứu chứng từ** (DOCS, Hằng ngày; API `GET /api/document-registry`, `DocumentRegistryService`) – 17
+    loại (PR, PO, GRN, RTV, TRF, ICS, ICR, ADJ, PRL, SRC, RFQ, CTR, CTA, NCC, NDQ, DGN, VP) theo quyền xem từng loại, tình trạng Chưa hoàn
+    thành/Hoàn thành/Đã hủy, trạng thái gốc, cấp đang chờ duyệt, lọc Tôi lập/Tôi đã duyệt (phiếu kho = tôi ghi sổ); bấm đúp mở trang phiếu;
+    design.md 18.22. Test: tích hợp `TraCuuChungTu_…`, e2e `document-registry.spec.ts`. Kiểm tra: `dotnet test` 507; Playwright 89/89.
   - **TC-3**: thông báo/Việc cần làm mở trang đầy đủ (duyệt NCC thêm hồ sơ NCC; NDQ, VIOL, CTA). **TC-4**: người duyệt tiếp theo.
   - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
     (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).

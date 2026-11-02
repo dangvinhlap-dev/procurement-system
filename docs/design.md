@@ -1557,6 +1557,21 @@ chưa ghi nhận" (mục 18.19). Điều khoản chữ "Chiết khấu", "Tài t
 Migration `V0_13_0_ChietKhauTaiTroHopDong` (bảng `PurchaseContractRebate`, `ContractRebateReceipt` – bảng mới, `Down()` xóa bảng, mất cam kết
 và thực nhận; AuditLog còn giữ lịch sử).
 
+### 18.22 Tra cứu chứng từ – mọi loại, đã/chưa hoàn thành (lát TC-2, 02/11/2026)
+
+Yêu cầu người dùng sau khi test 0.14.0: có một chỗ xem **tất cả các loại chứng từ** đã hoàn thành hoặc chưa, kể cả phiếu nhập/xuất kho.
+
+| Quy tắc | Ghi chú |
+| --- | --- |
+| Màn hình **DOCS** (Hằng ngày → Tra cứu chứng từ), API `GET /api/document-registry?from&to&docTypes&progress&mine` | Ai đăng nhập cũng mở được |
+| Loại: PR, PO, GRN, RTV, TRF, ICS, ICR, ADJ, PRL, SRC, RFQ, CTR, CTA, NCC (yêu cầu duyệt NCC), NDQ, DGN, VP. Mỗi loại chỉ hiện khi có **quyền xem** loại đó; dữ liệu qua global query filter (công ty, kho) | Không lộ chứng từ ngoài phạm vi |
+| **Tình trạng chung**: Chưa hoàn thành (nháp, chờ duyệt, đang nhận báo giá…), Hoàn thành (đã ghi sổ, đã duyệt, đã đóng, hiệu lực/chấm dứt, đã chọn thầu, đã kết luận…), Đã hủy/từ chối; kèm trạng thái gốc và cấp đang chờ duyệt | |
+| Lọc "Tôi lập" (người tạo) / "Tôi đã duyệt" (bước duyệt/từ chối do tôi; phiếu kho = tôi ghi sổ) | |
+| Ngày: ngày chứng từ; bảng giá = hiệu lực từ; hợp đồng = ngày ký (chưa ký: hiệu lực từ); loại không có ngày (phụ lục, duyệt NCC, độc quyền) = ngày lập giờ VN. Khoảng tối đa 366 ngày, tối đa 5.000 dòng | Tránh quét cả CSDL |
+| Bấm đúp mở **trang đầy đủ** của chứng từ (loại mở trong ngăn kéo: `?mo=<Id>`); điều chỉnh kho (ADJ) chưa có trang | |
+
+Không có migration.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

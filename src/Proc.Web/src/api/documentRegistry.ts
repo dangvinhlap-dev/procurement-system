@@ -1,0 +1,108 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/useAuth'
+import { apiFetch } from './client'
+
+/** Tình trạng chung của chứng từ (design.md mục 18.22). */
+export type DocumentProgress = 'Open' | 'Done' | 'Cancelled'
+
+/** Nhãn tình trạng. */
+export const progressLabels: Record<DocumentProgress, string> = {
+  Open: 'Chưa hoàn thành',
+  Done: 'Hoàn thành',
+  Cancelled: 'Đã hủy / từ chối',
+}
+
+/** Một chứng từ trên màn hình Tra cứu chứng từ. */
+export interface DocumentRegistryRow {
+  docType: string
+  id: string
+  no: string
+  date: string
+  partner: string | null
+  description: string | null
+  amount: number | null
+  status: string
+  statusName: string
+  progress: DocumentProgress
+  createdByName: string | null
+  createdAt: string
+  pendingLevel: number | null
+}
+
+/** Kết quả tra cứu. */
+export interface DocumentRegistryResult {
+  rows: DocumentRegistryRow[]
+  docTypes: string[]
+  truncated: boolean
+  limit: number
+}
+
+/** Bộ lọc tra cứu. */
+export interface DocumentRegistryFilter {
+  from: string
+  to: string
+  docTypes: string[]
+  progress?: DocumentProgress
+  mine?: 'created' | 'acted'
+}
+
+/** Tên loại chứng từ theo mã (cùng tên màn hình của từng loại). */
+export const docTypeLabels: Record<string, string> = {
+  PR: 'Đề nghị mua hàng',
+  PO: 'Đơn mua hàng',
+  GRN: 'Nhập mua NCC',
+  RTV: 'Xuất trả NCC',
+  TRF: 'Chuyển kho nội bộ',
+  ICS: 'Xuất bán nội bộ',
+  ICR: 'Nhập mua nội bộ',
+  ADJ: 'Điều chỉnh kho',
+  PRL: 'Bảng giá NCC',
+  SRC: 'Tìm nguồn',
+  RFQ: 'Yêu cầu báo giá',
+  CTR: 'Hợp đồng nguyên tắc',
+  CTA: 'Phụ lục hợp đồng',
+  NCC: 'Duyệt nhà cung cấp',
+  NDQ: 'NCC độc quyền',
+  DGN: 'Đánh giá NCC định kỳ',
+  VP: 'Vi phạm KSNB',
+}
+
+/**
+ * Đường dẫn mở trang đầy đủ của một chứng từ; null khi loại chưa có trang (điều chỉnh kho).
+ * Loại mở trong ngăn kéo của danh sách (NCC, NDQ, DGN, VP) dùng `?mo=<Id>`.
+ * @param docType Mã loại.
+ * @param id Id chứng từ.
+ */
+export function documentPath(docType: string, id: string): string | null {
+  const pages: Record<string, string> = {
+    PR: '/mua-hang/pr', PO: '/mua-hang/po', GRN: '/kho/grn', RTV: '/kho/rtv', TRF: '/kho/trf', ICS: '/kho/ics', ICR: '/kho/icr',
+    PRL: '/gia-ncc/bang-gia', SRC: '/dau-thau/tim-nguon', RFQ: '/dau-thau/rfq', CTR: '/mua-hang/hop-dong-khung',
+    CTA: '/mua-hang/hop-dong-khung/phu-luc',
+  }
+  const drawers: Record<string, string> = {
+    NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', VP: '/bao-cao/so-vi-pham',
+  }
+  if (pages[docType]) return `${pages[docType]}/${id}`
+  if (drawers[docType]) return `${drawers[docType]}?mo=${id}`
+  return null
+}
+
+/**
+ * Tra cứu chứng từ của công ty đang làm việc (`GET /api/document-registry`).
+ * @param filter Bộ lọc.
+ */
+export function useDocumentRegistry(filter: DocumentRegistryFilter) {
+  const { workingCompany } = useAuth()
+  const companyId = workingCompany?.id ?? ''
+  const params = new URLSearchParams({ from: filter.from, to: filter.to })
+  for (const t of filter.docTypes) params.append('docTypes', t)
+  if (filter.progress) params.set('progress', filter.progress)
+  if (filter.mine) params.set('mine', filter.mine)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['document-registry', companyId, query],
+    queryFn: () => apiFetch<DocumentRegistryResult>(`/api/document-registry?${query}`),
+    enabled: !!companyId,
+    placeholderData: keepPreviousData,
+  })
+}

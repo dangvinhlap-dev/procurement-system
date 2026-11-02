@@ -9,6 +9,7 @@ import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
+import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
@@ -75,6 +76,7 @@ import { DepartmentListPage } from './pages/system/DepartmentListPage'
 const implemented: Record<string, ReactNode> = {
   HOME: <HomePage />,
   NOTI: <NotificationPage />,
+  DOCS: <DocumentRegistryPage />,
   PR: <PurchaseListPage kind="purchase-requests" title="Danh sách đề nghị mua hàng (PR)" path="/mua-hang/pr" exportFileName="de-nghi-mua-hang" />,
   PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
   POTRK: <DeliveryTrackingPage />,
