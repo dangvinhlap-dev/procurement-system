@@ -1,5 +1,6 @@
 import { CheckOutlined, CloseCircleOutlined, RollbackOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Descriptions, Form, Input, InputNumber, Select, Spin } from 'antd'
+import { Alert, App, Button, DatePicker, Descriptions, Form, Input, InputNumber, Spin } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router'

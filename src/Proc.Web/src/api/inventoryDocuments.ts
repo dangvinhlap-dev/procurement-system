@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import { hasWildcard } from '../utils/text'
 
 /*
  * Kiểu dữ liệu và hàm gọi API chứng từ kho (khớp Proc.Application.Inventory.InventoryDocuments).
@@ -392,7 +393,8 @@ export function useAvailableStock(warehouseId: string | undefined, itemIds: stri
 }
 
 /**
- * Tìm hàng cho ô chọn hàng: theo từ khóa (≥ 2 ký tự) và/hoặc theo Id (hiển thị lại các dòng đã có).
+ * Tìm hàng cho ô chọn hàng: theo từ khóa (≥ 2 ký tự, hoặc có dấu `*` – gõ `*` liệt kê tất cả kiểu SAP ECC, tối đa 500 dòng)
+ * và/hoặc theo Id (hiển thị lại các dòng đã có).
  * @param search Từ khóa.
  * @param ids Id các mặt hàng đang có trên phiếu.
  * @param inventoryOnly Chỉ hàng tồn kho (chứng từ kho).
@@ -401,13 +403,14 @@ export function useItemLookup(search: string, ids: string[], inventoryOnly = tru
   const companyId = useCompanyId()
   const keyword = search.trim()
   const params = new URLSearchParams({ inventoryOnly: String(inventoryOnly) })
-  if (keyword.length >= 2) params.set('search', keyword)
+  const searching = keyword.length >= 2 || hasWildcard(keyword)
+  if (searching) params.set('search', keyword)
   for (const id of [...new Set(ids)].sort()) params.append('ids', id)
   const query = params.toString()
   return useQuery({
     queryKey: ['items', companyId, 'lookup', query],
     queryFn: () => apiFetch<ItemLookup[]>(`/api/items/lookup?${query}`),
-    enabled: keyword.length >= 2 || ids.length > 0,
+    enabled: searching || ids.length > 0,
     placeholderData: keepPreviousData,
   })
 }

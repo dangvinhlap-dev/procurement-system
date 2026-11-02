@@ -1,4 +1,5 @@
-import { Alert, Select, TreeSelect } from 'antd'
+import { Alert, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { periodStatusLabels, useInventoryCalendar } from '../../api/inventory'
 import { useItemCategories } from '../../api/masterData'

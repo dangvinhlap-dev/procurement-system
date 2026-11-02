@@ -1,4 +1,5 @@
-import { Alert, DatePicker, Modal, Select, Spin, Table } from 'antd'
+import { Alert, DatePicker, Modal, Spin, Table } from 'antd'
+import { Select } from '../../classic/Select'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'

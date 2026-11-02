@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.MasterData;
 using Proc.Domain.Common;
@@ -17,6 +17,9 @@ public sealed class ItemAdministration : IItemAdministration
 {
     /// <summary>Số dòng tối đa mỗi lần tìm – danh mục tới ~100.000 mã (design.md mục 1.3, câu 9), không tải hết về trình duyệt.</summary>
     public const int SearchLimit = 5000;
+
+    /// <summary>Số dòng tối đa của ô chọn hàng khi gõ "*" (liệt kê toàn bộ kiểu SAP ECC – mặc định 500 kết quả như SAP).</summary>
+    public const int WildcardLimit = 500;
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
@@ -94,7 +97,9 @@ public sealed class ItemAdministration : IItemAdministration
                 items = items.Where(i => EF.Functions.Like(i.SearchText, pattern, LikePatterns.Escape));
             }
 
-            found = await items.OrderBy(i => i.Code).Take(50).ToListAsync(cancellationToken);
+            // Gõ "*" (kiểu SAP ECC) là muốn xem toàn bộ: trả tới 500 dòng thay vì 50 dòng của tìm thường.
+            var limit = LikePatterns.HasWildcard(search) ? WildcardLimit : 50;
+            found = await items.OrderBy(i => i.Code).Take(limit).ToListAsync(cancellationToken);
         }
 
         if (ids.Count > 0)

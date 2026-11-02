@@ -1,5 +1,6 @@
 import { SettingOutlined } from '@ant-design/icons'
-import { Alert, Button, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
+import { Alert, Button, Checkbox, InputNumber, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'

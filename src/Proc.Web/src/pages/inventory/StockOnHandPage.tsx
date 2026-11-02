@@ -1,4 +1,5 @@
-import { Alert, Checkbox, Select, TreeSelect } from 'antd'
+import { Alert, Checkbox, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useItemCategories } from '../../api/masterData'

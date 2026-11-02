@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { App, Button, Checkbox, Form, Input, InputNumber, Select, TreeSelect } from 'antd'
+import { App, Button, Checkbox, Form, Input, InputNumber, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import { useEffect, useMemo, useState } from 'react'
 import {
   itemTypeLabels,

@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 02/11/2026 (C5a). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 02/11/2026 (TC-1 tìm kiểu SAP). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -118,6 +118,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026), nhánh `feature/tra-cuu-chung-tu`** – làm lần lượt:
+  - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
+    mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
+    Test: tích hợp `TimHang_DauSao_…`, e2e `lookup-wildcard.spec.ts`. Kiểm tra: `dotnet test` 506 qua; Playwright 88/88.
+  - **TC-2 (tiếp theo)**: màn hình **Tra cứu chứng từ** (Hằng ngày) – mọi loại chứng từ (PR, PO, GRN, RTV, TRF, ICS, ICR, bảng giá,
+    RFQ, hợp đồng, phụ lục, NCC, độc quyền…), đã/chưa hoàn thành, lọc Tôi lập/Tôi đã duyệt, bấm đúp mở cả trang phiếu.
+  - **TC-3**: thông báo/Việc cần làm mở trang đầy đủ (duyệt NCC thêm hồ sơ NCC; NDQ, VIOL, CTA). **TC-4**: người duyệt tiếp theo.
+  - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
+    (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).
   - Công cụ `tools/du-lieu-thu` (Node.js, gọi API, chạy lại không trùng): bộ phận, vai trò (mẫu Ban CUVT + TOANQUYEN), 38 tài khoản
     (mỗi công ty 12: cặp lap/duyet toàn quyền + 10 vai trò; aph.khokp1, bmi.denghi.bhld giới hạn phạm vi; mật khẩu Test@2026), xếp loại

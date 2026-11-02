@@ -89,6 +89,15 @@ Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
 - **Ô ngày** (`DateInput`, mọi ô ngày – header và lưới): gõ tay dd/MM/yyyy (gõ nhanh `05122026`, `5/12/2026`, `05.12.2026`)
   hoặc chọn trên lịch; không dùng ô ngày của trình duyệt (hiển thị theo ngôn ngữ hệ điều hành).
 
+## 5b. Ô chọn danh mục – tìm kiểu SAP ECC (02/11/2026)
+
+Mọi ô chọn có tìm kiếm (NCC, mặt hàng, kho, bộ phận, nhóm…) dùng `Select` của `src/classic/Select.tsx` (thay `Select` của antd, cùng thuộc tính):
+
+- Gõ **`*` rồi Enter**: liệt kê **toàn bộ** danh mục để chọn (ô tìm trên máy chủ trả tối đa 500 dòng). Mẫu có `*` thì Enter chỉ liệt kê,
+  không tự chọn dòng đầu; chọn bằng mũi tên + Enter hoặc bấm chuột.
+- `*` giữa từ khóa là ký tự đại diện: `b*long` khớp "Bu lông"; áp cả ô Tìm kiếm của mọi danh sách (`matchesKeyword`) và API tìm (`LikePatterns.Contains`).
+- Tìm không phân biệt có dấu/không dấu, nhiều từ không cần đúng thứ tự.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

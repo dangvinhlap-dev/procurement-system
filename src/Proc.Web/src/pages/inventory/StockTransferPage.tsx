@@ -1,5 +1,6 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { Alert, DatePicker, Form, Input, InputNumber, Select } from 'antd'
+import { Alert, DatePicker, Form, Input, InputNumber } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'

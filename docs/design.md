@@ -231,6 +231,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Quy đổi ĐVT: 1 ĐVT quy đổi = hệ số × ĐVT cơ sở, hệ số > 0, numeric(18,6); không trùng ĐVT cơ sở, mỗi ĐVT một dòng | Tồn kho luôn lưu theo ĐVT cơ sở; 6 chữ số thập phân để quy đổi g → kg |
 | Thuế suất mặc định: KCT, 0, 5, 8, 10 (%) | Danh mục thuế suất đầy đủ (mục 5.4) làm sau, giữ đúng các mã này |
 | Tìm hàng: mỗi lần tối đa 5.000 dòng; tìm theo mã, tên, tên tiếng Anh, mã vạch, có dấu hay không dấu (cột `SearchText`); lọc nhóm gồm nhóm con | Danh mục tới ~100.000 mã (mục 1.3) |
+| Tìm kiểu SAP ECC (02/11/2026): `*` là ký tự đại diện ở mọi ô tìm; ô chọn danh mục gõ `*` + Enter liệt kê toàn bộ (ô chọn hàng tối đa 500 dòng, tìm thường 50) – docs/ui-style.md mục 5b | Người dùng quen F4 của SAP |
 
 ### 5.8 Quản lý nhóm NCC và nhà cung cấp
 

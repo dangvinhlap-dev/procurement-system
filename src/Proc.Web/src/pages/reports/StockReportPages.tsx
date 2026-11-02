@@ -1,5 +1,6 @@
 import { FileAddOutlined } from '@ant-design/icons'
-import { Alert, Button, Checkbox, InputNumber, Select, TreeSelect } from 'antd'
+import { Alert, Button, Checkbox, InputNumber, TreeSelect } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'

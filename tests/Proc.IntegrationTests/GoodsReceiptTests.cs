@@ -181,6 +181,21 @@ public class GoodsReceiptTests
     }
 
     [Fact]
+    public async Task TimHang_DauSao_LietKeTatCa_VaLamKyTuDaiDien()
+    {
+        var f = await ArrangeAsync();
+
+        // "*" (kiểu SAP ECC): liệt kê toàn bộ, vượt giới hạn 50 dòng của tìm thường (tối đa 500).
+        var all = await f.Bha.GetFromJsonAsync<List<ItemLookupDto>>("/api/items/lookup?search=*&inventoryOnly=true", Ct);
+        Assert.Contains(all!, i => i.Id == f.Item.Id);
+        Assert.InRange(all!.Count, 1, 500);
+
+        // "*" giữa từ khóa là ký tự đại diện: "b*long" khớp "Bu lông".
+        var wild = await f.Bha.GetFromJsonAsync<List<ItemLookupDto>>($"/api/items/lookup?search=b*long%20{f.Category.Code}&inventoryOnly=true", Ct);
+        Assert.Equal(f.Item.Id, Assert.Single(wild!).Id);
+    }
+
+    [Fact]
     public async Task TraNcc_ChoPhieuNhap_ChiNccDaDuyetVaApDungTaiCongTy_ThuKhoCungDungDuoc()
     {
         var applied = await ArrangeAsync();
