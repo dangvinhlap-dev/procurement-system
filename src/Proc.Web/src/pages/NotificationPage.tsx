@@ -32,6 +32,8 @@ function targetPath(n: AppNotification): string {
   if (n.screenCode === 'NCC') return n.targetId ? `/gia-ncc/duyet-ncc?mo=${n.targetId}` : '/gia-ncc/duyet-ncc'
   // Phiếu NCC độc quyền (loại NDQ – lát B5b) mở trong ngăn kéo của danh sách, không có trang riêng.
   if (n.screenCode === 'NDQ') return n.targetId ? `/gia-ncc/ncc-doc-quyen?mo=${n.targetId}` : '/gia-ncc/ncc-doc-quyen'
+  // Vi phạm KSNB (lát F3) mở trong ngăn kéo của sổ vi phạm.
+  if (n.screenCode === 'VIOL') return n.targetId ? `/bao-cao/so-vi-pham?mo=${n.targetId}` : '/bao-cao/so-vi-pham'
   // Phụ lục hợp đồng (loại CTA – lát B4b) không có màn hình riêng: trang chuyển tiếp mở hợp đồng kèm ngăn kéo phụ lục.
   if (n.screenCode === 'CTA' && n.targetId) return `/mua-hang/hop-dong-khung/phu-luc/${n.targetId}`
   const screen = screens.find((s) => s.code === n.screenCode)

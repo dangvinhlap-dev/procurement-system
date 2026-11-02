@@ -92,7 +92,7 @@ public static class RoleTemplates
             .. CatalogView, Permissions.Purchase.ContractView, Permissions.Pricing.PriceListView,
             Permissions.Sourcing.RfqView,
         ]),
-        new("KSNB", "Kiểm soát nội bộ", "Giám sát độc lập: chỉ xem mọi nghiệp vụ, báo cáo toàn tập đoàn và nhật ký thao tác",
+        new("KSNB", "Kiểm soát nội bộ", "Giám sát độc lập: chỉ xem mọi nghiệp vụ, báo cáo toàn tập đoàn và nhật ký thao tác; rà dấu hiệu bất thường, ghi nhận vi phạm",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Inventory.PeriodView,
@@ -100,6 +100,14 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies, Permissions.System.LogView, Permissions.MasterData.ConflictView,
+            Permissions.Control.AnomalyView, Permissions.Control.FindingManage,
+        ]),
+        // Kết quả KSNB gửi thẳng lãnh đạo, không qua Nhóm Đàm phán/Vận hành – nên không gán quyền nhận cho Trưởng ban (design.md mục 18.19).
+        new("LANHDAO", "Lãnh đạo (nhận báo cáo KSNB)", "Ban giám đốc/HĐQT: nhận thông báo vi phạm của KSNB, xem sổ vi phạm, báo cáo toàn tập đoàn",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Control.FindingReceive,
         ]),
     ];
 }

@@ -86,34 +86,63 @@ public sealed class PurchaseReportService : IPurchaseReportService
         if (to < from) throw new BusinessRuleException("Đến ngày phải sau từ ngày.");
         if (to.DayNumber - from.DayNumber > 366) throw new BusinessRuleException("Khoảng ngày tối đa 1 năm.");
         if (tolerance < 0) throw new BusinessRuleException("Dung sai không được âm.");
+        var (matched, hiddenCount) = await ThreeWayRowsAsync(_db, from, to, tolerance, false, cancellationToken);
+        var all = matched.Select(m => m.Row).ToList();
+        var rows = all.Where(r => !onlyIssues || r.Issues.Count > 0).OrderBy(r => r.Date).ThenBy(r => r.DocumentNo).ToList();
+        return new ThreeWayMatchResult(
+            rows, all.Count(r => r.Result == "Matched"), all.Count(r => r.Result == "NoInvoice"), all.Count(r => r.Result == "Mismatch"),
+            all.Count(r => r.Issues.Count > 0), all.Sum(r => r.ReceiptTotal), all.Sum(r => r.InvoiceAmount ?? 0m), hiddenCount);
+    }
 
-        // Phiếu, dòng đi qua filter công ty, kho; mặt hàng đi qua filter nhóm hàng để biết phiếu nào người xem thấy đủ.
-        var documents = await _db.InventoryDocuments.AsNoTracking()
-            .Where(d => d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= @from && d.Date <= to)
-            .Join(_db.Suppliers, d => d.SupplierId, s => s.Id, (d, s) => new
+    /// <summary>
+    /// Đối chiếu từng phiếu nhập mua đã ghi sổ trong khoảng ngày (design.md mục 18.15) – dùng chung cho báo cáo MATCH3 và dấu hiệu bất thường
+    /// KSNB (mục 18.19). Phiếu có mặt hàng ngoài phạm vi nhóm hàng của người xem bị bỏ qua cả phiếu.
+    /// </summary>
+    /// <param name="db">DbContext đã gắn phạm vi người dùng.</param>
+    /// <param name="fromDate">Từ ngày nhập.</param>
+    /// <param name="toDate">Đến ngày nhập.</param>
+    /// <param name="tolerance">Dung sai tiền hóa đơn (đ).</param>
+    /// <param name="allCompanies">Toàn tập đoàn – bỏ filter công ty, kho; người gọi phải kiểm quyền trước.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các dòng kèm công ty của phiếu và số phiếu bỏ qua.</returns>
+    internal static async Task<(List<(Guid CompanyId, ThreeWayMatchRowDto Row)> Rows, int Hidden)> ThreeWayRowsAsync(
+        ProcDbContext db, DateOnly fromDate, DateOnly toDate, decimal tolerance, bool allCompanies, CancellationToken cancellationToken)
+    {
+        // Phiếu, dòng đi qua filter công ty, kho; mặt hàng đi qua filter nhóm hàng để biết phiếu nào người xem thấy đủ. Toàn tập đoàn
+        // (người gọi đã kiểm quyền) thì bỏ filter công ty, kho – phạm vi kho khai báo theo từng công ty; nhóm hàng vẫn giữ.
+        var documentSet = allCompanies
+            ? db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.WarehouseFilter])
+            : db.InventoryDocuments;
+        var lineSet = allCompanies
+            ? db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.WarehouseFilter])
+            : db.InventoryDocumentLines;
+        var orderSet = allCompanies ? db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : db.PurchaseOrders;
+        var documents = await documentSet.AsNoTracking()
+            .Where(d => d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= fromDate && d.Date <= toDate)
+            .Join(db.Suppliers, d => d.SupplierId, s => s.Id, (d, s) => new
             {
-                d.Id, d.No, d.Date, SupplierCode = s.Code, SupplierName = s.Name, d.PurchaseOrderId, d.TotalAmount, d.TotalVat,
+                d.Id, d.CompanyId, d.No, d.Date, SupplierCode = s.Code, SupplierName = s.Name, d.PurchaseOrderId, d.TotalAmount, d.TotalVat,
                 d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount,
             })
             .ToListAsync(cancellationToken);
         var documentIds = documents.Select(d => d.Id).ToList();
-        var allLines = await _db.InventoryDocumentLines.AsNoTracking()
+        var allLines = await lineSet.AsNoTracking()
             .Where(l => documentIds.Contains(l.DocumentId))
             .Select(l => new { l.DocumentId, l.ItemId, l.Qty, l.DeliveredQty })
             .ToListAsync(cancellationToken);
         var itemIds = allLines.Select(l => l.ItemId).Distinct().ToList();
         // Chỉ đọc Id mặt hàng người xem thấy (filter nhóm hàng); phiếu có mặt hàng bị ẩn thì bỏ qua cả phiếu.
-        var visibleItems = (await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).Select(i => i.Id).ToListAsync(cancellationToken))
+        var visibleItems = (await db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).Select(i => i.Id).ToListAsync(cancellationToken))
             .ToHashSet();
         var hidden = allLines.Where(l => !visibleItems.Contains(l.ItemId)).Select(l => l.DocumentId).ToHashSet();
         var shortDocuments = allLines.Where(l => l.DeliveredQty is { } delivered && l.Qty < delivered).Select(l => l.DocumentId).ToHashSet();
 
         var orderIds = documents.Select(d => d.PurchaseOrderId).OfType<Guid>().Distinct().ToList();
-        var orders = await _db.PurchaseOrders.AsNoTracking().Where(o => orderIds.Contains(o.Id))
+        var orders = await orderSet.AsNoTracking().Where(o => orderIds.Contains(o.Id))
             .Select(o => new { o.Id, o.No, o.Date, o.ApprovedAt, Total = o.TotalAmount + o.TotalVat })
             .ToDictionaryAsync(o => o.Id, cancellationToken);
 
-        var all = new List<ThreeWayMatchRowDto>();
+        var all = new List<(Guid CompanyId, ThreeWayMatchRowDto Row)>();
         foreach (var d in documents.Where(d => !hidden.Contains(d.Id)))
         {
             var order = d.PurchaseOrderId is { } oid ? orders.GetValueOrDefault(oid) : null;
@@ -147,15 +176,12 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 if (d.InvoiceDate is { } invoiceDate && invoiceDate < order.Date) issues.Add(ThreeWayMatchIssues.InvoiceBeforeOrder);
             }
 
-            all.Add(new ThreeWayMatchRowDto(
+            all.Add((d.CompanyId, new ThreeWayMatchRowDto(
                 d.Id, d.No, d.Date, d.SupplierCode, d.SupplierName, d.PurchaseOrderId, order?.No, order?.Date, approvedDate, order?.Total,
-                receiptTotal, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, difference, result, issues));
+                receiptTotal, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, difference, result, issues)));
         }
 
-        var rows = all.Where(r => !onlyIssues || r.Issues.Count > 0).OrderBy(r => r.Date).ThenBy(r => r.DocumentNo).ToList();
-        return new ThreeWayMatchResult(
-            rows, all.Count(r => r.Result == "Matched"), all.Count(r => r.Result == "NoInvoice"), all.Count(r => r.Result == "Mismatch"),
-            all.Count(r => r.Issues.Count > 0), all.Sum(r => r.ReceiptTotal), all.Sum(r => r.InvoiceAmount ?? 0m), hidden.Count);
+        return (all, hidden.Count);
     }
 
     /// <inheritdoc />
@@ -535,33 +561,51 @@ public sealed class PurchaseReportService : IPurchaseReportService
     /// Một dòng PO đã duyệt cho báo cáo giá mua. <c>Kind</c>: nguồn giá (Rfq, Contract, PriceList, None, Unknown), riêng dòng lệch giá đã
     /// duyệt là Deviation – không còn mua theo giá được duyệt nên không tính là theo nguồn đó.
     /// </summary>
-    private sealed record OrderLine(
+    internal sealed record OrderLine(
         Guid OrderId, string OrderNo, DateOnly Date, string CompanyCode, string? Department, string SupplierCode, string SupplierName, int LineNo,
         Guid ItemId, string ItemCode, string ItemName, string BaseUomCode, string UomCode, decimal Qty, decimal BaseQty, decimal NetPrice,
-        decimal Amount, string Kind, decimal? ApprovedNet, string? Reason);
+        decimal Amount, string Kind, decimal? ApprovedNet, string? Reason)
+    {
+        /// <summary>Công ty lập PO.</summary>
+        public Guid CompanyId { get; init; }
+
+        /// <summary>NCC.</summary>
+        public Guid SupplierId { get; init; }
+
+        /// <summary>Người lập PO.</summary>
+        public Guid? CreatedBy { get; init; }
+    }
 
     /// <summary>
     /// Dòng PO Đã duyệt hoặc Đã đóng có ngày PO trong khoảng – đơn hàng đã cam kết với NCC. PO nháp/chờ duyệt chưa phải giá mua; PO hủy không mua.
     /// </summary>
-    private async Task<List<OrderLine>> OrderLinesAsync(
-        DateOnly fromDate, DateOnly toDate, bool allCompanies, List<Guid>? categoryIds, CancellationToken cancellationToken)
+    private Task<List<OrderLine>> OrderLinesAsync(
+        DateOnly fromDate, DateOnly toDate, bool allCompanies, List<Guid>? categoryIds, CancellationToken cancellationToken) =>
+        OrderLinesAsync(_db, fromDate, toDate, allCompanies, categoryIds, cancellationToken);
+
+    /// <summary>
+    /// Như bản không tĩnh – dùng chung cho báo cáo KSNB (design.md mục 18.19). <paramref name="allCompanies"/> bỏ filter công ty nên người
+    /// gọi phải kiểm quyền xem toàn tập đoàn trước.
+    /// </summary>
+    internal static async Task<List<OrderLine>> OrderLinesAsync(
+        ProcDbContext db, DateOnly fromDate, DateOnly toDate, bool allCompanies, List<Guid>? categoryIds, CancellationToken cancellationToken)
     {
         // Toàn tập đoàn (đã kiểm quyền ở Check) – xem ghi chú lớp; filter nhóm hàng giữ nhờ join mặt hàng.
-        var orders = allCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
-        var items = categoryIds is null ? _db.Items : _db.Items.Where(i => categoryIds.Contains(i.CategoryId));
+        var orders = allCompanies ? db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : db.PurchaseOrders;
+        var items = categoryIds is null ? db.Items : db.Items.Where(i => categoryIds.Contains(i.CategoryId));
         var rows = await (
                 from o in orders.AsNoTracking()
                 where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.Date >= fromDate && o.Date <= toDate
                 from l in o.Lines
                 join i in items on l.ItemId equals i.Id
-                join bu in _db.Uoms on i.BaseUomId equals bu.Id
-                join u in _db.Uoms on l.UomId equals u.Id
-                join s in _db.Suppliers on o.SupplierId equals s.Id
-                join c in _db.Companies on o.CompanyId equals c.Id
+                join bu in db.Uoms on i.BaseUomId equals bu.Id
+                join u in db.Uoms on l.UomId equals u.Id
+                join s in db.Suppliers on o.SupplierId equals s.Id
+                join c in db.Companies on o.CompanyId equals c.Id
                 select new
                 {
-                    OrderId = o.Id, o.No, o.Date, CompanyCode = c.Code,
-                    Department = _db.Departments.Where(d => d.Id == o.DepartmentId).Select(d => d.Name).FirstOrDefault(),
+                    OrderId = o.Id, o.No, o.Date, o.CompanyId, o.SupplierId, o.CreatedBy, CompanyCode = c.Code,
+                    Department = db.Departments.Where(d => d.Id == o.DepartmentId).Select(d => d.Name).FirstOrDefault(),
                     SupplierCode = s.Code, SupplierName = s.Name, l.LineNo, l.ItemId, ItemCode = i.Code, ItemName = i.Name, BaseUomCode = bu.Code,
                     UomCode = u.Code, l.Qty, l.BaseQty, l.UnitPrice, l.DiscountPct, l.Amount, l.PriceSource, l.ApprovedUnitPrice,
                     l.ApprovedDiscountPct, l.PriceDeviationReason,
@@ -576,7 +620,10 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 var kind = approved is { } ap && ap != net ? "Deviation" : r.PriceSource.ToString();
                 return new OrderLine(
                     r.OrderId, r.No, r.Date, r.CompanyCode, r.Department, r.SupplierCode, r.SupplierName, r.LineNo, r.ItemId, r.ItemCode, r.ItemName,
-                    r.BaseUomCode, r.UomCode, r.Qty, r.BaseQty, net, r.Amount, kind, approved, r.PriceDeviationReason);
+                    r.BaseUomCode, r.UomCode, r.Qty, r.BaseQty, net, r.Amount, kind, approved, r.PriceDeviationReason)
+                {
+                    CompanyId = r.CompanyId, SupplierId = r.SupplierId, CreatedBy = r.CreatedBy,
+                };
             })
             .ToList();
     }

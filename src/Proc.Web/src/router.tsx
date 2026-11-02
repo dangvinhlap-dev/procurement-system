@@ -67,6 +67,7 @@ import { SupplierRatingPage } from './pages/system/SupplierRatingPage'
 import { SystemParameterPage } from './pages/system/SystemParameterPage'
 import { UserListPage } from './pages/system/UserListPage'
 import { WarehouseListPage } from './pages/system/WarehouseListPage'
+import { AnomalyReportPage, ControlFindingListPage } from './pages/reports/ControlPages'
 import { DepartmentListPage } from './pages/system/DepartmentListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
@@ -108,6 +109,8 @@ const implemented: Record<string, ReactNode> = {
   PRCW: <ContractComplianceReportPage />,
   PRVAR: <PriceVarianceReportPage />,
   KPI: <KpiReportPage />,
+  ANOM: <AnomalyReportPage />,
+  VIOL: <ControlFindingListPage />,
   ACCX: <AccountingExportPage />,
   PHIS: <PurchaseHistoryPage />,
   PHMAP: <PurchaseHistoryMappingPage />,

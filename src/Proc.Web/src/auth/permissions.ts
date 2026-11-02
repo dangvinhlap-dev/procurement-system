@@ -61,4 +61,7 @@ export const Permission = {
   PurchaseHistoryView: 'Analysis.PurchaseHistory.View',
   PurchaseHistoryImport: 'Analysis.PurchaseHistory.Import',
   PurchaseHistoryViewAllCompanies: 'Analysis.PurchaseHistory.ViewAllCompanies',
+  ControlAnomalyView: 'Control.Anomaly.View',
+  ControlFindingManage: 'Control.Finding.Manage',
+  ControlFindingReceive: 'Control.Finding.Receive',
 } as const

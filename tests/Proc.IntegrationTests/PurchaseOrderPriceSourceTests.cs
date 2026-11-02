@@ -466,11 +466,13 @@ public class PurchaseOrderPriceSourceTests
         var emergency = kpi.Items.Single(i => i.Code == "Emergency");
         // 300.000 ÷ 1.269.000 = 23,64% > trần 5%.
         Assert.Equal((23.64m, (decimal?)0m, 5m, (bool?)false), (emergency.Value, emergency.PreviousValue, emergency.Target, emergency.Met));
-        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả; đánh giá NCC và vi phạm chưa đo (lát F4, F3).
+        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả; đánh giá NCC chưa đo (lát F4); chưa có vi phạm KSNB → 0 vụ, đạt.
         Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SlowMoving"),
             i => Assert.Equal((true, (decimal?)null, (bool?)null), (i.Measured, i.Value, i.Met)));
-        Assert.All(kpi.Items.Where(i => i.Code is "SupplierReview" or "Violation"), i => Assert.False(i.Measured));
-        Assert.Equal((2, 0), (kpi.MeasuredCount, kpi.MetCount));
+        Assert.False(kpi.Items.Single(i => i.Code == "SupplierReview").Measured);
+        var violation = kpi.Items.Single(i => i.Code == "Violation");
+        Assert.Equal((true, (decimal?)0m, (bool?)true), (violation.Measured, violation.Value, violation.Met));
+        Assert.Equal((3, 1), (kpi.MeasuredCount, kpi.MetCount));
 
         // Mục tiêu sửa được ở Tham số hệ thống (nhóm KPI): hạ mục tiêu mua theo hợp đồng xuống 30% → đạt.
         var code = SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance);
@@ -478,7 +480,7 @@ public class PurchaseOrderPriceSourceTests
         Assert.Equal(("KPI", "30", false), (saved.Group, saved.Value, saved.IsDefault));
         kpi = await ReadAsync<KpiResult>(await f.Client.GetAsync(url, Ct));
         Assert.Equal((30m, (bool?)true), (kpi.Items.Single(i => i.Code == "ContractCompliance").Target, kpi.Items.Single(i => i.Code == "ContractCompliance").Met));
-        Assert.Equal(1, kpi.MetCount);
+        Assert.Equal(2, kpi.MetCount);
         Assert.Contains("0 đến 100%", await TitleAsync(await f.Client.PutAsJsonAsync(
             $"/api/system-parameters/{SystemParameterCodes.KpiTarget(KpiCode.Emergency)}", new UpdateSystemParameterRequest("150"), Ct)));
         Assert.Contains("số nguyên", await TitleAsync(await f.Client.PutAsJsonAsync(

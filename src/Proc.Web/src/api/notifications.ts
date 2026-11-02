@@ -8,7 +8,7 @@ import { apiFetch } from './client'
  */
 
 /** Loại thông báo. */
-export type NotificationType = 'ApprovalPending' | 'Approved' | 'Rejected' | 'IntercompanyReceipt' | 'PeriodReopened'
+export type NotificationType = 'ApprovalPending' | 'Approved' | 'Rejected' | 'IntercompanyReceipt' | 'PeriodReopened' | 'ControlFinding'
 
 /** Một thông báo. */
 export interface AppNotification {
@@ -32,6 +32,7 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   Rejected: 'Bị từ chối',
   IntercompanyReceipt: 'Hàng nội bộ chờ nhận',
   PeriodReopened: 'Mở lại kỳ kho',
+  ControlFinding: 'Vi phạm KSNB',
 }
 
 /** Thông báo của tôi, mới nhất trước. */

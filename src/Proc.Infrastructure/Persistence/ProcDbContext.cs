@@ -112,6 +112,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phê duyệt NCC độc quyền (lọc theo công ty và phạm vi nhóm hàng của mặt hàng – design.md mục 18.9).</summary>
     public DbSet<SoleSourceApproval> SoleSourceApprovals => Set<SoleSourceApproval>();
 
+    /// <summary>Vi phạm KSNB (lọc theo công ty – design.md mục 18.19).</summary>
+    public DbSet<Proc.Domain.Control.ControlFinding> ControlFindings => Set<Proc.Domain.Control.ControlFinding>();
+
     /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
     public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
 
