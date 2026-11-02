@@ -1352,6 +1352,22 @@ Nguồn: đề xuất Ban CUVT V3 (hàng chưa có trong danh mục → chuyển
 Migration `V0_13_0_HangMoiChuaCoMa` (bảng `PurchaseRequestNewItem` – `Down()` xóa bảng, mất hàng mới chưa có mã đã ghi trên PR; dòng có mã
 sinh ra khi gắn mã vẫn giữ).
 
+### 18.13 SLA mua hàng và hàng đang đặt (lát C4, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT "Quy định thời gian xử lý" (V6) và kiểm tra hàng đang đặt (V2); KPI "Đơn hàng xử lý đúng SLA ≥ 95%".
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Tham số SLA** theo công ty (màn hình SEC, nhóm "Mua hàng", ngày làm việc 0–60): hàng **đã có hợp đồng/bảng giá** 1 ngày (phát hành PO trong 1 ngày sau khi PR đủ duyệt); hàng **chưa có NCC được duyệt** 5 ngày (đề xuất 3–5 ngày tìm nguồn, so sánh, trình duyệt – lấy mức trên); hàng **khẩn** (PR mức ưu tiên Khẩn) 1 ngày ("tiếp nhận ngay"; 0 = trong ngày) | Bảng thời hạn xử lý của Ban CUVT, mỗi công ty chỉnh được |
+| Loại yêu cầu của dòng PR (tự xếp khi xem báo cáo): PR Khẩn → Khẩn; mặt hàng có trong bảng giá NCC hiệu lực vào ngày PR duyệt mà công ty dùng được (của công ty hoặc toàn tập đoàn; hợp đồng nguyên tắc luôn gắn bảng giá) → Đã có HĐ/bảng giá; còn lại và hàng mới chưa gắn mã (mục 18.12) → Chưa có NCC duyệt. Không đo "hàng có sẵn trong kho" (xuất kho, không mua) và "hàng chuyên ngành" (theo kế hoạch) | Xếp loại không cần người dùng khai |
+| **Hạn** = ngày PR đủ duyệt (giờ Việt Nam) + N ngày làm việc (thứ 2–6; PR duyệt thứ 7/CN tính từ thứ 2; **chưa trừ ngày lễ**). Mốc hoàn thành = ngày **PO đầu tiên được duyệt** có dòng lấy từ dòng PR đó. Trạng thái: Đúng hạn (PO duyệt ≤ hạn), Trễ, Đang xử lý (chưa có PO, còn hạn), Quá hạn (chưa có PO, qua hạn). **% đúng SLA** = đúng hạn / (đúng hạn + trễ + quá hạn) | "Phát hành PO trong … sau khi đủ phê duyệt"; dòng đang xử lý chưa tính vào tỷ lệ |
+| Báo cáo **SLA mua hàng** (màn hình SLA, Báo cáo, quyền `Report.Purchase.View`): PR duyệt trong khoảng ngày (tối đa 1 năm) của công ty đang làm việc; dòng trễ/quá hạn tô màu; đầu trang % đúng SLA (mục tiêu ≥ 95%); bấm đúp mở PO (hoặc PR nếu chưa có PO) | KPI đúng SLA (đợt F dùng lại) |
+| **Đang đặt** trên dòng PR: SL đang đặt của mặt hàng tại công ty (ĐVT cơ sở) = Σ trên PO **đã duyệt** chưa nhận đủ của (SL đặt − SL đã nhận theo phiếu nhập đã ghi sổ), mỗi dòng không âm; hiện cạnh "Tồn hiện tại" | V2: kiểm tra hàng đang đặt trước khi đề nghị, tránh mua trùng |
+| Chưa làm: lịch nghỉ lễ cho SLA; SLA theo ngày giờ (đang tính theo ngày); định mức sử dụng (V2 phần 2) | Làm khi có yêu cầu |
+
+Migration `V0_13_0_ThamSoSla` (cột `SlaPricedDays`, `SlaSourcingDays`, `SlaUrgentDays` của `CompanyParameter`, mặc định 1/5/1 – `Down()` xóa
+cột, mất SLA công ty đã sửa).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

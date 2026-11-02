@@ -9,6 +9,15 @@ public static class SystemParameterCodes
     /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
     public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
 
+    /// <summary>SLA hàng đã có hợp đồng/bảng giá (ngày làm việc) – sửa được (design.md mục 18.13).</summary>
+    public const string SlaPricedDays = "SLA_PRICED_DAYS";
+
+    /// <summary>SLA hàng chưa có NCC được duyệt (ngày làm việc) – sửa được.</summary>
+    public const string SlaSourcingDays = "SLA_SOURCING_DAYS";
+
+    /// <summary>SLA hàng khẩn (ngày làm việc) – sửa được.</summary>
+    public const string SlaUrgentDays = "SLA_URGENT_DAYS";
+
     /// <summary>Phương pháp giá vốn – chỉ xem (cố định bình quân gia quyền tháng, design.md mục 7).</summary>
     public const string CostingMethod = "COSTING_METHOD";
 

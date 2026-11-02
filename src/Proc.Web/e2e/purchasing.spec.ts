@@ -111,6 +111,15 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await page.locator('.data-grid-row', { hasText: poNo }).dblclick()
   await confirm(page, 'Duyệt', `Đã duyệt xong phiếu ${poNo}.`)
 
+  // 4a. Báo cáo SLA mua hàng (design.md mục 18.13): dòng PR có PO duyệt trong hạn → Đúng hạn, có số PO.
+  await openByCommand(page, 'SLA')
+  await expect(page.getByRole('heading', { name: 'SLA mua hàng' })).toBeVisible()
+  const slaRow = page.locator('.data-grid-row', { hasText: prNo })
+  await expect(slaRow).toContainText(poNo)
+  await expect(slaRow).toContainText('Đúng hạn')
+  await expect(page.getByRole('alert').filter({ hasText: 'Đúng SLA' })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/purchase-sla.png' })
+
   // 4b. Người lập xác nhận đã bổ sung hồ sơ mua khẩn cấp.
   await buyer.reload()
   await expect(buyer.getByRole('alert').filter({ hasText: 'Mua khẩn cấp' })).toContainText('Hạn bổ sung hồ sơ')

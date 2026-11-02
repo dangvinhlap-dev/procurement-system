@@ -54,6 +54,12 @@ public sealed class SystemParameterService : ISystemParameterService
                 markup == CompanyParameter.DefaultInternalMarkupPercent, true,
                 $"Mặt hàng chưa có trong Bảng giá nội bộ thì gợi ý giá bán = giá vốn kỳ đã đóng gần nhất × (1 + % markup), làm tròn đồng " +
                 $"(0–{CompanyParameter.MaxInternalMarkupPercent:0}%). Chỉ là gợi ý ở Bảng giá nội bộ và phiếu xuất bán nội bộ; giá đã khai báo không bị ảnh hưởng."),
+            Sla(SystemParameterCodes.SlaPricedDays, "SLA – hàng đã có hợp đồng/bảng giá", parameter?.SlaPricedDays, CompanyParameter.DefaultSlaPricedDays,
+                "Số ngày làm việc từ lúc PR đủ duyệt đến lúc PO được duyệt cho hàng đã có bảng giá/hợp đồng hiệu lực."),
+            Sla(SystemParameterCodes.SlaSourcingDays, "SLA – hàng chưa có NCC được duyệt", parameter?.SlaSourcingDays, CompanyParameter.DefaultSlaSourcingDays,
+                "Số ngày làm việc để tìm nguồn, so sánh, trình duyệt và phát hành PO cho hàng chưa có bảng giá/hợp đồng (kể cả hàng mới chưa có mã)."),
+            Sla(SystemParameterCodes.SlaUrgentDays, "SLA – hàng khẩn", parameter?.SlaUrgentDays, CompanyParameter.DefaultSlaUrgentDays,
+                "PR mức ưu tiên Khẩn: số ngày làm việc tới lúc PO được duyệt (0 = trong ngày)."),
             new(SystemParameterCodes.CostingMethod, "Kho", "Phương pháp giá vốn",
                 "Bình quân gia quyền cuối kỳ tháng", null, true, false,
                 "Tính theo công ty × mặt hàng khi đóng kỳ; cố định cho mọi công ty (design.md mục 7)."),
@@ -96,6 +102,26 @@ public sealed class SystemParameterService : ISystemParameterService
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeInternalMarkupPercent(percent);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
+            case SystemParameterCodes.SlaPricedDays:
+            case SystemParameterCodes.SlaSourcingDays:
+            case SystemParameterCodes.SlaUrgentDays:
+                int? days = null;
+                if (!string.IsNullOrWhiteSpace(request.Value))
+                {
+                    if (!int.TryParse(request.Value.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsedDays))
+                        throw new BusinessRuleException("SLA phải là số ngày làm việc (số nguyên).");
+                    days = parsedDays;
+                }
+
+                var category = key switch
+                {
+                    SystemParameterCodes.SlaPricedDays => Proc.Domain.Purchasing.SlaCategory.Priced,
+                    SystemParameterCodes.SlaSourcingDays => Proc.Domain.Purchasing.SlaCategory.Sourcing,
+                    _ => Proc.Domain.Purchasing.SlaCategory.Urgent,
+                };
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeSlaDays(category, days);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
             case SystemParameterCodes.CostingMethod:
             case SystemParameterCodes.NegativeStock:
                 throw new BusinessRuleException("Tham số này chỉ xem, không sửa ở màn hình Tham số hệ thống.");
@@ -124,6 +150,14 @@ public sealed class SystemParameterService : ISystemParameterService
         parameter = CompanyParameter.Create(companyId);
         _db.CompanyParameters.Add(parameter);
         return parameter;
+    }
+
+    /// <summary>Một tham số SLA (nhóm "Mua hàng"): giá trị hiện hành hoặc mặc định.</summary>
+    private static SystemParameterDto Sla(string code, string name, int? value, int defaultValue, string note)
+    {
+        var v = value ?? defaultValue;
+        return new(code, "Mua hàng", name, v.ToString(CultureInfo.InvariantCulture), defaultValue.ToString(CultureInfo.InvariantCulture),
+            v == defaultValue, true, $"{note} Từ 0 đến {CompanyParameter.MaxSlaDays}; tính thứ 2–6, chưa trừ ngày lễ. Đo ở báo cáo SLA mua hàng.");
     }
 
     /// <summary>Số % kiểu Việt Nam, bỏ số 0 thừa: 12,5000 → "12,5"; 10 → "10".</summary>

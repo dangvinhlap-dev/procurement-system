@@ -99,12 +99,14 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   // Lưu rồi gửi (hai lượt gọi API) – khi máy bận có thể quá 5 giây mới báo lỗi.
   await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible({ timeout: 20_000 })
+  // Tải lại trang cho trạng thái ổn định rồi mới gõ lý do: phiếu tải lại sau lần gửi bị chặn có thể nạp đè form lúc đang gõ (lỗi đã ghi
+  // ở TIEN_DO); "Gửi duyệt" tự lưu trước khi gửi.
+  await expect(page.locator('.ant-modal-confirm')).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('48.000')
   await page.getByLabel('Lý do lệch giá dòng 1').fill('NCC báo tăng giá nguyên liệu')
+  await expect(page.getByLabel('Lý do lệch giá dòng 1')).toHaveValue('NCC báo tăng giá nguyên liệu')
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
-  // Chờ đúng phản hồi lưu lần này – thông báo "Đã lưu phiếu" của lần lưu trước có thể vẫn còn trên màn hình.
-  const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/purchase-orders\/[^/]+$/.test(r.url()))
-  await page.keyboard.press('Control+s')
-  expect((await saved).ok()).toBe(true)
   // Gửi duyệt = lưu rồi gửi (hai lượt gọi API) – khi chạy song song có thể quá 5 giây, chờ trạng thái thay vì thông báo thoáng qua.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()

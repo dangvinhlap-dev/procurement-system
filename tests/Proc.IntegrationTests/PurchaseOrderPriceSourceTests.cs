@@ -6,6 +6,7 @@ using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
+using Proc.Application.Reports;
 using Proc.Application.Sourcing;
 using Proc.Domain.Organization;
 
@@ -102,6 +103,53 @@ public class PurchaseOrderPriceSourceTests
             Permissions.Purchase.ContractApprove, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.MasterData.SoleSourceView,
             Permissions.MasterData.SoleSourceApprove);
         return code;
+    }
+
+    [Fact]
+    public async Task Sla_DangDat_ThamSo_BaoCaoDungHan()
+    {
+        var f = await ArrangeAsync();
+        var px1 = await ReadAsync<DepartmentDto>(await f.Client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));
+        var approver = await ApproverAsync(f, await RoleAsync());
+
+        // Tham số SLA ở màn hình Tham số hệ thống: mặc định 1/5/1, sửa được 0–60.
+        var parameters = await ReadAsync<List<SystemParameterDto>>(await f.Client.GetAsync("/api/system-parameters", Ct));
+        Assert.Equal(("1", "5", "1"), (parameters.Single(p => p.Code == "SLA_PRICED_DAYS").Value, parameters.Single(p => p.Code == "SLA_SOURCING_DAYS").Value,
+            parameters.Single(p => p.Code == "SLA_URGENT_DAYS").Value));
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest,
+            (await f.Client.PutAsJsonAsync("/api/system-parameters/SLA_SOURCING_DAYS", new UpdateSystemParameterRequest("-1"), Ct)).StatusCode);
+        Assert.Equal("3", (await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync("/api/system-parameters/SLA_SOURCING_DAYS",
+            new UpdateSystemParameterRequest("3"), Ct))).Value);
+
+        // PR1: hàng có bảng giá → loại Priced; PR2 khẩn chỉ có hàng mới → Urgent, chưa có PO.
+        async Task<PurchaseRequestDto> ApprovedPrAsync(SavePurchaseRequestRequest request)
+        {
+            var created = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests", request, Ct));
+            await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{created.Id}/submit", null, Ct));
+            return await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{created.Id}/approve", new ApprovalActionRequest(null), Ct));
+        }
+
+        var pr1 = await ApprovedPrAsync(new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", null, f.WarehouseId, "Normal", null,
+            [new(null, f.ItemId, f.Cai, 10, null, null, null)]));
+        var pr2 = await ApprovedPrAsync(new SavePurchaseRequestRequest(Today, px1.Id, "Sự cố", null, f.WarehouseId, "Urgent", null, [],
+            [new(null, "Phớt chặn dầu đặc chủng", null, f.Cai, 2, 0, null, null)]));
+
+        // PO từ PR1 được duyệt ngay hôm nay → đúng hạn; dòng PR khác cùng mặt hàng thấy "đang đặt" 10.
+        var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
+            Po(f, f.SupplierId, new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 10, 50_000, 5, "10", null, null, pr1.Lines[0].Id)), Ct));
+        await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        Assert.Equal("Approved", po.Status);
+        var draft = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests",
+            new SavePurchaseRequestRequest(Today, px1.Id, "Kiểm tra", null, f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)]), Ct));
+        Assert.Equal(10m, draft.Lines[0].OnOrderQty);
+
+        var report = await ReadAsync<PurchaseSlaResult>(await f.Client.GetAsync($"/api/reports/purchase-sla?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
+        var r1 = report.Rows.Single(r => r.RequestId == pr1.Id);
+        Assert.Equal(("Priced", 1, po.No, "OnTime"), (r1.Category, r1.SlaDays, r1.OrderNo, r1.Status));
+        var r2 = report.Rows.Single(r => r.RequestId == pr2.Id);
+        Assert.Equal(("Urgent", "(hàng mới)", "InProgress"), (r2.Category, r2.ItemCode, r2.Status));
+        Assert.Equal((1, 0, 0, 100m), (report.OnTime, report.Late, report.Overdue, report.OnTimePct!.Value));
     }
 
     [Fact]

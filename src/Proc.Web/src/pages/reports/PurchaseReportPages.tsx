@@ -5,10 +5,14 @@ import { useNavigate } from 'react-router'
 import { priorityLabels } from '../../api/purchasing'
 import {
   usePendingRequests,
+  usePurchaseSla,
   usePurchaseSpend,
   useSourcingSavings,
   useSupplierEvaluation,
   type PendingRequestLine,
+  type PurchaseSlaRow,
+  type SlaCategory,
+  type SlaStatus,
   type PurchaseReportPeriod,
   type PurchaseSpendGroup,
   type PurchaseSpendRow,
@@ -17,7 +21,7 @@ import {
 } from '../../api/reports'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
-import type { GridColumn } from '../../components/DataGrid/types'
+import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatMoney } from '../../utils/format'
 import { LogDateRangeFilter } from '../system/logFilters'
@@ -78,6 +82,62 @@ export function PendingRequestsReportPage() {
           />
         )
       }
+    />
+  )
+}
+
+const slaCategoryLabels: Record<SlaCategory, string> = { Priced: 'Đã có HĐ/bảng giá', Sourcing: 'Chưa có NCC duyệt', Urgent: 'Khẩn' }
+const slaStatusLabels: Record<SlaStatus, string> = { OnTime: 'Đúng hạn', Late: 'Trễ', InProgress: 'Đang xử lý', Overdue: 'Quá hạn' }
+const slaStatusTone: Record<SlaStatus, StatusTone> = { OnTime: 'success', Late: 'error', InProgress: 'neutral', Overdue: 'error' }
+
+const slaColumns: GridColumn<PurchaseSlaRow>[] = [
+  { key: 'pr', title: 'Số PR', width: 150, value: (r) => r.requestNo },
+  { key: 'approved', title: 'Ngày duyệt PR', width: 100, type: 'date', value: (r) => r.approvedDate },
+  { key: 'department', title: 'Bộ phận', width: 140, value: (r) => r.department, groupable: true },
+  { key: 'line', title: 'Dòng', width: 55, type: 'quantity', value: (r) => r.lineNo },
+  { key: 'item', title: 'Mặt hàng', width: 240, value: (r) => `${r.itemCode} – ${r.itemName}` },
+  { key: 'category', title: 'Loại yêu cầu', width: 140, value: (r) => slaCategoryLabels[r.category], groupable: true },
+  { key: 'sla', title: 'SLA (ngày)', width: 80, type: 'quantity', value: (r) => r.slaDays },
+  { key: 'due', title: 'Hạn', width: 95, type: 'date', value: (r) => r.dueDate },
+  { key: 'po', title: 'PO', width: 150, value: (r) => r.orderNo },
+  { key: 'poDate', title: 'Ngày duyệt PO', width: 100, type: 'date', value: (r) => r.orderApprovedDate },
+  { key: 'status', title: 'Trạng thái', width: 110, type: 'status', value: (r) => slaStatusLabels[r.status], tone: (r) => slaStatusTone[r.status], groupable: true },
+]
+
+/**
+ * Báo cáo → SLA mua hàng (design.md mục 18.13 – V6): mỗi dòng PR được duyệt trong khoảng ngày, hạn = ngày duyệt PR + SLA ngày làm việc
+ * theo loại yêu cầu (tham số ở SEC), so với ngày duyệt PO đầu tiên. Đầu trang: % đúng SLA (mục tiêu ≥ 95%). Bấm đúp mở PO hoặc PR.
+ */
+export function PurchaseSlaReportPage() {
+  const navigate = useNavigate()
+  const [range, setRange] = useState({ from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') })
+  const report = usePurchaseSla(range)
+  const data = report.data
+  return (
+    <ListPage
+      title="SLA mua hàng"
+      exportFileName="sla-mua-hang"
+      exportSubtitle={`PR duyệt từ ${formatDate(range.from)} đến ${formatDate(range.to)}`}
+      canCreate={false}
+      rows={data?.rows ?? []}
+      columns={slaColumns}
+      rowKey={(r) => `${r.requestId}|${r.itemCode}|${r.lineNo}`}
+      loading={report.isLoading}
+      isMarked={(r) => r.status === 'Late' || r.status === 'Overdue'}
+      onOpenRow={(r) => navigate(r.orderId ? `/mua-hang/po/${r.orderId}` : `/mua-hang/pr/${r.requestId}`)}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : data ? (
+          <Alert
+            type={data.onTimePct == null || data.onTimePct >= 95 ? 'info' : 'warning'}
+            showIcon
+            title={`Đúng SLA ${data.onTimePct == null ? '—' : `${String(data.onTimePct).replace('.', ',')}%`} (mục tiêu ≥ 95%): đúng hạn ${data.onTime}, trễ ${data.late}, quá hạn chưa có PO ${data.overdue}, đang xử lý ${data.inProgress}. SLA tính ngày làm việc thứ 2–6 (chưa trừ ngày lễ), sửa ở Tham số hệ thống.`}
+          />
+        ) : null
+      }
+      onClearFilters={() => setRange({ from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') })}
+      filters={<LogDateRangeFilter value={range} onChange={(r) => setRange({ ...range, ...r })} />}
     />
   )
 }

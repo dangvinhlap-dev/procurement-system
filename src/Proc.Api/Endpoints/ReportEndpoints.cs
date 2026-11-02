@@ -40,6 +40,8 @@ public static class ReportEndpoints
         reports.MapGet("/supplier-evaluation", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSupplierEvaluationAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/purchase-sla", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetPurchaseSlaAsync(from, to, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/sourcing-savings", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSourcingSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);

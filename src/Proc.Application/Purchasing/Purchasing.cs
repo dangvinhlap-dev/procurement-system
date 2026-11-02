@@ -128,7 +128,7 @@ public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool 
 public sealed record PurchaseRequestLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal EstPrice, decimal Amount, Guid? SuggestedSupplierId, string? SuggestedSupplierCode,
-    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty);
+    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty, decimal OnOrderQty);
 
 /// <summary>
 /// Chi tiết PR. DepartmentId: bộ phận trong danh mục; Department: tên bộ phận để hiển thị, PR cũ chưa có danh mục thì là
