@@ -3,6 +3,60 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.12.0] - 2026-11-02
+
+### Thêm mới
+- Duyệt kết quả chọn thầu (design.md mục 8.6): RFQ mời ít hơn số NCC tối thiểu vẫn gửi được khi ghi giải trình; chọn thầu xong RFQ chuyển
+  **Chờ duyệt kết quả** theo quy trình loại RFQ (xét giá trị trúng thầu); người lập RFQ và người chọn thầu không tự duyệt; từ chối phải
+  ghi lý do. Chỉ tạo PO sau khi kết quả được duyệt.
+- Hồ sơ trình thầu: tab **Hồ sơ trình (x/7)** trên RFQ (bảng so sánh + 6 mục đánh dấu, ghi chú), hội đồng thấy mục còn thiếu; nút
+  **Tạo bảng giá** sinh bảng giá NCC nháp từ kết quả trúng thầu.
+- **Hợp đồng nguyên tắc** (màn hình CTR, Mua hàng → Hợp đồng nguyên tắc – design.md mục 18.7): mỗi công ty một hợp đồng với NCC, dùng
+  chung bảng giá, điều khoản (điều chỉnh giá, thanh toán, giao hàng, chiết khấu, tài trợ, chế tài), hạn mức công nợ, sản lượng dự kiến,
+  bộ phận được phép đặt; Nháp → Chờ duyệt → Hiệu lực → Chấm dứt; cảnh báo sắp hết hiệu lực; đính kèm.
+  - **Phụ lục hợp đồng**: gia hạn, đổi bảng giá, đổi điều khoản; loại duyệt riêng **CTA**; duyệt xong tự áp vào hợp đồng.
+  - **Nhập Excel hợp đồng hiện hữu** (mẫu tải trên màn hình, kiểm tra thử rồi nhập thật, vào trạng thái Nháp).
+- **Kê khai xung đột lợi ích** (màn hình COI, Giá và NCC → Xung đột lợi ích – design.md mục 18.8): ai cũng tự kê khai quan hệ với NCC;
+  người có kê khai còn hiệu lực không duyệt được PO, bảng giá, NCC, hợp đồng, phụ lục, kết quả chọn thầu liên quan NCC đó, không nhập báo
+  giá/chọn thầu RFQ có NCC đó.
+- **Phê duyệt NCC độc quyền** (màn hình NDQ, Giá và NCC → NCC độc quyền – design.md mục 18.9): giải trình NCC × mặt hàng, duyệt theo
+  loại NDQ, hạn đánh giá lại tối đa 12 tháng, kết thúc sớm, đánh giá lại; RFQ mời thiếu NCC mà mọi dòng có độc quyền đã duyệt thì tự ghi
+  giải trình.
+- **PO theo giá đã duyệt** (design.md mục 18.10): mỗi dòng PO có **nguồn giá** – kết quả chọn thầu → hợp đồng nguyên tắc → bảng giá →
+  ngoài hợp đồng; cột Giá đã duyệt, Nguồn giá, Lý do lệch giá; nút "Áp giá đã duyệt". Dòng **lệch giá đã duyệt** (tam giác vàng) phải
+  ghi lý do khi gửi duyệt và PO qua thêm **chặng duyệt ngoại lệ giá** (loại duyệt mới **POX** ở APRL). Danh sách PO có cột Nguồn giá
+  ("Ngoài hợp đồng" / "Lệch giá đã duyệt").
+- Quyền mới: `MasterData.Conflict.View`, `MasterData.Conflict.Manage`, `MasterData.SoleSource.View`, `MasterData.SoleSource.Manage`,
+  `MasterData.SoleSource.Approve`. Loại duyệt mới ở APRL: CTA, NDQ, POX.
+
+### Thay đổi
+- PO: đơn giá không còn "nhập tay tự do" – sửa khác giá hợp đồng/bảng giá/kết quả chọn thầu thì phải có lý do và duyệt ngoại lệ.
+  Dòng chưa có giá đã duyệt chỉ gắn cờ "Ngoài hợp đồng", không chặn.
+- Lịch sử duyệt PO có cột Chặng ("Ngoại lệ giá") khi PO qua chặng ngoại lệ.
+
+### Sửa lỗi
+- Không có lỗi người dùng báo trong bản này. Còn biết: bấm Quay lại ngay sau khi đăng xuất có thể để trang trắng (tải lại trang là hết).
+
+### Thay đổi CSDL
+- 7 migration, chỉ **thêm** bảng/cột, không xóa dữ liệu cũ: `V0_12_0_DuyetKetQuaChonThau`, `V0_12_0_HoSoTrinhThau`,
+  `V0_12_0_HopDongNguyenTac`, `V0_12_0_PhuLucHopDong`, `V0_12_0_KeKhaiXungDotLoiIch`, `V0_12_0_NccDocQuyen`, `V0_12_0_NguonGiaPo`.
+- `Down()` của từng migration **mất** dữ liệu tạo ở bản này: kết quả chọn thầu chờ duyệt/hồ sơ trình, hợp đồng nguyên tắc và phụ lục,
+  kê khai xung đột lợi ích, phiếu NCC độc quyền, nguồn giá và lý do lệch giá trên PO (AuditLog vẫn giữ).
+- PO lập trước bản này có nguồn giá "không xác định", không gắn cờ.
+- Script nâng cấp: `db/scripts/0.12.0.sql` (từ 0.11.0).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước**, rồi chạy `db/scripts/0.12.0.sql`.
+- Gán quyền mới cho vai trò cần dùng (vai trò Quản trị tự có). Khai báo ở APRL quy tắc duyệt cho CTR, CTA, NDQ và **POX** – nên dùng vai
+  trò khác cấp duyệt PO thường để tách người duyệt ngoại lệ giá.
+- RFQ đang "Đã chọn thầu" từ bản trước giữ nguyên (không phải duyệt lại).
+- Trình duyệt: tải lại trang bằng Ctrl+F5. Không đổi cấu hình triển khai (Docker, IIS).
+
+### Cách quay lại bản trước
+- Code: triển khai lại tag `v0.11.0` (Docker: `APP_VERSION=0.11.0`; Windows: chép lại gói 0.11.0).
+- CSDL: chỉ khi đã sao lưu – khôi phục bản sao lưu trước nâng cấp, hoặc
+  `dotnet ef database update 20261101101508_V0_11_0_DuyetBangGiaNcc` (mất dữ liệu như mục "Thay đổi CSDL").
+
 ## [0.11.0] - 2026-11-01
 
 ### Thêm mới
