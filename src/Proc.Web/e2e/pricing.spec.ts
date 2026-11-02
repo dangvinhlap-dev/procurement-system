@@ -97,7 +97,8 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page).not.toHaveURL(/\/moi$/)
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
-  await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible()
+  // Lưu rồi gửi (hai lượt gọi API) – khi máy bận có thể quá 5 giây mới báo lỗi.
+  await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible({ timeout: 20_000 })
   await page.getByLabel('Lý do lệch giá dòng 1').fill('NCC báo tăng giá nguyên liệu')
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
   // Chờ đúng phản hồi lưu lần này – thông báo "Đã lưu phiếu" của lần lưu trước có thể vẫn còn trên màn hình.

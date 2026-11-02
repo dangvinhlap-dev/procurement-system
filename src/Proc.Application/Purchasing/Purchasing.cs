@@ -137,7 +137,36 @@ public sealed record PurchaseRequestLineDto(
 public sealed record PurchaseRequestDto(
     Guid Id, string No, DateOnly Date, string Status, Guid? DepartmentId, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
     Guid? WarehouseId, string Priority, string? Note, decimal TotalAmount, string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName,
-    DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions);
+    DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions,
+    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem);
+
+/// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
+/// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
+/// <param name="ItemId">Mặt hàng đã gắn (nếu có) – khi đó dòng có mã tương ứng nằm trong Lines.</param>
+public sealed record PurchaseRequestNewItemDto(
+    Guid Id, int LineNo, string Description, string? Specification, Guid UomId, string UomCode, decimal Qty, decimal EstPrice, decimal Amount,
+    DateOnly? NeededDate, string? Note, Guid? SourcingRequestId, string? SourcingNo, Guid? ItemId, string? ItemCode);
+
+/// <summary>Dòng hàng mới chưa có mã gửi lên (đơn giá dự kiến do người lập ước – chưa có lịch sử giá).</summary>
+public sealed record SavePurchaseRequestNewItemRequest(
+    Guid? Id, string? Description, string? Specification, Guid UomId, decimal Qty, decimal EstPrice, DateOnly? NeededDate, string? Note);
+
+/// <summary>Gắn mã hàng cho dòng hàng mới của PR đã duyệt.</summary>
+/// <param name="ItemId">Mặt hàng (ĐVT của dòng phải là ĐVT cơ sở hoặc quy đổi của mặt hàng).</param>
+public sealed record LinkNewItemRequest(Guid ItemId);
+
+/// <summary>
+/// Xử lý hàng mới chưa có mã của PR đã duyệt (design.md mục 18.12 – V3): lập phiếu tìm nguồn, gắn mã hàng khi đã có mã. Tách khỏi
+/// <see cref="IPurchaseRequestService"/> vì cần dịch vụ tìm nguồn (module tìm nguồn).
+/// </summary>
+public interface IPurchaseRequestNewItemService
+{
+    /// <summary>Lập phiếu tìm nguồn (mô tả, quy cách, SL, hạn = ngày cần) cho dòng hàng mới và gắn vào dòng.</summary>
+    Task<PurchaseRequestDto> CreateSourcingAsync(Guid requestId, Guid newItemId, CancellationToken cancellationToken);
+
+    /// <summary>Gắn mã hàng: sinh dòng PR có mã (lên PO/RFQ được).</summary>
+    Task<PurchaseRequestDto> LinkItemAsync(Guid requestId, Guid newItemId, LinkNewItemRequest request, CancellationToken cancellationToken);
+}
 
 /// <summary>Dòng PR gửi lên. Đơn giá tham khảo do server lấy (giá nhập gần nhất), không nhận từ client.</summary>
 public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
@@ -145,9 +174,10 @@ public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid 
 /// <summary>
 /// Lưu PR nháp. DepartmentId: bắt buộc, bộ phận đang dùng của công ty (giữ nguyên bộ phận đã ngừng dùng nếu phiếu đã chọn trước đó).
 /// </summary>
+/// <param name="NewItems">Hàng mới chưa có mã (design.md mục 18.12); null = không có.</param>
 public sealed record SavePurchaseRequestRequest(
     DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, string Priority, string? Note,
-    IReadOnlyList<SavePurchaseRequestLineRequest> Lines);
+    IReadOnlyList<SavePurchaseRequestLineRequest> Lines, IReadOnlyList<SavePurchaseRequestNewItemRequest>? NewItems = null);
 
 /// <summary>Dòng PR đã duyệt còn chưa đặt hàng (để lập PO). RemainingQty: SL còn chưa lên PO theo ĐVT của dòng PR.</summary>
 public sealed record OpenRequestLineDto(
@@ -314,8 +344,10 @@ public sealed class SavePurchaseRequestRequestValidator : AbstractValidator<Save
         RuleFor(x => x.DepartmentId).NotEmpty().WithMessage("Hãy chọn bộ phận đề nghị.");
         RuleFor(x => x.Purpose).MaximumLength(500);
         RuleFor(x => x.Note).MaximumLength(1000);
-        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+        // PR chỉ gồm hàng mới chưa có mã vẫn hợp lệ (design.md mục 18.12).
+        RuleFor(x => x.Lines).Must((r, l) => l.Count > 0 || r.NewItems is { Count: > 0 }).WithMessage("Phiếu phải có ít nhất một dòng hàng.")
             .Must(l => l.Count <= 500).WithMessage("Mỗi phiếu tối đa 500 dòng.");
+        RuleFor(x => x.NewItems).Must(n => n is null || n.Count <= 100).WithMessage("Mỗi phiếu tối đa 100 dòng hàng mới.");
         RuleForEach(x => x.Lines).ChildRules(l =>
         {
             l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Dòng hàng chưa chọn mặt hàng.");

@@ -94,6 +94,30 @@ public class PurchaseOrderPriceTests
     }
 
     [Fact]
+    public void HangMoiChuaCoMa_TinhVaoTong_GanMaSinhDongCoMa_KhongDemHaiLan()
+    {
+        var item = NewItem();
+        var kg = Uom.Create("KG", "Kg");
+        var pr = PurchaseRequest.Create(Company, "PR-1",
+            new PurchaseRequestHeader(new DateOnly(2026, 11, 2), Guid.CreateVersion7(), null, null, null, PurchasePriority.Normal, null), null);
+        Assert.Throws<BusinessRuleException>(() => pr.SetLines([]));
+        Assert.Contains("mô tả", Assert.Throws<BusinessRuleException>(() => pr.SetNewItems([new(null, " ", null, Cai.Id, 1, 0, null, null)])).Message);
+        pr.SetNewItems([new(null, "Vòng bi gốm", "Si3N4", Cai.Id, 4, 250_000, null, null), new(null, "Dây curoa", null, kg.Id, 2, 0, null, null)]);
+        pr.SetLines([]);
+        Assert.Equal(1_000_000m, pr.TotalAmount);
+        Assert.Throws<BusinessRuleException>(() => pr.LinkNewItem(pr.NewItems[0].Id, item));
+
+        pr.Submit();
+        pr.MarkApproved(DateTimeOffset.UtcNow);
+        // ĐVT kg không thuộc mặt hàng (cái, thùng) thì không gắn được.
+        Assert.Contains("ĐVT", Assert.Throws<BusinessRuleException>(() => pr.LinkNewItem(pr.NewItems[1].Id, item)).Message);
+        var line = pr.LinkNewItem(pr.NewItems[0].Id, item);
+        Assert.Equal((1, 4m, 250_000m, 1_000_000m), (line.LineNo, line.Qty, line.EstPrice, pr.TotalAmount));
+        Assert.Equal((item.Id, line.Id), (pr.NewItems[0].ItemId!.Value, pr.NewItems[0].LinkedLineId!.Value));
+        Assert.Throws<BusinessRuleException>(() => pr.LinkNewItem(pr.NewItems[0].Id, item));
+    }
+
+    [Fact]
     public void CapDuyetNgoaiLe_LuonItNhatMotCap()
     {
         var role1 = Guid.CreateVersion7();

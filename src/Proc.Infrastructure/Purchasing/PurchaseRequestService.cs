@@ -72,7 +72,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     public async Task<PurchaseRequestDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        var request = await _db.PurchaseRequests.AsNoTracking().Include(r => r.Lines).SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
+        var request = await _db.PurchaseRequests.AsNoTracking().Include(r => r.Lines).Include(r => r.NewItems).AsSplitQuery().SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy đề nghị mua hàng.");
         return await ToDtoAsync(request, cancellationToken);
     }
@@ -84,9 +84,11 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
         await CheckDepartmentAsync(request.DepartmentId, null, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
+        var newItems = await ResolveNewItemsAsync(request.NewItems, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.PurchaseRequest, request.Date, cancellationToken);
         var pr = PurchaseRequest.Create(companyId, no, ToHeader(request), _scope.UserId);
+        pr.SetNewItems(newItems);
         pr.SetLines(lines);
         _db.PurchaseRequests.Add(pr);
         await _db.SaveChangesAsync(cancellationToken);
@@ -102,7 +104,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
         await CheckDepartmentAsync(request.DepartmentId, pr.DepartmentId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
+        var newItems = await ResolveNewItemsAsync(request.NewItems, cancellationToken);
         pr.Update(ToHeader(request));
+        pr.SetNewItems(newItems);
         pr.SetLines(lines);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -262,11 +266,27 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         if (!active && id != currentId) throw new BusinessRuleException("Bộ phận đề nghị đã ngừng dùng.");
     }
 
-    private async Task<PurchaseRequest> LoadAsync(Guid id, CancellationToken cancellationToken)
+    /// <summary>Tải PR kèm dòng có mã và hàng mới chưa có mã (dùng chung cho dịch vụ xử lý hàng mới).</summary>
+    /// <exception cref="NotFoundException">Khi không có hoặc ngoài phạm vi công ty.</exception>
+    internal async Task<PurchaseRequest> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        return await _db.PurchaseRequests.Include(r => r.Lines).SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
+        return await _db.PurchaseRequests.Include(r => r.Lines).Include(r => r.NewItems).AsSplitQuery().SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy đề nghị mua hàng.");
+    }
+
+    /// <summary>Hàng mới chưa có mã gửi lên: ĐVT phải có trong danh mục ĐVT.</summary>
+    /// <exception cref="NotFoundException">Khi ĐVT không có.</exception>
+    private async Task<List<PurchaseRequestNewItemData>> ResolveNewItemsAsync(
+        IReadOnlyList<SavePurchaseRequestNewItemRequest>? items, CancellationToken cancellationToken)
+    {
+        if (items is null || items.Count == 0) return [];
+        var uomIds = items.Select(i => i.UomId).Distinct().ToList();
+        var known = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).Select(u => u.Id).ToListAsync(cancellationToken);
+        return items.Select((i, index) => known.Contains(i.UomId)
+                ? new PurchaseRequestNewItemData(i.Id, i.Description, i.Specification, i.UomId, i.Qty, i.EstPrice, i.NeededDate, i.Note)
+                : throw new NotFoundException($"Hàng mới dòng {index + 1}: hãy chọn ĐVT trong danh mục."))
+            .ToList();
     }
 
     /// <summary>Sửa là thay toàn bộ dòng – chặn nếu phiếu có hàng người sửa không được xem (lưu sẽ xóa mất dòng đó).</summary>
@@ -277,12 +297,13 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             throw new ForbiddenAccessException("Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không thao tác được.");
     }
 
-    private async Task<PurchaseRequestDto> ToDtoAsync(PurchaseRequest pr, CancellationToken cancellationToken)
+    /// <summary>Đổi PR sang DTO (dùng chung cho dịch vụ xử lý hàng mới).</summary>
+    internal async Task<PurchaseRequestDto> ToDtoAsync(PurchaseRequest pr, CancellationToken cancellationToken)
     {
         var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
             .Select(i => new { i.Id, i.Code, i.Name, i.BaseUomId }).ToDictionaryAsync(i => i.Id, cancellationToken);
-        var uomIds = pr.Lines.Select(l => l.UomId).Concat(items.Values.Select(i => i.BaseUomId)).Distinct().ToList();
+        var uomIds = pr.Lines.Select(l => l.UomId).Concat(pr.NewItems.Select(n => n.UomId)).Concat(items.Values.Select(i => i.BaseUomId)).Distinct().ToList();
         var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
         var supplierIds = pr.Lines.Select(l => l.SuggestedSupplierId).OfType<Guid>().Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
@@ -305,6 +326,18 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), onHand.GetValueOrDefault(l.ItemId));
         }).ToList();
 
+        var sourcingIds = pr.NewItems.Select(n => n.SourcingRequestId).OfType<Guid>().ToList();
+        var sourcingNos = await _db.SourcingRequests.AsNoTracking().Where(s => sourcingIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.No, cancellationToken);
+        var linkedItemIds = pr.NewItems.Select(n => n.ItemId).OfType<Guid>().ToList();
+        var linkedCodes = await _db.Items.AsNoTracking().Where(i => linkedItemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.Code, cancellationToken);
+        var newItems = pr.NewItems.OrderBy(n => n.LineNo).Select(n => new PurchaseRequestNewItemDto(
+                n.Id, n.LineNo, n.Description, n.Specification, n.UomId, uoms.GetValueOrDefault(n.UomId) ?? "", n.Qty, n.EstPrice, n.Amount, n.NeededDate,
+                n.Note, n.SourcingRequestId, n.SourcingRequestId is { } sr ? sourcingNos.GetValueOrDefault(sr) : null, n.ItemId,
+                n.ItemId is { } li ? linkedCodes.GetValueOrDefault(li) ?? "(ngoài phạm vi)" : null))
+            .ToList();
+        var pendingNew = pr.Status == ApprovalDocumentStatus.Approved && pr.NewItems.Any(n => n.LinkedLineId is null);
+
         var itemsVisible = items.Count == itemIds.Count;
         var step = pr.Status == ApprovalDocumentStatus.Submitted ? await _approvals.CurrentStepAsync(pr, cancellationToken) : null;
         var canApprove = step is not null && itemsVisible && await _approvals.ApproveBlockerAsync(pr, step, cancellationToken) is null;
@@ -322,7 +355,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.DepartmentId, department ?? pr.LegacyDepartment, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,
             pr.NeededDate, pr.WarehouseId, pr.Priority.ToString(), pr.Note, pr.TotalAmount, pr.RejectReason, pr.CreatedAt,
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
-            await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken), actions);
+            await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken), actions, newItems,
+            pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate));
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>

@@ -142,3 +142,55 @@ test('PO: chưa có NCC chọn được thì báo rõ lý do và chỗ xử lý'
   await expect(hint).toContainText('Chưa có nhà cung cấp chọn được')
   await expect(hint.getByRole('link', { name: 'Danh mục nhà cung cấp' })).toHaveAttribute('href', '/gia-ncc/nha-cung-cap')
 })
+
+test('PR hàng mới chưa có mã → tìm nguồn → gắn mã → lên PO được', async ({ page, request }) => {
+  test.setTimeout(60_000)
+  const { itemCode, itemId } = await seedPostedReceipt(request)
+  const bha = await api(request, 'BHA')
+  const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
+  const departmentCode = unique('BP')
+  const department = await bha.send<{ id: string }>('post', '/api/departments', { code: departmentCode, name: `Xưởng ${departmentCode}`, managerName: null })
+  const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
+  // Người duyệt: tài khoản mới vai trò quản trị tại BHA (người lập – quản trị – không tự duyệt).
+  const approverName = unique('dy').toLowerCase()
+  await bha.send('post', '/api/users', {
+    userName: approverName, fullName: 'Người duyệt PR', email: null, password: 'Demo@2026',
+    access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
+  })
+
+  // PR chỉ có hàng mới chưa có mã, gửi duyệt và duyệt qua API.
+  const pr = await bha.send<{ id: string; no: string }>('post', '/api/purchase-requests', {
+    date: new Date().toISOString().slice(0, 10), departmentId: department.id, purpose: 'Linh kiện máy mới', neededDate: null, warehouseId: null,
+    priority: 'Normal', note: null, lines: [],
+    newItems: [{ id: null, description: 'Bulông inox chịu axit M12', specification: 'SUS316', uomId: hop, qty: 3, estPrice: 120000, neededDate: null, note: null }],
+  })
+  await bha.send('post', `/api/purchase-requests/${pr.id}/submit`, {})
+  const login = await request.post('/api/auth/login', { data: { userName: approverName, password: 'Demo@2026' } })
+  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { companies: { id: string; code: string }[] } }
+  const approved = await request.post(`/api/purchase-requests/${pr.id}/approve`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.companies.find((c) => c.code === 'BHA')!.id },
+    data: { comment: null },
+  })
+  expect(approved.ok(), await approved.text()).toBeTruthy()
+
+  // Quản trị mở PR: tab hàng mới → lập phiếu tìm nguồn → gắn mã hàng → dòng có mã xuất hiện.
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+  await page.goto(`/mua-hang/pr/${pr.id}`)
+  await page.getByRole('tab', { name: /Hàng mới chưa có mã \(1\)/i }).click()
+  await expect(page.getByLabel('Mô tả hàng mới dòng 1')).toHaveValue('Bulông inox chịu axit M12')
+  await page.getByRole('tabpanel').getByRole('button', { name: /Tìm nguồn$/ }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã lập phiếu tìm nguồn')
+  await expect(page.getByRole('tabpanel').getByRole('link')).toBeVisible()
+  await page.getByRole('tabpanel').getByRole('button', { name: /Gắn mã$/ }).click()
+  await page.getByRole('combobox', { name: 'Mặt hàng gắn mã' }).fill(itemCode.toLowerCase())
+  await pickOption(page, itemCode)
+  await page.getByRole('dialog').getByRole('button', { name: /Gắn mã$/ }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã gắn mã hàng')
+  await expect(page.getByRole('tabpanel')).toContainText(itemCode)
+  await page.screenshot({ path: 'e2e/screenshots/purchase-request-new-item.png' })
+  await page.getByRole('tab', { name: /Dòng hàng/i }).click()
+  await expect(page.locator('.line-grid-row').first()).toContainText(itemCode)
+  expect(itemId).toBeTruthy()
+})

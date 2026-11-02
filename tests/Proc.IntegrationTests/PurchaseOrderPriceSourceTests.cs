@@ -6,6 +6,7 @@ using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
+using Proc.Application.Sourcing;
 using Proc.Domain.Organization;
 
 namespace Proc.IntegrationTests;
@@ -101,6 +102,50 @@ public class PurchaseOrderPriceSourceTests
             Permissions.Purchase.ContractApprove, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.MasterData.SoleSourceView,
             Permissions.MasterData.SoleSourceApprove);
         return code;
+    }
+
+    [Fact]
+    public async Task HangMoiChuaCoMa_DuyetCungPr_TaoPhieuTimNguon_GanMaThiLenPo()
+    {
+        var f = await ArrangeAsync();
+        var px1 = await ReadAsync<DepartmentDto>(await f.Client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));
+        var approver = await ApproverAsync(f, await RoleAsync());
+
+        // PR chỉ có hàng mới chưa có mã: tổng = 4 × 250.000 = 1.000.000; chưa duyệt thì chưa tìm nguồn được.
+        var pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests",
+            new SavePurchaseRequestRequest(Today, px1.Id, "Thay thế linh kiện máy mới", Today.AddDays(10), f.WarehouseId, "Normal", null, [],
+                [new(null, "Vòng bi gốm chịu nhiệt 6207-CE", "Gốm Si3N4, 400°C", f.Cai, 4, 250_000, Today.AddDays(10), null)]), Ct));
+        Assert.Equal((0, 1, 1_000_000m), (pr.Lines.Count, pr.NewItems.Count, pr.TotalAmount));
+        var newItem = pr.NewItems[0];
+        Assert.Contains("chưa được duyệt", await TitleAsync(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/sourcing", null, Ct)));
+        await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
+        pr = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/approve", new ApprovalActionRequest(null), Ct));
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Client.GetAsync($"/api/purchase-requests/{pr.Id}", Ct));
+        Assert.Equal(("Approved", true, true), (pr.Status, pr.CanCreateSourcing, pr.CanLinkItem));
+        // Chưa có mã thì không lên PO: không có dòng mở để lấy.
+        var open = await ReadAsync<List<OpenRequestLineDto>>(await f.Client.GetAsync("/api/purchase-requests/open-lines", Ct));
+        Assert.DoesNotContain(open, l => l.RequestId == pr.Id);
+
+        // Lập phiếu tìm nguồn từ dòng hàng mới; lần hai báo đã có.
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/sourcing", null, Ct));
+        Assert.NotNull(pr.NewItems[0].SourcingNo);
+        var sourcing = await ReadAsync<SourcingDto>(await f.Client.GetAsync($"/api/sourcing/{pr.NewItems[0].SourcingRequestId}", Ct));
+        Assert.Equal(("Vòng bi gốm chịu nhiệt 6207-CE", (Guid?)null), (sourcing.Description, sourcing.ItemId));
+        Assert.Contains(pr.No, sourcing.Note ?? "");
+        Assert.Contains("đã có phiếu tìm nguồn", await TitleAsync(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/sourcing", null, Ct)));
+
+        // Gắn mã: sinh dòng có mã cùng SL, ĐVT, giá dự kiến; tổng không đổi; lên PO được.
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/link-item",
+            new LinkNewItemRequest(f.ItemId), Ct));
+        Assert.Equal((1, 1_000_000m, 4m, 250_000m), (pr.Lines.Count, pr.TotalAmount, pr.Lines[0].Qty, pr.Lines[0].EstPrice));
+        Assert.NotNull(pr.NewItems[0].ItemCode);
+        Assert.Contains("đã gắn mã", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/link-item",
+            new LinkNewItemRequest(f.ItemId), Ct)));
+        open = await ReadAsync<List<OpenRequestLineDto>>(await f.Client.GetAsync("/api/purchase-requests/open-lines", Ct));
+        Assert.Equal(4m, open.Single(l => l.RequestId == pr.Id).RemainingQty);
+        var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
+            Po(f, f.SupplierId, new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 4, 50_000, 5, "10", null, null, pr.Lines[0].Id)), Ct));
+        Assert.Equal(pr.No, po.Lines[0].SourcePrNo);
     }
 
     [Fact]

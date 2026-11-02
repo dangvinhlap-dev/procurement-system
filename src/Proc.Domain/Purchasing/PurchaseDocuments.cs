@@ -29,6 +29,18 @@ public enum PurchasePriority
 public sealed record PurchaseRequestHeader(
     DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, PurchasePriority Priority, string? Note);
 
+/// <summary>Dữ liệu một dòng hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
+/// <param name="Id">Dòng cũ (sửa) hoặc null (thêm).</param>
+/// <param name="Description">Mô tả hàng cần mua, bắt buộc.</param>
+/// <param name="Specification">Quy cách, yêu cầu kỹ thuật.</param>
+/// <param name="UomId">ĐVT (danh mục ĐVT).</param>
+/// <param name="Qty">Số lượng.</param>
+/// <param name="EstPrice">Đơn giá dự kiến do người lập ước (chưa có lịch sử giá).</param>
+/// <param name="NeededDate">Ngày cần.</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record PurchaseRequestNewItemData(
+    Guid? Id, string? Description, string? Specification, Guid UomId, decimal Qty, decimal EstPrice, DateOnly? NeededDate, string? Note);
+
 /// <summary>Dữ liệu một dòng đề nghị mua hàng.</summary>
 public sealed record PurchaseRequestLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal EstPrice, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
@@ -228,6 +240,7 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
 public sealed class PurchaseRequest : ApprovableDocument
 {
     private readonly List<PurchaseRequestLine> _lines = [];
+    private readonly List<PurchaseRequestNewItem> _newItems = [];
 
     private PurchaseRequest()
     {
@@ -263,6 +276,9 @@ public sealed class PurchaseRequest : ApprovableDocument
     /// <summary>Các dòng.</summary>
     public IReadOnlyList<PurchaseRequestLine> Lines => _lines;
 
+    /// <summary>Hàng mới chưa có mã (design.md mục 18.12) – không lên PO/RFQ cho tới khi gắn mã hàng.</summary>
+    public IReadOnlyList<PurchaseRequestNewItem> NewItems => _newItems;
+
     /// <inheritdoc />
     public override decimal ApprovalAmount => TotalAmount;
 
@@ -270,7 +286,7 @@ public sealed class PurchaseRequest : ApprovableDocument
     public override string DocType => DocumentTypes.PurchaseRequest;
 
     /// <inheritdoc />
-    protected override int LineCount => _lines.Count;
+    protected override int LineCount => _lines.Count + _newItems.Count(n => n.LinkedLineId is null);
 
     /// <summary>Lập PR nháp.</summary>
     /// <exception cref="BusinessRuleException">Khi thiếu công ty hoặc số.</exception>
@@ -308,7 +324,8 @@ public sealed class PurchaseRequest : ApprovableDocument
     public void SetLines(IReadOnlyList<(PurchaseRequestLineData Data, Item Item)> lines)
     {
         EnsureDraft();
-        if (lines.Count == 0) throw new BusinessRuleException("Phiếu phải có ít nhất một dòng hàng.");
+        // PR chỉ gồm hàng mới chưa có mã vẫn hợp lệ (design.md mục 18.12) – gọi SetNewItems trước SetLines.
+        if (lines.Count == 0 && _newItems.Count == 0) throw new BusinessRuleException("Phiếu phải có ít nhất một dòng hàng.");
         var keep = new List<PurchaseRequestLine>();
         var lineNo = 0;
         foreach (var (data, item) in lines)
@@ -322,7 +339,7 @@ public sealed class PurchaseRequest : ApprovableDocument
         }
 
         _lines.RemoveAll(l => !keep.Contains(l));
-        TotalAmount = _lines.Sum(l => l.Amount);
+        RecomputeTotal();
 
         PurchaseRequestLine AddLine()
         {
@@ -330,6 +347,166 @@ public sealed class PurchaseRequest : ApprovableDocument
             _lines.Add(line);
             return line;
         }
+    }
+
+    /// <summary>Thay toàn bộ dòng hàng mới chưa có mã (khi nháp), tính lại tổng.</summary>
+    /// <param name="items">Các dòng; ĐVT đã được kiểm tra có trong danh mục.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc dòng sai.</exception>
+    public void SetNewItems(IReadOnlyList<PurchaseRequestNewItemData> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        EnsureDraft();
+        var keep = new List<PurchaseRequestNewItem>();
+        var lineNo = 0;
+        foreach (var data in items)
+        {
+            lineNo++;
+            PurchaseRequestNewItem row;
+            if (data.Id is { } id)
+            {
+                row = _newItems.FirstOrDefault(n => n.Id == id)
+                      ?? throw new BusinessRuleException($"Hàng mới dòng {lineNo}: không tìm thấy dòng cần sửa – hãy tải lại phiếu.");
+            }
+            else
+            {
+                row = new PurchaseRequestNewItem(Id);
+                _newItems.Add(row);
+            }
+
+            row.Set(lineNo, data);
+            keep.Add(row);
+        }
+
+        _newItems.RemoveAll(n => !keep.Contains(n));
+        RecomputeTotal();
+    }
+
+    /// <summary>
+    /// Ghi phiếu tìm nguồn đã lập cho dòng hàng mới (design.md mục 18.12 – V3: hàng ngoài danh mục chuyển nhóm Đàm phán tìm nguồn).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi PR chưa duyệt, dòng đã có phiếu tìm nguồn hoặc đã gắn mã.</exception>
+    public PurchaseRequestNewItem PrepareSourcing(Guid newItemId)
+    {
+        var row = ApprovedNewItem(newItemId);
+        if (row.SourcingRequestId is not null) throw new BusinessRuleException($"Hàng mới dòng {row.LineNo} đã có phiếu tìm nguồn.");
+        return row;
+    }
+
+    /// <summary>Gắn phiếu tìm nguồn vừa lập vào dòng hàng mới.</summary>
+    public void LinkSourcing(Guid newItemId, Guid sourcingRequestId) => PrepareSourcing(newItemId).SourcingRequestId = sourcingRequestId;
+
+    /// <summary>
+    /// Gắn mã hàng cho dòng hàng mới khi đã có mã (sau tìm nguồn, đã tạo mặt hàng): sinh dòng PR có mã cùng SL, ĐVT, đơn giá dự kiến, ngày
+    /// cần – dòng này lên PO/RFQ như dòng thường. SL đã duyệt giữ nguyên nên không phải duyệt lại; tổng PR không đổi.
+    /// </summary>
+    /// <param name="newItemId">Dòng hàng mới.</param>
+    /// <param name="item">Mặt hàng (đang dùng; ĐVT của dòng phải là ĐVT cơ sở hoặc quy đổi của mặt hàng).</param>
+    /// <returns>Dòng PR có mã vừa sinh.</returns>
+    /// <exception cref="BusinessRuleException">Khi PR chưa duyệt, dòng đã gắn mã, mặt hàng ngừng dùng hoặc ĐVT không khớp.</exception>
+    public PurchaseRequestLine LinkNewItem(Guid newItemId, Item item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var row = ApprovedNewItem(newItemId);
+        if (!item.IsActive) throw new BusinessRuleException($"Mặt hàng {item.Code} đã ngừng dùng.");
+        var line = new PurchaseRequestLine(Id);
+        line.Set(
+            _lines.Count == 0 ? 1 : _lines.Max(l => l.LineNo) + 1,
+            new PurchaseRequestLineData(null, item.Id, row.UomId, row.Qty, row.EstPrice, null, row.NeededDate, row.Note ?? row.Description),
+            item);
+        _lines.Add(line);
+        row.ItemId = item.Id;
+        row.LinkedLineId = line.Id;
+        RecomputeTotal();
+        return line;
+    }
+
+    /// <summary>Tổng dự kiến = dòng có mã + hàng mới chưa gắn mã (đã gắn thì tính ở dòng có mã sinh ra, không đếm hai lần).</summary>
+    private void RecomputeTotal() => TotalAmount = _lines.Sum(l => l.Amount) + _newItems.Where(n => n.LinkedLineId is null).Sum(n => n.Amount);
+
+    private PurchaseRequestNewItem ApprovedNewItem(Guid newItemId)
+    {
+        if (Status != ApprovalDocumentStatus.Approved)
+            throw new BusinessRuleException($"Đề nghị {No} chưa được duyệt – chỉ xử lý hàng mới của PR đã duyệt.");
+        var row = _newItems.FirstOrDefault(n => n.Id == newItemId) ?? throw new BusinessRuleException("Không tìm thấy dòng hàng mới.");
+        if (row.LinkedLineId is not null) throw new BusinessRuleException($"Hàng mới dòng {row.LineNo} đã gắn mã hàng.");
+        return row;
+    }
+}
+
+/// <summary>
+/// Hàng mới chưa có mã trên PR (design.md mục 18.12 – đề xuất Ban CUVT V3): mô tả, quy cách, ĐVT, SL, giá dự kiến; được duyệt cùng PR,
+/// không lên PO/RFQ cho tới khi gắn mã hàng (sinh dòng PR có mã).
+/// </summary>
+[Auditable("Hàng mới chưa có mã trên PR")]
+public sealed class PurchaseRequestNewItem : Entity
+{
+    private PurchaseRequestNewItem()
+    {
+    }
+
+    internal PurchaseRequestNewItem(Guid requestId) => RequestId = requestId;
+
+    /// <summary>PR.</summary>
+    public Guid RequestId { get; private set; }
+
+    /// <summary>Số thứ tự trong danh sách hàng mới.</summary>
+    public int LineNo { get; private set; }
+
+    /// <summary>Mô tả hàng cần mua.</summary>
+    public string Description { get; private set; } = string.Empty;
+
+    /// <summary>Quy cách, yêu cầu kỹ thuật.</summary>
+    public string? Specification { get; private set; }
+
+    /// <summary>ĐVT.</summary>
+    public Guid UomId { get; private set; }
+
+    /// <summary>SL – numeric(18,4).</summary>
+    public decimal Qty { get; private set; }
+
+    /// <summary>Đơn giá dự kiến – numeric(19,6).</summary>
+    public decimal EstPrice { get; private set; }
+
+    /// <summary>Thành tiền dự kiến = SL × đơn giá, làm tròn 2 số – numeric(19,2).</summary>
+    public decimal Amount { get; private set; }
+
+    /// <summary>Ngày cần.</summary>
+    public DateOnly? NeededDate { get; private set; }
+
+    /// <summary>Ghi chú.</summary>
+    public string? Note { get; private set; }
+
+    /// <summary>Phiếu tìm nguồn đã lập cho dòng.</summary>
+    public Guid? SourcingRequestId { get; internal set; }
+
+    /// <summary>Mặt hàng đã gắn.</summary>
+    public Guid? ItemId { get; internal set; }
+
+    /// <summary>Dòng PR có mã sinh ra khi gắn mã.</summary>
+    public Guid? LinkedLineId { get; internal set; }
+
+    internal void Set(int lineNo, PurchaseRequestNewItemData data)
+    {
+        var prefix = $"Hàng mới dòng {lineNo}";
+        var description = string.IsNullOrWhiteSpace(data.Description) ? null : data.Description.Trim();
+        if (description is null) throw new BusinessRuleException($"{prefix}: hãy nhập mô tả hàng cần mua.");
+        if (description.Length > 500) throw new BusinessRuleException($"{prefix}: mô tả tối đa 500 ký tự.");
+        var spec = string.IsNullOrWhiteSpace(data.Specification) ? null : data.Specification.Trim();
+        if (spec is { Length: > 1000 }) throw new BusinessRuleException($"{prefix}: quy cách tối đa 1.000 ký tự.");
+        if (data.UomId == Guid.Empty) throw new BusinessRuleException($"{prefix}: hãy chọn ĐVT.");
+        if (data.Qty <= 0 || decimal.Round(data.Qty, 4) != data.Qty || data.Qty >= 100_000_000_000_000m)
+            throw new BusinessRuleException($"{prefix}: số lượng phải lớn hơn 0, tối đa 4 chữ số thập phân.");
+        if (data.EstPrice < 0 || decimal.Round(data.EstPrice, 6) != data.EstPrice || data.EstPrice >= 10_000_000_000_000m)
+            throw new BusinessRuleException($"{prefix}: đơn giá dự kiến phải ≥ 0, tối đa 6 chữ số thập phân.");
+        LineNo = lineNo;
+        Description = description;
+        Specification = spec;
+        UomId = data.UomId;
+        Qty = data.Qty;
+        EstPrice = data.EstPrice;
+        Amount = decimal.Round(data.Qty * data.EstPrice, 2, MidpointRounding.AwayFromZero);
+        NeededDate = data.NeededDate;
+        Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
     }
 }
 

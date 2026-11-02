@@ -38,8 +38,9 @@ public static class MasterDataEndpoints
             .RequirePermission(Permissions.System.ParameterManage);
 
         var uoms = app.MapGroup("/api/uoms").WithTags("Danh mục hàng");
+        // Người lập PR chọn ĐVT cho hàng mới chưa có mã (design.md mục 18.12) dù không có quyền xem danh mục hàng.
         uoms.MapGet("/", (IUomAdministration s, CancellationToken ct) => s.ListAsync(ct))
-            .RequirePermission(Permissions.MasterData.ItemView);
+            .RequireAnyPermission(Permissions.MasterData.ItemView, Permissions.Purchase.PrCreate, Permissions.Purchase.PrView);
         uoms.MapPost("/", async (CreateUomRequest request, IUomAdministration s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

@@ -72,6 +72,30 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.NewItems).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.NewItems).HasField("_newItems").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseRequestNewItem – hàng mới chưa có mã trên PR (lát C2b, design.md mục 18.12).</summary>
+internal sealed class PurchaseRequestNewItemConfiguration : IEntityTypeConfiguration<PurchaseRequestNewItem>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseRequestNewItem> builder)
+    {
+        builder.ToTable("PurchaseRequestNewItem");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.RequestId, x.LineNo });
+        builder.Property(x => x.Description).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.Specification).HasMaxLength(1000);
+        builder.Property(x => x.Qty).HasPrecision(18, 4);
+        builder.Property(x => x.EstPrice).HasPrecision(19, 6);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseRequestLine>().WithMany().HasForeignKey(x => x.LinkedLineId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Domain.Sourcing.SourcingRequest>().WithMany().HasForeignKey(x => x.SourcingRequestId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

@@ -3192,6 +3192,72 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("PurchaseRequestLine", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseRequestNewItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("EstPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<Guid?>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("LinkedLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("NeededDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("Qty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourcingRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Specification")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("UomId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("LinkedLineId");
+
+                    b.HasIndex("SourcingRequestId");
+
+                    b.HasIndex("UomId");
+
+                    b.HasIndex("RequestId", "LineNo");
+
+                    b.ToTable("PurchaseRequestNewItem", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.QuotationLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4732,6 +4798,36 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseRequestNewItem", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseRequestLine", null)
+                        .WithMany()
+                        .HasForeignKey("LinkedLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseRequest", null)
+                        .WithMany("NewItems")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Sourcing.SourcingRequest", null)
+                        .WithMany()
+                        .HasForeignKey("SourcingRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.MasterData.Uom", null)
+                        .WithMany()
+                        .HasForeignKey("UomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.QuotationLine", b =>
                 {
                     b.HasOne("Proc.Domain.Sourcing.RfqLine", null)
@@ -4888,6 +4984,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseRequest", b =>
                 {
                     b.Navigation("Lines");
+
+                    b.Navigation("NewItems");
                 });
 
             modelBuilder.Entity("Proc.Domain.Sourcing.Rfq", b =>
