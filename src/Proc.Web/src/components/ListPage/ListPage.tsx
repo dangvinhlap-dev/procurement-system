@@ -41,6 +41,8 @@ export interface ListPageProps<T> {
   /** Mở chi tiết dòng (bấm đúp hoặc Enter). */
   onOpenRow?: (row: T) => void
   isMarked?: (row: T) => boolean
+  /** Mã loại đối tượng của dòng trong nhật ký (rowKey là khóa bản ghi): F1 trên ô xem lịch sử – design.md mục 9.3a. */
+  auditEntity?: string
   /** Tên file khi xuất CSV/Excel (không gồm đuôi; chữ thường không dấu, số, gạch ngang). */
   exportFileName: string
   /** Dòng điều kiện lọc ghi trên file Excel xuất ra (kỳ, kho, số ngày…). */
@@ -91,6 +93,7 @@ export function ListPage<T>({
   notice,
   onOpenRow,
   isMarked,
+  auditEntity,
   exportFileName,
   exportSubtitle,
   excel,
@@ -316,6 +319,7 @@ export function ListPage<T>({
               onOpenRow={onOpenRow}
               isMarked={isMarked}
               loading={loading}
+              auditEntity={auditEntity}
             />
           </>
         ) : (

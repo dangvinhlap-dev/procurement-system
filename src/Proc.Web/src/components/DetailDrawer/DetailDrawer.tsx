@@ -1,7 +1,9 @@
 import { CloseOutlined, SaveOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { hasOpenPopup } from '../../utils/popup'
+import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
+import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DetailDrawer.css'
 
@@ -38,12 +40,17 @@ export interface DetailDrawerProps {
    * trỏ đúng ô của ngăn kéo.
    */
   formName?: string
+  /**
+   * Bản ghi đang mở trong nhật ký (design.md mục 9.3a): F1 ở một ô xem lịch sử ô; có id thì hiện nút "Lịch sử thay đổi" (bản ghi và các
+   * dòng con như người liên hệ, tài khoản ngân hàng).
+   */
+  audit?: AuditScope
 }
 
 /**
  * Ngăn kéo chi tiết của form danh mục (design.md mục 10.9: danh sách + ngăn kéo chi tiết có các tab).
  * Bố cục cố định: hàng nút lệnh (Lưu, Đóng, nút riêng của màn hình), thông báo lỗi, các tab kiểu Windows.
- * Bàn phím: Ctrl+S lưu, Esc đóng.
+ * Bàn phím: Ctrl+S lưu, Esc đóng, F1 lịch sử thay đổi của ô (khai báo audit).
  */
 export function DetailDrawer({
   open,
@@ -59,7 +66,9 @@ export function DetailDrawer({
   initialValues,
   readOnly = false,
   formName,
+  audit,
 }: DetailDrawerProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(tabs[0]?.key)
 
   // Ctrl+S lưu khi ngăn kéo đang mở – thao tác bằng bàn phím (CLAUDE.md mục 9).
@@ -113,30 +122,33 @@ export function DetailDrawer({
           </Button>
         )}
         {extraActions}
+        {audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />}
         <Button type="text" icon={<CloseOutlined />} onClick={onClose}>
           Đóng
         </Button>
       </div>
       {error && <Alert type="error" showIcon title={error} className="detail-drawer-error" />}
       <Spin spinning={loading}>
-        <Form
-          form={form}
-          name={formName}
-          component={false}
-          layout="vertical"
-          requiredMark={formRequiredMark(!readOnly)}
-          initialValues={initialValues}
-          disabled={readOnly}
-        >
-          <Tabs
-            size="small"
-            className="detail-drawer-tabs"
-            activeKey={tab}
-            onChange={setTab}
-            // Vẽ sẵn mọi tab để trường ở tab chưa mở vẫn thuộc form và được kiểm tra khi Lưu.
-            items={tabs.map((t) => ({ key: t.key, label: t.label, children: t.children, forceRender: true }))}
-          />
-        </Form>
+        <div ref={rootRef} {...auditScopeProps(audit)}>
+          <Form
+            form={form}
+            name={formName}
+            component={false}
+            layout="vertical"
+            requiredMark={formRequiredMark(!readOnly)}
+            initialValues={initialValues}
+            disabled={readOnly}
+          >
+            <Tabs
+              size="small"
+              className="detail-drawer-tabs"
+              activeKey={tab}
+              onChange={setTab}
+              // Vẽ sẵn mọi tab để trường ở tab chưa mở vẫn thuộc form và được kiểm tra khi Lưu.
+              items={tabs.map((t) => ({ key: t.key, label: t.label, children: t.children, forceRender: true }))}
+            />
+          </Form>
+        </div>
       </Spin>
     </Drawer>
   )

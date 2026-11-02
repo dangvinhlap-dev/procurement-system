@@ -273,6 +273,7 @@ export function SourcingPage() {
     <DocumentForm
       title="Phiếu tìm nguồn"
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'SourcingRequest', id: doc?.id }}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={sourcing.isLoading}
@@ -330,7 +331,7 @@ export function SourcingPage() {
         </>
       }
       lines={
-        <LineGrid name="candidates" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, status: 'Contacted' })} />
+        <LineGrid name="candidates" auditEntity="SourcingCandidate" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, status: 'Contacted' })} />
       }
     />
   )

@@ -30,13 +30,19 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
         typeof(ChangeHistoryQueries).GetMethod(nameof(FindVisibleCoreAsync), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     private readonly ProcDbContext _db;
+    private readonly IEntityType? _userType;
     private readonly Dictionary<(Type, string), object?> _cache = [];
 
     /// <summary>
     /// Tạo đối tượng truy vấn.
     /// </summary>
     /// <param name="db">DbContext (có global query filter theo phạm vi người xem).</param>
-    public ChangeHistoryQueries(ProcDbContext db) => _db = db;
+    public ChangeHistoryQueries(ProcDbContext db)
+    {
+        _db = db;
+        _userType = db.Model.FindEntityType(typeof(AppUser));
+    }
+
 
     /// <inheritdoc />
     public async Task<FieldHistoryDto> GetFieldHistoryAsync(
@@ -234,14 +240,15 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
             ?? properties.FirstOrDefault(p => string.Equals(p.Name, name + "Id", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static FieldInfoDto InfoOf(IEntityType type, AuditDescriptor descriptor, IProperty? property)
+    private FieldInfoDto InfoOf(IEntityType type, AuditDescriptor descriptor, IProperty? property)
     {
         var table = type.GetTableName();
         if (property is null)
             return new FieldInfoDto(descriptor.EntityType, descriptor.DisplayName, null, table, null, null, null, false, FieldValueKinds.Text, null, false);
 
         var store = StoreObjectIdentifier.Table(table!, type.GetSchema());
-        var reference = property.GetContainingForeignKeys().FirstOrDefault()?.PrincipalEntityType;
+        var reference = property.GetContainingForeignKeys().FirstOrDefault()?.PrincipalEntityType
+            ?? (IsUserReference(property) ? _userType : null);
         return new FieldInfoDto(
             descriptor.EntityType,
             descriptor.DisplayName,
@@ -258,7 +265,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
 
     private static string KindOf(IProperty property)
     {
-        if (property.IsForeignKey()) return FieldValueKinds.Reference;
+        if (property.IsForeignKey() || IsUserReference(property)) return FieldValueKinds.Reference;
         var clr = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;
         if (clr.IsEnum) return FieldValueKinds.Enum;
         if (clr == typeof(bool)) return FieldValueKinds.Bool;
@@ -267,6 +274,15 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
         if (clr == typeof(decimal) || clr == typeof(int) || clr == typeof(long) || clr == typeof(short)) return FieldValueKinds.Number;
         return FieldValueKinds.Text;
     }
+
+    /// <summary>
+    /// Cột người thao tác (PostedBy, ApprovedBy, DocsCompletedBy…): Guid tài khoản lưu không có khóa ngoại (bảng tài khoản thuộc Identity),
+    /// nhận ra theo quy ước tên "…By".
+    /// </summary>
+    private static bool IsUserReference(IProperty property) =>
+        (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType) == typeof(Guid)
+        && property.Name.EndsWith("By", StringComparison.Ordinal)
+        && !property.IsForeignKey();
 
     /// <summary>Giá trị JSON thành chuỗi thô: chuỗi bỏ ngoặc kép, số giữ dạng bất biến (1234.5), null là null.</summary>
     private static string? Raw(JsonElement value) => value.ValueKind switch
@@ -290,6 +306,14 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
     private async Task<string?> ReferenceLabelAsync(IProperty property, string? value, CancellationToken ct)
     {
         if (value is null) return null;
+        if (IsUserReference(property))
+        {
+            if (!Guid.TryParse(value, out var userId)) return value;
+            var user = await _db.Users.AsNoTracking().Where(u => u.Id == userId)
+                .Select(u => new { u.UserName, u.FullName }).FirstOrDefaultAsync(ct);
+            return user is null ? "(không xem được)" : $"{user.UserName} – {user.FullName}";
+        }
+
         var principal = property.GetContainingForeignKeys().First().PrincipalEntityType;
         var target = await FindVisibleAsync(principal, value, checkParents: false, ct);
         return target is null ? "(không xem được)" : LabelOf(target, AuditRegistry.Find(principal.ClrType)) ?? value;

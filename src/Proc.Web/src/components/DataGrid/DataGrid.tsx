@@ -35,6 +35,10 @@ export interface DataGridProps<T> {
   allColumns?: GridColumn<T>[]
   /** Đang tải dữ liệu: hiện vòng xoay trên lưới. */
   loading?: boolean
+  /**
+   * Mã loại đối tượng của dòng trong nhật ký (ví dụ Supplier) khi rowKey là khóa bản ghi: bấm F1 trên ô xem lịch sử ô đó (design.md mục 9.3a).
+   */
+  auditEntity?: string
 }
 
 /**
@@ -65,6 +69,7 @@ export function DataGrid<T>({
   isMarked,
   allColumns,
   loading = false,
+  auditEntity,
 }: DataGridProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
   const [widths, setWidths] = useState<Record<string, number>>({})
@@ -189,7 +194,12 @@ export function DataGrid<T>({
       sorter: true,
       showSorterTooltip: false,
       sortOrder: (sort?.key === c.key ? sort.order : null) as SortOrder,
-      onCell: (rec: GridRecord<T>) => (rec.group ? { colSpan: 0 } : {}),
+      onCell: (rec: GridRecord<T>) =>
+        rec.group
+          ? { colSpan: 0 }
+          : auditEntity && c.auditField !== false
+            ? ({ 'data-audit-field': c.auditField ?? c.key, 'data-audit-label': c.title } as HTMLAttributes<HTMLElement>)
+            : {},
       onHeaderCell: () =>
         ({
           columnKey: c.key,
@@ -331,6 +341,8 @@ export function DataGrid<T>({
               : {
                   onClick: () => setSelectedKey(rec.key),
                   onDoubleClick: () => onOpenRow?.(rec.row),
+                  // Dòng là một bản ghi trong nhật ký – F1 trên ô đọc loại và khóa ở đây (FieldHelp/auditDom.ts).
+                  ...(auditEntity ? ({ 'data-audit-entity': auditEntity, 'data-audit-id': rec.key } as HTMLAttributes<HTMLElement>) : {}),
                 }
           }
         />

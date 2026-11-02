@@ -247,6 +247,7 @@ export function GoodsReturnPage() {
       title="Phiếu xuất trả hàng NCC"
       extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'InventoryDocument', id: doc?.id, fields: { sourceDocumentId: 'LinkedDocumentId' } }}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -299,7 +300,7 @@ export function GoodsReturnPage() {
               Lấy mọi dòng còn trả được
             </Button>
           )}
-          <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />
+          <LineGrid name="lines" auditEntity="InventoryDocumentLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />
         </>
       }
       footer={

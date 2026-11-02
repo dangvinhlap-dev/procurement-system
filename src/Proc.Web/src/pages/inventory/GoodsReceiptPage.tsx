@@ -494,6 +494,7 @@ export function GoodsReceiptPage() {
       title="Phiếu nhập mua từ NCC"
       extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'InventoryDocument', id: doc?.id, fields: { warehouseId: 'ToWarehouseId' } }}
       printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -574,6 +575,7 @@ export function GoodsReceiptPage() {
             </Button>
           )}
           <LineGrid
+          auditEntity="InventoryDocumentLine"
           name="lines"
           columns={columns}
           readOnly={readOnly}

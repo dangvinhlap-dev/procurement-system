@@ -34,21 +34,31 @@ export function fieldNameOfId(id: string): string {
   return parts[parts.length - 1] ?? id
 }
 
+/** Ô nhập đầu tiên trong một vùng, bỏ qua ô ẩn (Form.Item hidden giữ id dòng, id phiếu nguồn…). */
+function firstControl(root: Element | null | undefined): HTMLElement | null {
+  if (!root) return null
+  return (
+    [...root.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)].find(
+      (c) => !c.closest('.ant-form-item-hidden') && (c as HTMLInputElement).type !== 'hidden',
+    ) ?? null
+  )
+}
+
 /** Ô nhập (có id) gần nhất của một phần tử: chính nó, ô nhập trong khung ô antd, trong Form.Item hoặc trong ô lưới. */
 function controlOf(el: Element): HTMLElement | null {
   if (el.matches(CONTROL_SELECTOR)) return el as HTMLElement
   const wrapper = el.closest(WRAPPER_SELECTOR)
-  const inWrapper = wrapper?.querySelector<HTMLElement>(CONTROL_SELECTOR)
+  const inWrapper = firstControl(wrapper)
   if (inWrapper) return inWrapper
   const item = el.closest('.ant-form-item')
   if (item) {
     // Nhãn trỏ tới ô qua for=… – đúng cả khi ô đang khóa (phiếu chỉ xem).
     const forId = item.querySelector('label[for]')?.getAttribute('for')
     const byLabel = forId ? document.getElementById(forId) : null
-    return byLabel ?? item.querySelector<HTMLElement>(CONTROL_SELECTOR)
+    return byLabel ?? firstControl(item)
   }
   const cell = el.closest('td')
-  return cell?.querySelector<HTMLElement>(CONTROL_SELECTOR) ?? null
+  return firstControl(cell)
 }
 
 /** Nhãn ô: nhãn Form.Item, tiêu đề cột của ô lưới, hoặc data-audit-label. */
@@ -142,7 +152,7 @@ export function collectFieldLabels(root: Element | null): Record<string, string>
         const text = heads[index]?.textContent?.trim()
         if (!text) return
         const explicit = cell.getAttribute('data-audit-field')
-        const control = explicit ? null : cell.querySelector<HTMLElement>(CONTROL_SELECTOR)
+        const control = explicit ? null : firstControl(cell)
         const name = explicit ?? (control?.id ? fieldNameOfId(control.id) : null)
         if (name && name !== 'id') labels[name.toLowerCase()] ??= text
       })

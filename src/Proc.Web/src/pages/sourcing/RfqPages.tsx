@@ -612,6 +612,7 @@ export function RfqPage() {
       <DocumentForm
         title="Yêu cầu báo giá (RFQ)"
         number={isNew ? null : (doc?.no ?? '')}
+        audit={{ entityType: 'Rfq', id: doc?.id }}
         status={status}
         meta={
           doc &&
@@ -665,7 +666,7 @@ export function RfqPage() {
                 </Button>
               </Space>
             )}
-            <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1, sourcePrLineId: null })} />
+            <LineGrid name="lines" auditEntity="RfqLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1, sourcePrLineId: null })} />
           </>
         }
         extraTabs={[...extraTabs, attachmentTab]}

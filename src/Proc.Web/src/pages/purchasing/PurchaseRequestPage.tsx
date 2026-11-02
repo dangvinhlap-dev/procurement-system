@@ -383,6 +383,7 @@ export function PurchaseRequestPage() {
     <DocumentForm
       title="Đề nghị mua hàng"
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'PurchaseRequest', id: doc?.id }}
       printPath={doc ? `/api/purchase-requests/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
@@ -438,7 +439,7 @@ export function PurchaseRequestPage() {
           </Form.Item>
         </>
       }
-      lines={<LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />}
+      lines={<LineGrid name="lines" auditEntity="PurchaseRequestLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1 })} />}
       footer={<DocumentTotal label="Tổng giá trị dự kiến" value={formatMoney(doc?.totalAmount ?? 0)} strong />}
       extraTabs={[
           {
@@ -448,7 +449,7 @@ export function PurchaseRequestPage() {
               <>
                 <Alert type="info" showIcon style={{ marginBottom: 6 }}
                   title="Hàng chưa có trong danh mục: ghi mô tả, quy cách, ĐVT, SL, giá dự kiến. Duyệt cùng PR; sau duyệt lập phiếu tìm nguồn, có mã hàng thì gắn mã mới lên PO được." />
-                <LineGrid name="newItems" columns={newItemColumns} readOnly={readOnly} newLine={() => ({ id: null, qty: 1, estPrice: 0 })} />
+                <LineGrid name="newItems" auditEntity="PurchaseRequestNewItem" columns={newItemColumns} readOnly={readOnly} newLine={() => ({ id: null, qty: 1, estPrice: 0 })} />
               </>
             ),
           },

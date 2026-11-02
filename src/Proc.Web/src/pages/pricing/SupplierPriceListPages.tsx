@@ -443,6 +443,7 @@ export function SupplierPriceListPage() {
         ...(doc && doc.companyId === workingCompany?.id ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
       ]}
       number={isNew ? null : (doc?.no ?? '')}
+      audit={{ entityType: 'SupplierPriceList', id: doc?.id }}
       status={status}
       meta={doc && `Công ty lập: ${doc.companyCode} · Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={list.isLoading}
@@ -487,7 +488,7 @@ export function SupplierPriceListPage() {
         </>
       }
       lines={
-        <LineGrid name="lines" columns={columns} readOnly={readOnly} addRef={addRef}
+        <LineGrid name="lines" auditEntity="SupplierPriceListLine" columns={columns} readOnly={readOnly} addRef={addRef}
           newLine={() => ({ id: null, minQty: 0, unitPrice: 0, discountPct: 0 })} />
       }
     />
