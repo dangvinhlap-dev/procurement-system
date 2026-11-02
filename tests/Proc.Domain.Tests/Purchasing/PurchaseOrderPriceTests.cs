@@ -137,6 +137,23 @@ public class PurchaseOrderPriceTests
     }
 
     [Fact]
+    public void NhanHang_KhongDatBatBuocGhiChu_LoaiPhieuKhacKhongGhiKiemTra()
+    {
+        var item = NewItem();
+        var grn = Proc.Domain.Inventory.InventoryDocument.CreateReceipt(Company, "GRN-1",
+            new Proc.Domain.Inventory.ReceiptHeader(new DateOnly(2026, 11, 2), Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, null, null, null));
+        Proc.Domain.Inventory.InventoryLineData Line(decimal? delivered, decimal rejected, Proc.Domain.Inventory.QcResult qc, string? note) =>
+            new(null, item.Id, Cai.Id, 8, 100, "10", null, null, null, null, null, delivered, rejected, qc, note);
+        Assert.Throws<BusinessRuleException>(() => grn.SetLines([(Line(10, 1, Proc.Domain.Inventory.QcResult.Passed, null), item)]));
+        Assert.Throws<BusinessRuleException>(() => grn.SetLines([(Line(10, 0, Proc.Domain.Inventory.QcResult.Passed, null), item)]));
+        grn.SetLines([(Line(10, 1, Proc.Domain.Inventory.QcResult.Passed, "Móp 1, thiếu 1"), item)]);
+        Assert.Equal((Proc.Domain.Inventory.QcResult.Failed, -1m), (grn.Lines[0].QcResult, grn.Lines[0].DiscrepancyQty));
+        grn.EnsureQcChecked();
+        grn.SetLines([(Line(null, 0, Proc.Domain.Inventory.QcResult.NotChecked, null), item)]);
+        Assert.Contains("chưa có kết quả kiểm tra", Assert.Throws<BusinessRuleException>(grn.EnsureQcChecked).Message);
+    }
+
+    [Fact]
     public void CapDuyetNgoaiLe_LuonItNhatMotCap()
     {
         var role1 = Guid.CreateVersion7();

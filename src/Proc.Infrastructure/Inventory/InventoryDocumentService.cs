@@ -162,6 +162,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             case DocumentTypes.GoodsReceipt:
                 await CheckReceiptHeaderAsync(ToRequest(document), cancellationToken);
                 await CheckOrderOnPostAsync(document, cancellationToken);
+                await CheckReceiptControlsAsync(document, cancellationToken);
                 EnsureItemsActive(document, items);
                 break;
             case DocumentTypes.ReturnToVendor:
@@ -353,6 +354,13 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             throw new BusinessRuleException($"NCC {supplier.Code} chưa được áp dụng tại công ty này (Nhà cung cấp → tab Áp dụng tại …).");
     }
 
+    /// <summary>Kết quả kiểm tra gửi lên: trống = chưa kiểm tra.</summary>
+    /// <exception cref="BusinessRuleException">Khi không phải NotChecked/Passed/Failed.</exception>
+    private static QcResult ParseQc(string? value, int lineNo) =>
+        string.IsNullOrWhiteSpace(value) ? QcResult.NotChecked
+        : Enum.TryParse<QcResult>(value, true, out var result) && Enum.IsDefined(result) ? result
+        : throw new BusinessRuleException($"Dòng {lineNo}: kết quả kiểm tra phải là NotChecked, Passed hoặc Failed.");
+
     /// <summary>Đọc mặt hàng của các dòng qua filter phạm vi nhóm hàng; hàng ngoài phạm vi báo như không tồn tại.</summary>
     private async Task<List<(InventoryLineData Data, Item Item)>> ResolveLinesAsync(
         IReadOnlyList<SaveInventoryLineRequest> lines, CancellationToken cancellationToken)
@@ -361,7 +369,9 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var items = await _db.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
         return lines
             .Select((l, index) => (
-                new InventoryLineData(l.Id, l.ItemId, l.UomId, l.Qty, l.UnitPrice, l.VatCode, l.LotNo, l.ExpiryDate, l.Note, null, l.PurchaseOrderLineId),
+                new InventoryLineData(
+                    l.Id, l.ItemId, l.UomId, l.Qty, l.UnitPrice, l.VatCode, l.LotNo, l.ExpiryDate, l.Note, null, l.PurchaseOrderLineId, l.DeliveredQty,
+                    l.RejectedQty, ParseQc(l.QcResult, index + 1), l.QcNote),
                 items.GetValueOrDefault(l.ItemId)
                 ?? throw new NotFoundException($"Dòng {index + 1}: không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).")))
             .ToList();
@@ -423,7 +433,8 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? HiddenItem, item?.Name ?? string.Empty, l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.UnitPrice, l.Amount,
                 l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId,
-                sentQty is not null && l.SourceLineId is { } src ? sentQty.GetValueOrDefault(src) : null, l.PurchaseOrderLineId);
+                sentQty is not null && l.SourceLineId is { } src ? sentQty.GetValueOrDefault(src) : null, l.PurchaseOrderLineId,
+                l.DeliveredQty, l.RejectedQty, l.QcResult.ToString(), l.QcNote, l.DiscrepancyQty);
         }).ToList();
 
         string? readOnlyReason = null;

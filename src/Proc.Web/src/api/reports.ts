@@ -284,6 +284,49 @@ export function useSourcingSavings(period: PurchaseReportPeriod) {
   })
 }
 
+/** Một dòng nhận hàng có sai lệch (design.md mục 18.14). */
+export interface ReceiptQualityRow {
+  documentId: string
+  documentNo: string
+  date: string
+  supplierCode: string
+  supplierName: string
+  purchaseOrderNo: string | null
+  lineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  deliveredQty: number | null
+  qty: number
+  rejectedQty: number
+  discrepancyQty: number
+  qcResult: 'NotChecked' | 'Passed' | 'Failed'
+  qcNote: string | null
+}
+
+/** Báo cáo sai lệch nhận hàng và tỷ lệ đạt chất lượng. */
+export interface ReceiptQualityResult {
+  rows: ReceiptQualityRow[]
+  totalLines: number
+  checkedLines: number
+  passedLines: number
+  passedPct: number | null
+}
+
+/**
+ * Sai lệch nhận hàng theo ngày phiếu nhập mua đã ghi sổ.
+ * @param range Khoảng ngày yyyy-MM-dd.
+ */
+export function useReceiptQuality(range: { from: string; to: string }) {
+  const companyId = useCompanyId()
+  const query = new URLSearchParams(range).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'receipt-quality', query],
+    queryFn: () => apiFetch<ReceiptQualityResult>(`/api/reports/receipt-quality?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Loại yêu cầu tính SLA (design.md mục 18.13). */
 export type SlaCategory = 'Priced' | 'Sourcing' | 'Urgent'
 

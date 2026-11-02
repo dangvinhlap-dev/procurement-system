@@ -6,6 +6,7 @@ using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
+using Proc.Application.Reports;
 using Proc.Domain.Organization;
 
 namespace Proc.IntegrationTests;
@@ -93,6 +94,44 @@ public class PurchasingTests
 
     private static Task<HttpResponseMessage> ActAsync(HttpClient client, string kind, Guid id, string action, string? comment = null) =>
         client.PostAsJsonAsync($"/api/{kind}/{id}/{action}", new ApprovalActionRequest(comment), Ct);
+
+    [Fact]
+    public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+
+        // Bật hai tham số nhận hàng (mặc định tắt).
+        await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_QC_REQUIRED", new UpdateSystemParameterRequest("Bật"), Ct));
+        var g4 = await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_SEPARATE_PO_CREATOR",
+            new UpdateSystemParameterRequest("true"), Ct));
+        Assert.Equal(("Bật", false), (g4.Value, g4.IsDefault));
+
+        SaveReceiptRequest Receipt(decimal qty, decimal? delivered, decimal rejected, string? qc, string? note) =>
+            new(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
+                [new(null, f.ItemId, f.Cai, qty, 1, null, null, null, null, po.Lines[0].Id, delivered, rejected, qc, note)], po.Id);
+
+        // Chứng từ giao 10, nhận đạt 8, không đạt 1 → thiếu 1, kết quả Không đạt: bắt buộc ghi chú.
+        Assert.Contains("ghi chú kiểm tra", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Receipt(8, 10, 1, "Passed", null), Ct)));
+        var grn = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts",
+            Receipt(8, 10, 1, "Passed", "1 cái móp, thiếu 1 cái so với phiếu giao"), Ct));
+        Assert.Equal(("Failed", 1m, -1m, (decimal?)10m), (grn.Lines[0].QcResult, grn.Lines[0].RejectedQty, grn.Lines[0].DiscrepancyQty, grn.Lines[0].DeliveredQty));
+
+        // Người lập PO không ghi sổ nhận hàng của PO đó; phiếu chưa kiểm tra không ghi sổ được.
+        Assert.Contains("người lập đơn mua hàng", await TitleAsync(await PostDocAsync(f, grn.Id)));
+        await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_SEPARATE_PO_CREATOR", new UpdateSystemParameterRequest(null), Ct));
+        var unchecked_ = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Receipt(1, null, 0, null, null), Ct));
+        Assert.Contains("chưa có kết quả kiểm tra", await TitleAsync(await PostDocAsync(f, unchecked_.Id)));
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
+
+        var report = await ReadAsync<ReceiptQualityResult>(await f.Buyer.GetAsync($"/api/reports/receipt-quality?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
+        var row = Assert.Single(report.Rows, r => r.DocumentId == grn.Id);
+        Assert.Equal((po.No, 1m, -1m, "Failed"), (row.PurchaseOrderNo, row.RejectedQty, row.DiscrepancyQty, row.QcResult));
+        Assert.Equal((1, 0, 0m), (report.CheckedLines, report.PassedLines, report.PassedPct!.Value));
+    }
 
     [Fact]
     public async Task LuongPrPoNhapKho_DuyetMotCap_NhanDuThiDongPo()

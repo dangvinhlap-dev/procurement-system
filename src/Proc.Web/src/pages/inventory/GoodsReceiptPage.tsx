@@ -5,12 +5,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import {
   documentStatusLabels,
+  qcResultLabels,
   useGoodsReceiptMutations,
   useInventoryDocument,
   useItemLookup,
   useSupplierLookup,
   type InventoryDocument,
   type ItemLookup,
+  type QcResult,
   type SaveReceiptInput,
 } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
@@ -36,6 +38,10 @@ interface LineValues {
   expiryDate?: Dayjs | null
   note?: string
   purchaseOrderLineId?: string | null
+  deliveredQty?: number | null
+  rejectedQty?: number | null
+  qcResult?: QcResult
+  qcNote?: string
 }
 
 interface ReceiptFormValues {
@@ -133,6 +139,10 @@ export function GoodsReceiptPage() {
         expiryDate: l.expiryDate ? dayjs(l.expiryDate) : null,
         note: l.note ?? '',
         purchaseOrderLineId: l.purchaseOrderLineId ?? null,
+        deliveredQty: l.deliveredQty ?? null,
+        rejectedQty: l.rejectedQty ?? 0,
+        qcResult: l.qcResult ?? 'NotChecked',
+        qcNote: l.qcNote ?? '',
       })),
     })
   }, [doc, form])
@@ -179,6 +189,10 @@ export function GoodsReceiptPage() {
         expiryDate: l.expiryDate ? l.expiryDate.format('YYYY-MM-DD') : null,
         note: orNull(l.note),
         purchaseOrderLineId: l.purchaseOrderLineId ?? null,
+        deliveredQty: l.deliveredQty ?? null,
+        rejectedQty: l.rejectedQty ?? 0,
+        qcResult: l.qcResult ?? 'NotChecked',
+        qcNote: orNull(l.qcNote),
       })),
     }
     try {
@@ -374,6 +388,61 @@ export function GoodsReceiptPage() {
       render: (field) => (
         <Form.Item name={[field.name, 'note']} noStyle>
           <Input variant="borderless" maxLength={500} aria-label={`Ghi chú dòng ${field.name + 1}`} />
+        </Form.Item>
+      ),
+    },
+    // Kiểm tra chất lượng, sai lệch nhận hàng (design.md mục 18.14 – V7): SL chứng từ giao, SL không đạt (không nhập kho), kết quả, ghi chú.
+    {
+      key: 'delivered',
+      title: 'SL chứng từ giao',
+      width: 100,
+      align: 'right',
+      render: (field) => (
+        <Form.Item name={[field.name, 'deliveredQty']} noStyle>
+          <InputNumber {...cellNumber} min={0} precision={4} aria-label={`SL chứng từ giao dòng ${field.name + 1}`} />
+        </Form.Item>
+      ),
+    },
+    {
+      key: 'rejected',
+      title: 'SL không đạt',
+      width: 90,
+      align: 'right',
+      render: (field) => (
+        <Form.Item name={[field.name, 'rejectedQty']} noStyle>
+          <InputNumber {...cellNumber} min={0} precision={4} aria-label={`SL không đạt dòng ${field.name + 1}`} />
+        </Form.Item>
+      ),
+    },
+    {
+      key: 'discrepancy',
+      title: 'Thiếu/thừa',
+      width: 85,
+      align: 'right',
+      render: (_, index) => {
+        const l = lines[index]
+        const diff = l?.deliveredQty == null ? 0 : (l.qty ?? 0) + (l.rejectedQty ?? 0) - l.deliveredQty
+        return <span className={diff ? 'line-grid-readonly line-grid-warning' : 'line-grid-readonly'}>{diff ? formatQuantity(diff) : ''}</span>
+      },
+    },
+    {
+      key: 'qc',
+      title: 'Kết quả KT',
+      width: 110,
+      render: (field) => (
+        <Form.Item name={[field.name, 'qcResult']} noStyle>
+          <Select variant="borderless" style={{ width: '100%' }} aria-label={`Kết quả kiểm tra dòng ${field.name + 1}`}
+            options={Object.entries(qcResultLabels).map(([value, label]) => ({ value, label }))} />
+        </Form.Item>
+      ),
+    },
+    {
+      key: 'qcNote',
+      title: 'Ghi chú kiểm tra',
+      width: 180,
+      render: (field) => (
+        <Form.Item name={[field.name, 'qcNote']} noStyle>
+          <Input variant="borderless" maxLength={500} placeholder="Bắt buộc khi không đạt/thiếu thừa" aria-label={`Ghi chú kiểm tra dòng ${field.name + 1}`} />
         </Form.Item>
       ),
     },

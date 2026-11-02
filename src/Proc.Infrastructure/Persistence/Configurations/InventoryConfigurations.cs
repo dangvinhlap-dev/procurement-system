@@ -83,6 +83,11 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.Property(x => x.UomFactor).HasPrecision(18, 6);
         builder.Property(x => x.BaseQty).HasPrecision(18, 4);
         builder.Property(x => x.UnitPrice).HasPrecision(19, 6);
+        // Kiểm tra chất lượng, sai lệch nhận hàng (lát C5 – design.md mục 18.14).
+        builder.Property(x => x.DeliveredQty).HasPrecision(18, 4);
+        builder.Property(x => x.RejectedQty).HasPrecision(18, 4);
+        builder.Property(x => x.QcNote).HasMaxLength(500);
+        builder.Ignore(x => x.DiscrepancyQty);
         builder.Property(x => x.Amount).HasPrecision(19, 2);
         builder.Property(x => x.VatAmount).HasPrecision(19, 2);
         builder.Property(x => x.VatCode).HasMaxLength(5);

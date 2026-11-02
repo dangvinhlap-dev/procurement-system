@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 02/11/2026 (C4). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 02/11/2026 (C5a). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -29,6 +29,7 @@ Cập nhật: 02/11/2026 (C4). Đọc file này đầu mỗi phiên để biết
 | B2 | Duyệt NCC hai chặng (yêu cầu người dùng): công ty liên quan (đang mua NCC) duyệt xong – 2 công ty thì cả 2 – rồi Tổng công ty duyệt cuối; đổi trạng thái Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng thành `SupplierChangeRequest`, duyệt xong mới áp; màn hình SUPAPR, cảnh báo trên ngăn kéo NCC, Việc cần làm/thông báo; `ApprovalStep.Stage`; migration `V0_11_0_DuyetNhaCungCap`; Testing thêm tài khoản `duyetncc.tct`; design.md 18.6 | feature/duyet-ncc |
 | B4c | **Nhập Excel hợp đồng hiện hữu** (nút Nhập Excel trên danh sách CTR, quyền `Purchase.Contract.Manage`): mỗi dòng một mặt hàng × ĐVT, gộp theo Số HĐ giấy; cột đầu ghi ở dòng đầu (dòng sau trống hoặc giống hệt); nhập thành hợp đồng **Nháp** của công ty đang làm việc qua `ContractService.CreateAsync` (dùng chung giao dịch của file), rồi gửi duyệt như lập tay; số HĐ giấy đã có cùng NCC thì lỗi; kiểm tra thử/nhập thật, lỗi theo dòng Excel; API `/api/contracts/import-template`, `/api/contracts/import`; không migration; design.md 18.7 | feature/nhap-hop-dong-excel |
 | B5a | **Kê khai xung đột lợi ích** (màn hình COI, Giá và NCC → Xung đột lợi ích): `ConflictDeclaration` người dùng × NCC, không xóa/sửa, kết thúc kèm lý do (quyền `MasterData.Conflict.Manage`); ai cũng tự kê khai, `MasterData.Conflict.View` xem toàn bộ (KSNB, Trưởng ban); kê khai còn hiệu lực chặn duyệt PO/PRL/NCC/CTR/CTA/RFQ (không báo, ẩn khỏi Việc cần làm) và chặn nhập báo giá, chọn thầu RFQ có NCC đó; migration `V0_12_0_KeKhaiXungDotLoiIch`; design.md 18.8 | feature/xung-dot-loi-ich |
+| C5a | **Kiểm tra chất lượng, sai lệch nhận hàng**: dòng phiếu nhập mua có SL chứng từ giao, SL không đạt (không nhập kho), kết quả kiểm tra, ghi chú (bắt buộc khi không đạt/thiếu thừa), cột Thiếu/thừa; tham số bật/tắt (mặc định tắt) "bắt buộc kiểm tra khi nhận hàng" và "người lập PO không ghi sổ nhận hàng của PO đó" (G4); báo cáo **Sai lệch nhận hàng** (QCDEV, % đạt chất lượng); ngăn kéo tham số có công tắc bật/tắt; migration `V0_13_0_KiemTraNhanHang`; design.md 18.14 | feature/nhan-hang-kiem-tra |
 | C4 | **SLA mua hàng và hàng đang đặt**: tham số SLA ở SEC (hàng có HĐ/bảng giá 1, chưa có NCC duyệt 5, khẩn 1 ngày làm việc); báo cáo **SLA mua hàng** (màn hình SLA): loại yêu cầu tự xếp, hạn = ngày PR duyệt + N ngày làm việc (thứ 2–6), so với ngày PO đầu tiên được duyệt, trạng thái Đúng hạn/Trễ/Đang xử lý/Quá hạn, % đúng SLA; cột **Đang đặt** trên dòng PR (PO đã duyệt chưa nhận đủ); migration `V0_13_0_ThamSoSla`; design.md 18.13 | feature/sla-mua-hang |
 | C2b | **Hàng ngoài danh mục trên PR**: tab "Hàng mới chưa có mã" (mô tả, quy cách, ĐVT, SL, giá dự kiến), duyệt cùng PR, không lên PO/RFQ; PR đã duyệt: nút Tìm nguồn lập phiếu tìm nguồn, nút Gắn mã sinh dòng PR có mã (lên PO được, tổng không đổi); người lập PR đọc được danh mục ĐVT; migration `V0_13_0_HangMoiChuaCoMa`; design.md 18.12 | feature/hang-ngoai-danh-muc |
 | C2a | **Mua khẩn cấp** trên PO: Loại mua Thường/Khẩn cấp, lý do + hạn bổ sung hồ sơ (≤ 30 ngày, mặc định +7); duyệt theo bộ cấp loại **POK** nếu đã cấu hình (không thì cấp PO); không gửi duyệt PO khẩn lập lùi ngày; lệnh "Đã bổ sung hồ sơ" (ghi chú, người, thời điểm), cờ quá hạn ở đầu phiếu và cột Loại mua của danh sách; API `/api/purchase-orders/{id}/complete-docs`; migration `V0_13_0_MuaKhanCap`; design.md 18.11 | feature/mua-khan-cap |
@@ -66,7 +67,10 @@ D:\project\procurement-system\src\Proc.Api` (thư mục làm việc của lệnh
 Kiểm tra trước (B3b, 01/11/2026): `dotnet test` 445 qua; Playwright 69/71 – vẫn 2 lỗi "Phiên bản 0.11.0" do Vite dev cũ (như B3a);
 `npm run build`, `tsc`, `oxlint` qua.
 
-Kiểm tra gần nhất (C4, 02/11/2026): `dotnet test` 473 qua; Playwright 77/77 cả bộ (e2e pricing: tải lại trang trước khi gõ lý do lệch giá –
+Kiểm tra gần nhất (C5a, 02/11/2026): `dotnet test` 475 qua; Playwright 77/77 cả bộ (system-parameters: 9 tham số; purchasing: chọn Đạt khi
+nhận hàng); `npm run build`, `tsc`, `oxlint` qua.
+
+Kiểm tra trước (C4, 02/11/2026): `dotnet test` 473 qua; Playwright 77/77 cả bộ (e2e pricing: tải lại trang trước khi gõ lý do lệch giá –
 xem lỗi nạp đè form ở mục Đang làm; e2e system-parameters: 7 tham số); `npm run build`, `tsc`, `oxlint` qua.
 
 Kiểm tra trước (C2b, 02/11/2026): `dotnet test` 471 qua; Playwright 77/77 cả bộ (e2e pricing: chờ thông báo lỗi gửi duyệt tới 20 giây khi
@@ -108,8 +112,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C4 (SLA mua hàng, hàng đang đặt) đã xong. Lát kế tiếp **C5** – nhận hàng: kiểm tra chất lượng từng dòng, biên bản sai lệch;
-  người lập PO không ghi sổ nhận của PO mình (tham số) (V7, G4 – docs/Phantich_01112026.md mục 5). Lập kế hoạch ngắn trước khi code.
+- Không có. C5a (kiểm tra chất lượng, sai lệch nhận hàng, tách người lập PO) đã xong. Lát kế tiếp **C5b** – in biên bản giao nhận /
+  sai lệch (PDF) từ phiếu nhập mua (design.md 18.14 dòng "Chưa làm"), rồi **C6**. Lập kế hoạch ngắn trước khi code.
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi
@@ -126,7 +130,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4 đã xong; **C3 hoãn chờ lệnh người dùng**; lát kế tiếp: **C5**.
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a đã xong; **C3 hoãn chờ lệnh người dùng**; lát kế tiếp: **C5b**, rồi C6.
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);

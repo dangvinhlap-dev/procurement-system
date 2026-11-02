@@ -38,6 +38,7 @@ import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/repo
 import {
   PendingRequestsReportPage,
   PurchaseSlaReportPage,
+  ReceiptQualityReportPage,
   PurchaseSpendReportPage,
   SourcingSavingsReportPage,
   SupplierEvaluationReportPage,
@@ -94,6 +95,7 @@ const implemented: Record<string, ReactNode> = {
   GSTK: <GroupStockReportPage />,
   PRPEND: <PendingRequestsReportPage />,
   SLA: <PurchaseSlaReportPage />,
+  QCDEV: <ReceiptQualityReportPage />,
   RPSUP: <PurchaseSpendReportPage />,
   SUPEVAL: <SupplierEvaluationReportPage />,
   SAVE: <SourcingSavingsReportPage />,
