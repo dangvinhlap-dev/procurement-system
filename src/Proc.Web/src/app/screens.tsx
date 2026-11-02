@@ -141,6 +141,7 @@ export const screens: Screen[] = [
   { code: 'PRPEND', title: 'PR chưa xử lý', navLabel: 'PR chưa xử lý', path: '/bao-cao/pr-chua-xu-ly', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SLA', title: 'SLA mua hàng', navLabel: 'SLA mua hàng', path: '/bao-cao/sla-mua-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'QCDEV', title: 'Sai lệch nhận hàng', navLabel: 'Sai lệch nhận hàng', path: '/bao-cao/sai-lech-nhan-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'MATCH3', title: 'Đối chiếu PO – nhận – hóa đơn', navLabel: 'Đối chiếu PO – nhận – HĐ', path: '/bao-cao/doi-chieu-po-nhan-hoa-don', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SAVE', title: 'Tiết kiệm từ đấu thầu', navLabel: 'Tiết kiệm đấu thầu', path: '/bao-cao/tiet-kiem-dau-thau', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },

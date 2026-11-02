@@ -135,6 +135,10 @@ export interface InventoryDocument {
   /** Đơn mua hàng nguồn (phiếu nhập theo PO). */
   purchaseOrderId?: string | null
   purchaseOrderNo?: string | null
+  /** Phiếu nhập mua: tổng tiền thanh toán trên hóa đơn NCC (gồm VAT); null = chưa nhập. */
+  invoiceAmount?: number | null
+  /** Phiếu nhập mua đã ghi sổ: người xem cập nhật được hóa đơn (design.md mục 18.15). */
+  canUpdateInvoice?: boolean
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -170,6 +174,29 @@ export interface SaveReceiptInput {
   lines: SaveLineInput[]
   /** Đơn mua hàng nguồn; null = nhập thẳng theo NCC. */
   purchaseOrderId?: string | null
+  /** Tổng tiền thanh toán trên hóa đơn NCC (gồm VAT); null = chưa có. */
+  invoiceAmount?: number | null
+}
+
+/** Thông tin hóa đơn NCC cập nhật cho phiếu nhập mua đã ghi sổ (design.md mục 18.15). */
+export interface ReceiptInvoiceInput {
+  invoiceNo: string | null
+  invoiceSeries: string | null
+  invoiceDate: string | null
+  invoiceAmount: number | null
+}
+
+/** Cập nhật hóa đơn NCC của phiếu nhập mua (cả khi đã ghi sổ) – không đổi sổ kho. */
+export function useUpdateReceiptInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ReceiptInvoiceInput }) =>
+      apiFetch<InventoryDocument>(`/api/goods-receipts/${id}/invoice`, { method: 'PUT', body: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+  })
 }
 
 /** Mặt hàng cho ô chọn hàng trên chứng từ, kèm ĐVT chọn được. */

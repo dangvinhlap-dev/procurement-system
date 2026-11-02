@@ -1,4 +1,4 @@
-import { Alert, Checkbox, Select } from 'antd'
+import { Alert, Checkbox, InputNumber, Select } from 'antd'
 import dayjs from 'dayjs'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
@@ -7,7 +7,11 @@ import {
   usePendingRequests,
   usePurchaseSla,
   useReceiptQuality,
+  useThreeWayMatch,
   type ReceiptQualityRow,
+  type ThreeWayMatchIssue,
+  type ThreeWayMatchRow,
+  type ThreeWayMatchStatus,
   usePurchaseSpend,
   useSourcingSavings,
   useSupplierEvaluation,
@@ -25,7 +29,7 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
-import { formatDate, formatMoney } from '../../utils/format'
+import { formatDate, formatMoney, vnNumberInput } from '../../utils/format'
 import { LogDateRangeFilter } from '../system/logFilters'
 
 const pendingColumns: GridColumn<PendingRequestLine>[] = [
@@ -194,6 +198,119 @@ export function ReceiptQualityReportPage() {
       }
       onClearFilters={() => setRange({ from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') })}
       filters={<LogDateRangeFilter value={range} onChange={(r) => setRange({ ...range, ...r })} />}
+    />
+  )
+}
+
+const matchStatusLabels: Record<ThreeWayMatchStatus, string> = { Matched: 'Khớp', NoInvoice: 'Chưa có hóa đơn', Mismatch: 'Lệch tiền' }
+const matchStatusTone: Record<ThreeWayMatchStatus, StatusTone> = { Matched: 'success', NoInvoice: 'warning', Mismatch: 'error' }
+
+/** Chữ của mã cảnh báo đối chiếu (design.md mục 18.15). */
+const matchIssueLabels: Record<ThreeWayMatchIssue, string> = {
+  NoInvoice: 'Chưa có hóa đơn',
+  AmountMismatch: 'Hóa đơn lệch tiền nhận',
+  InvoiceIncludesShortage: 'Hóa đơn tính cả hàng thiếu/không đạt',
+  NoPurchaseOrder: 'Nhập không theo PO',
+  ReceivedBeforeOrder: 'Nhận hàng trước ngày PO',
+  ReceivedBeforeApproval: 'Nhận hàng trước ngày duyệt PO',
+  InvoiceBeforeOrder: 'Hóa đơn trước ngày PO',
+}
+
+const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
+  { key: 'no', title: 'Phiếu nhập', width: 150, value: (r) => r.documentNo },
+  { key: 'date', title: 'Ngày nhập', width: 90, type: 'date', value: (r) => r.date },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  { key: 'po', title: 'PO', width: 140, value: (r) => r.purchaseOrderNo },
+  { key: 'poDate', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.purchaseOrderDate },
+  { key: 'poApproved', title: 'Ngày duyệt PO', width: 100, type: 'date', value: (r) => r.purchaseOrderApprovedDate },
+  { key: 'poTotal', title: 'Tổng tiền PO', width: 130, type: 'money', value: (r) => r.orderTotal },
+  { key: 'receipt', title: 'Tiền nhận', width: 130, type: 'money', value: (r) => r.receiptTotal },
+  { key: 'invoiceNo', title: 'Số hóa đơn', width: 110, value: (r) => r.invoiceNo },
+  { key: 'invoiceSeries', title: 'Ký hiệu', width: 90, value: (r) => r.invoiceSeries },
+  { key: 'invoiceDate', title: 'Ngày hóa đơn', width: 100, type: 'date', value: (r) => r.invoiceDate },
+  { key: 'invoice', title: 'Tiền hóa đơn', width: 130, type: 'money', value: (r) => r.invoiceAmount },
+  { key: 'diff', title: 'Chênh lệch', width: 120, type: 'money', value: (r) => r.difference },
+  {
+    key: 'result',
+    title: 'Kết quả',
+    width: 120,
+    type: 'status',
+    value: (r) => matchStatusLabels[r.result],
+    tone: (r) => matchStatusTone[r.result],
+    groupable: true,
+  },
+  { key: 'issues', title: 'Cảnh báo', width: 320, value: (r) => r.issues.map((i) => matchIssueLabels[i]).join('; ') },
+]
+
+const defaultMatchFilter = () => ({
+  from: dayjs().startOf('month').format('YYYY-MM-DD'),
+  to: dayjs().format('YYYY-MM-DD'),
+  tolerance: 0,
+  onlyIssues: false,
+})
+
+/**
+ * Báo cáo → Đối chiếu PO – nhận – hóa đơn (design.md mục 18.15, M5/V8 – báo cáo cho kế toán; thanh toán vẫn ở phần mềm kế toán):
+ * mỗi phiếu nhập mua NCC đã ghi sổ trong khoảng ngày – tiền hóa đơn so với tiền nhận (theo dung sai), ngày nhận/hóa đơn so với ngày PO.
+ * Bấm đúp mở phiếu nhập để cập nhật hóa đơn.
+ */
+export function ThreeWayMatchReportPage() {
+  const navigate = useNavigate()
+  const [filter, setFilter] = useState(defaultMatchFilter)
+  const report = useThreeWayMatch(filter)
+  const data = report.data
+  return (
+    <ListPage
+      title="Đối chiếu PO – nhận – hóa đơn"
+      exportFileName="doi-chieu-po-nhan-hoa-don"
+      exportSubtitle={`Phiếu nhập từ ${formatDate(filter.from)} đến ${formatDate(filter.to)} – dung sai ${formatMoney(filter.tolerance)} đ`}
+      canCreate={false}
+      rows={data?.rows ?? []}
+      columns={matchColumns}
+      rowKey={(r) => r.documentId}
+      loading={report.isLoading}
+      onOpenRow={(r) => navigate(`/kho/grn/${r.documentId}`)}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : data ? (
+          <Alert
+            type={data.mismatch > 0 ? 'warning' : 'info'}
+            showIcon
+            title={
+              `Khớp ${data.matched} · Chưa có hóa đơn ${data.noInvoice} · Lệch tiền ${data.mismatch} · Có cảnh báo ${data.withIssues} phiếu. ` +
+              `Tiền nhận ${formatMoney(data.receiptTotal)} – tiền hóa đơn đã nhập ${formatMoney(data.invoiceTotal)}.` +
+              (data.hiddenDocuments > 0 ? ` Bỏ qua ${data.hiddenDocuments} phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn.` : '')
+            }
+          />
+        ) : null
+      }
+      onClearFilters={() => setFilter(defaultMatchFilter())}
+      filters={
+        <>
+          <LogDateRangeFilter value={filter} onChange={(r) => setFilter({ ...filter, ...r })} />
+          <FilterField label="Dung sai (đ)" width={120}>
+            {(id) => (
+              <InputNumber
+                {...vnNumberInput}
+                id={id}
+                min={0}
+                precision={0}
+                value={filter.tolerance}
+                onChange={(v) => setFilter({ ...filter, tolerance: Number(v ?? 0) })}
+                style={{ width: '100%' }}
+              />
+            )}
+          </FilterField>
+          <FilterField label="Hiển thị" width={170}>
+            {(id) => (
+              <Checkbox id={id} checked={filter.onlyIssues} onChange={(e) => setFilter({ ...filter, onlyIssues: e.target.checked })}>
+                Chỉ phiếu có cảnh báo
+              </Checkbox>
+            )}
+          </FilterField>
+        </>
+      }
     />
   )
 }

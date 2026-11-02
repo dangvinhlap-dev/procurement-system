@@ -627,7 +627,7 @@ Mọi form chứng từ dùng **một khuôn chung** (`DocumentForm`): thanh cô
 
 | Phần | Trường |
 | --- | --- |
-| Đầu phiếu | Số phiếu, ngày nhập (quyết định kỳ kho), công ty, kho nhập, NCC, PO (một hoặc nhiều PO của cùng NCC), số hóa đơn, ký hiệu, ngày hóa đơn, số phiếu giao hàng, người giao, ghi chú |
+| Đầu phiếu | Số phiếu, ngày nhập (quyết định kỳ kho), công ty, kho nhập, NCC, PO (một hoặc nhiều PO của cùng NCC), số hóa đơn, ký hiệu, ngày hóa đơn, tiền hóa đơn gồm VAT (mục 18.15 – cập nhật được sau ghi sổ), số phiếu giao hàng, người giao, ghi chú |
 | Dòng | Mã hàng, ĐVT, SL theo PO (chỉ đọc), SL thực nhận, SL quy đổi ĐVT cơ sở (chỉ đọc), đơn giá, thành tiền, VAT, số lô, hạn dùng, vị trí kho con (nếu nhập thẳng kho con) |
 | Chi phí mua | Bảng phụ: vận chuyển, bốc xếp, bảo hiểm…; tiêu thức phân bổ (theo giá trị / số lượng / trọng lượng) vào giá nhập từng dòng |
 
@@ -1113,7 +1113,7 @@ Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám s�
 | PO lấy giá hợp đồng/bảng giá; sửa giá bắt buộc lý do + duyệt ngoại lệ, đánh dấu "ngoài hợp đồng" | 6.7, 8.5 (giá PO nhập tay) | C1 |
 | Bảng giá NCC (cả bảng riêng công ty) phải duyệt mới hiệu lực; người lập không tự duyệt | 8.5 (vòng đời bảng giá) | B1 |
 | RFQ dưới số NCC tối thiểu vẫn gửi được khi có giải trình; kết quả chọn thầu phải được hội đồng duyệt | 8.6 | B3 |
-| Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 |
+| Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 – mục 18.15 |
 | Hợp đồng nguyên tắc: mỗi pháp nhân một hợp đồng, dùng chung bảng giá; hiệu lực, sản lượng dự kiến, thanh toán, chiết khấu, chế tài, đơn vị được phép đặt; phụ lục; phải duyệt | 1.2 (hợp đồng khung) | B4 |
 | Danh mục bộ phận theo công ty; PR bắt buộc chọn bộ phận | 5.1, 10.2 (bộ phận dạng chữ, không bắt buộc) | A2 |
 | Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" (**hoãn 02/11/2026 – chỉ làm khi người dùng ra lệnh**) | mới | C3 |
@@ -1383,6 +1383,24 @@ không một mình xác nhận giao nhận).
 
 Migration `V0_13_0_KiemTraNhanHang` (cột `DeliveredQty`, `RejectedQty`, `QcResult`, `QcNote` của `InventoryDocumentLine`; `RequireReceiptQc`,
 `SeparatePoCreatorFromReceipt` của `CompanyParameter` – `Down()` xóa các cột, mất kết quả kiểm tra và hai tham số).
+
+### 18.15 Đối chiếu PO – phiếu nhận – hóa đơn (lát C6, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT V8, M5 (quyết định 6 giữ nguyên: công nợ, thanh toán ở phần mềm kế toán; hệ thống chỉ thêm báo cáo đối chiếu cho
+kế toán). Phiếu nhập theo PO đã bị buộc đúng mặt hàng, ĐVT, đơn giá ròng, thuế suất của dòng PO và SL không vượt SL đặt (mục 6.7), nên chỗ
+lệch còn lại là **hóa đơn NCC** và **ngày**.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu nhập mua NCC có thêm **Tiền hóa đơn (gồm VAT)** – tổng thanh toán ghi trên hóa đơn NCC, numeric(19,2), không bắt buộc, không âm. Chỉ để đối chiếu; giá nhập kho, giá vốn vẫn theo đơn giá dòng | V8 – nhập tiền hóa đơn NCC trên phiếu nhập |
+| **Cập nhật hóa đơn** (nút trên phiếu, `PUT /api/goods-receipts/{id}/invoice`, quyền lập chứng từ kho, thấy hết mặt hàng trên phiếu): số, ký hiệu, ngày, tiền hóa đơn sửa được cả khi phiếu **đã ghi sổ, kỳ đã đóng**; phiếu đã hủy thì không. Không đổi sổ kho; mọi thay đổi vào AuditLog | Hóa đơn thường về sau khi nhập; các trường này không phải số liệu kho nên không vướng quy tắc "chứng từ đã ghi sổ không sửa" |
+| Báo cáo **Đối chiếu PO – nhận – hóa đơn** (màn hình MATCH3, Báo cáo, quyền `Report.Purchase.View`, `GET /api/reports/three-way-match`): mỗi phiếu nhập mua đã ghi sổ trong khoảng ngày nhập (tối đa 1 năm) tại công ty đang làm việc một dòng – PO, ngày PO, ngày duyệt PO, tổng tiền PO, tiền nhận (tiền hàng + VAT của phiếu), số/ký hiệu/ngày/tiền hóa đơn, chênh lệch = hóa đơn − nhận | Báo cáo cho kế toán (M5) |
+| **Kết quả**: Chưa có hóa đơn (thiếu số hoặc tiền hóa đơn) / Lệch tiền (\|chênh lệch\| > dung sai) / Khớp. **Dung sai** (đ, mặc định 0) người xem nhập trên bộ lọc – cho chênh làm tròn VAT | Kế toán tự chọn mức chấp nhận |
+| **Cảnh báo**: hóa đơn lệch tiền nhận; **hóa đơn tính cả hàng thiếu/không đạt** (có dòng nhận đạt ít hơn chứng từ giao mà hóa đơn cao hơn tiền nhận quá dung sai – V7); nhập không theo PO; **nhận hàng trước ngày PO**; nhận hàng trước ngày duyệt PO; **hóa đơn trước ngày PO** | Kiểm soát chống hợp thức hóa thật sự (mục 18.11): hàng/hóa đơn có trước đơn |
+| Phiếu có mặt hàng ngoài phạm vi nhóm hàng của người xem bị bỏ qua cả phiếu (đếm số phiếu bỏ qua trên đầu báo cáo) | Không đối chiếu tiền cả phiếu khi chỉ thấy một phần; không bỏ qua filter phạm vi |
+| Chưa làm: trừ phiếu xuất trả NCC / hóa đơn điều chỉnh khỏi tiền nhận; một hóa đơn cho nhiều phiếu nhập; đối chiếu theo PO gộp nhiều lần nhận | Làm khi kế toán yêu cầu |
+
+Migration `V0_13_0_TienHoaDonPhieuNhap` (cột `InvoiceAmount` của `InventoryDocument` – `Down()` xóa cột, mất tiền hóa đơn đã nhập).
 
 ## Nguồn tham khảo
 

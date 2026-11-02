@@ -327,6 +327,80 @@ export function useReceiptQuality(range: { from: string; to: string }) {
   })
 }
 
+/** Kết quả đối chiếu một phiếu nhập: khớp, chưa có hóa đơn, lệch tiền (design.md mục 18.15). */
+export type ThreeWayMatchStatus = 'Matched' | 'NoInvoice' | 'Mismatch'
+
+/** Mã cảnh báo của báo cáo đối chiếu PO – nhận – hóa đơn. */
+export type ThreeWayMatchIssue =
+  | 'NoInvoice'
+  | 'AmountMismatch'
+  | 'InvoiceIncludesShortage'
+  | 'NoPurchaseOrder'
+  | 'ReceivedBeforeOrder'
+  | 'ReceivedBeforeApproval'
+  | 'InvoiceBeforeOrder'
+
+/** Một phiếu nhập mua trên báo cáo đối chiếu PO – nhận – hóa đơn. */
+export interface ThreeWayMatchRow {
+  documentId: string
+  documentNo: string
+  date: string
+  supplierCode: string
+  supplierName: string
+  purchaseOrderId: string | null
+  purchaseOrderNo: string | null
+  purchaseOrderDate: string | null
+  purchaseOrderApprovedDate: string | null
+  orderTotal: number | null
+  receiptTotal: number
+  invoiceNo: string | null
+  invoiceSeries: string | null
+  invoiceDate: string | null
+  invoiceAmount: number | null
+  difference: number | null
+  result: ThreeWayMatchStatus
+  issues: ThreeWayMatchIssue[]
+}
+
+/** Báo cáo đối chiếu PO – nhận – hóa đơn: dòng và tổng hợp. */
+export interface ThreeWayMatchResult {
+  rows: ThreeWayMatchRow[]
+  matched: number
+  noInvoice: number
+  mismatch: number
+  withIssues: number
+  receiptTotal: number
+  invoiceTotal: number
+  hiddenDocuments: number
+}
+
+/** Điều kiện báo cáo đối chiếu: khoảng ngày nhập, dung sai tiền (đ), chỉ phiếu có cảnh báo. */
+export interface ThreeWayMatchFilter {
+  from: string
+  to: string
+  tolerance: number
+  onlyIssues: boolean
+}
+
+/**
+ * Đối chiếu PO – nhận – hóa đơn theo ngày phiếu nhập mua đã ghi sổ (design.md mục 18.15).
+ * @param filter Điều kiện lọc.
+ */
+export function useThreeWayMatch(filter: ThreeWayMatchFilter) {
+  const companyId = useCompanyId()
+  const query = new URLSearchParams({
+    from: filter.from,
+    to: filter.to,
+    tolerance: String(filter.tolerance),
+    onlyIssues: String(filter.onlyIssues),
+  }).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'three-way-match', query],
+    queryFn: () => apiFetch<ThreeWayMatchResult>(`/api/reports/three-way-match?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Loại yêu cầu tính SLA (design.md mục 18.13). */
 export type SlaCategory = 'Priced' | 'Sourcing' | 'Urgent'
 
