@@ -92,6 +92,11 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await buyer.getByLabel('Đơn giá dòng 1').fill('48000')
   await buyer.getByLabel('Đơn giá dòng 1').press('Tab')
   await expect(buyer.locator('.document-form-footer')).toContainText('633.600')
+  // Mua khẩn cấp (design.md mục 18.11): bắt buộc lý do, hạn bổ sung hồ sơ tự điền +7 ngày.
+  await buyer.getByRole('combobox', { name: 'Loại mua', exact: true }).click()
+  await pickOption(buyer, 'Khẩn cấp')
+  await expect(buyer.getByLabel('Hạn bổ sung hồ sơ')).not.toHaveValue('')
+  await buyer.getByLabel('Lý do khẩn cấp').fill('Máy cán dừng vì gãy bulông')
   await buyer.keyboard.press('Control+s')
   await expect(buyer.locator('.ant-message')).toContainText(/Đã lưu phiếu PO-BHA-\d{4}-\d{4}\./)
   await expect(buyer.locator('.document-form-number')).toHaveText(/^PO-BHA-\d{4}-\d{4}$/)
@@ -105,6 +110,15 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await openByCommand(page, 'TODO')
   await page.locator('.data-grid-row', { hasText: poNo }).dblclick()
   await confirm(page, 'Duyệt', `Đã duyệt xong phiếu ${poNo}.`)
+
+  // 4b. Người lập xác nhận đã bổ sung hồ sơ mua khẩn cấp.
+  await buyer.reload()
+  await expect(buyer.getByRole('alert').filter({ hasText: 'Mua khẩn cấp' })).toContainText('Hạn bổ sung hồ sơ')
+  await buyer.getByRole('button', { name: /Đã bổ sung hồ sơ$/ }).click()
+  await buyer.getByLabel('Hồ sơ đã bổ sung (bắt buộc)').fill('Biên bản sự cố máy cán, 3 báo giá')
+  await buyer.getByRole('dialog').getByRole('button', { name: /Xác nhận$/ }).click()
+  await expect(buyer.locator('.ant-message')).toContainText(`Đã xác nhận bổ sung hồ sơ đơn ${poNo}.`)
+  await expect(buyer.getByRole('alert').filter({ hasText: 'đã bổ sung hồ sơ' })).toContainText('Biên bản sự cố máy cán')
 
   // 5. Phiếu nhập theo PO: chọn PO, lấy dòng còn lại (giá 48.000 theo PO), ghi sổ → PO Đã nhận đủ.
   await openByCommand(page, 'GRN')

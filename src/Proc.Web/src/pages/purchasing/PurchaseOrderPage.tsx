@@ -1,4 +1,4 @@
-import { DollarOutlined, FileAddOutlined, WarningFilled } from '@ant-design/icons'
+import { DollarOutlined, FileAddOutlined, FileDoneOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table, Tooltip } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,12 +10,15 @@ import { pickSupplierPrice, useSupplierPrices } from '../../api/pricing'
 import {
   priceSourceLabels,
   purchaseStatusLabels,
+  purchaseTypeLabels,
+  useCompletePoDocs,
   purchaseStatusTone,
   useOpenRequestLines,
   usePurchaseMutations,
   usePurchaseOrder,
   type OpenRequestLine,
   type PurchaseOrder,
+  type PurchaseType,
   type SavePurchaseOrderInput,
 } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
@@ -48,6 +51,9 @@ const netPrice = (price: number, discountPct: number) => Math.round(price * (100
 interface PoFormValues {
   date: Dayjs
   departmentId?: string | null
+  purchaseType: PurchaseType
+  emergencyReason?: string
+  docsDueDate?: Dayjs | null
   supplierId?: string
   warehouseId?: string
   expectedDate?: Dayjs | null
@@ -84,7 +90,7 @@ export function PurchaseOrderPage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
   const { hasPermission } = useAuth()
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const [form] = Form.useForm<PoFormValues>()
   const order = usePurchaseOrder(isNew ? null : id)
   const mutations = usePurchaseMutations<PurchaseOrder, SavePurchaseOrderInput>('purchase-orders')
@@ -117,6 +123,38 @@ export function PurchaseOrderPage() {
   const supplierId = Form.useWatch('supplierId', form) as string | undefined
   const orderDate = Form.useWatch('date', form) as Dayjs | undefined
   const departmentId = Form.useWatch('departmentId', form) as string | null | undefined
+  const purchaseType = Form.useWatch('purchaseType', form) as PurchaseType | undefined
+  const completeDocs = useCompletePoDocs()
+
+  /** Hộp thoại xác nhận đã bổ sung hồ sơ PO khẩn cấp: ghi chú bắt buộc (hồ sơ đã đính kèm ở tab Đính kèm). */
+  const confirmCompleteDocs = () => {
+    if (!doc) return
+    let note = ''
+    modal.confirm({
+      title: `Xác nhận đã bổ sung hồ sơ đơn ${doc.no}?`,
+      content: (
+        <>
+          <label htmlFor="docs-note">Hồ sơ đã bổ sung (bắt buộc)</label>
+          <Input.TextArea id="docs-note" rows={3} maxLength={500} placeholder="Ví dụ: biên bản sự cố, 3 báo giá so sánh – đã đính kèm"
+            onChange={(e) => (note = e.target.value)} />
+        </>
+      ),
+      okText: 'Xác nhận',
+      cancelText: 'Không',
+      onOk: async () => {
+        if (!note.trim()) {
+          message.error('Hãy ghi hồ sơ đã bổ sung.')
+          throw new Error('missing note')
+        }
+        try {
+          await completeDocs.mutateAsync({ id: doc.id, note: note.trim() })
+          message.success(`Đã xác nhận bổ sung hồ sơ đơn ${doc.no}.`)
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Không xác nhận được.')
+        }
+      },
+    })
+  }
   const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds, departmentId)
   const departments = useDepartments()
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn hiện tên (như PR – design.md mục 18.5).
@@ -189,6 +227,9 @@ export function PurchaseOrderPage() {
     form.setFieldsValue({
       date: dayjs(doc.date),
       departmentId: doc.departmentId,
+      purchaseType: doc.purchaseType,
+      emergencyReason: doc.emergencyReason ?? '',
+      docsDueDate: doc.docsDueDate ? dayjs(doc.docsDueDate) : null,
       supplierId: doc.supplierId,
       warehouseId: doc.warehouseId,
       expectedDate: doc.expectedDate ? dayjs(doc.expectedDate) : null,
@@ -225,6 +266,9 @@ export function PurchaseOrderPage() {
     const input: SavePurchaseOrderInput = {
       date: values.date.format('YYYY-MM-DD'),
       departmentId: values.departmentId ?? null,
+      purchaseType: values.purchaseType ?? 'Normal',
+      emergencyReason: values.purchaseType === 'Emergency' ? orNull(values.emergencyReason) : null,
+      docsDueDate: values.purchaseType === 'Emergency' && values.docsDueDate ? values.docsDueDate.format('YYYY-MM-DD') : null,
       supplierId: values.supplierId!,
       warehouseId: values.warehouseId!,
       expectedDate: values.expectedDate ? values.expectedDate.format('YYYY-MM-DD') : null,
@@ -432,6 +476,18 @@ export function PurchaseOrderPage() {
     { key: 'pr', title: 'PR nguồn', width: 130, render: (_, index) => readonlyCell(savedLine(index)?.sourcePrNo ?? (lines[index]?.sourcePrLineId ? '(từ PR)' : '')) },
   ]
 
+  /** Trạng thái hồ sơ khẩn cấp hiện ở đầu phiếu (design.md mục 18.11). */
+  const emergencyNotice =
+    doc?.purchaseType === 'Emergency' && doc.status !== 'Draft' && doc.status !== 'Cancelled' ? (
+      doc.docsCompletedAt ? (
+        <Alert type="success" showIcon
+          title={`Mua khẩn cấp – đã bổ sung hồ sơ ${formatDateTime(doc.docsCompletedAt)} (${doc.docsCompletedByName ?? ''}): ${doc.docsCompletionNote ?? ''}`} />
+      ) : (
+        <Alert type={doc.isDocsOverdue ? 'error' : 'warning'} showIcon
+          title={`Mua khẩn cấp: ${doc.emergencyReason ?? ''}. Hạn bổ sung hồ sơ ${formatDate(doc.docsDueDate)}${doc.isDocsOverdue ? ' – ĐÃ QUÁ HẠN' : ''}.`} />
+      )
+    ) : null
+
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
     : { label: doc ? purchaseStatusLabels[doc.status] : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
@@ -447,7 +503,8 @@ export function PurchaseOrderPage() {
         loading={order.isLoading}
         error={error ?? (order.error ? order.error.message : null)}
         notice={
-          noEligibleSupplier ? (
+          emergencyNotice ??
+          (noEligibleSupplier ? (
             <Alert type="warning" showIcon title={supplierHint} />
           ) : doc?.rejectReason && doc.status === 'Draft' ? (
             <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
@@ -457,14 +514,23 @@ export function PurchaseOrderPage() {
             <Alert type="warning" showIcon title="Có dòng lệch giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu): ghi lý do ở từng dòng; PO phải qua thêm chặng duyệt ngoại lệ giá." />
           ) : (
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
-          )
+          ))
         }
         form={form}
-        initialValues={{ date: dayjs(), receiveTolerancePct: 0, lines: [] }}
+        initialValues={{ date: dayjs(), receiveTolerancePct: 0, purchaseType: 'Normal', lines: [] }}
         readOnly={readOnly}
         onSave={save}
         onAddLine={() => addRef.current?.()}
-        actions={actions}
+        actions={
+          <>
+            {doc?.canCompleteDocs && (
+              <Button icon={<FileDoneOutlined />} onClick={confirmCompleteDocs} loading={completeDocs.isPending}>
+                Đã bổ sung hồ sơ
+              </Button>
+            )}
+            {actions}
+          </>
+        }
         header={
           <>
             <Form.Item label="Ngày đặt hàng" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
@@ -477,6 +543,26 @@ export function PurchaseOrderPage() {
                 options={(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
               />
             </Form.Item>
+            <Form.Item label="Loại mua" name="purchaseType" extra="Khẩn cấp: duyệt theo cấp riêng (POK), bổ sung hồ sơ sau trong hạn.">
+              <Select
+                options={Object.entries(purchaseTypeLabels).map(([value, label]) => ({ value, label }))}
+                onChange={(v: PurchaseType) => {
+                  if (v === 'Emergency' && !form.getFieldValue('docsDueDate'))
+                    form.setFieldValue('docsDueDate', (form.getFieldValue('date') as Dayjs | undefined ?? dayjs()).add(7, 'day'))
+                }}
+              />
+            </Form.Item>
+            {purchaseType === 'Emergency' && (
+              <>
+                <Form.Item label="Lý do khẩn cấp" name="emergencyReason" rules={[{ required: true, whitespace: true, message: 'Ghi lý do khẩn cấp.' }, { max: 500 }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item label="Hạn bổ sung hồ sơ" name="docsDueDate" rules={[{ required: true, message: 'Chọn hạn bổ sung hồ sơ.' }]}
+                  extra="Tối đa 30 ngày sau ngày đặt hàng.">
+                  <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+                </Form.Item>
+              </>
+            )}
             <Form.Item label="Bộ phận đặt hàng" name="departmentId" extra="Trống mà lấy dòng từ PR thì theo bộ phận của PR. Hợp đồng giới hạn bộ phận chỉ áp giá cho bộ phận được phép.">
               <Select allowClear showSearch={{ optionFilterProp: 'label' }} options={departmentOptions} loading={departments.isLoading} placeholder="Chọn bộ phận" />
             </Form.Item>

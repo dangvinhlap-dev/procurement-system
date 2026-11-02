@@ -85,6 +85,10 @@ export interface PurchaseListItem {
   outOfContract: boolean | null
   /** PO: có dòng lệch giá đã duyệt. */
   priceException: boolean | null
+  /** PO: loại mua (null với PR). */
+  purchaseType: PurchaseType | null
+  /** PO khẩn cấp quá hạn bổ sung hồ sơ. */
+  docsOverdue: boolean | null
 }
 
 /** Kết quả tìm PR/PO. */
@@ -248,12 +252,32 @@ export interface PurchaseOrder {
   departmentName: string | null
   /** Hợp đồng hiệu lực không cho bộ phận của PO đặt hàng – lý do không tính giá theo hợp đồng. */
   contractScopeNote: string | null
+  /** Loại mua (design.md mục 18.11). */
+  purchaseType: PurchaseType
+  emergencyReason: string | null
+  /** Hạn bổ sung hồ sơ của PO khẩn cấp. */
+  docsDueDate: string | null
+  docsCompletedAt: string | null
+  docsCompletedByName: string | null
+  docsCompletionNote: string | null
+  /** PO khẩn đã duyệt, quá hạn mà chưa xác nhận bổ sung hồ sơ. */
+  isDocsOverdue: boolean
+  canCompleteDocs: boolean
 }
+
+/** Loại mua của PO: thường hoặc khẩn cấp (duyệt theo cấp POK, bổ sung hồ sơ sau). */
+export type PurchaseType = 'Normal' | 'Emergency'
+
+/** Nhãn loại mua. */
+export const purchaseTypeLabels: Record<PurchaseType, string> = { Normal: 'Mua thường', Emergency: 'Khẩn cấp' }
 
 /** Nội dung PO gửi lên. */
 export interface SavePurchaseOrderInput {
   date: string
   departmentId: string | null
+  purchaseType: PurchaseType
+  emergencyReason: string | null
+  docsDueDate: string | null
   supplierId: string
   warehouseId: string
   expectedDate: string | null
@@ -393,6 +417,16 @@ export function usePurchaseOrder(id: string | null) {
     queryKey: ['purchasing', companyId, 'purchase-orders', id],
     queryFn: () => apiFetch<PurchaseOrder>(`/api/purchase-orders/${id}`),
     enabled: id !== null,
+  })
+}
+
+/** Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11); xong tải lại dữ liệu mua hàng. */
+export function useCompletePoDocs() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      apiFetch<PurchaseOrder>(`/api/purchase-orders/${id}/complete-docs`, { method: 'POST', body: { note } }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['purchasing'] }),
   })
 }
 

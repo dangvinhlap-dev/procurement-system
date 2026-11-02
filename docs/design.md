@@ -365,7 +365,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO; từ lát A3 thêm PRL, RFQ, NCC, CTR; lát B4b thêm CTA – phụ lục hợp đồng; lát B5b thêm NDQ – NCC độc quyền; lát C1 thêm POX – chặng ngoại lệ giá của PO – mục 18.6, 18.7, 18.9, 18.10): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
+| Quy trình duyệt (`ApprovalRule`) theo công ty × loại phiếu (PR, PO; từ lát A3 thêm PRL, RFQ, NCC, CTR; lát B4b thêm CTA – phụ lục hợp đồng; lát B5b thêm NDQ – NCC độc quyền; lát C1 thêm POX – chặng ngoại lệ giá của PO; lát C2a thêm POK – cấp duyệt PO khẩn cấp – mục 18.6, 18.7, 18.9, 18.10, 18.11): mỗi cấp có số cấp (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ tổng giá trị (PR: tổng dự kiến; PO: tổng thanh toán gồm VAT), lần lượt cấp thấp → cao. Quyền sửa quy trình: `System.Parameter.Manage` | Mục 5 (ApprovalRule), 6.2 |
 | Công ty chưa cấu hình quy trình cho loại phiếu → **một cấp**, ai có quyền duyệt (`Purchase.PR.Approve` / `Purchase.PO.Approve`) cũng duyệt được. Có cấu hình mà tổng dưới mọi ngưỡng → **duyệt ngay khi gửi** | Không chặn công ty chưa cấu hình; phiếu nhỏ không cần duyệt |
 | Người duyệt một cấp: có quyền duyệt loại phiếu **và** được gán vai trò của cấp đó tại công ty; **người lập không tự duyệt** phiếu của mình | Tách người lập – người duyệt (kiểm soát nội bộ) |
 | Vòng đời PR/PO: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; **từ chối** (bắt buộc lý do) thì về Nháp kèm lý do, gửi lại là lượt mới; PO nhận đủ → **Đã nhận đủ** (đóng). Lịch sử duyệt (`ApprovalStep`) gộp ApprovalRequest/ApprovalStep của mục 12.1 thành một bảng, lượt gửi phân biệt bằng `Round`; chỉ thêm, ghi kết quả, không xóa | Mục 10.1 thanh trạng thái phiếu |
@@ -1321,6 +1321,21 @@ Migration `V0_13_0_BoPhanPoDocQuyen` (lát C1b: cột `PurchaseOrder.DepartmentI
 hai cột, mất bộ phận đặt hàng và phiếu độc quyền đã ghi trên PO). Migration `V0_12_0_NguonGiaPo` (thêm cột `PriceSource`, `ApprovedUnitPrice`, `ApprovedDiscountPct`, `PriceListId`, `ContractId`,
 `SourceRfqLineId`, `PriceDeviationReason` vào `PurchaseOrderLine`; `HasPriceException`, `IsOutOfContract` vào `PurchaseOrder` – `Down()` xóa
 các cột, mất nguồn giá và lý do lệch giá đã ghi, AuditLog vẫn giữ).
+
+### 18.11 Mua khẩn cấp (lát C2a, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT V4 (mua khẩn cấp: duyệt theo cơ chế khẩn, hoàn thiện hồ sơ sau, không hợp thức hóa; KPI tỷ lệ mua khẩn cấp).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| PO có **Loại mua**: Mua thường (mặc định) / **Khẩn cấp**. Khẩn cấp bắt buộc **lý do** (≤ 500 ký tự) và **hạn bổ sung hồ sơ** (từ ngày đặt hàng đến tối đa 30 ngày sau; giao diện điền sẵn +7 ngày). Đổi về mua thường thì xóa lý do, hạn. PO cũ là mua thường | Mua khẩn phải có căn cứ và cam kết hoàn thiện hồ sơ |
+| **Duyệt theo cơ chế khẩn**: PO khẩn đi theo bộ cấp loại duyệt **POK** "Đơn mua hàng khẩn cấp" của công ty (APRL, theo ngưỡng tổng thanh toán, cùng quyền `Purchase.PO.Approve`) thay cho cấp PO thường; công ty chưa cấu hình POK thì vẫn theo cấp PO thường (không thoát duyệt). Lệch giá đã duyệt vẫn thêm chặng ngoại lệ POX (mục 18.10) | Duyệt nhanh nhưng vẫn có người chịu trách nhiệm |
+| **Không hợp thức hóa**: PO khẩn có ngày đặt hàng **trước hôm nay** không gửi duyệt được (lưu nháp được, sửa ngày là hôm nay) | Không dùng "khẩn cấp" để hợp thức hóa hàng đã mua trước khi có đơn |
+| **Hoàn thiện hồ sơ sau**: PO khẩn đã duyệt (hoặc đã nhận đủ) – người có quyền lập PO bấm **"Đã bổ sung hồ sơ"**, ghi chú bắt buộc (hồ sơ đính kèm ở tab Đính kèm); ghi người, thời điểm; xác nhận một lần, xác nhận trễ vẫn ghi ngày thực tế. **Quá hạn**: đã duyệt, quá hạn mà chưa xác nhận – đầu phiếu báo đỏ, danh sách PO cột Loại mua "Khẩn – quá hạn hồ sơ" | Theo dõi việc hoàn thiện hồ sơ; đo tỷ lệ mua khẩn, hồ sơ quá hạn (KPI đợt F) |
+| Chưa làm: thông báo tự động khi sắp/quá hạn hồ sơ, báo cáo tỷ lệ mua khẩn (đợt F); loại mua trên PR (PR đã có mức ưu tiên Khẩn) | Tách lát |
+
+Migration `V0_13_0_MuaKhanCap` (cột `PurchaseType` – PO cũ nhận 1 = mua thường, `EmergencyReason`, `DocsDueDate`, `DocsCompletedAt`,
+`DocsCompletedBy`, `DocsCompletionNote` trên `PurchaseOrder` – `Down()` xóa các cột, mất thông tin mua khẩn và xác nhận hồ sơ).
 
 ## Nguồn tham khảo
 
