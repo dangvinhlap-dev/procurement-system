@@ -146,6 +146,8 @@ export const screens: Screen[] = [
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SAVE', title: 'Tiết kiệm từ đấu thầu', navLabel: 'Tiết kiệm đấu thầu', path: '/bao-cao/tiet-kiem-dau-thau', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'PRCW', title: 'Giá mua & mua ngoài hợp đồng', navLabel: 'Mua ngoài hợp đồng', path: '/bao-cao/gia-mua-ngoai-hop-dong', icon: <AuditOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'PRVAR', title: 'Biến động giá mua', navLabel: 'Biến động giá mua', path: '/bao-cao/bien-dong-gia-mua', icon: <LineChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PHIS', title: 'Dữ liệu mua lịch sử', navLabel: 'Dữ liệu mua lịch sử', path: '/bao-cao/du-lieu-mua-lich-su', icon: <HistoryOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
   { code: 'PHMAP', title: 'Ánh xạ dữ liệu mua', navLabel: 'Ánh xạ dữ liệu mua', path: '/bao-cao/anh-xa-du-lieu-mua', icon: <NodeIndexOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
   { code: 'PHAN', title: 'Phân tích giá hợp nhất', navLabel: 'Phân tích giá hợp nhất', path: '/bao-cao/phan-tich-gia-hop-nhat', icon: <FundViewOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },

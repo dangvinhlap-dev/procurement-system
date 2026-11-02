@@ -373,6 +373,16 @@ public class PurchaseOrderPriceSourceTests
         Assert.Equal([1], normal.Approvals.Select(s => s.Stage));
     }
 
+    [Theory]
+    [InlineData("2026-10-01", "2026-10-31", "2026-09-01", "2026-09-30")]
+    [InlineData("2026-10-01", "2026-12-31", "2026-07-01", "2026-09-30")]
+    [InlineData("2026-03-01", "2026-03-31", "2026-02-01", "2026-02-28")]
+    [InlineData("2026-11-09", "2026-11-15", "2026-11-02", "2026-11-08")]
+    [InlineData("2026-10-05", "2026-10-31", "2026-09-08", "2026-10-04")]
+    public void BienDongGia_KyTruoc_TronThangLuiTheoThang_ConLaiLuiTheoNgay(string from, string to, string prevFrom, string prevTo) =>
+        Assert.Equal((DateOnly.Parse(prevFrom), DateOnly.Parse(prevTo)),
+            Proc.Infrastructure.Reports.PurchaseReportService.PreviousPeriod(DateOnly.Parse(from), DateOnly.Parse(to)));
+
     [Fact]
     public async Task BaoCaoTuan_GiaMuaNgoaiHopDong_BienDongGia()
     {

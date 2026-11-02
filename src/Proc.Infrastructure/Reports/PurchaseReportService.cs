@@ -475,9 +475,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
     public async Task<PriceVarianceResult> GetPriceVarianceAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken)
     {
         Check(period);
-        // Kỳ trước cùng số ngày, liền trước kỳ này: kỳ 09/11–15/11 → kỳ trước 02/11–08/11.
-        var days = period.To.DayNumber - period.From.DayNumber + 1;
-        var (prevFrom, prevTo) = (period.From.AddDays(-days), period.From.AddDays(-1));
+        var (prevFrom, prevTo) = PreviousPeriod(period.From, period.To);
         List<Guid>? categoryIds = null;
         if (categoryId is { } c)
         {
@@ -510,6 +508,25 @@ public sealed class PurchaseReportService : IPurchaseReportService
             .OrderByDescending(r => Math.Abs(r.ImpactAmount ?? 0m)).ThenBy(r => r.ItemCode)
             .ToList();
         return new PriceVarianceResult(prevFrom, prevTo, rows.Sum(r => r.ImpactAmount ?? 0m), rows);
+    }
+
+    /// <summary>
+    /// Kỳ so sánh liền trước kỳ này: khoảng trọn tháng (từ ngày 1 đến cuối tháng) thì lùi cùng số tháng – tháng 10 → tháng 9, quý IV → quý III;
+    /// còn lại lùi cùng số ngày – 09/11–15/11 → 02/11–08/11.
+    /// </summary>
+    /// <param name="from">Đầu kỳ này.</param>
+    /// <param name="to">Cuối kỳ này.</param>
+    /// <returns>Đầu, cuối kỳ trước.</returns>
+    public static (DateOnly From, DateOnly To) PreviousPeriod(DateOnly from, DateOnly to)
+    {
+        if (from.Day == 1 && to.AddDays(1).Day == 1)
+        {
+            var months = (to.Year * 12 + to.Month) - (from.Year * 12 + from.Month) + 1;
+            return (from.AddMonths(-months), from.AddDays(-1));
+        }
+
+        var days = to.DayNumber - from.DayNumber + 1;
+        return (from.AddDays(-days), from.AddDays(-1));
     }
 
     private static decimal Share(decimal part, decimal total) => total == 0 ? 0 : Math.Round(part * 100m / total, 2, MidpointRounding.AwayFromZero);

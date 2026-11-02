@@ -251,7 +251,7 @@ public sealed record OutOfContractLineDto(
 public sealed record ContractComplianceResult(
     int OrderCount, decimal TotalAmount, decimal? CompliancePct, IReadOnlyList<PriceSourceSummaryDto> Sources, IReadOnlyList<OutOfContractLineDto> Lines);
 
-/// <summary>Biến động giá mua một mặt hàng: kỳ này so kỳ trước cùng độ dài (design.md mục 18.17). Giá theo ĐVT cơ sở, sau chiết khấu, trước VAT.</summary>
+/// <summary>Biến động giá mua một mặt hàng: kỳ này so kỳ trước liền trước (design.md mục 18.17). Giá theo ĐVT cơ sở, sau chiết khấu, trước VAT.</summary>
 /// <param name="ItemId">Mặt hàng.</param>
 /// <param name="ItemCode">Mã hàng.</param>
 /// <param name="ItemName">Tên hàng.</param>
@@ -354,7 +354,7 @@ public interface IPurchaseReportService
     Task<ContractComplianceResult> GetContractComplianceAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Biến động giá mua (design.md mục 18.17): giá bình quân gia quyền theo ĐVT cơ sở của dòng PO đã duyệt kỳ này so với kỳ trước cùng số ngày.
+    /// Biến động giá mua (design.md mục 18.17): giá bình quân gia quyền theo ĐVT cơ sở của dòng PO đã duyệt kỳ này so với kỳ trước liền trước (khoảng trọn tháng thì lùi cùng số tháng, còn lại cùng số ngày).
     /// </summary>
     /// <param name="period">Kỳ này (khoảng ngày PO), phạm vi.</param>
     /// <param name="categoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm.</param>
