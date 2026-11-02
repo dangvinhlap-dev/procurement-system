@@ -300,3 +300,29 @@ public sealed class SaveQuotationRequestValidator : AbstractValidator<SaveQuotat
         RuleForEach(x => x.Lines).ChildRules(l => l.RuleFor(x => x.Note).MaximumLength(500));
     }
 }
+
+/// <summary>Giá trúng thầu của một dòng RFQ đã chọn thầu (nguồn giá PO – design.md mục 18.10).</summary>
+/// <param name="RfqLineId">Dòng RFQ.</param>
+/// <param name="RfqNo">Số RFQ.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT.</param>
+/// <param name="UnitPrice">Đơn giá báo giá trúng thầu, trước CK.</param>
+/// <param name="DiscountPct">% chiết khấu báo giá.</param>
+public sealed record RfqAwardPriceDto(Guid RfqLineId, string RfqNo, Guid ItemId, Guid UomId, decimal UnitPrice, decimal DiscountPct);
+
+/// <summary>
+/// Đọc giá trúng thầu cho module mua hàng (module chỉ gọi nhau qua interface – CLAUDE.md mục 3). Tách khỏi <see cref="IRfqService"/>
+/// vì RfqService đã dùng <see cref="IPurchaseOrderService"/> để lập PO (tránh phụ thuộc vòng).
+/// </summary>
+public interface IRfqAwardPriceReader
+{
+    /// <summary>
+    /// Giá trúng thầu của các dòng RFQ thuộc công ty đang làm việc, RFQ ở trạng thái Đã chọn thầu (kết quả đã duyệt) và dòng trúng
+    /// thầu cho đúng NCC. Dòng không thỏa thì không có trong kết quả.
+    /// </summary>
+    /// <param name="supplierId">NCC của PO.</param>
+    /// <param name="rfqLineIds">Các dòng RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Giá theo dòng RFQ.</returns>
+    Task<IReadOnlyList<RfqAwardPriceDto>> GetAsync(Guid supplierId, IReadOnlyList<Guid> rfqLineIds, CancellationToken cancellationToken);
+}

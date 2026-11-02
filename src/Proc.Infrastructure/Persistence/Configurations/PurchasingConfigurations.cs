@@ -158,5 +158,14 @@ internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<
         builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<PurchaseRequestLine>().WithMany().HasForeignKey(x => x.SourcePrLineId).OnDelete(DeleteBehavior.Restrict);
+        // Nguồn giá (lát C1 – design.md mục 18.10). Dòng cũ nhận PriceSource = 0 (không xác định).
+        builder.Ignore(x => x.IsPriceDeviation);
+        builder.Ignore(x => x.IsOutOfContract);
+        builder.Property(x => x.ApprovedUnitPrice).HasPrecision(19, 6);
+        builder.Property(x => x.ApprovedDiscountPct).HasPrecision(9, 4);
+        builder.Property(x => x.PriceDeviationReason).HasMaxLength(500);
+        builder.HasOne<Proc.Domain.Pricing.SupplierPriceList>().WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Domain.Sourcing.RfqLine>().WithMany().HasForeignKey(x => x.SourceRfqLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }

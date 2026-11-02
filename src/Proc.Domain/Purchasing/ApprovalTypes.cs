@@ -26,11 +26,18 @@ public static class ApprovalTypes
     /// </summary>
     public const string ContractAmendment = "CTA";
 
+    /// <summary>
+    /// Ngoại lệ giá đơn mua hàng (lát C1, design.md mục 18.10): PO có dòng đơn giá khác giá đã duyệt phải qua thêm chặng duyệt này sau
+    /// các cấp duyệt PO thường, cùng quyền duyệt PO. Không phải loại phiếu riêng – chỉ là bộ cấp duyệt cấu hình riêng ở APRL.
+    /// </summary>
+    public const string PurchaseOrderPriceException = "POX";
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
         new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
         new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
+        new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),

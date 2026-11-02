@@ -168,6 +168,8 @@ public class SourcingTests
         Assert.Equal(("Draft", a, 2), (po.Status, po.SupplierId, po.Lines.Count));
         Assert.Equal([(50_000m, 0m, "10"), (600_000m, 5m, "8")], po.Lines.Select(l => (l.UnitPrice, l.DiscountPct, l.VatCode)));
         Assert.Equal(10_700_000m, po.TotalAmount);
+        // Nguồn giá: giá trúng thầu đã được hội đồng duyệt (design.md mục 18.10) – không lệch, không ngoài hợp đồng.
+        Assert.All(po.Lines, l => Assert.Equal(("Rfq", rfq.No, false, false), (l.PriceSource, l.SourceRfqNo, l.IsPriceDeviation, l.IsOutOfContract)));
         Assert.Contains("đã có đơn mua hàng", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/create-orders", null, Ct)));
         Assert.Equal(po.No, (await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct))).Suppliers.Single(s => s.SupplierId == a).PurchaseOrderNo);
 
