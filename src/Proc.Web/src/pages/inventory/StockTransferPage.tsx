@@ -1,6 +1,7 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { Alert, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import {
   documentStatusLabels,
@@ -87,18 +88,15 @@ export function StockTransferPage() {
     return stock.data.filter((s) => s.itemId === line.itemId && (lot === null || s.lotNo === lot)).reduce((sum, s) => sum + s.qty, 0)
   }
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      fromWarehouseId: doc.fromWarehouseId ?? undefined,
-      toWarehouseId: doc.toWarehouseId ?? undefined,
-      deliverer: doc.deliverer ?? '',
-      receiver: doc.receiver ?? '',
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    fromWarehouseId: doc.fromWarehouseId ?? undefined,
+    toWarehouseId: doc.toWarehouseId ?? undefined,
+    deliverer: doc.deliverer ?? '',
+    receiver: doc.receiver ?? '',
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
+  }))
 
   const persist = async (): Promise<InventoryDocument | null> => {
     let values: TransferFormValues
@@ -126,7 +124,10 @@ export function StockTransferPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

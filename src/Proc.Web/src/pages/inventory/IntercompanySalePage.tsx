@@ -1,3 +1,4 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Popconfirm, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -103,19 +104,16 @@ export function IntercompanySalePage() {
     if (isNew && mainWarehouses.length === 1 && !form.getFieldValue('fromWarehouseId')) form.setFieldValue('fromWarehouseId', mainWarehouses[0].id)
   }, [isNew, mainWarehouses, form])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      fromWarehouseId: doc.fromWarehouseId ?? undefined,
-      buyerCompanyId: doc.counterCompanyId ?? undefined,
-      invoiceNo: doc.invoiceNo ?? '',
-      invoiceDate: doc.invoiceDate ? dayjs(doc.invoiceDate) : null,
-      deliverer: doc.deliverer ?? '',
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    fromWarehouseId: doc.fromWarehouseId ?? undefined,
+    buyerCompanyId: doc.counterCompanyId ?? undefined,
+    invoiceNo: doc.invoiceNo ?? '',
+    invoiceDate: doc.invoiceDate ? dayjs(doc.invoiceDate) : null,
+    deliverer: doc.deliverer ?? '',
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({ id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, lotNo: l.lotNo ?? '', note: l.note ?? '' })),
+  }))
 
   /**
    * Đơn giá, thuế suất, thành tiền, VAT của một dòng: phiếu đã lưu dùng số của server; phiếu đang sửa tính trước từ giá nội bộ
@@ -183,7 +181,10 @@ export function IntercompanySalePage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

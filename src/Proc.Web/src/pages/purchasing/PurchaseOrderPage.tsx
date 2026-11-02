@@ -1,3 +1,4 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { DollarOutlined, FileAddOutlined, FileDoneOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table, Tooltip } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -222,29 +223,26 @@ export function PurchaseOrderPage() {
     if (isNew && mainWarehouse && !form.getFieldValue('warehouseId')) form.setFieldValue('warehouseId', mainWarehouse)
   }, [isNew, mainWarehouse, form])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      departmentId: doc.departmentId,
-      purchaseType: doc.purchaseType,
-      emergencyReason: doc.emergencyReason ?? '',
-      docsDueDate: doc.docsDueDate ? dayjs(doc.docsDueDate) : null,
-      supplierId: doc.supplierId,
-      warehouseId: doc.warehouseId,
-      expectedDate: doc.expectedDate ? dayjs(doc.expectedDate) : null,
-      paymentTerms: doc.paymentTerms ?? '',
-      deliveryTerms: doc.deliveryTerms ?? '',
-      deliveryAddress: doc.deliveryAddress ?? '',
-      receiveTolerancePct: doc.receiveTolerancePct,
-      note: doc.note ?? '',
-      lines: doc.lines.map((l) => ({
-        id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode,
-        deliveryDate: l.deliveryDate ? dayjs(l.deliveryDate) : null, note: l.note ?? '', sourcePrLineId: l.sourcePrLineId,
-        priceDeviationReason: l.priceDeviationReason ?? '', sourceRfqLineId: l.sourceRfqLineId,
-      })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    departmentId: doc.departmentId,
+    purchaseType: doc.purchaseType,
+    emergencyReason: doc.emergencyReason ?? '',
+    docsDueDate: doc.docsDueDate ? dayjs(doc.docsDueDate) : null,
+    supplierId: doc.supplierId,
+    warehouseId: doc.warehouseId,
+    expectedDate: doc.expectedDate ? dayjs(doc.expectedDate) : null,
+    paymentTerms: doc.paymentTerms ?? '',
+    deliveryTerms: doc.deliveryTerms ?? '',
+    deliveryAddress: doc.deliveryAddress ?? '',
+    receiveTolerancePct: doc.receiveTolerancePct,
+    note: doc.note ?? '',
+    lines: doc.lines.map((l) => ({
+      id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode,
+      deliveryDate: l.deliveryDate ? dayjs(l.deliveryDate) : null, note: l.note ?? '', sourcePrLineId: l.sourcePrLineId,
+      priceDeviationReason: l.priceDeviationReason ?? '', sourceRfqLineId: l.sourceRfqLineId,
+    })),
+  }))
 
   const totals = lines.reduce(
     (sum, l) => {
@@ -284,7 +282,10 @@ export function PurchaseOrderPage() {
       })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null

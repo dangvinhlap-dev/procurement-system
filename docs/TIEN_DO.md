@@ -120,8 +120,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 - Không có lát đang dở. Đợt đề xuất Ban Cung ứng (E1 → F4) đã xong hết trừ **C3 (hoãn chờ lệnh)**. Bản **0.13.0** đã phát hành
   02/11/2026: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0 (bản cài thử ở http://localhost:5005).
-  Lát kế tiếp đề xuất: sửa **lỗi form chứng từ nạp đè chữ đang gõ** (mục "Lỗi cần sửa" bên dưới), rồi
-  lỗi trang trắng sau đăng xuất, test `supplier-links` chập chờn (mục Việc tiếp theo 4–5) – lập kế hoạch ngắn trước khi code.
+  Lỗi form nạp đè chữ đang gõ đã sửa (bên dưới). Lát kế tiếp đề xuất: lỗi trang trắng sau đăng xuất, test `supplier-links` chập chờn
+  (mục Việc tiếp theo 4–5) – lập kế hoạch ngắn trước khi code.
 - **F4b (xong, đã merge `main` 02/11/2026): chiết khấu doanh số/tài trợ trên hợp đồng + theo dõi thực nhận (P10)** – design.md mục 18.21.
   - `PurchaseContractRebate` (cam kết: loại, % hoặc số tiền cố định mỗi kỳ, doanh số tối thiểu, kỳ Quý/Năm/Cả HĐ – sửa khi Nháp qua
     `SaveContractRequest.Rebates`, null = giữ nguyên), `ContractRebateReceipt` (thực nhận, hủy có lý do, kỳ nhận diện bằng ngày đầu kỳ),
@@ -192,10 +192,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     chứng từ trả khóa dòng + cột. F1 trên ô lưới danh sách của 26 màn hình (`auditEntity` của ListPage/DataGrid). Test tích hợp
     `ChangeHistoryTests`, e2e `field-help-catalog.spec.ts`.
   - Kiểm tra cuối (02/11/2026): `dotnet test` 480 qua; Playwright 81/81; `npm run build`, `tsc`, `oxlint` qua. Không có migration.
-- **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
-  `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
-  (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi
-  phiếu đổi phiên bản/Id hoặc ngay sau khi lưu thành công, không nạp đè khi form đang có thay đổi chưa lưu.
+- **Sửa lỗi form chứng từ nạp đè chữ đang gõ (xong 02/11/2026, nhánh `fix/form-nap-de`)**: hook dùng chung
+  `components/DocumentForm/useDocumentFormSync.ts` – chỉ nạp form khi giá trị form tính từ phiếu khác lần nạp trước; lưu thành công thì
+  nạp ngay phiếu vừa lưu (Id dòng mới) nên lượt tải lại sau đó bị bỏ qua. Áp cho PO, PR, GRN, trả hàng, ICS, ICR, TRF, bảng giá NCC,
+  hợp đồng, RFQ, phiếu tìm nguồn. Sửa kèm lỗi tiềm ẩn **tạo trùng phiếu**: sau khi tạo, trang chuyển sang Id mới trong chuyển trang
+  nền nên lúc máy bận nút lệnh còn giữ `isNew` cũ – bấm Gửi duyệt ngay thì gọi tạo lần nữa; nay `persist` lưu theo `targetId()` (Id phiếu
+  đã lưu giữ trong ref). Ngăn kéo phụ lục hợp đồng (`ContractAmendmentDrawer`) và ngăn kéo danh mục chưa đổi (nạp theo cách
+  khác – làm khi có lỗi). e2e `pricing` bỏ bước tải lại trang: làm chậm lượt tải phiếu, gõ lý do lệch giá trước khi tải xong (đã thử tắt
+  cơ chế → test hỏng đúng như lỗi cũ). Kiểm tra: Playwright 87/87, `pricing` lặp 8 lần × 4 luồng qua; `npm run build`, `tsc`, `oxlint` qua;
+  không sửa backend nên không chạy lại `dotnet test` (API đang chạy khóa DLL).
 - **HOÃN – chờ lệnh người dùng: lát C3 (ngân sách công ty × bộ phận × tháng)**. Người dùng yêu cầu 02/11/2026: không làm ngân sách lúc
   này, **chỉ làm khi người dùng ra lệnh**. Nội dung đã chốt để làm sau: ngân sách theo công ty × bộ phận × tháng; PR/PO kiểm tra, vượt
   ngân sách không chặn mà thêm cấp duyệt "vượt ngân sách" (design.md mục 18 bảng quyết định; Phantich V1). Không tự đề xuất làm C3 khi

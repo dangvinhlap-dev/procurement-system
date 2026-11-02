@@ -1,7 +1,8 @@
+import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { CheckOutlined, CloseOutlined, FileSearchOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
 import { App, Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
 import { useSuppliers } from '../../api/masterData'
@@ -117,20 +118,17 @@ export function SourcingPage() {
   const watched = Form.useWatch('candidates', form) as CandidateValues[] | undefined
   const usedSuppliers = useMemo(() => new Set((watched ?? []).map((c) => c?.supplierId).filter(Boolean)), [watched])
 
-  useEffect(() => {
-    if (!doc) return
-    form.setFieldsValue({
-      date: dayjs(doc.date),
-      itemId: doc.itemId,
-      description: doc.description ?? '',
-      specification: doc.specification ?? '',
-      qty: doc.qty,
-      deadline: doc.deadline ? dayjs(doc.deadline) : null,
-      responsible: doc.responsible ?? '',
-      note: doc.note ?? '',
-      candidates: doc.candidates.map((c) => ({ id: c.id, supplierId: c.supplierId, status: c.status, note: c.note ?? '' })),
-    })
-  }, [doc, form])
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (doc) => ({
+    date: dayjs(doc.date),
+    itemId: doc.itemId,
+    description: doc.description ?? '',
+    specification: doc.specification ?? '',
+    qty: doc.qty,
+    deadline: doc.deadline ? dayjs(doc.deadline) : null,
+    responsible: doc.responsible ?? '',
+    note: doc.note ?? '',
+    candidates: doc.candidates.map((c) => ({ id: c.id, supplierId: c.supplierId, status: c.status, note: c.note ?? '' })),
+  }))
 
   const persist = async (): Promise<Sourcing | null> => {
     let values: FormValues
@@ -153,7 +151,10 @@ export function SourcingPage() {
       candidates: (values.candidates ?? []).map((c) => ({ id: c.id ?? null, supplierId: c.supplierId!, status: c.status ?? 'Contacted', note: orNull(c.note) })),
     }
     try {
-      return isNew ? await mutations.create.mutateAsync(input) : await mutations.update.mutateAsync({ id, input })
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      loadSaved(saved)
+      return saved
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
       return null
