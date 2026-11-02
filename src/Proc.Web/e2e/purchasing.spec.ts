@@ -136,6 +136,9 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await page.getByRole('button', { name: 'Lấy các dòng còn lại của PO' }).click()
   await expect(page.getByLabel('Đơn giá dòng 1')).toBeDisabled()
   await expect(page.locator('.line-grid-row').first()).toContainText('576.000')
+  // Kiểm tra chất lượng dòng (design.md mục 18.14): Đạt.
+  await page.getByRole('combobox', { name: 'Kết quả kiểm tra dòng 1' }).click()
+  await pickOption(page, 'Đạt')
   await confirm(page, 'Ghi sổ', /Đã ghi sổ phiếu GRN-BHA-\d{4}-\d{4}\./)
   await openByCommand(page, 'PO')
   await expect(page.locator('.data-grid-row', { hasText: poNo })).toContainText('Đã nhận đủ')

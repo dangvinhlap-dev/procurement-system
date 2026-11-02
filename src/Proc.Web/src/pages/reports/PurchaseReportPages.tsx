@@ -6,6 +6,8 @@ import { priorityLabels } from '../../api/purchasing'
 import {
   usePendingRequests,
   usePurchaseSla,
+  useReceiptQuality,
+  type ReceiptQualityRow,
   usePurchaseSpend,
   useSourcingSavings,
   useSupplierEvaluation,
@@ -133,6 +135,60 @@ export function PurchaseSlaReportPage() {
             type={data.onTimePct == null || data.onTimePct >= 95 ? 'info' : 'warning'}
             showIcon
             title={`Đúng SLA ${data.onTimePct == null ? '—' : `${String(data.onTimePct).replace('.', ',')}%`} (mục tiêu ≥ 95%): đúng hạn ${data.onTime}, trễ ${data.late}, quá hạn chưa có PO ${data.overdue}, đang xử lý ${data.inProgress}. SLA tính ngày làm việc thứ 2–6 (chưa trừ ngày lễ), sửa ở Tham số hệ thống.`}
+          />
+        ) : null
+      }
+      onClearFilters={() => setRange({ from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') })}
+      filters={<LogDateRangeFilter value={range} onChange={(r) => setRange({ ...range, ...r })} />}
+    />
+  )
+}
+
+const qcLabels: Record<ReceiptQualityRow['qcResult'], string> = { NotChecked: 'Chưa kiểm tra', Passed: 'Đạt', Failed: 'Không đạt' }
+
+const qualityColumns: GridColumn<ReceiptQualityRow>[] = [
+  { key: 'no', title: 'Phiếu nhập', width: 150, value: (r) => r.documentNo },
+  { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  { key: 'po', title: 'PO', width: 150, value: (r) => r.purchaseOrderNo },
+  { key: 'item', title: 'Mặt hàng', width: 230, value: (r) => `${r.itemCode} – ${r.itemName}` },
+  { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
+  { key: 'delivered', title: 'SL chứng từ', width: 90, type: 'quantity', value: (r) => r.deliveredQty },
+  { key: 'qty', title: 'SL nhận đạt', width: 90, type: 'quantity', value: (r) => r.qty },
+  { key: 'rejected', title: 'SL không đạt', width: 90, type: 'quantity', value: (r) => r.rejectedQty },
+  { key: 'diff', title: 'Thiếu/thừa', width: 85, type: 'quantity', value: (r) => r.discrepancyQty },
+  { key: 'qc', title: 'Kết quả KT', width: 100, value: (r) => qcLabels[r.qcResult], groupable: true },
+  { key: 'note', title: 'Ghi chú kiểm tra', width: 240, value: (r) => r.qcNote },
+]
+
+/**
+ * Báo cáo → Sai lệch nhận hàng (design.md mục 18.14 – V7): dòng phiếu nhập mua NCC đã ghi sổ có hàng không đạt hoặc thiếu/thừa so với
+ * chứng từ giao; đầu trang % dòng đạt chất lượng trên các dòng đã kiểm tra. Bấm đúp mở phiếu nhập.
+ */
+export function ReceiptQualityReportPage() {
+  const navigate = useNavigate()
+  const [range, setRange] = useState({ from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') })
+  const report = useReceiptQuality(range)
+  const data = report.data
+  return (
+    <ListPage
+      title="Sai lệch nhận hàng"
+      exportFileName="sai-lech-nhan-hang"
+      exportSubtitle={`Phiếu nhập từ ${formatDate(range.from)} đến ${formatDate(range.to)}`}
+      canCreate={false}
+      rows={data?.rows ?? []}
+      columns={qualityColumns}
+      rowKey={(r) => `${r.documentId}|${r.lineNo}`}
+      loading={report.isLoading}
+      onOpenRow={(r) => navigate(`/kho/grn/${r.documentId}`)}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : data ? (
+          <Alert
+            type="info"
+            showIcon
+            title={`Đạt chất lượng ${data.passedPct == null ? '—' : `${String(data.passedPct).replace('.', ',')}%`}: ${data.passedLines}/${data.checkedLines} dòng đã kiểm tra (tổng ${data.totalLines} dòng nhận). Danh sách chỉ gồm dòng không đạt hoặc thiếu/thừa.`}
           />
         ) : null
       }

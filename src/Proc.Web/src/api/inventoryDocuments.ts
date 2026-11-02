@@ -74,7 +74,22 @@ export interface InventoryLine {
   purchaseOrderLineId?: string | null
   /** SL gửi theo phiếu xuất bán (chỉ phiếu nhập mua nội bộ). */
   sentQty?: number | null
+  /** Phiếu nhập mua: SL theo chứng từ giao của NCC (design.md mục 18.14). */
+  deliveredQty?: number | null
+  /** Phiếu nhập mua: SL không đạt, không nhập kho. */
+  rejectedQty?: number
+  /** Phiếu nhập mua: kết quả kiểm tra chất lượng. */
+  qcResult?: QcResult
+  qcNote?: string | null
+  /** Thiếu (âm) / thừa (dương) so với chứng từ giao. */
+  discrepancyQty?: number
 }
+
+/** Kết quả kiểm tra chất lượng dòng phiếu nhập mua. */
+export type QcResult = 'NotChecked' | 'Passed' | 'Failed'
+
+/** Nhãn kết quả kiểm tra. */
+export const qcResultLabels: Record<QcResult, string> = { NotChecked: 'Chưa kiểm tra', Passed: 'Đạt', Failed: 'Không đạt' }
 
 /** Chi tiết chứng từ kho. */
 export interface InventoryDocument {
@@ -135,6 +150,10 @@ export interface SaveLineInput {
   note: string | null
   /** Dòng PO (phiếu nhập theo PO) – đơn giá, thuế suất do server lấy theo PO. */
   purchaseOrderLineId?: string | null
+  deliveredQty?: number | null
+  rejectedQty?: number
+  qcResult?: QcResult
+  qcNote?: string | null
 }
 
 /** Nội dung phiếu nhập mua NCC gửi lên khi lưu. */

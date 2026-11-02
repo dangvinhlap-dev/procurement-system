@@ -1368,6 +1368,22 @@ Nguồn: đề xuất Ban CUVT "Quy định thời gian xử lý" (V6) và kiể
 Migration `V0_13_0_ThamSoSla` (cột `SlaPricedDays`, `SlaSourcingDays`, `SlaUrgentDays` của `CompanyParameter`, mặc định 1/5/1 – `Down()` xóa
 cột, mất SLA công ty đã sửa).
 
+### 18.14 Kiểm tra chất lượng, sai lệch khi nhận hàng (lát C5a, 02/11/2026)
+
+Nguồn: đề xuất Ban CUVT V7 (kiểm đếm, kiểm tra chất lượng, lập biên bản, ghi nhận sai lệch; KPI "hàng đạt chất lượng"), G4 (người đặt hàng
+không một mình xác nhận giao nhận).
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Dòng **phiếu nhập mua NCC** (GRN) có: **SL theo chứng từ giao** của NCC (không bắt buộc), **SL không đạt** (≥ 0, không nhập kho – SL thực nhận là SL đạt nhập kho), **kết quả kiểm tra** (Chưa kiểm tra / Đạt / Không đạt), **ghi chú kiểm tra** (≤ 500). **Thiếu/thừa** = SL thực nhận + SL không đạt − SL chứng từ (âm = thiếu). Phiếu loại khác không ghi các trường này | Kiểm đếm, kiểm tra từng dòng |
+| SL không đạt > 0 thì kết quả là **Không đạt** (tự đặt). Không đạt hoặc có thiếu/thừa thì **bắt buộc ghi chú** (nội dung biên bản sai lệch) | Không để "đạt" mà vẫn loại hàng; sai lệch phải có giải trình |
+| Tham số công ty (SEC, nhóm "Nhận hàng", bật/tắt, **mặc định tắt**): **Bắt buộc kiểm tra chất lượng khi nhận hàng** – ghi sổ phiếu nhập mua chỉ khi mọi dòng có kết quả (Đạt/Không đạt); **Người lập PO không ghi sổ nhận hàng của PO đó** – người lập đơn mua hàng không ghi sổ được phiếu nhập theo đơn của mình (G4) | Công ty chưa tổ chức kiểm tra / một người kiêm nhiệm không bị chặn; bật khi đủ người |
+| Báo cáo **Sai lệch nhận hàng** (màn hình QCDEV, Báo cáo, quyền `Report.Purchase.View`): dòng phiếu nhập mua đã ghi sổ trong khoảng ngày có hàng không đạt, thiếu/thừa hoặc kết quả Không đạt; đầu trang **% đạt chất lượng** = dòng Đạt / dòng đã kiểm tra | KPI lô đạt chất lượng; dữ liệu cho đối chiếu (C6) và KSNB (F3) |
+| Chưa làm (lát C5b): in **biên bản giao nhận / sai lệch** (PDF) từ phiếu nhập | Tách lát |
+
+Migration `V0_13_0_KiemTraNhanHang` (cột `DeliveredQty`, `RejectedQty`, `QcResult`, `QcNote` của `InventoryDocumentLine`; `RequireReceiptQc`,
+`SeparatePoCreatorFromReceipt` của `CompanyParameter` – `Down()` xóa các cột, mất kết quả kiểm tra và hai tham số).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

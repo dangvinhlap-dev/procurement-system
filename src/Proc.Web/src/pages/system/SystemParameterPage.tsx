@@ -1,4 +1,4 @@
-import { App, Button, Descriptions, Form, InputNumber } from 'antd'
+import { App, Button, Descriptions, Form, InputNumber, Switch } from 'antd'
 import { useState } from 'react'
 import { useSystemParameters, useUpdateSystemParameter, type SystemParameter } from '../../api/systemParameters'
 import { Permission } from '../../auth/permissions'
@@ -64,11 +64,15 @@ const inputLimits: Record<string, { min: number; max: number; precision: number;
   SLA_URGENT_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
 }
 
-/** Ngăn kéo xem/sửa một tham số. Các tham số sửa được đều là số nên ô nhập là InputNumber. */
+/** Tham số bật/tắt (giá trị "Bật"/"Tắt" – design.md mục 18.14): ô nhập là công tắc, gửi "true"/"false". */
+const toggleCodes = new Set(['RECEIPT_QC_REQUIRED', 'RECEIPT_SEPARATE_PO_CREATOR'])
+
+/** Ngăn kéo xem/sửa một tham số: tham số số dùng InputNumber, tham số bật/tắt dùng công tắc. */
 function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () => void }) {
   const { message } = App.useApp()
   const { hasPermission } = useAuth()
-  const [form] = Form.useForm<{ value: number | null }>()
+  const [form] = Form.useForm<{ value: number | boolean | null }>()
+  const isToggle = toggleCodes.has(row.code)
   const update = useUpdateSystemParameter()
   const [error, setError] = useState<string | null>(null)
   const canEdit = row.editable && hasPermission(Permission.ParameterManage)
@@ -95,7 +99,7 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
       error={error}
       form={form}
       // Server trả số kiểu Việt Nam ("12,5") – đổi dấu phẩy về dấu chấm trước khi đọc thành số.
-      initialValues={{ value: row.editable ? Number(row.value.replace(',', '.')) : null }}
+      initialValues={{ value: !row.editable ? null : isToggle ? row.value === 'Bật' : Number(row.value.replace(',', '.')) }}
       readOnly={!canEdit}
       extraActions={
         canEdit &&
@@ -111,7 +115,11 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
           label: 'Giá trị',
           children: (
             <>
-              {row.editable ? (
+              {row.editable && isToggle ? (
+                <Form.Item label={row.name} name="value" valuePropName="checked" extra={`Mặc định: ${row.defaultValue ?? ''}`}>
+                  <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+                </Form.Item>
+              ) : row.editable ? (
                 <Form.Item
                   label={row.name}
                   name="value"
