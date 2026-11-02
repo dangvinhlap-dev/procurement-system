@@ -120,8 +120,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 - Không có lát đang dở. Đợt đề xuất Ban Cung ứng (E1 → F4) đã xong hết trừ **C3 (hoãn chờ lệnh)**. Bản **0.13.0** đã phát hành
   02/11/2026: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0 (bản cài thử ở http://localhost:5005).
-  Đã sửa (chưa phát hành): form nạp đè chữ đang gõ, trang trắng sau đăng xuất, nút lấy dòng PO/trả hàng bỏ qua cú bấm. Việc tiếp theo:
-  chờ người dùng chọn (phát hành 0.13.1, C3 khi có lệnh, hoặc việc "làm khi có yêu cầu" ở design.md).
+  Bản **0.13.1** (sửa lỗi giao diện, không đổi CSDL) phát hành 02/11/2026:
+  https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.1 – gồm: form nạp đè chữ đang gõ/tạo trùng phiếu, trang trắng
+  sau đăng xuất, nút lấy dòng PO/trả hàng bỏ qua cú bấm. Việc tiếp theo: chờ người dùng chọn (C3 khi có lệnh, hoặc việc "làm khi có yêu
+  cầu" ở design.md).
 - **Sửa lỗi nút lấy dòng bị bỏ qua cú bấm (02/11/2026, cùng nhánh)**: nút "Lấy các dòng còn lại của PO" (GRN) và "Lấy tất cả" (trả hàng)
   có `loading` khi đang tải lại nền nhưng vẫn bật – antd bỏ qua cú bấm lúc loading, người dùng bấm mà không có dòng (lộ ra ở e2e
   `purchasing` khi ép tải 10 luồng: hỏng 3/6). Nay khóa nút khi đang tải lại. Ép tải lại 6/6 qua; cả bộ Playwright 87/87.
