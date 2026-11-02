@@ -138,7 +138,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     (người lập có họ tên riêng). Kiểm tra: `dotnet test` 508; Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
   - Môi trường lần này: API dev (5000) và API Testing cũ (5010) cùng khóa `src/Proc.Api/bin` – không được dừng; build/test bằng
     `--artifacts-path <scratchpad>rtifacts`, e2e chạy API Testing bản mới từ đó ở cổng 5011 + Vite 5180.
-  - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
+  - Môi trường: 02/11/2026 người dùng yêu cầu tắt API 5000, 5010, 5011 (đã tắt – build không còn vướng khóa bin). Trước đó: API dev cũ (PID 28216) giữ cổng 5000; e2e chạy trên API Testing cổng 5010 + Vite 5179
     (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).
   - Công cụ `tools/du-lieu-thu` (Node.js, gọi API, chạy lại không trùng): bộ phận, vai trò (mẫu Ban CUVT + TOANQUYEN), 38 tài khoản
