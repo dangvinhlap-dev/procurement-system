@@ -54,6 +54,7 @@ export function ConflictListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="ConflictDeclaration"
         loading={declarations.isLoading}
         canCreate
         onCreate={() => setOpen(null)}

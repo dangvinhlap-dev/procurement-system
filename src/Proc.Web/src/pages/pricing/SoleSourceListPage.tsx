@@ -61,6 +61,7 @@ export function SoleSourceListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="SoleSourceApproval"
         loading={list.isLoading}
         canCreate={hasPermission(Permission.SoleSourceManage)}
         onCreate={() => open('new')}

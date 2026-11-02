@@ -210,6 +210,7 @@ function SoleSourceForm({ data, onClose, onOpen }: { data: SoleSource | null; on
       <DetailDrawer
         open
         title={isNew ? 'Lập phiếu NCC độc quyền' : `Phiếu ${data.no} – ${soleSourceStateLabel(data)}`}
+        audit={{ entityType: 'SoleSourceApproval', id: data?.id }}
         onClose={onClose}
         onSave={editable ? save : undefined}
         saving={saving}

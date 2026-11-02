@@ -8,8 +8,9 @@ namespace Proc.Application.MasterData;
 /// <param name="StartDate">Ngày bắt đầu giao dịch.</param>
 /// <param name="IsActive">Đang giao dịch.</param>
 /// <param name="CanEdit">Người xem sửa được (có quyền quản lý NCC tại công ty này).</param>
+/// <param name="Id">Khóa dòng áp dụng (null khi chưa khai báo) – để F1 xem lịch sử (design.md mục 9.3a).</param>
 public sealed record SupplierCompanyDto(
-    Guid SupplierId, string CompanyCode, bool IsApplied, string? LocalCode, DateOnly? StartDate, bool IsActive, bool CanEdit);
+    Guid SupplierId, string CompanyCode, bool IsApplied, string? LocalCode, DateOnly? StartDate, bool IsActive, bool CanEdit, Guid? Id = null);
 
 /// <summary>Lưu NCC áp dụng tại công ty đang làm việc.</summary>
 /// <param name="LocalCode">Mã NCC tại công ty.</param>

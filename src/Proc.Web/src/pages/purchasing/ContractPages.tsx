@@ -69,6 +69,7 @@ export function ContractListPage() {
       rows={contracts.data ?? []}
       columns={listColumns}
       rowKey={(r) => r.id}
+      auditEntity="PurchaseContract"
       loading={contracts.isLoading}
       canCreate={hasPermission(Permission.ContractManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}

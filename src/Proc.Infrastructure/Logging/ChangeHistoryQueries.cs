@@ -29,6 +29,9 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
     private static readonly MethodInfo FindMethod =
         typeof(ChangeHistoryQueries).GetMethod(nameof(FindVisibleCoreAsync), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
+    private static readonly MethodInfo FindOwnedMethod =
+        typeof(ChangeHistoryQueries).GetMethod(nameof(FindOwnedCoreAsync), BindingFlags.NonPublic | BindingFlags.Instance)!;
+
     private readonly ProcDbContext _db;
     private readonly IEntityType? _userType;
     private readonly Dictionary<(Type, string), object?> _cache = [];
@@ -352,7 +355,12 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
             values[i] = converted;
         }
 
-        var task = (Task<object?>)FindMethod.MakeGenericMethod(type.ClrType).Invoke(this, [key, values, ct])!;
+        // Entity "owned" (người liên hệ, tài khoản ngân hàng của NCC) không có DbSet riêng: truy vấn qua bản ghi chủ – vẫn qua filter của chủ.
+        var ownership = type.FindOwnership();
+        var task = ownership is null
+            ? (Task<object?>)FindMethod.MakeGenericMethod(type.ClrType).Invoke(this, [key, values, ct])!
+            : (Task<object?>)FindOwnedMethod.MakeGenericMethod(ownership.PrincipalEntityType.ClrType, type.ClrType)
+                .Invoke(this, [ownership.PrincipalToDependent!.Name, ownership.IsUnique, key, values, ct])!;
         var entity = await task;
         _cache[(type.ClrType, entityId)] = entity;
         if (entity is null || !checkParents) return entity;
@@ -373,6 +381,12 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
     private async Task<object?> FindVisibleCoreAsync<T>(IReadOnlyList<IProperty> key, object[] values, CancellationToken ct)
         where T : class
     {
+        return await _db.Set<T>().AsNoTracking().Where(KeyPredicate<T>(key, values)).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Biểu thức e => EF.Property(e, khóa1) == giá trị1 &amp;&amp; … (khóa ghép nhiều cột).</summary>
+    private static Expression<Func<T, bool>> KeyPredicate<T>(IReadOnlyList<IProperty> key, object[] values)
+    {
         var e = Expression.Parameter(typeof(T), "e");
         Expression? body = null;
         for (var i = 0; i < key.Count; i++)
@@ -383,7 +397,22 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
             body = body is null ? equal : Expression.AndAlso(body, equal);
         }
 
-        return await _db.Set<T>().AsNoTracking().Where(Expression.Lambda<Func<T, bool>>(body!, e)).FirstOrDefaultAsync(ct);
+        return Expression.Lambda<Func<T, bool>>(body!, e);
+    }
+
+    /// <summary>
+    /// Tìm entity owned theo khóa: chủ.SelectMany(o => o.Danh_sách).Where(khóa) (AsNoTracking – EF cho chiếu entity owned không kèm chủ).
+    /// </summary>
+    private async Task<object?> FindOwnedCoreAsync<TOwner, TOwned>(
+        string navigation, bool unique, IReadOnlyList<IProperty> key, object[] values, CancellationToken ct)
+        where TOwner : class
+        where TOwned : class
+    {
+        var owners = _db.Set<TOwner>().AsNoTracking();
+        var owned = unique
+            ? owners.Select(o => EF.Property<TOwned>(o, navigation))
+            : owners.SelectMany(o => EF.Property<IEnumerable<TOwned>>(o, navigation));
+        return await owned.Where(KeyPredicate<TOwned>(key, values)).FirstOrDefaultAsync(ct);
     }
 
     private static bool TryConvert(string text, Type type, out object value)

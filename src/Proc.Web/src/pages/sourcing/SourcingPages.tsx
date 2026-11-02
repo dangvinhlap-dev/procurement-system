@@ -59,6 +59,7 @@ export function SourcingListPage() {
       rows={list.data ?? []}
       columns={listColumns}
       rowKey={(r) => r.id}
+      auditEntity="SourcingRequest"
       loading={list.isLoading}
       canCreate={hasPermission(Permission.RfqManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}

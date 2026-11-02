@@ -97,6 +97,7 @@ function NumberingDrawer({ row, onClose }: { row: DocumentNumbering; onClose: ()
     <DetailDrawer
       open
       title={`Đánh số: ${row.docType} – ${row.name}`}
+      audit={{ entityType: 'DocumentNumbering', id: row.id }}
       onClose={onClose}
       onSave={canEdit ? () => void form.validateFields().then((v) => save(v.format)) : undefined}
       saving={update.isPending}

@@ -124,7 +124,7 @@ public sealed class ItemAdministration : IItemAdministration
         var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
 
         var conversions = item.Conversions
-            .Select(c => new ItemUomConversionDto(c.UomId, uoms[c.UomId].Code, uoms[c.UomId].Name, c.Factor))
+            .Select(c => new ItemUomConversionDto(c.UomId, uoms[c.UomId].Code, uoms[c.UomId].Name, c.Factor, c.Id))
             .OrderBy(c => c.Factor)
             .ToList();
         return new ItemDetailDto(

@@ -88,6 +88,7 @@ export function InventoryPeriodPage() {
         rows={data?.periods ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="InventoryPeriod"
         loading={calendar.isLoading}
         canCreate={canManage && data !== undefined}
         onCreate={createYear}
@@ -177,6 +178,7 @@ function PeriodDrawer({ period, canManage, onClose }: { period: InventoryPeriod;
     <DetailDrawer
       open
       title={`Kỳ kho ${period.label}`}
+      audit={{ entityType: 'InventoryPeriod', id: period.id }}
       onClose={onClose}
       error={error}
       extraActions={actions}

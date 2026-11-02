@@ -129,6 +129,7 @@ export function ConflictDrawer({ declaration, onClose }: { declaration: Conflict
     <DetailDrawer
       open
       title={isNew ? 'Kê khai xung đột lợi ích' : `Kê khai: ${declaration.userName} – ${declaration.supplierCode}`}
+      audit={{ entityType: 'ConflictDeclaration', id: declaration?.id }}
       onClose={onClose}
       onSave={isNew ? save : undefined}
       saving={saving}

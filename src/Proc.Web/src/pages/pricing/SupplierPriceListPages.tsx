@@ -60,6 +60,7 @@ export function PriceListListPage() {
       rows={lists.data ?? []}
       columns={listColumns}
       rowKey={(r) => r.id}
+      auditEntity="SupplierPriceList"
       loading={lists.isLoading}
       canCreate={hasPermission(Permission.PriceListManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}

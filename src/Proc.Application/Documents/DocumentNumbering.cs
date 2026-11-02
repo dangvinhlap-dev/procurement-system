@@ -7,8 +7,9 @@ namespace Proc.Application.Documents;
 /// <param name="IsDefault">true khi công ty chưa cấu hình riêng, đang dùng mẫu mặc định.</param>
 /// <param name="LastNumber">Số chứng từ cấp gần nhất trong kỳ hiện tại; null nếu kỳ này chưa cấp số nào.</param>
 /// <param name="NextNumber">Số sẽ cấp cho chứng từ kế tiếp nếu lập hôm nay (chỉ để xem, chưa giữ chỗ).</param>
+/// <param name="Id">Khóa dòng cấu hình riêng (null khi dùng mẫu mặc định) – để F1 xem lịch sử (design.md mục 9.3a).</param>
 public sealed record DocumentNumberingDto(
-    string DocType, string Name, string Format, bool IsDefault, string? LastNumber, string NextNumber);
+    string DocType, string Name, string Format, bool IsDefault, string? LastNumber, string NextNumber, Guid? Id = null);
 
 /// <summary>Đổi mẫu số; Format trống = quay về mẫu mặc định.</summary>
 /// <param name="Format">Mẫu số mới.</param>

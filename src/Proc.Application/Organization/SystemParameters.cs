@@ -40,8 +40,11 @@ public static class SystemParameterCodes
 /// <param name="IsDefault">true khi đang dùng giá trị mặc định.</param>
 /// <param name="Editable">true khi sửa được trên màn hình này.</param>
 /// <param name="Note">Giải thích: ý nghĩa, giới hạn, nơi khai báo nếu chỉ xem.</param>
+/// <param name="AuditId">Khóa dòng tham số công ty lưu giá trị (null khi chưa lưu lần nào) – để F1 xem lịch sử (design.md mục 9.3a).</param>
+/// <param name="AuditField">Trường của dòng tham số công ty lưu giá trị này; null = không lưu ở bảng tham số công ty.</param>
 public sealed record SystemParameterDto(
-    string Code, string Group, string Name, string Value, string? DefaultValue, bool IsDefault, bool Editable, string Note);
+    string Code, string Group, string Name, string Value, string? DefaultValue, bool IsDefault, bool Editable, string Note,
+    Guid? AuditId = null, string? AuditField = null);
 
 /// <summary>Đổi một tham số; Value trống = về mặc định.</summary>
 /// <param name="Value">Giá trị mới dạng chữ.</param>

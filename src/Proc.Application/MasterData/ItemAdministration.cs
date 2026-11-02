@@ -37,7 +37,8 @@ public sealed record ItemQuery(string? Search, Guid? CategoryId, string? Type, b
 /// <param name="UomCode">Mã ĐVT (chỉ đọc).</param>
 /// <param name="UomName">Tên ĐVT (chỉ đọc).</param>
 /// <param name="Factor">Số ĐVT cơ sở trong 1 ĐVT này.</param>
-public sealed record ItemUomConversionDto(Guid UomId, string UomCode, string UomName, decimal Factor);
+/// <param name="Id">Khóa dòng quy đổi (chỉ đọc) – để F1 xem lịch sử (design.md mục 9.3a).</param>
+public sealed record ItemUomConversionDto(Guid UomId, string UomCode, string UomName, decimal Factor, Guid? Id = null);
 
 /// <summary>ĐVT quy đổi gửi lên khi lưu.</summary>
 /// <param name="UomId">ĐVT.</param>

@@ -586,6 +586,12 @@ dùng nhập thì thấy ai tạo, ai sửa, ai xóa giá trị, lúc nào, giá
   **kể cả dòng đã xóa** (tìm qua khóa cha ghi trong dòng nhật ký tạo/xóa của dòng); cột Đối tượng ghi "Đầu phiếu" hoặc "… – dòng n (đã xóa)";
   lọc theo ô, người thao tác, khoảng ngày. Dòng con = entity `[Auditable]` không phải AuditableEntity, xóa theo cha (cascade), sâu tối đa 2 cấp.
 - **F1 trên lưới danh sách** (ListPage khai báo `auditEntity`): ô của dòng danh sách xem lịch sử trường tương ứng (cột "supplier" → SupplierId).
+- **Danh mục**: ngăn kéo (DetailDrawer) khai báo `audit`; dòng con là bản ghi riêng (người liên hệ, tài khoản ngân hàng NCC, quy đổi ĐVT,
+  NCC áp dụng tại công ty, NCC – sản phẩm) gắn vùng bản ghi riêng để F1 không lẫn với ô của bản ghi chính. Entity "owned" (người liên hệ,
+  TK ngân hàng, quy đổi ĐVT) tra qua bản ghi chủ. Tham số hệ thống: F1 trên ô giá trị xem cột tương ứng của dòng tham số công ty; đánh số
+  chứng từ: dòng cấu hình riêng (đang dùng mẫu mặc định thì chưa có lịch sử).
+- **Chưa làm**: ô của báo cáo (số liệu tính toán, không phải dữ liệu nhập); ô phân quyền dạng cây của vai trò và ô gán vai trò/phạm vi của
+  người dùng (bản ghi riêng nhiều dòng) – xem ở nút "Lịch sử thay đổi" hoặc màn hình Nhật ký thao tác.
 - **Ai được xem**: mọi người đã đăng nhập – không cần quyền `System.Log.View` (người dùng chốt 02/11/2026). Nhưng chỉ xem được bản ghi
   mình thấy được: bản ghi nạp qua global query filter (công ty, kho, nhóm hàng); dòng con kiểm tra cả bản ghi cha. Không thấy → "Không tìm
   thấy". Nhật ký của bản ghi lấy đủ, không lọc theo công ty lúc ghi (danh mục dùng chung có thể do tổng công ty sửa).

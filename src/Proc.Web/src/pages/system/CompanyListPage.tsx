@@ -50,6 +50,7 @@ export function CompanyListPage() {
         rows={rows}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Company"
         loading={companies.isLoading}
         canCreate={atHeadOffice && hasPermission(Permission.CompanyManage)}
         onCreate={() => setOpenId(null)}

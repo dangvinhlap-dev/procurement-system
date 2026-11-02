@@ -49,6 +49,7 @@ export function InternalPriceListPage() {
         rows={prices.data ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="InternalPrice"
         loading={prices.isLoading}
         canCreate={canManage}
         onCreate={() => setOpen(null)}
@@ -120,6 +121,7 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
     <DetailDrawer
       open
       title={price ? `Giá nội bộ: ${price.itemCode}` : 'Thêm giá nội bộ'}
+      audit={{ entityType: 'InternalPrice', id: price?.id }}
       onClose={onClose}
       onSave={canManage ? save : undefined}
       saving={saving}

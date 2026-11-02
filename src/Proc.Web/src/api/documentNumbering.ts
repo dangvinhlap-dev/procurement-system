@@ -4,6 +4,8 @@ import { apiFetch } from './client'
 
 /** Cấu hình đánh số một loại chứng từ – khớp Proc.Application.Documents.DocumentNumberingDto. */
 export interface DocumentNumbering {
+  /** Khóa dòng cấu hình riêng (null khi dùng mẫu mặc định) – F1 xem lịch sử. */
+  id: string | null
   docType: string
   name: string
   format: string

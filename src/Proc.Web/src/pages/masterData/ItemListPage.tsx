@@ -70,6 +70,7 @@ export function ItemListPage() {
         rows={items.data?.items ?? []}
         columns={columns}
         rowKey={(r) => r.id}
+        auditEntity="Item"
         loading={items.isLoading}
         canCreate={canManage}
         onCreate={() => setOpenId(null)}

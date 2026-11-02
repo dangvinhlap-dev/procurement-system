@@ -17,6 +17,7 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { SupplierCompanyTab, SupplierItemsTab } from './SupplierLinkTabs'
 
 interface SupplierFormValues {
@@ -201,6 +202,7 @@ export function SupplierDrawer({
     <DetailDrawer
       open
       title={isNew ? 'Thêm nhà cung cấp' : `Nhà cung cấp: ${detail?.code ?? ''}`}
+      audit={{ entityType: 'Supplier', id: detail?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}
@@ -322,7 +324,12 @@ export function SupplierDrawer({
               {(fields, { add, remove }) => (
                 <>
                   {fields.map((field) => (
-                    <div key={field.key} style={rowStyle}>
+                    <div
+                      key={field.key}
+                      style={rowStyle}
+                      // Người liên hệ là bản ghi riêng trong nhật ký – F1 ở ô của dòng xem lịch sử người liên hệ, không phải của NCC.
+                      {...auditScopeProps({ entityType: 'SupplierContact', id: form.getFieldValue(['contacts', field.name, 'id']) })}
+                    >
                       <Form.Item name={[field.name, 'id']} hidden>
                         <Input />
                       </Form.Item>
@@ -360,7 +367,11 @@ export function SupplierDrawer({
               {(fields, { add, remove }) => (
                 <>
                   {fields.map((field) => (
-                    <div key={field.key} style={rowStyle}>
+                    <div
+                      key={field.key}
+                      style={rowStyle}
+                      {...auditScopeProps({ entityType: 'SupplierBankAccount', id: form.getFieldValue(['bankAccounts', field.name, 'id']) })}
+                    >
                       <Form.Item name={[field.name, 'id']} hidden>
                         <Input />
                       </Form.Item>

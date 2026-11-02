@@ -93,6 +93,7 @@ function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () =
     <DetailDrawer
       open
       title={`Tham số: ${row.name}`}
+      audit={row.auditField ? { entityType: 'CompanyParameter', id: row.auditId, fields: { value: row.auditField } } : undefined}
       onClose={onClose}
       onSave={canEdit ? () => void form.validateFields().then((v) => save(v.value == null ? null : String(v.value))) : undefined}
       saving={update.isPending}

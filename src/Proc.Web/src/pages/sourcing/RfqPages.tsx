@@ -75,6 +75,7 @@ export function RfqListPage({ compare = false }: { compare?: boolean }) {
       rows={rfqs.data ?? []}
       columns={listColumns}
       rowKey={(r) => r.id}
+      auditEntity="Rfq"
       loading={rfqs.isLoading}
       canCreate={!compare && hasPermission(Permission.RfqManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}

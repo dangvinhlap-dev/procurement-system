@@ -125,6 +125,7 @@ export function InventoryDocumentListPage({
       rows={documents.data?.items ?? []}
       columns={columnsByType[docType]}
       rowKey={(r) => r.id}
+      auditEntity="InventoryDocument"
       loading={documents.isLoading}
       canCreate={canCreate && hasPermission(Permission.InventoryDocumentCreate)}
       onCreate={() => navigate(`${path}/moi`)}

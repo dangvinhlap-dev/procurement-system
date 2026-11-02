@@ -126,7 +126,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - Bước 2 (xong – G1): `FieldHelpHost` (F1 trong AppShell, ô có con trỏ hoặc ô dưới chuột), hộp thoại "Trợ giúp ô" 2 tab, nút
     "Lịch sử thay đổi" (cả phiếu, cả dòng đã xóa, lọc ô/người/ngày); khung dùng chung DocumentForm/LineGrid/DetailDrawer/DataGrid nhận
     `audit`/`auditEntity`; gắn cho 11 chứng từ. design.md mục 9.3a, ui-style.md mục 6 (F1). e2e `field-help.spec.ts`. Kiểm tra: Playwright 80/80.
-  - Bước 3: ngăn kéo danh mục + dòng con (người liên hệ, TK ngân hàng, quy đổi ĐVT) (G2). Bước 4: F1 trên lưới danh sách (G3).
+  - Bước 3 (xong – G2 + G3): 21 ngăn kéo danh mục/hệ thống khai báo `audit`; dòng con là bản ghi riêng (người liên hệ, TK ngân hàng NCC,
+    quy đổi ĐVT, NCC áp dụng tại công ty, NCC – sản phẩm) gắn vùng riêng; entity owned tra qua bản ghi chủ; tham số hệ thống và đánh số
+    chứng từ trả khóa dòng + cột. F1 trên ô lưới danh sách của 26 màn hình (`auditEntity` của ListPage/DataGrid). Test tích hợp
+    `ChangeHistoryTests`, e2e `field-help-catalog.spec.ts`.
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 480 qua; Playwright 81/81; `npm run build`, `tsc`, `oxlint` qua. Không có migration.
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi

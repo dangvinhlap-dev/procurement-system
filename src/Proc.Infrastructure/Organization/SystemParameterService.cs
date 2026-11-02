@@ -44,7 +44,7 @@ public sealed class SystemParameterService : ISystemParameterService
             .ToListAsync(cancellationToken);
 
         var defaultText = CompanyParameter.DefaultRfqMinSuppliers.ToString(CultureInfo.InvariantCulture);
-        return
+        List<SystemParameterDto> list =
         [
             new(SystemParameterCodes.RfqMinSuppliers, "Đấu thầu", "Số NCC tối thiểu khi gửi RFQ",
                 rfqMin.ToString(CultureInfo.InvariantCulture), defaultText, rfqMin == CompanyParameter.DefaultRfqMinSuppliers, true,
@@ -71,7 +71,21 @@ public sealed class SystemParameterService : ISystemParameterService
                 negative.Count == 0 ? "Không kho nào" : string.Join(", ", negative), null, negative.Count == 0, false,
                 "Khai báo trên từng kho ở màn hình Danh mục kho; mặc định không cho tồn âm."),
         ];
+        // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
+        return list.Select(p => AuditFields.TryGetValue(p.Code, out var field) ? p with { AuditId = parameter?.Id, AuditField = field } : p).ToList();
     }
+
+    /// <summary>Cột của <see cref="CompanyParameter"/> lưu từng tham số sửa được.</summary>
+    private static readonly Dictionary<string, string> AuditFields = new()
+    {
+        [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
+        [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
+        [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
+        [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
+        [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
+        [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
+        [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
+    };
 
     /// <inheritdoc />
     public async Task<SystemParameterDto> UpdateAsync(string code, UpdateSystemParameterRequest request, CancellationToken cancellationToken)

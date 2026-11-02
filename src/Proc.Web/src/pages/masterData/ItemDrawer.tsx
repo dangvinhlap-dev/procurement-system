@@ -13,6 +13,7 @@ import {
 } from '../../api/masterData'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { buildCategoryTree } from './categoryTree'
+import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { ItemSuppliersTab } from './SupplierLinkTabs'
 
 interface ItemFormValues {
@@ -180,6 +181,7 @@ export function ItemDrawer({
     <DetailDrawer
       open
       title={isNew ? 'Thêm hàng hóa' : `Hàng hóa: ${detail?.code ?? ''}`}
+      audit={{ entityType: 'Item', id: detail?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}
@@ -295,7 +297,16 @@ export function ItemDrawer({
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map((field) => (
-                      <div key={field.key} className="detail-grid" style={{ gridTemplateColumns: '1fr 1fr auto' }}>
+                      <div
+                        key={field.key}
+                        className="detail-grid"
+                        style={{ gridTemplateColumns: '1fr 1fr auto' }}
+                        // Dòng quy đổi là bản ghi riêng trong nhật ký: F1 ở ô của dòng xem lịch sử dòng đó (giữ Id theo ĐVT khi sửa).
+                        {...auditScopeProps({
+                          entityType: 'ItemUomConversion',
+                          id: detail?.conversions.find((c) => c.uomId === form.getFieldValue(['conversions', field.name, 'uomId']))?.id,
+                        })}
+                      >
                         <Form.Item
                           name={[field.name, 'uomId']}
                           label="ĐVT quy đổi"

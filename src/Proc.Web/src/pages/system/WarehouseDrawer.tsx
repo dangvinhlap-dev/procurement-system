@@ -129,6 +129,7 @@ export function WarehouseDrawer({
     <DetailDrawer
       open
       title={isNew ? 'Thêm kho phụ' : `Kho: ${warehouse.code}`}
+      audit={{ entityType: 'Warehouse', id: warehouse?.id }}
       onClose={onClose}
       onSave={editable ? save : undefined}
       saving={saving}
