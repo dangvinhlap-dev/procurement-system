@@ -1584,6 +1584,17 @@ bất thường mở **trang đầy đủ** (trong AppShell, tiêu đề + nút 
 
 Bấm đúp trên danh sách của chính màn hình đó vẫn mở ngăn kéo (`?mo=<Id>`). Quyền trang = quyền màn hình danh sách (phụ lục: quyền CTR).
 
+**Người duyệt tiếp theo (lát TC-4, 02/11/2026).** Phiếu đang chờ duyệt nêu tên những người **duyệt được** cấp đang đến lượt:
+
+| Quy tắc | Ghi chú |
+| --- | --- |
+| Người duyệt được = còn hoạt động, có quyền duyệt loại phiếu tại công ty của bước, có vai trò của cấp (nếu cấp gắn vai trò), không phải người lập (RFQ: cả người chọn thầu), không có kê khai xung đột lợi ích còn hiệu lực với NCC của phiếu | Cùng điều kiện với nút Duyệt và người nhận thông báo chờ duyệt (`NextApproverResolver` dùng chung) |
+| Chỉ bước đang đến lượt (chặng nhỏ nhất, cấp nhỏ nhất mỗi công ty) có danh sách; bước sau để trống; không ai đủ điều kiện thì báo "Chưa có người đủ điều kiện duyệt" | Duyệt NCC hai chặng: chặng Tổng công ty chỉ hiện khi các công ty liên quan đã duyệt |
+| Tab **Lịch sử duyệt** mọi phiếu có duyệt: cột Người duyệt hiện "Chờ: …" (`ApprovalStepDto.NextApprovers`); Tra cứu chứng từ thêm cột **Người duyệt tiếp theo** | Hiện tối đa 5 tên + "và N người khác"; rê chuột xem đủ ở Lịch sử duyệt |
+| Tra cứu chứng từ không tải cả phiếu: người lập = người tạo, NCC = NCC của dòng | RFQ xét đủ (người chọn thầu, mọi NCC được mời) trong tab Lịch sử duyệt |
+
+Không có migration.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

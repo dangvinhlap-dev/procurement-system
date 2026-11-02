@@ -288,7 +288,7 @@ public sealed class PriceListService : IPriceListService
             readOnly);
         var today = Today();
         // Công ty khác chỉ xem bảng toàn tập đoàn đã công bố – không cần (và không lộ) lịch sử duyệt nội bộ của công ty lập.
-        var approvals = own ? await _approvals.HistoryAsync(list.DocType, list.Id, cancellationToken) : [];
+        var approvals = own ? await _approvals.HistoryAsync(list.DocType, list.Id, cancellationToken, list) : [];
         return new PriceListDto(
             list.Id, list.No, list.Title, list.CompanyId, company, list.IsGroupWide, list.SupplierId, supplier.Code, supplier.Name, list.ValidFrom,
             list.ValidTo, list.CurrencyCode, list.DeliveryTerms, list.Note, list.Status.ToString(), list.CreatedAt, createdBy, list.ActivatedAt, lines, actions,

@@ -489,7 +489,7 @@ public sealed class RfqService : IRfqService
             rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Pricing.PriceListManage)
                 && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
             conflict);
-        var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken);
+        var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken, rfq);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,
             new RfqWeightsDto(weights.Price, weights.Quality, weights.Delivery, weights.Payment, weights.Warranty), rfq.Note, rfq.Status.ToString(),

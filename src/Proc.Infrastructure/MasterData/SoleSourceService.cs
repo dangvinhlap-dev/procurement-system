@@ -231,7 +231,7 @@ public sealed class SoleSourceService : ISoleSourceService
             canManage && x.Status == SoleSourceStatus.Submitted,
             canManage && x.Status == SoleSourceStatus.Approved && !x.IsOverdueOn(today),
             canManage && x.Status == SoleSourceStatus.Approved && renewedBy is null);
-        var approvals = await _approvals.HistoryAsync(x.DocType, x.Id, cancellationToken);
+        var approvals = await _approvals.HistoryAsync(x.DocType, x.Id, cancellationToken, x);
         return new SoleSourceDto(
             x.Id, x.No, company, x.SupplierId, supplier.Code, supplier.Name, x.ItemId, item.Code, item.Name, x.Reason, x.ValidFrom, x.ReviewDate,
             x.Status.ToString(), x.IsEffectiveOn(today), x.IsOverdueOn(today), x.RejectReason, x.ApprovedAt, x.EndedOn, x.EndReason,

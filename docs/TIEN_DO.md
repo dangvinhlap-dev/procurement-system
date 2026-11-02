@@ -131,7 +131,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     vi phạm (`/bao-cao/so-vi-pham/:id`), phụ lục HĐ (`/mua-hang/hop-dong-khung/phu-luc/:id` – thôi chuyển hướng). `DetailDrawer` thêm
     `asPage` (khung tiêu đề + nút lệnh như DocumentForm, nút Quay lại, Esc không đóng). design.md 18.22. Chỉ sửa Proc.Web, không migration.
     e2e sửa `suppliers`, `sole-sources`, `control`, `contract`. Kiểm tra: Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
-  - **TC-4**: người duyệt tiếp theo.
+  - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
+    Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
+    cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người
+    khác". design.md 18.22. Không migration. Test: tích hợp `NguoiDuyetTiepTheo_TheoCapDangCho_BoNguoiLapVaXungDot`, e2e `purchasing`
+    (người lập có họ tên riêng). Kiểm tra: `dotnet test` 508; Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
+  - Môi trường lần này: API dev (5000) và API Testing cũ (5010) cùng khóa `src/Proc.Api/bin` – không được dừng; build/test bằng
+    `--artifacts-path <scratchpad>rtifacts`, e2e chạy API Testing bản mới từ đó ở cổng 5011 + Vite 5180.
   - Môi trường: API dev cũ (PID 28216) giữ cổng 5000 – không được phép dừng; e2e chạy trên API Testing cổng 5010 + Vite 5179
     (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).

@@ -30,7 +30,7 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await bha.send('post', '/api/departments', { code: departmentCode, name: `Xưởng cán ${departmentCode}`, managerName: null })
   const buyerName = unique('mh').toLowerCase()
   await bha.send('post', '/api/users', {
-    userName: buyerName, fullName: 'Người lập mua hàng', email: null, password: 'Demo@2026',
+    userName: buyerName, fullName: `Người lập mua hàng ${buyerName}`, email: null, password: 'Demo@2026',
     access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
   })
   const buyerContext = await browser.newContext()
@@ -68,6 +68,19 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await expect(buyer.getByTestId('document-form-bar')).toHaveCount(0)
   await expect(buyer.getByRole('button', { name: /(^|\s)Duyệt$/ })).toHaveCount(0)
   await buyer.screenshot({ path: 'e2e/screenshots/purchase-request.png' })
+  // Người duyệt tiếp theo (TC-4): bước đang chờ nêu những người duyệt được – người lập không có trong đó.
+  await buyer.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+  const next = buyer.locator('.approval-next')
+  await expect(next).toContainText(/^Chờ: \S/)
+  await expect(next).not.toContainText(buyerName)
+  await buyer.screenshot({ path: 'e2e/screenshots/next-approvers.png' })
+  const firstApprover = (await next.innerText()).replace(/^Chờ: /, '').split(', ')[0]
+  // Tra cứu chứng từ: cột "Người duyệt tiếp theo" cùng kết quả với tab Lịch sử duyệt.
+  await openByCommand(buyer, 'DOCS')
+  await buyer.getByRole('textbox', { name: 'Tìm kiếm' }).fill(prNo)
+  const docRow = buyer.locator('.data-grid-row', { hasText: prNo })
+  await expect(docRow).toContainText('Cấp 1')
+  await expect(docRow).toContainText(firstApprover)
 
   // 2. Quản trị: Việc cần làm → mở PR → Duyệt.
   await openByCommand(page, 'TODO')

@@ -581,3 +581,8 @@ body.erp-col-resizing {
 .ant-tag {
   border-radius: 0;
 }
+
+/* Người duyệt tiếp theo ở bước đang chờ (tab Lịch sử duyệt – TC-4): chữ màu tiêu đề để phân biệt với người đã duyệt. */
+.approval-next {
+  color: var(--erp-title);
+}

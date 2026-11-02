@@ -10,6 +10,7 @@ import {
   type DocumentRegistryRow,
 } from '../api/documentRegistry'
 import type { DateRange } from '../api/logs'
+import { nextApproversText } from '../api/purchasing'
 import { Select } from '../classic/Select'
 import type { GridColumn } from '../components/DataGrid/types'
 import { FilterField, ListPage } from '../components/ListPage/ListPage'
@@ -32,6 +33,7 @@ const columns: GridColumn<DocumentRegistryRow>[] = [
   },
   { key: 'status', title: 'Trạng thái', width: 130, value: (r) => r.statusName, groupable: true },
   { key: 'pending', title: 'Đang chờ duyệt', width: 110, value: (r) => (r.pendingLevel ? `Cấp ${r.pendingLevel}` : null) },
+  { key: 'nextApprovers', title: 'Người duyệt tiếp theo', width: 220, value: (r) => nextApproversText(r.nextApprovers) },
   { key: 'partner', title: 'Đối tác / kho', width: 260, value: (r) => r.partner, groupable: true },
   { key: 'description', title: 'Nội dung', width: 260, value: (r) => r.description },
   { key: 'amount', title: 'Giá trị', width: 130, type: 'money', value: (r) => r.amount },

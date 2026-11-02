@@ -39,9 +39,14 @@ public sealed record DocumentRegistryQuery(
 /// <param name="CreatedByName">Người lập.</param>
 /// <param name="CreatedAt">Thời điểm lập.</param>
 /// <param name="PendingLevel">Cấp đang chờ duyệt (lượt gửi mới nhất); null khi không chờ duyệt.</param>
+/// <param name="NextApprovers">
+/// Người duyệt tiếp theo ở công ty đang làm việc (TC-4, design.md mục 18.22): họ tên những người duyệt được cấp đang chờ; rỗng khi chưa ai đủ
+/// điều kiện; null khi không chờ duyệt.
+/// </param>
 public sealed record DocumentRegistryRowDto(
     string DocType, Guid Id, string No, DateOnly Date, string? Partner, string? Description, decimal? Amount, string Status,
-    string StatusName, DocumentProgress Progress, string? CreatedByName, DateTimeOffset CreatedAt, int? PendingLevel);
+    string StatusName, DocumentProgress Progress, string? CreatedByName, DateTimeOffset CreatedAt, int? PendingLevel,
+    IReadOnlyList<string>? NextApprovers = null);
 
 /// <summary>Kết quả tra cứu.</summary>
 /// <param name="Rows">Các chứng từ, mới nhất trước.</param>

@@ -25,8 +25,13 @@ public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal 
 /// <param name="Comment">Ý kiến.</param>
 /// <param name="CompanyCode">Công ty duyệt bước này.</param>
 /// <param name="Stage">Chặng: 1 = công ty của phiếu / công ty liên quan; 2 = Tổng công ty duyệt lần cuối (design.md mục 18.6).</param>
+/// <param name="NextApprovers">
+/// Người duyệt tiếp theo – họ tên những người duyệt được bước này (TC-4, design.md mục 18.22); chỉ có ở bước đang đến lượt, rỗng khi chưa ai
+/// đủ điều kiện, null ở bước khác.
+/// </param>
 public sealed record ApprovalStepDto(
-    int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment, string? CompanyCode = null, int Stage = 1);
+    int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment, string? CompanyCode = null,
+    int Stage = 1, IReadOnlyList<string>? NextApprovers = null);
 
 /// <summary>Một phiếu đang chờ người dùng hiện tại duyệt (Việc cần làm).</summary>
 /// <param name="DocType">Loại phiếu duyệt (PR, PO…).</param>

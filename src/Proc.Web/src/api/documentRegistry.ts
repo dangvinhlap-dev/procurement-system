@@ -27,6 +27,8 @@ export interface DocumentRegistryRow {
   createdByName: string | null
   createdAt: string
   pendingLevel: number | null
+  /** Người duyệt tiếp theo của cấp đang chờ (TC-4); null khi không chờ duyệt. */
+  nextApprovers?: string[] | null
 }
 
 /** Kết quả tra cứu. */

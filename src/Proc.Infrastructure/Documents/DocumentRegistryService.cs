@@ -11,6 +11,7 @@ using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Documents;
 
@@ -35,14 +36,17 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly NextApproverResolver _approvers;
 
     /// <summary>Khởi tạo dịch vụ.</summary>
     /// <param name="db">CSDL.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
-    public DocumentRegistryService(ProcDbContext db, ICurrentUserScope scope)
+    /// <param name="clock">Đồng hồ (ngày hiệu lực kê khai xung đột lợi ích khi tìm người duyệt tiếp theo).</param>
+    public DocumentRegistryService(ProcDbContext db, ICurrentUserScope scope, IClock clock)
     {
         _db = db;
         _scope = scope;
+        _approvers = new NextApproverResolver(db, scope, clock);
     }
 
     /// <summary>Dòng thô đọc từ một bảng, trước khi ghép tên NCC/kho/người lập.</summary>
@@ -329,15 +333,17 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         var userIds = ordered.Where(r => r.CreatedBy is not null).Select(r => r.CreatedBy!.Value).Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
-        // Cấp đang chờ: bước Pending nhỏ nhất (theo chặng rồi cấp) – lượt bị từ chối đã chuyển các bước còn lại sang Skipped.
-        var openIds = ordered.Where(r => r.Progress == DocumentProgress.Open).Select(r => r.Id).ToList();
+        // Cấp đang chờ: bước Pending nhỏ nhất (theo chặng rồi cấp) – lượt bị từ chối đã chuyển các bước còn lại sang Skipped. Bước duyệt
+        // qua filter công ty nên chỉ thấy bước của công ty đang làm việc.
+        var openRows = ordered.Where(r => r.Progress == DocumentProgress.Open).ToDictionary(r => r.Id);
+        var openIds = openRows.Keys.ToList();
         var pending = (await _db.ApprovalSteps.AsNoTracking()
                 .Where(s => openIds.Contains(s.DocumentId) && s.Status == ApprovalStepStatus.Pending)
                 .Select(s => new { s.DocumentId, s.Stage, s.Level })
                 .ToListAsync(cancellationToken))
             .GroupBy(s => s.DocumentId)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Stage).ThenBy(s => s.Level).First().Level);
-
+        var nextApprovers = await NextApproversAsync(openRows, cancellationToken);
         var rowsOut = ordered.Select(r =>
         {
             string? partner = r.SupplierId is { } sid && suppliers.TryGetValue(sid, out var s) ? s
@@ -346,10 +352,41 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             return new DocumentRegistryRowDto(
                 r.DocType, r.Id, r.No, r.Date, partner, r.Description, r.Amount, r.Status, StatusName(r.DocType, r.Status), r.Progress,
                 r.CreatedBy is { } uid && users.TryGetValue(uid, out var name) ? name : null, r.CreatedAt,
-                pending.TryGetValue(r.Id, out var level) ? level : null);
+                pending.TryGetValue(r.Id, out var level) ? level : null, nextApprovers.GetValueOrDefault(r.Id));
         }).ToList();
 
         return new DocumentRegistryResult(rowsOut, visible, truncated, Limit);
+    }
+
+    /// <summary>
+    /// Người duyệt tiếp theo của các chứng từ đang chờ duyệt (TC-4, design.md mục 18.22) – cùng điều kiện với nút Duyệt và thông báo
+    /// (<see cref="NextApproverResolver"/>). Bước đến lượt xét trên mọi công ty của phiếu (duyệt NCC hai chặng: chặng Tổng công ty chỉ tới
+    /// lượt khi các công ty liên quan đã duyệt) – chỉ đọc bước của chứng từ người xem đã thấy được. Ở đây không tải cả phiếu nên người lập =
+    /// người tạo, NCC = NCC của dòng; RFQ (người chọn thầu, mọi NCC được mời) xét đủ trong tab Lịch sử duyệt khi mở phiếu.
+    /// </summary>
+    /// <param name="openRows">Dòng chưa hoàn thành, theo Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Họ tên theo Id chứng từ; chỉ có ở chứng từ đang chờ duyệt.</returns>
+    private async Task<Dictionary<Guid, IReadOnlyList<string>>> NextApproversAsync(
+        IReadOnlyDictionary<Guid, Raw> openRows, CancellationToken cancellationToken)
+    {
+        var ids = openRows.Keys.ToList();
+        var steps = await _db.ApprovalSteps.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .Where(s => ids.Contains(s.DocumentId) && s.Status == ApprovalStepStatus.Pending)
+            .ToListAsync(cancellationToken);
+        var active = steps
+            .GroupBy(s => s.DocumentId)
+            .SelectMany(g => Proc.Domain.Purchasing.ApprovalProgress.Active(g))
+            .ToList();
+        var names = await _approvers.NamesAsync(active.Select(step =>
+        {
+            var row = openRows[step.DocumentId];
+            return new NextApproverResolver.PendingStep(step.Id, step.DocType, step.CompanyId, step.RoleId,
+                u => u == row.CreatedBy, row.SupplierId is { } sid ? [sid] : []);
+        }).ToList(), cancellationToken);
+        return active.GroupBy(s => s.DocumentId).ToDictionary(
+            g => g.Key,
+            g => (IReadOnlyList<string>)g.SelectMany(s => names[s.Id]).Distinct().Order(StringComparer.CurrentCulture).ToList());
     }
 
     /// <summary>Tình trạng chung của PR/PO.</summary>

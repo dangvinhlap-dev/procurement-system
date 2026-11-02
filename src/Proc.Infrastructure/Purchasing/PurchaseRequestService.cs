@@ -376,7 +376,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.DepartmentId, department ?? pr.LegacyDepartment, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,
             pr.NeededDate, pr.WarehouseId, pr.Priority.ToString(), pr.Note, pr.TotalAmount, pr.RejectReason, pr.CreatedAt,
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
-            await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken), actions, newItems,
+            await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
             pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate));
     }
