@@ -73,8 +73,8 @@ public static class PurchasingEndpoints
         po.MapGet("/tracking", (IPurchaseOrderService s, CancellationToken ct) => s.TrackingAsync(ct))
             .RequirePermission(Permissions.Purchase.PoView);
         // Giá đã duyệt (hợp đồng/bảng giá) cho người lập PO – design.md mục 18.10; không cần quyền xem bảng giá, hợp đồng.
-        po.MapGet("/approved-prices", (Guid supplierId, DateOnly date, Guid[]? itemIds, IPurchaseOrderService s, CancellationToken ct) =>
-                s.ApprovedPricesAsync(supplierId, date, itemIds ?? [], ct))
+        po.MapGet("/approved-prices", (Guid supplierId, DateOnly date, Guid[]? itemIds, Guid? departmentId, IPurchaseOrderService s, CancellationToken ct) =>
+                s.ApprovedPricesAsync(supplierId, date, itemIds ?? [], departmentId, ct))
             .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
         // Thủ kho lập phiếu nhập theo PO cần đọc đơn dù không có quyền xem danh sách đơn mua hàng.
         po.MapGet("/{id:guid}", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.GetAsync(id, ct))

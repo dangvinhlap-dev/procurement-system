@@ -98,8 +98,54 @@ public class PurchaseOrderPriceSourceTests
     {
         var code = UniqueCode("R");
         await _factory.CreateRoleAsync(code, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractView,
-            Permissions.Purchase.ContractApprove);
+            Permissions.Purchase.ContractApprove, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.MasterData.SoleSourceView,
+            Permissions.MasterData.SoleSourceApprove);
         return code;
+    }
+
+    [Fact]
+    public async Task BoPhanNgoaiPhamViHopDong_KhongTinhGiaHopDong_GhiNhanNccDocQuyen()
+    {
+        var f = await ArrangeAsync();
+        var px1 = await ReadAsync<DepartmentDto>(await f.Client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));
+        var px2 = await ReadAsync<DepartmentDto>(await f.Client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX2", "Phân xưởng 2", null), Ct));
+        var approver = await ApproverAsync(f, await RoleAsync());
+
+        // Hợp đồng chỉ cho PX1 đặt hàng.
+        var contract = await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync("/api/contracts", new SaveContractRequest(
+            f.SupplierId, f.PriceListId, "HĐNT 03/2026", "Hợp đồng vòng bi PX1", Today, Today, Today.AddMonths(6), null, null, null, null, null, null, null,
+            null, null, [px1.Id], [new SaveContractLineRequest(null, f.ItemId, f.Cai, 1_000, null, null)]), Ct));
+        await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{contract.Id}/submit", null, Ct));
+        contract = await ReadAsync<ContractDto>(await approver.PostAsJsonAsync($"/api/contracts/{contract.Id}/approve", new ApprovalActionRequest(null), Ct));
+
+        // NCC độc quyền đã duyệt cho mặt hàng.
+        var sole = await ReadAsync<SoleSourceDto>(await f.Client.PostAsJsonAsync("/api/sole-sources",
+            new SaveSoleSourceRequest(f.SupplierId, f.ItemId, "Chỉ hãng này sản xuất vòng bi 6207 chịu nhiệt", Today, Today.AddMonths(12)), Ct));
+        await ReadAsync<SoleSourceDto>(await f.Client.PostAsync($"/api/sole-sources/{sole.Id}/submit", null, Ct));
+        sole = await ReadAsync<SoleSourceDto>(await approver.PostAsJsonAsync($"/api/sole-sources/{sole.Id}/approve", new ApprovalActionRequest(null), Ct));
+
+        // PX1: giá hợp đồng; PX2 và chưa chọn bộ phận: bảng giá + ghi chú phạm vi. Mọi dòng ghi nhận phiếu độc quyền.
+        var po1 = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", Po(f, f.SupplierId, Line(f, 10, 50_000, 5)) with { DepartmentId = px1.Id }, Ct));
+        Assert.Equal(("Contract", "PX1 – Phân xưởng 1", (string?)null, sole.No), (po1.Lines[0].PriceSource, po1.DepartmentName, po1.ContractScopeNote, po1.Lines[0].SoleSourceNo));
+        var po2 = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", Po(f, f.SupplierId, Line(f, 10, 50_000, 5)) with { DepartmentId = px2.Id }, Ct));
+        Assert.Equal(("PriceList", sole.No), (po2.Lines[0].PriceSource, po2.Lines[0].SoleSourceNo));
+        Assert.Equal($"Hợp đồng {contract.No} chỉ cho bộ phận PX1 đặt hàng – đơn của bộ phận PX2 không tính giá theo hợp đồng.", po2.ContractScopeNote);
+        var po3 = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", Po(f, f.SupplierId, Line(f, 10, 50_000, 5)), Ct));
+        Assert.Equal("PriceList", po3.Lines[0].PriceSource);
+        Assert.Contains("đơn chưa chọn bộ phận đặt hàng", po3.ContractScopeNote);
+        var prices = await ReadAsync<List<PoApprovedPriceDto>>(await f.Client.GetAsync(
+            $"/api/purchase-orders/approved-prices?supplierId={f.SupplierId}&date={Today:yyyy-MM-dd}&itemIds={f.ItemId}&departmentId={px2.Id}", Ct));
+        Assert.All(prices, p => Assert.Equal("PriceList", p.Source));
+
+        // Dòng từ PR: PO lấy bộ phận của PR; PR khác bộ phận đã chọn thì chặn.
+        var pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests",
+            new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", Today.AddDays(7), f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 20, null, null, null)]), Ct));
+        await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
+        pr = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/approve", new ApprovalActionRequest(null), Ct));
+        var fromPr = Po(f, f.SupplierId, new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 5, 50_000, 5, "10", null, null, pr.Lines[0].Id));
+        Assert.Contains("khác bộ phận đặt hàng PX2", await TitleAsync(await f.Client.PostAsJsonAsync("/api/purchase-orders", fromPr with { DepartmentId = px2.Id }, Ct)));
+        var po4 = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", fromPr, Ct));
+        Assert.Equal((px1.Id, "Contract"), (po4.DepartmentId!.Value, po4.Lines[0].PriceSource));
     }
 
     [Fact]

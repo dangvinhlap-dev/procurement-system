@@ -172,10 +172,12 @@ export function usePriceListMutations() {
  * @param supplierId NCC; trống thì không tải.
  * @param date Ngày yyyy-MM-dd.
  * @param itemIds Mặt hàng trên phiếu.
+ * @param departmentId Bộ phận đặt hàng – hợp đồng giới hạn bộ phận thì chỉ áp cho bộ phận được phép.
  */
-export function useSupplierPrices(supplierId: string | undefined, date: string | undefined, itemIds: string[]) {
+export function useSupplierPrices(supplierId: string | undefined, date: string | undefined, itemIds: string[], departmentId?: string | null) {
   const companyId = useCompanyId()
   const params = new URLSearchParams({ supplierId: supplierId ?? '', date: date ?? '' })
+  if (departmentId) params.append('departmentId', departmentId)
   for (const id of [...new Set(itemIds)].sort()) params.append('itemIds', id)
   const query = params.toString()
   return useQuery({

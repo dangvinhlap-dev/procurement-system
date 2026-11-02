@@ -100,8 +100,10 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible()
   await page.getByLabel('Lý do lệch giá dòng 1').fill('NCC báo tăng giá nguyên liệu')
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
+  // Chờ đúng phản hồi lưu lần này – thông báo "Đã lưu phiếu" của lần lưu trước có thể vẫn còn trên màn hình.
+  const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/purchase-orders\/[^/]+$/.test(r.url()))
   await page.keyboard.press('Control+s')
-  await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu/)
+  expect((await saved).ok()).toBe(true)
   // Gửi duyệt = lưu rồi gửi (hai lượt gọi API) – khi chạy song song có thể quá 5 giây, chờ trạng thái thay vì thông báo thoáng qua.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()

@@ -194,6 +194,8 @@ export interface PurchaseOrderLine {
   isPriceDeviation: boolean
   /** Không có giá đã duyệt hoặc lệch giá đã duyệt. */
   isOutOfContract: boolean
+  /** Số phiếu NCC độc quyền còn tác dụng vào ngày PO (ghi nhận cho KSNB). */
+  soleSourceNo: string | null
 }
 
 /** Nguồn giá của dòng PO: kết quả chọn thầu, hợp đồng nguyên tắc, bảng giá, ngoài hợp đồng; Unknown = PO trước bản 0.12.0. */
@@ -241,11 +243,17 @@ export interface PurchaseOrder {
   hasPriceException: boolean
   /** Có dòng mua ngoài hợp đồng. */
   isOutOfContract: boolean
+  /** Bộ phận đặt hàng (design.md mục 18.10). */
+  departmentId: string | null
+  departmentName: string | null
+  /** Hợp đồng hiệu lực không cho bộ phận của PO đặt hàng – lý do không tính giá theo hợp đồng. */
+  contractScopeNote: string | null
 }
 
 /** Nội dung PO gửi lên. */
 export interface SavePurchaseOrderInput {
   date: string
+  departmentId: string | null
   supplierId: string
   warehouseId: string
   expectedDate: string | null
