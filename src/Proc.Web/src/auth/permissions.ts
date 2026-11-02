@@ -43,6 +43,10 @@ export const Permission = {
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',
+  /** Lập, sửa, hủy phiếu điều chỉnh / kiểm kê kho – quyền riêng (design.md mục 18.23). */
+  InventoryAdjustmentCreate: 'Inventory.Adjustment.Create',
+  /** Ghi sổ, bỏ ghi sổ phiếu điều chỉnh / kiểm kê kho – quyền riêng. */
+  InventoryAdjustmentPost: 'Inventory.Adjustment.Post',
   StockView: 'Inventory.Stock.View',
   PeriodView: 'Inventory.Period.View',
   PeriodOpen: 'Inventory.Period.Open',

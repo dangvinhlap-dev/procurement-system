@@ -139,7 +139,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
       `PeriodCosting.IsPriced` (dòng tăng = nhập có giá), quyền riêng `Inventory.Adjustment.Create/Post` (KHO lập, KETOAN ghi sổ), API
       `/api/stock-adjustments`, thẻ kho, xuất kế toán; migration `V0_15_0_PhieuDieuChinhKho`. Sửa kèm: bỏ ghi sổ đếm trùng kho khi kho xuất =
       kho nhập. Test tích hợp `StockAdjustmentTests`. `dotnet test` 509 qua.
-    - **ADJ-2** giao diện (màn hình ADJ, trang phiếu, Tra cứu chứng từ mở được). **ADJ-3** kiểm kê (SL thực đếm → tự tính chênh lệch; in biên bản).
+    - **ADJ-2 (xong)** giao diện: màn hình ADJ `/kho/dieu-chinh` (`InventoryDocumentListPage` cột riêng + `createPermission`), trang
+      `StockAdjustmentPage.tsx`, `useDocumentCommands.postPermission`, quyền web `InventoryAdjustmentCreate/Post`; danh sách phiếu kho thêm
+      `Reason`, `CountReportNo`; Tra cứu chứng từ, xuất kế toán mở được ADJ. e2e `stock-adjustment.spec.ts`, sửa `administration` (nhóm Kho
+      11 quyền). Kiểm tra: `dotnet test` 509; Playwright 90/90; `npm run build`, `tsc`, `oxlint` qua.
+    - **ADJ-3** (tiếp theo): kiểm kê – nhập SL thực đếm, tự tính chênh lệch so tồn sổ sinh dòng tăng/giảm; in biên bản kiểm kê PDF.
+      Xong ADJ-3 thì merge `main`.
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người

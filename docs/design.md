@@ -1568,7 +1568,7 @@ Yêu cầu người dùng sau khi test 0.14.0: có một chỗ xem **tất cả 
 | **Tình trạng chung**: Chưa hoàn thành (nháp, chờ duyệt, đang nhận báo giá…), Hoàn thành (đã ghi sổ, đã duyệt, đã đóng, hiệu lực/chấm dứt, đã chọn thầu, đã kết luận…), Đã hủy/từ chối; kèm trạng thái gốc và cấp đang chờ duyệt | |
 | Lọc "Tôi lập" (người tạo) / "Tôi đã duyệt" (bước duyệt/từ chối do tôi; phiếu kho = tôi ghi sổ) | |
 | Ngày: ngày chứng từ; bảng giá = hiệu lực từ; hợp đồng = ngày ký (chưa ký: hiệu lực từ); loại không có ngày (phụ lục, duyệt NCC, độc quyền) = ngày lập giờ VN. Khoảng tối đa 366 ngày, tối đa 5.000 dòng | Tránh quét cả CSDL |
-| Bấm đúp mở **trang đầy đủ** của chứng từ; điều chỉnh kho (ADJ) chưa có trang vì **chưa có chức năng lập phiếu điều chỉnh/kiểm kê** (chỉ mới khai báo mã loại) – người dùng chốt 02/11/2026 làm thành tính năng riêng | |
+| Bấm đúp mở **trang đầy đủ** của chứng từ (điều chỉnh kho ADJ: `/kho/dieu-chinh/:id` – mục 18.23) | |
 
 Không có migration.
 
@@ -1613,8 +1613,12 @@ giá vốn, có biên bản kiểm kê, quyền riêng.
 | Thẻ kho: diễn giải "Điều chỉnh tăng/giảm"; NXT: vào cột tổng nhập/tổng xuất; xuất dữ liệu kế toán: loại ADJ, tên loại dòng "Điều chỉnh tăng/giảm", giá vốn theo chiều dòng | |
 | Migration `V0_15_0_PhieuDieuChinhKho` (cột `Reason`, `CountReportNo` của phiếu, `Direction` của dòng + ràng buộc −1/1); `Down()` mất dữ liệu của phiếu ADJ đã có | CLAUDE.md mục 8 |
 
-Lát sau: **ADJ-2** giao diện (màn hình ADJ – danh sách + trang phiếu, Tra cứu chứng từ mở được); **ADJ-3** kiểm kê (nhập SL thực đếm, tự tính
-chênh lệch so tồn sổ; in biên bản kiểm kê).
+**Giao diện (lát ADJ-2, 02/11/2026):** màn hình **ADJ** (Kho → Điều chỉnh, kiểm kê – `/kho/dieu-chinh`): danh sách (ngày, kho, số biên bản,
+lý do, trạng thái; nút Tạo mới theo quyền lập ADJ) và trang phiếu `DocumentForm` + `LineGrid`: cột Tăng/Giảm, tồn hiện tại tại kho (cảnh báo
+khi giảm vượt tồn), đơn giá chỉ ở dòng tăng (dòng giảm hiện "Giá vốn"), thành tiền + tiền tệ, lô, hạn dùng (dòng tăng); chân phiếu: số dòng,
+giá trị tăng; tab Đính kèm cho biên bản scan. Nút Ghi sổ theo quyền ghi sổ ADJ. Tra cứu chứng từ, xuất dữ liệu kế toán mở được phiếu ADJ.
+
+Lát sau: **ADJ-3** kiểm kê (nhập SL thực đếm, tự tính chênh lệch so tồn sổ; in biên bản kiểm kê).
 
 ## Nguồn tham khảo
 

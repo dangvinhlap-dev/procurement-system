@@ -2,6 +2,7 @@ import {
   AlertOutlined,
   ApartmentOutlined,
   AuditOutlined,
+  CalculatorOutlined,
   DashboardOutlined,
   BarChartOutlined,
   BankOutlined,
@@ -128,6 +129,8 @@ export const screens: Screen[] = [
   { code: 'TRF', title: 'Phiếu chuyển kho nội bộ (TRF)', navLabel: 'Chuyển kho nội bộ', path: '/kho/trf', icon: <SwapOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
   { code: 'ICS', title: 'Phiếu xuất bán nội bộ (ICS)', navLabel: 'Xuất bán nội bộ', path: '/kho/ics', icon: <FileDoneOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
   { code: 'ICR', title: 'Phiếu nhập mua nội bộ (ICR)', navLabel: 'Nhập mua nội bộ', path: '/kho/icr', icon: <InboxOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
+  // Phiếu điều chỉnh / kiểm kê (design.md mục 18.23): xem theo quyền xem chứng từ kho, lập và ghi sổ theo quyền riêng.
+  { code: 'ADJ', title: 'Phiếu điều chỉnh, kiểm kê kho (ADJ)', navLabel: 'Điều chỉnh, kiểm kê', path: '/kho/dieu-chinh', icon: <CalculatorOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
   { code: 'STK', title: 'Tồn kho hiện tại', navLabel: 'Tồn kho hiện tại', path: '/kho/ton-kho', icon: <DatabaseOutlined />, group: 'inventory', permission: Permission.StockView },
   { code: 'CARD', title: 'Thẻ kho', navLabel: 'Thẻ kho', path: '/kho/the-kho', icon: <ProfileOutlined />, group: 'inventory', permission: Permission.StockView },
 

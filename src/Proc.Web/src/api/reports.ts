@@ -610,7 +610,7 @@ export function usePurchaseSla(range: { from: string; to: string }) {
 /** Một chứng từ đã ghi sổ sẽ xuất cho kế toán. */
 export interface AccountingDocument {
   documentId: string
-  docType: 'GRN' | 'RTV' | 'TRF' | 'ICS' | 'ICR'
+  docType: 'GRN' | 'RTV' | 'TRF' | 'ICS' | 'ICR' | 'ADJ'
   no: string
   date: string
   partnerCode: string | null

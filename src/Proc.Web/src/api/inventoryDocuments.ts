@@ -39,6 +39,10 @@ export interface InventoryDocumentListItem {
   toWarehouseCode: string | null
   /** Công ty đối ứng (phiếu bán/nhập nội bộ). */
   counterCompanyCode?: string | null
+  /** Phiếu điều chỉnh: lý do điều chỉnh. */
+  reason?: string | null
+  /** Phiếu điều chỉnh: số biên bản kiểm kê. */
+  countReportNo?: string | null
 }
 
 /** Kết quả tìm chứng từ. */
@@ -84,6 +88,8 @@ export interface InventoryLine {
   qcNote?: string | null
   /** Thiếu (âm) / thừa (dương) so với chứng từ giao. */
   discrepancyQty?: number
+  /** Phiếu điều chỉnh: 1 tăng, -1 giảm (design.md mục 18.23). */
+  direction?: 1 | -1 | null
 }
 
 /** Kết quả kiểm tra chất lượng dòng phiếu nhập mua. */
@@ -140,6 +146,10 @@ export interface InventoryDocument {
   invoiceAmount?: number | null
   /** Phiếu nhập mua đã ghi sổ: người xem cập nhật được hóa đơn (design.md mục 18.15). */
   canUpdateInvoice?: boolean
+  /** Phiếu điều chỉnh: lý do điều chỉnh. */
+  reason?: string | null
+  /** Phiếu điều chỉnh: số biên bản kiểm kê. */
+  countReportNo?: string | null
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -332,6 +342,34 @@ export interface SaveTransferInput {
 
 /** Lập, sửa, ghi sổ phiếu chuyển kho. */
 export const useStockTransferMutations = () => useInventoryDocumentMutations<SaveTransferInput>('/api/stock-transfers')
+
+/** Một dòng phiếu điều chỉnh / kiểm kê gửi lên khi lưu (design.md mục 18.23). */
+export interface SaveAdjustmentLineInput {
+  id: string | null
+  itemId: string
+  uomId: string
+  /** 1 tăng (hàng thừa), -1 giảm (hàng thiếu). */
+  direction: 1 | -1
+  qty: number
+  /** Dòng tăng: giá nhập tay; dòng giảm: 0 – xuất theo giá vốn. */
+  unitPrice: number
+  lotNo: string | null
+  expiryDate: string | null
+  note: string | null
+}
+
+/** Nội dung phiếu điều chỉnh / kiểm kê gửi lên khi lưu. */
+export interface SaveAdjustmentInput {
+  date: string
+  warehouseId: string
+  reason: string
+  countReportNo: string
+  note: string | null
+  lines: SaveAdjustmentLineInput[]
+}
+
+/** Lập, sửa, ghi sổ phiếu điều chỉnh / kiểm kê kho. */
+export const useStockAdjustmentMutations = () => useInventoryDocumentMutations<SaveAdjustmentInput>('/api/stock-adjustments')
 
 /** Một dòng phiếu nhập còn trả được. */
 export interface ReturnableLine {

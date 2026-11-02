@@ -18,10 +18,13 @@ namespace Proc.Application.Inventory;
 /// <param name="ToWarehouseCode">Mã kho nhập (phiếu chuyển kho).</param>
 /// <param name="CounterCompanyCode">Mã công ty đối ứng (phiếu bán/nhập nội bộ).</param>
 /// <param name="ReceiveStatus">Trạng thái nhận hàng bán nội bộ (Pending, Full, Short); hiện chưa tính ở danh sách.</param>
+/// <param name="Reason">Phiếu điều chỉnh: lý do điều chỉnh.</param>
+/// <param name="CountReportNo">Phiếu điều chỉnh: số biên bản kiểm kê.</param>
 public sealed record InventoryDocumentListItemDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, string? WarehouseCode, string? WarehouseName,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, decimal TotalAmount, decimal TotalVat, int LineCount,
-    string? FromWarehouseCode = null, string? ToWarehouseCode = null, string? CounterCompanyCode = null, string? ReceiveStatus = null);
+    string? FromWarehouseCode = null, string? ToWarehouseCode = null, string? CounterCompanyCode = null, string? ReceiveStatus = null,
+    string? Reason = null, string? CountReportNo = null);
 
 /// <summary>Kết quả tìm chứng từ; mỗi lần tối đa <see cref="Limit"/> dòng.</summary>
 /// <param name="Items">Các phiếu, mới nhất trước.</param>

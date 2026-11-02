@@ -29,6 +29,8 @@ import { InventoryDocumentListPage } from './pages/inventory/InventoryDocumentLi
 import { StockCardPage } from './pages/inventory/StockCardPage'
 import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
 import { StockTransferPage } from './pages/inventory/StockTransferPage'
+import { StockAdjustmentPage } from './pages/inventory/StockAdjustmentPage'
+import { Permission } from './auth/permissions'
 import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ContractAmendmentPage } from './pages/purchasing/ContractAmendmentDrawer'
@@ -124,6 +126,12 @@ const implemented: Record<string, ReactNode> = {
   PHAN: <PurchaseAnalysisPage />,
   ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
   ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
+  ADJ: (
+    <InventoryDocumentListPage
+      docType="ADJ" title="Phiếu điều chỉnh, kiểm kê kho (ADJ)" path="/kho/dieu-chinh" exportFileName="phieu-dieu-chinh-kho"
+      createPermission={Permission.InventoryAdjustmentCreate}
+    />
+  ),
   IPR: <InternalPriceListPage />,
   PRL: <PriceListListPage />,
   PCMP: <PriceComparisonPage />,
@@ -150,6 +158,7 @@ const documentPages = [
   { code: 'GRN', element: <GoodsReceiptPage /> },
   { code: 'RTV', element: <GoodsReturnPage /> },
   { code: 'TRF', element: <StockTransferPage /> },
+  { code: 'ADJ', element: <StockAdjustmentPage /> },
   { code: 'ICS', element: <IntercompanySalePage /> },
   { code: 'ICR', element: <IntercompanyReceiptPage /> },
   { code: 'PR', element: <PurchaseRequestPage /> },

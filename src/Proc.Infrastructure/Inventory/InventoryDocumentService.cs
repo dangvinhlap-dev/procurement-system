@@ -83,7 +83,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 select new InventoryDocumentListItemDto(
                     d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), w == null ? null : w.Code, w == null ? null : w.Name,
                     s == null ? null : s.Code, s == null ? null : s.Name, d.InvoiceNo, d.TotalAmount, d.TotalVat, d.Lines.Count,
-                    wf == null ? null : wf.Code, wt == null ? null : wt.Code, cc == null ? null : cc.Code))
+                    wf == null ? null : wf.Code, wt == null ? null : wt.Code, cc == null ? null : cc.Code, null, d.Reason, d.CountReportNo))
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
         return new InventoryDocumentListResult(rows.Take(SearchLimit).ToList(), rows.Count > SearchLimit, SearchLimit);

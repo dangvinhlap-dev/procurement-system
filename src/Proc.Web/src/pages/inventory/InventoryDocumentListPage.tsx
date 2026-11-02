@@ -76,6 +76,15 @@ const columnsByType: Record<string, Column[]> = {
     ...moneyColumns,
     ...tailColumns,
   ],
+  // Phiếu điều chỉnh / kiểm kê (design.md mục 18.23): một kho, lý do, số biên bản; giá trị chỉ gồm dòng tăng (dòng giảm theo giá vốn).
+  ADJ: [
+    noColumn,
+    { key: 'date', title: 'Ngày điều chỉnh', width: 100, type: 'date', value: (r) => r.date },
+    { key: 'warehouse', title: 'Kho', width: 150, value: (r) => (r.warehouseCode ? `${r.warehouseCode} – ${r.warehouseName}` : ''), groupable: true },
+    { key: 'report', title: 'Số biên bản', width: 120, value: (r) => r.countReportNo ?? null },
+    { key: 'reason', title: 'Lý do', width: 260, value: (r) => r.reason ?? null },
+    ...tailColumns,
+  ],
   ICR: [
     noColumn,
     { key: 'date', title: 'Ngày nhận', width: 90, type: 'date', value: (r) => r.date },
@@ -107,8 +116,8 @@ const columnsByType: Record<string, Column[]> = {
  * @param canCreate false = không có nút Tạo mới (phiếu do hệ thống sinh, ví dụ phiếu nhập mua nội bộ).
  */
 export function InventoryDocumentListPage({
-  docType, title, path, exportFileName, canCreate = true,
-}: { docType: string; title: string; path: string; exportFileName: string; canCreate?: boolean }) {
+  docType, title, path, exportFileName, canCreate = true, createPermission = Permission.InventoryDocumentCreate,
+}: { docType: string; title: string; path: string; exportFileName: string; canCreate?: boolean; createPermission?: string }) {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const [range, setRange] = useState<DateRange>(() => ({
@@ -127,7 +136,7 @@ export function InventoryDocumentListPage({
       rowKey={(r) => r.id}
       auditEntity="InventoryDocument"
       loading={documents.isLoading}
-      canCreate={canCreate && hasPermission(Permission.InventoryDocumentCreate)}
+      canCreate={canCreate && hasPermission(createPermission)}
       onCreate={() => navigate(`${path}/moi`)}
       onOpenRow={(r) => navigate(`${path}/${r.id}`)}
       notice={<TruncatedNotice truncated={documents.data?.truncated} />}
