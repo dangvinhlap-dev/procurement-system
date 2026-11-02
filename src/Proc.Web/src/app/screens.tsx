@@ -79,6 +79,19 @@ export interface Screen {
   group: ModuleKey
   /** Quyền cần có để thấy và mở màn hình; không khai báo = ai đăng nhập cũng mở được. */
   permission?: string
+  /** Có một trong các quyền này là mở được (thay cho `permission` khi nhiều vai trò cùng xem, ví dụ sổ vi phạm: KSNB hoặc lãnh đạo). */
+  anyPermission?: readonly string[]
+}
+
+/**
+ * Người dùng có được mở màn hình không (theo `permission` hoặc `anyPermission`).
+ * @param screen Màn hình.
+ * @param hasPermission Hàm kiểm tra quyền của người dùng tại công ty đang làm việc.
+ * @returns true nếu được mở.
+ */
+export function canOpenScreen(screen: Screen, hasPermission: (code: string) => boolean): boolean {
+  if (screen.permission && !hasPermission(screen.permission)) return false
+  return !screen.anyPermission || screen.anyPermission.some(hasPermission)
 }
 
 /**
@@ -152,6 +165,8 @@ export const screens: Screen[] = [
   { code: 'PRVAR', title: 'Biến động giá mua', navLabel: 'Biến động giá mua', path: '/bao-cao/bien-dong-gia-mua', icon: <LineChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PHIS', title: 'Dữ liệu mua lịch sử', navLabel: 'Dữ liệu mua lịch sử', path: '/bao-cao/du-lieu-mua-lich-su', icon: <HistoryOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
   { code: 'PHMAP', title: 'Ánh xạ dữ liệu mua', navLabel: 'Ánh xạ dữ liệu mua', path: '/bao-cao/anh-xa-du-lieu-mua', icon: <NodeIndexOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
+  { code: 'ANOM', title: 'Dấu hiệu bất thường (KSNB)', navLabel: 'Dấu hiệu bất thường', path: '/bao-cao/dau-hieu-bat-thuong', icon: <AlertOutlined />, group: 'reports', permission: Permission.ControlAnomalyView },
+  { code: 'VIOL', title: 'Sổ vi phạm (KSNB)', navLabel: 'Sổ vi phạm', path: '/bao-cao/so-vi-pham', icon: <SafetyOutlined />, group: 'reports', anyPermission: [Permission.ControlAnomalyView, Permission.ControlFindingReceive] },
   { code: 'PHAN', title: 'Phân tích giá hợp nhất', navLabel: 'Phân tích giá hợp nhất', path: '/bao-cao/phan-tich-gia-hop-nhat', icon: <FundViewOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
 
   { code: 'ACCX', title: 'Xuất chứng từ cho kế toán', navLabel: 'Xuất cho kế toán', path: '/bao-cao/xuat-ke-toan', icon: <ExportOutlined />, group: 'reports', permission: Permission.AccountingExport },

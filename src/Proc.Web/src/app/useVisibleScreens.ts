@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { screens, type Screen } from './screens'
+import { canOpenScreen, screens, type Screen } from './screens'
 
 /**
  * Các màn hình người dùng được mở tại công ty đang làm việc – dùng cho menu module trên Shellbar, cây điều hướng, ô lệnh.
@@ -9,5 +9,5 @@ import { screens, type Screen } from './screens'
  */
 export function useVisibleScreens(): Screen[] {
   const { hasPermission } = useAuth()
-  return useMemo(() => screens.filter((s) => !s.permission || hasPermission(s.permission)), [hasPermission])
+  return useMemo(() => screens.filter((s) => canOpenScreen(s, hasPermission)), [hasPermission])
 }

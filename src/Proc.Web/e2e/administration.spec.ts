@@ -127,7 +127,9 @@ test.describe('quản trị hệ thống', () => {
     } else {
       await dialog.getByRole('button', { name: 'Đóng', exact: true }).last().click()
     }
-    await expect(gridRow(page, 'KSNB')).toContainText('Kiểm soát nội bộ')
+    // Vai trò LANHDAO cũng nhắc tới KSNB trong mô tả – lọc đúng dòng vai trò KSNB.
+    await expect(gridRow(page, 'KSNB').filter({ hasText: 'Kiểm soát nội bộ' })).toHaveCount(1)
+    await expect(gridRow(page, 'LANHDAO')).toContainText('Lãnh đạo')
 
     await page.getByRole('button', { name: 'Bộ vai trò mẫu…' }).click()
     await expect(dialog.getByRole('button', { name: 'Đã có đủ' })).toBeDisabled()

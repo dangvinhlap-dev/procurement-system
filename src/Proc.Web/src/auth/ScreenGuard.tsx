@@ -1,7 +1,7 @@
 import { StopOutlined } from '@ant-design/icons'
 import { Result } from 'antd'
 import type { ReactNode } from 'react'
-import type { Screen } from '../app/screens'
+import { canOpenScreen, type Screen } from '../app/screens'
 import { useAuth } from './useAuth'
 
 /**
@@ -10,7 +10,7 @@ import { useAuth } from './useAuth'
  */
 export function ScreenGuard({ screen, children }: { screen: Screen; children: ReactNode }) {
   const { hasPermission, workingCompany } = useAuth()
-  if (screen.permission && !hasPermission(screen.permission)) {
+  if (!canOpenScreen(screen, hasPermission)) {
     return (
       <Result
         icon={<StopOutlined />}

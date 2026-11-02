@@ -118,15 +118,20 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- **F3 (đang làm, nhánh `feature/f3-ksnb`): Kiểm soát nội bộ – dấu hiệu bất thường, sổ vi phạm, thông báo lãnh đạo** – design.md mục 18.19.
-  - Bước 1 (xong): quyền `Control.Anomaly.View`/`Control.Finding.Manage`/`Control.Finding.Receive`, vai trò mẫu KSNB thêm quyền, vai trò mẫu
-    mới LANHDAO; API `GET /api/control/anomalies` (`ControlAnomalyService`): giá cao lặp lại 1 NCC, PO sát dưới ngưỡng duyệt, đổi TK ngân
-    hàng NCC, mua ngoài hợp đồng cao theo người lập, hóa đơn tính cả hàng thiếu, hàng/hóa đơn trước PO, xung đột lợi ích; chiết khấu "Chưa đo".
-    `PurchaseReportService.OrderLinesAsync`/`ThreeWayRowsAsync` thành hàm tĩnh dùng chung. Test `ControlAnomalyTests`, sửa `RoleAdministrationTests`.
-  - Bước 2 (xong): sổ vi phạm `ControlFinding` (loại số VP, migration `V0_13_0_GhiNhanViPham`), API `/api/control/findings` (ghi nhận, sửa khi
-    mở, kết luận khóa phiếu, không xóa), thông báo thẳng người có quyền `Control.Finding.Receive`; KPI "Vi phạm nghiêm trọng" đo từ sổ (vụ
-    Nghiêm trọng đã kết luận). Test domain `ControlFindingTests`, tích hợp `SoViPham_…`; sửa `BangKpi_…` (vi phạm đã đo).
-  - Còn: bước 3 màn hình ANOM + VIOL (sổ vi phạm) + thông báo mở VIOL + e2e (sửa `document-numbering` đếm 14 loại); cuối lát chạy đủ kiểm tra, merge.
+- Không có lát đang dở. Lát kế tiếp theo lộ trình: **F4** (đánh giá NCC định kỳ theo quý – N5; chiết khấu doanh số/tài trợ trên hợp đồng –
+  P10), lập kế hoạch ngắn trước khi code; có thể phát hành 0.13.0 khi người dùng yêu cầu (C3 vẫn hoãn).
+- **F3 (xong, đã merge `main` 02/11/2026): Kiểm soát nội bộ – dấu hiệu bất thường, sổ vi phạm, thông báo thẳng lãnh đạo** – design.md mục 18.19.
+  - Quyền `Control.Anomaly.View`/`Control.Finding.Manage`/`Control.Finding.Receive`; vai trò mẫu KSNB thêm quyền, vai trò mẫu mới LANHDAO
+    (vai trò KSNB đã tạo trước đó phải gán tay quyền mới).
+  - API `GET /api/control/anomalies` (`ControlAnomalyService`): giá cao lặp lại 1 NCC, PO sát dưới ngưỡng duyệt, đổi TK ngân hàng NCC,
+    mua ngoài hợp đồng cao theo người lập, hóa đơn tính cả hàng thiếu, hàng/hóa đơn trước PO, xung đột lợi ích; chiết khấu "Chưa đo" (F4).
+    `PurchaseReportService.OrderLinesAsync`/`ThreeWayRowsAsync` thành hàm tĩnh dùng chung.
+  - Sổ vi phạm `ControlFinding` (số loại VP, migration `V0_13_0_GhiNhanViPham`), `/api/control/findings`, thông báo lãnh đạo khi ghi nhận và
+    kết luận; KPI "Vi phạm nghiêm trọng" đo từ sổ (vụ Nghiêm trọng đã kết luận).
+  - Giao diện: màn hình ANOM, VIOL (nhóm Báo cáo); `Screen.anyPermission`; thông báo loại "Vi phạm KSNB" mở sổ vi phạm.
+  - Test: domain `ControlFindingTests`, tích hợp `ControlAnomalyTests` (2), sửa `RoleAdministrationTests`, `BangKpi_…`; e2e `control.spec.ts`,
+    sửa `administration` (lọc dòng KSNB), `document-numbering` (14 loại).
+  - Kiểm tra cuối (02/11/2026): `dotnet test` 494 qua; Playwright 85/85 (administration sửa rồi chạy lại qua); `npm run build`, `tsc`, `oxlint` qua.
 - **F2 (xong, đã merge `main` 02/11/2026): bảng KPI cung ứng 9 chỉ số** – design.md mục 18.18.
   - API `GET /api/reports/kpi` (`KpiService` ghép PRCW, SLA, QCDEV, đánh giá NCC, tiết kiệm thầu, tồn chậm, tỷ lệ PO khẩn; so kỳ trước);
     màn hình KPI (Báo cáo, mặc định tháng trước, bấm đúp mở báo cáo chi tiết, nút "Mục tiêu KPI"). Đánh giá NCC (F4), vi phạm (F3): "Chưa đo".
@@ -184,7 +189,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F3** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; lát kế tiếp: **F4** (có thể phát hành 0.13.0 khi người dùng yêu cầu).
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);
