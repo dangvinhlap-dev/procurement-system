@@ -38,6 +38,22 @@ public class StockLedgerTests
     }
 
     [Fact]
+    public void CapNhatHoaDon_DuocKhiDaGhiSo_KhongDuocKhiDaHuy()
+    {
+        var (doc, _) = PostableReceipt();
+        doc.MarkPosted(Guid.CreateVersion7(), DateTimeOffset.UtcNow, null);
+
+        // Hóa đơn về sau khi ghi sổ: cập nhật được, tiền làm tròn 2 chữ số – design.md mục 18.15.
+        doc.UpdateInvoice(new ReceiptInvoice(" 0000123 ", "1C26TAA", new DateOnly(2026, 11, 2), 1_056_000.005m));
+        Assert.Equal(("0000123", (decimal?)1_056_000.01m, DocumentStatus.Posted), (doc.InvoiceNo, doc.InvoiceAmount, doc.Status));
+        Assert.Throws<BusinessRuleException>(() => doc.UpdateInvoice(new ReceiptInvoice(null, null, null, -1)));
+
+        var (draft, _) = PostableReceipt();
+        draft.Cancel();
+        Assert.Throws<BusinessRuleException>(() => draft.UpdateInvoice(new ReceiptInvoice("1", null, null, 0)));
+    }
+
+    [Fact]
     public void GhiSo_BoGhiSo_ChuyenTrangThai()
     {
         var (doc, _) = PostableReceipt();

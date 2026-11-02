@@ -115,8 +115,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
-- Không có. C5b (in biên bản giao nhận và kiểm tra hàng hóa – PDF từ phiếu nhập mua, design.md 18.14) đã xong 02/11/2026.
-  Lát kế tiếp **C6** (đối chiếu PO – nhận – hóa đơn). Lập kế hoạch ngắn trước khi code.
+- **C6 – đối chiếu PO – nhận – hóa đơn** (nhánh `feature/doi-chieu-3-chung-tu`, design.md 18.15). Bước 1 xong 02/11/2026: tiền hóa
+  đơn NCC trên phiếu nhập (`InvoiceAmount`, migration `V0_13_0_TienHoaDonPhieuNhap`), `PUT /api/goods-receipts/{id}/invoice` (cập nhật
+  hóa đơn cả khi đã ghi sổ), báo cáo `GET /api/reports/three-way-match`; test 477 qua. Bước 2: giao diện (ô tiền hóa đơn, nút "Cập nhật
+  hóa đơn", màn hình MATCH3), e2e, design.md 18.15.
 - **Lỗi cần sửa (phát hiện 02/11/2026 ở lát C4)**: trang chứng từ (PO, PR…) nạp lại form mỗi khi dữ liệu phiếu tải về (`useEffect` theo
   `doc` → `setFieldsValue`). Sau thao tác lưu/gửi, phiếu tải lại; nếu người dùng gõ trước lúc tải xong thì **chữ vừa gõ bị ghi đè**
   (ví dụ gõ lý do lệch giá ngay sau khi gửi duyệt bị chặn). e2e `pricing` đang tải lại trang để tránh. Hướng sửa: chỉ nạp lại form khi

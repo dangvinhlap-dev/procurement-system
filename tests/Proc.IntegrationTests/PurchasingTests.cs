@@ -134,6 +134,60 @@ public class PurchasingTests
     }
 
     [Fact]
+    public async Task DoiChieuPoNhanHoaDon_LechTien_ChuaCoHoaDon_CapNhatSauGhiSo()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        // PO 10 cái × 100.000, chiết khấu 5%, VAT 10% → giá ròng 95.000/cái, 104.500/cái gồm VAT.
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+
+        SaveReceiptRequest Receipt(decimal qty, decimal? delivered, decimal rejected, string? qc, string? note, decimal? invoiceAmount) =>
+            new(Today, f.Kt, f.SupplierId, "0000123", "1C26TAA", Today, null, null, null,
+                [new(null, f.ItemId, f.Cai, qty, 1, null, null, null, null, po.Lines[0].Id, delivered, rejected, qc, note)], po.Id, invoiceAmount);
+
+        // Phiếu 1: giao 5, đạt 4, không đạt 1; hóa đơn tính đủ 5 cái = 522.500 trong khi thực nhận 418.000.
+        Assert.Contains("không được âm", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Receipt(4, 5, 1, "Failed", "1 cái vỡ", -1), Ct)));
+        var short_ = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Receipt(4, 5, 1, "Failed", "1 cái vỡ", 522_500), Ct));
+        Assert.Equal((decimal?)522_500m, short_.InvoiceAmount);
+        Assert.False(short_.CanUpdateInvoice);
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, short_.Id));
+
+        // Phiếu 2: nhận đủ 6 cái = 627.000; hóa đơn về sau – cập nhật sau khi ghi sổ, lệch 1 đ làm tròn.
+        var full = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Receipt(6, 6, 0, "Passed", null, null), Ct));
+        full = await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, full.Id));
+        Assert.True(full.CanUpdateInvoice);
+        full = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PutAsJsonAsync($"/api/goods-receipts/{full.Id}/invoice",
+            new UpdateReceiptInvoiceRequest("0000124", "1C26TAA", Today, 627_001), Ct));
+        Assert.Equal(("Posted", "0000124", (decimal?)627_001m), (full.Status, full.InvoiceNo, full.InvoiceAmount));
+
+        // Phiếu 3: nhập thẳng không theo PO, chưa có hóa đơn.
+        var direct = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts",
+            new SaveReceiptRequest(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
+                [new(null, f.ItemId, f.Cai, 1, 50_000, "10", null, null, null, null, 1, 0, "Passed", null)]), Ct));
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, direct.Id));
+
+        var url = $"/api/reports/three-way-match?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&tolerance=1";
+        var report = await ReadAsync<ThreeWayMatchResult>(await f.Buyer.GetAsync(url, Ct));
+        var r1 = Assert.Single(report.Rows, r => r.DocumentId == short_.Id);
+        Assert.Equal(("Mismatch", 418_000m, (decimal?)104_500m, po.No, (decimal?)1_045_000m), (r1.Result, r1.ReceiptTotal, r1.Difference, r1.PurchaseOrderNo, r1.OrderTotal));
+        Assert.Equal([ThreeWayMatchIssues.AmountMismatch, ThreeWayMatchIssues.InvoiceIncludesShortage], r1.Issues);
+        var r2 = Assert.Single(report.Rows, r => r.DocumentId == full.Id);
+        Assert.Equal(("Matched", 0), (r2.Result, r2.Issues.Count));
+        var r3 = Assert.Single(report.Rows, r => r.DocumentId == direct.Id);
+        Assert.Equal(("NoInvoice", (decimal?)null), (r3.Result, r3.Difference));
+        Assert.Equal([ThreeWayMatchIssues.NoInvoice, ThreeWayMatchIssues.NoPurchaseOrder], r3.Issues);
+        Assert.Equal((1, 1, 1, 2, 1_100_000m, 1_149_501m), (report.Matched, report.NoInvoice, report.Mismatch, report.WithIssues, report.ReceiptTotal, report.InvoiceTotal));
+
+        // Không dung sai: lệch 1 đ là lệch; chỉ lấy phiếu có cảnh báo.
+        var strict = await ReadAsync<ThreeWayMatchResult>(await f.Buyer.GetAsync(url.Replace("tolerance=1", "tolerance=0") + "&onlyIssues=true", Ct));
+        Assert.Equal(3, strict.Rows.Count);
+        Assert.Equal((0, 2), (strict.Matched, strict.Mismatch));
+        Assert.Contains("Dung sai", await TitleAsync(await f.Buyer.GetAsync(url.Replace("tolerance=1", "tolerance=-1"), Ct)));
+    }
+
+    [Fact]
     public async Task LuongPrPoNhapKho_DuyetMotCap_NhanDuThiDongPo()
     {
         var f = await ArrangeAsync();

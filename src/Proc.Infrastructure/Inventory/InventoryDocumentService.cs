@@ -133,6 +133,18 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     }
 
     /// <inheritdoc />
+    public async Task<InventoryDocumentDto> UpdateReceiptInvoiceAsync(Guid id, UpdateReceiptInvoiceRequest request, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        var document = await LoadAsync(id, DocumentTypes.GoodsReceipt, cancellationToken);
+        await EnsureAllItemsVisibleAsync(document, cancellationToken);
+        // Không kiểm tra kỳ kho: hóa đơn không đổi sổ kho, giá vốn – design.md mục 18.15.
+        document.UpdateInvoice(new ReceiptInvoice(request.InvoiceNo, request.InvoiceSeries, request.InvoiceDate, request.InvoiceAmount));
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<InventoryDocumentDto> CancelAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -444,15 +456,19 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var itemsVisible = items.Count == itemIds.Count;
         var canPost = d.Status == DocumentStatus.Draft && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentPost);
         var canUnpost = d.Status == DocumentStatus.Posted && itemsVisible && _scope.HasPermission(Permissions.Inventory.DocumentUnpost);
+        // Phiếu nháp sửa hóa đơn ngay trên form; đã ghi sổ thì qua lệnh "Cập nhật hóa đơn" (design.md mục 18.15).
+        var canUpdateInvoice = d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && readOnlyReason is null;
 
         return new InventoryDocumentDto(
             d.Id, d.DocType, d.No, d.Date, d.Status.ToString(), d.FromWarehouseId, d.ToWarehouseId, d.SupplierId, supplier?.Code, supplier?.Name,
             d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.DeliveryNoteNo, d.Deliverer, d.Note, d.TotalAmount, d.TotalVat, d.CreatedAt,
             createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo,
             d.CounterCompanyId, counterCompany?.Code, counterCompany?.Name, receiveStatus, d.PurchaseOrderId,
-            d.PurchaseOrderId is { } poId ? await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == poId).Select(o => o.No).SingleOrDefaultAsync(cancellationToken) : null);
+            d.PurchaseOrderId is { } poId ? await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == poId).Select(o => o.No).SingleOrDefaultAsync(cancellationToken) : null,
+            d.InvoiceAmount, canUpdateInvoice);
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>
-        new(r.Date, r.WarehouseId, r.SupplierId, r.InvoiceNo, r.InvoiceSeries, r.InvoiceDate, r.DeliveryNoteNo, r.Deliverer, r.Note, r.PurchaseOrderId);
+        new(r.Date, r.WarehouseId, r.SupplierId, r.InvoiceNo, r.InvoiceSeries, r.InvoiceDate, r.DeliveryNoteNo, r.Deliverer, r.Note, r.PurchaseOrderId,
+            r.InvoiceAmount);
 }

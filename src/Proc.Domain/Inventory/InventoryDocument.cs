@@ -28,9 +28,17 @@ public enum DocumentStatus
 /// <param name="Deliverer">Người giao.</param>
 /// <param name="Note">Ghi chú.</param>
 /// <param name="PurchaseOrderId">Đơn mua hàng nguồn (nhập theo PO – design.md mục 6.2 bước 4); null = nhập thẳng theo NCC.</param>
+/// <param name="InvoiceAmount">Tổng tiền thanh toán ghi trên hóa đơn NCC (gồm VAT); null = chưa nhập (design.md mục 18.15).</param>
 public sealed record ReceiptHeader(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
-    string? DeliveryNoteNo, string? Deliverer, string? Note, Guid? PurchaseOrderId = null);
+    string? DeliveryNoteNo, string? Deliverer, string? Note, Guid? PurchaseOrderId = null, decimal? InvoiceAmount = null);
+
+/// <summary>Thông tin hóa đơn NCC của phiếu nhập mua – cập nhật được cả khi phiếu đã ghi sổ (design.md mục 18.15).</summary>
+/// <param name="InvoiceNo">Số hóa đơn.</param>
+/// <param name="InvoiceSeries">Ký hiệu hóa đơn.</param>
+/// <param name="InvoiceDate">Ngày hóa đơn.</param>
+/// <param name="InvoiceAmount">Tổng tiền thanh toán trên hóa đơn (gồm VAT); null = chưa có.</param>
+public sealed record ReceiptInvoice(string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount);
 
 /// <summary>Đầu phiếu xuất trả NCC (design.md mục 10.5): kho xuất, NCC lấy theo phiếu nhập gốc.</summary>
 /// <param name="Date">Ngày xuất trả.</param>
@@ -149,6 +157,12 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     /// <summary>Ngày hóa đơn.</summary>
     public DateOnly? InvoiceDate { get; private set; }
 
+    /// <summary>
+    /// Tổng tiền thanh toán ghi trên hóa đơn NCC (gồm VAT) – numeric(19,2); null = chưa nhập. Chỉ để đối chiếu với tiền phiếu nhập
+    /// (design.md mục 18.15), không đổi giá vốn – giá nhập kho vẫn theo đơn giá dòng.
+    /// </summary>
+    public decimal? InvoiceAmount { get; private set; }
+
     /// <summary>Số phiếu giao hàng của NCC.</summary>
     public string? DeliveryNoteNo { get; private set; }
 
@@ -222,10 +236,35 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         InvoiceNo = Clean(header.InvoiceNo);
         InvoiceSeries = Clean(header.InvoiceSeries);
         InvoiceDate = header.InvoiceDate;
+        InvoiceAmount = CheckInvoiceAmount(header.InvoiceAmount);
         DeliveryNoteNo = Clean(header.DeliveryNoteNo);
         Deliverer = Clean(header.Deliverer);
         Note = Clean(header.Note);
         PurchaseOrderId = header.PurchaseOrderId;
+    }
+
+    /// <summary>
+    /// Cập nhật số, ký hiệu, ngày, tiền hóa đơn NCC của phiếu nhập mua – được làm cả khi phiếu đã ghi sổ, kỳ đã đóng, vì hóa đơn thường về
+    /// sau khi nhập và các trường này không ảnh hưởng sổ kho, giá vốn (design.md mục 18.15). Mọi thay đổi vào AuditLog.
+    /// </summary>
+    /// <param name="invoice">Thông tin hóa đơn mới.</param>
+    /// <exception cref="BusinessRuleException">Khi không phải phiếu nhập mua, phiếu đã hủy hoặc tiền âm.</exception>
+    public void UpdateInvoice(ReceiptInvoice invoice)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+        if (DocType != DocumentTypes.GoodsReceipt) throw new BusinessRuleException("Chỉ phiếu nhập mua mới cập nhật hóa đơn NCC.");
+        if (Status == DocumentStatus.Cancelled) throw new BusinessRuleException("Phiếu đã hủy, không cập nhật hóa đơn.");
+        InvoiceNo = Clean(invoice.InvoiceNo);
+        InvoiceSeries = Clean(invoice.InvoiceSeries);
+        InvoiceDate = invoice.InvoiceDate;
+        InvoiceAmount = CheckInvoiceAmount(invoice.InvoiceAmount);
+    }
+
+    /// <summary>Tiền hóa đơn không âm, làm tròn 2 chữ số theo kiểu tiền numeric(19,2).</summary>
+    private static decimal? CheckInvoiceAmount(decimal? amount)
+    {
+        if (amount < 0) throw new BusinessRuleException("Tiền hóa đơn không được âm.");
+        return amount is { } a ? decimal.Round(a, 2, MidpointRounding.AwayFromZero) : null;
     }
 
     /// <summary>

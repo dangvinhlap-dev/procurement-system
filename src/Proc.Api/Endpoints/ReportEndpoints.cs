@@ -42,6 +42,9 @@ public static class ReportEndpoints
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/receipt-quality", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetReceiptQualityAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/three-way-match", (DateOnly from, DateOnly to, decimal? tolerance, bool? onlyIssues, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetThreeWayMatchAsync(from, to, tolerance ?? 0m, onlyIssues ?? false, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/purchase-sla", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetPurchaseSlaAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/sourcing-savings", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>

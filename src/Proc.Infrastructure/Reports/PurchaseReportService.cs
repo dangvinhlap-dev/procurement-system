@@ -78,6 +78,86 @@ public sealed class PurchaseReportService : IPurchaseReportService
     }
 
     /// <inheritdoc />
+    public async Task<ThreeWayMatchResult> GetThreeWayMatchAsync(
+        DateOnly from, DateOnly to, decimal tolerance, bool onlyIssues, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        if (to < from) throw new BusinessRuleException("Đến ngày phải sau từ ngày.");
+        if (to.DayNumber - from.DayNumber > 366) throw new BusinessRuleException("Khoảng ngày tối đa 1 năm.");
+        if (tolerance < 0) throw new BusinessRuleException("Dung sai không được âm.");
+
+        // Phiếu, dòng đi qua filter công ty, kho; mặt hàng đi qua filter nhóm hàng để biết phiếu nào người xem thấy đủ.
+        var documents = await _db.InventoryDocuments.AsNoTracking()
+            .Where(d => d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= @from && d.Date <= to)
+            .Join(_db.Suppliers, d => d.SupplierId, s => s.Id, (d, s) => new
+            {
+                d.Id, d.No, d.Date, SupplierCode = s.Code, SupplierName = s.Name, d.PurchaseOrderId, d.TotalAmount, d.TotalVat,
+                d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount,
+            })
+            .ToListAsync(cancellationToken);
+        var documentIds = documents.Select(d => d.Id).ToList();
+        var allLines = await _db.InventoryDocumentLines.AsNoTracking()
+            .Where(l => documentIds.Contains(l.DocumentId))
+            .Select(l => new { l.DocumentId, l.ItemId, l.Qty, l.DeliveredQty })
+            .ToListAsync(cancellationToken);
+        var itemIds = allLines.Select(l => l.ItemId).Distinct().ToList();
+        // Chỉ đọc Id mặt hàng người xem thấy (filter nhóm hàng); phiếu có mặt hàng bị ẩn thì bỏ qua cả phiếu.
+        var visibleItems = (await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).Select(i => i.Id).ToListAsync(cancellationToken))
+            .ToHashSet();
+        var hidden = allLines.Where(l => !visibleItems.Contains(l.ItemId)).Select(l => l.DocumentId).ToHashSet();
+        var shortDocuments = allLines.Where(l => l.DeliveredQty is { } delivered && l.Qty < delivered).Select(l => l.DocumentId).ToHashSet();
+
+        var orderIds = documents.Select(d => d.PurchaseOrderId).OfType<Guid>().Distinct().ToList();
+        var orders = await _db.PurchaseOrders.AsNoTracking().Where(o => orderIds.Contains(o.Id))
+            .Select(o => new { o.Id, o.No, o.Date, o.ApprovedAt, Total = o.TotalAmount + o.TotalVat })
+            .ToDictionaryAsync(o => o.Id, cancellationToken);
+
+        var all = new List<ThreeWayMatchRowDto>();
+        foreach (var d in documents.Where(d => !hidden.Contains(d.Id)))
+        {
+            var order = d.PurchaseOrderId is { } oid ? orders.GetValueOrDefault(oid) : null;
+            DateOnly? approvedDate = order?.ApprovedAt is { } at
+                ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, VietnamTime.Zone).DateTime)
+                : null;
+            var receiptTotal = d.TotalAmount + d.TotalVat;
+            var hasInvoice = !string.IsNullOrWhiteSpace(d.InvoiceNo) && d.InvoiceAmount is not null;
+            decimal? difference = d.InvoiceAmount is { } amount ? amount - receiptTotal : null;
+            var issues = new List<string>();
+            string result;
+            if (!hasInvoice)
+            {
+                result = "NoInvoice";
+                issues.Add(ThreeWayMatchIssues.NoInvoice);
+            }
+            else if (Math.Abs(difference!.Value) > tolerance)
+            {
+                result = "Mismatch";
+                issues.Add(ThreeWayMatchIssues.AmountMismatch);
+            }
+            else result = "Matched";
+            // Nhận thiếu/không đạt mà hóa đơn vẫn cao hơn tiền thực nhận: NCC tính tiền cả hàng không nhập kho (V7, V8).
+            if (difference > tolerance && shortDocuments.Contains(d.Id)) issues.Add(ThreeWayMatchIssues.InvoiceIncludesShortage);
+            if (order is null) issues.Add(ThreeWayMatchIssues.NoPurchaseOrder);
+            else
+            {
+                // Kiểm soát chống hợp thức hóa: hàng về/hóa đơn có trước đơn – design.md mục 18.11, 18.15.
+                if (d.Date < order.Date) issues.Add(ThreeWayMatchIssues.ReceivedBeforeOrder);
+                else if (approvedDate is { } approved && d.Date < approved) issues.Add(ThreeWayMatchIssues.ReceivedBeforeApproval);
+                if (d.InvoiceDate is { } invoiceDate && invoiceDate < order.Date) issues.Add(ThreeWayMatchIssues.InvoiceBeforeOrder);
+            }
+
+            all.Add(new ThreeWayMatchRowDto(
+                d.Id, d.No, d.Date, d.SupplierCode, d.SupplierName, d.PurchaseOrderId, order?.No, order?.Date, approvedDate, order?.Total,
+                receiptTotal, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, difference, result, issues));
+        }
+
+        var rows = all.Where(r => !onlyIssues || r.Issues.Count > 0).OrderBy(r => r.Date).ThenBy(r => r.DocumentNo).ToList();
+        return new ThreeWayMatchResult(
+            rows, all.Count(r => r.Result == "Matched"), all.Count(r => r.Result == "NoInvoice"), all.Count(r => r.Result == "Mismatch"),
+            all.Count(r => r.Issues.Count > 0), all.Sum(r => r.ReceiptTotal), all.Sum(r => r.InvoiceAmount ?? 0m), hidden.Count);
+    }
+
+    /// <inheritdoc />
     public async Task<PurchaseSlaResult> GetPurchaseSlaAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();

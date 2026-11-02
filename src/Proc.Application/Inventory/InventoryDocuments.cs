@@ -105,6 +105,8 @@ public sealed record InventoryLineDto(
 /// <param name="ReceiveStatus">Trạng thái nhận hàng bán nội bộ: Pending (chờ nhận), Full (đã nhận đủ), Short (nhận thiếu).</param>
 /// <param name="PurchaseOrderId">Đơn mua hàng nguồn (phiếu nhập theo PO).</param>
 /// <param name="PurchaseOrderNo">Số đơn mua hàng nguồn.</param>
+/// <param name="InvoiceAmount">Phiếu nhập mua: tổng tiền thanh toán trên hóa đơn NCC (gồm VAT); null = chưa nhập.</param>
+/// <param name="CanUpdateInvoice">Phiếu nhập mua đã ghi sổ: người xem cập nhật được thông tin hóa đơn (design.md mục 18.15).</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
@@ -112,7 +114,7 @@ public sealed record InventoryDocumentDto(
     DateTimeOffset? PostedAt, IReadOnlyList<InventoryLineDto> Lines, bool CanEdit, string? ReadOnlyReason, bool CanPost, bool CanUnpost,
     string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null,
     Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null,
-    Guid? PurchaseOrderId = null, string? PurchaseOrderNo = null);
+    Guid? PurchaseOrderId = null, string? PurchaseOrderNo = null, decimal? InvoiceAmount = null, bool CanUpdateInvoice = false);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -145,9 +147,18 @@ public sealed record SaveInventoryLineRequest(
 /// <param name="Note">Ghi chú.</param>
 /// <param name="Lines">Toàn bộ dòng.</param>
 /// <param name="PurchaseOrderId">Đơn mua hàng nguồn; null = nhập thẳng theo NCC.</param>
+/// <param name="InvoiceAmount">Tổng tiền thanh toán trên hóa đơn NCC (gồm VAT); null = chưa có (design.md mục 18.15).</param>
 public sealed record SaveReceiptRequest(
     DateOnly Date, Guid WarehouseId, Guid SupplierId, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate,
-    string? DeliveryNoteNo, string? Deliverer, string? Note, IReadOnlyList<SaveInventoryLineRequest> Lines, Guid? PurchaseOrderId = null);
+    string? DeliveryNoteNo, string? Deliverer, string? Note, IReadOnlyList<SaveInventoryLineRequest> Lines, Guid? PurchaseOrderId = null,
+    decimal? InvoiceAmount = null);
+
+/// <summary>Cập nhật hóa đơn NCC của phiếu nhập mua (nháp hoặc đã ghi sổ – design.md mục 18.15).</summary>
+/// <param name="InvoiceNo">Số hóa đơn.</param>
+/// <param name="InvoiceSeries">Ký hiệu hóa đơn.</param>
+/// <param name="InvoiceDate">Ngày hóa đơn.</param>
+/// <param name="InvoiceAmount">Tổng tiền thanh toán trên hóa đơn (gồm VAT); null = chưa có.</param>
+public sealed record UpdateReceiptInvoiceRequest(string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount);
 
 /// <summary>Một dòng trả NCC gửi lên khi lưu: chỉ chọn dòng nhập gốc và số lượng trả; hàng, ĐVT, lô, giá lấy theo dòng gốc.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -282,6 +293,19 @@ public interface IInventoryDocumentService
     /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người sửa.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> UpdateReceiptAsync(Guid id, SaveReceiptRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Cập nhật số, ký hiệu, ngày, tiền hóa đơn NCC của phiếu nhập mua nháp hoặc đã ghi sổ (kể cả kỳ đã đóng) – không đổi sổ kho, giá vốn;
+    /// mọi thay đổi vào AuditLog (design.md mục 18.15).
+    /// </summary>
+    /// <param name="id">Id phiếu nhập mua.</param>
+    /// <param name="request">Thông tin hóa đơn mới.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi cập nhật.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi không phải phiếu nhập mua, phiếu đã hủy hoặc tiền âm.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người sửa.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> UpdateReceiptInvoiceAsync(Guid id, UpdateReceiptInvoiceRequest request, CancellationToken cancellationToken);
 
     /// <summary>Hủy phiếu nháp (giữ số phiếu).</summary>
     /// <param name="id">Id phiếu.</param>

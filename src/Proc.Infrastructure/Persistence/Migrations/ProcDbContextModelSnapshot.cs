@@ -530,6 +530,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("FromWarehouseId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("InvoiceAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
                     b.Property<DateOnly?>("InvoiceDate")
                         .HasColumnType("date");
 
