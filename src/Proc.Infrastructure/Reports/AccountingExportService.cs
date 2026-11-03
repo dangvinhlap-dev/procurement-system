@@ -30,6 +30,7 @@ public sealed class AccountingExportService : IAccountingExportService
         [DocumentTypes.Transfer] = "Chuyển kho nội bộ",
         [DocumentTypes.IntercompanySale] = "Xuất bán nội bộ",
         [DocumentTypes.IntercompanyReceipt] = "Nhập mua nội bộ",
+        [DocumentTypes.Adjustment] = "Điều chỉnh, kiểm kê",
     };
 
     private readonly ProcDbContext _db;
@@ -74,7 +75,7 @@ public sealed class AccountingExportService : IAccountingExportService
         string? PartnerTaxCode, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? FromWarehouse, string? ToWarehouse, string? PurchaseOrderNo,
         string? LinkedNo, string? Note, int LineNo, string ItemCode, string ItemName, string? InventoryAccount, string UomCode, decimal Qty, decimal UnitPrice,
         decimal Amount, string? VatCode, decimal VatAmount, string BaseUomCode, decimal BaseQty, decimal UnitCost, decimal CostAmount, bool IsCostFinal,
-        string? LotNo, DateOnly? ExpiryDate);
+        string? LotNo, DateOnly? ExpiryDate, string DocTypeName);
 
     private async Task<List<Line>> LinesAsync(AccountingExportQuery query, CancellationToken cancellationToken)
     {
@@ -97,6 +98,7 @@ public sealed class AccountingExportService : IAccountingExportService
                     LineId = l.Id, d.Id, d.DocType, d.No, d.Date, d.PostedAt, d.SupplierId, d.CounterCompanyId, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate,
                     d.FromWarehouseId, d.ToWarehouseId, d.PurchaseOrderId, d.LinkedDocumentId, d.Note, l.LineNo, ItemCode = i.Code, ItemName = i.Name,
                     i.CategoryId, UomCode = u.Code, l.Qty, l.UnitPrice, l.Amount, l.VatCode, l.VatAmount, BaseUomCode = bu.Code, l.BaseQty, l.LotNo, l.ExpiryDate,
+                    l.Direction,
                 })
             .Take(MaxLines + 1)
             .ToListAsync(cancellationToken);
@@ -127,7 +129,12 @@ public sealed class AccountingExportService : IAccountingExportService
 
         return rows.Select(r =>
         {
-            var outgoing = r.DocType is DocumentTypes.ReturnToVendor or DocumentTypes.Transfer or DocumentTypes.IntercompanySale;
+            // Phiếu điều chỉnh: dòng giảm là xuất, dòng tăng là nhập – ghi rõ ở tên loại để kế toán hạch toán đúng chiều (design.md mục 6.1).
+            var outgoing = r.DocType is DocumentTypes.ReturnToVendor or DocumentTypes.Transfer or DocumentTypes.IntercompanySale
+                || (r.DocType == DocumentTypes.Adjustment && r.Direction == -1);
+            var docTypeName = r.DocType == DocumentTypes.Adjustment
+                ? (outgoing ? "Điều chỉnh giảm" : "Điều chỉnh tăng")
+                : DocTypeNames[r.DocType];
             var entries = ledger[r.LineId].Where(x => x.Direction == (outgoing ? -1 : 1)).ToList();
             var cost = entries.Sum(x => x.Amount);
             var baseQty = entries.Sum(x => x.BaseQty);
@@ -144,7 +151,7 @@ public sealed class AccountingExportService : IAccountingExportService
                 r.FromWarehouseId is { } f ? warehouses.GetValueOrDefault(f) : null, r.ToWarehouseId is { } t ? warehouses.GetValueOrDefault(t) : null,
                 r.PurchaseOrderId is { } o ? orders.GetValueOrDefault(o) : null, r.LinkedDocumentId is { } ld ? linked.GetValueOrDefault(ld) : null,
                 r.Note, r.LineNo, r.ItemCode, r.ItemName, AccountOf(r.CategoryId, categories), r.UomCode, r.Qty, r.UnitPrice, r.Amount, r.VatCode, r.VatAmount,
-                r.BaseUomCode, r.BaseQty, unitCost, cost, entries.Count > 0 && entries.All(x => x.IsCostFinal), r.LotNo, r.ExpiryDate);
+                r.BaseUomCode, r.BaseQty, unitCost, cost, entries.Count > 0 && entries.All(x => x.IsCostFinal), r.LotNo, r.ExpiryDate, docTypeName);
         }).ToList();
     }
 
@@ -215,7 +222,7 @@ public sealed class AccountingExportService : IAccountingExportService
 
     private static object?[] LineValues(Line l) =>
     [
-        l.Date, l.No, l.DocType, DocTypeNames[l.DocType], l.PostedDate, l.PartnerCode, l.PartnerLocalCode, l.PartnerName, l.PartnerTaxCode,
+        l.Date, l.No, l.DocType, l.DocTypeName, l.PostedDate, l.PartnerCode, l.PartnerLocalCode, l.PartnerName, l.PartnerTaxCode,
         l.InvoiceNo, l.InvoiceSeries, l.InvoiceDate, l.FromWarehouse, l.ToWarehouse, l.PurchaseOrderNo, l.LinkedNo, l.LineNo, l.ItemCode, l.ItemName,
         l.InventoryAccount, l.UomCode, l.Qty, l.UnitPrice, l.Amount, l.VatCode, l.VatAmount, l.Amount + l.VatAmount, l.BaseUomCode, l.BaseQty,
         l.UnitCost, l.CostAmount, l.IsCostFinal ? "Có" : "Tạm tính", l.LotNo, l.ExpiryDate, l.Note,

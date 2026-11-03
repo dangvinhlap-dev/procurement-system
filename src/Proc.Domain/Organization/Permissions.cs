@@ -127,6 +127,15 @@ public static class Permissions
         public const string DocumentPost = "Inventory.Document.Post";
         /// <summary>Quyền "Bỏ ghi sổ chứng từ kho".</summary>
         public const string DocumentUnpost = "Inventory.Document.Unpost";
+        /// <summary>
+        /// Quyền "Lập phiếu điều chỉnh, kiểm kê kho" – quyền riêng của phiếu ADJ (design.md mục 6.1): lập, sửa, hủy phiếu nháp.
+        /// </summary>
+        public const string AdjustmentCreate = "Inventory.Adjustment.Create";
+        /// <summary>
+        /// Quyền "Ghi sổ phiếu điều chỉnh, kiểm kê kho" – ghi sổ và bỏ ghi sổ phiếu ADJ; tách khỏi quyền ghi sổ chứng từ kho thường để người
+        /// kiểm kê không tự ghi tăng/giảm tồn (design.md mục 6.1).
+        /// </summary>
+        public const string AdjustmentPost = "Inventory.Adjustment.Post";
         /// <summary>Quyền "Xem tồn kho, thẻ kho".</summary>
         public const string StockView = "Inventory.Stock.View";
         /// <summary>Quyền "Xem kỳ kho".</summary>
@@ -254,6 +263,8 @@ public static class Permissions
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
         new(Inventory.DocumentUnpost, "Bỏ ghi sổ chứng từ kho"),
+        new(Inventory.AdjustmentCreate, "Lập phiếu điều chỉnh, kiểm kê kho"),
+        new(Inventory.AdjustmentPost, "Ghi sổ phiếu điều chỉnh, kiểm kê kho"),
         new(Inventory.StockView, "Xem tồn kho, thẻ kho"),
         new(Inventory.PeriodView, "Xem kỳ kho"),
         new(Inventory.PeriodOpen, "Tạo lịch và mở kỳ kho"),

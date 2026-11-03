@@ -41,6 +41,8 @@ interface DocumentCommandOptions {
   setError: (message: string | null) => void
   /** Có nút Hủy phiếu cho phiếu nháp (phiếu nhập mua nội bộ không hủy ở bên nhận). Mặc định có. */
   cancellable?: boolean
+  /** Quyền ghi sổ để hiện nút Ghi sổ khi phiếu chưa lưu (phiếu điều chỉnh dùng quyền riêng). Mặc định quyền ghi sổ chứng từ kho. */
+  postPermission?: string
 }
 
 /**
@@ -48,7 +50,9 @@ interface DocumentCommandOptions {
  * đúng nội dung đang thấy), Bỏ ghi sổ, Hủy phiếu, Đóng. Nút hiện/ẩn theo trạng thái phiếu và quyền.
  * @returns Hàm lưu (gắn Ctrl+S) và các nút lệnh.
  */
-export function useDocumentCommands({ isNew, doc, readOnly, persist, mutations, listPath, noun, setError, cancellable = true }: DocumentCommandOptions) {
+export function useDocumentCommands({
+  isNew, doc, readOnly, persist, mutations, listPath, noun, setError, cancellable = true, postPermission = Permission.InventoryDocumentPost,
+}: DocumentCommandOptions) {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
   const { hasPermission } = useAuth()
@@ -126,7 +130,7 @@ export function useDocumentCommands({ isNew, doc, readOnly, persist, mutations, 
           Lưu nháp
         </Button>
       )}
-      {(isNew ? !readOnly && hasPermission(Permission.InventoryDocumentPost) : doc?.canPost) && (
+      {(isNew ? !readOnly && hasPermission(postPermission) : doc?.canPost) && (
         <Button icon={<CheckCircleOutlined />} onClick={post} loading={mutations.post.isPending}>
           Ghi sổ
         </Button>

@@ -39,6 +39,10 @@ export interface InventoryDocumentListItem {
   toWarehouseCode: string | null
   /** Công ty đối ứng (phiếu bán/nhập nội bộ). */
   counterCompanyCode?: string | null
+  /** Phiếu điều chỉnh: lý do điều chỉnh. */
+  reason?: string | null
+  /** Phiếu điều chỉnh: số biên bản kiểm kê. */
+  countReportNo?: string | null
 }
 
 /** Kết quả tìm chứng từ. */
@@ -84,6 +88,12 @@ export interface InventoryLine {
   qcNote?: string | null
   /** Thiếu (âm) / thừa (dương) so với chứng từ giao. */
   discrepancyQty?: number
+  /** Phiếu điều chỉnh: 1 tăng, -1 giảm (design.md mục 18.23). */
+  direction?: 1 | -1 | null
+  /** Dòng kiểm kê: tồn sổ (ĐVT cơ sở) lúc lưu phiếu. */
+  bookQty?: number | null
+  /** Dòng kiểm kê: SL thực đếm (ĐVT cơ sở). */
+  countedQty?: number | null
 }
 
 /** Kết quả kiểm tra chất lượng dòng phiếu nhập mua. */
@@ -140,6 +150,10 @@ export interface InventoryDocument {
   invoiceAmount?: number | null
   /** Phiếu nhập mua đã ghi sổ: người xem cập nhật được hóa đơn (design.md mục 18.15). */
   canUpdateInvoice?: boolean
+  /** Phiếu điều chỉnh: lý do điều chỉnh. */
+  reason?: string | null
+  /** Phiếu điều chỉnh: số biên bản kiểm kê. */
+  countReportNo?: string | null
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -332,6 +346,63 @@ export interface SaveTransferInput {
 
 /** Lập, sửa, ghi sổ phiếu chuyển kho. */
 export const useStockTransferMutations = () => useInventoryDocumentMutations<SaveTransferInput>('/api/stock-transfers')
+
+/** Một dòng phiếu điều chỉnh / kiểm kê gửi lên khi lưu (design.md mục 18.23). */
+export interface SaveAdjustmentLineInput {
+  id: string | null
+  itemId: string
+  uomId: string
+  /** 1 tăng (hàng thừa), -1 giảm (hàng thiếu). */
+  direction: 1 | -1
+  qty: number
+  /** Dòng tăng: giá nhập tay; dòng giảm: 0 – xuất theo giá vốn. */
+  unitPrice: number
+  lotNo: string | null
+  expiryDate: string | null
+  note: string | null
+  /** Dòng kiểm kê: SL thực đếm (ĐVT cơ sở) – server lấy tồn sổ và tự tính chiều, SL chênh lệch. */
+  countedQty: number | null
+}
+
+/** Nội dung phiếu điều chỉnh / kiểm kê gửi lên khi lưu. */
+export interface SaveAdjustmentInput {
+  date: string
+  warehouseId: string
+  reason: string
+  countReportNo: string
+  note: string | null
+  lines: SaveAdjustmentLineInput[]
+}
+
+/** Lập, sửa, ghi sổ phiếu điều chỉnh / kiểm kê kho. */
+export const useStockAdjustmentMutations = () => useInventoryDocumentMutations<SaveAdjustmentInput>('/api/stock-adjustments')
+
+/** Một dòng bảng kiểm kê: tồn sổ của một mặt hàng (một lô) tại kho, theo ĐVT cơ sở. */
+export interface CountSheetRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  uomId: string
+  uomCode: string
+  lotNo: string | null
+  expiryDate: string | null
+  bookQty: number
+}
+
+/**
+ * Bảng kiểm kê của một kho (tồn sổ khác 0) để nhập SL thực đếm – design.md mục 18.23 (ADJ-3).
+ * @param warehouseId Kho kiểm kê; trống thì không tải.
+ * @param enabled Chỉ tải khi hộp thoại kiểm kê đang mở (luôn lấy tồn mới nhất).
+ */
+export function useCountSheet(warehouseId: string | undefined, enabled: boolean) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['stock', companyId, 'count-sheet', warehouseId],
+    queryFn: () => apiFetch<CountSheetRow[]>(`/api/stock-adjustments/count-sheet?warehouseId=${warehouseId}`),
+    enabled: enabled && !!warehouseId,
+    staleTime: 0,
+  })
+}
 
 /** Một dòng phiếu nhập còn trả được. */
 export interface ReturnableLine {

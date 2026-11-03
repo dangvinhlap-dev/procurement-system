@@ -431,8 +431,8 @@ Tính theo công ty × mặt hàng, trên số lượng ở ĐVT cơ sở:
 | Kỳ chuyển **Đang tính giá** và lưu trước (giao dịch riêng); ghi sổ/bỏ ghi sổ khóa dòng kỳ `FOR SHARE` và đọc lại trạng thái trong giao dịch của nó – phiếu đang ghi dở xong trước, phiếu sau bị chặn | Không có phiếu chen vào giữa lúc tính giá |
 | Tính giá, gán giá cho dòng sổ chưa chốt, chốt `StockPeriodBalance` (kho × hàng × lô), lưu `ItemPeriodCost`, chuyển Đã đóng trong **một giao dịch**; lỗi (ví dụ tồn cuối kỳ âm) thì hủy cả giao dịch và kỳ về Đang mở | Mục 7.2 bước 3–6 |
 | Giá vốn tính trên mọi kho, mọi nhóm hàng của công ty (bỏ qua phạm vi xem của người đóng kỳ, vẫn trong công ty) | Giá vốn theo công ty × mặt hàng (mục 7.3) |
-| Nhập có giá giai đoạn này: GRN (+), RTV (−, giá đích danh). Chuyển kho không tham gia; dòng xuất và nhập của phiếu chuyển nhận cùng giá vốn kỳ nên giá trị công ty không đổi. Mẫu số ≤ 0 thì dùng giá vốn kỳ trước (hoặc 0) | Mục 7.3 |
-| Chênh lệch làm tròn dồn vào dòng **xuất tiêu hao** cuối kỳ (không phải trả NCC, không phải chuyển kho). Chưa có loại phiếu xuất tiêu hao (xuất dùng, xuất bán nội bộ) nên hiện chưa phát sinh; SL tồn 0 mà còn giá trị thì chưa sinh bút toán điều chỉnh – làm cùng phiếu điều chỉnh (ADJ) | Mục 7.3 |
+| Nhập có giá giai đoạn này: GRN (+), RTV (−, giá đích danh), ICR (+), **dòng tăng của ADJ** (+, giá nhập tay – mục 18.23). Chuyển kho không tham gia; dòng xuất và nhập của phiếu chuyển nhận cùng giá vốn kỳ nên giá trị công ty không đổi. Mẫu số ≤ 0 thì dùng giá vốn kỳ trước (hoặc 0) | Mục 7.3 |
+| Chênh lệch làm tròn dồn vào dòng **xuất tiêu hao** cuối kỳ (không phải trả NCC, không phải chuyển kho). Dòng **giảm của ADJ** (và xuất bán nội bộ) là xuất tiêu hao nên nhận phần chênh lệch này. SL tồn 0 mà còn giá trị thì chưa sinh bút toán điều chỉnh tự động – làm khi có yêu cầu | Mục 7.3 |
 | Mở lại kỳ (quyền `Inventory.Period.Reopen`): chỉ kỳ đã đóng gần nhất, bắt buộc lý do (≤ 500 ký tự, lưu ở kỳ và nhật ký thao tác); xóa số dư và giá vốn của kỳ; dòng xuất về tạm tính (giữ số cũ tới lần đóng sau). Gửi thông báo cho người có quyền xuất dữ liệu kế toán (mục 11.6) | Mục 7.4 |
 | Tồn đầu của thẻ kho, báo cáo NXT = số dư kỳ đã đóng gần nhất kết thúc trước ngày bắt đầu + sổ kho sau kỳ đó; chưa có kỳ đóng thì cộng từ đầu sổ | Mục 11, đoạn Hiệu năng |
 
@@ -1568,7 +1568,7 @@ Yêu cầu người dùng sau khi test 0.14.0: có một chỗ xem **tất cả 
 | **Tình trạng chung**: Chưa hoàn thành (nháp, chờ duyệt, đang nhận báo giá…), Hoàn thành (đã ghi sổ, đã duyệt, đã đóng, hiệu lực/chấm dứt, đã chọn thầu, đã kết luận…), Đã hủy/từ chối; kèm trạng thái gốc và cấp đang chờ duyệt | |
 | Lọc "Tôi lập" (người tạo) / "Tôi đã duyệt" (bước duyệt/từ chối do tôi; phiếu kho = tôi ghi sổ) | |
 | Ngày: ngày chứng từ; bảng giá = hiệu lực từ; hợp đồng = ngày ký (chưa ký: hiệu lực từ); loại không có ngày (phụ lục, duyệt NCC, độc quyền) = ngày lập giờ VN. Khoảng tối đa 366 ngày, tối đa 5.000 dòng | Tránh quét cả CSDL |
-| Bấm đúp mở **trang đầy đủ** của chứng từ; điều chỉnh kho (ADJ) chưa có trang vì **chưa có chức năng lập phiếu điều chỉnh/kiểm kê** (chỉ mới khai báo mã loại) – người dùng chốt 02/11/2026 làm thành tính năng riêng | |
+| Bấm đúp mở **trang đầy đủ** của chứng từ (điều chỉnh kho ADJ: `/kho/dieu-chinh/:id` – mục 18.23) | |
 
 Không có migration.
 
@@ -1595,6 +1595,39 @@ Bấm đúp trên danh sách của chính màn hình đó vẫn mở ngăn kéo 
 | Tra cứu chứng từ không tải cả phiếu: người lập = người tạo, NCC = NCC của dòng | RFQ xét đủ (người chọn thầu, mọi NCC được mời) trong tab Lịch sử duyệt |
 
 Không có migration.
+
+### 18.23 Phiếu điều chỉnh / kiểm kê kho – ADJ (lát ADJ-1, 02/11/2026)
+
+Người dùng chốt 02/11/2026 làm thành tính năng riêng (trước đó ADJ chỉ có mã loại). Theo mục 6.1: kho bất kỳ, ±, tăng nhập giá tay, giảm theo
+giá vốn, có biên bản kiểm kê, quyền riêng.
+
+| Quy tắc | Ghi chú |
+| --- | --- |
+| Đầu phiếu: ngày, **một kho** của công ty (kho tổng hoặc kho con, trong phạm vi người dùng, còn dùng), **lý do** (bắt buộc, ≤ 500), **số biên bản kiểm kê** (bắt buộc, ≤ 50), ghi chú; đính kèm file biên bản dùng khối đính kèm của chứng từ kho | Kho ghi ở cả kho xuất và kho nhập để sổ kho, phạm vi kho, báo cáo dùng chung cột |
+| Dòng: mặt hàng tồn kho, ĐVT, **Tăng / Giảm** (`Direction` +1/−1), SL > 0, lô (hàng theo lô), hạn dùng (dòng tăng của hàng quản lý hạn dùng). Không có thuế suất | Không phải mua bán |
+| Dòng **tăng**: đơn giá nhập tay (≥ 0), giá trị = SL × giá, sổ kho +1 **đã chốt** – tham gia giá vốn như "nhập có giá" (`PeriodCosting.IsPriced`) | Mục 7.3 |
+| Dòng **giảm**: không nhập giá; sổ kho −1 theo **giá vốn tạm tính**, chưa chốt; đóng kỳ gán giá vốn kỳ và nhận chênh lệch làm tròn (xuất tiêu hao); chặn tồn âm (trừ kho cho phép) | Mục 7.2, 7.5 |
+| **Quyền riêng**: `Inventory.Adjustment.Create` (lập, sửa, hủy nháp), `Inventory.Adjustment.Post` (ghi sổ, **bỏ ghi sổ**); quyền chứng từ kho thường không dùng được cho ADJ. Xem: `Inventory.Document.View`. Vai trò mẫu KHO có quyền lập, KETOAN có quyền ghi sổ (tách người kiểm kê và người ghi tăng/giảm tồn); vai trò đã tạo trước phải gán tay | Kiểm soát nội bộ |
+| Không qua duyệt nhiều cấp; ghi sổ chỉ khi ngày thuộc kỳ Đang mở; kỳ đã đóng thì không bỏ ghi sổ – lập phiếu điều chỉnh mới ở kỳ đang mở. Mở lại kỳ: dòng tăng giữ giá nhập tay, dòng giảm về tạm tính | CLAUDE.md mục 4 |
+| API: `POST/PUT /api/stock-adjustments`; xem, hủy, ghi sổ, bỏ ghi sổ qua `/api/inventory-documents` (endpoint nhận một trong hai quyền, dịch vụ kiểm tra đúng quyền theo loại) | |
+| Thẻ kho: diễn giải "Điều chỉnh tăng/giảm"; NXT: vào cột tổng nhập/tổng xuất; xuất dữ liệu kế toán: loại ADJ, tên loại dòng "Điều chỉnh tăng/giảm", giá vốn theo chiều dòng | |
+| Migration `V0_15_0_PhieuDieuChinhKho` (cột `Reason`, `CountReportNo` của phiếu, `Direction` của dòng + ràng buộc −1/1); `Down()` mất dữ liệu của phiếu ADJ đã có | CLAUDE.md mục 8 |
+
+**Giao diện (lát ADJ-2, 02/11/2026):** màn hình **ADJ** (Kho → Điều chỉnh, kiểm kê – `/kho/dieu-chinh`): danh sách (ngày, kho, số biên bản,
+lý do, trạng thái; nút Tạo mới theo quyền lập ADJ) và trang phiếu `DocumentForm` + `LineGrid`: cột Tăng/Giảm, tồn hiện tại tại kho (cảnh báo
+khi giảm vượt tồn), đơn giá chỉ ở dòng tăng (dòng giảm hiện "Giá vốn"), thành tiền + tiền tệ, lô, hạn dùng (dòng tăng); chân phiếu: số dòng,
+giá trị tăng; tab Đính kèm cho biên bản scan. Nút Ghi sổ theo quyền ghi sổ ADJ. Tra cứu chứng từ, xuất dữ liệu kế toán mở được phiếu ADJ.
+
+**Kiểm kê (lát ADJ-3, 03/11/2026):**
+
+| Quy tắc | Chi tiết |
+| --- | --- |
+| Bảng kiểm kê | Nút **Bảng kiểm kê** (cần chọn kho) mở tồn sổ khác 0 của kho theo mặt hàng, lô (ĐVT cơ sở; hạn dùng lấy từ phiếu đã ghi sổ gần nhất của lô) – API `GET /api/stock-adjustments/count-sheet?warehouseId=`, quyền lập ADJ, phạm vi kho/nhóm hàng theo filter. Gõ SL thực đếm, chỉ dòng có chênh lệch được lập vào phiếu |
+| Dòng kiểm kê | Dòng có **SL thực đếm** (`CountedQty`) lưu thêm **tồn sổ** (`BookQty`) – cả hai numeric(18,4), ĐVT cơ sở. Server lấy tồn sổ tại kho **lúc lưu** (đúng lô; dòng không lô cộng mọi lô) và tự tính: chênh = thực đếm − tồn sổ; > 0 → Tăng, < 0 → Giảm, SL = |chênh|; không tin chiều/SL client gửi. Bằng 0 → báo "không chênh lệch". Dòng kiểm kê phải dùng ĐVT cơ sở; giao diện khóa ô Tăng/Giảm, ĐVT, SL của dòng này |
+| Tồn đổi sau khi lưu | Phiếu khác ghi sổ làm tồn sổ đổi thì lưu lại phiếu để tính lại; ghi sổ dùng SL điều chỉnh đã lưu (vẫn chặn tồn âm) |
+| Dòng nhập tay | Vẫn dùng được (hàng thừa không có trên sổ, điều chỉnh không qua kiểm kê): không có tồn sổ/thực đếm |
+| In biên bản | `GET /api/inventory-documents/{id}/pdf` với phiếu ADJ in **"BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO"**: kho, số biên bản, lý do; cột Tồn sổ, Thực đếm, Tăng, Giảm, Giá trị tăng (dòng giảm theo giá vốn chốt khi đóng kỳ nên không in tiền); ký: người lập, thủ kho, kế toán, trưởng ban kiểm kê |
+| CSDL | Migration `V0_15_0_SoLieuKiemKe` (2 cột null trên `InventoryDocumentLine`; `Down()` mất số tồn sổ/thực đếm đã ghi) |
 
 ## Nguồn tham khảo
 

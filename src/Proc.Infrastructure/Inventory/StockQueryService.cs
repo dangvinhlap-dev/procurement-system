@@ -143,9 +143,13 @@ public sealed class StockQueryService : IStockQueryService
         foreach (var r in rows)
         {
             balance += r.Direction * r.BaseQty;
-            var description = r.DocType == "TRF"
-                ? $"{r.FromCode ?? "?"} → {r.ToCode ?? "?"}"
-                : r.SupplierCode is null ? null : $"{r.SupplierCode} – {r.SupplierName}";
+            var description = r.DocType switch
+            {
+                "TRF" => $"{r.FromCode ?? "?"} → {r.ToCode ?? "?"}",
+                // Phiếu điều chỉnh / kiểm kê không có đối tác: nêu chiều để đọc thẻ kho biết thừa hay thiếu (design.md mục 6.1).
+                "ADJ" => r.Direction > 0 ? "Điều chỉnh tăng" : "Điều chỉnh giảm",
+                _ => r.SupplierCode is null ? null : $"{r.SupplierCode} – {r.SupplierName}",
+            };
             entries.Add(new StockCardEntryDto(
                 r.PostingDate, r.DocumentId, r.No, r.DocType, r.WarehouseCode, description, r.LotNo,
                 r.Direction > 0 ? r.BaseQty : 0m, r.Direction < 0 ? r.BaseQty : 0m, balance, r.UnitCost, r.Direction * r.Amount,

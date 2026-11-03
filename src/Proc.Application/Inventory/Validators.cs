@@ -85,6 +85,32 @@ public sealed class SaveTransferRequestValidator : AbstractValidator<SaveTransfe
     }
 }
 
+/// <summary>Kiểm tra lưu phiếu điều chỉnh / kiểm kê kho (design.md mục 6.1).</summary>
+public sealed class SaveAdjustmentRequestValidator : AbstractValidator<SaveAdjustmentRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SaveAdjustmentRequestValidator()
+    {
+        RuleFor(x => x.WarehouseId).NotEmpty().WithMessage("Hãy chọn kho điều chỉnh.");
+        RuleFor(x => x.Reason).NotEmpty().WithMessage("Hãy nhập lý do điều chỉnh.").MaximumLength(500);
+        RuleFor(x => x.CountReportNo).NotEmpty().WithMessage("Hãy nhập số biên bản kiểm kê.").MaximumLength(50);
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một dòng hàng.")
+            .Must(l => l.Count <= SaveReceiptRequestValidator.MaxLines).WithMessage($"Mỗi phiếu tối đa {SaveReceiptRequestValidator.MaxLines} dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Dòng hàng chưa chọn mặt hàng.");
+            l.RuleFor(x => x.UomId).NotEmpty().WithMessage("Dòng hàng chưa chọn ĐVT.");
+            l.RuleFor(x => x.Direction).Must(d => d is 1 or -1).WithMessage("Dòng hàng phải chọn Tăng hoặc Giảm.");
+            l.RuleFor(x => x.Qty).GreaterThan(0).WithMessage("Số lượng phải lớn hơn 0.");
+            l.RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0).WithMessage("Đơn giá không được âm.");
+            l.RuleFor(x => x.CountedQty).GreaterThanOrEqualTo(0).WithMessage("SL thực đếm không được âm.");
+            l.RuleFor(x => x.LotNo).MaximumLength(50);
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}
+
 /// <summary>Kiểm tra lưu phiếu xuất bán nội bộ.</summary>
 public sealed class SaveSaleRequestValidator : AbstractValidator<SaveSaleRequest>
 {

@@ -38,12 +38,13 @@ public static class InventoryEndpoints
             .RequirePermission(Permissions.Inventory.DocumentView);
         documents.MapGet("/{id:guid}", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.Inventory.DocumentView);
+        // Phiếu điều chỉnh / kiểm kê dùng quyền riêng (design.md mục 6.1): endpoint nhận một trong hai, dịch vụ kiểm tra đúng quyền theo loại.
         documents.MapPost("/{id:guid}/cancel", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.CancelAsync(id, ct))
-            .RequirePermission(Permissions.Inventory.DocumentCreate);
+            .RequireAnyPermission(Permissions.Inventory.DocumentCreate, Permissions.Inventory.AdjustmentCreate);
         documents.MapPost("/{id:guid}/post", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.PostAsync(id, ct))
-            .RequirePermission(Permissions.Inventory.DocumentPost);
+            .RequireAnyPermission(Permissions.Inventory.DocumentPost, Permissions.Inventory.AdjustmentPost);
         documents.MapPost("/{id:guid}/unpost", (Guid id, IInventoryDocumentService s, CancellationToken ct) => s.UnpostAsync(id, ct))
-            .RequirePermission(Permissions.Inventory.DocumentUnpost);
+            .RequireAnyPermission(Permissions.Inventory.DocumentUnpost, Permissions.Inventory.AdjustmentPost);
 
         var receipts = app.MapGroup("/api/goods-receipts").WithTags("Chứng từ kho");
         receipts.MapPost("/", async (SaveReceiptRequest request, IInventoryDocumentService s, CancellationToken ct) =>
@@ -92,6 +93,22 @@ public static class InventoryEndpoints
                 s.UpdateTransferAsync(id, request, ct))
             .RequirePermission(Permissions.Inventory.DocumentCreate)
             .Validate<SaveTransferRequest>();
+
+        var adjustments = app.MapGroup("/api/stock-adjustments").WithTags("Chứng từ kho");
+        adjustments.MapPost("/", async (SaveAdjustmentRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAdjustmentAsync(request, ct);
+                return Results.Created($"/api/inventory-documents/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Inventory.AdjustmentCreate)
+            .Validate<SaveAdjustmentRequest>();
+        adjustments.MapPut("/{id:guid}", (Guid id, SaveAdjustmentRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.UpdateAdjustmentAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.AdjustmentCreate)
+            .Validate<SaveAdjustmentRequest>();
+        // Bảng kiểm kê: tồn sổ của kho để nhập SL thực đếm (design.md mục 18.23 – ADJ-3).
+        adjustments.MapGet("/count-sheet", (Guid warehouseId, IInventoryDocumentService s, CancellationToken ct) => s.GetCountSheetAsync(warehouseId, ct))
+            .RequirePermission(Permissions.Inventory.AdjustmentCreate);
 
         var sales = app.MapGroup("/api/intercompany-sales").WithTags("Bán nội bộ");
         sales.MapPost("/", async (SaveSaleRequest request, IInventoryDocumentService s, CancellationToken ct) =>

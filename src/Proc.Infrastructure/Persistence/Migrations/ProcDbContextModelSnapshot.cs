@@ -586,6 +586,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CountReportNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<Guid?>("CounterCompanyId")
                         .HasColumnType("uuid");
 
@@ -653,6 +657,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Receiver")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -717,9 +725,20 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<decimal?>("BookQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("CountedQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<decimal?>("DeliveredQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
+
+                    b.Property<int?>("Direction")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid");
@@ -793,7 +812,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DocumentId", "LineNo");
 
-                    b.ToTable("InventoryDocumentLine", (string)null);
+                    b.ToTable("InventoryDocumentLine", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryDocumentLine_Direction", "\"Direction\" IS NULL OR \"Direction\" IN (-1, 1)");
+                        });
                 });
 
             modelBuilder.Entity("Proc.Domain.Inventory.InventoryPeriod", b =>

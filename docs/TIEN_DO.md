@@ -134,7 +134,20 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **DGN trang đầy đủ (xong 02/11/2026, nhánh `feature/trang-dgn`)**: `/gia-ncc/danh-gia-ncc-dinh-ky/:id` (`SupplierReviewDetailPage`),
     Tra cứu chứng từ mở trang này thay ngăn kéo. e2e `supplier-review`. Kiểm tra: Playwright 89/89; `tsc`, `oxlint`, `npm run build` qua.
   - **ADJ – phiếu điều chỉnh/kiểm kê kho**: phát hiện chỉ mới có mã loại, chưa có chức năng; người dùng chốt 02/11/2026 làm thành
-    **tính năng riêng** (nhánh `feature/dieu-chinh-kho`).
+    **tính năng riêng** (nhánh `feature/dieu-chinh-kho`), 3 lát – design.md 18.23:
+    - **ADJ-1 (xong)** backend: `InventoryDocument.CreateAdjustment` (lý do, số biên bản), dòng `Direction` ±1, `StockLedgerEntry.Adjustment`,
+      `PeriodCosting.IsPriced` (dòng tăng = nhập có giá), quyền riêng `Inventory.Adjustment.Create/Post` (KHO lập, KETOAN ghi sổ), API
+      `/api/stock-adjustments`, thẻ kho, xuất kế toán; migration `V0_15_0_PhieuDieuChinhKho`. Sửa kèm: bỏ ghi sổ đếm trùng kho khi kho xuất =
+      kho nhập. Test tích hợp `StockAdjustmentTests`. `dotnet test` 509 qua.
+    - **ADJ-2 (xong)** giao diện: màn hình ADJ `/kho/dieu-chinh` (`InventoryDocumentListPage` cột riêng + `createPermission`), trang
+      `StockAdjustmentPage.tsx`, `useDocumentCommands.postPermission`, quyền web `InventoryAdjustmentCreate/Post`; danh sách phiếu kho thêm
+      `Reason`, `CountReportNo`; Tra cứu chứng từ, xuất kế toán mở được ADJ. e2e `stock-adjustment.spec.ts`, sửa `administration` (nhóm Kho
+      11 quyền). Kiểm tra: `dotnet test` 509; Playwright 90/90; `npm run build`, `tsc`, `oxlint` qua.
+    - **ADJ-3 (xong, 03/11/2026)** kiểm kê: dòng ADJ thêm `BookQty`/`CountedQty` (migration `V0_15_0_SoLieuKiemKe`), server lấy tồn sổ
+      lúc lưu và tự tính chiều/SL (`InventoryDocumentLine.ApplyCount`); API bảng kiểm kê `/api/stock-adjustments/count-sheet`; in PDF
+      "Biên bản kiểm kê, điều chỉnh kho" (`DocumentPdfService.AdjustmentAsync`). Web: `CountSheetDialog.tsx` (nút Bảng kiểm kê), cột Thực
+      đếm, nút In phiếu. Test `KiemKe_NhapSoThucDem_TuTinhChenhLechSoVoiTonSo_InBienBan`, e2e "bảng kiểm kê". Kiểm tra: `dotnet test`
+      510/510; Playwright 91/91 (sửa kèm `administration`: số quyền vai trò 8 → 10); `npm run build`, `tsc`, `oxlint` qua. Merge `main`, xóa nhánh.
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người

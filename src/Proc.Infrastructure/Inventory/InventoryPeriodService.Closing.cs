@@ -79,8 +79,10 @@ public sealed partial class InventoryPeriodService
         await _db.StockPeriodBalances.IgnoreQueryFilters(CompanyWide).Where(b => b.PeriodId == id).ExecuteDeleteAsync(cancellationToken);
         await _db.ItemPeriodCosts.IgnoreQueryFilters(CompanyWide).Where(c => c.PeriodId == id).ExecuteDeleteAsync(cancellationToken);
         var priced = PeriodCosting.PricedDocTypes.ToList();
+        // Dòng tăng của phiếu điều chỉnh giữ giá nhập tay (nhập có giá – PeriodCosting.IsPriced); dòng giảm về tạm tính như xuất khác.
         await _db.StockLedger.IgnoreQueryFilters(CompanyWide)
-            .Where(l => l.PeriodId == id && !priced.Contains(l.DocType))
+            .Where(l => l.PeriodId == id && !priced.Contains(l.DocType)
+                        && !(l.DocType == PeriodCosting.AdjustmentDocType && l.Direction > 0))
             .ExecuteUpdateAsync(u => u.SetProperty(l => l.IsCostFinal, false), cancellationToken);
         // Báo kế toán (người có quyền xuất dữ liệu kế toán): số liệu kỳ này đã xuất có thể thay đổi (design.md mục 7.4, 11.6).
         var notifications = new Proc.Infrastructure.Notifications.NotificationPublisher(_db, _scope, _clock);
@@ -134,7 +136,7 @@ public sealed partial class InventoryPeriodService
             var rows = ledgerByItem[itemId].ToList();
             var openQty = open.Sum(b => b.CloseQty);
             var openAmount = open.Sum(b => b.CloseAmount);
-            var pricedRows = rows.Where(l => PeriodCosting.PricedDocTypes.Contains(l.DocType)).ToList();
+            var pricedRows = rows.Where(l => PeriodCosting.IsPriced(l.DocType, l.Direction)).ToList();
             var cost = PeriodCosting.UnitCost(
                 openQty, openAmount, pricedRows.Sum(l => l.Direction * l.BaseQty), pricedRows.Sum(l => l.Direction * l.Amount),
                 previousCosts.GetValueOrDefault(itemId));
@@ -152,7 +154,7 @@ public sealed partial class InventoryPeriodService
             var closeAmount = openAmount + rows.Sum(l => l.Direction * l.Amount);
             var target = Math.Round(closeQty * cost, 2, MidpointRounding.AwayFromZero);
             var lastConsumption = rows.LastOrDefault(l =>
-                l.Direction < 0 && !PeriodCosting.PricedDocTypes.Contains(l.DocType) && l.DocType != DocumentTypes.Transfer);
+                l.Direction < 0 && !PeriodCosting.IsPriced(l.DocType, l.Direction) && l.DocType != DocumentTypes.Transfer);
             if (closeAmount != target && lastConsumption is not null)
             {
                 lastConsumption.AdjustAmount(lastConsumption.Amount + closeAmount - target);

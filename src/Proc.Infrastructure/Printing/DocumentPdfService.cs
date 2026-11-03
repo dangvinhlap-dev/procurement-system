@@ -125,6 +125,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     public async Task<PdfFile> InventoryDocumentAsync(Guid id, CancellationToken cancellationToken)
     {
         var d = await _inventory.GetAsync(id, cancellationToken);
+        if (d.DocType == DocumentTypes.Adjustment) return await AdjustmentAsync(d, cancellationToken);
         var from = d.FromWarehouseId is { } f ? await WarehouseNameAsync(f, cancellationToken) : null;
         var to = d.ToWarehouseId is { } t ? await WarehouseNameAsync(t, cancellationToken) : null;
         var supplier = d.SupplierCode is null ? null : $"{d.SupplierCode} – {d.SupplierName}";
@@ -176,6 +177,39 @@ public sealed class DocumentPdfService : IDocumentPdfService
             title, d.No, d.Date, note, info, columns, rows, totals,
             priced ? VietnameseNumberText.ToVndWords(d.TotalAmount + d.TotalVat) : null, d.Note, signers,
             [d.CreatedByName, .. Enumerable.Repeat<string?>(null, signers.Length - 1)]);
+        return new PdfFile($"{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
+    }
+
+    /// <summary>
+    /// Biên bản kiểm kê, điều chỉnh kho (phiếu ADJ – design.md mục 18.23): mỗi dòng ghi tồn sổ, thực đếm (dòng lập theo kiểm kê) và SL tăng
+    /// hoặc giảm. Dòng tăng in giá nhập tay; dòng giảm xuất theo giá vốn chốt khi đóng kỳ nên không in tiền – tổng chỉ là giá trị tăng.
+    /// </summary>
+    private async Task<PdfFile> AdjustmentAsync(InventoryDocumentDto d, CancellationToken cancellationToken)
+    {
+        var warehouse = d.ToWarehouseId is { } w ? await WarehouseNameAsync(w, cancellationToken) : null;
+        PrintColumn[] columns =
+        [
+            new("STT", 8), new("Mã hàng", 22), new("Tên hàng", 42), new("ĐVT", 10), new("Số lô", 14), new("Tồn sổ", 16, true),
+            new("Thực đếm", 16, true), new("Tăng", 15, true), new("Giảm", 15, true), new("Giá trị tăng", 22, true),
+        ];
+        var rows = d.Lines.Select(l => (string[])
+        [
+            l.LineNo.ToString(Vi), l.ItemCode, l.ItemName, l.UomCode, l.LotNo ?? "",
+            l.BookQty is { } book ? Qty(book) : "", l.CountedQty is { } counted ? Qty(counted) : "",
+            l.Direction == 1 ? Qty(l.Qty) : "", l.Direction == -1 ? Qty(l.Qty) : "", l.Direction == 1 ? Money(l.Amount) : "",
+        ]).ToList();
+        var note = d.Status switch
+        {
+            "Draft" => "BẢN NHÁP – chưa ghi sổ",
+            "Cancelled" => "ĐÃ HỦY",
+            _ => null,
+        };
+        string[] signers = ["Người lập phiếu", "Thủ kho", "Kế toán", "Trưởng ban kiểm kê"];
+        var doc = new PrintDocument(
+            "BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO", d.No, d.Date, note,
+            [("Kho", warehouse), ("Số biên bản kiểm kê", d.CountReportNo), ("Lý do điều chỉnh", d.Reason)],
+            columns, rows, [new("Giá trị tăng", Money(d.TotalAmount), true)], null, d.Note, signers,
+            [d.CreatedByName, null, null, null]);
         return new PdfFile($"{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
     }
 

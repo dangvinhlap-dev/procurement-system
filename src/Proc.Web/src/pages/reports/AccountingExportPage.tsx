@@ -17,10 +17,13 @@ const docTypeNames: Record<AccountingDocument['docType'], string> = {
   TRF: 'Chuyển kho nội bộ',
   ICS: 'Xuất bán nội bộ',
   ICR: 'Nhập mua nội bộ',
+  ADJ: 'Điều chỉnh, kiểm kê',
 }
 
 /** Đường dẫn mở phiếu theo loại chứng từ. */
-const docPaths: Record<AccountingDocument['docType'], string> = { GRN: '/kho/grn', RTV: '/kho/rtv', TRF: '/kho/trf', ICS: '/kho/ics', ICR: '/kho/icr' }
+const docPaths: Record<AccountingDocument['docType'], string> = {
+  GRN: '/kho/grn', RTV: '/kho/rtv', TRF: '/kho/trf', ICS: '/kho/ics', ICR: '/kho/icr', ADJ: '/kho/dieu-chinh',
+}
 
 const columns: GridColumn<AccountingDocument>[] = [
   { key: 'date', title: 'Ngày CT', width: 90, type: 'date', value: (r) => r.date },
