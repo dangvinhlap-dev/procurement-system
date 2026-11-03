@@ -87,7 +87,7 @@ public sealed record RfqSupplierDto(
     Guid SupplierId, string SupplierCode, string SupplierName, string SupplierStatus, bool HasQuoted, DateOnly? QuoteDate, DateOnly? ValidUntil,
     string? PaymentTerms, decimal QualityScore, decimal DeliveryScore, decimal PaymentScore, decimal WarrantyScore, string? Note,
     decimal PriceScore, decimal TotalScore, int QuotedLineCount, decimal AwardedAmount, Guid? PurchaseOrderId, string? PurchaseOrderNo,
-    IReadOnlyList<QuotationLineDto> Lines, Guid? PriceListId = null, string? PriceListNo = null);
+    IReadOnlyList<QuotationLineDto> Lines, Guid? PriceListId = null, string? PriceListNo = null, Guid? ContractId = null, string? ContractNo = null);
 
 /// <summary>Một mục hồ sơ trình (lát B3b); IsAutomatic = hệ thống tự tính (bảng so sánh).</summary>
 public sealed record RfqDossierItemDto(string Code, string Name, bool IsDone, string? Note, bool IsAutomatic);
@@ -97,6 +97,9 @@ public sealed record SaveRfqDossierRequest(IReadOnlyList<SaveRfqDossierItemReque
 
 /// <summary>Đánh dấu một mục hồ sơ trình.</summary>
 public sealed record SaveRfqDossierItemRequest(string Code, bool IsDone, string? Note);
+
+/// <summary>Hợp đồng nguyên tắc nháp vừa sinh từ kết quả chọn thầu (design.md mục 8.6).</summary>
+public sealed record CreatedContractDto(Guid SupplierId, string SupplierCode, Guid ContractId, string ContractNo);
 
 /// <summary>Bảng giá NCC nháp vừa sinh từ kết quả chọn thầu (lát B3b).</summary>
 public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, Guid PriceListId, string PriceListNo);
@@ -108,7 +111,7 @@ public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, G
 /// </summary>
 public sealed record RfqActions(
     bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
-    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null);
+    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null, bool CanCreateContracts = false);
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);
@@ -250,6 +253,16 @@ public interface IRfqService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Các bảng giá vừa sinh.</returns>
     Task<IReadOnlyList<CreatedPriceListDto>> CreatePriceListsAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sinh hợp đồng nguyên tắc nháp cho mỗi NCC trúng thầu chưa có hợp đồng (hoặc hợp đồng cũ đã hủy) – RFQ đã duyệt kết quả, NCC đã có bảng
+    /// giá sinh từ RFQ (design.md mục 8.6, 18.7). Hợp đồng vẫn phải gửi duyệt. Cần quyền <c>Purchase.Contract.Manage</c>.
+    /// </summary>
+    /// <param name="id">Id RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các hợp đồng vừa sinh.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi RFQ chưa duyệt, NCC chưa có bảng giá từ RFQ hoặc mọi NCC đã có hợp đồng.</exception>
+    Task<IReadOnlyList<CreatedContractDto>> CreateContractsAsync(Guid id, CancellationToken cancellationToken);
 }
 
 /// <summary>Kiểm tra dữ liệu lưu phiếu tìm nguồn.</summary>

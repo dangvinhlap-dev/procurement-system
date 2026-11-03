@@ -16,7 +16,7 @@ namespace Proc.IntegrationTests;
 /// Tìm nguồn → RFQ → báo giá → so sánh → chọn thầu → PO nháp (design.md mục 8.3, 8.4). Mỗi test một công ty mới.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class SourcingTests
+public partial class SourcingTests
 {
     private readonly ProcApiFactory _factory;
 

@@ -30,6 +30,7 @@ public sealed class RfqService : IRfqService
     private readonly IPurchaseOrderService _orders;
     private readonly ISystemParameterService _parameters;
     private readonly IPriceListService _priceLists;
+    private readonly IContractService _contracts;
     private readonly ApprovalEngine _approvals;
 
     /// <summary>Tạo dịch vụ.</summary>
@@ -40,10 +41,12 @@ public sealed class RfqService : IRfqService
     /// <param name="orders">Dịch vụ đơn mua hàng.</param>
     /// <param name="parameters">Tham số công ty (số NCC tối thiểu khi gửi).</param>
     /// <param name="priceLists">Dịch vụ bảng giá NCC (sinh bảng giá từ kết quả thầu).</param>
+    /// <param name="contracts">Dịch vụ hợp đồng nguyên tắc (sinh hợp đồng từ kết quả thầu).</param>
     public RfqService(
         ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders,
-        ISystemParameterService parameters, IPriceListService priceLists)
+        ISystemParameterService parameters, IPriceListService priceLists, IContractService contracts)
     {
+        _contracts = contracts;
         _db = db;
         _scope = scope;
         _numbers = numbers;
@@ -290,6 +293,9 @@ public sealed class RfqService : IRfqService
         var codes = await _db.Suppliers.AsNoTracking().Where(s => rfq.Suppliers.Select(x => x.SupplierId).Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
         var today = _clock.TodayInVietnam();
+        // RFQ lập ở tổng công ty thường là thầu chung cho cả tập đoàn – bảng giá đánh dấu sẵn "toàn tập đoàn" (yêu cầu người dùng
+        // 03/11/2026); bảng còn nháp nên người lập bỏ đánh dấu được trước khi gửi duyệt. Công ty thành viên không lập được bảng toàn tập đoàn.
+        var groupWide = await _db.Companies.AsNoTracking().AnyAsync(c => c.Id == rfq.CompanyId && c.IsHeadOffice, cancellationToken);
         var created = new List<CreatedPriceListDto>();
         // Mỗi NCC một bảng giá nháp, lưu lần lượt như "Tạo PO": lỗi ở NCC sau không xóa bảng đã tạo; bấm lại chỉ tạo phần còn thiếu.
         foreach (var supplier in rfq.Suppliers.Where(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)))
@@ -310,7 +316,7 @@ public sealed class RfqService : IRfqService
                 : $"Từ kết quả chọn thầu {rfq.No}.";
             var title = $"Giá trúng thầu {rfq.No} – {rfq.Title}";
             var list = await _priceLists.CreateAsync(
-                new SavePriceListRequest(supplier.SupplierId, title.Length > 200 ? title[..200] : title, false, today, validTo, null, note, lines),
+                new SavePriceListRequest(supplier.SupplierId, title.Length > 200 ? title[..200] : title, groupWide, today, validTo, null, note, lines),
                 cancellationToken);
             rfq.LinkPriceList(supplier.SupplierId, list.Id);
             await _db.SaveChangesAsync(cancellationToken);
@@ -319,6 +325,68 @@ public sealed class RfqService : IRfqService
 
         if (created.Count == 0) throw new BusinessRuleException("Mọi NCC trúng thầu đã có bảng giá.");
         return created;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CreatedContractDto>> CreateContractsAsync(Guid id, CancellationToken cancellationToken)
+    {
+        _scope.EnsurePermission(Permissions.Purchase.ContractManage);
+        var rfq = await LoadAsync(id, cancellationToken);
+        if (rfq.Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {rfq.No} chưa được duyệt kết quả chọn thầu.");
+        var live = await LiveContractIdsAsync(rfq, cancellationToken);
+        var pending = rfq.Suppliers
+            .Where(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId) && (s.ContractId is not { } cid || !live.Contains(cid)))
+            .ToList();
+        if (pending.Count == 0) throw new BusinessRuleException("Mọi NCC trúng thầu đã có hợp đồng nguyên tắc từ RFQ này.");
+        var codes = await _db.Suppliers.AsNoTracking().Where(s => rfq.Suppliers.Select(x => x.SupplierId).Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
+        // Hợp đồng gắn bảng giá dùng chung (design.md mục 18.7) – lấy bảng giá sinh từ chính RFQ nên phải "Tạo bảng giá" trước.
+        var noList = pending.Where(s => s.PriceListId is null).Select(s => codes.GetValueOrDefault(s.SupplierId)).ToList();
+        if (noList.Count > 0)
+            throw new BusinessRuleException($"NCC {string.Join(", ", noList)} chưa có bảng giá từ RFQ này – bấm \"Tạo bảng giá\" trước rồi mới tạo hợp đồng.");
+        var listIds = pending.Select(s => s.PriceListId!.Value).ToList();
+        var lists = await _db.SupplierPriceLists.AsNoTracking().Where(p => listIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => new { p.No, p.ValidFrom, p.ValidTo, p.Status }, cancellationToken);
+        var today = _clock.TodayInVietnam();
+        var created = new List<CreatedContractDto>();
+        // Mỗi NCC một hợp đồng, lưu lần lượt như "Tạo bảng giá": lỗi ở NCC sau không xóa hợp đồng đã tạo; bấm lại chỉ tạo phần còn thiếu.
+        foreach (var supplier in pending)
+        {
+            var code = codes.GetValueOrDefault(supplier.SupplierId) ?? "";
+            var list = lists.GetValueOrDefault(supplier.PriceListId!.Value) ?? throw new NotFoundException("Không tìm thấy bảng giá sinh từ RFQ.");
+            if (list.Status == Proc.Domain.Pricing.PriceListStatus.Inactive)
+                throw new BusinessRuleException($"Bảng giá {list.No} của NCC {code} đã ngừng – không tạo hợp đồng được.");
+            // Hiệu lực theo bảng giá (không trước hôm nay); bảng không có hạn thì mặc định 12 tháng và ghi chú để người lập xem lại.
+            var from = list.ValidFrom > today ? list.ValidFrom : today;
+            var to = list.ValidTo is { } until && until >= from ? until : from.AddYears(1).AddDays(-1);
+            var note = $"Từ kết quả chọn thầu {rfq.No}, bảng giá {list.No}. Bổ sung số HĐ giấy, ngày ký, điều khoản rồi gửi duyệt."
+                       + (list.ValidTo is null ? " Bảng giá không có hạn – hiệu lực hợp đồng tạm đặt 12 tháng, kiểm tra lại." : "");
+            // Sản lượng dự kiến = SL trúng thầu; hai dòng RFQ cùng mặt hàng × ĐVT gộp một dòng (hợp đồng mỗi cặp một dòng).
+            var lines = rfq.Lines.Where(l => l.AwardedSupplierId == supplier.SupplierId).OrderBy(l => l.LineNo)
+                .GroupBy(l => (l.ItemId, l.UomId))
+                .Select(g => new SaveContractLineRequest(null, g.Key.ItemId, g.Key.UomId, g.Sum(l => l.Qty), null, $"SL trúng thầu {rfq.No}"))
+                .ToList();
+            var title = $"Hợp đồng nguyên tắc {code} – {rfq.Title}";
+            var contract = await _contracts.CreateAsync(
+                new SaveContractRequest(
+                    supplier.SupplierId, supplier.PriceListId!.Value, null, title.Length > 200 ? title[..200] : title, null, from, to,
+                    null, supplier.PaymentTerms, null, null, null, null, null, null, note, [], lines),
+                cancellationToken);
+            rfq.LinkContract(supplier.SupplierId, contract.Id);
+            await _db.SaveChangesAsync(cancellationToken);
+            created.Add(new CreatedContractDto(supplier.SupplierId, code, contract.Id, contract.No));
+        }
+
+        return created;
+    }
+
+    /// <summary>Hợp đồng đã liên kết với RFQ mà chưa hủy – hợp đồng đã hủy coi như chưa có (tạo lại được).</summary>
+    private async Task<HashSet<Guid>> LiveContractIdsAsync(Rfq rfq, CancellationToken cancellationToken)
+    {
+        var ids = rfq.Suppliers.Select(s => s.ContractId).OfType<Guid>().ToList();
+        if (ids.Count == 0) return [];
+        return (await _db.PurchaseContracts.AsNoTracking().Where(c => ids.Contains(c.Id) && c.Status != ContractStatus.Cancelled)
+            .Select(c => c.Id).ToListAsync(cancellationToken)).ToHashSet();
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>
@@ -419,6 +487,9 @@ public sealed class RfqService : IRfqService
         var priceListIds = rfq.Suppliers.Select(s => s.PriceListId).OfType<Guid>().ToList();
         var priceListNos = await _db.SupplierPriceLists.AsNoTracking().Where(p => priceListIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => p.No, cancellationToken);
+        var liveContracts = await LiveContractIdsAsync(rfq, cancellationToken);
+        var contractNos = await _db.PurchaseContracts.AsNoTracking().Where(c => liveContracts.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.No, cancellationToken);
         var sourcingNo = rfq.SourcingId is { } sid
             ? await _db.SourcingRequests.AsNoTracking().Where(s => s.Id == sid).Select(s => s.No).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -453,7 +524,9 @@ public sealed class RfqService : IRfqService
                     s.SupplierId, info?.Code ?? "", info?.Name ?? "", info?.Status.ToString() ?? "", s.HasQuoted, s.QuoteDate, s.ValidUntil, s.PaymentTerms,
                     s.QualityScore, s.DeliveryScore, s.PaymentScore, s.WarrantyScore, s.Note, priceScore, total, quoteLines.Count, awarded,
                     s.PurchaseOrderId, s.PurchaseOrderId is { } po ? orderNos.GetValueOrDefault(po) : null, quoteLines,
-                    s.PriceListId, s.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null);
+                    s.PriceListId, s.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null,
+                    // Hợp đồng đã hủy không hiện – NCC coi như chưa có hợp đồng.
+                    s.ContractId is { } ct && contractNos.ContainsKey(ct) ? ct : null, s.ContractId is { } cn ? contractNos.GetValueOrDefault(cn) : null);
             })
             .OrderBy(s => s.SupplierCode)
             .ToList();
@@ -488,7 +561,9 @@ public sealed class RfqService : IRfqService
             rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null,
             rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Pricing.PriceListManage)
                 && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
-            conflict);
+            conflict,
+            rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Purchase.ContractManage)
+                && rfq.Suppliers.Any(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId) && (s.ContractId is not { } c || !liveContracts.Contains(c))));
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken, rfq);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,

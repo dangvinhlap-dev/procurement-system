@@ -207,6 +207,9 @@ export interface RfqSupplier {
   /** Bảng giá NCC nháp sinh từ kết quả thầu (lát B3b). */
   priceListId: string | null
   priceListNo: string | null
+  /** Hợp đồng nguyên tắc nháp sinh từ kết quả thầu (design.md mục 8.6); hợp đồng đã hủy thì null. */
+  contractId: string | null
+  contractNo: string | null
 }
 
 /** Một mục hồ sơ trình kết quả chọn thầu (lát B3b); isAutomatic = hệ thống tự tính (bảng so sánh). */
@@ -216,6 +219,14 @@ export interface RfqDossierItem {
   isDone: boolean
   note: string | null
   isAutomatic: boolean
+}
+
+/** Hợp đồng nguyên tắc nháp vừa sinh từ kết quả chọn thầu. */
+export interface CreatedContract {
+  supplierId: string
+  supplierCode: string
+  contractId: string
+  contractNo: string
 }
 
 /** Bảng giá NCC nháp vừa sinh từ kết quả chọn thầu. */
@@ -273,6 +284,8 @@ export interface Rfq {
     conflictReason?: string | null
     /** Sinh bảng giá nháp từ kết quả đã duyệt. */
     canCreatePriceLists: boolean
+    /** Sinh hợp đồng nguyên tắc nháp từ kết quả đã duyệt (cần bảng giá từ RFQ). */
+    canCreateContracts: boolean
   }
   /** Giải trình khi mời ít hơn số NCC tối thiểu. */
   fewSuppliersReason: string | null
@@ -385,6 +398,13 @@ export function useRfqMutations() {
       onSuccess: () => {
         onSuccess()
         void queryClient.invalidateQueries({ queryKey: ['price-lists'] })
+      },
+    }),
+    createContracts: useMutation({
+      mutationFn: (id: string) => apiFetch<CreatedContract[]>(`/api/rfqs/${id}/create-contracts`, { method: 'POST' }),
+      onSuccess: () => {
+        onSuccess()
+        void queryClient.invalidateQueries({ queryKey: ['contracts'] })
       },
     }),
     approve: useMutation({
