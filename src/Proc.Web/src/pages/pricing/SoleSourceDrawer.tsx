@@ -1,4 +1,6 @@
 import { CheckOutlined, CloseCircleOutlined, FileAddOutlined, RollbackOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { withPendingApprovers } from '../../api/purchasing'
+import { approveContent, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 import { Alert, App, Button, DatePicker, Form, Input, Modal, Spin } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -203,18 +205,43 @@ function SoleSourceForm({
       onOpen(created.id)
     }, 'Đã lập phiếu đánh giá lại (nháp) – kiểm tra giải trình rồi gửi duyệt.')
 
+  // Gửi duyệt: xem trước người duyệt (popup); Duyệt: nêu người lập và người duyệt sau mình – yêu cầu người dùng 03/11/2026.
+  const submit = () =>
+    data &&
+    void confirmSubmitWithPreview(modal, {
+      title: `Gửi duyệt phiếu ${data.no}?`,
+      docType: 'NDQ',
+      prepare: async () => ({ id: data.id }),
+      onSubmit: async (id) => {
+        await run(() => mutations.submit.mutateAsync(id), 'Đã gửi duyệt.')
+      },
+      onError: (e) => setError(e instanceof Error ? e.message : 'Không gửi duyệt được.'),
+    })
+
+  const approve = () =>
+    data &&
+    modal.confirm({
+      title: `Duyệt phiếu ${data.no}?`,
+      content: approveContent(data),
+      okText: 'Duyệt',
+      cancelText: 'Không',
+      onOk: async () => {
+        await run(() => mutations.approve.mutateAsync({ id: data.id }), 'Đã duyệt.')
+      },
+    })
+
   const a = data?.actions
   const buttons = data && a && (
     <>
       {a.canEdit && (
         <Button icon={<SendOutlined />} loading={mutations.submit.isPending}
-          onClick={() => run(() => mutations.submit.mutateAsync(data.id), 'Đã gửi duyệt.')}>
+          onClick={submit}>
           Gửi duyệt
         </Button>
       )}
       {a.canApprove && (
         <Button icon={<CheckOutlined />} loading={mutations.approve.isPending}
-          onClick={() => run(() => mutations.approve.mutateAsync({ id: data.id }), 'Đã duyệt.')}>
+          onClick={approve}>
           Duyệt
         </Button>
       )}
@@ -256,7 +283,7 @@ function SoleSourceForm({
       <DetailDrawer
         open
         asPage={asPage}
-        title={isNew ? 'Lập phiếu NCC độc quyền' : `Phiếu ${data.no} – ${soleSourceStateLabel(data)}`}
+        title={isNew ? 'Lập phiếu NCC độc quyền' : `Phiếu ${data.no} – ${withPendingApprovers(soleSourceStateLabel(data), data.approvals)}`}
         audit={{ entityType: 'SoleSourceApproval', id: data?.id }}
         onClose={onClose}
         onSave={editable ? save : undefined}
@@ -346,7 +373,7 @@ function SoleSourceForm({
               </>
             ),
           },
-          ...(data ? [{ key: 'history', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={data.approvals} /> }] : []),
+          ...(data ? [{ key: 'history', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={data.approvals} createdByName={data.createdByName} createdAt={data.createdAt} /> }] : []),
           attachmentTab,
         ]}
       />

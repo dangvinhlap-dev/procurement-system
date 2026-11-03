@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
 import { useSuppliers, vatOptions } from '../../api/masterData'
-import type { OpenRequestLine } from '../../api/purchasing'
+import { withPendingApprovers, type OpenRequestLine } from '../../api/purchasing'
 import {
   rfqStatusLabels,
   rfqStatusTone,
@@ -45,7 +45,7 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
-import { confirmReject } from '../purchasing/useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -292,27 +292,28 @@ export function RfqPage() {
     })
   }
 
-  const confirmAward = () =>
-    doc &&
-    modal.confirm({
-      title: `Chọn thầu và gửi duyệt kết quả RFQ ${doc.no}?`,
-      content: 'Kết quả chuyển hội đồng duyệt (Chờ duyệt kết quả); trong lúc chờ không nhập thêm báo giá. Duyệt xong mới tạo được đơn mua hàng.',
+  // Xem trước hội đồng duyệt theo giá trị trúng thầu của lựa chọn đang chọn (server chạy thử rồi hủy) – yêu cầu người dùng 03/11/2026.
+  const confirmAward = () => {
+    if (!doc) return
+    setError(null)
+    const lines = doc.lines.map((l) => ({ rfqLineId: l.id, supplierId: award[l.id]?.supplierId ?? null, reason: orNull(award[l.id]?.reason) }))
+    void confirmSubmitWithPreview(modal, {
+      title: `Chọn thầu và gửi duyệt kết quả RFQ ${doc.no}? Trong lúc chờ không nhập thêm báo giá; duyệt xong mới tạo được đơn mua hàng.`,
+      docType: 'RFQ',
       okText: 'Chọn thầu, gửi duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
+      prepare: async () => ({ id: doc.id, award: { lines } }),
+      onSubmit: async (id) => {
         try {
-          const result = await mutations.award.mutateAsync({
-            id: doc.id,
-            lines: doc.lines.map((l) => ({ rfqLineId: l.id, supplierId: award[l.id]?.supplierId ?? null, reason: orNull(award[l.id]?.reason) })),
-          })
+          const result = await mutations.award.mutateAsync({ id, lines })
           setAwardEdits({})
           message.success(result.status === 'Awarded' ? `Kết quả RFQ ${doc.no} đã được duyệt ngay.` : `Đã gửi duyệt kết quả chọn thầu RFQ ${doc.no}.`)
         } catch (e) {
           fail(e, 'Không chọn thầu được.')
         }
       },
+      onError: (e) => fail(e, 'Không chọn thầu được.'),
     })
+  }
 
   const approve = () =>
     doc &&
@@ -322,6 +323,7 @@ export function RfqPage() {
         <>
           <p>Giá trị trúng thầu {formatMoney(doc.awardAmount)} đ. Duyệt cấp cuối thì giá trúng thầu vào lịch sử giá, tạo được đơn mua hàng.</p>
           <p>{dossierSummary(doc.dossier)}</p>
+          {approveContent(doc)}
         </>
       ),
       okText: 'Duyệt',
@@ -529,7 +531,7 @@ export function RfqPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? rfqStatusLabels[doc.status] : '', tone: doc ? rfqStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(rfqStatusLabels[doc.status], doc.approvals) : '', tone: doc ? rfqStatusTone[doc.status] : ('neutral' as const) }
 
   const actions = (
     <>
@@ -635,7 +637,7 @@ export function RfqPage() {
           },
         ]
       : []),
-    ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+    ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
   ]
 
   return (

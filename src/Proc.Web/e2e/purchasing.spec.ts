@@ -71,10 +71,10 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   // Người duyệt tiếp theo (TC-4): bước đang chờ nêu những người duyệt được – người lập không có trong đó.
   await buyer.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
   const next = buyer.locator('.approval-next')
-  await expect(next).toContainText(/^Chờ: \S/)
+  await expect(next).toContainText(/^Chờ duyệt: \S/)
   await expect(next).not.toContainText(buyerName)
   await buyer.screenshot({ path: 'e2e/screenshots/next-approvers.png' })
-  const firstApprover = (await next.innerText()).replace(/^Chờ: /, '').split(', ')[0]
+  const firstApprover = (await next.innerText()).replace(/^Chờ duyệt: /, '').split(', ')[0]
   // Tra cứu chứng từ: cột "Người duyệt tiếp theo" cùng kết quả với tab Lịch sử duyệt.
   await openByCommand(buyer, 'DOCS')
   await buyer.getByRole('textbox', { name: 'Tìm kiếm' }).fill(prNo)
@@ -90,7 +90,11 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await confirm(page, 'Duyệt', `Đã duyệt xong phiếu ${prNo}.`)
   await expect(page.locator('.document-form-title')).toContainText('Đã duyệt')
   await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
-  await expect(page.getByRole('cell', { name: 'Đã duyệt', exact: true })).toBeVisible()
+  // Cây lịch sử phê duyệt: người lập, lượt gửi, cấp đã duyệt kèm người và ngày giờ, lượt hoàn thành duyệt.
+  const tree = page.getByLabel('Cây lịch sử phê duyệt')
+  await expect(tree).toContainText(`Lập phiếu: Người lập mua hàng ${buyerName}`)
+  await expect(tree).toContainText(/Đã duyệt: .+ lúc \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)
+  await expect(tree).toContainText('hoàn thành duyệt')
 
   // 3. Người lập: PO lấy dòng từ PR, NCC, CK 0; gửi duyệt.
   await openByCommand(buyer, 'PO')

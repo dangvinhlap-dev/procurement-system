@@ -1,5 +1,5 @@
 import { CheckCircleFilled, ClockCircleFilled, CloseCircleFilled, EditOutlined, FieldTimeOutlined, MinusCircleOutlined, SendOutlined } from '@ant-design/icons'
-import { Empty, Tree } from 'antd'
+import { ConfigProvider, Empty, Tree } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import type { ReactNode } from 'react'
 import { nextApproversText, stepStatusLabels, type ApprovalStep } from '../../api/purchasing'
@@ -100,7 +100,19 @@ export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = f
   if (steps.length === 0 && !createdByName) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa gửi duyệt." />
   return (
     <div className="approval-tree" aria-label="Cây lịch sử phê duyệt">
-      <Tree showLine showIcon blockNode selectable={false} defaultExpandAll treeData={treeData} />
+      {/* defaultExpandAll chỉ áp lúc dựng lần đầu – lịch sử tải về sau (gửi duyệt, duyệt) thì dựng lại để mọi lượt luôn mở sẵn. */}
+      {/* Form chỉ xem đặt disabled cho mọi component bên trong – cây chỉ để đọc, không cần làm mờ chữ. */}
+      <ConfigProvider componentDisabled={false}>
+      <Tree
+        key={steps.map((s) => `${s.round}.${s.level}.${s.status}`).join('|')}
+        showLine
+        showIcon
+        blockNode
+        selectable={false}
+        defaultExpandAll
+        treeData={treeData}
+      />
+      </ConfigProvider>
       {steps.length === 0 && <div className="approval-tree-empty">Chưa gửi duyệt.</div>}
     </div>
   )
@@ -113,6 +125,10 @@ export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = f
  * @param byCompany Duyệt nhiều công ty – ghi công ty trên từng cấp.
  */
 export function ApprovalChain({ steps, approvedImmediately, byCompany = false }: { steps: ApprovalStep[]; approvedImmediately: boolean; byCompany?: boolean }) {
+  // Chặng 2 cùng công ty = chặng duyệt ngoại lệ (PO lệch giá – design.md mục 18.10); duyệt NCC thì chặng 2 là Tổng công ty.
+  const staged = steps.some((s) => s.stage === 2)
+  const stageLabel = (s: ApprovalStep) =>
+    !staged ? '' : byCompany ? (s.stage === 2 ? 'Tổng công ty (cuối) · ' : 'Công ty liên quan · ') : s.stage === 2 ? 'Chặng ngoại lệ · ' : 'Duyệt thường · '
   if (approvedImmediately) return <p>Phiếu dưới mọi ngưỡng duyệt đã cấu hình – gửi là được duyệt ngay, không cần ai duyệt.</p>
   return (
     <div className="approval-chain">
@@ -122,6 +138,7 @@ export function ApprovalChain({ steps, approvedImmediately, byCompany = false }:
           const names = s.nextApprovers ?? s.upcomingApprovers ?? []
           return (
             <li key={`${s.stage}-${s.companyCode ?? ''}-${s.level}`}>
+              {stageLabel(s)}
               {byCompany && s.companyCode ? `${s.companyCode} · ` : ''}Cấp {s.level} ({s.roleName ?? 'người có quyền duyệt'}):{' '}
               <span className={names.length === 0 ? 'approval-chain-missing' : undefined} title={names.join(', ')}>
                 {nextApproversText(names)}

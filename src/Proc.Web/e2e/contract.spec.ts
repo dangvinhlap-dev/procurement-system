@@ -122,7 +122,8 @@ test('phụ lục hợp đồng: gia hạn, đổi điều khoản, duyệt thì
   await page.screenshot({ path: 'e2e/screenshots/contract-amendment.png' })
 
   await drawer.getByRole('button', { name: /Gửi duyệt$/ }).click()
-  await page.getByRole('dialog').last().getByRole('button', { name: /Gửi duyệt$/ }).click()
+  // Popup xem trước người duyệt hiện sau khi lưu + hỏi server – chờ đúng popup rồi mới bấm.
+  await page.locator('.ant-modal-confirm').getByRole('button', { name: /Gửi duyệt$/ }).click()
   await expect(page.locator('.ant-message')).toContainText(`Đã gửi duyệt phụ lục ${contract.no}-PL01.`)
   const amendmentId = new URL(page.url()).searchParams.get('phu-luc')!
   await approveContractAmendment(request, amendmentId)

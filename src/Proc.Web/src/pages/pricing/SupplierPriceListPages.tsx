@@ -25,9 +25,10 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
+import { withPendingApprovers } from '../../api/purchasing'
 import { formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
-import { confirmReject } from '../purchasing/useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 
 const LIST_PATH = '/gia-ncc/bang-gia'
 
@@ -204,31 +205,40 @@ export function SupplierPriceListPage() {
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
 
   // Bảng giá phải duyệt mới hiệu lực, người lập không tự duyệt (lát B1 – design.md mục 8.5, 18.6).
-  const submit = () =>
-    modal.confirm({
-      title: 'Gửi duyệt bảng giá?',
-      content: 'Bảng giá chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối hoặc rút về nháp. Duyệt xong mới có hiệu lực.',
-      okText: 'Gửi duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
+  // Lưu, xem trước chuỗi duyệt (popup liệt kê người duyệt) rồi mới gửi – yêu cầu người dùng 03/11/2026.
+  const submit = () => {
+    setError(null)
+    void confirmSubmitWithPreview(modal, {
+      title: 'Gửi duyệt bảng giá? Duyệt xong mới có hiệu lực.',
+      docType: 'PRL',
+      prepare: async () => {
         const saved = await persist()
-        if (!saved) return
+        if (!saved) return null
+        if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
+        return { id: saved.id }
+      },
+      onSubmit: async (id) => {
         try {
-          const sent = await mutations.submit.mutateAsync({ id: saved.id })
+          const sent = await mutations.submit.mutateAsync({ id })
           message.success(sent.status === 'Active' ? `Bảng giá ${sent.no} đã có hiệu lực.` : `Đã gửi duyệt bảng giá ${sent.no}.`)
         } catch (e) {
           fail(e, 'Không gửi duyệt được.')
         }
-        if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
       },
+      onError: (e) => fail(e, 'Không gửi duyệt được.'),
     })
+  }
 
   const approve = () =>
     doc &&
     modal.confirm({
       title: `Duyệt bảng giá ${doc.no}?`,
-      content: 'Duyệt cấp cuối thì bảng giá có hiệu lực: đơn mua hàng của NCC này gợi ý giá từ bảng giá.',
+      content: (
+        <>
+          <p>Duyệt cấp cuối thì bảng giá có hiệu lực: đơn mua hàng của NCC này gợi ý giá từ bảng giá.</p>
+          {approveContent(doc)}
+        </>
+      ),
       okText: 'Duyệt',
       cancelText: 'Không',
       onOk: async () => {
@@ -400,7 +410,7 @@ export function SupplierPriceListPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? priceListStatusLabels[doc.status] : '', tone: doc ? priceListStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(priceListStatusLabels[doc.status], doc.approvals) : '', tone: doc ? priceListStatusTone[doc.status] : ('neutral' as const) }
 
   const actions = (
     <>
@@ -445,7 +455,7 @@ export function SupplierPriceListPage() {
       title="Bảng giá nhà cung cấp"
       extraTabs={[
         attachmentTab,
-        ...(doc && doc.companyId === workingCompany?.id ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+        ...(doc && doc.companyId === workingCompany?.id ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
       ]}
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'SupplierPriceList', id: doc?.id }}
