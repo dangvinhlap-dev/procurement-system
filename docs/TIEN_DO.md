@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 02/11/2026 (TC-2 tra cứu chứng từ). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 03/11/2026 (phát hành 0.15.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -151,8 +151,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     - **Sửa đính kèm ADJ (xong, 03/11/2026, nhánh `fix/dinh-kem-adj`)**: `AttachmentService` – tải lên/xóa đính kèm phiếu ADJ theo quyền lập
       ADJ (trước đòi quyền lập chứng từ kho thường); web tab Đính kèm theo `InventoryAdjustmentCreate`. Test
       `DinhKemBienBan_QuyenLapAdj_…`. Kiểm tra: `dotnet test` 511/511; e2e `stock-adjustment`, `attachments` qua; build/tsc/oxlint qua.
-  - Không còn lát nào đang dở; việc còn lại chờ người dùng chọn: C3 (ngân sách, hoãn chờ lệnh), phát hành 0.15.0 (ADJ, TC-1..4), việc
-    "làm khi có yêu cầu" ở design.md.
+  - **Phát hành 0.15.0 (03/11/2026)**: tag `v0.15.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.15.0 (gói
+    `procurement-0.15.0.zip`), script `db/scripts/0.15.0.sql` (49 migration; đã chạy thử 2 lần trên bản sao CSDL test 0.14.0).
+  - **Bản test 0.15.0**: `D:\project\procurement-thu-0.15.0`, CSDL `procurement_kiemtra_0150` (bản sao `procurement_uat` của bản test 0.14.0,
+    đã chạy script 0.15.0, đã gán quyền ADJ cho vai trò TOANQUYEN/KHO/KETOAN), chạy `app\Proc.Api.exe --urls http://0.0.0.0:5007` →
+    http://192.168.1.199:5007; admin / Admin@2026, tài khoản test `<tct|aph|bmi>.<lap|duyet|kho|ketoan|…>` / Test@2026; dừng:
+    `Stop-Process -Id (Get-Content D:\project\procurement-thu-0.15.0\pid.txt)`. Bản 0.14.0 (cổng 5006) vẫn chạy – không được phép dừng
+    từ phiên Claude. Sao lưu `procurement_uat` trước nâng cấp: `D:\project\procurement_uat_truoc_0.15.0.dump`. Tường lửa cổng 5007 chưa mở.
+  - Việc còn lại chờ người dùng chọn: C3 (ngân sách, hoãn chờ lệnh), việc "làm khi có yêu cầu" ở design.md.
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người
