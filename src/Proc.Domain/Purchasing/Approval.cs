@@ -144,6 +144,21 @@ public sealed class ApprovalStep : Entity, ICompanyOwned
     /// <summary>Ý kiến (bắt buộc khi từ chối).</summary>
     public string? Comment { get; private set; }
 
+    /// <summary>Thời điểm gửi duyệt lượt này (UTC) – hiện ở lịch sử duyệt; null với bước lập trước bản 0.17.0.</summary>
+    public DateTimeOffset? SubmittedAt { get; private set; }
+
+    /// <summary>Người gửi duyệt lượt này; null với bước lập trước bản 0.17.0.</summary>
+    public Guid? SubmittedBy { get; private set; }
+
+    /// <summary>Ghi người và thời điểm gửi duyệt của lượt (mọi bước của lượt cùng giá trị).</summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <param name="by">Người gửi.</param>
+    public void MarkSubmitted(DateTimeOffset at, Guid? by)
+    {
+        SubmittedAt = at;
+        SubmittedBy = by;
+    }
+
     /// <summary>Tạo bước chờ duyệt.</summary>
     /// <returns>Bước duyệt.</returns>
     public static ApprovalStep Create(Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId, int stage = 1) =>

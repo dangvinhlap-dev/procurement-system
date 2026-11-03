@@ -11,6 +11,7 @@ import { useDepartments, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
   purchaseStatusLabels,
+  withPendingApprovers,
   purchaseStatusTone,
   usePurchaseMutations,
   usePurchaseRequest,
@@ -186,7 +187,7 @@ export function PurchaseRequestPage() {
   }
 
   const { save, actions } = useApprovalCommands({
-    isNew, doc, readOnly, persist, mutations, listPath: '/mua-hang/pr', noun: 'đề nghị mua hàng', setError,
+    isNew, doc, readOnly, persist, mutations, listPath: '/mua-hang/pr', noun: 'đề nghị mua hàng', setError, docType: 'PR',
   })
 
   /** Dòng đã lưu tương ứng (để hiện giá tham khảo, tồn, SL đã đặt do server tính). */
@@ -400,7 +401,7 @@ export function PurchaseRequestPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? purchaseStatusLabels[doc.status] : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(purchaseStatusLabels[doc.status], doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
 
   return (
     <>
@@ -481,7 +482,7 @@ export function PurchaseRequestPage() {
               </>
             ),
           },
-          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}
     />

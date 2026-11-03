@@ -12,6 +12,7 @@ import { aboveGroupMinPct, pickSupplierPrice, useGroupMinPrices, useSupplierPric
 import {
   priceSourceLabels,
   purchaseStatusLabels,
+  withPendingApprovers,
   purchaseTypeLabels,
   useCompletePoDocs,
   purchaseStatusTone,
@@ -312,7 +313,7 @@ export function PurchaseOrderPage() {
   }
 
   const { save, actions } = useApprovalCommands({
-    isNew, doc, readOnly, persist, mutations, listPath: '/mua-hang/po', noun: 'đơn mua hàng', setError,
+    isNew, doc, readOnly, persist, mutations, listPath: '/mua-hang/po', noun: 'đơn mua hàng', setError, docType: 'PO',
   })
 
   /** Thêm các dòng PR đã chọn: SL = SL còn chưa đặt, đơn giá = giá tham khảo của PR, thuế suất theo mặt hàng. */
@@ -541,7 +542,7 @@ export function PurchaseOrderPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? purchaseStatusLabels[doc.status] : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(purchaseStatusLabels[doc.status], doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
 
   return (
     <>
@@ -667,7 +668,7 @@ export function PurchaseOrderPage() {
           </>
         }
         extraTabs={[
-          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} exceptionStage="Ngoại lệ giá" /> }] : []),
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} exceptionStage="Ngoại lệ giá" createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}
       />

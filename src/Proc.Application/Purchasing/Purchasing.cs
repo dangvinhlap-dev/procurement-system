@@ -29,9 +29,16 @@ public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal 
 /// Người duyệt tiếp theo – họ tên những người duyệt được bước này (TC-4, design.md mục 18.22); chỉ có ở bước đang đến lượt, rỗng khi chưa ai
 /// đủ điều kiện, null ở bước khác.
 /// </param>
+/// <param name="UpcomingApprovers">
+/// Người sẽ duyệt các bước còn chờ nhưng chưa đến lượt (cấp sau, chặng sau) của lượt hiện tại – để người duyệt cấp trước thấy ai duyệt
+/// tiếp sau mình (yêu cầu người dùng 03/11/2026); null ở bước khác.
+/// </param>
+/// <param name="SubmittedAt">Thời điểm gửi duyệt lượt của bước; null với dữ liệu trước bản 0.17.0.</param>
+/// <param name="SubmittedByName">Người gửi duyệt lượt của bước.</param>
 public sealed record ApprovalStepDto(
     int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment, string? CompanyCode = null,
-    int Stage = 1, IReadOnlyList<string>? NextApprovers = null);
+    int Stage = 1, IReadOnlyList<string>? NextApprovers = null, IReadOnlyList<string>? UpcomingApprovers = null, DateTimeOffset? SubmittedAt = null,
+    string? SubmittedByName = null);
 
 /// <summary>Một phiếu đang chờ người dùng hiện tại duyệt (Việc cần làm).</summary>
 /// <param name="DocType">Loại phiếu duyệt (PR, PO…).</param>

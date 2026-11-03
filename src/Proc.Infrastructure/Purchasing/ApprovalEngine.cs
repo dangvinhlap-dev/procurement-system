@@ -121,6 +121,8 @@ internal sealed class ApprovalEngine
             return;
         }
 
+        // Người và thời điểm gửi – lịch sử duyệt hiện "Lượt n: X gửi duyệt lúc …" (yêu cầu người dùng 03/11/2026).
+        foreach (var step in steps) step.MarkSubmitted(_clock.UtcNow, _scope.UserId);
         _db.ApprovalSteps.AddRange(steps);
         foreach (var step in ApprovalProgress.Active(steps)) await NotifyApproversAsync(document, step, cancellationToken);
     }
@@ -296,25 +298,31 @@ internal sealed class ApprovalEngine
             .OrderBy(s => s.Round).ThenBy(s => s.Stage).ThenBy(s => s.CompanyId).ThenBy(s => s.Level)
             .ToListAsync(cancellationToken);
         var roleIds = steps.Select(s => s.RoleId).OfType<Guid>().Distinct().ToList();
-        var userIds = steps.Select(s => s.ActedBy).OfType<Guid>().Distinct().ToList();
+        var userIds = steps.Select(s => s.ActedBy).Concat(steps.Select(s => s.SubmittedBy)).OfType<Guid>().Distinct().ToList();
         var roles = await _db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         var companyIds = steps.Select(s => s.CompanyId).Distinct().ToList();
         var companies = await _db.Companies.AsNoTracking().Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
-        // Chỉ bước đang đến lượt (chặng nhỏ nhất, cấp nhỏ nhất mỗi công ty) mới có người duyệt tiếp theo; bước sau chưa tới lượt để trống.
+        // Mọi bước còn chờ của lượt hiện tại đều tính người duyệt được (yêu cầu người dùng 03/11/2026: người duyệt cấp 1 thấy ai duyệt tiếp
+        // sau mình): bước đang đến lượt → NextApprovers ("Chờ: …"), bước sau → UpcomingApprovers ("Sẽ duyệt: …"). Cùng điều kiện với
+        // ApproveBlockerAsync (quyền, vai trò, không phải người lập, không vướng xung đột lợi ích) – danh sách có thể đổi khi phân quyền đổi.
         var next = new Dictionary<Guid, IReadOnlyList<string>>();
+        var activeIds = new HashSet<Guid>();
         if (document is { IsAwaitingApproval: true })
         {
-            var active = ApprovalProgress.Active(steps.Where(s => s.Round == document.ApprovalRound));
+            var round = steps.Where(s => s.Round == document.ApprovalRound).ToList();
+            activeIds = ApprovalProgress.Active(round).Select(s => s.Id).ToHashSet();
             var pendingSteps = new List<NextApproverResolver.PendingStep>();
-            foreach (var step in active) pendingSteps.Add(await PendingStepAsync(document, step, cancellationToken));
+            foreach (var step in round.Where(s => s.Status == ApprovalStepStatus.Pending)) pendingSteps.Add(await PendingStepAsync(document, step, cancellationToken));
             next = await _approvers.NamesAsync(pendingSteps, cancellationToken);
         }
 
         return steps.Select(s => new ApprovalStepDto(
                 s.Round, s.Level, s.RoleId is { } r ? roles.GetValueOrDefault(r) : null, s.Status.ToString(),
                 s.ActedBy is { } u ? users.GetValueOrDefault(u) : null, s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
-                next.GetValueOrDefault(s.Id)))
+                activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
+                !activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
+                s.SubmittedAt, s.SubmittedBy is { } sb ? users.GetValueOrDefault(sb) : null))
             .ToList();
     }
 }
