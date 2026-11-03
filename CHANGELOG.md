@@ -3,6 +3,35 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.16.0] - 2026-11-03
+
+### Thêm mới
+- **Ghi chú + đính kèm cho mọi form chứng từ/phiếu** (quy tắc chung, design.md 18.4):
+  - **Đính kèm ngay khi tạo phiếu**: chọn file trước khi lưu (hàng chờ trên trình duyệt), lưu xong tự tải lên.
+  - Thêm tab **Đính kèm** cho: phiếu tìm nguồn, phụ lục hợp đồng, đánh giá NCC định kỳ, sổ vi phạm KSNB, kê khai xung đột lợi ích
+    (người kê khai tự đính kèm); NCC độc quyền đính kèm được ngay khi lập.
+- Tài liệu hướng dẫn cấu hình duyệt PO nhiều cấp (`docs/HuongDan_PheDuyetPO_NhieuCap_v2.docx`, `docs/HuongDan_DuyetPO_A_B_C_D.docx`).
+
+### Thay đổi
+- Giới hạn đính kèm **2 MB/file** mặc định (trước 20 MB), cấu hình được `Attachments:MaxFileSizeMb` (1–25; Docker biến
+  `ATTACHMENT_MAX_MB`); giao diện đọc giới hạn từ máy chủ (`GET /api/attachments/limits`) và báo ngay khi chọn file quá cỡ.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (vẫn 49 migration như 0.15.0). Không có script `db/scripts/0.16.0.sql`.
+
+### Lưu ý khi nâng cấp
+- Từ 0.15.0: chỉ thay gói ứng dụng, không chạy script CSDL (vẫn nên sao lưu theo thói quen). Từ bản cũ hơn: chạy các script đến
+  `db/scripts/0.15.0.sql` trước.
+- Giới hạn đính kèm mặc định giảm còn **2 MB/file**; file đã tải lên trước đó giữ nguyên. Cần giới hạn khác thì thêm
+  `"MaxFileSizeMb": <số>` vào mục `Attachments` của `appsettings.Production.json` (Windows) hoặc đặt `ATTACHMENT_MAX_MB` (Docker).
+
+### Cách quay lại bản trước
+- Triển khai lại tag `v0.15.0` (CSDL không đổi nên không cần gỡ migration). File đính kèm của 5 loại phiếu mới vẫn nằm trong thư mục
+  đính kèm và CSDL nhưng bản 0.15.0 không hiển thị.
+
 ## [0.15.0] - 2026-11-03
 
 ### Thêm mới
