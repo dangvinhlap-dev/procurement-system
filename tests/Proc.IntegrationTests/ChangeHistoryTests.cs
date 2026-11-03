@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -44,12 +44,15 @@ public class ChangeHistoryTests
     [Fact]
     public async Task ThamSoHeThong_TraKhoaDong_XemLichSuGiaTri()
     {
-        var head = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
+        // Người quản trị riêng (không dùng admin – AuthTests đếm số công ty của admin).
+        var userName = $"ls.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT"]);
+        var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var code = $"H{Guid.NewGuid():N}".ToUpperInvariant()[..8];
         var created = await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(code, "Công ty thử lịch sử tham số", null, null, null, null, new DateOnly(2026, 1, 1), "KT", "Kho tổng"), Ct);
         created.EnsureSuccessStatusCode();
-        var client = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, code);
+        var client = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, code);
 
         (await client.PutAsJsonAsync($"/api/system-parameters/{SystemParameterCodes.RfqMinSuppliers}", new UpdateSystemParameterRequest("4"), Ct))
             .EnsureSuccessStatusCode();

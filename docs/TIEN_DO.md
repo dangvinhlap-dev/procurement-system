@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 03/11/2026 (phát hành 0.15.0; sau đó lát A4 ghi chú + đính kèm mọi form). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main trước phát hành 0.16.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -54,7 +54,7 @@ Kiểm tra trước (B1, 01/11/2026): `dotnet test` 441 qua; Playwright 65/68 �
 [::1]:5173 nên Playwright dùng lại – tắt hẳn Vite cũ hoặc khởi động lại máy), `supplier-links` chập chờn (chạy riêng cùng `pricing` 2/2 qua);
 `npm run build`, `tsc`, `oxlint` qua. Test tích hợp dựng bảng giá hiệu lực bằng `ProcApiFactory.FinishPriceListApprovalAsync`, e2e bằng
 `approvePriceList`. Lưu ý: test tích hợp không dùng tài khoản `admin` để tạo công ty (AuthTests đếm 4 công ty của admin) – `SupplierApprovalTests`
-(B2) đang dùng admin tạo công ty, chưa lỗi nhờ thứ tự chạy, nên sửa khi đụng tới.
+(B2) đang dùng admin tạo công ty – **đã sửa 03/11/2026** (cùng `ChangeHistoryTests`, `SharedCatalogEditTests`).
 
 Kiểm tra gần nhất (B4c, 01/11/2026): `dotnet test` 455 qua; Playwright 72/74 cả bộ – 2 lỗi "Phiên bản 0.11.0" do Vite cũ giữ cổng
 [::1]:5173 (PID ẩn, `netstat` báo PID 0); chạy lại trên Vite mới cổng 5178 (`E2E_WEB_URL`) auth/dashboard/classic-preview 10/10 qua;
@@ -121,6 +121,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
+  (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
+  - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;
+    test tích hợp `SupplierApprovalTests`, `ChangeHistoryTests`, `SharedCatalogEditTests` thôi dùng `admin` tạo công ty (người quản trị
+    riêng của test); `.gitignore` bỏ `/test-results/`. Kiểm tra: `dotnet build`, `dotnet test` 514/514.
 - **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026) – XONG TC-1 → TC-4, đã merge `main` (02/11/2026), chưa phát hành** – gồm:
   - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
     mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
