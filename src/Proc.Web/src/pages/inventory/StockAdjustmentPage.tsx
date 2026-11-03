@@ -98,8 +98,8 @@ export function StockAdjustmentPage() {
 
   const doc = document.data
   const readOnly = isNew ? !hasPermission(Permission.InventoryAdjustmentCreate) : !doc?.canEdit
-  // Biên bản kiểm kê scan đính kèm vào phiếu (design.md mục 18.4) – quyền theo quyền lập chứng từ kho của khối đính kèm.
-  const attachmentTab = useAttachmentTab('InventoryDocument', doc?.id, hasPermission(Permission.InventoryDocumentCreate))
+  // Biên bản kiểm kê scan đính kèm vào phiếu (design.md mục 18.4, 18.23) – theo quyền lập ADJ (server kiểm tra lại theo loại phiếu).
+  const attachmentTab = useAttachmentTab('InventoryDocument', doc?.id, hasPermission(Permission.InventoryAdjustmentCreate))
   const watchedLines = Form.useWatch('lines', form) as AdjustmentLineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
   const warehouseId = Form.useWatch('warehouseId', form) as string | undefined

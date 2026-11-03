@@ -1628,6 +1628,7 @@ giá trị tăng; tab Đính kèm cho biên bản scan. Nút Ghi sổ theo quy�
 | Dòng nhập tay | Vẫn dùng được (hàng thừa không có trên sổ, điều chỉnh không qua kiểm kê): không có tồn sổ/thực đếm |
 | In biên bản | `GET /api/inventory-documents/{id}/pdf` với phiếu ADJ in **"BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO"**: kho, số biên bản, lý do; cột Tồn sổ, Thực đếm, Tăng, Giảm, Giá trị tăng (dòng giảm theo giá vốn chốt khi đóng kỳ nên không in tiền); ký: người lập, thủ kho, kế toán, trưởng ban kiểm kê |
 | CSDL | Migration `V0_15_0_SoLieuKiemKe` (2 cột null trên `InventoryDocumentLine`; `Down()` mất số tồn sổ/thực đếm đã ghi) |
+| Đính kèm biên bản | Tải lên / xóa file đính kèm của phiếu ADJ theo quyền **lập ADJ** (`Inventory.Adjustment.Create`), phiếu kho khác vẫn theo quyền lập chứng từ kho; xem vẫn theo quyền xem chứng từ kho (sửa 03/11/2026) |
 
 ## Nguồn tham khảo
 
