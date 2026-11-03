@@ -189,6 +189,55 @@ export function useSupplierPrices(supplierId: string | undefined, date: string |
   })
 }
 
+/** Giá thấp nhất tập đoàn của một mặt hàng – khớp GroupMinPriceDto (giá sau CK, trước VAT, theo ĐVT cơ sở). */
+export interface GroupMinPrice {
+  itemId: string
+  basePrice: number
+  date: string
+  source: 'Receipt' | 'PO'
+  /** Số chứng từ, công ty, NCC: null khi người xem không có quyền xem giá toàn tập đoàn và giá thuộc công ty khác. */
+  documentNo: string | null
+  companyCode: string | null
+  supplierCode: string | null
+}
+
+/** Giá thấp nhất tập đoàn + % cảnh báo của công ty – khớp GroupMinPricesDto. */
+export interface GroupMinPrices {
+  warnPercent: number
+  items: GroupMinPrice[]
+}
+
+/**
+ * Giá thấp nhất tập đoàn của các mặt hàng trên PO để cảnh báo giá cao (design.md mục 8.5, 10.3).
+ * @param itemIds Mặt hàng trên phiếu.
+ * @param excludeOrderId PO đang xem – không tính giá của chính nó.
+ */
+export function useGroupMinPrices(itemIds: string[], excludeOrderId?: string) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams()
+  if (excludeOrderId) params.append('excludeOrderId', excludeOrderId)
+  for (const id of [...new Set(itemIds)].sort()) params.append('itemIds', id)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['price-comparison', companyId, 'group-min', query],
+    queryFn: () => apiFetch<GroupMinPrices>(`/api/purchase-orders/group-min-prices?${query}`),
+    enabled: itemIds.length > 0,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * % giá dòng PO cao hơn giá thấp nhất tập đoàn, làm tròn 2 số lẻ; null khi chưa đủ dữ liệu.
+ * Ví dụ giá thấp nhất 80.000/cái, dòng 2 thùng × 1.140.000 − 5% (thùng = 12 cái) → 90.250/cái → cao hơn 12,81%.
+ * @param net Giá sau chiết khấu theo ĐVT dòng.
+ * @param factor Hệ số ĐVT dòng → ĐVT cơ sở.
+ * @param minBase Giá thấp nhất tập đoàn theo ĐVT cơ sở.
+ */
+export function aboveGroupMinPct(net: number | null | undefined, factor: number, minBase: number | null | undefined): number | null {
+  if (net == null || minBase == null || minBase <= 0 || factor <= 0) return null
+  return Math.round(((net / factor - minBase) * 100 * 100) / minBase) / 100
+}
+
 /**
  * Chọn bậc giá cho một dòng PO: cùng ĐVT, bậc SL lớn nhất ≤ SL đặt. Không có bậc cùng ĐVT thì quy từ bậc theo ĐVT khác
  * (giá cơ sở × hệ số ĐVT dòng), vẫn chọn bậc lớn nhất có SL quy đổi ≤ SL đặt.

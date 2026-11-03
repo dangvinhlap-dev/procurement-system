@@ -2165,6 +2165,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<decimal>("PoHighPriceWarnPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasDefaultValue(10m);
+
                     b.Property<bool>("RequireReceiptQc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

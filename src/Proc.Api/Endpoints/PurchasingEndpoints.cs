@@ -84,6 +84,10 @@ public static class PurchasingEndpoints
         po.MapGet("/approved-prices", (Guid supplierId, DateOnly date, Guid[]? itemIds, Guid? departmentId, IPurchaseOrderService s, CancellationToken ct) =>
                 s.ApprovedPricesAsync(supplierId, date, itemIds ?? [], departmentId, ct))
             .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
+        // Giá thấp nhất tập đoàn cho cảnh báo giá cao trên dòng PO (design.md mục 8.5, 10.3) – người lập/xem PO, không cần quyền so sánh giá.
+        po.MapGet("/group-min-prices", (Guid[]? itemIds, Guid? excludeOrderId, Proc.Application.Pricing.IPriceComparisonService s, CancellationToken ct) =>
+                s.GroupMinPricesAsync(itemIds ?? [], excludeOrderId, ct))
+            .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
         // Thủ kho lập phiếu nhập theo PO cần đọc đơn dù không có quyền xem danh sách đơn mua hàng.
         po.MapGet("/{id:guid}", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Inventory.DocumentCreate);

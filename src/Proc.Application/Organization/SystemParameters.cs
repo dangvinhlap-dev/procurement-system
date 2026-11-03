@@ -9,6 +9,9 @@ public static class SystemParameterCodes
     /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
     public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
 
+    /// <summary>% cảnh báo giá cao trên PO so với giá thấp nhất tập đoàn – sửa được (design.md mục 8.5).</summary>
+    public const string PoHighPriceWarnPercent = "PO_HIGH_PRICE_WARN_PERCENT";
+
     /// <summary>Bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng – bật/tắt (design.md mục 18.14).</summary>
     public const string ReceiptQcRequired = "RECEIPT_QC_REQUIRED";
 

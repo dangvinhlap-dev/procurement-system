@@ -8,7 +8,7 @@ import { Link, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { vatOptions } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
-import { pickSupplierPrice, useSupplierPrices } from '../../api/pricing'
+import { aboveGroupMinPct, pickSupplierPrice, useGroupMinPrices, useSupplierPrices } from '../../api/pricing'
 import {
   priceSourceLabels,
   purchaseStatusLabels,
@@ -47,8 +47,11 @@ interface PoLineValues {
   sourceRfqLineId?: string | null
 }
 
-/** Giá sau chiết khấu, làm tròn 6 số như server (PurchaseOrderLine.NetUnitPrice). */
-const netPrice = (price: number, discountPct: number) => Math.round(price * (100 - discountPct) * 10_000) / 1_000_000_000
+/**
+ * Giá sau chiết khấu, làm tròn 6 số như server (PurchaseOrderLine.NetUnitPrice): giá × (100 − %CK) / 100.
+ * Ví dụ 50.000 − 5% → 47.500.
+ */
+const netPrice = (price: number, discountPct: number) => Math.round(price * (100 - discountPct) * 10_000) / 1_000_000
 
 interface PoFormValues {
   date: Dayjs
@@ -158,6 +161,7 @@ export function PurchaseOrderPage() {
     })
   }
   const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds, departmentId)
+  const groupMin = useGroupMinPrices(itemIds, doc?.id)
   const departments = useDepartments()
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn hiện tên (như PR – design.md mục 18.5).
   const departmentOptions = useMemo(
@@ -202,6 +206,20 @@ export function PurchaseOrderPage() {
     const line = lines[index]
     if (!a || a.unitPrice == null || !line) return false
     return netPrice(line.unitPrice ?? 0, line.discountPct ?? 0) !== netPrice(a.unitPrice, a.discountPct)
+  }
+
+  /**
+   * So giá dòng với giá thấp nhất tập đoàn (design.md mục 8.5, 10.3): chỉ cảnh báo, không chặn. Cao hơn quá % cảnh báo của công ty
+   * (tham số SEC, mặc định 10%) thì tam giác vàng; so giá sau CK quy về ĐVT cơ sở.
+   */
+  const highPrice = (index: number) => {
+    const line = lines[index]
+    if (!line?.itemId || line.unitPrice == null || !groupMin.data) return undefined
+    const min = groupMin.data.items.find((m) => m.itemId === line.itemId)
+    if (!min) return undefined
+    const factor = savedLine(index)?.uomFactor ?? itemsById.get(line.itemId)?.uoms.find((u) => u.uomId === line.uomId)?.factor ?? 1
+    const pct = aboveGroupMinPct(netPrice(line.unitPrice, line.discountPct ?? 0), factor, min.basePrice)
+    return { min, factor, pct, warn: pct != null && pct > groupMin.data.warnPercent, warnPercent: groupMin.data.warnPercent }
   }
 
   /** Chép giá đã duyệt (đơn giá, % CK, thuế suất) vào mọi dòng có giá hợp đồng/bảng giá (dòng từ kết quả chọn thầu giữ nguyên). */
@@ -431,6 +449,37 @@ export function PurchaseOrderPage() {
             )}
             {p?.unitPrice != null ? `${formatMoney(p.unitPrice)}${p.discountPct ? ` −${p.discountPct}%` : ''}` : ''}
           </span>
+        )
+      },
+    },
+    {
+      key: 'groupMin',
+      title: 'Giá thấp nhất TĐ',
+      width: 125,
+      align: 'right',
+      render: (field) => {
+        const h = highPrice(field.name)
+        if (!h) return readonlyCell('')
+        const m = h.min
+        const where = m.companyCode
+          ? `${m.source === 'Receipt' ? 'Phiếu nhập' : 'PO'} ${m.documentNo ?? ''} – ${m.companyCode}, NCC ${m.supplierCode ?? ''}, ngày ${formatDate(m.date)}`
+          : `ngày ${formatDate(m.date)} (công ty, NCC chỉ người có quyền xem giá toàn tập đoàn thấy)`
+        // Một chú thích cho cả ô (cảnh báo đứng trước) – hai Tooltip lồng nhau sẽ hiện chồng lên nhau.
+        const warning = h.warn
+          ? `Đơn giá cao hơn giá thấp nhất tập đoàn ${formatQuantity(h.pct)}% (ngưỡng cảnh báo ${formatQuantity(h.warnPercent)}%). ` +
+            'Chỉ cảnh báo – kiểm tra lại giá trước khi gửi duyệt. '
+          : ''
+        return (
+          <Tooltip title={`${warning}Giá mua thấp nhất tập đoàn 12 tháng (sau CK, trước VAT, theo ĐVT dòng): ${where}.`}>
+            <span className="line-grid-readonly">
+              {h.warn && (
+                <>
+                  <WarningFilled className="line-grid-alert-icon" aria-label={`Giá cao dòng ${field.name + 1}`} />{' '}
+                </>
+              )}
+              {formatMoney(Math.round(m.basePrice * h.factor * 1_000_000) / 1_000_000)}
+            </span>
+          </Tooltip>
         )
       },
     },

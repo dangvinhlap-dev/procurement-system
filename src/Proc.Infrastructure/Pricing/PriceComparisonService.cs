@@ -55,8 +55,8 @@ public sealed class PriceComparisonService : IPriceComparisonService
         var since = today.AddMonths(-12);
 
         var priceLists = await PriceListRowsAsync(companyId, allCompanies, itemId, today, cancellationToken);
-        var receipts = await ReceiptEntriesAsync(allCompanies, itemId, since, cancellationToken);
-        var orders = await OrderEntriesAsync(allCompanies, itemId, since, cancellationToken);
+        var receipts = await ReceiptEntriesAsync(allCompanies, [itemId], since, cancellationToken);
+        var orders = await OrderEntriesAsync(allCompanies, [itemId], since, null, cancellationToken);
         var quotations = await QuotationEntriesAsync(allCompanies, itemId, since, cancellationToken);
 
         var entries = receipts.Concat(orders).Concat(quotations).ToList();
@@ -86,6 +86,44 @@ public sealed class PriceComparisonService : IPriceComparisonService
                 .ToList(),
             purchases,
             history);
+    }
+
+    /// <inheritdoc />
+    public async Task<GroupMinPricesDto> GroupMinPricesAsync(IReadOnlyList<Guid> itemIds, Guid? excludeOrderId, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var warn = await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.PoHighPriceWarnPercent).FirstOrDefaultAsync(cancellationToken)
+                   ?? CompanyParameter.DefaultPoHighPriceWarnPercent;
+        var ids = itemIds.Distinct().Take(500).ToList();
+        if (ids.Count == 0) return new GroupMinPricesDto(warn, []);
+        // Filter nhóm hàng vẫn giữ: mặt hàng ngoài phạm vi coi như không có.
+        ids = await _db.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => i.Id).ToListAsync(cancellationToken);
+        var since = _clock.TodayInVietnam().AddMonths(-12);
+        // Giá thấp nhất tập đoàn phải đọc chứng từ mọi công ty (bỏ filter công ty, kho) dù người lập PO không có quyền xem toàn tập đoàn –
+        // design.md mục 10.3 cảnh báo theo giá thấp nhất tập đoàn; bù lại chỉ trả con số, chi tiết chứng từ công ty khác bị ẩn (bên dưới).
+        var receipts = await ReceiptEntriesAsync(true, ids, since, cancellationToken);
+        var orders = await OrderEntriesAsync(true, ids, since, excludeOrderId, cancellationToken);
+        var canSeeAll = _scope.HasPermission(Permissions.Report.PriceViewAllCompanies);
+
+        // Cùng cách chọn với BuildPurchaseRows: mỗi công ty × NCC lấy giá gần nhất (cùng ngày thì phiếu nhập), rồi lấy thấp nhất.
+        // Ví dụ BHA–NCC A gần nhất 95.000, TCT–NCC B gần nhất 80.000 → giá thấp nhất tập đoàn 80.000/ĐVT cơ sở.
+        var mins = receipts.Concat(orders)
+            .GroupBy(e => (e.ItemId, e.CompanyId, e.SupplierId))
+            .Select(g => g.OrderByDescending(e => e.Date).ThenByDescending(e => e.Source == "Receipt").ThenByDescending(e => e.No).First())
+            .GroupBy(e => e.ItemId)
+            .Select(g => g.OrderBy(e => e.BasePrice).ThenBy(e => e.CompanyId == companyId ? 0 : 1).ThenByDescending(e => e.Date).First())
+            .ToList();
+        var visibleCompanies = mins.Where(e => canSeeAll || e.CompanyId == companyId).Select(e => e.CompanyId).Distinct().ToList();
+        var visibleSuppliers = mins.Where(e => canSeeAll || e.CompanyId == companyId).Select(e => e.SupplierId).Distinct().ToList();
+        var companies = await _db.Companies.AsNoTracking().Where(c => visibleCompanies.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
+        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => visibleSuppliers.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
+        return new GroupMinPricesDto(warn, mins.Select(e =>
+            {
+                var visible = canSeeAll || e.CompanyId == companyId;
+                return new GroupMinPriceDto(e.ItemId, e.BasePrice, e.Date, e.Source, visible ? e.No : null,
+                    visible ? companies.GetValueOrDefault(e.CompanyId) : null, visible ? suppliers.GetValueOrDefault(e.SupplierId) : null);
+            })
+            .ToList());
     }
 
     /// <summary>
@@ -147,7 +185,7 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
-    private async Task<List<Entry>> ReceiptEntriesAsync(bool allCompanies, Guid itemId, DateOnly since, CancellationToken cancellationToken)
+    private async Task<List<Entry>> ReceiptEntriesAsync(bool allCompanies, IReadOnlyList<Guid> itemIds, DateOnly since, CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters áp cho cả câu truy vấn (mọi bảng trong đó), nên chỉ bỏ filter khi xem toàn tập đoàn (đã kiểm quyền) –
         // bỏ filter công ty và kho, xem ghi chú lớp. Chế độ công ty mình giữ nguyên mọi filter (dòng lọc qua phiếu, phiếu lọc công ty, kho).
@@ -157,30 +195,32 @@ public sealed class PriceComparisonService : IPriceComparisonService
         var rows = await (
                 from l in lines.AsNoTracking()
                 join d in _db.InventoryDocuments on l.DocumentId equals d.Id
-                where d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= since && l.ItemId == itemId
+                where d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= since && itemIds.Contains(l.ItemId)
                       && d.SupplierId != null && l.BaseQty > 0
-                select new { d.CompanyId, SupplierId = d.SupplierId!.Value, d.Date, d.No, l.BaseQty, l.Amount })
+                select new { l.ItemId, d.CompanyId, SupplierId = d.SupplierId!.Value, d.Date, d.No, l.BaseQty, l.Amount })
             .ToListAsync(cancellationToken);
         // Phiếu nhập không có chiết khấu riêng: đơn giá đã là giá thực mua nên giá cơ sở = thành tiền / SL cơ sở.
         return rows.Select(r => new Entry(
-                r.CompanyId, r.SupplierId, r.Date, "Receipt", r.No, r.BaseQty, r.Amount,
+                r.ItemId, r.CompanyId, r.SupplierId, r.Date, "Receipt", r.No, r.BaseQty, r.Amount,
                 Math.Round(r.Amount / r.BaseQty, 6, MidpointRounding.AwayFromZero)))
             .ToList();
     }
 
-    private async Task<List<Entry>> OrderEntriesAsync(bool allCompanies, Guid itemId, DateOnly since, CancellationToken cancellationToken)
+    private async Task<List<Entry>> OrderEntriesAsync(
+        bool allCompanies, IReadOnlyList<Guid> itemIds, DateOnly since, Guid? excludeOrderId, CancellationToken cancellationToken)
     {
         // Toàn tập đoàn (đã kiểm quyền) – xem ghi chú lớp; IgnoreQueryFilters áp cho cả câu truy vấn.
         var orders = allCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
         var rows = await (
                 from o in orders.AsNoTracking()
                 where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.Date >= since
+                      && o.Id != excludeOrderId
                 from l in o.Lines
-                where l.ItemId == itemId
-                select new { o.CompanyId, o.SupplierId, o.Date, o.No, l.BaseQty, l.Amount, l.UnitPrice, l.DiscountPct, l.UomFactor })
+                where itemIds.Contains(l.ItemId)
+                select new { l.ItemId, o.CompanyId, o.SupplierId, o.Date, o.No, l.BaseQty, l.Amount, l.UnitPrice, l.DiscountPct, l.UomFactor })
             .ToListAsync(cancellationToken);
         return rows.Select(r => new Entry(
-                r.CompanyId, r.SupplierId, r.Date, "PO", r.No, r.BaseQty, r.Amount, PricingMath.BaseNetPrice(r.UnitPrice, r.DiscountPct, r.UomFactor)))
+                r.ItemId, r.CompanyId, r.SupplierId, r.Date, "PO", r.No, r.BaseQty, r.Amount, PricingMath.BaseNetPrice(r.UnitPrice, r.DiscountPct, r.UomFactor)))
             .ToList();
     }
 
@@ -201,13 +241,13 @@ public sealed class PriceComparisonService : IPriceComparisonService
                 select new { r.CompanyId, s.SupplierId, Date = r.AwardDate!.Value, r.No, l.Qty, l.UomFactor, q.UnitPrice, q.DiscountPct })
             .ToListAsync(cancellationToken);
         return rows.Select(r => new Entry(
-                r.CompanyId, r.SupplierId, r.Date, "Quotation", r.No, Math.Round(r.Qty * r.UomFactor, 4, MidpointRounding.AwayFromZero),
+                itemId, r.CompanyId, r.SupplierId, r.Date, "Quotation", r.No, Math.Round(r.Qty * r.UomFactor, 4, MidpointRounding.AwayFromZero),
                 Math.Round(r.Qty * r.UnitPrice * (100m - r.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero),
                 PricingMath.BaseNetPrice(r.UnitPrice, r.DiscountPct, r.UomFactor)))
             .ToList();
     }
 
-    private sealed record Entry(Guid CompanyId, Guid SupplierId, DateOnly Date, string Source, string No, decimal BaseQty, decimal Amount, decimal BasePrice);
+    private sealed record Entry(Guid ItemId, Guid CompanyId, Guid SupplierId, DateOnly Date, string Source, string No, decimal BaseQty, decimal Amount, decimal BasePrice);
 
     private sealed record PriceListRow(
         Guid CompanyId, bool IsGroupWide, Guid SupplierId, string No, DateOnly ValidFrom, DateOnly? ValidTo, string UomCode, decimal UomFactor,

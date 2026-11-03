@@ -87,6 +87,17 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.locator('.document-form-footer')).toContainText('258.500')
   await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toHaveCount(0)
 
+  // 3b. Cảnh báo giá cao (design.md mục 8.5): giá thấp nhất tập đoàn từ phiếu nhập; đơn giá gấp 10 lần thì tam giác vàng, giá thường thì không.
+  await expect(page.getByLabel('Giá cao dòng 1')).toHaveCount(0)
+  await page.getByLabel('Đơn giá dòng 1').fill('500000')
+  await page.getByLabel('Đơn giá dòng 1').press('Tab')
+  await expect(page.getByLabel('Giá cao dòng 1')).toBeVisible()
+  await page.getByLabel('Giá cao dòng 1').hover()
+  await expect(page.getByRole('tooltip').filter({ hasText: 'cao hơn giá thấp nhất tập đoàn' })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/po-high-price.png' })
+  await page.getByRole('button', { name: /Áp giá đã duyệt$/ }).click()
+  await expect(page.getByLabel('Giá cao dòng 1')).toHaveCount(0)
+
   // 4. Sửa giá 48.000: lệch giá → cảnh báo, gửi duyệt khi chưa có lý do bị chặn; ghi lý do thì gửi được, có chặng "Ngoại lệ giá".
   await page.getByLabel('Đơn giá dòng 1').fill('48000')
   await page.getByLabel('Đơn giá dòng 1').press('Tab')
