@@ -6,6 +6,7 @@ import {
   DollarOutlined,
   EditOutlined,
   FileAddOutlined,
+  FileProtectOutlined,
   RollbackOutlined,
   SaveOutlined,
   SendOutlined,
@@ -388,7 +389,9 @@ export function RfqPage() {
     doc &&
     modal.confirm({
       title: 'Tạo bảng giá NCC từ kết quả chọn thầu?',
-      content: 'Mỗi NCC trúng thầu một bảng giá nháp của công ty: giá, % CK, VAT theo báo giá, hiệu lực từ hôm nay tới hết hiệu lực báo giá. Mở bảng giá để kiểm tra rồi gửi duyệt.',
+      content:
+        'Mỗi NCC trúng thầu một bảng giá nháp của công ty: giá, % CK, VAT theo báo giá, hiệu lực từ hôm nay tới hết hiệu lực báo giá. ' +
+        'RFQ của tổng công ty thì bảng giá đánh dấu sẵn "Áp dụng toàn tập đoàn" (bỏ được khi còn nháp). Mở bảng giá để kiểm tra rồi gửi duyệt.',
       okText: 'Tạo bảng giá',
       cancelText: 'Không',
       onOk: async () => {
@@ -398,6 +401,26 @@ export function RfqPage() {
           message.success(`Đã tạo ${created.map((c) => `${c.priceListNo} (${c.supplierCode})`).join(', ')}.`)
         } catch (e) {
           fail(e, 'Không tạo được bảng giá.')
+        }
+      },
+    })
+
+  const createContracts = () =>
+    doc &&
+    modal.confirm({
+      title: 'Tạo hợp đồng nguyên tắc từ kết quả chọn thầu?',
+      content:
+        'Mỗi NCC trúng thầu một hợp đồng nguyên tắc nháp của công ty, gắn bảng giá đã tạo từ RFQ này: sản lượng dự kiến = SL trúng thầu, ' +
+        'hiệu lực theo bảng giá, thanh toán theo báo giá. Mở hợp đồng bổ sung số HĐ giấy, ngày ký, điều khoản rồi gửi duyệt.',
+      okText: 'Tạo hợp đồng',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          const created = await mutations.createContracts.mutateAsync(doc.id)
+          message.success(`Đã tạo ${created.map((c) => `${c.contractNo} (${c.supplierCode})`).join(', ')}.`)
+        } catch (e) {
+          fail(e, 'Không tạo được hợp đồng.')
         }
       },
     })
@@ -548,6 +571,11 @@ export function RfqPage() {
       {doc?.actions.canCreatePriceLists && (
         <Button icon={<DollarOutlined />} onClick={createPriceLists} loading={mutations.createPriceLists.isPending}>
           Tạo bảng giá
+        </Button>
+      )}
+      {doc?.actions.canCreateContracts && (
+        <Button icon={<FileProtectOutlined />} onClick={createContracts} loading={mutations.createContracts.isPending}>
+          Tạo hợp đồng
         </Button>
       )}
       {doc?.actions.canCancel && (
@@ -895,6 +923,7 @@ function ComparisonView({
     { key: 'awarded', label: 'Giá trị trúng thầu', value: (s) => (s.awardedAmount ? formatMoney(s.awardedAmount) : '') },
     { key: 'po', label: 'Đơn mua hàng', value: (s) => s.purchaseOrderNo },
     { key: 'priceList', label: 'Bảng giá NCC', value: (s) => s.priceListNo },
+    { key: 'contract', label: 'Hợp đồng nguyên tắc', value: (s) => s.contractNo },
     ...(rfq.actions.canQuote
       ? [
           {

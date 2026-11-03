@@ -681,6 +681,20 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         supplier.LinkPriceList(priceListId);
     }
 
+    /// <summary>
+    /// Ghi nhận hợp đồng nguyên tắc nháp đã sinh cho NCC trúng thầu (design.md mục 8.6). Ghi đè liên kết cũ – dịch vụ chỉ gọi khi NCC chưa có
+    /// hợp đồng hoặc hợp đồng cũ đã hủy.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi RFQ chưa duyệt kết quả, NCC không trúng dòng nào hoặc chưa có bảng giá từ RFQ.</exception>
+    public void LinkContract(Guid supplierId, Guid contractId)
+    {
+        if (Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {No} chưa được duyệt kết quả chọn thầu.");
+        var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId) ?? throw new BusinessRuleException("NCC không có trong RFQ.");
+        if (_lines.All(l => l.AwardedSupplierId != supplierId)) throw new BusinessRuleException("NCC này không trúng dòng nào.");
+        if (supplier.PriceListId is null) throw new BusinessRuleException("NCC này chưa có bảng giá từ RFQ.");
+        supplier.LinkContract(contractId);
+    }
+
     /// <summary>Hủy RFQ (Nháp hoặc Đã gửi).</summary>
     /// <exception cref="BusinessRuleException">Khi đang chờ duyệt kết quả, đã chọn thầu hoặc đã hủy.</exception>
     public void Cancel()
@@ -843,6 +857,9 @@ public sealed class RfqSupplier : Entity
     /// <summary>Bảng giá NCC nháp đã sinh từ kết quả chọn thầu (lát B3b).</summary>
     public Guid? PriceListId { get; private set; }
 
+    /// <summary>Hợp đồng nguyên tắc nháp đã sinh từ kết quả chọn thầu (design.md mục 8.6).</summary>
+    public Guid? ContractId { get; private set; }
+
     /// <summary>Giá từng dòng.</summary>
     public IReadOnlyList<QuotationLine> QuotationLines => _quotationLines;
 
@@ -875,6 +892,8 @@ public sealed class RfqSupplier : Entity
     internal void LinkPurchaseOrder(Guid purchaseOrderId) => PurchaseOrderId = purchaseOrderId;
 
     internal void LinkPriceList(Guid priceListId) => PriceListId = priceListId;
+
+    internal void LinkContract(Guid contractId) => ContractId = contractId;
 }
 
 /// <summary>Một mục hồ sơ trình kết quả chọn thầu đã đánh dấu (lát B3b).</summary>

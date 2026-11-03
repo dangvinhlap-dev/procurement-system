@@ -105,4 +105,10 @@ test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async 
   // 6. Tạo bảng giá NCC nháp cho B từ kết quả đã duyệt (lát B3b).
   await confirm(page, 'Tạo bảng giá', 'Tạo bảng giá', new RegExp(`Đã tạo PRL-BHA-\\d{4}-\\d{4} \\(${s2}\\)\\.`))
   await expect(page.getByRole('table', { name: 'Điểm nhà cung cấp' })).toContainText(/PRL-BHA-\d{4}-\d{4}/)
+
+  // 7. Tạo hợp đồng nguyên tắc nháp cho B, gắn bảng giá vừa tạo (design.md mục 8.6); xong thì nút ẩn.
+  await confirm(page, 'Tạo hợp đồng', 'Tạo hợp đồng', new RegExp(`Đã tạo CTR-BHA-\\d{4}-\\d{4} \\(${s2}\\)\\.`))
+  await expect(page.getByRole('table', { name: 'Điểm nhà cung cấp' })).toContainText(/CTR-BHA-\d{4}-\d{4}/)
+  await expect(page.getByRole('button', { name: /(^| )Tạo hợp đồng$/ })).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/screenshots/rfq-create-contract.png' })
 })

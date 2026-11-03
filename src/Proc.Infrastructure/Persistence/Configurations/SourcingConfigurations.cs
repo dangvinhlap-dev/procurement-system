@@ -132,6 +132,7 @@ internal sealed class RfqSupplierConfiguration : IEntityTypeConfiguration<RfqSup
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<SupplierPriceList>().WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Domain.Purchasing.PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.QuotationLines).WithOne().HasForeignKey(q => q.RfqSupplierId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.QuotationLines).HasField("_quotationLines").UsePropertyAccessMode(PropertyAccessMode.Field);
     }

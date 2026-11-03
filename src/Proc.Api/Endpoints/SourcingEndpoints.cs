@@ -75,6 +75,9 @@ public static class SourcingEndpoints
             .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapPost("/{id:guid}/create-price-lists", (Guid id, IRfqService s, CancellationToken ct) => s.CreatePriceListsAsync(id, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage);
+        // Sinh hợp đồng nguyên tắc nháp từ kết quả chọn thầu (design.md mục 8.6) – quyền như lập hợp đồng.
+        rfq.MapPost("/{id:guid}/create-contracts", (Guid id, IRfqService s, CancellationToken ct) => s.CreateContractsAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.ContractManage);
         return app;
     }
 }

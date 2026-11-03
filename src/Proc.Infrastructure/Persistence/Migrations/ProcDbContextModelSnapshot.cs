@@ -3932,6 +3932,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ContractId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("DeliveryScore")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
@@ -3978,6 +3981,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(5,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ContractId");
 
                     b.HasIndex("PriceListId");
 
@@ -5406,6 +5411,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqSupplier", b =>
                 {
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Pricing.SupplierPriceList", null)
                         .WithMany()
                         .HasForeignKey("PriceListId")
