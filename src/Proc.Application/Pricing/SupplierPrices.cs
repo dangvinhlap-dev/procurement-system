@@ -249,3 +249,32 @@ public sealed class SavePriceListRequestValidator : AbstractValidator<SavePriceL
         });
     }
 }
+
+/// <summary>Kết quả nhập Excel bảng giá NCC.</summary>
+/// <param name="TotalRows">Số dòng dữ liệu (bỏ dòng trống).</param>
+/// <param name="PriceLists">Số bảng giá sẽ tạo / đã tạo.</param>
+/// <param name="Lines">Số dòng giá sẽ tạo / đã tạo.</param>
+/// <param name="Errors">Các lỗi (Code = mã NCC); có lỗi thì không bảng giá nào được lưu.</param>
+/// <param name="Committed">true khi đã lưu thật; false khi chỉ kiểm tra thử hoặc có lỗi.</param>
+public sealed record PriceListImportResult(int TotalRows, int PriceLists, int Lines, IReadOnlyList<Excel.ExcelImportError> Errors, bool Committed);
+
+/// <summary>
+/// Nhập Excel bảng giá NCC (design.md mục 8.5): mỗi dòng file là một bậc giá (mặt hàng × ĐVT × SL từ); các dòng cùng mã NCC + tên bảng giá
+/// là một bảng giá. Bảng giá nhập vào công ty đang làm việc ở trạng thái Nháp, qua đúng quy tắc lập tay, rồi gửi duyệt như thường.
+/// Cần quyền <c>Pricing.PriceList.Manage</c>.
+/// </summary>
+public interface IPriceListImportService
+{
+    /// <summary>File mẫu trống kèm sheet Hướng dẫn.</summary>
+    /// <returns>File .xlsx.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không có quyền sửa bảng giá.</exception>
+    Excel.ExcelFile GetTemplate();
+
+    /// <summary>Nhập file: kiểm tra thử (không lưu) hoặc nhập thật (chỉ lưu khi mọi dòng đúng).</summary>
+    /// <param name="content">Nội dung file .xlsx.</param>
+    /// <param name="commit">false = kiểm tra thử; true = lưu nếu không có lỗi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số bảng giá, số dòng và các lỗi theo dòng Excel.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không có quyền sửa bảng giá.</exception>
+    Task<PriceListImportResult> ImportAsync(Stream content, bool commit, CancellationToken cancellationToken);
+}

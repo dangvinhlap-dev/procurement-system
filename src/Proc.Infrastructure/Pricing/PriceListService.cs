@@ -78,13 +78,14 @@ public sealed class PriceListService : IPriceListService
         var companyId = _scope.RequireCompany();
         await CheckHeaderAsync(request, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        // Nhập Excel bảng giá gọi trong giao dịch chung của cả file – khi đó dùng giao dịch đó, không mở giao dịch lồng.
+        await using var transaction = _db.Database.CurrentTransaction is null ? await _db.Database.BeginTransactionAsync(cancellationToken) : null;
         var no = await _numbers.NextAsync(DocumentTypes.PriceList, request.ValidFrom, cancellationToken);
         var list = SupplierPriceList.Create(companyId, no, ToHeader(request));
         list.SetLines(lines);
         _db.SupplierPriceLists.Add(list);
         await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return await GetAsync(list.Id, cancellationToken);
     }
 

@@ -9,6 +9,11 @@ namespace Proc.Api.Endpoints;
 /// <summary>API bảng giá nội bộ (design.md mục 4, 6.3), bảng giá NCC và so sánh giá (mục 8.1, 8.2).</summary>
 public static class PricingEndpoints
 {
+    /// <summary>Kích thước file nhập Excel tối đa (như nhập hợp đồng).</summary>
+    private const long MaxFileBytes = 10 * 1024 * 1024;
+
+    private const string XlsxContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
     /// <summary>Đăng ký các endpoint.</summary>
     /// <param name="app">Ứng dụng.</param>
     /// <returns>Ứng dụng (để nối tiếp).</returns>
@@ -71,6 +76,24 @@ public static class PricingEndpoints
             .RequirePermission(Permissions.Pricing.PriceListApprove);
         lists.MapPost("/{id:guid}/deactivate", (Guid id, IPriceListService s, CancellationToken ct) => s.DeactivateAsync(id, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage);
+        // Nhập Excel bảng giá NCC (design.md mục 8.5): nhập thành bảng giá nháp của công ty đang làm việc, quyền như lập bảng giá.
+        lists.MapGet("/import-template", (IPriceListImportService s) =>
+            {
+                var file = s.GetTemplate();
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Pricing.PriceListManage);
+        lists.MapPost("/import", async (bool? commit, IFormFile file, IPriceListImportService s, CancellationToken ct) =>
+            {
+                if (file.Length == 0) return Results.Problem(title: "File rỗng.", statusCode: StatusCodes.Status400BadRequest);
+                if (file.Length > MaxFileBytes)
+                    return Results.Problem(title: "File quá 10 MB. Hãy chia nhỏ file.", statusCode: StatusCodes.Status400BadRequest);
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.ImportAsync(stream, commit ?? false, ct));
+            })
+            .RequirePermission(Permissions.Pricing.PriceListManage)
+            // API dùng JWT trong header, không dùng cookie, nên không có nguy cơ CSRF – tắt kiểm tra antiforgery cho form tải file.
+            .DisableAntiforgery();
 
         app.MapGet("/api/price-comparison", (Guid itemId, bool? allCompanies, decimal? thresholdPct, IPriceComparisonService s, CancellationToken ct) =>
                 s.CompareAsync(itemId, allCompanies ?? false, Math.Clamp(thresholdPct ?? 10m, 0m, 1000m), ct))
