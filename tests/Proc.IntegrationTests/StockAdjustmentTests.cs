@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PdfSharp.Pdf.IO;
 using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -158,5 +159,43 @@ public class StockAdjustmentTests
         // Kỳ mở lại: bỏ ghi sổ được, tồn về như trước điều chỉnh.
         Assert.Equal("Draft", (await ReadAsync<InventoryDocumentDto>(await f.Client.PostAsync($"/api/inventory-documents/{adj.Id}/unpost", null, Ct))).Status);
         Assert.Equal(100m, await StockAsync(f));
+    }
+
+    [Fact]
+    public async Task KiemKe_NhapSoThucDem_TuTinhChenhLechSoVoiTonSo_InBienBan()
+    {
+        var f = await ArrangeAsync();
+        await PostedAsync(f.Client, await f.Client.PostAsJsonAsync("/api/goods-receipts",
+            new SaveReceiptRequest(new DateOnly(2025, 1, 5), f.Kt, f.SupplierId, null, null, null, null, null, null,
+                [new(null, f.ItemId, f.Uom, 100, 10_000, "10", null, null, null)]), Ct));
+
+        // Bảng kiểm kê: tồn sổ của kho theo ĐVT cơ sở (design.md mục 18.23 – ADJ-3).
+        var sheet = await ReadAsync<List<CountSheetRowDto>>(await f.Client.GetAsync($"/api/stock-adjustments/count-sheet?warehouseId={f.Kt}", Ct));
+        var row = Assert.Single(sheet);
+        Assert.Equal((f.ItemId, f.Uom, 100m), (row.ItemId, row.UomId, row.BookQty));
+
+        // Client gửi chiều/SL sai: server tính lại theo thực đếm – 96 − 100 = giảm 4; tồn sổ ghi lại trên dòng.
+        var counted = new SaveAdjustmentLineRequest(null, f.ItemId, f.Uom, 1, 1, 0, null, null, null, CountedQty: 96);
+        var adj = await ReadAsync<InventoryDocumentDto>(await f.Client.PostAsJsonAsync("/api/stock-adjustments",
+            Adjustment(f, new DateOnly(2025, 1, 20), counted), Ct));
+        var line = Assert.Single(adj.Lines);
+        Assert.Equal((-1, 4m, 100m, 96m, 0m), (line.Direction, line.Qty, line.BookQty, line.CountedQty, line.UnitPrice));
+
+        // Thực đếm khớp tồn sổ: không có gì để điều chỉnh.
+        Assert.Contains("không chênh lệch", await TitleAsync(await f.Client.PostAsJsonAsync("/api/stock-adjustments",
+            Adjustment(f, new DateOnly(2025, 1, 20), counted with { CountedQty = 100 }), Ct)));
+        // Thực đếm âm bị chặn.
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PostAsJsonAsync("/api/stock-adjustments",
+            Adjustment(f, new DateOnly(2025, 1, 20), counted with { CountedQty = -1 }), Ct)).StatusCode);
+
+        // In biên bản kiểm kê, điều chỉnh kho.
+        var response = await f.Client.GetAsync($"/api/inventory-documents/{adj.Id}/pdf", Ct);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(Ct));
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+        var pdf = PdfReader.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync(Ct)), PdfDocumentOpenMode.Import);
+        Assert.Equal(1, pdf.PageCount);
+
+        await ReadAsync<InventoryDocumentDto>(await f.Client.PostAsync($"/api/inventory-documents/{adj.Id}/post", null, Ct));
+        Assert.Equal(96m, await StockAsync(f));
     }
 }

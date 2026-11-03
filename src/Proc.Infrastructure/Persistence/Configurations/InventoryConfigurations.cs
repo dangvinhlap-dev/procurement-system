@@ -94,6 +94,9 @@ internal sealed class InventoryDocumentLineConfiguration : IEntityTypeConfigurat
         builder.Ignore(x => x.DiscrepancyQty);
         // Chiều dòng phiếu điều chỉnh: +1 tăng, −1 giảm; loại phiếu khác null (design.md mục 6.1).
         builder.ToTable(t => t.HasCheckConstraint("CK_InventoryDocumentLine_Direction", "\"Direction\" IS NULL OR \"Direction\" IN (-1, 1)"));
+        // Số kiểm kê của dòng điều chỉnh theo biên bản (ADJ-3): tồn sổ lúc lưu và SL thực đếm, ĐVT cơ sở.
+        builder.Property(x => x.BookQty).HasPrecision(18, 4);
+        builder.Property(x => x.CountedQty).HasPrecision(18, 4);
         builder.Property(x => x.Amount).HasPrecision(19, 2);
         builder.Property(x => x.VatAmount).HasPrecision(19, 2);
         builder.Property(x => x.VatCode).HasMaxLength(5);

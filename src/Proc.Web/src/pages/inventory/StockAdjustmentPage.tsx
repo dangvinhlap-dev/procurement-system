@@ -1,5 +1,6 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { Alert, DatePicker, Form, Input, InputNumber } from 'antd'
+import { Alert, Button, DatePicker, Form, Input, InputNumber } from 'antd'
+import { CalculatorOutlined } from '@ant-design/icons'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
@@ -21,6 +22,7 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
+import { CountSheetDialog, type CountedDifference } from './CountSheetDialog'
 import { documentStatusTone } from './documentStatus'
 import { useDocumentCommands } from './useDocumentCommands'
 
@@ -37,6 +39,10 @@ interface AdjustmentLineValues {
   lotNo?: string
   expiryDate?: Dayjs | null
   note?: string
+  /** Dòng kiểm kê: SL thực đếm (ĐVT cơ sở). */
+  countedQty?: number | null
+  /** Dòng kiểm kê đã lưu: tồn sổ lúc lưu (chỉ hiển thị). */
+  bookQty?: number | null
 }
 
 interface AdjustmentFormValues {
@@ -87,6 +93,7 @@ export function StockAdjustmentPage() {
   const warehouses = useWarehouses()
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [counting, setCounting] = useState(false)
   const addRef = useRef<(() => void) | null>(null)
 
   const doc = document.data
@@ -101,9 +108,13 @@ export function StockAdjustmentPage() {
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
   const stock = useAvailableStock(readOnly ? undefined : warehouseId, itemIds)
 
-  /** Tồn hiện tại tại kho theo ĐVT cơ sở (đúng lô nếu dòng có lô); phiếu chỉ xem thì không hiện vì tồn đã gồm chính phiếu. */
+  /**
+   * Tồn hiện tại tại kho theo ĐVT cơ sở (đúng lô nếu dòng có lô); phiếu chỉ xem thì hiện tồn sổ đã ghi lúc lưu của dòng kiểm kê (tồn
+   * hiện tại đã gồm chính phiếu nên không dùng được).
+   */
   const onHand = (line: AdjustmentLineValues | undefined) => {
-    if (readOnly || !line?.itemId || !stock.data) return undefined
+    if (readOnly) return line?.bookQty ?? undefined
+    if (!line?.itemId || !stock.data) return undefined
     const lot = orNull(line.lotNo)
     return stock.data.filter((s) => s.itemId === line.itemId && (lot === null || s.lotNo === lot)).reduce((sum, s) => sum + s.qty, 0)
   }
@@ -117,6 +128,7 @@ export function StockAdjustmentPage() {
     lines: doc.lines.map((l) => ({
       id: l.id, itemId: l.itemId, uomId: l.uomId, direction: l.direction ?? 1, qty: l.qty, unitPrice: l.unitPrice,
       lotNo: l.lotNo ?? '', expiryDate: l.expiryDate ? dayjs(l.expiryDate) : null, note: l.note ?? '',
+      countedQty: l.countedQty ?? null, bookQty: l.bookQty ?? null,
     })),
   }))
 
@@ -146,6 +158,7 @@ export function StockAdjustmentPage() {
         lotNo: orNull(l.lotNo),
         expiryDate: l.direction === 1 && l.expiryDate ? l.expiryDate.format('YYYY-MM-DD') : null,
         note: orNull(l.note),
+        countedQty: l.countedQty ?? null,
       })),
     }
     try {
@@ -159,10 +172,52 @@ export function StockAdjustmentPage() {
     }
   }
 
-  const { save, actions } = useDocumentCommands({
+  const { save, actions: commands } = useDocumentCommands({
     isNew, doc, readOnly, persist, mutations, listPath: ADJUSTMENT_PATH, noun: 'phiếu điều chỉnh', setError,
     postPermission: Permission.InventoryAdjustmentPost,
   })
+
+  /**
+   * Dòng kiểm kê: gõ SL thực đếm thì tự đặt chiều và SL = |thực đếm − tồn sổ| theo ĐVT cơ sở (ví dụ tồn 10, đếm 7 → Giảm 3).
+   * Server tính lại khi lưu theo tồn sổ lúc đó; xóa thực đếm thì dòng trở lại nhập tay.
+   */
+  const applyCounted = (index: number, counted: number | null) => {
+    const line = lines[index]
+    const book = onHand(line)
+    if (counted === null || book === undefined || !line?.itemId) return
+    const diff = Math.round((counted - book) * 10000) / 10000
+    if (diff === 0) return
+    const direction = diff > 0 ? 1 : -1
+    form.setFieldValue(['lines', index], {
+      ...line,
+      uomId: itemsById.get(line.itemId)?.baseUomId ?? line.uomId,
+      direction,
+      qty: Math.abs(diff),
+      unitPrice: direction === -1 ? 0 : (line.unitPrice ?? 0),
+      countedQty: counted,
+    })
+  }
+
+  /** Thêm các dòng chênh lệch từ bảng kiểm kê vào cuối phiếu (dòng tăng chờ nhập đơn giá; dòng giảm theo giá vốn). */
+  const addCounted = (differences: CountedDifference[]) => {
+    const added: AdjustmentLineValues[] = differences.map(({ row, countedQty }) => {
+      const diff = Math.round((countedQty - row.bookQty) * 10000) / 10000
+      return {
+        id: null,
+        itemId: row.itemId,
+        uomId: row.uomId,
+        direction: diff > 0 ? 1 : -1,
+        qty: Math.abs(diff),
+        unitPrice: 0,
+        lotNo: row.lotNo ?? '',
+        expiryDate: diff > 0 && row.expiryDate ? dayjs(row.expiryDate) : null,
+        note: '',
+        countedQty,
+      }
+    })
+    form.setFieldValue('lines', [...(form.getFieldValue('lines') ?? []), ...added])
+    setCounting(false)
+  }
 
   const warehouseOptions = (current: string | null | undefined) =>
     (warehouses.data ?? [])
@@ -205,6 +260,8 @@ export function StockAdjustmentPage() {
             style={{ width: '100%' }}
             aria-label={`Tăng/Giảm dòng ${field.name + 1}`}
             options={directionOptions}
+            // Dòng kiểm kê: chiều suy ra từ thực đếm − tồn sổ, không sửa tay.
+            disabled={lines[field.name]?.countedQty != null}
             // Đổi sang Giảm thì bỏ giá nhập tay – dòng giảm xuất theo giá vốn.
             onChange={(v: 1 | -1) => v === -1 && form.setFieldValue(['lines', field.name, 'unitPrice'], 0)}
           />
@@ -224,6 +281,8 @@ export function StockAdjustmentPage() {
               style={{ width: '100%' }}
               aria-label={`ĐVT dòng ${field.name + 1}`}
               options={(item?.uoms ?? []).map((u) => ({ value: u.uomId, label: u.code }))}
+              // Dòng kiểm kê tính theo ĐVT cơ sở (server kiểm tra lại).
+              disabled={lines[field.name]?.countedQty != null}
             />
           </Form.Item>
         )
@@ -236,7 +295,13 @@ export function StockAdjustmentPage() {
       align: 'right',
       render: (field) => (
         <Form.Item name={[field.name, 'qty']} noStyle rules={[{ required: true, type: 'number', min: 0.0001, message: 'SL > 0.' }]}>
-          <InputNumber {...cellNumber} min={0} precision={4} aria-label={`Số lượng dòng ${field.name + 1}`} />
+          <InputNumber
+            {...cellNumber}
+            min={0}
+            precision={4}
+            aria-label={`Số lượng dòng ${field.name + 1}`}
+            disabled={lines[field.name]?.countedQty != null}
+          />
         </Form.Item>
       ),
     },
@@ -257,6 +322,28 @@ export function StockAdjustmentPage() {
           </span>
         )
       },
+    },
+    {
+      key: 'counted',
+      title: 'Thực đếm',
+      width: 100,
+      align: 'right',
+      render: (field) => (
+        <Form.Item name={[field.name, 'countedQty']} noStyle>
+          <InputNumber
+            {...cellNumber}
+            min={0}
+            precision={4}
+            aria-label={`Thực đếm dòng ${field.name + 1}`}
+            placeholder="(nhập tay)"
+            onBlur={(e) => {
+              const value = form.getFieldValue(['lines', field.name, 'countedQty']) as number | null | undefined
+              if (e.currentTarget.value.trim() === '' || value === null || value === undefined) return
+              applyCounted(field.name, value)
+            }}
+          />
+        </Form.Item>
+      ),
     },
     {
       key: 'price',
@@ -358,6 +445,7 @@ export function StockAdjustmentPage() {
   const increaseCount = lines.filter((l) => l?.direction === 1).length
 
   return (
+    <>
     <DocumentForm
       title="Phiếu điều chỉnh, kiểm kê kho"
       extraTabs={[attachmentTab]}
@@ -373,7 +461,22 @@ export function StockAdjustmentPage() {
       readOnly={readOnly}
       onSave={save}
       onAddLine={() => addRef.current?.()}
-      actions={actions}
+      actions={
+        <>
+          {!readOnly && (
+            <Button
+              icon={<CalculatorOutlined />}
+              disabled={!warehouseId}
+              onClick={() => setCounting(true)}
+              title={warehouseId ? 'Lấy tồn sổ của kho, nhập SL thực đếm và lập dòng chênh lệch' : 'Chọn kho trước'}
+            >
+              Bảng kiểm kê
+            </Button>
+          )}
+          {commands}
+        </>
+      }
+      printPath={doc ? `/api/inventory-documents/${doc.id}/pdf` : undefined}
       header={
         <>
           <Form.Item label="Ngày điều chỉnh" name="date" rules={[{ required: true, message: 'Chọn ngày điều chỉnh.' }]} extra="Quyết định kỳ kho khi ghi sổ.">
@@ -415,5 +518,7 @@ export function StockAdjustmentPage() {
         </>
       }
     />
+    <CountSheetDialog warehouseId={warehouseId} open={counting} onClose={() => setCounting(false)} onApply={addCounted} />
+    </>
   )
 }

@@ -1618,7 +1618,16 @@ lý do, trạng thái; nút Tạo mới theo quyền lập ADJ) và trang phiế
 khi giảm vượt tồn), đơn giá chỉ ở dòng tăng (dòng giảm hiện "Giá vốn"), thành tiền + tiền tệ, lô, hạn dùng (dòng tăng); chân phiếu: số dòng,
 giá trị tăng; tab Đính kèm cho biên bản scan. Nút Ghi sổ theo quyền ghi sổ ADJ. Tra cứu chứng từ, xuất dữ liệu kế toán mở được phiếu ADJ.
 
-Lát sau: **ADJ-3** kiểm kê (nhập SL thực đếm, tự tính chênh lệch so tồn sổ; in biên bản kiểm kê).
+**Kiểm kê (lát ADJ-3, 03/11/2026):**
+
+| Quy tắc | Chi tiết |
+| --- | --- |
+| Bảng kiểm kê | Nút **Bảng kiểm kê** (cần chọn kho) mở tồn sổ khác 0 của kho theo mặt hàng, lô (ĐVT cơ sở; hạn dùng lấy từ phiếu đã ghi sổ gần nhất của lô) – API `GET /api/stock-adjustments/count-sheet?warehouseId=`, quyền lập ADJ, phạm vi kho/nhóm hàng theo filter. Gõ SL thực đếm, chỉ dòng có chênh lệch được lập vào phiếu |
+| Dòng kiểm kê | Dòng có **SL thực đếm** (`CountedQty`) lưu thêm **tồn sổ** (`BookQty`) – cả hai numeric(18,4), ĐVT cơ sở. Server lấy tồn sổ tại kho **lúc lưu** (đúng lô; dòng không lô cộng mọi lô) và tự tính: chênh = thực đếm − tồn sổ; > 0 → Tăng, < 0 → Giảm, SL = |chênh|; không tin chiều/SL client gửi. Bằng 0 → báo "không chênh lệch". Dòng kiểm kê phải dùng ĐVT cơ sở; giao diện khóa ô Tăng/Giảm, ĐVT, SL của dòng này |
+| Tồn đổi sau khi lưu | Phiếu khác ghi sổ làm tồn sổ đổi thì lưu lại phiếu để tính lại; ghi sổ dùng SL điều chỉnh đã lưu (vẫn chặn tồn âm) |
+| Dòng nhập tay | Vẫn dùng được (hàng thừa không có trên sổ, điều chỉnh không qua kiểm kê): không có tồn sổ/thực đếm |
+| In biên bản | `GET /api/inventory-documents/{id}/pdf` với phiếu ADJ in **"BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO"**: kho, số biên bản, lý do; cột Tồn sổ, Thực đếm, Tăng, Giảm, Giá trị tăng (dòng giảm theo giá vốn chốt khi đóng kỳ nên không in tiền); ký: người lập, thủ kho, kế toán, trưởng ban kiểm kê |
+| CSDL | Migration `V0_15_0_SoLieuKiemKe` (2 cột null trên `InventoryDocumentLine`; `Down()` mất số tồn sổ/thực đếm đã ghi) |
 
 ## Nguồn tham khảo
 

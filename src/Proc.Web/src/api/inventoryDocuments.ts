@@ -90,6 +90,10 @@ export interface InventoryLine {
   discrepancyQty?: number
   /** Phiếu điều chỉnh: 1 tăng, -1 giảm (design.md mục 18.23). */
   direction?: 1 | -1 | null
+  /** Dòng kiểm kê: tồn sổ (ĐVT cơ sở) lúc lưu phiếu. */
+  bookQty?: number | null
+  /** Dòng kiểm kê: SL thực đếm (ĐVT cơ sở). */
+  countedQty?: number | null
 }
 
 /** Kết quả kiểm tra chất lượng dòng phiếu nhập mua. */
@@ -356,6 +360,8 @@ export interface SaveAdjustmentLineInput {
   lotNo: string | null
   expiryDate: string | null
   note: string | null
+  /** Dòng kiểm kê: SL thực đếm (ĐVT cơ sở) – server lấy tồn sổ và tự tính chiều, SL chênh lệch. */
+  countedQty: number | null
 }
 
 /** Nội dung phiếu điều chỉnh / kiểm kê gửi lên khi lưu. */
@@ -370,6 +376,33 @@ export interface SaveAdjustmentInput {
 
 /** Lập, sửa, ghi sổ phiếu điều chỉnh / kiểm kê kho. */
 export const useStockAdjustmentMutations = () => useInventoryDocumentMutations<SaveAdjustmentInput>('/api/stock-adjustments')
+
+/** Một dòng bảng kiểm kê: tồn sổ của một mặt hàng (một lô) tại kho, theo ĐVT cơ sở. */
+export interface CountSheetRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  uomId: string
+  uomCode: string
+  lotNo: string | null
+  expiryDate: string | null
+  bookQty: number
+}
+
+/**
+ * Bảng kiểm kê của một kho (tồn sổ khác 0) để nhập SL thực đếm – design.md mục 18.23 (ADJ-3).
+ * @param warehouseId Kho kiểm kê; trống thì không tải.
+ * @param enabled Chỉ tải khi hộp thoại kiểm kê đang mở (luôn lấy tồn mới nhất).
+ */
+export function useCountSheet(warehouseId: string | undefined, enabled: boolean) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['stock', companyId, 'count-sheet', warehouseId],
+    queryFn: () => apiFetch<CountSheetRow[]>(`/api/stock-adjustments/count-sheet?warehouseId=${warehouseId}`),
+    enabled: enabled && !!warehouseId,
+    staleTime: 0,
+  })
+}
 
 /** Một dòng phiếu nhập còn trả được. */
 export interface ReturnableLine {

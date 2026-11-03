@@ -106,6 +106,9 @@ public static class InventoryEndpoints
                 s.UpdateAdjustmentAsync(id, request, ct))
             .RequirePermission(Permissions.Inventory.AdjustmentCreate)
             .Validate<SaveAdjustmentRequest>();
+        // Bảng kiểm kê: tồn sổ của kho để nhập SL thực đếm (design.md mục 18.23 – ADJ-3).
+        adjustments.MapGet("/count-sheet", (Guid warehouseId, IInventoryDocumentService s, CancellationToken ct) => s.GetCountSheetAsync(warehouseId, ct))
+            .RequirePermission(Permissions.Inventory.AdjustmentCreate);
 
         var sales = app.MapGroup("/api/intercompany-sales").WithTags("Bán nội bộ");
         sales.MapPost("/", async (SaveSaleRequest request, IInventoryDocumentService s, CancellationToken ct) =>

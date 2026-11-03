@@ -110,7 +110,7 @@ test.describe('quản trị hệ thống', () => {
 
     await expect(page.locator('.ant-message')).toContainText(`Đã tạo vai trò ${code}.`)
     await expect(gridRow(page, code)).toContainText('Kế toán kho thử')
-    await expect(gridRow(page, code)).toContainText('8')
+    await expect(gridRow(page, code)).toContainText('10')
   })
 
   test('bộ vai trò mẫu Ban Cung ứng: tạo vai trò còn thiếu, mở lại thì đã đủ', async ({ page }) => {

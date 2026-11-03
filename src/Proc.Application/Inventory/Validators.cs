@@ -104,6 +104,7 @@ public sealed class SaveAdjustmentRequestValidator : AbstractValidator<SaveAdjus
             l.RuleFor(x => x.Direction).Must(d => d is 1 or -1).WithMessage("Dòng hàng phải chọn Tăng hoặc Giảm.");
             l.RuleFor(x => x.Qty).GreaterThan(0).WithMessage("Số lượng phải lớn hơn 0.");
             l.RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0).WithMessage("Đơn giá không được âm.");
+            l.RuleFor(x => x.CountedQty).GreaterThanOrEqualTo(0).WithMessage("SL thực đếm không được âm.");
             l.RuleFor(x => x.LotNo).MaximumLength(50);
             l.RuleFor(x => x.Note).MaximumLength(500);
         });

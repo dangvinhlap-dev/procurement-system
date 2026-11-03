@@ -64,3 +64,40 @@ test('điều chỉnh kho theo biên bản kiểm kê: dòng giảm, dòng tăng
   await expect(page).toHaveURL(/\/kho\/dieu-chinh\/[0-9a-f-]{36}$/)
   await expect(page.locator('.document-form-number')).toHaveText(adjustmentNo)
 })
+
+/**
+ * Kiểm kê (ADJ-3): mở bảng kiểm kê của kho KT, gõ SL thực đếm 8 cho mặt hàng tồn sổ 10 → phiếu tự lập dòng Giảm 2; lưu rồi in biên bản.
+ */
+test('bảng kiểm kê: nhập thực đếm, tự lập dòng chênh lệch, in biên bản', async ({ page, request }) => {
+  const { itemCode } = await seedPostedReceipt(request)
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+
+  await openByCommand(page, 'ADJ')
+  await page.getByRole('button', { name: 'Tạo mới' }).click()
+  await expect(page.getByRole('button', { name: 'Bảng kiểm kê' })).toBeDisabled()
+  await chooseOption(page, 'Kho', 'KT – ')
+  await page.getByLabel('Số biên bản kiểm kê').fill('BBKK-E2E-02')
+  await page.getByLabel('Lý do điều chỉnh').fill('Kiểm kê định kỳ')
+  await page.getByRole('button', { name: 'Bảng kiểm kê' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Bảng kiểm kê – nhập SL thực đếm' })
+  const row = dialog.locator('.ant-table-row', { hasText: itemCode })
+  await expect(row).toContainText('10')
+  await dialog.getByLabel(`Thực đếm ${itemCode}`).fill('8')
+  await expect(row).toContainText('-2')
+  await page.screenshot({ path: 'e2e/screenshots/stock-count-sheet.png' })
+  await dialog.getByRole('button', { name: 'Lập dòng chênh lệch (1)' }).click()
+  await expect(dialog).toBeHidden()
+
+  await expect(page.getByLabel('Tăng/Giảm dòng 1')).toBeDisabled()
+  await expect(page.locator('.line-grid-row').first()).toContainText('Giảm')
+  await expect(page.getByLabel('Số lượng dòng 1')).toHaveValue('2')
+  await expect(page.getByLabel('Thực đếm dòng 1')).toHaveValue('8')
+
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu ADJ-BHA-\d{4}-\d{4}\./)
+  await expect(page.getByRole('button', { name: 'In phiếu' })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/stock-count-adjustment.png' })
+})

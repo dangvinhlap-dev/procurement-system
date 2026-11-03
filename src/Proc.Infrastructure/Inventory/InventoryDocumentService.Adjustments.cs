@@ -22,7 +22,7 @@ public sealed partial class InventoryDocumentService
         var companyId = _scope.RequireCompany();
         RequirePermission(Permissions.Inventory.AdjustmentCreate, "lập phiếu điều chỉnh, kiểm kê kho");
         await CheckAdjustmentWarehouseAsync(request.WarehouseId, cancellationToken);
-        var lines = await ResolveAdjustmentLinesAsync(request.Lines, cancellationToken);
+        var lines = await ResolveAdjustmentLinesAsync(request.WarehouseId, request.Lines, cancellationToken);
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.Adjustment, request.Date, cancellationToken);
@@ -42,7 +42,7 @@ public sealed partial class InventoryDocumentService
         var document = await LoadAsync(id, DocumentTypes.Adjustment, cancellationToken);
         await EnsureAllItemsVisibleAsync(document, cancellationToken);
         await CheckAdjustmentWarehouseAsync(request.WarehouseId, cancellationToken);
-        var lines = await ResolveAdjustmentLinesAsync(request.Lines, cancellationToken);
+        var lines = await ResolveAdjustmentLinesAsync(request.WarehouseId, request.Lines, cancellationToken);
 
         document.UpdateAdjustment(ToAdjustmentHeader(request));
         document.SetLines(lines);
@@ -80,15 +80,68 @@ public sealed partial class InventoryDocumentService
         if (!warehouse.IsActive) throw new BusinessRuleException($"Kho {warehouse.Code} đã ngừng dùng.");
     }
 
-    /// <summary>Dòng điều chỉnh: chiều tăng/giảm; tăng có đơn giá nhập tay, giảm đơn giá 0 (giá vốn ghi ở sổ kho lúc ghi sổ).</summary>
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CountSheetRowDto>> GetCountSheetAsync(Guid warehouseId, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        RequirePermission(Permissions.Inventory.AdjustmentCreate, "lập phiếu điều chỉnh, kiểm kê kho");
+        await CheckAdjustmentWarehouseAsync(warehouseId, cancellationToken);
+        // Đọc qua filter phạm vi kho, nhóm hàng: hàng ngoài phạm vi không hiện trên bảng kiểm kê.
+        var rows = await (
+                from s in _db.StockOnHand.AsNoTracking()
+                join i in _db.Items.AsNoTracking() on s.ItemId equals i.Id
+                join u in _db.Uoms.AsNoTracking() on i.BaseUomId equals u.Id
+                where s.WarehouseId == warehouseId && s.Qty != 0
+                orderby i.Code, s.LotNo
+                select new { s.ItemId, i.Code, i.Name, UomId = u.Id, UomCode = u.Code, s.LotNo, s.Qty })
+            .ToListAsync(cancellationToken);
+
+        // Hạn dùng của lô: lấy từ dòng phiếu đã ghi sổ gần nhất có cùng mặt hàng, lô (StockOnHand không lưu hạn dùng).
+        var itemIds = rows.Where(r => r.LotNo != null).Select(r => r.ItemId).Distinct().ToList();
+        var expiries = itemIds.Count == 0
+            ? []
+            : (await (
+                    from l in _db.InventoryDocumentLines.AsNoTracking()
+                    join d in _db.InventoryDocuments.AsNoTracking() on l.DocumentId equals d.Id
+                    where d.Status == DocumentStatus.Posted && itemIds.Contains(l.ItemId) && l.LotNo != null && l.ExpiryDate != null
+                    group l by new { l.ItemId, l.LotNo } into g
+                    select new { g.Key.ItemId, g.Key.LotNo, Expiry = g.Max(x => x.ExpiryDate) })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(x => (x.ItemId, x.LotNo), x => x.Expiry);
+        return rows
+            .Select(r => new CountSheetRowDto(r.ItemId, r.Code, r.Name, r.UomId, r.UomCode, r.LotNo,
+                r.LotNo is null ? null : expiries.GetValueOrDefault((r.ItemId, r.LotNo)), r.Qty))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Dòng điều chỉnh: chiều tăng/giảm; tăng có đơn giá nhập tay, giảm đơn giá 0 (giá vốn ghi ở sổ kho lúc ghi sổ). Dòng kiểm kê (có SL
+    /// thực đếm): tồn sổ lấy tại kho lúc lưu (đúng lô nếu dòng có lô, không lô thì cộng mọi lô), domain tự tính chiều và SL chênh lệch.
+    /// Tồn sổ có thể đổi sau khi lưu (phiếu khác ghi sổ) – lưu lại phiếu để tính lại theo tồn mới.
+    /// </summary>
     private async Task<List<(InventoryLineData Data, Item Item)>> ResolveAdjustmentLinesAsync(
-        IReadOnlyList<SaveAdjustmentLineRequest> lines, CancellationToken cancellationToken)
+        Guid warehouseId, IReadOnlyList<SaveAdjustmentLineRequest> lines, CancellationToken cancellationToken)
     {
         var ids = lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+        var countedIds = lines.Where(l => l.CountedQty is not null).Select(l => l.ItemId).Distinct().ToList();
+        var stock = countedIds.Count == 0
+            ? []
+            : await _db.StockOnHand.AsNoTracking()
+                .Where(s => s.WarehouseId == warehouseId && countedIds.Contains(s.ItemId))
+                .Select(s => new { s.ItemId, s.LotNo, s.Qty })
+                .ToListAsync(cancellationToken);
+        decimal? Book(SaveAdjustmentLineRequest l)
+        {
+            if (l.CountedQty is null) return null;
+            var lot = string.IsNullOrWhiteSpace(l.LotNo) ? null : l.LotNo.Trim();
+            return stock.Where(s => s.ItemId == l.ItemId && (lot == null || s.LotNo == lot)).Sum(s => s.Qty);
+        }
+
         return lines
             .Select((l, index) => (
-                new InventoryLineData(l.Id, l.ItemId, l.UomId, l.Qty, l.UnitPrice, null, l.LotNo, l.ExpiryDate, l.Note, Direction: l.Direction),
+                new InventoryLineData(l.Id, l.ItemId, l.UomId, l.Qty, l.UnitPrice, null, l.LotNo, l.ExpiryDate, l.Note, Direction: l.Direction,
+                    BookQty: Book(l), CountedQty: l.CountedQty),
                 items.GetValueOrDefault(l.ItemId)
                 ?? throw new NotFoundException($"Dòng {index + 1}: không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).")))
             .ToList();

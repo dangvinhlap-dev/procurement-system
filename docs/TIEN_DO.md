@@ -143,8 +143,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
       `StockAdjustmentPage.tsx`, `useDocumentCommands.postPermission`, quyền web `InventoryAdjustmentCreate/Post`; danh sách phiếu kho thêm
       `Reason`, `CountReportNo`; Tra cứu chứng từ, xuất kế toán mở được ADJ. e2e `stock-adjustment.spec.ts`, sửa `administration` (nhóm Kho
       11 quyền). Kiểm tra: `dotnet test` 509; Playwright 90/90; `npm run build`, `tsc`, `oxlint` qua.
-    - **ADJ-3** (tiếp theo): kiểm kê – nhập SL thực đếm, tự tính chênh lệch so tồn sổ sinh dòng tăng/giảm; in biên bản kiểm kê PDF.
-      Xong ADJ-3 thì merge `main`.
+    - **ADJ-3 (xong, 03/11/2026)** kiểm kê: dòng ADJ thêm `BookQty`/`CountedQty` (migration `V0_15_0_SoLieuKiemKe`), server lấy tồn sổ
+      lúc lưu và tự tính chiều/SL (`InventoryDocumentLine.ApplyCount`); API bảng kiểm kê `/api/stock-adjustments/count-sheet`; in PDF
+      "Biên bản kiểm kê, điều chỉnh kho" (`DocumentPdfService.AdjustmentAsync`). Web: `CountSheetDialog.tsx` (nút Bảng kiểm kê), cột Thực
+      đếm, nút In phiếu. Test `KiemKe_NhapSoThucDem_TuTinhChenhLechSoVoiTonSo_InBienBan`, e2e "bảng kiểm kê". Kiểm tra: `dotnet test`
+      510/510; Playwright 91/91 (sửa kèm `administration`: số quyền vai trò 8 → 10); `npm run build`, `tsc`, `oxlint` qua. Merge `main`, xóa nhánh.
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người

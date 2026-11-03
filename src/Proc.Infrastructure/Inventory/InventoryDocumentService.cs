@@ -458,7 +458,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.UnitPrice, l.Amount,
                 l.VatCode, l.VatAmount, l.LotNo, l.ExpiryDate, l.Note, l.SourceLineId,
                 sentQty is not null && l.SourceLineId is { } src ? sentQty.GetValueOrDefault(src) : null, l.PurchaseOrderLineId,
-                l.DeliveredQty, l.RejectedQty, l.QcResult.ToString(), l.QcNote, l.DiscrepancyQty, l.Direction);
+                l.DeliveredQty, l.RejectedQty, l.QcResult.ToString(), l.QcNote, l.DiscrepancyQty, l.Direction, l.BookQty, l.CountedQty);
         }).ToList();
 
         string? readOnlyReason = null;

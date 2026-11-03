@@ -67,12 +67,14 @@ public sealed record InventoryDocumentQuery(string DocType, DateOnly? From, Date
 /// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
 /// <param name="DiscrepancyQty">Thiếu/thừa = SL thực nhận + SL không đạt − SL chứng từ (âm = thiếu; 0 khi không có SL chứng từ).</param>
 /// <param name="Direction">Phiếu điều chỉnh: +1 tăng, −1 giảm; loại phiếu khác null.</param>
+/// <param name="BookQty">Dòng kiểm kê: tồn sổ (ĐVT cơ sở) lúc lưu phiếu.</param>
+/// <param name="CountedQty">Dòng kiểm kê: SL thực đếm (ĐVT cơ sở).</param>
 public sealed record InventoryLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal UnitPrice, decimal Amount, string? VatCode, decimal VatAmount, string? LotNo,
     DateOnly? ExpiryDate, string? Note, Guid? SourceLineId = null, decimal? SentQty = null, Guid? PurchaseOrderLineId = null,
     decimal? DeliveredQty = null, decimal RejectedQty = 0, string QcResult = "NotChecked", string? QcNote = null, decimal DiscrepancyQty = 0,
-    int? Direction = null);
+    int? Direction = null, decimal? BookQty = null, decimal? CountedQty = null);
 
 /// <summary>Chi tiết chứng từ kho.</summary>
 /// <param name="Id">Id.</param>
@@ -214,8 +216,24 @@ public sealed record SaveTransferRequest(
 /// <param name="LotNo">Số lô.</param>
 /// <param name="ExpiryDate">Hạn dùng (dòng tăng của hàng quản lý hạn dùng).</param>
 /// <param name="Note">Ghi chú dòng.</param>
+/// <param name="CountedQty">
+/// Dòng kiểm kê: SL thực đếm theo ĐVT cơ sở; có giá trị thì server lấy tồn sổ tại kho lúc lưu và tự tính chiều, SL = |thực đếm − tồn sổ|.
+/// </param>
 public sealed record SaveAdjustmentLineRequest(
-    Guid? Id, Guid ItemId, Guid UomId, int Direction, decimal Qty, decimal UnitPrice, string? LotNo, DateOnly? ExpiryDate, string? Note);
+    Guid? Id, Guid ItemId, Guid UomId, int Direction, decimal Qty, decimal UnitPrice, string? LotNo, DateOnly? ExpiryDate, string? Note,
+    decimal? CountedQty = null);
+
+/// <summary>Một dòng bảng kiểm kê: tồn sổ hiện tại của một mặt hàng (một lô) tại kho, theo ĐVT cơ sở – design.md mục 18.23.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="UomId">ĐVT cơ sở.</param>
+/// <param name="UomCode">Mã ĐVT cơ sở.</param>
+/// <param name="LotNo">Số lô (null nếu không quản lý lô).</param>
+/// <param name="ExpiryDate">Hạn dùng của lô (lấy từ phiếu nhập gần nhất của lô; null nếu không có).</param>
+/// <param name="BookQty">Tồn sổ.</param>
+public sealed record CountSheetRowDto(
+    Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, string? LotNo, DateOnly? ExpiryDate, decimal BookQty);
 
 /// <summary>Lưu phiếu điều chỉnh / kiểm kê kho (nháp) – design.md mục 6.1.</summary>
 /// <param name="Date">Ngày điều chỉnh.</param>
@@ -428,6 +446,14 @@ public interface IInventoryDocumentService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu không còn nháp hoặc dữ liệu sai.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> UpdateAdjustmentAsync(Guid id, SaveAdjustmentRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Bảng kiểm kê: tồn sổ khác 0 của một kho theo mặt hàng, lô (ĐVT cơ sở) để nhập SL thực đếm.</summary>
+    /// <param name="warehouseId">Kho kiểm kê (trong phạm vi người dùng).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các dòng theo mã hàng, số lô.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi thiếu quyền lập phiếu điều chỉnh.</exception>
+    /// <exception cref="Common.NotFoundException">Khi kho ngoài phạm vi.</exception>
+    Task<IReadOnlyList<CountSheetRowDto>> GetCountSheetAsync(Guid warehouseId, CancellationToken cancellationToken);
 
     /// <summary>Lập phiếu xuất bán nội bộ nháp; giá theo bảng giá nội bộ của công ty bán.</summary>
     /// <param name="request">Nội dung.</param>

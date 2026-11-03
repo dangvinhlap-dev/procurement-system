@@ -725,6 +725,14 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<decimal?>("BookQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("CountedQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<decimal?>("DeliveredQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");

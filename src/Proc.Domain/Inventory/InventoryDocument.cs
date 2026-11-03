@@ -99,10 +99,12 @@ public sealed record ReceiptConfirmLine(Guid LineId, decimal ReceivedQty, string
 /// <param name="QcResult">Phiếu nhập mua: kết quả kiểm tra chất lượng của dòng.</param>
 /// <param name="QcNote">Phiếu nhập mua: ghi chú kiểm tra / sai lệch.</param>
 /// <param name="Direction">Phiếu điều chỉnh: +1 tăng (thừa), −1 giảm (thiếu); loại phiếu khác để null.</param>
+/// <param name="BookQty">Phiếu điều chỉnh theo kiểm kê: tồn sổ (ĐVT cơ sở) lúc lưu – do server tính, không nhận từ client.</param>
+/// <param name="CountedQty">Phiếu điều chỉnh theo kiểm kê: SL thực đếm (ĐVT cơ sở); có giá trị thì chiều và SL suy ra từ chênh lệch.</param>
 public sealed record InventoryLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, string? VatCode, string? LotNo, DateOnly? ExpiryDate, string? Note,
     Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null, decimal? DeliveredQty = null, decimal RejectedQty = 0,
-    QcResult QcResult = QcResult.NotChecked, string? QcNote = null, int? Direction = null);
+    QcResult QcResult = QcResult.NotChecked, string? QcNote = null, int? Direction = null, decimal? BookQty = null, decimal? CountedQty = null);
 
 /// <summary>Kết quả kiểm tra chất lượng dòng phiếu nhập mua (design.md mục 18.14 – đề xuất Ban CUVT V7).</summary>
 public enum QcResult
@@ -690,6 +692,12 @@ public sealed class InventoryDocumentLine : Entity
     /// <summary>Phiếu điều chỉnh: +1 tăng (hàng thừa), −1 giảm (hàng thiếu); loại phiếu khác là null.</summary>
     public int? Direction { get; private set; }
 
+    /// <summary>Phiếu điều chỉnh theo kiểm kê: tồn sổ tại kho (ĐVT cơ sở) lúc lưu phiếu – numeric(18,4); dòng nhập tay là null.</summary>
+    public decimal? BookQty { get; private set; }
+
+    /// <summary>Phiếu điều chỉnh theo kiểm kê: SL thực đếm (ĐVT cơ sở) – numeric(18,4); dòng nhập tay là null.</summary>
+    public decimal? CountedQty { get; private set; }
+
     /// <summary>
     /// Thiếu (âm) / thừa (dương) so với chứng từ giao = SL thực nhận + SL không đạt − SL chứng từ; 0 khi không ghi SL chứng từ.
     /// Ví dụ chứng từ 100, nhận đạt 90, không đạt 5 → thiếu 5 (−5).
@@ -726,6 +734,7 @@ public sealed class InventoryDocumentLine : Entity
     /// </summary>
     internal void Set(int lineNo, InventoryLineData data, Item item, string docType)
     {
+        data = ApplyCount(lineNo, data, item, docType);
         // Phiếu chuyển kho không có đơn giá nhập tay: giá vốn tạm tính ghi ở sổ kho, chốt khi đóng kỳ (design.md mục 10.6).
         // Phiếu điều chỉnh (design.md mục 6.1): mỗi dòng là tăng hoặc giảm; tăng nhập giá tay (tham gia giá vốn như nhập có giá), giảm
         // xuất theo giá vốn nên không nhập giá; không có thuế (không phải mua bán).
@@ -789,7 +798,32 @@ public sealed class InventoryDocumentLine : Entity
         ExpiryDate = data.ExpiryDate;
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
         Direction = docType == DocumentTypes.Adjustment ? data.Direction : null;
+        BookQty = data.BookQty;
+        CountedQty = data.CountedQty;
         SetQc(prefix, data, docType);
+    }
+
+    /// <summary>
+    /// Dòng kiểm kê (design.md mục 18.23 – ADJ-3): có SL thực đếm thì chiều và SL điều chỉnh suy ra từ chênh lệch so với tồn sổ, không
+    /// tin chiều/SL client gửi. Ví dụ tồn sổ 100, đếm được 96 → giảm 4; đếm được 103 → tăng 3. Tính theo ĐVT cơ sở nên dòng kiểm kê phải
+    /// dùng ĐVT cơ sở; thực đếm khớp tồn sổ thì không có gì để điều chỉnh.
+    /// </summary>
+    private static InventoryLineData ApplyCount(int lineNo, InventoryLineData data, Item item, string docType)
+    {
+        if (data.CountedQty is null && data.BookQty is null) return data;
+        if (docType != DocumentTypes.Adjustment) throw new BusinessRuleException($"Dòng {lineNo}: chỉ phiếu điều chỉnh mới có số kiểm kê.");
+        if (data.CountedQty is not { } counted || data.BookQty is not { } book)
+            throw new BusinessRuleException($"Dòng {lineNo}: dòng kiểm kê phải có cả tồn sổ và SL thực đếm.");
+        if (counted < 0 || decimal.Round(counted, 4) != counted)
+            throw new BusinessRuleException($"Dòng {lineNo}: SL thực đếm phải ≥ 0, tối đa 4 chữ số thập phân.");
+        if (data.UomId != item.BaseUomId)
+            throw new BusinessRuleException($"Dòng {lineNo} ({item.Code}): dòng kiểm kê nhập theo ĐVT cơ sở của mặt hàng.");
+        var difference = counted - book;
+        if (difference == 0)
+            throw new BusinessRuleException($"Dòng {lineNo} ({item.Code}): thực đếm {counted:0.####} không chênh lệch so với tồn sổ – bỏ dòng này.");
+        var direction = difference > 0 ? 1 : -1;
+        // Dòng giảm xuất theo giá vốn: bỏ đơn giá client gửi; dòng tăng giữ đơn giá nhập tay.
+        return data with { Direction = direction, Qty = Math.Abs(difference), UnitPrice = direction > 0 ? data.UnitPrice : 0m };
     }
 
     /// <summary>
