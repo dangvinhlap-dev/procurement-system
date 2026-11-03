@@ -11,6 +11,10 @@ namespace Proc.Application.Documents;
 public sealed record AttachmentDto(
     Guid Id, string FileName, string ContentType, long SizeBytes, string? Note, DateTimeOffset UploadedAt, string? UploadedByName);
 
+/// <summary>Giới hạn tải lên theo cấu hình máy chủ (design.md mục 18.4).</summary>
+/// <param name="MaxFileSizeMb">Dung lượng tối đa một file (MB), mặc định 2.</param>
+public sealed record AttachmentLimitsDto(int MaxFileSizeMb);
+
 /// <summary>Nội dung file để tải xuống.</summary>
 /// <param name="FileName">Tên file gốc.</param>
 /// <param name="ContentType">Loại nội dung (suy từ đuôi).</param>
@@ -41,7 +45,7 @@ public interface IAttachmentService
     /// <param name="note">Ghi chú.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File vừa lưu.</returns>
-    /// <exception cref="Domain.Common.BusinessRuleException">Đuôi không được nhận, rỗng, quá 20 MB.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Đuôi không được nhận, rỗng, quá dung lượng tối đa (cấu hình <c>Attachments:MaxFileSizeMb</c>, mặc định 2 MB).</exception>
     /// <exception cref="Common.ForbiddenAccessException">Không có quyền sửa chủ.</exception>
     /// <exception cref="Common.NotFoundException">Chủ không tồn tại hoặc ngoài phạm vi.</exception>
     Task<AttachmentDto> UploadAsync(

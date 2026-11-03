@@ -17,7 +17,7 @@ using Proc.Application.Common;
 namespace Proc.IntegrationTests;
 
 /// <summary>
-/// File đính kèm dùng chung (design.md mục 18.4): tải lên/xuống, giới hạn 20 MB và đuôi file, quyền theo đối tượng chủ, phạm vi công ty
+/// File đính kèm dùng chung (design.md mục 18.4): tải lên/xuống, giới hạn dung lượng (mặc định 2 MB) và đuôi file, quyền theo đối tượng chủ, phạm vi công ty
 /// và kho, xóa mềm giữ file, nhật ký.
 /// </summary>
 [Collection(ApiCollection.Name)]
@@ -137,7 +137,7 @@ public class AttachmentTests
     }
 
     [Fact]
-    public async Task DuoiBiChan_Va_Qua20MB_BaoLoiKhongGhiFile()
+    public async Task DuoiBiChan_Va_Qua2MB_BaoLoiKhongGhiFile()
     {
         var f = await ArrangeAsync();
 
@@ -145,9 +145,13 @@ public class AttachmentTests
         Assert.Equal(HttpStatusCode.BadRequest, exe.StatusCode);
         Assert.Contains(".exe", await TitleAsync(exe));
 
-        var big = await UploadAsync(f.Head, AttachmentOwnerTypes.Supplier, f.Supplier.Id, "lon.zip", new byte[Attachment.MaxFileBytes + 1]);
+        var big = await UploadAsync(f.Head, AttachmentOwnerTypes.Supplier, f.Supplier.Id, "lon.zip", new byte[Attachment.MegabytesToBytes(Attachment.DefaultMaxFileSizeMb) + 1]);
         Assert.Equal(HttpStatusCode.BadRequest, big.StatusCode);
-        Assert.Contains("20 MB", await TitleAsync(big));
+        Assert.Contains("2 MB", await TitleAsync(big));
+
+        // Giao diện đọc giới hạn từ máy chủ để kiểm tra trước khi gửi.
+        var limits = await ReadAsync<AttachmentLimitsDto>(await f.Head.GetAsync("/api/attachments/limits", Ct));
+        Assert.Equal(2, limits.MaxFileSizeMb);
 
         Assert.Empty(await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Head, AttachmentOwnerTypes.Supplier, f.Supplier.Id)));
         var unknown = await ListAsync(f.Head, "Khac", f.Supplier.Id);
@@ -196,5 +200,40 @@ public class AttachmentTests
         var bhaKeeper = await _factory.CreateClientInCompanyAsync(keeper, ProcApiFactory.TestPassword, "BHA");
         Assert.Equal(HttpStatusCode.NotFound, (await ListAsync(bhaKeeper, AttachmentOwnerTypes.InventoryDocument, atKp2.Id)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await bhaKeeper.DeleteAsync($"/api/attachments/{uploaded.Id}", Ct)).StatusCode);
+    }
+    [Fact]
+    public async Task LoaiChuMoi_DuocNhan_KhongCoChuThi404()
+    {
+        // Lát A4 (mọi form có đính kèm): loại chủ mới hợp lệ – id không tồn tại trả 404, không phải 400 "loại không hợp lệ".
+        var f = await ArrangeAsync();
+        string[] types = [AttachmentOwnerTypes.SourcingRequest, AttachmentOwnerTypes.ContractAmendment, AttachmentOwnerTypes.SupplierReview,
+            AttachmentOwnerTypes.ControlFinding, AttachmentOwnerTypes.ConflictDeclaration];
+        foreach (var type in types)
+            Assert.Equal(HttpStatusCode.NotFound, (await UploadAsync(f.Bha, type, Guid.NewGuid(), "a.pdf", [1])).StatusCode);
+    }
+
+    [Fact]
+    public async Task KeKhaiXungDot_NguoiKeKhaiDinhKem_NguoiKhacKhongQuyenThi403()
+    {
+        var f = await ArrangeAsync();
+        var staffName = $"dk.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(staffName, "NMI", "NVMUA");
+        var staff = await _factory.CreateClientInCompanyAsync(staffName, ProcApiFactory.TestPassword, "NMI");
+        var declaration = await ReadAsync<ConflictDeclarationDto>(await staff.PostAsJsonAsync("/api/conflict-declarations",
+            new CreateConflictDeclarationRequest(null, f.Supplier.Id, "Family", "Em trai là giám đốc kinh doanh", null), Ct));
+
+        // Người kê khai tự đính kèm văn bản kê khai có chữ ký, không cần mã quyền.
+        var uploaded = await ReadAsync<AttachmentDto>(
+            await UploadAsync(staff, AttachmentOwnerTypes.ConflictDeclaration, declaration.Id, "ke-khai.pdf", [37, 80, 68, 70]));
+        Assert.Equal("ke-khai.pdf", uploaded.FileName);
+
+        // Nhân viên khác không có quyền xem kê khai của người khác.
+        var otherName = $"dk.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(otherName, "NMI", "NVMUA");
+        var other = await _factory.CreateClientInCompanyAsync(otherName, ProcApiFactory.TestPassword, "NMI");
+        Assert.Equal(HttpStatusCode.Forbidden, (await ListAsync(other, AttachmentOwnerTypes.ConflictDeclaration, declaration.Id)).StatusCode);
+
+        // Quản trị (có quyền xem toàn bộ) xem được.
+        Assert.Single(await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Head, AttachmentOwnerTypes.ConflictDeclaration, declaration.Id)));
     }
 }

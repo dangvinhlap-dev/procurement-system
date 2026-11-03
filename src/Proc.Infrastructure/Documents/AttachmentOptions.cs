@@ -9,4 +9,10 @@ public sealed class AttachmentOptions
     /// <c>D:\ProcurementData\attachments</c> (docs/deploy-windows.md). Thư mục này phải được sao lưu cùng CSDL.
     /// </summary>
     public string RootPath { get; set; } = "data/attachments";
+
+    /// <summary>
+    /// Dung lượng tối đa một file (MB), mặc định 2 MB (người dùng chốt 03/11/2026). Cho phép 1–25 MB; muốn trên 25 MB phải nâng cả giới
+    /// hạn request của Kestrel/IIS (<c>web.config</c> maxAllowedContentLength) – docs/deploy-windows.md.
+    /// </summary>
+    public int MaxFileSizeMb { get; set; } = Proc.Domain.Documents.Attachment.DefaultMaxFileSizeMb;
 }

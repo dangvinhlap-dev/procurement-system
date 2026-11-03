@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Proc.Application.Documents;
+using Proc.Infrastructure.Documents;
 
 namespace Proc.Api.Endpoints;
 
@@ -18,6 +20,9 @@ public static class AttachmentEndpoints
     {
         var group = app.MapGroup("/api/attachments").WithTags("Đính kèm");
 
+        // Giới hạn dung lượng cho giao diện kiểm tra trước khi gửi và hiện "Tối đa n MB/file" (design.md mục 18.4) – đổi cấu hình máy chủ
+        // là giao diện theo, không phải sửa code.
+        group.MapGet("/limits", (IOptions<AttachmentOptions> options) => new AttachmentLimitsDto(options.Value.MaxFileSizeMb));
         group.MapGet("/", (string ownerType, Guid ownerId, IAttachmentService s, CancellationToken ct) => s.ListAsync(ownerType, ownerId, ct));
         group.MapPost("/", async (
                 [FromForm] string ownerType, [FromForm] Guid ownerId, [FromForm] string? note, IFormFile file, IAttachmentService s,

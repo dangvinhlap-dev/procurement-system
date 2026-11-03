@@ -4,7 +4,7 @@ using Proc.Domain.Documents;
 namespace Proc.Domain.Tests.Documents;
 
 /// <summary>
-/// File đính kèm: đuôi được nhận, 20 MB, tên file, đường dẫn lưu, xóa mềm (design.md mục 18.4).
+/// File đính kèm: đuôi được nhận, dung lượng tối đa (mặc định 2 MB, cấu hình được), tên file, đường dẫn lưu, xóa mềm (design.md mục 18.4).
 /// </summary>
 public class AttachmentTests
 {
@@ -45,12 +45,22 @@ public class AttachmentTests
     }
 
     [Fact]
-    public void Dung20MB_DuocNhan_Vuot1Byte_BaoLoi()
+    public void MacDinh2MB_Dung2MBDuocNhan_Vuot1Byte_BaoLoi()
     {
-        Assert.Equal(Attachment.MaxFileBytes, Create("a.zip", Attachment.MaxFileBytes).SizeBytes);
-        var ex = Assert.Throws<BusinessRuleException>(() => Create("a.zip", Attachment.MaxFileBytes + 1));
-        Assert.Contains("20 MB", ex.Message);
+        const long twoMb = 2 * 1024 * 1024;
+        Assert.Equal(2, Attachment.DefaultMaxFileSizeMb);
+        Assert.Equal(twoMb, Create("a.zip", twoMb).SizeBytes);
+        var ex = Assert.Throws<BusinessRuleException>(() => Create("a.zip", twoMb + 1));
+        Assert.Contains("2 MB", ex.Message);
         Assert.Throws<BusinessRuleException>(() => Create("a.zip", 0));
+    }
+
+    [Fact]
+    public void GioiHanCauHinh_TheoThamSoTruyenVao()
+    {
+        Assert.Equal(".pdf", Attachment.ValidateFile("a.pdf", 5L * 1024 * 1024, maxFileSizeMb: 5));
+        var ex = Assert.Throws<BusinessRuleException>(() => Attachment.ValidateFile("a.pdf", 5L * 1024 * 1024 + 1, maxFileSizeMb: 5));
+        Assert.Contains("5 MB", ex.Message);
     }
 
     [Fact]
