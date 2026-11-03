@@ -143,7 +143,10 @@ public sealed class AttachmentService : IAttachmentService
         if (!OwnerPermissions.TryGetValue(ownerType, out var permissions))
             throw new BusinessRuleException($"Loại đối tượng đính kèm '{ownerType}' không hợp lệ.");
         _scope.RequireCompany();
-        _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
+        // Phiếu điều chỉnh / kiểm kê (ADJ) có quyền lập riêng (design.md mục 18.23): người kiểm kê đính kèm biên bản scan theo quyền lập
+        // ADJ, không cần quyền lập chứng từ kho thường – kiểm tra sau khi biết loại phiếu.
+        var adjustmentAware = manage && ownerType == AttachmentOwnerTypes.InventoryDocument;
+        if (!adjustmentAware) _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
 
         // Select CompanyId dạng Guid? để một kiểu chung cho mọi loại chủ; NCC trả null có chủ đích (danh mục dùng chung – mục 5).
         var owner = ownerType switch
@@ -163,9 +166,11 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.SoleSourceApproval => await _db.SoleSourceApprovals.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             _ => await _db.InventoryDocuments.Where(x => x.Id == ownerId)
-                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+                .Select(x => new OwnerRow(x.CompanyId, x.DocType)).FirstOrDefaultAsync(cancellationToken),
         };
         if (owner is null) throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
+        if (adjustmentAware)
+            _scope.EnsurePermission(owner.DocType == DocumentTypes.Adjustment ? Permissions.Inventory.AdjustmentCreate : permissions.Manage);
         if (owner.CompanyId is { } companyId) _scope.EnsureCompany(companyId);
         return owner.CompanyId;
     }
@@ -211,5 +216,6 @@ public sealed class AttachmentService : IAttachmentService
         }
     }
 
-    private sealed record OwnerRow(Guid? CompanyId);
+    /// <summary>Chủ đính kèm: công ty (null với NCC) và loại phiếu (chỉ phiếu kho – phân biệt quyền lập ADJ).</summary>
+    private sealed record OwnerRow(Guid? CompanyId, string? DocType = null);
 }

@@ -148,6 +148,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
       "Biên bản kiểm kê, điều chỉnh kho" (`DocumentPdfService.AdjustmentAsync`). Web: `CountSheetDialog.tsx` (nút Bảng kiểm kê), cột Thực
       đếm, nút In phiếu. Test `KiemKe_NhapSoThucDem_TuTinhChenhLechSoVoiTonSo_InBienBan`, e2e "bảng kiểm kê". Kiểm tra: `dotnet test`
       510/510; Playwright 91/91 (sửa kèm `administration`: số quyền vai trò 8 → 10); `npm run build`, `tsc`, `oxlint` qua. Merge `main`, xóa nhánh.
+    - **Sửa đính kèm ADJ (xong, 03/11/2026, nhánh `fix/dinh-kem-adj`)**: `AttachmentService` – tải lên/xóa đính kèm phiếu ADJ theo quyền lập
+      ADJ (trước đòi quyền lập chứng từ kho thường); web tab Đính kèm theo `InventoryAdjustmentCreate`. Test
+      `DinhKemBienBan_QuyenLapAdj_…`. Kiểm tra: `dotnet test` 511/511; e2e `stock-adjustment`, `attachments` qua; build/tsc/oxlint qua.
+  - Không còn lát nào đang dở; việc còn lại chờ người dùng chọn: C3 (ngân sách, hoãn chờ lệnh), phát hành 0.15.0 (ADJ, TC-1..4), việc
+    "làm khi có yêu cầu" ở design.md.
   - **TC-4 (xong)**: **người duyệt tiếp theo** – `NextApproverResolver` (Infrastructure/Purchasing) dùng chung cho thông báo chờ duyệt, tab
     Lịch sử duyệt (`ApprovalStepDto.NextApprovers`, `HistoryAsync(..., document)`) và Tra cứu chứng từ (`DocumentRegistryRowDto.NextApprovers`,
     cột mới): quyền + vai trò cấp, bỏ người lập, bỏ người vướng xung đột lợi ích; chỉ bước đang đến lượt. Giao diện hiện 5 tên + "và N người

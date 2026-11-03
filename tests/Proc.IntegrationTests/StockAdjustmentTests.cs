@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -197,5 +198,39 @@ public class StockAdjustmentTests
 
         await ReadAsync<InventoryDocumentDto>(await f.Client.PostAsync($"/api/inventory-documents/{adj.Id}/post", null, Ct));
         Assert.Equal(96m, await StockAsync(f));
+    }
+
+    private static Task<HttpResponseMessage> UploadAsync(HttpClient client, Guid ownerId)
+    {
+        var file = new ByteArrayContent("%PDF-1.4 bien ban"u8.ToArray());
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent("InventoryDocument"), "ownerType" },
+            { new StringContent(ownerId.ToString()), "ownerId" },
+            { file, "file", "bien-ban-kiem-ke.pdf" },
+        };
+        return client.PostAsync("/api/attachments", form, Ct);
+    }
+
+    [Fact]
+    public async Task DinhKemBienBan_QuyenLapAdj_TaiLenPhieuAdj_KhongTaiLenPhieuKhoThuong()
+    {
+        var f = await ArrangeAsync();
+        var receipt = await PostedAsync(f.Client, await f.Client.PostAsJsonAsync("/api/goods-receipts",
+            new SaveReceiptRequest(new DateOnly(2025, 1, 5), f.Kt, f.SupplierId, null, null, null, null, null, null,
+                [new(null, f.ItemId, f.Uom, 10, 10_000, "10", null, null, null)]), Ct));
+        var adj = await ReadAsync<InventoryDocumentDto>(await f.Client.PostAsJsonAsync("/api/stock-adjustments",
+            Adjustment(f, new DateOnly(2025, 1, 20), new SaveAdjustmentLineRequest(null, f.ItemId, f.Uom, -1, 1, 0, null, null, null)), Ct));
+
+        // Người kiểm kê: chỉ quyền xem chứng từ kho + lập phiếu điều chỉnh (design.md mục 18.23) – đính kèm biên bản scan theo quyền lập ADJ.
+        var roleCode = UniqueCode("K");
+        await _factory.CreateRoleAsync(roleCode, Permissions.Inventory.DocumentView, Permissions.Inventory.AdjustmentCreate);
+        var counterName = $"kk.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(counterName, f.CompanyCode, roleCode);
+        var counter = await _factory.CreateClientInCompanyAsync(counterName, ProcApiFactory.TestPassword, f.CompanyCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await UploadAsync(counter, adj.Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await UploadAsync(counter, receipt.Id)).StatusCode);
     }
 }
