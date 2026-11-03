@@ -76,6 +76,29 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>SLA hàng khẩn (ngày làm việc; 0 = trong ngày PR được duyệt).</summary>
     public int SlaUrgentDays { get; private set; } = DefaultSlaUrgentDays;
 
+    /// <summary>% cảnh báo giá cao trên PO mặc định – cùng mức tô màu mặc định của màn hình So sánh giá (design.md mục 8.2).</summary>
+    public const decimal DefaultPoHighPriceWarnPercent = 10m;
+
+    /// <summary>Giới hạn trên của % cảnh báo giá cao – lớn hơn gần như chắc chắn là gõ nhầm.</summary>
+    public const decimal MaxPoHighPriceWarnPercent = 1000m;
+
+    /// <summary>
+    /// % cảnh báo giá cao trên PO – numeric(9,4) (design.md mục 8.5): dòng PO có giá sau CK theo ĐVT cơ sở cao hơn giá thấp nhất tập đoàn
+    /// quá mức này thì hiện cảnh báo (không chặn). 0 = cảnh báo mọi giá cao hơn giá thấp nhất.
+    /// </summary>
+    public decimal PoHighPriceWarnPercent { get; private set; } = DefaultPoHighPriceWarnPercent;
+
+    /// <summary>Đổi % cảnh báo giá cao trên PO.</summary>
+    /// <param name="value">Giá trị mới (làm tròn 4 số lẻ); null = về mặc định <see cref="DefaultPoHighPriceWarnPercent"/>.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài khoảng 0–<see cref="MaxPoHighPriceWarnPercent"/>.</exception>
+    public void ChangePoHighPriceWarnPercent(decimal? value)
+    {
+        var v = Math.Round(value ?? DefaultPoHighPriceWarnPercent, 4, MidpointRounding.AwayFromZero);
+        if (v < 0 || v > MaxPoHighPriceWarnPercent)
+            throw new BusinessRuleException($"% cảnh báo giá cao phải từ 0 đến {MaxPoHighPriceWarnPercent:0}.");
+        PoHighPriceWarnPercent = v;
+    }
+
     /// <summary>
     /// Tạo bộ tham số với giá trị mặc định.
     /// </summary>

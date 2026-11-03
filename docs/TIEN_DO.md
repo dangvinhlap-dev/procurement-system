@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -41,6 +41,7 @@ Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm m�
 | B3b | RFQ: tab **Hồ sơ trình (x/7)** – bảng so sánh tự đánh dấu, 6 mục đánh dấu tay + ghi chú, sửa khi Nháp/Đang nhận báo giá, khóa khi gửi duyệt; thiếu mục không chặn nhưng hiện "đủ x/7, còn thiếu…" cho hội đồng (thông báo + hộp thoại duyệt); nút **Tạo bảng giá** – bảng giá NCC nháp cho từng NCC trúng thầu từ RFQ đã duyệt (giá/CK/VAT theo báo giá, hiệu lực tới hết hiệu lực báo giá), mỗi NCC một bảng; migration `V0_12_0_HoSoTrinhThau`; design.md 8.6 | feature/ho-so-trinh-thau |
 | B3a | RFQ: mời ít hơn số NCC tối thiểu gửi được khi có **giải trình**; chọn thầu → **Chờ duyệt kết quả** qua quy trình duyệt dùng chung loại RFQ (xét giá trị trúng thầu), người lập RFQ và người chọn thầu không tự duyệt (`IApprovalSubject.IsPreparedBy`), từ chối bắt buộc lý do về Đang nhận báo giá, rút về; giá trúng thầu vào lịch sử giá, tạo PO chỉ sau khi duyệt; Việc cần làm loại RFQ, tab Lịch sử duyệt; migration `V0_12_0_DuyetKetQuaChonThau`; Testing thêm `duyetthau.bha`; design.md 8.6, 18.6 | feature/duyet-chon-thau |
 | B1 | Duyệt bảng giá NCC: Nháp → Chờ duyệt → Hiệu lực qua cơ chế duyệt dùng chung (tại công ty lập, quy trình PRL), người lập không tự duyệt, từ chối bắt buộc lý do về nháp, rút về nháp; bỏ "Đưa vào hiệu lực"; bảng toàn tập đoàn chưa duyệt công ty khác không thấy; cảnh báo sắp hết hiệu lực (≤ 30 ngày) ở danh sách và phiếu; Việc cần làm loại PRL; hộp thoại từ chối dùng chung `confirmReject`; migration `V0_11_0_DuyetBangGiaNcc`; Testing thêm `duyetgia.tct`; design.md 8.5, 18.6 | feature/duyet-bang-gia |
+| CB-GIA | **Cảnh báo giá cao trên PO**: cột "Giá thấp nhất TĐ" trên dòng PO (giá gần nhất 12 tháng thấp nhất giữa các công ty × NCC, như PCMP), tam giác vàng khi giá sau CK cao hơn quá X% – chỉ cảnh báo; tham số SEC `PO_HIGH_PRICE_WARN_PERCENT` (mặc định 10%); chi tiết công ty/NCC/số phiếu chỉ hiện khi có quyền xem giá toàn tập đoàn; API `/api/purchase-orders/group-min-prices`; sửa `netPrice` trang PO (chia sai 10⁹ → 10⁶); migration `V0_17_0_CanhBaoGiaCaoPo`; design.md 8.5 | feature/canh-bao-gia-cao-po |
 | BG-X | **Nhập Excel bảng giá NCC** (nút Nhập Excel trên danh sách PRL, quyền `Pricing.PriceList.Manage`, theo mẫu B4c): mỗi dòng một bậc giá, gộp theo Mã NCC + Tên bảng giá; cột đầu bảng ở dòng đầu (dòng sau trống/giống hệt); nhập thành bảng **Nháp** của công ty đang làm việc qua `PriceListService.CreateAsync` (dùng chung giao dịch của file); bảng cùng NCC + tên + ngày hiệu lực chưa ngừng thì lỗi; API `/api/price-lists/import-template`, `/api/price-lists/import`; không migration; design.md 8.5 | feature/nhap-bang-gia-excel |
 | A4 | **Ghi chú + đính kèm cho mọi form** (quy tắc người dùng 03/11/2026, ghi ở CLAUDE.md mục 4, design.md 18.4): đính kèm **ngay khi tạo** (hàng chờ trên trình duyệt, lưu xong tự tải lên – `usePendingAttachments`, `uploadTo`); giới hạn **2 MB/file** mặc định, cấu hình `Attachments:MaxFileSizeMb` 1–25 (Docker `ATTACHMENT_MAX_MB`), API `/api/attachments/limits`; thêm loại chủ + tab Đính kèm: phiếu tìm nguồn, phụ lục HĐ, đánh giá NCC, vi phạm KSNB, kê khai xung đột lợi ích (người kê khai tự đính kèm); NCC độc quyền đính kèm được khi lập; không migration | feature/ghi-chu-dinh-kem-moi-form |
 | UI-c | Dấu * đỏ sau nhãn ở mọi ô bắt buộc (form, ngăn kéo, hộp thoại, tiêu đề cột lưới dòng), ẩn khi chỉ xem | feature/dau-bat-buoc |
@@ -136,7 +137,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Bước 3 (xong, nhánh `feature/nhap-bang-gia-excel`)**: nhập Excel bảng giá NCC (xem bảng Đã xong, dòng BG-X). Test: tích hợp
     `SupplierPricingTests.NhapExcel_BangGia_*` (2), e2e `pricing.spec.ts` "hộp thoại nhập Excel". Kiểm tra: `dotnet build`, `dotnet test` 516/516;
     Playwright pricing + contract 6/6; `npm run build`, `tsc`, `oxlint` qua.
-  - **Tiếp theo: bước 4 – cảnh báo giá cao trên PO** (design.md mục 10.3 dòng PO: "sửa được kèm cảnh báo nếu cao hơn giá thấp nhất tập đoàn").
+  - **Bước 4 (xong, nhánh `feature/canh-bao-gia-cao-po`)**: cảnh báo giá cao trên PO (bảng Đã xong, dòng CB-GIA). Test: tích hợp
+    `CanhBaoGiaCaoPo_*`, e2e `pricing.spec.ts` bước 3b; `system-parameters.spec.ts` đếm 20 tham số. Kiểm tra: `dotnet build`, `dotnet test` 517/517; Playwright pricing +
+    purchasing + system-parameters 6/6; `npm run build`, `tsc`, `oxlint` qua.
+  - **Tiếp theo: bước 5 – sinh hợp đồng nguyên tắc từ kết quả thầu** (RFQ đã duyệt → hợp đồng nháp, dùng bảng giá "Tạo bảng giá" B3b).
 - **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026) – XONG TC-1 → TC-4, đã merge `main` (02/11/2026), chưa phát hành** – gồm:
   - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
     mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.

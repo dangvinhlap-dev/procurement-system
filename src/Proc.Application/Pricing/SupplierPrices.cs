@@ -228,7 +228,35 @@ public interface IPriceComparisonService
     /// <returns>Kết quả so sánh.</returns>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<PriceComparisonDto> CompareAsync(Guid itemId, bool allCompanies, decimal thresholdPct, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Giá thấp nhất tập đoàn của các mặt hàng để cảnh báo giá cao trên PO (design.md mục 8.5, 10.3): cùng cách tính với
+    /// <see cref="CompareAsync"/> khi xem toàn tập đoàn – mỗi công ty × NCC lấy giá gần nhất 12 tháng (phiếu nhập đã ghi sổ hoặc PO đã
+    /// duyệt), rồi lấy thấp nhất. Không cần quyền xem toàn tập đoàn: chỉ trả con số; công ty, NCC, số chứng từ của giá đó chỉ trả khi có
+    /// quyền <c>Report.Price.ViewAllCompanies</c> hoặc chứng từ thuộc công ty đang làm việc. Kèm % cảnh báo của công ty đang làm việc.
+    /// </summary>
+    /// <param name="itemIds">Các mặt hàng (ngoài phạm vi nhóm hàng thì bỏ qua).</param>
+    /// <param name="excludeOrderId">PO đang xem – không tính giá của chính nó.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Ngưỡng % và giá thấp nhất từng mặt hàng có dữ liệu.</returns>
+    Task<GroupMinPricesDto> GroupMinPricesAsync(IReadOnlyList<Guid> itemIds, Guid? excludeOrderId, CancellationToken cancellationToken);
 }
+
+/// <summary>Giá thấp nhất tập đoàn của một mặt hàng (giá sau CK, trước VAT, theo ĐVT cơ sở, VND).</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="BasePrice">Giá thấp nhất theo ĐVT cơ sở.</param>
+/// <param name="Date">Ngày chứng từ của giá đó.</param>
+/// <param name="Source">Receipt (phiếu nhập) hoặc PO.</param>
+/// <param name="DocumentNo">Số chứng từ – null khi không được xem.</param>
+/// <param name="CompanyCode">Công ty – null khi không được xem.</param>
+/// <param name="SupplierCode">Mã NCC – null khi không được xem.</param>
+public sealed record GroupMinPriceDto(
+    Guid ItemId, decimal BasePrice, DateOnly Date, string Source, string? DocumentNo, string? CompanyCode, string? SupplierCode);
+
+/// <summary>Giá thấp nhất tập đoàn cho cảnh báo giá cao trên PO.</summary>
+/// <param name="WarnPercent">% cảnh báo của công ty đang làm việc (tham số SEC).</param>
+/// <param name="Items">Giá thấp nhất từng mặt hàng có dữ liệu 12 tháng.</param>
+public sealed record GroupMinPricesDto(decimal WarnPercent, IReadOnlyList<GroupMinPriceDto> Items);
 
 /// <summary>Kiểm tra dữ liệu lưu bảng giá.</summary>
 public sealed class SavePriceListRequestValidator : AbstractValidator<SavePriceListRequest>

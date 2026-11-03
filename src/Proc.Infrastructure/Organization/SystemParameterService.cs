@@ -35,6 +35,7 @@ public sealed class SystemParameterService : ISystemParameterService
         var parameter = await _db.CompanyParameters.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         var rfqMin = parameter?.RfqMinSuppliers ?? CompanyParameter.DefaultRfqMinSuppliers;
         var markup = parameter?.InternalMarkupPercent ?? CompanyParameter.DefaultInternalMarkupPercent;
+        var warn = parameter?.PoHighPriceWarnPercent ?? CompanyParameter.DefaultPoHighPriceWarnPercent;
 
         // Chỉ thấy kho trong phạm vi kho được gán (global query filter) – đúng với những gì người dùng sửa được ở màn hình Kho.
         var negative = await _db.Warehouses.AsNoTracking()
@@ -54,6 +55,11 @@ public sealed class SystemParameterService : ISystemParameterService
                 markup == CompanyParameter.DefaultInternalMarkupPercent, true,
                 $"Mặt hàng chưa có trong Bảng giá nội bộ thì gợi ý giá bán = giá vốn kỳ đã đóng gần nhất × (1 + % markup), làm tròn đồng " +
                 $"(0–{CompanyParameter.MaxInternalMarkupPercent:0}%). Chỉ là gợi ý ở Bảng giá nội bộ và phiếu xuất bán nội bộ; giá đã khai báo không bị ảnh hưởng."),
+            new(SystemParameterCodes.PoHighPriceWarnPercent, "Giá", "% cảnh báo giá cao trên PO",
+                FormatPercent(warn), FormatPercent(CompanyParameter.DefaultPoHighPriceWarnPercent),
+                warn == CompanyParameter.DefaultPoHighPriceWarnPercent, true,
+                "Dòng PO có giá sau chiết khấu (theo ĐVT cơ sở) cao hơn giá thấp nhất tập đoàn quá mức này thì hiện cảnh báo, không chặn. " +
+                $"Giá thấp nhất tập đoàn = thấp nhất trong các giá mua gần nhất 12 tháng của từng công ty × NCC, như màn hình So sánh giá (0–{CompanyParameter.MaxPoHighPriceWarnPercent:0}%)."),
             Toggle(SystemParameterCodes.ReceiptQcRequired, "Bắt buộc kiểm tra chất lượng khi nhận hàng", parameter?.RequireReceiptQc ?? false,
                 "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
             Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
@@ -81,6 +87,7 @@ public sealed class SystemParameterService : ISystemParameterService
     {
         [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
         [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
+        [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
@@ -138,17 +145,21 @@ public sealed class SystemParameterService : ISystemParameterService
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             case SystemParameterCodes.InternalMarkupPercent:
+            case SystemParameterCodes.PoHighPriceWarnPercent:
                 decimal? percent = null;
+                var isMarkup = key == SystemParameterCodes.InternalMarkupPercent;
                 if (!string.IsNullOrWhiteSpace(request.Value))
                 {
                     // Nhận cả "12,5" (kiểu Việt Nam, CLAUDE.md mục 5) lẫn "12.5" (ô số trên giao diện gửi lên); không nhận dấu nhóm nghìn.
                     var text = request.Value.Trim().Replace(',', '.');
                     if (!decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
-                        throw new BusinessRuleException("% markup nội bộ phải là số, ví dụ 10 hoặc 12,5.");
+                        throw new BusinessRuleException($"{(isMarkup ? "% markup nội bộ" : "% cảnh báo giá cao")} phải là số, ví dụ 10 hoặc 12,5.");
                     percent = parsed;
                 }
 
-                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeInternalMarkupPercent(percent);
+                var parameterRow = await GetOrCreateAsync(companyId, cancellationToken);
+                if (isMarkup) parameterRow.ChangeInternalMarkupPercent(percent);
+                else parameterRow.ChangePoHighPriceWarnPercent(percent);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             case SystemParameterCodes.ReceiptQcRequired:
