@@ -12,7 +12,7 @@ namespace Proc.IntegrationTests;
 /// thì cả hai – rồi mới tới Tổng công ty duyệt lần cuối; duyệt xong mới áp trạng thái / tài khoản ngân hàng vào NCC.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class SupplierApprovalTests
+public partial class SupplierApprovalTests
 {
     private readonly ProcApiFactory _factory;
 

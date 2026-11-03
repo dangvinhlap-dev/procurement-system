@@ -2,7 +2,9 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Checkbox, Form, Input, Rate, Select } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { EMPTY_GUID, previewApproval } from '../../api/purchasing'
 import { changeKindLabels } from '../../api/supplierApprovals'
+import { ApprovalGroups } from '../purchasing/ApprovalHistory'
 import {
   supplierStatusLabels,
   useSupplier,
@@ -86,7 +88,7 @@ export function SupplierDrawer({
   canManage: boolean
   onClose: () => void
 }) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const { workingCompany, hasPermission } = useAuth()
   const [form] = Form.useForm<SupplierFormValues>()
   const supplier = useSupplier(supplierId)
@@ -171,8 +173,35 @@ export function SupplierDrawer({
         isDefault: b.isDefault ?? false,
       })),
     }
+    // Đã duyệt / Danh sách đen, đổi tài khoản ngân hàng không áp ngay mà thành yêu cầu duyệt (design.md mục 18.6): hỏi server trước (chạy
+    // thử rồi hủy) xem sẽ sinh yêu cầu nào, ai duyệt – có thì popup cho người dùng xác nhận (yêu cầu người dùng 03/11/2026), không thì lưu thẳng.
+    let groups
     try {
-      // Đã duyệt / Danh sách đen, đổi tài khoản ngân hàng không áp ngay mà thành yêu cầu duyệt (design.md mục 18.6).
+      groups = (await previewApproval('NCC', detail?.id ?? EMPTY_GUID, undefined, input)).groups ?? []
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Không lưu được NCC.')
+      setSaving(false)
+      return
+    }
+    if (groups.length > 0) {
+      setSaving(false)
+      modal.confirm({
+        title: 'Lưu NCC và gửi duyệt thay đổi?',
+        width: 560,
+        content: <ApprovalGroups groups={groups} />,
+        okText: 'Lưu, gửi duyệt',
+        cancelText: 'Không',
+        onOk: () => commit(input),
+      })
+      return
+    }
+    await commit(input)
+  }
+
+  /** Lưu thật (sau khi đã xem trước hoặc không có thay đổi cần duyệt). */
+  const commit = async (input: Parameters<typeof mutations.create.mutateAsync>[0]) => {
+    setSaving(true)
+    try {
       const before = detail?.pendingRequests?.length ?? 0
       if (isNew) {
         const created = await mutations.create.mutateAsync(input)

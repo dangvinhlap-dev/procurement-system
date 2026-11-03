@@ -124,7 +124,18 @@ export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = f
  * @param approvedImmediately Dưới mọi ngưỡng – gửi là duyệt ngay.
  * @param byCompany Duyệt nhiều công ty – ghi công ty trên từng cấp.
  */
-export function ApprovalChain({ steps, approvedImmediately, byCompany = false }: { steps: ApprovalStep[]; approvedImmediately: boolean; byCompany?: boolean }) {
+export function ApprovalChain({
+  steps,
+  approvedImmediately,
+  byCompany = false,
+  hideIntro = false,
+}: {
+  steps: ApprovalStep[]
+  approvedImmediately: boolean
+  byCompany?: boolean
+  /** Bỏ câu mở đầu (dùng trong popup duyệt NCC – nhiều khối). */
+  hideIntro?: boolean
+}) {
   // Chặng 2 cùng công ty = chặng duyệt ngoại lệ (PO lệch giá – design.md mục 18.10); duyệt NCC thì chặng 2 là Tổng công ty.
   const staged = steps.some((s) => s.stage === 2)
   const stageLabel = (s: ApprovalStep) =>
@@ -132,7 +143,7 @@ export function ApprovalChain({ steps, approvedImmediately, byCompany = false }:
   if (approvedImmediately) return <p>Phiếu dưới mọi ngưỡng duyệt đã cấu hình – gửi là được duyệt ngay, không cần ai duyệt.</p>
   return (
     <div className="approval-chain">
-      <p>Phiếu chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối. Người duyệt lần lượt:</p>
+      {!hideIntro && <p>Phiếu chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối. Người duyệt lần lượt:</p>}
       <ol>
         {steps.map((s) => {
           const names = s.nextApprovers ?? s.upcomingApprovers ?? []
@@ -147,6 +158,25 @@ export function ApprovalChain({ steps, approvedImmediately, byCompany = false }:
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+/**
+ * Nội dung popup trước khi lưu hồ sơ NCC có thay đổi cần duyệt (design.md mục 18.6): mỗi yêu cầu duyệt sẽ sinh một khối – nội dung đổi và
+ * người duyệt từng chặng/công ty/cấp (yêu cầu người dùng 03/11/2026).
+ * @param groups Các yêu cầu từ API xem trước.
+ */
+export function ApprovalGroups({ groups }: { groups: { title: string; approvedImmediately: boolean; steps: ApprovalStep[] }[] }) {
+  return (
+    <div className="approval-chain">
+      <p>Thay đổi sau chưa áp ngay mà thành yêu cầu duyệt (công ty liên quan, rồi Tổng công ty):</p>
+      {groups.map((g) => (
+        <div key={g.title} className="approval-group">
+          <strong>{g.title}</strong>
+          <ApprovalChain steps={g.steps} approvedImmediately={g.approvedImmediately} byCompany hideIntro />
+        </div>
+      ))}
     </div>
   )
 }

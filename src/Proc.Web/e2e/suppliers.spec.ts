@@ -71,6 +71,12 @@ test.describe('danh mục nhà cung cấp', () => {
     await expect(drawer.getByText('Hãy ghi lý do.')).toBeVisible()
     await drawer.getByLabel('Lý do').fill('Giao hàng không đúng xuất xứ')
     await drawer.getByRole('button', { name: 'Lưu' }).click()
+    // Popup xem trước (yêu cầu người dùng 03/11/2026): thay đổi nào thành yêu cầu duyệt, ai duyệt ở Tổng công ty.
+    const sendDialog = page.locator('.ant-modal-confirm')
+    await expect(sendDialog).toContainText('Danh sách đen')
+    await expect(sendDialog).toContainText('TCT · Cấp')
+    await page.screenshot({ path: 'e2e/screenshots/supplier-approval-preview.png' })
+    await sendDialog.getByRole('button', { name: /Lưu, gửi duyệt$/ }).click()
     // Danh sách đen phải qua duyệt (design.md mục 18.6): NCC vẫn Tiềm năng, yêu cầu chờ Tổng công ty (NCC chưa áp dụng công ty nào).
     await expect(page.locator('.ant-message')).toContainText(`Đã lưu NCC ${code}. Thay đổi cần duyệt đã gửi duyệt`)
     await expect(gridRow(page, code)).toContainText('Tiềm năng')
