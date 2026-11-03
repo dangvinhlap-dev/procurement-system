@@ -3,6 +3,46 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.17.0] - 2026-11-04
+
+### Thêm mới
+- **Nhập Excel bảng giá NCC** (màn hình bảng giá NCC → Nhập Excel): tải file mẫu, kiểm tra trước rồi mới ghi; nhiều bảng giá trong một
+  file (gom theo Mã NCC + Tên bảng giá), báo lỗi theo từng dòng Excel; tối đa 5.000 dòng, 10 MB.
+- **Cảnh báo giá cao trên PO**: cột "Giá thấp nhất TĐ" trên dòng PO, tam giác vàng khi đơn giá vượt giá thấp nhất tập đoàn quá ngưỡng
+  (tham số `PO_HIGH_PRICE_WARN_PERCENT`, mặc định 10%, sửa ở màn hình SEC). Người không có quyền xem giá mọi công ty chỉ thấy con số,
+  không thấy công ty/NCC/chứng từ nguồn.
+- **Sinh hợp đồng nguyên tắc từ kết quả thầu** (nút "Tạo hợp đồng" trên RFQ đã duyệt chọn thầu): mỗi NCC trúng thầu một hợp đồng gắn
+  bảng giá tạo từ RFQ, sản lượng = SL trúng thầu, điều khoản thanh toán theo báo giá. RFQ lập ở Tổng công ty: bảng giá mặc định
+  "Toàn tập đoàn" (bỏ đánh dấu được khi còn nháp).
+- **Hiện người duyệt trên mọi phiếu có duyệt** (PR, PO, bảng giá, RFQ chọn thầu, hợp đồng, phụ lục, NCC độc quyền, duyệt NCC):
+  - Trạng thái ghi rõ "Chờ duyệt: <tên người>".
+  - **Popup trước khi gửi duyệt** liệt kê từng cấp và người duyệt được; lưu hồ sơ NCC có thay đổi cần duyệt cũng hiện popup
+    "Lưu NCC và gửi duyệt thay đổi?".
+  - Popup khi duyệt cho biết người lập, thời điểm gửi và ai duyệt tiếp sau mình.
+  - Tab Lịch sử duyệt dạng **cây**: Lập phiếu → từng lượt gửi duyệt (người gửi, ngày giờ) → từng cấp (người duyệt, ngày giờ, ý kiến;
+    "Chờ duyệt"/"Sẽ duyệt" cho cấp chưa tới).
+
+### Thay đổi
+- Bảng giá toàn tập đoàn: công ty khác cũng xem được lịch sử duyệt (design.md mục 8.5).
+
+### Sửa lỗi
+- Lưu NCC đổi **cả** trạng thái lẫn tài khoản ngân hàng trong một lần bị lỗi trùng số yêu cầu duyệt (409).
+- Đơn giá sau chiết khấu trên dòng PO (giao diện) tính sai tỉ lệ.
+
+### Thay đổi CSDL
+- 3 migration mới (49 → 52): `V0_17_0_CanhBaoGiaCaoPo` (tham số công ty ngưỡng cảnh báo giá cao), `V0_17_0_HopDongTuKetQuaThau`
+  (liên kết NCC trúng thầu → hợp đồng), `V0_17_0_ThoiDiemGuiDuyet` (thời điểm, người gửi duyệt trên bước duyệt). Chỉ thêm cột, không
+  xóa dữ liệu. Script: `db/scripts/0.17.0.sql` (đã chạy thử trên bản sao CSDL 0.16.0, chạy lại lần hai không lỗi).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.17.0.sql`, sau đó thay gói ứng dụng.
+  Từ bản cũ hơn 0.15.0: chạy lần lượt các script đến `0.15.0.sql` trước.
+- Bước duyệt của các phiếu gửi duyệt trước khi nâng cấp không có thời điểm gửi – cây lịch sử ghi "gửi duyệt" không kèm ngày giờ.
+
+### Cách quay lại bản trước
+- Khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.16.0`; hoặc gỡ migration về `20261103002518_V0_15_0_SoLieuKiemKe`
+  (`Down()` xóa 3 cột mới – mất ngưỡng cảnh báo đã sửa, liên kết hợp đồng từ RFQ và thời điểm gửi duyệt; hợp đồng đã tạo vẫn giữ).
+
 ## [0.16.0] - 2026-11-03
 
 ### Thêm mới
