@@ -30,6 +30,9 @@
 .approval-chain p {
   margin: 0 0 4px;
 }
+.approval-group {
+  margin-top: 6px;
+}
 .approval-chain-missing {
   color: var(--erp-icon-danger);
 }

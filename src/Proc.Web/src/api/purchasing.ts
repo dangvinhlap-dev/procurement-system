@@ -77,6 +77,8 @@ export function withPendingApprovers(label: string, steps: ApprovalStep[] | null
 export interface ApprovalPreview {
   approvedImmediately: boolean
   steps: ApprovalStep[]
+  /** Duyệt NCC: các yêu cầu duyệt sẽ sinh khi lưu hồ sơ (rỗng = lưu không cần duyệt). */
+  groups?: { title: string; approvedImmediately: boolean; steps: ApprovalStep[] }[] | null
 }
 
 /**
@@ -84,10 +86,17 @@ export interface ApprovalPreview {
  * @param docType PR, PO, PRL, RFQ, CTR, CTA, NDQ.
  * @param documentId Id phiếu đã lưu.
  * @param award RFQ: lựa chọn trúng thầu sẽ gửi.
+ * @param supplier NCC: hồ sơ sắp lưu (documentId = Id NCC, hoặc Guid rỗng khi lập mới).
  */
-export function previewApproval(docType: string, documentId: string, award?: unknown) {
-  return apiFetch<ApprovalPreview>('/api/approvals/preview', { method: 'POST', body: { docType, documentId, award: award ?? null } })
+export function previewApproval(docType: string, documentId: string, award?: unknown, supplier?: unknown) {
+  return apiFetch<ApprovalPreview>('/api/approvals/preview', {
+    method: 'POST',
+    body: { docType, documentId, award: award ?? null, supplier: supplier ?? null },
+  })
 }
+
+/** Guid rỗng – xem trước duyệt NCC khi lập NCC mới (chưa có Id). */
+export const EMPTY_GUID = '00000000-0000-0000-0000-000000000000'
 
 /** Số tên hiện tối đa – cấp "ai có quyền duyệt" có thể có rất nhiều người, ô lưới chỉ cần đủ để biết nhắc ai. */
 const NEXT_APPROVERS_SHOWN = 5

@@ -164,8 +164,10 @@ public class PriceListApprovalTests
         await ReadAsync<PriceListDto>(await ActAsync(approver, list.Id, "approve"));
         var seen = await ReadAsync<PriceListDto>(await member.GetAsync($"/api/price-lists/{list.Id}", Ct));
         Assert.Equal("Active", seen.Status);
-        // Công ty khác chỉ xem bảng đã công bố – không thấy lịch sử duyệt nội bộ của công ty lập.
-        Assert.Empty(seen.Approvals);
+        // Công ty khác xem được lịch sử duyệt của bảng toàn tập đoàn (yêu cầu người dùng 03/11/2026 – ai mở phiếu cũng thấy ai lập, ai duyệt).
+        var step = Assert.Single(seen.Approvals);
+        Assert.Equal("Approved", step.Status);
+        Assert.False(string.IsNullOrEmpty(step.ActedByName));
         Assert.Equal([25_000m], (await ResolveAsync(member, catalog)).Select(r => r.UnitPrice));
     }
 }

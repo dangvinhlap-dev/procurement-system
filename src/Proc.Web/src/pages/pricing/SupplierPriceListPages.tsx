@@ -455,7 +455,7 @@ export function SupplierPriceListPage() {
       title="Bảng giá nhà cung cấp"
       extraTabs={[
         attachmentTab,
-        ...(doc && doc.companyId === workingCompany?.id ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+        ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
       ]}
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'SupplierPriceList', id: doc?.id }}

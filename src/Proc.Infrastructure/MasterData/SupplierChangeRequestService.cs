@@ -37,7 +37,10 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
         ProcDbContext db, ApprovalEngine approvals, Supplier supplier, Func<string, SupplierChangeRequest> create,
         CancellationToken cancellationToken)
     {
-        var count = await db.SupplierChangeRequests.CountAsync(r => r.SupplierId == supplier.Id, cancellationToken);
+        // Đếm cả yêu cầu vừa lập trong cùng lần lưu (đổi trạng thái và tài khoản cùng lúc sinh hai yêu cầu, chưa xuống CSDL) – không thì hai
+        // yêu cầu trùng số (lỗi trùng khóa IX_SupplierChangeRequest_No).
+        var count = await db.SupplierChangeRequests.CountAsync(r => r.SupplierId == supplier.Id, cancellationToken)
+                    + db.ChangeTracker.Entries<SupplierChangeRequest>().Count(e => e.State == EntityState.Added && e.Entity.SupplierId == supplier.Id);
         var request = create($"{supplier.Code}-{count + 1:00}");
         if (await db.SupplierChangeRequests.AnyAsync(
                 r => r.SupplierId == supplier.Id && r.Kind == request.Kind && r.Status == SupplierChangeRequestStatus.Submitted, cancellationToken))
