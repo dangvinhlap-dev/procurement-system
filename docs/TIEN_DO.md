@@ -149,6 +149,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Kế hoạch 03/11/2026 đã xong cả 5 bước.** Thêm DUYET-HIEN (hiện người duyệt). Bản 0.17.0 (bước 3–5 + DUYET-HIEN, 3 migration) chưa
     phát hành – chờ người dùng yêu cầu. Kiểm tra DUYET-HIEN: `dotnet test` 520/520; Playwright cả bộ 93/93; build, tsc, oxlint qua.
   - DUYET-NCC xong (03/11/2026): `dotnet test` 521/521; Playwright cả bộ 93/93 (suppliers.spec cập nhật theo popup); build, tsc, oxlint qua.
+  - **Phát hành 0.17.0 (04/11/2026)**: tag `v0.17.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.17.0
+    (gói `procurement-0.17.0.zip`); 3 migration (49 → 52), script `db/scripts/0.17.0.sql` chạy thử trên bản sao CSDL 0.16.0
+    (`procurement_kiemtra_0170`, chạy lại lần hai không lỗi). **Bản test cổng 5007 đã nâng tại chỗ lên 0.17.0**: thư mục
+    `D:\project\procurement-thu-0.15.0` (`app` = 0.17.0, `app-0.16.0`/`app-0.15.0` = bản cũ), CSDL `procurement_kiemtra_0150`, sao lưu trước
+    nâng `D:\project\procurement_kiemtra_0150_truoc_0.17.0.dump`; PID trong `pid.txt`. `publish.ps1` chạy bằng `powershell -File` (gọi `&`
+    trong phiên có chuyển hướng `*>` thì cảnh báo Vite ở stderr làm script dừng).
 - **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026) – XONG TC-1 → TC-4, đã merge `main` (02/11/2026), chưa phát hành** – gồm:
   - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
     mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
@@ -321,7 +327,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0
 2. Hợp đồng nguyên tắc (CTR): B4a, B4b (phụ lục), B4c (nhập Excel) xong (design.md 18.7). PO lấy giá theo hợp đồng: C1 xong (18.10);
    phạm vi bộ phận được đặt của hợp đồng: C1b xong.
-3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0, `procurement_kiemtra_0130` – CSDL bản cài thử 0.13.0,
+3. **Không xóa** dữ liệu/CSDL nào (`procurement_perf`, `procurement_perf_mau`, `procurement_kiemtra_090` – CSDL thử script 0.9.0, `procurement_kiemtra_windows` – CSDL thử bản publish Windows, `procurement_kiemtra_0100` – CSDL thử script 0.10.0 và bản cài thử, `procurement_kiemtra_0110` – CSDL thử chuỗi script 0.1.0 → 0.11.0, `procurement_kiemtra_0130` – CSDL bản cài thử 0.13.0, `procurement_kiemtra_0170` – CSDL thử script 0.17.0,
    file `D:\project\procurement_perf_nguon.dump`) cho đến khi người dùng chỉ định.
 4. ~~Lỗi trang trắng sau đăng xuất~~ – đã sửa 02/11/2026 (nhánh `fix/dang-xuat-trang-trang`, xem mục Đang làm).
 5. ~~Test Playwright `supplier-links` chập chờn~~ – 02/11/2026 chạy riêng 12/12, ép tải 10 luồng 6/6, cả bộ 87/87 đều qua, không tái
