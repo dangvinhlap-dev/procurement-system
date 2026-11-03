@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main trước phát hành 0.16.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -126,6 +126,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;
     test tích hợp `SupplierApprovalTests`, `ChangeHistoryTests`, `SharedCatalogEditTests` thôi dùng `admin` tạo công ty (người quản trị
     riêng của test); `.gitignore` bỏ `/test-results/`. Kiểm tra: `dotnet build`, `dotnet test` 514/514.
+  - **Bước 2 (xong) – phát hành 0.16.0 (03/11/2026)**: tag `v0.16.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.16.0
+    (gói `procurement-0.16.0.zip`); không đổi CSDL (49 migration), không có script 0.16.0. **Bản test cổng 5007 đã nâng tại chỗ lên 0.16.0**:
+    thư mục vẫn tên `D:\project\procurement-thu-0.15.0` (`app` = 0.16.0, `app-0.15.0` = bản cũ để quay lại), CSDL `procurement_kiemtra_0150`,
+    sao lưu trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.16.0.dump`; PID trong `pid.txt`. Bản 0.12.0/0.13.0/0.14.0 vẫn chạy.
+    Lúc đóng gói: Vite cũ cổng 5179/5180 (phiên e2e trước) khóa `node_modules` làm `npm ci` lỗi EPERM – người dùng cho dừng; dừng Vite
+    trước khi chạy `publish.ps1`. Kiểm tra bằng `Get-Process`/`Get-CimInstance` (netstat lọc theo cổng dễ sót).
+  - **Tiếp theo: bước 3 – nhập bảng giá NCC bằng Excel** (nhánh `feature/nhap-bang-gia-excel`, làm theo mẫu B4c).
 - **Yêu cầu người dùng sau khi test 0.14.0 (02/11/2026) – XONG TC-1 → TC-4, đã merge `main` (02/11/2026), chưa phát hành** – gồm:
   - **TC-1 (xong)**: ô chọn danh mục tìm kiểu SAP ECC – gõ `*` + Enter liệt kê toàn bộ (ô hàng tối đa 500 dòng), `*` là ký tự đại diện ở
     mọi ô tìm (`classic/Select.tsx` thay `Select` antd ở 29 file, `matchesKeyword`, `LikePatterns.Contains`); ui-style.md mục 5b.
