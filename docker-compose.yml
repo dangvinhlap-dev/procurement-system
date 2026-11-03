@@ -29,6 +29,7 @@ services:
       Seed__Enabled: "true"
       # File đính kèm để ngoài thư mục ứng dụng /app (volume attachments) – design.md mục 18.4.
       Attachments__RootPath: /data/attachments
+      Attachments__MaxFileSizeMb: ${ATTACHMENT_MAX_MB:-2}
       Seed__AdminUserName: ${ADMIN_USERNAME:-admin}
       Seed__AdminPassword: ${ADMIN_PASSWORD:?Chưa đặt ADMIN_PASSWORD}
       Seed__HeadOffice__Code: ${HEAD_OFFICE_CODE:-TCT}

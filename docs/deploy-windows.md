@@ -109,7 +109,8 @@ Nếu "Default Web Site" đang dùng cổng 80 thì dừng nó hoặc đặt bin
 (IIS Manager → Bindings), rồi bỏ binding 80 hoặc chuyển hướng sang HTTPS.
 
 `web.config` trong gói đã: gỡ WebDAV (nếu không IIS chặn PUT/DELETE, báo lỗi 405 khi sửa/xóa), cho phép tải lên tới 30 MB (file
-tối đa 20 MB).
+đính kèm tối đa mặc định 2 MB, đổi bằng `Attachments:MaxFileSizeMb` trong `appsettings.Production.json`, cho phép 1–25 MB; ngoài khoảng
+này ứng dụng báo lỗi khi khởi động).
 
 **3.6. Kiểm tra** – mở `http://<server>/health` phải thấy `"status":"Healthy"` và số phiên bản; mở `http://<server>`, đăng nhập
 bằng tài khoản quản trị ở bước 3.4 rồi **đổi mật khẩu ngay**. Xem `D:\ProcurementData\logs\proc-<ngày>.log` không có dòng `[ERR]`;
@@ -157,7 +158,7 @@ Chép `E:\ProcurementBackup` ra máy khác định kỳ. Tác vụ báo "Last Ru
 | HTTP 500.30 / 500.31 | Ứng dụng không khởi động: xem log ở `D:\ProcurementData\logs`; chưa có log thì sửa `web.config` tạm đặt `stdoutLogEnabled="true"`, tạo thư mục `D:\Procurement\app\logs` cho App Pool quyền ghi, xem file `stdout_*.log`, xong đặt lại `false` |
 | "Thiếu chuỗi kết nối" trong log | Thiếu/sai tên file `appsettings.Production.json`, hoặc App Pool đặt `ASPNETCORE_ENVIRONMENT` khác `Production` |
 | HTTP 405 khi lưu, xóa | WebDAV chưa gỡ – kiểm tra `web.config` còn thẻ `<remove name="WebDAVModule" />` |
-| HTTP 413 khi tải file | File > 20 MB (ứng dụng báo lỗi tiếng Việt), hoặc `requestLimits` trong `web.config` bị sửa nhỏ đi |
+| HTTP 413 khi tải file | File vượt `Attachments:MaxFileSizeMb` (mặc định 2 MB – ứng dụng báo lỗi tiếng Việt), hoặc `requestLimits` trong `web.config` bị sửa nhỏ đi |
 | Không lưu được file đính kèm, không có file log | App Pool thiếu quyền Modify trên `D:\ProcurementData` (bước 3.5) |
 | Không kết nối được CSDL | Dịch vụ `postgresql-x64-18` chưa chạy; sai mật khẩu; CSDL ở máy khác thì mở `listen_addresses` trong `postgresql.conf`, thêm dòng cho IP máy web trong `pg_hba.conf` và mở cổng 5432 trên tường lửa chỉ cho máy web |
 | Máy khác trong mạng không mở được trang (bản test chạy thẳng `Proc.Api.exe`, không qua IIS) | Chạy với `--urls http://0.0.0.0:<cổng>` (không viết cứng IP trong cấu hình code) và mở cổng đó trên tường lửa Windows bằng PowerShell Administrator: `New-NetFirewallRule -DisplayName "Procurement test <cổng>" -Direction Inbound -Protocol TCP -LocalPort <cổng> -Action Allow -Profile Private,Domain`. Máy test mở `http://<IP máy chủ>:<cổng>` – xem `tools/du-lieu-thu/README.md` |

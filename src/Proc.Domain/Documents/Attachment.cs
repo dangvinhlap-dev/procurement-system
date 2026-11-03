@@ -32,9 +32,24 @@ public static class AttachmentOwnerTypes
     /// <summary>Phê duyệt NCC độc quyền (văn bản xác nhận độc quyền, phân phối – lát B5b).</summary>
     public const string SoleSourceApproval = "SoleSourceApproval";
 
+    /// <summary>Phiếu tìm nguồn (báo giá sơ bộ, catalogue – lát A4, mọi form có đính kèm).</summary>
+    public const string SourcingRequest = "SourcingRequest";
+
+    /// <summary>Phụ lục hợp đồng nguyên tắc (bản scan phụ lục đã ký – lát A4).</summary>
+    public const string ContractAmendment = "ContractAmendment";
+
+    /// <summary>Phiếu đánh giá NCC định kỳ (biên bản, bằng chứng chấm điểm – lát A4).</summary>
+    public const string SupplierReview = "SupplierReview";
+
+    /// <summary>Vi phạm KSNB ghi nhận (bằng chứng, biên bản làm việc – lát A4).</summary>
+    public const string ControlFinding = "ControlFinding";
+
+    /// <summary>Kê khai xung đột lợi ích (văn bản kê khai có chữ ký – lát A4).</summary>
+    public const string ConflictDeclaration = "ConflictDeclaration";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
-        SoleSourceApproval];
+        SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration];
 }
 
 /// <summary>
@@ -45,8 +60,19 @@ public static class AttachmentOwnerTypes
 [Auditable("Tệp đính kèm", LabelProperty = nameof(FileName), Ignore = [nameof(StoragePath), nameof(Sha256)])]
 public sealed class Attachment : AuditableEntity
 {
-    /// <summary>Dung lượng tối đa một file: 20 MB (quyết định Q6).</summary>
-    public const long MaxFileBytes = 20 * 1024 * 1024;
+    /// <summary>
+    /// Dung lượng tối đa một file mặc định: 2 MB (người dùng chốt 03/11/2026, thay 20 MB của quyết định Q6). Máy chủ đổi được qua
+    /// <c>Attachments:MaxFileSizeMb</c> trong appsettings – xem design.md mục 18.4.
+    /// </summary>
+    public const int DefaultMaxFileSizeMb = 2;
+
+    /// <summary>Giới hạn trên cho phép cấu hình (MB) – quá mức này phải nâng cả giới hạn request của IIS/Kestrel (docs/deploy-windows.md).</summary>
+    public const int MaxConfigurableFileSizeMb = 25;
+
+    /// <summary>Đổi MB sang byte (1 MB = 1024 × 1024 byte; ví dụ 2 MB = 2.097.152 byte).</summary>
+    /// <param name="megabytes">Số MB.</param>
+    /// <returns>Số byte.</returns>
+    public static long MegabytesToBytes(int megabytes) => megabytes * 1024L * 1024L;
 
     /// <summary>Độ dài tối đa của tên file gốc.</summary>
     public const int FileNameMaxLength = 255;
@@ -141,14 +167,16 @@ public sealed class Attachment : AuditableEntity
     /// <param name="sha256">Mã băm SHA-256.</param>
     /// <param name="uploadedAt">Thời điểm tải lên (UTC) – dùng làm thư mục năm/tháng.</param>
     /// <param name="note">Ghi chú.</param>
+    /// <param name="maxFileSizeMb">Dung lượng tối đa một file (MB) theo cấu hình máy chủ.</param>
     /// <returns>Bản ghi mới.</returns>
     /// <exception cref="BusinessRuleException">Khi loại chủ, tên, đuôi, dung lượng hoặc ghi chú không hợp lệ.</exception>
     public static Attachment Create(
-        string ownerType, Guid ownerId, Guid? companyId, string fileName, long sizeBytes, string sha256, DateTimeOffset uploadedAt, string? note)
+        string ownerType, Guid ownerId, Guid? companyId, string fileName, long sizeBytes, string sha256, DateTimeOffset uploadedAt, string? note,
+        int maxFileSizeMb = DefaultMaxFileSizeMb)
     {
         if (!AttachmentOwnerTypes.All.Contains(ownerType)) throw new BusinessRuleException($"Loại đối tượng đính kèm '{ownerType}' không hợp lệ.");
         var name = NormalizeFileName(fileName);
-        var extension = ValidateFile(name, sizeBytes);
+        var extension = ValidateFile(name, sizeBytes, maxFileSizeMb);
         var trimmedNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         if (trimmedNote is { Length: > NoteMaxLength }) throw new BusinessRuleException($"Ghi chú tối đa {NoteMaxLength} ký tự.");
 
@@ -173,13 +201,14 @@ public sealed class Attachment : AuditableEntity
     /// </summary>
     /// <param name="fileName">Tên file gốc.</param>
     /// <param name="sizeBytes">Dung lượng.</param>
+    /// <param name="maxFileSizeMb">Dung lượng tối đa một file (MB) theo cấu hình máy chủ.</param>
     /// <returns>Đuôi file chữ thường.</returns>
-    /// <exception cref="BusinessRuleException">Khi file rỗng, quá 20 MB, tên quá dài hoặc đuôi không được nhận.</exception>
-    public static string ValidateFile(string fileName, long sizeBytes)
+    /// <exception cref="BusinessRuleException">Khi file rỗng, quá dung lượng tối đa, tên quá dài hoặc đuôi không được nhận.</exception>
+    public static string ValidateFile(string fileName, long sizeBytes, int maxFileSizeMb = DefaultMaxFileSizeMb)
     {
         var name = NormalizeFileName(fileName);
         if (sizeBytes <= 0) throw new BusinessRuleException("File rỗng.");
-        if (sizeBytes > MaxFileBytes) throw new BusinessRuleException("File quá 20 MB. Hãy nén hoặc chia nhỏ file.");
+        if (sizeBytes > MegabytesToBytes(maxFileSizeMb)) throw TooLarge(maxFileSizeMb);
         var extension = Path.GetExtension(name).ToLowerInvariant();
         if (!AllowedExtensions.ContainsKey(extension))
             throw new BusinessRuleException(
@@ -187,6 +216,12 @@ public sealed class Attachment : AuditableEntity
                 "ảnh (jpg, png, gif, bmp, tif), file nén (zip, rar, 7z) và thư (msg, eml).");
         return extension;
     }
+
+    /// <summary>Lỗi file quá dung lượng tối đa – một câu chung cho kiểm tra sớm và kiểm tra khi ghi đĩa.</summary>
+    /// <param name="maxFileSizeMb">Dung lượng tối đa (MB).</param>
+    /// <returns>Ngoại lệ để ném.</returns>
+    public static BusinessRuleException TooLarge(int maxFileSizeMb) =>
+        new($"File quá {maxFileSizeMb} MB. Hãy nén, giảm độ phân giải ảnh hoặc chia nhỏ file.");
 
     /// <summary>
     /// Xóa mềm: ẩn khỏi danh sách; file trên đĩa giữ lại (đối chiếu, khôi phục khi xóa nhầm).

@@ -22,6 +22,7 @@ import {
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
@@ -111,6 +112,8 @@ export function SourcingPage() {
   const addRef = useRef<(() => void) | null>(null)
   const doc = sourcing.data
   const readOnly = isNew ? !hasPermission(Permission.RfqManage) : !doc?.canEdit
+  // Báo giá sơ bộ, catalogue của NCC ứng viên – đính kèm được cả khi phiếu đã đóng (design.md mục 18.4).
+  const attachmentTab = useAttachmentTab('SourcingRequest', doc?.id, hasPermission(Permission.RfqManage))
   const itemId = Form.useWatch('itemId', form) as string | undefined
   const description = Form.useWatch('description', form) as string | undefined
   // Phải có mặt hàng hoặc mô tả (Sourcing.Create ở Domain) – ô còn lại thôi bắt buộc khi đã nhập một trong hai.
@@ -288,6 +291,7 @@ export function SourcingPage() {
       onAddLine={() => addRef.current?.()}
       actions={actions}
       linesLabel="NCC ứng viên"
+      extraTabs={[attachmentTab]}
       header={
         <>
           <Form.Item label="Ngày lập" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>

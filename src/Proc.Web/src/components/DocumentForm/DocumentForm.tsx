@@ -187,7 +187,7 @@ export function DocumentForm({
               className="document-form-tabs"
               activeKey={tab}
               onChange={setTab}
-              items={[{ key: 'lines', label: linesLabel, children: lines }, ...extraTabs].map((t) => ({ ...t, forceRender: true }))}
+              items={[{ key: 'lines', label: linesLabel, children: lines }, ...extraTabs].map((t) => ({ key: t.key, label: t.label, children: t.children, forceRender: true }))}
             />
             {footer && <div className="document-form-footer">{footer}</div>}
           </Form>

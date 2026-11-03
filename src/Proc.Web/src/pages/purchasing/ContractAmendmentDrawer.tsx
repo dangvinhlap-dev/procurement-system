@@ -15,6 +15,9 @@ import {
   type SaveContractAmendmentInput,
 } from '../../api/contracts'
 import { usePriceLists } from '../../api/pricing'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { Permission } from '../../auth/permissions'
+import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { formatDate, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
@@ -60,6 +63,7 @@ export function ContractAmendmentDrawer({
   asPage?: boolean
 }) {
   const isNew = amendmentId === 'moi'
+  const { hasPermission } = useAuth()
   const { message, modal } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const amendment = useContractAmendment(amendmentId && !isNew ? amendmentId : null)
@@ -68,6 +72,8 @@ export function ContractAmendmentDrawer({
   const [error, setError] = useState<string | null>(null)
   const doc = amendment.data
   const canEdit = isNew ? contract.actions.canAmend : !!doc?.actions.canEdit
+  // Bản scan phụ lục đã ký – đính kèm được cả sau khi duyệt, quyền theo quyền sửa hợp đồng (design.md mục 18.4).
+  const attachmentTab = useAttachmentTab('ContractAmendment', doc?.id, hasPermission(Permission.ContractManage))
 
   // Bảng giá chọn được: cùng NCC; bảng của công ty (chưa ngừng) hoặc bảng toàn tập đoàn đã hiệu lực – server kiểm tra lại.
   const priceListOptions = (priceLists.data ?? [])
@@ -146,7 +152,10 @@ export function ContractAmendmentDrawer({
     const saved = await persist()
     if (!saved) return
     message.success(`Đã lưu phụ lục ${saved.no}.`)
-    if (isNew) onCreated(saved.id)
+    if (isNew) {
+      await attachmentTab.uploadTo(saved.id)
+      onCreated(saved.id)
+    }
   }
 
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
@@ -161,7 +170,10 @@ export function ContractAmendmentDrawer({
         setError(null)
         const saved = await persist()
         if (!saved) return
-        if (isNew) onCreated(saved.id)
+        if (isNew) {
+          await attachmentTab.uploadTo(saved.id)
+          onCreated(saved.id)
+        }
         try {
           const sent = await mutations.submit.mutateAsync(saved.id)
           message.success(sent.status === 'Approved' ? `Phụ lục ${sent.no} đã duyệt và áp vào hợp đồng.` : `Đã gửi duyệt phụ lục ${sent.no}.`)
@@ -339,6 +351,7 @@ export function ContractAmendmentDrawer({
           ),
         },
         ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+        attachmentTab,
       ]}
     />
   )

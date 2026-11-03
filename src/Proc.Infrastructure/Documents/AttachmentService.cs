@@ -29,12 +29,20 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.InventoryDocument] = (Permissions.Inventory.DocumentView, Permissions.Inventory.DocumentCreate),
             [AttachmentOwnerTypes.PurchaseContract] = (Permissions.Purchase.ContractView, Permissions.Purchase.ContractManage),
             [AttachmentOwnerTypes.SoleSourceApproval] = (Permissions.MasterData.SoleSourceView, Permissions.MasterData.SoleSourceManage),
+            // Lát A4 (mọi form có đính kèm): quyền theo màn hình chủ, giống các service tương ứng.
+            [AttachmentOwnerTypes.SourcingRequest] = (Permissions.Sourcing.RfqView, Permissions.Sourcing.RfqManage),
+            [AttachmentOwnerTypes.ContractAmendment] = (Permissions.Purchase.ContractView, Permissions.Purchase.ContractManage),
+            [AttachmentOwnerTypes.SupplierReview] = (Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage),
+            [AttachmentOwnerTypes.ControlFinding] = (Permissions.Control.AnomalyView, Permissions.Control.FindingManage),
+            // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
+            [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
         };
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
     private readonly string _root;
+    private readonly int _maxFileSizeMb;
 
     /// <summary>
     /// Tạo dịch vụ.
@@ -49,6 +57,7 @@ public sealed class AttachmentService : IAttachmentService
         _scope = scope;
         _clock = clock;
         _root = Path.GetFullPath(options.Value.RootPath);
+        _maxFileSizeMb = options.Value.MaxFileSizeMb;
     }
 
     /// <inheritdoc />
@@ -70,7 +79,7 @@ public sealed class AttachmentService : IAttachmentService
         string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken)
     {
         var companyId = await RequireOwnerAsync(ownerType, ownerId, manage: true, cancellationToken);
-        Attachment.ValidateFile(fileName, sizeBytes);
+        Attachment.ValidateFile(fileName, sizeBytes, _maxFileSizeMb);
 
         // Ghi ra file tạm cùng thư mục gốc (đổi tên cùng ổ đĩa là nguyên tử), đo dung lượng thật và băm SHA-256 trong lúc ghi;
         // không tin dung lượng client báo.
@@ -84,11 +93,11 @@ public sealed class AttachmentService : IAttachmentService
             await using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             {
-                written = await CopyLimitedAsync(content, file, hash, cancellationToken);
+                written = await CopyLimitedAsync(content, file, hash, _maxFileSizeMb, cancellationToken);
                 sha256 = Convert.ToHexStringLower(hash.GetHashAndReset());
             }
 
-            var attachment = Attachment.Create(ownerType, ownerId, companyId, fileName, written, sha256, _clock.UtcNow, note);
+            var attachment = Attachment.Create(ownerType, ownerId, companyId, fileName, written, sha256, _clock.UtcNow, note, _maxFileSizeMb);
             finalPath = ResolvePath(attachment.StoragePath);
             Directory.CreateDirectory(Path.GetDirectoryName(finalPath)!);
             File.Move(tempPath, finalPath);
@@ -146,6 +155,7 @@ public sealed class AttachmentService : IAttachmentService
         // Phiếu điều chỉnh / kiểm kê (ADJ) có quyền lập riêng (design.md mục 18.23): người kiểm kê đính kèm biên bản scan theo quyền lập
         // ADJ, không cần quyền lập chứng từ kho thường – kiểm tra sau khi biết loại phiếu.
         var adjustmentAware = manage && ownerType == AttachmentOwnerTypes.InventoryDocument;
+        if (ownerType == AttachmentOwnerTypes.ConflictDeclaration) return await RequireConflictDeclarationAsync(ownerId, manage, cancellationToken);
         if (!adjustmentAware) _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
 
         // Select CompanyId dạng Guid? để một kiểu chung cho mọi loại chủ; NCC trả null có chủ đích (danh mục dùng chung – mục 5).
@@ -165,6 +175,14 @@ public sealed class AttachmentService : IAttachmentService
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.SoleSourceApproval => await _db.SoleSourceApprovals.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.SourcingRequest => await _db.SourcingRequests.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.ContractAmendment => await _db.PurchaseContractAmendments.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.SupplierReview => await _db.SupplierReviews.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.ControlFinding => await _db.ControlFindings.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             _ => await _db.InventoryDocuments.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId, x.DocType)).FirstOrDefaultAsync(cancellationToken),
         };
@@ -173,6 +191,23 @@ public sealed class AttachmentService : IAttachmentService
             _scope.EnsurePermission(owner.DocType == DocumentTypes.Adjustment ? Permissions.Inventory.AdjustmentCreate : permissions.Manage);
         if (owner.CompanyId is { } companyId) _scope.EnsureCompany(companyId);
         return owner.CompanyId;
+    }
+
+    /// <summary>
+    /// Chủ là kê khai xung đột lợi ích (design.md mục 18.8): không thuộc công ty, không có mã quyền xem riêng. Người kê khai xem/đính kèm
+    /// được kê khai của chính mình; người khác cần quyền xem toàn bộ (xem) hoặc quyền quản lý (đính kèm, xóa) – giống
+    /// ConflictDeclarationService.
+    /// </summary>
+    private async Task<Guid?> RequireConflictDeclarationAsync(Guid ownerId, bool manage, CancellationToken cancellationToken)
+    {
+        var userId = await _db.ConflictDeclarations.Where(x => x.Id == ownerId).Select(x => (Guid?)x.UserId).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
+        if (userId == _scope.UserId) return null;
+        var allowed = manage
+            ? _scope.HasPermission(Permissions.MasterData.ConflictManage)
+            : _scope.HasPermission(Permissions.MasterData.ConflictView) || _scope.HasPermission(Permissions.MasterData.ConflictManage);
+        if (!allowed) throw new ForbiddenAccessException("Bạn không có quyền với kê khai xung đột lợi ích của người khác.");
+        return null;
     }
 
     /// <summary>
@@ -187,16 +222,18 @@ public sealed class AttachmentService : IAttachmentService
         return full;
     }
 
-    /// <summary>Chép luồng, dừng khi vượt 20 MB (client có thể báo sai dung lượng).</summary>
-    private static async Task<long> CopyLimitedAsync(Stream source, Stream target, IncrementalHash hash, CancellationToken cancellationToken)
+    /// <summary>Chép luồng, dừng khi vượt dung lượng tối đa (client có thể báo sai dung lượng).</summary>
+    private static async Task<long> CopyLimitedAsync(
+        Stream source, Stream target, IncrementalHash hash, int maxFileSizeMb, CancellationToken cancellationToken)
     {
+        var maxBytes = Attachment.MegabytesToBytes(maxFileSizeMb);
         var buffer = new byte[81920];
         long total = 0;
         int read;
         while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
         {
             total += read;
-            if (total > Attachment.MaxFileBytes) throw new BusinessRuleException("File quá 20 MB. Hãy nén hoặc chia nhỏ file.");
+            if (total > maxBytes) throw Attachment.TooLarge(maxFileSizeMb);
             hash.AppendData(buffer, 0, read);
             await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
         }

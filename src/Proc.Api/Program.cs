@@ -41,7 +41,12 @@ builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind
 // Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
 builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()
     .Bind(builder.Configuration.GetSection("Attachments"))
-    .PostConfigure(o => o.RootPath = Path.GetFullPath(o.RootPath, builder.Environment.ContentRootPath));
+    .PostConfigure(o => o.RootPath = Path.GetFullPath(o.RootPath, builder.Environment.ContentRootPath))
+    // Trên 25 MB vượt giới hạn request mặc định của Kestrel/IIS (30 MB gồm cả phần đầu multipart) – báo lỗi ngay khi khởi động.
+    .Validate(
+        o => o.MaxFileSizeMb is >= 1 and <= Proc.Domain.Documents.Attachment.MaxConfigurableFileSizeMb,
+        $"Attachments:MaxFileSizeMb phải từ 1 đến {Proc.Domain.Documents.Attachment.MaxConfigurableFileSizeMb}.")
+    .ValidateOnStart();
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection("Jwt"))
     .Validate(

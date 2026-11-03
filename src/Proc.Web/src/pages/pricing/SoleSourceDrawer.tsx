@@ -107,7 +107,7 @@ function SoleSourceForm({
   const editable = isNew ? canManage : data.actions.canEdit
   const suppliers = useSuppliers({})
   const foundItems = useItemSearch(itemSearch)
-  const attachmentTab = useAttachmentTab('SoleSourceApproval', data?.id, canManage && !!data && data.status !== 'Ended')
+  const attachmentTab = useAttachmentTab('SoleSourceApproval', data?.id, canManage && (!data || data.status !== 'Ended'))
   const validFrom = Form.useWatch('validFrom', form)
 
   const today = dayjs()
@@ -162,6 +162,8 @@ function SoleSourceForm({
     await run(async () => {
       if (isNew) {
         const created = await mutations.create.mutateAsync(input)
+        // Form dựng lại theo Id mới nên tải file chọn lúc lập ngay tại đây (design.md mục 18.4).
+        await attachmentTab.uploadTo(created.id)
         onOpen(created.id)
       } else {
         await mutations.update.mutateAsync({ id: data.id, input })
@@ -344,9 +346,8 @@ function SoleSourceForm({
               </>
             ),
           },
-          ...(data
-            ? [{ key: 'history', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={data.approvals} /> }, attachmentTab]
-            : []),
+          ...(data ? [{ key: 'history', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={data.approvals} /> }] : []),
+          attachmentTab,
         ]}
       />
       <Modal

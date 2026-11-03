@@ -8,7 +8,7 @@ import { apiDownload, apiFetch, apiUpload } from './client'
 
 /** Loại đối tượng được đính kèm (khớp AttachmentOwnerTypes). */
 export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'PurchaseRequest' | 'PurchaseOrder' | 'InventoryDocument' | 'PurchaseContract'
-  | 'SoleSourceApproval'
+  | 'SoleSourceApproval' | 'SourcingRequest' | 'ContractAmendment' | 'SupplierReview' | 'ControlFinding' | 'ConflictDeclaration'
 
 /** Một file đính kèm. */
 export interface AttachmentItem {
@@ -21,8 +21,35 @@ export interface AttachmentItem {
   uploadedByName: string | null
 }
 
-/** Dung lượng tối đa một file: 20 MB (quyết định Q6) – kiểm tra trước khi gửi để khỏi chờ tải lên rồi mới bị từ chối. */
-export const attachmentMaxBytes = 20 * 1024 * 1024
+/** Dung lượng tối đa mặc định (MB) khi chưa đọc được cấu hình máy chủ – khớp Attachment.DefaultMaxFileSizeMb (yêu cầu 03/11/2026). */
+export const defaultAttachmentMaxMb = 2
+
+/**
+ * Giới hạn tải lên theo cấu hình máy chủ (<c>Attachments:MaxFileSizeMb</c>) – kiểm tra trước khi gửi để khỏi chờ tải lên rồi mới bị
+ * từ chối. Cấu hình hiếm khi đổi nên giữ cả phiên.
+ * @returns Dung lượng tối đa một file (MB).
+ */
+export function useAttachmentMaxMb(): number {
+  const { data } = useQuery({
+    queryKey: ['attachments', 'limits'],
+    queryFn: () => apiFetch<{ maxFileSizeMb: number }>('/api/attachments/limits'),
+    staleTime: Infinity,
+  })
+  return data?.maxFileSizeMb ?? defaultAttachmentMaxMb
+}
+
+/**
+ * Kiểm tra một file trước khi gửi (đuôi, dung lượng); máy chủ vẫn kiểm tra lại.
+ * @param file File người dùng chọn.
+ * @param maxMb Dung lượng tối đa (MB).
+ * @returns Câu báo lỗi, hoặc null nếu hợp lệ.
+ */
+export function checkAttachmentFile(file: File, maxMb: number): string | null {
+  const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : ''
+  if (!attachmentExtensions.includes(extension)) return `Không nhận file "${file.name}". Chỉ nhận tài liệu, ảnh, file nén thông dụng.`
+  if (file.size > maxMb * 1024 * 1024) return `File "${file.name}" quá ${maxMb} MB. Hãy nén, giảm độ phân giải ảnh hoặc chia nhỏ file.`
+  return null
+}
 
 /** Đuôi file được nhận (khớp Attachment.AllowedExtensions) – dùng cho ô chọn file và kiểm tra trước khi gửi. */
 export const attachmentExtensions = [
