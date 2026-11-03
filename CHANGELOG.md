@@ -3,6 +3,46 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.15.0] - 2026-11-03
+
+### Thêm mới
+- **Phiếu điều chỉnh / kiểm kê kho (ADJ)** – màn hình Kho → Điều chỉnh, kiểm kê (`/kho/dieu-chinh`, mã lệnh `ADJ`):
+  - Một kho bất kỳ của công ty; bắt buộc lý do và số biên bản kiểm kê; bản scan biên bản ở tab Đính kèm.
+  - Mỗi dòng là **Tăng** (hàng thừa, nhập giá tay – tham gia giá vốn kỳ như nhập có giá) hoặc **Giảm** (hàng thiếu, xuất theo giá vốn,
+    chốt khi đóng kỳ); cột tồn hiện tại, cảnh báo giảm vượt tồn; ghi sổ chặn tồn âm.
+  - **Bảng kiểm kê**: lấy tồn sổ của kho, nhập SL thực đếm, tự lập dòng chênh lệch; server lấy tồn sổ lúc lưu và tự tính chiều, SL.
+  - **In "Biên bản kiểm kê, điều chỉnh kho"** (PDF): tồn sổ, thực đếm, tăng, giảm, giá trị tăng, 4 chỗ ký.
+  - **Quyền riêng**: `Inventory.Adjustment.Create` (lập/sửa/hủy, đính kèm) và `Inventory.Adjustment.Post` (ghi sổ/bỏ ghi sổ) – vai trò
+    mẫu Kho có quyền lập, Kế toán có quyền ghi sổ.
+  - Thẻ kho ghi "Điều chỉnh tăng/giảm"; xuất dữ liệu kế toán có loại ADJ; Tra cứu chứng từ mở được phiếu ADJ.
+- **Tra cứu chứng từ** (màn hình DOCS, Hằng ngày): 17 loại chứng từ theo quyền xem, lọc Chưa hoàn thành/Hoàn thành/Đã hủy, Tôi lập/Tôi
+  đã duyệt, cấp đang chờ duyệt, cột **Người duyệt tiếp theo**; bấm đúp mở trang chứng từ.
+- **Người duyệt tiếp theo** trên tab Lịch sử duyệt ("Chờ: …", tối đa 5 tên + "và N người khác"): theo quyền + vai trò của cấp đang chờ,
+  bỏ người lập và người vướng kê khai xung đột lợi ích.
+- **Ô chọn danh mục tìm kiểu SAP ECC**: gõ `*` rồi Enter liệt kê toàn bộ danh mục (tối đa 500 dòng); `*` là ký tự đại diện ở mọi ô tìm
+  (ví dụ `b*long` khớp "Bu lông").
+
+### Thay đổi
+- Thông báo, Việc cần làm, Tra cứu chứng từ và liên kết KSNB mở **trang đầy đủ** thay ngăn kéo cho: duyệt NCC (thêm tab Hồ sơ NCC, Hồ sơ
+  đính kèm chỉ xem), NCC độc quyền, sổ vi phạm, phụ lục hợp đồng, đánh giá NCC định kỳ.
+
+### Sửa lỗi
+- Bỏ ghi sổ phiếu có kho xuất = kho nhập không còn báo nhầm "kho ngoài phạm vi".
+
+### Thay đổi CSDL
+- 2 migration mới (tổng 49): `V0_15_0_PhieuDieuChinhKho` (lý do, số biên bản trên phiếu kho; chiều tăng/giảm trên dòng),
+  `V0_15_0_SoLieuKiemKe` (tồn sổ, thực đếm trên dòng). Chỉ thêm cột, không xóa dữ liệu. Script: `db/scripts/0.15.0.sql` (chạy được nhiều lần).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước khi nâng cấp**, rồi chạy `db/scripts/0.15.0.sql` (từ 0.13.x/0.14.0), sau đó thay gói ứng dụng.
+- Vai trò đã tạo từ trước **không tự có** 2 quyền mới: gán `Inventory.Adjustment.Create` cho vai trò kho và `Inventory.Adjustment.Post`
+  cho vai trò kế toán ở màn hình Vai trò (vai trò ADMIN luôn đủ quyền).
+
+### Cách quay lại bản trước
+- Triển khai lại tag `v0.14.0`. CSDL 0.15.0 vẫn chạy được với ứng dụng 0.14.0 (chỉ thêm cột, cột mới cho phép trống) nên không bắt buộc
+  gỡ migration; nếu muốn gỡ: sao lưu rồi `dotnet ef database update V0_13_0_ChietKhauTaiTroHopDong` – **mất dữ liệu phiếu ADJ** (phiếu
+  ADJ đã ghi sổ phải bỏ ghi sổ/xử lý trước).
+
 ## [0.14.0] - 2026-11-02
 
 ### Thêm mới
