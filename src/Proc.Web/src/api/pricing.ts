@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { ExcelImportSource, ImportOutcome } from '../components/ListPage/excelImport'
 import type { ApprovalStep } from './purchasing'
 
 /*
@@ -290,4 +291,28 @@ export function usePriceComparison(itemId: string | undefined, allCompanies: boo
     queryFn: () => apiFetch<PriceComparison>(`/api/price-comparison?${query}`),
     enabled: !!itemId,
   })
+}
+
+/** Kết quả nhập Excel bảng giá NCC – khớp PriceListImportResult. */
+export interface PriceListImportResult extends ImportOutcome {
+  priceLists: number
+  lines: number
+}
+
+/**
+ * Nguồn nhập Excel bảng giá NCC (design.md mục 8.5): mỗi dòng một bậc giá (mặt hàng × ĐVT × SL từ), các dòng cùng Mã NCC + Tên bảng giá là
+ * một bảng giá; nhập thành bảng giá nháp của công ty đang làm việc, không cập nhật bảng giá đã có.
+ */
+export const priceListImportSource: ExcelImportSource<PriceListImportResult> = {
+  importUrl: '/api/price-lists/import',
+  templateUrl: '/api/price-lists/import-template',
+  templateFileName: 'mau-bang-gia-ncc.xlsx',
+  hint:
+    'Mỗi dòng một bậc giá (mặt hàng × ĐVT × SL từ); các dòng cùng Mã NCC + Tên bảng giá là một bảng giá. Bảng giá nhập vào ở trạng thái ' +
+    'Nháp của công ty đang làm việc – kiểm tra rồi gửi duyệt như lập tay. Bảng cùng NCC, cùng tên, cùng ngày hiệu lực đã có thì báo lỗi, ' +
+    'không nhập lại. Bấm "Kiểm tra thử" trước – "Nhập thật" chỉ lưu khi mọi bảng giá đều đúng.',
+  summary: (r) => ({
+    valid: `File hợp lệ: ${r.priceLists.toLocaleString('vi-VN')} bảng giá, ${r.lines.toLocaleString('vi-VN')} dòng giá. Bấm "Nhập thật" để lưu.`,
+    committed: `Đã nhập ${r.priceLists.toLocaleString('vi-VN')} bảng giá nháp, ${r.lines.toLocaleString('vi-VN')} dòng giá.`,
+  }),
 }

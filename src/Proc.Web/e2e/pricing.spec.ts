@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 import { approvePriceList, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
@@ -124,4 +125,30 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt', { timeout: 20_000 })
   await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
   await expect(page.getByRole('tabpanel')).toContainText('Ngoại lệ giá')
+})
+
+/**
+ * Nhập Excel bảng giá NCC (design.md mục 8.5): nút Nhập Excel trên danh sách PRL, tải file mẫu, file sai mẫu báo thiếu cột bắt buộc
+ * (nhập đúng file đã có test tích hợp SupplierPricingTests.NhapExcel_BangGia_*).
+ */
+test('bảng giá NCC: hộp thoại nhập Excel', async ({ page }) => {
+  await loginViaApi(page)
+  await page.goto('/')
+  await openByCommand(page, 'PRL')
+  await page.getByRole('button', { name: 'Nhập Excel' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Nhập bảng giá NCC từ Excel' })
+  await expect(dialog.getByText(/các dòng cùng Mã NCC \+ Tên bảng giá là một bảng giá/)).toBeVisible()
+  const downloading = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Tải file mẫu' }).click()
+  expect((await downloading).suggestedFilename()).toBe('mau-bang-gia-ncc.xlsx')
+
+  // File của màn hình khác (dữ liệu mua lịch sử) thiếu các cột của bảng giá – báo lỗi, không lưu gì.
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'sai-mau.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: readFileSync('e2e/fixtures/du-lieu-mua-lich-su.xlsx'),
+  })
+  await dialog.getByRole('button', { name: 'Kiểm tra thử' }).click()
+  await expect(dialog.getByText(/File thiếu cột bắt buộc: .*Tên bảng giá/)).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/price-list-import.png' })
 })

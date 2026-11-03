@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
 import { useSuppliers, vatOptions } from '../../api/masterData'
 import {
+  priceListImportSource,
   priceListStatusLabels,
   priceListStatusTone,
   usePriceList,
@@ -67,6 +68,7 @@ export function PriceListListPage() {
       canCreate={hasPermission(Permission.PriceListManage)}
       onCreate={() => navigate(`${LIST_PATH}/moi`)}
       onOpenRow={(r) => navigate(`${LIST_PATH}/${r.id}`)}
+      excelImport={{ source: priceListImportSource, title: 'bảng giá NCC', canImport: hasPermission(Permission.PriceListManage) }}
     />
   )
 }

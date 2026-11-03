@@ -15,7 +15,7 @@ namespace Proc.IntegrationTests;
 /// Bảng giá NCC, giá gợi ý cho PO và so sánh giá toàn tập đoàn (design.md mục 8.1, 8.2). Mỗi test dùng công ty, mặt hàng, NCC mới.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class SupplierPricingTests
+public partial class SupplierPricingTests
 {
     private readonly ProcApiFactory _factory;
 

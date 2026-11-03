@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Purchasing.IContractRebateService, Proc.Infrastructure.Purchasing.ContractRebateService>();
         services.AddScoped<Proc.Application.Purchasing.IContractAmendmentService, Proc.Infrastructure.Purchasing.ContractService>();
         services.AddScoped<Proc.Application.Purchasing.IContractImportService, Proc.Infrastructure.Purchasing.ContractImportService>();
+        services.AddScoped<Proc.Application.Pricing.IPriceListImportService, Proc.Infrastructure.Pricing.PriceListImportService>();
 
         // Một đối tượng phạm vi cho mỗi request: UserScopeLoader nạp, DbContext (filter) và Application đọc.
         services.AddScoped<CurrentUserScope>();
