@@ -1209,10 +1209,25 @@ Bước 4–5 của đề xuất: với từng mã hàng chung, so giá mua gi�
 **bảng giá NCC, RFQ, PR, PO và mọi phiếu kho** (GRN, RTV, TRF, ICS, ICR – tab "Đính kèm (n)" trên DocumentForm). Hợp đồng nguyên tắc
 (lát B4) dùng lại cùng cơ chế.
 
+**Quy tắc chung cho mọi form (người dùng chốt 03/11/2026, lát A4 – áp dụng cho mọi form chứng từ/phiếu làm từ nay):**
+
+1. Mọi form chứng từ/phiếu (PR, PO, RFQ, hợp đồng, phụ lục, bảng giá, phiếu kho, phiếu tìm nguồn, NCC độc quyền, đánh giá NCC, vi phạm
+   KSNB, kê khai xung đột…) có **ô Ghi chú** nhập được ngay khi tạo. Form đã có ô diễn giải tự do tương đương (Giải trình – NCC độc quyền,
+   Mô tả – kê khai xung đột và vi phạm KSNB, Nhận xét – đánh giá NCC) thì ô đó là ghi chú.
+2. Mọi form đó có **tab "Đính kèm (n)"** (`useAttachmentTab`) và đính kèm được **ngay khi tạo**: phiếu chưa lưu thì file (kèm ghi chú) nằm
+   ở hàng chờ trên trình duyệt, lưu phiếu xong tự tải lên (`usePendingAttachments`); rời trang chưa lưu thì bỏ hàng chờ – không có file mồ
+   côi trên máy chủ. Form dựng lại theo Id mới (ngăn kéo có key theo Id) gọi `uploadTo(id)` trong hàm lưu.
+3. File lưu ở **thư mục trên máy chủ** (bảng dưới), dung lượng tối đa **một file mặc định 2 MB**, cấu hình được bằng
+   `Attachments:MaxFileSizeMb` (1–25; Docker: biến `ATTACHMENT_MAX_MB`); giao diện đọc giới hạn qua `GET /api/attachments/limits`.
+
+Loại chủ thêm ở lát A4: `SourcingRequest` (quyền Rfq.View/Rfq.Manage), `ContractAmendment` (Contract.View/Contract.Manage),
+`SupplierReview` (SupplierReview.View/Manage), `ControlFinding` (Control.Anomaly.View / Control.Finding.Manage), `ConflictDeclaration`
+(không thuộc công ty; người kê khai tự xem/đính kèm, người khác cần Conflict.View để xem, Conflict.Manage để đính kèm/xóa – mục 18.8).
+
 | Quy tắc | Lý do |
 | --- | --- |
 | File nằm trong **thư mục trên máy chủ** (`Attachments:RootPath`, mặc định `data/attachments` tính từ thư mục ứng dụng; Docker: volume `attachments` gắn vào `/data/attachments`; Windows/IIS: thư mục ngoài thư mục web, ví dụ `D:\ProcurementData\attachments` – docs/deploy-windows.md), đường dẫn `yyyy/MM/{Id}{đuôi}` – không dùng tên người dùng gửi. Bảng `Attachment`: loại chủ (`OwnerType`) + `OwnerId`, CompanyId của chủ (trống với NCC), tên file gốc, đuôi, loại nội dung, dung lượng, SHA-256, đường dẫn tương đối, ghi chú, người/giờ tải lên, cờ xóa + người/giờ xóa | Quyết định Q6; tên trên đĩa không chứa ký tự lạ hay "../" |
-| Tối đa **20 MB/file** (đo khi ghi, không tin dung lượng client báo); chỉ nhận pdf, doc(x), xls(x), csv, ppt(x), txt, xml, jpg/jpeg, png, gif, bmp, tif(f), zip, rar, 7z, msg, eml. Loại nội dung suy từ đuôi; tải xuống luôn dạng `attachment` | Chặn file chạy được, html/svg có thể chạy script trong trình duyệt |
+| Tối đa **2 MB/file** mặc định (A4, 03/11/2026 – trước đó 20 MB theo Q6), cấu hình `Attachments:MaxFileSizeMb` 1–25 (đo khi ghi, không tin dung lượng client báo); chỉ nhận pdf, doc(x), xls(x), csv, ppt(x), txt, xml, jpg/jpeg, png, gif, bmp, tif(f), zip, rar, 7z, msg, eml. Loại nội dung suy từ đuôi; tải xuống luôn dạng `attachment` | Chặn file chạy được, html/svg có thể chạy script trong trình duyệt |
 | **Quyền theo đối tượng chủ**, không thêm mã quyền: xem/tải xuống = quyền xem chủ (Supplier.View, PriceList.View, Rfq.View, PR.View, PO.View, Inventory.Document.View); tải lên/xóa = quyền sửa chủ (Supplier.Manage, PriceList.Manage, Rfq.Manage, PR.Create, PO.Create, Inventory.Document.Create). Chủ đọc qua global query filter: phiếu công ty khác hoặc kho ngoài phạm vi → 404. NCC là danh mục dùng chung nên hồ sơ NCC mọi công ty cùng thấy | Mục 9.2; không lộ việc phiếu có tồn tại |
 | Đính kèm được ở **mọi trạng thái** của chủ (kể cả đã duyệt, đã ghi sổ) | File không đổi số liệu; hóa đơn, biên bản thường có sau khi nhập |
 | **Xóa mềm**: ẩn khỏi danh sách, file giữ trên đĩa; tải lên/xóa vào Nhật ký (`Attachment` có [Auditable]). Ghi file trước, lưu CSDL sau; lưu CSDL lỗi thì xóa file vừa ghi | Đối chiếu, khôi phục khi xóa nhầm; không có file mồ côi |
