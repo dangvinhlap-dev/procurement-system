@@ -45,3 +45,6 @@ src/Proc.Api/data/
 
 # Bản đóng gói cài Windows (deploy/windows/publish.ps1)
 artifacts/
+
+# Kết quả Playwright khi chạy từ thư mục gốc
+/test-results/

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.MasterData;
@@ -43,7 +43,10 @@ public class SharedCatalogEditTests
     [Fact]
     public async Task SuaDanhMucDungChung_TheoQuyen_KhongDoiMa_ThemMoiChiOTongCongTy()
     {
-        var head = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
+        // Người quản trị riêng (không dùng admin – AuthTests đếm số công ty của admin).
+        var managerName = $"sd.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(managerName, ProcApiFactory.TestPassword, ["TCT"]);
+        var head = await _factory.CreateClientInCompanyAsync(managerName, ProcApiFactory.TestPassword, "TCT");
         var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("S"), "Công ty thử sửa danh mục", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var uom = await ReadAsync<UomDto>(await head.PostAsJsonAsync("/api/uoms", new CreateUomRequest(UniqueCode("U")[..8], "Cuộn"), Ct));

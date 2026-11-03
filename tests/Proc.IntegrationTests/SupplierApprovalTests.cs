@@ -31,8 +31,22 @@ public class SupplierApprovalTests
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;
     }
 
-    private Task<HttpClient> AdminAtAsync(string companyCode) =>
-        _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, companyCode);
+    /// <summary>Người quản trị riêng của mỗi test (xUnit tạo lớp mới cho từng test).</summary>
+    private string? _managerUserName;
+
+    /// <summary>
+    /// Đăng nhập người quản trị riêng của test tại một công ty. Không dùng tài khoản <c>admin</c>: công ty do admin tạo làm lệch số công ty
+    /// mà <c>AuthTests</c> đếm (test chỉ qua nhờ thứ tự chạy). Người tạo công ty được làm việc ở công ty đó như các test khác.
+    /// </summary>
+    private async Task<HttpClient> AdminAtAsync(string companyCode)
+    {
+        if (_managerUserName is null)
+        {
+            _managerUserName = $"dn.{Guid.NewGuid():N}"[..16];
+            await _factory.CreateUserAsync(_managerUserName, ProcApiFactory.TestPassword, ["TCT"]);
+        }
+        return await _factory.CreateClientInCompanyAsync(_managerUserName, ProcApiFactory.TestPassword, companyCode);
+    }
 
     /// <summary>Công ty thành viên mới (mã ngẫu nhiên) – không lẫn dữ liệu với test khác.</summary>
     private async Task<string> NewCompanyAsync(HttpClient head)
