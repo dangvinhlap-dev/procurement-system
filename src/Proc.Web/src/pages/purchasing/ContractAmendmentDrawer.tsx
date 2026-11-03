@@ -19,10 +19,11 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { withPendingApprovers } from '../../api/purchasing'
 import { formatDate, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { contractTermFields } from './contractTerms'
-import { confirmReject } from './useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
 
 /** Đường dẫn trang đầy đủ một phụ lục (`AMENDMENT_PATH/:id`) – mở từ thông báo / Việc cần làm / Tra cứu chứng từ (chỉ biết Id phụ lục). */
 export const AMENDMENT_PATH = '/mua-hang/hop-dong-khung/phu-luc'
@@ -160,34 +161,43 @@ export function ContractAmendmentDrawer({
 
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
 
-  const submit = () =>
-    modal.confirm({
-      title: 'Gửi duyệt phụ lục?',
-      content: 'Phụ lục chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối hoặc rút về nháp. Duyệt xong mới áp vào hợp đồng.',
-      okText: 'Gửi duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
+  // Lưu, xem trước chuỗi duyệt (popup liệt kê người duyệt) rồi mới gửi – yêu cầu người dùng 03/11/2026.
+  const submit = () => {
+    setError(null)
+    void confirmSubmitWithPreview(modal, {
+      title: 'Gửi duyệt phụ lục? Duyệt xong mới áp vào hợp đồng.',
+      docType: 'CTA',
+      prepare: async () => {
         const saved = await persist()
-        if (!saved) return
+        if (!saved) return null
         if (isNew) {
           await attachmentTab.uploadTo(saved.id)
           onCreated(saved.id)
         }
+        return { id: saved.id }
+      },
+      onSubmit: async (id) => {
         try {
-          const sent = await mutations.submit.mutateAsync(saved.id)
+          const sent = await mutations.submit.mutateAsync(id)
           message.success(sent.status === 'Approved' ? `Phụ lục ${sent.no} đã duyệt và áp vào hợp đồng.` : `Đã gửi duyệt phụ lục ${sent.no}.`)
         } catch (e) {
           fail(e, 'Không gửi duyệt được.')
         }
       },
+      onError: (e) => fail(e, 'Không gửi duyệt được.'),
     })
+  }
 
   const approve = () =>
     doc &&
     modal.confirm({
       title: `Duyệt phụ lục ${doc.no}?`,
-      content: `${doc.changeSummary}. Giá trị dự kiến sau phụ lục ${formatMoney(doc.expectedAmount)} đ. Duyệt cấp cuối thì phụ lục áp vào hợp đồng.`,
+      content: (
+        <>
+          <p>{doc.changeSummary}. Giá trị dự kiến sau phụ lục {formatMoney(doc.expectedAmount)} đ. Duyệt cấp cuối thì phụ lục áp vào hợp đồng.</p>
+          {approveContent(doc)}
+        </>
+      ),
       okText: 'Duyệt',
       cancelText: 'Không',
       onOk: async () => {
@@ -265,7 +275,7 @@ export function ContractAmendmentDrawer({
     </>
   )
 
-  const statusLabel = isNew ? 'Nháp (chưa lưu)' : doc ? amendmentStatusLabels[doc.status] : ''
+  const statusLabel = isNew ? 'Nháp (chưa lưu)' : doc ? withPendingApprovers(amendmentStatusLabels[doc.status], doc.approvals) : ''
   const notices = doc && (
     <>
       {doc.rejectReason && doc.status === 'Draft' && <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />}
@@ -350,7 +360,7 @@ export function ContractAmendmentDrawer({
             </>
           ),
         },
-        ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+        ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
         attachmentTab,
       ]}
     />

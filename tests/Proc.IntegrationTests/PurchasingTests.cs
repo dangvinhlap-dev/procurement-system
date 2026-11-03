@@ -18,7 +18,7 @@ namespace Proc.IntegrationTests;
 /// ngưỡng và vai trò; từ chối; dưới ngưỡng tự duyệt. Mỗi test một công ty mới để quy trình duyệt không ảnh hưởng test khác.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class PurchasingTests
+public partial class PurchasingTests
 {
     private readonly ProcApiFactory _factory;
 

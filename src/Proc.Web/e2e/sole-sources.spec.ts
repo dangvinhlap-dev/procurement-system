@@ -51,6 +51,10 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
   expect(no).not.toBe('')
 
   await drawer.getByRole('button', { name: 'Gửi duyệt' }).click()
+  // Popup xem trước người duyệt (yêu cầu người dùng 03/11/2026) rồi mới gửi.
+  const sendDialog = page.locator('.ant-modal-confirm')
+  await expect(sendDialog).toContainText('Người duyệt lần lượt')
+  await sendDialog.getByRole('button', { name: /Gửi duyệt$/ }).click()
   await expect(drawer.locator('.detail-drawer-title')).toContainText('Chờ duyệt')
   // Người lập không tự duyệt: không có nút Duyệt.
   await expect(drawer.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0)

@@ -16,6 +16,8 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime } from '../../utils/format'
 import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
+import { approveContent } from '../purchasing/useApprovalCommands'
+import { withPendingApprovers } from '../../api/purchasing'
 import { SupplierProfile } from './SupplierProfile'
 
 /** Đường dẫn màn hình duyệt NCC; trang đầy đủ một yêu cầu là `${SUPPLIER_APPROVAL_PATH}/:id`. */
@@ -90,7 +92,7 @@ export function SupplierApprovalDetailPage() {
  * @param onClose Đóng / quay lại danh sách.
  */
 function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; asPage?: boolean; onClose: () => void }) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const request = useSupplierChangeRequest(id)
   const actions = useSupplierChangeActions()
   const [error, setError] = useState<string | null>(null)
@@ -111,7 +113,19 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
   const buttons = r && (
     <>
       {r.canApprove && (
-        <Button type="primary" loading={actions.approve.isPending} onClick={() => run(() => actions.approve.mutateAsync({ id }), 'Đã duyệt.')}>
+        <Button
+          type="primary"
+          loading={actions.approve.isPending}
+          // Popup nêu người lập và người duyệt sau mình (yêu cầu người dùng 03/11/2026).
+          onClick={() =>
+            modal.confirm({
+              title: `Duyệt yêu cầu ${r.no}?`,
+              content: approveContent(r),
+              okText: 'Duyệt',
+              cancelText: 'Không',
+              onOk: () => run(() => actions.approve.mutateAsync({ id }), 'Đã duyệt.'),
+            })
+          }>
           Duyệt
         </Button>
       )}
@@ -129,7 +143,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
       <DetailDrawer
         open
         asPage={asPage}
-        title={r ? `Yêu cầu ${r.no} – ${changeStatusLabels[r.status]}` : 'Yêu cầu duyệt NCC'}
+        title={r ? `Yêu cầu ${r.no} – ${withPendingApprovers(changeStatusLabels[r.status], r.approvals)}` : 'Yêu cầu duyệt NCC'}
         audit={{ entityType: 'SupplierChangeRequest', id: r?.id }}
         onClose={onClose}
         loading={request.isLoading}
@@ -159,7 +173,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
             // Người duyệt chỉ xem/tải file; tải lên, xóa làm ở màn hình NCC (design.md mục 18.4).
             children: r && <AttachmentPanel ownerType="Supplier" ownerId={r.supplierId} canManage={false} />,
           },
-          { key: 'history', label: 'Lịch sử duyệt', children: r && <ApprovalHistory steps={r.approvals} byCompany /> },
+          { key: 'history', label: 'Lịch sử duyệt', children: r && <ApprovalHistory steps={r.approvals} byCompany createdByName={r.createdByName} createdAt={r.createdAt} /> },
         ]}
       />
       <Modal

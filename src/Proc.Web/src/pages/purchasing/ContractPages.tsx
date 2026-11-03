@@ -30,12 +30,13 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
+import { withPendingApprovers } from '../../api/purchasing'
 import { formatDate, formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { ContractAmendmentDrawer } from './ContractAmendmentDrawer'
 import { RebateGrid, RebateTracking, type RebateValues } from './ContractRebatePanel'
 import { contractTermFields as termFields } from './contractTerms'
-import { confirmReject } from './useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
 
 const LIST_PATH = '/mua-hang/hop-dong-khung'
 
@@ -326,31 +327,40 @@ export function ContractPage() {
 
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
 
-  const submit = () =>
-    modal.confirm({
-      title: 'Gửi duyệt hợp đồng nguyên tắc?',
-      content: 'Hợp đồng chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối hoặc rút về nháp. Duyệt xong mới có hiệu lực.',
-      okText: 'Gửi duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
+  // Lưu, xem trước chuỗi duyệt (popup liệt kê người duyệt) rồi mới gửi – yêu cầu người dùng 03/11/2026.
+  const submit = () => {
+    setError(null)
+    void confirmSubmitWithPreview(modal, {
+      title: 'Gửi duyệt hợp đồng nguyên tắc? Duyệt xong mới có hiệu lực.',
+      docType: 'CTR',
+      prepare: async () => {
         const saved = await persist()
-        if (!saved) return
+        if (!saved) return null
+        if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
+        return { id: saved.id }
+      },
+      onSubmit: async (id) => {
         try {
-          const sent = await mutations.submit.mutateAsync(saved.id)
+          const sent = await mutations.submit.mutateAsync(id)
           message.success(sent.status === 'Active' ? `Hợp đồng ${sent.no} đã có hiệu lực.` : `Đã gửi duyệt hợp đồng ${sent.no}.`)
         } catch (e) {
           fail(e, 'Không gửi duyệt được.')
         }
-        if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
       },
+      onError: (e) => fail(e, 'Không gửi duyệt được.'),
     })
+  }
 
   const approve = () =>
     doc &&
     modal.confirm({
       title: `Duyệt hợp đồng ${doc.no}?`,
-      content: `Giá trị dự kiến ${formatMoney(doc.expectedAmount)} đ. Duyệt cấp cuối thì hợp đồng có hiệu lực.`,
+      content: (
+        <>
+          <p>Giá trị dự kiến {formatMoney(doc.expectedAmount)} đ. Duyệt cấp cuối thì hợp đồng có hiệu lực.</p>
+          {approveContent(doc)}
+        </>
+      ),
       okText: 'Duyệt',
       cancelText: 'Không',
       onOk: async () => {
@@ -526,7 +536,7 @@ export function ContractPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? contractStatusLabels[doc.status] : '', tone: doc ? contractStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(contractStatusLabels[doc.status], doc.approvals) : '', tone: doc ? contractStatusTone[doc.status] : ('neutral' as const) }
 
   const actions = (
     <>
@@ -683,7 +693,7 @@ export function ContractPage() {
           ...(doc && doc.status !== 'Draft' && doc.status !== 'Cancelled'
             ? [{ key: 'amendments', label: `Phụ lục (${doc.amendments.length})`, children: <AmendmentTable rows={doc.amendments} onOpen={openAmendment} /> }]
             : []),
-          ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} /> }] : []),
+          ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}
       />

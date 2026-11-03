@@ -13,6 +13,11 @@ public static class PurchasingEndpoints
     /// <returns>Ứng dụng (để nối tiếp).</returns>
     public static IEndpointRouteBuilder MapPurchasingEndpoints(this IEndpointRouteBuilder app)
     {
+        // Xem trước chuỗi duyệt khi gửi duyệt (yêu cầu người dùng 03/11/2026) – quyền theo loại phiếu kiểm tra trong dịch vụ.
+        app.MapPost("/api/approvals/preview", (ApprovalPreviewRequest request, IApprovalPreviewService s, CancellationToken ct) => s.PreviewSubmitAsync(request, ct))
+            .WithTags("Quy trình duyệt")
+            .RequireAuthorization();
+
         var rules = app.MapGroup("/api/approval-rules").WithTags("Quy trình duyệt");
         rules.MapGet("/", (IApprovalRuleAdministration s, CancellationToken ct) => s.ListAsync(ct))
             .RequirePermission(Permissions.System.ParameterView);

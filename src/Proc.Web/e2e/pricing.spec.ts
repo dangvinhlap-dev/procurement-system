@@ -118,9 +118,9 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   // Đổi giá sau lần lưu đầu: "Gửi duyệt" lưu thay đổi này nên phiếu tải về khác bản đang có – trước đây chính lượt này ghi đè form.
   await page.getByLabel('Đơn giá dòng 1').fill('48500')
   await page.getByLabel('Đơn giá dòng 1').press('Tab')
+  // Gửi duyệt lưu phiếu rồi xem trước chuỗi duyệt – thiếu lý do lệch giá thì báo lỗi ngay, không mở popup.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
-  await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
-  // Lưu rồi gửi (hai lượt gọi API) – khi máy bận có thể quá 5 giây mới báo lỗi.
+  // Lưu rồi xem trước (hai lượt gọi API) – khi máy bận có thể quá 5 giây mới báo lỗi.
   await expect(page.getByRole('alert').filter({ hasText: 'lý do lệch giá' })).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.ant-modal-confirm')).toHaveCount(0)
   const reloaded = page.waitForResponse((r) => poDetail.test(new URL(r.url()).pathname) && r.request().method() === 'GET')
@@ -132,10 +132,20 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await page.screenshot({ path: 'e2e/screenshots/po-price-exception.png' })
   // Gửi duyệt = lưu rồi gửi (hai lượt gọi API) – khi chạy song song có thể quá 5 giây, chờ trạng thái thay vì thông báo thoáng qua.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
-  await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  // Popup liệt kê người duyệt từng cấp (yêu cầu người dùng 03/11/2026).
+  const sendDialog = page.locator('.ant-modal-confirm')
+  await expect(sendDialog).toContainText('Người duyệt lần lượt', { timeout: 20_000 })
+  await page.screenshot({ path: 'e2e/screenshots/po-submit-preview.png' })
+  await sendDialog.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await expect(page.locator('.document-form-title')).toContainText('Chờ duyệt', { timeout: 20_000 })
   await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
   await expect(page.getByRole('tabpanel')).toContainText('Ngoại lệ giá')
+  // Cây lịch sử phê duyệt: lập phiếu, lượt gửi (người, giờ), cấp đang chờ nêu tên người duyệt.
+  const tree = page.getByLabel('Cây lịch sử phê duyệt')
+  await expect(tree).toContainText('Lập phiếu:')
+  await expect(tree).toContainText(/Lượt 1 – gửi duyệt bởi .+ lúc \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)
+  await expect(tree).toContainText('Chờ duyệt:')
+  await page.screenshot({ path: 'e2e/screenshots/approval-tree.png' })
 })
 
 /**

@@ -2,8 +2,9 @@ import { CheckOutlined, CloseCircleOutlined, CloseOutlined, SaveOutlined, SendOu
 import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import type { PurchaseActions, PurchaseStatus } from '../../api/purchasing'
+import { previewApproval, type ApprovalStep, type PurchaseActions, type PurchaseStatus } from '../../api/purchasing'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
+import { ApprovalChain, ApproveInfo } from './ApprovalHistory'
 
 /** Phiếu mua hàng tối thiểu mà lệnh chung cần. */
 interface ApprovableDoc {
@@ -11,6 +12,8 @@ interface ApprovableDoc {
   no: string
   status: PurchaseStatus
   actions: PurchaseActions
+  approvals?: ApprovalStep[]
+  createdByName?: string | null
 }
 
 /** Một lệnh theo Id phiếu (gửi duyệt, duyệt, từ chối, hủy). */
@@ -37,6 +40,8 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
   noun: string
   /** Hiện lỗi trên phiếu. */
   setError: (message: string | null) => void
+  /** Loại phiếu duyệt (PR, PO) – để xem trước chuỗi duyệt trước khi gửi. */
+  docType: string
 }
 
 type AppApi = ReturnType<typeof App.useApp>
@@ -78,11 +83,62 @@ export function confirmReject(modal: AppApi['modal'], message: AppApi['message']
 }
 
 /**
+ * Gửi duyệt có xem trước (yêu cầu người dùng 03/11/2026): lưu phiếu, hỏi server chuỗi duyệt dự kiến (chạy thử – không lưu gì) rồi mới hỏi
+ * xác nhận, popup liệt kê từng cấp và người duyệt được. Lỗi khiến phiếu không gửi được (như khi gửi thật) báo ngay, không mở popup.
+ * @param modal Modal của App.useApp().
+ * @param options.title Câu hỏi, ví dụ "Gửi duyệt đơn mua hàng?".
+ * @param options.docType Loại phiếu duyệt.
+ * @param options.prepare Lưu phiếu; trả Id (và lựa chọn trúng thầu với RFQ), null khi lưu lỗi.
+ * @param options.onSubmit Gửi duyệt thật.
+ * @param options.onError Báo lỗi (lưu hoặc xem trước).
+ */
+export async function confirmSubmitWithPreview(
+  modal: AppApi['modal'],
+  options: {
+    title: string
+    docType: string
+    prepare: () => Promise<{ id: string; award?: unknown } | null>
+    onSubmit: (id: string) => Promise<void>
+    onError: (e: unknown) => void
+    byCompany?: boolean
+    okText?: string
+  },
+) {
+  let prepared: { id: string; award?: unknown } | null
+  let preview
+  try {
+    prepared = await options.prepare()
+    if (!prepared) return
+    preview = await previewApproval(options.docType, prepared.id, prepared.award)
+  } catch (e) {
+    options.onError(e)
+    return
+  }
+  const id = prepared.id
+  modal.confirm({
+    title: options.title,
+    width: 520,
+    content: <ApprovalChain steps={preview.steps} approvedImmediately={preview.approvedImmediately} byCompany={options.byCompany} />,
+    okText: options.okText ?? 'Gửi duyệt',
+    cancelText: 'Không',
+    onOk: () => options.onSubmit(id),
+  })
+}
+
+/**
+ * Nội dung popup Duyệt: người lập và người duyệt tiếp theo sau mình (yêu cầu người dùng 03/11/2026).
+ * @param doc Phiếu có lịch sử duyệt và người lập.
+ */
+export function approveContent(doc: { approvals?: ApprovalStep[]; createdByName?: string | null }) {
+  return <ApproveInfo steps={doc.approvals ?? []} createdByName={doc.createdByName} />
+}
+
+/**
  * Lệnh chung của phiếu có duyệt trên thanh lệnh DocumentForm (design.md mục 10.1): Lưu nháp · Gửi duyệt (lưu trước rồi gửi) · Duyệt ·
  * Từ chối (bắt buộc lý do) · Hủy · Đóng. Nút hiện theo quyền server trả về (actions) – server vẫn kiểm tra lại khi bấm.
  * @returns Hàm lưu (Ctrl+S) và các nút lệnh.
  */
-export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readOnly, persist, mutations, listPath, noun, setError }: ApprovalCommandOptions<T>) {
+export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readOnly, persist, mutations, listPath, noun, setError, docType }: ApprovalCommandOptions<T>) {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback)
@@ -95,30 +151,40 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     if (isNew) navigate(`${listPath}/${saved.id}`, { replace: true })
   }
 
-  const submit = () =>
-    modal.confirm({
+  // Lưu trước rồi xem trước chuỗi duyệt; phiếu mới đã lưu thì chuyển sang trang phiếu dù người dùng chọn "Không".
+  const submit = () => {
+    setError(null)
+    let savedId: string | null = null
+    void confirmSubmitWithPreview(modal, {
       title: `Gửi duyệt ${noun}?`,
-      content: 'Phiếu chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối.',
-      okText: 'Gửi duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        setError(null)
+      docType,
+      prepare: async () => {
         const saved = await persist()
-        if (!saved) return
+        if (!saved) return null
+        savedId = saved.id
+        if (isNew) navigate(`${listPath}/${saved.id}`, { replace: true })
+        return { id: saved.id }
+      },
+      onSubmit: async (id) => {
         try {
-          const sent = await mutations.submit.mutateAsync({ id: saved.id })
+          const sent = await mutations.submit.mutateAsync({ id })
           message.success(sent.status === 'Approved' ? `Phiếu ${sent.no} dưới ngưỡng duyệt – đã duyệt ngay.` : `Đã gửi duyệt phiếu ${sent.no}.`)
         } catch (e) {
           fail(e, 'Không gửi duyệt được.')
         }
-        if (isNew) navigate(`${listPath}/${saved.id}`, { replace: true })
+      },
+      onError: (e) => {
+        fail(e, 'Không gửi duyệt được.')
+        if (isNew && savedId) navigate(`${listPath}/${savedId}`, { replace: true })
       },
     })
+  }
 
   const approve = () =>
     doc &&
     modal.confirm({
       title: `Duyệt phiếu ${doc.no}?`,
+      content: approveContent(doc),
       okText: 'Duyệt',
       cancelText: 'Không',
       onOk: async () => {

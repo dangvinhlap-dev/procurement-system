@@ -53,6 +53,40 @@ export interface ApprovalStep {
    * đủ điều kiện (thiếu vai trò, chỉ có người lập hoặc người vướng xung đột lợi ích).
    */
   nextApprovers?: string[] | null
+  /** Người sẽ duyệt bước còn chờ nhưng chưa đến lượt (cấp/chặng sau) – yêu cầu người dùng 03/11/2026. */
+  upcomingApprovers?: string[] | null
+  /** Người và thời điểm gửi duyệt lượt của bước; null với dữ liệu cũ. */
+  submittedAt?: string | null
+  submittedByName?: string | null
+}
+
+/**
+ * Nhãn trạng thái kèm người đang chờ duyệt, ví dụ "Chờ duyệt: Nguyễn A, Trần B" (yêu cầu người dùng 03/11/2026). Phiếu không còn bước
+ * đang đến lượt thì giữ nguyên nhãn.
+ * @param label Nhãn trạng thái gốc.
+ * @param steps Lịch sử duyệt của phiếu.
+ */
+export function withPendingApprovers(label: string, steps: ApprovalStep[] | null | undefined): string {
+  const names = [...new Set((steps ?? []).flatMap((s) => (s.status === 'Pending' && s.nextApprovers ? s.nextApprovers : [])))]
+  if (!steps?.some((s) => s.status === 'Pending' && s.nextApprovers)) return label
+  if (names.length === 0) return `${label}: chưa có người đủ điều kiện`
+  return `${label}: ${names.length > 3 ? `${names.slice(0, 3).join(', ')} và ${names.length - 3} người khác` : names.join(', ')}`
+}
+
+/** Chuỗi duyệt dự kiến khi gửi – khớp ApprovalPreviewDto. */
+export interface ApprovalPreview {
+  approvedImmediately: boolean
+  steps: ApprovalStep[]
+}
+
+/**
+ * Xem trước chuỗi duyệt (server chạy thử lệnh gửi duyệt rồi hủy – không lưu gì). Lỗi như khi gửi thật (thiếu lý do lệch giá…) ném ra.
+ * @param docType PR, PO, PRL, RFQ, CTR, CTA, NDQ.
+ * @param documentId Id phiếu đã lưu.
+ * @param award RFQ: lựa chọn trúng thầu sẽ gửi.
+ */
+export function previewApproval(docType: string, documentId: string, award?: unknown) {
+  return apiFetch<ApprovalPreview>('/api/approvals/preview', { method: 'POST', body: { docType, documentId, award: award ?? null } })
 }
 
 /** Số tên hiện tối đa – cấp "ai có quyền duyệt" có thể có rất nhiều người, ô lưới chỉ cần đủ để biết nhắc ai. */
