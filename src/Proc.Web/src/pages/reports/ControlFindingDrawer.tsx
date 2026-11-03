@@ -16,6 +16,7 @@ import {
 } from '../../api/control'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { DATE_INPUT_FORMATS, formatDateTime } from '../../utils/format'
@@ -109,6 +110,8 @@ function FindingForm({
   const isNew = finding === null
   const canManage = hasPermission(Permission.ControlFindingManage)
   const editable = canManage && (isNew || finding.status === 'Open')
+  // Bằng chứng, biên bản làm việc – đính kèm được cả sau khi kết luận (design.md mục 18.4).
+  const attachmentTab = useAttachmentTab('ControlFinding', finding?.id, canManage)
   const suppliers = useConflictSupplierOptions(editable)
   const source = finding ?? prefill
   const refPath = controlRefPath(source?.refScreen ?? null, source?.refId ?? null)
@@ -148,6 +151,8 @@ function FindingForm({
           refNo: prefill?.refNo ?? null,
         })
         message.success(`Đã ghi nhận vi phạm ${saved.no} và thông báo lãnh đạo.`)
+        // Form dựng lại theo Id mới nên tải file chọn lúc lập ngay tại đây.
+        await attachmentTab.uploadTo(saved.id)
         onOpen(saved.id)
       } else {
         await mutations.update.mutateAsync({ id: finding.id, input })
@@ -303,6 +308,7 @@ function FindingForm({
             </>
           ),
         },
+        attachmentTab,
       ]}
     />
   )

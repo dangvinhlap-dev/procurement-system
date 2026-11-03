@@ -13,6 +13,7 @@ import {
 } from '../../api/conflicts'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { DATE_INPUT_FORMATS, formatDate, formatDateTime } from '../../utils/format'
@@ -48,6 +49,12 @@ export function ConflictDrawer({ declaration, onClose }: { declaration: Conflict
   const canManage = hasPermission(Permission.ConflictManage)
   const suppliers = useConflictSupplierOptions(isNew)
   const users = useConflictUserOptions(isNew && canManage)
+  // Văn bản kê khai có chữ ký: người kê khai tự đính kèm, người khác cần quyền quản lý (máy chủ kiểm tra lại – design.md mục 18.8).
+  const attachmentTab = useAttachmentTab(
+    'ConflictDeclaration',
+    declaration?.id,
+    isNew || canManage || declaration.userId === session?.user.userId,
+  )
 
   const initialValues: ConflictFormValues = isNew
     ? { userId: null, supplierId: null, relation: null, description: '', validFrom: dayjs() }
@@ -78,6 +85,8 @@ export function ConflictDrawer({ declaration, onClose }: { declaration: Conflict
         validFrom: values.validFrom ? values.validFrom.format('YYYY-MM-DD') : null,
       })
       message.success(`Đã ghi kê khai quan hệ với NCC ${saved.supplierCode}.`)
+      // Ngăn kéo đóng sau khi ghi nên tải file chọn lúc kê khai ngay tại đây.
+      await attachmentTab.uploadTo(saved.id)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không ghi được kê khai.')
@@ -218,6 +227,7 @@ export function ConflictDrawer({ declaration, onClose }: { declaration: Conflict
             </>
           ),
         },
+        attachmentTab,
       ]}
     />
   )

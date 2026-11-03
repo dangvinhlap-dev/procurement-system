@@ -19,6 +19,7 @@ import {
 } from '../../api/supplierReviews'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { DATE_INPUT_FORMATS, formatDateTime, formatMoney, formatQuantity } from '../../utils/format'
 import { matchesKeyword } from '../../utils/text'
@@ -134,6 +135,8 @@ function ReviewForm({
   const isNew = review === null
   const canManage = hasPermission(Permission.SupplierReviewManage)
   const editable = canManage && (isNew || review.status === 'Draft')
+  // Biên bản, bằng chứng chấm điểm – đính kèm được cả khi đã hoàn thành (design.md mục 18.4).
+  const attachmentTab = useAttachmentTab('SupplierReview', review?.id, canManage)
   // Lập từ nút "Tạo mới" (chưa có NCC) thì chọn NCC; lập từ một dòng bảng đánh giá thì NCC đã cố định.
   const pickSupplier = isNew && !fresh?.supplierId
   const suppliers = useConflictSupplierOptions(pickSupplier)
@@ -189,6 +192,8 @@ function ReviewForm({
       if (isNew) {
         const saved = await mutations.create.mutateAsync(input)
         message.success(`Đã lập phiếu đánh giá ${saved.no}.`)
+        // Form dựng lại theo Id mới nên tải file chọn lúc lập ngay tại đây.
+        await attachmentTab.uploadTo(saved.id)
         onOpen(saved.id)
       } else {
         await mutations.update.mutateAsync({ id: review.id, input })
@@ -213,6 +218,7 @@ function ReviewForm({
         try {
           // Phiếu mới: lập nháp trước rồi hoàn thành ngay (máy chủ cấp số khi lập).
           const target = isNew ? await mutations.create.mutateAsync(input) : review
+          if (isNew) await attachmentTab.uploadTo(target.id)
           const done = await mutations.complete.mutateAsync({ id: target.id, input })
           message.success(`Đã hoàn thành phiếu đánh giá ${done.no}.`)
           if (isNew) onOpen(done.id)
@@ -389,6 +395,7 @@ function ReviewForm({
             </>
           ),
         },
+        attachmentTab,
       ]}
     />
   )
