@@ -324,7 +324,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Ngân sách tạm dừng (người dùng 05/11/2026: "bỏ qua phần ngân sách, ghi nhận lại")**: chưa biết chặn ở PR hay PO và điều kiện chặn.
     Giữ nguyên code bước 1 (không khai ngân sách thì không ảnh hưởng). Không làm thêm việc ngân sách (bỏ "nhập ngân sách bằng Excel")
     cho tới khi người dùng chốt 8 câu hỏi ở design.md 18.24 dòng "Chưa chốt nghiệp vụ". Khi chốt có thể phải sửa `BudgetUsage`,
-    `ApplyBudgetCheck`, submit PR/PO.
+    `ApplyBudgetCheck`, submit PR/PO. Người dùng nhắc lại 05/11/2026: **hoãn, chỉ làm khi người dùng yêu cầu** – chưa xác nhận được
+    lúc này, không hỏi lại 8 câu và không đề xuất việc ngân sách trong các đề xuất tiếp theo.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
