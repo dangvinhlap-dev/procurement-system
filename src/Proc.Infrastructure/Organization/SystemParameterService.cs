@@ -50,6 +50,8 @@ public sealed class SystemParameterService : ISystemParameterService
             new(SystemParameterCodes.RfqMinSuppliers, "Đấu thầu", "Số NCC tối thiểu khi gửi RFQ",
                 rfqMin.ToString(CultureInfo.InvariantCulture), defaultText, rfqMin == CompanyParameter.DefaultRfqMinSuppliers, true,
                 $"Phải mời đủ số NCC này mới gửi được yêu cầu báo giá (1–{CompanyParameter.MaxRfqMinSuppliers}). RFQ đã gửi không bị ảnh hưởng."),
+            Toggle(SystemParameterCodes.RfqDossierRequired, "Bắt buộc đủ hồ sơ trình khi chọn thầu", parameter?.RequireRfqDossierComplete ?? false,
+                "Bật: hồ sơ trình của RFQ (7 mục) phải đủ mới chọn thầu, gửi hội đồng duyệt được. Tắt: thiếu mục vẫn gửi, hộp thoại duyệt ghi mục còn thiếu.", "Đấu thầu"),
             new(SystemParameterCodes.InternalMarkupPercent, "Giá", "% markup nội bộ mặc định",
                 FormatPercent(markup), FormatPercent(CompanyParameter.DefaultInternalMarkupPercent),
                 markup == CompanyParameter.DefaultInternalMarkupPercent, true,
@@ -88,6 +90,7 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
         [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
         [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
+        [SystemParameterCodes.RfqDossierRequired] = nameof(CompanyParameter.RequireRfqDossierComplete),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
@@ -164,9 +167,11 @@ public sealed class SystemParameterService : ISystemParameterService
                 break;
             case SystemParameterCodes.ReceiptQcRequired:
             case SystemParameterCodes.ReceiptSeparatePoCreator:
+            case SystemParameterCodes.RfqDossierRequired:
                 var on = ParseToggle(request.Value);
                 var row = await GetOrCreateAsync(companyId, cancellationToken);
                 if (key == SystemParameterCodes.ReceiptQcRequired) row.ChangeRequireReceiptQc(on);
+                else if (key == SystemParameterCodes.RfqDossierRequired) row.ChangeRequireRfqDossierComplete(on);
                 else row.ChangeSeparatePoCreatorFromReceipt(on);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
@@ -247,8 +252,8 @@ public sealed class SystemParameterService : ISystemParameterService
     }
 
     /// <summary>Tham số bật/tắt (nhóm "Nhận hàng"): giá trị "Bật"/"Tắt", mặc định tắt.</summary>
-    private static SystemParameterDto Toggle(string code, string name, bool value, string note) =>
-        new(code, "Nhận hàng", name, value ? "Bật" : "Tắt", "Tắt", !value, true, note);
+    private static SystemParameterDto Toggle(string code, string name, bool value, string note, string group = "Nhận hàng") =>
+        new(code, group, name, value ? "Bật" : "Tắt", "Tắt", !value, true, note);
 
     /// <summary>Giá trị bật/tắt gửi lên: true/false, 1/0, bật/tắt; trống = về mặc định.</summary>
     /// <exception cref="BusinessRuleException">Khi không đọc được.</exception>

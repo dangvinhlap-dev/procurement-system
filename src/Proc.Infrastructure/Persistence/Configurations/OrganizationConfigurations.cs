@@ -20,6 +20,7 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.SlaPricedDays).HasDefaultValue(CompanyParameter.DefaultSlaPricedDays);
         builder.Property(x => x.RequireReceiptQc).HasDefaultValue(false);
         builder.Property(x => x.SeparatePoCreatorFromReceipt).HasDefaultValue(false);
+        builder.Property(x => x.RequireRfqDossierComplete).HasDefaultValue(false);
         builder.Property(x => x.SlaSourcingDays).HasDefaultValue(CompanyParameter.DefaultSlaSourcingDays);
         builder.Property(x => x.SlaUrgentDays).HasDefaultValue(CompanyParameter.DefaultSlaUrgentDays);
         // Mục tiêu KPI (design.md mục 18.18): mặc định cột = mục tiêu mặc định của danh mục để dòng tham số cũ có ngay giá trị đúng.

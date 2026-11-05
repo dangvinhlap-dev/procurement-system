@@ -2176,6 +2176,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("RequireRfqDossierComplete")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<int>("RfqMinSuppliers")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

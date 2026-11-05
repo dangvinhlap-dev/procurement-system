@@ -271,8 +271,18 @@ public partial class SourcingTests
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000, 0, null, 7), Q(thung, 600_000, 5, "8", 7)), Ct));
         rfq = await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 48_000)), Ct));
         Assert.True(rfq.Dossier.Single(d => d.Code == "COMPARE").IsDone);
-        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
-            new AwardRfqRequest([new(cai, b, null), new(thung, a, null)]), Ct));
+
+        // Mặc định thiếu mục vẫn chọn thầu được; công ty bật tham số RFQ_DOSSIER_REQUIRED thì phải đủ 7 mục mới chọn thầu.
+        var award = new AwardRfqRequest([new(cai, b, null), new(thung, a, null)]);
+        await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync(
+            $"/api/system-parameters/{SystemParameterCodes.RfqDossierRequired}", new UpdateSystemParameterRequest("true"), Ct));
+        var blocked = await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", award, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+        Assert.StartsWith("Hồ sơ trình còn thiếu:", await TitleAsync(blocked));
+        Assert.Equal("Sent", (await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct))).Status);
+        rfq = await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/dossier",
+            new SaveRfqDossierRequest(rfq.Dossier.Where(d => !d.IsAutomatic).Select(d => new SaveRfqDossierItemRequest(d.Code, true, d.Note)).ToList()), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", award, Ct));
         Assert.False(rfq.Actions.CanEditDossier);
         Assert.Contains("không sửa được", await TitleAsync(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/dossier",
             new SaveRfqDossierRequest([new("COST", true, null)]), Ct)));
