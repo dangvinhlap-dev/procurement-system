@@ -110,15 +110,37 @@ public sealed class DocumentPdfService : IDocumentPdfService
                 new("STT", 8), new("Mã hàng", 27), new("Tên hàng", 53), new("ĐVT", 12), new("SL", 16, true), new("Giá tham khảo", 20, true),
                 new("Thành tiền", 24, true), new("Ngày cần", 20),
             ],
-            pr.Lines.Select(l => new[]
-            {
-                l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (string.IsNullOrWhiteSpace(l.Note) ? "" : $" – {l.Note}"), l.UomCode, Qty(l.Qty),
-                Price(l.EstPrice), Money(l.Amount), Date(l.NeededDate ?? pr.NeededDate) ?? "",
-            }).ToList(),
+            PurchaseRequestRows(pr),
             [new("Tổng giá trị ước tính", Money(pr.TotalAmount), true)],
             VietnameseNumberText.ToVndWords(pr.TotalAmount), pr.Note,
             ["Người đề nghị", "Trưởng bộ phận", "Người duyệt"], [pr.RequesterName ?? pr.CreatedByName, null, approver]);
         return new PdfFile($"{pr.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
+    }
+
+    /// <summary>
+    /// Dòng in của phiếu đề nghị mua: dòng có mã, rồi hàng mới <b>chưa gắn mã</b> đánh số tiếp, cột mã ghi "Chưa có mã", tên = mô tả
+    /// + quy cách + ghi chú. Hàng mới đã gắn mã không in lại vì đã sinh dòng có mã (design.md mục 18.12) – nên tổng các dòng in khớp
+    /// tổng giá trị ước tính của PR.
+    /// </summary>
+    /// <param name="pr">Phiếu đề nghị mua đã đọc theo phạm vi người dùng.</param>
+    /// <returns>Mỗi dòng: STT, mã, tên, ĐVT, SL, giá tham khảo, thành tiền, ngày cần.</returns>
+    public static IReadOnlyList<string[]> PurchaseRequestRows(PurchaseRequestDto pr)
+    {
+        var rows = pr.Lines.Select(l => new[]
+        {
+            l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (string.IsNullOrWhiteSpace(l.Note) ? "" : $" – {l.Note}"), l.UomCode, Qty(l.Qty),
+            Price(l.EstPrice), Money(l.Amount), Date(l.NeededDate ?? pr.NeededDate) ?? "",
+        }).ToList();
+        var no = pr.Lines.Count;
+        foreach (var n in pr.NewItems.Where(n => n.ItemId is null).OrderBy(n => n.LineNo))
+        {
+            var name = n.Description
+                + (string.IsNullOrWhiteSpace(n.Specification) ? "" : $" – Quy cách: {n.Specification}")
+                + (string.IsNullOrWhiteSpace(n.Note) ? "" : $" – {n.Note}");
+            rows.Add([(++no).ToString(Vi), "Chưa có mã", name, n.UomCode, Qty(n.Qty), Price(n.EstPrice), Money(n.Amount),
+                Date(n.NeededDate ?? pr.NeededDate) ?? ""]);
+        }
+        return rows;
     }
 
     /// <inheritdoc />

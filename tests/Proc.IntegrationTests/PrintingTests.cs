@@ -78,8 +78,14 @@ public class PrintingTests
         Assert.True(poPdf.PageCount >= 2, $"60 dòng phải sang trang, có {poPdf.PageCount} trang.");
 
         var pr = await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)],
+                [new(null, "Van bi inox DN50", "Áp lực PN16", cai, 2, 450_000, null, "Mẫu như van cũ")]), Ct));
         Assert.Equal($"PHIẾU ĐỀ NGHỊ MUA HÀNG {pr.No}", (await PdfAsync(await client.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct))).Info.Title);
+
+        // Hàng mới chưa có mã in nối sau dòng có mã, đánh số tiếp (design.md mục 18.12).
+        var prRows = Proc.Infrastructure.Printing.DocumentPdfService.PurchaseRequestRows(pr);
+        Assert.Equal(2, prRows.Count);
+        Assert.Equal(["2", "Chưa có mã", "Van bi inox DN50 – Quy cách: Áp lực PN16 – Mẫu như van cũ", "CAI", "2", "450.000", "900.000"], prRows[1][..7]);
 
         var grn = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
             new SaveReceiptRequest(Today, kt, supplier.Id, "0001234", "1C26TBL", Today, null, "Anh Bình", null, [new(null, item.Id, cai, 10, 12_500, "10", null, null, null)]), Ct));

@@ -1402,7 +1402,8 @@ Nguồn: đề xuất Ban CUVT V3 (hàng chưa có trong danh mục → chuyển
 | Hàng mới **không lên PO/RFQ** (không có trong dòng PR mở để lấy) cho tới khi gắn mã | Không đặt hàng khi chưa xác định mặt hàng, NCC (V3) |
 | PR **đã duyệt**: nút **Tìm nguồn** (quyền `Sourcing.Rfq.Manage` – nhóm Đàm phán) lập phiếu tìm nguồn (TIMNGUON) với mô tả, quy cách, SL, hạn = ngày cần, ghi chú "Từ đề nghị PR-… – hàng mới dòng n: SL ĐVT"; mỗi dòng một phiếu, dòng hiện số phiếu (mở được) | Chuyển nhóm Đàm phán tìm nguồn |
 | Có mã hàng (sau khi tìm nguồn, đã tạo mặt hàng): nút **Gắn mã** (quyền lập PO hoặc lập PR) chọn mặt hàng trong phạm vi nhóm hàng, đang dùng; ĐVT của dòng phải là ĐVT cơ sở/quy đổi của mặt hàng. Gắn mã **sinh dòng PR có mã** cùng SL, ĐVT, giá dự kiến, ngày cần (ghi chú = ghi chú hoặc mô tả) – lên PO/RFQ như dòng thường. SL đã được duyệt nên không duyệt lại; tổng PR không đổi (dòng đã gắn không đếm hai lần). Mỗi dòng gắn một lần | Nối nhu cầu đã duyệt với mã hàng mà không phải lập PR mới |
-| Chưa làm: in PR (PDF) chưa in hàng mới; phiếu tìm nguồn chưa hiện ngược PR nguồn (chỉ ghi chú) | Làm khi có yêu cầu |
+| In PR (PDF): hàng mới **chưa gắn mã** in nối sau dòng có mã, đánh số tiếp, cột mã "Chưa có mã", tên = mô tả + quy cách + ghi chú; dòng đã gắn mã không in lại (đã thành dòng có mã) | Bản in khớp tổng giá trị ước tính và đủ nhu cầu đã duyệt |
+| Chưa làm: phiếu tìm nguồn chưa hiện ngược PR nguồn (chỉ ghi chú) | Làm khi có yêu cầu |
 
 Migration `V0_13_0_HangMoiChuaCoMa` (bảng `PurchaseRequestNewItem` – `Down()` xóa bảng, mất hàng mới chưa có mã đã ghi trên PR; dòng có mã
 sinh ra khi gắn mã vẫn giữ).
