@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu; in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -326,6 +326,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     cho tới khi người dùng chốt 8 câu hỏi ở design.md 18.24 dòng "Chưa chốt nghiệp vụ". Khi chốt có thể phải sửa `BudgetUsage`,
     `ApplyBudgetCheck`, submit PR/PO. Người dùng nhắc lại 05/11/2026: **hoãn, chỉ làm khi người dùng yêu cầu** – chưa xác nhận được
     lúc này, không hỏi lại 8 câu và không đề xuất việc ngân sách trong các đề xuất tiếp theo.
+  - **Bước 3 – việc "làm khi có yêu cầu" (05/11/2026, nhánh `feature/in-pr-hang-moi`)**: người dùng "làm tiếp" không chỉ định – chọn việc
+    nhỏ, an toàn: **in PR (PDF) có hàng mới chưa có mã** (`DocumentPdfService.PurchaseRequestRows`, design.md 18.12). Không migration.
+    Test: `PrintingTests` thêm hàng mới vào PR, kiểm tra dòng in. Kiểm tra: `dotnet build`, `dotnet test` 523/523. Còn lại ở 18.12: phiếu tìm nguồn hiện ngược PR nguồn.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
