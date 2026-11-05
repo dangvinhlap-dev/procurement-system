@@ -352,3 +352,5 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - Bản cài thử 0.10.0 (chế độ Production, như cài Windows): `D:\project\procurement-thu-0.10.0`, chạy ở http://localhost:5002, CSDL
   `procurement_kiemtra_0100`, đăng nhập `admin` / `Admin@2026`; dừng: `Stop-Process -Id (Get-Content D:\project\procurement-thu-0.10.0\pid.txt)`.
 - Build bị khóa DLL khi API đang chạy → dừng API trước khi build; chạy Playwright khi API môi trường Testing đã bật sẵn (`--no-build`).
+- `git pull` lỗi "bad object refs/heads/main (1)" (05/11/2026): file ref trùng tên kiểu `main (1)` trong `.git/refs` (do công cụ sao chép/đồng bộ
+  tạo ra). Kiểm tra commit trong đó đã nằm trong lịch sử (`git merge-base --is-ancestor`) rồi chuyển file ra ngoài `.git` – không mất gì.
