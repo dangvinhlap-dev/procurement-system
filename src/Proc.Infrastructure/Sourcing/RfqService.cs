@@ -183,6 +183,10 @@ public sealed class RfqService : IRfqService
         await RequireNoConflictAsync(rfq, cancellationToken);
         rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam());
         await CheckAwardedSuppliersAsync(rfq, cancellationToken);
+        // Hồ sơ trình thiếu mục mặc định không chặn (hội đồng quyết); công ty bật tham số RFQ_DOSSIER_REQUIRED thì chặn – design.md mục 8.6.
+        if (await _db.CompanyParameters.AsNoTracking().AnyAsync(p => p.RequireRfqDossierComplete, cancellationToken)
+            && rfq.Dossier.Where(d => !d.IsDone).Select(d => d.Name).ToList() is { Count: > 0 } missing)
+            throw new BusinessRuleException($"Hồ sơ trình còn thiếu: {string.Join(", ", missing)} – bổ sung ở tab Hồ sơ trình rồi chọn thầu lại (công ty bắt buộc đủ hồ sơ trình).");
         // Lát B3 (M4): chọn thầu xong là gửi hội đồng duyệt ngay – không có trạng thái "đã chọn nhưng chưa gửi".
         await _approvals.SubmitAsync(rfq, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);

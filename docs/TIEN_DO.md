@@ -317,10 +317,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     thay `SubmitWithExceptionAsync`); đầu phiếu `BudgetNotice`; lịch sử duyệt `stageLabels`. Migration `V0_18_0_NganSachBoPhan` (52 → 53).
     Test: tích hợp `BudgetTests` (2), e2e `budget.spec.ts`; sửa `PurchasingTests` (danh sách loại duyệt thêm PRB, POB). Kiểm tra: `dotnet test`
     523/523; Playwright budget + pricing + purchasing + administration + permissions 18/18; `npm run build`, `tsc`, `oxlint` qua.
+  - **Bước 2 (xong, nhánh `feature/chan-ho-so-trinh`)**: tham số công ty "Bắt buộc đủ hồ sơ trình khi chọn thầu" (`RFQ_DOSSIER_REQUIRED`,
+    `CompanyParameter.RequireRfqDossierComplete`, mặc định Tắt – giữ hành vi cũ); bật thì `RfqService.AwardAsync` chặn, báo mục còn thiếu
+    (design.md 8.6). Migration `V0_18_0_BatBuocHoSoTrinh` (53 → 54). Test: `SourcingTests.HoSoTrinh_VaTaoBangGiaTuKetQuaThau` thêm bước
+    bật tham số; e2e `system-parameters` đếm 21 tham số.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
-- Đang chờ người dùng: hồ sơ trình thiếu mục hiện **không chặn** gửi duyệt (mặc định an toàn) – đổi thành chặn nếu người dùng yêu cầu.
+- Hồ sơ trình thiếu mục: từ 05/11/2026 mỗi công ty tự bật chặn ở Tham số hệ thống (`RFQ_DOSSIER_REQUIRED`, mặc định Tắt).
 
 ## Việc tiếp theo
 

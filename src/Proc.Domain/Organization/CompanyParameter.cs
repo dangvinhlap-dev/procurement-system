@@ -49,6 +49,15 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// </summary>
     public bool SeparatePoCreatorFromReceipt { get; private set; }
 
+    /// <summary>
+    /// Chọn thầu (gửi hội đồng duyệt kết quả) chỉ khi hồ sơ trình đủ mọi mục (design.md mục 8.6 – lát B3b). Mặc định tắt: thiếu mục vẫn gửi
+    /// được, hộp thoại duyệt ghi "đủ x/7, còn thiếu…" để hội đồng quyết – công ty muốn chặn cứng thì bật.
+    /// </summary>
+    public bool RequireRfqDossierComplete { get; private set; }
+
+    /// <summary>Bật/tắt bắt buộc đủ hồ sơ trình khi chọn thầu; null = về mặc định (tắt).</summary>
+    public void ChangeRequireRfqDossierComplete(bool? value) => RequireRfqDossierComplete = value ?? false;
+
     /// <summary>Bật/tắt bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng; null = về mặc định (tắt).</summary>
     public void ChangeRequireReceiptQc(bool? value) => RequireReceiptQc = value ?? false;
 

@@ -6,6 +6,9 @@ public static class SystemParameterCodes
     /// <summary>Số NCC tối thiểu khi gửi RFQ – sửa được.</summary>
     public const string RfqMinSuppliers = "RFQ_MIN_SUPPLIERS";
 
+    /// <summary>Bắt buộc đủ hồ sơ trình mới chọn thầu (gửi duyệt kết quả) – bật/tắt (design.md mục 8.6).</summary>
+    public const string RfqDossierRequired = "RFQ_DOSSIER_REQUIRED";
+
     /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
     public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
 
