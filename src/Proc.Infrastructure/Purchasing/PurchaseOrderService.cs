@@ -27,6 +27,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     private readonly ApprovalEngine _approvals;
     private readonly IPriceListService _prices;
     private readonly IRfqAwardPriceReader _awards;
+    private readonly BudgetUsage _budgets;
 
     /// <summary>Tạo dịch vụ.</summary>
     public PurchaseOrderService(
@@ -39,6 +40,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         _prices = prices;
         _awards = awards;
         _approvals = new ApprovalEngine(db, scope, clock);
+        _budgets = new BudgetUsage(db);
     }
 
     /// <inheritdoc />
@@ -98,6 +100,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var order = PurchaseOrder.Create(companyId, no, ToHeader(request, departmentId));
         order.SetLines(lines);
         await ApplyApprovedPricesAsync(order, cancellationToken);
+        order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         _db.PurchaseOrders.Add(order);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -115,6 +118,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         order.Update(ToHeader(request, departmentId));
         order.SetLines(lines);
         await ApplyApprovedPricesAsync(order, cancellationToken);
+        order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -140,9 +144,12 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             ruleType = ApprovalTypes.PurchaseOrderEmergency;
         }
 
-        if (order.HasPriceException)
-            await _approvals.SubmitWithExceptionAsync(order, ApprovalTypes.PurchaseOrderPriceException, cancellationToken, ruleType);
-        else await _approvals.SubmitAsync(order, cancellationToken, ruleType);
+        // Ngân sách tính lại lúc gửi; vượt thì thêm chặng "vượt ngân sách" POB sau chặng ngoại lệ giá (design.md mục 18.24) – không chặn.
+        order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
+        var stages = new List<(string, int)>();
+        if (order.HasPriceException) stages.Add((ApprovalTypes.PurchaseOrderPriceException, ApprovalTypes.PriceExceptionStage));
+        if (order.IsOverBudget) stages.Add((ApprovalTypes.PurchaseOrderOverBudget, ApprovalTypes.OverBudgetStage));
+        await _approvals.SubmitWithStagesAsync(order, stages, cancellationToken, ruleType);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -524,7 +531,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             await ContractScopeNoteAsync(order, department?.Code, cancellationToken), order.PurchaseType.ToString(), order.EmergencyReason,
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
-            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed);
+            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order));
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

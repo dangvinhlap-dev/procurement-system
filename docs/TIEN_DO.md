@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 03/11/2026 (phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -309,10 +309,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   khác – làm khi có lỗi). e2e `pricing` bỏ bước tải lại trang: làm chậm lượt tải phiếu, gõ lý do lệch giá trước khi tải xong (đã thử tắt
   cơ chế → test hỏng đúng như lỗi cũ). Kiểm tra: Playwright 87/87, `pricing` lặp 8 lần × 4 luồng qua; `npm run build`, `tsc`, `oxlint` qua;
   không sửa backend nên không chạy lại `dotnet test` (API đang chạy khóa DLL).
-- **HOÃN – chờ lệnh người dùng: lát C3 (ngân sách công ty × bộ phận × tháng)**. Người dùng yêu cầu 02/11/2026: không làm ngân sách lúc
-  này, **chỉ làm khi người dùng ra lệnh**. Nội dung đã chốt để làm sau: ngân sách theo công ty × bộ phận × tháng; PR/PO kiểm tra, vượt
-  ngân sách không chặn mà thêm cấp duyệt "vượt ngân sách" (design.md mục 18 bảng quyết định; Phantich V1). Không tự đề xuất làm C3 khi
-  "làm tiếp" – bỏ qua sang lát kế tiếp.
+- **Kế hoạch 05/11/2026 (người dùng: "làm từng bước")**: (1) C3 ngân sách → (2) chặn gửi duyệt khi hồ sơ trình thiếu mục → (3) các việc
+  "làm khi có yêu cầu" ở design.md (mục 4 – góp ý sau test 0.17.0 – chờ người dùng).
+  - **Bước 1 – C3 (xong, nhánh `feature/ngan-sach`)**: ngân sách bộ phận × tháng (design.md 18.24): bảng `DepartmentBudget`, quyền
+    `Purchase.Budget.View/Manage`, API `/api/budgets`, màn hình BUDG (`BudgetListPage`, `BudgetDrawer`); đã dùng = PO + phần PR chưa lên PO
+    (`BudgetUsage`); PR/PO kiểm tra lúc lưu và gửi, vượt thì thêm chặng 3 "Vượt ngân sách" (loại PRB/POB, `ApprovalEngine.SubmitWithStagesAsync`
+    thay `SubmitWithExceptionAsync`); đầu phiếu `BudgetNotice`; lịch sử duyệt `stageLabels`. Migration `V0_18_0_NganSachBoPhan` (52 → 53).
+    Test: tích hợp `BudgetTests` (2), e2e `budget.spec.ts`; sửa `PurchasingTests` (danh sách loại duyệt thêm PRB, POB). Kiểm tra: `dotnet test`
+    523/523; Playwright budget + pricing + purchasing + administration + permissions 18/18; `npm run build`, `tsc`, `oxlint` qua.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
@@ -321,7 +325,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
-   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong; **C3 hoãn chờ lệnh người dùng**; G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
+   E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C3, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong (C3 làm 05/11/2026); G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0
    Bản 0.10.0 đã phát hành 01/11/2026 (SEC-2, đợt E, A1, WIN). Bản **0.12.0** phát hành 02/11/2026 (B3a–B5b, C1):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.12.0

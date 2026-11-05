@@ -54,23 +54,30 @@ internal sealed class ApprovalEngine
     }
 
     /// <summary>
-    /// Gửi duyệt có chặng ngoại lệ (design.md mục 18.10 – PO lệch giá đã duyệt): chặng 1 các cấp thường của loại phiếu (có thể không
-    /// có cấp nào nếu dưới mọi ngưỡng), chặng 2 các cấp của loại ngoại lệ tại cùng công ty – luôn ít nhất một cấp
-    /// (<see cref="ApprovalPlan.ExceptionLevels"/>). Bước chặng 2 vẫn mang loại phiếu gốc nên người duyệt cần quyền duyệt loại phiếu đó.
+    /// Gửi duyệt có thêm chặng phụ sau chặng thường: chặng 1 các cấp thường của loại phiếu (có thể không có cấp nào nếu dưới mọi
+    /// ngưỡng), rồi lần lượt từng chặng phụ theo bộ cấp của loại phụ tại cùng công ty – mỗi chặng phụ luôn ít nhất một cấp
+    /// (<see cref="ApprovalPlan.ExceptionLevels"/>). Dùng cho PO lệch giá đã duyệt (POX, chặng 2 – design.md mục 18.10) và PR/PO vượt
+    /// ngân sách (PRB/POB, chặng 3 – mục 18.24). Bước chặng phụ vẫn mang loại phiếu gốc nên người duyệt cần quyền duyệt loại phiếu đó.
+    /// Không có chặng phụ nào thì như <see cref="SubmitAsync"/>.
     /// </summary>
     /// <param name="document">Đối tượng duyệt.</param>
-    /// <param name="exceptionType">Mã loại ngoại lệ trong <see cref="ApprovalTypes"/> (ví dụ POX).</param>
+    /// <param name="extraStages">Các chặng phụ: mã loại trong <see cref="ApprovalTypes"/> và số chặng (tăng dần).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <param name="ruleType">Bộ cấp duyệt thay thế cho chặng 1 (như <see cref="SubmitAsync"/>).</param>
-    public async Task SubmitWithExceptionAsync(IApprovalSubject document, string exceptionType, CancellationToken cancellationToken, string? ruleType = null)
+    public async Task SubmitWithStagesAsync(
+        IApprovalSubject document, IReadOnlyList<(string Type, int Stage)> extraStages, CancellationToken cancellationToken, string? ruleType = null)
     {
         var round = document.Submit();
-        var exceptionRules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == exceptionType).ToListAsync(cancellationToken);
         var steps = ApprovalPlan.Levels(await BaseRulesAsync(document, ruleType, cancellationToken), document.ApprovalAmount)
             .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
-            .Concat(ApprovalPlan.ExceptionLevels(exceptionRules, document.ApprovalAmount)
-                .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, 2)))
             .ToList();
+        foreach (var (type, stage) in extraStages.OrderBy(x => x.Stage))
+        {
+            var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == type).ToListAsync(cancellationToken);
+            steps.AddRange(ApprovalPlan.ExceptionLevels(rules, document.ApprovalAmount)
+                .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, stage)));
+        }
+
         await StartAsync(document, steps, cancellationToken);
     }
 

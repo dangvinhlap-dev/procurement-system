@@ -62,6 +62,7 @@ import { ExpiringReportPage, GroupStockReportPage, ReorderSuggestionReportPage, 
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
 import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
+import { BudgetListPage } from './pages/purchasing/BudgetListPage'
 import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
@@ -85,6 +86,7 @@ const implemented: Record<string, ReactNode> = {
   PR: <PurchaseListPage kind="purchase-requests" title="Danh sách đề nghị mua hàng (PR)" path="/mua-hang/pr" exportFileName="de-nghi-mua-hang" />,
   PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
   POTRK: <DeliveryTrackingPage />,
+  BUDG: <BudgetListPage />,
   TODO: <PendingApprovalsPage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,

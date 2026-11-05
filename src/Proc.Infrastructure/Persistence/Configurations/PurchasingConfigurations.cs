@@ -62,6 +62,8 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
         builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Warehouse>().WithMany()
             .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
@@ -150,6 +152,8 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
         builder.Property(x => x.GrossAmount).HasPrecision(19, 2);
         builder.Property(x => x.TotalDiscount).HasPrecision(19, 2);
         builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
         builder.Property(x => x.TotalVat).HasPrecision(19, 2);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
@@ -197,5 +201,21 @@ internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<
         builder.HasOne<Proc.Domain.Sourcing.RfqLine>().WithMany().HasForeignKey(x => x.SourceRfqLineId).OnDelete(DeleteBehavior.Restrict);
         // Ghi nhận mua theo NCC độc quyền (lát C1b – design.md mục 18.10).
         builder.HasOne<Proc.Domain.MasterData.SoleSourceApproval>().WithMany().HasForeignKey(x => x.SoleSourceApprovalId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng DepartmentBudget – ngân sách bộ phận × tháng (design.md mục 18.24).</summary>
+internal sealed class DepartmentBudgetConfiguration : IEntityTypeConfiguration<DepartmentBudget>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<DepartmentBudget> builder)
+    {
+        builder.ToTable("DepartmentBudget");
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Ignore(x => x.Label);
+        builder.HasIndex(x => new { x.CompanyId, x.DepartmentId, x.Year, x.Month }).IsUnique();
+        // Khóa ngoại (DepartmentId, CompanyId) – CSDL chặn ngân sách gắn bộ phận của công ty khác (như PR, mục 18.5).
+        builder.HasOne<Department>().WithMany().HasForeignKey(x => new { x.DepartmentId, x.CompanyId })
+            .HasPrincipalKey(d => new { d.Id, d.CompanyId }).OnDelete(DeleteBehavior.Restrict);
     }
 }

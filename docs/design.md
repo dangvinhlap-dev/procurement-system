@@ -1155,7 +1155,7 @@ Phê duyệt có kiểm soát – Mua hàng theo từng pháp nhân – Giám s�
 | Công nợ, thanh toán vẫn ở phần mềm kế toán (giữ quyết định 6); thêm báo cáo đối chiếu PO – phiếu nhận – hóa đơn | 1.3 (quyết định 6), 11.5 | C6 – mục 18.15 |
 | Hợp đồng nguyên tắc: mỗi pháp nhân một hợp đồng, dùng chung bảng giá; hiệu lực, sản lượng dự kiến, thanh toán, chiết khấu, chế tài, đơn vị được phép đặt; phụ lục; phải duyệt | 1.2 (hợp đồng khung) | B4 |
 | Danh mục bộ phận theo công ty; PR bắt buộc chọn bộ phận | 5.1, 10.2 (bộ phận dạng chữ, không bắt buộc) | A2 |
-| Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" (**hoãn 02/11/2026 – chỉ làm khi người dùng ra lệnh**) | mới | C3 |
+| Ngân sách công ty × bộ phận × tháng; vượt không chặn, thêm cấp duyệt "vượt ngân sách" (hoãn 02/11/2026, người dùng ra lệnh làm 05/11/2026 – mục 18.24) | mới | C3 |
 | Đính kèm file: thư mục trên máy chủ, tối đa 20 MB/file | mới | A1 |
 | Đưa NCC vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng NCC phải qua duyệt | 5.8 | B2 |
 
@@ -1256,7 +1256,7 @@ phân quyền** – phần mềm không viết cứng cấp duyệt hay người
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
+| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9); bộ cấp phụ cùng quyền PR/PO: **POX** (ngoại lệ giá, mục 18.10), **POK** (PO khẩn, mục 18.11), **PRB**/**POB** (vượt ngân sách, mục 18.24). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
 | Mỗi loại có **quyền duyệt riêng**: `Purchase.PR.Approve`, `Purchase.PO.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `MasterData.Supplier.Approve`, `Purchase.Contract.Approve`. Người duyệt phải có quyền đó **tại công ty của phiếu** (quyền gán theo công ty – mục 9); cấp có vai trò thì phải có thêm vai trò đó tại công ty. Muốn người Tổng công ty duyệt phiếu của công ty thành viên thì gán vai trò cho họ tại công ty thành viên | Công ty nào duyệt do phân quyền |
 | Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC, NDQ không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến, CTA giá trị dự kiến sau phụ lục | Duyệt mấy cấp do người dùng quyết định |
 | Người lập không tự duyệt; từ chối bắt buộc lý do, về nháp; lịch sử `ApprovalStep` chỉ thêm – như PR/PO (mục 6.7) | Tách người lập – người duyệt (G3) |
@@ -1648,6 +1648,23 @@ giá trị tăng; tab Đính kèm cho biên bản scan. Nút Ghi sổ theo quy�
 | In biên bản | `GET /api/inventory-documents/{id}/pdf` với phiếu ADJ in **"BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO"**: kho, số biên bản, lý do; cột Tồn sổ, Thực đếm, Tăng, Giảm, Giá trị tăng (dòng giảm theo giá vốn chốt khi đóng kỳ nên không in tiền); ký: người lập, thủ kho, kế toán, trưởng ban kiểm kê |
 | CSDL | Migration `V0_15_0_SoLieuKiemKe` (2 cột null trên `InventoryDocumentLine`; `Down()` mất số tồn sổ/thực đếm đã ghi) |
 | Đính kèm biên bản | Tải lên / xóa file đính kèm của phiếu ADJ theo quyền **lập ADJ** (`Inventory.Adjustment.Create`), phiếu kho khác vẫn theo quyền lập chứng từ kho; xem vẫn theo quyền xem chứng từ kho (sửa 03/11/2026) |
+
+### 18.24 Ngân sách bộ phận × tháng (lát C3, 05/11/2026)
+
+Nguồn: đề xuất Ban CUVT V1 (kiểm tra ngân sách khi lập/duyệt PR, PO), quyết định Q5 (mục 18: vượt không chặn, thêm cấp duyệt "vượt ngân
+sách"). Người dùng ra lệnh làm 05/11/2026.
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Ngân sách** (`DepartmentBudget`): công ty × bộ phận × năm × tháng, số tiền VND chưa VAT (numeric(19,2), ≥ 0), duy nhất theo công ty × bộ phận × năm × tháng; khóa ngoại (bộ phận, công ty) chặn gắn bộ phận công ty khác. **Không có dòng = tháng đó bộ phận không kiểm soát ngân sách** (bỏ trống ô tháng thì xóa dòng; nhật ký giữ giá trị cũ). Sửa được cả tháng đã qua | Công ty chưa dùng ngân sách không bị ảnh hưởng; mỗi tháng khai riêng |
+| **Đã dùng** của bộ phận × tháng = Σ tiền hàng chưa VAT (sau chiết khấu) của **PO** Chờ duyệt/Đã duyệt/Đã đóng theo **tháng ngày PO** và bộ phận đặt hàng của PO + Σ phần **PR** Chờ duyệt/Đã duyệt **chưa lên PO** theo tháng ngày PR. Phần PR chưa lên PO của dòng = thành tiền × (SL − SL đã lên PO được tính) / SL (ví dụ 10 cái × 1.000.000, PO đặt 4 → còn 6.000.000); hàng mới chưa gắn mã tính đủ. PO/PR nháp, bị từ chối, đã hủy không tính | Cam kết chi gồm cả đề nghị đã gửi; phần PR đã lên PO chỉ đếm một lần (ở PO) |
+| **Kiểm tra trên PR/PO**: server tính lúc lưu và **tính lại lúc gửi duyệt** (phiếu đang xét không tính vào đã dùng; PO đang xét coi phần PR nó đặt là đã lên PO). Vượt khi đã dùng + giá trị phiếu (PR: tổng dự kiến; PO: tổng tiền chưa VAT) > ngân sách. PR luôn có bộ phận; **PO chưa chọn bộ phận** (và không lấy từ PR) **không kiểm tra**. Lưu trên phiếu: ngân sách, đã dùng lúc kiểm tra, cờ vượt (`BudgetAmount`, `BudgetUsedAmount`, `IsOverBudget`) – phiếu đã gửi giữ số liệu lúc gửi cho người duyệt | Số liệu tại thời điểm trình duyệt là căn cứ duyệt |
+| **Vượt ngân sách không chặn**: gửi duyệt được, thêm **chặng "Vượt ngân sách"** (chặng 3, sau chặng ngoại lệ giá POX nếu có) theo bộ cấp loại **PRB** (PR) / **POB** (PO) cấu hình ở APRL theo ngưỡng như loại PR/PO, cùng quyền duyệt PR/PO; luôn ít nhất một cấp (dưới mọi ngưỡng vẫn qua cấp thấp nhất; chưa cấu hình → một cấp, ai có quyền duyệt PR/PO). Quy tắc chung giữ nguyên (người lập không tự duyệt, xung đột lợi ích). Popup gửi duyệt hiện sẵn chặng này (chạy thử lệnh gửi) | Q5; nên gán vai trò riêng (ví dụ lãnh đạo, kế toán) cho cấp PRB/POB để tách người duyệt |
+| **Giao diện**: màn hình **BUDG** "Ngân sách bộ phận" (Mua hàng; quyền `Purchase.Budget.View` xem, `Purchase.Budget.Manage` khai): lưới bộ phận × 12 tháng chọn hiển thị Ngân sách / Đã dùng / Còn lại, cột cả năm, tình trạng (Chưa khai / Trong ngân sách / Vượt n tháng – dòng vượt đánh dấu); bấm đúp mở ngăn kéo khai 12 tháng (kèm đã dùng, còn lại từng tháng; nút "Chép T01 cho cả năm"). Bộ phận ngừng dùng vẫn hiện nếu năm đó có ngân sách hoặc phiếu. PR/PO: đầu phiếu báo vàng khi vượt (ngân sách, đã dùng, phiếu này, số vượt), phiếu nháp trong ngân sách báo còn lại; lịch sử duyệt ghi chặng "Vượt ngân sách". API `GET /api/budgets/{năm}`, `PUT /api/budgets/{năm}/{bộ phận}` (đủ 12 tháng, null = không kiểm soát) | |
+| Chưa làm: ngân sách theo nhóm hàng; nhập ngân sách bằng Excel; F1 lịch sử từng ô tháng trên lưới (nhật ký vẫn ghi `DepartmentBudget`); chuyển ngân sách giữa tháng/bộ phận có duyệt; báo cáo thực hiện theo GRN | Làm khi có yêu cầu |
+
+Migration `V0_18_0_NganSachBoPhan` (bảng `DepartmentBudget`; cột `BudgetAmount`, `BudgetUsedAmount`, `IsOverBudget` trên `PurchaseRequest`,
+`PurchaseOrder` – `Down()` mất toàn bộ ngân sách và số liệu kiểm tra ngân sách trên phiếu, AuditLog vẫn giữ).
 
 ## Nguồn tham khảo
 

@@ -38,6 +38,21 @@ public static class ApprovalTypes
     /// </summary>
     public const string PurchaseOrderEmergency = "POK";
 
+    /// <summary>
+    /// Vượt ngân sách đề nghị mua hàng (lát C3, design.md mục 18.24): PR vượt ngân sách bộ phận × tháng qua thêm chặng duyệt này sau các
+    /// cấp duyệt PR thường, cùng quyền duyệt PR. Chỉ là bộ cấp duyệt cấu hình riêng ở APRL.
+    /// </summary>
+    public const string PurchaseRequestOverBudget = "PRB";
+
+    /// <summary>Vượt ngân sách đơn mua hàng (lát C3, design.md mục 18.24) – như <see cref="PurchaseRequestOverBudget"/>, cùng quyền duyệt PO.</summary>
+    public const string PurchaseOrderOverBudget = "POB";
+
+    /// <summary>Chặng ngoại lệ giá PO (design.md mục 18.10) trong <c>ApprovalStep.Stage</c>.</summary>
+    public const int PriceExceptionStage = 2;
+
+    /// <summary>Chặng vượt ngân sách (design.md mục 18.24) – sau chặng ngoại lệ giá nếu có, cùng số chặng cho PR và PO.</summary>
+    public const int OverBudgetStage = 3;
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
@@ -45,6 +60,8 @@ public static class ApprovalTypes
         new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(PurchaseOrderEmergency, "Đơn mua hàng khẩn cấp", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
+        new(PurchaseRequestOverBudget, "Vượt ngân sách đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
+        new(PurchaseOrderOverBudget, "Vượt ngân sách đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),
