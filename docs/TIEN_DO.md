@@ -321,6 +321,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `CompanyParameter.RequireRfqDossierComplete`, mặc định Tắt – giữ hành vi cũ); bật thì `RfqService.AwardAsync` chặn, báo mục còn thiếu
     (design.md 8.6). Migration `V0_18_0_BatBuocHoSoTrinh` (53 → 54). Test: `SourcingTests.HoSoTrinh_VaTaoBangGiaTuKetQuaThau` thêm bước
     bật tham số; e2e `system-parameters` đếm 21 tham số.
+  - **Ngân sách tạm dừng (người dùng 05/11/2026: "bỏ qua phần ngân sách, ghi nhận lại")**: chưa biết chặn ở PR hay PO và điều kiện chặn.
+    Giữ nguyên code bước 1 (không khai ngân sách thì không ảnh hưởng). Không làm thêm việc ngân sách (bỏ "nhập ngân sách bằng Excel")
+    cho tới khi người dùng chốt 8 câu hỏi ở design.md 18.24 dòng "Chưa chốt nghiệp vụ". Khi chốt có thể phải sửa `BudgetUsage`,
+    `ApplyBudgetCheck`, submit PR/PO.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
