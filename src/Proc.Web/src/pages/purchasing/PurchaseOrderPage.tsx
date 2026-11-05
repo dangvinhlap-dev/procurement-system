@@ -23,6 +23,7 @@ import {
   type PurchaseOrder,
   type PurchaseType,
   type SavePurchaseOrderInput,
+  PURCHASE_STAGE_LABELS,
 } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -31,6 +32,7 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
+import { BudgetNotice } from './BudgetNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 
 interface PoLineValues {
@@ -556,18 +558,21 @@ export function PurchaseOrderPage() {
         loading={order.isLoading}
         error={error ?? (order.error ? order.error.message : null)}
         notice={
-          emergencyNotice ??
-          (noEligibleSupplier ? (
-            <Alert type="warning" showIcon title={supplierHint} />
-          ) : doc?.rejectReason && doc.status === 'Draft' ? (
-            <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
-          ) : doc?.contractScopeNote && doc.status === 'Draft' ? (
-            <Alert type="info" showIcon title={doc.contractScopeNote} />
-          ) : (!readOnly && hasDeviation) || (readOnly && doc?.hasPriceException) ? (
-            <Alert type="warning" showIcon title="Có dòng lệch giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu): ghi lý do ở từng dòng; PO phải qua thêm chặng duyệt ngoại lệ giá." />
-          ) : (
-            doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
-          ))
+          <>
+            {emergencyNotice ??
+              (noEligibleSupplier ? (
+                <Alert type="warning" showIcon title={supplierHint} />
+              ) : doc?.rejectReason && doc.status === 'Draft' ? (
+                <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
+              ) : doc?.contractScopeNote && doc.status === 'Draft' ? (
+                <Alert type="info" showIcon title={doc.contractScopeNote} />
+              ) : (!readOnly && hasDeviation) || (readOnly && doc?.hasPriceException) ? (
+                <Alert type="warning" showIcon title="Có dòng lệch giá đã duyệt (hợp đồng/bảng giá/kết quả chọn thầu): ghi lý do ở từng dòng; PO phải qua thêm chặng duyệt ngoại lệ giá." />
+              ) : (
+                doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
+              ))}
+            <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+          </>
         }
         form={form}
         initialValues={{ date: dayjs(), receiveTolerancePct: 0, purchaseType: 'Normal', lines: [] }}
@@ -668,7 +673,7 @@ export function PurchaseOrderPage() {
           </>
         }
         extraTabs={[
-          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} exceptionStage="Ngoại lệ giá" createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={PURCHASE_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}
       />

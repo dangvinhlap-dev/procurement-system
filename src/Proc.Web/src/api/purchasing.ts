@@ -216,6 +216,8 @@ export interface PurchaseRequest {
   canCreateSourcing: boolean
   /** PR đã duyệt còn hàng mới chưa gắn mã và người dùng gắn mã được. */
   canLinkItem: boolean
+  /** Kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát. */
+  budget: BudgetCheck | null
 }
 
 /** Hàng mới chưa có mã trên PR: không lên PO/RFQ cho tới khi gắn mã hàng. */
@@ -363,6 +365,8 @@ export interface PurchaseOrder {
   /** PO khẩn đã duyệt, quá hạn mà chưa xác nhận bổ sung hồ sơ. */
   isDocsOverdue: boolean
   canCompleteDocs: boolean
+  /** Kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát. */
+  budget: BudgetCheck | null
 }
 
 /** Loại mua của PO: thường hoặc khẩn cấp (duyệt theo cấp POK, bổ sung hồ sơ sau). */
@@ -439,7 +443,7 @@ export interface DeliveryTracking {
 }
 
 /** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
-export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ'
+export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ'
 
 /** Một loại phiếu có duyệt. */
 export interface ApprovalType {
@@ -643,3 +647,64 @@ export function useApprovalRuleMutations() {
     remove: useMutation({ mutationFn: (id: string) => apiFetch<void>(`/api/approval-rules/${id}`, { method: 'DELETE' }), onSuccess }),
   }
 }
+
+/**
+ * Kiểm tra ngân sách của PR/PO (design.md mục 18.24): ngân sách bộ phận × tháng của ngày phiếu, đã dùng của các phiếu khác, giá trị phiếu
+ * (chưa VAT). Vượt thì gửi duyệt qua thêm chặng "Vượt ngân sách" – không chặn.
+ */
+export interface BudgetCheck {
+  year: number
+  month: number
+  budgetAmount: number
+  usedAmount: number
+  documentAmount: number
+  isOver: boolean
+  /** Số vượt = đã dùng + phiếu − ngân sách (0 khi không vượt). */
+  overAmount: number
+}
+
+/** Một tháng ngân sách của bộ phận. */
+export interface BudgetMonth {
+  month: number
+  /** null = tháng này bộ phận không kiểm soát ngân sách. */
+  budget: number | null
+  /** Đã dùng: PO chờ duyệt/đã duyệt/đã đóng + phần PR chờ duyệt/đã duyệt chưa lên PO. */
+  used: number
+  /** Ngân sách − đã dùng (âm khi vượt); null khi không có ngân sách. */
+  remaining: number | null
+}
+
+/** Ngân sách cả năm của một bộ phận. */
+export interface DepartmentBudgetYear {
+  departmentId: string
+  departmentCode: string
+  departmentName: string
+  isActive: boolean
+  months: BudgetMonth[]
+  totalBudget: number
+  totalUsed: number
+  /** Số tháng vượt ngân sách. */
+  overMonths: number
+}
+
+/** Ngân sách các bộ phận của công ty đang làm việc trong một năm (design.md mục 18.24). */
+export function useBudgetYear(year: number) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'budgets', year],
+    queryFn: () => apiFetch<DepartmentBudgetYear[]>(`/api/budgets/${year}`),
+  })
+}
+
+/** Lưu ngân sách 12 tháng của một bộ phận (null = bỏ ngân sách tháng đó); xong tải lại bảng ngân sách. */
+export function useSaveBudget() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ year, departmentId, months }: { year: number; departmentId: string; months: (number | null)[] }) =>
+      apiFetch<DepartmentBudgetYear>(`/api/budgets/${year}/${departmentId}`, { method: 'PUT', body: { months } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchasing'] }),
+  })
+}
+
+/** Nhãn chặng phụ của PR, PO trong lịch sử duyệt: 2 = ngoại lệ giá (design.md mục 18.10), 3 = vượt ngân sách (mục 18.24). */
+export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách' }

@@ -150,7 +150,7 @@ public sealed record PurchaseRequestDto(
     Guid Id, string No, DateOnly Date, string Status, Guid? DepartmentId, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
     Guid? WarehouseId, string Priority, string? Note, decimal TotalAmount, string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions,
-    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem);
+    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null);
 
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
@@ -206,7 +206,7 @@ public sealed record PurchaseOrderLineDto(
     string PriceSource, decimal? ApprovedUnitPrice, decimal? ApprovedDiscountPct, string? PriceListNo, string? ContractNo, string? SourceRfqNo,
     Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract, string? SoleSourceNo);
 
-/// <summary>Chi tiết PO.</summary>
+/// <summary>Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.</summary>
 public sealed record PurchaseOrderDto(
     Guid Id, string No, DateOnly Date, string Status, Guid SupplierId, string SupplierCode, string SupplierName, Guid WarehouseId, string? WarehouseCode,
     DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms, string? DeliveryAddress, string CurrencyCode, decimal ReceiveTolerancePct,
@@ -214,7 +214,7 @@ public sealed record PurchaseOrderDto(
     string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseOrderLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals,
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
     string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
-    string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs);
+    string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null);
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
 /// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>
@@ -294,7 +294,7 @@ public interface IPurchaseOrderService
     /// <summary>Tìm PO theo khoảng ngày, trạng thái.</summary>
     Task<PurchaseDocumentListResult> SearchAsync(PurchaseDocumentQuery query, CancellationToken cancellationToken);
 
-    /// <summary>Chi tiết PO.</summary>
+    /// <summary>Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.</summary>
     Task<PurchaseOrderDto> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Lập PO nháp (cấp số).</summary>

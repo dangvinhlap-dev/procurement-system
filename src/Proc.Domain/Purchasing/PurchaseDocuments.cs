@@ -218,6 +218,38 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     /// <inheritdoc />
     public virtual IReadOnlyCollection<Guid> RelatedSupplierIds => [];
 
+    /// <summary>Bộ phận tính ngân sách (design.md mục 18.24); null = không kiểm tra ngân sách.</summary>
+    public abstract Guid? BudgetDepartmentId { get; }
+
+    /// <summary>Giá trị phiếu tính vào ngân sách – tiền hàng chưa VAT (PR: tổng dự kiến; PO: tổng tiền sau chiết khấu).</summary>
+    public abstract decimal BudgetedAmount { get; }
+
+    /// <summary>
+    /// Ngân sách bộ phận × tháng lúc kiểm tra gần nhất (lưu, gửi duyệt) – numeric(19,2); null = tháng đó bộ phận không có ngân sách
+    /// hoặc phiếu chưa có bộ phận. Giữ lại sau khi gửi để người duyệt thấy số liệu đúng lúc gửi.
+    /// </summary>
+    public decimal? BudgetAmount { get; protected set; }
+
+    /// <summary>Đã dùng của các phiếu khác lúc kiểm tra (không gồm phiếu này) – numeric(19,2).</summary>
+    public decimal? BudgetUsedAmount { get; protected set; }
+
+    /// <summary>Vượt ngân sách: đã dùng + giá trị phiếu &gt; ngân sách – phiếu qua thêm chặng duyệt "vượt ngân sách".</summary>
+    public bool IsOverBudget { get; protected set; }
+
+    /// <summary>
+    /// Ghi kết quả kiểm tra ngân sách (design.md mục 18.24). Vượt khi đã dùng + giá trị phiếu &gt; ngân sách, ví dụ ngân sách
+    /// 100.000.000, đã dùng 70.000.000, phiếu 40.000.000 → 110.000.000 &gt; 100.000.000 → vượt 10.000.000.
+    /// </summary>
+    /// <param name="check">Kết quả; null = không kiểm soát ngân sách.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp.</exception>
+    public void ApplyBudgetCheck(BudgetCheck? check)
+    {
+        EnsureDraft();
+        BudgetAmount = check?.BudgetAmount;
+        BudgetUsedAmount = check?.UsedAmount;
+        IsOverBudget = check is not null && check.UsedAmount + BudgetedAmount > check.BudgetAmount;
+    }
+
     /// <inheritdoc />
     public bool IsAwaitingApproval => Status == ApprovalDocumentStatus.Submitted;
 
@@ -323,6 +355,12 @@ public sealed class PurchaseRequest : ApprovableDocument
 
     /// <inheritdoc />
     public override string DocType => DocumentTypes.PurchaseRequest;
+
+    /// <inheritdoc />
+    public override Guid? BudgetDepartmentId => DepartmentId;
+
+    /// <inheritdoc />
+    public override decimal BudgetedAmount => TotalAmount;
 
     /// <inheritdoc />
     protected override int LineCount => _lines.Count + _newItems.Count(n => n.LinkedLineId is null);
@@ -709,6 +747,12 @@ public sealed class PurchaseOrder : ApprovableDocument
 
     /// <summary>Ngưỡng duyệt xét trên tổng thanh toán (gồm VAT).</summary>
     public override decimal ApprovalAmount => TotalAmount + TotalVat;
+
+    /// <inheritdoc />
+    public override Guid? BudgetDepartmentId => DepartmentId;
+
+    /// <inheritdoc />
+    public override decimal BudgetedAmount => TotalAmount;
 
     /// <inheritdoc />
     public override string DocType => DocumentTypes.PurchaseOrder;

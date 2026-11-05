@@ -121,6 +121,14 @@ public static class PurchasingEndpoints
         po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
                 s.CompleteDocsAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
+
+        // Ngân sách bộ phận × tháng (lát C3, design.md mục 18.24).
+        var budgets = app.MapGroup("/api/budgets").WithTags("Ngân sách bộ phận");
+        budgets.MapGet("/{year:int}", (int year, IBudgetService s, CancellationToken ct) => s.YearAsync(year, ct))
+            .RequireAnyPermission(Permissions.Purchase.BudgetView, Permissions.Purchase.BudgetManage);
+        budgets.MapPut("/{year:int}/{departmentId:guid}", (int year, Guid departmentId, SaveDepartmentBudgetRequest request, IBudgetService s, CancellationToken ct) =>
+                s.SaveAsync(departmentId, year, request, ct))
+            .RequirePermission(Permissions.Purchase.BudgetManage);
         return app;
     }
 }

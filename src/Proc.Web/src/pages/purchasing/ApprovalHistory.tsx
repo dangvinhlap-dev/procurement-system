@@ -16,8 +16,11 @@ interface ApprovalHistoryProps {
   createdAt?: string | null
   /** Duyệt nhiều công ty (duyệt NCC – design.md mục 18.6): ghi chặng và công ty trên từng bước. */
   byCompany?: boolean
-  /** Tên chặng 2 khi phiếu có chặng duyệt ngoại lệ ở cùng công ty (PO lệch giá – design.md mục 18.10). */
-  exceptionStage?: string
+  /**
+   * Tên các chặng phụ ở cùng công ty theo số chặng: 2 = ngoại lệ giá (PO lệch giá – design.md mục 18.10), 3 = vượt ngân sách (PR/PO –
+   * mục 18.24). Chặng 1 hiện "Duyệt thường".
+   */
+  stageLabels?: Record<number, string>
 }
 
 /** Biểu tượng kết quả bước – màu theo đèn trạng thái, luôn có chữ đi kèm (ui-style.md mục 2). */
@@ -42,15 +45,15 @@ function Names({ prefix, names }: { prefix: string; names: string[] }) {
  * giờ) → từng lượt gửi duyệt (người gửi, ngày giờ) → từng cấp: đã duyệt/từ chối (người, ngày giờ, ý kiến), đang đến lượt ("Chờ duyệt: …"),
  * cấp sau ("Sẽ duyệt: …"). Ai mở được phiếu cũng thấy.
  */
-export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = false, exceptionStage }: ApprovalHistoryProps) {
-  const showException = !byCompany && !!exceptionStage && steps.some((s) => s.stage === 2)
+export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = false, stageLabels }: ApprovalHistoryProps) {
+  const showStages = !byCompany && !!stageLabels && steps.some((s) => stageLabels[s.stage] !== undefined)
   const rounds = [...new Set(steps.map((s) => s.round))].sort((a, b) => a - b)
 
   const stepTitle = (s: ApprovalStep): ReactNode => {
     const where = [
       byCompany ? (s.stage === 2 ? 'Tổng công ty (cuối)' : 'Công ty liên quan') : null,
       byCompany ? s.companyCode : null,
-      showException ? (s.stage === 2 ? exceptionStage : 'Duyệt thường') : null,
+      showStages ? (stageLabels?.[s.stage] ?? 'Duyệt thường') : null,
       `Cấp ${s.level}`,
     ].filter(Boolean).join(' · ')
     const role = s.roleName ?? 'Người có quyền duyệt'

@@ -40,6 +40,8 @@ export const Permission = {
   ContractView: 'Purchase.Contract.View',
   ContractManage: 'Purchase.Contract.Manage',
   ContractApprove: 'Purchase.Contract.Approve',
+  BudgetView: 'Purchase.Budget.View',
+  BudgetManage: 'Purchase.Budget.Manage',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',

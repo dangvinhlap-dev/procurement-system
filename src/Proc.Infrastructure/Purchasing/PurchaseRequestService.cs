@@ -26,6 +26,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     private readonly IDocumentNumberService _numbers;
     private readonly IClock _clock;
     private readonly ApprovalEngine _approvals;
+    private readonly BudgetUsage _budgets;
 
     /// <summary>Tạo dịch vụ.</summary>
     public PurchaseRequestService(ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock)
@@ -35,6 +36,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         _numbers = numbers;
         _clock = clock;
         _approvals = new ApprovalEngine(db, scope, clock);
+        _budgets = new BudgetUsage(db);
     }
 
     /// <inheritdoc />
@@ -90,6 +92,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var pr = PurchaseRequest.Create(companyId, no, ToHeader(request), _scope.UserId);
         pr.SetNewItems(newItems);
         pr.SetLines(lines);
+        pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
         _db.PurchaseRequests.Add(pr);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -108,6 +111,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         pr.Update(ToHeader(request));
         pr.SetNewItems(newItems);
         pr.SetLines(lines);
+        pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -117,7 +121,12 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     {
         var pr = await LoadAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(pr, cancellationToken);
-        await _approvals.SubmitAsync(pr, cancellationToken);
+        // Ngân sách tính lại lúc gửi (phiếu khác có thể đã dùng ngân sách từ lúc lưu nháp); vượt thì qua thêm chặng duyệt
+        // "vượt ngân sách" PRB – không chặn gửi (design.md mục 18.24, quyết định Q5).
+        pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
+        if (pr.IsOverBudget)
+            await _approvals.SubmitWithStagesAsync(pr, [(ApprovalTypes.PurchaseRequestOverBudget, ApprovalTypes.OverBudgetStage)], cancellationToken);
+        else await _approvals.SubmitAsync(pr, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -378,7 +387,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
-            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate));
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr));
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>

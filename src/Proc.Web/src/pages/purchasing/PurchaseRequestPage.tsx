@@ -19,6 +19,7 @@ import {
   type PurchasePriority,
   type PurchaseRequest,
   type SavePurchaseRequestInput,
+  PURCHASE_STAGE_LABELS,
 } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -27,6 +28,7 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
+import { BudgetNotice } from './BudgetNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 
 interface PrLineValues {
@@ -415,11 +417,14 @@ export function PurchaseRequestPage() {
       loading={request.isLoading}
       error={error ?? (request.error ? request.error.message : null)}
       notice={
-        doc?.rejectReason && doc.status === 'Draft' ? (
-          <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
-        ) : (
-          doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
-        )
+        <>
+          {doc?.rejectReason && doc.status === 'Draft' ? (
+            <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
+          ) : (
+            doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
+          )}
+          <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+        </>
       }
       form={form}
       initialValues={{
@@ -482,7 +487,7 @@ export function PurchaseRequestPage() {
               </>
             ),
           },
-          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={PURCHASE_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}
     />

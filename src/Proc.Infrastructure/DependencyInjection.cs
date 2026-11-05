@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Purchasing.IApprovalRuleAdministration, Proc.Infrastructure.Purchasing.ApprovalRuleAdministration>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseRequestService, Proc.Infrastructure.Purchasing.PurchaseRequestService>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseOrderService, Proc.Infrastructure.Purchasing.PurchaseOrderService>();
+        services.AddScoped<Proc.Application.Purchasing.IBudgetService, Proc.Infrastructure.Purchasing.BudgetService>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseRequestNewItemService, Proc.Infrastructure.Purchasing.PurchaseRequestNewItemService>();
         services.AddScoped<Proc.Application.Sourcing.IRfqAwardPriceReader, Proc.Infrastructure.Sourcing.RfqAwardPriceReader>();
         services.AddScoped<Proc.Application.Printing.IDocumentPdfService, Proc.Infrastructure.Printing.DocumentPdfService>();
