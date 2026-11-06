@@ -33,6 +33,9 @@ public sealed class ProblemExceptionHandler : IExceptionHandler
             BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message),
             ForbiddenAccessException => (StatusCodes.Status403Forbidden, exception.Message),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+            // Sửa trên bản cũ, hoặc hai lệnh lưu cùng một dòng cùng lúc (lát R2 – design.md mục 18.26).
+            ConcurrencyConflictException => (StatusCodes.Status409Conflict, exception.Message),
+            Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, ConcurrencyConflictException.DefaultMessage),
             _ when DuplicateKeyMessages.Describe(exception) is { } duplicate => (StatusCodes.Status409Conflict, duplicate),
             _ => (StatusCodes.Status500InternalServerError, "Có lỗi hệ thống. Hãy thử lại hoặc báo quản trị hệ thống."),
         };

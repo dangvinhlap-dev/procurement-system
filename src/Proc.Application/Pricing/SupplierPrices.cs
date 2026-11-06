@@ -58,7 +58,7 @@ public sealed record PriceListDto(
     Guid Id, string No, string Title, Guid CompanyId, string CompanyCode, bool IsGroupWide, Guid SupplierId, string SupplierCode,
     string SupplierName, DateOnly ValidFrom, DateOnly? ValidTo, string CurrencyCode, string? DeliveryTerms, string? Note, string Status,
     DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ActivatedAt, IReadOnlyList<PriceListLineDto> Lines, PriceListActions Actions,
-    string? RejectReason, int? DaysToExpiry, bool ExpiringSoon, IReadOnlyList<ApprovalStepDto> Approvals);
+    string? RejectReason, int? DaysToExpiry, bool ExpiringSoon, IReadOnlyList<ApprovalStepDto> Approvals, uint Version = 0);
 
 /// <summary>Lưu bảng giá.</summary>
 public sealed record SavePriceListRequest(

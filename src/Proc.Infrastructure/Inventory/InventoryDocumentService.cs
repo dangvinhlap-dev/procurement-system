@@ -503,7 +503,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             createdBy, d.PostedAt, lines, canEdit, readOnlyReason, canPost, canUnpost, d.Receiver, d.LinkedDocumentId, linkedNo,
             d.CounterCompanyId, counterCompany?.Code, counterCompany?.Name, receiveStatus, d.PurchaseOrderId,
             d.PurchaseOrderId is { } poId ? await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == poId).Select(o => o.No).SingleOrDefaultAsync(cancellationToken) : null,
-            d.InvoiceAmount, canUpdateInvoice, d.Reason, d.CountReportNo);
+            d.InvoiceAmount, canUpdateInvoice, d.Reason, d.CountReportNo) { Version = d.Version };
     }
 
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>

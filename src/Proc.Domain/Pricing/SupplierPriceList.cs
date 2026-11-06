@@ -55,8 +55,11 @@ public sealed record PriceListLineData(
 /// (giữ lịch sử).
 /// </summary>
 [Auditable("Bảng giá NCC", LabelProperty = nameof(No))]
-public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private readonly List<SupplierPriceListLine> _lines = [];
 
     private SupplierPriceList()

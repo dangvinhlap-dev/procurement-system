@@ -43,8 +43,42 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 /**
+ * Phiên bản chứng từ đã nhận từ server (Id → version), để lệnh ghi sau đó gửi kèm header If-Match.
+ * Tại sao (lát R2, design.md mục 18.26): người khác sửa phiếu trong lúc mình đang mở thì server trả 409 thay vì để lần lưu của mình
+ * âm thầm ghi đè. Form chứng từ tự nạp lại khi phiếu trên server đổi (`useDocumentFormSync`), nên phiên bản nhớ ở đây luôn là bản
+ * mới nhất mà trang đã tải.
+ */
+const versions = new Map<string, number>()
+
+/** Id dạng GUID đầu tiên trên đường dẫn – trùng tham số `{id}` của API. */
+const GUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+/**
+ * Nhớ phiên bản nếu dữ liệu trả về là một chứng từ có `id` và `version`.
+ * @param data JSON server trả về.
+ */
+function rememberVersion(data: unknown): void {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return
+  const { id, version } = data as { id?: unknown; version?: unknown }
+  if (typeof id === 'string' && typeof version === 'number' && version > 0) versions.set(id.toLowerCase(), version)
+}
+
+/**
+ * Phiên bản đã xem của chứng từ trên đường dẫn (lệnh ghi), hoặc undefined.
+ * @param path Đường dẫn API.
+ * @param method Phương thức HTTP.
+ */
+function expectedVersion(path: string, method: string | undefined): number | undefined {
+  const m = (method ?? 'GET').toUpperCase()
+  if (m === 'GET' || m === 'HEAD') return undefined
+  const id = GUID.exec(path)?.[0]
+  return id ? versions.get(id.toLowerCase()) : undefined
+}
+
+/**
  * Gọi API: tự gắn JWT (Authorization: Bearer) và công ty đang làm việc (X-Company-Id – design.md mục 9.2).
  * Nhận 401 ở API cần đăng nhập thì báo hết phiên để quay về màn hình đăng nhập.
+ * Lệnh ghi lên một chứng từ đã tải thì gửi kèm If-Match (phiên bản đã xem); server trả 409 nếu người khác vừa sửa.
  * @param path Đường dẫn, ví dụ "/api/auth/me".
  * @param init Tùy chọn fetch; body là object sẽ được chuyển thành JSON.
  * @returns Dữ liệu JSON đã parse.
@@ -57,6 +91,8 @@ export async function apiFetch<T>(path: string, init: Omit<RequestInit, 'body'> 
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (companyId) headers.set('X-Company-Id', companyId)
   if (init.body !== undefined) headers.set('Content-Type', 'application/json')
+  const version = expectedVersion(path, init.method)
+  if (version !== undefined) headers.set('If-Match', `"${version}"`)
 
   let response: Response
   try {
@@ -70,7 +106,9 @@ export async function apiFetch<T>(path: string, init: Omit<RequestInit, 'body'> 
     if (response.status === 401 && token) bridge.onUnauthorized()
     throw new ApiError(response.status, message)
   }
-  return (response.status === 204 ? undefined : await response.json()) as T
+  const data = response.status === 204 ? undefined : ((await response.json()) as unknown)
+  rememberVersion(data)
+  return data as T
 }
 
 /**

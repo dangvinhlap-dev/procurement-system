@@ -102,8 +102,11 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
 /// gửi phân biệt bằng <see cref="Round"/>). Chỉ thêm, sửa kết quả; không xóa – là lịch sử duyệt của phiếu.
 /// </summary>
 [Auditable("Bước duyệt")]
-public sealed class ApprovalStep : Entity, ICompanyOwned
+public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private ApprovalStep()
     {
     }

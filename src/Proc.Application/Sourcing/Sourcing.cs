@@ -125,7 +125,7 @@ public sealed record RfqDto(
     string Status, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? SentAt, DateTimeOffset? AwardedAt, int MinSuppliers,
     IReadOnlyList<RfqLineDto> Lines, IReadOnlyList<RfqSupplierDto> Suppliers, RfqActions Actions, string? FewSuppliersReason,
     decimal AwardAmount, string? AwardedByName, string? RejectReason, IReadOnlyList<ApprovalStepDto> Approvals,
-    IReadOnlyList<RfqDossierItemDto> Dossier);
+    IReadOnlyList<RfqDossierItemDto> Dossier, uint Version = 0);
 
 /// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
 public sealed record SendRfqRequest(string? Reason);

@@ -105,6 +105,46 @@ public partial class PurchasingTests
     private static Task<HttpResponseMessage> ActAsync(HttpClient client, string kind, Guid id, string action, string? comment = null) =>
         client.PostAsJsonAsync($"/api/{kind}/{id}/{action}", new ApprovalActionRequest(comment), Ct);
 
+    /// <summary>
+    /// Lát R2 (design.md mục 18.26): sửa PO kèm phiên bản đã xem (If-Match) – đúng thì lưu, phiên bản đổi; gửi lại phiên bản cũ (người khác
+    /// đã sửa) thì 409, không ghi đè. Hai người duyệt cùng một cấp cùng lúc: chỉ một lần duyệt được ghi.
+    /// </summary>
+    [Fact]
+    public async Task SuaTrenBanCu_Bao409_HaiNguoiDuyetCungLuc_ChiMotNguoi()
+    {
+        var f = await ArrangeAsync();
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        Assert.True(po.Version > 0);
+
+        HttpRequestMessage Update(uint version, decimal qty)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/purchase-orders/{po.Id}")
+            {
+                Content = JsonContent.Create(new SavePurchaseOrderRequest(Today, f.SupplierId, f.Kt, Today.AddDays(5), "30 ngày", null, null, 0, null,
+                    [new(po.Lines[0].Id, f.ItemId, f.Cai, qty, 100_000, 5, "10", null, null, null)])),
+            };
+            request.Headers.IfMatch.Add(new System.Net.Http.Headers.EntityTagHeaderValue($"\"{version}\""));
+            return request;
+        }
+
+        var saved = await ReadAsync<PurchaseOrderDto>(await f.Buyer.SendAsync(Update(po.Version, 12), Ct));
+        Assert.Equal(12m, saved.Lines[0].Qty);
+        Assert.NotEqual(po.Version, saved.Version);
+        var stale = await f.Buyer.SendAsync(Update(po.Version, 15), Ct);
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Contains("người khác thay đổi", await TitleAsync(stale));
+        Assert.Equal(12m, (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Lines[0].Qty);
+
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        var (first, _) = await ApproverAsync(f);
+        var (second, _) = await ApproverAsync(f);
+        var approvals = await Task.WhenAll(ActAsync(first, "purchase-orders", po.Id, "approve"), ActAsync(second, "purchase-orders", po.Id, "approve"));
+
+        Assert.Equal(1, approvals.Count(a => a.IsSuccessStatusCode));
+        var history = (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Approvals;
+        Assert.Single(history, s => s.Status == "Approved");
+    }
+
     [Fact]
     public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
     {

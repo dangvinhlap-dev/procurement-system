@@ -186,8 +186,11 @@ public static class PriceTierPicker
 /// Phần chung của chứng từ mua hàng có duyệt (PR, PO): số phiếu, trạng thái, lượt gửi duyệt, lý do từ chối gần nhất.
 /// Vòng đời: Nháp → (Gửi duyệt) Chờ duyệt → Đã duyệt; bị từ chối về Nháp kèm lý do; hủy được khi Nháp/Chờ duyệt/Đã duyệt chưa dùng.
 /// </summary>
-public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <inheritdoc />
     public Guid CompanyId { get; protected set; }
 

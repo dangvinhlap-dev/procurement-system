@@ -186,7 +186,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
             s.PaymentTerms, s.SupplyScope, s.Rating, s.Status.ToString(), s.StatusNote, s.InternalCompanyId,
             s.Contacts.Select(c => new SupplierContactDto(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)).ToList(),
             s.BankAccounts.Select(b => new SupplierBankAccountDto(b.Id, b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).ToList(),
-            canEdit, await PendingRequestsAsync(id, cancellationToken));
+            canEdit, await PendingRequestsAsync(id, cancellationToken)) { Version = s.Version };
     }
 
     /// <summary>Yêu cầu duyệt đang chờ của NCC (design.md mục 18.6) – hiện trên ngăn kéo NCC.</summary>

@@ -136,7 +136,7 @@ public sealed class ItemAdministration : IItemAdministration
             item.Id, item.Code, item.Name, item.EnglishName, item.Type.ToString(), item.CategoryId, item.BaseUomId,
             item.Specification, item.Brand, item.Origin, item.Barcode, item.VatCode, item.TechnicalSpecs,
             item.TrackLot, item.TrackExpiry, item.MinStock, item.MaxStock, item.IsActive, conversions, canEdit,
-            item.SafetyStock, item.ReorderPoint, item.IsCritical);
+            item.SafetyStock, item.ReorderPoint, item.IsCritical) { Version = item.Version };
     }
 
     /// <inheritdoc />

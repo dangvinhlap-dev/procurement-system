@@ -26,8 +26,11 @@ public enum PeriodStatus
 /// ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó (CLAUDE.md mục 4).
 /// </summary>
 [Auditable("Kỳ kho", LabelProperty = nameof(Label))]
-public sealed class InventoryPeriod : AuditableEntity, ICompanyOwned
+public sealed class InventoryPeriod : AuditableEntity, ICompanyOwned, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <summary>Năm nhỏ nhất được tạo lịch.</summary>
     public const int MinYear = 2000;
 

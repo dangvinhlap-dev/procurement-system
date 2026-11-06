@@ -32,7 +32,7 @@ public sealed record ContractDto(
     IReadOnlyList<string> DepartmentNames, IReadOnlyList<ContractLineDto> Lines, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ActivatedAt, DateOnly? TerminatedOn, string? TerminationReason, string? RejectReason, int DaysToExpiry, bool ExpiringSoon,
     IReadOnlyList<ApprovalStepDto> Approvals, IReadOnlyList<ContractAmendmentListItemDto> Amendments, ContractActions Actions,
-    IReadOnlyList<ContractRebateDto> Rebates);
+    IReadOnlyList<ContractRebateDto> Rebates, uint Version = 0);
 
 /// <summary>
 /// Cam kết chiết khấu doanh số/tài trợ trên hợp đồng (lát F4b – design.md mục 18.21). Kind: SalesVolume, Sponsorship, Other; Method: Percent
@@ -123,7 +123,7 @@ public sealed record ContractAmendmentDto(
     Guid NewPriceListId, string NewPriceListNo, string NewPriceListTitle, string NewPriceListStatus, ContractTermsDto Terms,
     ContractTermsDto CurrentTerms, string? Note, decimal CurrentExpectedAmount, decimal ExpectedAmount, string ChangeSummary, string Status,
     string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<ApprovalStepDto> Approvals,
-    ContractAmendmentActions Actions);
+    ContractAmendmentActions Actions, uint Version = 0);
 
 /// <summary>Lưu phụ lục nháp: giá trị của hợp đồng sau phụ lục (điền sẵn bằng giá trị hiện hành).</summary>
 public sealed record SaveContractAmendmentRequest(

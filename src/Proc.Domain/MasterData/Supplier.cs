@@ -113,8 +113,11 @@ public sealed record SupplierBankAccountData(
 /// Công ty thành viên cũng là NCC nội bộ, liên kết qua <see cref="InternalCompanyId"/>.
 /// </summary>
 [Auditable("Nhà cung cấp", LabelProperty = nameof(Code), Ignore = [nameof(SearchText)])]
-public sealed partial class Supplier : AuditableEntity
+public sealed partial class Supplier : AuditableEntity, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <summary>Độ dài tối đa của mã NCC.</summary>
     public const int CodeMaxLength = 30;
 

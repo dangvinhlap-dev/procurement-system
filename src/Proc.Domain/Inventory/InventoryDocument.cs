@@ -124,8 +124,11 @@ public enum QcResult
 /// Hiện có phiếu nhập mua NCC (GRN), xuất trả NCC (RTV), chuyển kho nội bộ (TRF).
 /// </summary>
 [Auditable("Chứng từ kho", LabelProperty = nameof(No))]
-public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocumentNumber
+public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private readonly List<InventoryDocumentLine> _lines = [];
 
     private InventoryDocument()
