@@ -110,8 +110,11 @@ public sealed record ContractLinePrice(decimal UnitPrice, decimal DiscountPct);
 /// Duyệt qua quy trình dùng chung loại CTR, xét giá trị dự kiến (design.md mục 18.6).
 /// </summary>
 [Auditable("Hợp đồng nguyên tắc", LabelProperty = nameof(No))]
-public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private readonly List<PurchaseContractLine> _lines = [];
     private readonly List<PurchaseContractDepartment> _departments = [];
     private readonly List<PurchaseContractRebate> _rebates = [];

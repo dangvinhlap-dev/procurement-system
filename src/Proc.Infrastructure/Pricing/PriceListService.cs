@@ -294,7 +294,7 @@ public sealed class PriceListService : IPriceListService
         return new PriceListDto(
             list.Id, list.No, list.Title, list.CompanyId, company, list.IsGroupWide, list.SupplierId, supplier.Code, supplier.Name, list.ValidFrom,
             list.ValidTo, list.CurrencyCode, list.DeliveryTerms, list.Note, list.Status.ToString(), list.CreatedAt, createdBy, list.ActivatedAt, lines, actions,
-            list.RejectReason, list.DaysToExpiry(today), list.ExpiresWithin(today, ExpiryWarningDays), approvals);
+            list.RejectReason, list.DaysToExpiry(today), list.ExpiresWithin(today, ExpiryWarningDays), approvals) { Version = list.Version };
     }
 
     private static PriceListHeader ToHeader(SavePriceListRequest r) =>

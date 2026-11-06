@@ -69,12 +69,13 @@ public sealed record ItemUomConversionInput(Guid UomId, decimal Factor);
 /// <param name="SafetyStock">Tồn an toàn (design.md mục 18.16).</param>
 /// <param name="ReorderPoint">Điểm đặt hàng lại.</param>
 /// <param name="IsCritical">Vật tư trọng yếu.</param>
+/// <param name="Version">Phiên bản dòng – web gửi lại ở header If-Match khi sửa, thao tác (lát R2).</param>
 public sealed record ItemDetailDto(
     Guid Id, string Code, string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
     string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs,
     bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, bool IsActive,
     IReadOnlyList<ItemUomConversionDto> Conversions, bool CanEdit,
-    decimal? SafetyStock = null, decimal? ReorderPoint = null, bool IsCritical = false);
+    decimal? SafetyStock = null, decimal? ReorderPoint = null, bool IsCritical = false, uint Version = 0);
 
 /// <summary>Thêm hàng hóa.</summary>
 /// <param name="Code">Mã hàng: 2–30 ký tự chữ không dấu, số và - . _ /.</param>

@@ -94,11 +94,12 @@ public sealed record SupplierBankAccountDto(Guid? Id, string BankName, string? B
 /// <param name="BankAccounts">Tài khoản ngân hàng.</param>
 /// <param name="CanEdit">Người xem sửa được (có quyền, đang ở tổng công ty).</param>
 /// <param name="PendingRequests">Yêu cầu duyệt đang chờ (trạng thái, tài khoản ngân hàng) – design.md mục 18.6.</param>
+/// <param name="Version">Phiên bản dòng – web gửi lại ở header If-Match khi sửa, thao tác (lát R2).</param>
 public sealed record SupplierDetailDto(
     Guid Id, string Code, Guid GroupId, string Name, string? ShortName, bool IsForeign, string? TaxCode, string? Address,
     string? Phone, string? Email, string? Website, string? PaymentTerms, string? SupplyScope, int? Rating, string Status,
     string? StatusNote, Guid? InternalCompanyId, IReadOnlyList<SupplierContactDto> Contacts,
-    IReadOnlyList<SupplierBankAccountDto> BankAccounts, bool CanEdit, IReadOnlyList<SupplierChangeRequestDto>? PendingRequests = null);
+    IReadOnlyList<SupplierBankAccountDto> BankAccounts, bool CanEdit, IReadOnlyList<SupplierChangeRequestDto>? PendingRequests = null, uint Version = 0);
 
 /// <summary>Thông tin NCC gửi lên khi thêm (kèm mã) hoặc sửa.</summary>
 /// <param name="Code">Mã NCC (chỉ dùng khi thêm; khi sửa bỏ qua).</param>

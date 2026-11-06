@@ -56,8 +56,11 @@ public sealed record MonthlyApprovalLineData(
 /// (<see cref="ReplacesId"/>), duyệt xong thì phiếu cũ thành Đã thay; hoặc hủy kèm lý do.
 /// </summary>
 [Auditable("Phiếu duyệt NCC và giá tháng", LabelProperty = nameof(No))]
-public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <summary>Độ dài ghi chú, lý do tối đa.</summary>
     public const int TextMaxLength = 1000;
 

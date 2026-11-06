@@ -227,7 +227,7 @@ public sealed partial class ContractService : IContractAmendmentService
             a.OldValidTo, a.NewValidTo, a.OldPriceListId, lists[a.OldPriceListId].No, a.NewPriceListId, newList.No, newList.Title, newList.Status.ToString(),
             TermsDto(a.NewTerms), TermsDto(contract.Terms), a.Note, contract.ExpectedAmount, a.ExpectedAmount, a.ChangeSummary, a.Status.ToString(),
             a.RejectReason, a.CreatedAt, createdBy, a.ApprovedAt, await _approvals.HistoryAsync(a.DocType, a.Id, cancellationToken, a),
-            new ContractAmendmentActions(canEdit, canEdit, canApprove, a.Status == ContractAmendmentStatus.Submitted && readOnly is null, canEdit, readOnly));
+            new ContractAmendmentActions(canEdit, canEdit, canApprove, a.Status == ContractAmendmentStatus.Submitted && readOnly is null, canEdit, readOnly)) { Version = a.Version };
     }
 
     /// <summary>Phụ lục của hợp đồng cho tab Phụ lục, mới nhất trước.</summary>

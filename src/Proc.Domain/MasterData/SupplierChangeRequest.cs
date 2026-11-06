@@ -36,8 +36,11 @@ public enum SupplierChangeRequestStatus
 /// các công ty liên quan (đang mua của NCC) duyệt xong, rồi Tổng công ty duyệt lần cuối. Duyệt xong mới áp thay đổi vào NCC.
 /// </summary>
 [Auditable("Yêu cầu duyệt NCC", LabelProperty = nameof(No))]
-public sealed class SupplierChangeRequest : AuditableEntity, IApprovalSubject
+public sealed class SupplierChangeRequest : AuditableEntity, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private SupplierChangeRequest()

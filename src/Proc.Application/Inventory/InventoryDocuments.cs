@@ -116,6 +116,7 @@ public sealed record InventoryLineDto(
 /// <param name="CanUpdateInvoice">Phiếu nhập mua đã ghi sổ: người xem cập nhật được thông tin hóa đơn (design.md mục 18.15).</param>
 /// <param name="Reason">Phiếu điều chỉnh: lý do điều chỉnh.</param>
 /// <param name="CountReportNo">Phiếu điều chỉnh: số biên bản kiểm kê.</param>
+/// <param name="Version">Phiên bản dòng – web gửi lại ở header If-Match khi sửa, thao tác (lát R2).</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
@@ -124,7 +125,7 @@ public sealed record InventoryDocumentDto(
     string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null,
     Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null,
     Guid? PurchaseOrderId = null, string? PurchaseOrderNo = null, decimal? InvoiceAmount = null, bool CanUpdateInvoice = false,
-    string? Reason = null, string? CountReportNo = null);
+    string? Reason = null, string? CountReportNo = null, uint Version = 0);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>

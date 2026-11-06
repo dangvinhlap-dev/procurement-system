@@ -37,8 +37,11 @@ public sealed record ContractAmendmentData(
 /// duyệt) để các phụ lục không đè nhau.
 /// </summary>
 [Auditable("Phụ lục hợp đồng nguyên tắc", LabelProperty = nameof(No))]
-public sealed class PurchaseContractAmendment : AuditableEntity, ICompanyOwned, IApprovalSubject
+public sealed class PurchaseContractAmendment : AuditableEntity, ICompanyOwned, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private PurchaseContractAmendment()
     {
     }

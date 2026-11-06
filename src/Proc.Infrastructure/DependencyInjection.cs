@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.TryAddScoped<IRequestContext, NoRequestContext>();
         services.AddScoped<AuditFieldsInterceptor>();
         services.AddScoped<AuditLogInterceptor>();
+        services.AddScoped<IExpectedVersion, ExpectedVersion>();
+        services.AddScoped<VersionCheckInterceptor>();
         services.AddScoped<IAccessLog, AccessLogWriter>();
         services.AddScoped<ILogQueries, LogQueries>();
         services.AddScoped<IChangeHistoryQueries, ChangeHistoryQueries>();
@@ -133,8 +135,10 @@ public static class DependencyInjection
 
         services.AddDbContext<ProcDbContext>((sp, options) => options
             .UseNpgsql(connectionString)
-            // Thứ tự quan trọng: điền CreatedAt/UpdatedAt trước, rồi mới sinh nhật ký.
-            .AddInterceptors(sp.GetRequiredService<AuditFieldsInterceptor>(), sp.GetRequiredService<AuditLogInterceptor>()));
+            // Thứ tự quan trọng: so phiên bản (If-Match) trước hết, điền CreatedAt/UpdatedAt, rồi mới sinh nhật ký.
+            .AddInterceptors(
+                sp.GetRequiredService<VersionCheckInterceptor>(), sp.GetRequiredService<AuditFieldsInterceptor>(),
+                sp.GetRequiredService<AuditLogInterceptor>()));
 
         services.AddIdentityCore<AppUser>(options =>
             {

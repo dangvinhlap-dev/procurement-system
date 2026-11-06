@@ -1783,6 +1783,7 @@ Rà soát toàn bộ phần mềm, người dùng duyệt làm 8 lát (R1–R8).
 | Lát | Quy tắc | Lý do |
 | --- | --- | --- |
 | R1 – ghi sổ đồng thời | Ghi sổ / bỏ ghi sổ / hủy phiếu kho / xác nhận ICR khóa dòng phiếu (kèm phiếu liên kết ICS↔ICR) ngay đầu giao dịch (`RowLocks`); ghi sổ phiếu nhập theo PO khóa dòng PO (SL còn nhận được tính trên số đã khóa); gửi duyệt PO khóa PO và các PR nguồn (SL còn đặt được). Đang chạy trong giao dịch của lời gọi ngoài (xem trước người duyệt) thì dùng chung giao dịch đó | Trước đây 2 lệnh "Ghi sổ" cùng lúc trên một phiếu đều thành công (tồn ×2), ICS sinh 2 ICR, hai PO cùng một dòng PR có thể đặt quá SL đề nghị |
+| R2 – chống ghi đè | Chứng từ (PR, PO, RFQ, phiếu tìm nguồn, phiếu kho, bảng giá, hợp đồng, phụ lục, phiếu duyệt tháng, NCC độc quyền, yêu cầu duyệt NCC), NCC, mặt hàng, kỳ kho, bước duyệt có **phiên bản dòng** (`IVersioned.Version` = cột hệ thống `xmin`, concurrency token – migration `V0_19_0_KhoaSuaTrung` không đổi CSDL). DTO chứng từ, NCC, mặt hàng trả `version`; web nhớ phiên bản đã tải và gửi `If-Match` ở mọi lệnh ghi lên Id đó. Phiên bản khác bản đã xem, hoặc hai lệnh lưu cùng một dòng cùng lúc → **409** "Dữ liệu vừa được người khác thay đổi – hãy tải lại trang rồi thao tác lại." Không gửi If-Match (client cũ, test API) thì chỉ còn chặn lưu đồng thời | Trước đây người lưu sau âm thầm ghi đè người lưu trước; hai người duyệt cùng cấp cùng lúc đều được ghi |
 
 ## Nguồn tham khảo
 

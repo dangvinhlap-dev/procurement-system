@@ -244,6 +244,18 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ProcDbContext).Assembly);
         ApplyScopeFilters(modelBuilder);
+        ApplyRowVersions(modelBuilder);
+    }
+
+    /// <summary>
+    /// Entity <see cref="IVersioned"/>: thuộc tính Version (uint) là cột hệ thống <c>xmin</c> của PostgreSQL, làm concurrency token – UPDATE
+    /// kèm điều kiện xmin như lúc đọc, dòng đã bị giao dịch khác đổi thì EF báo xung đột (lát R2, design.md mục 18.26). Không thêm cột thật.
+    /// </summary>
+    private static void ApplyRowVersions(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                     .Where(t => typeof(IVersioned).IsAssignableFrom(t.ClrType) && t.BaseType is null))
+            modelBuilder.Entity(entityType.ClrType).Property(nameof(IVersioned.Version)).IsRowVersion();
     }
 
     /// <summary>

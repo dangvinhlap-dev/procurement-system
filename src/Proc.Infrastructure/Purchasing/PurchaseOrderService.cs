@@ -667,7 +667,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
-            order.Lines.Any(IsOverCeiling));
+            order.Lines.Any(IsOverCeiling)) { Version = order.Version };
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

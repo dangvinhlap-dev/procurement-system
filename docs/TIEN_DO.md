@@ -132,6 +132,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **R1 (xong, nhánh `fix/ghi-so-dong-thoi`)**: `Persistence/RowLocks.cs` (khóa `FOR UPDATE` theo thứ tự Id, `BeginOrJoinAsync`); ghi sổ/bỏ
     ghi sổ/hủy/xác nhận ICR khóa phiếu + phiếu liên kết; khóa PO khi ghi sổ phiếu nhập; gửi duyệt PO khóa PO + PR nguồn. Test
     `GhiSoCungPhieuHaiLanDongThoi_ChiGhiMotLan`, `GhiSoTrungPhieuBan_ChiMotPhieuChoNhan_BoGhiSoDuaVoiNhan_DungMotLenh`. `dotnet test` 538/538.
+  - **R2 (xong, nhánh `fix/khoa-sua-trung`)**: `IVersioned` (xmin) cho 14 loại entity gốc, migration `V0_19_0_KhoaSuaTrung` (không SQL);
+    `ExpectedVersionMiddleware` đọc If-Match + `{id}`, `VersionCheckInterceptor` so phiên bản, 409 cho `ConcurrencyConflictException`/
+    `DbUpdateConcurrencyException`; 9 DTO có `Version`; web `apiFetch` nhớ version, tự gửi If-Match. Test `SuaTrenBanCu_Bao409_HaiNguoiDuyetCungLuc_ChiMotNguoi`,
+    e2e `concurrency.spec.ts`. `dotnet test` 539/539; Playwright 98/98; build, tsc, oxlint qua.
 - **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
   (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;

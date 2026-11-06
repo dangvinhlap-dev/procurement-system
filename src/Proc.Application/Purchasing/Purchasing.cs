@@ -150,7 +150,7 @@ public sealed record PurchaseRequestDto(
     Guid Id, string No, DateOnly Date, string Status, Guid? DepartmentId, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
     Guid? WarehouseId, string Priority, string? Note, decimal TotalAmount, string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions,
-    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null);
+    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null, uint Version = 0);
 
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
@@ -220,7 +220,7 @@ public sealed record PurchaseOrderDto(
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
     string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
     string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null,
-    bool IsOffApprovedList = false, bool IsOverCeiling = false);
+    bool IsOffApprovedList = false, bool IsOverCeiling = false, uint Version = 0);
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
 /// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>

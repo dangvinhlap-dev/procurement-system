@@ -47,8 +47,11 @@ public sealed record ItemDescription(
 /// </summary>
 // SearchText suy ra từ mã, tên… nên không ghi vào nhật ký (trùng thông tin).
 [Auditable("Hàng hóa", LabelProperty = nameof(Code), Ignore = [nameof(SearchText)])]
-public sealed class Item : AuditableEntity
+public sealed class Item : AuditableEntity, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <summary>Độ dài tối đa của mã hàng.</summary>
     public const int CodeMaxLength = 30;
 

@@ -58,8 +58,11 @@ public sealed record SourcingCandidateData(Guid? Id, Guid SupplierId, CandidateS
 /// NCC chưa có trong danh mục thì thêm ở danh mục NCC (trạng thái Tiềm năng) rồi chọn vào đây.
 /// </summary>
 [Auditable("Danh sách tìm nguồn", LabelProperty = nameof(No))]
-public sealed class SourcingRequest : AuditableEntity, ICompanyOwned, IHasDocumentNumber
+public sealed class SourcingRequest : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private readonly List<SourcingCandidate> _candidates = [];
 
     private SourcingRequest()
@@ -340,8 +343,11 @@ public sealed record RfqDossierStatus(string Code, string Name, bool IsDone, str
 /// Kết quả chọn thầu đi qua quy trình duyệt dùng chung loại RFQ (design.md mục 8.6, 18.6).
 /// </summary>
 [Auditable("Yêu cầu báo giá", LabelProperty = nameof(No))]
-public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     private readonly List<RfqLine> _lines = [];
     private readonly List<RfqSupplier> _suppliers = [];
     private readonly List<RfqDossierItem> _dossierItems = [];

@@ -114,6 +114,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 // Sau xác thực: nạp phạm vi (công ty từ X-Company-Id, quyền, kho, nhóm hàng) trước khi vào endpoint.
 app.UseMiddleware<CompanyScopeMiddleware>();
+app.UseMiddleware<ExpectedVersionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

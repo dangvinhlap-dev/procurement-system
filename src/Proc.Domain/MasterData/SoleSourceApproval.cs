@@ -35,8 +35,11 @@ public sealed record SoleSourceData(Guid SupplierId, Guid ItemId, string Reason,
 /// (đánh giá lại), hết độc quyền thì kết thúc sớm kèm lý do.
 /// </summary>
 [Auditable("Phê duyệt NCC độc quyền", LabelProperty = nameof(No))]
-public sealed class SoleSourceApproval : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject
+public sealed class SoleSourceApproval : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IApprovalSubject, IVersioned
 {
+    /// <summary>Phiên bản dòng (cột hệ thống xmin của PostgreSQL) – chống ghi đè khi hai người cùng sửa (<see cref="IVersioned"/>).</summary>
+    public uint Version { get; private set; }
+
     /// <summary>Độ dài giải trình, lý do tối đa.</summary>
     public const int TextMaxLength = 1000;
 
