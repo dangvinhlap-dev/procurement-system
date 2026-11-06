@@ -59,13 +59,15 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                     Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault() ?? r.LegacyDepartment,
                     CreatedBy = u == null ? null : u.FullName, r.Priority,
                     Base = r.Lines.Sum(l => l.BaseQty),
+                    ClosedManually = r.ClosedAt != null,
                 })
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
         var ordered = await OrderedBaseByRequestAsync(rows.Select(r => r.Id).ToList(), cancellationToken);
         var items = rows.Take(SearchLimit).Select(r => new PurchaseDocumentListItemDto(
                 r.Id, r.No, r.Date, r.Status.ToString(), r.Department, r.Purpose, r.NeededDate, r.TotalAmount, r.LineCount, r.CreatedBy,
-                r.Base > 0 ? Math.Min(100m, Math.Round(ordered.GetValueOrDefault(r.Id) * 100m / r.Base, 1)) : 0m, r.Priority.ToString()))
+                r.Base > 0 ? Math.Min(100m, Math.Round(ordered.GetValueOrDefault(r.Id) * 100m / r.Base, 1)) : 0m, r.Priority.ToString(),
+                ClosedManually: r.ClosedManually))
             .ToList();
         return new PurchaseDocumentListResult(items, rows.Count > SearchLimit, SearchLimit);
     }
@@ -165,6 +167,28 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         pr.Cancel();
         await _approvals.SkipPendingAsync(pr, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PurchaseRequestDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken)
+    {
+        // Khóa PR: PO lấy dòng của PR đang gửi duyệt cùng lúc (khóa PR nguồn – lát R1) phải xong trước.
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await RowLocks.LockAsync<PurchaseRequest>(_db, [id], cancellationToken);
+        var pr = await LoadAsync(id, cancellationToken);
+        var lineIds = pr.Lines.Select(l => l.Id).ToList();
+        var ordered = await (
+                from ol in _db.Set<PurchaseOrderLine>()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where ol.SourcePrLineId != null && lineIds.Contains(ol.SourcePrLineId.Value) && o.Status != ApprovalDocumentStatus.Cancelled
+                select o.Id)
+            .AnyAsync(cancellationToken);
+        // Chưa lên PO thì hủy PR là đúng nghĩa; đóng phần còn lại dành cho PR đã đặt một phần (lát R6, design.md mục 18.26).
+        if (!ordered) throw new BusinessRuleException($"PR {pr.No} chưa lên đơn mua hàng nào – dùng lệnh Hủy phiếu thay cho đóng phần còn lại.");
+        pr.CloseRemaining(_scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập."), _clock.UtcNow, request.Reason);
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -379,7 +403,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             canApprove,
             pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null,
-            readOnly);
+            readOnly,
+            pr.Status == ApprovalDocumentStatus.Approved && readOnly is null && lines.Any(l => l.OrderedQty > 0));
 
         return new PurchaseRequestDto(
             pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.DepartmentId, department ?? pr.LegacyDepartment, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,
@@ -387,7 +412,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
-            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version };
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>

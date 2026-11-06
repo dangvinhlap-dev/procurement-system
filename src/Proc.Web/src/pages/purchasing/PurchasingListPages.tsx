@@ -8,6 +8,7 @@ import type { DateRange } from '../../api/logs'
 import {
   priorityLabels,
   purchaseStatusLabels,
+  purchaseStatusText,
   purchaseStatusTone,
   useApprovalRuleMutations,
   useApprovalRules,
@@ -38,7 +39,7 @@ const statusColumn: Column = {
   title: 'Trạng thái',
   width: 110,
   type: 'status',
-  value: (r) => purchaseStatusLabels[r.status],
+  value: (r) => purchaseStatusText(r.status, r.closedManually),
   tone: (r) => purchaseStatusTone[r.status],
   groupable: true,
 }

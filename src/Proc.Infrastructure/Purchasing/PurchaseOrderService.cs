@@ -64,7 +64,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 {
                     o.Id, o.No, o.Date, o.Status, Supplier = s.Code + " – " + s.Name, Warehouse = w.Code, o.ExpectedDate,
                     Amount = o.TotalAmount + o.TotalVat, LineCount = o.Lines.Count, CreatedBy = u == null ? null : u.FullName,
-                    Base = o.Lines.Sum(l => l.BaseQty), o.IsOutOfContract, o.HasPriceException, o.PurchaseType,
+                    Base = o.Lines.Sum(l => l.BaseQty), o.IsOutOfContract, o.HasPriceException, o.PurchaseType, ClosedManually = o.ClosedAt != null,
                     // Như PurchaseOrder.IsDocsOverdue, viết lại để EF dịch sang SQL.
                     DocsOverdue = o.PurchaseType == PurchaseType.Emergency && o.DocsCompletedAt == null && o.DocsDueDate < today
                                   && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed),
@@ -75,7 +75,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var items = rows.Take(PurchaseRequestService.SearchLimit).Select(r => new PurchaseDocumentListItemDto(
                 r.Id, r.No, r.Date, r.Status.ToString(), r.Supplier, r.Warehouse, r.ExpectedDate, r.Amount, r.LineCount, r.CreatedBy,
                 r.Base > 0 ? Math.Min(100m, Math.Round(received.GetValueOrDefault(r.Id) * 100m / r.Base, 1)) : 0m, null, r.IsOutOfContract,
-                r.HasPriceException, r.PurchaseType.ToString(), r.DocsOverdue))
+                r.HasPriceException, r.PurchaseType.ToString(), r.DocsOverdue, r.ClosedManually))
             .ToList();
         return new PurchaseDocumentListResult(items, rows.Count > PurchaseRequestService.SearchLimit, PurchaseRequestService.SearchLimit);
     }
@@ -210,6 +210,28 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         order.Cancel();
         await _approvals.SkipPendingAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<PurchaseOrderDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken)
+    {
+        // Khóa PO: phiếu nhập đang ghi sổ cùng lúc phải xong trước, rồi mới xét còn phiếu nhập nháp / đã nhận chưa (lát R1).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken);
+        var order = await LoadAsync(id, cancellationToken);
+        await EnsureItemsVisibleAsync(order, cancellationToken);
+        // Phiếu nhập nháp theo PO phải ghi sổ hoặc hủy trước – không để phiếu treo trỏ vào PO đã đóng (lát R6, design.md mục 18.26).
+        var drafts = await _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]).AsNoTracking()
+            .Where(d => d.PurchaseOrderId == id && d.Status == DocumentStatus.Draft).Select(d => d.No).ToListAsync(cancellationToken);
+        if (drafts.Count > 0)
+            throw new BusinessRuleException($"Đơn {order.No} còn phiếu nhập nháp {string.Join(", ", drafts)} – ghi sổ hoặc hủy trước khi đóng phần còn lại.");
+        var received = await ReceivedBaseByLineAsync(order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        if (!received.Values.Any(q => q > 0))
+            throw new BusinessRuleException($"Đơn {order.No} chưa nhận hàng – dùng lệnh Hủy phiếu thay cho đóng phần còn lại.");
+        order.CloseRemaining(_scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập."), _clock.UtcNow, request.Reason);
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -655,7 +677,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             canApprove,
             order.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null && !anyReceived,
-            readOnly);
+            readOnly,
+            order.Status == ApprovalDocumentStatus.Approved && readOnly is null && anyReceived);
 
         return new PurchaseOrderDto(
             order.Id, order.No, order.Date, order.Status.ToString(), order.SupplierId, supplier.Code, supplier.Name, order.WarehouseId, warehouse,
@@ -667,7 +690,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
-            order.Lines.Any(IsOverCeiling)) { Version = order.Version };
+            order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

@@ -218,6 +218,41 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     /// <summary>Ghi chú.</summary>
     public string? Note { get; protected set; }
 
+    /// <summary>
+    /// Lý do đóng phần còn lại (lát R6, design.md mục 18.26) – có giá trị khi người dùng chủ động đóng phiếu đã duyệt mà chưa đặt/nhận hết
+    /// (PR: phần chưa lên PO không đặt nữa; PO: phần NCC chưa giao không nhận nữa). Null = không đóng tay.
+    /// </summary>
+    public string? ClosedReason { get; protected set; }
+
+    /// <summary>Người đóng phần còn lại.</summary>
+    public Guid? ClosedBy { get; protected set; }
+
+    /// <summary>Thời điểm đóng phần còn lại (UTC).</summary>
+    public DateTimeOffset? ClosedAt { get; protected set; }
+
+    /// <summary>Đã đóng tay phần còn lại (khác "Đã nhận đủ" tự động của PO).</summary>
+    public bool IsClosedManually => ClosedAt is not null;
+
+    /// <summary>
+    /// Đóng phần còn lại của phiếu đã duyệt (lát R6): Đã duyệt → Đã đóng, ghi lý do, người, thời điểm. Phần đã đặt/đã nhận giữ nguyên;
+    /// phần còn lại không đặt/nhận thêm được nữa. Điều kiện riêng (PR đã lên PO, PO đã nhận một phần) do tầng trên kiểm tra.
+    /// </summary>
+    /// <param name="userId">Người đóng.</param>
+    /// <param name="at">Thời điểm.</param>
+    /// <param name="reason">Lý do, bắt buộc, tối đa 500 ký tự.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không ở trạng thái Đã duyệt hoặc thiếu lý do.</exception>
+    public void CloseRemaining(Guid userId, DateTimeOffset at, string? reason)
+    {
+        if (Status != ApprovalDocumentStatus.Approved)
+            throw new BusinessRuleException($"Phiếu {No} không ở trạng thái Đã duyệt nên không đóng phần còn lại được.");
+        var text = string.IsNullOrWhiteSpace(reason) ? throw new BusinessRuleException("Hãy nhập lý do đóng phần còn lại.") : reason.Trim();
+        if (text.Length > 500) throw new BusinessRuleException("Lý do đóng phần còn lại tối đa 500 ký tự.");
+        Status = ApprovalDocumentStatus.Closed;
+        ClosedReason = text;
+        ClosedBy = userId;
+        ClosedAt = at;
+    }
+
     /// <summary>Tổng giá trị dùng để xét ngưỡng duyệt.</summary>
     public abstract decimal ApprovalAmount { get; }
 
@@ -947,10 +982,13 @@ public sealed class PurchaseOrder : ApprovableDocument
         if (Status == ApprovalDocumentStatus.Approved) Status = ApprovalDocumentStatus.Closed;
     }
 
-    /// <summary>Bỏ ghi sổ phiếu nhập làm PO thiếu hàng trở lại: Đã nhận đủ → Đã duyệt.</summary>
+    /// <summary>
+    /// Bỏ ghi sổ phiếu nhập (hoặc trả NCC) làm PO thiếu hàng trở lại: Đã nhận đủ → Đã duyệt. PO đã đóng tay phần còn lại (lát R6) thì giữ
+    /// Đã đóng – người dùng đã quyết định không nhận thêm.
+    /// </summary>
     public void ReopenReceiving()
     {
-        if (Status == ApprovalDocumentStatus.Closed) Status = ApprovalDocumentStatus.Approved;
+        if (Status == ApprovalDocumentStatus.Closed && !IsClosedManually) Status = ApprovalDocumentStatus.Approved;
     }
 }
 

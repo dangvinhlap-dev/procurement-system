@@ -240,6 +240,50 @@ public partial class PurchasingTests
         Assert.Equal(("Closed", 13m), (po.Status, po.Lines[0].ReceivedQty));
     }
 
+    /// <summary>
+    /// Lát R6 (design.md mục 18.26): đóng phần còn lại – PO đã nhận một phần đóng được (bắt buộc lý do), không nhận thêm, bỏ ghi sổ phiếu nhập
+    /// không mở lại; PO chưa nhận thì phải hủy. PR đã lên PO một phần đóng được, dòng PR không còn trong danh sách chờ đặt hàng.
+    /// </summary>
+    [Fact]
+    public async Task DongPhanConLai_PoNhanThieu_PrDatMotPhan()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var pr = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 10));
+        await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
+        pr = await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "approve"));
+        Assert.False(pr.Actions.CanCloseRemaining);
+        Assert.Contains("chưa lên đơn mua hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/close-remaining", new CloseRemainingRequest("Thôi"), Ct)));
+
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 4, pr.Lines[0].Id));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+        Assert.Contains("chưa nhận hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("Thôi"), Ct)));
+
+        // PR: còn 6 chưa đặt – đóng (bắt buộc lý do), dòng không còn chờ đặt hàng.
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}", Ct));
+        Assert.True(pr.Actions.CanCloseRemaining);
+        Assert.Contains("lý do", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/close-remaining", new CloseRemainingRequest(" "), Ct)));
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/close-remaining", new CloseRemainingRequest("Bộ phận chỉ cần 4 cái"), Ct));
+        Assert.Equal(("Closed", "Bộ phận chỉ cần 4 cái"), (pr.Status, pr.ClosedReason));
+        Assert.NotNull(pr.ClosedByName);
+        var open = await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct);
+        Assert.DoesNotContain(open!, l => l.PrLineId == pr.Lines[0].Id);
+        Assert.Contains("chưa được duyệt", await TitleAsync(await CreatePoAsync(f, 1, pr.Lines[0].Id)));
+
+        // PO: nhận 3/4 rồi đóng phần còn lại; không nhận thêm; bỏ ghi sổ phiếu nhập vẫn giữ Đã đóng.
+        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 3));
+        var draft = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 1));
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
+        Assert.Contains("phiếu nhập nháp", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("NCC hết hàng"), Ct)));
+        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{draft.Id}/cancel", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("NCC hết hàng"), Ct));
+        Assert.Equal(("Closed", "NCC hết hàng", 3m), (po.Status, po.ClosedReason, po.Lines[0].ReceivedQty));
+        Assert.Contains("đã nhận đủ hoặc đã hủy", await TitleAsync(await ReceiveAsync(f, po, 1)));
+        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn.Id}/unpost", null, Ct));
+        Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
+    }
+
     [Fact]
     public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
     {

@@ -3672,6 +3672,16 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -3947,6 +3957,16 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("BudgetUsedAmount")
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
