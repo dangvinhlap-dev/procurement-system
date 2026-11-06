@@ -384,7 +384,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
-0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c xong; tiếp **G5** kế hoạch nhu cầu, rồi G6 … G12.
+0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c xong; **tạm dừng sau G4c theo yêu cầu người dùng (06/11/2026)** –
+   khi người dùng cho làm tiếp thì làm **G5** kế hoạch nhu cầu, rồi G6 … G12. G1–G4c chưa phát hành (bản test 5007 vẫn 0.18.0).
+   Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
+   TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới
+   N01–N16 (0.15.0–0.18.0). N01 nhắc admin gán quyền `Purchase.Budget.*` cho TOANQUYEN (CSDL test chưa có) và khai PRB/POB ở BMI.
+   Dựng bằng script Python trên khung file 0.14.0 (script ở scratchpad, không commit).
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
    E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C3, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong (C3 làm 05/11/2026); G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0
