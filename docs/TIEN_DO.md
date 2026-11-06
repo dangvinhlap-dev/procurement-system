@@ -145,6 +145,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **R5 (xong, nhánh `fix/tra-ncc-tru-po`)**: `PurchaseOrderReceipts.ReceivedBaseByLineAsync` trừ RTV; `SyncOrderStatusAsync` chạy cả với RTV (PO
     của phiếu nhập gốc), đọc SL sau khi đã ghi phiếu. Test `TraNcc_TruSlDaNhanCuaPo_MoLaiDeGiaoBu`. `dotnet test` 542/542; e2e return-transfer,
     three-way-match, purchasing, po-list 14/14.
+  - **R6 (xong, nhánh `feature/dong-phan-con-lai`)**: `ApprovableDocument.CloseRemaining` + cột ClosedReason/By/At (migration `V0_19_0_DongPhanConLai`);
+    `CloseRemainingAsync` PR/PO, endpoint `close-remaining`, `PurchaseDocumentActions.CanCloseRemaining`, `BudgetUsage` tính phần đã nhận;
+    web nút "Đóng phần còn lại" (`confirmWithReason`), `ClosedRemainingNotice`, nhãn `purchaseStatusText`. Test `DongPhanConLai_PoNhanThieu_PrDatMotPhan`,
+    e2e `close-remaining.spec.ts`. `dotnet test` 543/543; e2e mua hàng 15/15; build, tsc, oxlint qua.
 - **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
   (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;

@@ -20,6 +20,15 @@ export const purchaseStatusLabels: Record<PurchaseStatus, string> = {
   Cancelled: 'Đã hủy',
 }
 
+/**
+ * Nhãn trạng thái có xét đóng tay (lát R6): PR/PO đã đóng phần còn lại hiện "Đã đóng phần còn lại" thay vì "Đã nhận đủ".
+ * @param status Trạng thái.
+ * @param closedManually Đã đóng phần còn lại.
+ */
+export function purchaseStatusText(status: PurchaseStatus, closedManually?: boolean | null): string {
+  return status === 'Closed' && closedManually ? 'Đã đóng phần còn lại' : purchaseStatusLabels[status]
+}
+
 /** Tông màu trạng thái (ui-guide.md): xanh hoàn tất, cam chờ, xám trung tính. */
 export const purchaseStatusTone: Record<PurchaseStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
   Draft: 'neutral',
@@ -128,6 +137,18 @@ export interface PurchaseActions {
   canApprove: boolean
   canCancel: boolean
   readOnlyReason: string | null
+  /** Đóng phần còn lại (lát R6): PR đã lên PO một phần, PO đã nhận một phần. */
+  canCloseRemaining?: boolean
+}
+
+/** Thông tin đóng phần còn lại của PR/PO (lát R6, design.md mục 18.26). */
+export interface ClosedRemaining {
+  /** Lý do; null = phiếu không đóng tay. */
+  closedReason?: string | null
+  /** Thời điểm đóng (UTC, ISO). */
+  closedAt?: string | null
+  /** Họ tên người đóng. */
+  closedByName?: string | null
 }
 
 /** Một dòng danh sách PR/PO. */
@@ -146,6 +167,8 @@ export interface PurchaseListItem {
   priority: PurchasePriority | null
   /** PO: có dòng ngoài hợp đồng (null với PR). */
   outOfContract: boolean | null
+  /** Đã đóng phần còn lại (lát R6). */
+  closedManually?: boolean
   /** PO: có dòng lệch giá đã duyệt. */
   priceException: boolean | null
   /** PO: loại mua (null với PR). */
@@ -187,7 +210,7 @@ export interface PurchaseRequestLine {
 }
 
 /** Chi tiết PR. */
-export interface PurchaseRequest {
+export interface PurchaseRequest extends ClosedRemaining {
   id: string
   no: string
   date: string
@@ -329,7 +352,7 @@ export const priceSourceLabels: Record<PriceSource, string> = {
 }
 
 /** Chi tiết PO. */
-export interface PurchaseOrder {
+export interface PurchaseOrder extends ClosedRemaining {
   id: string
   no: string
   date: string
@@ -587,7 +610,7 @@ export function usePurchaseMutations<TDoc extends { id: string; no: string }, TI
   const useAction = (name: string) =>
     useMutation({
       mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
-        apiFetch<TDoc>(`/api/${kind}/${id}/${name}`, { method: 'POST', body: name === 'approve' || name === 'reject' ? { comment: comment ?? null } : undefined }),
+        apiFetch<TDoc>(`/api/${kind}/${id}/${name}`, { method: 'POST', body: actionBody(name, comment) }),
       onSuccess,
     })
   return {
@@ -600,7 +623,19 @@ export function usePurchaseMutations<TDoc extends { id: string; no: string }, TI
     approve: useAction('approve'),
     reject: useAction('reject'),
     cancel: useAction('cancel'),
+    closeRemaining: useAction('close-remaining'),
   }
+}
+
+/**
+ * Thân request của lệnh trên phiếu: duyệt/từ chối gửi ý kiến; đóng phần còn lại gửi lý do (lát R6); lệnh khác không có thân.
+ * @param name Tên lệnh trên đường dẫn.
+ * @param comment Ý kiến hoặc lý do người dùng nhập.
+ */
+function actionBody(name: string, comment: string | null | undefined): unknown {
+  if (name === 'approve' || name === 'reject') return { comment: comment ?? null }
+  if (name === 'close-remaining') return { reason: comment ?? null }
+  return undefined
 }
 
 /** Dòng PR đã duyệt còn chưa đặt hàng (lập PO). */

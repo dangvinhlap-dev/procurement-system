@@ -9,7 +9,8 @@ namespace Proc.Infrastructure.Purchasing;
 /// công ty nên chỉ thấy phiếu của công ty đang làm việc.
 /// <para>
 /// Đã dùng = Σ tiền hàng chưa VAT của <b>PO</b> Chờ duyệt/Đã duyệt/Đã đóng (theo tháng ngày PO, bộ phận đặt hàng của PO)
-/// + Σ phần <b>PR</b> Chờ duyệt/Đã duyệt <b>chưa lên PO</b> (theo tháng ngày PR). Phần PR đã lên một PO được tính thì không tính ở PR
+/// + Σ phần <b>PR</b> Chờ duyệt/Đã duyệt <b>chưa lên PO</b> (theo tháng ngày PR). Phiếu đã đóng phần còn lại (lát R6): PO chỉ tính phần đã
+/// nhận thuần, PR không tính phần chưa lên PO. Phần PR đã lên một PO được tính thì không tính ở PR
 /// nữa – tránh đếm hai lần. PO nháp, bị từ chối (về nháp), đã hủy không tính.
 /// </para>
 /// <para>
@@ -71,14 +72,37 @@ internal sealed class BudgetUsage
         var orders = await _db.PurchaseOrders.AsNoTracking()
             .Where(o => o.DepartmentId != null && o.Date >= from && o.Date <= to && Counted.Contains(o.Status) && o.Id != excludeDocumentId)
             .Where(o => departmentId == null || o.DepartmentId == departmentId)
+            .Where(o => o.ClosedAt == null)
             .GroupBy(o => new { DepartmentId = o.DepartmentId!.Value, o.Date.Month })
             .Select(g => new { g.Key.DepartmentId, g.Key.Month, Amount = g.Sum(o => o.TotalAmount) })
             .ToListAsync(cancellationToken);
         foreach (var o in orders) Add(result, (o.DepartmentId, o.Month), o.Amount);
 
+        // PO đã đóng phần còn lại (lát R6): chỉ tính phần đã nhận thuần – phần NCC không giao nữa trả lại ngân sách. Mỗi dòng = thành tiền ×
+        // min(1, SL đã nhận ÷ SL đặt), ví dụ đặt 10 × 100.000 = 1.000.000, nhận 6 → 600.000.
+        var (start, end) = (from, to);
+        var closedLines = await (
+                from l in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on l.OrderId equals o.Id
+                where o.DepartmentId != null && o.Date >= start && o.Date <= end && o.ClosedAt != null && o.Id != excludeDocumentId
+                      && (departmentId == null || o.DepartmentId == departmentId)
+                select new { l.Id, DepartmentId = o.DepartmentId!.Value, o.Date.Month, l.Amount, l.BaseQty })
+            .ToListAsync(cancellationToken);
+        if (closedLines.Count > 0)
+        {
+            var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, closedLines.Select(l => l.Id).ToList(), null, cancellationToken);
+            foreach (var l in closedLines.Where(l => l.BaseQty > 0))
+            {
+                var share = Math.Clamp(received.GetValueOrDefault(l.Id) / l.BaseQty, 0m, 1m);
+                Add(result, (l.DepartmentId, l.Month), decimal.Round(l.Amount * share, 2, MidpointRounding.AwayFromZero));
+            }
+        }
+
         var requests = _db.PurchaseRequests.AsNoTracking()
             .Where(r => r.DepartmentId != null && r.Date >= from && r.Date <= to && Counted.Contains(r.Status) && r.Id != excludeDocumentId)
-            .Where(r => departmentId == null || r.DepartmentId == departmentId);
+            .Where(r => departmentId == null || r.DepartmentId == departmentId)
+            // PR đã đóng phần còn lại (lát R6): phần chưa lên PO không đặt nữa – không giữ ngân sách.
+            .Where(r => r.ClosedAt == null);
         var lines = await (
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in requests on l.RequestId equals r.Id

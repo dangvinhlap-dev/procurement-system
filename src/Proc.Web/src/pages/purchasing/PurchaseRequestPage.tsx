@@ -10,7 +10,7 @@ import { useUoms } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
-  purchaseStatusLabels,
+  purchaseStatusText,
   withPendingApprovers,
   purchaseStatusTone,
   usePurchaseMutations,
@@ -29,6 +29,7 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
+import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 
 interface PrLineValues {
@@ -403,7 +404,7 @@ export function PurchaseRequestPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? withPendingApprovers(purchaseStatusLabels[doc.status], doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(purchaseStatusText(doc.status, !!doc.closedReason), doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
 
   return (
     <>
@@ -424,6 +425,7 @@ export function PurchaseRequestPage() {
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
           )}
           <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+          <ClosedRemainingNotice doc={doc} />
         </>
       }
       form={form}

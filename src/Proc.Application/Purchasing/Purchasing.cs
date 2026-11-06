@@ -117,13 +117,22 @@ public sealed record PurchaseDocumentQuery(DateOnly? From, DateOnly? To, string?
 /// <param name="CreatedByName">Người lập.</param>
 /// <param name="Progress">PR: % SL đã đặt hàng; PO: % SL đã nhận (theo ĐVT cơ sở).</param>
 /// <param name="Priority">Mức ưu tiên (PR).</param>
+/// <param name="OutOfContract">PO: có dòng ngoài hợp đồng (null với PR).</param>
+/// <param name="PriceException">PO: có dòng lệch giá đã duyệt (null với PR).</param>
+/// <param name="PurchaseType">PO: loại mua (thường/khẩn cấp).</param>
+/// <param name="DocsOverdue">PO khẩn cấp quá hạn bổ sung hồ sơ.</param>
+/// <param name="ClosedManually">Đã đóng phần còn lại (lát R6) – trạng thái Đã đóng không phải do nhận đủ.</param>
 public sealed record PurchaseDocumentListItemDto(
     Guid Id, string No, DateOnly Date, string Status, string? Description, string? Purpose, DateOnly? NeededDate, decimal Amount,
     int LineCount, string? CreatedByName, decimal Progress, string? Priority, bool? OutOfContract = null, bool? PriceException = null,
-    string? PurchaseType = null, bool? DocsOverdue = null);
+    string? PurchaseType = null, bool? DocsOverdue = null, bool ClosedManually = false);
 
 /// <summary>Kết quả tìm PR/PO.</summary>
 public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentListItemDto> Items, bool Truncated, int Limit);
+
+/// <summary>Đóng phần còn lại của PR/PO đã duyệt (lát R6, design.md mục 18.26).</summary>
+/// <param name="Reason">Lý do, bắt buộc, tối đa 500 ký tự.</param>
+public sealed record CloseRemainingRequest(string? Reason);
 
 /// <summary>Quyền thao tác trên phiếu theo trạng thái và người xem.</summary>
 /// <param name="CanEdit">Sửa, lưu nháp.</param>
@@ -131,7 +140,8 @@ public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentLi
 /// <param name="CanApprove">Duyệt/từ chối (đúng cấp đang chờ, không phải người lập).</param>
 /// <param name="CanCancel">Hủy.</param>
 /// <param name="ReadOnlyReason">Lý do chỉ xem.</param>
-public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason);
+/// <param name="CanCloseRemaining">Đóng phần còn lại (lát R6): PR đã duyệt đã lên PO một phần, PO đã duyệt đã nhận một phần.</param>
+public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason, bool CanCloseRemaining = false);
 
 /// <summary>
 /// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu; OnHandQty: tồn hiện tại của mặt hàng ở công ty (ĐVT cơ sở,
@@ -150,7 +160,17 @@ public sealed record PurchaseRequestDto(
     Guid Id, string No, DateOnly Date, string Status, Guid? DepartmentId, string? Department, string? RequesterName, string? Purpose, DateOnly? NeededDate,
     Guid? WarehouseId, string Priority, string? Note, decimal TotalAmount, string? RejectReason, DateTimeOffset CreatedAt, string? CreatedByName,
     DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions,
-    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null, uint Version = 0);
+    IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null, uint Version = 0)
+{
+    /// <summary>Lý do đóng phần còn lại (lát R6); null = không đóng tay.</summary>
+    public string? ClosedReason { get; init; }
+
+    /// <summary>Thời điểm đóng phần còn lại (UTC).</summary>
+    public DateTimeOffset? ClosedAt { get; init; }
+
+    /// <summary>Họ tên người đóng phần còn lại.</summary>
+    public string? ClosedByName { get; init; }
+}
 
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
@@ -220,7 +240,17 @@ public sealed record PurchaseOrderDto(
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
     string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
     string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null,
-    bool IsOffApprovedList = false, bool IsOverCeiling = false, uint Version = 0);
+    bool IsOffApprovedList = false, bool IsOverCeiling = false, uint Version = 0)
+{
+    /// <summary>Lý do đóng phần còn lại (lát R6); null = không đóng tay.</summary>
+    public string? ClosedReason { get; init; }
+
+    /// <summary>Thời điểm đóng phần còn lại (UTC).</summary>
+    public DateTimeOffset? ClosedAt { get; init; }
+
+    /// <summary>Họ tên người đóng phần còn lại.</summary>
+    public string? ClosedByName { get; init; }
+}
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
 /// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>
@@ -290,6 +320,14 @@ public interface IPurchaseRequestService
     /// <summary>Hủy PR (chưa lên PO).</summary>
     Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>Đóng phần còn lại – PR đã duyệt đã lên PO một phần: phần chưa lên PO không đặt nữa (lát R6, design.md mục 18.26).</summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="request">Lý do đóng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi đóng (Đã đóng).</returns>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu chưa duyệt, chưa đặt/nhận phần nào, thiếu lý do.</exception>
+    Task<PurchaseRequestDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken);
+
     /// <summary>Dòng PR đã duyệt còn chưa đặt hàng.</summary>
     Task<IReadOnlyList<OpenRequestLineDto>> OpenLinesAsync(CancellationToken cancellationToken);
 }
@@ -320,6 +358,14 @@ public interface IPurchaseOrderService
 
     /// <summary>Hủy PO (chưa nhận hàng).</summary>
     Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Đóng phần còn lại – PO đã duyệt đã nhận một phần: phần NCC chưa giao không nhận nữa (lát R6, design.md mục 18.26).</summary>
+    /// <param name="id">Id phiếu.</param>
+    /// <param name="request">Lý do đóng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi đóng (Đã đóng).</returns>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu chưa duyệt, chưa đặt/nhận phần nào, thiếu lý do.</exception>
+    Task<PurchaseOrderDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken);
 
     /// <summary>Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11).</summary>
     Task<PurchaseOrderDto> CompleteDocsAsync(Guid id, CompleteDocsRequest request, CancellationToken cancellationToken);

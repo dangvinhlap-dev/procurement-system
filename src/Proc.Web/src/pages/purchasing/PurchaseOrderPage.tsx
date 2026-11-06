@@ -11,7 +11,7 @@ import { useDepartments, useWarehouses } from '../../api/organization'
 import { aboveGroupMinPct, pickSupplierPrice, useGroupMinPrices, useSupplierPrices } from '../../api/pricing'
 import {
   priceSourceLabels,
-  purchaseStatusLabels,
+  purchaseStatusText,
   withPendingApprovers,
   purchaseTypeLabels,
   useCompletePoDocs,
@@ -33,6 +33,7 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
+import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 
 interface PoLineValues {
@@ -555,7 +556,7 @@ export function PurchaseOrderPage() {
 
   const status = isNew
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
-    : { label: doc ? withPendingApprovers(purchaseStatusLabels[doc.status], doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
+    : { label: doc ? withPendingApprovers(purchaseStatusText(doc.status, !!doc.closedReason), doc.approvals) : '', tone: doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
 
   return (
     <>
@@ -583,6 +584,7 @@ export function PurchaseOrderPage() {
                 doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
               ))}
             <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+            <ClosedRemainingNotice doc={doc} />
             {/* Mua ngoài danh sách hoặc ngoài giá bắt buộc duyệt (người dùng chốt 06/11/2026 – design.md mục 18.25). */}
             {doc?.isOffApprovedList && (
               <Alert

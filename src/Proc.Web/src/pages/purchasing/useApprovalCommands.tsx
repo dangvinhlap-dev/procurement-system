@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseCircleOutlined, CloseOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { CheckOutlined, CloseCircleOutlined, CloseOutlined, MinusCircleOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
@@ -33,7 +33,11 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
   /** Kiểm tra form và lưu nháp; trả về phiếu đã lưu, null nếu lỗi. */
   persist: () => Promise<T | null>
   /** Các lệnh của loại phiếu. */
-  mutations: { create: { isPending: boolean }; update: { isPending: boolean }; submit: DocAction<T>; approve: DocAction<T>; reject: DocAction<T>; cancel: DocAction<T> }
+  mutations: {
+    create: { isPending: boolean }; update: { isPending: boolean }; submit: DocAction<T>; approve: DocAction<T>; reject: DocAction<T>; cancel: DocAction<T>
+    /** Đóng phần còn lại (lát R6) – trang không có lệnh này thì bỏ trống. */
+    closeRemaining?: DocAction<T>
+  }
   /** Đường dẫn danh sách, ví dụ "/mua-hang/pr". */
   listPath: string
   /** Tên loại phiếu trong câu hỏi, ví dụ "đề nghị mua hàng". */
@@ -45,6 +49,45 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
 }
 
 type AppApi = ReturnType<typeof App.useApp>
+
+/**
+ * Hộp thoại hỏi có ô lý do bắt buộc – dùng cho từ chối và đóng phần còn lại (lát R6).
+ * @param modal Modal của App.useApp().
+ * @param message Message của App.useApp().
+ * @param options.title Câu hỏi.
+ * @param options.label Nhãn ô lý do.
+ * @param options.placeholder Gợi ý trong ô.
+ * @param options.okText Chữ nút đồng ý.
+ * @param options.description Câu giải thích phía trên ô lý do (tùy chọn).
+ * @param options.onOk Gọi với lý do đã cắt khoảng trắng.
+ */
+export function confirmWithReason(
+  modal: AppApi['modal'],
+  message: AppApi['message'],
+  options: { title: string; label: string; placeholder: string; okText: string; description?: string; onOk: (reason: string) => Promise<void> },
+) {
+  let reason = ''
+  modal.confirm({
+    title: options.title,
+    content: (
+      <>
+        {options.description && <p>{options.description}</p>}
+        <label htmlFor="action-reason">{renderRequiredMark(options.label, { required: true })}</label>
+        <Input.TextArea id="action-reason" rows={3} maxLength={500} placeholder={options.placeholder} onChange={(e) => (reason = e.target.value)} />
+      </>
+    ),
+    okText: options.okText,
+    okButtonProps: { danger: true },
+    cancelText: 'Không',
+    onOk: async () => {
+      if (!reason.trim()) {
+        message.error(`Hãy nhập ${options.label.toLowerCase()}.`)
+        throw new Error('missing reason')
+      }
+      await options.onOk(reason.trim())
+    },
+  })
+}
 
 /**
  * Hộp thoại từ chối có ô lý do bắt buộc (design.md mục 18.6: từ chối bắt buộc lý do) – dùng chung cho PR, PO, bảng giá NCC.
@@ -229,6 +272,25 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
       },
     })
 
+  const closeRemaining = () =>
+    doc &&
+    mutations.closeRemaining &&
+    confirmWithReason(modal, message, {
+      title: `Đóng phần còn lại của phiếu ${doc.no}?`,
+      description: 'Phần đã đặt/đã nhận giữ nguyên; phần còn lại không đặt hay nhận thêm được nữa.',
+      label: 'Lý do đóng',
+      placeholder: 'Ví dụ: NCC hết hàng, bộ phận không cần thêm',
+      okText: 'Đóng phần còn lại',
+      onOk: async (reason) => {
+        try {
+          await mutations.closeRemaining!.mutateAsync({ id: doc.id, comment: reason })
+          message.success(`Đã đóng phần còn lại của phiếu ${doc.no}.`)
+        } catch (e) {
+          fail(e, 'Không đóng được phần còn lại.')
+        }
+      },
+    })
+
   const canEdit = isNew ? !readOnly : doc?.actions.canEdit === true
   const actions: ReactNode = (
     <>
@@ -251,6 +313,11 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
             Từ chối
           </Button>
         </>
+      )}
+      {!isNew && doc?.actions.canCloseRemaining && mutations.closeRemaining && (
+        <Button danger icon={<MinusCircleOutlined />} onClick={closeRemaining} loading={mutations.closeRemaining.isPending}>
+          Đóng phần còn lại
+        </Button>
       )}
       {!isNew && doc?.actions.canCancel && (
         <Button danger icon={<StopOutlined />} onClick={cancel}>

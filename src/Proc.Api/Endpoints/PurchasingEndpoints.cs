@@ -70,6 +70,10 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PrApprove);
         pr.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PrCreate);
+        // Đóng phần còn lại chưa lên PO (lát R6, design.md mục 18.26) – cùng quyền với hủy PR.
+        pr.MapPost("/{id:guid}/close-remaining", (Guid id, CloseRemainingRequest request, IPurchaseRequestService s, CancellationToken ct) =>
+                s.CloseRemainingAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PrCreate);
         // Hàng mới chưa có mã của PR đã duyệt (design.md mục 18.12): nhóm Đàm phán lập phiếu tìm nguồn; người mua gắn mã hàng khi đã có mã.
         pr.MapPost("/{id:guid}/new-items/{newItemId:guid}/sourcing", (Guid id, Guid newItemId, IPurchaseRequestNewItemService s, CancellationToken ct) =>
                 s.CreateSourcingAsync(id, newItemId, ct))
@@ -116,6 +120,10 @@ public static class PurchasingEndpoints
         po.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseOrderService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoApprove);
         po.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.CancelAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PoCreate);
+        // Đóng phần NCC chưa giao (lát R6, design.md mục 18.26) – cùng quyền với hủy PO.
+        po.MapPost("/{id:guid}/close-remaining", (Guid id, CloseRemainingRequest request, IPurchaseOrderService s, CancellationToken ct) =>
+                s.CloseRemainingAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
         // Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11) – người lập PO.
         po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
