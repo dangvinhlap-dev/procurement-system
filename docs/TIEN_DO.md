@@ -139,6 +139,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **R3 (xong, nhánh `fix/duyet-khac-nguoi`)**: `ApprovalEngine.ApproveBlockerAsync` chặn người đã duyệt một cấp trong lượt; `ApprovedBy` loại họ
     khỏi người duyệt tiếp theo (engine, lịch sử duyệt, `DocumentRegistryService`). Test `DuyetNhieuCap_MoiCapMotNguoiKhacNhau_TrongMotLuot`; 7 test
     tích hợp + e2e `purchasing`, `price-reports` đổi sang hai người duyệt luân phiên. `dotnet test` 540/540; e2e duyệt 21/21.
+  - **R4 (xong, nhánh `feature/grn-bat-buoc-po`)**: tham số `RECEIPT_PO_REQUIRED` (`CompanyParameter.RequireReceiptPo`, migration
+    `V0_19_0_NhapMuaTheoPo`), chặn ở `CheckReceiptHeaderAsync` (lưu + ghi sổ); SEC bật/tắt. Test `NhapMuaBatBuocTheoPo_ChanPhieuNhapThang`, e2e
+    `system-parameters` đếm 22 tham số. `dotnet test` 541/541; e2e system-parameters + goods-receipt qua.
 - **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
   (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;

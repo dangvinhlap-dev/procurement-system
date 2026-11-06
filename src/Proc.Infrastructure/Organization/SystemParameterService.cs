@@ -66,6 +66,8 @@ public sealed class SystemParameterService : ISystemParameterService
                 "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
             Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
                 "Bật: người lập đơn mua hàng không ghi sổ được phiếu nhập theo đơn của mình – người khác xác nhận giao nhận (tách nhiệm)."),
+            Toggle(SystemParameterCodes.ReceiptPoRequired, "Nhập mua bắt buộc theo đơn mua hàng", parameter?.RequireReceiptPo ?? false,
+                "Bật: phiếu nhập mua từ NCC phải chọn đơn mua hàng đã duyệt (giá, SL theo PO) – không nhập thẳng với đơn giá gõ tay. Mua gấp dùng PO mua khẩn cấp."),
             Sla(SystemParameterCodes.SlaPricedDays, "SLA – hàng đã có hợp đồng/bảng giá", parameter?.SlaPricedDays, CompanyParameter.DefaultSlaPricedDays,
                 "Số ngày làm việc từ lúc PR đủ duyệt đến lúc PO được duyệt cho hàng đã có bảng giá/hợp đồng hiệu lực."),
             Sla(SystemParameterCodes.SlaSourcingDays, "SLA – hàng chưa có NCC được duyệt", parameter?.SlaSourcingDays, CompanyParameter.DefaultSlaSourcingDays,
@@ -93,6 +95,7 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.RfqDossierRequired] = nameof(CompanyParameter.RequireRfqDossierComplete),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
+        [SystemParameterCodes.ReceiptPoRequired] = nameof(CompanyParameter.RequireReceiptPo),
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
         [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
         [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
@@ -167,11 +170,13 @@ public sealed class SystemParameterService : ISystemParameterService
                 break;
             case SystemParameterCodes.ReceiptQcRequired:
             case SystemParameterCodes.ReceiptSeparatePoCreator:
+            case SystemParameterCodes.ReceiptPoRequired:
             case SystemParameterCodes.RfqDossierRequired:
                 var on = ParseToggle(request.Value);
                 var row = await GetOrCreateAsync(companyId, cancellationToken);
                 if (key == SystemParameterCodes.ReceiptQcRequired) row.ChangeRequireReceiptQc(on);
                 else if (key == SystemParameterCodes.RfqDossierRequired) row.ChangeRequireRfqDossierComplete(on);
+                else if (key == SystemParameterCodes.ReceiptPoRequired) row.ChangeRequireReceiptPo(on);
                 else row.ChangeSeparatePoCreatorFromReceipt(on);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;

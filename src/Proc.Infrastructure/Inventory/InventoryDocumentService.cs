@@ -397,6 +397,11 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         // SupplierCompanies tự lọc theo công ty đang làm việc: có dòng đang giao dịch = công ty này đang mua của NCC đó.
         if (!await _db.SupplierCompanies.AnyAsync(sc => sc.SupplierId == supplier.Id && sc.IsActive, cancellationToken))
             throw new BusinessRuleException($"NCC {supplier.Code} chưa được áp dụng tại công ty này (Nhà cung cấp → tab Áp dụng tại …).");
+        // Kiểm tra cả lúc lưu và lúc ghi sổ: phiếu nháp lập trước khi bật tham số cũng không ghi sổ được (lát R4, design.md mục 18.26).
+        if (request.PurchaseOrderId is null
+            && await _db.CompanyParameters.AsNoTracking().AnyAsync(p => p.RequireReceiptPo, cancellationToken))
+            throw new BusinessRuleException(
+                "Công ty bắt buộc nhập mua theo đơn mua hàng – chọn đơn mua hàng đã duyệt cho phiếu nhập (tham số \"Nhập mua bắt buộc theo đơn mua hàng\").");
     }
 
     /// <summary>Kết quả kiểm tra gửi lên: trống = chưa kiểm tra.</summary>
