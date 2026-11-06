@@ -53,6 +53,7 @@ import {
   SourcingSavingsReportPage,
   ContractComplianceReportPage,
   PriceVarianceReportPage,
+  StandardSavingsReportPage,
   KpiReportPage,
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
@@ -123,6 +124,7 @@ const implemented: Record<string, ReactNode> = {
   SAVE: <SourcingSavingsReportPage />,
   PRCW: <ContractComplianceReportPage />,
   PRVAR: <PriceVarianceReportPage />,
+  SAVSTD: <StandardSavingsReportPage />,
   KPI: <KpiReportPage />,
   ANOM: <AnomalyReportPage />,
   VIOL: <ControlFindingListPage />,

@@ -278,6 +278,43 @@ public sealed record PriceVarianceRowDto(
 public sealed record PriceVarianceResult(DateOnly PreviousFrom, DateOnly PreviousTo, decimal ImpactAmount, IReadOnlyList<PriceVarianceRowDto> Items);
 
 /// <summary>
+/// Tiết kiệm so giá chuẩn của một mặt hàng (lát G4c, design.md mục 18.25): dòng PO đã duyệt bằng VND có dòng phiếu duyệt tháng (GTH) có giá
+/// chuẩn. Giá theo ĐVT cơ sở, sau chiết khấu, trước VAT.
+/// </summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="BaseUomCode">ĐVT cơ sở.</param>
+/// <param name="Qty">SL mua (ĐVT cơ sở).</param>
+/// <param name="AvgPrice">Giá mua bình quân gia quyền = thành tiền ÷ SL cơ sở (6 số lẻ).</param>
+/// <param name="StandardAvgPrice">Giá chuẩn bình quân = giá trị theo giá chuẩn ÷ SL cơ sở (6 số lẻ).</param>
+/// <param name="Amount">Thành tiền thực (sau CK, trước VAT).</param>
+/// <param name="StandardAmount">Giá trị theo giá chuẩn = Σ giá chuẩn quy ĐVT dòng × SL.</param>
+/// <param name="Saving">Tiết kiệm = giá trị theo giá chuẩn − thành tiền; âm là mua cao hơn giá chuẩn.</param>
+/// <param name="SavingPct">% tiết kiệm = tiết kiệm ÷ giá trị theo giá chuẩn × 100, 2 số lẻ; null khi giá trị chuẩn = 0.</param>
+/// <param name="TargetAmount">Giá trị theo giá mục tiêu của các dòng có giá mục tiêu; null khi không dòng nào có.</param>
+/// <param name="TargetGap">Còn cách mục tiêu = thành tiền các dòng có giá mục tiêu − giá trị theo giá mục tiêu; ≤ 0 là đạt; null khi không có.</param>
+/// <param name="OverCeilingLines">Số dòng PO có giá ròng vượt giá trần của phiếu tháng.</param>
+/// <param name="OrderCount">Số PO.</param>
+/// <param name="ApprovalNos">Số phiếu GTH, cách nhau "; ".</param>
+public sealed record StandardSavingRowDto(
+    Guid ItemId, string ItemCode, string ItemName, string BaseUomCode, decimal Qty, decimal AvgPrice, decimal StandardAvgPrice, decimal Amount,
+    decimal StandardAmount, decimal Saving, decimal? SavingPct, decimal? TargetAmount, decimal? TargetGap, int OverCeilingLines, int OrderCount,
+    string ApprovalNos);
+
+/// <summary>Báo cáo tiết kiệm so giá chuẩn (lát G4c).</summary>
+/// <param name="TotalAmount">Tổng thành tiền mọi dòng PO đã duyệt bằng VND trong kỳ (trong nhóm hàng lọc).</param>
+/// <param name="CoveredAmount">Thành tiền các dòng có giá chuẩn.</param>
+/// <param name="CoveragePct">Tỷ lệ giá trị mua có giá chuẩn = phần có giá chuẩn ÷ tổng × 100, 2 số lẻ; null khi tổng = 0.</param>
+/// <param name="StandardAmount">Tổng giá trị theo giá chuẩn.</param>
+/// <param name="Saving">Tổng tiết kiệm (âm là mua cao hơn chuẩn).</param>
+/// <param name="SavingPct">% tiết kiệm = tổng tiết kiệm ÷ tổng giá trị chuẩn × 100, 2 số lẻ; null khi giá trị chuẩn = 0.</param>
+/// <param name="Items">Các mặt hàng, tiết kiệm giảm dần (mua cao hơn chuẩn nhiều nhất cuối danh sách).</param>
+public sealed record StandardSavingResult(
+    decimal TotalAmount, decimal CoveredAmount, decimal? CoveragePct, decimal StandardAmount, decimal Saving, decimal? SavingPct,
+    IReadOnlyList<StandardSavingRowDto> Items);
+
+/// <summary>
 /// Một mặt hàng trong báo cáo NCC đủ điều kiện (design.md mục 18.25 – quyết định thành lập Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC).
 /// </summary>
 /// <param name="ItemId">Mặt hàng.</param>
@@ -401,6 +438,18 @@ public interface IPurchaseReportService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<PriceVarianceResult> GetPriceVarianceAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tiết kiệm so giá chuẩn (lát G4c, design.md mục 18.25): dòng PO Đã duyệt/Đã đóng bằng VND có ngày PO trong khoảng, có dòng phiếu
+    /// duyệt tháng có giá chuẩn; tiết kiệm = giá trị theo giá chuẩn − thành tiền, gộp theo mặt hàng; kèm giá mục tiêu, số dòng vượt trần.
+    /// </summary>
+    /// <param name="period">Khoảng ngày PO, phạm vi.</param>
+    /// <param name="categoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
+    Task<StandardSavingResult> GetStandardSavingsAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken);
 
     /// <summary>
     /// NCC đủ điều kiện theo mặt hàng (design.md mục 18.25): mỗi mặt hàng đang dùng đếm NCC Đã duyệt khai báo bán mặt hàng; ít hơn

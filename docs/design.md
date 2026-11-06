@@ -1760,6 +1760,18 @@ AuditLog vẫn giữ).
 Migration `V0_19_0_GiaChuanTranMucTieu` (3 cột numeric(19,6) cho phép null trên `MonthlySupplierApprovalLine`; `Down()` xóa cột, mất các giá này,
 AuditLog vẫn giữ).
 
+**G4c – Tiết kiệm so giá chuẩn** (màn hình **SAVSTD**, Báo cáo → Tiết kiệm so giá chuẩn,
+`GET /api/reports/standard-savings?from=&to=&allCompanies=&categoryId=`, 06/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Dòng PO **Đã duyệt/Đã đóng**, bằng **VND**, ngày PO trong khoảng (tối đa hai năm), có dòng phiếu tháng (`MonthlyApprovalLineId`, kể cả NCC ngoài danh sách) mà dòng phiếu có **giá chuẩn**. Phạm vi công ty, nhóm hàng như các báo cáo mua hàng; toàn tập đoàn cần `Report.Purchase.ViewAllCompanies`; xem cần `Report.Purchase.View` | Giá chuẩn là mốc Ban duyệt (G4b); PO nháp/chờ duyệt chưa phải giá mua |
+| Giá chuẩn, mục tiêu, trần quy về ĐVT dòng PO = giá ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng (6 số lẻ). **Giá trị theo giá chuẩn** = Σ giá chuẩn (ĐVT dòng) × SL (2 số lẻ mỗi dòng); **tiết kiệm** = giá trị theo giá chuẩn − thành tiền (sau CK, trước VAT); % = tiết kiệm ÷ giá trị chuẩn. Âm là mua cao hơn giá chuẩn (tô màu). Ví dụ chuẩn 12.200/cái: 60 × 12.000 + 40 × 12.500 + 10 × 13.000 = 1.350.000 so 1.342.000 → −8.000 = −0,60% | Đo hiệu quả đàm phán so mốc giá của Ban |
+| Gộp theo mặt hàng: SL cơ sở, giá mua BQ, giá chuẩn BQ, thành tiền, giá trị chuẩn, tiết kiệm, **giá trị theo mục tiêu** và **còn cách mục tiêu** (chỉ các dòng có giá mục tiêu; ≤ 0 là đạt), **số dòng vượt trần** (giá ròng > trần), số PO, số phiếu GTH. Tiết kiệm nhiều lên đầu | Ban thấy mặt hàng cần đàm phán lại |
+| Đầu báo cáo: tổng tiết kiệm, %, và **tỷ lệ giá trị mua có giá chuẩn** = thành tiền dòng có giá chuẩn ÷ tổng thành tiền mọi dòng PO đã duyệt bằng VND trong kỳ (cùng nhóm hàng lọc). Mặc định tháng trước | Tiết kiệm chỉ có nghĩa khi phần lớn giá trị mua có giá chuẩn |
+
+Không có migration.
+
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
 

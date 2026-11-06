@@ -6,6 +6,7 @@ using Proc.Domain.Documents;
 using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
 using Proc.Infrastructure.MasterData;
@@ -535,6 +536,90 @@ public sealed class PurchaseReportService : IPurchaseReportService
             .OrderByDescending(r => Math.Abs(r.ImpactAmount ?? 0m)).ThenBy(r => r.ItemCode)
             .ToList();
         return new PriceVarianceResult(prevFrom, prevTo, rows.Sum(r => r.ImpactAmount ?? 0m), rows);
+    }
+
+    /// <inheritdoc />
+    public async Task<StandardSavingResult> GetStandardSavingsAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken)
+    {
+        Check(period);
+        List<Guid>? categoryIds = null;
+        if (categoryId is { } c)
+        {
+            var parents = await _db.ItemCategories.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.ParentId, cancellationToken);
+            categoryIds = parents.Keys.Where(id => ItemAdministration.IsUnder(id, c, parents)).ToList();
+        }
+
+        // Toàn tập đoàn đã kiểm quyền ở Check; filter nhóm hàng giữ nhờ join mặt hàng. Phiếu tháng thuộc tổng công ty nên bỏ filter công ty,
+        // nhóm hàng của phiếu – chỉ đọc đúng dòng phiếu đã ghi trên dòng PO người dùng xem được (như PurchaseOrderService).
+        // Phiếu tháng tính bằng VND nên chỉ xét PO bằng VND (như cảnh báo vượt trần G4b).
+        var orders = period.AllCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
+        var items = categoryIds is null ? _db.Items : _db.Items.Where(i => categoryIds.Contains(i.CategoryId));
+        var monthly =
+            from ml in _db.Set<MonthlySupplierApprovalLine>()
+            join a in _db.MonthlySupplierApprovals.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]) on ml.ApprovalId equals a.Id
+            select new { ml.Id, a.No, ml.UomFactor, ml.StandardPrice, ml.CeilingPrice, ml.TargetPrice };
+        var rows = await (
+                from o in orders.AsNoTracking()
+                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                      && o.Date >= period.From && o.Date <= period.To && o.CurrencyCode == "VND"
+                from l in o.Lines
+                join i in items on l.ItemId equals i.Id
+                join bu in _db.Uoms on i.BaseUomId equals bu.Id
+                join m in monthly on l.MonthlyApprovalLineId equals (Guid?)m.Id into ms
+                from m in ms.DefaultIfEmpty()
+                select new
+                {
+                    OrderId = o.Id, l.ItemId, ItemCode = i.Code, ItemName = i.Name, BaseUomCode = bu.Code, l.Qty, l.BaseQty, l.UomFactor,
+                    l.UnitPrice, l.DiscountPct, l.Amount, ApprovalNo = m == null ? null : m.No, MonthlyFactor = m == null ? (decimal?)null : m.UomFactor,
+                    Standard = m == null ? null : m.StandardPrice, Ceiling = m == null ? null : m.CeilingPrice, Target = m == null ? null : m.TargetPrice,
+                })
+            .ToListAsync(cancellationToken);
+
+        // Giá phiếu tháng quy về ĐVT dòng PO = giá ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng (6 số lẻ) – như giá tháng/giá trần (G3, G4b).
+        // Ví dụ giá chuẩn 146.400/thùng 12 cái, PO tính theo cái → 12.200/cái.
+        static decimal? ToLine(decimal? price, decimal? monthlyFactor, decimal lineFactor) =>
+            price is { } p && monthlyFactor is { } f && f != 0 ? Math.Round(p / f * lineFactor, 6, MidpointRounding.AwayFromZero) : null;
+        static decimal Net(decimal price, decimal discount) => Math.Round(price * (100m - discount) / 100m, 6, MidpointRounding.AwayFromZero);
+        static decimal? Pct(decimal part, decimal total) => total == 0 ? null : Math.Round(part * 100m / total, 2, MidpointRounding.AwayFromZero);
+        static decimal Avg(decimal amount, decimal qty) => qty == 0 ? 0 : Math.Round(amount / qty, 6, MidpointRounding.AwayFromZero);
+
+        var covered = rows
+            .Select(r => new
+            {
+                Row = r,
+                Standard = ToLine(r.Standard, r.MonthlyFactor, r.UomFactor),
+                Target = ToLine(r.Target, r.MonthlyFactor, r.UomFactor),
+                Ceiling = ToLine(r.Ceiling, r.MonthlyFactor, r.UomFactor),
+            })
+            .Where(x => x.Standard is not null)
+            .ToList();
+
+        // Tiết kiệm = Σ giá chuẩn (ĐVT dòng) × SL − Σ thành tiền. Ví dụ chuẩn 12.200/cái: 60 cái × 12.000 = 720.000 so 732.000 → +12.000;
+        // 39 cái × 12.500 = 487.500 so 475.800 → −11.700; mặt hàng tiết kiệm 300 đ = 300 ÷ 1.207.800 = 0,02%.
+        var result = covered.GroupBy(x => x.Row.ItemId)
+            .Select(g =>
+            {
+                var first = g.First().Row;
+                var qty = g.Sum(x => x.Row.BaseQty);
+                var amount = g.Sum(x => x.Row.Amount);
+                var standard = g.Sum(x => Money(x.Standard!.Value * x.Row.Qty));
+                var withTarget = g.Where(x => x.Target is not null).ToList();
+                decimal? targetAmount = withTarget.Count > 0 ? withTarget.Sum(x => Money(x.Target!.Value * x.Row.Qty)) : null;
+                decimal? targetGap = targetAmount is { } t ? withTarget.Sum(x => x.Row.Amount) - t : null;
+                var over = g.Count(x => x.Ceiling is { } ceiling && Net(x.Row.UnitPrice, x.Row.DiscountPct) > ceiling);
+                var nos = string.Join("; ", g.Select(x => x.Row.ApprovalNo!).Distinct().Order(StringComparer.Ordinal));
+                return new StandardSavingRowDto(
+                    g.Key, first.ItemCode, first.ItemName, first.BaseUomCode, qty, Avg(amount, qty), Avg(standard, qty), amount, standard,
+                    standard - amount, Pct(standard - amount, standard), targetAmount, targetGap, over, g.Select(x => x.Row.OrderId).Distinct().Count(), nos);
+            })
+            .OrderByDescending(r => r.Saving).ThenBy(r => r.ItemCode, StringComparer.Ordinal)
+            .ToList();
+
+        var total = rows.Sum(r => r.Amount);
+        var coveredAmount = result.Sum(r => r.Amount);
+        var standardAmount = result.Sum(r => r.StandardAmount);
+        var saving = standardAmount - coveredAmount;
+        return new StandardSavingResult(total, coveredAmount, Pct(coveredAmount, total), standardAmount, saving, Pct(saving, standardAmount), result);
     }
 
     /// <summary>

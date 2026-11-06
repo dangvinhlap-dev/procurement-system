@@ -12,6 +12,8 @@ import {
   type KpiRow,
   usePendingRequests,
   usePriceVariance,
+  useStandardSavings,
+  type StandardSavingRow,
   type OutOfContractLine,
   type PriceSourceKind,
   type PriceVarianceRow,
@@ -697,6 +699,94 @@ export function PriceVarianceReportPage() {
             type="info"
             showIcon
             title={`So với ${previous}: ảnh hưởng ${formatMoney(data?.impactAmount ?? 0)} đ (dương là mua đắt hơn). Giá theo PO đã duyệt, ĐVT cơ sở, sau chiết khấu, trước VAT. Tô màu: tăng giá.`}
+          />
+        )
+      }
+      onClearFilters={() => {
+        setPeriod(lastMonth())
+        setCategoryId(undefined)
+      }}
+      filters={
+        <PeriodFilters
+          value={period}
+          onChange={setPeriod}
+          extra={
+            <FilterField label="Nhóm hàng (gồm nhóm con)" width={220}>
+              {(id) => (
+                <TreeSelect
+                  id={id}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  treeData={tree}
+                  allowClear
+                  showSearch
+                  treeNodeFilterProp="title"
+                  placeholder="Tất cả"
+                />
+              )}
+            </FilterField>
+          }
+        />
+      }
+    />
+  )
+}
+
+const standardSavingColumns: GridColumn<StandardSavingRow>[] = [
+  { key: 'code', title: 'Mã hàng', width: 120, value: (r) => r.itemCode },
+  { key: 'name', title: 'Tên hàng', width: 220, value: (r) => r.itemName },
+  { key: 'uom', title: 'ĐVT cơ sở', width: 80, value: (r) => r.baseUomCode },
+  { key: 'qty', title: 'SL mua', width: 90, type: 'quantity', value: (r) => r.qty },
+  { key: 'price', title: 'Giá mua BQ', width: 110, type: 'money', value: (r) => r.avgPrice },
+  { key: 'standardPrice', title: 'Giá chuẩn BQ', width: 110, type: 'money', value: (r) => r.standardAvgPrice },
+  { key: 'amount', title: 'Thành tiền', width: 130, type: 'money', value: (r) => r.amount },
+  { key: 'standardAmount', title: 'Giá trị theo giá chuẩn', width: 150, type: 'money', value: (r) => r.standardAmount },
+  { key: 'saving', title: 'Tiết kiệm', width: 120, type: 'money', value: (r) => r.saving },
+  { key: 'savingPct', title: 'Tiết kiệm (%)', width: 100, type: 'quantity', value: (r) => r.savingPct },
+  { key: 'targetAmount', title: 'Giá trị theo mục tiêu', width: 140, type: 'money', value: (r) => r.targetAmount },
+  { key: 'targetGap', title: 'Còn cách mục tiêu', width: 130, type: 'money', value: (r) => r.targetGap },
+  { key: 'over', title: 'Dòng vượt trần', width: 100, type: 'quantity', value: (r) => (r.overCeilingLines > 0 ? r.overCeilingLines : null) },
+  { key: 'orders', title: 'Số PO', width: 70, type: 'quantity', value: (r) => r.orderCount },
+  { key: 'gth', title: 'Phiếu duyệt tháng', width: 180, value: (r) => r.approvalNos },
+]
+
+/**
+ * Báo cáo → Tiết kiệm so giá chuẩn (lát G4c, design.md mục 18.25): dòng PO đã duyệt bằng VND có giá chuẩn trên phiếu duyệt tháng (GTH);
+ * tiết kiệm = giá trị theo giá chuẩn − thành tiền, gộp theo mặt hàng; kèm giá mục tiêu, số dòng vượt trần. Mặc định tháng trước.
+ * Dòng mua cao hơn giá chuẩn được tô màu.
+ */
+export function StandardSavingsReportPage() {
+  const [period, setPeriod] = useState(lastMonth)
+  const [categoryId, setCategoryId] = useState<string>()
+  const categories = useItemCategories()
+  const tree = useMemo(() => buildCategoryTree(categories.data ?? []), [categories.data])
+  const report = useStandardSavings(period, categoryId)
+  const data = report.data
+  const pct = (v: number | null | undefined) => (v == null ? '–' : `${formatQuantity(v)}%`)
+  return (
+    <ListPage
+      title="Tiết kiệm so giá chuẩn"
+      exportFileName="tiet-kiem-gia-chuan"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={data?.items ?? []}
+      columns={standardSavingColumns}
+      rowKey={(r) => r.itemId}
+      loading={report.isLoading}
+      isMarked={(r) => r.saving < 0}
+      notice={
+        report.error ? (
+          <Alert type="error" showIcon title={report.error.message} />
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            title={
+              `Tiết kiệm so giá chuẩn: ${formatMoney(data?.saving ?? 0)} đ (${pct(data?.savingPct)}) trên giá trị chuẩn ` +
+              `${formatMoney(data?.standardAmount ?? 0)} đ. Giá trị mua có giá chuẩn: ${formatMoney(data?.coveredAmount ?? 0)} / ` +
+              `${formatMoney(data?.totalAmount ?? 0)} đ (${pct(data?.coveragePct)}).`
+            }
+            description="Theo PO đã duyệt bằng VND, giá chuẩn của phiếu duyệt NCC và giá tháng, sau chiết khấu, trước VAT. Âm là mua cao hơn giá chuẩn (tô màu)."
           />
         )
       }

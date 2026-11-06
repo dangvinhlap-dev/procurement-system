@@ -59,4 +59,9 @@ test('giá mua & mua ngoài hợp đồng: PO tuần trước không có giá đ
   await expect(page.getByRole('heading', { name: 'Biến động giá mua' })).toBeVisible()
   await expect(page.getByText(/So với kỳ trước từ \d{2}\/\d{2}\/\d{4}/)).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/price-variance.png' })
+
+  await openByCommand(page, 'SAVSTD')
+  await expect(page.getByRole('heading', { name: 'Tiết kiệm so giá chuẩn' })).toBeVisible()
+  await expect(page.getByText(/Tiết kiệm so giá chuẩn: .* đ/)).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/standard-savings.png' })
 })

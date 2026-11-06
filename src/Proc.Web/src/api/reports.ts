@@ -441,6 +441,56 @@ export function usePriceVariance(period: PurchaseReportPeriod, categoryId?: stri
   })
 }
 
+/** Tiết kiệm so giá chuẩn của một mặt hàng (lát G4c, design.md mục 18.25) – giá theo ĐVT cơ sở, sau CK, trước VAT. */
+export interface StandardSavingRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  baseUomCode: string
+  qty: number
+  avgPrice: number
+  standardAvgPrice: number
+  amount: number
+  standardAmount: number
+  /** Giá trị theo giá chuẩn − thành tiền; âm là mua cao hơn giá chuẩn. */
+  saving: number
+  savingPct: number | null
+  targetAmount: number | null
+  /** Thành tiền dòng có giá mục tiêu − giá trị theo giá mục tiêu; ≤ 0 là đạt. */
+  targetGap: number | null
+  overCeilingLines: number
+  orderCount: number
+  approvalNos: string
+}
+
+/** Báo cáo tiết kiệm so giá chuẩn. */
+export interface StandardSavingResult {
+  totalAmount: number
+  coveredAmount: number
+  coveragePct: number | null
+  standardAmount: number
+  saving: number
+  savingPct: number | null
+  items: StandardSavingRow[]
+}
+
+/**
+ * Tiết kiệm so giá chuẩn của phiếu duyệt tháng (G4c): dòng PO đã duyệt bằng VND có giá chuẩn.
+ * @param period Khoảng ngày PO, phạm vi.
+ * @param categoryId Nhóm hàng (gồm nhóm con), không có = mọi nhóm.
+ */
+export function useStandardSavings(period: PurchaseReportPeriod, categoryId?: string) {
+  const companyId = useCompanyId()
+  const params = periodQuery(period)
+  if (categoryId) params.set('categoryId', categoryId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'standard-savings', query],
+    queryFn: () => apiFetch<StandardSavingResult>(`/api/reports/standard-savings?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Một dòng nhận hàng có sai lệch (design.md mục 18.14). */
 export interface ReceiptQualityRow {
   documentId: string
