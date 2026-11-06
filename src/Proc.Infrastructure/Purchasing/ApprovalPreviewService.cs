@@ -30,13 +30,16 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
     private readonly ISoleSourceService _soleSources;
     private readonly ISupplierAdministration _suppliers;
     private readonly ISupplierChangeRequestService _supplierChanges;
+    private readonly Proc.Application.Pricing.IMonthlySupplierApprovalService _monthly;
 
     /// <summary>Tạo dịch vụ.</summary>
     public ApprovalPreviewService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseRequestService requests, IPurchaseOrderService orders, IPriceListService priceLists,
         IRfqService rfqs, IContractService contracts, IContractAmendmentService amendments, ISoleSourceService soleSources,
-        ISupplierAdministration suppliers, ISupplierChangeRequestService supplierChanges)
+        ISupplierAdministration suppliers, ISupplierChangeRequestService supplierChanges,
+        Proc.Application.Pricing.IMonthlySupplierApprovalService monthly)
     {
+        _monthly = monthly;
         _suppliers = suppliers;
         _supplierChanges = supplierChanges;
         _db = db;
@@ -64,6 +67,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
             DocumentTypes.RequestForQuotation => Permissions.Sourcing.RfqAward,
             DocumentTypes.Contract or ApprovalTypes.ContractAmendment => Permissions.Purchase.ContractManage,
             DocumentTypes.SoleSource => Permissions.MasterData.SoleSourceManage,
+            DocumentTypes.MonthlySupplierApproval => Permissions.Pricing.MonthlyApprovalManage,
             _ => throw new BusinessRuleException($"Loại phiếu {docType} không xem trước chuỗi duyệt được."),
         });
 
@@ -79,6 +83,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
                     request.Award ?? throw new BusinessRuleException("Chưa chọn NCC trúng thầu."), cancellationToken) is var rfq ? (rfq.Status, rfq.Approvals) : default),
                 DocumentTypes.Contract => Result(await _contracts.SubmitAsync(request.DocumentId, cancellationToken) is var ct ? (ct.Status, ct.Approvals) : default),
                 ApprovalTypes.ContractAmendment => Result(await _amendments.SubmitAmendmentAsync(request.DocumentId, cancellationToken) is var am ? (am.Status, am.Approvals) : default),
+                DocumentTypes.MonthlySupplierApproval => Result(await _monthly.SubmitAsync(request.DocumentId, cancellationToken) is var ms ? (ms.Status, ms.Approvals) : default),
                 _ => Result(await _soleSources.SubmitAsync(request.DocumentId, cancellationToken) is var ss ? (ss.Status, ss.Approvals) : default),
             };
             // Lượt vừa gửi thử là lượt lớn nhất; không có bước nào ở lượt đó = dưới mọi ngưỡng, gửi là duyệt ngay.

@@ -443,7 +443,7 @@ export interface DeliveryTracking {
 }
 
 /** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
-export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ'
+export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ' | 'GTH'
 
 /** Một loại phiếu có duyệt. */
 export interface ApprovalType {

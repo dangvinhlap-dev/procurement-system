@@ -71,6 +71,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Purchase.ContractView, DocumentTypes.Contract, ApprovalTypes.ContractAmendment);
         Add(Permissions.MasterData.SupplierView, ApprovalTypes.Supplier);
         Add(Permissions.MasterData.SoleSourceView, DocumentTypes.SoleSource);
+        Add(Permissions.Pricing.MonthlyApprovalView, DocumentTypes.MonthlySupplierApproval);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
         if (_scope.HasPermission(Permissions.Control.AnomalyView) || _scope.HasPermission(Permissions.Control.FindingReceive)
             || _scope.HasPermission(Permissions.Control.FindingManage))
@@ -281,6 +282,26 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             raws.AddRange(rows.Select(d => new Raw(DocumentTypes.SoleSource, d.Id, d.No, VietnamDate(d.CreatedAt), d.SupplierId, null, null,
                 "Phê duyệt NCC độc quyền", null, d.Status.ToString(),
                 d.Status is SoleSourceStatus.Approved or SoleSourceStatus.Ended ? DocumentProgress.Done : DocumentProgress.Open,
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.MonthlySupplierApproval))
+        {
+            // Filter công ty giữ nguyên: sổ chứng từ là chứng từ của công ty đang làm việc – phiếu duyệt tháng hiện ở tổng công ty (nơi lập).
+            var q = _db.MonthlySupplierApprovals.AsNoTracking().Where(d => d.CreatedAt >= fromUtc && d.CreatedAt < toUtc);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            if (acted) { var actedIds = ActedIds(DocumentTypes.MonthlySupplierApproval); q = q.Where(d => actedIds.Contains(d.Id)); }
+            var rows = await q.OrderByDescending(d => d.CreatedAt).Take(take)
+                .Select(d => new { d.Id, d.No, d.CreatedAt, d.Period, d.Status, d.CreatedBy })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.MonthlySupplierApproval, d.Id, d.No, VietnamDate(d.CreatedAt), null, null, null,
+                $"Duyệt NCC và giá tháng {d.Period:MM/yyyy}", null, d.Status.ToString(),
+                d.Status switch
+                {
+                    MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced => DocumentProgress.Done,
+                    MonthlyApprovalStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
                 d.CreatedBy, d.CreatedAt)));
         }
 

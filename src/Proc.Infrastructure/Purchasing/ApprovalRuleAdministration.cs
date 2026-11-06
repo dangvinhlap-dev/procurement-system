@@ -206,6 +206,24 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 step!.Level, sole.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
+        // Phiếu duyệt NCC và giá tháng chờ Ban duyệt (lát G2): duyệt tại tổng công ty – filter công ty và nhóm hàng giữ nguyên.
+        var monthly = await _db.MonthlySupplierApprovals.Include(x => x.Lines).Where(x => x.Status == MonthlyApprovalStatus.Submitted)
+            .ToListAsync(cancellationToken);
+        var monthlyCategoryIds = monthly.Select(x => x.ItemCategoryId).Distinct().ToList();
+        var monthlyCategories = await _db.ItemCategories.AsNoTracking().Where(c => monthlyCategoryIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => $"{c.Code} – {c.Name}", cancellationToken);
+        var monthlyCreatorIds = monthly.Select(x => x.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => monthlyCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var sheet in monthly)
+        {
+            var step = await _approvals.CurrentStepAsync(sheet, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(sheet, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                sheet.DocType, ApprovalTypes.Get(sheet.DocType).Name, sheet.Id, sheet.No, sheet.Period,
+                $"Tháng {sheet.Period:MM/yyyy}: {monthlyCategories.GetValueOrDefault(sheet.ItemCategoryId)} ({sheet.Lines.Count} mặt hàng)", 0,
+                step!.Level, sheet.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();
     }
 

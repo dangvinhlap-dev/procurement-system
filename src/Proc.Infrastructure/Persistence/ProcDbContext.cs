@@ -166,6 +166,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Bảng giá NCC (design.md mục 8.1).</summary>
     public DbSet<Proc.Domain.Pricing.SupplierPriceList> SupplierPriceLists => Set<Proc.Domain.Pricing.SupplierPriceList>();
 
+    /// <summary>Phiếu duyệt NCC và giá tháng (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25).</summary>
+    public DbSet<Proc.Domain.Pricing.MonthlySupplierApproval> MonthlySupplierApprovals => Set<Proc.Domain.Pricing.MonthlySupplierApproval>();
+
+    /// <summary>Công ty áp dụng của phiếu duyệt tháng.</summary>
+    public DbSet<Proc.Domain.Pricing.MonthlySupplierApprovalCompany> MonthlySupplierApprovalCompanies => Set<Proc.Domain.Pricing.MonthlySupplierApprovalCompany>();
+
     /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
     public DbSet<Proc.Domain.Sourcing.SourcingRequest> SourcingRequests => Set<Proc.Domain.Sourcing.SourcingRequest>();
 
@@ -296,5 +302,8 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         // Phiếu NCC độc quyền cũng theo phạm vi nhóm hàng của mặt hàng (filter công ty đã có vì ICompanyOwned).
         modelBuilder.Entity<SoleSourceApproval>().HasQueryFilter(
             ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
+        // Phiếu duyệt NCC và giá tháng theo nhóm hàng của phiếu: người không được nhóm hàng đó không thấy phiếu (design.md mục 9.2, 18.25).
+        modelBuilder.Entity<Proc.Domain.Pricing.MonthlySupplierApproval>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
     }
 }

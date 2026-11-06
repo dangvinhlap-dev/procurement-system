@@ -99,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<ISupplierChangeRequestService, SupplierChangeRequestService>();
         services.AddScoped<IConflictDeclarationService, ConflictDeclarationService>();
         services.AddScoped<ISoleSourceService, SoleSourceService>();
+        services.AddScoped<Proc.Application.Pricing.IMonthlySupplierApprovalService, Proc.Infrastructure.Pricing.MonthlySupplierApprovalService>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();
         services.AddScoped<ISupplierRatingAdministration, SupplierRatingAdministration>();
         services.AddScoped<CatalogNumberAllocator>();

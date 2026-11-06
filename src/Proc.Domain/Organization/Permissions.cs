@@ -163,6 +163,12 @@ public static class Permissions
         public const string PriceListApprove = "Pricing.PriceList.Approve";
         /// <summary>Quyền "So sánh giá".</summary>
         public const string CompareView = "Pricing.Compare.View";
+        /// <summary>Quyền "Xem phiếu duyệt NCC và giá tháng" (lát G2, design.md mục 18.25).</summary>
+        public const string MonthlyApprovalView = "Pricing.MonthlyApproval.View";
+        /// <summary>Quyền "Lập, gửi duyệt, điều chỉnh, hủy phiếu duyệt NCC và giá tháng" (Văn phòng Ban – chỉ đề xuất).</summary>
+        public const string MonthlyApprovalManage = "Pricing.MonthlyApproval.Manage";
+        /// <summary>Quyền "Duyệt phiếu NCC và giá tháng" (Ban cung ứng).</summary>
+        public const string MonthlyApprovalApprove = "Pricing.MonthlyApproval.Approve";
     }
 
     /// <summary>Tìm nguồn và đấu thầu.</summary>
@@ -280,6 +286,9 @@ public static class Permissions
         new(Pricing.PriceListManage, "Thêm, sửa bảng giá"),
         new(Pricing.PriceListApprove, "Duyệt bảng giá nhà cung cấp"),
         new(Pricing.CompareView, "So sánh giá"),
+        new(Pricing.MonthlyApprovalView, "Xem phiếu duyệt NCC và giá tháng"),
+        new(Pricing.MonthlyApprovalManage, "Lập, gửi duyệt, điều chỉnh, hủy phiếu duyệt NCC và giá tháng"),
+        new(Pricing.MonthlyApprovalApprove, "Duyệt NCC và giá tháng"),
         new(Sourcing.RfqView, "Xem yêu cầu báo giá, tìm nguồn"),
         new(Sourcing.RfqManage, "Lập yêu cầu báo giá"),
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),

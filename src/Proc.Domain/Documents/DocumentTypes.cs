@@ -50,6 +50,9 @@ public static class DocumentTypes
     /// <summary>Phê duyệt NCC độc quyền (lát B5b, design.md mục 18.9).</summary>
     public const string SoleSource = "NDQ";
 
+    /// <summary>Phiếu duyệt NCC và giá tháng (lát G2, design.md mục 18.25).</summary>
+    public const string MonthlySupplierApproval = "GTH";
+
     /// <summary>Vi phạm do Kiểm soát nội bộ ghi nhận (lát F3, design.md mục 18.19).</summary>
     public const string ControlFinding = "VP";
 
@@ -72,6 +75,7 @@ public static class DocumentTypes
         new(PriceList, "Bảng giá nhà cung cấp"),
         new(Sourcing, "Danh sách tìm nguồn"),
         new(SoleSource, "Phê duyệt NCC độc quyền"),
+        new(MonthlySupplierApproval, "Duyệt NCC và giá tháng"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
         new(SupplierReview, "Đánh giá nhà cung cấp định kỳ"),
     ];

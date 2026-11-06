@@ -1701,6 +1701,25 @@ theo quyết định; G11 định mức sử dụng; G12 báo cáo tháng cho Ba
 
 Không có migration.
 
+**G2 – Phiếu duyệt NCC và giá tháng** (màn hình **GTH**, Giá và NCC → Duyệt NCC và giá tháng, `/api/monthly-supplier-approvals`, số loại
+**GTH**, ví dụ GTH-TCT-2612-0001 theo tháng áp dụng):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu `MonthlySupplierApproval` thuộc **tổng công ty** – chỉ lập, sửa, gửi, duyệt khi đang làm việc ở tổng công ty. Đầu phiếu: **tháng áp dụng** (lưu ngày đầu tháng), **nhóm hàng**, **công ty áp dụng** (≥ 1, đang hoạt động, có thể gồm tổng công ty), Ghi chú; tab Đính kèm (biên bản họp Ban) | Quyết định 06/11/2026: phiếu theo nhóm hàng, áp cho các công ty chọn; Ban cung ứng là cấp chung của hai công ty |
+| Dòng = **một mặt hàng** (thuộc nhóm hàng của phiếu hoặc nhóm con; không trùng trên phiếu), ĐVT (cơ sở hoặc quy đổi), **NCC chính + giá**, **NCC dự phòng + giá** (không bắt buộc; có NCC dự phòng thì bắt buộc giá, khác NCC chính), **hạn mức SL tháng**, ghi chú. Giá VND, trước VAT, đã trừ chiết khấu | Có NCC dự phòng mà không có giá thì khi mua của NCC dự phòng lại thành tự thỏa thuận giá – quyết định cấm |
+| **Hạn mức tháng là số lượng** (theo ĐVT dòng) **gộp các công ty áp dụng**, để đạt bậc chiết khấu với NCC (người dùng chốt 06/11/2026); để trống = không giới hạn. Lát G3: PO vượt hạn mức bị chặn gửi duyệt | Chiết khấu tính trên sản lượng gộp (G6) |
+| NCC chính, dự phòng phải ở trạng thái **Đã duyệt** (kiểm tra lúc lưu, gửi và duyệt cấp cuối) | Ban chỉ chọn trong danh sách NCC đủ điều kiện (G1) |
+| Chỉ lập/gửi cho **tháng hiện tại trở đi** | Kết quả tháng phải có trước khi đặt hàng, không hợp thức hóa đơn đã đặt |
+| Mỗi **mặt hàng × tháng × công ty** chỉ thuộc một phiếu còn hiệu lực (Nháp, Chờ duyệt, Đã duyệt) – kể cả phiếu nhóm hàng khác chứa cùng mặt hàng | Một mặt hàng trong tháng chỉ có một NCC chính, một giá |
+| Nháp → **Chờ duyệt** → **Đã duyệt** qua quy trình loại **GTH** của tổng công ty (APRL, không xét giá trị – ngưỡng 0; tạm dùng duyệt nhiều cấp thay biểu quyết – quyết định 4); **người lập không tự duyệt**, người có kê khai xung đột lợi ích với NCC nào trên phiếu không duyệt (mục 18.8). Từ chối bắt buộc lý do, về Nháp; rút về Nháp khi đang chờ. Việc cần làm/thông báo mở `/gia-ncc/duyet-thang/<Id>` | Văn phòng Ban chỉ đề xuất, Ban quyết định |
+| Đã duyệt không sửa. **Điều chỉnh**: lập phiếu nháp mới cùng tháng chép nội dung (tháng chưa qua; mỗi phiếu một phiếu điều chỉnh còn hiệu lực); duyệt xong thì phiếu cũ thành **Đã thay**. **Hủy** (nháp hoặc đã duyệt, bắt buộc lý do; không hủy phiếu đang có phiếu điều chỉnh). **Chép sang tháng sau**: phiếu nháp tháng kế tiếp cùng nhóm hàng, công ty, dòng | Giữ lịch sử từng quyết định tháng; lập phiếu hằng tháng nhanh |
+| Công ty áp dụng **chỉ xem** phiếu Đã duyệt/Đã thay áp cho mình (nháp, chờ duyệt, đã hủy không công bố); đính kèm xem ở tổng công ty. Phạm vi nhóm hàng theo nhóm hàng của phiếu | Mỗi pháp nhân thấy kết quả mua của mình |
+| Quyền `Pricing.MonthlyApproval.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `.Manage` – lập, gửi, rút, điều chỉnh, hủy, chép (DAMPHAN), `.Approve` – duyệt (TRUONGBANCUVT, HOIDONG) | Không kiêm nhiệm |
+
+Chưa làm ở G2 (lát G3): PO kiểm tra theo phiếu tháng. Migration `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
+`MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

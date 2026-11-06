@@ -34,6 +34,7 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.ContractAmendment] = (Permissions.Purchase.ContractView, Permissions.Purchase.ContractManage),
             [AttachmentOwnerTypes.SupplierReview] = (Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage),
             [AttachmentOwnerTypes.ControlFinding] = (Permissions.Control.AnomalyView, Permissions.Control.FindingManage),
+            [AttachmentOwnerTypes.MonthlySupplierApproval] = (Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
             [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
         };
@@ -182,6 +183,9 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.SupplierReview => await _db.SupplierReviews.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.ControlFinding => await _db.ControlFindings.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            // Phiếu duyệt tháng thuộc tổng công ty: đính kèm (biên bản họp Ban) xem, thêm khi đang làm việc ở tổng công ty.
+            AttachmentOwnerTypes.MonthlySupplierApproval => await _db.MonthlySupplierApprovals.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             _ => await _db.InventoryDocuments.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId, x.DocType)).FirstOrDefaultAsync(cancellationToken),
