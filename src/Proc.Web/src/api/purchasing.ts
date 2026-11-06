@@ -628,13 +628,14 @@ export function usePurchaseMutations<TDoc extends { id: string; no: string }, TI
 }
 
 /**
- * Thân request của lệnh trên phiếu: duyệt/từ chối gửi ý kiến; đóng phần còn lại gửi lý do (lát R6); lệnh khác không có thân.
+ * Thân request của lệnh trên phiếu: duyệt/từ chối gửi ý kiến; đóng phần còn lại (lát R6) và hủy phiếu đã duyệt (lát R7) gửi lý do;
+ * lệnh khác không có thân.
  * @param name Tên lệnh trên đường dẫn.
  * @param comment Ý kiến hoặc lý do người dùng nhập.
  */
 function actionBody(name: string, comment: string | null | undefined): unknown {
   if (name === 'approve' || name === 'reject') return { comment: comment ?? null }
-  if (name === 'close-remaining') return { reason: comment ?? null }
+  if (name === 'close-remaining' || name === 'cancel') return comment ? { reason: comment } : undefined
   return undefined
 }
 

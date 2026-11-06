@@ -1,5 +1,6 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import {
+  CalendarOutlined,
   CheckOutlined,
   CloseCircleOutlined,
   CloseOutlined,
@@ -45,7 +46,7 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
-import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from '../purchasing/useApprovalCommands'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -292,19 +293,77 @@ export function RfqPage() {
     })
   }
 
+  /**
+   * Gia hạn nhận báo giá (lát R7, design.md mục 18.26): quá hạn nộp thì không nhập, sửa báo giá được – gia hạn có lý do (nhật ký ghi hạn
+   * cũ → mới). Hạn mới phải sau hạn hiện tại và không trước hôm nay.
+   */
+  const extendDeadline = () => {
+    if (!doc) return
+    let deadline: Dayjs | null = dayjs(doc.deadline).add(7, 'day')
+    let reason = ''
+    modal.confirm({
+      title: `Gia hạn nhận báo giá RFQ ${doc.no}?`,
+      content: (
+        <Flex vertical gap={8}>
+          <span>Hạn hiện tại: {formatDate(doc.deadline)}</span>
+          <label htmlFor="rfq-new-deadline">{renderRequiredMark('Hạn mới', { required: true })}</label>
+          <DatePicker id="rfq-new-deadline" format={DATE_INPUT_FORMATS} defaultValue={deadline} onChange={(v) => (deadline = v)} />
+          <label htmlFor="rfq-extend-reason">{renderRequiredMark('Lý do gia hạn', { required: true })}</label>
+          <Input.TextArea id="rfq-extend-reason" rows={3} maxLength={500} placeholder="Ví dụ: NCC xin thêm thời gian chuẩn bị hồ sơ"
+            onChange={(e) => (reason = e.target.value)} />
+        </Flex>
+      ),
+      okText: 'Gia hạn',
+      cancelText: 'Không',
+      onOk: async () => {
+        if (!deadline || !reason.trim()) {
+          message.error('Hãy chọn hạn mới và nhập lý do gia hạn.')
+          throw new Error('missing input')
+        }
+        try {
+          await mutations.extendDeadline.mutateAsync({ id: doc.id, deadline: deadline.format('YYYY-MM-DD'), reason: reason.trim() })
+          message.success(`Đã gia hạn nhận báo giá RFQ ${doc.no} đến ${deadline.format('DD/MM/YYYY')}.`)
+        } catch (e) {
+          fail(e, 'Không gia hạn được.')
+        }
+      },
+    })
+  }
+
   // Xem trước hội đồng duyệt theo giá trị trúng thầu của lựa chọn đang chọn (server chạy thử rồi hủy) – yêu cầu người dùng 03/11/2026.
   const confirmAward = () => {
     if (!doc) return
     setError(null)
+    const quoted = doc.quotedSupplierCount ?? doc.suppliers.length
+    // Ít NCC chào giá hơn tối thiểu (lát R7): hỏi giải trình trước, trừ khi đã giải trình mời thiếu NCC và mọi NCC mời đều chào giá.
+    const needsReason = quoted < doc.minSuppliers && !(doc.fewSuppliersReason && quoted >= doc.suppliers.length)
+    if (needsReason) {
+      confirmWithReason(modal, message, {
+        title: `Chỉ có ${quoted} NCC chào giá (tối thiểu ${doc.minSuppliers})`,
+        description: 'Ít hơn số báo giá tối thiểu phải có giải trình – hội đồng duyệt thấy giải trình này.',
+        label: 'Giải trình ít báo giá',
+        placeholder: 'Ví dụ: hai NCC được mời không phản hồi trong hạn',
+        okText: 'Tiếp tục',
+        danger: false,
+        onOk: async (reason) => startAward(reason),
+      })
+      return
+    }
+    void startAward(null)
+  }
+
+  /** Xem trước chuỗi duyệt rồi chọn thầu (kèm giải trình ít báo giá nếu có). */
+  const startAward = async (fewQuotesReason: string | null) => {
+    if (!doc) return
     const lines = doc.lines.map((l) => ({ rfqLineId: l.id, supplierId: award[l.id]?.supplierId ?? null, reason: orNull(award[l.id]?.reason) }))
-    void confirmSubmitWithPreview(modal, {
+    await confirmSubmitWithPreview(modal, {
       title: `Chọn thầu và gửi duyệt kết quả RFQ ${doc.no}? Trong lúc chờ không nhập thêm báo giá; duyệt xong mới tạo được đơn mua hàng.`,
       docType: 'RFQ',
       okText: 'Chọn thầu, gửi duyệt',
-      prepare: async () => ({ id: doc.id, award: { lines } }),
+      prepare: async () => ({ id: doc.id, award: { lines, fewQuotesReason } }),
       onSubmit: async (id) => {
         try {
-          const result = await mutations.award.mutateAsync({ id, lines })
+          const result = await mutations.award.mutateAsync({ id, lines, fewQuotesReason })
           setAwardEdits({})
           message.success(result.status === 'Awarded' ? `Kết quả RFQ ${doc.no} đã được duyệt ngay.` : `Đã gửi duyệt kết quả chọn thầu RFQ ${doc.no}.`)
         } catch (e) {
@@ -543,6 +602,11 @@ export function RfqPage() {
       {(isNew ? !readOnly : doc?.actions.canSend) && (
         <Button icon={<SendOutlined />} onClick={send} loading={mutations.send.isPending}>
           Gửi NCC
+        </Button>
+      )}
+      {doc?.actions.canExtendDeadline && (
+        <Button icon={<CalendarOutlined />} onClick={extendDeadline} loading={mutations.extendDeadline.isPending}>
+          Gia hạn nhận báo giá
         </Button>
       )}
       {doc?.actions.canAward && (
@@ -817,6 +881,10 @@ function RfqNotices({ doc }: { doc: Rfq }) {
     ),
     doc.rejectReason && doc.status === 'Sent' && <Alert key="reject" type="warning" showIcon title={`Kết quả chọn thầu bị từ chối: ${doc.rejectReason}`} />,
     doc.fewSuppliersReason && <Alert key="few" type="warning" showIcon title={`Mời ít hơn ${doc.minSuppliers} NCC – giải trình: ${doc.fewSuppliersReason}`} />,
+    doc.fewQuotesReason && <Alert key="fewQuotes" type="warning" showIcon title={`Ít hơn ${doc.minSuppliers} báo giá – giải trình: ${doc.fewQuotesReason}`} />,
+    doc.deadlineExtensionReason && (
+      <Alert key="extend" type="info" showIcon title={`Đã gia hạn nhận báo giá đến ${formatDate(doc.deadline)} – lý do: ${doc.deadlineExtensionReason}`} />
+    ),
     doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
     doc.actions.conflictReason && <Alert key="conflict" type="warning" showIcon title={doc.actions.conflictReason} />,
   ].filter(Boolean)

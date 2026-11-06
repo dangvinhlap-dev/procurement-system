@@ -111,7 +111,8 @@ public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, G
 /// </summary>
 public sealed record RfqActions(
     bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
-    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null, bool CanCreateContracts = false);
+    bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null, bool CanCreateContracts = false,
+    bool CanExtendDeadline = false);
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);
@@ -125,7 +126,17 @@ public sealed record RfqDto(
     string Status, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? SentAt, DateTimeOffset? AwardedAt, int MinSuppliers,
     IReadOnlyList<RfqLineDto> Lines, IReadOnlyList<RfqSupplierDto> Suppliers, RfqActions Actions, string? FewSuppliersReason,
     decimal AwardAmount, string? AwardedByName, string? RejectReason, IReadOnlyList<ApprovalStepDto> Approvals,
-    IReadOnlyList<RfqDossierItemDto> Dossier, uint Version = 0);
+    IReadOnlyList<RfqDossierItemDto> Dossier, uint Version = 0)
+{
+    /// <summary>Giải trình ít báo giá lúc chọn thầu (lát R7).</summary>
+    public string? FewQuotesReason { get; init; }
+
+    /// <summary>Lý do gia hạn nhận báo giá gần nhất (lát R7).</summary>
+    public string? DeadlineExtensionReason { get; init; }
+
+    /// <summary>Số NCC đã chào giá ít nhất một dòng.</summary>
+    public int QuotedSupplierCount { get; init; }
+}
 
 /// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
 public sealed record SendRfqRequest(string? Reason);
@@ -147,7 +158,14 @@ public sealed record SaveQuotationRequest(
 public sealed record SaveQuotationLineRequest(Guid RfqLineId, decimal UnitPrice, decimal DiscountPct, string? VatCode, int? LeadTimeDays, string? Note);
 
 /// <summary>Chọn thầu: mỗi dòng một NCC (hoặc null = không trao) kèm lý do.</summary>
-public sealed record AwardRfqRequest(IReadOnlyList<AwardRfqLineRequest> Lines);
+/// <param name="Lines">Lựa chọn từng dòng.</param>
+/// <param name="FewQuotesReason">Giải trình khi số NCC chào giá ít hơn tối thiểu (lát R7).</param>
+public sealed record AwardRfqRequest(IReadOnlyList<AwardRfqLineRequest> Lines, string? FewQuotesReason = null);
+
+/// <summary>Gia hạn nhận báo giá (lát R7, design.md mục 18.26).</summary>
+/// <param name="Deadline">Hạn mới.</param>
+/// <param name="Reason">Lý do, bắt buộc.</param>
+public sealed record ExtendRfqDeadlineRequest(DateOnly Deadline, string? Reason);
 
 /// <summary>Chọn thầu một dòng.</summary>
 public sealed record AwardRfqLineRequest(Guid RfqLineId, Guid? SupplierId, string? Reason);
@@ -204,6 +222,13 @@ public interface IRfqService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
     Task<RfqDto> AwardAsync(Guid id, AwardRfqRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Gia hạn nhận báo giá khi RFQ đang nhận báo giá (lát R7).</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Hạn mới và lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ.</returns>
+    Task<RfqDto> ExtendDeadlineAsync(Guid id, ExtendRfqDeadlineRequest request, CancellationToken cancellationToken);
 
     /// <summary>Duyệt kết quả chọn thầu ở bước đến lượt; duyệt đủ thì RFQ Đã chọn thầu.</summary>
     /// <param name="id">Id.</param>

@@ -59,6 +59,10 @@ public static class SourcingEndpoints
         rfq.MapPost("/{id:guid}/award", (Guid id, AwardRfqRequest request, IRfqService s, CancellationToken ct) => s.AwardAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
         // Kết quả chọn thầu phải được hội đồng duyệt (lát B3 – design.md mục 8.6); người chọn thầu rút về được khi còn chờ.
+        // Gia hạn nhận báo giá (lát R7, design.md mục 18.26) – cùng quyền lập, sửa RFQ.
+        rfq.MapPost("/{id:guid}/extend-deadline", (Guid id, ExtendRfqDeadlineRequest request, IRfqService s, CancellationToken ct) =>
+                s.ExtendDeadlineAsync(id, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapPost("/{id:guid}/recall", (Guid id, IRfqService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
         rfq.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))

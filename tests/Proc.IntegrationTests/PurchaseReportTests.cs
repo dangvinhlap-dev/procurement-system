@@ -235,7 +235,7 @@ public class PurchaseReportTests
         await ReadAsync<RfqDto>(await f.Buyer.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000, 0), Q(thung, 600_000, 5)), Ct));
         await ReadAsync<RfqDto>(await f.Buyer.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 48_000, 0)), Ct));
         await ReadAsync<RfqDto>(await f.Buyer.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{c}", Quote(Q(cai, 52_000, 0), Q(thung, 590_000, 0)), Ct));
-        await ReadAsync<RfqDto>(await f.Buyer.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, b, null), new(thung, a, null)]), Ct));
+        await ReadAsync<RfqDto>(await f.Buyer.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, b, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         await _factory.FinishRfqAwardApprovalAsync(rfq.Id);
 
         var rows = await ReadAsync<List<SourcingSavingRowDto>>(await f.Buyer.GetAsync(

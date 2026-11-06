@@ -169,7 +169,8 @@ public sealed class RfqService : IRfqService
             new QuotationHeader(
                 request.QuoteDate, request.ValidUntil, request.PaymentTerms, request.QualityScore, request.DeliveryScore, request.PaymentScore,
                 request.WarrantyScore, request.Note),
-            request.Lines.Select(l => new QuotationLineData(l.RfqLineId, l.UnitPrice, l.DiscountPct, l.VatCode, l.LeadTimeDays, l.Note)).ToList());
+            request.Lines.Select(l => new QuotationLineData(l.RfqLineId, l.UnitPrice, l.DiscountPct, l.VatCode, l.LeadTimeDays, l.Note)).ToList(),
+            _clock.TodayInVietnam());
         await TrackSourcingAsync(rfq, [supplierId], CandidateStatus.Quoted, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -181,7 +182,8 @@ public sealed class RfqService : IRfqService
         var rfq = await LoadAsync(id, cancellationToken);
         var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
         await RequireNoConflictAsync(rfq, cancellationToken);
-        rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam());
+        rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam(),
+            await _parameters.RfqMinSuppliersAsync(cancellationToken), request.FewQuotesReason);
         await CheckAwardedSuppliersAsync(rfq, cancellationToken);
         // Hồ sơ trình thiếu mục mặc định không chặn (hội đồng quyết); công ty bật tham số RFQ_DOSSIER_REQUIRED thì chặn – design.md mục 8.6.
         if (await _db.CompanyParameters.AsNoTracking().AnyAsync(p => p.RequireRfqDossierComplete, cancellationToken)
@@ -189,6 +191,15 @@ public sealed class RfqService : IRfqService
             throw new BusinessRuleException($"Hồ sơ trình còn thiếu: {string.Join(", ", missing)} – bổ sung ở tab Hồ sơ trình rồi chọn thầu lại (công ty bắt buộc đủ hồ sơ trình).");
         // Lát B3 (M4): chọn thầu xong là gửi hội đồng duyệt ngay – không có trạng thái "đã chọn nhưng chưa gửi".
         await _approvals.SubmitAsync(rfq, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<RfqDto> ExtendDeadlineAsync(Guid id, ExtendRfqDeadlineRequest request, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(id, cancellationToken);
+        rfq.ExtendDeadline(request.Deadline, request.Reason, _clock.TodayInVietnam());
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -567,7 +578,8 @@ public sealed class RfqService : IRfqService
                 && rfq.Suppliers.Any(s => s.PriceListId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
             conflict,
             rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Purchase.ContractManage)
-                && rfq.Suppliers.Any(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId) && (s.ContractId is not { } c || !liveContracts.Contains(c))));
+                && rfq.Suppliers.Any(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId) && (s.ContractId is not { } c || !liveContracts.Contains(c))),
+            rfq.Status == RfqStatus.Sent && readOnly is null);
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken, rfq);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,
@@ -575,7 +587,7 @@ public sealed class RfqService : IRfqService
             rfq.CreatedAt, rfq.CreatedBy is { } c ? userNames.GetValueOrDefault(c) : null, rfq.SentAt, rfq.AwardedAt,
             await _parameters.RfqMinSuppliersAsync(cancellationToken), lines, supplierDtos, actions, rfq.FewSuppliersReason, rfq.ApprovalAmount,
             rfq.AwardedBy is { } a ? userNames.GetValueOrDefault(a) : null, rfq.RejectReason, approvals,
-            rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList()) { Version = rfq.Version };
+            rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList()) { Version = rfq.Version, FewQuotesReason = rfq.FewQuotesReason, DeadlineExtensionReason = rfq.DeadlineExtensionReason, QuotedSupplierCount = rfq.QuotedSupplierCount };
     }
 
     private static RfqHeader ToHeader(SaveRfqRequest r) =>

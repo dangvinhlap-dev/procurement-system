@@ -130,6 +130,10 @@ public sealed record PurchaseDocumentListItemDto(
 /// <summary>Kết quả tìm PR/PO.</summary>
 public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentListItemDto> Items, bool Truncated, int Limit);
 
+/// <summary>Hủy PR/PO (lát R7): lý do bắt buộc khi phiếu đã duyệt.</summary>
+/// <param name="Reason">Lý do hủy, tối đa 500 ký tự.</param>
+public sealed record CancelDocumentRequest(string? Reason);
+
 /// <summary>Đóng phần còn lại của PR/PO đã duyệt (lát R6, design.md mục 18.26).</summary>
 /// <param name="Reason">Lý do, bắt buộc, tối đa 500 ký tự.</param>
 public sealed record CloseRemainingRequest(string? Reason);
@@ -170,6 +174,9 @@ public sealed record PurchaseRequestDto(
 
     /// <summary>Họ tên người đóng phần còn lại.</summary>
     public string? ClosedByName { get; init; }
+
+    /// <summary>Lý do hủy (lát R7).</summary>
+    public string? CancelReason { get; init; }
 }
 
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
@@ -250,6 +257,9 @@ public sealed record PurchaseOrderDto(
 
     /// <summary>Họ tên người đóng phần còn lại.</summary>
     public string? ClosedByName { get; init; }
+
+    /// <summary>Lý do hủy (lát R7).</summary>
+    public string? CancelReason { get; init; }
 }
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
@@ -317,8 +327,12 @@ public interface IPurchaseRequestService
     /// <summary>Từ chối (phiếu về nháp).</summary>
     Task<PurchaseRequestDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Hủy PR (chưa lên PO).</summary>
-    Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+    /// <summary>Hủy PR (chưa lên PO); PR đã duyệt bắt buộc lý do (lát R7).</summary>
+    /// <param name="id">Id PR.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="reason">Lý do hủy.</param>
+    /// <returns>PR đã hủy.</returns>
+    Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null);
 
     /// <summary>Đóng phần còn lại – PR đã duyệt đã lên PO một phần: phần chưa lên PO không đặt nữa (lát R6, design.md mục 18.26).</summary>
     /// <param name="id">Id phiếu.</param>
@@ -356,8 +370,12 @@ public interface IPurchaseOrderService
     /// <summary>Từ chối (phiếu về nháp).</summary>
     Task<PurchaseOrderDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Hủy PO (chưa nhận hàng).</summary>
-    Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+    /// <summary>Hủy PO (chưa nhận hàng); PO đã duyệt bắt buộc lý do (lát R7).</summary>
+    /// <param name="id">Id PO.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="reason">Lý do hủy.</param>
+    /// <returns>PO đã hủy.</returns>
+    Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null);
 
     /// <summary>Đóng phần còn lại – PO đã duyệt đã nhận một phần: phần NCC chưa giao không nhận nữa (lát R6, design.md mục 18.26).</summary>
     /// <param name="id">Id phiếu.</param>

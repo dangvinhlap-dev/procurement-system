@@ -200,14 +200,14 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     }
 
     /// <inheritdoc />
-    public async Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null)
     {
         var order = await LoadAsync(id, cancellationToken);
         // Đã có phiếu nhập (chưa hủy) theo PO thì không hủy – hàng đã/đang về theo đơn này.
         var receipts = await _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]).AsNoTracking()
             .Where(d => d.PurchaseOrderId == id && d.Status != DocumentStatus.Cancelled).Select(d => d.No).ToListAsync(cancellationToken);
         if (receipts.Count > 0) throw new BusinessRuleException($"Đơn {order.No} đã có phiếu nhập {string.Join(", ", receipts)} – không hủy được.");
-        order.Cancel();
+        order.Cancel(reason);
         await _approvals.SkipPendingAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -690,7 +690,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
-            order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

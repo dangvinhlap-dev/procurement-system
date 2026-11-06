@@ -152,7 +152,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     }
 
     /// <inheritdoc />
-    public async Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null)
     {
         var pr = await LoadAsync(id, cancellationToken);
         // PR đã lên PO (chưa hủy) thì hủy PO trước – không để PO trỏ vào PR đã hủy.
@@ -164,7 +164,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 select o.No)
             .Distinct().ToListAsync(cancellationToken);
         if (orders.Count > 0) throw new BusinessRuleException($"PR {pr.No} đã lên đơn mua hàng {string.Join(", ", orders)} – hủy đơn mua hàng trước.");
-        pr.Cancel();
+        pr.Cancel(reason);
         await _approvals.SkipPendingAsync(pr, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -412,7 +412,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
-            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>

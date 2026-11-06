@@ -60,11 +60,16 @@ type AppApi = ReturnType<typeof App.useApp>
  * @param options.okText Chữ nút đồng ý.
  * @param options.description Câu giải thích phía trên ô lý do (tùy chọn).
  * @param options.onOk Gọi với lý do đã cắt khoảng trắng.
+ * @param options.danger Nút đồng ý màu đỏ (mặc định có).
  */
 export function confirmWithReason(
   modal: AppApi['modal'],
   message: AppApi['message'],
-  options: { title: string; label: string; placeholder: string; okText: string; description?: string; onOk: (reason: string) => Promise<void> },
+  options: {
+    title: string; label: string; placeholder: string; okText: string; description?: string; onOk: (reason: string) => Promise<void>
+    /** Nút đồng ý màu đỏ (mặc định có – lệnh không hoàn tác); false cho lệnh thường. */
+    danger?: boolean
+  },
 ) {
   let reason = ''
   modal.confirm({
@@ -77,7 +82,7 @@ export function confirmWithReason(
       </>
     ),
     okText: options.okText,
-    okButtonProps: { danger: true },
+    okButtonProps: { danger: options.danger ?? true },
     cancelText: 'Không',
     onOk: async () => {
       if (!reason.trim()) {
@@ -254,8 +259,27 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     })
   }
 
-  const cancel = () =>
-    doc &&
+  const cancel = () => {
+    if (!doc) return
+    // Phiếu đã duyệt (PO có thể đã gửi NCC) bắt buộc lý do hủy (lát R7, design.md mục 18.26).
+    if (doc.status === 'Approved') {
+      confirmWithReason(modal, message, {
+        title: `Hủy phiếu ${doc.no} đã duyệt?`,
+        description: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
+        label: 'Lý do hủy',
+        placeholder: 'Ví dụ: NCC báo không giao được, đổi phương án mua',
+        okText: 'Hủy phiếu',
+        onOk: async (reason) => {
+          try {
+            await mutations.cancel.mutateAsync({ id: doc.id, comment: reason })
+            message.success(`Đã hủy phiếu ${doc.no}.`)
+          } catch (e) {
+            fail(e, 'Không hủy được phiếu.')
+          }
+        },
+      })
+      return
+    }
     modal.confirm({
       title: `Hủy phiếu ${doc.no}?`,
       content: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
@@ -271,6 +295,7 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
         }
       },
     })
+  }
 
   const closeRemaining = () =>
     doc &&

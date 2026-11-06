@@ -286,9 +286,17 @@ export interface Rfq {
     canCreatePriceLists: boolean
     /** Sinh hợp đồng nguyên tắc nháp từ kết quả đã duyệt (cần bảng giá từ RFQ). */
     canCreateContracts: boolean
+    /** Gia hạn nhận báo giá (đang nhận báo giá – lát R7). */
+    canExtendDeadline?: boolean
   }
   /** Giải trình khi mời ít hơn số NCC tối thiểu. */
   fewSuppliersReason: string | null
+  /** Giải trình khi số NCC chào giá ít hơn tối thiểu lúc chọn thầu (lát R7). */
+  fewQuotesReason?: string | null
+  /** Lý do gia hạn nhận báo giá gần nhất (lát R7). */
+  deadlineExtensionReason?: string | null
+  /** Số NCC đã chào giá ít nhất một dòng. */
+  quotedSupplierCount?: number
   /** Giá trị trúng thầu (sau CK, trước VAT) – xét ngưỡng duyệt. */
   awardAmount: number
   /** Người chọn thầu. */
@@ -375,8 +383,15 @@ export function useRfqMutations() {
       onSuccess,
     }),
     award: useMutation({
-      mutationFn: ({ id, lines }: { id: string; lines: { rfqLineId: string; supplierId: string | null; reason: string | null }[] }) =>
-        apiFetch<Rfq>(`/api/rfqs/${id}/award`, { method: 'POST', body: { lines } }),
+      mutationFn: ({ id, lines, fewQuotesReason }: {
+        id: string; lines: { rfqLineId: string; supplierId: string | null; reason: string | null }[]; fewQuotesReason?: string | null
+      }) => apiFetch<Rfq>(`/api/rfqs/${id}/award`, { method: 'POST', body: { lines, fewQuotesReason: fewQuotesReason ?? null } }),
+      onSuccess,
+    }),
+    // Gia hạn nhận báo giá có lý do (lát R7, design.md mục 18.26).
+    extendDeadline: useMutation({
+      mutationFn: ({ id, deadline, reason }: { id: string; deadline: string; reason: string }) =>
+        apiFetch<Rfq>(`/api/rfqs/${id}/extend-deadline`, { method: 'POST', body: { deadline, reason } }),
       onSuccess,
     }),
     createOrders: useMutation({

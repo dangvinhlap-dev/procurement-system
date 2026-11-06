@@ -62,6 +62,7 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
         builder.Property(x => x.ClosedReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
         builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
         builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
@@ -150,6 +151,7 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
         builder.Property(x => x.ClosedReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         builder.Property(x => x.ReceiveTolerancePct).HasPrecision(9, 4);
         builder.Property(x => x.GrossAmount).HasPrecision(19, 2);
         builder.Property(x => x.TotalDiscount).HasPrecision(19, 2);
