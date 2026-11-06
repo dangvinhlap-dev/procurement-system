@@ -147,9 +147,9 @@ public partial class SourcingTests
 
         // Chọn A cho cả hai dòng: dòng cái không phải giá thấp nhất → phải có lý do.
         Assert.Contains("phải ghi lý do", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
-            new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct)));
+            new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct)));
         rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
-            new AwardRfqRequest([new(cai, a, "Gộp một NCC để giao một lần"), new(thung, a, null)]), Ct));
+            new AwardRfqRequest([new(cai, a, "Gộp một NCC để giao một lần"), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         // Lát B3: kết quả chọn thầu chờ hội đồng duyệt – chưa sinh PO, chưa vào lịch sử giá.
         Assert.Equal(("AwardPending", false, true), (rfq.Status, rfq.Actions.CanCreateOrders, rfq.Actions.CanRecall));
         Assert.Equal(5_000_000m + 5_700_000m, rfq.Suppliers.Single(s => s.SupplierId == a).AwardedAmount);
@@ -223,7 +223,7 @@ public partial class SourcingTests
         var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000), Q(thung, 600_000)), Ct));
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 52_000)), Ct));
-        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         Assert.Equal(("AwardPending", false), (rfq.Status, rfq.Actions.CanApprove));
         Assert.Single(rfq.Approvals);
 
@@ -241,10 +241,10 @@ public partial class SourcingTests
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 49_000), Q(thung, 600_000)), Ct));
 
         // Gửi lại rồi rút về, gửi lần nữa: mỗi lượt một bước mới; người duyệt chỉ có quyền xem + duyệt vẫn duyệt được.
-        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         rfq = await ReadAsync<RfqDto>(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/recall", null, Ct));
         Assert.Equal("Sent", rfq.Status);
-        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         Assert.Null(rfq.RejectReason);
         rfq = await ReadAsync<RfqDto>(await approver.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct));
         Assert.Equal(("Awarded", 4_900_000m + 6_000_000m), (rfq.Status, rfq.AwardAmount));
@@ -273,7 +273,7 @@ public partial class SourcingTests
         Assert.True(rfq.Dossier.Single(d => d.Code == "COMPARE").IsDone);
 
         // Mặc định thiếu mục vẫn chọn thầu được; công ty bật tham số RFQ_DOSSIER_REQUIRED thì phải đủ 7 mục mới chọn thầu.
-        var award = new AwardRfqRequest([new(cai, b, null), new(thung, a, null)]);
+        var award = new AwardRfqRequest([new(cai, b, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá");
         await ReadAsync<SystemParameterDto>(await f.Client.PutAsJsonAsync(
             $"/api/system-parameters/{SystemParameterCodes.RfqDossierRequired}", new UpdateSystemParameterRequest("true"), Ct));
         var blocked = await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", award, Ct);

@@ -327,13 +327,25 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
         RejectReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
     }
 
+    /// <summary>Lý do hủy (bắt buộc khi hủy phiếu đã duyệt – lát R7); null = hủy khi còn nháp/chờ duyệt không ghi lý do.</summary>
+    public string? CancelReason { get; protected set; }
+
     /// <summary>Hủy phiếu (giữ số, lịch sử). Phiếu đã dùng (PR đã lên PO, PO đã nhận hàng) do tầng trên chặn.</summary>
-    /// <exception cref="BusinessRuleException">Khi phiếu đã hủy hoặc đã đóng.</exception>
-    public void Cancel()
+    /// <param name="reason">
+    /// Lý do hủy, tối đa 500 ký tự. Bắt buộc khi phiếu <b>đã duyệt</b> (lát R7, design.md mục 18.26): PO đã duyệt có thể đã gửi NCC, hủy
+    /// mà không ghi lý do thì không truy được.
+    /// </param>
+    /// <exception cref="BusinessRuleException">Khi phiếu đã hủy hoặc đã đóng, hoặc hủy phiếu đã duyệt mà thiếu lý do.</exception>
+    public void Cancel(string? reason = null)
     {
         if (Status is ApprovalDocumentStatus.Cancelled or ApprovalDocumentStatus.Closed)
             throw new BusinessRuleException($"Phiếu {No} đã hủy hoặc đã đóng.");
+        var text = Clean(reason);
+        if (Status == ApprovalDocumentStatus.Approved && text is null)
+            throw new BusinessRuleException($"Phiếu {No} đã duyệt – hãy nhập lý do hủy.");
+        if (text?.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
         Status = ApprovalDocumentStatus.Cancelled;
+        CancelReason = text;
     }
 
     /// <summary>Số dòng.</summary>

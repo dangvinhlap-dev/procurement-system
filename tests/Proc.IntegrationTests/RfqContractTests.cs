@@ -23,7 +23,7 @@ public partial class SourcingTests
         var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000), Q(thung, 600_000, 5)), Ct));
         await ReadAsync<RfqDto>(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 52_000)), Ct));
-        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         var url = $"/api/rfqs/{rfq.Id}/create-contracts";
         Assert.Contains("chưa được duyệt", await TitleAsync(await f.Client.PostAsync(url, null, Ct)));
         await ReadAsync<RfqDto>(await (await ApproverAsync(f)).PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct));
@@ -72,7 +72,7 @@ public partial class SourcingTests
         rfq = await ReadAsync<RfqDto>(await f.Head.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/send", new SendRfqRequest("Thử tổng công ty"), Ct));
         var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
         await ReadAsync<RfqDto>(await f.Head.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{a}", Quote(Q(cai, 50_000), Q(thung, 600_000)), Ct));
-        await ReadAsync<RfqDto>(await f.Head.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)]), Ct));
+        await ReadAsync<RfqDto>(await f.Head.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(cai, a, null), new(thung, a, null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         await _factory.FinishRfqAwardApprovalAsync(rfq.Id);
 
         var created = Assert.Single(await ReadAsync<List<CreatedPriceListDto>>(await f.Head.PostAsync($"/api/rfqs/{rfq.Id}/create-price-lists", null, Ct)));

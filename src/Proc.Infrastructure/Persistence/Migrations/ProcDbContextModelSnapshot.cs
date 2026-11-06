@@ -3672,6 +3672,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -3957,6 +3961,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("BudgetUsedAmount")
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
@@ -4251,8 +4259,14 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("Deadline")
                         .HasColumnType("date");
 
+                    b.Property<string>("DeadlineExtensionReason")
+                        .HasColumnType("text");
+
                     b.Property<int>("DeliveryWeight")
                         .HasColumnType("integer");
+
+                    b.Property<string>("FewQuotesReason")
+                        .HasColumnType("text");
 
                     b.Property<string>("FewSuppliersReason")
                         .HasMaxLength(500)

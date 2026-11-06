@@ -149,6 +149,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `CloseRemainingAsync` PR/PO, endpoint `close-remaining`, `PurchaseDocumentActions.CanCloseRemaining`, `BudgetUsage` tính phần đã nhận;
     web nút "Đóng phần còn lại" (`confirmWithReason`), `ClosedRemainingNotice`, nhãn `purchaseStatusText`. Test `DongPhanConLai_PoNhanThieu_PrDatMotPhan`,
     e2e `close-remaining.spec.ts`. `dotnet test` 543/543; e2e mua hàng 15/15; build, tsc, oxlint qua.
+  - **R7 (xong, nhánh `fix/rfq-han-nop`)**: `Rfq.SaveQuotation` chặn quá hạn, `Rfq.ExtendDeadline`, `Rfq.Award` đếm NCC chào giá + `FewQuotesReason`;
+    `ApprovableDocument.Cancel(reason)` bắt lý do khi đã duyệt; endpoint `extend-deadline`, cancel nhận thân tùy chọn; migration
+    `V0_19_0_RfqHanNopLyDoHuy`. Web: nút Gia hạn, hỏi giải trình ít báo giá, hỏi lý do hủy phiếu đã duyệt. Test domain
+    `Rfq_HanNop_GiaHan_ItBaoGiaPhaiGiaiTrinh`, tích hợp `HuyPoDaDuyet_BatBuocLyDo` (test chọn thầu cũ thêm giải trình), e2e `rfq-deadline.spec.ts`.
+    `dotnet test` 545/545; e2e đấu thầu/mua hàng 10/10; build, tsc, oxlint qua.
 - **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
   (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;

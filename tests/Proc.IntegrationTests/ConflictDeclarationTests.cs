@@ -176,11 +176,11 @@ public class ConflictDeclarationTests
         Assert.False(rfq.Actions.CanAward);
         Assert.Contains("kê khai quan hệ lợi ích", await TitleAsync(await head.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{suppliers[2]}", quote, Ct)));
         Assert.Contains("kê khai quan hệ lợi ích", await TitleAsync(await head.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award",
-            new AwardRfqRequest([new(lineId, suppliers[0], null)]), Ct)));
+            new AwardRfqRequest([new(lineId, suppliers[0], null)], "Thử nghiệm: NCC khác không chào giá"), Ct)));
 
         // Người khác không vướng kê khai thì chọn thầu được.
         var colleague = await ManagerAsync();
-        rfq = await ReadAsync<RfqDto>(await colleague.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(lineId, suppliers[0], null)]), Ct));
+        rfq = await ReadAsync<RfqDto>(await colleague.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/award", new AwardRfqRequest([new(lineId, suppliers[0], null)], "Thử nghiệm: NCC khác không chào giá"), Ct));
         Assert.Equal("AwardPending", rfq.Status);
     }
 }

@@ -413,6 +413,18 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <summary>Giải trình khi mời ít hơn số NCC tối thiểu (null = mời đủ).</summary>
     public string? FewSuppliersReason { get; private set; }
 
+    /// <summary>
+    /// Giải trình khi số NCC <b>thực sự chào giá</b> ít hơn số tối thiểu lúc chọn thầu (lát R7, design.md mục 18.26 – "ít hơn 3 báo giá phải
+    /// giải trình"); null = đủ báo giá hoặc đã có giải trình mời thiếu NCC mà mọi NCC được mời đều chào giá.
+    /// </summary>
+    public string? FewQuotesReason { get; private set; }
+
+    /// <summary>Lý do gia hạn nhận báo giá gần nhất (lát R7); null = chưa gia hạn.</summary>
+    public string? DeadlineExtensionReason { get; private set; }
+
+    /// <summary>Số NCC đã chào giá ít nhất một dòng.</summary>
+    public int QuotedSupplierCount => _suppliers.Count(s => s.HasQuoted);
+
     /// <inheritdoc />
     public int ApprovalRound { get; private set; }
 
@@ -568,9 +580,18 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
 
     /// <summary>Nhập/sửa báo giá của một NCC (khi đã gửi, chưa chọn thầu). Dòng không có trong danh sách = NCC không chào dòng đó.</summary>
     /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi, NCC không được mời, dòng sai.</exception>
-    public RfqSupplier SaveQuotation(Guid supplierId, QuotationHeader header, IReadOnlyList<QuotationLineData> lines)
+    /// <param name="supplierId">NCC được mời.</param>
+    /// <param name="header">Thông tin báo giá.</param>
+    /// <param name="lines">Giá từng dòng.</param>
+    /// <param name="today">Hôm nay (giờ Việt Nam): quá hạn nộp thì không nhập, sửa báo giá – gia hạn trước (lát R7).</param>
+    public RfqSupplier SaveQuotation(Guid supplierId, QuotationHeader header, IReadOnlyList<QuotationLineData> lines, DateOnly today)
     {
         EnsureSent();
+        // Báo giá nhập sau hạn nộp (hoặc ghi ngày sau hạn) làm mất tính công bằng giữa các NCC: phải gia hạn RFQ có lý do (lát R7).
+        if (today > Deadline)
+            throw new BusinessRuleException($"RFQ {No} đã quá hạn nộp báo giá {Deadline:dd/MM/yyyy} – gia hạn nhận báo giá (ghi lý do) trước khi nhập, sửa báo giá.");
+        if (header.QuoteDate > Deadline)
+            throw new BusinessRuleException($"Ngày báo giá {header.QuoteDate:dd/MM/yyyy} sau hạn nộp {Deadline:dd/MM/yyyy} – báo giá nộp trễ, gia hạn RFQ nếu chấp nhận.");
         var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)
             ?? throw new BusinessRuleException("NCC này không có trong danh sách được mời của RFQ.");
         foreach (var line in lines)
@@ -589,7 +610,9 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <param name="awardedBy">Người chọn thầu.</param>
     /// <param name="today">Ngày chọn thầu (giờ Việt Nam).</param>
     /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi hoặc lựa chọn sai quy tắc.</exception>
-    public void Award(IReadOnlyList<AwardLineData> awards, Guid awardedBy, DateOnly today)
+    /// <param name="minSuppliers">Số NCC tối thiểu (tham số công ty) – so với số NCC thực sự chào giá.</param>
+    /// <param name="fewQuotesReason">Giải trình khi số báo giá ít hơn tối thiểu (lát R7).</param>
+    public void Award(IReadOnlyList<AwardLineData> awards, Guid awardedBy, DateOnly today, int minSuppliers, string? fewQuotesReason)
     {
         EnsureSent();
         if (!awards.Any(a => a.SupplierId is not null)) throw new BusinessRuleException("Hãy chọn NCC trúng thầu cho ít nhất một dòng.");
@@ -617,9 +640,42 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
             chosen.Add((line, supplierId, reason));
         }
 
+        // Kiểm tra sau lựa chọn từng dòng (lỗi dòng báo trước). Đếm NCC thực sự chào giá, không phải số được mời: mời 3 mà chỉ 1
+        // chào giá vẫn là "ít hơn 3 báo giá" (lát R7). Giải trình mời thiếu NCC đã có (hoặc NCC độc quyền) thì đủ khi mọi NCC được
+        // mời đều chào giá.
+        var quoted = QuotedSupplierCount;
+        string? fewQuotes = null;
+        if (quoted < minSuppliers)
+        {
+            fewQuotes = Clean(fewQuotesReason);
+            if (fewQuotes is null && !(FewSuppliersReason is not null && quoted >= _suppliers.Count))
+                throw new BusinessRuleException($"Chỉ có {quoted} NCC chào giá (tối thiểu {minSuppliers}) – ghi giải trình ít báo giá trước khi chọn thầu.");
+            if (fewQuotes?.Length > 500) throw new BusinessRuleException("Giải trình ít báo giá tối đa 500 ký tự.");
+        }
+
         foreach (var (line, supplierId, reason) in chosen) line.SetAward(supplierId, reason);
         AwardedBy = awardedBy;
         AwardDate = today;
+        FewQuotesReason = fewQuotes;
+    }
+
+    /// <summary>
+    /// Gia hạn nhận báo giá (lát R7, design.md mục 18.26): chỉ khi đang nhận báo giá; hạn mới sau hạn cũ và không trước hôm nay; bắt buộc
+    /// lý do (nhật ký ghi hạn cũ → mới).
+    /// </summary>
+    /// <param name="deadline">Hạn mới.</param>
+    /// <param name="reason">Lý do, tối đa 500 ký tự.</param>
+    /// <param name="today">Hôm nay (giờ Việt Nam).</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ không đang nhận báo giá, hạn mới không hợp lệ hoặc thiếu lý do.</exception>
+    public void ExtendDeadline(DateOnly deadline, string? reason, DateOnly today)
+    {
+        EnsureSent();
+        if (deadline <= Deadline) throw new BusinessRuleException($"Hạn mới phải sau hạn hiện tại {Deadline:dd/MM/yyyy}.");
+        if (deadline < today) throw new BusinessRuleException("Hạn mới không được trước hôm nay.");
+        var text = Clean(reason) ?? throw new BusinessRuleException("Hãy nhập lý do gia hạn.");
+        if (text.Length > 500) throw new BusinessRuleException("Lý do gia hạn tối đa 500 ký tự.");
+        Deadline = deadline;
+        DeadlineExtensionReason = text;
     }
 
     /// <summary>Gửi duyệt kết quả chọn thầu: Đã gửi → Chờ duyệt, tăng lượt, xóa lý do từ chối cũ.</summary>

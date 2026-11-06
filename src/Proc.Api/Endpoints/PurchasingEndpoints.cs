@@ -68,7 +68,12 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PrApprove);
         pr.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PrApprove);
-        pr.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
+        // PR đã duyệt bắt buộc lý do hủy (lát R7).
+        pr.MapPost("/{id:guid}/cancel", async (Guid id, HttpRequest http, IPurchaseRequestService s, CancellationToken ct) =>
+            {
+                var request = http.HasJsonContentType() ? await http.ReadFromJsonAsync<CancelDocumentRequest>(ct) : null;
+                return await s.CancelAsync(id, ct, request?.Reason);
+            })
             .RequirePermission(Permissions.Purchase.PrCreate);
         // Đóng phần còn lại chưa lên PO (lát R6, design.md mục 18.26) – cùng quyền với hủy PR.
         pr.MapPost("/{id:guid}/close-remaining", (Guid id, CloseRemainingRequest request, IPurchaseRequestService s, CancellationToken ct) =>
@@ -119,7 +124,12 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PoApprove);
         po.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseOrderService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoApprove);
-        po.MapPost("/{id:guid}/cancel", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.CancelAsync(id, ct))
+        // PO đã duyệt bắt buộc lý do hủy (lát R7) – thân request có thể bỏ trống với PO nháp/chờ duyệt.
+        po.MapPost("/{id:guid}/cancel", async (Guid id, HttpRequest http, IPurchaseOrderService s, CancellationToken ct) =>
+            {
+                var request = http.HasJsonContentType() ? await http.ReadFromJsonAsync<CancelDocumentRequest>(ct) : null;
+                return await s.CancelAsync(id, ct, request?.Reason);
+            })
             .RequirePermission(Permissions.Purchase.PoCreate);
         // Đóng phần NCC chưa giao (lát R6, design.md mục 18.26) – cùng quyền với hủy PO.
         po.MapPost("/{id:guid}/close-remaining", (Guid id, CloseRemainingRequest request, IPurchaseOrderService s, CancellationToken ct) =>

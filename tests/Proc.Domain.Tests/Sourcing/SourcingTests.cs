@@ -124,6 +124,39 @@ public class SourcingTests
         Assert.Null(full.FewSuppliersReason);
     }
 
+    /// <summary>
+    /// Lát R7 (design.md mục 18.26): quá hạn nộp (hoặc ngày báo giá sau hạn) thì không nhập báo giá – gia hạn có lý do rồi nhập được; số NCC
+    /// thực sự chào giá ít hơn tối thiểu thì chọn thầu phải có giải trình ít báo giá.
+    /// </summary>
+    [Fact]
+    public void Rfq_HanNop_GiaHan_ItBaoGiaPhaiGiaiTrinh()
+    {
+        var item = NewItem();
+        Guid a = Guid.CreateVersion7(), b = Guid.CreateVersion7(), c = Guid.CreateVersion7();
+        var rfq = SentRfq(item, a, b, c);
+        var cai = rfq.Lines[0].Id;
+        QuotationHeader Header(DateOnly date) => new(date, null, null, 8, 8, 8, 8, null);
+        var deadline = rfq.Deadline;
+
+        Assert.Contains("quá hạn nộp", Assert.Throws<BusinessRuleException>(() =>
+            rfq.SaveQuotation(a, Header(Today), [new(cai, 50_000, 0, null, null, null)], deadline.AddDays(1))).Message);
+        Assert.Contains("sau hạn nộp", Assert.Throws<BusinessRuleException>(() =>
+            rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], Today)).Message);
+
+        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline, "Thêm NCC", Today));
+        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline.AddDays(5), " ", Today));
+        rfq.ExtendDeadline(deadline.AddDays(5), " NCC xin thêm thời gian ", Today);
+        Assert.Equal((deadline.AddDays(5), "NCC xin thêm thời gian"), (rfq.Deadline, rfq.DeadlineExtensionReason));
+        rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], deadline.AddDays(1));
+        Assert.Equal(1, rfq.QuotedSupplierCount);
+
+        // Mời 3 nhưng chỉ 1 chào giá, tối thiểu 3: phải giải trình.
+        Assert.Contains("giải trình ít báo giá", Assert.Throws<BusinessRuleException>(() =>
+            rfq.Award([new(cai, a, null)], Guid.CreateVersion7(), Today, 3, null)).Message);
+        rfq.Award([new(cai, a, null)], Guid.CreateVersion7(), Today, 3, " Hai NCC không phản hồi ");
+        Assert.Equal("Hai NCC không phản hồi", rfq.FewQuotesReason);
+    }
+
     [Fact]
     public void ChonThau_KhongChonGiaThapNhatPhaiCoLyDo()
     {
@@ -132,32 +165,32 @@ public class SourcingTests
         var rfq = SentRfq(item, a, b, c);
         var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
         var header = new QuotationHeader(Today, null, "30 ngày", 8, 10, 10, 6, null);
-        rfq.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null), new(thung, 600_000, 5, "10", 7, null)]);
-        rfq.SaveQuotation(b, header, [new(cai, 48_000, 0, "10", 14, null)]);
-        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(Guid.CreateVersion7(), header, [new(cai, 1, 0, null, null, null)]));
+        rfq.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null), new(thung, 600_000, 5, "10", 7, null)], Today);
+        rfq.SaveQuotation(b, header, [new(cai, 48_000, 0, "10", 14, null)], Today);
+        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(Guid.CreateVersion7(), header, [new(cai, 1, 0, null, null, null)], Today));
 
         var user = Guid.CreateVersion7();
         // Dòng thùng: B không chào → không chọn được B.
-        Assert.Throws<BusinessRuleException>(() => rfq.Award([new(thung, b, null)], user, Today));
+        Assert.Throws<BusinessRuleException>(() => rfq.Award([new(thung, b, null)], user, Today, 1, null));
         // Dòng cái: A đắt hơn B → chọn A phải có lý do.
-        Assert.Throws<BusinessRuleException>(() => rfq.Award([new(cai, a, null)], user, Today));
+        Assert.Throws<BusinessRuleException>(() => rfq.Award([new(cai, a, null)], user, Today, 1, null));
         // Chưa chọn thầu thì chưa gửi duyệt được.
         Assert.Throws<BusinessRuleException>(() => rfq.Submit());
-        rfq.Award([new(cai, a, "Giao nhanh hơn"), new(thung, a, null)], user, Today);
+        rfq.Award([new(cai, a, "Giao nhanh hơn"), new(thung, a, null)], user, Today, 1, null);
         Assert.Equal((RfqStatus.Sent, a, "Giao nhanh hơn"), (rfq.Status, rfq.Lines[0].AwardedSupplierId, rfq.Lines[0].AwardReason));
 
         // Lát B3 (M4): kết quả chọn thầu phải qua duyệt. Giá trị = 100 × 50.000 + 10 × 600.000 × 95% = 10.700.000.
         Assert.Equal(1, rfq.Submit());
         Assert.Equal((RfqStatus.AwardPending, true, 10_700_000m, user), (rfq.Status, rfq.IsAwaitingApproval, rfq.ApprovalAmount, rfq.AwardedBy));
         Assert.True(((IApprovalSubject)rfq).IsPreparedBy(user));
-        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(a, header, [new(cai, 1, 0, null, null, null)]));
+        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(a, header, [new(cai, 1, 0, null, null, null)], Today));
         Assert.Throws<BusinessRuleException>(() => rfq.Cancel());
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPurchaseOrder(a, Guid.CreateVersion7()));
 
         // Từ chối: về Đang nhận báo giá, giữ lựa chọn cũ làm gợi ý, lưu lý do; gửi lại thì xóa lý do, tăng lượt.
         rfq.ReturnToDraft("Cần thêm báo giá");
         Assert.Equal((RfqStatus.Sent, "Cần thêm báo giá", a), (rfq.Status, rfq.RejectReason, rfq.Lines[0].AwardedSupplierId));
-        rfq.Award([new(cai, a, "Giao nhanh hơn"), new(thung, a, null)], user, Today);
+        rfq.Award([new(cai, a, "Giao nhanh hơn"), new(thung, a, null)], user, Today, 1, null);
         Assert.Equal(2, rfq.Submit());
         Assert.Null(rfq.RejectReason);
         var at = DateTimeOffset.UtcNow;
@@ -185,14 +218,14 @@ public class SourcingTests
         rfq.SetDossier([new("MINUTES", true, " BB-01/11 "), new("BUDGET", false, null)]);
         rfq.SetDossier([new("BUDGET", true, null)]);
         var cai = rfq.Lines[0].Id;
-        rfq.SaveQuotation(a, new QuotationHeader(Today, null, null, 8, 8, 8, 8, null), [new(cai, 50_000, 0, null, null, null)]);
+        rfq.SaveQuotation(a, new QuotationHeader(Today, null, null, 8, 8, 8, 8, null), [new(cai, 50_000, 0, null, null, null)], Today);
         var dossier = rfq.Dossier.ToDictionary(d => d.Code);
         Assert.Equal((true, true), (dossier[RfqDossier.Comparison].IsDone, dossier[RfqDossier.Comparison].IsAutomatic));
         Assert.Equal((true, "BB-01/11"), (dossier["MINUTES"].IsDone, dossier["MINUTES"].Note));
         Assert.True(dossier["BUDGET"].IsDone);
         Assert.Equal(3, rfq.Dossier.Count(d => d.IsDone));
 
-        rfq.Award([new(cai, a, null)], Guid.CreateVersion7(), Today);
+        rfq.Award([new(cai, a, null)], Guid.CreateVersion7(), Today, 1, null);
         // Chưa duyệt kết quả thì chưa tạo bảng giá.
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPriceList(a, Guid.CreateVersion7()));
         rfq.Submit();

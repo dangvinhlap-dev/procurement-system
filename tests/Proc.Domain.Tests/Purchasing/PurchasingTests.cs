@@ -118,7 +118,8 @@ public class PurchasingTests
         po.MarkApproved(DateTimeOffset.UtcNow);
         po.CloseReceived();
         Assert.Equal(ApprovalDocumentStatus.Closed, po.Status);
-        Assert.Throws<BusinessRuleException>(po.Cancel);
+        Assert.Throws<BusinessRuleException>(() => po.Cancel());
+        // Lát R7: phiếu đã duyệt phải có lý do hủy (kiểm tra ở bước đã duyệt bên dưới).
         po.ReopenReceiving();
         Assert.Equal(ApprovalDocumentStatus.Approved, po.Status);
 
