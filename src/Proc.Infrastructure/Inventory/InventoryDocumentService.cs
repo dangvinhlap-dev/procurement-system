@@ -252,7 +252,9 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             }
         }
 
-        await SyncOrderStatusAsync(document, posting: true, cancellationToken);
+        // Ghi trạng thái phiếu và sổ kho trước (cùng giao dịch) để SL đã nhận/đã trả của PO đọc từ CSDL gồm cả phiếu này.
+        await _db.SaveChangesAsync(cancellationToken);
+        await SyncOrderStatusAsync(document, cancellationToken);
         if (document.DocType == DocumentTypes.IntercompanySale)
         {
             // Sinh phiếu nhập mua nội bộ "Chờ nhận" tại công ty mua, số theo mẫu số của công ty mua (design.md mục 6.3 bước 3).
@@ -314,7 +316,8 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
 
         _db.StockLedger.RemoveRange(entries);
         document.MarkUnposted();
-        await SyncOrderStatusAsync(document, posting: false, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        await SyncOrderStatusAsync(document, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);

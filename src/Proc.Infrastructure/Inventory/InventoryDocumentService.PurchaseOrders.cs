@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
 using Proc.Domain.Common;
+using Proc.Domain.Documents;
 using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Purchasing;
@@ -76,23 +77,22 @@ public sealed partial class InventoryDocumentService
     }
 
     /// <summary>
-    /// Sau ghi sổ/bỏ ghi sổ phiếu nhập theo PO: mọi dòng PO đã nhận đủ (ĐVT cơ sở) thì PO Đã nhận đủ, ngược lại về Đã duyệt.
+    /// Sau ghi sổ/bỏ ghi sổ phiếu nhập theo PO, hoặc phiếu trả NCC của phiếu nhập theo PO (lát R5): mọi dòng PO đã nhận đủ (SL thuần sau
+    /// trả lại, ĐVT cơ sở) thì PO Đã nhận đủ, ngược lại về Đã duyệt. Gọi sau khi đã ghi (SaveChanges) trạng thái mới của phiếu trong cùng
+    /// giao dịch – SL đọc từ CSDL đã gồm phiếu này.
     /// </summary>
-    /// <param name="document">Phiếu nhập.</param>
-    /// <param name="posting">true = đang ghi sổ (cộng phiếu này); false = đang bỏ ghi sổ (không tính phiếu này).</param>
+    /// <param name="document">Phiếu nhập hoặc phiếu trả NCC.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    private async Task SyncOrderStatusAsync(InventoryDocument document, bool posting, CancellationToken cancellationToken)
+    private async Task SyncOrderStatusAsync(InventoryDocument document, CancellationToken cancellationToken)
     {
-        if (document.PurchaseOrderId is not { } orderId) return;
-        await RowLocks.LockAsync<PurchaseOrder>(_db, [orderId], cancellationToken);
-        var order = await _db.PurchaseOrders.Include(o => o.Lines).SingleAsync(o => o.Id == orderId, cancellationToken);
-        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), document.Id, cancellationToken);
-        if (posting)
-        {
-            foreach (var line in document.Lines.Where(l => l.PurchaseOrderLineId is not null))
-                received[line.PurchaseOrderLineId!.Value] = received.GetValueOrDefault(line.PurchaseOrderLineId.Value) + line.BaseQty;
-        }
-
+        var orderId = document.PurchaseOrderId;
+        if (orderId is null && document.DocType == DocumentTypes.ReturnToVendor && document.LinkedDocumentId is { } sourceId)
+            orderId = await _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]).AsNoTracking()
+                .Where(d => d.Id == sourceId).Select(d => d.PurchaseOrderId).SingleOrDefaultAsync(cancellationToken);
+        if (orderId is not { } id) return;
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken);
+        var order = await _db.PurchaseOrders.Include(o => o.Lines).SingleAsync(o => o.Id == id, cancellationToken);
+        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
         if (order.Lines.All(l => received.GetValueOrDefault(l.Id) >= l.BaseQty)) order.CloseReceived();
         else order.ReopenReceiving();
     }
