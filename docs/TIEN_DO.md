@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu; in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu; in PR có hàng mới; phát hành 0.18.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -329,6 +329,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Bước 3 – việc "làm khi có yêu cầu" (05/11/2026, nhánh `feature/in-pr-hang-moi`)**: người dùng "làm tiếp" không chỉ định – chọn việc
     nhỏ, an toàn: **in PR (PDF) có hàng mới chưa có mã** (`DocumentPdfService.PurchaseRequestRows`, design.md 18.12). Không migration.
     Test: `PrintingTests` thêm hàng mới vào PR, kiểm tra dòng in. Kiểm tra: `dotnet build`, `dotnet test` 523/523. Còn lại ở 18.12: phiếu tìm nguồn hiện ngược PR nguồn.
+- **Phát hành 0.18.0 (06/11/2026)**: tag `v0.18.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.18.0 (gói
+  `procurement-0.18.0.zip`) – C3 ngân sách, `RFQ_DOSSIER_REQUIRED`, in PR có hàng mới; 2 migration (52 → 54), script `db/scripts/0.18.0.sql`
+  chạy thử 2 lần trên bản sao `procurement_kiemtra_0180` (từ CSDL test 0.17.0). **Bản test cổng 5007 nâng tại chỗ lên 0.18.0**: `app` = 0.18.0,
+  `app-0.17.0` = bản cũ, sao lưu trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.18.0.dump`, PID trong `pid.txt`.
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
