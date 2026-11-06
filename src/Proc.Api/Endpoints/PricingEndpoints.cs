@@ -99,6 +99,52 @@ public static class PricingEndpoints
                 s.CompareAsync(itemId, allCompanies ?? false, Math.Clamp(thresholdPct ?? 10m, 0m, 1000m), ct))
             .WithTags("So sánh giá")
             .RequirePermission(Permissions.Pricing.CompareView);
+        // Phiếu duyệt NCC và giá tháng (design.md mục 18.25 – lát G2): tổng công ty lập, Ban cung ứng duyệt theo quy trình loại GTH.
+        var monthly = app.MapGroup("/api/monthly-supplier-approvals").WithTags("Duyệt NCC và giá tháng");
+        monthly.MapGet("/", (IMonthlySupplierApprovalService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalView);
+        monthly.MapGet("/companies", (IMonthlySupplierApprovalService s, CancellationToken ct) => s.CompaniesAsync(ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalView);
+        monthly.MapGet("/{id:guid}", (Guid id, IMonthlySupplierApprovalService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalView);
+        monthly.MapPost("/", async (SaveMonthlyApprovalRequest request, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/monthly-supplier-approvals/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage)
+            .Validate<SaveMonthlyApprovalRequest>();
+        monthly.MapPut("/{id:guid}", (Guid id, SaveMonthlyApprovalRequest request, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage)
+            .Validate<SaveMonthlyApprovalRequest>();
+        monthly.MapPost("/{id:guid}/submit", (Guid id, IMonthlySupplierApprovalService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
+        monthly.MapPost("/{id:guid}/recall", (Guid id, IMonthlySupplierApprovalService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
+        monthly.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalApprove);
+        monthly.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalApprove);
+        monthly.MapPost("/{id:guid}/cancel", (Guid id, CancelMonthlyApprovalRequest request, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage)
+            .Validate<CancelMonthlyApprovalRequest>();
+        monthly.MapPost("/{id:guid}/adjust", async (Guid id, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+            {
+                var created = await s.AdjustAsync(id, ct);
+                return Results.Created($"/api/monthly-supplier-approvals/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
+        monthly.MapPost("/{id:guid}/copy-next-month", async (Guid id, IMonthlySupplierApprovalService s, CancellationToken ct) =>
+            {
+                var created = await s.CopyNextMonthAsync(id, ct);
+                return Results.Created($"/api/monthly-supplier-approvals/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
+
         return app;
     }
 }

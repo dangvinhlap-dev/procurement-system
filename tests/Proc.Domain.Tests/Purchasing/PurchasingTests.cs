@@ -46,7 +46,7 @@ public class PurchasingTests
     {
         var role = Guid.CreateVersion7();
 
-        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ"], ApprovalTypes.All.Select(t => t.Code));
+        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH"], ApprovalTypes.All.Select(t => t.Code));
         Assert.Equal("PRL", ApprovalRule.Create(Company, " prl ", 1, 0, role).DocType);
         Assert.Equal(5_000_000m, ApprovalRule.Create(Company, "RFQ", 2, 5_000_000, role).MinAmount);
         Assert.Equal(100m, ApprovalRule.Create(Company, "CTR", 1, 100, role).MinAmount);

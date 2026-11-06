@@ -65,6 +65,7 @@ export const docTypeLabels: Record<string, string> = {
   CTA: 'Phụ lục hợp đồng',
   NCC: 'Duyệt nhà cung cấp',
   NDQ: 'NCC độc quyền',
+  GTH: 'Duyệt NCC và giá tháng',
   DGN: 'Đánh giá NCC định kỳ',
   VP: 'Vi phạm KSNB',
 }
@@ -81,7 +82,7 @@ export function documentPath(docType: string, id: string): string | null {
     ADJ: '/kho/dieu-chinh',
     PRL: '/gia-ncc/bang-gia', SRC: '/dau-thau/tim-nguon', RFQ: '/dau-thau/rfq', CTR: '/mua-hang/hop-dong-khung',
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
-    DGN: '/gia-ncc/danh-gia-ncc-dinh-ky',
+    DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang',
   }
   return pages[docType] ? `${pages[docType]}/${id}` : null
 }

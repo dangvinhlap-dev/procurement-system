@@ -2583,6 +2583,164 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateOnly?>("CancelledOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateOnly>("Period")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("ReplacesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemCategoryId");
+
+                    b.HasIndex("ReplacesId");
+
+                    b.HasIndex("CompanyId", "No")
+                        .IsUnique();
+
+                    b.HasIndex("Period", "Status");
+
+                    b.ToTable("MonthlySupplierApproval", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MonthlySupplierApproval_Period", "EXTRACT(DAY FROM \"Period\") = 1");
+                        });
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApprovalCompany", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ApprovalId", "CompanyId")
+                        .IsUnique();
+
+                    b.ToTable("MonthlySupplierApprovalCompany", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApprovalLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BackupSupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("BackupUnitPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MainSupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("QuantityLimit")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<decimal>("UomFactor")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<Guid>("UomId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BackupSupplierId");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("MainSupplierId");
+
+                    b.HasIndex("UomId");
+
+                    b.HasIndex("ApprovalId", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("MonthlySupplierApprovalLine", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MonthlySupplierApprovalLine_Backup", "\"BackupSupplierId\" IS NULL OR \"BackupSupplierId\" <> \"MainSupplierId\"");
+                        });
+                });
+
             modelBuilder.Entity("Proc.Domain.Pricing.SupplierPriceList", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5094,6 +5252,73 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApproval", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.ItemCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ItemCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Pricing.MonthlySupplierApproval", null)
+                        .WithMany()
+                        .HasForeignKey("ReplacesId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApprovalCompany", b =>
+                {
+                    b.HasOne("Proc.Domain.Pricing.MonthlySupplierApproval", null)
+                        .WithMany("Companies")
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApprovalLine", b =>
+                {
+                    b.HasOne("Proc.Domain.Pricing.MonthlySupplierApproval", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("BackupSupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("MainSupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Uom", null)
+                        .WithMany()
+                        .HasForeignKey("UomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Pricing.SupplierPriceList", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -5565,6 +5790,13 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.Inventory.InventoryDocument", b =>
                 {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.MonthlySupplierApproval", b =>
+                {
+                    b.Navigation("Companies");
+
                     b.Navigation("Lines");
                 });
 

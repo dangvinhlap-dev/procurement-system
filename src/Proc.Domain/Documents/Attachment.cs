@@ -47,9 +47,13 @@ public static class AttachmentOwnerTypes
     /// <summary>Kê khai xung đột lợi ích (văn bản kê khai có chữ ký – lát A4).</summary>
     public const string ConflictDeclaration = "ConflictDeclaration";
 
+    /// <summary>Phiếu duyệt NCC và giá tháng (biên bản họp Ban, bảng so sánh giá – lát G2).</summary>
+    public const string MonthlySupplierApproval = "MonthlySupplierApproval";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
-        SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration];
+        SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
+        MonthlySupplierApproval];
 }
 
 /// <summary>
