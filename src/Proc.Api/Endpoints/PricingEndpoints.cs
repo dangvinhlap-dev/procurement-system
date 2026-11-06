@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Pricing;
@@ -144,6 +145,33 @@ public static class PricingEndpoints
                 return Results.Created($"/api/monthly-supplier-approvals/{created.Id}", created);
             })
             .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
+
+        // Phiếu khảo sát giá thị trường – ngân hàng giá (design.md mục 18.25 – lát G4a): Văn phòng Ban lập ở tổng công ty, chốt, không qua duyệt.
+        var surveys = app.MapGroup("/api/market-price-surveys").WithTags("Khảo sát giá thị trường");
+        surveys.MapGet("/", (IMarketPriceSurveyService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Pricing.PriceBankView);
+        surveys.MapGet("/prices", ([FromQuery] Guid[]? itemIds, int? days, IMarketPriceSurveyService s, CancellationToken ct) =>
+                s.PricesAsync(itemIds ?? [], days ?? 180, ct))
+            .RequirePermission(Permissions.Pricing.PriceBankView);
+        surveys.MapGet("/{id:guid}", (Guid id, IMarketPriceSurveyService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.PriceBankView);
+        surveys.MapPost("/", async (SaveMarketSurveyRequest request, IMarketPriceSurveyService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/market-price-surveys/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.PriceBankManage)
+            .Validate<SaveMarketSurveyRequest>();
+        surveys.MapPut("/{id:guid}", (Guid id, SaveMarketSurveyRequest request, IMarketPriceSurveyService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.PriceBankManage)
+            .Validate<SaveMarketSurveyRequest>();
+        surveys.MapPost("/{id:guid}/confirm", (Guid id, IMarketPriceSurveyService s, CancellationToken ct) => s.ConfirmAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.PriceBankManage);
+        surveys.MapPost("/{id:guid}/cancel", (Guid id, CancelMarketSurveyRequest request, IMarketPriceSurveyService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.PriceBankManage)
+            .Validate<CancelMarketSurveyRequest>();
 
         return app;
     }

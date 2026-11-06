@@ -169,6 +169,10 @@ public static class Permissions
         public const string MonthlyApprovalManage = "Pricing.MonthlyApproval.Manage";
         /// <summary>Quyền "Duyệt phiếu NCC và giá tháng" (Ban cung ứng).</summary>
         public const string MonthlyApprovalApprove = "Pricing.MonthlyApproval.Approve";
+        /// <summary>Quyền "Xem ngân hàng giá – phiếu khảo sát giá thị trường" (lát G4a, design.md mục 18.25).</summary>
+        public const string PriceBankView = "Pricing.PriceBank.View";
+        /// <summary>Quyền "Lập, chốt, hủy phiếu khảo sát giá thị trường" (Văn phòng Ban).</summary>
+        public const string PriceBankManage = "Pricing.PriceBank.Manage";
     }
 
     /// <summary>Tìm nguồn và đấu thầu.</summary>
@@ -289,6 +293,8 @@ public static class Permissions
         new(Pricing.MonthlyApprovalView, "Xem phiếu duyệt NCC và giá tháng"),
         new(Pricing.MonthlyApprovalManage, "Lập, gửi duyệt, điều chỉnh, hủy phiếu duyệt NCC và giá tháng"),
         new(Pricing.MonthlyApprovalApprove, "Duyệt NCC và giá tháng"),
+        new(Pricing.PriceBankView, "Xem ngân hàng giá (khảo sát giá thị trường)"),
+        new(Pricing.PriceBankManage, "Lập, chốt, hủy phiếu khảo sát giá thị trường"),
         new(Sourcing.RfqView, "Xem yêu cầu báo giá, tìm nguồn"),
         new(Sourcing.RfqManage, "Lập yêu cầu báo giá"),
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),

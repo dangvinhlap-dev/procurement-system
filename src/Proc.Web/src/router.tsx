@@ -40,6 +40,7 @@ import { InternalPriceListPage } from './pages/pricing/InternalPriceListPage'
 import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
 import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
 import { MonthlyApprovalListPage, MonthlyApprovalPage } from './pages/pricing/MonthlyApprovalPages'
+import { MarketSurveyListPage, MarketSurveyPage } from './pages/pricing/MarketSurveyPages'
 import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
 import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
@@ -140,6 +141,7 @@ const implemented: Record<string, ReactNode> = {
   IPR: <InternalPriceListPage />,
   PRL: <PriceListListPage />,
   GTH: <MonthlyApprovalListPage />,
+  KSG: <MarketSurveyListPage />,
   PCMP: <PriceComparisonPage />,
   SRC: <SourcingListPage />,
   RFQ: <RfqListPage />,
@@ -171,6 +173,7 @@ const documentPages = [
   { code: 'PO', element: <PurchaseOrderPage /> },
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
+  { code: 'KSG', element: <MarketSurveyPage /> },
   { code: 'SRC', element: <SourcingPage /> },
   { code: 'RFQ', element: <RfqPage /> },
   { code: 'CTR', element: <ContractPage /> },
