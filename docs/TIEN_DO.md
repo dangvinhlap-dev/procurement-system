@@ -1,11 +1,12 @@
 # Tiến độ dự án
 
-Cập nhật: 05/11/2026 (lát C3 ngân sách bộ phận – người dùng ra lệnh; phát hành 0.15.0; lát A4 ghi chú + đính kèm mọi form; dọn main; phát hành 0.16.0; nhập bảng giá NCC bằng Excel; cảnh báo giá cao trên PO; hợp đồng từ kết quả thầu; in PR có hàng mới; phát hành 0.18.0). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 06/11/2026 (rà soát lỗi R1–R8 xong, đã merge `main`; trước đó: lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
 | Phần | Nội dung | Merge |
 | --- | --- | --- |
+| Rà soát R1–R8 (06/11/2026) | Ghi sổ đồng thời (khóa dòng), chống ghi đè (xmin + If-Match → 409), mỗi cấp duyệt một người, tham số nhập mua theo PO, RTV trừ SL đã nhận PO, đóng phần còn lại PR/PO, RFQ hạn nộp/gia hạn/giải trình ít báo giá, lý do hủy phiếu đã duyệt, build 0 cảnh báo; 4 migration 0.19.0 (`KhoaSuaTrung` không SQL, `NhapMuaTheoPo`, `DongPhanConLai`, `RfqHanNopLyDoHuy`) – chưa phát hành. Kiểm tra trên `main`: `dotnet build` 0 cảnh báo, `dotnet test` 545/545, Playwright 100/100, `npm run build`, `tsc`, `oxlint` qua | 21e0232 … f176790 |
 | Giai đoạn 0 | Khung giao diện, đăng nhập + công ty làm việc, phân quyền + phạm vi, người dùng/vai trò, nhật ký, đánh số chứng từ, Docker | 2ef17fa … 1fb997f |
 | Giai đoạn 1 | Danh mục công ty/kho, hàng hóa, NCC, NCC–công ty–sản phẩm, nhập/xuất Excel | 8d80f0f … 31718fb |
 | Giai đoạn 2 | Kỳ kho, chứng từ kho, ghi sổ, trả NCC, chuyển kho, tồn kho + thẻ kho | f404824 … 8a63474 |
