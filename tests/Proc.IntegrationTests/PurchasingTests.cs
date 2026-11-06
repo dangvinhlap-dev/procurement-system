@@ -206,6 +206,40 @@ public partial class PurchasingTests
         Assert.Equal("Posted", (await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, oldDraft.Id))).Status);
     }
 
+    /// <summary>
+    /// Lát R5 (design.md mục 18.26): trả NCC hàng của phiếu nhập theo PO trừ vào SL đã nhận – PO đã nhận đủ mở lại để NCC giao bù; giao bù
+    /// đủ thì PO đóng lại. Bỏ ghi sổ phiếu trả thì SL đã nhận cộng lại.
+    /// </summary>
+    [Fact]
+    public async Task TraNcc_TruSlDaNhanCuaPo_MoLaiDeGiaoBu()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 10));
+        grn = await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
+        Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
+
+        var rtv = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-returns",
+            new SaveReturnRequest(Today, grn.Id, null, "Hàng lỗi", [new(null, grn.Lines[0].Id, 3, null)]), Ct));
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, rtv.Id));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
+        Assert.Equal(("Approved", 7m, 3m), (po.Status, po.Lines[0].ReceivedQty, po.Lines[0].RemainingQty));
+
+        // Giao bù: nhận tối đa 3 (không dung sai).
+        Assert.Contains("vượt SL còn nhận được", await TitleAsync(await ReceiveAsync(f, po, 4)));
+        var replacement = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 3));
+        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, replacement.Id));
+        Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
+
+        // Bỏ ghi sổ phiếu trả: SL đã nhận thành 13 (vẫn đủ) – PO giữ Đã nhận đủ.
+        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{rtv.Id}/unpost", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
+        Assert.Equal(("Closed", 13m), (po.Status, po.Lines[0].ReceivedQty));
+    }
+
     [Fact]
     public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
     {
