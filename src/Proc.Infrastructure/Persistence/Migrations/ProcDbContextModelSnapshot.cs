@@ -2809,6 +2809,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 6)
                         .HasColumnType("numeric(19,6)");
 
+                    b.Property<decimal?>("CeilingPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
                     b.Property<Guid>("ItemId")
                         .HasColumnType("uuid");
 
@@ -2825,6 +2829,14 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("QuantityLimit")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("StandardPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<decimal?>("TargetPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(19, 6)

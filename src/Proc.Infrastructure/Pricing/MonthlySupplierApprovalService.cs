@@ -299,7 +299,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
         return lines.Select((l, index) => (
                 new MonthlyApprovalLineData(l.Id, l.ItemId, l.UomId, l.MainSupplierId, l.UnitPrice, l.BackupSupplierId, l.BackupUnitPrice,
-                    l.QuantityLimit, l.Note),
+                    l.QuantityLimit, l.Note, l.StandardPrice, l.CeilingPrice, l.TargetPrice),
                 items.GetValueOrDefault(l.ItemId)
                 ?? throw new NotFoundException($"Dòng {index + 1}: không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).")))
             .ToList();
@@ -376,7 +376,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             return new MonthlyApprovalLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.MainSupplierId, main?.Code ?? "", main?.Name ?? "", l.UnitPrice, l.BackupSupplierId, backup?.Code, backup?.Name, l.BackupUnitPrice,
-                l.QuantityLimit, l.Note);
+                l.QuantityLimit, l.Note, l.UomFactor, l.StandardPrice, l.CeilingPrice, l.TargetPrice);
         }).ToList();
         var approvals = await _approvals.HistoryAsync(x.DocType, x.Id, cancellationToken, x);
         return new MonthlyApprovalDto(
@@ -393,5 +393,6 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         new(new DateOnly(r.Period.Year, r.Period.Month, 1), r.ItemCategoryId, r.CompanyIds, r.Note);
 
     private static SaveMonthlyApprovalLineRequest ToRequest(MonthlyApprovalLineData d) =>
-        new(null, d.ItemId, d.UomId, d.MainSupplierId, d.UnitPrice, d.BackupSupplierId, d.BackupUnitPrice, d.QuantityLimit, d.Note);
+        new(null, d.ItemId, d.UomId, d.MainSupplierId, d.UnitPrice, d.BackupSupplierId, d.BackupUnitPrice, d.QuantityLimit, d.Note,
+            d.StandardPrice, d.CeilingPrice, d.TargetPrice);
 }

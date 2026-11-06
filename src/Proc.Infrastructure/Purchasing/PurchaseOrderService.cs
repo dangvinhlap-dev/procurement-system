@@ -595,12 +595,21 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
         // Số phiếu duyệt tháng phủ dòng: phiếu thuộc tổng công ty, chỉ lấy đúng Id đã ghi trên dòng của PO người dùng xem được.
         var monthlyLineIds = order.Lines.Select(l => l.MonthlyApprovalLineId).OfType<Guid>().Distinct().ToList();
-        var monthlyNos = await (
+        var monthlyLines = await (
                 from l in _db.Set<MonthlySupplierApprovalLine>().AsNoTracking()
                 join a in _db.MonthlySupplierApprovals.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]) on l.ApprovalId equals a.Id
                 where monthlyLineIds.Contains(l.Id)
-                select new { l.Id, a.No })
-            .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
+                select new { l.Id, a.No, l.CeilingPrice, l.UomFactor })
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var monthlyNos = monthlyLines.ToDictionary(x => x.Key, x => x.Value.No);
+        // Giá trần của phiếu tháng quy về ĐVT dòng PO: trần ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng (6 số lẻ), ví dụ trần 126.000/thùng 12 cái → 10.500/cái.
+        // Phiếu tháng tính bằng VND nên chỉ so khi PO bằng VND.
+        decimal? CeilingOf(PurchaseOrderLine l) =>
+            order.CurrencyCode == "VND" && l.MonthlyApprovalLineId is { } id && monthlyLines.GetValueOrDefault(id) is { CeilingPrice: { } ceiling } m
+                ? Math.Round(ceiling / m.UomFactor * l.UomFactor, 6, MidpointRounding.AwayFromZero)
+                : null;
+        // Vượt trần: giá ròng (sau chiết khấu, trước VAT) > trần – chỉ cảnh báo, không chặn gửi duyệt, mọi mặt hàng (người dùng chốt 06/11/2026).
+        bool IsOverCeiling(PurchaseOrderLine l) => CeilingOf(l) is { } c && l.NetUnitPrice > c;
         var department = order.DepartmentId is { } departmentId
             ? await _db.Departments.AsNoTracking().Where(d => d.Id == departmentId).Select(d => new { d.Code, d.Name }).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -620,7 +629,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqNos.GetValueOrDefault(rl) : null,
                 l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract,
                 l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null,
-                l.MonthlyApprovalLineId is { } ml ? monthlyNos.GetValueOrDefault(ml) : null, l.IsOffMonthlyList);
+                l.MonthlyApprovalLineId is { } ml ? monthlyNos.GetValueOrDefault(ml) : null, l.IsOffMonthlyList, CeilingOf(l), IsOverCeiling(l));
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;
@@ -645,7 +654,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             await ContractScopeNoteAsync(order, department?.Code, cancellationToken), order.PurchaseType.ToString(), order.EmergencyReason,
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
-            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList);
+            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
+            order.Lines.Any(IsOverCeiling));
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

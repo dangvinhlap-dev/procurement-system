@@ -57,6 +57,14 @@ export interface MonthlyApprovalLine {
   backupUnitPrice: number | null
   quantityLimit: number | null
   note: string | null
+  /** Hệ số ĐVT dòng so với ĐVT cơ sở. */
+  uomFactor: number
+  /** Giá chuẩn – mốc tính tiết kiệm (lát G4b). */
+  standardPrice: number | null
+  /** Giá trần – giá duyệt không vượt; PO vượt thì cảnh báo. */
+  ceilingPrice: number | null
+  /** Giá mục tiêu để đàm phán. */
+  targetPrice: number | null
 }
 
 /** Công ty chọn được để áp dụng phiếu. */
@@ -120,6 +128,9 @@ export interface SaveMonthlyApprovalInput {
     backupUnitPrice: number | null
     quantityLimit: number | null
     note: string | null
+    standardPrice: number | null
+    ceilingPrice: number | null
+    targetPrice: number | null
   }[]
 }
 

@@ -36,10 +36,15 @@ public sealed record MonthlyApprovalListItemDto(
 /// <param name="BackupUnitPrice">Giá NCC dự phòng.</param>
 /// <param name="QuantityLimit">Hạn mức SL tháng (null = không giới hạn).</param>
 /// <param name="Note">Ghi chú.</param>
+/// <param name="UomFactor">Hệ số ĐVT dòng so với ĐVT cơ sở (quy giá thị trường về ĐVT dòng).</param>
+/// <param name="StandardPrice">Giá chuẩn (lát G4b).</param>
+/// <param name="CeilingPrice">Giá trần.</param>
+/// <param name="TargetPrice">Giá mục tiêu.</param>
 public sealed record MonthlyApprovalLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, Guid MainSupplierId, string MainSupplierCode,
     string MainSupplierName, decimal UnitPrice, Guid? BackupSupplierId, string? BackupSupplierCode, string? BackupSupplierName,
-    decimal? BackupUnitPrice, decimal? QuantityLimit, string? Note);
+    decimal? BackupUnitPrice, decimal? QuantityLimit, string? Note, decimal UomFactor = 1m, decimal? StandardPrice = null,
+    decimal? CeilingPrice = null, decimal? TargetPrice = null);
 
 /// <summary>Thao tác được phép trên phiếu duyệt tháng.</summary>
 /// <param name="CanEdit">Sửa, gửi duyệt (nháp, đang làm việc ở tổng công ty, có quyền lập).</param>
@@ -79,10 +84,10 @@ public sealed record MonthlyApprovalDto(
 public sealed record SaveMonthlyApprovalRequest(
     DateOnly Period, Guid ItemCategoryId, IReadOnlyList<Guid> CompanyIds, string? Note, IReadOnlyList<SaveMonthlyApprovalLineRequest> Lines);
 
-/// <summary>Lưu một dòng phiếu duyệt tháng.</summary>
+/// <summary>Lưu một dòng phiếu duyệt tháng; giá chuẩn/trần/mục tiêu không bắt buộc (lát G4b).</summary>
 public sealed record SaveMonthlyApprovalLineRequest(
     Guid? Id, Guid ItemId, Guid UomId, Guid MainSupplierId, decimal UnitPrice, Guid? BackupSupplierId, decimal? BackupUnitPrice,
-    decimal? QuantityLimit, string? Note);
+    decimal? QuantityLimit, string? Note, decimal? StandardPrice = null, decimal? CeilingPrice = null, decimal? TargetPrice = null);
 
 /// <summary>Hủy phiếu duyệt tháng.</summary>
 /// <param name="Reason">Lý do, bắt buộc.</param>
