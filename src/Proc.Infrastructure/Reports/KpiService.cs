@@ -118,7 +118,7 @@ public sealed class KpiService : IKpiService
         // Cùng công thức báo cáo PRCW (design.md mục 18.17): theo giá đã duyệt ÷ (tổng − không xác định).
         var compliance = await _purchase.GetContractComplianceAsync(period, cancellationToken);
         var known = compliance.Sources.Where(s => s.Source != "Unknown").Sum(s => s.Amount);
-        var compliant = compliance.Sources.Where(s => s.Source is "Rfq" or "Contract" or "PriceList").Sum(s => s.Amount);
+        var compliant = compliance.Sources.Where(s => s.Source is "MonthlyApproval" or "Rfq" or "Contract" or "PriceList").Sum(s => s.Amount);
 
         var sla = await _purchase.GetPurchaseSlaAsync(from, to, cancellationToken);
         var evaluation = await _purchase.GetSupplierEvaluationAsync(period, cancellationToken);

@@ -94,8 +94,11 @@ public class PurchaseReportTests
     {
         var po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-orders",
             new SavePurchaseOrderRequest(date, supplierId, f.Kt, expected, null, null, null, 0, null, [new(null, f.ItemId, f.Cai, qty, price, 0, "10", null, null, null)]), Ct));
-        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
-        return await ReadAsync<PurchaseOrderDto>(await f.Approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        // Duyệt hết các chặng: PO không có giá đã duyệt qua thêm chặng POL (design.md mục 18.25).
+        for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
+            po = await ReadAsync<PurchaseOrderDto>(await f.Approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        return po;
     }
 
     /// <summary>Phiếu nhập mua đã ghi sổ hôm nay; có PO thì nhận theo dòng PO (giá theo PO).</summary>

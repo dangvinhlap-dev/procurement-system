@@ -112,8 +112,8 @@ public sealed record PurchaseOrderLineData(
     string? Note, Guid? SourcePrLineId, string? PriceDeviationReason = null, Guid? SourceRfqLineId = null);
 
 /// <summary>
-/// Nguồn giá của dòng PO (design.md mục 18.10 – đề xuất Ban CUVT M1, P5): thứ tự ưu tiên kết quả chọn thầu → hợp đồng nguyên tắc →
-/// bảng giá NCC → ngoài hợp đồng (không có giá đã duyệt).
+/// Nguồn giá của dòng PO (design.md mục 18.10 – đề xuất Ban CUVT M1, P5; mục 18.25 lát G3): thứ tự ưu tiên phiếu duyệt NCC và giá tháng →
+/// kết quả chọn thầu → hợp đồng nguyên tắc → bảng giá NCC → ngoài hợp đồng (không có giá đã duyệt).
 /// </summary>
 public enum PurchasePriceSource
 {
@@ -131,6 +131,12 @@ public enum PurchasePriceSource
 
     /// <summary>Không có giá đã duyệt – mua ngoài hợp đồng.</summary>
     None = 4,
+
+    /// <summary>
+    /// Giá NCC chính/dự phòng của phiếu duyệt NCC và giá tháng (GTH) đã duyệt cho công ty × mặt hàng × tháng của ngày PO – quyết định Ban
+    /// cung ứng là cấp cao nhất nên đứng đầu thứ tự (design.md mục 18.25, lát G3).
+    /// </summary>
+    MonthlyApproval = 5,
 }
 
 /// <summary>Giá đã duyệt tìm được cho một dòng PO.</summary>
@@ -858,14 +864,18 @@ public sealed class PurchaseOrder : ApprovableDocument
     /// <summary>Có dòng mua ngoài hợp đồng (không có giá đã duyệt hoặc lệch giá đã duyệt) – đo tỷ lệ mua theo hợp đồng (P5).</summary>
     public bool IsOutOfContract { get; private set; }
 
+    /// <summary>Có dòng mua ngoài danh sách tháng hoặc không có giá đã duyệt – gửi duyệt qua thêm chặng POL (design.md mục 18.25, lát G3).</summary>
+    public bool IsOffApprovedList { get; private set; }
+
     /// <summary>Gán giá đã duyệt cho từng dòng (server tính lúc lưu và lúc gửi duyệt – giá có thể đổi giữa hai lần).</summary>
     /// <param name="resolve">Giá đã duyệt của dòng, null nếu không có.</param>
+    /// <param name="monthlyLine">Dòng phiếu duyệt tháng phủ mặt hàng của dòng (kể cả khi NCC ngoài danh sách), null nếu không có.</param>
     /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
-    public void ApplyApprovedPrices(Func<PurchaseOrderLine, ApprovedPrice?> resolve)
+    public void ApplyApprovedPrices(Func<PurchaseOrderLine, ApprovedPrice?> resolve, Func<PurchaseOrderLine, Guid?>? monthlyLine = null)
     {
         ArgumentNullException.ThrowIfNull(resolve);
         EnsureDraft();
-        foreach (var line in _lines) line.ApplyApprovedPrice(resolve(line));
+        foreach (var line in _lines) line.ApplyApprovedPrice(resolve(line), monthlyLine?.Invoke(line));
         RefreshPriceFlags();
     }
 
@@ -886,6 +896,7 @@ public sealed class PurchaseOrder : ApprovableDocument
     {
         HasPriceException = _lines.Any(l => l.IsPriceDeviation);
         IsOutOfContract = _lines.Any(l => l.IsOutOfContract);
+        IsOffApprovedList = _lines.Any(l => l.NeedsOffListApproval);
     }
 
     /// <summary>
@@ -1032,6 +1043,25 @@ public sealed class PurchaseOrderLine : Entity
     public Guid? SoleSourceApprovalId { get; internal set; }
 
     /// <summary>
+    /// Dòng phiếu duyệt NCC và giá tháng đã duyệt cho công ty × mặt hàng × tháng của ngày PO (design.md mục 18.25, lát G3) – ghi cả khi
+    /// NCC của PO không phải NCC chính/dự phòng (để biết dòng mua ngoài danh sách của phiếu nào); null khi mặt hàng không có phiếu tháng.
+    /// </summary>
+    public Guid? MonthlyApprovalLineId { get; private set; }
+
+    /// <summary>
+    /// Mua ngoài danh sách tháng: mặt hàng có phiếu tháng mà NCC của PO không phải NCC chính/dự phòng (Phòng cung ứng không tự chọn NCC –
+    /// quyết định thành lập Ban cung ứng).
+    /// </summary>
+    public bool IsOffMonthlyList => MonthlyApprovalLineId is not null && PriceSource != PurchasePriceSource.MonthlyApproval;
+
+    /// <summary>
+    /// Dòng phải qua chặng duyệt "Ngoài danh sách/giá" (POL): ngoài danh sách tháng hoặc không có giá đã duyệt. Người dùng chốt
+    /// 06/11/2026 – mua ngoài danh sách hoặc ngoài giá bắt buộc duyệt, thay quy tắc "chỉ gắn cờ" cũ của mục 18.10. Dòng lập trước bản
+    /// 0.12.0 (nguồn không xác định) không tính.
+    /// </summary>
+    public bool NeedsOffListApproval => IsOffMonthlyList || PriceSource == PurchasePriceSource.None;
+
+    /// <summary>
     /// Giá thực (sau chiết khấu) khác giá đã duyệt (sau chiết khấu). So sau chiết khấu để "đơn giá 100.000, CK 5%" và "đơn giá 95.000,
     /// CK 0%" coi là như nhau. Lệch cả khi rẻ hơn: giá đã đàm phán là giá mua, đổi giá phải được duyệt (quyết định M1).
     /// </summary>
@@ -1090,8 +1120,9 @@ public sealed class PurchaseOrderLine : Entity
     /// <summary>
     /// Ghi giá đã duyệt của dòng; không có thì nguồn "ngoài hợp đồng". Hết lệch giá thì xóa lý do cũ để báo cáo không ghi nhầm.
     /// </summary>
-    internal void ApplyApprovedPrice(ApprovedPrice? price)
+    internal void ApplyApprovedPrice(ApprovedPrice? price, Guid? monthlyApprovalLineId)
     {
+        MonthlyApprovalLineId = monthlyApprovalLineId;
         PriceSource = price?.Source ?? PurchasePriceSource.None;
         ApprovedUnitPrice = price?.UnitPrice;
         ApprovedDiscountPct = price?.DiscountPct;

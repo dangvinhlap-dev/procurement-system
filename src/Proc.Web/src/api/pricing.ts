@@ -123,9 +123,12 @@ export interface ResolvedSupplierPrice {
   priceListNo: string
 }
 
-/** Bậc giá đã duyệt cho PO: bảng giá của hợp đồng nguyên tắc hiệu lực (Contract) hoặc bảng giá NCC hiệu lực (PriceList). */
+/**
+ * Bậc giá đã duyệt cho PO: giá NCC chính/dự phòng của phiếu duyệt tháng (MonthlyApproval – priceListNo là số phiếu GTH, đứng đầu), bảng giá
+ * của hợp đồng nguyên tắc hiệu lực (Contract) hoặc bảng giá NCC hiệu lực (PriceList).
+ */
 export interface ApprovedPoPrice extends ResolvedSupplierPrice {
-  source: 'Contract' | 'PriceList'
+  source: 'MonthlyApproval' | 'Contract' | 'PriceList'
   contractNo: string | null
 }
 

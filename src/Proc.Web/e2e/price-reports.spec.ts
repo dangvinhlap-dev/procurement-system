@@ -32,11 +32,14 @@ test('giá mua & mua ngoài hợp đồng: PO tuần trước không có giá đ
   })
   const login = await request.post('/api/auth/login', { data: { userName: approverName, password: 'Demo@2026' } })
   const { accessToken, user } = (await login.json()) as { accessToken: string; user: { companies: { id: string; code: string }[] } }
-  const approved = await request.post(`/api/purchase-orders/${po.id}/approve`, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.companies.find((c) => c.code === 'BHA')!.id },
-    data: { comment: null },
-  })
-  expect(approved.ok(), await approved.text()).toBeTruthy()
+  // Hai lượt duyệt: cấp PO thường và chặng "Ngoài danh sách/giá" (POL) – dòng không có giá đã duyệt bắt buộc duyệt (design.md mục 18.25).
+  for (let i = 0; i < 2; i++) {
+    const approved = await request.post(`/api/purchase-orders/${po.id}/approve`, {
+      headers: { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.companies.find((c) => c.code === 'BHA')!.id },
+      data: { comment: null },
+    })
+    expect(approved.ok(), await approved.text()).toBeTruthy()
+  }
 
   await loginViaApi(page)
   await page.goto('/')

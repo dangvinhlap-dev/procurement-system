@@ -342,7 +342,7 @@ export function useSourcingSavings(period: PurchaseReportPeriod) {
 }
 
 /** Nguồn giá trong báo cáo giá mua (design.md mục 18.17); Deviation = lệch giá đã duyệt. */
-export type PriceSourceKind = 'Rfq' | 'Contract' | 'PriceList' | 'Deviation' | 'None' | 'Unknown'
+export type PriceSourceKind = 'MonthlyApproval' | 'Rfq' | 'Contract' | 'PriceList' | 'Deviation' | 'None' | 'Unknown'
 
 /** Tổng hợp giá trị dòng PO theo một nguồn giá. */
 export interface PriceSourceSummary {

@@ -9,6 +9,7 @@ using Proc.Domain.Documents;
 using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
@@ -135,6 +136,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         // ngoại lệ – design.md mục 18.10 (quyết định M1).
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.EnsurePriceDeviationsExplained();
+        // Hạn mức SL tháng của phiếu duyệt NCC và giá tháng (gộp các công ty áp dụng) – vượt thì chặn gửi (design.md mục 18.25, G3).
+        await CheckMonthlyLimitsAsync(order, cancellationToken);
         // Mua khẩn cấp (design.md mục 18.11 – V4): không lập lùi ngày để hợp thức hóa hàng đã mua; duyệt theo bộ cấp POK nếu đã cấu hình.
         string? ruleType = null;
         if (order.PurchaseType == PurchaseType.Emergency)
@@ -149,6 +152,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var stages = new List<(string, int)>();
         if (order.HasPriceException) stages.Add((ApprovalTypes.PurchaseOrderPriceException, ApprovalTypes.PriceExceptionStage));
         if (order.IsOverBudget) stages.Add((ApprovalTypes.PurchaseOrderOverBudget, ApprovalTypes.OverBudgetStage));
+        // Mua ngoài danh sách tháng hoặc không có giá đã duyệt: bắt buộc duyệt thêm chặng POL (người dùng chốt 06/11/2026 – mục 18.25).
+        if (order.IsOffApprovedList) stages.Add((ApprovalTypes.PurchaseOrderOffList, ApprovalTypes.OffListStage));
         await _approvals.SubmitWithStagesAsync(order, stages, cancellationToken, ruleType);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -240,15 +245,23 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     {
         _scope.RequireCompany();
         if (itemIds.Count == 0) return [];
+        var companyId = _scope.RequireCompany();
         var contract = await EffectiveContractAsync(supplierId, date, cancellationToken) is { } c && c.Allows(departmentId) ? c : null;
         var tiers = await _prices.ResolveAsync(supplierId, date, itemIds, cancellationToken, contract?.PriceListId);
-        return tiers.Select(t =>
+        // Giá phiếu tháng đứng đầu (G3): mặt hàng có giá tháng cho NCC này thì chỉ trả giá tháng (một bậc từ 0, CK 0 – giá phiếu đã trừ CK);
+        // NCC ngoài danh sách thì vẫn trả bậc hợp đồng/bảng giá như server tính (dòng bị gắn cờ ngoài danh sách khi lưu).
+        var monthly = (await MonthlyLinesAsync(companyId, date, itemIds, cancellationToken)).Values
+            .Select(m => (Line: m, Price: m.PriceFor(supplierId))).Where(x => x.Price is not null).ToList();
+        var monthlyItems = monthly.Select(x => x.Line.ItemId).ToHashSet();
+        return monthly.Select(x => new PoApprovedPriceDto(
+                x.Line.ItemId, x.Line.UomId, x.Line.UomFactor, 0m, x.Price!.Value, 0m, null, PurchasePriceSource.MonthlyApproval.ToString(), x.Line.No, null))
+            .Concat(tiers.Where(t => !monthlyItems.Contains(t.ItemId)).Select(t =>
             {
                 var fromContract = contract is not null && t.PriceListId == contract.PriceListId;
                 return new PoApprovedPriceDto(
                     t.ItemId, t.UomId, t.UomFactor, t.MinQty, t.UnitPrice, t.DiscountPct, t.VatCode,
                     (fromContract ? PurchasePriceSource.Contract : PurchasePriceSource.PriceList).ToString(), t.PriceListNo, fromContract ? contract!.No : null);
-            })
+            }))
             .ToList();
     }
 
@@ -317,8 +330,12 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .GroupBy(t => t.ItemId).ToDictionary(g => g.Key, g => g.ToList());
         var rfqLineIds = order.Lines.Select(l => l.SourceRfqLineId).OfType<Guid>().Distinct().ToList();
         var awards = (await _awards.GetAsync(order.SupplierId, rfqLineIds, cancellationToken)).ToDictionary(a => a.RfqLineId);
+        var monthly = await MonthlyLinesAsync(order.CompanyId, order.Date, itemIds, cancellationToken);
         order.ApplyApprovedPrices(line =>
         {
+            // Phiếu duyệt NCC và giá tháng là quyết định của Ban cung ứng – đứng đầu thứ tự (design.md mục 18.25, G3).
+            if (monthly.TryGetValue(line.ItemId, out var m) && m.PriceFor(order.SupplierId) is { } monthlyPrice)
+                return new ApprovedPrice(PurchasePriceSource.MonthlyApproval, m.PriceIn(monthlyPrice, line.UomFactor), 0m);
             if (line.SourceRfqLineId is { } rfqLineId && awards.TryGetValue(rfqLineId, out var award) && award.ItemId == line.ItemId && award.UomId == line.UomId)
                 return new ApprovedPrice(PurchasePriceSource.Rfq, award.UnitPrice, award.DiscountPct, RfqLineId: rfqLineId);
             if (!tiers.TryGetValue(line.ItemId, out var itemTiers)) return null;
@@ -330,7 +347,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             return new ApprovedPrice(
                 fromContract ? PurchasePriceSource.Contract : PurchasePriceSource.PriceList, price.UnitPrice, price.DiscountPct, listId,
                 fromContract ? contract!.Id : null);
-        });
+        }, line => monthly.TryGetValue(line.ItemId, out var m) ? m.Id : null);
 
         // Ghi nhận mua theo NCC độc quyền: phiếu còn tác dụng vào ngày PO của công ty × NCC × mặt hàng (điều kiện như
         // SoleSourceApproval.IsEffectiveOn, viết lại để EF dịch sang SQL); nhiều phiếu thì lấy phiếu hiệu lực muộn nhất.
@@ -342,6 +359,94 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.MaxBy(x => x.ValidFrom)!.Id);
         order.ApplySoleSources(line => soleSources.TryGetValue(line.ItemId, out var id) ? id : null);
     }
+
+    /// <summary>Dòng phiếu duyệt NCC và giá tháng đã duyệt áp cho công ty của PO (design.md mục 18.25).</summary>
+    private sealed record MonthlyLine(
+        Guid Id, string No, Guid ItemId, Guid UomId, decimal UomFactor, Guid MainSupplierId, decimal UnitPrice, Guid? BackupSupplierId,
+        decimal? BackupUnitPrice, decimal? QuantityLimit, Guid ApprovalId)
+    {
+        /// <summary>Giá theo ĐVT của phiếu cho NCC: NCC chính → giá chính, NCC dự phòng → giá dự phòng; NCC khác → null (ngoài danh sách).</summary>
+        public decimal? PriceFor(Guid supplierId) =>
+            supplierId == MainSupplierId ? UnitPrice : supplierId == BackupSupplierId ? BackupUnitPrice : null;
+
+        /// <summary>
+        /// Quy giá theo ĐVT phiếu sang ĐVT dòng PO: giá ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng, làm tròn 6 số (0,5 lên). Ví dụ phiếu 120.000/thùng
+        /// 12 cái, PO đặt theo cái → 10.000/cái.
+        /// </summary>
+        public decimal PriceIn(decimal price, decimal lineFactor) =>
+            UomFactor == lineFactor ? price : Math.Round(price / UomFactor * lineFactor, 6, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>
+    /// Dòng phiếu tháng Đã duyệt (không tính Đã thay, Đã hủy) áp cho công ty × tháng của ngày đặt hàng, theo mặt hàng. Phiếu thuộc tổng
+    /// công ty nên bỏ filter công ty, nhưng chỉ lấy phiếu có công ty này trong danh sách áp dụng (đã công bố cho công ty – như màn hình GTH);
+    /// bỏ filter nhóm hàng vì mặt hàng của PO đã kiểm tra phạm vi riêng. Mỗi mặt hàng × tháng × công ty chỉ một phiếu còn hiệu lực (G2).
+    /// </summary>
+    private async Task<Dictionary<Guid, MonthlyLine>> MonthlyLinesAsync(
+        Guid companyId, DateOnly date, IReadOnlyCollection<Guid> itemIds, CancellationToken cancellationToken)
+    {
+        var period = new DateOnly(date.Year, date.Month, 1);
+        var lines = await (
+                from a in _db.MonthlySupplierApprovals.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+                where a.Period == period && a.Status == MonthlyApprovalStatus.Approved && a.Companies.Any(c => c.CompanyId == companyId)
+                from l in a.Lines
+                where itemIds.Contains(l.ItemId)
+                select new MonthlyLine(
+                    l.Id, a.No, l.ItemId, l.UomId, l.UomFactor, l.MainSupplierId, l.UnitPrice, l.BackupSupplierId, l.BackupUnitPrice,
+                    l.QuantityLimit, a.Id))
+            .ToListAsync(cancellationToken);
+        return lines.GroupBy(l => l.ItemId).ToDictionary(g => g.Key, g => g.First());
+    }
+
+    /// <summary>
+    /// Chặn gửi duyệt khi vượt hạn mức SL tháng của phiếu duyệt tháng (người dùng chốt 06/11/2026 – hạn mức là số lượng gộp các công ty áp
+    /// dụng để đạt bậc chiết khấu; vượt thì chặn). Đã đặt = SL cơ sở mọi PO đã gửi/duyệt/đóng (không tính nháp, đã hủy; mọi NCC) của
+    /// các công ty áp dụng phiếu, cùng mặt hàng, ngày đặt trong tháng, trừ PO này; quy về ĐVT phiếu = SL cơ sở ÷ hệ số ĐVT phiếu.
+    /// Ví dụ hạn mức 100 cái, đã đặt 61, PO này 50 → 111 > 100: chặn.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi có mặt hàng vượt hạn mức (báo dòng, phiếu, hạn mức, đã đặt, đơn này).</exception>
+    private async Task CheckMonthlyLimitsAsync(PurchaseOrder order, CancellationToken cancellationToken)
+    {
+        var limitLineIds = order.Lines.Select(l => l.MonthlyApprovalLineId).OfType<Guid>().Distinct().ToList();
+        if (limitLineIds.Count == 0) return;
+        var monthly = (await MonthlyLinesAsync(order.CompanyId, order.Date, order.Lines.Select(l => l.ItemId).Distinct().ToList(), cancellationToken))
+            .Values.Where(m => m.QuantityLimit is not null && limitLineIds.Contains(m.Id)).ToList();
+        if (monthly.Count == 0) return;
+        var monthStart = new DateOnly(order.Date.Year, order.Date.Month, 1);
+        var monthEnd = monthStart.AddMonths(1);
+        var approvalIds = monthly.Select(m => m.ApprovalId).Distinct().ToList();
+        var companies = await _db.MonthlySupplierApprovalCompanies.AsNoTracking()
+            .Where(c => approvalIds.Contains(c.ApprovalId)).Select(c => new { c.ApprovalId, c.CompanyId }).ToListAsync(cancellationToken);
+        var itemIds = monthly.Select(m => m.ItemId).ToList();
+        var allCompanies = companies.Select(c => c.CompanyId).Distinct().ToList();
+        // Gộp các công ty áp dụng: bỏ filter công ty + nhóm hàng, chỉ lấy tổng SL theo công ty × mặt hàng (không trả chi tiết PO công ty khác).
+        var ordered = await (
+                from o in _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+                where o.Id != order.Id && allCompanies.Contains(o.CompanyId) && o.Date >= monthStart && o.Date < monthEnd
+                      && (o.Status == ApprovalDocumentStatus.Submitted || o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                from l in o.Lines
+                where itemIds.Contains(l.ItemId)
+                group l by new { o.CompanyId, l.ItemId } into g
+                select new { g.Key.CompanyId, g.Key.ItemId, BaseQty = g.Sum(x => x.BaseQty) })
+            .ToListAsync(cancellationToken);
+        var errors = new List<string>();
+        foreach (var m in monthly)
+        {
+            var applies = companies.Where(c => c.ApprovalId == m.ApprovalId).Select(c => c.CompanyId).ToHashSet();
+            var before = ordered.Where(x => x.ItemId == m.ItemId && applies.Contains(x.CompanyId)).Sum(x => x.BaseQty) / m.UomFactor;
+            var lines = order.Lines.Where(l => l.ItemId == m.ItemId).ToList();
+            var current = lines.Sum(l => l.BaseQty) / m.UomFactor;
+            if (before + current <= m.QuantityLimit!.Value) continue;
+            errors.Add($"dòng {string.Join(", ", lines.Select(l => l.LineNo))}: hạn mức {Qty(m.QuantityLimit.Value)} theo {m.No}, đã đặt {Qty(before)}, đơn này {Qty(current)}");
+        }
+
+        if (errors.Count > 0)
+            throw new BusinessRuleException($"Đơn vượt hạn mức tháng của phiếu duyệt NCC và giá tháng – {string.Join("; ", errors)}. Giảm số lượng hoặc đề nghị Ban điều chỉnh phiếu tháng.");
+    }
+
+    /// <summary>Số lượng trong câu báo lỗi kiểu Việt Nam, tối đa 4 số lẻ (ví dụ 1.234,5).</summary>
+    private static string Qty(decimal value) =>
+        Math.Round(value, 4, MidpointRounding.AwayFromZero).ToString("#,##0.####", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
 
     /// <summary>Hợp đồng nguyên tắc dùng làm nguồn giá; DepartmentIds rỗng = mọi bộ phận được đặt.</summary>
     private sealed record EffectiveContract(Guid Id, string No, Guid PriceListId, IReadOnlyList<Guid> DepartmentIds)
@@ -488,6 +593,14 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var soleSourceIds = order.Lines.Select(l => l.SoleSourceApprovalId).OfType<Guid>().Distinct().ToList();
         var soleSourceNos = await _db.SoleSourceApprovals.AsNoTracking().Where(x => soleSourceIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
+        // Số phiếu duyệt tháng phủ dòng: phiếu thuộc tổng công ty, chỉ lấy đúng Id đã ghi trên dòng của PO người dùng xem được.
+        var monthlyLineIds = order.Lines.Select(l => l.MonthlyApprovalLineId).OfType<Guid>().Distinct().ToList();
+        var monthlyNos = await (
+                from l in _db.Set<MonthlySupplierApprovalLine>().AsNoTracking()
+                join a in _db.MonthlySupplierApprovals.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]) on l.ApprovalId equals a.Id
+                where monthlyLineIds.Contains(l.Id)
+                select new { l.Id, a.No })
+            .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
         var department = order.DepartmentId is { } departmentId
             ? await _db.Departments.AsNoTracking().Where(d => d.Id == departmentId).Select(d => new { d.Code, d.Name }).SingleOrDefaultAsync(cancellationToken)
             : null;
@@ -506,7 +619,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 l.PriceSource.ToString(), l.ApprovedUnitPrice, l.ApprovedDiscountPct, l.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null,
                 l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqNos.GetValueOrDefault(rl) : null,
                 l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract,
-                l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null);
+                l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null,
+                l.MonthlyApprovalLineId is { } ml ? monthlyNos.GetValueOrDefault(ml) : null, l.IsOffMonthlyList);
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;
@@ -531,7 +645,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             await ContractScopeNoteAsync(order, department?.Code, cancellationToken), order.PurchaseType.ToString(), order.EmergencyReason,
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
-            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order));
+            && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList);
     }
 
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>

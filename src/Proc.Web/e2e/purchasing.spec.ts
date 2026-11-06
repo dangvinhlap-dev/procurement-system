@@ -121,11 +121,14 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await expect(buyer.locator('.ant-form-item', { hasText: 'Bộ phận đặt hàng' })).toContainText(departmentCode)
   const poNo = (await buyer.locator('.document-form-number').textContent())!
   await confirm(buyer, 'Gửi duyệt', `Đã gửi duyệt phiếu ${poNo}.`)
+  // NCC chưa có giá đã duyệt: cảnh báo đầu phiếu, phải qua thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25).
+  await expect(buyer.getByRole('alert').filter({ hasText: 'Ngoài danh sách/giá' })).toBeVisible()
   await buyer.screenshot({ path: 'e2e/screenshots/purchase-order.png' })
 
-  // 4. Quản trị duyệt PO.
+  // 4. Quản trị duyệt PO: cấp PO thường rồi chặng ngoài danh sách/giá.
   await openByCommand(page, 'TODO')
   await page.locator('.data-grid-row', { hasText: poNo }).dblclick()
+  await confirm(page, 'Duyệt', `Đã duyệt cấp của bạn – phiếu ${poNo} chuyển cấp tiếp theo.`)
   await confirm(page, 'Duyệt', `Đã duyệt xong phiếu ${poNo}.`)
 
   // 4a. Báo cáo SLA mua hàng (design.md mục 18.13): dòng PR có PO duyệt trong hạn → Đúng hạn, có số PO.

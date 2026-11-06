@@ -197,16 +197,21 @@ public sealed record OpenRequestLineDto(
     Guid UomId, string UomCode, decimal RemainingQty, decimal EstPrice, string? VatCode, Guid? SuggestedSupplierId);
 
 /// <summary>
-/// Dòng PO. ReceivedQty: SL đã nhận (phiếu nhập đã ghi sổ) theo ĐVT trên PO; RemainingQty = SL đặt − đã nhận (không âm).
+/// Dòng PO. ReceivedQty: SL đã nhận (phiếu nhập đã ghi sổ) theo ĐVT trên PO; RemainingQty = SL đặt − đã nhận (không âm). MonthlyApprovalNo:
+/// phiếu duyệt NCC và giá tháng phủ mặt hàng; IsOffMonthlyList: NCC ngoài NCC chính/dự phòng của phiếu đó (design.md mục 18.25).
 /// </summary>
 public sealed record PurchaseOrderLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, decimal UnitPrice, decimal DiscountPct, decimal GrossAmount, decimal DiscountAmount, decimal Amount, string? VatCode,
     decimal VatAmount, DateOnly? DeliveryDate, string? Note, Guid? SourcePrLineId, string? SourcePrNo, decimal ReceivedQty, decimal RemainingQty,
     string PriceSource, decimal? ApprovedUnitPrice, decimal? ApprovedDiscountPct, string? PriceListNo, string? ContractNo, string? SourceRfqNo,
-    Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract, string? SoleSourceNo);
+    Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract, string? SoleSourceNo,
+    string? MonthlyApprovalNo = null, bool IsOffMonthlyList = false);
 
-/// <summary>Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.</summary>
+/// <summary>
+/// Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.
+/// IsOffApprovedList: có dòng ngoài danh sách tháng hoặc không có giá đã duyệt – gửi duyệt qua chặng POL (mục 18.25).
+/// </summary>
 public sealed record PurchaseOrderDto(
     Guid Id, string No, DateOnly Date, string Status, Guid SupplierId, string SupplierCode, string SupplierName, Guid WarehouseId, string? WarehouseCode,
     DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms, string? DeliveryAddress, string CurrencyCode, decimal ReceiveTolerancePct,
@@ -214,7 +219,8 @@ public sealed record PurchaseOrderDto(
     string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseOrderLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals,
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
     string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
-    string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null);
+    string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null,
+    bool IsOffApprovedList = false);
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
 /// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>

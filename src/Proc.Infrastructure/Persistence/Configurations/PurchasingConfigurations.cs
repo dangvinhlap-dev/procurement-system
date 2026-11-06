@@ -201,6 +201,10 @@ internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<
         builder.HasOne<Proc.Domain.Sourcing.RfqLine>().WithMany().HasForeignKey(x => x.SourceRfqLineId).OnDelete(DeleteBehavior.Restrict);
         // Ghi nhận mua theo NCC độc quyền (lát C1b – design.md mục 18.10).
         builder.HasOne<Proc.Domain.MasterData.SoleSourceApproval>().WithMany().HasForeignKey(x => x.SoleSourceApprovalId).OnDelete(DeleteBehavior.Restrict);
+        // Phiếu duyệt NCC và giá tháng phủ dòng (lát G3 – design.md mục 18.25).
+        builder.Ignore(x => x.IsOffMonthlyList);
+        builder.Ignore(x => x.NeedsOffListApproval);
+        builder.HasOne<Proc.Domain.Pricing.MonthlySupplierApprovalLine>().WithMany().HasForeignKey(x => x.MonthlyApprovalLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
