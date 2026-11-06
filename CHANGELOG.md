@@ -3,6 +3,37 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.18.0] - 2026-11-06
+
+### Thêm mới
+- **Ngân sách bộ phận theo tháng** (màn hình BUDG, Mua hàng → Ngân sách; quyền `Purchase.Budget.View/Manage`): khai ngân sách bộ phận ×
+  tháng; đã dùng = PO + phần PR chưa lên PO. PR/PO vượt ngân sách thêm chặng duyệt "Vượt ngân sách" (cấu hình loại PRB/POB ở APRL), đầu
+  phiếu hiện ngân sách/đã dùng/còn lại. **Nghiệp vụ chưa chốt** (design.md 18.24) – công ty không khai ngân sách thì không ảnh hưởng gì;
+  có thể đổi khi chốt điều kiện chặn.
+- **Tham số "Bắt buộc đủ hồ sơ trình khi chọn thầu"** (`RFQ_DOSSIER_REQUIRED`, màn hình SEC, mặc định Tắt): bật thì chọn thầu RFQ bị
+  chặn khi hồ sơ trình còn thiếu mục, báo rõ mục thiếu.
+- **In PR (PDF) có hàng mới chưa có mã**: in nối sau dòng có mã, cột mã "Chưa có mã", tên gồm mô tả + quy cách + ghi chú.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 2 migration mới (52 → 54): `V0_18_0_NganSachBoPhan` (bảng `DepartmentBudget`, cột ngân sách trên PR/PO), `V0_18_0_BatBuocHoSoTrinh`
+  (tham số công ty). Chỉ thêm bảng/cột, không xóa dữ liệu. Script: `db/scripts/0.18.0.sql` (đã chạy thử trên bản sao CSDL 0.17.0, chạy lại
+  lần hai không lỗi).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.18.0.sql`, sau đó thay gói ứng dụng.
+  Từ bản cũ hơn 0.17.0: chạy lần lượt các script trước đó.
+- Muốn dùng ngân sách: gán quyền `Purchase.Budget.*` cho vai trò và cấu hình cấp duyệt loại PRB/POB ở APRL.
+
+### Cách quay lại bản trước
+- Khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.17.0`; hoặc gỡ migration về `20261103141843_V0_17_0_ThoiDiemGuiDuyet`
+  (`Down()` xóa bảng `DepartmentBudget` và các cột mới – **mất ngân sách đã khai** và tham số hồ sơ trình).
+
 ## [0.17.0] - 2026-11-04
 
 ### Thêm mới
