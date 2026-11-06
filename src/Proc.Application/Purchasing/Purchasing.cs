@@ -182,6 +182,19 @@ public sealed record PurchaseRequestDto(
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
 /// <param name="ItemId">Mặt hàng đã gắn (nếu có) – khi đó dòng có mã tương ứng nằm trong Lines.</param>
+/// <param name="Id">Id dòng hàng mới.</param>
+/// <param name="LineNo">Số thứ tự.</param>
+/// <param name="Description">Mô tả hàng cần mua.</param>
+/// <param name="Specification">Quy cách, thông số.</param>
+/// <param name="UomId">Đơn vị tính.</param>
+/// <param name="UomCode">Mã đơn vị tính.</param>
+/// <param name="Qty">Số lượng.</param>
+/// <param name="EstPrice">Đơn giá dự kiến.</param>
+/// <param name="Amount">Thành tiền dự kiến.</param>
+/// <param name="NeededDate">Ngày cần.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="SourcingNo">Số phiếu tìm nguồn.</param>
+/// <param name="ItemCode">Mã hàng đã gắn.</param>
 public sealed record PurchaseRequestNewItemDto(
     Guid Id, int LineNo, string Description, string? Specification, Guid UomId, string UomCode, decimal Qty, decimal EstPrice, decimal Amount,
     DateOnly? NeededDate, string? Note, Guid? SourcingRequestId, string? SourcingNo, Guid? ItemId, string? ItemCode);
@@ -214,6 +227,14 @@ public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid 
 /// Lưu PR nháp. DepartmentId: bắt buộc, bộ phận đang dùng của công ty (giữ nguyên bộ phận đã ngừng dùng nếu phiếu đã chọn trước đó).
 /// </summary>
 /// <param name="NewItems">Hàng mới chưa có mã (design.md mục 18.12); null = không có.</param>
+/// <param name="Date">Ngày đề nghị.</param>
+/// <param name="DepartmentId">Bộ phận đề nghị (bắt buộc).</param>
+/// <param name="Purpose">Mục đích sử dụng.</param>
+/// <param name="NeededDate">Ngày cần hàng.</param>
+/// <param name="WarehouseId">Kho nhận dự kiến.</param>
+/// <param name="Priority">Mức ưu tiên: Low, Normal, Urgent.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="Lines">Dòng hàng có mã.</param>
 public sealed record SavePurchaseRequestRequest(
     DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, string Priority, string? Note,
     IReadOnlyList<SavePurchaseRequestLineRequest> Lines, IReadOnlyList<SavePurchaseRequestNewItemRequest>? NewItems = null);
@@ -287,12 +308,35 @@ public sealed record PoApprovedPriceDto(
 /// <summary>Dòng PO gửi lên.</summary>
 /// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt.</param>
 /// <param name="SourceRfqLineId">Dòng RFQ đã chọn thầu (chỉ khi lập PO từ kết quả chọn thầu).</param>
+/// <param name="Id">Id dòng khi sửa; null = dòng mới.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">Đơn vị tính.</param>
+/// <param name="Qty">Số lượng đặt.</param>
+/// <param name="UnitPrice">Đơn giá trước chiết khấu, chưa VAT.</param>
+/// <param name="DiscountPct">Chiết khấu (%).</param>
+/// <param name="VatCode">Mã thuế suất VAT.</param>
+/// <param name="DeliveryDate">Ngày giao của dòng.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="SourcePrLineId">Dòng PR nguồn (nếu lấy từ PR).</param>
 public sealed record SavePurchaseOrderLineRequest(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, decimal DiscountPct, string? VatCode, DateOnly? DeliveryDate, string? Note,
     Guid? SourcePrLineId, string? PriceDeviationReason = null, Guid? SourceRfqLineId = null);
 
 /// <summary>Lưu PO nháp.</summary>
 /// <param name="DepartmentId">Bộ phận đặt hàng (không bắt buộc; trống mà các dòng lấy từ PR của một bộ phận thì lấy bộ phận đó).</param>
+/// <param name="Date">Ngày đặt hàng.</param>
+/// <param name="SupplierId">NCC (đã duyệt, đang áp dụng tại công ty).</param>
+/// <param name="WarehouseId">Kho nhận hàng.</param>
+/// <param name="ExpectedDate">Ngày giao dự kiến.</param>
+/// <param name="PaymentTerms">Điều khoản thanh toán.</param>
+/// <param name="DeliveryTerms">Điều khoản giao hàng.</param>
+/// <param name="DeliveryAddress">Địa chỉ giao.</param>
+/// <param name="ReceiveTolerancePct">Dung sai nhận hàng (%): phiếu nhập nhận tới SL đặt × (1 + dung sai).</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="Lines">Dòng hàng.</param>
+/// <param name="PurchaseType">Loại mua: Normal (thường) hoặc Emergency (khẩn cấp – design.md mục 18.11).</param>
+/// <param name="EmergencyReason">Lý do mua khẩn cấp (bắt buộc khi khẩn cấp).</param>
+/// <param name="DocsDueDate">Hạn bổ sung hồ sơ của PO khẩn cấp.</param>
 public sealed record SavePurchaseOrderRequest(
     DateOnly Date, Guid SupplierId, Guid WarehouseId, DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms, string? DeliveryAddress,
     decimal ReceiveTolerancePct, string? Note, IReadOnlyList<SavePurchaseOrderLineRequest> Lines, Guid? DepartmentId = null,

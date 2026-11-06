@@ -367,14 +367,6 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     }
 
     /// <summary>
-    /// Lập phiếu xuất bán nội bộ ở trạng thái nháp (design.md mục 6.3, 10.7).
-    /// </summary>
-    /// <param name="companyId">Công ty bán.</param>
-    /// <param name="no">Số phiếu đã cấp.</param>
-    /// <param name="header">Đầu phiếu.</param>
-    /// <returns>Phiếu nháp.</returns>
-    /// <exception cref="BusinessRuleException">Khi thiếu kho, công ty mua hoặc bán cho chính mình.</exception>
-    /// <summary>
     /// Lập phiếu điều chỉnh / kiểm kê kho nháp (ADJ – design.md mục 6.1): một kho bất kỳ của công ty, dòng tăng (+) hoặc giảm (−).
     /// Kho ghi ở cả kho xuất và kho nhập để sổ kho, bộ lọc phạm vi kho và báo cáo dùng chung cột như các phiếu khác.
     /// </summary>
@@ -413,6 +405,14 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         Note = Clean(header.Note);
     }
 
+    /// <summary>
+    /// Lập phiếu xuất bán nội bộ ở trạng thái nháp (design.md mục 6.3, 10.7).
+    /// </summary>
+    /// <param name="companyId">Công ty bán.</param>
+    /// <param name="no">Số phiếu đã cấp.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <returns>Phiếu nháp.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu kho, công ty mua hoặc bán cho chính mình.</exception>
     public static InventoryDocument CreateSale(Guid companyId, string no, SaleHeader header)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Chứng từ kho phải thuộc một công ty.");

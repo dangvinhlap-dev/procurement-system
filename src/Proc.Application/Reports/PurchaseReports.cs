@@ -29,12 +29,26 @@ public sealed record PendingRequestLineDto(
 /// <param name="DueDate">Hạn = ngày PR duyệt + SlaDays ngày làm việc.</param>
 /// <param name="OrderNo">PO đầu tiên được duyệt có dòng lấy từ dòng PR này.</param>
 /// <param name="Status">OnTime, Late, InProgress (chưa có PO, còn hạn), Overdue (chưa có PO, quá hạn).</param>
+/// <param name="RequestId">Id PR.</param>
+/// <param name="RequestNo">Số PR.</param>
+/// <param name="ApprovedDate">Ngày PR duyệt đủ.</param>
+/// <param name="Department">Bộ phận đề nghị.</param>
+/// <param name="LineNo">Dòng PR.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="OrderId">Id PO đầu tiên được duyệt.</param>
+/// <param name="OrderApprovedDate">Ngày PO đó được duyệt.</param>
 public sealed record PurchaseSlaRowDto(
     Guid RequestId, string RequestNo, DateOnly ApprovedDate, string? Department, int LineNo, string ItemCode, string ItemName, string Category,
     int SlaDays, DateOnly DueDate, Guid? OrderId, string? OrderNo, DateOnly? OrderApprovedDate, string Status);
 
 /// <summary>Báo cáo SLA mua hàng: dòng và tổng hợp.</summary>
 /// <param name="OnTimePct">% đúng SLA = đúng hạn / (đúng hạn + trễ + quá hạn), 1 số lẻ; null khi chưa có dòng nào đến hạn hoặc có PO.</param>
+/// <param name="Rows">Các dòng PR.</param>
+/// <param name="OnTime">Số dòng đúng hạn.</param>
+/// <param name="Late">Số dòng trễ hạn.</param>
+/// <param name="InProgress">Số dòng chưa có PO, còn hạn.</param>
+/// <param name="Overdue">Số dòng chưa có PO, đã quá hạn.</param>
 public sealed record PurchaseSlaResult(
     IReadOnlyList<PurchaseSlaRowDto> Rows, int OnTime, int Late, int InProgress, int Overdue, decimal? OnTimePct);
 
@@ -44,6 +58,17 @@ public sealed record PurchaseSlaResult(
 /// <param name="RejectedQty">SL không đạt, không nhập kho.</param>
 /// <param name="DiscrepancyQty">Thiếu (âm) / thừa (dương) so với chứng từ giao.</param>
 /// <param name="QcResult">NotChecked, Passed, Failed.</param>
+/// <param name="DocumentId">Id phiếu nhập.</param>
+/// <param name="DocumentNo">Số phiếu nhập.</param>
+/// <param name="Date">Ngày nhập.</param>
+/// <param name="SupplierCode">Mã NCC.</param>
+/// <param name="SupplierName">Tên NCC.</param>
+/// <param name="PurchaseOrderNo">Số PO (nếu nhập theo PO).</param>
+/// <param name="LineNo">Dòng phiếu.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="UomCode">ĐVT.</param>
+/// <param name="QcNote">Ghi chú kiểm tra.</param>
 public sealed record ReceiptQualityRowDto(
     Guid DocumentId, string DocumentNo, DateOnly Date, string SupplierCode, string SupplierName, string? PurchaseOrderNo, int LineNo,
     string ItemCode, string ItemName, string UomCode, decimal? DeliveredQty, decimal Qty, decimal RejectedQty, decimal DiscrepancyQty,
@@ -53,6 +78,8 @@ public sealed record ReceiptQualityRowDto(
 /// <param name="CheckedLines">Số dòng phiếu nhập mua đã ghi sổ trong kỳ có kết quả kiểm tra.</param>
 /// <param name="PassedLines">Số dòng đạt.</param>
 /// <param name="PassedPct">% đạt = đạt / đã kiểm tra, 1 số lẻ; null khi chưa có dòng nào kiểm tra.</param>
+/// <param name="Rows">Các dòng có sai lệch.</param>
+/// <param name="TotalLines">Tổng số dòng phiếu nhập mua đã ghi sổ trong kỳ.</param>
 public sealed record ReceiptQualityResult(
     IReadOnlyList<ReceiptQualityRowDto> Rows, int TotalLines, int CheckedLines, int PassedLines, decimal? PassedPct);
 
@@ -241,7 +268,7 @@ public sealed record OutOfContractLineDto(
     string ItemCode, string ItemName, string UomCode, decimal Qty, decimal NetUnitPrice, decimal? ApprovedNetPrice, decimal? DeviationPct,
     decimal Amount, decimal? DeviationAmount, string Kind, string? Reason);
 
-/// <summary>Báo cáo giá mua & mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17).</summary>
+/// <summary>Báo cáo giá mua &amp; mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17).</summary>
 /// <param name="OrderCount">Số PO đã duyệt trong kỳ.</param>
 /// <param name="TotalAmount">Tổng thành tiền dòng PO (trước VAT).</param>
 /// <param name="CompliancePct">Tỷ lệ mua theo giá đã duyệt = giá trị theo giá đã duyệt (không lệch) ÷ (tổng − dòng không xác định) × 100,
@@ -418,7 +445,7 @@ public interface IPurchaseReportService
     Task<ThreeWayMatchResult> GetThreeWayMatchAsync(DateOnly from, DateOnly to, decimal tolerance, bool onlyIssues, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Giá mua & mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17): dòng PO đã duyệt (Đã duyệt, Đã đóng) có ngày PO trong khoảng,
+    /// Giá mua &amp; mua ngoài hợp đồng (báo cáo tuần – design.md mục 18.17): dòng PO đã duyệt (Đã duyệt, Đã đóng) có ngày PO trong khoảng,
     /// tổng hợp theo nguồn giá, tỷ lệ mua theo giá đã duyệt và các dòng ngoài hợp đồng.
     /// </summary>
     /// <param name="period">Khoảng ngày PO, phạm vi.</param>
