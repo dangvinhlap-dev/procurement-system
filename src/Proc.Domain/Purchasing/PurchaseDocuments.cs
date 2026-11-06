@@ -50,6 +50,15 @@ public sealed record PurchaseRequestLineData(
 /// <param name="PurchaseType">Loại mua: thường hoặc khẩn cấp (design.md mục 18.11).</param>
 /// <param name="EmergencyReason">Lý do mua khẩn cấp (bắt buộc khi khẩn cấp).</param>
 /// <param name="DocsDueDate">Hạn bổ sung hồ sơ của PO khẩn cấp (bắt buộc khi khẩn cấp).</param>
+/// <param name="Date">Ngày đặt hàng.</param>
+/// <param name="SupplierId">NCC.</param>
+/// <param name="WarehouseId">Kho nhận.</param>
+/// <param name="ExpectedDate">Ngày giao dự kiến.</param>
+/// <param name="PaymentTerms">Điều khoản thanh toán.</param>
+/// <param name="DeliveryTerms">Điều khoản giao hàng.</param>
+/// <param name="DeliveryAddress">Địa chỉ giao.</param>
+/// <param name="ReceiveTolerancePct">Dung sai nhận hàng (%).</param>
+/// <param name="Note">Ghi chú.</param>
 public sealed record PurchaseOrderHeader(
     DateOnly Date, Guid SupplierId, Guid WarehouseId, DateOnly? ExpectedDate, string? PaymentTerms, string? DeliveryTerms,
     string? DeliveryAddress, decimal ReceiveTolerancePct, string? Note, Guid? DepartmentId = null,
@@ -107,6 +116,16 @@ public enum PurchaseType
 /// <summary>Dữ liệu một dòng đơn mua hàng.</summary>
 /// <param name="PriceDeviationReason">Lý do đơn giá khác giá đã duyệt (bắt buộc khi gửi duyệt nếu lệch – design.md mục 18.10).</param>
 /// <param name="SourceRfqLineId">Dòng RFQ đã chọn thầu mà dòng PO lấy giá (chỉ khi lập PO từ kết quả chọn thầu; server kiểm tra lại).</param>
+/// <param name="Id">Id dòng khi sửa; null = dòng mới.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">Đơn vị tính.</param>
+/// <param name="Qty">Số lượng đặt.</param>
+/// <param name="UnitPrice">Đơn giá trước chiết khấu, chưa VAT.</param>
+/// <param name="DiscountPct">Chiết khấu (%).</param>
+/// <param name="VatCode">Mã thuế suất VAT.</param>
+/// <param name="DeliveryDate">Ngày giao của dòng.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="SourcePrLineId">Dòng PR nguồn (nếu lấy từ PR).</param>
 public sealed record PurchaseOrderLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal UnitPrice, decimal DiscountPct, string? VatCode, DateOnly? DeliveryDate,
     string? Note, Guid? SourcePrLineId, string? PriceDeviationReason = null, Guid? SourceRfqLineId = null);

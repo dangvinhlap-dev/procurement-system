@@ -219,13 +219,13 @@ public sealed partial class InventoryPeriodService
         }
 
         // Tên bảng, cột từ mô hình EF (không phải dữ liệu người dùng) nên ghép chuỗi an toàn.
-#pragma warning disable EF1002
+#pragma warning disable EF1002, EF1003
         await _db.Database.ExecuteSqlRawAsync(
             $"UPDATE \"{table}\" l SET \"{Column(nameof(StockLedgerEntry.UnitCost))}\" = c.unit_cost, " +
             $"\"{Column(nameof(StockLedgerEntry.Amount))}\" = c.amount, \"{Column(nameof(StockLedgerEntry.IsCostFinal))}\" = c.is_final " +
             $"FROM ledger_cost c WHERE l.\"{Column(nameof(StockLedgerEntry.Id))}\" = c.id",
             cancellationToken);
-#pragma warning restore EF1002
+#pragma warning restore EF1002, EF1003
     }
 
     /// <summary>

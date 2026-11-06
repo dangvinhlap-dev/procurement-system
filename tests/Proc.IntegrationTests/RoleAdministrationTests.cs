@@ -164,7 +164,7 @@ public class RoleAdministrationTests
         Assert.Empty(again.Created);
         Assert.Equal(RoleTemplates.Procurement.Count, again.Skipped.Count);
 
-        var templates = await admin.GetFromJsonAsync<List<RoleTemplateDto>>("/api/roles/templates", Ct);
+        var templates = (await admin.GetFromJsonAsync<List<RoleTemplateDto>>("/api/roles/templates", Ct))!;
         Assert.All(templates!, t => Assert.True(t.Exists));
         var roles = await admin.GetFromJsonAsync<List<RoleListItemDto>>("/api/roles", Ct);
         var council = roles!.Single(r => r.Code == "HOIDONG");
@@ -172,7 +172,7 @@ public class RoleAdministrationTests
         Assert.Contains(Permissions.Sourcing.RfqApproveAward, detail!.PermissionCodes);
 
         // Không kiêm nhiệm: nhóm đàm phán không có quyền duyệt; KSNB chỉ xem nghiệp vụ (ghi được sổ vi phạm của chính KSNB – mục 18.19).
-        var negotiator = templates!.Single(t => t.Code == "DAMPHAN");
+        var negotiator = templates.Single(t => t.Code == "DAMPHAN");
         Assert.DoesNotContain(negotiator.PermissionCodes, p => p.EndsWith(".Approve", StringComparison.Ordinal) || p.EndsWith(".ApproveAward", StringComparison.Ordinal));
         Assert.All(templates.Single(t => t.Code == "KSNB").PermissionCodes.Where(p => p != Permissions.Control.FindingManage),
             p => Assert.EndsWith(".View", p.Replace("ViewAllCompanies", "View")));

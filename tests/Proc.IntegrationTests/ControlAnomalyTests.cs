@@ -134,7 +134,6 @@ public class ControlAnomalyTests
 
         var url = $"/api/control/anomalies?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}";
         var result = await ReadAsync<AnomalyResult>(await f.Buyer.GetAsync(url, Ct));
-        int Count(string code) => result.Summary.Single(s => s.Code == code).Count;
         Assert.Equal(
             [
                 (AnomalyCodes.HighPriceRepeat, 1), (AnomalyCodes.NearThreshold, 1), (AnomalyCodes.BankAccountChange, 1), (AnomalyCodes.OffContract, 1),

@@ -166,6 +166,6 @@ public class DepartmentTests
         Assert.Equal(HttpStatusCode.Forbidden, (await buyer.PostAsJsonAsync(
             "/api/departments", new CreateDepartmentRequest("KD", "Phòng kinh doanh", null), Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await buyer.PutAsJsonAsync(
-            $"/api/departments/{departments[0].Id}", new UpdateDepartmentRequest("Đổi tên", null, true), Ct)).StatusCode);
+            $"/api/departments/{departments![0].Id}", new UpdateDepartmentRequest("Đổi tên", null, true), Ct)).StatusCode);
     }
 }
