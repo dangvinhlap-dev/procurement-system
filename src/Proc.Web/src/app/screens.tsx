@@ -174,6 +174,7 @@ export const screens: Screen[] = [
   { code: 'PRCW', title: 'Giá mua & mua ngoài hợp đồng', navLabel: 'Mua ngoài hợp đồng', path: '/bao-cao/gia-mua-ngoai-hop-dong', icon: <AuditOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'KPI', title: 'Bảng KPI cung ứng', navLabel: 'Bảng KPI', path: '/bao-cao/kpi', icon: <DashboardOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PRVAR', title: 'Biến động giá mua', navLabel: 'Biến động giá mua', path: '/bao-cao/bien-dong-gia-mua', icon: <LineChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'SAVSTD', title: 'Tiết kiệm so giá chuẩn', navLabel: 'Tiết kiệm so giá chuẩn', path: '/bao-cao/tiet-kiem-gia-chuan', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PHIS', title: 'Dữ liệu mua lịch sử', navLabel: 'Dữ liệu mua lịch sử', path: '/bao-cao/du-lieu-mua-lich-su', icon: <HistoryOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
   { code: 'PHMAP', title: 'Ánh xạ dữ liệu mua', navLabel: 'Ánh xạ dữ liệu mua', path: '/bao-cao/anh-xa-du-lieu-mua', icon: <NodeIndexOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
   { code: 'ANOM', title: 'Dấu hiệu bất thường (KSNB)', navLabel: 'Dấu hiệu bất thường', path: '/bao-cao/dau-hieu-bat-thuong', icon: <AlertOutlined />, group: 'reports', permission: Permission.ControlAnomalyView },

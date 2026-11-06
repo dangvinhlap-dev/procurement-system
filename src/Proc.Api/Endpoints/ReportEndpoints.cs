@@ -60,6 +60,10 @@ public static class ReportEndpoints
         reports.MapGet("/price-variance", (DateOnly from, DateOnly to, bool? allCompanies, Guid? categoryId, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetPriceVarianceAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), categoryId, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Tiết kiệm so giá chuẩn của phiếu duyệt tháng – ngân hàng giá (lát G4c, design.md mục 18.25).
+        reports.MapGet("/standard-savings", (DateOnly from, DateOnly to, bool? allCompanies, Guid? categoryId, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetStandardSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), categoryId, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         // NCC đủ điều kiện theo mặt hàng – quyết định Ban cung ứng: tối thiểu 03 NCC mỗi mặt hàng (design.md mục 18.25).
         reports.MapGet("/supplier-coverage", (int? minSuppliers, Guid? categoryId, bool? onlyShort, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSupplierCoverageAsync(minSuppliers ?? 3, categoryId, onlyShort ?? false, ct))
