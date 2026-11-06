@@ -192,6 +192,40 @@ public class InventoryPostingTests
         Assert.Equal((144m, 6, 144m), ((await StockAsync(f)).OnHand, (await StockAsync(f)).LedgerRows, (await StockAsync(f)).LedgerQty));
     }
 
+    /// <summary>
+    /// Bấm "Ghi sổ" hai lần cùng lúc trên MỘT phiếu (2 tab, 2 người, mạng gửi lại): chỉ một lần ghi, lần kia báo không còn nháp –
+    /// trước đây cả hai cùng thành công, tồn bị cộng gấp đôi. Tương tự với bỏ ghi sổ.
+    /// </summary>
+    [Fact]
+    public async Task GhiSoCungPhieuHaiLanDongThoi_ChiGhiMotLan()
+    {
+        var f = await ArrangeAsync();
+        var second = await _factory.CreateClientInCompanyAsync(await NewAdminAsync(), ProcApiFactory.TestPassword, "BHA");
+        for (var round = 0; round < 4; round++)
+        {
+            var draft = await DraftAsync(f, 1);
+            var before = (await StockAsync(f)).OnHand;
+
+            var posts = await Task.WhenAll(PostAsync(f, draft.Id), second.PostAsync($"/api/inventory-documents/{draft.Id}/post", null, Ct));
+
+            Assert.Equal(1, posts.Count(p => p.StatusCode == HttpStatusCode.OK));
+            Assert.Equal(before + 24m, (await StockAsync(f)).OnHand);
+
+            var unposts = await Task.WhenAll(UnpostAsync(f, draft.Id), second.PostAsync($"/api/inventory-documents/{draft.Id}/unpost", null, Ct));
+
+            Assert.Equal(1, unposts.Count(p => p.StatusCode == HttpStatusCode.OK));
+            Assert.Equal(before, (await StockAsync(f)).OnHand);
+        }
+    }
+
+    /// <summary>Người quản trị thứ hai ở TCT, BHA (đăng nhập riêng – phiên khác người ghi sổ thứ nhất).</summary>
+    private async Task<string> NewAdminAsync()
+    {
+        var userName = $"qt2.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA"]);
+        return userName;
+    }
+
     [Fact]
     public async Task ThuKho_GhiSoDuoc_NhungKhongCoQuyenBoGhiSo()
     {

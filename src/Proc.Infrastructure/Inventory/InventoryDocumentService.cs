@@ -148,11 +148,14 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     public async Task<InventoryDocumentDto> CancelAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await LockDocumentAsync(id, cancellationToken);
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
         RequireDocumentPermission(document, Permissions.Inventory.DocumentCreate, Permissions.Inventory.AdjustmentCreate, "hủy");
         document.Cancel();
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -160,6 +163,10 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     public async Task<InventoryDocumentDto> PostAsync(Guid id, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
+        // Giao dịch mở từ đầu và khóa phiếu trước khi đọc: lệnh ghi sổ thứ hai trên cùng phiếu phải chờ lệnh đầu xong, rồi đọc lại thấy
+        // phiếu đã ghi sổ và bị chặn – không ghi sổ hai lần (lỗi L1). Mọi kiểm tra bên dưới cũng chạy trên dữ liệu đã khóa.
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await LockDocumentAsync(id, cancellationToken);
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
         if (document.Status != DocumentStatus.Draft)
@@ -210,7 +217,6 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             ? await ProvisionalCostsAsync(itemIds, cancellationToken)
             : [];
 
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         await LockOpenPeriodAsync(periodId, cancellationToken);
         document.MarkPosted(periodId, _clock.UtcNow, _scope.UserId);
         foreach (var line in document.Lines)
@@ -265,6 +271,9 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
     public async Task<InventoryDocumentDto> UnpostAsync(Guid id, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
+        // Khóa phiếu (và phiếu liên kết) trước khi đọc – hai lệnh bỏ ghi sổ cùng lúc không đảo sổ hai lần (lỗi L1).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await LockDocumentAsync(id, cancellationToken);
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy chứng từ.");
         if (document.Status != DocumentStatus.Posted) throw new BusinessRuleException($"Phiếu {document.No} chưa ghi sổ.");
@@ -299,7 +308,6 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         var counterpart = document.DocType == DocumentTypes.IntercompanySale ? await CounterpartAsync(document, cancellationToken) : null;
         if (counterpart is not null) document.DetachIntercompanyReceipt(counterpart);
 
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         await LockOpenPeriodAsync(period.Id, cancellationToken);
         foreach (var entry in entries)
             await ApplyStockAsync(companyId, warehouses[entry.WarehouseId], items[entry.ItemId], entry.LotNo, -entry.SignedQty, cancellationToken);
@@ -310,6 +318,19 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Khóa phiếu kho và phiếu liên kết của nó (cặp ICS–ICR, thuộc công ty khác) tới hết giao dịch đang mở. Ghi sổ ICR và bỏ ghi sổ ICS
+    /// cùng lúc phải lần lượt: không thì ICS bị bỏ ghi sổ (ICR bị hủy) trong khi ICR vẫn được ghi sổ – hàng nhập không có nguồn xuất.
+    /// Hai phiếu khóa theo thứ tự Id nên hai phía không chờ nhau vòng tròn.
+    /// </summary>
+    private async Task LockDocumentAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // Đọc Id liên kết thẳng từ bảng (bỏ filter công ty, kho): chỉ để biết dòng nào cần khóa, không trả dữ liệu ra ngoài.
+        var linked = await _db.InventoryDocuments.IgnoreQueryFilters().AsNoTracking()
+            .Where(d => d.Id == id).Select(d => d.LinkedDocumentId).SingleOrDefaultAsync(cancellationToken);
+        await RowLocks.LockAsync<InventoryDocument>(_db, linked is { } other ? [id, other] : [id], cancellationToken);
     }
 
     /// <summary>
