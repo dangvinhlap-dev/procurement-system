@@ -87,6 +87,10 @@ public class ControlAnomalyTests
         var approverName = $"dy.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(approverName, f.CompanyCode, roleCode);
         var approver = await _factory.CreateClientInCompanyAsync(approverName, ProcApiFactory.TestPassword, f.CompanyCode);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approverName2 = $"dy.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(approverName2, f.CompanyCode, roleCode);
+        var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, f.CompanyCode);
         // Quy trình duyệt PO: cấp 1 từ 0 đ, cấp 2 từ 1.000.000 đ (gồm VAT).
         await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 1, 0, roleId), Ct));
         await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 2, 1_000_000, roleId), Ct));
@@ -99,7 +103,7 @@ public class ControlAnomalyTests
             po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
             // Duyệt hết các chặng: PO không có giá đã duyệt qua thêm chặng POL (design.md mục 18.25).
             for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
-                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+                po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? approver : approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
             Assert.Equal("Approved", po.Status);
             return po;
         }

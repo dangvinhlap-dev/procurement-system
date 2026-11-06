@@ -25,15 +25,16 @@ test('giá mua & mua ngoài hợp đồng: PO tuần trước không có giá đ
   })
   await bha.send('post', `/api/purchase-orders/${po.id}/submit`, {})
   // Người duyệt: tài khoản quản trị mới tại BHA (người lập không tự duyệt).
-  const approverName = unique('dy').toLowerCase()
-  await bha.send('post', '/api/users', {
-    userName: approverName, fullName: 'Người duyệt PO', email: null, password: 'Demo@2026',
-    access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
-  })
-  const login = await request.post('/api/auth/login', { data: { userName: approverName, password: 'Demo@2026' } })
-  const { accessToken, user } = (await login.json()) as { accessToken: string; user: { companies: { id: string; code: string }[] } }
-  // Hai lượt duyệt: cấp PO thường và chặng "Ngoài danh sách/giá" (POL) – dòng không có giá đã duyệt bắt buộc duyệt (design.md mục 18.25).
+  // Hai lượt duyệt: cấp PO thường và chặng "Ngoài danh sách/giá" (POL) – dòng không có giá đã duyệt bắt buộc duyệt (design.md mục 18.25);
+  // mỗi chặng một người duyệt khác nhau (lát R3, design.md mục 18.26).
   for (let i = 0; i < 2; i++) {
+    const approverName = unique('dy').toLowerCase()
+    await bha.send('post', '/api/users', {
+      userName: approverName, fullName: `Người duyệt PO ${i + 1}`, email: null, password: 'Demo@2026',
+      access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
+    })
+    const login = await request.post('/api/auth/login', { data: { userName: approverName, password: 'Demo@2026' } })
+    const { accessToken, user } = (await login.json()) as { accessToken: string; user: { companies: { id: string; code: string }[] } }
     const approved = await request.post(`/api/purchase-orders/${po.id}/approve`, {
       headers: { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': user.companies.find((c) => c.code === 'BHA')!.id },
       data: { comment: null },

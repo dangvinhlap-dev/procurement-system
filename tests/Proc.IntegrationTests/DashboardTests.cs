@@ -60,6 +60,10 @@ public class DashboardTests
         var approverName = $"dy.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(approverName, company.Code, approverRole);
         var approver = await _factory.CreateClientInCompanyAsync(approverName, ProcApiFactory.TestPassword, company.Code);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approverName2 = $"dy.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(approverName2, company.Code, approverRole);
+        var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
 
         // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); phiếu nhập nháp; phiếu nhập đã ghi sổ 2 × 50.000 trong tháng.
         var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests",
@@ -70,8 +74,8 @@ public class DashboardTests
                 [new(null, item.Id, cai, 10, 50_000, 0, "10", null, null, null)]), Ct));
         await ReadAsync<PurchaseOrderDto>(await buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
-        // PO không có giá đã duyệt: thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25), cùng người duyệt được.
-        await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        // PO không có giá đã duyệt: thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25) – người khác duyệt (lát R3).
+        await ReadAsync<PurchaseOrderDto>(await approver2.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",
             new SaveReceiptRequest(Today, kt, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 1, 50_000, "10", null, null, null)]), Ct));
         var posted = await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",

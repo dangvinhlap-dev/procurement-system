@@ -175,6 +175,14 @@ internal sealed class ApprovalEngine
             return $"Cấp {step.Level} do vai trò {role} duyệt – bạn không có vai trò này tại công ty.";
         }
 
+        // Mỗi cấp một người khác nhau trong cùng lượt duyệt: một người có quyền nhiều cấp mà duyệt liên tiếp thì duyệt nhiều cấp mất tác
+        // dụng (lát R3, design.md mục 18.26). Gửi lại sau khi bị từ chối là lượt mới – người đó lại duyệt được một cấp.
+        var approvedLevel = (await RoundStepsAsync(document, cancellationToken))
+            .Where(s => s.Status == ApprovalStepStatus.Approved && s.ActedBy == userId)
+            .OrderBy(s => s.Stage).ThenBy(s => s.Level).FirstOrDefault();
+        if (approvedLevel is not null)
+            return $"Bạn đã duyệt cấp {approvedLevel.Level} của phiếu {document.No} trong lượt này – cấp sau phải do người khác duyệt.";
+
         return null;
     }
 
@@ -234,9 +242,22 @@ internal sealed class ApprovalEngine
             document.DocType, document.Id);
     }
 
-    /// <summary>Bước đang chờ kèm điều kiện loại người lập và NCC của phiếu, để tìm người duyệt.</summary>
-    private async Task<NextApproverResolver.PendingStep> PendingStepAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken) =>
-        new(step.Id, document.DocType, step.CompanyId, step.RoleId, document.IsPreparedBy, await SupplierIdsAsync(document, cancellationToken));
+    /// <summary>
+    /// Bước đang chờ kèm điều kiện loại người lập, người đã duyệt một cấp trong lượt này (lát R3) và NCC của phiếu, để tìm người duyệt.
+    /// Bước của lượt đọc có theo dõi nên thấy cả bước vừa duyệt trong request mà chưa lưu.
+    /// </summary>
+    private async Task<NextApproverResolver.PendingStep> PendingStepAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
+    {
+        var approvedBy = ApprovedBy(await RoundStepsAsync(document, cancellationToken));
+        return new(step.Id, document.DocType, step.CompanyId, step.RoleId, u => document.IsPreparedBy(u) || approvedBy.Contains(u),
+            await SupplierIdsAsync(document, cancellationToken));
+    }
+
+    /// <summary>Người đã duyệt một cấp trong các bước cho trước (cùng lượt) – không duyệt thêm cấp khác (lát R3, design.md mục 18.26).</summary>
+    /// <param name="steps">Bước của một lượt duyệt.</param>
+    /// <returns>Id người đã duyệt.</returns>
+    internal static HashSet<Guid> ApprovedBy(IEnumerable<ApprovalStep> steps) =>
+        steps.Where(s => s.Status == ApprovalStepStatus.Approved && s.ActedBy is not null).Select(s => s.ActedBy!.Value).ToHashSet();
 
     /// <summary>
     /// Lý do người dùng không được tham gia quyết định (duyệt, chấm thầu, chọn thầu) vì có kê khai xung đột lợi ích còn hiệu lực hôm nay

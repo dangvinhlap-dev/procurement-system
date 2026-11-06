@@ -129,7 +129,22 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await openByCommand(page, 'TODO')
   await page.locator('.data-grid-row', { hasText: poNo }).dblclick()
   await confirm(page, 'Duyệt', `Đã duyệt cấp của bạn – phiếu ${poNo} chuyển cấp tiếp theo.`)
-  await confirm(page, 'Duyệt', `Đã duyệt xong phiếu ${poNo}.`)
+  // Chặng sau do người khác duyệt – một người không duyệt hai cấp/chặng của cùng lượt (lát R3, design.md mục 18.26).
+  await expect(page.getByRole('button', { name: /(^|\s)Duyệt$/ })).toHaveCount(0)
+  const polName = unique('dy').toLowerCase()
+  await bha.send('post', '/api/users', {
+    userName: polName, fullName: `Người duyệt chặng POL ${polName}`, email: null, password: 'Demo@2026',
+    access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
+  })
+  const polContext = await browser.newContext()
+  const polPage = await polContext.newPage()
+  await loginViaApi(polPage, { userName: polName, password: 'Demo@2026' })
+  await polPage.goto('/')
+  await switchCompany(polPage, 'BHA')
+  await openByCommand(polPage, 'TODO')
+  await polPage.locator('.data-grid-row', { hasText: poNo }).dblclick()
+  await confirm(polPage, 'Duyệt', `Đã duyệt xong phiếu ${poNo}.`)
+  await polContext.close()
 
   // 4a. Báo cáo SLA mua hàng (design.md mục 18.13): dòng PR có PO duyệt trong hạn → Đúng hạn, có số PO.
   await openByCommand(page, 'SLA')
