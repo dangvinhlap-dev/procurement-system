@@ -1731,6 +1731,24 @@ Không có migration.
 Migration `V0_19_0_PoTheoPhieuThang` (cột `PurchaseOrderLine.MonthlyApprovalLineId`, `PurchaseOrder.IsOffApprovedList` – PO cũ nhận false, tính lại
 khi sửa nháp; `Down()` xóa hai cột, mất liên kết phiếu tháng và cờ trên PO, AuditLog vẫn giữ).
 
+**G4 – Ngân hàng giá** (06/11/2026, chia lát): G4a phiếu khảo sát giá thị trường; G4b giá chuẩn/trần/mục tiêu trên dòng phiếu duyệt tháng
+(Ban duyệt cùng phiếu, hiện giá thị trường gần nhất để tham khảo) và PO vượt giá trần – tham số công ty Cảnh báo (mặc định) / Chặn gửi duyệt;
+G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu: chưa làm (khi có yêu cầu).
+
+**G4a – Phiếu khảo sát giá thị trường** (màn hình **KSG**, Giá và NCC → Khảo sát giá thị trường, `/api/market-price-surveys`, số loại **KSG**,
+ví dụ KSG-TCT-2611-0001 theo ngày khảo sát):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu `MarketPriceSurvey` thuộc **tổng công ty** – chỉ lập, sửa, chốt, hủy khi đang làm việc ở tổng công ty; công ty thành viên không thấy. Đầu phiếu: **ngày khảo sát** (không sau hôm nay), **nhóm hàng**, Ghi chú; tab Đính kèm (báo giá, ảnh bảng giá) | Quyết định: Văn phòng Ban khảo sát giá định kỳ, chuyển dữ liệu vào ngân hàng giá |
+| Dòng = một giá của **một nguồn** cho một mặt hàng (thuộc nhóm hàng của phiếu hoặc nhóm con): ĐVT (cơ sở hoặc quy đổi), **NCC trong danh mục** (mọi trạng thái – gồm NCC tiềm năng) **hoặc tên nguồn ngoài** (≤ 200 ký tự, bắt buộc khi không chọn NCC), đơn giá VND trước VAT > 0, ghi chú. Một mặt hàng nhiều dòng được, không trùng mặt hàng × nguồn (cùng NCC hoặc cùng tên nguồn, không phân biệt hoa thường) | Giá khảo sát phải truy được nguồn; một mặt hàng cần nhiều nguồn để so sánh |
+| **Nháp → Đã chốt** (ghi người, thời điểm chốt): giá vào ngân hàng giá, **không sửa**; sai thì **hủy** (nháp hoặc đã chốt, bắt buộc lý do) và lập phiếu mới. Không qua duyệt | Văn phòng Ban chỉ thu thập dữ liệu – quyết định giá vẫn ở phiếu duyệt tháng (GTH) |
+| Tra giá thị trường `GET /api/market-price-surveys/prices?itemIds=&days=` (mặc định 180 ngày, 1–730): chỉ phiếu **Đã chốt**, giá quy về ĐVT cơ sở (đơn giá ÷ hệ số, 6 số lẻ), mới nhất trước – dùng ở G4b | Ban so sánh giá đề xuất với giá thị trường khi duyệt tháng |
+| Quyền `Pricing.PriceBank.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `Pricing.PriceBank.Manage` (DAMPHAN). Có trong tra cứu chứng từ (loại KSG) | Văn phòng Ban lập; các bộ phận khác tham khảo |
+
+Migration `V0_19_0_KhaoSatGiaThiTruong` (bảng `MarketPriceSurvey`, `MarketPriceSurveyLine`; bảng mới – `Down()` xóa bảng, mất phiếu khảo sát,
+AuditLog vẫn giữ).
+
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
 

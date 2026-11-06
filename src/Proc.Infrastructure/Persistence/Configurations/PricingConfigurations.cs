@@ -114,6 +114,49 @@ internal sealed class MonthlySupplierApprovalConfiguration : IEntityTypeConfigur
     }
 }
 
+/// <summary>Cấu hình bảng MarketPriceSurvey – phiếu khảo sát giá thị trường (design.md mục 18.25, lát G4a).</summary>
+internal sealed class MarketPriceSurveyConfiguration : IEntityTypeConfiguration<MarketPriceSurvey>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<MarketPriceSurvey> builder)
+    {
+        builder.ToTable("MarketPriceSurvey");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        builder.HasIndex(x => new { x.SurveyDate, x.Status });
+        builder.Property(x => x.Note).HasMaxLength(MarketPriceSurvey.TextMaxLength);
+        builder.Property(x => x.CancelReason).HasMaxLength(MarketPriceSurvey.TextMaxLength);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ItemCategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.SurveyId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng MarketPriceSurveyLine – dòng khảo sát giá.</summary>
+internal sealed class MarketPriceSurveyLineConfiguration : IEntityTypeConfiguration<MarketPriceSurveyLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<MarketPriceSurveyLine> builder)
+    {
+        builder.ToTable("MarketPriceSurveyLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.BaseUnitPrice);
+        // Tra giá thị trường theo mặt hàng (ngân hàng giá, phiếu duyệt tháng – lát G4b).
+        builder.HasIndex(x => x.ItemId);
+        builder.Property(x => x.UomFactor).HasPrecision(18, 6);
+        builder.Property(x => x.UnitPrice).HasPrecision(19, 6);
+        builder.Property(x => x.SourceName).HasMaxLength(MarketPriceSurveyLine.SourceMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.ToTable(t => t.HasCheckConstraint("CK_MarketPriceSurveyLine_Source", "\"SupplierId\" IS NOT NULL OR \"SourceName\" IS NOT NULL"));
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng MonthlySupplierApprovalCompany – công ty áp dụng phiếu duyệt tháng.</summary>
 internal sealed class MonthlySupplierApprovalCompanyConfiguration : IEntityTypeConfiguration<MonthlySupplierApprovalCompany>
 {

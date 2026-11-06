@@ -72,6 +72,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.MasterData.SupplierView, ApprovalTypes.Supplier);
         Add(Permissions.MasterData.SoleSourceView, DocumentTypes.SoleSource);
         Add(Permissions.Pricing.MonthlyApprovalView, DocumentTypes.MonthlySupplierApproval);
+        Add(Permissions.Pricing.PriceBankView, DocumentTypes.MarketPriceSurvey);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
         if (_scope.HasPermission(Permissions.Control.AnomalyView) || _scope.HasPermission(Permissions.Control.FindingReceive)
             || _scope.HasPermission(Permissions.Control.FindingManage))
@@ -300,6 +301,25 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 {
                     MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced => DocumentProgress.Done,
                     MonthlyApprovalStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.MarketPriceSurvey) && !acted)
+        {
+            // Phiếu khảo sát giá không qua duyệt nên không có "đã xử lý"; filter công ty giữ nguyên (phiếu của tổng công ty).
+            var q = _db.MarketPriceSurveys.AsNoTracking().Where(d => d.SurveyDate >= from && d.SurveyDate <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            var rows = await q.OrderByDescending(d => d.SurveyDate).Take(take)
+                .Select(d => new { d.Id, d.No, d.SurveyDate, d.Status, d.CreatedBy, d.CreatedAt, Lines = d.Lines.Count })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.MarketPriceSurvey, d.Id, d.No, d.SurveyDate, null, null, null,
+                $"Khảo sát giá thị trường – {d.Lines} dòng giá", null, d.Status.ToString(),
+                d.Status switch
+                {
+                    MarketSurveyStatus.Confirmed => DocumentProgress.Done,
+                    MarketSurveyStatus.Cancelled => DocumentProgress.Cancelled,
                     _ => DocumentProgress.Open,
                 },
                 d.CreatedBy, d.CreatedAt)));

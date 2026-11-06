@@ -359,10 +359,20 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     đã duyệt; Dashboard/PurchaseReport/ControlAnomaly duyệt thêm chặng 4; e2e `purchasing`, `price-reports` duyệt hai lượt). Kiểm tra:
     `dotnet test` 530/530, Playwright 96/96 (2 spec sửa chạy lại qua), `npm run build`, `tsc`, `oxlint` qua.
     **Lưu ý triển khai**: từ bản này mọi PO có dòng không có giá đã duyệt đều thêm một lượt duyệt – nên cấu hình POL (APRL) trước khi phát hành.
+    Quy tắc tự đặt của G3 (người dùng "làm tiếp" 06/11/2026, chưa phản đối): hạn mức đếm PO đã gửi/duyệt/đóng của mọi NCC ở các công ty áp
+    dụng; chỉ kiểm tra lúc gửi; NCC ngoài danh sách vẫn tính giá theo hợp đồng/bảng giá nhưng gắn cờ và qua POL.
+  - **G4 – ngân hàng giá**, kế hoạch chia lát (06/11/2026): G4a phiếu khảo sát giá (KSG) → G4b giá chuẩn/trần/mục tiêu trên dòng GTH, PO vượt
+    giá trần theo tham số công ty (mặc định Cảnh báo) → G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu để sau.
+  - **G4a xong (06/11/2026, nhánh `feature/g4a-khao-sat-gia`)**: phiếu khảo sát giá thị trường – màn hình **KSG** (`MarketSurveyPages.tsx`),
+    `MarketPriceSurveyService`, API `/api/market-price-surveys` (+ `/prices` tra giá đã chốt), quyền `Pricing.PriceBank.View/Manage`, đính kèm,
+    tra cứu chứng từ. Migration `V0_19_0_KhaoSatGiaThiTruong` (56 → 57). Test: domain `MarketPriceSurveyTests` (3), tích hợp
+    `MarketPriceSurveyTests`, Playwright `market-survey.spec.ts`; `document-numbering.spec` 17 loại. Kiểm tra: `dotnet test` 534/534,
+    Playwright 97/97, `npm run build`, `tsc`, `oxlint` qua.
 
 ## Việc tiếp theo
 
-0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3 xong; tiếp **G4** ngân hàng giá … G12.
+0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a xong; tiếp **G4b** giá chuẩn/trần/mục tiêu trên dòng GTH + PO vượt giá trần
+   (tham số Cảnh báo/Chặn), **G4c** báo cáo tiết kiệm so giá chuẩn, rồi G5 … G12.
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
    E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C3, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong (C3 làm 05/11/2026); G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0

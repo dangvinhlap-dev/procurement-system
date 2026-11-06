@@ -60,6 +60,8 @@ export const Permission = {
   MonthlyApprovalView: 'Pricing.MonthlyApproval.View',
   MonthlyApprovalManage: 'Pricing.MonthlyApproval.Manage',
   MonthlyApprovalApprove: 'Pricing.MonthlyApproval.Approve',
+  PriceBankView: 'Pricing.PriceBank.View',
+  PriceBankManage: 'Pricing.PriceBank.Manage',
   RfqView: 'Sourcing.Rfq.View',
   RfqManage: 'Sourcing.Rfq.Manage',
   RfqAward: 'Sourcing.Rfq.Award',
