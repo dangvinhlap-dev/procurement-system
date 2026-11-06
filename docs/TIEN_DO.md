@@ -333,6 +333,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   `procurement-0.18.0.zip`) – C3 ngân sách, `RFQ_DOSSIER_REQUIRED`, in PR có hàng mới; 2 migration (52 → 54), script `db/scripts/0.18.0.sql`
   chạy thử 2 lần trên bản sao `procurement_kiemtra_0180` (từ CSDL test 0.17.0). **Bản test cổng 5007 nâng tại chỗ lên 0.18.0**: `app` = 0.18.0,
   `app-0.17.0` = bản cũ, sao lưu trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.18.0.dump`, PID trong `pid.txt`.
+- **Tài liệu trình bày (06/11/2026)**: `docs/TrinhBay_HeThong_0.18.0.pptx` – 50 slide: quy trình, quy tắc từng phân hệ/form (theo design.md),
+  từ viết tắt, 70 mã màn hình, tài khoản test và 3 kịch bản demo trên bản test 5007. Dựng bằng pptxgenjs (script ở scratchpad, không commit).
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
