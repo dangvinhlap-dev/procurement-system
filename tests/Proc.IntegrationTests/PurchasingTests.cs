@@ -145,6 +145,39 @@ public partial class PurchasingTests
         Assert.Single(history, s => s.Status == "Approved");
     }
 
+    /// <summary>
+    /// Lát R3 (design.md mục 18.26): PO hai cấp cùng một vai trò – người đã duyệt cấp 1 không duyệt tiếp cấp 2 (không có trong "người duyệt
+    /// tiếp theo"), người khác duyệt cấp 2; bị từ chối rồi gửi lại là lượt mới, người đó lại duyệt được cấp 1.
+    /// </summary>
+    [Fact]
+    public async Task DuyetNhieuCap_MoiCapMotNguoiKhacNhau_TrongMotLuot()
+    {
+        var f = await ArrangeAsync();
+        var (first, roleId) = await ApproverAsync(f);
+        var roleCode = (await f.Buyer.GetFromJsonAsync<List<Proc.Application.Administration.RoleListItemDto>>("/api/roles", Ct))!.Single(r => r.Id == roleId).Code;
+        var secondName = $"dy.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(secondName, f.CompanyCode, roleCode);
+        var second = await _factory.CreateClientInCompanyAsync(secondName, ProcApiFactory.TestPassword, f.CompanyCode);
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 1, 0, roleId), Ct));
+        await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 2, 0, roleId), Ct));
+
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(first, "purchase-orders", po.Id, "approve"));
+        Assert.Equal("Submitted", po.Status);
+        Assert.Contains("đã duyệt cấp 1", await TitleAsync(await ActAsync(first, "purchase-orders", po.Id, "approve")));
+        Assert.Contains("đã duyệt cấp 1", await TitleAsync(await ActAsync(first, "purchase-orders", po.Id, "reject", "Thử từ chối")));
+        var waiting = Assert.Single(po.Approvals, s => s.Status == "Pending");
+        Assert.DoesNotContain(waiting.NextApprovers!, n => po.Approvals.Any(s => s.Status == "Approved" && s.ActedByName == n));
+
+        // Người khác từ chối cấp 2 → về nháp; gửi lại là lượt mới: người cũ duyệt lại được cấp 1, người khác duyệt cấp 2.
+        await ReadAsync<PurchaseOrderDto>(await ActAsync(second, "purchase-orders", po.Id, "reject", "Xem lại giá"));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        await ReadAsync<PurchaseOrderDto>(await ActAsync(first, "purchase-orders", po.Id, "approve"));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(second, "purchase-orders", po.Id, "approve"));
+        Assert.Equal("Approved", po.Status);
+    }
+
     [Fact]
     public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
     {

@@ -83,6 +83,10 @@ public class StandardSavingsReportTests
         var approverName = $"sd.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(approverName, company.Code, poRole);
         var approver = await _factory.CreateClientInCompanyAsync(approverName, ProcApiFactory.TestPassword, company.Code);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approverName2 = $"sd.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(approverName2, company.Code, poRole);
+        var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
 
         async Task<PurchaseOrderDto> DraftAsync(Guid supplier, Guid itemId, decimal qty, decimal price) =>
             await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders",
@@ -92,7 +96,7 @@ public class StandardSavingsReportTests
             var po = await DraftAsync(supplier, itemId, qty, price);
             po = await ReadAsync<PurchaseOrderDto>(await client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
             for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
-                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+                po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? approver : approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
             Assert.Equal("Approved", po.Status);
         }
 

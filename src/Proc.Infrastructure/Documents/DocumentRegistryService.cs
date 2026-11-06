@@ -419,11 +419,18 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             .GroupBy(s => s.DocumentId)
             .SelectMany(g => Proc.Domain.Purchasing.ApprovalProgress.Active(g))
             .ToList();
+        // Người đã duyệt một cấp trong lượt đang chạy không duyệt thêm cấp khác (lát R3) – loại khỏi "người duyệt tiếp theo".
+        var approved = (await _db.ApprovalSteps.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+                .Where(s => ids.Contains(s.DocumentId) && s.Status == ApprovalStepStatus.Approved && s.ActedBy != null)
+                .Select(s => new { s.DocumentId, s.DocType, s.Round, ActedBy = s.ActedBy!.Value })
+                .ToListAsync(cancellationToken))
+            .ToLookup(s => (s.DocumentId, s.DocType, s.Round), s => s.ActedBy);
         var names = await _approvers.NamesAsync(active.Select(step =>
         {
             var row = openRows[step.DocumentId];
+            var approvedBy = approved[(step.DocumentId, step.DocType, step.Round)].ToHashSet();
             return new NextApproverResolver.PendingStep(step.Id, step.DocType, step.CompanyId, step.RoleId,
-                u => u == row.CreatedBy, row.SupplierId is { } sid ? [sid] : []);
+                u => u == row.CreatedBy || approvedBy.Contains(u), row.SupplierId is { } sid ? [sid] : []);
         }).ToList(), cancellationToken);
         return active.GroupBy(s => s.DocumentId).ToDictionary(
             g => g.Key,

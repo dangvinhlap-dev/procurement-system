@@ -387,14 +387,17 @@ public class PurchaseOrderPriceSourceTests
     public async Task BaoCaoTuan_GiaMuaNgoaiHopDong_BienDongGia()
     {
         var f = await ArrangeAsync();
-        var approver = await ApproverAsync(f, await RoleAsync());
+        var role = await RoleAsync();
+        var approver = await ApproverAsync(f, role);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approver2 = await ApproverAsync(f, role);
         async Task<PurchaseOrderDto> ApprovedAsync(SavePurchaseOrderRequest request)
         {
             var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", request, Ct));
             po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
             // PO lệch giá có thêm chặng ngoại lệ (chưa cấu hình POX → một cấp, ai có quyền duyệt PO): duyệt đến khi xong.
-            while (po.Status == "Submitted")
-                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            for (var i = 0; po.Status == "Submitted"; i++)
+                po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? approver : approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
             Assert.Equal("Approved", po.Status);
             return po;
         }
@@ -435,13 +438,16 @@ public class PurchaseOrderPriceSourceTests
     public async Task BangKpi_TheoKy_SoKyTruoc_MucTieuCauHinhDuoc()
     {
         var f = await ArrangeAsync();
-        var approver = await ApproverAsync(f, await RoleAsync());
+        var role = await RoleAsync();
+        var approver = await ApproverAsync(f, role);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approver2 = await ApproverAsync(f, role);
         async Task ApprovedAsync(SavePurchaseOrderRequest request)
         {
             var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", request, Ct));
             po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
-            while (po.Status == "Submitted")
-                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            for (var i = 0; po.Status == "Submitted"; i++)
+                po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? approver : approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
             Assert.Equal("Approved", po.Status);
         }
 

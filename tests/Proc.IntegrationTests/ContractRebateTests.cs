@@ -80,6 +80,8 @@ public class ContractRebateTests
         var f = await ArrangeAsync();
         var approver = await UserAsync(f, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractView,
             Permissions.Purchase.ContractApprove);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approver2 = await UserAsync(f, Permissions.Purchase.PoView, Permissions.Purchase.PoApprove);
 
         // Hiệu lực từ 200 ngày trước: kỳ quý đầu tiên chắc chắn đã quá hạn ghi nhận (cuối kỳ + 30 ngày).
         var from = Today.AddDays(-200);
@@ -113,8 +115,8 @@ public class ContractRebateTests
             new SavePurchaseOrderRequest(from, f.SupplierId, f.WarehouseId, null, null, null, null, 0, null,
                 [new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 10, 50_000, 5, "10", null, null, null)]), Ct));
         po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
-        while (po.Status == "Submitted")
-            po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        for (var i = 0; po.Status == "Submitted"; i++)
+            po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? approver : approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
             new SavePurchaseOrderRequest(from, f.SupplierId, f.WarehouseId, null, null, null, null, 0, null,
                 [new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 100, 50_000, 0, "10", null, null, null)]), Ct));

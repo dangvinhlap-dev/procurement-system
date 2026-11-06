@@ -36,7 +36,8 @@ public class PurchaseReportTests
     }
 
     private sealed record Fixture(
-        HttpClient Buyer, HttpClient Approver, string CompanyCode, Guid Kt, Guid ItemId, Guid Cai, Guid Thung, Guid[] Suppliers, string[] SupplierCodes);
+        HttpClient Buyer, HttpClient Approver, string CompanyCode, Guid Kt, Guid ItemId, Guid Cai, Guid Thung, Guid[] Suppliers, string[] SupplierCodes,
+        HttpClient Approver2);
 
     /// <summary>
     /// Công ty mới (kỳ tháng hiện tại mở), mặt hàng (cái, thùng = 12 cái), 3 NCC đã duyệt áp dụng tại công ty. Người lập: quản trị;
@@ -77,7 +78,11 @@ public class PurchaseReportTests
         var approverName = $"dy.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(approverName, company.Code, roleCode);
         var approver = await _factory.CreateClientInCompanyAsync(approverName, ProcApiFactory.TestPassword, company.Code);
-        return new Fixture(buyer, approver, company.Code, kt, item.Id, cai, thung, [.. suppliers.Select(s => s.Id)], [.. suppliers.Select(s => s.Code)]);
+        // Mỗi cấp/chặng một người duyệt khác nhau (lát R3, design.md mục 18.26): hai người cùng vai trò duyệt luân phiên.
+        var approverName2 = $"dy.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(approverName2, company.Code, roleCode);
+        var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
+        return new Fixture(buyer, approver, company.Code, kt, item.Id, cai, thung, [.. suppliers.Select(s => s.Id)], [.. suppliers.Select(s => s.Code)], approver2);
     }
 
     private static async Task<PurchaseRequestDto> SubmitPrAsync(Fixture f, decimal qty, bool approve)
@@ -97,7 +102,7 @@ public class PurchaseReportTests
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         // Duyệt hết các chặng: PO không có giá đã duyệt qua thêm chặng POL (design.md mục 18.25).
         for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
-            po = await ReadAsync<PurchaseOrderDto>(await f.Approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            po = await ReadAsync<PurchaseOrderDto>(await (i % 2 == 0 ? f.Approver : f.Approver2).PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         return po;
     }
 
