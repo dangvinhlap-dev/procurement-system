@@ -555,6 +555,51 @@ public sealed class PurchaseReportService : IPurchaseReportService
         return (from.AddDays(-days), from.AddDays(-1));
     }
 
+    /// <inheritdoc />
+    public async Task<SupplierCoverageResult> GetSupplierCoverageAsync(int minSuppliers, Guid? categoryId, bool onlyShort, CancellationToken cancellationToken)
+    {
+        if (minSuppliers is < 1 or > 20) throw new BusinessRuleException("Số NCC tối thiểu từ 1 đến 20.");
+        var today = _clock.TodayInVietnam();
+        // Mặt hàng, NCC – sản phẩm đi qua filter phạm vi nhóm hàng; phiếu độc quyền qua filter công ty đang làm việc (CLAUDE.md mục 4).
+        var items = await _db.Items.AsNoTracking().Where(i => i.IsActive)
+            .Join(_db.ItemCategories.AsNoTracking(), i => i.CategoryId, c => c.Id, (i, c) => new { i.Id, i.Code, i.Name, i.CategoryId, CategoryName = c.Name })
+            .ToListAsync(cancellationToken);
+        if (categoryId is { } root)
+        {
+            var parents = await _db.ItemCategories.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.ParentId, cancellationToken);
+            items = items.Where(i => ItemAdministration.IsUnder(i.CategoryId, root, parents)).ToList();
+        }
+
+        var links = (await _db.SupplierItems.AsNoTracking()
+                .Join(_db.Suppliers.AsNoTracking(), l => l.SupplierId, s => s.Id, (l, s) => new { l.ItemId, l.IsPreferred, s.Name, s.Status })
+                .ToListAsync(cancellationToken))
+            .ToLookup(l => l.ItemId);
+        var soleSources = (await _db.SoleSourceApprovals.AsNoTracking()
+                .Where(x => x.Status == SoleSourceStatus.Approved && x.ValidFrom <= today && x.ReviewDate >= today)
+                .Select(x => new { x.ItemId, x.No, x.ValidFrom })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ValidFrom).First().No);
+
+        var rows = items.Select(i =>
+            {
+                var l = links[i.Id].ToList();
+                var approved = l.Where(x => x.Status == SupplierStatus.Approved).OrderByDescending(x => x.IsPreferred).ThenBy(x => x.Name).ToList();
+                var sole = soleSources.GetValueOrDefault(i.Id);
+                // Độc quyền đã duyệt thì miễn mức tối thiểu – không thể có đủ NCC (design.md mục 18.9).
+                var status = approved.Count >= minSuppliers ? SupplierCoverageStatuses.Ok
+                    : sole is not null ? SupplierCoverageStatuses.SoleSource : SupplierCoverageStatuses.Short;
+                var missing = status == SupplierCoverageStatuses.Short ? minSuppliers - approved.Count : 0;
+                return new SupplierCoverageRowDto(i.Id, i.Code, i.Name, i.CategoryName, approved.Count,
+                    l.Count(x => x.Status == SupplierStatus.Potential), l.Count(x => x.Status == SupplierStatus.Suspended), missing, status,
+                    string.Join("; ", approved.Select(x => x.Name)), status == SupplierCoverageStatuses.SoleSource ? sole : null);
+            })
+            .ToList();
+        var shortCount = rows.Count(r => r.Status == SupplierCoverageStatuses.Short);
+        var shown = rows.Where(r => !onlyShort || r.Status == SupplierCoverageStatuses.Short)
+            .OrderByDescending(r => r.Missing).ThenBy(r => r.ItemCode, StringComparer.Ordinal).ToList();
+        return new SupplierCoverageResult(minSuppliers, rows.Count, shortCount, shown);
+    }
+
     private static decimal Share(decimal part, decimal total) => total == 0 ? 0 : Math.Round(part * 100m / total, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>

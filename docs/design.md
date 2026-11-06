@@ -1668,6 +1668,39 @@ sách"). Người dùng ra lệnh làm 05/11/2026.
 Migration `V0_18_0_NganSachBoPhan` (bảng `DepartmentBudget`; cột `BudgetAmount`, `BudgetUsedAmount`, `IsOverBudget` trên `PurchaseRequest`,
 `PurchaseOrder` – `Down()` mất toàn bộ ngân sách và số liệu kiểm tra ngân sách trên phiếu, AuditLog vẫn giữ).
 
+### 18.25 Quyết định thành lập Ban và Phòng cung ứng chung Suối Tiên – Sơn Tiên (06/11/2026)
+
+Nguồn: `docs/Purchasing.docx` (quyết định), tóm tắt đánh giá `docs/tomtatquyetdinh.docx`. Ba cấp: **Ban cung ứng** (quyết định danh sách
+NCC, duyệt NCC và giá hằng tháng, đình chỉ NCC, duyệt mua ngoài danh sách, duyệt quy tắc phân bổ); **Văn phòng Ban** (tìm, đánh giá NCC,
+ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn NCC, không đặt hàng; mỗi mặt hàng tối thiểu 03 NCC); **Phòng cung ứng chung**
+(đặt hàng cho cả hai công ty đúng NCC và giá Ban đã duyệt trong tháng, phân bổ trong biên độ; không tự chọn NCC, không tự thỏa thuận giá).
+
+**Người dùng chốt 06/11/2026:**
+
+| Câu hỏi | Quyết định | Lát |
+| --- | --- | --- |
+| Mua ngoài danh sách hoặc ngoài giá | **Bắt buộc duyệt** – thay quy tắc "dòng chưa có giá đã duyệt chỉ gắn cờ" ở mục 18.10 khi làm lát G3 | G3 |
+| Đơn vị duyệt tháng | Phiếu theo **nhóm hàng**, mỗi dòng một **mặt hàng** | G2 |
+| Phòng cung ứng chung đặt hàng | Giữ **một PO cho mỗi pháp nhân**, thêm công cụ đặt gộp | G7 |
+| Biểu quyết Ban | Tạm dùng **duyệt nhiều cấp** như hiện nay (APRL) | G9 hoãn |
+| Vượt hạn mức tháng | **Chặn** gửi duyệt | G3 |
+| Thứ tự làm | G1 → G12 | |
+
+Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
+cầu; G6 chiết khấu bậc theo sản lượng gộp; G7 đặt hàng gộp và phân bổ; G8 hồ sơ đánh giá NCC mới; G9 biểu quyết (hoãn); G10 vai trò mẫu
+theo quyết định; G11 định mức sử dụng; G12 báo cáo tháng cho Ban.
+
+**G1 – NCC đủ điều kiện theo mặt hàng** (màn hình **SUPCOV**, Giá và NCC → NCC đủ điều kiện, `GET /api/reports/supplier-coverage?minSuppliers=&categoryId=&onlyShort=`):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Mỗi mặt hàng **đang dùng** (trong phạm vi nhóm hàng của người xem) đếm NCC **Đã duyệt** có dòng NCC – sản phẩm (mục 5.9) của mặt hàng; kèm số NCC Tiềm năng, Tạm ngưng để tham khảo | Quyết định: duy trì danh sách NCC đủ điều kiện, tối thiểu 03 NCC mỗi mặt hàng; NCC tiềm năng là nguồn Văn phòng Ban đang bổ sung |
+| Số NCC tối thiểu nhập trên màn hình, **mặc định 3**, 1–20 | Mức của quyết định; xem thử mức khác không cần tham số |
+| Ít hơn mức tối thiểu là **Thiếu** (cột Còn thiếu = mức − số đã duyệt), trừ khi công ty đang làm việc có phiếu **NCC độc quyền** còn tác dụng hôm nay cho mặt hàng (mục 18.9) – **Miễn**, hiện số phiếu | Độc quyền đã giải trình, duyệt thì không thể có đủ 3 NCC |
+| Mặc định chỉ hiện mặt hàng thiếu, thiếu nhiều lên đầu; NCC đã duyệt liệt kê NCC ưu tiên đứng đầu. Quyền xem `MasterData.Supplier.View` | Văn phòng Ban thấy ngay việc cần làm |
+
+Không có migration.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

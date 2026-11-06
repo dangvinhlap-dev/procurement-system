@@ -339,9 +339,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   vẫn lập lùi ngày được – kiểm soát thật là đối chiếu ngày nhận/hóa đơn với ngày PO (design.md 18.11).
   Từ nay mọi màn hình làm theo docs/ui-style.md.
 - Hồ sơ trình thiếu mục: từ 05/11/2026 mỗi công ty tự bật chặn ở Tham số hệ thống (`RFQ_DOSSIER_REQUIRED`, mặc định Tắt).
+- **Quyết định thành lập Ban & Phòng cung ứng chung (06/11/2026)**: phân tích `docs/Purchasing.docx`, tóm tắt + quyết định người dùng ở
+  `docs/tomtatquyetdinh.docx` và design.md mục 18.25 (đợt "QĐ", lát G1 → G12 – khác nhóm G1–G3 cũ của F1 lịch sử ô).
+  - **G1 xong**: màn hình SUPCOV "NCC đủ điều kiện theo mặt hàng" (`/api/reports/supplier-coverage`) – đếm NCC Đã duyệt theo NCC – sản phẩm,
+    mặc định tối thiểu 3, miễn khi có NCC độc quyền còn tác dụng; test tích hợp `SupplierCoverageTests`, Playwright `supplier-coverage.spec.ts`.
 
 ## Việc tiếp theo
 
+0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1 xong; tiếp **G2** phiếu duyệt NCC và giá tháng (nhóm hàng × tháng, dòng mặt hàng: NCC chính,
+   giá, NCC dự phòng, hạn mức), rồi G3 (PO ngoài danh sách bắt buộc duyệt, vượt hạn mức chặn gửi duyệt) … G12.
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
    E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C3, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong (C3 làm 05/11/2026); G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0
