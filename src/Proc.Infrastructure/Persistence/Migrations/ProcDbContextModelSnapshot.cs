@@ -2207,6 +2207,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(9,4)")
                         .HasDefaultValue(10m);
 
+                    b.Property<bool>("RequireReceiptPo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("RequireReceiptQc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

@@ -76,7 +76,7 @@ const inputLimits: Record<string, { min: number; max: number; precision: number;
 }
 
 /** Tham số bật/tắt (giá trị "Bật"/"Tắt" – design.md mục 18.14): ô nhập là công tắc, gửi "true"/"false". */
-const toggleCodes = new Set(['RECEIPT_QC_REQUIRED', 'RECEIPT_SEPARATE_PO_CREATOR'])
+const toggleCodes = new Set(['RECEIPT_QC_REQUIRED', 'RECEIPT_SEPARATE_PO_CREATOR', 'RECEIPT_PO_REQUIRED'])
 
 /** Ngăn kéo xem/sửa một tham số: tham số số dùng InputNumber, tham số bật/tắt dùng công tắc. */
 function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () => void }) {

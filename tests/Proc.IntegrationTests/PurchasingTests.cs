@@ -178,6 +178,34 @@ public partial class PurchasingTests
         Assert.Equal("Approved", po.Status);
     }
 
+    /// <summary>
+    /// Lát R4 (design.md mục 18.26): bật "Nhập mua bắt buộc theo đơn mua hàng" thì không lập, không ghi sổ phiếu nhập thẳng (kể cả phiếu nháp
+    /// lập trước khi bật); phiếu nhập theo PO đã duyệt vẫn bình thường. Tắt lại thì nhập thẳng được như cũ.
+    /// </summary>
+    [Fact]
+    public async Task NhapMuaBatBuocTheoPo_ChanPhieuNhapThang()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        SaveReceiptRequest Direct() => new(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
+            [new(null, f.ItemId, f.Cai, 1, 50_000, "10", null, null, null)]);
+        var oldDraft = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Direct(), Ct));
+
+        var on = await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_PO_REQUIRED", new UpdateSystemParameterRequest("Bật"), Ct));
+        Assert.Equal(("Bật", false), (on.Value, on.IsDefault));
+        Assert.Contains("bắt buộc nhập mua theo đơn mua hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Direct(), Ct)));
+        Assert.Contains("bắt buộc nhập mua theo đơn mua hàng", await TitleAsync(await PostDocAsync(f, oldDraft.Id)));
+
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 5, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 5));
+        Assert.Equal("Posted", (await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id))).Status);
+
+        await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_PO_REQUIRED", new UpdateSystemParameterRequest(null), Ct));
+        Assert.Equal("Posted", (await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, oldDraft.Id))).Status);
+    }
+
     [Fact]
     public async Task NhanHang_KiemTraChatLuong_SaiLech_TachNguoiLapPo()
     {

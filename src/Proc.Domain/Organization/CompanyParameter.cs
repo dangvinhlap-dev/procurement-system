@@ -50,6 +50,15 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     public bool SeparatePoCreatorFromReceipt { get; private set; }
 
     /// <summary>
+    /// Phiếu nhập mua từ NCC bắt buộc theo đơn mua hàng đã duyệt (lát R4, design.md mục 18.26): không lập, không ghi sổ phiếu nhập "thẳng"
+    /// với đơn giá gõ tay – tránh mua hàng ngoài luồng PR/PO/duyệt. Mua gấp dùng PO mua khẩn cấp. Mặc định tắt (giữ cách làm cũ).
+    /// </summary>
+    public bool RequireReceiptPo { get; private set; }
+
+    /// <summary>Bật/tắt bắt buộc nhập mua theo PO; null = về mặc định (tắt).</summary>
+    public void ChangeRequireReceiptPo(bool? value) => RequireReceiptPo = value ?? false;
+
+    /// <summary>
     /// Chọn thầu (gửi hội đồng duyệt kết quả) chỉ khi hồ sơ trình đủ mọi mục (design.md mục 8.6 – lát B3b). Mặc định tắt: thiếu mục vẫn gửi
     /// được, hộp thoại duyệt ghi "đủ x/7, còn thiếu…" để hội đồng quyết – công ty muốn chặn cứng thì bật.
     /// </summary>

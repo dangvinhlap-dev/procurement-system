@@ -21,6 +21,9 @@ public static class SystemParameterCodes
     /// <summary>Người lập PO không ghi sổ phiếu nhập của PO đó – bật/tắt (design.md mục 18.14).</summary>
     public const string ReceiptSeparatePoCreator = "RECEIPT_SEPARATE_PO_CREATOR";
 
+    /// <summary>Phiếu nhập mua bắt buộc theo đơn mua hàng đã duyệt – bật/tắt (lát R4, design.md mục 18.26).</summary>
+    public const string ReceiptPoRequired = "RECEIPT_PO_REQUIRED";
+
     /// <summary>SLA hàng đã có hợp đồng/bảng giá (ngày làm việc) – sửa được (design.md mục 18.13).</summary>
     public const string SlaPricedDays = "SLA_PRICED_DAYS";
 
