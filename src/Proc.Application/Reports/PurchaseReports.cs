@@ -278,6 +278,44 @@ public sealed record PriceVarianceRowDto(
 public sealed record PriceVarianceResult(DateOnly PreviousFrom, DateOnly PreviousTo, decimal ImpactAmount, IReadOnlyList<PriceVarianceRowDto> Items);
 
 /// <summary>
+/// Một mặt hàng trong báo cáo NCC đủ điều kiện (design.md mục 18.25 – quyết định thành lập Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC).
+/// </summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="CategoryName">Nhóm hàng.</param>
+/// <param name="ApprovedCount">Số NCC Đã duyệt có khai báo bán mặt hàng (NCC – sản phẩm).</param>
+/// <param name="PotentialCount">Số NCC Tiềm năng (nguồn bổ sung của Văn phòng Ban).</param>
+/// <param name="SuspendedCount">Số NCC Tạm ngưng.</param>
+/// <param name="Missing">Số NCC Đã duyệt còn thiếu so với mức tối thiểu (0 khi đủ hoặc được miễn).</param>
+/// <param name="Status">Ok (đủ), Short (thiếu), SoleSource (miễn – có phiếu NCC độc quyền còn tác dụng hôm nay).</param>
+/// <param name="ApprovedSuppliers">Tên NCC Đã duyệt, NCC ưu tiên đứng đầu, cách nhau "; ".</param>
+/// <param name="SoleSourceNo">Số phiếu NCC độc quyền khi được miễn.</param>
+public sealed record SupplierCoverageRowDto(
+    Guid ItemId, string ItemCode, string ItemName, string CategoryName, int ApprovedCount, int PotentialCount, int SuspendedCount, int Missing,
+    string Status, string ApprovedSuppliers, string? SoleSourceNo);
+
+/// <summary>Báo cáo NCC đủ điều kiện theo mặt hàng.</summary>
+/// <param name="MinSuppliers">Số NCC tối thiểu đang xét.</param>
+/// <param name="ItemCount">Số mặt hàng đang dùng trong phạm vi (trước lọc "chỉ thiếu").</param>
+/// <param name="ShortCount">Số mặt hàng thiếu NCC.</param>
+/// <param name="Items">Các dòng: thiếu nhiều lên đầu, rồi theo mã hàng.</param>
+public sealed record SupplierCoverageResult(int MinSuppliers, int ItemCount, int ShortCount, IReadOnlyList<SupplierCoverageRowDto> Items);
+
+/// <summary>Trạng thái dòng báo cáo NCC đủ điều kiện.</summary>
+public static class SupplierCoverageStatuses
+{
+    /// <summary>Đủ số NCC tối thiểu.</summary>
+    public const string Ok = "Ok";
+
+    /// <summary>Thiếu NCC.</summary>
+    public const string Short = "Short";
+
+    /// <summary>Miễn vì có NCC độc quyền đã duyệt.</summary>
+    public const string SoleSource = "SoleSource";
+}
+
+/// <summary>
 /// Báo cáo mua hàng, đánh giá NCC, tiết kiệm từ đấu thầu (design.md mục 11, 11.3). Mặc định chỉ công ty đang làm việc; xem toàn tập đoàn cần
 /// quyền <c>Report.Purchase.ViewAllCompanies</c>.
 /// </summary>
@@ -363,4 +401,16 @@ public interface IPurchaseReportService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<PriceVarianceResult> GetPriceVarianceAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// NCC đủ điều kiện theo mặt hàng (design.md mục 18.25): mỗi mặt hàng đang dùng đếm NCC Đã duyệt khai báo bán mặt hàng; ít hơn
+    /// <paramref name="minSuppliers"/> là thiếu, trừ khi công ty đang làm việc có phiếu NCC độc quyền còn tác dụng hôm nay cho mặt hàng.
+    /// </summary>
+    /// <param name="minSuppliers">Số NCC tối thiểu (1–20, quyết định Ban cung ứng: 3).</param>
+    /// <param name="categoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm.</param>
+    /// <param name="onlyShort">Chỉ trả mặt hàng thiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi số NCC tối thiểu ngoài 1–20.</exception>
+    Task<SupplierCoverageResult> GetSupplierCoverageAsync(int minSuppliers, Guid? categoryId, bool onlyShort, CancellationToken cancellationToken);
 }

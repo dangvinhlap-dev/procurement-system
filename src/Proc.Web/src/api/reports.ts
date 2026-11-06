@@ -702,3 +702,47 @@ export function useKpi(range: { from: string; to: string }) {
     placeholderData: keepPreviousData,
   })
 }
+
+/** Trạng thái một mặt hàng trong báo cáo NCC đủ điều kiện: đủ / thiếu / miễn vì NCC độc quyền. */
+export type SupplierCoverageStatus = 'Ok' | 'Short' | 'SoleSource'
+
+/** Một mặt hàng: số NCC Đã duyệt khai báo bán mặt hàng so với mức tối thiểu (design.md mục 18.25). */
+export interface SupplierCoverageRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  categoryName: string
+  approvedCount: number
+  potentialCount: number
+  suspendedCount: number
+  missing: number
+  status: SupplierCoverageStatus
+  approvedSuppliers: string
+  soleSourceNo: string | null
+}
+
+/** Báo cáo NCC đủ điều kiện theo mặt hàng. */
+export interface SupplierCoverageResult {
+  minSuppliers: number
+  itemCount: number
+  shortCount: number
+  items: SupplierCoverageRow[]
+}
+
+/**
+ * NCC đủ điều kiện theo mặt hàng – quyết định Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC (design.md mục 18.25).
+ * @param minSuppliers Số NCC tối thiểu (1–20).
+ * @param categoryId Nhóm hàng (gồm nhóm con), không có = mọi nhóm.
+ * @param onlyShort Chỉ mặt hàng thiếu.
+ */
+export function useSupplierCoverage(minSuppliers: number, categoryId: string | undefined, onlyShort: boolean) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({ minSuppliers: String(minSuppliers), onlyShort: String(onlyShort) })
+  if (categoryId) params.set('categoryId', categoryId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'supplier-coverage', query],
+    queryFn: () => apiFetch<SupplierCoverageResult>(`/api/reports/supplier-coverage?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
