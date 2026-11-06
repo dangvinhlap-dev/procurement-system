@@ -5,6 +5,7 @@ using Proc.Domain.Common;
 using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Purchasing;
+using Proc.Infrastructure.Persistence;
 using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Inventory;
@@ -66,6 +67,9 @@ public sealed partial class InventoryDocumentService
     private async Task CheckOrderOnPostAsync(InventoryDocument document, CancellationToken cancellationToken)
     {
         if (document.PurchaseOrderId is not { } orderId) return;
+        // Khóa PO tới hết giao dịch ghi sổ: hai phiếu nhập khác nhau của cùng PO ghi sổ cùng lúc phải lần lượt, phiếu sau thấy SL phiếu
+        // trước đã nhận – không vượt SL đặt + dung sai (lỗi L1).
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [orderId], cancellationToken);
         var order = await LoadReceivableOrderAsync(orderId, document.SupplierId ?? Guid.Empty, cancellationToken);
         await CheckOrderQuantitiesAsync(
             order, document.Lines.Select(l => (l.PurchaseOrderLineId ?? Guid.Empty, l.Qty, l.LineNo)).ToList(), document.Id, cancellationToken);
@@ -80,6 +84,7 @@ public sealed partial class InventoryDocumentService
     private async Task SyncOrderStatusAsync(InventoryDocument document, bool posting, CancellationToken cancellationToken)
     {
         if (document.PurchaseOrderId is not { } orderId) return;
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [orderId], cancellationToken);
         var order = await _db.PurchaseOrders.Include(o => o.Lines).SingleAsync(o => o.Id == orderId, cancellationToken);
         var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), document.Id, cancellationToken);
         if (posting)

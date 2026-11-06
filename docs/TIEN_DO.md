@@ -126,6 +126,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
+  tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,
+  L8 RFQ đếm NCC mời thay báo giá + báo giá sau hạn, L9 hủy PO đã duyệt không lý do, cảnh báo CS1573.
+  - **R1 (xong, nhánh `fix/ghi-so-dong-thoi`)**: `Persistence/RowLocks.cs` (khóa `FOR UPDATE` theo thứ tự Id, `BeginOrJoinAsync`); ghi sổ/bỏ
+    ghi sổ/hủy/xác nhận ICR khóa phiếu + phiếu liên kết; khóa PO khi ghi sổ phiếu nhập; gửi duyệt PO khóa PO + PR nguồn. Test
+    `GhiSoCungPhieuHaiLanDongThoi_ChiGhiMotLan`, `GhiSoTrungPhieuBan_ChiMotPhieuChoNhan_BoGhiSoDuaVoiNhan_DungMotLenh`. `dotnet test` 538/538.
 - **Kế hoạch người dùng duyệt 03/11/2026**: (1) dọn `main` → (2) phát hành 0.16.0 có A4 (chờ người dùng xác nhận phát hành) →
   (3) nhập bảng giá NCC bằng Excel → (4) cảnh báo giá cao trên PO → (5) sinh hợp đồng nguyên tắc từ kết quả thầu.
   - **Bước 1 (xong, nhánh `chore/don-main`)**: commit tài liệu hướng dẫn `docs/HuongDan_*.docx` (duyệt PO nhiều cấp), `docs/Bancungung.*`;

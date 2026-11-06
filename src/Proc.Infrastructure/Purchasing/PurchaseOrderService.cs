@@ -127,6 +127,17 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     /// <inheritdoc />
     public async Task<PurchaseOrderDto> SubmitAsync(Guid id, CancellationToken cancellationToken)
     {
+        // Khóa PO và các PR nguồn tới hết giao dịch: gửi trùng một PO, hoặc hai PO cùng lấy một dòng PR gửi cùng lúc, phải lần lượt –
+        // lệnh sau thấy PO đã gửi / SL PR đã đặt của lệnh trước, không đặt quá SL đề nghị (lỗi L1).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        var sourceRequests = await (
+                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join rl in _db.Set<PurchaseRequestLine>().AsNoTracking() on ol.SourcePrLineId equals rl.Id
+                where ol.OrderId == id
+                select rl.RequestId)
+            .Distinct().ToListAsync(cancellationToken);
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken);
+        await RowLocks.LockAsync<PurchaseRequest>(_db, sourceRequests, cancellationToken);
         var order = await LoadAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(order, cancellationToken);
         // Kiểm tra lại lúc gửi: NCC có thể bị tạm ngưng, PR nguồn có thể đã lên PO khác từ lúc lưu nháp.
@@ -156,6 +167,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         if (order.IsOffApprovedList) stages.Add((ApprovalTypes.PurchaseOrderOffList, ApprovalTypes.OffListStage));
         await _approvals.SubmitWithStagesAsync(order, stages, cancellationToken, ruleType);
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 

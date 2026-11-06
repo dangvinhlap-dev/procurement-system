@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
+using Proc.Infrastructure.Persistence;
 
 namespace Proc.IntegrationTests;
 
@@ -129,6 +132,43 @@ public class IntercompanyTests
             $"/api/reports/intercompany-reconciliation?from={Today.AddDays(-1):yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct);
         var withNmi = reconciliation!.Single(r => r.CounterCompanyId == f.NmiId);
         Assert.True(withNmi.SoldAmount - withNmi.ReceivedByCounterAmount >= 30_000m);
+    }
+
+    /// <summary>
+    /// Ghi sổ trùng phiếu xuất bán (2 phiên cùng lúc): chỉ xuất một lần, chỉ sinh một phiếu chờ nhận; bên bán bỏ ghi sổ cùng lúc bên mua ghi
+    /// sổ phiếu nhập: đúng một lệnh thành công – không có cảnh nhập hàng mà phiếu xuất đã bị bỏ (lỗi L1).
+    /// </summary>
+    [Fact]
+    public async Task GhiSoTrungPhieuBan_ChiMotPhieuChoNhan_BoGhiSoDuaVoiNhan_DungMotLenh()
+    {
+        var f = await ArrangeAsync();
+        var userName = $"nb2.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["BHA", "NMI"]);
+        var bha2 = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
+
+        var sale = await ReadAsync<InventoryDocumentDto>(await CreateSaleAsync(f, 10));
+        var posts = await Task.WhenAll(PostAsync(f.Bha, sale.Id), PostAsync(bha2, sale.Id));
+        Assert.Equal(1, posts.Count(p => p.IsSuccessStatusCode));
+        Assert.Equal(40m, await StockAsync(f.Bha, f.BhaKt, f.ItemId));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            Assert.Equal(1, await db.InventoryDocuments.IgnoreQueryFilters().CountAsync(d => d.LinkedDocumentId == sale.Id, Ct));
+        }
+
+        sale = await ReadAsync<InventoryDocumentDto>(await f.Bha.GetAsync($"/api/inventory-documents/{sale.Id}", Ct));
+        var receipt = await ReadAsync<InventoryDocumentDto>(await f.Nmi.GetAsync($"/api/inventory-documents/{sale.LinkedDocumentId}", Ct));
+        await ReadAsync<InventoryDocumentDto>(await f.Nmi.PutAsJsonAsync($"/api/intercompany-receipts/{receipt.Id}",
+            new ConfirmIntercompanyReceiptRequest(Today, null, [new(receipt.Lines[0].Id, 10, null, null)]), Ct));
+
+        var race = await Task.WhenAll(UnpostAsync(f.Bha, sale.Id), PostAsync(f.Nmi, receipt.Id));
+
+        Assert.Equal(1, race.Count(r => r.IsSuccessStatusCode));
+        var saleAfter = await ReadAsync<InventoryDocumentDto>(await f.Bha.GetAsync($"/api/inventory-documents/{sale.Id}", Ct));
+        var nmiStock = await StockAsync(f.Nmi, f.NmiKt, f.ItemId);
+        // Hoặc bên mua đã nhận (phiếu bán giữ ghi sổ), hoặc phiếu bán đã bỏ ghi sổ và bên mua không có hàng.
+        Assert.True((saleAfter.Status == "Posted" && nmiStock == 10m) || (saleAfter.Status == "Draft" && nmiStock == 0m),
+            $"Phiếu bán {saleAfter.Status}, tồn NMI {nmiStock}");
     }
 
     [Fact]

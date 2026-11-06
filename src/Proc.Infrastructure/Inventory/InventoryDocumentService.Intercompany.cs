@@ -56,6 +56,9 @@ public sealed partial class InventoryDocumentService
         Guid id, ConfirmIntercompanyReceiptRequest request, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
+        // Khóa cặp ICR–ICS: bên bán bỏ ghi sổ cùng lúc thì một trong hai lệnh chờ lệnh kia xong rồi mới đọc trạng thái (lỗi L1).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await LockDocumentAsync(id, cancellationToken);
         var receipt = await LoadAsync(id, DocumentTypes.IntercompanyReceipt, cancellationToken);
         await EnsureAllItemsVisibleAsync(receipt, cancellationToken);
         var sale = await LinkedSaleAsync(receipt, cancellationToken);
@@ -64,6 +67,7 @@ public sealed partial class InventoryDocumentService
             request.Lines.Select(l => new ReceiptConfirmLine(l.LineId, l.ReceivedQty, l.LotNo, l.Note)).ToList(),
             sale.Lines.ToDictionary(l => l.Id, l => l.Qty));
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 

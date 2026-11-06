@@ -839,6 +839,7 @@ Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NC
 | **Bỏ ghi sổ** (quyền `Inventory.Document.Unpost`) chỉ khi kỳ của phiếu còn **Đang mở**: xóa các dòng sổ kho của phiếu, trừ lại tồn (chặn nếu làm tồn âm), phiếu về Nháp; kỳ đã đóng thì lập chứng từ điều chỉnh | CLAUDE.md mục 4 |
 | RTV: mỗi dòng −1 tại kho xuất, đơn giá = giá nhập gốc, giá trị = thành tiền trước VAT, đã chốt. TRF: cặp dòng −1/+1 theo giá vốn tạm tính (mục 6.5), chưa chốt | Mục 6.1, 7.5 |
 | Sổ kho, tồn kho lọc theo công ty, kho được phép, nhóm hàng được phép | Mục 9.2 |
+| Ghi sổ, bỏ ghi sổ, hủy phiếu kho, xác nhận ICR: giao dịch mở **từ đầu lệnh**, khóa dòng phiếu (và phiếu liên kết ICS↔ICR, theo thứ tự Id) bằng `SELECT … FOR UPDATE` trước khi đọc trạng thái; phiếu nhập theo PO khóa thêm dòng PO. Lệnh thứ hai cùng lúc chờ rồi thấy phiếu không còn nháp/đã ghi sổ và bị chặn | Lỗi L1 (rà soát 06/11/2026, mục 18.26): hai lệnh ghi sổ cùng lúc từng cùng thành công, tồn bị cộng hai lần |
 
 ## 13. Lộ trình triển khai với Claude Code
 
@@ -1774,6 +1775,14 @@ Không có migration.
 
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
+
+### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
+
+Rà soát toàn bộ phần mềm, người dùng duyệt làm 8 lát (R1–R8). Mỗi lát một nhánh, quy tắc mới ghi ở đây.
+
+| Lát | Quy tắc | Lý do |
+| --- | --- | --- |
+| R1 – ghi sổ đồng thời | Ghi sổ / bỏ ghi sổ / hủy phiếu kho / xác nhận ICR khóa dòng phiếu (kèm phiếu liên kết ICS↔ICR) ngay đầu giao dịch (`RowLocks`); ghi sổ phiếu nhập theo PO khóa dòng PO (SL còn nhận được tính trên số đã khóa); gửi duyệt PO khóa PO và các PR nguồn (SL còn đặt được). Đang chạy trong giao dịch của lời gọi ngoài (xem trước người duyệt) thì dùng chung giao dịch đó | Trước đây 2 lệnh "Ghi sổ" cùng lúc trên một phiếu đều thành công (tồn ×2), ICS sinh 2 ICR, hai PO cùng một dòng PR có thể đặt quá SL đề nghị |
 
 ## Nguồn tham khảo
 
