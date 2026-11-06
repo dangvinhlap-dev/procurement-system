@@ -348,7 +348,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     tra cứu chứng từ, Việc cần làm. Người dùng chốt: **hạn mức tháng = số lượng (gộp các công ty) để đạt bậc chiết khấu**. Migration
     `V0_19_0_PhieuDuyetNccGiaThang` (54 → 55). Test: domain `MonthlySupplierApprovalTests`, tích hợp `MonthlySupplierApprovalTests` (2),
     Playwright `monthly-approval.spec.ts`; sửa `PurchasingTests` (thêm GTH), `document-numbering.spec` (16 loại). Kiểm tra: `dotnet test` 529/529,
-    Playwright 97/97, `npm run build`, `tsc`, `oxlint` qua.
+    Playwright 97/97, `npm run build`, `tsc`, `oxlint` qua. Người dùng đồng ý (06/11/2026) các quy tắc tự đặt: NCC chính/dự phòng phải Đã duyệt,
+    không lập tháng đã qua, mỗi mặt hàng × tháng × công ty một phiếu còn hiệu lực, vai trò mẫu DAMPHAN lập – TRUONGBANCUVT/HOIDONG duyệt.
 
 ## Việc tiếp theo
 
