@@ -60,6 +60,9 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   await chooseOption(page, 'NCC dự phòng dòng 1', backupCode)
   await page.getByLabel('Giá dự phòng dòng 1').fill('87500')
   await page.getByLabel('Hạn mức dòng 1').fill('1200')
+  // Ngân hàng giá (G4b): giá chuẩn, giá trần không bắt buộc; giá duyệt không vượt trần.
+  await page.getByLabel('Giá chuẩn dòng 1').fill('86000')
+  await page.getByLabel('Giá trần dòng 1').fill('90000')
   await page.getByLabel('Hạn mức dòng 1').press('Tab')
   await expect(page.getByLabel('Giá NCC chính dòng 1')).toHaveValue('85.000')
 
@@ -67,6 +70,7 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu GTH-TCT-\d{4}-\d{4}\./)
   await expect(page.locator('.document-form-number')).toHaveText(/^GTH-TCT-\d{4}-\d{4}$/)
   await expect(page.getByLabel('Hạn mức dòng 1')).toHaveValue('1.200')
+  await expect(page.getByLabel('Giá trần dòng 1')).toHaveValue('90.000')
 
   // Gửi duyệt có popup xem trước người duyệt; người lập không tự duyệt.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()

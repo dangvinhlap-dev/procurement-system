@@ -8,6 +8,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
+import { useMarketPrices } from '../../api/marketSurveys'
 import { useItemCategories, useSuppliers } from '../../api/masterData'
 import {
   monthlyApprovalStatusLabels,
@@ -28,7 +29,7 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { formatDateTime, vnNumberInput } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 
@@ -91,6 +92,9 @@ interface LineValues {
   backupUnitPrice?: number | null
   quantityLimit?: number | null
   note?: string
+  standardPrice?: number | null
+  ceilingPrice?: number | null
+  targetPrice?: number | null
 }
 
 interface FormValues {
@@ -156,6 +160,8 @@ export function MonthlyApprovalPage() {
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
+  // Giá thị trường (ngân hàng giá – phiếu khảo sát đã chốt 180 ngày gần nhất) để Ban so với giá đề xuất (design.md mục 18.25, G4b).
+  const market = useMarketPrices(hasPermission(Permission.PriceBankView) ? itemIds : [])
   // Ban chỉ chọn NCC Đã duyệt (danh sách NCC đủ điều kiện – G1); NCC đang có trên phiếu cũ vẫn hiện để đọc được.
   const onDoc = new Set((doc?.lines ?? []).flatMap((l) => [l.mainSupplierId, l.backupSupplierId ?? '']))
   const supplierOptions = (suppliers.data?.items ?? [])
@@ -169,7 +175,8 @@ export function MonthlyApprovalPage() {
     note: doc.note ?? '',
     lines: doc.lines.map((l) => ({
       id: l.id, itemId: l.itemId, uomId: l.uomId, mainSupplierId: l.mainSupplierId, unitPrice: l.unitPrice, backupSupplierId: l.backupSupplierId,
-      backupUnitPrice: l.backupUnitPrice, quantityLimit: l.quantityLimit, note: l.note ?? '',
+      backupUnitPrice: l.backupUnitPrice, quantityLimit: l.quantityLimit, note: l.note ?? '', standardPrice: l.standardPrice,
+      ceilingPrice: l.ceilingPrice, targetPrice: l.targetPrice,
     })),
   }))
 
@@ -193,7 +200,8 @@ export function MonthlyApprovalPage() {
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, mainSupplierId: l.mainSupplierId!, unitPrice: l.unitPrice ?? 0,
         backupSupplierId: l.backupSupplierId ?? null, backupUnitPrice: l.backupSupplierId ? (l.backupUnitPrice ?? null) : null,
-        quantityLimit: l.quantityLimit ?? null, note: orNull(l.note),
+        quantityLimit: l.quantityLimit ?? null, note: orNull(l.note), standardPrice: l.standardPrice ?? null, ceilingPrice: l.ceilingPrice ?? null,
+        targetPrice: l.targetPrice ?? null,
       })),
     }
     try {
@@ -333,7 +341,30 @@ export function MonthlyApprovalPage() {
     }
   }
 
-  const priceInput = (name: number, field: 'unitPrice' | 'backupUnitPrice', label: string, required: boolean) => (
+  /**
+   * Giá thị trường gần nhất của dòng theo ĐVT dòng: phiếu khảo sát mới nhất của mặt hàng, lấy giá thấp nhất trong phiếu đó;
+   * giá cơ sở × hệ số ĐVT dòng (ví dụ 10.000/cái, dòng theo thùng 12 cái → 120.000).
+   */
+  const marketCell = (index: number) => {
+    const line = lines[index]
+    const rows = (market.data ?? []).filter((m) => m.itemId === line?.itemId)
+    if (!line?.uomId || rows.length === 0) return <span className="line-grid-readonly" />
+    const latest = rows.filter((m) => m.surveyId === rows[0].surveyId)
+    const best = latest.reduce((a, b) => (b.baseUnitPrice < a.baseUnitPrice ? b : a))
+    const factor = (line.itemId ? itemsById.get(line.itemId) : undefined)?.uoms.find((u) => u.uomId === line.uomId)?.factor
+      ?? doc?.lines.find((l) => l.id === line.id && l.uomId === line.uomId)?.uomFactor
+    if (factor === undefined) return <span className="line-grid-readonly" />
+    const detail = latest.map((m) => `${m.source}: ${formatMoney(m.baseUnitPrice * factor)}`).join('\n')
+    return (
+      <span className="line-grid-readonly" title={`${best.surveyNo} ngày ${formatDate(best.surveyDate)}\n${detail}`}>
+        {formatMoney(best.baseUnitPrice * factor)}
+      </span>
+    )
+  }
+
+  const priceInput = (
+    name: number, field: 'unitPrice' | 'backupUnitPrice' | 'standardPrice' | 'ceilingPrice' | 'targetPrice', label: string, required: boolean,
+  ) => (
     <Form.Item name={[name, field]} noStyle rules={required ? [{ required: true, type: 'number', min: 0, message: `Nhập ${label}.` }] : [{ type: 'number', min: 0 }]}>
       <InputNumber {...vnNumberInput} variant="borderless" style={{ width: '100%' }} min={0} aria-label={`${label} dòng ${name + 1}`} />
     </Form.Item>
@@ -403,6 +434,11 @@ export function MonthlyApprovalPage() {
         </Form.Item>
       ),
     },
+    // Ngân hàng giá (G4b): ba giá không bắt buộc; giá chính, dự phòng, chuẩn, mục tiêu không vượt trần (server kiểm tra).
+    { key: 'standard', title: 'Giá chuẩn', width: 105, align: 'right', render: (field) => priceInput(field.name, 'standardPrice', 'Giá chuẩn', false) },
+    { key: 'ceiling', title: 'Giá trần', width: 105, align: 'right', render: (field) => priceInput(field.name, 'ceilingPrice', 'Giá trần', false) },
+    { key: 'target', title: 'Giá mục tiêu', width: 105, align: 'right', render: (field) => priceInput(field.name, 'targetPrice', 'Giá mục tiêu', false) },
+    { key: 'market', title: 'Giá thị trường', width: 110, align: 'right', render: (field) => marketCell(field.name) },
     {
       key: 'note', title: 'Ghi chú', width: 180,
       render: (field) => (

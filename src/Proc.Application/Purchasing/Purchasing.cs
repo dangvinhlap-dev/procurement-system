@@ -206,7 +206,7 @@ public sealed record PurchaseOrderLineDto(
     decimal VatAmount, DateOnly? DeliveryDate, string? Note, Guid? SourcePrLineId, string? SourcePrNo, decimal ReceivedQty, decimal RemainingQty,
     string PriceSource, decimal? ApprovedUnitPrice, decimal? ApprovedDiscountPct, string? PriceListNo, string? ContractNo, string? SourceRfqNo,
     Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract, string? SoleSourceNo,
-    string? MonthlyApprovalNo = null, bool IsOffMonthlyList = false);
+    string? MonthlyApprovalNo = null, bool IsOffMonthlyList = false, decimal? CeilingPrice = null, bool IsOverCeiling = false);
 
 /// <summary>
 /// Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.
@@ -220,7 +220,7 @@ public sealed record PurchaseOrderDto(
     PurchaseDocumentActions Actions, bool HasPriceException, bool IsOutOfContract, Guid? DepartmentId, string? DepartmentName,
     string? ContractScopeNote, string PurchaseType, string? EmergencyReason, DateOnly? DocsDueDate, DateTimeOffset? DocsCompletedAt,
     string? DocsCompletedByName, string? DocsCompletionNote, bool IsDocsOverdue, bool CanCompleteDocs, BudgetCheckDto? Budget = null,
-    bool IsOffApprovedList = false);
+    bool IsOffApprovedList = false, bool IsOverCeiling = false);
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>
 /// <param name="Note">Hồ sơ đã bổ sung, bắt buộc.</param>

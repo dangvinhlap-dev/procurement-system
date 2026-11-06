@@ -45,6 +45,32 @@ public class MonthlySupplierApprovalTests
     }
 
     [Fact]
+    public void GiaChuanTranMucTieu_KhongBatBuoc_GiaDuyetKhongVuotTran()
+    {
+        var item = NewItem();
+        var approval = MonthlySupplierApproval.Create(Company, "GTH-1", Header());
+        MonthlyApprovalLineData Priced(decimal? standard, decimal? ceiling, decimal? target, decimal? backupPrice = null) =>
+            Line(item, backupPrice is null ? null : BackupSupplier, backupPrice) with { StandardPrice = standard, CeilingPrice = ceiling, TargetPrice = target };
+
+        // Giá chính 45.000: trần 44.000 không được; dự phòng, chuẩn, mục tiêu cũng không vượt trần.
+        Assert.Contains("giá NCC chính vượt giá trần", Assert.Throws<BusinessRuleException>(() => approval.SetLines([(Priced(null, 44_000m, null), item)])).Message);
+        Assert.Contains("dự phòng vượt", Assert.Throws<BusinessRuleException>(() => approval.SetLines([(Priced(null, 46_000m, null, 47_000m), item)])).Message);
+        Assert.Contains("giá chuẩn vượt", Assert.Throws<BusinessRuleException>(() => approval.SetLines([(Priced(47_000m, 46_000m, null), item)])).Message);
+        Assert.Contains("mục tiêu vượt", Assert.Throws<BusinessRuleException>(() => approval.SetLines([(Priced(null, 46_000m, 47_000m), item)])).Message);
+        Assert.Throws<BusinessRuleException>(() => approval.SetLines([(Priced(-1m, null, null), item)]));
+
+        approval.SetLines([(Priced(45_000m, 48_000m, 43_000m, 46_500m), item)]);
+        var line = Assert.Single(approval.Lines);
+        Assert.Equal(((decimal?)45_000m, (decimal?)48_000m, (decimal?)43_000m), (line.StandardPrice, line.CeilingPrice, line.TargetPrice));
+        // Chép sang phiếu khác giữ ba giá.
+        Assert.Equal((decimal?)48_000m, approval.CopyLines().Single().CeilingPrice);
+
+        // Không có trần: không giới hạn giá duyệt.
+        approval.SetLines([(Priced(null, null, null), item)]);
+        Assert.Null(approval.Lines.Single().CeilingPrice);
+    }
+
+    [Fact]
     public void Dong_MotMatHangMotDong_DuPhongKhacChinhVaCoGia_HanMucDuong_DvtQuyDoi()
     {
         var item = NewItem();

@@ -306,6 +306,10 @@ export interface PurchaseOrderLine {
   monthlyApprovalNo: string | null
   /** NCC của PO không phải NCC chính/dự phòng của phiếu tháng – mua ngoài danh sách, phải qua chặng POL. */
   isOffMonthlyList: boolean
+  /** Giá trần của phiếu tháng quy về ĐVT dòng (lát G4b); null = không có trần. */
+  ceilingPrice: number | null
+  /** Giá ròng (sau chiết khấu) vượt giá trần – chỉ cảnh báo, không chặn. */
+  isOverCeiling: boolean
 }
 
 /**
@@ -359,6 +363,8 @@ export interface PurchaseOrder {
   isOutOfContract: boolean
   /** Có dòng ngoài danh sách tháng hoặc không có giá đã duyệt – gửi duyệt qua thêm chặng "Ngoài danh sách/giá" (POL, mục 18.25). */
   isOffApprovedList: boolean
+  /** Có dòng giá ròng vượt giá trần của phiếu duyệt tháng – cảnh báo, không chặn (mục 18.25, G4b). */
+  isOverCeiling: boolean
   /** Bộ phận đặt hàng (design.md mục 18.10). */
   departmentId: string | null
   departmentName: string | null

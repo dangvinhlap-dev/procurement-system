@@ -70,10 +70,13 @@ public class PurchaseOrderMonthlyApprovalTests
         var outsider = await SupplierAsync("NCC ngoài danh sách G3");
         var warehouse = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
 
-        // Phiếu tháng cho công ty mới: NCC chính 12.000, dự phòng 12.500, hạn mức 100 cái; Ban duyệt.
-        var gth = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(GthUrl, new SaveMonthlyApprovalRequest(
-            new DateOnly(Today.Year, Today.Month, 1), category.Id, [company.Id], null,
-            [new(null, item, cai, main, 12_000m, backup, 12_500m, 100m, null)]), Ct));
+        // Phiếu tháng cho công ty mới: NCC chính 12.000, dự phòng 12.500, hạn mức 100 cái, giá chuẩn 12.200, trần 12.600, mục tiêu 11.800;
+        // Ban duyệt. Giá duyệt không được vượt trần (G4b).
+        SaveMonthlyApprovalRequest Gth(decimal ceiling) => new(new DateOnly(Today.Year, Today.Month, 1), category.Id, [company.Id], null,
+            [new(null, item, cai, main, 12_000m, backup, 12_500m, 100m, null, 12_200m, ceiling, 11_800m)]);
+        Assert.Contains("giá NCC dự phòng vượt giá trần", await TitleAsync(await head.PostAsJsonAsync(GthUrl, Gth(12_400m), Ct)));
+        var gth = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(GthUrl, Gth(12_600m), Ct));
+        Assert.Equal(((decimal?)12_200m, (decimal?)12_600m, (decimal?)11_800m), (gth.Lines[0].StandardPrice, gth.Lines[0].CeilingPrice, gth.Lines[0].TargetPrice));
         await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{GthUrl}/{gth.Id}/submit", null, Ct));
         var boardRole = UniqueCode("B");
         await _factory.CreateRoleAsync(boardRole, Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
@@ -95,11 +98,14 @@ public class PurchaseOrderMonthlyApprovalTests
         async Task<PurchaseOrderDto> SubmitAsync(Guid id) =>
             await ReadAsync<PurchaseOrderDto>(await client.PostAsync($"/api/purchase-orders/{id}/submit", null, Ct));
 
-        // NCC ngoài danh sách tháng: dòng gắn cờ, gửi duyệt qua thêm chặng 4 "Ngoài danh sách/giá".
-        var offList = await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(outsider, item, 1, 11_000), Ct));
+        // NCC ngoài danh sách tháng: dòng gắn cờ, gửi duyệt qua thêm chặng 4 "Ngoài danh sách/giá". Giá 13.000 vượt trần 12.600 của mặt
+        // hàng (áp cả NCC ngoài danh sách): chỉ cảnh báo, vẫn gửi duyệt được.
+        var offList = await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(outsider, item, 1, 13_000), Ct));
         Assert.Equal(("None", true, gth.No, true), (offList.Lines[0].PriceSource, offList.Lines[0].IsOffMonthlyList, offList.Lines[0].MonthlyApprovalNo, offList.IsOffApprovedList));
+        Assert.Equal(((decimal?)12_600m, true, true), (offList.Lines[0].CeilingPrice, offList.Lines[0].IsOverCeiling, offList.IsOverCeiling));
         offList = await SubmitAsync(offList.Id);
         Assert.Equal([1, 4], offList.Approvals.Select(s => s.Stage));
+        Assert.True(offList.IsOverCeiling);
 
         // Mặt hàng không có phiếu tháng, không có giá đã duyệt: bắt buộc duyệt (thay quy tắc "chỉ gắn cờ" của mục 18.10).
         var noPrice = await SubmitAsync((await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(main, other, 1, 5_000), Ct))).Id);
@@ -109,6 +115,7 @@ public class PurchaseOrderMonthlyApprovalTests
         // NCC chính đúng giá: nguồn "Duyệt tháng", không thêm chặng nào.
         var onList = await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(main, item, 60, 12_000), Ct));
         Assert.Equal(("MonthlyApproval", 12_000m, false, gth.No), (onList.Lines[0].PriceSource, onList.Lines[0].ApprovedUnitPrice!.Value, onList.IsOffApprovedList, onList.Lines[0].MonthlyApprovalNo));
+        Assert.Equal((false, false), (onList.Lines[0].IsOverCeiling, onList.IsOverCeiling));
         onList = await SubmitAsync(onList.Id);
         Assert.Equal([1], onList.Approvals.Select(s => s.Stage));
 

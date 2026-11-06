@@ -187,6 +187,9 @@ internal sealed class MonthlySupplierApprovalLineConfiguration : IEntityTypeConf
         builder.Property(x => x.UnitPrice).HasPrecision(19, 6);
         builder.Property(x => x.BackupUnitPrice).HasPrecision(19, 6);
         builder.Property(x => x.QuantityLimit).HasPrecision(18, 4);
+        builder.Property(x => x.StandardPrice).HasPrecision(19, 6);
+        builder.Property(x => x.CeilingPrice).HasPrecision(19, 6);
+        builder.Property(x => x.TargetPrice).HasPrecision(19, 6);
         builder.Property(x => x.Note).HasMaxLength(500);
         builder.ToTable(t => t.HasCheckConstraint("CK_MonthlySupplierApprovalLine_Backup",
             "\"BackupSupplierId\" IS NULL OR \"BackupSupplierId\" <> \"MainSupplierId\""));

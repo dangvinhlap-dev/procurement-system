@@ -1732,8 +1732,8 @@ Migration `V0_19_0_PoTheoPhieuThang` (cột `PurchaseOrderLine.MonthlyApprovalLi
 khi sửa nháp; `Down()` xóa hai cột, mất liên kết phiếu tháng và cờ trên PO, AuditLog vẫn giữ).
 
 **G4 – Ngân hàng giá** (06/11/2026, chia lát): G4a phiếu khảo sát giá thị trường; G4b giá chuẩn/trần/mục tiêu trên dòng phiếu duyệt tháng
-(Ban duyệt cùng phiếu, hiện giá thị trường gần nhất để tham khảo) và PO vượt giá trần – tham số công ty Cảnh báo (mặc định) / Chặn gửi duyệt;
-G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu: chưa làm (khi có yêu cầu).
+(Ban duyệt cùng phiếu, hiện giá thị trường gần nhất để tham khảo) và PO vượt giá trần – **chỉ cảnh báo, không chặn, mọi mặt hàng** (người
+dùng chốt 06/11/2026); G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu: chưa làm (khi có yêu cầu).
 
 **G4a – Phiếu khảo sát giá thị trường** (màn hình **KSG**, Giá và NCC → Khảo sát giá thị trường, `/api/market-price-surveys`, số loại **KSG**,
 ví dụ KSG-TCT-2611-0001 theo ngày khảo sát):
@@ -1747,6 +1747,17 @@ ví dụ KSG-TCT-2611-0001 theo ngày khảo sát):
 | Quyền `Pricing.PriceBank.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `Pricing.PriceBank.Manage` (DAMPHAN). Có trong tra cứu chứng từ (loại KSG) | Văn phòng Ban lập; các bộ phận khác tham khảo |
 
 Migration `V0_19_0_KhaoSatGiaThiTruong` (bảng `MarketPriceSurvey`, `MarketPriceSurveyLine`; bảng mới – `Down()` xóa bảng, mất phiếu khảo sát,
+AuditLog vẫn giữ).
+
+**G4b – Giá chuẩn, trần, mục tiêu trên phiếu duyệt tháng** (06/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Dòng phiếu GTH thêm **giá chuẩn**, **giá trần**, **giá mục tiêu** theo ĐVT dòng (VND, trước VAT, đã trừ chiết khấu), đều không bắt buộc, ≥ 0, 6 số lẻ. Có trần thì giá NCC chính, giá dự phòng, giá chuẩn, giá mục tiêu **không vượt trần**. Điều chỉnh / chép sang tháng sau giữ ba giá | Ban duyệt các mốc giá cùng kết quả tháng; phiếu không tự mâu thuẫn với trần của chính nó |
+| Lưới GTH có cột **Giá thị trường** (chỉ xem, cần quyền `Pricing.PriceBank.View`): phiếu khảo sát Đã chốt mới nhất của mặt hàng trong 180 ngày, giá thấp nhất của phiếu đó quy về ĐVT dòng (giá cơ sở × hệ số); rê chuột thấy số phiếu, ngày, từng nguồn | Ban so giá đề xuất với thị trường khi duyệt (G4a) |
+| **PO vượt giá trần**: dòng PO có phiếu tháng (`MonthlyApprovalLineId`, kể cả NCC ngoài danh sách) và PO bằng VND – trần quy về ĐVT dòng PO (trần ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng, 6 số lẻ); **giá ròng sau chiết khấu, trước VAT** > trần → cột Nguồn giá ghi "Vượt giá trần …", đầu phiếu cảnh báo vàng. **Chỉ cảnh báo, không chặn** gửi/duyệt, áp mọi mặt hàng (người dùng chốt 06/11/2026). Tính lúc đọc, không lưu cờ | Người duyệt thấy rõ để cân nhắc; NCC chính/dự phòng đúng giá tháng không bao giờ vượt trần |
+
+Migration `V0_19_0_GiaChuanTranMucTieu` (3 cột numeric(19,6) cho phép null trên `MonthlySupplierApprovalLine`; `Down()` xóa cột, mất các giá này,
 AuditLog vẫn giữ).
 
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,

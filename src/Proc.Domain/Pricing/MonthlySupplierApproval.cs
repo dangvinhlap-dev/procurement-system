@@ -41,9 +41,12 @@ public sealed record MonthlyApprovalHeader(DateOnly Period, Guid ItemCategoryId,
 /// <param name="BackupUnitPrice">Giá duyệt của NCC dự phòng – bắt buộc khi có NCC dự phòng.</param>
 /// <param name="QuantityLimit">Hạn mức số lượng trong tháng (theo ĐVT dòng, gộp các công ty áp dụng); null = không giới hạn.</param>
 /// <param name="Note">Ghi chú dòng.</param>
+/// <param name="StandardPrice">Giá chuẩn (ngân hàng giá – lát G4b): mốc tính tiết kiệm; không bắt buộc.</param>
+/// <param name="CeilingPrice">Giá trần: giá chính, dự phòng, chuẩn, mục tiêu không vượt; PO vượt thì cảnh báo; không bắt buộc.</param>
+/// <param name="TargetPrice">Giá mục tiêu để đàm phán; không bắt buộc.</param>
 public sealed record MonthlyApprovalLineData(
     Guid? Id, Guid ItemId, Guid UomId, Guid MainSupplierId, decimal UnitPrice, Guid? BackupSupplierId, decimal? BackupUnitPrice,
-    decimal? QuantityLimit, string? Note);
+    decimal? QuantityLimit, string? Note, decimal? StandardPrice = null, decimal? CeilingPrice = null, decimal? TargetPrice = null);
 
 /// <summary>
 /// Phiếu duyệt NCC và giá tháng – số loại <see cref="DocumentTypes.MonthlySupplierApproval"/> (design.md mục 18.25, lát G2). Quyết định thành
@@ -263,7 +266,7 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
     public IReadOnlyList<MonthlyApprovalLineData> CopyLines() =>
         _lines.OrderBy(l => l.LineNo)
             .Select(l => new MonthlyApprovalLineData(null, l.ItemId, l.UomId, l.MainSupplierId, l.UnitPrice, l.BackupSupplierId, l.BackupUnitPrice,
-                l.QuantityLimit, l.Note))
+                l.QuantityLimit, l.Note, l.StandardPrice, l.CeilingPrice, l.TargetPrice))
             .ToList();
 
     private void EnsureStatus(MonthlyApprovalStatus expected, string name)
@@ -344,6 +347,15 @@ public sealed class MonthlySupplierApprovalLine : Entity
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Giá chuẩn theo ĐVT dòng (VND, trước VAT, đã trừ chiết khấu) – mốc tính tiết kiệm (lát G4b, G4c); null = chưa đặt – numeric(19,6).</summary>
+    public decimal? StandardPrice { get; private set; }
+
+    /// <summary>Giá trần theo ĐVT dòng – PO giá ròng vượt thì cảnh báo, không chặn (người dùng chốt 06/11/2026); null = không có trần.</summary>
+    public decimal? CeilingPrice { get; private set; }
+
+    /// <summary>Giá mục tiêu theo ĐVT dòng – Phòng cung ứng đàm phán hướng tới; null = chưa đặt.</summary>
+    public decimal? TargetPrice { get; private set; }
+
     internal void Set(int lineNo, MonthlyApprovalLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";
@@ -363,6 +375,19 @@ public sealed class MonthlySupplierApprovalLine : Entity
             throw new BusinessRuleException($"{prefix}: có giá dự phòng thì phải chọn NCC dự phòng.");
         }
 
+        if (data.StandardPrice is { } standard) CheckPrice(prefix, "giá chuẩn", standard);
+        if (data.TargetPrice is { } target) CheckPrice(prefix, "giá mục tiêu", target);
+        if (data.CeilingPrice is { } ceiling)
+        {
+            CheckPrice(prefix, "giá trần", ceiling);
+            // Giá trần là mức cao nhất Ban chấp nhận – chính phiếu duyệt không được duyệt giá vượt trần (design.md mục 18.25, G4b).
+            if (data.UnitPrice > ceiling) throw new BusinessRuleException($"{prefix}: giá NCC chính vượt giá trần.");
+            if (data.BackupSupplierId is not null && data.BackupUnitPrice > ceiling)
+                throw new BusinessRuleException($"{prefix}: giá NCC dự phòng vượt giá trần.");
+            if (data.StandardPrice > ceiling) throw new BusinessRuleException($"{prefix}: giá chuẩn vượt giá trần.");
+            if (data.TargetPrice > ceiling) throw new BusinessRuleException($"{prefix}: giá mục tiêu vượt giá trần.");
+        }
+
         if (data.QuantityLimit is { } limit && (limit <= 0 || decimal.Round(limit, 4) != limit || limit >= MaxQty))
             throw new BusinessRuleException($"{prefix}: hạn mức phải > 0, tối đa 4 chữ số thập phân (để trống = không giới hạn).");
         var note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
@@ -379,6 +404,9 @@ public sealed class MonthlySupplierApprovalLine : Entity
         BackupUnitPrice = data.BackupSupplierId is null ? null : data.BackupUnitPrice;
         QuantityLimit = data.QuantityLimit;
         Note = note;
+        StandardPrice = data.StandardPrice;
+        CeilingPrice = data.CeilingPrice;
+        TargetPrice = data.TargetPrice;
     }
 
     private static void CheckPrice(string prefix, string what, decimal price)

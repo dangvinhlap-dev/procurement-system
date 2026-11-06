@@ -501,7 +501,10 @@ export function PurchaseOrderPage() {
         const saved = savedLine(index)
         const sole = saved?.soleSourceNo
         const offList = saved?.isOffMonthlyList ? `Ngoài danh sách ${saved.monthlyApprovalNo ?? ''}`.trim() : null
-        return readonlyCell([approvedPrice(field.name)?.sourceText, offList, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '))
+        const overCeiling = saved?.isOverCeiling && saved.ceilingPrice !== null ? `Vượt giá trần ${formatMoney(saved.ceilingPrice)}` : null
+        return readonlyCell(
+          [approvedPrice(field.name)?.sourceText, offList, overCeiling, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '),
+        )
       },
     },
     {
@@ -586,6 +589,14 @@ export function PurchaseOrderPage() {
                 type="warning"
                 showIcon
                 title={'Có dòng mua ngoài danh sách NCC/giá đã duyệt (NCC không phải NCC chính/dự phòng của phiếu duyệt tháng, hoặc chưa có giá đã duyệt): PO phải qua thêm chặng duyệt "Ngoài danh sách/giá".'}
+              />
+            )}
+            {/* Vượt giá trần của phiếu duyệt tháng chỉ cảnh báo, không chặn gửi duyệt (người dùng chốt 06/11/2026 – mục 18.25, G4b). */}
+            {doc?.isOverCeiling && (
+              <Alert
+                type="warning"
+                showIcon
+                title="Có dòng giá ròng (sau chiết khấu) vượt giá trần của phiếu duyệt NCC và giá tháng – xem cột Nguồn giá. Vẫn gửi duyệt được; người duyệt cân nhắc."
               />
             )}
           </>
