@@ -3529,6 +3529,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("HasPriceException")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsOffApprovedList")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsOutOfContract")
                         .HasColumnType("boolean");
 
@@ -3647,6 +3650,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("LineNo")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("MonthlyApprovalLineId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -3701,6 +3707,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasIndex("ContractId");
 
                     b.HasIndex("ItemId");
+
+                    b.HasIndex("MonthlyApprovalLineId");
 
                     b.HasIndex("PriceListId");
 
@@ -5541,6 +5549,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Pricing.MonthlySupplierApprovalLine", null)
+                        .WithMany()
+                        .HasForeignKey("MonthlyApprovalLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
                         .WithMany("Lines")

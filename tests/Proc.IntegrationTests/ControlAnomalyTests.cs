@@ -97,7 +97,9 @@ public class ControlAnomalyTests
                 new SavePurchaseOrderRequest(Today, supplierId, f.Kt, null, null, null, null, 0, null,
                     [new(null, itemId, f.Cai, qty, price, discount, "10", null, null, null)]), Ct));
             po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
-            po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+            // Duyệt hết các chặng: PO không có giá đã duyệt qua thêm chặng POL (design.md mục 18.25).
+            for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
+                po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
             Assert.Equal("Approved", po.Status);
             return po;
         }

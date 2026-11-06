@@ -70,6 +70,8 @@ public class DashboardTests
                 [new(null, item.Id, cai, 10, 50_000, 0, "10", null, null, null)]), Ct));
         await ReadAsync<PurchaseOrderDto>(await buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
+        // PO không có giá đã duyệt: thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25), cùng người duyệt được.
+        await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",
             new SaveReceiptRequest(Today, kt, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 1, 50_000, "10", null, null, null)]), Ct));
         var posted = await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",

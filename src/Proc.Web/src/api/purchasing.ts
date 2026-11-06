@@ -302,14 +302,22 @@ export interface PurchaseOrderLine {
   isOutOfContract: boolean
   /** Số phiếu NCC độc quyền còn tác dụng vào ngày PO (ghi nhận cho KSNB). */
   soleSourceNo: string | null
+  /** Số phiếu duyệt NCC và giá tháng phủ mặt hàng của dòng (design.md mục 18.25). */
+  monthlyApprovalNo: string | null
+  /** NCC của PO không phải NCC chính/dự phòng của phiếu tháng – mua ngoài danh sách, phải qua chặng POL. */
+  isOffMonthlyList: boolean
 }
 
-/** Nguồn giá của dòng PO: kết quả chọn thầu, hợp đồng nguyên tắc, bảng giá, ngoài hợp đồng; Unknown = PO trước bản 0.12.0. */
-export type PriceSource = 'Unknown' | 'Rfq' | 'Contract' | 'PriceList' | 'None'
+/**
+ * Nguồn giá của dòng PO: phiếu duyệt NCC và giá tháng (đứng đầu – design.md mục 18.25), kết quả chọn thầu, hợp đồng nguyên tắc, bảng giá,
+ * ngoài hợp đồng; Unknown = PO trước bản 0.12.0.
+ */
+export type PriceSource = 'Unknown' | 'MonthlyApproval' | 'Rfq' | 'Contract' | 'PriceList' | 'None'
 
 /** Nhãn nguồn giá. */
 export const priceSourceLabels: Record<PriceSource, string> = {
   Unknown: '',
+  MonthlyApproval: 'Duyệt tháng',
   Rfq: 'Kết quả chọn thầu',
   Contract: 'Hợp đồng',
   PriceList: 'Bảng giá',
@@ -349,6 +357,8 @@ export interface PurchaseOrder {
   hasPriceException: boolean
   /** Có dòng mua ngoài hợp đồng. */
   isOutOfContract: boolean
+  /** Có dòng ngoài danh sách tháng hoặc không có giá đã duyệt – gửi duyệt qua thêm chặng "Ngoài danh sách/giá" (POL, mục 18.25). */
+  isOffApprovedList: boolean
   /** Bộ phận đặt hàng (design.md mục 18.10). */
   departmentId: string | null
   departmentName: string | null
@@ -707,4 +717,4 @@ export function useSaveBudget() {
 }
 
 /** Nhãn chặng phụ của PR, PO trong lịch sử duyệt: 2 = ngoại lệ giá (design.md mục 18.10), 3 = vượt ngân sách (mục 18.24). */
-export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách' }
+export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách', 4: 'Ngoài danh sách/giá' }

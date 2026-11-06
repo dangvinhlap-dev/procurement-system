@@ -469,7 +469,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
         Check(period);
         var lines = await OrderLinesAsync(period.From, period.To, period.AllCompanies, null, cancellationToken);
         var total = lines.Sum(l => l.Amount);
-        var order = new[] { "Rfq", "Contract", "PriceList", "Deviation", "None", "Unknown" };
+        var order = new[] { "MonthlyApproval", "Rfq", "Contract", "PriceList", "Deviation", "None", "Unknown" };
         var sources = lines.GroupBy(l => l.Kind)
             .Select(g => new PriceSourceSummaryDto(g.Key, g.Count(), g.Sum(l => l.Amount), Share(g.Sum(l => l.Amount), total)))
             .OrderBy(x => Array.IndexOf(order, x.Source))
@@ -478,7 +478,8 @@ public sealed class PurchaseReportService : IPurchaseReportService
         // Tỷ lệ mua theo giá đã duyệt (P5, KPI ≥ 95%): dòng không xác định nguồn (PO trước 0.12.0) không tính vào mẫu số.
         // Ví dụ theo bảng giá 475.000, lệch giá 494.000, không có giá 300.000 → 475.000 ÷ 1.269.000 = 37,43%.
         var known = lines.Where(l => l.Kind != "Unknown").Sum(l => l.Amount);
-        var compliant = lines.Where(l => l.Kind is "Rfq" or "Contract" or "PriceList").Sum(l => l.Amount);
+        // Giá phiếu duyệt tháng (G3) cũng là giá đã duyệt.
+        var compliant = lines.Where(l => l.Kind is "MonthlyApproval" or "Rfq" or "Contract" or "PriceList").Sum(l => l.Amount);
         decimal? compliancePct = known > 0 ? Math.Round(compliant * 100m / known, 2, MidpointRounding.AwayFromZero) : null;
 
         var outLines = lines

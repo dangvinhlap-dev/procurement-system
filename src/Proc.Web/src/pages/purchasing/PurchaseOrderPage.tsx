@@ -194,13 +194,19 @@ export function PurchaseOrderPage() {
       if (!saved) return undefined
       if (saved.approvedUnitPrice == null)
         return saved.priceSource === 'None' ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
-      const ref = saved.priceSource === 'Rfq' ? saved.sourceRfqNo : saved.priceSource === 'Contract' ? saved.contractNo : saved.priceListNo
+      const ref =
+        saved.priceSource === 'Rfq' ? saved.sourceRfqNo
+        : saved.priceSource === 'Contract' ? saved.contractNo
+        : saved.priceSource === 'MonthlyApproval' ? saved.monthlyApprovalNo
+        : saved.priceListNo
       return { unitPrice: saved.approvedUnitPrice, discountPct: saved.approvedDiscountPct ?? 0, sourceText: `${priceSourceLabels[saved.priceSource]} ${ref ?? ''}`.trim() }
     }
     if (!line?.itemId || !line.uomId || !supplierId) return undefined
     const p = suggestedPrice(line)
     if (!p) return supplierPrices.isSuccess ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
-    return { unitPrice: p.unitPrice, discountPct: p.discountPct, sourceText: p.source === 'Contract' ? `Hợp đồng ${p.contractNo ?? ''}` : `Bảng giá ${p.priceListNo}` }
+    const sourceText =
+      p.source === 'MonthlyApproval' ? `Duyệt tháng ${p.priceListNo}` : p.source === 'Contract' ? `Hợp đồng ${p.contractNo ?? ''}` : `Bảng giá ${p.priceListNo}`
+    return { unitPrice: p.unitPrice, discountPct: p.discountPct, sourceText }
   }
 
   /** Dòng có giá đã duyệt mà giá sau CK khác – cần lý do lệch giá (so như server: sau chiết khấu, 6 số lẻ). */
@@ -490,10 +496,12 @@ export function PurchaseOrderPage() {
       key: 'priceSource',
       title: 'Nguồn giá',
       width: 150,
-      // Phiếu NCC độc quyền ghi nhận lúc lưu (design.md mục 18.10) – hiện kèm nguồn giá.
+      // Phiếu NCC độc quyền, mua ngoài danh sách phiếu tháng ghi nhận lúc lưu (design.md mục 18.10, 18.25) – hiện kèm nguồn giá.
       render: (field, index) => {
-        const sole = savedLine(index)?.soleSourceNo
-        return readonlyCell([approvedPrice(field.name)?.sourceText, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '))
+        const saved = savedLine(index)
+        const sole = saved?.soleSourceNo
+        const offList = saved?.isOffMonthlyList ? `Ngoài danh sách ${saved.monthlyApprovalNo ?? ''}`.trim() : null
+        return readonlyCell([approvedPrice(field.name)?.sourceText, offList, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '))
       },
     },
     {
@@ -572,6 +580,14 @@ export function PurchaseOrderPage() {
                 doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
               ))}
             <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+            {/* Mua ngoài danh sách hoặc ngoài giá bắt buộc duyệt (người dùng chốt 06/11/2026 – design.md mục 18.25). */}
+            {doc?.isOffApprovedList && (
+              <Alert
+                type="warning"
+                showIcon
+                title={'Có dòng mua ngoài danh sách NCC/giá đã duyệt (NCC không phải NCC chính/dự phòng của phiếu duyệt tháng, hoặc chưa có giá đã duyệt): PO phải qua thêm chặng duyệt "Ngoài danh sách/giá".'}
+              />
+            )}
           </>
         }
         form={form}

@@ -7,6 +7,7 @@ using Proc.Application.Inventory;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
+using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
 using Proc.Application.Reports;
 using Proc.Domain.Organization;
@@ -64,6 +65,13 @@ public partial class PurchasingTests
             new SaveSupplierRequest(null, groupId, "NCC mua hàng", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
         await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await buyer.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
+        // Bảng giá đã duyệt 100.000/cái, CK 5% (đúng giá CreatePoAsync): PO thử có giá đã duyệt nên chỉ qua cấp duyệt PO thường – PO không có
+        // giá đã duyệt phải qua thêm chặng POL (design.md mục 18.25), có test riêng.
+        var list = await ReadAsync<PriceListDto>(await buyer.PostAsJsonAsync("/api/price-lists",
+            new SavePriceListRequest(supplier.Id, "Bảng giá mua hàng", false, Today.AddDays(-Today.Day + 1), null, null, null,
+                [new(null, item.Id, cai, 0, 100_000, 5, "10", null)]), Ct));
+        await ReadAsync<PriceListDto>(await buyer.PostAsync($"/api/price-lists/{list.Id}/submit", null, Ct));
+        await _factory.FinishPriceListApprovalAsync(list.Id);
         return new Fixture(buyer, company.Code, kt, item.Id, cai, supplier.Id, await TestDepartments.CreateAsync(buyer, "Xưởng cán"));
     }
 
@@ -244,7 +252,7 @@ public partial class PurchasingTests
         var (_, role) = await ApproverAsync(f);
 
         var types = await f.Buyer.GetFromJsonAsync<List<ApprovalTypeDto>>("/api/approval-rules/types", Ct);
-        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH"], types!.Select(t => t.Code));
+        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH"], types!.Select(t => t.Code));
         Assert.Null(types.Single(t => t.Code == "NCC").AmountLabel);
 
         var prl = await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("prl", 1, 0, role), Ct));

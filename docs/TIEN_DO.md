@@ -350,11 +350,19 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Playwright `monthly-approval.spec.ts`; sửa `PurchasingTests` (thêm GTH), `document-numbering.spec` (16 loại). Kiểm tra: `dotnet test` 529/529,
     Playwright 97/97, `npm run build`, `tsc`, `oxlint` qua. Người dùng đồng ý (06/11/2026) các quy tắc tự đặt: NCC chính/dự phòng phải Đã duyệt,
     không lập tháng đã qua, mỗi mặt hàng × tháng × công ty một phiếu còn hiệu lực, vai trò mẫu DAMPHAN lập – TRUONGBANCUVT/HOIDONG duyệt.
+  - **G3 xong (06/11/2026, nhánh `feature/g3-po-theo-phieu-thang`)**: PO kiểm tra theo phiếu tháng – nguồn giá **Duyệt tháng** đứng đầu
+    (`PurchasePriceSource.MonthlyApproval`, NCC chính/dự phòng, quy ĐVT); NCC ngoài danh sách tháng hoặc dòng không có giá đã duyệt →
+    chặng 4 loại duyệt **POL** "Mua ngoài danh sách/giá đã duyệt" (thay quy tắc "chỉ gắn cờ" của 18.10); vượt hạn mức SL tháng gộp các công ty
+    áp dụng → chặn gửi (`CheckMonthlyLimitsAsync`); cảnh báo đầu PO, cột Nguồn giá "Ngoài danh sách GTH-…", lịch sử duyệt chặng 4; báo cáo
+    PRCW/KPI tính "Duyệt tháng" là theo giá đã duyệt. Migration `V0_19_0_PoTheoPhieuThang` (55 → 56). Test: tích hợp
+    `PurchaseOrderMonthlyApprovalTests`; sửa test cũ theo quy tắc mới (danh sách loại duyệt thêm POL; fixture `PurchasingTests` có bảng giá
+    đã duyệt; Dashboard/PurchaseReport/ControlAnomaly duyệt thêm chặng 4; e2e `purchasing`, `price-reports` duyệt hai lượt). Kiểm tra:
+    `dotnet test` 530/530, Playwright 96/96 (2 spec sửa chạy lại qua), `npm run build`, `tsc`, `oxlint` qua.
+    **Lưu ý triển khai**: từ bản này mọi PO có dòng không có giá đã duyệt đều thêm một lượt duyệt – nên cấu hình POL (APRL) trước khi phát hành.
 
 ## Việc tiếp theo
 
-0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2 xong; tiếp **G3** PO kiểm tra theo phiếu tháng (NCC ngoài NCC chính/dự phòng hoặc dòng
-   chưa có giá đã duyệt → chặng duyệt riêng; vượt hạn mức SL gộp các công ty → chặn gửi duyệt; giá phiếu tháng đứng đầu thứ tự nguồn giá) … G12.
+0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3 xong; tiếp **G4** ngân hàng giá … G12.
 1. **Theo đề xuất Ban Cung ứng** (đã chốt 01/11/2026 – `docs/Phantich_01112026.md` mục 5–6, design.md mục 18): làm lần lượt
    E1 → E2 → E3 → A1 → A2 → A3 → B1 … → F4. E1, E2, E3, A1, A2, A3, B1, B2, B3a, B3b, B4a, B4b, B4c, B5a, B5b, C1, C1b, C2a, C2b, C3, C4, C5a, C5b, C6, D1, F1, F2, F3 đã xong (C3 làm 05/11/2026); G1–G3 (F1 lịch sử ô) đã xong; F4a, F4b đã xong. Bản **0.13.0** phát hành 02/11/2026 (C1b–F4b, G1–G3):
    https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.13.0

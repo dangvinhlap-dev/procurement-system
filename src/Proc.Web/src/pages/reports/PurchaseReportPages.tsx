@@ -549,6 +549,7 @@ export function SourcingSavingsReportPage() {
 
 /** Tên nguồn giá trên báo cáo giá mua (design.md mục 18.17). */
 const priceSourceLabels: Record<PriceSourceKind, string> = {
+  MonthlyApproval: 'Duyệt tháng',
   Rfq: 'Chọn thầu',
   Contract: 'Hợp đồng',
   PriceList: 'Bảng giá',
