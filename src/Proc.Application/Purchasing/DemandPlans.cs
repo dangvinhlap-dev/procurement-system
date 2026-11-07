@@ -134,7 +134,54 @@ public interface IDemandPlanService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Phiếu.</returns>
     Task<DemandPlanDto> CancelAsync(Guid id, CancelDemandPlanRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tổng hợp nhu cầu gộp (lát G5b): SL kế hoạch 12 tháng theo ĐVT cơ sở của các phiếu Đã chốt trong năm, mỗi mặt hàng một dòng, tách
+    /// theo công ty. Ở tổng công ty gộp mọi công ty; ở công ty thành viên chỉ công ty đó.
+    /// </summary>
+    /// <param name="year">Năm kế hoạch.</param>
+    /// <param name="categoryId">Nhóm hàng của mặt hàng (gồm nhóm con); null = mọi nhóm trong phạm vi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bảng tổng hợp.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi năm không hợp lệ.</exception>
+    Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, CancellationToken cancellationToken);
 }
+
+/// <summary>Một công ty trong bảng tổng hợp nhu cầu.</summary>
+/// <param name="CompanyId">Công ty.</param>
+/// <param name="Code">Mã công ty.</param>
+/// <param name="Name">Tên công ty.</param>
+/// <param name="ConfirmedPlans">Số phiếu Đã chốt của năm (theo nhóm hàng lọc) – đã tính vào tổng hợp.</param>
+/// <param name="DraftPlans">Số phiếu Nháp của năm – chưa tính, để Văn phòng Ban nhắc công ty chốt.</param>
+public sealed record DemandSummaryCompanyDto(Guid CompanyId, string Code, string Name, int ConfirmedPlans, int DraftPlans);
+
+/// <summary>Nhu cầu của một công ty cho một mặt hàng.</summary>
+/// <param name="CompanyId">Công ty.</param>
+/// <param name="Months">SL 12 tháng theo ĐVT cơ sở, phần tử 0 là tháng 1.</param>
+/// <param name="Total">Cả năm theo ĐVT cơ sở.</param>
+/// <param name="PlanNos">Số các phiếu Đã chốt có mặt hàng này.</param>
+public sealed record DemandSummaryCellDto(Guid CompanyId, IReadOnlyList<decimal> Months, decimal Total, IReadOnlyList<string> PlanNos);
+
+/// <summary>Một dòng tổng hợp nhu cầu: một mặt hàng.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="BaseUomCode">ĐVT cơ sở.</param>
+/// <param name="CategoryCode">Mã nhóm hàng của mặt hàng.</param>
+/// <param name="CategoryName">Tên nhóm hàng của mặt hàng.</param>
+/// <param name="Companies">Nhu cầu từng công ty có kế hoạch (công ty không có thì không có phần tử).</param>
+/// <param name="Months">Tổng các công ty theo tháng.</param>
+/// <param name="Total">Tổng các công ty cả năm.</param>
+public sealed record DemandSummaryRowDto(
+    Guid ItemId, string ItemCode, string ItemName, string BaseUomCode, string CategoryCode, string CategoryName,
+    IReadOnlyList<DemandSummaryCellDto> Companies, IReadOnlyList<decimal> Months, decimal Total);
+
+/// <summary>Bảng tổng hợp nhu cầu gộp của một năm.</summary>
+/// <param name="Year">Năm kế hoạch.</param>
+/// <param name="AllCompanies">true khi gộp mọi công ty (đang làm việc ở tổng công ty).</param>
+/// <param name="Companies">Các công ty là cột của bảng.</param>
+/// <param name="Rows">Dòng mặt hàng, mã hàng tăng dần.</param>
+public sealed record DemandSummaryDto(int Year, bool AllCompanies, IReadOnlyList<DemandSummaryCompanyDto> Companies, IReadOnlyList<DemandSummaryRowDto> Rows);
 
 /// <summary>Kiểm tra dữ liệu lưu phiếu kế hoạch nhu cầu.</summary>
 public sealed class SaveDemandPlanRequestValidator : AbstractValidator<SaveDemandPlanRequest>
