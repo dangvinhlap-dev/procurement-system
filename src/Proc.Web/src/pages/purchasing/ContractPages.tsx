@@ -717,14 +717,16 @@ export function ContractPage() {
         <ContractAmendmentDrawer contract={doc} amendmentId={amendmentId} onClose={() => openAmendment(null)} onCreated={(id) => openAmendment(id)} />
       )}
       {planning && (
-        // Hợp đồng nguyên tắc là của một công ty (mục 18.7) nên mặc định chỉ lấy kế hoạch công ty đang làm việc, khoảng = thời hạn hợp đồng.
+        // Hợp đồng nguyên tắc là của một công ty (mục 18.7) nên mặc định chỉ lấy kế hoạch công ty đang làm việc, khoảng = đúng thời hạn hợp
+        // đồng (chưa nhập Hiệu lực đến thì 12 tháng). Không cho đổi dòng sang ĐVT cơ sở: đơn giá lấy theo mặt hàng × ĐVT của bảng giá.
         <PlannedQuantityDialog
           title="Lấy SL kế hoạch làm sản lượng dự kiến"
           lines={toPlannedLines(lines, (l) => l.expectedQty)}
           defaultFrom={validFrom ?? dayjs()}
-          defaultTo={validTo ?? (validFrom ?? dayjs()).add(11, 'month')}
+          defaultTo={validTo ?? (validFrom ?? dayjs()).add(12, 'month').subtract(1, 'day')}
           defaultAllCompanies={false}
-          onApply={(qty) => qty.forEach((value, index) => form.setFieldValue(['lines', index, 'expectedQty'], value))}
+          allowBaseUom={false}
+          onApply={(changes) => changes.forEach((c, index) => form.setFieldValue(['lines', index, 'expectedQty'], c.qty))}
           onClose={() => setPlanning(false)}
         />
       )}

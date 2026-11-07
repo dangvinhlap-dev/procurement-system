@@ -779,15 +779,21 @@ export function RfqPage() {
       />
       {picking && <RequestLinePicker onCancel={() => setPicking(false)} onPick={addFromRequests} />}
       {planning && (
-        // RFQ thường lập ở tổng công ty cho nhu cầu gộp (Văn phòng Ban) nên ở tổng công ty mặc định toàn tập đoàn; khoảng mặc định 12 tháng
-        // kể từ tháng sau ngày lập – kỳ mà kết quả thầu sẽ áp dụng.
+        // RFQ thường lập ở tổng công ty cho nhu cầu gộp (Văn phòng Ban) nên ở tổng công ty mặc định toàn tập đoàn; khoảng mặc định trọn 12
+        // tháng kể từ tháng sau ngày lập – kỳ mà kết quả thầu sẽ áp dụng. RFQ nháp chưa có giá nên đổi dòng sang ĐVT cơ sở được.
         <PlannedQuantityDialog
           title="Lấy SL kế hoạch làm SL mời thầu"
           lines={toPlannedLines(lines, (l) => l.qty)}
-          defaultFrom={(rfqDate ?? dayjs()).add(1, 'month')}
-          defaultTo={(rfqDate ?? dayjs()).add(12, 'month')}
+          defaultFrom={(rfqDate ?? dayjs()).add(1, 'month').startOf('month')}
+          defaultTo={(rfqDate ?? dayjs()).add(12, 'month').endOf('month').startOf('day')}
           defaultAllCompanies={workingCompany?.isHeadOffice === true}
-          onApply={(qty) => qty.forEach((value, index) => form.setFieldValue(['lines', index, 'qty'], value))}
+          allowBaseUom
+          onApply={(changes) =>
+            changes.forEach((c, index) => {
+              form.setFieldValue(['lines', index, 'qty'], c.qty)
+              if (c.uomId) form.setFieldValue(['lines', index, 'uomId'], c.uomId)
+            })
+          }
           onClose={() => setPlanning(false)}
         />
       )}

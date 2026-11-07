@@ -214,23 +214,28 @@ export interface PlannedQuantity {
   itemName: string
   uomId: string
   uomCode: string
-  /** null = không có kế hoạch đã chốt trong khoảng (hoặc ĐVT không quy đổi được). */
+  /** null = không có kế hoạch đã chốt trong khoảng (hoặc ĐVT không quy đổi được). 4 số lẻ, có thể lẻ khi ĐVT không chia hết / chia theo ngày. */
   qty: number | null
   companies: PlannedQuantityCompany[]
+  /** ĐVT cơ sở của mặt hàng – để đổi dòng sang ĐVT cơ sở khi SL theo ĐVT dòng bị lẻ. */
+  baseUomId: string | null
+  baseUomCode: string
+  /** Tổng SL theo ĐVT cơ sở (4 số lẻ). */
+  baseQty: number | null
 }
 
 /** Điều kiện lấy SL kế hoạch. */
 export interface PlannedQuantityQuery {
-  /** Tháng đầu, yyyy-MM-01. */
-  fromMonth: string
-  /** Tháng cuối, yyyy-MM-01. */
-  toMonth: string
+  /** Ngày đầu yyyy-MM-dd (tháng đầu không trọn chia theo số ngày). */
+  fromDate: string
+  /** Ngày cuối yyyy-MM-dd (tháng cuối không trọn chia theo số ngày). */
+  toDate: string
   allCompanies: boolean
   lines: { itemId: string; uomId: string }[]
 }
 
 /**
- * SL kế hoạch nhu cầu (phiếu Đã chốt) của các dòng trong khoảng tháng, quy về ĐVT dòng – design.md mục 18.25, lát G5c.
+ * SL kế hoạch nhu cầu (phiếu Đã chốt) của các dòng trong khoảng ngày, quy về ĐVT dòng – design.md mục 18.25, lát G5c.
  * @param query Điều kiện; null = chưa tải.
  */
 export function usePlannedQuantities(query: PlannedQuantityQuery | null) {

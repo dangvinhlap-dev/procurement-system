@@ -149,23 +149,23 @@ public interface IDemandPlanService
     Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, bool allCompanies, CancellationToken cancellationToken);
 
     /// <summary>
-    /// SL kế hoạch của các dòng (lát G5c) để làm SL dự kiến RFQ / hợp đồng nguyên tắc: tổng các tháng trong khoảng của phiếu Đã chốt, quy về
-    /// ĐVT của từng dòng.
+    /// SL kế hoạch của các dòng (lát G5c) để làm SL dự kiến RFQ / hợp đồng nguyên tắc: tổng các tháng trong khoảng ngày của phiếu Đã chốt
+    /// (tháng đầu / cuối không trọn thì chia theo số ngày), quy về ĐVT của từng dòng.
     /// </summary>
-    /// <param name="request">Khoảng tháng, phạm vi công ty, các dòng (mặt hàng × ĐVT).</param>
+    /// <param name="request">Khoảng ngày, phạm vi công ty, các dòng (mặt hàng × ĐVT).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Một kết quả cho mỗi dòng, cùng thứ tự.</returns>
-    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng tháng sai hoặc quá 36 tháng.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày ngược hoặc từ 36 tháng trở lên.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà không có quyền.</exception>
     Task<IReadOnlyList<PlannedQuantityDto>> QuantitiesAsync(PlannedQuantityRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>Yêu cầu lấy SL kế hoạch cho các dòng của RFQ / hợp đồng nguyên tắc (lát G5c).</summary>
-/// <param name="FromMonth">Tháng đầu (ngày bất kỳ trong tháng; tính đủ tháng).</param>
-/// <param name="ToMonth">Tháng cuối (ngày bất kỳ trong tháng; tính đủ tháng).</param>
+/// <param name="FromDate">Ngày đầu (tính cả ngày này; tháng đầu không trọn thì chia theo số ngày).</param>
+/// <param name="ToDate">Ngày cuối (tính cả ngày này; tháng cuối không trọn thì chia theo số ngày).</param>
 /// <param name="AllCompanies">true = cộng kế hoạch mọi công ty (cần quyền xem kế hoạch nhu cầu toàn tập đoàn).</param>
 /// <param name="Lines">Các dòng cần lấy SL.</param>
-public sealed record PlannedQuantityRequest(DateOnly FromMonth, DateOnly ToMonth, bool AllCompanies, IReadOnlyList<PlannedQuantityLineRequest> Lines);
+public sealed record PlannedQuantityRequest(DateOnly FromDate, DateOnly ToDate, bool AllCompanies, IReadOnlyList<PlannedQuantityLineRequest> Lines);
 
 /// <summary>Một dòng cần lấy SL kế hoạch.</summary>
 /// <param name="ItemId">Mặt hàng.</param>
@@ -186,8 +186,12 @@ public sealed record PlannedQuantityCompanyDto(string CompanyCode, decimal Qty, 
 /// <param name="UomCode">Mã ĐVT dòng.</param>
 /// <param name="Qty">Tổng SL kế hoạch theo ĐVT dòng (4 số lẻ); null khi không có kế hoạch đã chốt trong khoảng, hoặc ĐVT không quy đổi được.</param>
 /// <param name="Companies">Chi tiết từng công ty có kế hoạch.</param>
+/// <param name="BaseUomId">ĐVT cơ sở của mặt hàng (null khi mặt hàng ngoài phạm vi).</param>
+/// <param name="BaseUomCode">Mã ĐVT cơ sở.</param>
+/// <param name="BaseQty">Tổng SL kế hoạch theo ĐVT cơ sở (4 số lẻ) – giao diện dùng khi SL theo ĐVT dòng bị lẻ (đổi dòng sang ĐVT cơ sở).</param>
 public sealed record PlannedQuantityDto(
-    Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal? Qty, IReadOnlyList<PlannedQuantityCompanyDto> Companies);
+    Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal? Qty, IReadOnlyList<PlannedQuantityCompanyDto> Companies,
+    Guid? BaseUomId, string BaseUomCode, decimal? BaseQty);
 
 /// <summary>Kiểm tra yêu cầu lấy SL kế hoạch.</summary>
 public sealed class PlannedQuantityRequestValidator : AbstractValidator<PlannedQuantityRequest>
