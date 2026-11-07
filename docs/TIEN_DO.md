@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 06/11/2026 (rà soát lỗi R1–R8 xong, đã merge `main`; trước đó: lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 07/11/2026 (phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -365,6 +365,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   `procurement-0.18.0.zip`) – C3 ngân sách, `RFQ_DOSSIER_REQUIRED`, in PR có hàng mới; 2 migration (52 → 54), script `db/scripts/0.18.0.sql`
   chạy thử 2 lần trên bản sao `procurement_kiemtra_0180` (từ CSDL test 0.17.0). **Bản test cổng 5007 nâng tại chỗ lên 0.18.0**: `app` = 0.18.0,
   `app-0.17.0` = bản cũ, sao lưu trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.18.0.dump`, PID trong `pid.txt`.
+- **Phát hành 0.19.0 (07/11/2026)**: tag `v0.19.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.19.0 (gói
+  `procurement-0.19.0.zip`) – đợt QĐ G1–G4c (SUPCOV, GTH, PO theo phiếu tháng/POL, KSG, giá chuẩn/trần/mục tiêu, SAVSTD) + rà soát R1–R8;
+  8 migration (54 → 62), script `db/scripts/0.19.0.sql` chạy thử 3 lần trên bản sao `procurement_kiemtra_0190` (từ CSDL bản test 5007,
+  0.18.0), gói chạy thử trên bản sao đó: `/health` Healthy 0.19.0. Kiểm tra trước phát hành: build 0 cảnh báo, `dotnet test` 545/545.
+  **Bản test cổng 5007 chưa nâng** (vẫn 0.18.0) – chờ người dùng yêu cầu.
 - **Tài liệu trình bày (06/11/2026)**: `docs/TrinhBay_HeThong_0.18.0.pptx` – 50 slide: quy trình, quy tắc từng phân hệ/form (theo design.md),
   từ viết tắt, 70 mã màn hình, tài khoản test và 3 kịch bản demo trên bản test 5007. Dựng bằng pptxgenjs (script ở scratchpad, không commit).
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
@@ -417,7 +422,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c xong; **tạm dừng sau G4c theo yêu cầu người dùng (06/11/2026)** –
-   khi người dùng cho làm tiếp thì làm **G5** kế hoạch nhu cầu, rồi G6 … G12. G1–G4c chưa phát hành (bản test 5007 vẫn 0.18.0).
+   khi người dùng cho làm tiếp thì làm **G5** kế hoạch nhu cầu, rồi G6 … G12. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 vẫn 0.18.0, chưa nâng).
    Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
    TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới
    N01–N16 (0.15.0–0.18.0). N01 nhắc admin gán quyền `Purchase.Budget.*` cho TOANQUYEN (CSDL test chưa có) và khai PRB/POB ở BMI.
