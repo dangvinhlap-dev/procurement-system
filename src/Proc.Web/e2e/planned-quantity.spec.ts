@@ -3,9 +3,9 @@ import { loginViaApi } from './helpers.ts'
 import { api, unique } from './inventoryHelpers.ts'
 
 /**
- * Lấy SL kế hoạch (design.md mục 18.25, lát G5c): RFQ nháp ở tổng công ty, dòng tính theo thùng; kế hoạch đã chốt của TCT (24 cái) và BHA
- * (2 thùng) năm sau → hộp thoại toàn tập đoàn gợi ý 4 thùng, chi tiết từng công ty; áp dụng chép SL vào dòng. Hợp đồng nguyên tắc dùng chung
- * hộp thoại; quy tắc cộng tháng, quyền kiểm tra ở test tích hợp DemandPlanTests.
+ * Lấy SL kế hoạch (design.md mục 18.25, lát G5c): RFQ nháp ở tổng công ty, dòng tính theo thùng; kế hoạch đã chốt của TCT (30 cái) và BHA
+ * (2 thùng) năm sau → hộp thoại toàn tập đoàn ra 4,5 thùng (lẻ, cảnh báo), chi tiết từng công ty; mặc định làm tròn lên 5 thùng, chọn "Đổi dòng
+ * sang ĐVT cơ sở" thì áp dụng 54 cái. Hợp đồng nguyên tắc dùng chung hộp thoại; chia theo ngày, quyền kiểm tra ở test tích hợp DemandPlanTests.
  */
 test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp màn hình', async ({ page, request }) => {
   test.setTimeout(90_000)
@@ -30,7 +30,7 @@ test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp 
     })
     await client.send('post', `/api/demand-plans/${created.id}/confirm`, null)
   }
-  await plan(head, cai, [24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+  await plan(head, cai, [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
   await plan(bha, thung, [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
@@ -46,19 +46,25 @@ test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp 
   await expect(page.locator('.document-form-number')).toHaveText(rfq.no)
   await page.getByRole('button', { name: /Lấy SL kế hoạch$/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Lấy SL kế hoạch làm SL mời thầu' })
-  // Ở tổng công ty mặc định toàn tập đoàn; chọn khoảng cả năm sau.
+  // Ở tổng công ty mặc định toàn tập đoàn; chọn khoảng cả năm sau (trọn tháng).
   await expect(dialog.getByRole('checkbox', { name: 'Toàn tập đoàn' })).toBeChecked()
-  for (const [label, value] of [['Từ tháng', `01/${year}`], ['Đến tháng', `12/${year}`]]) {
+  for (const [label, value] of [['Từ ngày', `01/01/${year}`], ['Đến ngày', `31/12/${year}`]]) {
     const box = dialog.getByLabel(label)
     await box.click()
     await box.fill(value)
     await box.press('Enter')
   }
   const row = dialog.locator('.ant-table-row', { hasText: item.code })
-  // 24 cái + 2 thùng × 12 = 48 cái = 4 thùng.
-  await expect(row).toContainText('4')
-  await expect(row).toContainText(/BHA: 2 \(KHN-BHA-.+\); TCT: 2 \(KHN-TCT-.+\)/)
+  // 30 cái + 2 thùng × 12 = 54 cái = 4,5 thùng: lẻ → mặc định làm tròn lên 5 thùng.
+  await expect(dialog).toContainText('Tính 12 tháng')
+  await expect(row.getByLabel('SL lẻ dòng 1')).toBeVisible()
+  await expect(row).toContainText('4,5')
+  await expect(row).toContainText('54 CAI')
+  await expect(row).toContainText('5 THUNG')
+  await expect(row).toContainText(/BHA: 2 \(KHN-BHA-.+\); TCT: 2,5 \(KHN-TCT-.+\)/)
+  await dialog.getByRole('radio', { name: 'Đổi dòng sang ĐVT cơ sở' }).check()
+  await expect(row).toContainText('54 CAI')
   await page.screenshot({ path: 'e2e/screenshots/planned-quantity.png' })
   await dialog.getByRole('button', { name: 'Áp dụng cho 1 dòng' }).click()
-  await expect(page.getByLabel('Số lượng dòng 1')).toHaveValue('4')
+  await expect(page.getByLabel('Số lượng dòng 1')).toHaveValue('54')
 })
