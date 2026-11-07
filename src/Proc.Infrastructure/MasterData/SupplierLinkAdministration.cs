@@ -11,7 +11,8 @@ namespace Proc.Infrastructure.MasterData;
 
 /// <summary>
 /// NCC áp dụng cho công ty và NCC – sản phẩm (design.md mục 5.3, 5.9). SupplierCompany đi qua filter công ty,
-/// SupplierItem đi qua filter phạm vi nhóm hàng của mặt hàng – không truy vấn nào bỏ qua filter.
+/// SupplierItem đi qua filter phạm vi nhóm hàng của mặt hàng. Ngoại lệ duy nhất: mở rộng NCC cho công ty (đọc/ghi SupplierCompany của
+/// công ty khác – chỉ ghi ở tổng công ty với quyền quản lý NCC, design.md mục 5.9, 9.2).
 /// </summary>
 public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
 {
@@ -74,6 +75,62 @@ public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
 
         await _db.SaveChangesAsync(cancellationToken);
         return await GetCompanyLinkAsync(supplierId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<SupplierExtensionsDto> GetExtensionsAsync(Guid supplierId, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        if (!await _db.Suppliers.AnyAsync(s => s.Id == supplierId, cancellationToken))
+            throw new NotFoundException("Không tìm thấy nhà cung cấp.");
+        // Ngoại lệ filter công ty (người dùng chốt 07/11/2026, design.md mục 5.9, 9.2): NCC là danh mục dùng chung, một NCC bán cho nhiều
+        // công ty là bình thường, nên form NCC phải cho thấy NCC đang mở rộng cho công ty nào. Chỉ đọc; ghi vẫn kiểm tra quyền riêng.
+        var links = await _db.SupplierCompanies.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+            .Where(x => x.SupplierId == supplierId).ToDictionaryAsync(x => x.CompanyId, cancellationToken);
+        var linkedIds = links.Keys.ToList();
+        var companies = await _db.Companies.AsNoTracking().Where(c => c.IsActive || linkedIds.Contains(c.Id))
+            .OrderByDescending(c => c.IsHeadOffice).ThenBy(c => c.Code)
+            .Select(c => new { c.Id, c.Code, c.Name, c.IsHeadOffice }).ToListAsync(cancellationToken);
+        var canExtend = _scope.HasPermission(Permissions.MasterData.SupplierManage) && await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
+        var rows = companies.Select(c => links.TryGetValue(c.Id, out var l)
+                ? new SupplierExtensionRow(c.Id, c.Code, c.Name, c.IsHeadOffice, true, l.IsActive, l.LocalCode, l.StartDate, l.Id)
+                : new SupplierExtensionRow(c.Id, c.Code, c.Name, c.IsHeadOffice, false, false, null, null, null))
+            .ToList();
+        return new SupplierExtensionsDto(supplierId, canExtend, rows);
+    }
+
+    /// <inheritdoc />
+    public async Task<SupplierExtensionsDto> SetExtensionsAsync(Guid supplierId, SetSupplierExtensionsRequest request, CancellationToken cancellationToken)
+    {
+        // Mở rộng NCC cho công ty khác là việc của danh mục dùng chung: chỉ ở tổng công ty, quyền quản lý NCC tại tổng công ty (design.md 5.9).
+        await HeadOffice.RequireAsync(_db, _scope, "mở rộng nhà cung cấp cho công ty", cancellationToken);
+        _scope.EnsurePermission(Permissions.MasterData.SupplierManage);
+        var supplier = await _db.Suppliers.AsNoTracking().SingleOrDefaultAsync(s => s.Id == supplierId, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy nhà cung cấp.");
+        var companyIds = request.CompanyIds.Distinct().ToList();
+        // Không tin danh sách client gửi: mọi công ty phải có thật và đang dùng (CLAUDE.md mục 4).
+        var valid = await _db.Companies.AsNoTracking().Where(c => companyIds.Contains(c.Id) && c.IsActive).Select(c => c.Id).ToListAsync(cancellationToken);
+        if (valid.Count != companyIds.Count)
+            throw new BusinessRuleException("Có công ty không tồn tại hoặc đã ngừng dùng – tải lại form rồi chọn lại.");
+
+        var links = await _db.SupplierCompanies.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .Where(x => x.SupplierId == supplierId && companyIds.Contains(x.CompanyId)).ToDictionaryAsync(x => x.CompanyId, cancellationToken);
+        foreach (var companyId in companyIds)
+        {
+            if (links.TryGetValue(companyId, out var link))
+            {
+                // Mã tại công ty và ngày bắt đầu là dữ liệu công ty thành viên đã khai – chỉ đổi trạng thái, ngày chỉ điền khi còn trống.
+                if (link.IsActive != request.IsActive)
+                    link.Update(supplier, link.LocalCode, link.StartDate ?? (request.IsActive ? request.StartDate : null), request.IsActive);
+            }
+            else if (request.IsActive)
+            {
+                // Mã tại công ty để trống: công ty thành viên tự điền theo phần mềm kế toán của mình (tab "Áp dụng tại …").
+                _db.SupplierCompanies.Add(SupplierCompany.Apply(supplier, companyId, null, request.StartDate));
+            }
+        }
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetExtensionsAsync(supplierId, cancellationToken);
     }
 
     /// <inheritdoc />

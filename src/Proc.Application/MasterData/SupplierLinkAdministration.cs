@@ -18,6 +18,32 @@ public sealed record SupplierCompanyDto(
 /// <param name="IsActive">Đang giao dịch.</param>
 public sealed record SaveSupplierCompanyRequest(string? LocalCode, DateOnly? StartDate, bool IsActive);
 
+/// <summary>NCC mở rộng cho một công ty (một dòng trong bảng "Mở rộng cho công ty" của form NCC – design.md mục 5.9).</summary>
+/// <param name="CompanyId">Công ty.</param>
+/// <param name="CompanyCode">Mã công ty.</param>
+/// <param name="CompanyName">Tên công ty.</param>
+/// <param name="IsHeadOffice">Là tổng công ty.</param>
+/// <param name="IsApplied">Đã có dòng áp dụng (đã từng mở rộng hoặc công ty tự khai báo).</param>
+/// <param name="IsActive">Đang giao dịch.</param>
+/// <param name="LocalCode">Mã NCC tại công ty.</param>
+/// <param name="StartDate">Ngày bắt đầu giao dịch.</param>
+/// <param name="Id">Khóa dòng áp dụng – để F1 xem lịch sử; null khi chưa mở rộng.</param>
+public sealed record SupplierExtensionRow(
+    Guid CompanyId, string CompanyCode, string CompanyName, bool IsHeadOffice, bool IsApplied, bool IsActive, string? LocalCode,
+    DateOnly? StartDate, Guid? Id);
+
+/// <summary>NCC đang mở rộng cho những công ty nào.</summary>
+/// <param name="SupplierId">NCC.</param>
+/// <param name="CanExtend">Người xem mở rộng/ngừng được (đang làm việc ở tổng công ty và có quyền quản lý NCC).</param>
+/// <param name="Companies">Mọi công ty đang dùng, tổng công ty trước rồi theo mã.</param>
+public sealed record SupplierExtensionsDto(Guid SupplierId, bool CanExtend, IReadOnlyList<SupplierExtensionRow> Companies);
+
+/// <summary>Mở rộng (hoặc ngừng) NCC cho nhiều công ty cùng lúc.</summary>
+/// <param name="CompanyIds">Công ty chọn (một, vài hoặc tất cả).</param>
+/// <param name="IsActive">true = mở rộng/cho giao dịch lại; false = ngừng giao dịch (vẫn giữ lịch sử).</param>
+/// <param name="StartDate">Ngày bắt đầu giao dịch cho công ty chưa có ngày (không ghi đè ngày công ty đã khai).</param>
+public sealed record SetSupplierExtensionsRequest(IReadOnlyList<Guid> CompanyIds, bool IsActive, DateOnly? StartDate);
+
 /// <summary>Một dòng NCC – sản phẩm.</summary>
 /// <param name="Id">Id dòng.</param>
 /// <param name="SupplierId">NCC.</param>
@@ -78,6 +104,29 @@ public interface ISupplierLinkAdministration
     /// <exception cref="Domain.Common.BusinessRuleException">Khi NCC ở danh sách đen, trùng mã tại công ty.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có NCC.</exception>
     Task<SupplierCompanyDto> SaveCompanyLinkAsync(Guid supplierId, SaveSupplierCompanyRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// NCC đang mở rộng cho những công ty nào (design.md mục 5.9). Ngoại lệ filter công ty: danh mục NCC dùng chung nên mọi người có quyền
+    /// xem NCC đều thấy NCC đang mua ở công ty nào (người dùng chốt 07/11/2026, design.md mục 9.2).
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Mỗi công ty đang dùng một dòng.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có NCC.</exception>
+    Task<SupplierExtensionsDto> GetExtensionsAsync(Guid supplierId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Mở rộng hoặc ngừng NCC cho các công ty chọn – chỉ ở tổng công ty, quyền quản lý NCC tại tổng công ty (design.md mục 5.9).
+    /// Chưa có dòng thì tạo (mã tại công ty để trống); có rồi thì chỉ đổi trạng thái giao dịch, giữ mã và ngày của công ty.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="request">Công ty chọn và trạng thái.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Tình trạng mở rộng sau khi lưu.</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không làm việc ở tổng công ty.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi NCC ở danh sách đen, công ty không có hoặc đã ngừng dùng.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có NCC.</exception>
+    Task<SupplierExtensionsDto> SetExtensionsAsync(Guid supplierId, SetSupplierExtensionsRequest request, CancellationToken cancellationToken);
 
     /// <summary>Sản phẩm/dịch vụ NCC bán (trong phạm vi nhóm hàng người xem).</summary>
     /// <param name="supplierId">NCC.</param>

@@ -91,7 +91,7 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
 
   // Áp dụng tại công ty đang làm việc (TCT), lưu riêng trong tab.
   await drawer.getByRole('tab', { name: 'Áp dụng tại TCT' }).click()
-  await drawer.getByLabel('Mã NCC tại công ty').fill(`331${supplierCode}`.slice(0, 20))
+  await drawer.getByRole('textbox', { name: 'Mã NCC tại công ty' }).fill(`331${supplierCode}`.slice(0, 20))
   await drawer.getByRole('button', { name: 'Lưu áp dụng' }).click()
   await expect(page.locator('.ant-message')).toContainText('Đã lưu áp dụng tại TCT.')
   await drawer.getByRole('button', { name: 'Đóng' }).click()
@@ -136,4 +136,35 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   await page.locator('.data-grid-row', { hasText: itemCode }).dblclick()
   await drawer.getByRole('tab', { name: 'Nhà cung cấp' }).click()
   await expect(drawer.getByRole('tabpanel').locator('.data-grid-row', { hasText: supplierCode })).toContainText('✓')
+})
+
+test('Mở rộng NCC cho công ty: ở tổng công ty chọn tất cả công ty, bảng hiện từng công ty đang giao dịch', async ({ page, request }) => {
+  const api = await adminApi(request)
+  const groups = await api.get<{ id: string; code: string }[]>('/api/supplier-groups')
+  const supplier = await api.post<{ id: string; code: string }>('/api/suppliers', {
+    code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC mở rộng ${unique('M')}`, shortName: null,
+    isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
+    rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
+  })
+  await approveSupplier(request, supplier.id)
+
+  await loginViaApi(page)
+  await page.goto('/')
+  const drawer = page.locator('.detail-drawer')
+  await openByCommand(page, 'SUP')
+  await page.getByPlaceholder(/Gõ từ khóa/).fill(supplier.code)
+  await page.locator('.data-grid-row', { hasText: supplier.code }).dblclick()
+  await drawer.getByRole('tab', { name: 'Mở rộng cho công ty' }).click()
+  const grid = drawer.getByTestId('supplier-extensions')
+  await expect(grid.locator('.data-grid-row').first()).toContainText('Chưa mở rộng')
+  const companyCount = await grid.locator('.data-grid-row').count()
+
+  await drawer.getByRole('button', { name: 'Mở rộng cho công ty…' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Mở rộng NCC cho công ty' })
+  await dialog.getByRole('checkbox', { name: 'Chọn tất cả' }).check()
+  await dialog.screenshot({ path: 'e2e/screenshots/supplier-extend-dialog.png' })
+  await dialog.getByRole('button', { name: 'Mở rộng' }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã mở rộng NCC cho')
+  await expect(grid.locator('.data-grid-row', { hasText: 'Đang giao dịch' })).toHaveCount(companyCount)
+  await page.screenshot({ path: 'e2e/screenshots/supplier-extensions-tab.png' })
 })
