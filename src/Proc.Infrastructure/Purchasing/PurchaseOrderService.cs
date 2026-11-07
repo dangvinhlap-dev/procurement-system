@@ -392,6 +392,23 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 .ToListAsync(cancellationToken))
             .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.MaxBy(x => x.ValidFrom)!.Id);
         order.ApplySoleSources(line => soleSources.TryGetValue(line.ItemId, out var id) ? id : null);
+
+        // Mã hàng theo NCC chép vào dòng cùng lúc tính giá (lưu, gửi duyệt) – phiếu in gửi NCC ghi mã NCC hiểu (design.md mục 5.9).
+        var supplierCodes = await _db.SupplierItems.AsNoTracking()
+            .Where(x => x.SupplierId == order.SupplierId && itemIds.Contains(x.ItemId) && x.SupplierItemCode != null)
+            .ToDictionaryAsync(x => x.ItemId, x => x.SupplierItemCode, cancellationToken);
+        order.ApplySupplierItemCodes(line => supplierCodes.GetValueOrDefault(line.ItemId));
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<PoSupplierItemDto>> SupplierItemsAsync(Guid supplierId, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        // Filter nhóm hàng của SupplierItem giữ nguyên: người lập chỉ thấy mặt hàng trong phạm vi của mình (CLAUDE.md mục 4).
+        return await _db.SupplierItems.AsNoTracking()
+            .Where(x => x.SupplierId == supplierId)
+            .Select(x => new PoSupplierItemDto(x.ItemId, x.SupplierItemCode, x.PurchaseUomId))
+            .ToListAsync(cancellationToken);
     }
 
     /// <summary>Dòng phiếu duyệt NCC và giá tháng đã duyệt áp cho công ty của PO (design.md mục 18.25).</summary>
@@ -663,7 +680,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqNos.GetValueOrDefault(rl) : null,
                 l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract,
                 l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null,
-                l.MonthlyApprovalLineId is { } ml ? monthlyNos.GetValueOrDefault(ml) : null, l.IsOffMonthlyList, CeilingOf(l), IsOverCeiling(l));
+                l.MonthlyApprovalLineId is { } ml ? monthlyNos.GetValueOrDefault(ml) : null, l.IsOffMonthlyList, CeilingOf(l), IsOverCeiling(l),
+                l.SupplierItemCode);
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;

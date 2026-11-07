@@ -1,11 +1,12 @@
 # Tiến độ dự án
 
-Cập nhật: 07/11/2026 (phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 07/11/2026 (mã hàng theo NCC + ĐVT mua trên PO; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
 | Phần | Nội dung | Merge |
 | --- | --- | --- |
+| NCC-SP (07/11/2026) | **Mã hàng theo NCC và ĐVT mua có tác dụng** (người dùng chọn phương án A): hộp thoại "Thêm mặt hàng NCC bán" sửa lỗi gõ `*` không liệt kê mặt hàng, ĐVT mua tự điền ĐVT cơ sở, nhãn + chú thích rõ; PO chọn mặt hàng tự lấy ĐVT mua của NCC, cột "Mã hàng NCC", máy chủ chép mã vào dòng PO khi lưu/gửi (PO đã gửi giữ mã), phiếu in PO ghi mã NCC; API `/api/purchase-orders/supplier-items`; migration `V0_20_0_MaHangNccTrenPo` (chưa phát hành); design.md 5.9. Kiểm tra: `dotnet build` 0 cảnh báo, `dotnet test` 546/546, Playwright 100/100, `npm run build`, `tsc`, `oxlint` qua. Còn chờ người dùng quyết: ngành hàng NCC chọn từ danh mục Nhóm hàng hay danh mục riêng; gán sản phẩm có cần duyệt không | feature/ma-hang-dvt-ncc |
 | Rà soát R1–R8 (06/11/2026) | Ghi sổ đồng thời (khóa dòng), chống ghi đè (xmin + If-Match → 409), mỗi cấp duyệt một người, tham số nhập mua theo PO, RTV trừ SL đã nhận PO, đóng phần còn lại PR/PO, RFQ hạn nộp/gia hạn/giải trình ít báo giá, lý do hủy phiếu đã duyệt, build 0 cảnh báo; 4 migration 0.19.0 (`KhoaSuaTrung` không SQL, `NhapMuaTheoPo`, `DongPhanConLai`, `RfqHanNopLyDoHuy`) – chưa phát hành. Kiểm tra trên `main`: `dotnet build` 0 cảnh báo, `dotnet test` 545/545, Playwright 100/100, `npm run build`, `tsc`, `oxlint` qua | 21e0232 … f176790 |
 | Giai đoạn 0 | Khung giao diện, đăng nhập + công ty làm việc, phân quyền + phạm vi, người dùng/vai trò, nhật ký, đánh số chứng từ, Docker | 2ef17fa … 1fb997f |
 | Giai đoạn 1 | Danh mục công ty/kho, hàng hóa, NCC, NCC–công ty–sản phẩm, nhập/xuất Excel | 8d80f0f … 31718fb |

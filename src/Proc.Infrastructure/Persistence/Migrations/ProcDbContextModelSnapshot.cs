@@ -3901,6 +3901,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("SourceRfqLineId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("SupplierItemCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(19, 6)
                         .HasColumnType("numeric(19,6)");

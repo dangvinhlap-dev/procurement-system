@@ -333,6 +333,8 @@ export interface PurchaseOrderLine {
   ceilingPrice: number | null
   /** Giá ròng (sau chiết khấu) vượt giá trần – chỉ cảnh báo, không chặn. */
   isOverCeiling: boolean
+  /** Mã hàng theo NCC chép từ NCC – sản phẩm lúc lưu/gửi (design.md mục 5.9); null = NCC chưa khai báo. */
+  supplierItemCode: string | null
 }
 
 /**
