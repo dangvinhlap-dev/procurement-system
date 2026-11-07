@@ -3,6 +3,61 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.19.0] - 2026-11-07
+
+### Thêm mới
+- **Đợt QĐ Ban cung ứng (design.md 18.25), lát G1–G4c:**
+  - **NCC đủ điều kiện theo mặt hàng** (màn hình SUPCOV): đếm NCC Đã duyệt theo NCC – sản phẩm, mặc định tối thiểu 3, miễn khi có NCC
+    độc quyền còn tác dụng.
+  - **Phiếu duyệt NCC và giá tháng** (màn hình GTH; quyền `Pricing.MonthlyApproval.View/Manage/Approve`): mỗi mặt hàng × tháng × công ty
+    áp dụng một phiếu – NCC chính/dự phòng (phải Đã duyệt), giá, hạn mức số lượng tháng (gộp các công ty) để đạt bậc chiết khấu; duyệt
+    theo quy trình loại GTH, có đính kèm, tra cứu chứng từ, Việc cần làm.
+  - **PO kiểm tra theo phiếu tháng**: nguồn giá "Duyệt tháng" đứng đầu; NCC ngoài danh sách tháng hoặc dòng không có giá đã duyệt → thêm
+    chặng duyệt **POL** "Mua ngoài danh sách/giá đã duyệt"; vượt hạn mức số lượng tháng thì chặn gửi duyệt.
+  - **Phiếu khảo sát giá thị trường** (màn hình KSG; quyền `Pricing.PriceBank.View/Manage`) – ngân hàng giá.
+  - **Giá chuẩn / giá trần / giá mục tiêu** trên dòng phiếu GTH, cột Giá thị trường (KSG đã chốt gần nhất). PO vượt giá trần (giá ròng sau
+    chiết khấu, trước VAT) **chỉ cảnh báo vàng, không chặn**.
+  - **Báo cáo tiết kiệm so giá chuẩn** (màn hình SAVSTD): tiết kiệm = giá trị chuẩn − thành tiền, khoảng cách mục tiêu, số dòng vượt trần,
+    tỷ lệ giá trị mua có giá chuẩn (PO VND đã duyệt).
+- **Đóng phần còn lại** trên PO nhận thiếu và PR đặt một phần (bắt buộc lý do): PO thôi chờ hàng, PR thôi chờ đặt; ngân sách chỉ tính phần
+  đã nhận/đã đặt. Trạng thái hiện "Đã đóng phần còn lại".
+- **Gia hạn nhận báo giá RFQ** (nút "Gia hạn nhận báo giá", bắt buộc lý do, hiện trên phiếu).
+- **Tham số "Nhập mua bắt buộc theo đơn mua hàng"** (`RECEIPT_PO_REQUIRED`, màn hình SEC, mặc định Tắt): bật thì phiếu nhập mua phải theo PO.
+
+### Thay đổi
+- **Mỗi cấp duyệt một người khác nhau trong cùng một lượt** (cả chặng ngoại lệ POX/POL/POB): người đã duyệt một cấp không duyệt tiếp cấp sau.
+- **RFQ quá hạn nộp không nhập/sửa báo giá** được nữa (phải gia hạn). Chọn thầu khi số NCC chào giá ít hơn tối thiểu **phải giải trình**
+  (trừ khi đã giải trình mời thiếu NCC và mọi NCC mời đều chào giá); đếm theo NCC thực chào giá thay vì NCC được mời.
+- **Hủy PR/PO đã duyệt bắt buộc lý do** (hiện trên phiếu).
+- **Trả NCC trừ vào số đã nhận của PO**: PO đã nhận đủ mà trả lại thì mở lại để NCC giao bù.
+
+### Sửa lỗi
+- Bấm Ghi sổ / Bỏ ghi sổ / Hủy / Xác nhận nhập nội bộ (ICR) **đồng thời** có thể ghi sổ hai lần (tồn kho gấp đôi); hai phiếu nhập cùng PO
+  hoặc hai PO cùng dòng PR gửi cùng lúc có thể vượt số lượng – nay khóa dòng, chỉ một lệnh được thực hiện.
+- Hai người cùng sửa một phiếu/danh mục: người lưu sau ghi đè mất thay đổi của người trước – nay báo "Dữ liệu vừa được người khác thay đổi
+  – hãy tải lại trang" (409). Hai người duyệt cùng lúc chỉ một người được ghi.
+- Dọn toàn bộ cảnh báo build (chú thích XML, nullable).
+
+### Thay đổi CSDL
+- 8 migration mới (54 → 62): `V0_19_0_PhieuDuyetNccGiaThang`, `V0_19_0_PoTheoPhieuThang`, `V0_19_0_KhaoSatGiaThiTruong`,
+  `V0_19_0_GiaChuanTranMucTieu`, `V0_19_0_KhoaSuaTrung` (không sinh SQL – dùng cột hệ thống `xmin`), `V0_19_0_NhapMuaTheoPo`,
+  `V0_19_0_DongPhanConLai`, `V0_19_0_RfqHanNopLyDoHuy`. Chỉ thêm bảng/cột, không xóa dữ liệu. Script: `db/scripts/0.19.0.sql` (đã chạy thử
+  3 lần trên bản sao CSDL test 0.18.0, không lỗi, dữ liệu giữ nguyên).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.19.0.sql`, sau đó thay gói ứng dụng.
+  Từ bản cũ hơn 0.18.0: chạy lần lượt các script trước đó.
+- **Cấu hình chặng POL ở APRL trước khi dùng**: từ bản này mọi PO có dòng không có giá đã duyệt (không theo phiếu tháng) đều thêm một
+  lượt duyệt POL.
+- **Công ty chưa gán vai trò riêng cho chặng POX/POL/POB cần ít nhất 2 người có quyền duyệt PO** (mỗi cấp một người khác nhau).
+- Gán quyền mới cho vai trò đang dùng: `Pricing.MonthlyApproval.View/Manage/Approve`, `Pricing.PriceBank.View/Manage` (vai trò mẫu
+  DAMPHAN, TRUONGBANCUVT, HOIDONG đã có sẵn khi tạo mới).
+- RFQ đang nhận báo giá mà đã quá hạn nộp: phải gia hạn mới nhập tiếp được báo giá.
+
+### Cách quay lại bản trước
+- Khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.18.0`; hoặc gỡ migration về `20261105063638_V0_18_0_BatBuocHoSoTrinh`
+  (`Down()` xóa các bảng phiếu duyệt tháng, khảo sát giá và các cột mới – **mất phiếu GTH/KSG đã lập**, giá chuẩn/trần, lý do đóng/hủy/gia hạn).
+
 ## [0.18.0] - 2026-11-06
 
 ### Thêm mới
