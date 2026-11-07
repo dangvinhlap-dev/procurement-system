@@ -372,7 +372,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   **Bản test cổng 5007 nâng tại chỗ lên 0.19.0 (07/11/2026)**: `app` = 0.19.0, `app-0.18.0` = bản cũ, sao lưu trước nâng
   `D:\project\procurement_kiemtra_0150_truoc_0.19.0.dump`, PID trong `pid.txt`; đã gán quyền `Pricing.MonthlyApproval.*`/`Pricing.PriceBank.*`
   qua API cho TOANQUYEN (đủ 5), TRUONGBANCUVT/HOIDONG (xem + duyệt GTH, xem KSG), DAMPHAN (lập GTH/KSG), VANHANH (xem). Chưa khai POL ở APRL:
-  PO không có giá đã duyệt (mọi PO cũ chưa có phiếu GTH) thêm chặng POL – người có quyền duyệt PO, khác người đã duyệt cấp trước.
+  PO có dòng không có giá đã duyệt (nguồn "Ngoài hợp đồng") hoặc NCC ngoài danh sách GTH thêm chặng POL – người có quyền duyệt PO, khác
+  người đã duyệt cấp trước (CSDL test chưa có bảng giá nào nên PO trước TC14 đều có POL).
+- **Kịch bản test 0.19.0 (07/11/2026)**: `docs/DuLieuThu_KichBanTest_0.19.0.docx` – 66 kịch bản: TC01–TC38 + N01–N16 (sửa theo POL, mỗi cấp
+  một người, RFQ hạn nộp) và nhóm I M01–M12 (KSG → GTH → PO theo phiếu tháng → vượt trần/hạn mức → SAVSTD trên mặt hàng VPP-00004; SUPCOV;
+  R1–R7). Dựng bằng script `kb019.py` (scratchpad, không commit) trên khung file 0.14.0.
 - **Tài liệu trình bày (06/11/2026)**: `docs/TrinhBay_HeThong_0.18.0.pptx` – 50 slide: quy trình, quy tắc từng phân hệ/form (theo design.md),
   từ viết tắt, 70 mã màn hình, tài khoản test và 3 kịch bản demo trên bản test 5007. Dựng bằng pptxgenjs (script ở scratchpad, không commit).
 - Ghi nhớ cho **C6** (đối chiếu PO – nhận – hóa đơn) / **F3**: chặn lùi ngày PO khẩn (C2a) không phải kiểm soát chống hợp thức hóa; PO thường
