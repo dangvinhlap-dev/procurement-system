@@ -1786,7 +1786,7 @@ AuditLog vẫn giữ).
 Không có migration.
 
 **G5 – Kế hoạch nhu cầu** (07/11/2026, chia lát): G5a phiếu kế hoạch nhu cầu của từng công ty; G5b tổng hợp nhu cầu gộp ở tổng công ty
-(mặt hàng × tháng/quý/năm, cột từng công ty + tổng, ĐVT cơ sở); G5c lấy SL kế hoạch làm SL dự kiến cho RFQ / hợp đồng nguyên tắc.
+(mặt hàng × tháng/quý/năm, cột từng công ty + tổng, ĐVT cơ sở); G5c lấy SL kế hoạch làm SL dự kiến cho RFQ / hợp đồng nguyên tắc. G5a–G5c xong 07/11/2026.
 
 **G5a – Phiếu kế hoạch nhu cầu** (màn hình **KHN**, Mua hàng → Kế hoạch nhu cầu, `/api/demand-plans`, số loại **KHN**, ví dụ
 KHN-BHA-2611-0001 theo ngày lập):
@@ -1813,6 +1813,17 @@ bảng, mất phiếu kế hoạch nhu cầu, AuditLog vẫn giữ).
 | **Toàn tập đoàn** (gộp mọi công ty đang hoạt động, cộng công ty đã ngừng còn kế hoạch đã chốt) cần quyền riêng **`Purchase.DemandPlan.ViewAllCompanies`** "Xem kế hoạch nhu cầu toàn tập đoàn" (người dùng yêu cầu 07/11/2026; vai trò mẫu TRUONGBANCUVT, DAMPHAN, KSNB) – có quyền thì ô "Toàn tập đoàn" bật sẵn; bỏ filter công ty như các báo cáo `*.ViewAllCompanies` (mục 9.2), filter nhóm hàng giữ. Không chọn toàn tập đoàn (hoặc không có quyền) thì chỉ công ty đang làm việc, kể cả ở tổng công ty. Xem cần `Purchase.DemandPlan.View` | Văn phòng Ban dự báo sản lượng gộp để thương lượng; xem nhu cầu công ty khác là quyền riêng, không ngầm theo việc làm ở tổng công ty |
 
 Không có migration (quyền mới tự có trong danh mục quyền).
+
+**G5c – Lấy SL kế hoạch làm SL dự kiến RFQ / hợp đồng nguyên tắc** (`POST /api/demand-plans/quantities`, 07/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Nút **"Lấy SL kế hoạch"** trên lưới dòng **RFQ** (SL mời thầu) và **hợp đồng nguyên tắc** (SL dự kiến) khi phiếu còn sửa được, cần quyền `Purchase.DemandPlan.View`; dùng các dòng đã chọn mặt hàng và ĐVT | Quyết định: kế hoạch nhu cầu là cơ sở thương lượng sản lượng gộp – không gõ lại số liệu |
+| Hộp thoại: **Từ tháng – Đến tháng** (đủ tháng, không chia theo ngày; tối đa 36 tháng, qua nhiều năm được), **Toàn tập đoàn** (chỉ khi có quyền `Purchase.DemandPlan.ViewAllCompanies` như G5b; không thì công ty đang làm việc). Mặc định: hợp đồng = tháng của Hiệu lực từ → Hiệu lực đến, chỉ công ty đang làm việc (hợp đồng của một công ty – mục 18.7); RFQ = 12 tháng kể từ tháng sau ngày lập, toàn tập đoàn khi đang ở tổng công ty | Hợp đồng có thời hạn rõ; RFQ của Văn phòng Ban thường gom nhu cầu cả tập đoàn cho kỳ áp dụng kết quả thầu |
+| SL = Σ (SL tháng × hệ số ĐVT phiếu, 4 số lẻ) các tháng trong khoảng của phiếu **Đã chốt**, rồi ÷ hệ số ĐVT dòng (4 số lẻ). Ví dụ 24 cái (TCT) + 2 thùng (BHA, 12 cái/thùng) = 48 cái → dòng theo thùng 4 thùng. ĐVT dòng không quy đổi được hoặc không có kế hoạch → "Không có kế hoạch", không chọn được | Cùng cách quy đổi với tổng hợp G5b |
+| Bảng xem trước: dòng, mặt hàng, ĐVT, SL hiện tại, SL kế hoạch, theo công ty (SL + số phiếu); chọn sẵn các dòng có kế hoạch khác SL hiện tại. **Áp dụng** chỉ chép SL vào lưới – người dùng vẫn lưu phiếu (máy chủ kiểm tra như nhập tay, ví dụ SL cam kết tối thiểu ≤ SL dự kiến) | Người lập soát lại trước khi lưu; không đổi phiếu ngầm |
+
+Không có migration.
 
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
