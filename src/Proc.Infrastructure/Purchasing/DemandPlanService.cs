@@ -260,6 +260,8 @@ public sealed class DemandPlanService : IDemandPlanService
                     l.Qty07, l.Qty08, l.Qty09, l.Qty10, l.Qty11, l.Qty12 })
             .ToListAsync(cancellationToken);
         var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+        var uomIds = request.Lines.Select(l => l.UomId).Distinct().ToList();
+        var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
 
         // SL cơ sở của mỗi dòng phiếu = Σ (SL tháng × hệ số ĐVT phiếu, 4 số lẻ) các tháng nằm trong khoảng – đủ tháng, không chia theo ngày.
         // Ví dụ khoảng 07/2027 – 06/2028 cộng tháng 7–12 của phiếu năm 2027 và tháng 1–6 của phiếu năm 2028.
@@ -278,10 +280,13 @@ public sealed class DemandPlanService : IDemandPlanService
         return request.Lines.Select(line =>
             {
                 // Quy SL cơ sở về ĐVT dòng: ÷ hệ số, 4 số lẻ (ví dụ 60 cái, dòng theo thùng 12 cái → 5 thùng). ĐVT không thuộc mặt hàng thì không quy.
-                var factor = items.GetValueOrDefault(line.ItemId) is { } item
-                    ? line.UomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == line.UomId)?.Factor
-                    : null;
-                if (factor is not { } f || f <= 0) return new PlannedQuantityDto(line.ItemId, line.UomId, null, []);
+                var item = items.GetValueOrDefault(line.ItemId);
+                var factor = item is null ? null
+                    : line.UomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == line.UomId)?.Factor;
+                PlannedQuantityDto Result(decimal? qty, IReadOnlyList<PlannedQuantityCompanyDto> companies) => new(
+                    line.ItemId, item?.Code ?? string.Empty, item?.Name ?? string.Empty, line.UomId, uoms.GetValueOrDefault(line.UomId) ?? string.Empty,
+                    qty, companies);
+                if (factor is not { } f || f <= 0) return Result(null, []);
                 var companies = baseByLine.Where(l => l.ItemId == line.ItemId)
                     .GroupBy(l => l.CompanyCode)
                     .OrderBy(g => g.Key, StringComparer.Ordinal)
@@ -289,8 +294,7 @@ public sealed class DemandPlanService : IDemandPlanService
                         g.Key, decimal.Round(g.Sum(l => l.Qty) / f, 4, MidpointRounding.AwayFromZero), g.Select(l => l.No).Distinct().Order().ToList()))
                     .ToList();
                 var total = baseByLine.Where(l => l.ItemId == line.ItemId).Sum(l => l.Qty);
-                return new PlannedQuantityDto(
-                    line.ItemId, line.UomId, total > 0 ? decimal.Round(total / f, 4, MidpointRounding.AwayFromZero) : null, companies);
+                return Result(total > 0 ? decimal.Round(total / f, 4, MidpointRounding.AwayFromZero) : null, companies);
             })
             .ToList();
     }

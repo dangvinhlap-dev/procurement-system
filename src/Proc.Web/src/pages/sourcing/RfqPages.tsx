@@ -46,6 +46,8 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
+import { PlannedQuantityDialog } from '../purchasing/PlannedQuantityDialog'
+import { toPlannedLines } from '../purchasing/plannedLines'
 import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from '../purchasing/useApprovalCommands'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
@@ -129,7 +131,7 @@ export function RfqPage() {
   const isNew = id === 'moi'
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
-  const { hasPermission } = useAuth()
+  const { hasPermission, workingCompany } = useAuth()
   const [form] = Form.useForm<FormValues>()
   const rfq = useRfq(isNew ? null : id)
   const sourcingId = isNew ? params.get('sourcingId') : null
@@ -139,6 +141,7 @@ export function RfqPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [picking, setPicking] = useState(false)
+  const [planning, setPlanning] = useState(false)
   const [quoting, setQuoting] = useState<RfqSupplier | null>(null)
   const [awardEdits, setAwardEdits] = useState<AwardDraft>({})
   const addRef = useRef<(() => void) | null>(null)
@@ -149,6 +152,7 @@ export function RfqPage() {
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
+  const rfqDate = Form.useWatch('date', form) as Dayjs | undefined
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
@@ -761,6 +765,11 @@ export function RfqPage() {
                 <Button icon={<FileAddOutlined />} onClick={() => setPicking(true)}>
                   Lấy dòng từ PR đã duyệt
                 </Button>
+                {hasPermission(Permission.DemandPlanView) && (
+                  <Button icon={<CalendarOutlined />} onClick={() => setPlanning(true)} disabled={toPlannedLines(lines, (l) => l.qty).length === 0}>
+                    Lấy SL kế hoạch
+                  </Button>
+                )}
               </Space>
             )}
             <LineGrid name="lines" auditEntity="RfqLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1, sourcePrLineId: null })} />
@@ -769,6 +778,19 @@ export function RfqPage() {
         extraTabs={[...extraTabs, attachmentTab]}
       />
       {picking && <RequestLinePicker onCancel={() => setPicking(false)} onPick={addFromRequests} />}
+      {planning && (
+        // RFQ thường lập ở tổng công ty cho nhu cầu gộp (Văn phòng Ban) nên ở tổng công ty mặc định toàn tập đoàn; khoảng mặc định 12 tháng
+        // kể từ tháng sau ngày lập – kỳ mà kết quả thầu sẽ áp dụng.
+        <PlannedQuantityDialog
+          title="Lấy SL kế hoạch làm SL mời thầu"
+          lines={toPlannedLines(lines, (l) => l.qty)}
+          defaultFrom={(rfqDate ?? dayjs()).add(1, 'month')}
+          defaultTo={(rfqDate ?? dayjs()).add(12, 'month')}
+          defaultAllCompanies={workingCompany?.isHeadOffice === true}
+          onApply={(qty) => qty.forEach((value, index) => form.setFieldValue(['lines', index, 'qty'], value))}
+          onClose={() => setPlanning(false)}
+        />
+      )}
       {quoting && doc && <QuotationDialog rfq={doc} supplier={quoting} onClose={() => setQuoting(null)} />}
     </>
   )

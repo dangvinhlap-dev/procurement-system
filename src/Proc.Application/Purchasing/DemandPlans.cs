@@ -180,10 +180,14 @@ public sealed record PlannedQuantityCompanyDto(string CompanyCode, decimal Qty, 
 
 /// <summary>SL kế hoạch của một dòng.</summary>
 /// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng (rỗng khi mặt hàng ngoài phạm vi nhóm hàng).</param>
+/// <param name="ItemName">Tên hàng.</param>
 /// <param name="UomId">ĐVT dòng.</param>
+/// <param name="UomCode">Mã ĐVT dòng.</param>
 /// <param name="Qty">Tổng SL kế hoạch theo ĐVT dòng (4 số lẻ); null khi không có kế hoạch đã chốt trong khoảng, hoặc ĐVT không quy đổi được.</param>
 /// <param name="Companies">Chi tiết từng công ty có kế hoạch.</param>
-public sealed record PlannedQuantityDto(Guid ItemId, Guid UomId, decimal? Qty, IReadOnlyList<PlannedQuantityCompanyDto> Companies);
+public sealed record PlannedQuantityDto(
+    Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal? Qty, IReadOnlyList<PlannedQuantityCompanyDto> Companies);
 
 /// <summary>Kiểm tra yêu cầu lấy SL kế hoạch.</summary>
 public sealed class PlannedQuantityRequestValidator : AbstractValidator<PlannedQuantityRequest>

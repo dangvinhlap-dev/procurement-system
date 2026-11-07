@@ -254,7 +254,8 @@ body.erp-col-resizing {
   border-right: 1px solid var(--erp-grid-line);
   border-bottom: 1px solid var(--erp-grid-line);
 }
-/* Cột số (căn phải) dùng phông đơn cách (docs/ui-style.md mục 3). */
+/* Cột số (căn phải) dùng phông đơn cách (docs/ui-style.md mục 3) – cả bảng chọn dòng trong hộp thoại (Lấy dòng từ PR, Lấy SL kế hoạch). */
+.ant-modal .ant-table-tbody .ant-table-cell[style*='right'],
 .data-grid .ant-table-tbody .ant-table-cell[style*='right'],
 .data-grid .ant-table-tbody-virtual .ant-table-cell[style*='right'] {
   font-family: var(--erp-font-mono);

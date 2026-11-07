@@ -198,3 +198,46 @@ export function useDemandSummary(year: number, categoryId: string | undefined, a
     queryFn: () => apiFetch<DemandSummary>(`${BASE}/summary?${params}`),
   })
 }
+
+/** Kế hoạch của một công ty cho một dòng (lát G5c). */
+export interface PlannedQuantityCompany {
+  companyCode: string
+  /** SL theo ĐVT dòng. */
+  qty: number
+  planNos: string[]
+}
+
+/** SL kế hoạch của một dòng RFQ / hợp đồng, theo ĐVT dòng. */
+export interface PlannedQuantity {
+  itemId: string
+  itemCode: string
+  itemName: string
+  uomId: string
+  uomCode: string
+  /** null = không có kế hoạch đã chốt trong khoảng (hoặc ĐVT không quy đổi được). */
+  qty: number | null
+  companies: PlannedQuantityCompany[]
+}
+
+/** Điều kiện lấy SL kế hoạch. */
+export interface PlannedQuantityQuery {
+  /** Tháng đầu, yyyy-MM-01. */
+  fromMonth: string
+  /** Tháng cuối, yyyy-MM-01. */
+  toMonth: string
+  allCompanies: boolean
+  lines: { itemId: string; uomId: string }[]
+}
+
+/**
+ * SL kế hoạch nhu cầu (phiếu Đã chốt) của các dòng trong khoảng tháng, quy về ĐVT dòng – design.md mục 18.25, lát G5c.
+ * @param query Điều kiện; null = chưa tải.
+ */
+export function usePlannedQuantities(query: PlannedQuantityQuery | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['demand-plans', companyId, 'quantities', query],
+    queryFn: () => apiFetch<PlannedQuantity[]>(`${BASE}/quantities`, { method: 'POST', body: query }),
+    enabled: query !== null && query.lines.length > 0,
+  })
+}
