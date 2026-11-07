@@ -177,4 +177,72 @@ public class SupplierLinkTests
         var rows = await limited.GetFromJsonAsync<List<SupplierItemDto>>($"/api/suppliers/{supplier.Id}/items", Ct);
         Assert.Equal([visibleItem.Code], rows!.Select(r => r.ItemCode));
     }
+
+    [Fact]
+    public async Task MoRongCongTy_TuTongCongTy_ChonNhieuCongTy_CongTyDuocMoRongDungNgay()
+    {
+        var (head, bha) = await AdminAsync();
+        var supplier = await NewSupplierAsync(head);
+        var bhaId = await _factory.GetCompanyIdAsync("BHA");
+        var headId = await _factory.GetCompanyIdAsync("TCT");
+
+        var before = await head.GetFromJsonAsync<SupplierExtensionsDto>($"/api/suppliers/{supplier.Id}/extensions", Ct);
+        Assert.True(before!.CanExtend);
+        Assert.All(before.Companies, c => Assert.False(c.IsApplied));
+        Assert.Contains(before.Companies, c => c.CompanyCode == "BHA");
+
+        var after = await ReadAsync<SupplierExtensionsDto>(await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/extensions",
+            new SetSupplierExtensionsRequest([bhaId, headId], true, new DateOnly(2026, 11, 7)), Ct));
+        var bhaRow = after.Companies.Single(c => c.CompanyCode == "BHA");
+        Assert.Equal((true, true, new DateOnly(2026, 11, 7)), (bhaRow.IsApplied, bhaRow.IsActive, bhaRow.StartDate));
+        Assert.True(after.Companies.Single(c => c.CompanyCode == "TCT").IsActive);
+
+        // Công ty được mở rộng thấy NCC trong danh sách đang mua – không cần tạo NCC mới (design.md mục 5.9).
+        var atBha = await bha.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?appliedOnly=true&search={supplier.Code}", Ct);
+        Assert.Single(atBha!.Items);
+        // Công ty thành viên xem được NCC đang mở rộng cho công ty nào, nhưng không mở rộng được.
+        var viewAtBha = await bha.GetFromJsonAsync<SupplierExtensionsDto>($"/api/suppliers/{supplier.Id}/extensions", Ct);
+        Assert.False(viewAtBha!.CanExtend);
+        Assert.True(viewAtBha.Companies.Single(c => c.CompanyCode == "BHA").IsActive);
+    }
+
+    [Fact]
+    public async Task MoRongCongTy_NgungRoiMoLai_GiuMaTaiCongTy()
+    {
+        var (head, bha) = await AdminAsync();
+        var supplier = await NewSupplierAsync(head);
+        var bhaId = await _factory.GetCompanyIdAsync("BHA");
+        var localCode = UniqueCode("331");
+        await ReadAsync<SupplierCompanyDto>(await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company",
+            new SaveSupplierCompanyRequest(localCode, new DateOnly(2026, 10, 1), true), Ct));
+
+        var stopped = await ReadAsync<SupplierExtensionsDto>(await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/extensions",
+            new SetSupplierExtensionsRequest([bhaId], false, null), Ct));
+        Assert.False(stopped.Companies.Single(c => c.CompanyCode == "BHA").IsActive);
+
+        var reopened = await ReadAsync<SupplierExtensionsDto>(await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/extensions",
+            new SetSupplierExtensionsRequest([bhaId], true, new DateOnly(2026, 11, 7)), Ct));
+        var row = reopened.Companies.Single(c => c.CompanyCode == "BHA");
+        // Mã tại công ty và ngày bắt đầu cũ là dữ liệu của công ty thành viên – mở lại không ghi đè.
+        Assert.Equal((true, localCode, new DateOnly(2026, 10, 1)), (row.IsActive, row.LocalCode, row.StartDate));
+    }
+
+    [Fact]
+    public async Task MoRongCongTy_NgoaiTongCongTy_HoacDanhSachDen_BiChan()
+    {
+        var (head, bha) = await AdminAsync();
+        var bhaId = await _factory.GetCompanyIdAsync("BHA");
+        var supplier = await NewSupplierAsync(head);
+
+        var fromMember = await bha.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/extensions", new SetSupplierExtensionsRequest([bhaId], true, null), Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, fromMember.StatusCode);
+
+        var black = await NewSupplierAsync(head, "Blacklisted", "Hàng giả");
+        var blacklisted = await head.PutAsJsonAsync($"/api/suppliers/{black.Id}/extensions", new SetSupplierExtensionsRequest([bhaId], true, null), Ct);
+        Assert.Contains("danh sách đen", await TitleAsync(blacklisted));
+
+        var unknown = await head.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/extensions",
+            new SetSupplierExtensionsRequest([Guid.NewGuid()], true, null), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+    }
 }

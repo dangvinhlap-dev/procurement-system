@@ -1,4 +1,4 @@
-import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Spin } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -9,10 +9,13 @@ import {
   useItemSearch,
   useItemSuppliers,
   useSaveSupplierCompanyLink,
+  useSetSupplierExtensions,
+  useSupplierExtensions,
   useSupplierCompanyLink,
   useSupplierItemMutations,
   useSupplierItems,
   useUoms,
+  type SupplierExtensionRow,
   type SupplierItemRow,
 } from '../../api/masterData'
 import { DataGrid } from '../../components/DataGrid/DataGrid'
@@ -110,6 +113,147 @@ export function SupplierCompanyTab({ supplierId }: { supplierId: string }) {
           </Button>
         )}
       </Form>
+    </Spin>
+  )
+}
+
+/** Tình trạng NCC tại một công ty – chữ đi kèm màu đèn (ui-style.md mục 2). */
+function extensionStatus(r: SupplierExtensionRow) {
+  if (r.isActive) return 'Đang giao dịch'
+  return r.isApplied ? 'Ngừng giao dịch' : 'Chưa mở rộng'
+}
+
+const extensionColumns: GridColumn<SupplierExtensionRow>[] = [
+  { key: 'code', title: 'Mã công ty', width: 80, value: (r) => r.companyCode },
+  { key: 'name', title: 'Tên công ty', width: 230, value: (r) => r.companyName },
+  {
+    key: 'status',
+    title: 'Tình trạng',
+    width: 120,
+    type: 'status',
+    value: extensionStatus,
+    tone: (r) => (r.isActive ? 'success' : r.isApplied ? 'warning' : 'neutral'),
+  },
+  { key: 'local', title: 'Mã NCC tại công ty', width: 120, value: (r) => r.localCode },
+  { key: 'start', title: 'Ngày bắt đầu', width: 90, type: 'date', value: (r) => r.startDate },
+]
+
+/**
+ * Tab "Mở rộng cho công ty" của ngăn kéo NCC (design.md mục 5.9): NCC dùng chung đang mua ở những công ty nào. Ở tổng công ty, người có
+ * quyền quản lý NCC mở rộng NCC sẵn có cho một, vài hoặc tất cả công ty thành viên (không phải tạo NCC mới), hoặc ngừng giao dịch.
+ * @param supplierId NCC.
+ */
+export function SupplierExtensionTab({ supplierId }: { supplierId: string }) {
+  const { message } = App.useApp()
+  const extensions = useSupplierExtensions(supplierId)
+  const setExtensions = useSetSupplierExtensions()
+  const [groupBy, setGroupBy] = useState<string | null>(null)
+  /** Hộp thoại đang mở: mở rộng hay ngừng; null = đóng. */
+  const [mode, setMode] = useState<'extend' | 'stop' | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  const [startDate, setStartDate] = useState<Dayjs | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const data = extensions.data
+  const rows = useMemo(() => data?.companies ?? [], [data])
+  // Mở rộng: chọn trong các công ty chưa giao dịch; ngừng: trong các công ty đang giao dịch.
+  const choices = useMemo(() => rows.filter((r) => (mode === 'stop' ? r.isActive : !r.isActive)), [rows, mode])
+
+  const open = (next: 'extend' | 'stop') => {
+    setMode(next)
+    setSelected([])
+    setStartDate(next === 'extend' ? dayjs() : null)
+    setError(null)
+  }
+
+  const submit = async () => {
+    if (!mode) return
+    if (selected.length === 0) {
+      setError('Chọn ít nhất một công ty.')
+      return
+    }
+    try {
+      await setExtensions.mutateAsync({
+        supplierId,
+        input: { companyIds: selected, isActive: mode === 'extend', startDate: startDate ? startDate.format('YYYY-MM-DD') : null },
+      })
+      const codes = rows.filter((r) => selected.includes(r.companyId)).map((r) => r.companyCode).join(', ')
+      message.success(mode === 'extend' ? `Đã mở rộng NCC cho ${codes}.` : `Đã ngừng giao dịch NCC tại ${codes}.`)
+      setMode(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Không lưu được.')
+    }
+  }
+
+  const allChecked = choices.length > 0 && selected.length === choices.length
+
+  return (
+    <Spin spinning={extensions.isLoading}>
+      {data && !data.canExtend && (
+        <Alert
+          type="info"
+          showIcon
+          className="detail-section"
+          title="Mở rộng NCC cho công ty khác làm ở tổng công ty (cần quyền quản lý nhà cung cấp tại tổng công ty)."
+        />
+      )}
+      <div style={{ ...gridBoxStyle, height: 200 }} data-testid="supplier-extensions">
+        <DataGrid
+          rows={rows}
+          columns={extensionColumns}
+          rowKey={(r) => r.companyId}
+          groupBy={groupBy}
+          onGroupByChange={setGroupBy}
+          loading={extensions.isFetching}
+        />
+      </div>
+      {data?.canExtend && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <Button icon={<PlusOutlined />} onClick={() => open('extend')}>
+            Mở rộng cho công ty…
+          </Button>
+          <Button icon={<StopOutlined />} onClick={() => open('stop')} disabled={!rows.some((r) => r.isActive)}>
+            Ngừng giao dịch…
+          </Button>
+        </div>
+      )}
+      <Modal
+        open={mode !== null}
+        title={mode === 'stop' ? 'Ngừng giao dịch NCC tại công ty' : 'Mở rộng NCC cho công ty'}
+        okText={mode === 'stop' ? 'Ngừng giao dịch' : 'Mở rộng'}
+        cancelText="Đóng"
+        onOk={submit}
+        onCancel={() => setMode(null)}
+        confirmLoading={setExtensions.isPending}
+        destroyOnHidden
+      >
+        {error && <Alert type="error" showIcon className="detail-section" title={error} />}
+        {choices.length === 0 ? (
+          <Alert type="info" showIcon title={mode === 'stop' ? 'Không có công ty nào đang giao dịch.' : 'NCC đã được mở rộng cho mọi công ty.'} />
+        ) : (
+          <>
+            <Checkbox
+              checked={allChecked}
+              indeterminate={selected.length > 0 && !allChecked}
+              onChange={(e) => setSelected(e.target.checked ? choices.map((c) => c.companyId) : [])}
+            >
+              Chọn tất cả
+            </Checkbox>
+            <Checkbox.Group
+              value={selected}
+              onChange={(v) => setSelected(v as string[])}
+              style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '8px 0 8px 16px' }}
+              options={choices.map((c) => ({ value: c.companyId, label: `${c.companyCode} – ${c.companyName}` }))}
+            />
+            {mode === 'extend' && (
+              <Form layout="vertical" component="div">
+                <Form.Item label="Ngày bắt đầu giao dịch" extra="Chỉ điền cho công ty chưa có ngày; mã NCC tại công ty do công ty thành viên tự khai.">
+                  <DatePicker format={DATE_INPUT_FORMATS} value={startDate} onChange={setStartDate} style={{ width: '100%' }} />
+                </Form.Item>
+              </Form>
+            )}
+          </>
+        )}
+      </Modal>
     </Spin>
   )
 }

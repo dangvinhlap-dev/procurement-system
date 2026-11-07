@@ -534,6 +534,53 @@ export function useSaveSupplierCompanyLink() {
   })
 }
 
+/** NCC mở rộng cho một công ty (design.md mục 5.9). */
+export interface SupplierExtensionRow {
+  companyId: string
+  companyCode: string
+  companyName: string
+  isHeadOffice: boolean
+  /** Đã có dòng áp dụng (từng mở rộng hoặc công ty tự khai báo). */
+  isApplied: boolean
+  isActive: boolean
+  localCode: string | null
+  /** yyyy-MM-dd. */
+  startDate: string | null
+  /** Khóa dòng áp dụng – để F1 xem lịch sử; null khi chưa mở rộng. */
+  id: string | null
+}
+
+/** NCC đang mở rộng cho những công ty nào. */
+export interface SupplierExtensions {
+  supplierId: string
+  /** Mở rộng/ngừng được: đang làm việc ở tổng công ty và có quyền quản lý NCC. */
+  canExtend: boolean
+  companies: SupplierExtensionRow[]
+}
+
+/**
+ * NCC đang mở rộng cho những công ty nào (mọi công ty, kể cả công ty khác công ty đang làm việc).
+ * @param supplierId NCC; null thì không tải.
+ */
+export function useSupplierExtensions(supplierId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['suppliers', companyId, 'extensions', supplierId ?? ''],
+    queryFn: () => apiFetch<SupplierExtensions>(`/api/suppliers/${supplierId}/extensions`),
+    enabled: supplierId !== null,
+  })
+}
+
+/** Mở rộng hoặc ngừng NCC cho các công ty chọn (chỉ ở tổng công ty). */
+export function useSetSupplierExtensions() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ supplierId, input }: { supplierId: string; input: { companyIds: string[]; isActive: boolean; startDate: string | null } }) =>
+      apiFetch<SupplierExtensions>(`/api/suppliers/${supplierId}/extensions`, { method: 'PUT', body: input }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['suppliers'] }),
+  })
+}
+
 /**
  * Sản phẩm/dịch vụ một NCC bán.
  * @param supplierId NCC; null thì không tải.

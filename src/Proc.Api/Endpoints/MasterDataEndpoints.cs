@@ -231,6 +231,13 @@ public static class MasterDataEndpoints
                 s.SaveCompanyLinkAsync(id, request, ct))
             .RequirePermission(Permissions.MasterData.SupplierManage)
             .Validate<SaveSupplierCompanyRequest>();
+        // Mở rộng NCC cho công ty thành viên: làm ở tổng công ty (kiểm tra ở tầng Application); xem thì ai có quyền xem NCC cũng được.
+        suppliers.MapGet("/{id:guid}/extensions", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetExtensionsAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        suppliers.MapPut("/{id:guid}/extensions", (Guid id, SetSupplierExtensionsRequest request, ISupplierLinkAdministration s, CancellationToken ct) =>
+                s.SetExtensionsAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierManage)
+            .Validate<SetSupplierExtensionsRequest>();
 
         suppliers.MapGet("/{id:guid}/items", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.ListItemsOfSupplierAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

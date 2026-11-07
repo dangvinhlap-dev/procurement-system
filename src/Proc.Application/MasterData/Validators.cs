@@ -149,6 +149,17 @@ public sealed class SaveSupplierCompanyRequestValidator : AbstractValidator<Save
     }
 }
 
+/// <summary>Kiểm tra yêu cầu mở rộng NCC cho công ty.</summary>
+public sealed class SetSupplierExtensionsRequestValidator : AbstractValidator<SetSupplierExtensionsRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public SetSupplierExtensionsRequestValidator()
+    {
+        RuleFor(x => x.CompanyIds).NotEmpty().WithMessage("Chọn ít nhất một công ty.");
+        RuleFor(x => x.CompanyIds.Count).LessThanOrEqualTo(200).When(x => x.CompanyIds is not null);
+    }
+}
+
 /// <summary>Kiểm tra lưu NCC – sản phẩm.</summary>
 public sealed class SaveSupplierItemRequestValidator : AbstractValidator<SaveSupplierItemRequest>
 {

@@ -22,7 +22,7 @@ import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPane
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { SupplierCategoryField } from './SupplierCategoryField'
-import { SupplierCompanyTab, SupplierItemsTab } from './SupplierLinkTabs'
+import { SupplierCompanyTab, SupplierExtensionTab, SupplierItemsTab } from './SupplierLinkTabs'
 
 interface SupplierFormValues {
   code: string
@@ -445,6 +445,8 @@ export function SupplierDrawer({
           ? [
               { key: 'items', label: 'Sản phẩm/dịch vụ', children: <SupplierItemsTab supplierId={supplierId} canManage={editable} /> },
               { key: 'company', label: `Áp dụng tại ${workingCompany?.code ?? ''}`, children: <SupplierCompanyTab supplierId={supplierId} /> },
+              // NCC dùng chung bán cho nhiều công ty: thấy đang mở rộng cho công ty nào; mở rộng/ngừng ở tổng công ty (design.md mục 5.9).
+              { key: 'extensions', label: 'Mở rộng cho công ty', children: <SupplierExtensionTab supplierId={supplierId} /> },
               // Hồ sơ pháp lý, năng lực (design.md mục 18.4): NCC dùng chung nên mọi công ty cùng thấy; tải lên/xóa theo quyền sửa NCC.
               {
                 key: 'attachments',
