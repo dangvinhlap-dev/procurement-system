@@ -127,6 +127,11 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>NCC – sản phẩm (lọc theo phạm vi nhóm hàng của mặt hàng).</summary>
     public DbSet<SupplierItem> SupplierItems => Set<SupplierItem>();
 
+    /// <summary>
+    /// Ngành hàng NCC cung cấp (NCC × nhóm hàng). Không lọc theo phạm vi nhóm hàng: danh mục nhóm hàng ai cũng xem đủ (design.md mục 9.2).
+    /// </summary>
+    public DbSet<SupplierCategory> SupplierCategories => Set<SupplierCategory>();
+
     /// <summary>Kỳ kho (lọc theo công ty).</summary>
     public DbSet<InventoryPeriod> InventoryPeriods => Set<InventoryPeriod>();
 

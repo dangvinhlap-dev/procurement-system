@@ -51,7 +51,7 @@ public class SharedCatalogEditTests
             new CreateCompanyRequest(UniqueCode("S"), "Công ty thử sửa danh mục", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var uom = await ReadAsync<UomDto>(await head.PostAsJsonAsync("/api/uoms", new CreateUomRequest(UniqueCode("U")[..8], "Cuộn"), Ct));
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm sửa tên", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm sửa tên {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm NCC sửa tên"), Ct));
@@ -70,8 +70,10 @@ public class SharedCatalogEditTests
             new UpdateItemRequest("Dây điện 2x1,5", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, [], true), Ct));
         Assert.Equal((item.Code, "Dây điện 2x1,5"), (renamed.Code, renamed.Name));
         Assert.Equal("Cuộn dây", (await ReadAsync<UomDto>(await editor.PutAsJsonAsync($"/api/uoms/{uom.Id}", new UpdateUomRequest("Cuộn dây", true), Ct))).Name);
-        Assert.Equal("Nhóm dây điện", (await ReadAsync<ItemCategoryDetailDto>(await editor.PutAsJsonAsync($"/api/item-categories/{category.Id}",
-            new UpdateItemCategoryRequest("Nhóm dây điện", null, null, true), Ct))).Name);
+        // Tên mới có hậu tố riêng: nhóm hàng không được trùng tên trong cùng nhóm cha (lần chạy trước đã có "Nhóm dây điện" ở gốc).
+        var categoryName = $"Nhóm dây điện {Guid.NewGuid():N}";
+        Assert.Equal(categoryName, (await ReadAsync<ItemCategoryDetailDto>(await editor.PutAsJsonAsync($"/api/item-categories/{category.Id}",
+            new UpdateItemCategoryRequest(categoryName, null, null, true), Ct))).Name);
         Assert.Equal("Nhóm NCC điện", (await ReadAsync<SupplierGroupDto>(await editor.PutAsJsonAsync($"/api/supplier-groups/{group.Id}",
             new UpdateSupplierGroupRequest("Nhóm NCC điện", true), Ct))).Name);
         var updatedSupplier = await ReadAsync<SupplierDetailDto>(await editor.PutAsJsonAsync($"/api/suppliers/{supplier.Id}",

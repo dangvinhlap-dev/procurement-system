@@ -93,6 +93,9 @@ public sealed class SupplierAdministration : ISupplierAdministration
     /// <summary>Số dòng tối đa mỗi lần tìm.</summary>
     public const int SearchLimit = 5000;
 
+    /// <summary>Số ngành hàng tối đa của một NCC.</summary>
+    public const int MaxCategories = 50;
+
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly CatalogNumberAllocator _numbers;
@@ -131,6 +134,13 @@ public sealed class SupplierAdministration : ISupplierAdministration
             suppliers = suppliers.Where(s => EF.Functions.Like(s.SearchText, pattern, LikePatterns.Escape));
         }
 
+        if (query.CategoryId is { } categoryId)
+        {
+            // Chọn một ngành hàng là gồm mọi nhóm con của nó (như bộ lọc nhóm hàng ở danh mục hàng hóa).
+            var branch = await CategoryBranchAsync(categoryId, cancellationToken);
+            suppliers = suppliers.Where(s => _db.SupplierCategories.Any(x => x.SupplierId == s.Id && branch.Contains(x.ItemCategoryId)));
+        }
+
         // SupplierCompanies tự lọc theo công ty đang làm việc, nên đây là "áp dụng tại công ty này".
         if (query.AppliedOnly) suppliers = suppliers.Where(s => _db.SupplierCompanies.Any(sc => sc.SupplierId == s.Id && sc.IsActive));
 
@@ -153,11 +163,14 @@ public sealed class SupplierAdministration : ISupplierAdministration
             .Take(SearchLimit + 1)
             .ToListAsync(cancellationToken);
 
-        var items = rows.Take(SearchLimit)
+        var page = rows.Take(SearchLimit).ToList();
+        var categories = (await CategoriesOfAsync(page.Select(r => r.Id).ToList(), cancellationToken))
+            .ToDictionary(g => g.Key, g => string.Join("; ", g.Value.Select(c => c.Name)));
+        var items = page
             .Select(r => new SupplierListItemDto(
                 r.Id, r.Code, r.Name, r.ShortName, r.GroupCode, r.GroupName, r.IsForeign, r.TaxCode, r.Phone, r.Email, r.Address,
                 r.Primary is null ? null : r.Primary.Phone is null ? r.Primary.Name : $"{r.Primary.Name} – {r.Primary.Phone}",
-                r.Status.ToString(), r.Rating, r.CompanyCode, r.Applied, r.LocalCode))
+                r.Status.ToString(), r.Rating, r.CompanyCode, r.Applied, r.LocalCode) { Categories = categories.GetValueOrDefault(r.Id) })
             .ToList();
         return new SupplierListResult(items, rows.Count > SearchLimit, SearchLimit);
     }
@@ -186,7 +199,70 @@ public sealed class SupplierAdministration : ISupplierAdministration
             s.PaymentTerms, s.SupplyScope, s.Rating, s.Status.ToString(), s.StatusNote, s.InternalCompanyId,
             s.Contacts.Select(c => new SupplierContactDto(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)).ToList(),
             s.BankAccounts.Select(b => new SupplierBankAccountDto(b.Id, b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).ToList(),
-            canEdit, await PendingRequestsAsync(id, cancellationToken)) { Version = s.Version };
+            canEdit, await PendingRequestsAsync(id, cancellationToken))
+        {
+            Version = s.Version,
+            Categories = (await CategoriesOfAsync([id], cancellationToken)).GetValueOrDefault(id) ?? [],
+        };
+    }
+
+    /// <summary>
+    /// Ngành hàng của các NCC, theo mã nhóm. Đọc nhóm hàng bỏ filter phạm vi: danh mục nhóm hàng ai cũng xem đủ (người dùng chốt 07/11/2026,
+    /// design.md mục 9.2) – chỉ là tên nhóm, không mở mặt hàng ngoài phạm vi.
+    /// </summary>
+    private async Task<Dictionary<Guid, List<SupplierCategoryRefDto>>> CategoriesOfAsync(IReadOnlyList<Guid> supplierIds, CancellationToken cancellationToken)
+    {
+        if (supplierIds.Count == 0) return [];
+        var rows = await (
+                from x in _db.SupplierCategories.AsNoTracking()
+                join c in _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]) on x.ItemCategoryId equals c.Id
+                where supplierIds.Contains(x.SupplierId)
+                orderby c.Code
+                select new { x.SupplierId, Category = new SupplierCategoryRefDto(c.Id, c.Code, c.Name, c.IsActive) })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(r => r.SupplierId).ToDictionary(g => g.Key, g => g.Select(r => r.Category).ToList());
+    }
+
+    /// <summary>Nhóm hàng và mọi nhóm con cháu của nó (cả cây, không lọc phạm vi).</summary>
+    private async Task<List<Guid>> CategoryBranchAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        var parents = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+            .Select(c => new { c.Id, c.ParentId }).ToListAsync(cancellationToken);
+        var children = parents.Where(c => c.ParentId != null).ToLookup(c => c.ParentId!.Value, c => c.Id);
+        var branch = new List<Guid>();
+        var queue = new Queue<Guid>([categoryId]);
+        while (queue.TryDequeue(out var id))
+        {
+            if (branch.Contains(id)) continue;
+            branch.Add(id);
+            foreach (var child in children[id]) queue.Enqueue(child);
+        }
+
+        return branch;
+    }
+
+    /// <summary>
+    /// Thay ngành hàng của NCC (design.md mục 5.3): bỏ nhóm không còn chọn, thêm nhóm mới chọn (phải đang dùng); nhóm đã ngừng dùng mà vẫn
+    /// giữ thì để nguyên. Không cần duyệt (người dùng chốt 07/11/2026). Mỗi thêm/bỏ là một dòng nhật ký.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="categoryIds">Nhóm hàng chọn; null = không đổi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <exception cref="NotFoundException">Khi có nhóm hàng không tồn tại.</exception>
+    /// <exception cref="BusinessRuleException">Khi quá 50 nhóm hoặc thêm nhóm đã ngừng dùng.</exception>
+    private async Task SetCategoriesAsync(Guid supplierId, IReadOnlyList<Guid>? categoryIds, CancellationToken cancellationToken)
+    {
+        if (categoryIds is null) return;
+        var wanted = categoryIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (wanted.Count > MaxCategories) throw new BusinessRuleException($"Mỗi NCC tối đa {MaxCategories} ngành hàng.");
+        var current = await _db.SupplierCategories.Where(x => x.SupplierId == supplierId).ToListAsync(cancellationToken);
+        _db.SupplierCategories.RemoveRange(current.Where(x => !wanted.Contains(x.ItemCategoryId)));
+        var added = wanted.Where(id => current.All(x => x.ItemCategoryId != id)).ToList();
+        if (added.Count == 0) return;
+        var categories = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter])
+            .Where(c => added.Contains(c.Id)).ToListAsync(cancellationToken);
+        if (categories.Count != added.Count) throw new NotFoundException("Không tìm thấy nhóm hàng đã chọn làm ngành hàng.");
+        _db.SupplierCategories.AddRange(categories.Select(c => SupplierCategory.Create(supplierId, c)));
     }
 
     /// <summary>Yêu cầu duyệt đang chờ của NCC (design.md mục 18.6) – hiện trên ngăn kéo NCC.</summary>
@@ -211,6 +287,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
         var deferred = await ApplyAsync(supplier, request, isNew: true, cancellationToken);
 
         _db.Suppliers.Add(supplier);
+        await SetCategoriesAsync(supplier.Id, request.CategoryIds, cancellationToken);
         await SubmitDeferredAsync(supplier, deferred, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
@@ -226,6 +303,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
         supplier.Update(ToInfo(request));
         if (request.GroupId != supplier.GroupId) supplier.ChangeGroup(await FindGroupAsync(request.GroupId, cancellationToken));
         var deferred = await ApplyAsync(supplier, request, isNew: false, cancellationToken);
+        await SetCategoriesAsync(supplier.Id, request.CategoryIds, cancellationToken);
 
         await SubmitDeferredAsync(supplier, deferred, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);

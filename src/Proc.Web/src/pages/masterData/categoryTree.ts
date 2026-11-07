@@ -1,4 +1,5 @@
 import type { ItemCategory } from '../../api/masterData'
+import { normalizeVi } from '../../utils/text'
 
 /** Một nút của TreeSelect nhóm hàng. */
 export interface CategoryNode {
@@ -39,4 +40,19 @@ export function buildCategoryTree(
     if (excluded) disable(excluded)
   }
   return roots
+}
+
+/**
+ * Nhóm cùng tên (so không dấu, như máy chủ) với tên đang gõ: trong cùng nhóm cha (máy chủ chặn) và ở nhánh khác (chỉ nhắc) – tránh tạo
+ * trùng nhóm hàng (yêu cầu người dùng 07/11/2026).
+ * @param catalog Cả danh mục nhóm hàng (kể cả ngoài phạm vi, ngừng dùng).
+ * @param name Tên đang gõ.
+ * @param parentId Nhóm cha đang chọn; null = gốc.
+ * @param excludeId Nhóm đang sửa (không so với chính nó).
+ */
+export function sameNameCategories(catalog: ItemCategory[], name: string, parentId: string | null, excludeId?: string) {
+  const key = normalizeVi(name)
+  const same = key ? catalog.filter((c) => c.id !== excludeId && normalizeVi(c.name) === key) : []
+  const sameParent = same.find((c) => (c.parentId ?? null) === parentId)
+  return { sameParent, elsewhere: same.filter((c) => c !== sameParent) }
 }

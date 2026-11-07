@@ -1571,6 +1571,40 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Supplier", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemCategoryId");
+
+                    b.HasIndex("SupplierId", "ItemCategoryId")
+                        .IsUnique();
+
+                    b.ToTable("SupplierCategory", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.MasterData.SupplierChangeRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5301,6 +5335,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("BankAccounts");
 
                     b.Navigation("Contacts");
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierCategory", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.ItemCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ItemCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Domain.MasterData.SupplierChangeRequest", b =>

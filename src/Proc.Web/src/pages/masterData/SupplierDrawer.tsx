@@ -21,6 +21,7 @@ import { useAuth } from '../../auth/useAuth'
 import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
+import { SupplierCategoryField } from './SupplierCategoryField'
 import { SupplierCompanyTab, SupplierItemsTab } from './SupplierLinkTabs'
 
 interface SupplierFormValues {
@@ -35,7 +36,8 @@ interface SupplierFormValues {
   email: string
   website: string
   paymentTerms: string
-  supplyScope: string
+  /** Ngành hàng NCC cung cấp (Id nhóm hàng). */
+  categoryIds: string[]
   rating: number
   status: SupplierStatus
   statusNote: string
@@ -56,7 +58,7 @@ const emptyValues: SupplierFormValues = {
   email: '',
   website: '',
   paymentTerms: '',
-  supplyScope: '',
+  categoryIds: [],
   rating: 0,
   status: 'Potential',
   statusNote: '',
@@ -119,7 +121,7 @@ export function SupplierDrawer({
       email: detail.email ?? '',
       website: detail.website ?? '',
       paymentTerms: detail.paymentTerms ?? '',
-      supplyScope: detail.supplyScope ?? '',
+      categoryIds: detail.categories.map((c) => c.id),
       rating: detail.rating ?? 0,
       status: detail.status,
       statusNote: detail.statusNote ?? '',
@@ -152,7 +154,9 @@ export function SupplierDrawer({
       email: orNull(values.email),
       website: orNull(values.website),
       paymentTerms: orNull(values.paymentTerms),
-      supplyScope: orNull(values.supplyScope),
+      // Chữ tự do cũ ngừng dùng: gửi lại nguyên giá trị đang có (design.md mục 5.3).
+      supplyScope: detail?.supplyScope ?? null,
+      categoryIds: values.categoryIds ?? [],
       rating: values.rating ? values.rating : null,
       status: values.status,
       statusNote: orNull(values.statusNote),
@@ -313,9 +317,7 @@ export function SupplierDrawer({
                   <Input placeholder="Ví dụ: chuyển khoản 30 ngày sau khi nhận hàng" />
                 </Form.Item>
               </div>
-              <Form.Item label="Ngành hàng cung cấp" name="supplyScope" rules={[{ max: 500 }]}>
-                <Input />
-              </Form.Item>
+              <SupplierCategoryField editable={editable} legacyText={detail?.supplyScope} />
               <fieldset className="detail-section">
                 <legend>Đánh giá và trạng thái</legend>
                 <div className="detail-grid">

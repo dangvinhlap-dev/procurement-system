@@ -549,7 +549,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
         new(Email, ""),
         new(Website, ""),
         new(PaymentTerms, ""),
-        new(SupplyScope, ""),
+        new(SupplyScope, "Mã nhóm hàng NCC cung cấp, nhiều mã cách nhau dấu phẩy, ví dụ VT, VTCK. Để trống = giữ nguyên khi cập nhật.", Text: true),
         new(Rating, "1–5."),
         new(Status, "Tiềm năng / Đã duyệt / Tạm ngưng / Danh sách đen; để trống = Tiềm năng (khi thêm) hoặc giữ nguyên (khi cập nhật)."),
         new(StatusNote, "Bắt buộc khi Tạm ngưng hoặc Danh sách đen."),
@@ -568,6 +568,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
     public override IReadOnlyList<string> Guide =>
     [
         "Người liên hệ và tài khoản ngân hàng: file chỉ có một người liên hệ chính và một tài khoản mặc định, chỉ dùng khi thêm NCC mới. Cập nhật NCC đã có thì giữ nguyên người liên hệ, tài khoản đang có (sửa ở màn hình Nhà cung cấp).",
+        "Ngành hàng: ghi mã nhóm hàng (danh mục Nhóm hàng), thay cả danh sách ngành hàng của NCC. Thiếu nhóm thì thêm ở màn hình Nhóm hàng trước. Muốn bỏ hết ngành hàng thì sửa ở màn hình Nhà cung cấp.",
     ];
 
     /// <inheritdoc />
@@ -576,6 +577,14 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
         var groups = await db.SupplierGroups.AsNoTracking().ToDictionaryAsync(g => g.Id, g => g.Code, cancellationToken);
         var companies = await db.Companies.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
         var list = await db.Suppliers.AsNoTracking().OrderBy(s => s.Code).ToListAsync(cancellationToken);
+        // Ngành hàng: mã nhóm hàng (danh mục nhóm hàng ai cũng xem đủ – design.md mục 9.2).
+        var scopes = (await (
+                from x in db.SupplierCategories.AsNoTracking()
+                join c in db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]) on x.ItemCategoryId equals c.Id
+                select new { x.SupplierId, c.Code })
+            .ToListAsync(cancellationToken))
+            .GroupBy(x => x.SupplierId)
+            .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.Code).Order(StringComparer.Ordinal)));
         return list.Select(s =>
         {
             var contact = s.Contacts.FirstOrDefault(c => c.IsPrimary) ?? s.Contacts.FirstOrDefault();
@@ -583,7 +592,7 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
             return (IReadOnlyList<object?>)
             [
                 s.Code, s.Name, s.ShortName, groups[s.GroupId], ExcelHeaders.YesNo(s.IsForeign), s.TaxCode, s.Address, s.Phone, s.Email,
-                s.Website, s.PaymentTerms, s.SupplyScope, s.Rating, StatusLabels[s.Status.ToString()], s.StatusNote,
+                s.Website, s.PaymentTerms, scopes.GetValueOrDefault(s.Id), s.Rating, StatusLabels[s.Status.ToString()], s.StatusNote,
                 s.InternalCompanyId is { } c ? companies.GetValueOrDefault(c) : null,
                 contact?.Name, contact?.Position, contact?.Phone, contact?.Email,
                 bank?.BankName, bank?.Branch, bank?.AccountNumber, bank?.AccountName,
@@ -638,11 +647,12 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
             banks = existing.BankAccounts.Select(b => new SupplierBankAccountDto(b.Id, b.BankName, b.Branch, b.AccountNumber, b.AccountName, b.IsDefault)).ToList();
         }
 
+        // Cột Ngành hàng nay là mã nhóm hàng; chữ tự do cũ (SupplyScope, ngừng dùng) giữ nguyên trên NCC đã có.
         var request = new SaveSupplierRequest(
             null, groupId, row.RequiredText(Name), row.Text(ShortName), row.Bool(Foreign) ?? false,
             row.Text(TaxCode), row.Text(Address), row.Text(Phone), row.Text(Email), row.Text(Website), row.Text(PaymentTerms),
-            row.Text(SupplyScope), row.Int(Rating), status ?? existing?.Status.ToString() ?? "Potential", row.Text(StatusNote), companyId,
-            contacts, banks);
+            existing?.SupplyScope, row.Int(Rating), status ?? existing?.Status.ToString() ?? "Potential", row.Text(StatusNote), companyId,
+            contacts, banks, await CategoryIdsAsync(row.Text(SupplyScope), cancellationToken));
         await ValidateAsync(services, request, cancellationToken);
 
         if (existing is null)
@@ -653,5 +663,20 @@ internal sealed class SupplierExcelCatalog(ProcDbContext db, ISupplierAdministra
 
         await suppliers.UpdateAsync(existing.Id, request, cancellationToken);
         return false;
+    }
+
+    /// <summary>Mã nhóm hàng cách nhau dấu phẩy/chấm phẩy → Id; ô trống = null (giữ nguyên ngành hàng).</summary>
+    /// <exception cref="ExcelRowException">Khi có mã không thuộc danh mục Nhóm hàng.</exception>
+    private async Task<IReadOnlyList<Guid>?> CategoryIdsAsync(string? text, CancellationToken cancellationToken)
+    {
+        if (text is null) return null;
+        var codes = text.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(CodeRules.Normalize).Distinct().ToList();
+        var found = await db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+            .Where(c => codes.Contains(c.Code)).ToDictionaryAsync(c => c.Code, c => c.Id, cancellationToken);
+        var missing = codes.Where(c => !found.ContainsKey(c)).ToList();
+        if (missing.Count > 0)
+            throw new ExcelRowException($"Không có nhóm hàng mã {string.Join(", ", missing)} – cột \"{SupplyScope}\" ghi mã nhóm hàng, thêm nhóm ở màn hình Nhóm hàng trước.");
+        return codes.Select(c => found[c]).ToList();
     }
 }

@@ -170,6 +170,21 @@ internal sealed class SupplierItemConfiguration : IEntityTypeConfiguration<Suppl
     }
 }
 
+/// <summary>Cấu hình bảng SupplierCategory – ngành hàng NCC cung cấp (design.md mục 5.3).</summary>
+internal sealed class SupplierCategoryConfiguration : IEntityTypeConfiguration<SupplierCategory>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierCategory> builder)
+    {
+        builder.ToTable("SupplierCategory");
+        builder.HasIndex(x => new { x.SupplierId, x.ItemCategoryId }).IsUnique();
+        // Lọc NCC theo ngành hàng (danh sách NCC, NCC đủ điều kiện).
+        builder.HasIndex(x => x.ItemCategoryId);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ItemCategoryId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng SupplierRatingRule (design.md mục 11.3).</summary>
 internal sealed class SupplierRatingRuleConfiguration : IEntityTypeConfiguration<SupplierRatingRule>
 {

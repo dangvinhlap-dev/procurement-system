@@ -11,7 +11,7 @@ test('lưu phiếu đã bị người khác sửa thì báo xung đột, không 
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', { code: null, name: 'Nhóm xung đột', parentId: null, inventoryAccount: null })
+  const category = await head.send<{ id: string }>('post', '/api/item-categories', { code: null, name: `Nhóm xung đột ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: 'Hàng thử xung đột', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
     specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,

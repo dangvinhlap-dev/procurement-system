@@ -32,6 +32,11 @@ export interface ItemCategory {
   inventoryAccount: string | null
   isActive: boolean
   itemCount: number
+  /**
+   * Nhóm (hoặc nhóm cha) thuộc phạm vi nhóm hàng của người xem. Danh mục nhóm hàng ai cũng xem đủ (người dùng chốt 07/11/2026 – design.md
+   * mục 9.2); nhóm ngoài phạm vi chỉ xem, không sửa, không gán cho mặt hàng.
+   */
+  isInScope: boolean
 }
 
 /** Loại hàng (design.md mục 5.2). */
@@ -176,8 +181,21 @@ export function useUomMutations() {
   }
 }
 
-/** Danh sách nhóm hàng trong phạm vi, xếp theo đường dẫn. */
+/** Danh sách nhóm hàng trong phạm vi của người xem, xếp theo đường dẫn – dùng cho chọn nhóm của mặt hàng, lọc báo cáo, tồn kho. */
 export function useItemCategories() {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['item-categories', companyId],
+    queryFn: () => apiFetch<ItemCategory[]>('/api/item-categories'),
+    select: (rows) => rows.filter((c) => c.isInScope),
+  })
+}
+
+/**
+ * Cả danh mục nhóm hàng (kể cả nhóm ngoài phạm vi người xem, có cờ `isInScope`) – màn hình Nhóm hàng và ngành hàng NCC, để chọn đủ
+ * và tránh tạo trùng nhóm (người dùng chốt 07/11/2026).
+ */
+export function useItemCategoryCatalog() {
   const companyId = useCompanyId()
   return useQuery({ queryKey: ['item-categories', companyId], queryFn: () => apiFetch<ItemCategory[]>('/api/item-categories') })
 }
@@ -298,6 +316,8 @@ export interface SupplierListItem {
   appliedAtCompany: boolean
   /** Mã NCC tại công ty đang làm việc. */
   localCode: string | null
+  /** Ngành hàng (tên nhóm hàng, cách nhau "; "). */
+  categories: string | null
 }
 
 /** Kết quả tìm NCC. */
@@ -340,6 +360,7 @@ export interface SupplierInput {
   email: string | null
   website: string | null
   paymentTerms: string | null
+  /** Ngành hàng ghi chữ tự do – ngừng dùng (chỉ xem, gửi lại nguyên giá trị cũ). */
   supplyScope: string | null
   rating: number | null
   status: SupplierStatus
@@ -347,12 +368,24 @@ export interface SupplierInput {
   internalCompanyId: string | null
   contacts: SupplierContact[]
   bankAccounts: SupplierBankAccount[]
+  /** Ngành hàng NCC cung cấp (Id nhóm hàng) – thay cả danh sách, không cần duyệt (design.md mục 5.3). */
+  categoryIds: string[]
+}
+
+/** Một ngành hàng (nhóm hàng) của NCC. */
+export interface SupplierCategoryRef {
+  id: string
+  code: string
+  name: string
+  isActive: boolean
 }
 
 /** Chi tiết NCC. */
-export interface SupplierDetail extends Omit<SupplierInput, 'code'> {
+export interface SupplierDetail extends Omit<SupplierInput, 'code' | 'categoryIds'> {
   id: string
   code: string
+  /** Ngành hàng NCC cung cấp. */
+  categories: SupplierCategoryRef[]
   /** Sửa được: có quyền và đang làm việc ở tổng công ty. */
   canEdit: boolean
   /** Yêu cầu duyệt đang chờ (trạng thái, tài khoản ngân hàng) – design.md mục 18.6. */
@@ -384,13 +417,14 @@ export function useSupplierGroupMutations() {
 }
 
 /**
- * Tìm NCC theo nhóm, trạng thái, "chỉ NCC công ty đang dùng" (lọc ở server); từ khóa lọc tiếp ở danh sách.
- * @param filter Nhóm NCC, trạng thái, chỉ NCC áp dụng tại công ty đang làm việc.
+ * Tìm NCC theo nhóm, trạng thái, ngành hàng, "chỉ NCC công ty đang dùng" (lọc ở server); từ khóa lọc tiếp ở danh sách.
+ * @param filter Nhóm NCC, trạng thái, chỉ NCC áp dụng tại công ty đang làm việc, ngành hàng (gồm nhóm con).
  */
-export function useSuppliers(filter: { groupId?: string; status?: SupplierStatus; appliedOnly?: boolean }) {
+export function useSuppliers(filter: { groupId?: string; status?: SupplierStatus; appliedOnly?: boolean; categoryId?: string }) {
   const companyId = useCompanyId()
   const params = new URLSearchParams()
   if (filter.groupId) params.set('groupId', filter.groupId)
+  if (filter.categoryId) params.set('categoryId', filter.categoryId)
   if (filter.status) params.set('status', filter.status)
   if (filter.appliedOnly) params.set('appliedOnly', 'true')
   const query = params.toString()

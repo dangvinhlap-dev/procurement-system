@@ -93,17 +93,24 @@ export function DetailDrawer({
 
   // Esc đóng ngăn kéo, nghe ở cấp cửa sổ: Drawer của antd chỉ nhận Esc khi tiêu điểm nằm trong ngăn kéo, mà chọn xong một mục
   // trong ô chọn thì tiêu điểm có thể rơi ra ngoài (danh sách thả xuống vẽ ở cuối trang) – khi đó Esc không đóng được.
+  // Nghe ở pha capture và giữ onClose trong ref: bộ nghe luôn chạy TRƯỚC hộp thoại con (F1, xác nhận…) nên còn thấy hộp thoại đang mở.
+  // Trước đây nghe ở pha bubble, effect đăng ký lại mỗi khi onClose đổi (trang cha vẽ lại khi dữ liệu tải xong) nên có lúc chạy SAU hộp
+  // thoại – hộp thoại đã đóng, Esc đóng luôn cả ngăn kéo.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
   useEffect(() => {
     if (!open || asPage) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       // Đang mở danh sách thả xuống, lịch hay hộp thoại con thì Esc đóng cái đó trước, chưa đóng ngăn kéo.
       if (hasOpenPopup()) return
-      onClose()
+      onCloseRef.current()
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, asPage])
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [open, asPage])
 
   const saveButton = onSave && (
     <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={onSave} disabled={loading}>

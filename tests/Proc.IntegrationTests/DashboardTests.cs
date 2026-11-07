@@ -46,7 +46,7 @@ public class DashboardTests
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm trang chủ", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm trang chủ {Guid.NewGuid():N}", null, null), Ct));
         // Tồn tối thiểu 100, công ty chưa có tồn → dưới mức.
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dầu thủy lực", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, 100, null, []), Ct));

@@ -23,15 +23,19 @@ public sealed record UpdateUomRequest(string Name, bool IsActive);
 /// <param name="Code">Mã (không đổi được).</param>
 /// <param name="Name">Tên.</param>
 /// <param name="ParentId">Nhóm cha.</param>
-/// <param name="ParentCode">Mã nhóm cha (null nếu là nhóm gốc hoặc nhóm cha ngoài phạm vi người xem).</param>
+/// <param name="ParentCode">Mã nhóm cha (null nếu là nhóm gốc).</param>
 /// <param name="Path">Đường dẫn từ nhóm gốc, ví dụ "VT / VTC / VTCK" – để danh sách đọc như cây.</param>
 /// <param name="Level">Cấp trong cây, nhóm gốc = 1.</param>
 /// <param name="InventoryAccount">Tài khoản kho mặc định.</param>
 /// <param name="IsActive">Còn sử dụng.</param>
-/// <param name="ItemCount">Số mặt hàng trực tiếp trong nhóm.</param>
+/// <param name="ItemCount">Số mặt hàng trực tiếp trong nhóm (chỉ đếm hàng người xem thấy).</param>
+/// <param name="IsInScope">
+/// Nhóm (hoặc nhóm cha của nó) thuộc phạm vi nhóm hàng của người xem. Danh mục nhóm hàng ai cũng xem đủ (người dùng chốt 07/11/2026 –
+/// design.md mục 9.2); nhóm ngoài phạm vi chỉ xem, không sửa, không gán cho mặt hàng.
+/// </param>
 public sealed record ItemCategoryDetailDto(
     Guid Id, string Code, string Name, Guid? ParentId, string? ParentCode, string Path, int Level,
-    string? InventoryAccount, bool IsActive, int ItemCount);
+    string? InventoryAccount, bool IsActive, int ItemCount, bool IsInScope = true);
 
 /// <summary>Thêm nhóm hàng.</summary>
 /// <param name="Code">Mã (2–20 chữ không dấu hoặc số), duy nhất toàn tập đoàn.</param>

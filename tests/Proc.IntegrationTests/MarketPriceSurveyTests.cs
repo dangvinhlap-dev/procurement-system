@@ -45,9 +45,9 @@ public class MarketPriceSurveyTests
         var member = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm khảo sát giá", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm khảo sát giá {Guid.NewGuid():N}", null, null), Ct));
         var other = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm khác khảo sát", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm khác khảo sát {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name) => (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
         var item = await ItemAsync(category.Id, "Que hàn khảo sát");

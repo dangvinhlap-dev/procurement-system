@@ -57,7 +57,7 @@ public partial class PurchasingTests
 
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm mua hàng", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm mua hàng {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dây curoa", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
