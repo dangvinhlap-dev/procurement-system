@@ -98,9 +98,6 @@ public static class PurchasingEndpoints
         po.MapGet("/approved-prices", (Guid supplierId, DateOnly date, Guid[]? itemIds, Guid? departmentId, IPurchaseOrderService s, CancellationToken ct) =>
                 s.ApprovedPricesAsync(supplierId, date, itemIds ?? [], departmentId, ct))
             .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
-        // ĐVT mua và mã hàng theo NCC cho dòng PO (design.md mục 5.9) – người lập/xem PO, không cần quyền xem danh mục NCC.
-        po.MapGet("/supplier-items", (Guid supplierId, IPurchaseOrderService s, CancellationToken ct) => s.SupplierItemsAsync(supplierId, ct))
-            .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
         // Giá thấp nhất tập đoàn cho cảnh báo giá cao trên dòng PO (design.md mục 8.5, 10.3) – người lập/xem PO, không cần quyền so sánh giá.
         po.MapGet("/group-min-prices", (Guid[]? itemIds, Guid? excludeOrderId, Proc.Application.Pricing.IPriceComparisonService s, CancellationToken ct) =>
                 s.GroupMinPricesAsync(itemIds ?? [], excludeOrderId, ct))

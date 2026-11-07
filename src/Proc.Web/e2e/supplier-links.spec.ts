@@ -30,7 +30,7 @@ async function openByCommand(page: Page, code: string) {
   await box.press('Enter')
 }
 
-test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa, dòng PO lấy ĐVT mua', async ({ page, request }) => {
+test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa, dòng PO/PR lấy ĐVT mua', async ({ page, request }) => {
   // Đi qua bốn màn hình (NCC, PO, hàng hóa) nên dài hơn giới hạn mặc định 30 giây.
   test.setTimeout(90_000)
   const api = await adminApi(request)
@@ -116,6 +116,19 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   await expect(poLine).toContainText('CUON')
   await expect(poLine).toContainText('DC-THU-01')
   await page.screenshot({ path: 'e2e/screenshots/po-supplier-item-code.png' })
+
+  // PR: chọn mặt hàng rồi NCC đề xuất thì dòng lấy ĐVT mua (Cuộn) và hiện mã hàng theo NCC.
+  await page.goto('/mua-hang/pr/moi')
+  await page.locator('.line-grid-add').first().click()
+  await page.getByLabel('Mặt hàng dòng 1').fill(itemCode.toLowerCase())
+  await page.locator('.ant-select-dropdown:visible').getByTitle(itemCode, { exact: false }).click()
+  const prLine = page.locator('.line-grid-row').first()
+  const suggested = page.getByRole('combobox', { name: 'NCC đề xuất dòng 1' })
+  await suggested.click()
+  await suggested.fill(supplierCode)
+  await page.locator('.ant-select-dropdown:visible').getByTitle(supplierCode, { exact: false }).click()
+  await expect(prLine).toContainText('CUON')
+  await expect(prLine).toContainText('DC-THU-01')
 
   // Ngăn kéo hàng hóa: tab Nhà cung cấp thấy NCC ưu tiên.
   await openByCommand(page, 'ITEM')

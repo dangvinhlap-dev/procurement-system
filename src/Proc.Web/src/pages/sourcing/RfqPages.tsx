@@ -20,7 +20,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useItemLookup } from '../../api/inventoryDocuments'
-import { useSuppliers, vatOptions } from '../../api/masterData'
+import { supplierItemKey, useSupplierItemLookup, useSuppliers, vatOptions } from '../../api/masterData'
 import { withPendingApprovers, type OpenRequestLine } from '../../api/purchasing'
 import {
   rfqStatusLabels,
@@ -1074,6 +1074,8 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
   const { message } = App.useApp()
   const mutations = useRfqMutations()
   const [error, setError] = useState<string | null>(null)
+  // Mã hàng theo NCC để đối chiếu với báo giá giấy của NCC (design.md mục 5.9).
+  const supplierItems = useSupplierItemLookup([supplier.supplierId])
 
   const submit = async () => {
     const values = await form.validateFields()
@@ -1158,6 +1160,12 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
           dataSource={rfq.lines}
           columns={[
             { title: 'Mặt hàng', key: 'item', render: (_, l) => `${l.itemCode} – ${l.itemName}` },
+            {
+              title: 'Mã hàng NCC',
+              key: 'supplierItemCode',
+              width: 100,
+              render: (_, l) => supplierItems.data?.get(supplierItemKey(supplier.supplierId, l.itemId))?.supplierItemCode ?? '',
+            },
             { title: 'ĐVT', key: 'uom', width: 60, render: (_, l) => l.uomCode },
             { title: 'SL', key: 'qty', width: 80, align: 'right', render: (_, l) => formatQuantity(l.qty) },
             {
