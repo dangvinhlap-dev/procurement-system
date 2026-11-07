@@ -73,6 +73,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.MasterData.SoleSourceView, DocumentTypes.SoleSource);
         Add(Permissions.Pricing.MonthlyApprovalView, DocumentTypes.MonthlySupplierApproval);
         Add(Permissions.Pricing.PriceBankView, DocumentTypes.MarketPriceSurvey);
+        Add(Permissions.Purchase.DemandPlanView, DocumentTypes.DemandPlan);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
         if (_scope.HasPermission(Permissions.Control.AnomalyView) || _scope.HasPermission(Permissions.Control.FindingReceive)
             || _scope.HasPermission(Permissions.Control.FindingManage))
@@ -320,6 +321,26 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 {
                     MarketSurveyStatus.Confirmed => DocumentProgress.Done,
                     MarketSurveyStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.DemandPlan) && !acted)
+        {
+            // Kế hoạch nhu cầu không có ngày chứng từ: lọc và hiện theo ngày lập (giờ Việt Nam); không qua duyệt nên không có "đã xử lý".
+            var q = _db.DemandPlans.AsNoTracking().Where(d => d.CreatedAt >= fromUtc && d.CreatedAt < toUtc);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            var rows = await q.OrderByDescending(d => d.CreatedAt).Take(take)
+                .Select(d => new { d.Id, d.No, d.Year, d.Status, d.CreatedBy, d.CreatedAt, Lines = d.Lines.Count })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.DemandPlan, d.Id, d.No,
+                VietnamDate(d.CreatedAt), null, null, null,
+                $"Kế hoạch nhu cầu năm {d.Year} – {d.Lines} mặt hàng", null, d.Status.ToString(),
+                d.Status switch
+                {
+                    DemandPlanStatus.Confirmed or DemandPlanStatus.Replaced => DocumentProgress.Done,
+                    DemandPlanStatus.Cancelled => DocumentProgress.Cancelled,
                     _ => DocumentProgress.Open,
                 },
                 d.CreatedBy, d.CreatedAt)));

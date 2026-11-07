@@ -147,6 +147,36 @@ public static class PurchasingEndpoints
         budgets.MapPut("/{year:int}/{departmentId:guid}", (int year, Guid departmentId, SaveDepartmentBudgetRequest request, IBudgetService s, CancellationToken ct) =>
                 s.SaveAsync(departmentId, year, request, ct))
             .RequirePermission(Permissions.Purchase.BudgetManage);
+
+        // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
+        var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
+        plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanView);
+        plans.MapGet("/{id:guid}", (Guid id, IDemandPlanService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanView);
+        plans.MapPost("/", async (SaveDemandPlanRequest request, IDemandPlanService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/demand-plans/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.DemandPlanManage)
+            .Validate<SaveDemandPlanRequest>();
+        plans.MapPut("/{id:guid}", (Guid id, SaveDemandPlanRequest request, IDemandPlanService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanManage)
+            .Validate<SaveDemandPlanRequest>();
+        plans.MapPost("/{id:guid}/confirm", (Guid id, IDemandPlanService s, CancellationToken ct) => s.ConfirmAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanManage);
+        plans.MapPost("/{id:guid}/adjust", async (Guid id, IDemandPlanService s, CancellationToken ct) =>
+            {
+                var created = await s.AdjustAsync(id, ct);
+                return Results.Created($"/api/demand-plans/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.DemandPlanManage);
+        plans.MapPost("/{id:guid}/cancel", (Guid id, CancelDemandPlanRequest request, IDemandPlanService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanManage)
+            .Validate<CancelDemandPlanRequest>();
         return app;
     }
 }

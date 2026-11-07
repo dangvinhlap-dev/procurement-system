@@ -229,3 +229,47 @@ internal sealed class DepartmentBudgetConfiguration : IEntityTypeConfiguration<D
             .HasPrincipalKey(d => new { d.Id, d.CompanyId }).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng DemandPlan – phiếu kế hoạch nhu cầu (design.md mục 18.25, lát G5a).</summary>
+internal sealed class DemandPlanConfiguration : IEntityTypeConfiguration<DemandPlan>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<DemandPlan> builder)
+    {
+        builder.ToTable("DemandPlan");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        // Dò trùng mặt hàng × năm × công ty và tổng hợp nhu cầu theo năm.
+        builder.HasIndex(x => new { x.Year, x.Status });
+        builder.HasIndex(x => x.ReplacesId);
+        builder.Property(x => x.Note).HasMaxLength(DemandPlan.TextMaxLength);
+        builder.Property(x => x.CancelReason).HasMaxLength(DemandPlan.TextMaxLength);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ItemCategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<DemandPlan>().WithMany().HasForeignKey(x => x.ReplacesId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.PlanId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng DemandPlanLine – dòng kế hoạch nhu cầu (SL 12 tháng numeric(18,4)).</summary>
+internal sealed class DemandPlanLineConfiguration : IEntityTypeConfiguration<DemandPlanLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<DemandPlanLine> builder)
+    {
+        builder.ToTable("DemandPlanLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.Months);
+        builder.Ignore(x => x.Total);
+        builder.HasIndex(x => x.ItemId);
+        builder.Property(x => x.UomFactor).HasPrecision(18, 6);
+        foreach (var month in new[] { "Qty01", "Qty02", "Qty03", "Qty04", "Qty05", "Qty06", "Qty07", "Qty08", "Qty09", "Qty10", "Qty11", "Qty12" })
+            builder.Property<decimal>(month).HasPrecision(18, 4);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
