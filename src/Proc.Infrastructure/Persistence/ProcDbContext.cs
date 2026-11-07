@@ -180,6 +180,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phiếu khảo sát giá thị trường – ngân hàng giá (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25).</summary>
     public DbSet<Proc.Domain.Pricing.MarketPriceSurvey> MarketPriceSurveys => Set<Proc.Domain.Pricing.MarketPriceSurvey>();
 
+    /// <summary>Phiếu kế hoạch nhu cầu (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25, lát G5a).</summary>
+    public DbSet<Proc.Domain.Purchasing.DemandPlan> DemandPlans => Set<Proc.Domain.Purchasing.DemandPlan>();
+
     /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
     public DbSet<Proc.Domain.Sourcing.SourcingRequest> SourcingRequests => Set<Proc.Domain.Sourcing.SourcingRequest>();
 
@@ -327,6 +330,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
             ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
         // Phiếu khảo sát giá cũng theo nhóm hàng của phiếu.
         modelBuilder.Entity<Proc.Domain.Pricing.MarketPriceSurvey>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
+        // Phiếu kế hoạch nhu cầu cũng theo nhóm hàng của phiếu.
+        modelBuilder.Entity<Proc.Domain.Purchasing.DemandPlan>().HasQueryFilter(
             ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
     }
 }

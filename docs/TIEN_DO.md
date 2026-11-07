@@ -1,11 +1,12 @@
 # Tiến độ dự án
 
-Cập nhật: 07/11/2026 (ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 07/11/2026 (G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
 | Phần | Nội dung | Merge |
 | --- | --- | --- |
+| G5a (07/11/2026) | **Phiếu kế hoạch nhu cầu** (màn hình KHN, Mua hàng → Kế hoạch nhu cầu, số `KHN-…`): mỗi công ty lập theo năm (năm nay → +2) × nhóm hàng; dòng mặt hàng × ĐVT, SL 12 tháng, tổng quý/cả năm tự tính; Nháp → Đã chốt (không duyệt); Điều chỉnh = phiếu nháp mới, chốt xong phiếu cũ Đã thay; hủy bắt buộc lý do; mỗi mặt hàng × năm × công ty một phiếu còn hiệu lực; quyền `Purchase.DemandPlan.View/Manage` (vai trò mẫu DAMPHAN lập), đính kèm, tra cứu chứng từ. `LineGrid` thêm `scrollX` (giữ độ rộng cột, cuộn ngang – chỉ bật cho lưới 12 tháng). Migration `V0_20_0_KeHoachNhuCau`; design.md 18.25, ui-style.md 5. Kiểm tra: `dotnet build` 0 cảnh báo, `dotnet test` 553/553, Playwright 103/103, build/tsc/oxlint qua | feature/ke-hoach-nhu-cau |
 | NCC-NH (07/11/2026) | **Ngành hàng NCC chọn từ danh mục Nhóm hàng** (người dùng chọn cách A): bảng `SupplierCategory` (NCC × nhóm hàng, nhật ký), chọn nhiều nhóm ở ngăn kéo NCC, nút "Thêm nhóm hàng" tạo ngay; lưu không cần duyệt; danh sách NCC có cột + lọc ngành hàng (gồm nhóm con); Excel cột Ngành hàng = mã nhóm; chữ `SupplyScope` cũ ngừng dùng (chỉ xem). **Danh mục nhóm hàng ai cũng xem đủ** (cờ `IsInScope`, nhóm ngoài phạm vi chỉ xem; mặt hàng/tồn kho/chứng từ vẫn lọc phạm vi – CLAUDE.md mục 4 ghi ngoại lệ); **chặn trùng tên nhóm trong cùng nhóm cha** (so không dấu) + cảnh báo ngay khi gõ. Sửa lỗi tiềm ẩn: Esc đóng hộp thoại F1 đóng luôn ngăn kéo (DetailDrawer nghe Esc ở pha capture). Test: tên nhóm hàng trong test thêm hậu tố ngẫu nhiên. Migration `V0_20_0_NganhHangNcc`; design.md 5.3, 5.7, 5.9, 5.10, 9.2. Kiểm tra: `dotnet build` 0 cảnh báo, `dotnet test` 549/549, Playwright 102/102, build/tsc/oxlint qua | feature/nganh-hang-ncc |
 | NCC-SP2 (07/11/2026) | **Mã hàng theo NCC + ĐVT mua cho PR, RFQ**: PR lấy ĐVT mua theo NCC đề xuất của dòng, cột "Mã hàng NCC"; hộp thoại báo giá RFQ có cột "Mã hàng NCC" của NCC đó; API riêng của PO thay bằng API tra chung `/api/supplier-items/lookup` (chỉ cần đăng nhập, lọc nhóm hàng); design.md 5.9. Không migration mới. Kiểm tra: `dotnet test` 546/546, Playwright 101/101, build/tsc/oxlint qua | feature/pr-rfq-ma-hang-ncc |
 | TIM-* (07/11/2026) | **Đồng bộ ô tìm `*` mọi form** (yêu cầu người dùng): `Select` cổ điển mặc định bật tìm (22 màn hình còn dùng `Select` antd chuyển sang – ô lọc nhóm NCC, kho, công ty, trạng thái… gõ được); `TreeSelect` cổ điển mới cho 9 ô cây nhóm hàng (`*`, không dấu); ô lệnh gõ `*` liệt kê mọi màn hình, Enter không tự mở; ô mặt hàng NCC độc quyền báo đúng; ui-style.md 5b. Máy chủ đã hiểu `*` từ trước. Kiểm tra: `dotnet test` 546/546, Playwright 101/101, build/tsc/oxlint qua | fix/tim-sao-toan-bo |
@@ -432,8 +433,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
-0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c xong; **tạm dừng sau G4c theo yêu cầu người dùng (06/11/2026)** –
-   khi người dùng cho làm tiếp thì làm **G5** kế hoạch nhu cầu, rồi G6 … G12. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
+0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c, **G5a** xong (người dùng cho làm tiếp 07/11/2026).
+   Tiếp theo: **G5b** tổng hợp nhu cầu gộp ở tổng công ty (mặt hàng × tháng/quý/năm, cột từng công ty + tổng, ĐVT cơ sở, chỉ phiếu Đã chốt),
+   **G5c** nút lấy SL kế hoạch làm SL dự kiến RFQ / hợp đồng nguyên tắc, rồi G6 … G12. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
    Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
    TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới
    N01–N16 (0.15.0–0.18.0). N01 nhắc admin gán quyền `Purchase.Budget.*` cho TOANQUYEN (CSDL test chưa có) và khai PRB/POB ở BMI.

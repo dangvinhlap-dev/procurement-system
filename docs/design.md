@@ -1782,6 +1782,23 @@ AuditLog vẫn giữ).
 
 Không có migration.
 
+**G5 – Kế hoạch nhu cầu** (07/11/2026, chia lát): G5a phiếu kế hoạch nhu cầu của từng công ty; G5b tổng hợp nhu cầu gộp ở tổng công ty
+(mặt hàng × tháng/quý/năm, cột từng công ty + tổng, ĐVT cơ sở); G5c lấy SL kế hoạch làm SL dự kiến cho RFQ / hợp đồng nguyên tắc.
+
+**G5a – Phiếu kế hoạch nhu cầu** (màn hình **KHN**, Mua hàng → Kế hoạch nhu cầu, `/api/demand-plans`, số loại **KHN**, ví dụ
+KHN-BHA-2611-0001 theo ngày lập):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu `DemandPlan` thuộc **công ty đang làm việc** (mọi công ty lập được, kể cả tổng công ty). Đầu phiếu: **năm kế hoạch** (năm hiện tại đến 2 năm tới), **nhóm hàng**, Ghi chú; tab Đính kèm (định mức, đề xuất của kho, bộ phận) | Quyết định: Văn phòng Ban tổng hợp nhu cầu năm, quý, tháng của các công ty theo nhóm hàng; đầu vào là đề xuất định mức và nhu cầu từ kho, bộ phận sử dụng – mỗi pháp nhân tự khai nhu cầu của mình |
+| Dòng = **một mặt hàng** (thuộc nhóm hàng của phiếu hoặc nhóm con; không trùng trên phiếu), ĐVT (cơ sở hoặc quy đổi), **SL tháng 1–12** (≥ 0, 4 số lẻ, ít nhất một tháng > 0), ghi chú. Tổng quý, cả năm tự cộng từ tháng (chỉ hiển thị, không lưu) | Một nguồn số liệu cho cả năm, quý, tháng – không lệch nhau |
+| Mỗi **mặt hàng × năm × công ty** chỉ thuộc một phiếu còn hiệu lực (Nháp, Đã chốt) – kể cả phiếu nhóm hàng khác chứa cùng mặt hàng; trừ cặp phiếu gốc ↔ phiếu điều chỉnh của nó. Kiểm tra lúc lưu và lúc chốt | Tổng hợp gộp không đếm trùng nhu cầu |
+| **Nháp → Đã chốt** (ghi người, thời điểm) – không qua duyệt; năm kế hoạch đã qua thì không lập, sửa, chốt. Đã chốt không sửa: **Điều chỉnh** lập phiếu nháp mới chép nội dung (mỗi phiếu một phiếu điều chỉnh chưa hủy); chốt phiếu điều chỉnh thì phiếu cũ thành **Đã thay** (cùng giao dịch). **Hủy** (nháp hoặc đã chốt, bắt buộc lý do; không hủy phiếu đang có phiếu điều chỉnh nháp) | Kế hoạch là số liệu đề xuất – Ban quyết định ở phiếu duyệt tháng (GTH); giữ lịch sử từng lần điều chỉnh |
+| Chỉ thấy phiếu của công ty đang làm việc, theo phạm vi nhóm hàng của phiếu. Quyền `Purchase.DemandPlan.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `Purchase.DemandPlan.Manage` – lập, chốt, điều chỉnh, hủy (DAMPHAN). Có trong tra cứu chứng từ (loại KHN, theo ngày lập) | Tổng hợp nhiều công ty làm ở lát G5b |
+
+Migration `V0_20_0_KeHoachNhuCau` (bảng `DemandPlan`, `DemandPlanLine` – 12 cột `Qty01`…`Qty12` numeric(18,4); bảng mới – `Down()` xóa
+bảng, mất phiếu kế hoạch nhu cầu, AuditLog vẫn giữ).
+
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
 

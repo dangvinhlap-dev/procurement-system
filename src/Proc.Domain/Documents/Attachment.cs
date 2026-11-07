@@ -53,10 +53,13 @@ public static class AttachmentOwnerTypes
     /// <summary>Phiếu khảo sát giá thị trường (báo giá, ảnh chụp bảng giá – lát G4a).</summary>
     public const string MarketPriceSurvey = "MarketPriceSurvey";
 
+    /// <summary>Phiếu kế hoạch nhu cầu (định mức, nhu cầu kho, bộ phận – lát G5a).</summary>
+    public const string DemandPlan = "DemandPlan";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
-        MonthlySupplierApproval, MarketPriceSurvey];
+        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan];
 }
 
 /// <summary>

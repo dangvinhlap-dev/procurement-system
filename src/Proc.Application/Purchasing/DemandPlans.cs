@@ -1,0 +1,168 @@
+using FluentValidation;
+
+namespace Proc.Application.Purchasing;
+
+/// <summary>Một dòng danh sách phiếu kế hoạch nhu cầu.</summary>
+/// <param name="Id">Id.</param>
+/// <param name="No">Số phiếu.</param>
+/// <param name="Year">Năm kế hoạch.</param>
+/// <param name="CategoryCode">Mã nhóm hàng.</param>
+/// <param name="CategoryName">Tên nhóm hàng.</param>
+/// <param name="LineCount">Số mặt hàng.</param>
+/// <param name="Status">Draft, Confirmed, Replaced, Cancelled.</param>
+/// <param name="ReplacesNo">Số phiếu được điều chỉnh (null = phiếu gốc).</param>
+/// <param name="CreatedByName">Người lập.</param>
+public sealed record DemandPlanListItemDto(
+    Guid Id, string No, int Year, string CategoryCode, string CategoryName, int LineCount, string Status, string? ReplacesNo, string? CreatedByName);
+
+/// <summary>Một dòng phiếu kế hoạch nhu cầu.</summary>
+/// <param name="Id">Id dòng.</param>
+/// <param name="LineNo">Số thứ tự.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã hàng.</param>
+/// <param name="ItemName">Tên hàng.</param>
+/// <param name="UomId">ĐVT.</param>
+/// <param name="UomCode">Mã ĐVT.</param>
+/// <param name="Months">SL 12 tháng theo ĐVT dòng (phần tử 0 là tháng 1).</param>
+/// <param name="Total">Tổng năm theo ĐVT dòng.</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record DemandPlanLineDto(
+    Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, IReadOnlyList<decimal> Months, decimal Total,
+    string? Note);
+
+/// <summary>Thao tác được phép trên phiếu kế hoạch nhu cầu.</summary>
+/// <param name="CanEdit">Sửa, chốt (nháp, có quyền lập).</param>
+/// <param name="CanCancel">Hủy (nháp hoặc đã chốt chưa có phiếu điều chỉnh soạn dở).</param>
+/// <param name="CanAdjust">Lập phiếu điều chỉnh (đã chốt, năm chưa qua, chưa có phiếu điều chỉnh).</param>
+/// <param name="ReadOnlyReason">Lý do chỉ xem.</param>
+public sealed record DemandPlanActions(bool CanEdit, bool CanCancel, bool CanAdjust, string? ReadOnlyReason);
+
+/// <summary>Chi tiết phiếu kế hoạch nhu cầu.</summary>
+/// <param name="Id">Id.</param>
+/// <param name="No">Số phiếu.</param>
+/// <param name="Year">Năm kế hoạch.</param>
+/// <param name="ItemCategoryId">Nhóm hàng.</param>
+/// <param name="CategoryCode">Mã nhóm hàng.</param>
+/// <param name="CategoryName">Tên nhóm hàng.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="Status">Draft, Confirmed, Replaced, Cancelled.</param>
+/// <param name="ReplacesId">Phiếu được điều chỉnh.</param>
+/// <param name="ReplacesNo">Số phiếu được điều chỉnh.</param>
+/// <param name="ReplacedById">Phiếu điều chỉnh của phiếu này (chưa hủy).</param>
+/// <param name="ReplacedByNo">Số phiếu điều chỉnh.</param>
+/// <param name="ConfirmedAt">Thời điểm chốt.</param>
+/// <param name="ConfirmedByName">Người chốt.</param>
+/// <param name="CancelledOn">Ngày hủy.</param>
+/// <param name="CancelReason">Lý do hủy.</param>
+/// <param name="CreatedAt">Thời điểm lập.</param>
+/// <param name="CreatedByName">Người lập.</param>
+/// <param name="Version">Phiên bản dòng (chống ghi đè – gửi lại qua If-Match).</param>
+/// <param name="Lines">Các dòng.</param>
+/// <param name="Actions">Thao tác được phép.</param>
+public sealed record DemandPlanDto(
+    Guid Id, string No, int Year, Guid ItemCategoryId, string CategoryCode, string CategoryName, string? Note, string Status, Guid? ReplacesId,
+    string? ReplacesNo, Guid? ReplacedById, string? ReplacedByNo, DateTimeOffset? ConfirmedAt, string? ConfirmedByName, DateOnly? CancelledOn,
+    string? CancelReason, DateTimeOffset CreatedAt, string? CreatedByName, uint Version, IReadOnlyList<DemandPlanLineDto> Lines,
+    DemandPlanActions Actions);
+
+/// <summary>Lưu phiếu kế hoạch nhu cầu.</summary>
+/// <param name="Year">Năm kế hoạch.</param>
+/// <param name="ItemCategoryId">Nhóm hàng.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="Lines">Các dòng.</param>
+public sealed record SaveDemandPlanRequest(int Year, Guid ItemCategoryId, string? Note, IReadOnlyList<SaveDemandPlanLineRequest> Lines);
+
+/// <summary>Lưu một dòng kế hoạch nhu cầu.</summary>
+/// <param name="Id">Id dòng đang có (null = dòng mới).</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT.</param>
+/// <param name="Months">SL 12 tháng (phần tử 0 là tháng 1).</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record SaveDemandPlanLineRequest(Guid? Id, Guid ItemId, Guid UomId, IReadOnlyList<decimal> Months, string? Note);
+
+/// <summary>Hủy phiếu kế hoạch nhu cầu.</summary>
+/// <param name="Reason">Lý do, bắt buộc.</param>
+public sealed record CancelDemandPlanRequest(string Reason);
+
+/// <summary>
+/// Phiếu kế hoạch nhu cầu (design.md mục 18.25, lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, SL 12 tháng mỗi mặt hàng; chốt để vào tổng
+/// hợp nhu cầu gộp; sửa sau khi chốt bằng phiếu điều chỉnh.
+/// </summary>
+public interface IDemandPlanService
+{
+    /// <summary>Danh sách phiếu của công ty đang làm việc (theo phạm vi nhóm hàng), năm mới nhất trước.</summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Danh sách.</returns>
+    Task<IReadOnlyList<DemandPlanListItemDto>> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>Chi tiết phiếu.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không thấy hoặc ngoài phạm vi.</exception>
+    Task<DemandPlanDto> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lập phiếu nháp cho công ty đang làm việc.</summary>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu vừa lập.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi sai quy tắc (năm, nhóm hàng, trùng mặt hàng với phiếu khác…).</exception>
+    Task<DemandPlanDto> CreateAsync(SaveDemandPlanRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sửa phiếu nháp.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi sửa.</returns>
+    Task<DemandPlanDto> UpdateAsync(Guid id, SaveDemandPlanRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Chốt phiếu nháp; phiếu điều chỉnh chốt xong thì phiếu cũ thành Đã thay.</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu.</returns>
+    Task<DemandPlanDto> ConfirmAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lập phiếu điều chỉnh (nháp, chép nội dung) cho phiếu đã chốt.</summary>
+    /// <param name="id">Id phiếu đã chốt.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu điều chỉnh vừa lập.</returns>
+    Task<DemandPlanDto> AdjustAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Hủy phiếu (bắt buộc lý do).</summary>
+    /// <param name="id">Id.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu.</returns>
+    Task<DemandPlanDto> CancelAsync(Guid id, CancelDemandPlanRequest request, CancellationToken cancellationToken);
+}
+
+/// <summary>Kiểm tra dữ liệu lưu phiếu kế hoạch nhu cầu.</summary>
+public sealed class SaveDemandPlanRequestValidator : AbstractValidator<SaveDemandPlanRequest>
+{
+    /// <summary>Khai báo quy tắc.</summary>
+    public SaveDemandPlanRequestValidator()
+    {
+        RuleFor(x => x.Year).InclusiveBetween(2000, 2999).WithMessage("Năm kế hoạch không hợp lệ.");
+        RuleFor(x => x.ItemCategoryId).NotEmpty().WithMessage("Hãy chọn nhóm hàng.");
+        RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một mặt hàng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty().WithMessage("Hãy chọn mặt hàng.");
+            l.RuleFor(x => x.UomId).NotEmpty().WithMessage("Hãy chọn ĐVT.");
+            l.RuleFor(x => x.Months).Must(m => m is { Count: 12 }).WithMessage("Phải có số lượng đủ 12 tháng.");
+            l.RuleForEach(x => x.Months).GreaterThanOrEqualTo(0).WithMessage("Số lượng không được âm.");
+            l.RuleFor(x => x.Note).MaximumLength(500);
+        });
+    }
+}
+
+/// <summary>Kiểm tra yêu cầu hủy phiếu kế hoạch nhu cầu.</summary>
+public sealed class CancelDemandPlanRequestValidator : AbstractValidator<CancelDemandPlanRequest>
+{
+    /// <summary>Khai báo quy tắc.</summary>
+    public CancelDemandPlanRequestValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().WithMessage("Hãy nhập lý do hủy.").MaximumLength(1000);
+    }
+}

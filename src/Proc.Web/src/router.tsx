@@ -67,6 +67,7 @@ import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purc
 import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
 import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
 import { BudgetListPage } from './pages/purchasing/BudgetListPage'
+import { DemandPlanListPage, DemandPlanPage } from './pages/purchasing/DemandPlanPages'
 import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
@@ -91,6 +92,7 @@ const implemented: Record<string, ReactNode> = {
   PO: <PurchaseListPage kind="purchase-orders" title="Danh sách đơn mua hàng (PO)" path="/mua-hang/po" exportFileName="don-mua-hang" />,
   POTRK: <DeliveryTrackingPage />,
   BUDG: <BudgetListPage />,
+  KHN: <DemandPlanListPage />,
   TODO: <PendingApprovalsPage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
@@ -176,6 +178,7 @@ const documentPages = [
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },
+  { code: 'KHN', element: <DemandPlanPage /> },
   { code: 'SRC', element: <SourcingPage /> },
   { code: 'RFQ', element: <RfqPage /> },
   { code: 'CTR', element: <ContractPage /> },

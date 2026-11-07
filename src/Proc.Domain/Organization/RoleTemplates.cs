@@ -29,7 +29,7 @@ public static class RoleTemplates
         Permissions.Purchase.PrView, Permissions.Purchase.PoView, Permissions.Purchase.ContractView,
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
-        Permissions.Pricing.PriceBankView,
+        Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -57,7 +57,7 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
             Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
-            Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage,
+            Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Purchase.DemandPlanManage,
         ]),
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [

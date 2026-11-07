@@ -118,6 +118,10 @@ public static class Permissions
         public const string BudgetView = "Purchase.Budget.View";
         /// <summary>Quyền "Lập, sửa ngân sách bộ phận".</summary>
         public const string BudgetManage = "Purchase.Budget.Manage";
+        /// <summary>Quyền "Xem kế hoạch nhu cầu" (lát G5, design.md mục 18.25).</summary>
+        public const string DemandPlanView = "Purchase.DemandPlan.View";
+        /// <summary>Quyền "Lập, chốt, điều chỉnh, hủy phiếu kế hoạch nhu cầu".</summary>
+        public const string DemandPlanManage = "Purchase.DemandPlan.Manage";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -275,6 +279,8 @@ public static class Permissions
         new(Purchase.ContractApprove, "Duyệt hợp đồng nguyên tắc"),
         new(Purchase.BudgetView, "Xem ngân sách bộ phận"),
         new(Purchase.BudgetManage, "Lập, sửa ngân sách bộ phận"),
+        new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
+        new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),

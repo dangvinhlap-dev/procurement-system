@@ -56,6 +56,9 @@ public static class DocumentTypes
     /// <summary>Phiếu khảo sát giá thị trường – ngân hàng giá (lát G4a, design.md mục 18.25).</summary>
     public const string MarketPriceSurvey = "KSG";
 
+    /// <summary>Phiếu kế hoạch nhu cầu (lát G5a, design.md mục 18.25).</summary>
+    public const string DemandPlan = "KHN";
+
     /// <summary>Vi phạm do Kiểm soát nội bộ ghi nhận (lát F3, design.md mục 18.19).</summary>
     public const string ControlFinding = "VP";
 
@@ -80,6 +83,7 @@ public static class DocumentTypes
         new(SoleSource, "Phê duyệt NCC độc quyền"),
         new(MonthlySupplierApproval, "Duyệt NCC và giá tháng"),
         new(MarketPriceSurvey, "Khảo sát giá thị trường"),
+        new(DemandPlan, "Kế hoạch nhu cầu"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
         new(SupplierReview, "Đánh giá nhà cung cấp định kỳ"),
     ];
