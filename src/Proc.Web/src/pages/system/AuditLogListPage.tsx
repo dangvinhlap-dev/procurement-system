@@ -1,4 +1,5 @@
-import { Descriptions, Select, Table } from 'antd'
+import { Descriptions, Table } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { defaultLogRange, useAuditLog, useAuditLogs, type AuditLogItem } from '../../api/logs'
 import { useAuth } from '../../auth/useAuth'

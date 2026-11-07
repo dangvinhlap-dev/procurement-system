@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { App, Button, Checkbox, Form, Input, InputNumber, TreeSelect } from 'antd'
+import { App, Button, Checkbox, Form, Input, InputNumber } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -232,7 +233,7 @@ export function ItemDrawer({
               </Form.Item>
               <div className="detail-grid">
                 <Form.Item label="Nhóm hàng" name="categoryId" rules={[{ required: true, message: 'Hãy chọn nhóm hàng.' }]}>
-                  <TreeSelect treeData={tree} showSearch treeNodeFilterProp="title" treeDefaultExpandAll />
+                  <TreeSelect treeData={tree} showSearch treeDefaultExpandAll />
                 </Form.Item>
                 <Form.Item
                   label="ĐVT cơ sở"

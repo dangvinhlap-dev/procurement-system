@@ -1,5 +1,6 @@
 import { DeleteOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Form, Input, InputNumber, TreeSelect } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import {
@@ -169,7 +170,7 @@ function NumberingDrawer({ numbering, canManage, onClose }: { numbering: Catalog
               </Form.Item>
               {catalog === 'item' && (
                 <Form.Item label="Nhóm hàng" name="categoryId" extra="Để trống = dải mặc định cho mọi nhóm chưa có dải riêng.">
-                  <TreeSelect disabled={numbering !== null} treeData={tree} allowClear showSearch treeNodeFilterProp="title" placeholder="Mặc định mọi nhóm" />
+                  <TreeSelect disabled={numbering !== null} treeData={tree} allowClear showSearch placeholder="Mặc định mọi nhóm" />
                 </Form.Item>
               )}
               <Form.Item

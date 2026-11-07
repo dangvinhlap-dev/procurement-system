@@ -1,5 +1,6 @@
 import { CheckOutlined } from '@ant-design/icons'
-import { App, Button, Select } from 'antd'
+import { App, Button } from 'antd'
+import { Select } from '../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { notificationTypeLabels, useNotificationMutations, useNotifications, type AppNotification } from '../api/notifications'

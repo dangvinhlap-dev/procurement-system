@@ -1,4 +1,5 @@
-import { Alert, Checkbox, InputNumber, TreeSelect } from 'antd'
+import { Alert, Checkbox, InputNumber } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { useMemo, useState } from 'react'
 import { useItemCategories } from '../../api/masterData'
 import { useSupplierCoverage, type SupplierCoverageRow, type SupplierCoverageStatus } from '../../api/reports'
@@ -91,7 +92,7 @@ export function SupplierCoveragePage() {
                 treeData={tree}
                 allowClear
                 showSearch
-                treeNodeFilterProp="title"
+               
                 placeholder="Tất cả"
               />
             )}

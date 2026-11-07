@@ -1,4 +1,4 @@
-import { Select } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { conflictRelationLabels, useConflictDeclarations, type ConflictDeclaration } from '../../api/conflicts'
 import { Permission } from '../../auth/permissions'

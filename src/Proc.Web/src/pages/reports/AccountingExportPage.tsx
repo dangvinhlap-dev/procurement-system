@@ -1,5 +1,6 @@
 import { FileExcelOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Select } from 'antd'
+import { Alert, App, Button } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'

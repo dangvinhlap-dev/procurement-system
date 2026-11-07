@@ -1,4 +1,5 @@
-import { Alert, Select } from 'antd'
+import { Alert } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { soleSourceStateLabel, useSoleSources, type SoleSourceListItem } from '../../api/soleSources'

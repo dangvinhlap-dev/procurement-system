@@ -1,4 +1,4 @@
-import { Select } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { defaultLogRange, useAccessLogs, type AccessEvent, type AccessLogItem } from '../../api/logs'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'

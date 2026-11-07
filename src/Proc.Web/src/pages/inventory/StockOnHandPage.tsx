@@ -1,4 +1,5 @@
-import { Alert, Checkbox, TreeSelect } from 'antd'
+import { Alert, Checkbox } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -94,7 +95,7 @@ export function StockOnHandPage() {
                 treeData={tree}
                 allowClear
                 showSearch
-                treeNodeFilterProp="title"
+               
                 placeholder="Tất cả"
               />
             )}

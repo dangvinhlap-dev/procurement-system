@@ -1,5 +1,6 @@
 import { FileAddOutlined } from '@ant-design/icons'
-import { Alert, Button, Checkbox, InputNumber, TreeSelect } from 'antd'
+import { Alert, Button, Checkbox, InputNumber } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -70,7 +71,7 @@ function StockReportFilters({
             treeData={tree}
             allowClear
             showSearch
-            treeNodeFilterProp="title"
+           
             placeholder="Tất cả"
           />
         )}
@@ -368,7 +369,7 @@ export function ReorderSuggestionReportPage() {
                 treeData={tree}
                 allowClear
                 showSearch
-                treeNodeFilterProp="title"
+               
                 placeholder="Tất cả"
               />
             )}

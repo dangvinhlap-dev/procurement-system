@@ -1,5 +1,6 @@
 import { ExportOutlined, FileAddOutlined } from '@ant-design/icons'
-import { Alert, Button, Checkbox, Descriptions, InputNumber, Modal, Select } from 'antd'
+import { Alert, Button, Checkbox, Descriptions, InputNumber, Modal } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'

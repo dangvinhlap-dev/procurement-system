@@ -1,4 +1,5 @@
-import { App, Checkbox, Form, Input, TreeSelect } from 'antd'
+import { App, Checkbox, Form, Input } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { useMemo, useState } from 'react'
 import { useItemCategories, useItemCategoryMutations, type ItemCategory } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
@@ -175,7 +176,7 @@ function ItemCategoryDrawer({
                 name="parentId"
                 extra="Để trống là nhóm gốc. Được phân quyền một nhóm thì được mọi nhóm con của nó."
               >
-                <TreeSelect treeData={tree} allowClear showSearch treeNodeFilterProp="title" treeDefaultExpandAll placeholder="(Nhóm gốc)" />
+                <TreeSelect treeData={tree} allowClear showSearch treeDefaultExpandAll placeholder="(Nhóm gốc)" />
               </Form.Item>
               {category && (
                 <Form.Item name="isActive" valuePropName="checked" extra="Ngừng dùng nhóm con và hàng trong nhóm trước.">

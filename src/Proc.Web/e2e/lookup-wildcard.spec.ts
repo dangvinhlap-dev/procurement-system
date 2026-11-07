@@ -53,3 +53,46 @@ test('gõ * rồi Enter liệt kê toàn bộ danh mục trong ô chọn', async
   await supplier.press('Enter')
   await expect(page.locator('.ant-select-dropdown:visible')).toHaveCount(0)
 })
+
+/**
+ * Đồng bộ mọi ô tìm (yêu cầu người dùng 07/11/2026): ô lệnh, ô cây nhóm hàng và ô lọc trên danh sách cũng gõ `*` rồi Enter liệt kê toàn bộ,
+ * tìm không dấu được.
+ */
+test('ô lệnh, ô cây nhóm hàng, ô lọc danh sách: gõ * liệt kê toàn bộ', async ({ page }) => {
+  await loginViaApi(page)
+  await page.goto('/')
+  const dropdown = page.locator('.ant-select-dropdown:visible')
+
+  // Ô lệnh: * rồi Enter liệt kê mọi màn hình, không tự mở màn hình đầu.
+  const command = page.getByPlaceholder('Ô lệnh – tên màn hình')
+  await command.click()
+  await command.fill('*')
+  await expect(dropdown).toBeVisible()
+  await command.press('Enter')
+  await expect(dropdown).toBeVisible()
+  expect(await dropdown.locator('.ant-select-item-option').count()).toBeGreaterThan(5)
+  await expect(page).toHaveURL(/\/$/)
+  await command.fill('')
+  await command.press('Escape')
+
+  // Ô cây nhóm hàng trên danh sách hàng hóa: * liệt kê các nhóm; gõ không dấu vẫn tìm được.
+  await command.fill('ITEM')
+  await command.press('Enter')
+  const category = page.getByLabel('Nhóm hàng (gồm nhóm con)')
+  await category.click()
+  await category.fill('*')
+  await category.press('Enter')
+  await expect(page.locator('.ant-select-dropdown:visible .ant-select-tree-treenode:not([aria-hidden]) .ant-select-tree-title').first()).toBeVisible()
+  await category.press('Escape')
+
+  // Ô lọc Nhóm NCC (trước đây không gõ được): * liệt kê, gõ không dấu "trong nuoc" ra "Trong nước".
+  await command.fill('SUP')
+  await command.press('Enter')
+  const group = page.getByRole('combobox', { name: 'Nhóm NCC' })
+  await group.click()
+  await group.fill('*')
+  await group.press('Enter')
+  expect(await dropdown.locator('.ant-select-item-option').count()).toBeGreaterThan(1)
+  await group.fill('trong nuoc')
+  await expect(dropdown.locator('.ant-select-item-option', { hasText: 'Trong nước' }).first()).toBeVisible()
+})

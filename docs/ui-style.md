@@ -97,6 +97,10 @@ Mọi ô chọn có tìm kiếm (NCC, mặt hàng, kho, bộ phận, nhóm…) d
   không tự chọn dòng đầu; chọn bằng mũi tên + Enter hoặc bấm chuột.
 - `*` giữa từ khóa là ký tự đại diện: `b*long` khớp "Bu lông"; áp cả ô Tìm kiếm của mọi danh sách (`matchesKeyword`) và API tìm (`LikePatterns.Contains`).
 - Tìm không phân biệt có dấu/không dấu, nhiều từ không cần đúng thứ tự.
+- **Đồng bộ mọi form** (yêu cầu người dùng 07/11/2026): `Select` cổ điển **mặc định bật tìm** – kể cả ô lọc trạng thái/nhóm/kho/công ty trên
+  danh sách (chỉ `showSearch={false}` mới tắt); không import `Select`/`TreeSelect` trực tiếp từ antd. Ô cây (nhóm hàng) dùng `TreeSelect` của
+  `src/classic/TreeSelect.tsx` – cùng cách tìm `*`, không dấu. **Ô lệnh** (tên màn hình) gõ `*` rồi Enter liệt kê mọi màn hình được phép, mũi
+  tên + Enter mới mở. Ô tìm trên máy chủ gọi API khi gõ ≥ 2 ký tự **hoặc** có `*`.
 
 ## 5a. Tab
 

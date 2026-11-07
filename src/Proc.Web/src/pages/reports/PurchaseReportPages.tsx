@@ -1,5 +1,6 @@
 import { SettingOutlined } from '@ant-design/icons'
-import { Alert, Button, Checkbox, InputNumber, TreeSelect } from 'antd'
+import { Alert, Button, Checkbox, InputNumber } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useMemo, useState, type ReactNode } from 'react'
@@ -720,7 +721,7 @@ export function PriceVarianceReportPage() {
                   treeData={tree}
                   allowClear
                   showSearch
-                  treeNodeFilterProp="title"
+                 
                   placeholder="Tất cả"
                 />
               )}
@@ -808,7 +809,7 @@ export function StandardSavingsReportPage() {
                   treeData={tree}
                   allowClear
                   showSearch
-                  treeNodeFilterProp="title"
+                 
                   placeholder="Tất cả"
                 />
               )}

@@ -19,7 +19,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { DATE_INPUT_FORMATS, formatDate, formatDateTime } from '../../utils/format'
-import { matchesKeyword } from '../../utils/text'
+import { hasWildcard, matchesKeyword } from '../../utils/text'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 
 interface SoleSourceFormValues {
@@ -313,7 +313,7 @@ function SoleSourceForm({
                     showSearch={{ filterOption: false, onSearch: setItemSearch }}
                     options={itemOptions}
                     placeholder="Gõ ít nhất 2 ký tự mã, tên hoặc mã vạch"
-                    notFoundContent={foundItems.isFetching ? <Spin size="small" /> : itemSearch.trim().length < 2 ? 'Gõ để tìm' : 'Không có'}
+                    notFoundContent={foundItems.isFetching ? <Spin size="small" /> : itemSearch.trim().length < 2 && !hasWildcard(itemSearch) ? 'Gõ ít nhất 2 ký tự, hoặc * để xem tất cả' : 'Không có'}
                   />
                 </Form.Item>
                 <Form.Item

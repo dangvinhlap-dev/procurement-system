@@ -7,13 +7,14 @@ import {
   LogoutOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
-import { App, AutoComplete, Avatar, Badge, Button, Dropdown, Input, Select, Tooltip, type MenuProps } from 'antd'
+import { App, AutoComplete, Avatar, Badge, Button, Dropdown, Input, Tooltip, type MenuProps } from 'antd'
+import { Select } from '../../classic/Select'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { searchScreens } from '../../app/commands'
 import { moduleGroups, type ModuleGroup, type ModuleKey } from '../../app/screens'
 import { useVisibleScreens } from '../../app/useVisibleScreens'
-import { normalizeVi } from '../../utils/text'
+import { hasWildcard, normalizeVi } from '../../utils/text'
 
 type MenuItems = NonNullable<MenuProps['items']>
 
@@ -89,6 +90,8 @@ export function ShellBar({
   const screens = useVisibleScreens()
   const [command, setCommand] = useState('')
   const matches = useMemo(() => searchScreens(command, screens), [command, screens])
+  // Đã dùng mũi tên chọn màn hình sau lần gõ cuối – khi đó Enter mở màn hình đó dù từ khóa có `*`.
+  const navigated = useRef(false)
 
   // Nhóm vẫn hiện để giữ bố cục cố định; không có màn hình được phép thì báo rõ trong menu.
   const menuItemsOf = (group: ModuleKey): MenuItems => {
@@ -163,22 +166,40 @@ export function ShellBar({
         </nav>
       </div>
 
-      <AutoComplete
-        className="app-command-box"
-        value={command}
-        onChange={setCommand}
-        onSelect={openScreen}
-        defaultActiveFirstOption
-        popupMatchSelectWidth={360}
-        options={matches.map((s) => ({ value: s.code, label: `${s.code} – ${s.title}` }))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && command.trim() && matches.length === 0) {
-            message.warning(`Không có màn hình "${command.trim()}".`)
+      <span
+        style={{ display: 'contents' }}
+        onKeyDownCapture={(e) => {
+          // Gõ `*` rồi Enter chỉ liệt kê màn hình, danh sách không đóng (ui-style.md mục 5b).
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') navigated.current = true
+          if (e.key === 'Enter' && hasWildcard(command) && !navigated.current) {
+            e.preventDefault()
+            e.stopPropagation()
           }
         }}
       >
-        <Input prefix={<SearchOutlined />} placeholder="Ô lệnh – tên màn hình" aria-label="Ô lệnh – tên màn hình" allowClear />
-      </AutoComplete>
+        <AutoComplete
+          className="app-command-box"
+          value={command}
+          onChange={(value) => {
+            navigated.current = false
+            setCommand(value)
+          }}
+          onSelect={openScreen}
+          // Gõ `*` là để xem danh sách màn hình: Enter không tự mở màn hình đầu (như ô chọn danh mục – ui-style.md mục 5b).
+          defaultActiveFirstOption={!hasWildcard(command)}
+          popupMatchSelectWidth={360}
+          // `matches` đã lọc (không dấu, `*` đại diện); lọc thêm của antd theo chữ gốc sẽ bỏ mất kết quả khi gõ `*`.
+          filterOption={false}
+          options={matches.map((s) => ({ value: s.code, label: `${s.code} – ${s.title}` }))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && command.trim() && matches.length === 0) {
+              message.warning(`Không có màn hình "${command.trim()}".`)
+            }
+          }}
+        >
+          <Input prefix={<SearchOutlined />} placeholder="Ô lệnh – tên màn hình" aria-label="Ô lệnh – tên màn hình" allowClear />
+        </AutoComplete>
+      </span>
 
       <div className="app-shell-end">
         <Select

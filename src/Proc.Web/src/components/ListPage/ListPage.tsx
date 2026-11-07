@@ -7,7 +7,8 @@ import {
   UpOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
-import { App, Button, Checkbox, Dropdown, Empty, Input, Popover, Select, Tabs, Typography } from 'antd'
+import { App, Button, Checkbox, Dropdown, Empty, Input, Popover, Tabs, Typography } from 'antd'
+import { Select } from '../../classic/Select'
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { matchesKeyword } from '../../utils/text'
 import { DataGrid } from '../DataGrid/DataGrid'
