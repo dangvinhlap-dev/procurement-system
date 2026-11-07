@@ -154,8 +154,9 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.DemandPlanView);
         plans.MapGet("/{id:guid}", (Guid id, IDemandPlanService s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.Purchase.DemandPlanView);
-        // Tổng hợp nhu cầu gộp (lát G5b): ở tổng công ty gộp mọi công ty, ở công ty thành viên chỉ công ty đó.
-        plans.MapGet("/summary", (int year, Guid? categoryId, IDemandPlanService s, CancellationToken ct) => s.SummaryAsync(year, categoryId, ct))
+        // Tổng hợp nhu cầu gộp (lát G5b): toàn tập đoàn cần thêm quyền ViewAllCompanies (kiểm tra trong dịch vụ).
+        plans.MapGet("/summary", (int year, Guid? categoryId, bool? allCompanies, IDemandPlanService s, CancellationToken ct) =>
+                s.SummaryAsync(year, categoryId, allCompanies ?? false, ct))
             .RequirePermission(Permissions.Purchase.DemandPlanView);
         plans.MapPost("/", async (SaveDemandPlanRequest request, IDemandPlanService s, CancellationToken ct) =>
             {

@@ -8,14 +8,13 @@ using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.MasterData;
-using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
 
 /// <summary>
 /// Phiếu kế hoạch nhu cầu (design.md mục 18.25, lát G5a). Phiếu thuộc công ty đang làm việc – mỗi pháp nhân lập nhu cầu của mình; filter công
-/// ty và nhóm hàng giữ nguyên ở mọi truy vấn (trừ lúc dò trùng mặt hàng, xem <see cref="CheckAsync"/>; và tổng hợp nhu cầu ở tổng công ty, xem
+/// ty và nhóm hàng giữ nguyên ở mọi truy vấn (trừ lúc dò trùng mặt hàng, xem <see cref="CheckAsync"/>; và tổng hợp nhu cầu toàn tập đoàn, xem
 /// <see cref="SummaryAsync"/>).
 /// </summary>
 public sealed class DemandPlanService : IDemandPlanService
@@ -142,15 +141,15 @@ public sealed class DemandPlanService : IDemandPlanService
     }
 
     /// <inheritdoc />
-    public async Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, CancellationToken cancellationToken)
+    public async Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, bool allCompanies, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
         if (year is < 2000 or > 2999) throw new BusinessRuleException("Năm kế hoạch không hợp lệ.");
 
-        // Văn phòng Ban (tổng công ty) tổng hợp nhu cầu của các công ty để thương lượng sản lượng gộp (design.md 18.25, lát G5b) – nên ở tổng
-        // công ty bỏ filter công ty; công ty thành viên chỉ thấy nhu cầu của mình. Filter nhóm hàng (phiếu, mặt hàng) giữ nguyên.
-        var all = await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
-        var plans = all ? _db.DemandPlans.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.DemandPlans;
+        // Văn phòng Ban tổng hợp nhu cầu của các công ty để thương lượng sản lượng gộp (design.md 18.25, lát G5b) – xem toàn tập đoàn cần quyền
+        // riêng (người dùng yêu cầu 07/11/2026) rồi mới bỏ filter công ty, như các báo cáo toàn tập đoàn. Filter nhóm hàng (phiếu, mặt hàng) giữ nguyên.
+        if (allCompanies) _scope.EnsurePermission(Permissions.Purchase.DemandPlanViewAllCompanies);
+        var plans = allCompanies ? _db.DemandPlans.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.DemandPlans;
         var lines = await (
                 from x in plans.AsNoTracking()
                 where x.Year == year && (x.Status == DemandPlanStatus.Draft || x.Status == DemandPlanStatus.Confirmed)
@@ -171,7 +170,7 @@ public sealed class DemandPlanService : IDemandPlanService
         // Phiếu nháp chưa tính vào tổng hợp (số liệu còn đang sửa) nhưng đếm để Văn phòng Ban biết công ty nào chưa chốt.
         var confirmed = lines.Where(l => l.Status == DemandPlanStatus.Confirmed).ToList();
         var companies = await _db.Companies.AsNoTracking()
-            .Where(x => all ? x.IsActive : x.Id == companyId)
+            .Where(x => allCompanies ? x.IsActive : x.Id == companyId)
             .OrderByDescending(x => x.IsHeadOffice).ThenBy(x => x.Code)
             .Select(x => new { x.Id, x.Code, x.Name })
             .ToListAsync(cancellationToken);
@@ -230,7 +229,7 @@ public sealed class DemandPlanService : IDemandPlanService
             })
             .OrderBy(r => r.ItemCode, StringComparer.Ordinal)
             .ToList();
-        return new DemandSummaryDto(year, all, companyDtos, rows);
+        return new DemandSummaryDto(year, allCompanies, companyDtos, rows);
     }
 
     /// <summary>Cấp số và lưu phiếu nháp trong một transaction (số không bị nhảy khi lưu lỗi).</summary>

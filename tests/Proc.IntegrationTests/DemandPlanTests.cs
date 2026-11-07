@@ -125,9 +125,12 @@ public class DemandPlanTests
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync(Url, Request(Year, Line(item, 1)), Ct)).StatusCode);
     }
 
-    /// <summary>Lát G5b: tổng hợp nhu cầu gộp – tổng công ty cộng mọi công ty, chỉ phiếu Đã chốt, SL quy về ĐVT cơ sở.</summary>
+    /// <summary>
+    /// Lát G5b: tổng hợp nhu cầu gộp – toàn tập đoàn (quyền riêng) cộng mọi công ty, chỉ phiếu Đã chốt, SL quy về ĐVT cơ sở; không chọn toàn
+    /// tập đoàn thì chỉ công ty đang làm việc.
+    /// </summary>
     [Fact]
-    public async Task TongHopNhuCau_TongCongTyGopCacCongTy_ChiPhieuDaChot_QuyVeDvtCoSo()
+    public async Task TongHopNhuCau_ToanTapDoanGopCacCongTy_ChiPhieuDaChot_QuyVeDvtCoSo()
     {
         var userName = $"kt.{Guid.NewGuid():N}"[..16];
         await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA", "NMI"]);
@@ -150,7 +153,7 @@ public class DemandPlanTests
         SaveDemandPlanLineRequest Line(Guid itemId, Guid uomId, params decimal[] months) => new(null, itemId, uomId, Months(months), null);
         async Task<DemandPlanDto> ConfirmAsync(HttpClient client, DemandPlanDto plan) =>
             await ReadAsync<DemandPlanDto>(await client.PostAsync($"{Url}/{plan.Id}/confirm", null, Ct));
-        string SummaryUrl(Guid categoryId) => $"{Url}/summary?year={Year}&categoryId={categoryId}";
+        string SummaryUrl(Guid categoryId, bool all = true) => $"{Url}/summary?year={Year}&categoryId={categoryId}&allCompanies={all}";
 
         // BHA chốt rồi điều chỉnh (phiếu cũ Đã thay – không tính); NMI khai theo thùng; NMI còn phiếu nháp; TCT phiếu đã hủy.
         var bhaPlan = await ConfirmAsync(bha, await ReadAsync<DemandPlanDto>(await bha.PostAsJsonAsync(Url, Request(Line(item.Id, cai, 10, 20)), Ct)));
@@ -162,7 +165,7 @@ public class DemandPlanTests
         var tctPlan = await ReadAsync<DemandPlanDto>(await tct.PostAsJsonAsync(Url, Request(Line(item.Id, cai, 1000)), Ct));
         await ReadAsync<DemandPlanDto>(await tct.PostAsJsonAsync($"{Url}/{tctPlan.Id}/cancel", new CancelDemandPlanRequest("Nhập nhầm"), Ct));
 
-        // Tổng công ty: gộp mọi công ty, lọc nhóm cha gồm nhóm con; 1 thùng = 12 cái, 2,5 thùng = 30 cái.
+        // Toàn tập đoàn: gộp mọi công ty, lọc nhóm cha gồm nhóm con; 1 thùng = 12 cái, 2,5 thùng = 30 cái.
         var summary = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(category.Id), Ct));
         Assert.True(summary.AllCompanies);
         Assert.Equal("TCT", summary.Companies[0].Code);
@@ -185,11 +188,23 @@ public class DemandPlanTests
         summary = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(child.Id), Ct));
         Assert.Equal(item.Id, Assert.Single(summary.Rows).ItemId);
 
-        // Công ty thành viên: chỉ nhu cầu của mình.
-        var own = await ReadAsync<DemandSummaryDto>(await bha.GetAsync(SummaryUrl(category.Id), Ct));
+        // Không chọn toàn tập đoàn: chỉ nhu cầu của công ty đang làm việc (kể cả ở tổng công ty).
+        var own = await ReadAsync<DemandSummaryDto>(await bha.GetAsync(SummaryUrl(category.Id, false), Ct));
         Assert.False(own.AllCompanies);
         Assert.Equal("BHA", Assert.Single(own.Companies).Code);
         Assert.Equal(35m, own.Rows.Single(r => r.ItemId == item.Id).Total);
+        var head = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(category.Id, false), Ct));
+        Assert.Equal("TCT", Assert.Single(head.Companies).Code);
+        Assert.Empty(head.Rows);
+
+        // Chỉ quyền xem kế hoạch nhu cầu (không có quyền toàn tập đoàn): xem công ty mình được, toàn tập đoàn bị chặn.
+        var viewRole = UniqueCode("K");
+        await _factory.CreateRoleAsync(viewRole, Permissions.Purchase.DemandPlanView);
+        var viewerName = $"kv.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(viewerName, "TCT", viewRole);
+        var viewer = await _factory.CreateClientInCompanyAsync(viewerName, ProcApiFactory.TestPassword, "TCT");
+        Assert.True((await viewer.GetAsync(SummaryUrl(category.Id, false), Ct)).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync(SummaryUrl(category.Id), Ct)).StatusCode);
 
         // Không có quyền xem kế hoạch nhu cầu: bị chặn.
         var role = UniqueCode("K");

@@ -68,6 +68,7 @@ import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
 import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
 import { BudgetListPage } from './pages/purchasing/BudgetListPage'
 import { DemandPlanListPage, DemandPlanPage } from './pages/purchasing/DemandPlanPages'
+import { DemandSummaryPage } from './pages/purchasing/DemandSummaryPage'
 import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
@@ -93,6 +94,7 @@ const implemented: Record<string, ReactNode> = {
   POTRK: <DeliveryTrackingPage />,
   BUDG: <BudgetListPage />,
   KHN: <DemandPlanListPage />,
+  KHNTH: <DemandSummaryPage />,
   TODO: <PendingApprovalsPage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,

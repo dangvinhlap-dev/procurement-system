@@ -137,14 +137,16 @@ public interface IDemandPlanService
 
     /// <summary>
     /// Tổng hợp nhu cầu gộp (lát G5b): SL kế hoạch 12 tháng theo ĐVT cơ sở của các phiếu Đã chốt trong năm, mỗi mặt hàng một dòng, tách
-    /// theo công ty. Ở tổng công ty gộp mọi công ty; ở công ty thành viên chỉ công ty đó.
+    /// theo công ty. Toàn tập đoàn gộp mọi công ty (quyền <c>Purchase.DemandPlan.ViewAllCompanies</c>); không thì chỉ công ty đang làm việc.
     /// </summary>
     /// <param name="year">Năm kế hoạch.</param>
     /// <param name="categoryId">Nhóm hàng của mặt hàng (gồm nhóm con); null = mọi nhóm trong phạm vi.</param>
+    /// <param name="allCompanies">true = gộp mọi công ty.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Bảng tổng hợp.</returns>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi năm không hợp lệ.</exception>
-    Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, CancellationToken cancellationToken);
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà không có quyền.</exception>
+    Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, bool allCompanies, CancellationToken cancellationToken);
 }
 
 /// <summary>Một công ty trong bảng tổng hợp nhu cầu.</summary>
@@ -178,7 +180,7 @@ public sealed record DemandSummaryRowDto(
 
 /// <summary>Bảng tổng hợp nhu cầu gộp của một năm.</summary>
 /// <param name="Year">Năm kế hoạch.</param>
-/// <param name="AllCompanies">true khi gộp mọi công ty (đang làm việc ở tổng công ty).</param>
+/// <param name="AllCompanies">true khi gộp mọi công ty (toàn tập đoàn).</param>
 /// <param name="Companies">Các công ty là cột của bảng.</param>
 /// <param name="Rows">Dòng mặt hàng, mã hàng tăng dần.</param>
 public sealed record DemandSummaryDto(int Year, bool AllCompanies, IReadOnlyList<DemandSummaryCompanyDto> Companies, IReadOnlyList<DemandSummaryRowDto> Rows);

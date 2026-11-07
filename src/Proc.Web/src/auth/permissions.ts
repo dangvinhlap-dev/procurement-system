@@ -44,6 +44,7 @@ export const Permission = {
   BudgetManage: 'Purchase.Budget.Manage',
   DemandPlanView: 'Purchase.DemandPlan.View',
   DemandPlanManage: 'Purchase.DemandPlan.Manage',
+  DemandPlanViewAllCompanies: 'Purchase.DemandPlan.ViewAllCompanies',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',
