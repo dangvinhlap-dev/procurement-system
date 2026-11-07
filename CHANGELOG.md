@@ -3,6 +3,46 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.20.0] - 2026-11-07
+
+### Thêm mới
+- **Mở rộng NCC cho công ty** (tab "Mở rộng cho công ty" ở ngăn kéo NCC): bảng mọi công ty với tình trạng Đang giao dịch / Ngừng
+  giao dịch / Chưa mở rộng, mã NCC tại công ty, ngày bắt đầu. Ở tổng công ty, người có quyền `MasterData.Supplier.Manage` mở rộng NCC
+  sẵn có cho một, vài hoặc tất cả công ty thành viên (không phải tạo NCC mới), hoặc ngừng giao dịch; mở lại giữ mã và ngày công ty đã khai.
+- **Phiếu kế hoạch nhu cầu** (màn hình KHN, Mua hàng → Kế hoạch nhu cầu, số `KHN-…`; lát G5a): mỗi công ty lập theo năm × nhóm hàng,
+  dòng mặt hàng × ĐVT với số lượng 12 tháng, tổng quý/cả năm tự tính; Nháp → Đã chốt; điều chỉnh bằng phiếu mới (phiếu cũ thành Đã thay);
+  hủy phải ghi lý do; quyền mới `Purchase.DemandPlan.View/Manage`.
+- **Ngành hàng NCC chọn từ danh mục Nhóm hàng**: chọn nhiều nhóm ở ngăn kéo NCC, nút "Thêm nhóm hàng" tạo ngay; danh sách NCC có cột và
+  bộ lọc Ngành hàng (gồm nhóm con); Excel cột Ngành hàng ghi mã nhóm.
+- **Mã hàng theo NCC và ĐVT mua** trên PO, PR, báo giá RFQ: chọn mặt hàng tự lấy ĐVT mua của NCC, cột "Mã hàng NCC"; PO chép mã vào dòng
+  khi lưu/gửi, phiếu in PO ghi mã NCC.
+
+### Thay đổi
+- Danh mục nhóm hàng ai cũng xem đủ (nhóm ngoài phạm vi chỉ xem, không sửa, không gán cho mặt hàng); mặt hàng, tồn kho, chứng từ vẫn lọc
+  theo phạm vi nhóm hàng.
+- Không cho trùng tên nhóm hàng trong cùng nhóm cha (so không dấu), cảnh báo ngay khi gõ.
+- Mọi ô chọn có tìm kiếm: gõ `*` rồi Enter liệt kê toàn bộ danh mục; ô cây nhóm hàng tìm được không dấu; ô lệnh gõ `*` liệt kê mọi màn hình.
+- Chữ tự do "Phạm vi cung cấp" cũ của NCC chỉ còn để xem.
+
+### Sửa lỗi
+- Hộp thoại "Thêm mặt hàng NCC bán": gõ `*` không liệt kê mặt hàng; ĐVT mua chưa tự điền ĐVT cơ sở.
+- Bấm Esc đóng hộp thoại F1 làm đóng luôn ngăn kéo chi tiết.
+
+### Thay đổi CSDL
+- 3 migration mới (62 → 65): `V0_20_0_MaHangNccTrenPo`, `V0_20_0_NganhHangNcc`, `V0_20_0_KeHoachNhuCau`. Chỉ thêm bảng/cột, không xóa
+  dữ liệu. Script: `db/scripts/0.20.0.sql` (đã chạy thử 2 lần trên bản sao CSDL test 0.19.0, không lỗi, dữ liệu giữ nguyên).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.20.0.sql`, sau đó thay gói ứng dụng.
+  Từ bản cũ hơn 0.19.0: chạy lần lượt các script trước đó.
+- Gán quyền mới `Purchase.DemandPlan.View/Manage` cho vai trò đang dùng (vai trò mẫu DAMPHAN đã có sẵn khi tạo mới).
+- NCC mà công ty thành viên đang mua nhưng chưa áp dụng tại công ty đó sẽ không chọn được khi lập PO: mở rộng từ tổng công ty ở tab
+  "Mở rộng cho công ty".
+
+### Cách quay lại bản trước
+- Khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.19.0`; hoặc gỡ migration về `20261106104102_V0_19_0_RfqHanNopLyDoHuy`
+  (`Down()` xóa bảng kế hoạch nhu cầu, ngành hàng NCC và cột mã hàng NCC trên dòng PO – **mất phiếu KHN đã lập và ngành hàng NCC đã chọn**).
+
 ## [0.19.0] - 2026-11-07
 
 ### Thêm mới
