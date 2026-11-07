@@ -1,4 +1,5 @@
-import { Alert, Select } from 'antd'
+import { Alert } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useCompanies, type CompanyListItem } from '../../api/organization'
 import { Permission } from '../../auth/permissions'

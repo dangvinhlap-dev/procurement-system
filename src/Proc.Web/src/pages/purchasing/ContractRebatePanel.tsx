@@ -1,5 +1,6 @@
 import { CloseCircleOutlined, PlusCircleOutlined } from '@ant-design/icons'
-import { App, Button, DatePicker, Flex, Form, Input, InputNumber, Modal, Select, Table, Typography } from 'antd'
+import { App, Button, DatePicker, Flex, Form, Input, InputNumber, Modal, Table, Typography } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState, type MutableRefObject } from 'react'
 import {

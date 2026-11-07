@@ -1,4 +1,5 @@
-import { Alert, TreeSelect } from 'antd'
+import { Alert } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { periodStatusLabels, useInventoryCalendar } from '../../api/inventory'
@@ -118,7 +119,7 @@ export function StockMovementReportPage() {
           </FilterField>
           <FilterField label="Nhóm hàng (gồm nhóm con)" width={210}>
             {(id) => (
-              <TreeSelect id={id} value={categoryId} onChange={setCategoryId} treeData={tree} allowClear showSearch treeNodeFilterProp="title" placeholder="Tất cả" />
+              <TreeSelect id={id} value={categoryId} onChange={setCategoryId} treeData={tree} allowClear showSearch placeholder="Tất cả" />
             )}
           </FilterField>
         </>

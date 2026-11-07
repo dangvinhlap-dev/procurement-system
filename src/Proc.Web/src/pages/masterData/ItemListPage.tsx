@@ -1,4 +1,5 @@
-import { Alert, TreeSelect } from 'antd'
+import { Alert } from 'antd'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { itemTypeLabels, useItemCategories, useItems, type ItemListItem, type ItemType } from '../../api/masterData'
@@ -92,7 +93,7 @@ export function ItemListPage() {
                   treeData={tree}
                   allowClear
                   showSearch
-                  treeNodeFilterProp="title"
+                 
                   placeholder="Tất cả"
                 />
               )}

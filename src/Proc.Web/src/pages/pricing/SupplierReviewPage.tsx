@@ -1,4 +1,5 @@
-import { Alert, InputNumber, Select } from 'antd'
+import { Alert, InputNumber } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'

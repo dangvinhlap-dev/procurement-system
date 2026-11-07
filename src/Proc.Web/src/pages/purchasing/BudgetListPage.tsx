@@ -1,4 +1,4 @@
-import { Select } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { useBudgetYear, type DepartmentBudgetYear } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'

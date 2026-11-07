@@ -1,4 +1,4 @@
-import { normalizeVi } from '../utils/text'
+import { hasWildcard, matchesKeyword, normalizeVi } from '../utils/text'
 import type { Screen } from './screens'
 
 /**
@@ -22,6 +22,8 @@ export function focusListSearch(): boolean {
 export function searchScreens(text: string, screens: Screen[]): Screen[] {
   const q = normalizeVi(text)
   if (!q) return []
+  // Gõ `*` (liệt kê tất cả) hoặc mẫu có `*` như ô chọn danh mục – docs/ui-style.md mục 5b; giữ thứ tự menu.
+  if (hasWildcard(q)) return screens.filter((s) => matchesKeyword(`${s.code} ${s.navLabel} ${s.title}`, q))
   const rank = (s: Screen) => {
     const code = s.code.toLowerCase()
     if (code === q) return 0

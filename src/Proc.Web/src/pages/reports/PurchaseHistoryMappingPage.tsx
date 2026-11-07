@@ -1,4 +1,5 @@
-import { Alert, App, Button, Empty, Flex, Input, Radio, Select, Spin } from 'antd'
+import { Alert, App, Button, Empty, Flex, Input, Radio, Spin } from 'antd'
+import { Select } from '../../classic/Select'
 import { useDeferredValue, useState } from 'react'
 import {
   usePurchaseHistoryCandidates,

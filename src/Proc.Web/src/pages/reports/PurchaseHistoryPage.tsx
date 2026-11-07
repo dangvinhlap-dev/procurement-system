@@ -1,5 +1,6 @@
 import { DeleteOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Select } from 'antd'
+import { Alert, App, Button, DatePicker } from 'antd'
+import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import {

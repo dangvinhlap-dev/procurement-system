@@ -27,7 +27,8 @@ function textOf(node: ReactNode): string {
  * - Tìm không phân biệt có dấu/không dấu, nhiều từ không cần đúng thứ tự (CLAUDE.md mục 5).
  * - Ô tìm trên máy chủ (`showSearch.filterOption = false` + `onSearch`) nhận nguyên chuỗi có `*`; API tìm hiểu `*` là đại diện
  *   (`LikePatterns.Contains`) và trả tới 500 dòng.
- * Không bật `showSearch` thì giống hệt `Select` của antd.
+ * - **Mặc định bật tìm** cho mọi ô chọn, kể cả ô lọc trạng thái/nhóm/kho trên danh sách (yêu cầu người dùng 07/11/2026: đồng bộ mọi form,
+ *   ô nào cũng gõ `*` được). Chỉ ô truyền `showSearch={false}` mới giống hệt `Select` của antd (không gõ được).
  * @param props Như `SelectProps` của antd.
  */
 export function Select<V = unknown, O extends BaseOptionType | DefaultOptionType = DefaultOptionType>(props: SelectProps<V, O>) {
@@ -36,7 +37,7 @@ export function Select<V = unknown, O extends BaseOptionType | DefaultOptionType
   // Người dùng đã dùng mũi tên chọn dòng sau lần gõ cuối – khi đó Enter là chọn dòng đó, không chặn.
   const navigated = useRef(false)
 
-  if (!showSearch) return <AntSelect<V, O> {...props} />
+  if (showSearch === false) return <AntSelect<V, O> {...props} />
 
   const config = typeof showSearch === 'object' ? showSearch : {}
   const wildcard = hasWildcard(term)

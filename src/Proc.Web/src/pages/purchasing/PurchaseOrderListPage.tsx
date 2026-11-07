@@ -1,4 +1,5 @@
-import { App, Select } from 'antd'
+import { App } from 'antd'
+import { Select } from '../../classic/Select'
 import { useMemo, useState } from 'react'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'

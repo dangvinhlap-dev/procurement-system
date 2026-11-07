@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, Form, Input, Rate, Select } from 'antd'
+import { Alert, App, Button, Checkbox, Form, Input, Rate } from 'antd'
+import { Select } from '../../classic/Select'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { EMPTY_GUID, previewApproval } from '../../api/purchasing'

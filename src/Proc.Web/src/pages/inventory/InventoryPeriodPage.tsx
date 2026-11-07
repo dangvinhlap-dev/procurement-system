@@ -1,5 +1,6 @@
 import { LockOutlined, RollbackOutlined, UnlockOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Descriptions, Input, Select } from 'antd'
+import { Alert, App, Button, Descriptions, Input } from 'antd'
+import { Select } from '../../classic/Select'
 import { useState } from 'react'
 import {
   periodStatusLabels,
