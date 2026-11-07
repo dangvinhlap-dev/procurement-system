@@ -33,7 +33,10 @@ function periodMonths(period: Period): number[] {
 /** Cộng SL các tháng của kỳ, làm tròn 4 số lẻ như numeric(18,4) để tránh sai số dấu phẩy động khi cộng. */
 const sumMonths = (months: number[], indexes: number[]) => Math.round(indexes.reduce((s, i) => s + (months[i] ?? 0), 0) * 10000) / 10000
 
-/** Cột của bảng: thông tin mặt hàng, một cột mỗi công ty (SL của kỳ), tổng; công ty không có kế hoạch để trống. */
+/**
+ * Cột của bảng: thông tin mặt hàng, tổng, rồi một cột mỗi công ty (SL của kỳ); công ty không có kế hoạch để trống. Tổng đứng trước các cột
+ * công ty để số cột công ty thay đổi (theo dữ liệu) không đẩy cột tổng đi – lưới nhớ thứ tự cột theo key.
+ */
 function columns(companies: DemandSummaryCompany[], period: Period): GridColumn<DemandSummaryRow>[] {
   const months = periodMonths(period)
   return [
@@ -41,6 +44,8 @@ function columns(companies: DemandSummaryCompany[], period: Period): GridColumn<
     { key: 'name', title: 'Tên hàng', width: 220, value: (r) => r.itemName, auditField: false },
     { key: 'uom', title: 'ĐVT cơ sở', width: 75, value: (r) => r.baseUomCode, groupable: true, auditField: false },
     { key: 'category', title: 'Nhóm hàng', width: 160, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true, auditField: false },
+    { key: 'total', title: 'Tổng', width: 110, type: 'quantity', value: (r) => sumMonths(r.months, months), auditField: false },
+    { key: 'count', title: 'Số công ty', width: 80, type: 'quantity', value: (r) => r.companies.length, auditField: false },
     ...companies.map<GridColumn<DemandSummaryRow>>((c) => ({
       key: `c-${c.companyId}`,
       title: c.code,
@@ -52,8 +57,6 @@ function columns(companies: DemandSummaryCompany[], period: Period): GridColumn<
       },
       auditField: false,
     })),
-    { key: 'total', title: 'Tổng', width: 110, type: 'quantity', value: (r) => sumMonths(r.months, months), auditField: false },
-    { key: 'count', title: 'Số công ty', width: 80, type: 'quantity', value: (r) => r.companies.length, auditField: false },
   ]
 }
 
@@ -127,7 +130,6 @@ function DemandSummaryDrawer({ row, companies, onClose }: { row: DemandSummaryRo
                   rowKey={(r) => r.key}
                   groupBy={null}
                   onGroupByChange={() => {}}
-                  isMarked={(r) => !r.key.startsWith('m')}
                 />
               </div>
             </>

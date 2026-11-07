@@ -1797,10 +1797,22 @@ KHN-BHA-2611-0001 theo ngày lập):
 | Dòng = **một mặt hàng** (thuộc nhóm hàng của phiếu hoặc nhóm con; không trùng trên phiếu), ĐVT (cơ sở hoặc quy đổi), **SL tháng 1–12** (≥ 0, 4 số lẻ, ít nhất một tháng > 0), ghi chú. Tổng quý, cả năm tự cộng từ tháng (chỉ hiển thị, không lưu) | Một nguồn số liệu cho cả năm, quý, tháng – không lệch nhau |
 | Mỗi **mặt hàng × năm × công ty** chỉ thuộc một phiếu còn hiệu lực (Nháp, Đã chốt) – kể cả phiếu nhóm hàng khác chứa cùng mặt hàng; trừ cặp phiếu gốc ↔ phiếu điều chỉnh của nó. Kiểm tra lúc lưu và lúc chốt | Tổng hợp gộp không đếm trùng nhu cầu |
 | **Nháp → Đã chốt** (ghi người, thời điểm) – không qua duyệt; năm kế hoạch đã qua thì không lập, sửa, chốt. Đã chốt không sửa: **Điều chỉnh** lập phiếu nháp mới chép nội dung (mỗi phiếu một phiếu điều chỉnh chưa hủy); chốt phiếu điều chỉnh thì phiếu cũ thành **Đã thay** (cùng giao dịch). **Hủy** (nháp hoặc đã chốt, bắt buộc lý do; không hủy phiếu đang có phiếu điều chỉnh nháp) | Kế hoạch là số liệu đề xuất – Ban quyết định ở phiếu duyệt tháng (GTH); giữ lịch sử từng lần điều chỉnh |
-| Chỉ thấy phiếu của công ty đang làm việc, theo phạm vi nhóm hàng của phiếu. Quyền `Purchase.DemandPlan.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `Purchase.DemandPlan.Manage` – lập, chốt, điều chỉnh, hủy (DAMPHAN). Có trong tra cứu chứng từ (loại KHN, theo ngày lập) | Tổng hợp nhiều công ty làm ở lát G5b |
+| Chỉ thấy phiếu của công ty đang làm việc, theo phạm vi nhóm hàng của phiếu. Quyền `Purchase.DemandPlan.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `Purchase.DemandPlan.Manage` – lập, chốt, điều chỉnh, hủy (DAMPHAN). Có trong tra cứu chứng từ (loại KHN, theo ngày lập) | Tổng hợp nhiều công ty ở lát G5b (quyền riêng toàn tập đoàn) |
 
 Migration `V0_20_0_KeHoachNhuCau` (bảng `DemandPlan`, `DemandPlanLine` – 12 cột `Qty01`…`Qty12` numeric(18,4); bảng mới – `Down()` xóa
 bảng, mất phiếu kế hoạch nhu cầu, AuditLog vẫn giữ).
+
+**G5b – Tổng hợp nhu cầu gộp** (màn hình **KHNTH**, Mua hàng → Tổng hợp nhu cầu,
+`GET /api/demand-plans/summary?year=&categoryId=&allCompanies=`, 07/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Chỉ tính phiếu **Đã chốt** của năm (không tính Nháp, Đã thay, Đã hủy). Mỗi công ty hiện số phiếu đã chốt và số phiếu **nháp chưa chốt** (đầu báo cáo cảnh báo vàng "còn phiếu nháp chưa chốt", nêu công ty chưa có kế hoạch đã chốt) | Nháp còn đang sửa; Văn phòng Ban cần biết công ty nào chưa chốt để nhắc |
+| SL quy về **ĐVT cơ sở** từng tháng của từng dòng rồi mới cộng: SL × hệ số ĐVT dòng, làm tròn 4 số lẻ (ví dụ 2,5 thùng × 12 = 30 cái). Mỗi mặt hàng một dòng; quý, năm cộng từ tháng | Các công ty khai ĐVT khác nhau; cộng chung phải cùng ĐVT |
+| Bảng: Mã hàng, Tên, ĐVT cơ sở, Nhóm hàng, **Tổng**, Số công ty, rồi **một cột mỗi công ty**; ô **Kỳ** chọn Cả năm / Quý I–IV / Tháng 1–12. Mở dòng: ngăn kéo tháng 1–12 xen dòng quý và cả năm × từng công ty + tổng, kèm số phiếu đã chốt của từng công ty. Lọc nhóm hàng của **mặt hàng** (gồm nhóm con) | Mặt hàng × tháng/quý/năm, cột từng công ty + tổng như quyết định; 12 tháng × N công ty trên một lưới quá rộng nên tách kỳ |
+| **Toàn tập đoàn** (gộp mọi công ty đang hoạt động, cộng công ty đã ngừng còn kế hoạch đã chốt) cần quyền riêng **`Purchase.DemandPlan.ViewAllCompanies`** "Xem kế hoạch nhu cầu toàn tập đoàn" (người dùng yêu cầu 07/11/2026; vai trò mẫu TRUONGBANCUVT, DAMPHAN, KSNB) – có quyền thì ô "Toàn tập đoàn" bật sẵn; bỏ filter công ty như các báo cáo `*.ViewAllCompanies` (mục 9.2), filter nhóm hàng giữ. Không chọn toàn tập đoàn (hoặc không có quyền) thì chỉ công ty đang làm việc, kể cả ở tổng công ty. Xem cần `Purchase.DemandPlan.View` | Văn phòng Ban dự báo sản lượng gộp để thương lượng; xem nhu cầu công ty khác là quyền riêng, không ngầm theo việc làm ở tổng công ty |
+
+Không có migration (quyền mới tự có trong danh mục quyền).
 
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
