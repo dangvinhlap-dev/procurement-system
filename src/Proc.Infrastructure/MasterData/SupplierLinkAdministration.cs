@@ -81,6 +81,20 @@ public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
         QueryAsync(_db.SupplierItems.Where(x => x.SupplierId == supplierId), byItem: true, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<SupplierItemLookupDto>> LookupItemsAsync(
+        IReadOnlyList<Guid> supplierIds, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        if (supplierIds.Count == 0) return [];
+        if (supplierIds.Count > 100) throw new BusinessRuleException("Tra tối đa 100 nhà cung cấp mỗi lần.");
+        // Filter nhóm hàng của SupplierItem giữ nguyên: chỉ trả mặt hàng trong phạm vi người dùng (CLAUDE.md mục 4).
+        var query = _db.SupplierItems.AsNoTracking().Where(x => supplierIds.Contains(x.SupplierId));
+        if (itemIds.Count > 0) query = query.Where(x => itemIds.Contains(x.ItemId));
+        return await query.Select(x => new SupplierItemLookupDto(x.SupplierId, x.ItemId, x.SupplierItemCode, x.PurchaseUomId))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<SupplierItemDto>> ListSuppliersOfItemAsync(Guid itemId, CancellationToken cancellationToken) =>
         QueryAsync(_db.SupplierItems.Where(x => x.ItemId == itemId), byItem: false, cancellationToken);
 

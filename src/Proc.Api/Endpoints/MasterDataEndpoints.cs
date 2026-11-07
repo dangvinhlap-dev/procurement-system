@@ -242,6 +242,10 @@ public static class MasterDataEndpoints
             .Validate<SaveSupplierItemRequest>();
 
         var supplierItems = app.MapGroup("/api/supplier-items").WithTags("Nhà cung cấp");
+        // Dòng PR/PO/báo giá RFQ tra mã hàng theo NCC và ĐVT mua (design.md mục 5.9): người lập phiếu có thể không có quyền xem danh mục
+        // NCC nên chỉ cần đăng nhập và có công ty làm việc; kết quả vẫn lọc theo phạm vi nhóm hàng.
+        supplierItems.MapGet("/lookup", (Guid[]? supplierIds, Guid[]? itemIds, ISupplierLinkAdministration s, CancellationToken ct) =>
+            s.LookupItemsAsync(supplierIds ?? [], itemIds ?? [], ct));
         supplierItems.MapPut("/{id:guid}", (Guid id, SaveSupplierItemRequest request, ISupplierLinkAdministration s, CancellationToken ct) =>
                 s.UpdateItemAsync(id, request, ct))
             .RequirePermission(Permissions.MasterData.SupplierManage)

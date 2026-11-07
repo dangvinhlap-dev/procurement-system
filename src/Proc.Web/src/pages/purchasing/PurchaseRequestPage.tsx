@@ -6,7 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
-import { useUoms } from '../../api/masterData'
+import { supplierItemKey, useFetchSupplierItem, useSupplierItemLookup, useUoms } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
@@ -122,6 +122,25 @@ export function PurchaseRequestPage() {
     [doc, prefill],
   )
   const suppliers = useSupplierLookup(supplierIds)
+  // Mã hàng theo NCC đề xuất của từng dòng và ĐVT mua (design.md mục 5.9).
+  const lineSupplierIds = useMemo(() => lines.map((l) => l?.suggestedSupplierId).filter((x): x is string => !!x), [lines])
+  const supplierItems = useSupplierItemLookup(lineSupplierIds)
+  const fetchSupplierItem = useFetchSupplierItem()
+
+  /**
+   * Dòng có cả mặt hàng và NCC đề xuất mà NCC đã khai báo ĐVT mua thì dòng lấy ĐVT đó (ĐVT đã bị gỡ khỏi mặt hàng thì bỏ qua). Chỉ áp khi
+   * dòng vẫn đúng mặt hàng/NCC lúc tra xong (người dùng có thể đã đổi tiếp).
+   * @param index Số thứ tự dòng (từ 0).
+   * @param itemId Mặt hàng của dòng.
+   * @param supplierId NCC đề xuất của dòng.
+   */
+  const applyPurchaseUom = async (index: number, itemId: string | undefined, supplierId: string | undefined) => {
+    if (!itemId || !supplierId) return
+    const found = await fetchSupplierItem(supplierId, itemId).catch(() => undefined)
+    const line = form.getFieldValue(['lines', index]) as PrLineValues | undefined
+    if (!found || line?.itemId !== itemId || line?.suggestedSupplierId !== supplierId) return
+    if (itemsById.get(itemId)?.uoms.some((u) => u.uomId === found.purchaseUomId)) form.setFieldValue(['lines', index, 'uomId'], found.purchaseUomId)
+  }
 
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ trong danh sách để hiện tên (design.md mục 18.5).
   const departmentOptions = useMemo(
@@ -215,7 +234,10 @@ export function PurchaseRequestPage() {
               showSearch={{ filterOption: false, onSearch: setSearch }}
               placeholder="Gõ mã hoặc tên hàng"
               options={(lookup.data ?? []).map((i) => ({ value: i.id, label: `${i.code} – ${i.name}` }))}
-              onChange={(v: string) => form.setFieldValue(['lines', field.name, 'uomId'], itemsById.get(v)?.baseUomId)}
+              onChange={(v: string) => {
+                form.setFieldValue(['lines', field.name, 'uomId'], itemsById.get(v)?.baseUomId)
+                void applyPurchaseUom(field.name, v, lines[field.name]?.suggestedSupplierId)
+              }}
               popupMatchSelectWidth={420}
             />
           </Form.Item>
@@ -265,10 +287,20 @@ export function PurchaseRequestPage() {
             aria-label={`NCC đề xuất dòng ${field.name + 1}`}
             showSearch={{ optionFilterProp: 'label' }}
             options={(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.code} – ${s.name}` }))}
+            onChange={(v: string | undefined) => void applyPurchaseUom(field.name, lines[field.name]?.itemId, v)}
             popupMatchSelectWidth={320}
           />
         </Form.Item>
       ),
+    },
+    {
+      key: 'supplierItemCode',
+      title: 'Mã hàng NCC',
+      width: 100,
+      render: (_, index) => {
+        const l = lines[index]
+        return readonlyCell(l?.itemId && l.suggestedSupplierId ? (supplierItems.data?.get(supplierItemKey(l.suggestedSupplierId, l.itemId))?.supplierItemCode ?? '') : '')
+      },
     },
     {
       key: 'needed',

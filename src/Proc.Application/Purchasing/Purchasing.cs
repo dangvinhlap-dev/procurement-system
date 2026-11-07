@@ -449,22 +449,7 @@ public interface IPurchaseOrderService
     /// <returns>Các bậc giá kèm nguồn.</returns>
     Task<IReadOnlyList<PoApprovedPriceDto>> ApprovedPricesAsync(
         Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, Guid? departmentId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Mặt hàng NCC bán (NCC – sản phẩm, design.md mục 5.9) trong phạm vi nhóm hàng của người dùng, để dòng PO tự lấy ĐVT mua và hiện
-    /// mã hàng theo NCC. Người lập PO không cần quyền xem danh mục NCC.
-    /// </summary>
-    /// <param name="supplierId">NCC của PO.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Mỗi mặt hàng một dòng: mã hàng theo NCC (có thể null) và ĐVT mua.</returns>
-    Task<IReadOnlyList<PoSupplierItemDto>> SupplierItemsAsync(Guid supplierId, CancellationToken cancellationToken);
 }
-
-/// <summary>Mặt hàng NCC bán dùng trên dòng PO (design.md mục 5.9).</summary>
-/// <param name="ItemId">Mặt hàng.</param>
-/// <param name="SupplierItemCode">Mã hàng theo NCC, null nếu chưa khai báo.</param>
-/// <param name="PurchaseUomId">ĐVT mua từ NCC này.</param>
-public sealed record PoSupplierItemDto(Guid ItemId, string? SupplierItemCode, Guid PurchaseUomId);
 
 /// <summary>Kiểm tra cấp duyệt.</summary>
 public sealed class SaveApprovalRuleRequestValidator : AbstractValidator<SaveApprovalRuleRequest>

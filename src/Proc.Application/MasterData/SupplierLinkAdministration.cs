@@ -39,6 +39,13 @@ public sealed record SupplierItemDto(
     string ItemName, string BaseUomCode, string? SupplierItemCode, Guid PurchaseUomId, string PurchaseUomCode, decimal? Moq,
     int? LeadTimeDays, bool IsPreferred);
 
+/// <summary>Mã hàng theo NCC và ĐVT mua của một NCC × mặt hàng, dùng trên dòng chứng từ (design.md mục 5.9).</summary>
+/// <param name="SupplierId">NCC.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="SupplierItemCode">Mã hàng theo NCC, null nếu chưa khai báo.</param>
+/// <param name="PurchaseUomId">ĐVT mua từ NCC này.</param>
+public sealed record SupplierItemLookupDto(Guid SupplierId, Guid ItemId, string? SupplierItemCode, Guid PurchaseUomId);
+
 /// <summary>Thêm/sửa một dòng NCC – sản phẩm.</summary>
 /// <param name="ItemId">Mặt hàng (khi sửa phải trùng mặt hàng cũ).</param>
 /// <param name="SupplierItemCode">Mã hàng của NCC.</param>
@@ -77,6 +84,18 @@ public interface ISupplierLinkAdministration
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Theo mã hàng.</returns>
     Task<IReadOnlyList<SupplierItemDto>> ListItemsOfSupplierAsync(Guid supplierId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tra mã hàng theo NCC và ĐVT mua cho dòng chứng từ (PR, PO, báo giá RFQ – design.md mục 5.9): chỉ cần đăng nhập và có công ty làm
+    /// việc (người lập phiếu có thể không có quyền xem danh mục NCC); vẫn lọc theo phạm vi nhóm hàng.
+    /// </summary>
+    /// <param name="supplierIds">Các NCC (tối đa 100); trống thì trả rỗng.</param>
+    /// <param name="itemIds">Chỉ các mặt hàng này; trống = mọi mặt hàng NCC bán.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Mỗi NCC × mặt hàng một dòng.</returns>
+    /// <exception cref="BusinessRuleException">Khi quá 100 NCC.</exception>
+    Task<IReadOnlyList<SupplierItemLookupDto>> LookupItemsAsync(
+        IReadOnlyList<Guid> supplierIds, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 
     /// <summary>Các NCC bán một mặt hàng.</summary>
     /// <param name="itemId">Mặt hàng.</param>

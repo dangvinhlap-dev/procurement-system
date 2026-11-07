@@ -400,17 +400,6 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         order.ApplySupplierItemCodes(line => supplierCodes.GetValueOrDefault(line.ItemId));
     }
 
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<PoSupplierItemDto>> SupplierItemsAsync(Guid supplierId, CancellationToken cancellationToken)
-    {
-        _scope.RequireCompany();
-        // Filter nhóm hàng của SupplierItem giữ nguyên: người lập chỉ thấy mặt hàng trong phạm vi của mình (CLAUDE.md mục 4).
-        return await _db.SupplierItems.AsNoTracking()
-            .Where(x => x.SupplierId == supplierId)
-            .Select(x => new PoSupplierItemDto(x.ItemId, x.SupplierItemCode, x.PurchaseUomId))
-            .ToListAsync(cancellationToken);
-    }
-
     /// <summary>Dòng phiếu duyệt NCC và giá tháng đã duyệt áp cho công ty của PO (design.md mục 18.25).</summary>
     private sealed record MonthlyLine(
         Guid Id, string No, Guid ItemId, Guid UomId, decimal UomFactor, Guid MainSupplierId, decimal UnitPrice, Guid? BackupSupplierId,

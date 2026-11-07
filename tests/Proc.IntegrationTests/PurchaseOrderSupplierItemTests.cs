@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.Inventory;
@@ -10,8 +9,8 @@ using Proc.Domain.Organization;
 namespace Proc.IntegrationTests;
 
 /// <summary>
-/// Mã hàng theo NCC và ĐVT mua trên PO (design.md mục 5.9): giao diện đọc ĐVT mua/mã NCC qua API riêng của PO; máy chủ chép mã NCC vào
-/// dòng PO lúc lưu/gửi, PO đã gửi giữ nguyên mã khi danh mục NCC – sản phẩm đổi sau đó.
+/// Mã hàng theo NCC và ĐVT mua trên chứng từ (design.md mục 5.9): PR/PO/báo giá RFQ tra qua <c>/api/supplier-items/lookup</c>; máy chủ
+/// chép mã NCC vào dòng PO lúc lưu/gửi, PO đã gửi giữ nguyên mã khi danh mục NCC – sản phẩm đổi sau đó.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public class PurchaseOrderSupplierItemTests
@@ -65,21 +64,24 @@ public class PurchaseOrderSupplierItemTests
             new SaveSupplierItemRequest(item.Id, " VB6207-A ", thung, null, null, false), Ct));
         var warehouse = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
 
-        // Người chỉ có quyền xem PO đọc được ĐVT mua và mã NCC (không cần quyền xem danh mục NCC); không có quyền PO thì bị chặn.
-        var viewRole = UniqueCode("R");
-        await _factory.CreateRoleAsync(viewRole, Permissions.Purchase.PoView);
-        var viewerName = $"xp.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateScopedUserAsync(viewerName, company.Code, viewRole);
-        var viewer = await _factory.CreateClientInCompanyAsync(viewerName, ProcApiFactory.TestPassword, company.Code);
-        var supplierItems = await ReadAsync<List<PoSupplierItemDto>>(await viewer.GetAsync($"/api/purchase-orders/supplier-items?supplierId={a}", Ct));
-        Assert.Equal(new PoSupplierItemDto(item.Id, "VB6207-A", thung), Assert.Single(supplierItems));
-        Assert.Empty(await ReadAsync<List<PoSupplierItemDto>>(await viewer.GetAsync($"/api/purchase-orders/supplier-items?supplierId={b}", Ct)));
-        var otherRole = UniqueCode("R");
-        await _factory.CreateRoleAsync(otherRole, Permissions.Purchase.PrView);
-        var outsiderName = $"kp.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateScopedUserAsync(outsiderName, company.Code, otherRole);
-        var outsider = await _factory.CreateClientInCompanyAsync(outsiderName, ProcApiFactory.TestPassword, company.Code);
-        Assert.Equal(HttpStatusCode.Forbidden, (await outsider.GetAsync($"/api/purchase-orders/supplier-items?supplierId={a}", Ct)).StatusCode);
+        // Người lập phiếu chỉ có quyền PR (không xem danh mục NCC) vẫn tra được ĐVT mua và mã NCC; người bị giới hạn nhóm hàng khác thì không
+        // thấy mặt hàng ngoài phạm vi (CLAUDE.md mục 4).
+        var prRole = UniqueCode("R");
+        await _factory.CreateRoleAsync(prRole, Permissions.Purchase.PrView);
+        var prUserName = $"xp.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(prUserName, company.Code, prRole);
+        var prUser = await _factory.CreateClientInCompanyAsync(prUserName, ProcApiFactory.TestPassword, company.Code);
+        var lookupUrl = $"/api/supplier-items/lookup?supplierIds={a}&supplierIds={b}";
+        var found = await ReadAsync<List<SupplierItemLookupDto>>(await prUser.GetAsync(lookupUrl, Ct));
+        Assert.Equal(new SupplierItemLookupDto(a, item.Id, "VB6207-A", thung), Assert.Single(found));
+        Assert.Single(await ReadAsync<List<SupplierItemLookupDto>>(await prUser.GetAsync($"{lookupUrl}&itemIds={item.Id}", Ct)));
+        Assert.Empty(await ReadAsync<List<SupplierItemLookupDto>>(await prUser.GetAsync($"{lookupUrl}&itemIds={Guid.NewGuid()}", Ct)));
+        var otherCategory = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, "Nhóm ngoài phạm vi", null, null), Ct));
+        var limitedName = $"kp.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(limitedName, company.Code, prRole, categoryCodes: [otherCategory.Code]);
+        var limited = await _factory.CreateClientInCompanyAsync(limitedName, ProcApiFactory.TestPassword, company.Code);
+        Assert.Empty(await ReadAsync<List<SupplierItemLookupDto>>(await limited.GetAsync(lookupUrl, Ct)));
 
         // Lưu PO với NCC A: dòng có mã NCC (đã bỏ khoảng trắng); PO với NCC B: không có mã.
         SavePurchaseOrderRequest Po(Guid supplierId) =>

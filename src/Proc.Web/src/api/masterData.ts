@@ -548,6 +548,59 @@ export function useSupplierItemMutations() {
   }
 }
 
+/** Mã hàng theo NCC và ĐVT mua của một NCC × mặt hàng – khớp SupplierItemLookupDto (design.md mục 5.9). */
+export interface SupplierItemLookup {
+  supplierId: string
+  itemId: string
+  /** Mã hàng theo NCC; null = chưa khai báo. */
+  supplierItemCode: string | null
+  /** ĐVT mua từ NCC này – dòng chứng từ chọn mặt hàng thì tự lấy ĐVT này. */
+  purchaseUomId: string
+}
+
+/** Khóa tra của {@link useSupplierItemLookup}. */
+export const supplierItemKey = (supplierId: string, itemId: string) => `${supplierId}|${itemId}`
+
+/**
+ * Tra mã hàng theo NCC và ĐVT mua cho dòng PR/PO/báo giá RFQ (`/api/supplier-items/lookup`): người lập phiếu không cần quyền xem danh mục
+ * NCC; lọc theo phạm vi nhóm hàng.
+ * @param supplierIds Các NCC trên phiếu; trống thì không tải.
+ * @returns Bảng tra theo {@link supplierItemKey}.
+ */
+export function useSupplierItemLookup(supplierIds: string[]) {
+  const companyId = useCompanyId()
+  const ids = [...new Set(supplierIds.filter(Boolean))].sort()
+  const params = new URLSearchParams()
+  for (const id of ids) params.append('supplierIds', id)
+  const query = params.toString()
+  return useQuery({
+    // Cùng gốc khóa với danh sách NCC – sản phẩm: sửa mặt hàng NCC bán thì phiếu đang mở tải lại.
+    queryKey: ['supplier-items', companyId, 'lookup', query],
+    queryFn: () => apiFetch<SupplierItemLookup[]>(`/api/supplier-items/lookup?${query}`),
+    enabled: ids.length > 0,
+    placeholderData: keepPreviousData,
+    select: (rows) => new Map(rows.map((r) => [supplierItemKey(r.supplierId, r.itemId), r])),
+  })
+}
+
+/**
+ * Tra ngay một NCC × mặt hàng lúc người dùng đổi mặt hàng hoặc NCC trên dòng (dữ liệu của {@link useSupplierItemLookup} có thể chưa kịp tải
+ * cho NCC vừa chọn); dùng chung bộ nhớ đệm với hook đó.
+ * @returns Hàm (NCC, mặt hàng) → dòng NCC – sản phẩm, hoặc undefined nếu NCC chưa khai báo mặt hàng.
+ */
+export function useFetchSupplierItem() {
+  const companyId = useCompanyId()
+  const queryClient = useQueryClient()
+  return async (supplierId: string, itemId: string): Promise<SupplierItemLookup | undefined> => {
+    const query = new URLSearchParams({ supplierIds: supplierId }).toString()
+    const rows = await queryClient.fetchQuery({
+      queryKey: ['supplier-items', companyId, 'lookup', query],
+      queryFn: () => apiFetch<SupplierItemLookup[]>(`/api/supplier-items/lookup?${query}`),
+    })
+    return rows.find((r) => r.itemId === itemId)
+  }
+}
+
 /**
  * Tìm mặt hàng đang dùng theo từ khóa (ô chọn hàng): gọi server khi đã gõ ít nhất 2 ký tự hoặc có `*` (`*` = liệt kê tất cả).
  * @param search Từ khóa (mã, tên, mã vạch), có dấu hay không dấu.

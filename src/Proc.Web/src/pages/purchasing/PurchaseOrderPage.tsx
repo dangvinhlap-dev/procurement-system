@@ -6,9 +6,9 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
-import { vatOptions } from '../../api/masterData'
+import { supplierItemKey, useSupplierItemLookup, vatOptions } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
-import { aboveGroupMinPct, pickSupplierPrice, useGroupMinPrices, usePoSupplierItems, useSupplierPrices } from '../../api/pricing'
+import { aboveGroupMinPct, pickSupplierPrice, useGroupMinPrices, useSupplierPrices } from '../../api/pricing'
 import {
   priceSourceLabels,
   purchaseStatusText,
@@ -165,7 +165,7 @@ export function PurchaseOrderPage() {
     })
   }
   const supplierPrices = useSupplierPrices(supplierId, orderDate?.format('YYYY-MM-DD'), itemIds, departmentId)
-  const supplierItems = usePoSupplierItems(supplierId)
+  const supplierItems = useSupplierItemLookup(supplierId ? [supplierId] : [])
   const groupMin = useGroupMinPrices(itemIds, doc?.id)
   const departments = useDepartments()
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn hiện tên (như PR – design.md mục 18.5).
@@ -348,7 +348,7 @@ export function PurchaseOrderPage() {
   // Mã hàng theo NCC: PO nháp hiện mã đang khai báo ở NCC – sản phẩm (máy chủ chép đúng mã này khi lưu/gửi); PO đã gửi hiện mã đã chép.
   const supplierItemCode = (index: number) =>
     !doc || doc.status === 'Draft'
-      ? (lines[index]?.itemId ? supplierItems.data?.get(lines[index].itemId!)?.supplierItemCode : null)
+      ? (lines[index]?.itemId ? supplierItems.data?.get(supplierItemKey(supplierId ?? '', lines[index].itemId!))?.supplierItemCode : null)
       : savedLine(index)?.supplierItemCode
   const hasDeviation = lines.some((_, i) => isDeviation(i))
   const readonlyCell = (text: string) => <span className="line-grid-readonly">{text}</span>
@@ -382,7 +382,7 @@ export function PurchaseOrderPage() {
               onChange={(v: string) => {
                 // ĐVT mua khai báo ở NCC – sản phẩm đi trước ĐVT cơ sở (design.md mục 5.9); ĐVT đó đã bị gỡ khỏi mặt hàng thì về ĐVT cơ sở.
                 const item = itemsById.get(v)
-                const purchaseUomId = supplierItems.data?.get(v)?.purchaseUomId
+                const purchaseUomId = supplierId ? supplierItems.data?.get(supplierItemKey(supplierId, v))?.purchaseUomId : undefined
                 const uomId = purchaseUomId && item?.uoms.some((u) => u.uomId === purchaseUomId) ? purchaseUomId : item?.baseUomId
                 form.setFieldValue(['lines', field.name, 'uomId'], uomId)
                 form.setFieldValue(['lines', field.name, 'vatCode'], item?.vatCode)
