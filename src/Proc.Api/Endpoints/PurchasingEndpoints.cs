@@ -158,6 +158,10 @@ public static class PurchasingEndpoints
         plans.MapGet("/summary", (int year, Guid? categoryId, bool? allCompanies, IDemandPlanService s, CancellationToken ct) =>
                 s.SummaryAsync(year, categoryId, allCompanies ?? false, ct))
             .RequirePermission(Permissions.Purchase.DemandPlanView);
+        // SL kế hoạch cho dòng RFQ / hợp đồng nguyên tắc (lát G5c) – chỉ đọc, POST vì gửi danh sách dòng.
+        plans.MapPost("/quantities", (PlannedQuantityRequest request, IDemandPlanService s, CancellationToken ct) => s.QuantitiesAsync(request, ct))
+            .RequirePermission(Permissions.Purchase.DemandPlanView)
+            .Validate<PlannedQuantityRequest>();
         plans.MapPost("/", async (SaveDemandPlanRequest request, IDemandPlanService s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

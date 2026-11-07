@@ -1,6 +1,6 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { CheckOutlined, CloseCircleOutlined, CloseOutlined, FileAddOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber, Table, Typography } from 'antd'
+import { CalendarOutlined, CheckOutlined, CloseCircleOutlined, CloseOutlined, FileAddOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber, Space, Table, Typography } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
@@ -34,6 +34,8 @@ import { withPendingApprovers } from '../../api/purchasing'
 import { formatDate, formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { ContractAmendmentDrawer } from './ContractAmendmentDrawer'
+import { PlannedQuantityDialog } from './PlannedQuantityDialog'
+import { toPlannedLines } from './plannedLines'
 import { RebateGrid, RebateTracking, type RebateValues } from './ContractRebatePanel'
 import { contractTermFields as termFields } from './contractTerms'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
@@ -202,6 +204,7 @@ export function ContractPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
+  const [planning, setPlanning] = useState(false)
   const doc = contract.data
   // Ngăn kéo phụ lục mở theo ?phu-luc=<Id|moi> – mở thẳng được từ thông báo, Việc cần làm (lát B4b).
   const [searchParams, setSearchParams] = useSearchParams()
@@ -217,6 +220,8 @@ export function ContractPage() {
 
   const supplierId = Form.useWatch('supplierId', form) as string | undefined
   const priceListId = Form.useWatch('priceListId', form) as string | undefined
+  const validFrom = Form.useWatch('validFrom', form) as Dayjs | undefined
+  const validTo = Form.useWatch('validTo', form) as Dayjs | undefined
   const priceList = usePriceList(priceListId ?? null)
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -653,7 +658,18 @@ export function ContractPage() {
           </>
         }
         linesLabel="Sản lượng dự kiến"
-        lines={<LineGrid name="lines" auditEntity="PurchaseContractLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />}
+        lines={
+          <>
+            {!readOnly && hasPermission(Permission.DemandPlanView) && (
+              <Space style={{ marginBottom: 6 }}>
+                <Button icon={<CalendarOutlined />} onClick={() => setPlanning(true)} disabled={toPlannedLines(lines, (l) => l.expectedQty).length === 0}>
+                  Lấy SL kế hoạch
+                </Button>
+              </Space>
+            )}
+            <LineGrid name="lines" auditEntity="PurchaseContractLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, expectedQty: 1, minCommitQty: null })} />
+          </>
+        }
         footer={<DocumentTotal label="Giá trị dự kiến (sau CK, trước VAT)" value={formatMoney(total)} strong />}
         extraTabs={[
           {
@@ -699,6 +715,18 @@ export function ContractPage() {
       />
       {doc && amendmentId && (
         <ContractAmendmentDrawer contract={doc} amendmentId={amendmentId} onClose={() => openAmendment(null)} onCreated={(id) => openAmendment(id)} />
+      )}
+      {planning && (
+        // Hợp đồng nguyên tắc là của một công ty (mục 18.7) nên mặc định chỉ lấy kế hoạch công ty đang làm việc, khoảng = thời hạn hợp đồng.
+        <PlannedQuantityDialog
+          title="Lấy SL kế hoạch làm sản lượng dự kiến"
+          lines={toPlannedLines(lines, (l) => l.expectedQty)}
+          defaultFrom={validFrom ?? dayjs()}
+          defaultTo={validTo ?? (validFrom ?? dayjs()).add(11, 'month')}
+          defaultAllCompanies={false}
+          onApply={(qty) => qty.forEach((value, index) => form.setFieldValue(['lines', index, 'expectedQty'], value))}
+          onClose={() => setPlanning(false)}
+        />
       )}
     </>
   )
