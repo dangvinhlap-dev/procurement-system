@@ -124,4 +124,94 @@ public class DemandPlanTests
         Assert.NotNull(view.Actions.ReadOnlyReason);
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync(Url, Request(Year, Line(item, 1)), Ct)).StatusCode);
     }
+
+    /// <summary>
+    /// Lát G5b: tổng hợp nhu cầu gộp – toàn tập đoàn (quyền riêng) cộng mọi công ty, chỉ phiếu Đã chốt, SL quy về ĐVT cơ sở; không chọn toàn
+    /// tập đoàn thì chỉ công ty đang làm việc.
+    /// </summary>
+    [Fact]
+    public async Task TongHopNhuCau_ToanTapDoanGopCacCongTy_ChiPhieuDaChot_QuyVeDvtCoSo()
+    {
+        var userName = $"kt.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA", "NMI"]);
+        var tct = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
+        var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
+        var nmi = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "NMI");
+        var uoms = (await tct.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
+        var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
+        var category = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm tổng hợp {Guid.NewGuid():N}", null, null), Ct));
+        var child = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm con tổng hợp {Guid.NewGuid():N}", category.Id, null), Ct));
+        async Task<ItemDetailDto> ItemAsync(Guid categoryId, string name) => await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null,
+                [new(thung, 12)]), Ct));
+        var item = await ItemAsync(child.Id, "Bóng đèn tổng hợp");
+        var draftOnly = await ItemAsync(category.Id, "Dây điện tổng hợp");
+
+        SaveDemandPlanRequest Request(params SaveDemandPlanLineRequest[] lines) => new(Year, category.Id, null, lines);
+        SaveDemandPlanLineRequest Line(Guid itemId, Guid uomId, params decimal[] months) => new(null, itemId, uomId, Months(months), null);
+        async Task<DemandPlanDto> ConfirmAsync(HttpClient client, DemandPlanDto plan) =>
+            await ReadAsync<DemandPlanDto>(await client.PostAsync($"{Url}/{plan.Id}/confirm", null, Ct));
+        string SummaryUrl(Guid categoryId, bool all = true) => $"{Url}/summary?year={Year}&categoryId={categoryId}&allCompanies={all}";
+
+        // BHA chốt rồi điều chỉnh (phiếu cũ Đã thay – không tính); NMI khai theo thùng; NMI còn phiếu nháp; TCT phiếu đã hủy.
+        var bhaPlan = await ConfirmAsync(bha, await ReadAsync<DemandPlanDto>(await bha.PostAsJsonAsync(Url, Request(Line(item.Id, cai, 10, 20)), Ct)));
+        var bhaAdjust = await ReadAsync<DemandPlanDto>(await bha.PostAsync($"{Url}/{bhaPlan.Id}/adjust", null, Ct));
+        await ReadAsync<DemandPlanDto>(await bha.PutAsJsonAsync($"{Url}/{bhaAdjust.Id}", Request(Line(item.Id, cai, 15, 20)), Ct));
+        await ConfirmAsync(bha, bhaAdjust);
+        var nmiPlan = await ConfirmAsync(nmi, await ReadAsync<DemandPlanDto>(await nmi.PostAsJsonAsync(Url, Request(Line(item.Id, thung, 1, 2.5m)), Ct)));
+        var nmiDraft = await ReadAsync<DemandPlanDto>(await nmi.PostAsJsonAsync(Url, Request(Line(draftOnly.Id, cai, 7)), Ct));
+        var tctPlan = await ReadAsync<DemandPlanDto>(await tct.PostAsJsonAsync(Url, Request(Line(item.Id, cai, 1000)), Ct));
+        await ReadAsync<DemandPlanDto>(await tct.PostAsJsonAsync($"{Url}/{tctPlan.Id}/cancel", new CancelDemandPlanRequest("Nhập nhầm"), Ct));
+
+        // Toàn tập đoàn: gộp mọi công ty, lọc nhóm cha gồm nhóm con; 1 thùng = 12 cái, 2,5 thùng = 30 cái.
+        var summary = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(category.Id), Ct));
+        Assert.True(summary.AllCompanies);
+        Assert.Equal("TCT", summary.Companies[0].Code);
+        var row = Assert.Single(summary.Rows);
+        Assert.Equal((item.Id, "CAI", 77m), (row.ItemId, row.BaseUomCode, row.Total));
+        Assert.Equal([27m, 50m], row.Months.Take(2));
+        var ids = summary.Companies.ToDictionary(c => c.Code, c => c.CompanyId);
+        var cells = row.Companies.ToDictionary(c => c.CompanyId);
+        Assert.Equal(2, cells.Count);
+        Assert.Equal((35m, bhaAdjust.No), (cells[ids["BHA"]].Total, Assert.Single(cells[ids["BHA"]].PlanNos)));
+        Assert.Equal([12m, 30m], cells[ids["NMI"]].Months.Take(2));
+        Assert.Equal(nmiPlan.No, Assert.Single(cells[ids["NMI"]].PlanNos));
+        var counts = summary.Companies.ToDictionary(c => c.Code, c => (c.ConfirmedPlans, c.DraftPlans));
+        Assert.Equal(((1, 1), (1, 0), (0, 0)), (counts["NMI"], counts["BHA"], counts["TCT"]));
+
+        // Nháp chốt xong mới vào tổng hợp; lọc nhóm con chỉ còn mặt hàng của nhóm con.
+        await ConfirmAsync(nmi, nmiDraft);
+        summary = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(category.Id), Ct));
+        Assert.Equal(7m, summary.Rows.Single(r => r.ItemId == draftOnly.Id).Total);
+        summary = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(child.Id), Ct));
+        Assert.Equal(item.Id, Assert.Single(summary.Rows).ItemId);
+
+        // Không chọn toàn tập đoàn: chỉ nhu cầu của công ty đang làm việc (kể cả ở tổng công ty).
+        var own = await ReadAsync<DemandSummaryDto>(await bha.GetAsync(SummaryUrl(category.Id, false), Ct));
+        Assert.False(own.AllCompanies);
+        Assert.Equal("BHA", Assert.Single(own.Companies).Code);
+        Assert.Equal(35m, own.Rows.Single(r => r.ItemId == item.Id).Total);
+        var head = await ReadAsync<DemandSummaryDto>(await tct.GetAsync(SummaryUrl(category.Id, false), Ct));
+        Assert.Equal("TCT", Assert.Single(head.Companies).Code);
+        Assert.Empty(head.Rows);
+
+        // Chỉ quyền xem kế hoạch nhu cầu (không có quyền toàn tập đoàn): xem công ty mình được, toàn tập đoàn bị chặn.
+        var viewRole = UniqueCode("K");
+        await _factory.CreateRoleAsync(viewRole, Permissions.Purchase.DemandPlanView);
+        var viewerName = $"kv.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(viewerName, "TCT", viewRole);
+        var viewer = await _factory.CreateClientInCompanyAsync(viewerName, ProcApiFactory.TestPassword, "TCT");
+        Assert.True((await viewer.GetAsync(SummaryUrl(category.Id, false), Ct)).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync(SummaryUrl(category.Id), Ct)).StatusCode);
+
+        // Không có quyền xem kế hoạch nhu cầu: bị chặn.
+        var role = UniqueCode("K");
+        await _factory.CreateRoleAsync(role, Permissions.Purchase.PrView);
+        var otherName = $"kn.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(otherName, "TCT", role);
+        var other = await _factory.CreateClientInCompanyAsync(otherName, ProcApiFactory.TestPassword, "TCT");
+        Assert.Equal(HttpStatusCode.Forbidden, (await other.GetAsync(SummaryUrl(category.Id), Ct)).StatusCode);
+    }
 }

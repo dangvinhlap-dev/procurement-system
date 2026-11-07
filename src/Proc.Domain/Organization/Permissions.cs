@@ -122,6 +122,11 @@ public static class Permissions
         public const string DemandPlanView = "Purchase.DemandPlan.View";
         /// <summary>Quyền "Lập, chốt, điều chỉnh, hủy phiếu kế hoạch nhu cầu".</summary>
         public const string DemandPlanManage = "Purchase.DemandPlan.Manage";
+        /// <summary>
+        /// Quyền "Xem kế hoạch nhu cầu toàn tập đoàn" (lát G5b): tổng hợp nhu cầu gộp mọi công ty – Văn phòng Ban dự báo sản lượng gộp để
+        /// thương lượng. Không có quyền này chỉ thấy nhu cầu của công ty đang làm việc.
+        /// </summary>
+        public const string DemandPlanViewAllCompanies = "Purchase.DemandPlan.ViewAllCompanies";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -281,6 +286,7 @@ public static class Permissions
         new(Purchase.BudgetManage, "Lập, sửa ngân sách bộ phận"),
         new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
+        new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),

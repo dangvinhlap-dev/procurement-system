@@ -123,6 +123,7 @@ export const screens: Screen[] = [
   { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },
   { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing', permission: Permission.PoView },
   { code: 'KHN', title: 'Kế hoạch nhu cầu', navLabel: 'Kế hoạch nhu cầu', path: '/mua-hang/ke-hoach-nhu-cau', icon: <CalendarOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
+  { code: 'KHNTH', title: 'Tổng hợp nhu cầu', navLabel: 'Tổng hợp nhu cầu', path: '/mua-hang/tong-hop-nhu-cau', icon: <BarChartOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
   { code: 'BUDG', title: 'Ngân sách bộ phận', navLabel: 'Ngân sách bộ phận', path: '/mua-hang/ngan-sach', icon: <FundOutlined />, group: 'purchasing', anyPermission: [Permission.BudgetView, Permission.BudgetManage] },
   { code: 'CTR', title: 'Hợp đồng nguyên tắc', navLabel: 'Hợp đồng nguyên tắc', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing', permission: Permission.ContractView },
 

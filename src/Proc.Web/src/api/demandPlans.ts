@@ -139,3 +139,62 @@ export function useDemandPlanMutations() {
     }),
   }
 }
+
+/** Một công ty (cột) của bảng tổng hợp nhu cầu (lát G5b). */
+export interface DemandSummaryCompany {
+  companyId: string
+  code: string
+  name: string
+  /** Số phiếu Đã chốt của năm – đã tính vào tổng hợp. */
+  confirmedPlans: number
+  /** Số phiếu Nháp của năm – chưa tính. */
+  draftPlans: number
+}
+
+/** Nhu cầu của một công ty cho một mặt hàng, theo ĐVT cơ sở. */
+export interface DemandSummaryCell {
+  companyId: string
+  /** SL 12 tháng, phần tử 0 là tháng 1. */
+  months: number[]
+  total: number
+  planNos: string[]
+}
+
+/** Một dòng tổng hợp: một mặt hàng. */
+export interface DemandSummaryRow {
+  itemId: string
+  itemCode: string
+  itemName: string
+  baseUomCode: string
+  categoryCode: string
+  categoryName: string
+  /** Chỉ các công ty có kế hoạch đã chốt cho mặt hàng. */
+  companies: DemandSummaryCell[]
+  months: number[]
+  total: number
+}
+
+/** Bảng tổng hợp nhu cầu gộp của một năm. */
+export interface DemandSummary {
+  year: number
+  /** true khi gộp mọi công ty (toàn tập đoàn). */
+  allCompanies: boolean
+  companies: DemandSummaryCompany[]
+  rows: DemandSummaryRow[]
+}
+
+/**
+ * Tổng hợp nhu cầu gộp (design.md mục 18.25, lát G5b): chỉ phiếu Đã chốt, SL theo ĐVT cơ sở.
+ * @param year Năm kế hoạch.
+ * @param categoryId Nhóm hàng (gồm nhóm con); undefined = mọi nhóm.
+ * @param allCompanies true = gộp mọi công ty (cần quyền "Xem kế hoạch nhu cầu toàn tập đoàn").
+ */
+export function useDemandSummary(year: number, categoryId: string | undefined, allCompanies: boolean) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({ year: String(year), allCompanies: String(allCompanies) })
+  if (categoryId) params.set('categoryId', categoryId)
+  return useQuery({
+    queryKey: ['demand-plans', companyId, 'summary', year, categoryId ?? null, allCompanies],
+    queryFn: () => apiFetch<DemandSummary>(`${BASE}/summary?${params}`),
+  })
+}

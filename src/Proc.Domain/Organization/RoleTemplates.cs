@@ -47,6 +47,7 @@ public static class RoleTemplates
             Permissions.Analysis.PurchaseHistoryViewAllCompanies,
             Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage, Permissions.MasterData.SoleSourceApprove,
             Permissions.MasterData.SupplierReviewManage, Permissions.Pricing.MonthlyApprovalApprove,
+            Permissions.Purchase.DemandPlanViewAllCompanies,
         ]),
         new("DAMPHAN", "Nhóm Đàm phán & quản trị giá", "Quản lý hồ sơ NCC, lập bảng giá, RFQ, đề xuất chọn thầu, soạn hợp đồng, phân tích dữ liệu mua – không tự duyệt",
         [
@@ -58,6 +59,7 @@ public static class RoleTemplates
             Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
             Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
             Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Purchase.DemandPlanManage,
+            Permissions.Purchase.DemandPlanViewAllCompanies,
         ]),
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [
@@ -106,7 +108,7 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies, Permissions.System.LogView, Permissions.MasterData.ConflictView,
-            Permissions.Control.AnomalyView, Permissions.Control.FindingManage,
+            Permissions.Control.AnomalyView, Permissions.Control.FindingManage, Permissions.Purchase.DemandPlanViewAllCompanies,
         ]),
         // Kết quả KSNB gửi thẳng lãnh đạo, không qua Nhóm Đàm phán/Vận hành – nên không gán quyền nhận cho Trưởng ban (design.md mục 18.19).
         new("LANHDAO", "Lãnh đạo (nhận báo cáo KSNB)", "Ban giám đốc/HĐQT: nhận thông báo vi phạm của KSNB, xem sổ vi phạm, báo cáo toàn tập đoàn",
