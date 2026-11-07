@@ -84,7 +84,8 @@ Icon luôn có chú thích (title) – màu không là thông tin duy nhất.
 - Ô nhập ngay trong lưới (như Excel); ô chỉ đọc nền `--erp-readonly-bg`.
 - Có sẵn vài dòng trống cuối lưới để gõ tiếp.
 - Dòng tổng chữ `--erp-subtotal`, đậm.
-- Thanh cuộn ngang khi nhiều cột; tiêu đề cột dính trên.
+- Thanh cuộn ngang khi nhiều cột; tiêu đề cột dính trên. `LineGrid` mặc định co cột cho vừa khung; lưới rất nhiều cột (ví dụ 12 tháng của
+  kế hoạch nhu cầu) bật `scrollX` để giữ đúng độ rộng cột và cuộn ngang.
 - **Co giãn cột**: kéo mép phải tiêu đề cột (tối thiểu 32px); bấm đúp mép cột để trả về độ rộng mặc định.
 - **Ô ngày** (`DateInput`, mọi ô ngày – header và lưới): gõ tay dd/MM/yyyy (gõ nhanh `05122026`, `5/12/2026`, `05.12.2026`)
   hoặc chọn trên lịch; không dùng ô ngày của trình duyệt (hiển thị theo ngôn ngữ hệ điều hành).

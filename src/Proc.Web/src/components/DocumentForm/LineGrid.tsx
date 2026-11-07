@@ -35,6 +35,11 @@ export interface LineGridProps {
   fixedRows?: boolean
   /** Mã loại đối tượng của dòng trong nhật ký (ví dụ PurchaseOrderLine): bấm F1 ở ô của dòng đã lưu xem lịch sử ô đó. */
   auditEntity?: string
+  /**
+   * Giữ đúng độ rộng cột và cuộn ngang khi tổng độ rộng vượt khung (ví dụ lưới 12 tháng của kế hoạch nhu cầu). Mặc định tắt: lưới co cột
+   * cho vừa khung như các phiếu hiện có.
+   */
+  scrollX?: boolean
 }
 
 /**
@@ -42,7 +47,7 @@ export interface LineGridProps {
  * (hết dòng thì sang dòng dưới), F2 thêm dòng và đặt con trỏ vào ô đầu của dòng mới. Cột STT và nút xóa dòng có sẵn.
  * Kéo mép phải tiêu đề cột để đổi độ rộng, bấm đúp mép để trả về độ rộng gốc (docs/ui-style.md mục 5).
  */
-export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false, auditEntity }: LineGridProps) {
+export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false, auditEntity, scrollX = false }: LineGridProps) {
   return (
     <Form.List name={name}>
       {(fields, { add, remove }) => (
@@ -55,6 +60,7 @@ export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fix
           addRef={fixedRows ? undefined : addRef}
           listName={name}
           auditEntity={auditEntity}
+          scrollX={scrollX}
         />
       )}
     </Form.List>
@@ -70,9 +76,11 @@ function LineGridBody({
   addRef,
   listName,
   auditEntity,
+  scrollX,
 }: {
   listName: string
   auditEntity?: string
+  scrollX: boolean
   fields: FormListFieldData[]
   columns: LineColumn[]
   readOnly: boolean
@@ -138,7 +146,8 @@ function LineGridBody({
 
   return (
     <div className="line-grid" onKeyDown={onKeyDown}>
-      <table>
+      {/* scrollX: bảng rộng bằng tổng độ rộng cột (tối thiểu 100% – CSS), nhiều cột thì cuộn ngang thay vì ép cột hẹp (docs/ui-style.md mục 5). */}
+      <table style={scrollX ? { width: 44 + columns.reduce((sum, c) => sum + widthOf(c), 0) + (readOnly ? 0 : 32) } : undefined}>
         <thead>
           <tr>
             <th style={{ width: 44 }}>STT</th>
