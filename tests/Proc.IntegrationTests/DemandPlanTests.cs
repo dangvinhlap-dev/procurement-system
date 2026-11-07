@@ -214,4 +214,74 @@ public class DemandPlanTests
         var other = await _factory.CreateClientInCompanyAsync(otherName, ProcApiFactory.TestPassword, "TCT");
         Assert.Equal(HttpStatusCode.Forbidden, (await other.GetAsync(SummaryUrl(category.Id), Ct)).StatusCode);
     }
+
+    /// <summary>
+    /// Lát G5c: SL kế hoạch cho dòng RFQ / hợp đồng – cộng các tháng trong khoảng (qua hai năm) của phiếu Đã chốt, quy về ĐVT dòng;
+    /// công ty đang làm việc hoặc toàn tập đoàn (quyền riêng).
+    /// </summary>
+    [Fact]
+    public async Task LaySlKeHoach_CongThangTrongKhoang_QuyVeDvtDong()
+    {
+        var userName = $"kq.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT", "BHA"]);
+        var tct = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
+        var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
+        var uoms = (await tct.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
+        var (cai, thung, hop) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id, uoms.Single(u => u.Code == "HOP").Id);
+        var category = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm SL kế hoạch {Guid.NewGuid():N}", null, null), Ct));
+        var item = await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, "Ốc vít SL kế hoạch", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
+                null, null, [new(thung, 12)]), Ct));
+        async Task PlanAsync(HttpClient client, int year, Guid uomId, decimal[] months)
+        {
+            var plan = await ReadAsync<DemandPlanDto>(await client.PostAsJsonAsync(Url,
+                new SaveDemandPlanRequest(year, category.Id, null, [new SaveDemandPlanLineRequest(null, item.Id, uomId, months, null)]), Ct));
+            await ReadAsync<DemandPlanDto>(await client.PostAsync($"{Url}/{plan.Id}/confirm", null, Ct));
+        }
+
+        var m = new decimal[12];
+        (m[6], m[11]) = (24, 12);
+        await PlanAsync(bha, Year, cai, m);
+        await PlanAsync(bha, Year + 1, cai, Months(36));
+        var t = new decimal[12];
+        t[6] = 1;
+        await PlanAsync(tct, Year, thung, t);
+        // Phiếu nháp không tính.
+        await ReadAsync<DemandPlanDto>(await tct.PostAsJsonAsync(Url,
+            new SaveDemandPlanRequest(Year + 1, category.Id, null, [new SaveDemandPlanLineRequest(null, item.Id, cai, Months(500), null)]), Ct));
+
+        PlannedQuantityRequest Request(DateOnly from, DateOnly to, bool all) =>
+            new(from, to, all, [new(item.Id, thung), new(item.Id, cai), new(item.Id, hop)]);
+        var july = new DateOnly(Year, 7, 15);
+        var june = new DateOnly(Year + 1, 6, 30);
+
+        // BHA, 07/năm – 06/năm sau: 24 + 12 + 36 = 72 cái = 6 thùng; ĐVT không quy đổi (HOP) không có SL.
+        var own = await ReadAsync<List<PlannedQuantityDto>>(await bha.PostAsJsonAsync($"{Url}/quantities", Request(july, june, false), Ct));
+        Assert.Equal([6m, 72m, null], own.Select(r => r.Qty));
+        var company = Assert.Single(own[0].Companies);
+        Assert.Equal(("BHA", 6m, 2), (company.CompanyCode, company.Qty, company.PlanNos.Count));
+
+        // Toàn tập đoàn (ở TCT): cộng 1 thùng của TCT → 84 cái = 7 thùng.
+        var all = await ReadAsync<List<PlannedQuantityDto>>(await tct.PostAsJsonAsync($"{Url}/quantities", Request(july, june, true), Ct));
+        Assert.Equal([7m, 84m], all.Take(2).Select(r => r.Qty));
+        Assert.Equal(["BHA", "TCT"], all[1].Companies.Select(c => c.CompanyCode));
+
+        // Khoảng không có kế hoạch: null; khoảng ngược, quá 36 tháng: lỗi.
+        var none = await ReadAsync<List<PlannedQuantityDto>>(await bha.PostAsJsonAsync($"{Url}/quantities",
+            Request(new DateOnly(Year, 8, 1), new DateOnly(Year, 11, 1), false), Ct));
+        Assert.All(none, r => Assert.Null(r.Qty));
+        Assert.Contains("Tháng cuối", await TitleAsync(await bha.PostAsJsonAsync($"{Url}/quantities", Request(june, july, false), Ct)));
+        Assert.Contains("36 tháng", await TitleAsync(await bha.PostAsJsonAsync($"{Url}/quantities",
+            Request(new DateOnly(Year, 1, 1), new DateOnly(Year + 3, 1, 1), false), Ct)));
+
+        // Chỉ quyền xem kế hoạch: công ty mình được, toàn tập đoàn bị chặn.
+        var role = UniqueCode("K");
+        await _factory.CreateRoleAsync(role, Permissions.Purchase.DemandPlanView);
+        var viewerName = $"kw.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(viewerName, "BHA", role);
+        var viewer = await _factory.CreateClientInCompanyAsync(viewerName, ProcApiFactory.TestPassword, "BHA");
+        Assert.True((await viewer.PostAsJsonAsync($"{Url}/quantities", Request(july, june, false), Ct)).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync($"{Url}/quantities", Request(july, june, true), Ct)).StatusCode);
+    }
 }

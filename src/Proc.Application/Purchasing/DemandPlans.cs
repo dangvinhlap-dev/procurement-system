@@ -147,6 +147,58 @@ public interface IDemandPlanService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi năm không hợp lệ.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà không có quyền.</exception>
     Task<DemandSummaryDto> SummaryAsync(int year, Guid? categoryId, bool allCompanies, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// SL kế hoạch của các dòng (lát G5c) để làm SL dự kiến RFQ / hợp đồng nguyên tắc: tổng các tháng trong khoảng của phiếu Đã chốt, quy về
+    /// ĐVT của từng dòng.
+    /// </summary>
+    /// <param name="request">Khoảng tháng, phạm vi công ty, các dòng (mặt hàng × ĐVT).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Một kết quả cho mỗi dòng, cùng thứ tự.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng tháng sai hoặc quá 36 tháng.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà không có quyền.</exception>
+    Task<IReadOnlyList<PlannedQuantityDto>> QuantitiesAsync(PlannedQuantityRequest request, CancellationToken cancellationToken);
+}
+
+/// <summary>Yêu cầu lấy SL kế hoạch cho các dòng của RFQ / hợp đồng nguyên tắc (lát G5c).</summary>
+/// <param name="FromMonth">Tháng đầu (ngày bất kỳ trong tháng; tính đủ tháng).</param>
+/// <param name="ToMonth">Tháng cuối (ngày bất kỳ trong tháng; tính đủ tháng).</param>
+/// <param name="AllCompanies">true = cộng kế hoạch mọi công ty (cần quyền xem kế hoạch nhu cầu toàn tập đoàn).</param>
+/// <param name="Lines">Các dòng cần lấy SL.</param>
+public sealed record PlannedQuantityRequest(DateOnly FromMonth, DateOnly ToMonth, bool AllCompanies, IReadOnlyList<PlannedQuantityLineRequest> Lines);
+
+/// <summary>Một dòng cần lấy SL kế hoạch.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT của dòng (kết quả quy về ĐVT này).</param>
+public sealed record PlannedQuantityLineRequest(Guid ItemId, Guid UomId);
+
+/// <summary>Kế hoạch của một công ty cho một dòng.</summary>
+/// <param name="CompanyCode">Mã công ty.</param>
+/// <param name="Qty">SL theo ĐVT dòng.</param>
+/// <param name="PlanNos">Số các phiếu Đã chốt góp vào SL.</param>
+public sealed record PlannedQuantityCompanyDto(string CompanyCode, decimal Qty, IReadOnlyList<string> PlanNos);
+
+/// <summary>SL kế hoạch của một dòng.</summary>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="UomId">ĐVT dòng.</param>
+/// <param name="Qty">Tổng SL kế hoạch theo ĐVT dòng (4 số lẻ); null khi không có kế hoạch đã chốt trong khoảng, hoặc ĐVT không quy đổi được.</param>
+/// <param name="Companies">Chi tiết từng công ty có kế hoạch.</param>
+public sealed record PlannedQuantityDto(Guid ItemId, Guid UomId, decimal? Qty, IReadOnlyList<PlannedQuantityCompanyDto> Companies);
+
+/// <summary>Kiểm tra yêu cầu lấy SL kế hoạch.</summary>
+public sealed class PlannedQuantityRequestValidator : AbstractValidator<PlannedQuantityRequest>
+{
+    /// <summary>Khai báo quy tắc.</summary>
+    public PlannedQuantityRequestValidator()
+    {
+        RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu chưa có dòng mặt hàng.");
+        RuleFor(x => x.Lines.Count).LessThanOrEqualTo(2000).WithMessage("Tối đa 2.000 dòng.");
+        RuleForEach(x => x.Lines).ChildRules(l =>
+        {
+            l.RuleFor(x => x.ItemId).NotEmpty();
+            l.RuleFor(x => x.UomId).NotEmpty();
+        });
+    }
 }
 
 /// <summary>Một công ty trong bảng tổng hợp nhu cầu.</summary>

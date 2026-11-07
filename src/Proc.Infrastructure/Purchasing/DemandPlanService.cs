@@ -19,6 +19,9 @@ namespace Proc.Infrastructure.Purchasing;
 /// </summary>
 public sealed class DemandPlanService : IDemandPlanService
 {
+    /// <summary>Khoảng tối đa khi lấy SL kế hoạch (tháng) – bằng 3 năm kế hoạch (năm nay đến 2 năm tới).</summary>
+    private const int MaxQuantityMonths = 36;
+
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IDocumentNumberService _numbers;
@@ -230,6 +233,66 @@ public sealed class DemandPlanService : IDemandPlanService
             .OrderBy(r => r.ItemCode, StringComparer.Ordinal)
             .ToList();
         return new DemandSummaryDto(year, allCompanies, companyDtos, rows);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<PlannedQuantityDto>> QuantitiesAsync(PlannedQuantityRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        _scope.RequireCompany();
+        var first = new DateOnly(request.FromMonth.Year, request.FromMonth.Month, 1);
+        var last = new DateOnly(request.ToMonth.Year, request.ToMonth.Month, 1);
+        if (last < first) throw new BusinessRuleException("Tháng cuối phải từ tháng đầu trở đi.");
+        var monthCount = (last.Year - first.Year) * 12 + last.Month - first.Month + 1;
+        if (monthCount > MaxQuantityMonths) throw new BusinessRuleException($"Chỉ lấy kế hoạch tối đa {MaxQuantityMonths} tháng.");
+
+        // Như tổng hợp nhu cầu (G5b): cộng các công ty cần quyền toàn tập đoàn, không thì chỉ công ty đang làm việc; filter nhóm hàng giữ nguyên.
+        if (request.AllCompanies) _scope.EnsurePermission(Permissions.Purchase.DemandPlanViewAllCompanies);
+        var plans = request.AllCompanies ? _db.DemandPlans.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.DemandPlans;
+        var itemIds = request.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var planLines = await (
+                from x in plans.AsNoTracking()
+                where x.Year >= first.Year && x.Year <= last.Year && x.Status == DemandPlanStatus.Confirmed
+                from l in x.Lines
+                where itemIds.Contains(l.ItemId)
+                join c in _db.Companies on x.CompanyId equals c.Id
+                select new { x.Year, CompanyCode = c.Code, x.No, l.ItemId, l.UomFactor, l.Qty01, l.Qty02, l.Qty03, l.Qty04, l.Qty05, l.Qty06,
+                    l.Qty07, l.Qty08, l.Qty09, l.Qty10, l.Qty11, l.Qty12 })
+            .ToListAsync(cancellationToken);
+        var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+
+        // SL cơ sở của mỗi dòng phiếu = Σ (SL tháng × hệ số ĐVT phiếu, 4 số lẻ) các tháng nằm trong khoảng – đủ tháng, không chia theo ngày.
+        // Ví dụ khoảng 07/2027 – 06/2028 cộng tháng 7–12 của phiếu năm 2027 và tháng 1–6 của phiếu năm 2028.
+        var baseByLine = planLines
+            .Select(l =>
+            {
+                decimal[] months = [l.Qty01, l.Qty02, l.Qty03, l.Qty04, l.Qty05, l.Qty06, l.Qty07, l.Qty08, l.Qty09, l.Qty10, l.Qty11, l.Qty12];
+                var qty = Enumerable.Range(1, 12)
+                    .Where(m => new DateOnly(l.Year, m, 1) >= first && new DateOnly(l.Year, m, 1) <= last)
+                    .Sum(m => decimal.Round(months[m - 1] * l.UomFactor, 4, MidpointRounding.AwayFromZero));
+                return new { l.ItemId, l.CompanyCode, l.No, Qty = qty };
+            })
+            .Where(l => l.Qty > 0)
+            .ToList();
+
+        return request.Lines.Select(line =>
+            {
+                // Quy SL cơ sở về ĐVT dòng: ÷ hệ số, 4 số lẻ (ví dụ 60 cái, dòng theo thùng 12 cái → 5 thùng). ĐVT không thuộc mặt hàng thì không quy.
+                var factor = items.GetValueOrDefault(line.ItemId) is { } item
+                    ? line.UomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == line.UomId)?.Factor
+                    : null;
+                if (factor is not { } f || f <= 0) return new PlannedQuantityDto(line.ItemId, line.UomId, null, []);
+                var companies = baseByLine.Where(l => l.ItemId == line.ItemId)
+                    .GroupBy(l => l.CompanyCode)
+                    .OrderBy(g => g.Key, StringComparer.Ordinal)
+                    .Select(g => new PlannedQuantityCompanyDto(
+                        g.Key, decimal.Round(g.Sum(l => l.Qty) / f, 4, MidpointRounding.AwayFromZero), g.Select(l => l.No).Distinct().Order().ToList()))
+                    .ToList();
+                var total = baseByLine.Where(l => l.ItemId == line.ItemId).Sum(l => l.Qty);
+                return new PlannedQuantityDto(
+                    line.ItemId, line.UomId, total > 0 ? decimal.Round(total / f, 4, MidpointRounding.AwayFromZero) : null, companies);
+            })
+            .ToList();
     }
 
     /// <summary>Cấp số và lưu phiếu nháp trong một transaction (số không bị nhảy khi lưu lỗi).</summary>
