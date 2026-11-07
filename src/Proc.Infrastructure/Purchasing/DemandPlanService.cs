@@ -240,11 +240,10 @@ public sealed class DemandPlanService : IDemandPlanService
     {
         ArgumentNullException.ThrowIfNull(request);
         _scope.RequireCompany();
-        var first = new DateOnly(request.FromMonth.Year, request.FromMonth.Month, 1);
-        var last = new DateOnly(request.ToMonth.Year, request.ToMonth.Month, 1);
-        if (last < first) throw new BusinessRuleException("Tháng cuối phải từ tháng đầu trở đi.");
-        var monthCount = (last.Year - first.Year) * 12 + last.Month - first.Month + 1;
-        if (monthCount > MaxQuantityMonths) throw new BusinessRuleException($"Chỉ lấy kế hoạch tối đa {MaxQuantityMonths} tháng.");
+        var (fromDate, toDate) = (request.FromDate, request.ToDate);
+        if (toDate < fromDate) throw new BusinessRuleException("Ngày cuối phải từ ngày đầu trở đi.");
+        // Tối đa 36 tháng tính theo ngày: 15/01/2027 – 14/01/2030 được (chạm 37 tháng lịch nhưng chỉ dài 36 tháng).
+        if (toDate >= fromDate.AddMonths(MaxQuantityMonths)) throw new BusinessRuleException($"Chỉ lấy kế hoạch tối đa {MaxQuantityMonths} tháng.");
 
         // Như tổng hợp nhu cầu (G5b): cộng các công ty cần quyền toàn tập đoàn, không thì chỉ công ty đang làm việc; filter nhóm hàng giữ nguyên.
         if (request.AllCompanies) _scope.EnsurePermission(Permissions.Purchase.DemandPlanViewAllCompanies);
@@ -252,7 +251,7 @@ public sealed class DemandPlanService : IDemandPlanService
         var itemIds = request.Lines.Select(l => l.ItemId).Distinct().ToList();
         var planLines = await (
                 from x in plans.AsNoTracking()
-                where x.Year >= first.Year && x.Year <= last.Year && x.Status == DemandPlanStatus.Confirmed
+                where x.Year >= fromDate.Year && x.Year <= toDate.Year && x.Status == DemandPlanStatus.Confirmed
                 from l in x.Lines
                 where itemIds.Contains(l.ItemId)
                 join c in _db.Companies on x.CompanyId equals c.Id
@@ -260,18 +259,28 @@ public sealed class DemandPlanService : IDemandPlanService
                     l.Qty07, l.Qty08, l.Qty09, l.Qty10, l.Qty11, l.Qty12 })
             .ToListAsync(cancellationToken);
         var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
-        var uomIds = request.Lines.Select(l => l.UomId).Distinct().ToList();
+        var uomIds = request.Lines.Select(l => l.UomId).Concat(items.Values.Select(i => i.BaseUomId)).Distinct().ToList();
         var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
 
-        // SL cơ sở của mỗi dòng phiếu = Σ (SL tháng × hệ số ĐVT phiếu, 4 số lẻ) các tháng nằm trong khoảng – đủ tháng, không chia theo ngày.
-        // Ví dụ khoảng 07/2027 – 06/2028 cộng tháng 7–12 của phiếu năm 2027 và tháng 1–6 của phiếu năm 2028.
+        // Phần của tháng nằm trong khoảng = số ngày trong khoảng ÷ số ngày của tháng (tháng trọn = 1, ngoài khoảng = 0). Kế hoạch chỉ có theo
+        // tháng nên giả định nhu cầu rải đều trong tháng. Ví dụ hiệu lực từ 15/01: tháng 1 tính 17/31.
+        decimal Portion(int year, int month)
+        {
+            var start = new DateOnly(year, month, 1);
+            var end = start.AddMonths(1).AddDays(-1);
+            var days = (end < toDate ? end : toDate).DayNumber - (start > fromDate ? start : fromDate).DayNumber + 1;
+            return days <= 0 ? 0 : (decimal)days / DateTime.DaysInMonth(year, month);
+        }
+
+        // SL cơ sở của mỗi dòng phiếu = Σ (SL tháng × hệ số ĐVT phiếu, 4 số lẻ) × phần của tháng, chưa làm tròn (làm tròn 4 số lẻ một lần ở tổng).
+        // Ví dụ 15/01 – 14/03, kế hoạch 31 / 50 / 31 cái: 31 × 17/31 + 50 + 31 × 14/31 = 81 cái. Khoảng 01/07/2027 – 30/06/2028 cộng trọn
+        // tháng 7–12 của phiếu năm 2027 và tháng 1–6 của phiếu năm 2028.
         var baseByLine = planLines
             .Select(l =>
             {
                 decimal[] months = [l.Qty01, l.Qty02, l.Qty03, l.Qty04, l.Qty05, l.Qty06, l.Qty07, l.Qty08, l.Qty09, l.Qty10, l.Qty11, l.Qty12];
                 var qty = Enumerable.Range(1, 12)
-                    .Where(m => new DateOnly(l.Year, m, 1) >= first && new DateOnly(l.Year, m, 1) <= last)
-                    .Sum(m => decimal.Round(months[m - 1] * l.UomFactor, 4, MidpointRounding.AwayFromZero));
+                    .Sum(m => decimal.Round(months[m - 1] * l.UomFactor, 4, MidpointRounding.AwayFromZero) * Portion(l.Year, m));
                 return new { l.ItemId, l.CompanyCode, l.No, Qty = qty };
             })
             .Where(l => l.Qty > 0)
@@ -283,10 +292,10 @@ public sealed class DemandPlanService : IDemandPlanService
                 var item = items.GetValueOrDefault(line.ItemId);
                 var factor = item is null ? null
                     : line.UomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == line.UomId)?.Factor;
-                PlannedQuantityDto Result(decimal? qty, IReadOnlyList<PlannedQuantityCompanyDto> companies) => new(
+                PlannedQuantityDto Result(decimal? qty, IReadOnlyList<PlannedQuantityCompanyDto> companies, decimal? baseQty) => new(
                     line.ItemId, item?.Code ?? string.Empty, item?.Name ?? string.Empty, line.UomId, uoms.GetValueOrDefault(line.UomId) ?? string.Empty,
-                    qty, companies);
-                if (factor is not { } f || f <= 0) return Result(null, []);
+                    qty, companies, item?.BaseUomId, item is null ? string.Empty : uoms.GetValueOrDefault(item.BaseUomId) ?? string.Empty, baseQty);
+                if (factor is not { } f || f <= 0) return Result(null, [], null);
                 var companies = baseByLine.Where(l => l.ItemId == line.ItemId)
                     .GroupBy(l => l.CompanyCode)
                     .OrderBy(g => g.Key, StringComparer.Ordinal)
@@ -294,7 +303,9 @@ public sealed class DemandPlanService : IDemandPlanService
                         g.Key, decimal.Round(g.Sum(l => l.Qty) / f, 4, MidpointRounding.AwayFromZero), g.Select(l => l.No).Distinct().Order().ToList()))
                     .ToList();
                 var total = baseByLine.Where(l => l.ItemId == line.ItemId).Sum(l => l.Qty);
-                return Result(total > 0 ? decimal.Round(total / f, 4, MidpointRounding.AwayFromZero) : null, companies);
+                return total > 0
+                    ? Result(decimal.Round(total / f, 4, MidpointRounding.AwayFromZero), companies, decimal.Round(total, 4, MidpointRounding.AwayFromZero))
+                    : Result(null, companies, null);
             })
             .ToList();
     }

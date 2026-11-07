@@ -253,12 +253,14 @@ public class DemandPlanTests
 
         PlannedQuantityRequest Request(DateOnly from, DateOnly to, bool all) =>
             new(from, to, all, [new(item.Id, thung), new(item.Id, cai), new(item.Id, hop)]);
-        var july = new DateOnly(Year, 7, 15);
+        var july = new DateOnly(Year, 7, 1);
         var june = new DateOnly(Year + 1, 6, 30);
 
-        // BHA, 07/năm – 06/năm sau: 24 + 12 + 36 = 72 cái = 6 thùng; ĐVT không quy đổi (HOP) không có SL.
+        // BHA, 01/07/năm – 30/06/năm sau (trọn tháng): 24 + 12 + 36 = 72 cái = 6 thùng; ĐVT không quy đổi (HOP) không có SL.
         var own = await ReadAsync<List<PlannedQuantityDto>>(await bha.PostAsJsonAsync($"{Url}/quantities", Request(july, june, false), Ct));
         Assert.Equal([6m, 72m, null], own.Select(r => r.Qty));
+        Assert.Equal([72m, 72m, null], own.Select(r => r.BaseQty));
+        Assert.Equal("CAI", own[0].BaseUomCode);
         var company = Assert.Single(own[0].Companies);
         Assert.Equal(("BHA", 6m, 2), (company.CompanyCode, company.Qty, company.PlanNos.Count));
 
@@ -267,11 +269,13 @@ public class DemandPlanTests
         Assert.Equal([7m, 84m], all.Take(2).Select(r => r.Qty));
         Assert.Equal(["BHA", "TCT"], all[1].Companies.Select(c => c.CompanyCode));
 
-        // Khoảng không có kế hoạch: null; khoảng ngược, quá 36 tháng: lỗi.
+        // Khoảng không có kế hoạch: null; khoảng ngược, từ 36 tháng trở lên: lỗi (01/01/năm – 31/12/năm+2 vừa đủ 36 tháng).
         var none = await ReadAsync<List<PlannedQuantityDto>>(await bha.PostAsJsonAsync($"{Url}/quantities",
             Request(new DateOnly(Year, 8, 1), new DateOnly(Year, 11, 1), false), Ct));
         Assert.All(none, r => Assert.Null(r.Qty));
-        Assert.Contains("Tháng cuối", await TitleAsync(await bha.PostAsJsonAsync($"{Url}/quantities", Request(june, july, false), Ct)));
+        Assert.True((await bha.PostAsJsonAsync($"{Url}/quantities",
+            Request(new DateOnly(Year, 1, 1), new DateOnly(Year + 2, 12, 31), false), Ct)).IsSuccessStatusCode);
+        Assert.Contains("Ngày cuối", await TitleAsync(await bha.PostAsJsonAsync($"{Url}/quantities", Request(june, july, false), Ct)));
         Assert.Contains("36 tháng", await TitleAsync(await bha.PostAsJsonAsync($"{Url}/quantities",
             Request(new DateOnly(Year, 1, 1), new DateOnly(Year + 3, 1, 1), false), Ct)));
 
@@ -283,5 +287,37 @@ public class DemandPlanTests
         var viewer = await _factory.CreateClientInCompanyAsync(viewerName, ProcApiFactory.TestPassword, "BHA");
         Assert.True((await viewer.PostAsJsonAsync($"{Url}/quantities", Request(july, june, false), Ct)).IsSuccessStatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync($"{Url}/quantities", Request(july, june, true), Ct)).StatusCode);
+    }
+    /// <summary>
+    /// SL kế hoạch chia theo ngày cho tháng đầu / cuối không trọn: hợp đồng 15/01 – 14/03 lấy 17/31 tháng 1 và 14/31 tháng 3; kèm SL theo
+    /// ĐVT cơ sở để giao diện xử lý SL lẻ (dòng theo thùng 31 cái = 2,5833 thùng).
+    /// </summary>
+    [Fact]
+    public async Task LaySlKeHoach_ThangDauCuoiKhongTron_ChiaTheoNgay()
+    {
+        var client = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
+        var uoms = (await client.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
+        var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
+        var category = await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm chia ngày {Guid.NewGuid():N}", null, null), Ct));
+        var item = await ReadAsync<ItemDetailDto>(await client.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, "Ốc vít chia ngày", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
+                null, null, [new(thung, 12)]), Ct));
+        // Tháng 1: 31 cái, tháng 2: 50 cái, tháng 3: 31 cái.
+        var plan = await ReadAsync<DemandPlanDto>(await client.PostAsJsonAsync(Url,
+            new SaveDemandPlanRequest(Year, category.Id, null, [new SaveDemandPlanLineRequest(null, item.Id, cai, Months(31, 50, 31), null)]), Ct));
+        await ReadAsync<DemandPlanDto>(await client.PostAsync($"{Url}/{plan.Id}/confirm", null, Ct));
+
+        // 15/01 – 14/03: 31 × 17/31 + 50 + 31 × 14/31 = 17 + 50 + 14 = 81 cái = 6,75 thùng.
+        var result = await ReadAsync<List<PlannedQuantityDto>>(await client.PostAsJsonAsync($"{Url}/quantities",
+            new PlannedQuantityRequest(new DateOnly(Year, 1, 15), new DateOnly(Year, 3, 14), false, [new(item.Id, thung), new(item.Id, cai)]), Ct));
+        Assert.Equal([6.75m, 81m], result.Select(r => r.Qty));
+        Assert.Equal([81m, 81m], result.Select(r => r.BaseQty));
+
+        // Chỉ ngày 15/01 – 14/02: 17 cái + 50 × 14/28 (hoặc 14/29 năm nhuận).
+        var february = DateTime.DaysInMonth(Year, 2);
+        var part = await ReadAsync<List<PlannedQuantityDto>>(await client.PostAsJsonAsync($"{Url}/quantities",
+            new PlannedQuantityRequest(new DateOnly(Year, 1, 15), new DateOnly(Year, 2, 14), false, [new(item.Id, cai)]), Ct));
+        Assert.Equal(decimal.Round(17m + 50m * 14 / february, 4, MidpointRounding.AwayFromZero), part[0].Qty);
     }
 }
