@@ -258,6 +258,8 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Mỗi (NCC, mặt hàng) một dòng; ĐVT mua phải là ĐVT cơ sở hoặc ĐVT quy đổi của mặt hàng; MOQ > 0 (numeric(18,4)); thời gian giao 0–365 ngày | Nhập kho phải quy đổi được về ĐVT cơ sở |
 | Mỗi mặt hàng tối đa **một NCC ưu tiên**; chọn NCC ưu tiên mới thì NCC cũ tự bỏ (cùng giao dịch) | Gợi ý NCC mặc định khi lập PR/PO |
 | Xóa dòng NCC – sản phẩm được (chưa có chứng từ tham chiếu); nhật ký thao tác giữ giá trị cũ | |
+| **Mã hàng theo NCC** (không bắt buộc, tối đa 50 ký tự): mã NCC tự đặt, ghi trên báo giá/hóa đơn của họ – gõ tay vì là danh mục của NCC. PO chép mã này vào dòng (`PurchaseOrderLine.SupplierItemCode`) mỗi lần lưu/gửi duyệt khi còn nháp; PO đã gửi giữ mã lúc gửi. Trang PO có cột "Mã hàng NCC", phiếu in PO ghi "– mã NCC: …" sau tên hàng (yêu cầu người dùng 07/11/2026) | NCC nhận ra sản phẩm của họ khi nhận đơn; sửa danh mục sau không làm đổi phiếu đã gửi NCC |
+| **ĐVT mua**: hộp thoại tự điền ĐVT cơ sở khi chọn mặt hàng. Lập PO với NCC, chọn mặt hàng thì dòng tự lấy ĐVT mua (ĐVT đã bị gỡ khỏi mặt hàng thì về ĐVT cơ sở); dòng lấy từ PR giữ ĐVT của PR. API `GET /api/purchase-orders/supplier-items?supplierId=` (quyền lập hoặc xem PO, lọc phạm vi nhóm hàng) | Đặt đúng đơn vị NCC bán (ví dụ cuộn 100 m thay vì mét) |
 
 ### 5.10 Nhập/xuất danh mục bằng Excel
 

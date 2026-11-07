@@ -2,6 +2,7 @@ import type { SupplierChangeRequest } from './supplierApprovals'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import { hasWildcard } from '../utils/text'
 
 /*
  * Kiểu dữ liệu và hàm gọi API danh mục hàng hóa: đơn vị tính, nhóm hàng, hàng hóa (khớp Proc.Application.MasterData).
@@ -548,7 +549,7 @@ export function useSupplierItemMutations() {
 }
 
 /**
- * Tìm mặt hàng đang dùng theo từ khóa (ô chọn hàng): chỉ gọi server khi đã gõ ít nhất 2 ký tự.
+ * Tìm mặt hàng đang dùng theo từ khóa (ô chọn hàng): gọi server khi đã gõ ít nhất 2 ký tự hoặc có `*` (`*` = liệt kê tất cả).
  * @param search Từ khóa (mã, tên, mã vạch), có dấu hay không dấu.
  */
 export function useItemSearch(search: string) {
@@ -557,7 +558,8 @@ export function useItemSearch(search: string) {
   return useQuery({
     queryKey: ['items', companyId, 'search', keyword],
     queryFn: () => apiFetch<ItemListResult>(`/api/items?activeOnly=true&search=${encodeURIComponent(keyword)}`),
-    enabled: keyword.length >= 2,
+    // Gõ `*` (một ký tự) rồi Enter phải liệt kê toàn bộ danh mục – docs/ui-style.md mục 5b.
+    enabled: keyword.length >= 2 || hasWildcard(keyword),
     placeholderData: keepPreviousData,
   })
 }

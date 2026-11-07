@@ -30,7 +30,9 @@ async function openByCommand(page: Page, code: string) {
   await box.press('Enter')
 }
 
-test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa', async ({ page, request }) => {
+test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa, dòng PO lấy ĐVT mua', async ({ page, request }) => {
+  // Đi qua bốn màn hình (NCC, PO, hàng hóa) nên dài hơn giới hạn mặc định 30 giây.
+  test.setTimeout(90_000)
   const api = await adminApi(request)
   const groups = await api.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const uoms = await api.get<{ id: string; code: string }[]>('/api/uoms')
@@ -60,21 +62,30 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   await page.locator('.data-grid-row', { hasText: supplierCode }).dblclick()
   await expect(drawer.getByText(`Nhà cung cấp: ${supplierCode}`)).toBeVisible()
 
-  // Thêm mặt hàng NCC bán: tìm hàng ở server, ĐVT mua chỉ có Mét (cơ sở) và Cuộn (quy đổi).
+  // Thêm mặt hàng NCC bán: gõ * rồi Enter liệt kê cả danh mục (ui-style.md mục 5b); tìm hàng ở server; ĐVT mua tự điền ĐVT cơ sở,
+  // chỉ có Mét (cơ sở) và Cuộn (quy đổi).
   await drawer.getByRole('tab', { name: 'Sản phẩm/dịch vụ' }).click()
   await drawer.getByRole('button', { name: 'Thêm mặt hàng' }).click()
   const dialog = page.getByRole('dialog', { name: 'Thêm mặt hàng NCC bán' })
-  await dialog.getByLabel('Mặt hàng', { exact: true }).fill(itemCode.toLowerCase())
+  const itemBox = dialog.getByLabel('Mặt hàng', { exact: true })
+  await itemBox.fill('*')
+  await itemBox.press('Enter')
+  await expect(page.locator('.ant-select-dropdown:visible .ant-select-item-option').first()).toBeVisible()
+  await itemBox.fill(itemCode.toLowerCase())
   await page.locator('.ant-select-dropdown:visible').getByTitle(itemCode, { exact: false }).click()
+  await expect(dialog.locator('.ant-form-item', { hasText: 'ĐVT mua' })).toContainText('(ĐVT cơ sở)')
+  await dialog.getByLabel('Mã hàng theo NCC').fill('DC-THU-01')
   await dialog.getByLabel('ĐVT mua').click()
   await expect(page.locator('.ant-select-dropdown:visible .ant-select-item-option')).toHaveCount(2)
   await page.locator('.ant-select-dropdown:visible').getByTitle('CUON', { exact: false }).click()
   await dialog.getByLabel('Số lượng đặt tối thiểu (MOQ)').fill('5')
   await dialog.getByRole('checkbox', { name: 'NCC ưu tiên của mặt hàng này' }).check()
+  await dialog.screenshot({ path: 'e2e/screenshots/supplier-item-dialog.png' })
   await dialog.getByRole('button', { name: 'Lưu' }).click()
   await expect(page.locator('.ant-message')).toContainText('Đã lưu mặt hàng của NCC.')
   const itemRow = drawer.locator('.data-grid-row', { hasText: itemCode })
   await expect(itemRow).toContainText('CUON')
+  await expect(itemRow).toContainText('DC-THU-01')
   await expect(itemRow).toContainText('✓')
   await page.screenshot({ path: 'e2e/screenshots/supplier-items-tab.png' })
 
@@ -88,6 +99,23 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   await page.getByLabel('Phạm vi').click()
   await page.locator('.ant-select-dropdown:visible').getByTitle('NCC TCT đang mua').click()
   await expect(page.locator('.data-grid-row', { hasText: supplierCode })).toContainText('Đang mua')
+
+  // PO với NCC này: chọn mặt hàng thì dòng tự lấy ĐVT mua (Cuộn) và hiện mã hàng theo NCC (design.md mục 5.9).
+  await openByCommand(page, 'PO')
+  // Chờ màn hình PO: danh sách NCC cũng có nút "Tạo mới".
+  await expect(page.getByRole('heading', { name: 'Danh sách đơn mua hàng (PO)' })).toBeVisible()
+  await page.getByRole('button', { name: 'Tạo mới' }).click()
+  const supplierBox = page.getByRole('combobox', { name: 'Nhà cung cấp', exact: true })
+  await supplierBox.click()
+  await supplierBox.fill(supplierCode)
+  await page.locator('.ant-select-dropdown:visible').getByTitle(supplierCode, { exact: false }).click()
+  await page.locator('.line-grid-add').click()
+  await page.getByLabel('Mặt hàng dòng 1').fill(itemCode.toLowerCase())
+  await page.locator('.ant-select-dropdown:visible').getByTitle(itemCode, { exact: false }).click()
+  const poLine = page.locator('.line-grid-row').first()
+  await expect(poLine).toContainText('CUON')
+  await expect(poLine).toContainText('DC-THU-01')
+  await page.screenshot({ path: 'e2e/screenshots/po-supplier-item-code.png' })
 
   // Ngăn kéo hàng hóa: tab Nhà cung cấp thấy NCC ưu tiên.
   await openByCommand(page, 'ITEM')

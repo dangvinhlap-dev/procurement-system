@@ -20,6 +20,7 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { formRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { DATE_INPUT_FORMATS } from '../../utils/format'
+import { hasWildcard } from '../../utils/text'
 
 /** Khung cố định chiều cao cho lưới trong tab (DataGrid co giãn theo khung cha). Độ rộng cột cộng lại vừa ngăn kéo 720px. */
 const gridBoxStyle = { height: 320, display: 'flex', flexDirection: 'column' } as const
@@ -116,7 +117,7 @@ export function SupplierCompanyTab({ supplierId }: { supplierId: string }) {
 const supplierItemColumns: GridColumn<SupplierItemRow>[] = [
   { key: 'item', title: 'Mã hàng', width: 100, value: (r) => r.itemCode },
   { key: 'name', title: 'Tên hàng', width: 170, value: (r) => r.itemName },
-  { key: 'code', title: 'Mã hàng của NCC', width: 110, value: (r) => r.supplierItemCode },
+  { key: 'code', title: 'Mã hàng theo NCC', width: 110, value: (r) => r.supplierItemCode },
   { key: 'uom', title: 'ĐVT mua', width: 60, value: (r) => r.purchaseUomCode },
   { key: 'moq', title: 'MOQ', width: 70, type: 'quantity', value: (r) => r.moq },
   { key: 'lead', title: 'Giao (ngày)', width: 70, type: 'quantity', value: (r) => r.leadTimeDays },
@@ -200,6 +201,11 @@ function SupplierItemDialog({ supplierId, row, onClose }: { supplierId: string; 
     })
   }, [item.data, uoms.data])
 
+  // Chọn mặt hàng xong thì ĐVT mua mặc định là ĐVT cơ sở – đa số NCC bán theo đúng ĐVT kho; khác thì người dùng đổi (design.md mục 5.9).
+  useEffect(() => {
+    if (!row && item.data && item.data.id === itemId && !form.getFieldValue('purchaseUomId')) form.setFieldValue('purchaseUomId', item.data.baseUomId)
+  }, [row, item.data, itemId, form])
+
   const submit = async () => {
     const values = await form.validateFields().catch(() => null)
     if (!values) return
@@ -276,16 +282,28 @@ function SupplierItemDialog({ supplierId, row, onClose }: { supplierId: string; 
             showSearch={{ filterOption: false, onSearch: setSearch }}
             options={itemOptions}
             disabled={row !== null}
-            placeholder="Gõ ít nhất 2 ký tự mã, tên hoặc mã vạch"
-            notFoundContent={found.isFetching ? <Spin size="small" /> : search.trim().length < 2 ? 'Gõ để tìm' : 'Không có'}
+            placeholder="Gõ mã, tên, mã vạch – hoặc * rồi Enter để xem tất cả"
+            notFoundContent={
+              found.isFetching ? <Spin size="small" /> : search.trim().length < 2 && !hasWildcard(search) ? 'Gõ ít nhất 2 ký tự, hoặc * để xem tất cả' : 'Không có'
+            }
             onChange={() => form.setFieldValue('purchaseUomId', undefined)}
           />
         </Form.Item>
         <div className="detail-grid">
-          <Form.Item label="Mã hàng của NCC" name="supplierItemCode" rules={[{ max: 50 }]}>
-            <Input autoComplete="off" />
+          <Form.Item
+            label="Mã hàng theo NCC"
+            name="supplierItemCode"
+            rules={[{ max: 50 }]}
+            extra="Không bắt buộc. Mã NCC tự đặt, ghi trên báo giá/hóa đơn của họ; có mã thì dòng PO và phiếu in PO ghi kèm."
+          >
+            <Input autoComplete="off" placeholder="Ví dụ: BL-M10-ZN" />
           </Form.Item>
-          <Form.Item label="ĐVT mua" name="purchaseUomId" rules={[{ required: true, message: 'Hãy chọn ĐVT mua.' }]}>
+          <Form.Item
+            label="ĐVT mua"
+            name="purchaseUomId"
+            rules={[{ required: true, message: 'Hãy chọn ĐVT mua.' }]}
+            extra="Đơn vị NCC bán (mặc định ĐVT cơ sở). Lập PO với NCC này, chọn mặt hàng thì dòng tự lấy ĐVT này."
+          >
             <Select options={uomOptions} loading={item.isLoading} placeholder={itemId ? undefined : 'Chọn mặt hàng trước'} />
           </Form.Item>
           <Form.Item label="Số lượng đặt tối thiểu (MOQ)" name="moq" rules={[{ type: 'number', min: 0.0001, message: 'MOQ phải lớn hơn 0.' }]}>
@@ -308,7 +326,7 @@ const itemSupplierColumns: GridColumn<SupplierItemRow>[] = [
   { key: 'supplier', title: 'Mã NCC', width: 90, value: (r) => r.supplierCode },
   { key: 'name', title: 'Tên NCC', width: 150, value: (r) => r.supplierName },
   { key: 'status', title: 'Trạng thái NCC', width: 90, value: (r) => supplierStatusLabels[r.supplierStatus] },
-  { key: 'code', title: 'Mã hàng của NCC', width: 100, value: (r) => r.supplierItemCode },
+  { key: 'code', title: 'Mã hàng theo NCC', width: 100, value: (r) => r.supplierItemCode },
   { key: 'uom', title: 'ĐVT mua', width: 60, value: (r) => r.purchaseUomCode },
   { key: 'moq', title: 'MOQ', width: 70, type: 'quantity', value: (r) => r.moq },
   { key: 'lead', title: 'Giao (ngày)', width: 60, type: 'quantity', value: (r) => r.leadTimeDays },

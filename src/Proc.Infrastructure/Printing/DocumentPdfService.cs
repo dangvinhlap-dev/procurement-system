@@ -75,8 +75,10 @@ public sealed class DocumentPdfService : IDocumentPdfService
             ],
             po.Lines.Select(l => new[]
             {
-                l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (l.DeliveryDate is { } d ? $" (giao {d:dd/MM/yyyy})" : ""), l.UomCode,
-                Qty(l.Qty), Price(l.UnitPrice), l.DiscountPct > 0 ? Qty(l.DiscountPct) : "", Money(l.Amount), Vat(l.VatCode),
+                // Mã hàng theo NCC ghi kèm tên hàng để NCC nhận ra sản phẩm của họ (design.md mục 5.9).
+                l.LineNo.ToString(Vi), l.ItemCode,
+                l.ItemName + (l.SupplierItemCode is { } sc ? $" – mã NCC: {sc}" : "") + (l.DeliveryDate is { } d ? $" (giao {d:dd/MM/yyyy})" : ""),
+                l.UomCode, Qty(l.Qty), Price(l.UnitPrice), l.DiscountPct > 0 ? Qty(l.DiscountPct) : "", Money(l.Amount), Vat(l.VatCode),
             }).ToList(),
             [
                 new("Tiền hàng", Money(po.GrossAmount)),

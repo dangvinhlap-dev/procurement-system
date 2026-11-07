@@ -961,6 +961,23 @@ public sealed class PurchaseOrder : ApprovableDocument
         foreach (var line in _lines) line.SoleSourceApprovalId = resolve(line);
     }
 
+    /// <summary>
+    /// Chép mã hàng theo NCC (khai báo ở NCC – sản phẩm, design.md mục 5.9) vào từng dòng khi lưu/gửi duyệt PO nháp: PO đã gửi giữ nguyên
+    /// mã lúc gửi, sau đó sửa danh mục NCC – sản phẩm không làm đổi phiếu đã gửi NCC.
+    /// </summary>
+    /// <param name="resolve">Mã hàng theo NCC của dòng, null nếu NCC chưa khai báo.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
+    public void ApplySupplierItemCodes(Func<PurchaseOrderLine, string?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(resolve);
+        EnsureDraft();
+        foreach (var line in _lines)
+        {
+            var code = resolve(line)?.Trim();
+            line.SupplierItemCode = string.IsNullOrEmpty(code) ? null : code;
+        }
+    }
+
     private void RefreshPriceFlags()
     {
         HasPriceException = _lines.Any(l => l.IsPriceDeviation);
@@ -1113,6 +1130,9 @@ public sealed class PurchaseOrderLine : Entity
 
     /// <summary>Phiếu NCC độc quyền còn tác dụng vào ngày PO cho NCC × mặt hàng của dòng (design.md mục 18.9, 18.10).</summary>
     public Guid? SoleSourceApprovalId { get; internal set; }
+
+    /// <summary>Mã hàng theo NCC lúc lưu/gửi duyệt (chép từ NCC – sản phẩm, design.md mục 5.9); null khi NCC chưa khai báo.</summary>
+    public string? SupplierItemCode { get; internal set; }
 
     /// <summary>
     /// Dòng phiếu duyệt NCC và giá tháng đã duyệt cho công ty × mặt hàng × tháng của ngày PO (design.md mục 18.25, lát G3) – ghi cả khi

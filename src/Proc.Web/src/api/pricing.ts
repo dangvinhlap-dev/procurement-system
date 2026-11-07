@@ -192,6 +192,31 @@ export function useSupplierPrices(supplierId: string | undefined, date: string |
   })
 }
 
+/** Mặt hàng NCC bán dùng trên dòng PO – khớp PoSupplierItemDto (design.md mục 5.9). */
+export interface PoSupplierItem {
+  itemId: string
+  /** Mã hàng theo NCC; null = chưa khai báo. */
+  supplierItemCode: string | null
+  /** ĐVT mua từ NCC này – dòng PO chọn mặt hàng thì tự lấy ĐVT này. */
+  purchaseUomId: string
+}
+
+/**
+ * Mặt hàng NCC bán (NCC – sản phẩm) để dòng PO tự lấy ĐVT mua và hiện mã hàng theo NCC; người lập/xem PO không cần quyền xem danh mục NCC.
+ * @param supplierId NCC của PO; trống thì không tải.
+ * @returns Bảng tra theo Id mặt hàng.
+ */
+export function usePoSupplierItems(supplierId: string | undefined) {
+  const companyId = useCompanyId()
+  return useQuery({
+    // Cùng gốc khóa với danh sách NCC – sản phẩm: sửa mặt hàng NCC bán thì ô PO đang mở tải lại.
+    queryKey: ['supplier-items', companyId, 'po', supplierId ?? ''],
+    queryFn: () => apiFetch<PoSupplierItem[]>(`/api/purchase-orders/supplier-items?supplierId=${supplierId}`),
+    enabled: !!supplierId,
+    select: (rows) => new Map(rows.map((r) => [r.itemId, r])),
+  })
+}
+
 /** Giá thấp nhất tập đoàn của một mặt hàng – khớp GroupMinPriceDto (giá sau CK, trước VAT, theo ĐVT cơ sở). */
 export interface GroupMinPrice {
   itemId: string
