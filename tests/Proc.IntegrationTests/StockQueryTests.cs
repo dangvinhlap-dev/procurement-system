@@ -44,7 +44,7 @@ public class StockQueryTests
         var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm tồn kho", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm tồn kho {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Đai ốc xem tồn", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, "10", null, false, false, minStock, null, []), Ct));

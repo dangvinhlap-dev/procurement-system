@@ -93,7 +93,7 @@ public interface ISupplierLinkAdministration
     /// <param name="itemIds">Chỉ các mặt hàng này; trống = mọi mặt hàng NCC bán.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Mỗi NCC × mặt hàng một dòng.</returns>
-    /// <exception cref="BusinessRuleException">Khi quá 100 NCC.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi quá 100 NCC.</exception>
     Task<IReadOnlyList<SupplierItemLookupDto>> LookupItemsAsync(
         IReadOnlyList<Guid> supplierIds, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 

@@ -59,7 +59,7 @@ public class PrintingTests
         var kp = (await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", kt, null, null, false), Ct))).Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm in phiếu", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm in phiếu {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Bu lông mạ kẽm M8 – loại dài để thử xuống dòng trong ô tên hàng", null, "Inventory", category.Id, cai,
                 null, null, null, null, "10", null, false, false, null, null, []), Ct));

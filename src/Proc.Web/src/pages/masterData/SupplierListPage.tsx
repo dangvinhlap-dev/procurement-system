@@ -1,8 +1,10 @@
 import { Alert } from 'antd'
 import { Select } from '../../classic/Select'
+import { TreeSelect } from '../../classic/TreeSelect'
 import { useMemo, useState } from 'react'
 import {
   supplierStatusLabels,
+  useItemCategoryCatalog,
   useSupplierGroups,
   useSuppliers,
   type SupplierListItem,
@@ -15,6 +17,7 @@ import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatQuantity } from '../../utils/format'
 import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
 import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
+import { buildCategoryTree } from './categoryTree'
 import { SupplierDrawer } from './SupplierDrawer'
 
 const statusTone: Record<SupplierStatus, StatusTone> = {
@@ -29,6 +32,7 @@ const baseColumns: GridColumn<SupplierListItem>[] = [
   { key: 'name', title: 'Tên nhà cung cấp', width: 260, value: (r) => r.name },
   { key: 'shortName', title: 'Tên viết tắt', width: 110, value: (r) => r.shortName },
   { key: 'group', title: 'Nhóm NCC', width: 110, value: (r) => r.groupName, groupable: true },
+  { key: 'categories', title: 'Ngành hàng', width: 200, value: (r) => r.categories },
   { key: 'taxCode', title: 'Mã số thuế', width: 120, value: (r) => r.taxCode },
   { key: 'phone', title: 'Điện thoại', width: 120, value: (r) => r.phone },
   { key: 'contact', title: 'Liên hệ chính', width: 200, value: (r) => r.primaryContact },
@@ -47,14 +51,18 @@ const baseColumns: GridColumn<SupplierListItem>[] = [
 
 /**
  * Màn hình Danh mục nhà cung cấp (design.md mục 5.3, 5.8): NCC dùng chung toàn tập đoàn, kể cả NCC nội bộ (công ty thành viên).
- * Nhóm và trạng thái lọc ở server; ô tìm kiếm (có dấu hay không dấu) lọc tiếp trên các dòng đã tải.
+ * Nhóm, trạng thái, ngành hàng (gồm nhóm con) lọc ở server; ô tìm kiếm (có dấu hay không dấu) lọc tiếp trên các dòng đã tải.
  */
 export function SupplierListPage() {
   const { workingCompany } = useAuth()
   const [groupId, setGroupId] = useState<string | undefined>()
   const [status, setStatus] = useState<SupplierStatus | undefined>()
   const [appliedOnly, setAppliedOnly] = useState(false)
-  const suppliers = useSuppliers({ groupId, status, appliedOnly })
+  const [categoryId, setCategoryId] = useState<string | undefined>()
+  const suppliers = useSuppliers({ groupId, status, appliedOnly, categoryId })
+  // Ngành hàng lấy cả danh mục nhóm hàng (ai cũng xem đủ – design.md mục 9.2).
+  const catalog = useItemCategoryCatalog()
+  const categoryTree = useMemo(() => buildCategoryTree(catalog.data ?? []), [catalog.data])
   const companyCode = workingCompany?.code ?? ''
   // Cột "áp dụng tại" đổi tiêu đề theo công ty đang làm việc – mỗi công ty tự quản lý NCC mình mua (design.md mục 5.9).
   const columns = useMemo<GridColumn<SupplierListItem>[]>(
@@ -101,6 +109,7 @@ export function SupplierListPage() {
           setGroupId(undefined)
           setStatus(undefined)
           setAppliedOnly(false)
+          setCategoryId(undefined)
         }}
         filters={
           <>
@@ -125,6 +134,11 @@ export function SupplierListPage() {
                   onChange={(v) => setGroupId(v || undefined)}
                   options={[{ value: '', label: 'Tất cả' }, ...(groups.data ?? []).map((g) => ({ value: g.id, label: g.name }))]}
                 />
+              )}
+            </FilterField>
+            <FilterField label="Ngành hàng (gồm nhóm con)" width={220}>
+              {(id) => (
+                <TreeSelect id={id} value={categoryId} onChange={setCategoryId} treeData={categoryTree} allowClear placeholder="Tất cả" />
               )}
             </FilterField>
             <FilterField label="Trạng thái" width={150}>

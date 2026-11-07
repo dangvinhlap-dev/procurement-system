@@ -50,6 +50,7 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 ## 4. Quy tắc nghiệp vụ bất biến
 - Mỗi công ty là pháp nhân độc lập. Mọi bảng giao dịch có CompanyId.
 - Luôn đi qua ICurrentUserScope; không truy vấn bỏ qua global query filter (công ty, kho, nhóm hàng).
+  Ngoại lệ đã duyệt 07/11/2026: danh mục tên nhóm hàng ai cũng xem đủ (kèm cờ `IsInScope`) – design.md mục 9.2.
   Lệnh ghi phải kiểm tra lại phạm vi ở tầng Application, không tin dữ liệu từ client.
 - Mỗi công ty có đúng một kho Main; kho Sub thuộc một công ty.
 - Liên công ty chỉ đi kho Main → kho Main, qua cặp chứng từ ICS (xuất bán nội bộ) / ICR (nhập mua nội bộ),

@@ -155,7 +155,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Nhóm NCC (`SupplierGroup`) | Mã, tên | Trong nước, nhập khẩu, nội bộ… |
-| Nhà cung cấp (`Supplier`) | Mã, tên, MST (duy nhất), địa chỉ, điện thoại, email, website, người liên hệ (bảng con), tài khoản ngân hàng (bảng con), điều khoản thanh toán, ngành hàng cung cấp, trạng thái (Tiềm năng / Đã duyệt / Tạm ngưng / Danh sách đen), xếp hạng, hồ sơ pháp lý đính kèm | Công ty thành viên cũng được tạo thành NCC nội bộ, liên kết `CompanyId` |
+| Nhà cung cấp (`Supplier`) | Mã, tên, MST (duy nhất), địa chỉ, điện thoại, email, website, người liên hệ (bảng con), tài khoản ngân hàng (bảng con), điều khoản thanh toán, ngành hàng cung cấp (`SupplierCategory`: chọn nhiều nhóm hàng từ danh mục Nhóm hàng – ô chữ `SupplyScope` cũ ngừng dùng từ 0.20.0, chỉ xem), trạng thái (Tiềm năng / Đã duyệt / Tạm ngưng / Danh sách đen), xếp hạng, hồ sơ pháp lý đính kèm | Công ty thành viên cũng được tạo thành NCC nội bộ, liên kết `CompanyId` |
 | NCC áp dụng cho công ty (`SupplierCompany`) | `SupplierId`, `CompanyId`, mã NCC tại công ty, ngày bắt đầu, trạng thái | Trả lời: NCC nào đang bán cho công ty nào |
 | NCC – Sản phẩm/Dịch vụ (`SupplierItem`) | `SupplierId`, `ItemId`, mã hàng của NCC, ĐVT mua, MOQ, lead time (ngày), là NCC ưu tiên | Trả lời: NCC nào đang bán sản phẩm gì |
 
@@ -221,7 +221,8 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Quy tắc | Lý do |
 | --- | --- |
 | **Thêm** đơn vị tính, nhóm hàng, hàng hóa chỉ khi làm việc ở **tổng công ty** (tránh tạo trùng từ nhiều công ty). **Sửa**: ở tổng công ty với quyền quản lý danh mục, hoặc quyền `MasterData.Catalog.EditShared` ("Sửa thông tin danh mục dùng chung") cho **sửa thông tin (trừ mã)** ở bất kỳ công ty nào đang làm việc; mã không bao giờ sửa; mọi lần sửa ghi nhật ký (yêu cầu 31/10/2026); không có quyền thì công ty thành viên chỉ xem | Danh mục dùng chung toàn tập đoàn để so sánh giá được (mục 5) |
-| Hàng hóa và nhóm hàng chỉ thấy trong **phạm vi nhóm hàng** của người xem (global query filter trên `Item` theo `CategoryId`) | Phân quyền theo nhóm hàng (mục 9.2) |
+| Hàng hóa chỉ thấy trong **phạm vi nhóm hàng** của người xem (global query filter trên `Item` theo `CategoryId`). **Danh mục nhóm hàng** (cây tên nhóm) thì ai cũng xem đủ, mỗi nhóm có cờ `IsInScope` (người dùng chốt 07/11/2026, cách A); nhóm ngoài phạm vi chỉ xem: không sửa, không làm nhóm cha, không gán cho mặt hàng (API trả 403 "ngoài phạm vi nhóm hàng của bạn"); ô chọn nhóm của mặt hàng, lọc báo cáo/tồn kho vẫn chỉ hiện nhóm trong phạm vi | Phân quyền theo nhóm hàng (mục 9.2); xem đủ cây để chọn ngành hàng NCC và tránh tạo trùng nhóm |
+| **Không trùng tên nhóm hàng trong cùng nhóm cha** (so không dấu, không phân biệt hoa thường, xét cả nhóm ngừng dùng và ngoài phạm vi) – khi thêm, đổi tên, đổi nhóm cha; trùng tên ở nhánh khác thì giao diện chỉ nhắc. Màn hình Nhóm hàng và hộp thoại "Thêm nhóm hàng" ở NCC cảnh báo ngay khi gõ (yêu cầu người dùng 07/11/2026) | Thiếu nhóm thì tạo, nhưng không tạo trùng |
 | Mã ĐVT 1–10 chữ/số; mã nhóm 2–20 chữ/số; mã hàng 2–30 ký tự chữ không dấu, số, `- . _ /`. Không đổi sau khi tạo | Mã nằm trên chứng từ, phân quyền, báo cáo |
 | Trùng mã với bản ghi ngoài phạm vi: chỉ mục duy nhất trong CSDL chặn, API trả 409 kèm thông báo tiếng Việt | Kiểm tra trùng trước khi lưu đi qua filter nên không thấy bản ghi ngoài phạm vi |
 | Thêm nhóm gốc, đổi nhóm cha, sửa đơn vị tính cần phạm vi **mọi nhóm hàng** | Người bị giới hạn chỉ thấy một phần cây/một phần hàng nên không kiểm tra được vòng lặp hay "còn hàng đang dùng" |
@@ -258,6 +259,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Mỗi (NCC, mặt hàng) một dòng; ĐVT mua phải là ĐVT cơ sở hoặc ĐVT quy đổi của mặt hàng; MOQ > 0 (numeric(18,4)); thời gian giao 0–365 ngày | Nhập kho phải quy đổi được về ĐVT cơ sở |
 | Mỗi mặt hàng tối đa **một NCC ưu tiên**; chọn NCC ưu tiên mới thì NCC cũ tự bỏ (cùng giao dịch) | Gợi ý NCC mặc định khi lập PR/PO |
 | Xóa dòng NCC – sản phẩm được (chưa có chứng từ tham chiếu); nhật ký thao tác giữ giá trị cũ | |
+| **Ngành hàng NCC** (`SupplierCategory`, NCC × nhóm hàng – yêu cầu người dùng 07/11/2026): ô "Ngành hàng cung cấp" ở ngăn kéo NCC chọn nhiều nhóm hàng từ cả danh mục; thiếu nhóm thì nút "Thêm nhóm hàng" (quyền thêm nhóm hàng, ở tổng công ty) tạo ngay rồi tự chọn. Lưu cùng NCC, thay cả danh sách, **không cần duyệt**; thêm nhóm phải đang dùng, nhóm đã ngừng dùng mà NCC vẫn giữ thì để nguyên (ghi "(ngừng dùng)"); tối đa 50 nhóm; mỗi thêm/bỏ ghi nhật ký. Danh sách NCC có cột Ngành hàng và bộ lọc "Ngành hàng (gồm nhóm con)" (`GET /api/suppliers?categoryId=`). Chữ tự do cũ `SupplyScope` hiện để tham khảo, xóa cột ở bản sau. Migration `V0_20_0_NganhHangNcc` (`Down()` mất ngành hàng đã chọn) | Danh mục nhóm hàng ai cũng xem đủ nên lưu NCC thay cả danh sách không làm mất nhóm người khác đã chọn |
 | **Mã hàng theo NCC** (không bắt buộc, tối đa 50 ký tự): mã NCC tự đặt, ghi trên báo giá/hóa đơn của họ – gõ tay vì là danh mục của NCC. PO chép mã này vào dòng (`PurchaseOrderLine.SupplierItemCode`) mỗi lần lưu/gửi duyệt khi còn nháp; PO đã gửi giữ mã lúc gửi. Trang PO có cột "Mã hàng NCC", phiếu in PO ghi "– mã NCC: …" sau tên hàng (yêu cầu người dùng 07/11/2026) | NCC nhận ra sản phẩm của họ khi nhận đơn; sửa danh mục sau không làm đổi phiếu đã gửi NCC |
 | **ĐVT mua**: hộp thoại tự điền ĐVT cơ sở khi chọn mặt hàng. Lập PO với NCC, chọn mặt hàng thì dòng tự lấy ĐVT mua (ĐVT đã bị gỡ khỏi mặt hàng thì về ĐVT cơ sở); dòng lấy từ PR giữ ĐVT của PR. **PR**: dòng có mặt hàng và NCC đề xuất thì lấy ĐVT mua của NCC đó, cột "Mã hàng NCC". **RFQ**: hộp thoại nhập báo giá của từng NCC có cột "Mã hàng NCC" (ĐVT RFQ dùng chung cho mọi NCC nên không đổi). API tra chung `GET /api/supplier-items/lookup?supplierIds=&itemIds=` – chỉ cần đăng nhập + công ty làm việc (người lập phiếu có thể không có quyền xem danh mục NCC), tối đa 100 NCC, lọc phạm vi nhóm hàng | Đặt đúng đơn vị NCC bán (ví dụ cuộn 100 m thay vì mét) |
 
@@ -276,6 +278,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Nhóm hàng: nhóm cha đứng trên nhóm con (file xuất đã theo thứ tự cây) | |
 | Hàng hóa: tối đa 3 ĐVT quy đổi trên file; cập nhật mà để trống cả 3 cột quy đổi thì giữ quy đổi cũ; thông số kỹ thuật không có trên file nên giữ nguyên | Tránh nhập file thiếu cột làm mất dữ liệu |
 | NCC: một người liên hệ chính và một tài khoản ngân hàng, **chỉ dùng khi thêm NCC mới**; cập nhật giữ nguyên người liên hệ, tài khoản | Bảng con nhiều dòng sửa ở màn hình NCC |
+| NCC: cột **Ngành hàng** ghi **mã nhóm hàng**, nhiều mã cách nhau dấu phẩy/chấm phẩy (thay cả danh sách ngành hàng); để trống = giữ nguyên; mã không có thì lỗi theo dòng. Xuất Excel ghi mã nhóm (từ 0.20.0 – trước đây là chữ tự do) | Ngành hàng chọn từ danh mục Nhóm hàng (mục 5.9) |
 
 ### 5.11 Đánh số danh mục tự động (yêu cầu 31/10/2026)
 
@@ -539,6 +542,10 @@ Phân quyền có hai chiều độc lập: **quyền chức năng** (được l
 | `UserCompanyRole` | Người dùng – công ty – vai trò |
 | `UserWarehouseScope` | Kho được phép (trống = tất cả kho của công ty đã gán) |
 | `UserItemCategoryScope` | Nhóm hàng được phép **tại từng công ty** (có cột `CompanyId`, giống phạm vi kho), kế thừa xuống nhóm con (trống = tất cả) |
+
+**Ngoại lệ đã duyệt (07/11/2026, cách A):** riêng **danh mục nhóm hàng** (tên nhóm, cây) ai cũng xem đủ – `GET /api/item-categories` và tên
+ngành hàng của NCC đọc bỏ filter nhóm hàng (`IgnoreQueryFilters([ItemCategoryFilter])`), kèm cờ `IsInScope`. Mặt hàng, tồn kho, chứng từ,
+giá, báo cáo **vẫn** lọc theo phạm vi nhóm hàng; mọi lệnh ghi nhóm hàng vẫn qua filter (mục 5.7).
 
 Mỗi request mang **công ty đang làm việc** (header `X-Company-Id`, chọn ở thanh menu trên cùng). Lớp `ICurrentUserScope` nạp phạm vi một lần mỗi request; EF Core **global query filter** tự thêm điều kiện công ty, kho, nhóm hàng vào truy vấn.
 

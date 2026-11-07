@@ -48,7 +48,7 @@ test.describe('danh mục hàng hóa', () => {
     await page.getByRole('button', { name: 'Tạo mới' }).click()
     // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11): ô mã bị khóa, ghi "(tự cấp khi lưu)".
     await expect(drawer.getByLabel('Mã nhóm')).toBeDisabled()
-    await drawer.getByLabel('Tên nhóm hàng').fill('Ống nhựa thử')
+    await drawer.getByLabel('Tên nhóm hàng').fill(`Ống nhựa thử ${crypto.randomUUID().slice(0, 8)}`)
     await drawer.getByLabel('Tài khoản kho mặc định').fill('152')
     await page.keyboard.press('Control+s')
     const savedCategory = await page.locator('.ant-message').getByText(/Đã lưu nhóm hàng /).textContent()

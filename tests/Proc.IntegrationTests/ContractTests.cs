@@ -56,7 +56,7 @@ public partial class ContractTests
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm hợp đồng", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm hợp đồng {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Vòng bi 6306", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, [new(thung, 12)]), Ct));

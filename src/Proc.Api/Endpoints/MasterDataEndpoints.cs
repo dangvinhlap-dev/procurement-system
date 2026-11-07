@@ -106,8 +106,9 @@ public static class MasterDataEndpoints
             .Validate<UpdateSupplierGroupRequest>();
 
         var suppliers = app.MapGroup("/api/suppliers").WithTags("Nhà cung cấp");
-        suppliers.MapGet("/", (string? search, Guid? groupId, string? status, bool? appliedOnly, ISupplierAdministration s, CancellationToken ct) =>
-                s.SearchAsync(new SupplierQuery(search, groupId, status, appliedOnly ?? false), ct))
+        suppliers.MapGet("/", (string? search, Guid? groupId, string? status, bool? appliedOnly, Guid? categoryId, ISupplierAdministration s,
+                    CancellationToken ct) =>
+                s.SearchAsync(new SupplierQuery(search, groupId, status, appliedOnly ?? false, categoryId), ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
         // Ô chọn NCC trên chứng từ: thủ kho lập phiếu nhập nhưng có thể không có quyền xem danh mục NCC.
         suppliers.MapGet("/lookup", (Guid[]? ids, ISupplierAdministration s, CancellationToken ct) => s.LookupForPurchaseAsync(ids ?? [], ct));

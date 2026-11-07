@@ -39,7 +39,11 @@ public sealed record UpdateSupplierGroupRequest(string Name, bool IsActive);
 public sealed record SupplierListItemDto(
     Guid Id, string Code, string Name, string? ShortName, string GroupCode, string GroupName, bool IsForeign, string? TaxCode,
     string? Phone, string? Email, string? Address, string? PrimaryContact, string Status, int? Rating, string? InternalCompanyCode,
-    bool AppliedAtCompany, string? LocalCode);
+    bool AppliedAtCompany, string? LocalCode)
+{
+    /// <summary>Ngành hàng NCC cung cấp (tên nhóm hàng, cách nhau "; "), null nếu chưa khai báo – design.md mục 5.3.</summary>
+    public string? Categories { get; init; }
+}
 
 /// <summary>Kết quả tìm NCC; mỗi lần tối đa <see cref="Limit"/> dòng.</summary>
 /// <param name="Items">Các dòng theo mã.</param>
@@ -52,7 +56,15 @@ public sealed record SupplierListResult(IReadOnlyList<SupplierListItemDto> Items
 /// <param name="GroupId">Nhóm NCC.</param>
 /// <param name="Status">Trạng thái.</param>
 /// <param name="AppliedOnly">Chỉ NCC công ty đang làm việc đang giao dịch (ô chọn NCC trên chứng từ mua hàng).</param>
-public sealed record SupplierQuery(string? Search, Guid? GroupId, string? Status, bool AppliedOnly = false);
+/// <param name="CategoryId">Chỉ NCC cung cấp ngành hàng này hoặc một nhóm con của nó.</param>
+public sealed record SupplierQuery(string? Search, Guid? GroupId, string? Status, bool AppliedOnly = false, Guid? CategoryId = null);
+
+/// <summary>Một ngành hàng (nhóm hàng) NCC cung cấp.</summary>
+/// <param name="Id">Id nhóm hàng.</param>
+/// <param name="Code">Mã nhóm.</param>
+/// <param name="Name">Tên nhóm.</param>
+/// <param name="IsActive">Nhóm còn dùng (nhóm ngừng dùng vẫn giữ trên NCC cho tới khi bỏ).</param>
+public sealed record SupplierCategoryRefDto(Guid Id, string Code, string Name, bool IsActive);
 
 /// <summary>Người liên hệ (đọc ra và gửi lên; Id trống = dòng mới).</summary>
 /// <param name="Id">Id dòng.</param>
@@ -85,7 +97,7 @@ public sealed record SupplierBankAccountDto(Guid? Id, string BankName, string? B
 /// <param name="Email">Email.</param>
 /// <param name="Website">Website.</param>
 /// <param name="PaymentTerms">Điều khoản thanh toán.</param>
-/// <param name="SupplyScope">Ngành hàng cung cấp.</param>
+/// <param name="SupplyScope">Ngành hàng ghi chữ tự do – ngừng dùng từ 0.20.0 (chỉ xem), thay bằng <c>Categories</c>.</param>
 /// <param name="Rating">Xếp hạng.</param>
 /// <param name="Status">Trạng thái.</param>
 /// <param name="StatusNote">Lý do tạm ngưng/danh sách đen.</param>
@@ -99,7 +111,11 @@ public sealed record SupplierDetailDto(
     Guid Id, string Code, Guid GroupId, string Name, string? ShortName, bool IsForeign, string? TaxCode, string? Address,
     string? Phone, string? Email, string? Website, string? PaymentTerms, string? SupplyScope, int? Rating, string Status,
     string? StatusNote, Guid? InternalCompanyId, IReadOnlyList<SupplierContactDto> Contacts,
-    IReadOnlyList<SupplierBankAccountDto> BankAccounts, bool CanEdit, IReadOnlyList<SupplierChangeRequestDto>? PendingRequests = null, uint Version = 0);
+    IReadOnlyList<SupplierBankAccountDto> BankAccounts, bool CanEdit, IReadOnlyList<SupplierChangeRequestDto>? PendingRequests = null, uint Version = 0)
+{
+    /// <summary>Ngành hàng NCC cung cấp, chọn từ danh mục Nhóm hàng (design.md mục 5.3, 5.8).</summary>
+    public IReadOnlyList<SupplierCategoryRefDto> Categories { get; init; } = [];
+}
 
 /// <summary>Thông tin NCC gửi lên khi thêm (kèm mã) hoặc sửa.</summary>
 /// <param name="Code">Mã NCC (chỉ dùng khi thêm; khi sửa bỏ qua).</param>
@@ -113,18 +129,19 @@ public sealed record SupplierDetailDto(
 /// <param name="Email">Email.</param>
 /// <param name="Website">Website.</param>
 /// <param name="PaymentTerms">Điều khoản thanh toán.</param>
-/// <param name="SupplyScope">Ngành hàng cung cấp.</param>
+/// <param name="SupplyScope">Ngành hàng ghi chữ tự do – ngừng dùng (giao diện gửi lại nguyên giá trị cũ).</param>
 /// <param name="Rating">Xếp hạng 1–5.</param>
 /// <param name="Status">Trạng thái.</param>
 /// <param name="StatusNote">Lý do (bắt buộc khi Tạm ngưng, Danh sách đen).</param>
 /// <param name="InternalCompanyId">Công ty thành viên nếu là NCC nội bộ.</param>
 /// <param name="Contacts">Toàn bộ người liên hệ.</param>
 /// <param name="BankAccounts">Toàn bộ tài khoản ngân hàng.</param>
+/// <param name="CategoryIds">Ngành hàng NCC cung cấp (Id nhóm hàng, thay cả danh sách, không cần duyệt); null = giữ nguyên (nhập Excel cũ, gọi API cũ).</param>
 public sealed record SaveSupplierRequest(
     string? Code, Guid GroupId, string Name, string? ShortName, bool IsForeign, string? TaxCode, string? Address,
     string? Phone, string? Email, string? Website, string? PaymentTerms, string? SupplyScope, int? Rating, string Status,
     string? StatusNote, Guid? InternalCompanyId, IReadOnlyList<SupplierContactDto> Contacts,
-    IReadOnlyList<SupplierBankAccountDto> BankAccounts);
+    IReadOnlyList<SupplierBankAccountDto> BankAccounts, IReadOnlyList<Guid>? CategoryIds = null);
 
 /// <summary>NCC cho ô chọn NCC trên chứng từ.</summary>
 /// <param name="Id">Id.</param>

@@ -156,3 +156,36 @@ public sealed class SupplierItem : AuditableEntity
     /// <summary>Bỏ đánh dấu ưu tiên (khi NCC khác được chọn làm NCC ưu tiên của cùng mặt hàng).</summary>
     public void ClearPreferred() => IsPreferred = false;
 }
+
+/// <summary>
+/// Ngành hàng NCC cung cấp (design.md mục 5.3, 5.8): NCC × nhóm hàng, chọn từ danh mục Nhóm hàng (người dùng chốt 07/11/2026) thay cho ô
+/// chữ tự do <see cref="Supplier.SupplyScope"/> (ngừng dùng). Danh mục nhóm hàng ai cũng xem đủ nên không lọc theo phạm vi nhóm hàng; gán
+/// ngành hàng không cần duyệt (người dùng chốt 07/11/2026). Mã nhóm hiện trên nhật ký qua cột Id nhóm hàng.
+/// </summary>
+[Auditable("Ngành hàng NCC")]
+public sealed class SupplierCategory : AuditableEntity
+{
+    private SupplierCategory()
+    {
+    }
+
+    /// <summary>NCC.</summary>
+    public Guid SupplierId { get; private set; }
+
+    /// <summary>Nhóm hàng (ngành hàng) NCC cung cấp.</summary>
+    public Guid ItemCategoryId { get; private set; }
+
+    /// <summary>
+    /// Ghi nhận NCC cung cấp một ngành hàng.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="category">Nhóm hàng đang dùng.</param>
+    /// <returns>Dòng mới.</returns>
+    /// <exception cref="BusinessRuleException">Khi nhóm hàng đã ngừng dùng.</exception>
+    public static SupplierCategory Create(Guid supplierId, ItemCategory category)
+    {
+        ArgumentNullException.ThrowIfNull(category);
+        if (!category.IsActive) throw new BusinessRuleException($"Nhóm hàng {category.Code} đã ngừng dùng.");
+        return new SupplierCategory { SupplierId = supplierId, ItemCategoryId = category.Id };
+    }
+}

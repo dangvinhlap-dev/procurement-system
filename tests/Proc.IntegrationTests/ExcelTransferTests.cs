@@ -107,7 +107,7 @@ public class ExcelTransferTests
     public async Task CoLoi_BaoTheoDong_KhongLuuDongNaoKeCaDongDung()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Nhóm Excel", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
         // Dòng mới để trống mã; dòng có mã phải là mã đã có (mã do hệ thống cấp – design.md mục 5.11).
         var missing = $"{category!.Code}-99999";
@@ -135,7 +135,7 @@ public class ExcelTransferTests
     public async Task XuatSuaNhapLai_CapNhatHangVaGiuQuyDoi()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Nhóm Excel", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
         // Thêm mới để trống mã: nhóm mới nên mã hàng đầu tiên là {NHOM}-00001 (dữ liệu mẫu).
         var code = $"{category!.Code}-00001";
@@ -180,6 +180,46 @@ public class ExcelTransferTests
         var detail = await head.GetFromJsonAsync<SupplierDetailDto>($"/api/suppliers/{row.Id}", Ct);
         Assert.Equal("01234567", Assert.Single(detail!.BankAccounts).AccountNumber);
         Assert.Equal("Đã duyệt", Assert.Single(detail.PendingRequests!).ProposedSummary);
+    }
+
+    [Fact]
+    public async Task Ncc_CotNganhHang_GhiMaNhomHang_MaSaiBaoLoiTheoDong()
+    {
+        var head = await HeadOfficeAdminAsync();
+        var first = await ReadCategoryAsync(head, "Ngành Excel 1");
+        var second = await ReadCategoryAsync(head, "Ngành Excel 2");
+        var taxCode = $"0{Random.Shared.NextInt64(100_000_000, 999_999_999)}";
+        string[] headers = ["Mã NCC", "Tên NCC", "Mã nhóm NCC", "Mã số thuế", "Ngành hàng"];
+
+        // Ghi chữ tự do như trước (không phải mã nhóm hàng) → lỗi theo dòng, chỉ rõ mã không có.
+        var wrong = await ImportAsync(head, ExcelCatalogs.Suppliers,
+            Workbook("Nhà cung cấp", headers, [null, "NCC ngành Excel", "TN", taxCode, "Thép xây dựng"]), commit: true);
+        Assert.False(wrong.Committed);
+        Assert.Contains("Không có nhóm hàng mã", Assert.Single(wrong.Errors).Message, StringComparison.Ordinal);
+
+        // Mã nhóm hàng, cách nhau dấu phẩy/chấm phẩy, chữ thường cũng được.
+        var ok = await ImportAsync(head, ExcelCatalogs.Suppliers,
+            Workbook("Nhà cung cấp", headers, [null, "NCC ngành Excel", "TN", taxCode, $"{first.Code.ToLowerInvariant()}; {second.Code}"]), commit: true);
+        Assert.True(ok.Committed, string.Join("; ", ok.Errors.Select(e => e.Message)));
+        var row = (await head.GetFromJsonAsync<SupplierListResult>($"/api/suppliers?search={taxCode}", Ct))!.Items.Single();
+        var detail = (await head.GetFromJsonAsync<SupplierDetailDto>($"/api/suppliers/{row.Id}", Ct))!;
+        Assert.Equal(new[] { first.Code, second.Code }.Order(StringComparer.Ordinal), detail.Categories.Select(c => c.Code));
+
+        // Xuất Excel ghi mã nhóm hàng ở cột Ngành hàng.
+        using var exported = new XLWorkbook(new MemoryStream(await head.GetByteArrayAsync("/api/excel/suppliers", Ct)));
+        var sheet = exported.Worksheet(1);
+        var headerRow = sheet.RowsUsed().First(r => r.CellsUsed().Any(c => c.GetString() == "Mã NCC"));
+        var scopeColumn = headerRow.CellsUsed().First(c => c.GetString().StartsWith("Ngành hàng", StringComparison.Ordinal)).Address.ColumnNumber;
+        var codeColumn = headerRow.CellsUsed().First(c => c.GetString().StartsWith("Mã NCC", StringComparison.Ordinal)).Address.ColumnNumber;
+        var exportedRow = sheet.RowsUsed().Single(r => r.Cell(codeColumn).GetString() == row.Code);
+        Assert.Equal(string.Join(", ", new[] { first.Code, second.Code }.Order(StringComparer.Ordinal)), exportedRow.Cell(scopeColumn).GetString());
+    }
+
+    private async Task<ItemCategoryDetailDto> ReadCategoryAsync(HttpClient head, string name)
+    {
+        var response = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"{name} {Guid.NewGuid():N}", null, null), Ct);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(Ct));
+        return (await response.Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct))!;
     }
 
     [Fact]

@@ -1,14 +1,16 @@
-import { App, Checkbox, Form, Input } from 'antd'
+import { Alert, App, Checkbox, Form, Input } from 'antd'
 import { TreeSelect } from '../../classic/TreeSelect'
 import { useMemo, useState } from 'react'
-import { useItemCategories, useItemCategoryMutations, type ItemCategory } from '../../api/masterData'
+import { useItemCategoryCatalog, useItemCategoryMutations, type ItemCategory } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
 import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
-import { buildCategoryTree } from './categoryTree'
+import { normalizeVi } from '../../utils/text'
+import { CategoryDuplicateNotice } from './CategoryDuplicateNotice'
+import { buildCategoryTree, sameNameCategories } from './categoryTree'
 
 const columns: GridColumn<ItemCategory>[] = [
   { key: 'path', title: 'Đường dẫn', width: 200, value: (r) => r.path },
@@ -27,14 +29,17 @@ const columns: GridColumn<ItemCategory>[] = [
     tone: (r) => (r.isActive ? 'success' : 'neutral'),
     groupable: true,
   },
+  // Danh mục ai cũng xem đủ; nhóm ngoài phạm vi nhóm hàng của người xem chỉ xem (design.md mục 9.2).
+  { key: 'scope', title: 'Phạm vi của bạn', width: 120, value: (r) => (r.isInScope ? 'Trong phạm vi' : 'Chỉ xem'), groupable: true },
 ]
 
 /**
  * Màn hình Nhóm hàng (design.md mục 5.2, 5.7): cây nhóm dùng chung, cũng là căn cứ phân quyền theo nhóm hàng.
- * Chỉ thấy nhóm trong phạm vi được phép; thêm ở tổng công ty, sửa thông tin (trừ mã) theo quyền.
+ * Ai cũng xem đủ cả cây (người dùng chốt 07/11/2026 – để tránh tạo trùng, chọn ngành hàng NCC); chỉ sửa được nhóm trong phạm vi;
+ * thêm ở tổng công ty, sửa thông tin (trừ mã) theo quyền.
  */
 export function ItemCategoryListPage() {
-  const categories = useItemCategories()
+  const categories = useItemCategoryCatalog()
   // Thêm mới ở tổng công ty; sửa thông tin (trừ mã) theo quyền – design.md mục 5.7.
   const rights = useSharedCatalogRights(Permission.ItemCategoryManage)
   // undefined = đóng; null = thêm mới; còn lại = nhóm đang mở.
@@ -62,7 +67,7 @@ export function ItemCategoryListPage() {
         <ItemCategoryDrawer
           category={open}
           categories={categories.data ?? []}
-          canManage={open === null ? rights.canCreate : rights.canEdit}
+          canManage={open === null ? rights.canCreate : rights.canEdit && open.isInScope}
           onClose={() => setOpen(undefined)}
         />
       )}
@@ -81,7 +86,7 @@ interface CategoryFormValues {
 /**
  * Ngăn kéo chi tiết nhóm hàng. Nhóm cha không chọn được chính nhóm này hay nhóm con cháu của nó (cây không thành vòng).
  * @param category Nhóm đang mở; null = thêm mới.
- * @param categories Mọi nhóm đang thấy.
+ * @param categories Cả danh mục (nhóm cha chỉ chọn trong phạm vi; kiểm tra trùng tên trên cả cây).
  * @param canManage Được sửa.
  * @param onClose Đóng.
  */
@@ -102,9 +107,14 @@ function ItemCategoryDrawer({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const tree = useMemo(
-    () => buildCategoryTree(categories, { activeOnly: true, exclude: category?.id }),
+    () => buildCategoryTree(categories.filter((c) => c.isInScope), { activeOnly: true, exclude: category?.id }),
     [categories, category?.id],
   )
+  const name = (Form.useWatch('name', form) as string | undefined) ?? ''
+  const parentId = (Form.useWatch('parentId', form) as string | null | undefined) ?? null
+  // Chỉ cảnh báo khi tên/nhóm cha khác bản đang lưu (nhóm trùng có từ trước vẫn sửa được thông tin khác).
+  const changed = !category || normalizeVi(name) !== normalizeVi(category.name) || parentId !== (category.parentId ?? null)
+  const duplicate = changed ? sameNameCategories(categories, name, parentId, category?.id) : { sameParent: undefined, elsewhere: [] }
 
   const save = async () => {
     const values = await form.validateFields().catch(() => null)
@@ -152,6 +162,10 @@ function ItemCategoryDrawer({
           label: 'Thông tin chung',
           children: (
             <>
+              {category && !category.isInScope && (
+                <Alert type="info" showIcon style={{ marginBottom: 8 }} title="Nhóm này ngoài phạm vi nhóm hàng của bạn – chỉ xem được." />
+              )}
+              {canManage && <CategoryDuplicateNotice {...duplicate} />}
               <div className="detail-grid">
                 <Form.Item
                   label="Mã nhóm"

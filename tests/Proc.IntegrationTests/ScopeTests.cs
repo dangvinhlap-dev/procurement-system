@@ -105,12 +105,14 @@ public class ScopeTests
     [Fact]
     public async Task PhamViNhomHang_KeThuaXuongNhomCon()
     {
-        // Được phép VTC (Vật tư cơ khí) thì được cả VTCK (con của VTC), không được VT (cha) hay VTD (anh em).
+        // Được phép VTC (Vật tư cơ khí) thì được cả VTCK (con của VTC), không được VT (cha) hay VTD (anh em). Danh mục nhóm hàng ai cũng
+        // xem đủ cả cây (người dùng chốt 07/11/2026 – design.md mục 9.2), phạm vi thể hiện ở cờ IsInScope.
         var client = await ClientForNewUserAsync("BHA", "THUKHO", categories: ["VTC"]);
 
-        var categories = await client.GetFromJsonAsync<List<ItemCategoryDto>>("/api/item-categories", Ct);
+        var categories = (await client.GetFromJsonAsync<List<Proc.Application.MasterData.ItemCategoryDetailDto>>("/api/item-categories", Ct))!;
 
-        Assert.Equal(["VTC", "VTCK"], categories!.Select(c => c.Code));
+        Assert.Equal(["VTC", "VTCK"], categories.Where(c => c.IsInScope).Select(c => c.Code));
+        Assert.Superset(new HashSet<string> { "VT", "VTD", "VTC", "VTCK" }, categories.Select(c => c.Code).ToHashSet());
     }
 
     [Fact]
@@ -118,9 +120,9 @@ public class ScopeTests
     {
         var client = await ClientForNewUserAsync("BHA", "THUKHO", categories: ["VT"]);
 
-        var categories = await client.GetFromJsonAsync<List<ItemCategoryDto>>("/api/item-categories", Ct);
+        var categories = (await client.GetFromJsonAsync<List<Proc.Application.MasterData.ItemCategoryDetailDto>>("/api/item-categories", Ct))!;
 
-        Assert.Equal(["VT", "VTC", "VTCK", "VTD"], categories!.Select(c => c.Code));
+        Assert.Equal(["VT", "VTC", "VTCK", "VTD"], categories.Where(c => c.IsInScope).Select(c => c.Code));
     }
 
     [Fact]

@@ -44,7 +44,7 @@ public class PurchaseOrderSupplierItemTests
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm mã hàng NCC", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm mã hàng NCC {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Vòng bi 6207", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, [new(thung, 12)]), Ct));
@@ -77,7 +77,7 @@ public class PurchaseOrderSupplierItemTests
         Assert.Single(await ReadAsync<List<SupplierItemLookupDto>>(await prUser.GetAsync($"{lookupUrl}&itemIds={item.Id}", Ct)));
         Assert.Empty(await ReadAsync<List<SupplierItemLookupDto>>(await prUser.GetAsync($"{lookupUrl}&itemIds={Guid.NewGuid()}", Ct)));
         var otherCategory = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Nhóm ngoài phạm vi", null, null), Ct));
+            new CreateItemCategoryRequest(null, $"Nhóm ngoài phạm vi {Guid.NewGuid():N}", null, null), Ct));
         var limitedName = $"kp.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(limitedName, company.Code, prRole, categoryCodes: [otherCategory.Code]);
         var limited = await _factory.CreateClientInCompanyAsync(limitedName, ProcApiFactory.TestPassword, company.Code);

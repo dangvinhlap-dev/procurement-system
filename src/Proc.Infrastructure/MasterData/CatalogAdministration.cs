@@ -99,8 +99,9 @@ public sealed class UomAdministration : IUomAdministration
 }
 
 /// <summary>
-/// Quản lý nhóm hàng (design.md mục 5.2, 5.7). Mọi truy vấn qua filter phạm vi nhóm hàng; được một nhóm là được mọi nhóm con,
-/// nên nhóm con mới thêm dưới nhóm được phép vẫn thấy ngay.
+/// Quản lý nhóm hàng (design.md mục 5.2, 5.7). <b>Xem</b> danh mục: đủ cả cây cho mọi người (người dùng chốt 07/11/2026 – để chọn ngành
+/// hàng NCC và tránh tạo trùng nhóm; design.md mục 9.2), mỗi nhóm kèm cờ trong/ngoài phạm vi. <b>Ghi</b> (thêm, sửa, làm nhóm cha) vẫn qua
+/// filter phạm vi nhóm hàng; được một nhóm là được mọi nhóm con.
 /// </summary>
 public sealed class ItemCategoryAdministration : IItemCategoryAdministration
 {
@@ -125,15 +126,18 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
     public async Task<IReadOnlyList<ItemCategoryDetailDto>> ListAsync(CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        var categories = await _db.ItemCategories.AsNoTracking().ToListAsync(cancellationToken);
+        // Ngoại lệ có chủ đích với filter nhóm hàng (CLAUDE.md mục 4): chỉ đọc danh mục tên nhóm; mặt hàng (số đếm bên dưới), tồn kho,
+        // chứng từ vẫn lọc theo phạm vi.
+        var categories = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking().ToListAsync(cancellationToken);
         var counts = await _db.Items.AsNoTracking()
             .GroupBy(i => i.CategoryId)
             .Select(g => new { CategoryId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.CategoryId, x => x.Count, cancellationToken);
         var byId = categories.ToDictionary(c => c.Id);
+        var allowed = _scope.AllItemCategories ? null : _scope.ItemCategoryIds.ToHashSet();
 
         return categories
-            .Select(c => ToDto(c, byId, counts.GetValueOrDefault(c.Id)))
+            .Select(c => ToDto(c, byId, counts.GetValueOrDefault(c.Id), allowed))
             .OrderBy(d => d.Path, StringComparer.Ordinal)
             .ToList();
     }
@@ -147,6 +151,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
             throw new ForbiddenAccessException("Bạn chỉ được làm việc với một số nhóm hàng nên chỉ thêm được nhóm con trong các nhóm đó.");
 
         var parent = request.ParentId is { } parentId ? await FindParentAsync(parentId, cancellationToken) : null;
+        await EnsureUniqueNameAsync(parent?.Id, request.Name, null, cancellationToken);
         // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – người dùng không tự đặt.
         CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.ItemCategory, request.Code);
         await using var transaction = await _numbers.BeginAsync(cancellationToken);
@@ -157,13 +162,8 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
         await _db.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
-        // Không đọc lại qua filter: danh sách nhóm được phép (gồm nhóm con) nạp từ đầu request, lúc nhóm mới chưa có,
-        // nên người bị giới hạn chưa thấy nhóm vừa thêm cho tới request sau. Dựng kết quả từ nhóm cha thay vì đọc lại.
-        var parentDto = parent is null ? null : (await ListAsync(cancellationToken)).Single(c => c.Id == parent.Id);
-        return new ItemCategoryDetailDto(
-            category.Id, category.Code, category.Name, category.ParentId, parent?.Code,
-            parentDto is null ? category.Code : $"{parentDto.Path} / {category.Code}", (parentDto?.Level ?? 0) + 1,
-            category.InventoryAccount, category.IsActive, 0);
+        // Danh mục đọc đủ cây nên đọc lại được ngay; cờ phạm vi tính theo nhóm cha (nhóm con mới dưới nhóm được phép là trong phạm vi).
+        return await GetAsync(category.Id, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -171,7 +171,10 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
     {
         await SharedCatalog.RequireEditAsync(_db, _scope, "nhóm hàng", Permissions.MasterData.ItemCategoryManage, cancellationToken);
         var category = await _db.ItemCategories.SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
-            ?? throw new NotFoundException("Không tìm thấy nhóm hàng.");
+            ?? throw await OutOfScopeOrNotFoundAsync(id, "Không tìm thấy nhóm hàng.", cancellationToken);
+        // Đổi tên hoặc nhóm cha mới kiểm tra trùng – nhóm trùng có từ trước vẫn sửa được thông tin khác.
+        if (request.ParentId != category.ParentId || SearchText.Normalize(request.Name) != SearchText.Normalize(category.Name))
+            await EnsureUniqueNameAsync(request.ParentId, request.Name, category.Id, cancellationToken);
         category.Update(request.Name, request.InventoryAccount);
 
         if (request.ParentId != category.ParentId)
@@ -218,27 +221,65 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
     private async Task<ItemCategory> FindParentAsync(Guid parentId, CancellationToken cancellationToken)
     {
         var parent = await _db.ItemCategories.SingleOrDefaultAsync(c => c.Id == parentId, cancellationToken)
-            ?? throw new NotFoundException("Không tìm thấy nhóm cha.");
+            ?? throw await OutOfScopeOrNotFoundAsync(parentId, "Không tìm thấy nhóm cha.", cancellationToken);
         if (!parent.IsActive) throw new BusinessRuleException($"Nhóm cha {parent.Code} đã ngừng dùng.");
         return parent;
+    }
+
+    /// <summary>
+    /// Không trùng tên (so không dấu, không phân biệt hoa thường) trong cùng nhóm cha – xét cả nhóm ngoài phạm vi người dùng và nhóm ngừng
+    /// dùng (yêu cầu người dùng 07/11/2026: thiếu nhóm thì tạo, nhưng không tạo trùng).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi đã có nhóm cùng tên.</exception>
+    private async Task EnsureUniqueNameAsync(Guid? parentId, string name, Guid? excludeId, CancellationToken cancellationToken)
+    {
+        var normalized = SearchText.Normalize(name);
+        var siblings = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+            .Where(c => c.ParentId == parentId && c.Id != excludeId)
+            .Select(c => new { c.Code, c.Name, c.IsActive })
+            .ToListAsync(cancellationToken);
+        var same = siblings.FirstOrDefault(c => SearchText.Normalize(c.Name) == normalized);
+        if (same is not null)
+            throw new BusinessRuleException(
+                $"Đã có nhóm hàng {same.Code} – {same.Name}{(same.IsActive ? "" : " (ngừng dùng – dùng lại nhóm này)")} trong cùng nhóm cha.");
+    }
+
+    /// <summary>Nhóm có nhưng ngoài phạm vi người dùng thì báo rõ không có quyền (danh mục vẫn hiện nhóm đó); không có thì báo không tìm thấy.</summary>
+    private async Task<Exception> OutOfScopeOrNotFoundAsync(Guid id, string notFound, CancellationToken cancellationToken)
+    {
+        var code = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+            .Where(c => c.Id == id).Select(c => c.Code).SingleOrDefaultAsync(cancellationToken);
+        return code is null
+            ? new NotFoundException(notFound)
+            : new ForbiddenAccessException($"Nhóm hàng {code} ngoài phạm vi nhóm hàng của bạn – chỉ xem được.");
     }
 
     private async Task<ItemCategoryDetailDto> GetAsync(Guid id, CancellationToken cancellationToken) =>
         (await ListAsync(cancellationToken)).Single(c => c.Id == id);
 
-    /// <summary>Đường dẫn và cấp tính trên phần cây người xem thấy được (nhóm cha ngoài phạm vi thì dừng ở đó).</summary>
-    private static ItemCategoryDetailDto ToDto(ItemCategory c, Dictionary<Guid, ItemCategory> byId, int itemCount)
+    /// <summary>
+    /// Đường dẫn và cấp trên cả cây; trong phạm vi khi chính nhóm hoặc một nhóm cha thuộc nhóm được phép (được nhóm cha là được nhóm con –
+    /// kể cả nhóm con vừa thêm trong request này, chưa có trong danh sách phạm vi nạp từ đầu request).
+    /// </summary>
+    /// <param name="c">Nhóm.</param>
+    /// <param name="byId">Cả cây theo Id.</param>
+    /// <param name="itemCount">Số mặt hàng trong nhóm người xem thấy.</param>
+    /// <param name="allowed">Nhóm được phép; null = mọi nhóm.</param>
+    private static ItemCategoryDetailDto ToDto(ItemCategory c, Dictionary<Guid, ItemCategory> byId, int itemCount, HashSet<Guid>? allowed)
     {
         var codes = new List<string>();
         var visited = new HashSet<Guid>();
+        var inScope = allowed is null;
         for (var current = c; current is not null && visited.Add(current.Id);
              current = current.ParentId is { } p ? byId.GetValueOrDefault(p) : null)
         {
             codes.Insert(0, current.Code);
+            inScope = inScope || allowed!.Contains(current.Id);
         }
 
         var parentCode = c.ParentId is { } parentId ? byId.GetValueOrDefault(parentId)?.Code : null;
         return new ItemCategoryDetailDto(
-            c.Id, c.Code, c.Name, c.ParentId, parentCode, string.Join(" / ", codes), codes.Count, c.InventoryAccount, c.IsActive, itemCount);
+            c.Id, c.Code, c.Name, c.ParentId, parentCode, string.Join(" / ", codes), codes.Count, c.InventoryAccount, c.IsActive, itemCount,
+            inScope);
     }
 }

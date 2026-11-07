@@ -117,12 +117,46 @@ public class ItemCatalogTests
         await _factory.CreateScopedUserAsync(userName, "TCT", roleCode, categoryCodes: [allowed.Code]);
         var limited = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
 
-        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Gốc mới", null, null), Ct);
+        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Gốc mới {Guid.NewGuid():N}", null, null), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, root.StatusCode);
 
         var child = await CreateCategoryAsync(limited, UniqueCode("C"), allowed.Id);
-        var visible = (await limited.GetFromJsonAsync<List<ItemCategoryDetailDto>>("/api/item-categories", Ct))!;
-        Assert.Equal([allowed.Code, child.Code], visible.Select(c => c.Code));
+        Assert.True(child.IsInScope);
+
+        // Danh mục nhóm hàng ai cũng xem đủ (người dùng chốt 07/11/2026 – design.md mục 9.2): nhóm ngoài phạm vi vẫn hiện nhưng gắn cờ,
+        // không sửa được, không thêm nhóm con vào được.
+        var outside = await CreateCategoryAsync(head, UniqueCode("O"));
+        var visible = (await limited.GetFromJsonAsync<List<ItemCategoryDetailDto>>("/api/item-categories", Ct))!.ToDictionary(c => c.Id);
+        Assert.True(visible[allowed.Id].IsInScope);
+        Assert.True(visible[child.Id].IsInScope);
+        Assert.False(visible[outside.Id].IsInScope);
+        var edit = await limited.PutAsJsonAsync($"/api/item-categories/{outside.Id}", new UpdateItemCategoryRequest("Đổi tên", null, null, true), Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, edit.StatusCode);
+        var under = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Con ngoài phạm vi", outside.Id, null), Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, under.StatusCode);
+    }
+
+    [Fact]
+    public async Task NhomHang_KhongTrungTenTrongCungNhomCha()
+    {
+        var head = await HeadOfficeAdminAsync();
+        var root = await CreateCategoryAsync(head, UniqueCode("R"));
+        var first = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, "Vật tư điện", root.Id, null), Ct));
+
+        // Trùng tên không phân biệt dấu, hoa thường, khoảng trắng thừa → chặn, báo nhóm đã có.
+        var duplicate = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "  vat tu  DIEN ", root.Id, null), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Contains(first.Code, await TitleAsync(duplicate));
+
+        // Cùng tên ở nhóm cha khác thì được; đổi tên/chuyển nhóm cha thành trùng thì chặn; sửa thông tin khác không đổi tên thì được.
+        var other = await CreateCategoryAsync(head, UniqueCode("R"));
+        var elsewhere = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, "Vật tư điện", other.Id, null), Ct));
+        var move = await head.PutAsJsonAsync($"/api/item-categories/{elsewhere.Id}", new UpdateItemCategoryRequest("Vật tư điện", root.Id, null, true), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, move.StatusCode);
+        Assert.Equal("1521", (await ReadAsync<ItemCategoryDetailDto>(await head.PutAsJsonAsync($"/api/item-categories/{elsewhere.Id}",
+            new UpdateItemCategoryRequest("Vật tư điện", other.Id, "1521", true), Ct))).InventoryAccount);
     }
 
     [Fact]
