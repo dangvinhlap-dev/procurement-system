@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 07/11/2026 (mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 07/11/2026 (phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -380,6 +380,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   qua API cho TOANQUYEN (đủ 5), TRUONGBANCUVT/HOIDONG (xem + duyệt GTH, xem KSG), DAMPHAN (lập GTH/KSG), VANHANH (xem). Chưa khai POL ở APRL:
   PO có dòng không có giá đã duyệt (nguồn "Ngoài hợp đồng") hoặc NCC ngoài danh sách GTH thêm chặng POL – người có quyền duyệt PO, khác
   người đã duyệt cấp trước (CSDL test chưa có bảng giá nào nên PO trước TC14 đều có POL).
+- **Phát hành 0.20.0 (07/11/2026)**: tag `v0.20.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.20.0 (gói
+  `procurement-0.20.0.zip`) – mở rộng NCC cho công ty, G5a kế hoạch nhu cầu (KHN), ngành hàng NCC từ nhóm hàng, mã hàng NCC + ĐVT mua
+  trên PO/PR/RFQ, đồng bộ ô tìm `*`; 3 migration (62 → 65), script `db/scripts/0.20.0.sql` chạy thử 2 lần trên bản sao
+  `procurement_kiemtra_0200` (từ CSDL bản test 5007). Kiểm tra trước phát hành: build 0 cảnh báo, `dotnet test` 556/556, Playwright
+  103/104 (`auth.spec` "đổi công ty" chập chờn khi chạy song song – chạy riêng 3 lượt qua hết).
+  **Bản test cổng 5007 nâng tại chỗ lên 0.20.0 (07/11/2026)**: `app` = 0.20.0, `app-0.19.0` = bản cũ, sao lưu trước nâng
+  `D:\project\procurement_kiemtra_0150_truoc_0.20.0.dump`, PID trong `pid.txt`; `/health` Healthy 0.20.0; đã gán quyền
+  `Purchase.DemandPlan.*` qua API: TOANQUYEN, DAMPHAN (xem + lập), TRUONGBANCUVT, HOIDONG, VANHANH (xem). NCC000026 đang giao dịch ở TCT,
+  chưa mở rộng APH/BMI (để người dùng tự thử). CSDL bản sao `procurement_kiemtra_0200` còn giữ – xóa khi người dùng đồng ý.
 - **Kịch bản test 0.19.0 (07/11/2026)**: `docs/DuLieuThu_KichBanTest_0.19.0.docx` – 66 kịch bản: TC01–TC38 + N01–N16 (sửa theo POL, mỗi cấp
   một người, RFQ hạn nộp) và nhóm I M01–M12 (KSG → GTH → PO theo phiếu tháng → vượt trần/hạn mức → SAVSTD trên mặt hàng VPP-00004; SUPCOV;
   R1–R7). Dựng bằng script `kb019.py` (scratchpad, không commit) trên khung file 0.14.0.
