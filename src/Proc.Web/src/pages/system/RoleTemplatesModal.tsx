@@ -41,8 +41,9 @@ export function RoleTemplatesModal({ open, onClose }: { open: boolean; onClose: 
     >
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />}
       <Typography.Paragraph type="secondary">
-        Theo cơ cấu đề xuất: người đàm phán, chọn NCC không tự duyệt giá; Hội đồng và Trưởng ban duyệt; Kiểm soát nội bộ chỉ xem.
-        Vai trò đã có giữ nguyên quyền hiện tại.
+        Theo cơ cấu đề xuất và sơ đồ tổ chức Ban, Phòng cung ứng chung: người tìm NCC, đề xuất giá, đặt hàng không tự duyệt; Hội đồng
+        (Trưởng ban, Phó ban) và Chủ tịch/TGĐ duyệt; thành viên chuyên môn thẩm định, không duyệt; Kiểm soát nội bộ chỉ xem. Vai trò đã có
+        giữ nguyên quyền hiện tại. Tạo xong có thể áp cấu hình duyệt mẫu ở Hệ thống → Quy trình duyệt.
       </Typography.Paragraph>
       <List
         size="small"

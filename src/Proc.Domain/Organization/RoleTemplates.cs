@@ -119,8 +119,9 @@ public static class RoleTemplates
         ]),
 
         // ---- Theo sơ đồ tổ chức & lưu đồ phê duyệt mua sắm của Ban & Phòng cung ứng chung (lát G10 – design.md mục 18.25). Trưởng ban
-        // dùng TRUONGBANCUVT ở trên. Nguyên tắc: Văn phòng Ban chỉ đề xuất (không duyệt, không đặt hàng); Phòng cung ứng chung đặt hàng đúng
-        // NCC/giá đã duyệt (không quản lý NCC, không lập giá); thành viên chuyên môn thẩm định, không có quyền duyệt (không biểu quyết).
+        // dùng TRUONGBANCUVT ở trên. Nguyên tắc: Phòng cung ứng chung **tìm kiếm, đánh giá NCC** (người dùng chốt 08/11/2026 – Q2, khớp bước 2
+        // của sơ đồ) và đặt hàng đúng NCC/giá đã duyệt, không lập/duyệt giá; Văn phòng Ban phân tích giá, đề xuất danh sách NCC và giá (không
+        // duyệt, không đặt hàng, không lập hồ sơ NCC); thành viên chuyên môn thẩm định, không có quyền duyệt (không biểu quyết).
         new("CHUTICH", "Chủ tịch HĐQT / Tổng Giám đốc", "Phê duyệt ngoại lệ (ngoài danh sách/giá, lệch giá, khẩn cấp, độc quyền), duyệt PO, hợp đồng theo phân quyền nội bộ; nhận báo cáo KSNB",
         [
             .. CatalogView, .. ProcurementView,
@@ -151,32 +152,34 @@ public static class RoleTemplates
         new("VPBDIEUPHOI", "Điều phối Văn phòng Ban", "Trưởng phòng/bộ phận điều phối Văn phòng Ban: tổng hợp nhu cầu, phân tích giá, đề xuất danh sách NCC và giá tháng, ngân hàng giá, thỏa thuận chiết khấu – không duyệt",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.MasterData.SupplierManage, Permissions.MasterData.ItemManage,
-            Permissions.Pricing.PriceListManage, Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward,
+            Permissions.MasterData.ItemManage, Permissions.Pricing.PriceListManage, Permissions.Sourcing.RfqAward,
             Permissions.Purchase.ContractManage, Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
             Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Pricing.VolumeRebateManage,
             Permissions.Purchase.DemandPlanViewAllCompanies,
             Permissions.Report.PurchaseView, Permissions.Report.PriceViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Analysis.PurchaseHistoryView, Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
         ]),
-        new("VPBTIMNGUON", "Nhân viên tìm nguồn NCC (Văn phòng Ban)", "Tìm kiếm, đánh giá NCC (≥ 03 NCC mỗi mặt hàng), khảo sát giá thị trường, RFQ, đề xuất NCC/giá – không chọn NCC, không đặt hàng",
+        new("VPBPHANTICH", "Nhân viên phân tích giá, đề xuất NCC (Văn phòng Ban)", "Phân tích, so sánh giá, khảo sát giá thị trường, đề xuất danh sách NCC và giá mục tiêu, đề xuất chọn thầu – không lập hồ sơ NCC, không chọn NCC, không đặt hàng",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward,
-            Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage, Permissions.Pricing.PriceBankManage,
-            Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
+            Permissions.Sourcing.RfqAward, Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
+            Permissions.Pricing.PriceBankManage, Permissions.Pricing.MonthlyApprovalManage,
+            Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
         ]),
-        new("CUCTRUONGPHONG", "Trưởng phòng cung ứng chung", "Tiếp nhận, kiểm tra hồ sơ, quy cách đề nghị mua; điều hành đặt hàng cho các công ty đúng NCC và giá đã duyệt, theo dõi giao hàng",
+        new("CUCTRUONGPHONG", "Trưởng phòng cung ứng chung", "Tiếp nhận, kiểm tra hồ sơ, quy cách đề nghị mua; điều hành tìm kiếm, đánh giá NCC (≥ 03 NCC mỗi nhóm hàng); đặt hàng cho các công ty đúng NCC và giá đã duyệt, theo dõi giao hàng",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Purchase.PrApprove, Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierReviewManage,
+            Permissions.Purchase.PrApprove, Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
+            Permissions.MasterData.SupplierReviewManage,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies, Permissions.Purchase.DemandPlanViewAllCompanies,
         ]),
-        new("CUCDATHANG", "Nhân viên đặt hàng (Phòng cung ứng chung)", "Lập PO theo NCC và giá Ban đã duyệt, theo dõi giao hàng – không tự đổi NCC/giá",
+        new("CUCDATHANG", "Nhân viên cung ứng (Phòng cung ứng chung)", "Nhóm cung ứng F&B/VT: tìm kiếm, đánh giá NCC, hỏi giá (RFQ); lập PO theo NCC và giá Ban đã duyệt, theo dõi giao hàng – không tự đổi NCC/giá",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Purchase.PoCreate, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
+            Permissions.MasterData.SupplierReviewManage,
+            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
         ]),
         new("DONVIDATHANG", "Đơn vị đặt hàng (nhà hàng, NDAT, F&B…)", "Lập nhu cầu (đề nghị mua, kế hoạch nhu cầu); xem phiếu nhập để xác nhận số lượng, chất lượng",
         [

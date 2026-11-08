@@ -22,7 +22,7 @@ public class ApprovalRuleTemplateTests
 
         // Có đủ vai trò của sơ đồ.
         Assert.Subset(codes.ToHashSet(),
-            new HashSet<string> { "CHUTICH", "TRUONGBANCUVT", "PHOBAN", "THAMDINHCL", "THAMDINHPL", "VPBDIEUPHOI", "VPBTIMNGUON", "CUCTRUONGPHONG", "CUCDATHANG", "DONVIDATHANG" });
+            new HashSet<string> { "CHUTICH", "TRUONGBANCUVT", "PHOBAN", "THAMDINHCL", "THAMDINHPL", "VPBDIEUPHOI", "VPBPHANTICH", "CUCTRUONGPHONG", "CUCDATHANG", "DONVIDATHANG" });
     }
 
     [Fact]
@@ -31,14 +31,20 @@ public class ApprovalRuleTemplateTests
         var byCode = RoleTemplates.Procurement.ToDictionary(t => t.Code, t => t.Permissions.ToHashSet());
         var approvals = ApprovalTypes.All.Select(t => t.ApprovePermission).ToHashSet();
         // Thành viên chuyên môn, Văn phòng Ban, nhân viên đặt hàng, đơn vị đặt hàng không có quyền duyệt nào (không biểu quyết, chỉ đề xuất).
-        foreach (var code in new[] { "THAMDINHCL", "THAMDINHPL", "VPBDIEUPHOI", "VPBTIMNGUON", "CUCDATHANG", "DONVIDATHANG" })
+        foreach (var code in new[] { "THAMDINHCL", "THAMDINHPL", "VPBDIEUPHOI", "VPBPHANTICH", "CUCDATHANG", "DONVIDATHANG" })
             Assert.Empty(byCode[code].Intersect(approvals));
-        // Văn phòng Ban không đặt hàng; Phòng cung ứng không quản lý NCC, không lập/sửa giá.
-        Assert.DoesNotContain(Permissions.Purchase.PoCreate, byCode["VPBTIMNGUON"]);
-        Assert.DoesNotContain(Permissions.Purchase.PoCreate, byCode["VPBDIEUPHOI"]);
+        // Q2 (người dùng chốt 08/11/2026): Phòng cung ứng tìm kiếm, đánh giá NCC, hỏi giá; Văn phòng Ban không lập hồ sơ NCC, không đặt hàng.
+        foreach (var code in new[] { "VPBPHANTICH", "VPBDIEUPHOI" })
+        {
+            Assert.DoesNotContain(Permissions.Purchase.PoCreate, byCode[code]);
+            Assert.DoesNotContain(Permissions.MasterData.SupplierManage, byCode[code]);
+        }
+
+        // Phòng cung ứng không lập/sửa giá, không lập phiếu duyệt NCC & giá tháng (không tự ý thay đổi NCC/giá đã duyệt).
         foreach (var code in new[] { "CUCTRUONGPHONG", "CUCDATHANG" })
         {
-            Assert.DoesNotContain(Permissions.MasterData.SupplierManage, byCode[code]);
+            Assert.Contains(Permissions.MasterData.SupplierManage, byCode[code]);
+            Assert.Contains(Permissions.Sourcing.RfqManage, byCode[code]);
             Assert.DoesNotContain(Permissions.Pricing.PriceListManage, byCode[code]);
             Assert.DoesNotContain(Permissions.Pricing.MonthlyApprovalManage, byCode[code]);
         }
