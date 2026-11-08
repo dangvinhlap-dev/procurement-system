@@ -41,6 +41,7 @@ import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
 import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
 import { MonthlyApprovalListPage, MonthlyApprovalPage } from './pages/pricing/MonthlyApprovalPages'
 import { MarketSurveyListPage, MarketSurveyPage } from './pages/pricing/MarketSurveyPages'
+import { VolumeRebateListPage, VolumeRebatePage, VolumeRebateTrackingPage } from './pages/pricing/VolumeRebatePages'
 import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
 import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
 import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
@@ -148,6 +149,8 @@ const implemented: Record<string, ReactNode> = {
   PRL: <PriceListListPage />,
   GTH: <MonthlyApprovalListPage />,
   KSG: <MarketSurveyListPage />,
+  CKB: <VolumeRebateListPage />,
+  CKBT: <VolumeRebateTrackingPage />,
   PCMP: <PriceComparisonPage />,
   SRC: <SourcingListPage />,
   RFQ: <RfqListPage />,
@@ -180,6 +183,7 @@ const documentPages = [
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },
+  { code: 'CKB', element: <VolumeRebatePage /> },
   { code: 'KHN', element: <DemandPlanPage /> },
   { code: 'SRC', element: <SourcingPage /> },
   { code: 'RFQ', element: <RfqPage /> },

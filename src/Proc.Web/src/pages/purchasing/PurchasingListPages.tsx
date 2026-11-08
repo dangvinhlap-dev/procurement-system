@@ -145,6 +145,7 @@ const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = 
   NCC: (id) => `/gia-ncc/duyet-ncc/${id}`,
   NDQ: (id) => `/gia-ncc/ncc-doc-quyen/${id}`,
   GTH: (id) => `/gia-ncc/duyet-thang/${id}`,
+  CKB: (id) => `/gia-ncc/chiet-khau-san-luong/${id}`,
 }
 
 /** Màn hình Việc cần làm: PR, PO đang chờ chính tôi duyệt ở công ty đang làm việc (design.md mục 6.7). Bấm đúp mở phiếu để duyệt. */
