@@ -1,6 +1,6 @@
 # Tiến độ dự án
 
-Cập nhật: 08/11/2026 (G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 08/11/2026 (G7a: phiếu đặt hàng gộp DHG – backend; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -138,6 +138,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 Đã sửa test `SupplierPricingTests` lỗi vào ngày mùng 1 (số bảng giá theo ngày hiệu lực = hôm qua).
 
 ## Đang làm
+
+- **G7 – Đặt hàng gộp và phân bổ** (nhánh `feature/g7-dat-hang-gop`, design.md 18.25 mục G7; quy tắc tự đặt, người dùng "làm tiếp" 08/11/2026).
+  - **G7a (xong, backend)**: domain `PooledOrder` (+ `PooledAllocation`: đề xuất theo tỷ lệ kế hoạch nhu cầu, dung sai max(tổng × biên độ %, 1));
+    `PooledOrderService` + API `/api/pooled-orders` (list, get, approvals, context, create, update, cancel, create-orders); tạo PO cho từng công
+    ty dưới phạm vi người dùng tại công ty đó (`ICompanyScopeRunner`/`CompanyScopeRunner`), một giao dịch; `PurchaseOrderService.CreateAsync`
+    dùng `RowLocks.BeginOrJoinAsync`. Quyền `Purchase.PooledOrder.View/Manage` (vai trò mẫu), loại số DHG, loại đính kèm `PooledOrder`, tra cứu
+    chứng từ, tham số SEC `POOLED_MARGIN_PERCENT` (mặc định 10). Migration `V0_20_0_DatHangGop`. Test domain `PooledOrderTests` (6), tích hợp
+    `PooledOrderTests`. `dotnet test` 585/585.
+  - **G7b (tiếp theo)**: màn hình DHG (danh sách + phiếu: chọn GTH/NCC, tab công ty nhận, lưới phân bổ cột theo công ty, nút "Phân bổ theo kế
+    hoạch", "Tạo PO"), menu, ô lệnh, tra cứu chứng từ, Playwright; e2e đếm loại số chứng từ / tham số SEC cần cập nhật.
 
 - **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
   tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,

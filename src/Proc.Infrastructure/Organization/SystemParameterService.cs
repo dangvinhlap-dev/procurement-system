@@ -36,6 +36,7 @@ public sealed class SystemParameterService : ISystemParameterService
         var rfqMin = parameter?.RfqMinSuppliers ?? CompanyParameter.DefaultRfqMinSuppliers;
         var markup = parameter?.InternalMarkupPercent ?? CompanyParameter.DefaultInternalMarkupPercent;
         var warn = parameter?.PoHighPriceWarnPercent ?? CompanyParameter.DefaultPoHighPriceWarnPercent;
+        var pooledMargin = parameter?.PooledMarginPercent ?? CompanyParameter.DefaultPooledMarginPercent;
 
         // Chỉ thấy kho trong phạm vi kho được gán (global query filter) – đúng với những gì người dùng sửa được ở màn hình Kho.
         var negative = await _db.Warehouses.AsNoTracking()
@@ -62,6 +63,11 @@ public sealed class SystemParameterService : ISystemParameterService
                 warn == CompanyParameter.DefaultPoHighPriceWarnPercent, true,
                 "Dòng PO có giá sau chiết khấu (theo ĐVT cơ sở) cao hơn giá thấp nhất tập đoàn quá mức này thì hiện cảnh báo, không chặn. " +
                 $"Giá thấp nhất tập đoàn = thấp nhất trong các giá mua gần nhất 12 tháng của từng công ty × NCC, như màn hình So sánh giá (0–{CompanyParameter.MaxPoHighPriceWarnPercent:0}%)."),
+            new(SystemParameterCodes.PooledMarginPercent, "Mua hàng", "% biên độ phân bổ đặt hàng gộp",
+                FormatPercent(pooledMargin), FormatPercent(CompanyParameter.DefaultPooledMarginPercent),
+                pooledMargin == CompanyParameter.DefaultPooledMarginPercent, true,
+                "Phiếu đặt hàng gộp (DHG) lập ở tổng công ty dùng tham số của tổng công ty: SL phân bổ cho mỗi công ty được lệch so với đề xuất theo " +
+                $"tỷ lệ kế hoạch nhu cầu tháng tối đa max(tổng SL dòng × % ÷ 100, 1 ĐVT); vượt thì không tạo PO được (0–{CompanyParameter.MaxPooledMarginPercent:0}%)."),
             Toggle(SystemParameterCodes.ReceiptQcRequired, "Bắt buộc kiểm tra chất lượng khi nhận hàng", parameter?.RequireReceiptQc ?? false,
                 "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
             Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
@@ -92,6 +98,7 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
         [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
         [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
+        [SystemParameterCodes.PooledMarginPercent] = nameof(CompanyParameter.PooledMarginPercent),
         [SystemParameterCodes.RfqDossierRequired] = nameof(CompanyParameter.RequireRfqDossierComplete),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
@@ -152,6 +159,7 @@ public sealed class SystemParameterService : ISystemParameterService
                 break;
             case SystemParameterCodes.InternalMarkupPercent:
             case SystemParameterCodes.PoHighPriceWarnPercent:
+            case SystemParameterCodes.PooledMarginPercent:
                 decimal? percent = null;
                 var isMarkup = key == SystemParameterCodes.InternalMarkupPercent;
                 if (!string.IsNullOrWhiteSpace(request.Value))
@@ -159,12 +167,13 @@ public sealed class SystemParameterService : ISystemParameterService
                     // Nhận cả "12,5" (kiểu Việt Nam, CLAUDE.md mục 5) lẫn "12.5" (ô số trên giao diện gửi lên); không nhận dấu nhóm nghìn.
                     var text = request.Value.Trim().Replace(',', '.');
                     if (!decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
-                        throw new BusinessRuleException($"{(isMarkup ? "% markup nội bộ" : "% cảnh báo giá cao")} phải là số, ví dụ 10 hoặc 12,5.");
+                        throw new BusinessRuleException($"{(isMarkup ? "% markup nội bộ" : key == SystemParameterCodes.PooledMarginPercent ? "% biên độ phân bổ" : "% cảnh báo giá cao")} phải là số, ví dụ 10 hoặc 12,5.");
                     percent = parsed;
                 }
 
                 var parameterRow = await GetOrCreateAsync(companyId, cancellationToken);
                 if (isMarkup) parameterRow.ChangeInternalMarkupPercent(percent);
+                else if (key == SystemParameterCodes.PooledMarginPercent) parameterRow.ChangePooledMarginPercent(percent);
                 else parameterRow.ChangePoHighPriceWarnPercent(percent);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;

@@ -62,6 +62,9 @@ public static class DocumentTypes
     /// <summary>Phiếu kế hoạch nhu cầu (lát G5a, design.md mục 18.25).</summary>
     public const string DemandPlan = "KHN";
 
+    /// <summary>Phiếu đặt hàng gộp cho các công ty (lát G7, design.md mục 18.25).</summary>
+    public const string PooledOrder = "DHG";
+
     /// <summary>Vi phạm do Kiểm soát nội bộ ghi nhận (lát F3, design.md mục 18.19).</summary>
     public const string ControlFinding = "VP";
 
@@ -88,6 +91,7 @@ public static class DocumentTypes
         new(VolumeRebate, "Thỏa thuận chiết khấu sản lượng gộp"),
         new(MarketPriceSurvey, "Khảo sát giá thị trường"),
         new(DemandPlan, "Kế hoạch nhu cầu"),
+        new(PooledOrder, "Đặt hàng gộp"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
         new(SupplierReview, "Đánh giá nhà cung cấp định kỳ"),
     ];

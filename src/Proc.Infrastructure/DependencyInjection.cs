@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Purchasing.IApprovalRuleAdministration, Proc.Infrastructure.Purchasing.ApprovalRuleAdministration>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseRequestService, Proc.Infrastructure.Purchasing.PurchaseRequestService>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseOrderService, Proc.Infrastructure.Purchasing.PurchaseOrderService>();
+        services.AddScoped<Proc.Application.Purchasing.IPooledOrderService, Proc.Infrastructure.Purchasing.PooledOrderService>();
         services.AddScoped<Proc.Application.Purchasing.IBudgetService, Proc.Infrastructure.Purchasing.BudgetService>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseRequestNewItemService, Proc.Infrastructure.Purchasing.PurchaseRequestNewItemService>();
         services.AddScoped<Proc.Application.Sourcing.IRfqAwardPriceReader, Proc.Infrastructure.Sourcing.RfqAwardPriceReader>();
@@ -86,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<CurrentUserScope>();
         services.AddScoped<ICurrentUserScope>(sp => sp.GetRequiredService<CurrentUserScope>());
         services.AddScoped<UserScopeLoader>();
+        services.AddScoped<ICompanyScopeRunner, CompanyScopeRunner>();
         services.AddScoped<IOrganizationQueries, OrganizationQueries>();
         services.AddScoped<ICompanyAdministration, CompanyAdministration>();
         services.AddScoped<IWarehouseAdministration, WarehouseAdministration>();

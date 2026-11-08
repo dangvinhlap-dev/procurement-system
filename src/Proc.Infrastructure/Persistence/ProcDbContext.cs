@@ -194,6 +194,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phiếu kế hoạch nhu cầu (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25, lát G5a).</summary>
     public DbSet<Proc.Domain.Purchasing.DemandPlan> DemandPlans => Set<Proc.Domain.Purchasing.DemandPlan>();
 
+    /// <summary>Phiếu đặt hàng gộp (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25, lát G7).</summary>
+    public DbSet<Proc.Domain.Purchasing.PooledOrder> PooledOrders => Set<Proc.Domain.Purchasing.PooledOrder>();
+
     /// <summary>Danh sách tìm nguồn (design.md mục 8.3).</summary>
     public DbSet<Proc.Domain.Sourcing.SourcingRequest> SourcingRequests => Set<Proc.Domain.Sourcing.SourcingRequest>();
 
@@ -347,6 +350,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
             ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
         // Phiếu kế hoạch nhu cầu cũng theo nhóm hàng của phiếu.
         modelBuilder.Entity<Proc.Domain.Purchasing.DemandPlan>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
+        // Phiếu đặt hàng gộp theo nhóm hàng của phiếu GTH mà nó dựa vào.
+        modelBuilder.Entity<Proc.Domain.Purchasing.PooledOrder>().HasQueryFilter(
             ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
     }
 }

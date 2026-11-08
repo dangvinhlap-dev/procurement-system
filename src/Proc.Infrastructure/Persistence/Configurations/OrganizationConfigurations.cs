@@ -17,6 +17,7 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.RfqMinSuppliers).HasDefaultValue(CompanyParameter.DefaultRfqMinSuppliers);
         builder.Property(x => x.InternalMarkupPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultInternalMarkupPercent);
         builder.Property(x => x.PoHighPriceWarnPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultPoHighPriceWarnPercent);
+        builder.Property(x => x.PooledMarginPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultPooledMarginPercent);
         builder.Property(x => x.SlaPricedDays).HasDefaultValue(CompanyParameter.DefaultSlaPricedDays);
         builder.Property(x => x.RequireReceiptQc).HasDefaultValue(false);
         builder.Property(x => x.SeparatePoCreatorFromReceipt).HasDefaultValue(false);

@@ -117,6 +117,30 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         PoHighPriceWarnPercent = v;
     }
 
+    /// <summary>% biên độ phân bổ đặt hàng gộp mặc định (lát G7, design.md mục 18.25).</summary>
+    public const decimal DefaultPooledMarginPercent = 10m;
+
+    /// <summary>Giới hạn trên của % biên độ phân bổ.</summary>
+    public const decimal MaxPooledMarginPercent = 100m;
+
+    /// <summary>
+    /// % biên độ phân bổ đặt hàng gộp – numeric(9,4), dùng tham số của tổng công ty (nơi lập phiếu DHG): SL phân bổ cho mỗi công ty được lệch
+    /// so với đề xuất theo tỷ lệ kế hoạch nhu cầu tối đa max(tổng SL dòng × % ÷ 100, 1 ĐVT). Quyết định: Phòng cung ứng chung chỉ điều chỉnh
+    /// phân bổ trong biên độ Ban cho phép.
+    /// </summary>
+    public decimal PooledMarginPercent { get; private set; } = DefaultPooledMarginPercent;
+
+    /// <summary>Đổi % biên độ phân bổ đặt hàng gộp.</summary>
+    /// <param name="value">Giá trị mới (làm tròn 4 số lẻ); null = về mặc định <see cref="DefaultPooledMarginPercent"/>.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài khoảng 0–<see cref="MaxPooledMarginPercent"/>.</exception>
+    public void ChangePooledMarginPercent(decimal? value)
+    {
+        var v = Math.Round(value ?? DefaultPooledMarginPercent, 4, MidpointRounding.AwayFromZero);
+        if (v < 0 || v > MaxPooledMarginPercent)
+            throw new BusinessRuleException($"% biên độ phân bổ phải từ 0 đến {MaxPooledMarginPercent:0}.");
+        PooledMarginPercent = v;
+    }
+
     /// <summary>
     /// Tạo bộ tham số với giá trị mặc định.
     /// </summary>
