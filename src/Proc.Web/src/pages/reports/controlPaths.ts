@@ -15,6 +15,9 @@ export function controlRefPath(screenCode: string | null, targetId: string | nul
       return targetId ? `/gia-ncc/duyet-ncc/${targetId}` : '/gia-ncc/duyet-ncc'
     case 'CTR':
       return targetId ? `/mua-hang/hop-dong-khung/${targetId}` : null
+    case 'CKB':
+      // Chiết khấu sản lượng gộp chưa ghi nhận (lát G6b) – mở thỏa thuận để xem tab Thực nhận.
+      return targetId ? `/gia-ncc/chiet-khau-san-luong/${targetId}` : '/gia-ncc/chiet-khau-san-luong'
     case 'PRCW':
       return '/bao-cao/gia-mua-ngoai-hop-dong'
     default:
