@@ -1830,6 +1830,33 @@ Không có migration.
 Migration G2 `V0_19_0_PhieuDuyetNccGiaThang` (bảng `MonthlySupplierApproval`,
 `MonthlySupplierApprovalCompany`, `MonthlySupplierApprovalLine`; bảng mới – `Down()` xóa bảng, mất phiếu duyệt tháng, AuditLog vẫn giữ).
 
+**G6a – Thỏa thuận chiết khấu bậc theo sản lượng gộp** (08/11/2026; màn hình **CKB**, Giá và NCC → Chiết khấu sản lượng gộp,
+`/api/volume-rebates`, số loại **CKB**, ví dụ CKB-TCT-2601-0001 theo ngày hiệu lực từ; màn hình **CKBT** Theo dõi bậc chiết khấu,
+`GET /api/volume-rebates/tracking?nearPercent=&onlyAlerts=`, lũy kế một thỏa thuận `GET /api/volume-rebates/{id}/progress?nearPercent=`).
+Quyết định: Ban thương lượng bậc chiết khấu theo **sản lượng gộp** các công ty; Phòng cung ứng chung theo dõi lũy kế so với bậc, cảnh báo
+sắp chạm/hụt bậc, chia chiết khấu theo tỷ lệ doanh số. Các quy tắc dưới đây tự đặt theo mặc định an toàn (CLAUDE.md – quy tắc đã nêu là đã chốt):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Thỏa thuận `VolumeRebateAgreement` thuộc **tổng công ty** – chỉ lập, sửa, gửi, hủy, chép khi đang làm việc ở tổng công ty. Đầu: **tên**, **NCC** (Đã duyệt – kiểm tra lúc lưu, gửi, duyệt cấp cuối), **nhóm hàng**, **hiệu lực từ – đến** (tối đa 5 năm), **kỳ tính bậc** Tháng / Quý / Năm / Cả thỏa thuận, **cơ sở tính bậc** Số lượng gộp / Doanh số gộp (VND), **bậc mục tiêu** (không bắt buộc), **công ty áp dụng** (≥ 1, đang hoạt động), Ghi chú; tab Đính kèm (văn bản thỏa thuận) | Như phiếu duyệt tháng: thỏa thuận chung của tập đoàn |
+| Dòng = **mặt hàng** tính sản lượng (thuộc nhóm hàng hoặc nhóm con, không trùng) + ĐVT (cơ sở hoặc quy đổi); tính theo **số lượng** thì mọi dòng **cùng một ĐVT** (để cộng được) | Sản lượng gộp phải cộng được, ví dụ cùng "tấn" cho các loại xi măng |
+| **Bậc** (1–10): ngưỡng từ > 0 (số lượng 4 số lẻ / doanh số 2 số lẻ) và % chiết khấu (0 < % ≤ 100, 4 số lẻ); ngưỡng và % **cùng tăng dần nghiêm ngặt**; bậc mục tiêu ≤ số bậc | Bậc cao hơn phải mua nhiều hơn và được nhiều hơn – ngược lại là nhập nhầm |
+| **Bậc toàn phần**: đạt ngưỡng bậc nào thì **cả kỳ** hưởng % của bậc đó trên doanh số kỳ (không chia lũy tiến). Chiết khấu gộp = doanh số gộp × % ÷ 100, làm tròn 2 số. Ví dụ bậc 100 cái 1%, 200 cái 2%; mua 220 cái, doanh số 2.200.000 → 44.000 | Cách tính phổ biến của chiết khấu sản lượng |
+| **Lũy kế kỳ** = dòng PO **Đã duyệt/Đã đóng** bằng VND của các công ty áp dụng × NCC × mặt hàng trên thỏa thuận, ngày PO trong kỳ (cùng nguồn số với chiết khấu hợp đồng mục 18.21, PRCW); SL = SL cơ sở ÷ hệ số ĐVT dòng (4 số lẻ), doanh số = thành tiền sau CK trên đơn, trước VAT. Kỳ cắt theo hiệu lực (như mục 18.21) | Đơn đã cam kết với NCC là sản lượng thương lượng |
+| **Chia chiết khấu** theo tỷ lệ doanh số từng công ty: phần = chiết khấu gộp × doanh số công ty ÷ doanh số gộp (2 số lẻ), số lẻ làm tròn dồn vào công ty doanh số lớn nhất để tổng khớp. Ví dụ gộp 100.000 chia ba công ty bằng nhau → 33.333,34 / 33.333,33 / 33.333,33 | Chiết khấu là quyền lợi của từng pháp nhân theo phần mua |
+| **Cảnh báo** (kỳ đã bắt đầu): **sắp chạm bậc** khi lũy kế ≥ ngưỡng bậc kế × (100 − X)% (X nhập trên màn hình, mặc định 10, 1–50); **dự báo cuối kỳ** = lũy kế × số ngày của kỳ ÷ số ngày đã qua (gồm hôm nay); so **bậc mục tiêu**: Đã đạt / Dự báo đạt / **Nguy cơ hụt** (dự báo < ngưỡng) / **Hụt bậc** (hết kỳ chưa đạt) / Chưa bắt đầu | Quyết định: cảnh báo khi sắp chạm hoặc hụt bậc |
+| Nháp → **Chờ duyệt** → **Hiệu lực** qua quy trình loại **CKB** của tổng công ty (APRL, không xét giá trị); người lập không tự duyệt, người có xung đột lợi ích với NCC không duyệt (mục 18.8); từ chối bắt buộc lý do. Hiệu lực **không sửa** – đổi bậc/gia hạn thì **Chép thành thỏa thuận mới** (nháp, hiệu lực nối tiếp ngay sau, cùng độ dài, cùng dòng và bậc) và **Hủy** (nháp hoặc hiệu lực, bắt buộc lý do) | Thỏa thuận thương mại phải được Ban duyệt, giữ lịch sử |
+| Mỗi **NCC × mặt hàng × công ty** chỉ thuộc một thỏa thuận còn hiệu lực (nháp, chờ duyệt, hiệu lực) có thời hạn giao nhau | Một lượng mua không được tính bậc hai lần |
+| Công ty áp dụng **chỉ xem** thỏa thuận Hiệu lực áp cho mình; lũy kế hiện tổng gộp nhưng **chỉ phần của công ty mình** (tổng công ty thấy mọi công ty). Đọc PO các công ty áp dụng bỏ filter công ty và nhóm hàng, chỉ trả số tổng | Doanh số từng pháp nhân là thông tin riêng của pháp nhân đó |
+| CKBT: kỳ hiện tại (chưa tới hiệu lực → kỳ đầu, đã hết hạn → kỳ cuối) của mọi thỏa thuận **Hiệu lực** có hiệu lực đến ≥ hôm nay − 31 ngày; lọc "Chỉ dòng có cảnh báo" | Đối chiếu chiết khấu kỳ cuối với NCC sau khi hết hạn |
+| Quyền `Pricing.VolumeRebate.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `.Manage` (DAMPHAN), `.Approve` (TRUONGBANCUVT, HOIDONG). Có trong Việc cần làm, tra cứu chứng từ | Không kiêm nhiệm |
+
+**G6b** (làm sau): ghi **thực nhận** chiết khấu theo kỳ của thỏa thuận (như mục 18.21) và chia phần thực nhận cho từng công ty theo tỷ lệ
+doanh số; dấu hiệu KSNB khi thiếu.
+
+Migration `V0_20_0_ChietKhauSanLuongGop` (bảng `VolumeRebateAgreement`, `VolumeRebateCompany`, `VolumeRebateTier`, `VolumeRebateLine` –
+bảng mới, `Down()` xóa bảng, mất thỏa thuận; AuditLog vẫn giữ).
+
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 
 Rà soát toàn bộ phần mềm, người dùng duyệt làm 8 lát (R1–R8). Mỗi lát một nhánh, quy tắc mới ghi ở đây.
