@@ -117,5 +117,72 @@ public static class RoleTemplates
             Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Control.FindingReceive,
         ]),
+
+        // ---- Theo sơ đồ tổ chức & lưu đồ phê duyệt mua sắm của Ban & Phòng cung ứng chung (lát G10 – design.md mục 18.25). Trưởng ban
+        // dùng TRUONGBANCUVT ở trên. Nguyên tắc: Văn phòng Ban chỉ đề xuất (không duyệt, không đặt hàng); Phòng cung ứng chung đặt hàng đúng
+        // NCC/giá đã duyệt (không quản lý NCC, không lập giá); thành viên chuyên môn thẩm định, không có quyền duyệt (không biểu quyết).
+        new("CHUTICH", "Chủ tịch HĐQT / Tổng Giám đốc", "Phê duyệt ngoại lệ (ngoài danh sách/giá, lệch giá, khẩn cấp, độc quyền), duyệt PO, hợp đồng theo phân quyền nội bộ; nhận báo cáo KSNB",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PrApprove, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractApprove,
+            Permissions.MasterData.SoleSourceApprove,
+            Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
+            Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.Control.FindingReceive,
+        ]),
+        new("PHOBAN", "Phó ban cung ứng (Hội đồng)", "Thành viên Hội đồng đàm phán, duyệt giá: duyệt danh sách NCC, giá tháng, kết quả thầu, hợp đồng; kiểm tra, xác nhận PO; xem xét ngoại lệ",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PoApprove, Permissions.Purchase.ContractApprove, Permissions.Pricing.PriceListApprove,
+            Permissions.Sourcing.RfqApproveAward, Permissions.MasterData.SupplierApprove, Permissions.MasterData.SoleSourceApprove,
+            Permissions.Pricing.MonthlyApprovalApprove, Permissions.Pricing.VolumeRebateApprove,
+            Permissions.Report.PurchaseView, Permissions.Report.PriceViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.MasterData.ConflictView,
+        ]),
+        new("THAMDINHCL", "Thẩm định chất lượng (thành viên chuyên môn)", "Thẩm định chất lượng hàng, NCC trước khi Hội đồng quyết; đánh giá NCC – không biểu quyết, không duyệt",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.MasterData.SupplierReviewManage, Permissions.Inventory.DocumentView, Permissions.Report.PurchaseView,
+        ]),
+        new("THAMDINHPL", "Thẩm định pháp lý (thành viên chuyên môn)", "Thẩm định điều khoản pháp lý của hồ sơ NCC, hồ sơ thầu, hợp đồng – không biểu quyết, không duyệt",
+        [
+            .. CatalogView, .. ProcurementView, Permissions.MasterData.ConflictView,
+        ]),
+        new("VPBDIEUPHOI", "Điều phối Văn phòng Ban", "Trưởng phòng/bộ phận điều phối Văn phòng Ban: tổng hợp nhu cầu, phân tích giá, đề xuất danh sách NCC và giá tháng, ngân hàng giá, thỏa thuận chiết khấu – không duyệt",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.MasterData.SupplierManage, Permissions.MasterData.ItemManage,
+            Permissions.Pricing.PriceListManage, Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward,
+            Permissions.Purchase.ContractManage, Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
+            Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Pricing.VolumeRebateManage,
+            Permissions.Purchase.DemandPlanViewAllCompanies,
+            Permissions.Report.PurchaseView, Permissions.Report.PriceViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Analysis.PurchaseHistoryView, Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
+        ]),
+        new("VPBTIMNGUON", "Nhân viên tìm nguồn NCC (Văn phòng Ban)", "Tìm kiếm, đánh giá NCC (≥ 03 NCC mỗi mặt hàng), khảo sát giá thị trường, RFQ, đề xuất NCC/giá – không chọn NCC, không đặt hàng",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward,
+            Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage, Permissions.Pricing.PriceBankManage,
+            Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
+        ]),
+        new("CUCTRUONGPHONG", "Trưởng phòng cung ứng chung", "Tiếp nhận, kiểm tra hồ sơ, quy cách đề nghị mua; điều hành đặt hàng cho các công ty đúng NCC và giá đã duyệt, theo dõi giao hàng",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PrApprove, Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierReviewManage,
+            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
+            Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies, Permissions.Purchase.DemandPlanViewAllCompanies,
+        ]),
+        new("CUCDATHANG", "Nhân viên đặt hàng (Phòng cung ứng chung)", "Lập PO theo NCC và giá Ban đã duyệt, theo dõi giao hàng – không tự đổi NCC/giá",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PoCreate, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
+        ]),
+        new("DONVIDATHANG", "Đơn vị đặt hàng (nhà hàng, NDAT, F&B…)", "Lập nhu cầu (đề nghị mua, kế hoạch nhu cầu); xem phiếu nhập để xác nhận số lượng, chất lượng",
+        [
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
+            Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView,
+            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
+        ]),
     ];
 }
