@@ -7,6 +7,7 @@ using Proc.Domain.MasterData;
 using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
+using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
@@ -67,6 +68,45 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
         // Phiếu đang chờ duyệt giữ nguyên các bước đã sinh lúc gửi; cấu hình mới áp cho lần gửi sau.
         _db.ApprovalRules.Remove(rule);
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        var headOffice = await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
+        // Filter công ty: chỉ cấu hình của công ty đang làm việc.
+        var configured = (await _db.ApprovalRules.AsNoTracking().Select(r => r.DocType).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+        var codes = ApprovalRuleTemplates.Procurement.Select(t => t.RoleCode).Distinct().ToList();
+        var roles = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code) && r.IsActive).ToDictionaryAsync(r => r.Code, r => r.Name, cancellationToken);
+        // Thiếu một vai trò của loại thì bỏ cả loại – tạo nửa số cấp sẽ cho quy trình khác sơ đồ.
+        var missing = ApprovalRuleTemplates.Procurement.Where(t => !roles.ContainsKey(t.RoleCode)).Select(t => t.DocType).ToHashSet();
+        return ApprovalRuleTemplates.Procurement
+            .Select(t => new ApprovalRuleTemplateDto(
+                t.DocType, ApprovalTypes.Get(t.DocType).Name, t.Level, t.RoleCode, roles.GetValueOrDefault(t.RoleCode), t.Note,
+                t.HeadOfficeOnly && !headOffice ? "HeadOfficeOnly"
+                : configured.Contains(t.DocType) ? "Configured"
+                : missing.Contains(t.DocType) ? "MissingRole"
+                : "Create"))
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var rows = await TemplateAsync(cancellationToken);
+        var toCreate = rows.Where(r => r.Status == "Create").ToList();
+        if (toCreate.Count > 0)
+        {
+            var codes = toCreate.Select(r => r.RoleCode).Distinct().ToList();
+            var roleIds = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code)).ToDictionaryAsync(r => r.Code, r => r.Id, cancellationToken);
+            // Ngưỡng 0: mọi phiếu qua đủ cấp – người quản trị sửa ngưỡng theo phân quyền nội bộ sau khi áp.
+            foreach (var r in toCreate) _db.ApprovalRules.Add(ApprovalRule.Create(companyId, r.DocType, r.Level, 0, roleIds[r.RoleCode]));
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return new ApplyApprovalRuleTemplateResult(toCreate.Count, await TemplateAsync(cancellationToken));
     }
 
     /// <inheritdoc />

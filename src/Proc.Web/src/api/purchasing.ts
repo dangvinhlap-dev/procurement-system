@@ -684,7 +684,34 @@ export function useApprovalTypes() {
   return useQuery({ queryKey: ['approval-types'], queryFn: () => apiFetch<ApprovalType[]>('/api/approval-rules/types'), staleTime: Infinity })
 }
 
-/** Thêm, sửa, xóa cấp duyệt. */
+/** Tình trạng một cấp duyệt mẫu: sẽ tạo, loại đã cấu hình (giữ nguyên), thiếu vai trò mẫu, chỉ áp ở tổng công ty. */
+export type ApprovalRuleTemplateStatus = 'Create' | 'Configured' | 'MissingRole' | 'HeadOfficeOnly'
+
+/** Một cấp duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10 – design.md mục 18.25). */
+export interface ApprovalRuleTemplate {
+  docType: string
+  typeName: string
+  level: number
+  roleCode: string
+  roleName: string | null
+  note: string
+  status: ApprovalRuleTemplateStatus
+}
+
+/**
+ * Xem trước cấu hình duyệt mẫu cho công ty đang làm việc.
+ * @param enabled Chỉ tải khi hộp thoại mở.
+ */
+export function useApprovalRuleTemplate(enabled: boolean) {
+  const companyId = useAuth().workingCompany?.id ?? ''
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'approval-rules', 'template'],
+    queryFn: () => apiFetch<ApprovalRuleTemplate[]>('/api/approval-rules/template'),
+    enabled,
+  })
+}
+
+/** Thêm, sửa, xóa cấp duyệt; áp cấu hình duyệt mẫu. */
 export function useApprovalRuleMutations() {
   const queryClient = useQueryClient()
   const onSuccess = () => {
@@ -699,6 +726,10 @@ export function useApprovalRuleMutations() {
       onSuccess,
     }),
     remove: useMutation({ mutationFn: (id: string) => apiFetch<void>(`/api/approval-rules/${id}`, { method: 'DELETE' }), onSuccess }),
+    applyTemplate: useMutation({
+      mutationFn: () => apiFetch<{ created: number; rows: ApprovalRuleTemplate[] }>('/api/approval-rules/template', { method: 'POST' }),
+      onSuccess,
+    }),
   }
 }
 

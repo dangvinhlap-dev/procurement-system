@@ -1701,6 +1701,21 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Vượt hạn mức tháng | **Chặn** gửi duyệt | G3 |
 | Thứ tự làm | G1 → G12 | |
 
+**Người dùng chốt 08/11/2026** (sau phân tích sơ đồ tổ chức & lưu đồ phê duyệt mua sắm `sodopheduyet.jpg` – báo cáo Word
+`docs/PhanTich_SoDoPheDuyet_08112026.docx`, chỉ lưu trên máy):
+
+| Câu hỏi | Quyết định | Lát |
+| --- | --- | --- |
+| Q1 – đếm tối thiểu 03 NCC | Theo **nhóm hàng** (thay cách đếm theo mặt hàng của G1) | G1b |
+| Q2 – ai tìm kiếm, đánh giá NCC | **Phòng cung ứng chung** (khớp bước 2 của sơ đồ); Văn phòng Ban phân tích giá, đề xuất danh sách NCC và giá | G10 |
+| Q3 – PO vượt giá trần | **Phải lên Chủ tịch/TGĐ duyệt** – thay quyết định 06/11/2026 "chỉ cảnh báo" của G4b | H3 |
+| Q4 – biểu quyết Hội đồng | Giữ **hoãn**, tạm dùng duyệt nhiều cấp tuần tự | G9 |
+| Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
+| Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
+
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 → H3 → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
+→ G12; G9 hoãn.
+
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
 cầu; G6 chiết khấu bậc theo sản lượng gộp; G7 đặt hàng gộp và phân bổ; G8 hồ sơ đánh giá NCC mới; G9 biểu quyết (hoãn); G10 vai trò mẫu
 theo quyết định; G11 định mức sử dụng; G12 báo cáo tháng cho Ban.
@@ -1874,6 +1889,17 @@ do người dùng chốt 08/11/2026; các quy tắc khác tự đặt theo mặc
 
 Migration `V0_20_0_ThucNhanChietKhauSanLuong` (bảng `VolumeRebateReceipt`, `VolumeRebateReceiptShare` – bảng mới, `Down()` xóa bảng, mất các
 lần ghi nhận; AuditLog vẫn giữ).
+
+**G10 – Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ** (08/11/2026; Hệ thống → Vai trò → "Bộ vai trò mẫu…", Hệ thống → Quy trình duyệt →
+"Cấu hình duyệt mẫu theo sơ đồ…", `GET/POST /api/approval-rules/template`):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Thêm vai trò mẫu theo sơ đồ (giữ các vai trò mẫu cũ): **CHUTICH** Chủ tịch HĐQT/TGĐ (duyệt PR, PO, hợp đồng, NCC độc quyền, nhận báo cáo KSNB); **PHOBAN** Phó ban – Hội đồng (duyệt NCC, giá tháng, kết quả thầu, bảng giá, hợp đồng, chiết khấu, độc quyền; kiểm tra PO); Trưởng ban dùng **TRUONGBANCUVT**; **THAMDINHCL**, **THAMDINHPL** thành viên chuyên môn (xem, đánh giá NCC – không quyền duyệt); **VPBDIEUPHOI**, **VPBPHANTICH** Văn phòng Ban (phân tích giá, ngân hàng giá, đề xuất NCC/giá, lập phiếu GTH, đề xuất chọn thầu – không lập hồ sơ NCC, không duyệt, không đặt hàng); **CUCTRUONGPHONG**, **CUCDATHANG** Phòng cung ứng chung (tìm kiếm, đánh giá NCC, hỏi giá RFQ, lập PO, theo dõi giao hàng; Trưởng phòng duyệt tiếp nhận PR – không lập/duyệt giá, không lập GTH); **DONVIDATHANG** đơn vị đặt hàng (PR, kế hoạch nhu cầu, xem phiếu nhập) | Sơ đồ mục 1, 3; Q2 |
+| **Cấu hình duyệt mẫu** (`ApprovalRuleTemplates`): PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch; POL, POX, POK, NDQ – Phó ban → Chủ tịch; RFQ – Phó ban → Trưởng ban; bảng giá – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; **chỉ ở tổng công ty**: GTH, CKB – Phó ban → Phó ban → Trưởng ban (3 thành viên Hội đồng thay biểu quyết), hồ sơ NCC – Trưởng ban. Vượt ngân sách (PRB, POB) không có trên sơ đồ – không cấu hình mẫu | Sơ đồ mục 2, 4 |
+| Xem trước từng cấp với tình trạng: Sẽ tạo / Đã cấu hình – giữ nguyên / Thiếu vai trò mẫu / Chỉ ở tổng công ty. Áp cho **công ty đang làm việc**, chỉ tạo loại phiếu **chưa có cấp nào** và đủ vai trò mẫu của cả loại (thiếu một vai trò thì bỏ cả loại); không sửa cấu hình đã có; mọi cấp **ngưỡng 0** – người quản trị sửa ngưỡng theo phân quyền nội bộ. Xem: `System.Parameter.View`; áp: `System.Parameter.Manage` | Nguyên tắc "duyệt mấy cấp do người quản trị cấu hình" (mục 18.6) |
+
+Không có migration (vai trò, cấp duyệt là dữ liệu tạo khi người quản trị bấm).
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 

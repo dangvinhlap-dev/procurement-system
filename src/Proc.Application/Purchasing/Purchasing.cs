@@ -58,6 +58,23 @@ public sealed record PendingApprovalDto(string DocType, string DocTypeName, Guid
 /// <param name="AmountLabel">Giá trị xét ngưỡng; null = không xét giá trị (ngưỡng luôn 0).</param>
 public sealed record ApprovalTypeDto(string Code, string Name, string? AmountLabel);
 
+/// <summary>Một cấp duyệt mẫu theo sơ đồ (lát G10).</summary>
+/// <param name="DocType">Loại phiếu.</param>
+/// <param name="TypeName">Tên loại.</param>
+/// <param name="Level">Cấp.</param>
+/// <param name="RoleCode">Mã vai trò mẫu.</param>
+/// <param name="RoleName">Tên vai trò (trống khi chưa có vai trò).</param>
+/// <param name="Note">Căn cứ trên sơ đồ.</param>
+/// <param name="Status">Create (sẽ tạo), Configured (loại đã có cấu hình – giữ nguyên), MissingRole (chưa có vai trò mẫu của loại – tạo bộ
+/// vai trò mẫu trước), HeadOfficeOnly (chỉ áp ở tổng công ty).</param>
+public sealed record ApprovalRuleTemplateDto(
+    string DocType, string TypeName, int Level, string RoleCode, string? RoleName, string Note, string Status);
+
+/// <summary>Kết quả áp cấu hình duyệt mẫu.</summary>
+/// <param name="Created">Số cấp đã tạo.</param>
+/// <param name="Rows">Tình trạng từng cấp mẫu sau khi áp.</param>
+public sealed record ApplyApprovalRuleTemplateResult(int Created, IReadOnlyList<ApprovalRuleTemplateDto> Rows);
+
 /// <summary>Duyệt/từ chối kèm ý kiến (bắt buộc khi từ chối).</summary>
 public sealed record ApprovalActionRequest(string? Comment);
 
@@ -91,6 +108,22 @@ public interface IApprovalRuleAdministration
     /// <summary>Các loại phiếu có duyệt, theo thứ tự hiển thị.</summary>
     /// <returns>Danh sách loại.</returns>
     IReadOnlyList<ApprovalTypeDto> Types();
+
+    /// <summary>
+    /// Xem trước cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10) cho công ty đang làm việc: mỗi cấp mẫu kèm tình trạng sẽ tạo / giữ
+    /// nguyên (loại đã cấu hình) / thiếu vai trò / chỉ áp ở tổng công ty.
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Các cấp mẫu theo thứ tự loại phiếu, cấp.</returns>
+    Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Áp cấu hình duyệt mẫu cho công ty đang làm việc: chỉ tạo cấp cho loại phiếu chưa có cấp nào và đủ vai trò mẫu cho cả loại; không sửa
+    /// cấu hình đã có. Một lần lưu.
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số cấp đã tạo và tình trạng từng cấp mẫu sau khi áp.</returns>
+    Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(CancellationToken cancellationToken);
 
     /// <summary>Các phiếu PR, PO đang chờ người dùng hiện tại duyệt ở công ty đang làm việc.</summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>

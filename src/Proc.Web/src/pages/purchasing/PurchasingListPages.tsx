@@ -1,9 +1,11 @@
+import { ApartmentOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Form, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useRoles } from '../../api/administration'
+import { ApprovalRuleTemplateModal } from './ApprovalRuleTemplateModal'
 import type { DateRange } from '../../api/logs'
 import {
   priorityLabels,
@@ -233,10 +235,13 @@ export function ApprovalRuleListPage() {
   const typeName = (code: string) => types.data?.find((t) => t.code === code)?.name ?? code
   const canManage = hasPermission(Permission.ParameterManage)
   const [open, setOpen] = useState<ApprovalRule | null | undefined>(undefined)
+  const [templateOpen, setTemplateOpen] = useState(false)
   return (
     <>
       <ListPage
         title={`Quy trình duyệt – ${workingCompany?.code ?? ''}`}
+        // Cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10) – người chỉ xem vẫn mở được để xem trước.
+        actions={<Button icon={<ApartmentOutlined />} onClick={() => setTemplateOpen(true)}>Cấu hình duyệt mẫu theo sơ đồ…</Button>}
         exportFileName="quy-trinh-duyet"
         rows={rules.data ?? []}
         columns={ruleColumns(typeName)}
@@ -252,6 +257,8 @@ export function ApprovalRuleListPage() {
         }
       />
       {open !== undefined && <ApprovalRuleDrawer rule={open} canManage={canManage} onClose={() => setOpen(undefined)} />}
+      <ApprovalRuleTemplateModal open={templateOpen} companyCode={workingCompany?.code ?? ''} canManage={canManage}
+        onClose={() => setTemplateOpen(false)} />
     </>
   )
 }
