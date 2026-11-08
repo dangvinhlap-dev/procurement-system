@@ -60,7 +60,7 @@ export function ApprovalRuleTemplateModal({ open, companyCode, canManage, onClos
       cancelText="Đóng"
       confirmLoading={applyTemplate.isPending}
       destroyOnHidden
-      width={980}
+      width={1100}
     >
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />}
       <Typography.Paragraph type="secondary">
@@ -80,11 +80,10 @@ export function ApprovalRuleTemplateModal({ open, companyCode, canManage, onClos
         dataSource={rows}
         tableLayout="fixed"
         scroll={{ y: 420 }}
-        aria-label="Cấu hình duyệt mẫu"
         columns={[
-          { title: 'Loại phiếu', key: 'type', width: 230, render: (_, r) => `${r.docType} – ${r.typeName}` },
+          { title: 'Loại phiếu', key: 'type', width: 250, ellipsis: { showTitle: true }, render: (_, r) => `${r.docType} – ${r.typeName}` },
           { title: 'Cấp', dataIndex: 'level', width: 50, align: 'right' },
-          { title: 'Vai trò', key: 'role', width: 220, render: (_, r) => (r.roleName ? `${r.roleCode} – ${r.roleName}` : r.roleCode) },
+          { title: 'Vai trò', key: 'role', width: 290, ellipsis: { showTitle: true }, render: (_, r) => (r.roleName ? `${r.roleCode} – ${r.roleName}` : r.roleCode) },
           { title: 'Căn cứ trên sơ đồ', dataIndex: 'note', ellipsis: { showTitle: true } },
           {
             title: 'Tình trạng', dataIndex: 'status', width: 190,

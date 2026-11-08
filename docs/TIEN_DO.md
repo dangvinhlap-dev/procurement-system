@@ -1,11 +1,12 @@
 # Tiến độ dự án
 
-Cập nhật: 08/11/2026 (G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 08/11/2026 (G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
 | Phần | Nội dung | Merge |
 | --- | --- | --- |
+| G10 (08/11/2026) | **Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm** (design.md 18.25): 9 vai trò mẫu mới (CHUTICH, PHOBAN, THAMDINHCL, THAMDINHPL, VPBDIEUPHOI, VPBPHANTICH, CUCTRUONGPHONG, CUCDATHANG, DONVIDATHANG; Trưởng ban dùng TRUONGBANCUVT) – Phòng cung ứng tìm NCC (Q2); hộp thoại "Cấu hình duyệt mẫu theo sơ đồ…" trên màn hình Quy trình duyệt (`GET/POST /api/approval-rules/template`): xem trước, chỉ tạo loại phiếu chưa cấu hình, ngưỡng 0. Không migration. Test domain `ApprovalRuleTemplateTests` (3), tích hợp `ApprovalRuleTemplateTests`, Playwright `approval-rule-template.spec`. Kiểm tra: `dotnet test` 578/578, Playwright 109/109, build, tsc, oxlint qua. | `feature/g10-vai-tro-mau` |
 | G6b (08/11/2026) | **Thực nhận chiết khấu sản lượng gộp** (design.md 18.25): tab **Thực nhận** của CKB – mỗi kỳ phải nhận/đã nhận/còn thiếu/hạn ghi nhận (cuối kỳ + 30 ngày)/tình trạng; tổng công ty ghi nhận (**chỉ kỳ đã kết thúc, ngày nhận sau cuối kỳ** – người dùng chốt 08/11/2026), Ghi chú + Đính kèm (`VolumeRebateReceipt`), hủy có lý do; phần chia từng công ty theo tỷ lệ doanh số kỳ lúc ghi, lưu cố định (`VolumeRebateReceiptShare`); công ty áp dụng chỉ thấy phần mình. CKBT thêm "Đã nhận kỳ này", "Thiếu thực nhận quá hạn" (tính vào lọc cảnh báo). KSNB dấu hiệu `UnrecordedVolumeRebate` ở công ty sở hữu thỏa thuận. Tình trạng kỳ dùng chung `RebateSettlement` với chiết khấu hợp đồng (F4b). Migration `V0_20_0_ThucNhanChietKhauSanLuong`. Test domain `VolumeRebateReceiptTests` (5), tích hợp `VolumeRebateReceiptTests`, Playwright `volume-rebate-receipt.spec`. Kiểm tra: `dotnet test` 574/574, Playwright 108/108 (một lần chạy cả bộ `volume-rebate.spec` lỗi chập chờn, chạy riêng và chạy lại cả bộ đều qua), `npm run build`, `tsc`, `oxlint` qua. | `feature/g6b-thuc-nhan-ckb` |
 | G6a (08/11/2026) | **Chiết khấu bậc theo sản lượng gộp** (design.md 18.25): thỏa thuận **CKB** của tổng công ty (NCC × nhóm hàng, công ty áp dụng, kỳ Tháng/Quý/Năm/Cả thỏa thuận, cơ sở Số lượng – cùng ĐVT / Doanh số, bậc ngưỡng → % tăng dần, bậc mục tiêu, Ghi chú, Đính kèm), duyệt APRL loại CKB, hủy có lý do, chép thành thỏa thuận mới; chặn trùng NCC × mặt hàng × công ty × thời hạn. Tab **Lũy kế**: PO Đã duyệt/Đã đóng VND các công ty theo kỳ, bậc toàn phần, CK phải nhận, chia theo tỷ lệ doanh số (dồn số lẻ), dự báo, sắp chạm bậc (X%), nguy cơ/hụt bậc mục tiêu; công ty áp dụng chỉ thấy phần mình. Màn **CKBT** theo dõi kỳ hiện tại. Quyền `Pricing.VolumeRebate.*`, vai trò mẫu. Migration `V0_20_0_ChietKhauSanLuongGop`. Test domain 8, tích hợp `VolumeRebateTests`, Playwright `volume-rebate.spec`. Quy tắc tự đặt ghi ở design.md (bậc toàn phần, % trên doanh số, X = 10%, dự báo theo nhịp mua, thành viên chỉ thấy phần mình). | `feature/g6a-chiet-khau-bac` |
 | G5c+ (07/11/2026) | **SL kế hoạch chính xác hơn** (người dùng duyệt): khoảng theo **ngày** thay cho tháng – tháng đầu/cuối không trọn chia theo số ngày (15/01 tính 17/31), tối đa 36 tháng tính theo ngày; hộp thoại ghi số tháng và số ngày được tính. **SL lẻ** theo ĐVT dòng: tam giác vàng + chọn Làm tròn lên (mặc định) / Đổi dòng sang ĐVT cơ sở (chỉ RFQ) / Giữ số lẻ; cột SL theo ĐVT cơ sở, SL áp dụng. API: `FromDate/ToDate`, kết quả thêm `BaseUomId/BaseUomCode/BaseQty`. Mặc định hợp đồng = đúng hiệu lực, RFQ = trọn 12 tháng từ tháng sau. Không migration; design.md 18.25 | feature/sl-ke-hoach-chia-ngay |
@@ -449,20 +450,23 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 ## Việc tiếp theo
 
 **Các lát chưa làm (ghi nhận 08/11/2026 theo yêu cầu người dùng):**
-- **Ưu tiên trước (08/11/2026)**: phân tích, so sánh sơ đồ tổ chức & lưu đồ phê duyệt mua sắm (`sodopheduyet.jpg`) với phần mềm – xuất Word
-  `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy, không commit vì có sơ đồ tổ chức nội bộ); lát mới đề xuất H1 ý kiến
-  thẩm định, H2 ngoại lệ GTH lên Chủ tịch, H3 PO biến động giá lớn (chờ quyết), H4 đơn vị đặt hàng xác nhận nghiệm thu; đề xuất đưa G10 lên trước G7.
+- Phân tích sơ đồ phê duyệt (xong 08/11/2026): `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy). Người dùng chốt Q1–Q6
+  (design.md 18.25). Thứ tự làm: **G10 (xong)** → G7 → H1 → H2 → H3 → H4 → G1b → G8 → G11 → G12; G9 hoãn.
+- **H1** ý kiến thẩm định của thành viên chuyên môn (GTH, RFQ, hợp đồng, hồ sơ NCC) – không phải cấp duyệt.
+- **H2** phiếu GTH có ngoại lệ → thêm chặng Chủ tịch/TGĐ (Q6).
+- **H3** PO vượt giá trần → phải Chủ tịch/TGĐ duyệt (Q3, thay quyết định 06/11 chỉ cảnh báo).
+- **H4** đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập.
+- **G1b** đếm tối thiểu 03 NCC theo nhóm hàng (Q1).
 - **G7** đặt hàng gộp và phân bổ (Phòng cung ứng chung đặt cho các công ty, mỗi pháp nhân một PO, phân bổ trong biên độ, đúng NCC/giá GTH).
-- **G8** hồ sơ đánh giá NCC mới (Văn phòng Ban tìm, đánh giá, đề xuất Ban).
+- **G8** hồ sơ đánh giá NCC mới (Phòng cung ứng tìm, đánh giá – Q2; Văn phòng Ban đề xuất; Hội đồng xét).
 - **G9** biểu quyết Ban – **hoãn** (tạm dùng duyệt nhiều cấp APRL).
-- **G10** vai trò mẫu theo quyết định (Hội đồng, thành viên chuyên môn, Văn phòng Ban, Phòng cung ứng chung, đơn vị đặt hàng).
 - **G11** định mức sử dụng (căn cứ kế hoạch nhu cầu).
 - **G12** báo cáo tháng cho Ban.
-- Chưa phát hành: G5b, G5c, G6a, G6b (bản gần nhất 0.20.0).
+- Chưa phát hành: G5b, G5c, G6a, G6b, G10 (bản gần nhất 0.20.0).
 
 0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c, G5a, G5b, **G5c** xong (người dùng cho làm tiếp 07/11/2026).
-   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b** xong (08/11/2026). Tiếp theo: **G7** đặt hàng gộp và phân bổ, rồi G8 … G12. G5a đã phát hành trong 0.20.0;
-   G5b, G5c, G6a, G6b chưa phát hành. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
+   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b**, **G10** xong (08/11/2026). Tiếp theo: **G7** đặt hàng gộp và phân bổ, rồi H1 → H4, G1b, G8, G11, G12. G5a đã phát hành trong 0.20.0;
+   G5b, G5c, G6a, G6b, G10 chưa phát hành. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
    Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
    TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới
    N01–N16 (0.15.0–0.18.0). N01 nhắc admin gán quyền `Purchase.Budget.*` cho TOANQUYEN (CSDL test chưa có) và khai PRB/POB ở BMI.

@@ -24,7 +24,8 @@ test('áp cấu hình duyệt mẫu theo sơ đồ cho công ty mới', async ({
   await expect(page.getByRole('heading', { name: `Quy trình duyệt – ${code}` })).toBeVisible()
   await page.getByRole('button', { name: /Cấu hình duyệt mẫu theo sơ đồ/ }).click()
   const dialog = page.getByRole('dialog', { name: `Cấu hình duyệt mẫu theo sơ đồ – ${code}` })
-  const table = dialog.getByRole('table', { name: 'Cấu hình duyệt mẫu' })
+  // Bảng có cuộn dọc (antd tách tiêu đề và thân thành hai bảng) – đọc theo nội dung hộp thoại.
+  const table = dialog.locator('.ant-table')
   await expect(table).toContainText('PO – Đơn mua hàng')
   await expect(table).toContainText('PHOBAN – Phó ban cung ứng (Hội đồng)')
   await expect(table).toContainText('Chỉ ở tổng công ty')
