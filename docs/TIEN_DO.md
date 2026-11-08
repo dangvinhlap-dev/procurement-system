@@ -448,6 +448,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Các lát chưa làm (ghi nhận 08/11/2026 theo yêu cầu người dùng):**
+- **Ưu tiên trước (08/11/2026)**: phân tích, so sánh sơ đồ tổ chức & lưu đồ phê duyệt mua sắm (`sodopheduyet.jpg`) với phần mềm – xuất Word
+  `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy, không commit vì có sơ đồ tổ chức nội bộ); lát mới đề xuất H1 ý kiến
+  thẩm định, H2 ngoại lệ GTH lên Chủ tịch, H3 PO biến động giá lớn (chờ quyết), H4 đơn vị đặt hàng xác nhận nghiệm thu; đề xuất đưa G10 lên trước G7.
+- **G7** đặt hàng gộp và phân bổ (Phòng cung ứng chung đặt cho các công ty, mỗi pháp nhân một PO, phân bổ trong biên độ, đúng NCC/giá GTH).
+- **G8** hồ sơ đánh giá NCC mới (Văn phòng Ban tìm, đánh giá, đề xuất Ban).
+- **G9** biểu quyết Ban – **hoãn** (tạm dùng duyệt nhiều cấp APRL).
+- **G10** vai trò mẫu theo quyết định (Hội đồng, thành viên chuyên môn, Văn phòng Ban, Phòng cung ứng chung, đơn vị đặt hàng).
+- **G11** định mức sử dụng (căn cứ kế hoạch nhu cầu).
+- **G12** báo cáo tháng cho Ban.
+- Chưa phát hành: G5b, G5c, G6a, G6b (bản gần nhất 0.20.0).
+
 0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c, G5a, G5b, **G5c** xong (người dùng cho làm tiếp 07/11/2026).
    G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b** xong (08/11/2026). Tiếp theo: **G7** đặt hàng gộp và phân bổ, rồi G8 … G12. G5a đã phát hành trong 0.20.0;
    G5b, G5c, G6a, G6b chưa phát hành. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
