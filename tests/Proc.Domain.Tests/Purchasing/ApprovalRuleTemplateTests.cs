@@ -4,7 +4,7 @@ using Proc.Domain.Purchasing;
 namespace Proc.Domain.Tests.Purchasing;
 
 /// <summary>
-/// Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ tổ chức & lưu đồ phê duyệt mua sắm (lát G10, design.md mục 18.25): mẫu phải tự nhất quán để
+/// Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ tổ chức và lưu đồ phê duyệt mua sắm (lát G10, design.md mục 18.25): mẫu phải tự nhất quán để
 /// áp xong là duyệt được ngay.
 /// </summary>
 public class ApprovalRuleTemplateTests

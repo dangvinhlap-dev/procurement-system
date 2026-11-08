@@ -11,7 +11,7 @@ namespace Proc.Domain.Purchasing;
 public sealed record ApprovalRuleTemplate(string DocType, int Level, string RoleCode, bool HeadOfficeOnly, string Note);
 
 /// <summary>
-/// Cấu hình duyệt mẫu theo sơ đồ tổ chức & lưu đồ phê duyệt mua sắm của Ban & Phòng cung ứng chung (lát G10 – design.md mục 18.25). Mọi cấp
+/// Cấu hình duyệt mẫu theo sơ đồ tổ chức và lưu đồ phê duyệt mua sắm của Ban và Phòng cung ứng chung (lát G10 – design.md mục 18.25). Mọi cấp
 /// ngưỡng 0 (mọi phiếu qua đủ cấp) – người quản trị sửa ngưỡng theo phân quyền nội bộ của tập đoàn sau khi áp. Chỉ là gợi ý: áp cho loại phiếu
 /// chưa cấu hình, không sửa cấu hình đã có (nguyên tắc "duyệt mấy cấp do người quản trị cấu hình" – mục 18.6). Biểu quyết 3 thành viên Hội
 /// đồng tạm thay bằng 3 cấp tuần tự, mỗi cấp một người khác (G9 hoãn, lát R3).
