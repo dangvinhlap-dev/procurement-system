@@ -78,7 +78,8 @@ public sealed class VolumeRebateReceipt : AuditableEntity, ICompanyOwned
     /// <param name="today">Hôm nay theo giờ Việt Nam.</param>
     /// <returns>Bản ghi thực nhận kèm phần từng công ty.</returns>
     /// <exception cref="BusinessRuleException">
-    /// Khi thỏa thuận chưa hiệu lực, kỳ không thuộc thỏa thuận, ngày/số tiền/hình thức sai, hoặc kỳ chưa có doanh số để chia.
+    /// Khi thỏa thuận chưa hiệu lực, kỳ không thuộc thỏa thuận hoặc chưa kết thúc, ngày nhận không sau cuối kỳ, số tiền/hình thức sai, hoặc kỳ
+    /// chưa có doanh số để chia.
     /// </exception>
     public static VolumeRebateReceipt Create(
         VolumeRebateAgreement agreement, VolumeRebateReceiptData data, IReadOnlyList<VolumeRebateCompanyVolume> periodVolumes, DateOnly today)
@@ -89,10 +90,14 @@ public sealed class VolumeRebateReceipt : AuditableEntity, ICompanyOwned
         // Chỉ thỏa thuận Hiệu lực mới được theo dõi chiết khấu; thỏa thuận đã hủy không còn theo dõi (design.md 18.25, G6a).
         if (agreement.Status != VolumeRebateStatus.Active)
             throw new BusinessRuleException($"Thỏa thuận {agreement.No} không ở trạng thái Hiệu lực – không ghi nhận thực nhận được.");
-        if (agreement.Periods().All(p => p.From != data.PeriodFrom))
-            throw new BusinessRuleException("Kỳ tính bậc không thuộc thỏa thuận – hãy chọn kỳ trong danh sách.");
+        var period = agreement.Periods().FirstOrDefault(p => p.From == data.PeriodFrom);
+        if (period == default) throw new BusinessRuleException("Kỳ tính bậc không thuộc thỏa thuận – hãy chọn kỳ trong danh sách.");
+        // Chỉ ghi thực nhận sau khi kỳ kết thúc (người dùng chốt 08/11/2026): bậc và số phải nhận chỉ chốt khi hết kỳ, ghi sớm thì phần chia
+        // theo doanh số dở dang của kỳ sẽ sai. Ngày nhận cũng phải sau ngày cuối kỳ vì cùng lý do.
+        if (today <= period.To)
+            throw new BusinessRuleException($"Kỳ {period.From:dd/MM/yyyy} – {period.To:dd/MM/yyyy} chưa kết thúc – chỉ ghi thực nhận sau ngày cuối kỳ.");
         if (!Enum.IsDefined(data.Form)) throw new BusinessRuleException("Hình thức nhận không hợp lệ.");
-        if (data.ReceivedOn < data.PeriodFrom) throw new BusinessRuleException("Ngày nhận không được trước ngày bắt đầu kỳ.");
+        if (data.ReceivedOn <= period.To) throw new BusinessRuleException($"Ngày nhận phải sau ngày cuối kỳ ({period.To:dd/MM/yyyy}).");
         if (data.ReceivedOn > today) throw new BusinessRuleException("Ngày nhận không được sau hôm nay.");
         if (data.Amount <= 0 || decimal.Round(data.Amount, 2) != data.Amount || data.Amount >= 10_000_000_000_000m)
             throw new BusinessRuleException("Số tiền thực nhận phải lớn hơn 0, tối đa 2 chữ số thập phân.");

@@ -14,7 +14,7 @@ public class VolumeRebateReceiptTests
     private static readonly Guid Head = Guid.CreateVersion7();
     private static readonly Guid MemberA = Guid.CreateVersion7();
     private static readonly Guid MemberB = Guid.CreateVersion7();
-    private static readonly DateOnly Today = new(2026, 5, 10);
+    private static readonly DateOnly Today = new(2026, 7, 15);
 
     /// <summary>Thỏa thuận theo quý 15/02 – 10/08/2026, áp ba công ty, đã hiệu lực (nếu <paramref name="active"/>).</summary>
     private static VolumeRebateAgreement NewAgreement(bool active = true)
@@ -34,7 +34,7 @@ public class VolumeRebateReceiptTests
     }
 
     private static VolumeRebateReceiptData Data(decimal amount = 100_000m, DateOnly? periodFrom = null, DateOnly? receivedOn = null) =>
-        new(periodFrom ?? new DateOnly(2026, 2, 15), receivedOn ?? new DateOnly(2026, 4, 20), amount, RebateReceiptForm.DebtOffset, " BB-01 ", " ");
+        new(periodFrom ?? new DateOnly(2026, 2, 15), receivedOn ?? new DateOnly(2026, 4, 5), amount, RebateReceiptForm.DebtOffset, " BB-01 ", " ");
 
     private static readonly VolumeRebateCompanyVolume[] Volumes =
         [new(Head, 10m, 600_000_000m), new(MemberA, 5m, 300_000_000m), new(MemberB, 2m, 100_000_000m)];
@@ -74,10 +74,16 @@ public class VolumeRebateReceiptTests
             () => VolumeRebateReceipt.Create(NewAgreement(active: false), Data(), Volumes, Today)).Message);
         Assert.Contains("không thuộc thỏa thuận", Assert.Throws<BusinessRuleException>(
             () => VolumeRebateReceipt.Create(NewAgreement(), Data(periodFrom: new DateOnly(2026, 3, 1)), Volumes, Today)).Message);
-        // Kỳ 2 của thỏa thuận theo quý bắt đầu 01/04.
+        // Kỳ 2 (01/04 – 30/06) đã hết; kỳ 3 (01/07 – 10/08) chưa kết thúc → chưa ghi được (người dùng chốt 08/11/2026).
         Assert.Equal(new DateOnly(2026, 4, 1),
-            VolumeRebateReceipt.Create(NewAgreement(), Data(periodFrom: new DateOnly(2026, 4, 1)), Volumes, Today).PeriodFrom);
-        Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(NewAgreement(), Data(receivedOn: new DateOnly(2026, 2, 14)), Volumes, Today));
+            VolumeRebateReceipt.Create(NewAgreement(), Data(periodFrom: new DateOnly(2026, 4, 1), receivedOn: new DateOnly(2026, 7, 1)), Volumes, Today).PeriodFrom);
+        Assert.Contains("chưa kết thúc", Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(
+            NewAgreement(), Data(periodFrom: new DateOnly(2026, 7, 1), receivedOn: Today), Volumes, Today)).Message);
+        Assert.Contains("chưa kết thúc", Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(
+            NewAgreement(), Data(periodFrom: new DateOnly(2026, 4, 1)), Volumes, new DateOnly(2026, 6, 30))).Message);
+        // Ngày nhận phải sau ngày cuối kỳ (31/03).
+        Assert.Contains("sau ngày cuối kỳ", Assert.Throws<BusinessRuleException>(
+            () => VolumeRebateReceipt.Create(NewAgreement(), Data(receivedOn: new DateOnly(2026, 3, 31)), Volumes, Today)).Message);
         Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(NewAgreement(), Data(receivedOn: Today.AddDays(1)), Volumes, Today));
         Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(NewAgreement(), Data(0m), Volumes, Today));
         Assert.Throws<BusinessRuleException>(() => VolumeRebateReceipt.Create(NewAgreement(), Data(1.001m), Volumes, Today));
