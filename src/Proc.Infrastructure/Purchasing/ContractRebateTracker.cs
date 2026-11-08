@@ -11,8 +11,8 @@ namespace Proc.Infrastructure.Purchasing;
 /// </summary>
 internal static class ContractRebateTracker
 {
-    /// <summary>Số ngày sau cuối kỳ quyết toán để NCC trả và người mua ghi nhận; quá hạn mà thiếu thì là dấu hiệu KSNB.</summary>
-    public const int GraceDays = 30;
+    /// <summary>Số ngày sau cuối kỳ quyết toán để NCC trả và người mua ghi nhận (<see cref="RebateSettlement.GraceDays"/>).</summary>
+    public const int GraceDays = RebateSettlement.GraceDays;
 
     /// <summary>Một kỳ quyết toán đã tính.</summary>
     internal sealed record Row(
@@ -74,25 +74,13 @@ internal static class ContractRebateTracker
                         .Sum(p => p.Amount);
                     var expected = rebate.ExpectedFor(purchase);
                     var got = received.GetValueOrDefault((rebate.Id, pFrom));
-                    var due = pTo.AddDays(GraceDays);
-                    rows.Add(new Row(contract, rebate, pFrom, pTo, due, purchase, expected, got, StatusOf(today, pTo, due, expected, got)));
+                    rows.Add(new Row(
+                        contract, rebate, pFrom, pTo, RebateSettlement.DueDate(pTo), purchase, expected, got,
+                        RebateSettlement.StatusOf(today, pTo, expected, got)));
                 }
             }
         }
 
         return rows;
-    }
-
-    /// <summary>
-    /// Tình trạng kỳ: đủ khi đã nhận ≥ phải nhận (&gt; 0); chưa hết kỳ → NotDue; hết kỳ mà phải nhận 0 (chưa đạt doanh số tối thiểu, không
-    /// phát sinh mua) → NotReached; trong hạn ghi nhận → Waiting; quá hạn mà thiếu → Short. Ví dụ kỳ quý 3 kết thúc 30/09, hạn 30/10, hôm nay
-    /// 02/11, phải nhận 25.000.000, đã nhận 10.000.000 → Short, thiếu 15.000.000.
-    /// </summary>
-    private static string StatusOf(DateOnly today, DateOnly to, DateOnly due, decimal expected, decimal received)
-    {
-        if (expected > 0 && received >= expected) return "Received";
-        if (today <= to) return "NotDue";
-        if (expected == 0) return "NotReached";
-        return today <= due ? "Waiting" : "Short";
     }
 }

@@ -86,7 +86,20 @@ public static class VolumeRebateCalculation
             Allocate(volumes, amount, rebate));
     }
 
-    /// <summary>Chia chiết khấu theo tỷ lệ doanh số, dồn số lẻ làm tròn vào công ty doanh số lớn nhất (xem <see cref="Evaluate"/>).</summary>
+    /// <summary>
+    /// Chia một số tiền chiết khấu (phải nhận hoặc thực nhận – lát G6b) cho các công ty theo tỷ lệ doanh số kỳ, dồn số lẻ làm tròn vào công ty
+    /// doanh số lớn nhất để tổng các phần đúng bằng <paramref name="rebate"/> (xem <see cref="Evaluate"/>). Ví dụ thực nhận 100.000, doanh số
+    /// ba công ty 600 / 300 / 100 triệu → 60.000 / 30.000 / 10.000.
+    /// </summary>
+    /// <param name="volumes">Doanh số từng công ty trong kỳ.</param>
+    /// <param name="rebate">Số tiền cần chia (2 số lẻ).</param>
+    /// <returns>Phần từng công ty theo thứ tự <paramref name="volumes"/>; doanh số gộp 0 thì mọi phần bằng 0.</returns>
+    public static IReadOnlyList<VolumeRebateShare> Allocate(IReadOnlyList<VolumeRebateCompanyVolume> volumes, decimal rebate)
+    {
+        ArgumentNullException.ThrowIfNull(volumes);
+        return Allocate(volumes, volumes.Sum(v => v.Amount), rebate);
+    }
+
     private static List<VolumeRebateShare> Allocate(IReadOnlyList<VolumeRebateCompanyVolume> volumes, decimal amount, decimal rebate)
     {
         var shares = volumes.Select(v => new VolumeRebateShare(
