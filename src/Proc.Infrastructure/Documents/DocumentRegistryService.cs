@@ -72,6 +72,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.MasterData.SupplierView, ApprovalTypes.Supplier);
         Add(Permissions.MasterData.SoleSourceView, DocumentTypes.SoleSource);
         Add(Permissions.Pricing.MonthlyApprovalView, DocumentTypes.MonthlySupplierApproval);
+        Add(Permissions.Pricing.VolumeRebateView, DocumentTypes.VolumeRebate);
         Add(Permissions.Pricing.PriceBankView, DocumentTypes.MarketPriceSurvey);
         Add(Permissions.Purchase.DemandPlanView, DocumentTypes.DemandPlan);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
@@ -302,6 +303,26 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 {
                     MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced => DocumentProgress.Done,
                     MonthlyApprovalStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.VolumeRebate))
+        {
+            // Filter công ty giữ nguyên: thỏa thuận chiết khấu sản lượng gộp hiện ở tổng công ty (nơi lập).
+            var q = _db.VolumeRebateAgreements.AsNoTracking().Where(d => d.CreatedAt >= fromUtc && d.CreatedAt < toUtc);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            if (acted) { var actedIds = ActedIds(DocumentTypes.VolumeRebate); q = q.Where(d => actedIds.Contains(d.Id)); }
+            var rows = await q.OrderByDescending(d => d.CreatedAt).Take(take)
+                .Select(d => new { d.Id, d.No, d.CreatedAt, d.Title, d.Status, d.CreatedBy })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.VolumeRebate, d.Id, d.No, VietnamDate(d.CreatedAt), null, null, null,
+                d.Title, null, d.Status.ToString(),
+                d.Status switch
+                {
+                    VolumeRebateStatus.Active => DocumentProgress.Done,
+                    VolumeRebateStatus.Cancelled => DocumentProgress.Cancelled,
                     _ => DocumentProgress.Open,
                 },
                 d.CreatedBy, d.CreatedAt)));

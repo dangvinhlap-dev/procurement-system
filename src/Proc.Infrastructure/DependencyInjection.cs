@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<IConflictDeclarationService, ConflictDeclarationService>();
         services.AddScoped<ISoleSourceService, SoleSourceService>();
         services.AddScoped<Proc.Application.Pricing.IMonthlySupplierApprovalService, Proc.Infrastructure.Pricing.MonthlySupplierApprovalService>();
+        services.AddScoped<Proc.Application.Pricing.IVolumeRebateService, Proc.Infrastructure.Pricing.VolumeRebateService>();
         services.AddScoped<Proc.Application.Pricing.IMarketPriceSurveyService, Proc.Infrastructure.Pricing.MarketPriceSurveyService>();
         services.AddScoped<Proc.Application.Purchasing.IDemandPlanService, Proc.Infrastructure.Purchasing.DemandPlanService>();
         services.AddScoped<ISupplierLinkAdministration, SupplierLinkAdministration>();

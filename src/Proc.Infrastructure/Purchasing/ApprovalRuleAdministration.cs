@@ -224,6 +224,23 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                 step!.Level, sheet.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
         }
 
+        // Thỏa thuận chiết khấu sản lượng gộp chờ Ban duyệt (lát G6a): duyệt tại tổng công ty – filter công ty và nhóm hàng giữ nguyên.
+        var rebates = await _db.VolumeRebateAgreements.Where(x => x.Status == VolumeRebateStatus.Submitted).ToListAsync(cancellationToken);
+        var rebateSupplierIds = rebates.Select(x => x.SupplierId).Distinct().ToList();
+        var rebateSuppliers = await _db.Suppliers.AsNoTracking().Where(s => rebateSupplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
+        var rebateCreatorIds = rebates.Select(x => x.CreatedBy).OfType<Guid>().Except(users.Keys).Distinct().ToList();
+        foreach (var u in await _db.Users.AsNoTracking().Where(u => rebateCreatorIds.Contains(u.Id)).ToListAsync(cancellationToken)) users[u.Id] = u.FullName;
+        foreach (var agreement in rebates)
+        {
+            var step = await _approvals.CurrentStepAsync(agreement, cancellationToken);
+            if (await _approvals.ApproveBlockerAsync(agreement, step, cancellationToken) is not null) continue;
+            result.Add(new PendingApprovalDto(
+                agreement.DocType, ApprovalTypes.Get(agreement.DocType).Name, agreement.Id, agreement.No, agreement.ValidFrom,
+                $"{agreement.Title} – {rebateSuppliers.GetValueOrDefault(agreement.SupplierId)}", 0,
+                step!.Level, agreement.CreatedBy is { } c ? users.GetValueOrDefault(c) : null));
+        }
+
         return result.OrderBy(r => r.Date).ThenBy(r => r.No).ToList();
     }
 
