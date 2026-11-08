@@ -26,6 +26,9 @@ public static class AnomalyCodes
 
     /// <summary>Chiết khấu doanh số/tài trợ chưa ghi nhận – P10, chưa đo được (cần chiết khấu trên hợp đồng, lát F4).</summary>
     public const string UnrecordedRebate = "UnrecordedRebate";
+
+    /// <summary>Chiết khấu sản lượng gộp chưa ghi nhận – kỳ của thỏa thuận CKB quá hạn ghi nhận mà thực nhận ít hơn phải nhận (lát G6b).</summary>
+    public const string UnrecordedVolumeRebate = "UnrecordedVolumeRebate";
 }
 
 /// <summary>Mức độ dấu hiệu: High (cao – đèn đỏ), Medium (trung bình – đèn vàng).</summary>

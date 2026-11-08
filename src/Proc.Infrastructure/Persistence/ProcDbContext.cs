@@ -183,6 +183,11 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Công ty áp dụng của thỏa thuận chiết khấu sản lượng gộp.</summary>
     public DbSet<Proc.Domain.Pricing.VolumeRebateCompany> VolumeRebateCompanies => Set<Proc.Domain.Pricing.VolumeRebateCompany>();
 
+    /// <summary>
+    /// Chiết khấu sản lượng gộp thực nhận (lát G6b) – thuộc tổng công ty (filter công ty); công ty áp dụng đọc qua thỏa thuận hiệu lực của mình.
+    /// </summary>
+    public DbSet<Proc.Domain.Pricing.VolumeRebateReceipt> VolumeRebateReceipts => Set<Proc.Domain.Pricing.VolumeRebateReceipt>();
+
     /// <summary>Phiếu khảo sát giá thị trường – ngân hàng giá (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25).</summary>
     public DbSet<Proc.Domain.Pricing.MarketPriceSurvey> MarketPriceSurveys => Set<Proc.Domain.Pricing.MarketPriceSurvey>();
 

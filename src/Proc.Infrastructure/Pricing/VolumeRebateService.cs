@@ -172,10 +172,54 @@ public sealed class VolumeRebateService : IVolumeRebateService
         var agreement = await LoadVisibleAsync(id, cancellationToken);
         var near = Near(nearPercent);
         var today = _clock.TodayInVietnam();
-        var volumes = await VolumesAsync([agreement], cancellationToken);
+        var volumes = await VolumeRebateTracker.VolumesAsync(_db, [agreement], cancellationToken);
+        var received = await VolumeRebateTracker.ReceivedAsync(_db, [agreement.Id], cancellationToken);
         var codes = await CompanyCodeMapAsync(agreement.Companies.Select(c => c.CompanyId), cancellationToken);
-        var periods = agreement.Periods().Select(p => ToPeriodDto(agreement, p, volumes, today, near, codes)).ToList();
-        return new VolumeRebateProgressDto(agreement.Id, agreement.Basis.ToString(), await UomCodeAsync(agreement, cancellationToken), periods);
+        var periods = agreement.Periods().Select(p => ToPeriodDto(agreement, p, volumes, received, today, near, codes)).ToList();
+        var canRecord = agreement.Status == VolumeRebateStatus.Active && agreement.CompanyId == _scope.RequireCompany()
+                        && _scope.HasPermission(Permissions.Pricing.VolumeRebateManage) && await ItemsVisibleAsync(agreement, cancellationToken);
+        return new VolumeRebateProgressDto(
+            agreement.Id, agreement.Basis.ToString(), await UomCodeAsync(agreement, cancellationToken), periods, RebateSettlement.GraceDays, canRecord,
+            await ReceiptsAsync(agreement, null, cancellationToken));
+    }
+
+    /// <inheritdoc />
+    public async Task<VolumeRebateReceiptDto> RecordReceiptAsync(Guid id, SaveVolumeRebateReceiptRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var agreement = await FindOwnAsync(id, cancellationToken);
+        await EnsureItemsVisibleAsync(agreement, cancellationToken);
+        var form = Enum.TryParse<RebateReceiptForm>(request.Form, true, out var f) && Enum.IsDefined(f)
+            ? f
+            : throw new BusinessRuleException("Hình thức nhận không hợp lệ.");
+        var period = agreement.Periods().FirstOrDefault(p => p.From == request.PeriodFrom);
+        // Doanh số kỳ tính lúc ghi để chia phần thực nhận; kỳ không thuộc thỏa thuận thì domain báo lỗi (để trống doanh số).
+        var volumes = period == default
+            ? []
+            : VolumeRebateTracker.PeriodVolumes(
+                agreement, period.From, period.To, await VolumeRebateTracker.VolumesAsync(_db, [agreement], cancellationToken),
+                await CompanyCodeMapAsync(agreement.Companies.Select(c => c.CompanyId), cancellationToken));
+        var receipt = VolumeRebateReceipt.Create(
+            agreement, new VolumeRebateReceiptData(request.PeriodFrom, request.ReceivedOn, request.Amount, form, request.RefNo, request.Note),
+            volumes, _clock.TodayInVietnam());
+        _db.VolumeRebateReceipts.Add(receipt);
+        await _db.SaveChangesAsync(cancellationToken);
+        return (await ReceiptsAsync(agreement, receipt.Id, cancellationToken)).Single();
+    }
+
+    /// <inheritdoc />
+    public async Task<VolumeRebateReceiptDto> CancelReceiptAsync(Guid receiptId, CancelVolumeRebateRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        _scope.RequireCompany();
+        // Filter công ty giữ nguyên: bản ghi thuộc tổng công ty, công ty áp dụng không hủy được.
+        var receipt = await _db.VolumeRebateReceipts.SingleOrDefaultAsync(r => r.Id == receiptId, cancellationToken)
+                      ?? throw new NotFoundException("Không tìm thấy bản ghi thực nhận.");
+        var agreement = await FindOwnAsync(receipt.AgreementId, cancellationToken);
+        await EnsureItemsVisibleAsync(agreement, cancellationToken);
+        receipt.Cancel(request.Reason);
+        await _db.SaveChangesAsync(cancellationToken);
+        return (await ReceiptsAsync(agreement, receipt.Id, cancellationToken)).Single();
     }
 
     /// <inheritdoc />
@@ -189,7 +233,8 @@ public sealed class VolumeRebateService : IVolumeRebateService
             .OrderBy(x => x.No)
             .ToListAsync(cancellationToken);
         if (agreements.Count == 0) return [];
-        var volumes = await VolumesAsync(agreements, cancellationToken);
+        var volumes = await VolumeRebateTracker.VolumesAsync(_db, agreements, cancellationToken);
+        var received = await VolumeRebateTracker.ReceivedAsync(_db, agreements.Select(a => a.Id).ToList(), cancellationToken);
         var codes = await CompanyCodeMapAsync(agreements.SelectMany(a => a.Companies.Select(c => c.CompanyId)), cancellationToken);
         var supplierIds = agreements.Select(a => a.SupplierId).Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => new { s.Code, s.Name }, cancellationToken);
@@ -203,12 +248,18 @@ public sealed class VolumeRebateService : IVolumeRebateService
             // Kỳ hiện tại = kỳ chứa hôm nay; chưa tới hiệu lực thì kỳ đầu; đã hết hạn thì kỳ cuối (đối chiếu chiết khấu với NCC).
             var current = periods.FirstOrDefault(p => p.From <= today && today <= p.To);
             if (current == default) current = today < a.ValidFrom ? periods[0] : periods[^1];
-            var period = ToPeriodDto(a, current, volumes, today, near, codes);
-            if (onlyAlerts && !(period.IsNearNextTier || period.TargetStatus is "AtRisk" or "Missed")) continue;
+            var period = ToPeriodDto(a, current, volumes, received, today, near, codes);
+            // Kỳ đã qua hạn ghi nhận mà còn thiếu thực nhận (lát G6b) – cảnh báo cả khi kỳ hiện tại đang chạy bình thường.
+            var unreceived = periods.Where(p => p.To < today)
+                .Select(p => p == current ? period : ToPeriodDto(a, p, volumes, received, today, near, codes))
+                .Where(p => p.ReceiptStatus == RebateSettlement.Short)
+                .ToList();
+            if (onlyAlerts && !(period.IsNearNextTier || period.TargetStatus is "AtRisk" or "Missed" || unreceived.Count > 0)) continue;
             var supplier = suppliers.GetValueOrDefault(a.SupplierId);
             var uom = a.Basis == VolumeRebateBasis.Quantity && a.Lines.Count > 0 ? uoms.GetValueOrDefault(a.Lines[0].UomId) : null;
             rows.Add(new VolumeRebateTrackingRowDto(
-                a.Id, a.No, a.Title, supplier?.Code ?? "", supplier?.Name ?? "", a.Basis.ToString(), uom, a.TargetTierNo, period));
+                a.Id, a.No, a.Title, supplier?.Code ?? "", supplier?.Name ?? "", a.Basis.ToString(), uom, a.TargetTierNo, period, unreceived.Count,
+                unreceived.Sum(p => p.ShortAmount)));
         }
 
         return rows;
@@ -294,56 +345,52 @@ public sealed class VolumeRebateService : IVolumeRebateService
             throw new BusinessRuleException($"NCC {supplier.Code} chưa ở trạng thái Đã duyệt – không lập thỏa thuận chiết khấu được.");
     }
 
-    /// <summary>Một nhóm dòng PO: công ty × NCC × mặt hàng × ngày.</summary>
-    private sealed record VolumeRow(Guid CompanyId, Guid SupplierId, Guid ItemId, DateOnly Date, decimal BaseQty, decimal Amount);
-
     /// <summary>
-    /// Sản lượng mua của các thỏa thuận: dòng PO <b>Đã duyệt/Đã đóng</b> bằng VND (cùng nguồn số với chiết khấu hợp đồng mục 18.21 và PRCW), của
-    /// các công ty áp dụng × NCC × mặt hàng, ngày PO trong thời hạn. Bỏ filter công ty và nhóm hàng: sản lượng là của các pháp nhân khác nhau
-    /// gộp lại (quyết định Ban cung ứng); chỉ trả số tổng theo ngày, không trả chi tiết PO công ty khác.
-    /// </summary>
-    private async Task<List<VolumeRow>> VolumesAsync(IReadOnlyList<VolumeRebateAgreement> agreements, CancellationToken cancellationToken)
-    {
-        var supplierIds = agreements.Select(a => a.SupplierId).Distinct().ToList();
-        var companyIds = agreements.SelectMany(a => a.Companies.Select(c => c.CompanyId)).Distinct().ToList();
-        var itemIds = agreements.SelectMany(a => a.Lines.Select(l => l.ItemId)).Distinct().ToList();
-        var min = agreements.Min(a => a.ValidFrom);
-        var max = agreements.Max(a => a.ValidTo);
-        return await (
-                from o in _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]).AsNoTracking()
-                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.CurrencyCode == "VND"
-                      && supplierIds.Contains(o.SupplierId) && companyIds.Contains(o.CompanyId) && o.Date >= min && o.Date <= max
-                from l in o.Lines
-                where itemIds.Contains(l.ItemId)
-                group l by new { o.CompanyId, o.SupplierId, l.ItemId, o.Date } into g
-                select new VolumeRow(g.Key.CompanyId, g.Key.SupplierId, g.Key.ItemId, g.Key.Date, g.Sum(x => x.BaseQty), g.Sum(x => x.Amount)))
-            .ToListAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Tính một kỳ: gom sản lượng từng công ty (SL cơ sở ÷ hệ số ĐVT dòng thỏa thuận), gọi <see cref="VolumeRebateCalculation.Evaluate"/>.
-    /// Ở công ty thành viên chỉ trả phần của công ty mình (tổng gộp vẫn hiện) – doanh số từng pháp nhân khác là thông tin riêng của họ.
+    /// Tính một kỳ: gom sản lượng từng công ty (<see cref="VolumeRebateTracker.PeriodVolumes"/>), gọi <see cref="VolumeRebateCalculation.Evaluate"/>,
+    /// ghép thực nhận (lát G6b): phải nhận = chiết khấu gộp của bậc đạt, tình trạng theo <see cref="RebateSettlement.StatusOf"/>. Ở công ty
+    /// thành viên chỉ trả phần của công ty mình (tổng gộp vẫn hiện) – doanh số từng pháp nhân khác là thông tin riêng của họ.
     /// </summary>
     private VolumeRebatePeriodDto ToPeriodDto(
-        VolumeRebateAgreement a, (DateOnly From, DateOnly To) p, IReadOnlyList<VolumeRow> rows, DateOnly today, decimal near,
-        IReadOnlyDictionary<Guid, string> codes)
+        VolumeRebateAgreement a, (DateOnly From, DateOnly To) p, IReadOnlyList<VolumeRebateTracker.VolumeRow> rows,
+        VolumeRebateTracker.Received received, DateOnly today, decimal near, IReadOnlyDictionary<Guid, string> codes)
     {
-        var factors = a.Lines.ToDictionary(l => l.ItemId, l => l.UomFactor);
-        var applied = a.Companies.Select(c => c.CompanyId).ToHashSet();
-        var volumes = rows.Where(r => r.SupplierId == a.SupplierId && applied.Contains(r.CompanyId) && factors.ContainsKey(r.ItemId) && r.Date >= p.From && r.Date <= p.To)
-            .GroupBy(r => r.CompanyId)
-            .Select(g => new VolumeRebateCompanyVolume(
-                g.Key, decimal.Round(g.Sum(r => r.BaseQty / factors[r.ItemId]), 4, MidpointRounding.AwayFromZero), g.Sum(r => r.Amount)))
-            .OrderBy(v => codes.GetValueOrDefault(v.CompanyId))
-            .ToList();
+        var volumes = VolumeRebateTracker.PeriodVolumes(a, p.From, p.To, rows, codes);
         var r = a.Evaluate(p.From, p.To, volumes, today, near);
         var companyId = _scope.RequireCompany();
         var shares = r.Shares.Where(s => a.CompanyId == companyId || s.CompanyId == companyId)
-            .Select(s => new VolumeRebateCompanyShareDto(s.CompanyId, codes.GetValueOrDefault(s.CompanyId) ?? "", s.Quantity, s.Amount, s.SharePercent, s.Rebate))
+            .Select(s => new VolumeRebateCompanyShareDto(
+                s.CompanyId, codes.GetValueOrDefault(s.CompanyId) ?? "", s.Quantity, s.Amount, s.SharePercent, s.Rebate,
+                received.ByCompany.GetValueOrDefault((a.Id, p.From, s.CompanyId))))
             .ToList();
+        var got = received.Total.GetValueOrDefault((a.Id, p.From));
         return new VolumeRebatePeriodDto(
             r.From, r.To, r.State, r.Volume, r.Amount, r.Tier?.TierNo, r.Tier?.Percent ?? 0m, r.Rebate, r.Next?.TierNo, r.Next?.FromValue, r.Shortfall,
-            r.Forecast, r.Target?.FromValue, r.TargetStatus, r.IsNearNextTier, shares);
+            r.Forecast, r.Target?.FromValue, r.TargetStatus, r.IsNearNextTier, shares, RebateSettlement.DueDate(p.To), got, Math.Max(0m, r.Rebate - got),
+            RebateSettlement.StatusOf(today, p.To, r.Rebate, got));
+    }
+
+    /// <summary>
+    /// Các lần ghi nhận thực nhận của thỏa thuận (hoặc chỉ bản ghi <paramref name="onlyId"/>). Bỏ filter công ty: bản ghi thuộc tổng công ty,
+    /// công ty áp dụng đã được xem thỏa thuận (người gọi kiểm tra) nhưng chỉ thấy phần chia của mình.
+    /// </summary>
+    private async Task<List<VolumeRebateReceiptDto>> ReceiptsAsync(VolumeRebateAgreement a, Guid? onlyId, CancellationToken cancellationToken)
+    {
+        var companyId = _scope.RequireCompany();
+        var receipts = await _db.VolumeRebateReceipts.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking().Include(r => r.Shares)
+            .Where(r => r.AgreementId == a.Id && (onlyId == null || r.Id == onlyId))
+            .OrderBy(r => r.PeriodFrom).ThenBy(r => r.ReceivedOn).ThenBy(r => r.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var codes = await CompanyCodeMapAsync(receipts.SelectMany(r => r.Shares.Select(s => s.CompanyId)), cancellationToken);
+        var users = await UserNamesAsync(receipts.Select(r => r.CreatedBy), cancellationToken);
+        var ends = a.Periods().ToDictionary(p => p.From, p => p.To);
+        return receipts.Select(r => new VolumeRebateReceiptDto(
+                r.Id, r.AgreementId, r.PeriodFrom, ends.GetValueOrDefault(r.PeriodFrom, r.PeriodFrom), r.ReceivedOn, r.Amount, r.Form.ToString(), r.RefNo,
+                r.Note, r.IsCancelled, r.CancelReason, r.CreatedAt, r.CreatedBy is { } u ? users.GetValueOrDefault(u) : null,
+                r.Shares.Where(s => a.CompanyId == companyId || s.CompanyId == companyId)
+                    .OrderBy(s => codes.GetValueOrDefault(s.CompanyId), StringComparer.Ordinal)
+                    .Select(s => new VolumeRebateReceiptShareDto(s.CompanyId, codes.GetValueOrDefault(s.CompanyId) ?? "", s.PurchaseAmount, s.SharePercent, s.Amount))
+                    .ToList()))
+            .ToList();
     }
 
     private static decimal Near(decimal? nearPercent) => Math.Clamp(nearPercent ?? VolumeRebateCalculation.DefaultNearPercent, 1m, 50m);
@@ -386,10 +433,15 @@ public sealed class VolumeRebateService : IVolumeRebateService
             .ToList();
     }
 
-    private async Task EnsureItemsVisibleAsync(VolumeRebateAgreement agreement, CancellationToken cancellationToken)
+    private async Task<bool> ItemsVisibleAsync(VolumeRebateAgreement agreement, CancellationToken cancellationToken)
     {
         var ids = agreement.Lines.Select(l => l.ItemId).Distinct().ToList();
-        if (await _db.Items.CountAsync(i => ids.Contains(i.Id), cancellationToken) < ids.Count)
+        return await _db.Items.CountAsync(i => ids.Contains(i.Id), cancellationToken) == ids.Count;
+    }
+
+    private async Task EnsureItemsVisibleAsync(VolumeRebateAgreement agreement, CancellationToken cancellationToken)
+    {
+        if (!await ItemsVisibleAsync(agreement, cancellationToken))
             throw new ForbiddenAccessException("Thỏa thuận có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không thao tác được.");
     }
 

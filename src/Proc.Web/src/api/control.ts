@@ -18,6 +18,7 @@ export type AnomalyCode =
   | 'BackdatedOrder'
   | 'ConflictOfInterest'
   | 'UnrecordedRebate'
+  | 'UnrecordedVolumeRebate'
 
 /** Nhãn loại dấu hiệu. */
 export const anomalyLabels: Record<AnomalyCode, string> = {
@@ -29,6 +30,7 @@ export const anomalyLabels: Record<AnomalyCode, string> = {
   BackdatedOrder: 'Hàng/hóa đơn trước PO',
   ConflictOfInterest: 'Xung đột lợi ích',
   UnrecordedRebate: 'Chiết khấu/tài trợ chưa ghi nhận',
+  UnrecordedVolumeRebate: 'Chiết khấu sản lượng gộp chưa ghi nhận',
 }
 
 /** Mức dấu hiệu. */

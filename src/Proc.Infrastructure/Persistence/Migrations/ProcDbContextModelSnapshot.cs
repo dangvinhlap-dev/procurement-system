@@ -3239,6 +3239,99 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("VolumeRebateLine", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Form")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("PeriodFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("ReceivedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RefNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("AgreementId", "PeriodFrom");
+
+                    b.ToTable("VolumeRebateReceipt", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceiptShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PurchaseAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("SharePercent")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ReceiptId", "CompanyId")
+                        .IsUnique();
+
+                    b.ToTable("VolumeRebateReceiptShare", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateTier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6109,6 +6202,36 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceipt", b =>
+                {
+                    b.HasOne("Proc.Domain.Pricing.VolumeRebateAgreement", null)
+                        .WithMany()
+                        .HasForeignKey("AgreementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceiptShare", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Pricing.VolumeRebateReceipt", null)
+                        .WithMany("Shares")
+                        .HasForeignKey("ReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateTier", b =>
                 {
                     b.HasOne("Proc.Domain.Pricing.VolumeRebateAgreement", null)
@@ -6626,6 +6749,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("Tiers");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceipt", b =>
+                {
+                    b.Navigation("Shares");
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.DemandPlan", b =>

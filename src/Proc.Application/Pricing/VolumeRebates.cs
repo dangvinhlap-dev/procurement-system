@@ -104,7 +104,9 @@ public sealed record CancelVolumeRebateRequest(string Reason);
 /// <param name="Amount">Doanh số mua trước VAT.</param>
 /// <param name="SharePercent">Tỷ lệ doanh số trong tổng (%, 4 số lẻ).</param>
 /// <param name="RebateShare">Chiết khấu phải nhận được chia.</param>
-public sealed record VolumeRebateCompanyShareDto(Guid CompanyId, string CompanyCode, decimal Quantity, decimal Amount, decimal SharePercent, decimal RebateShare);
+/// <param name="ReceivedShare">Thực nhận được chia (Σ phần của công ty trong các bản ghi thực nhận chưa hủy của kỳ – lát G6b).</param>
+public sealed record VolumeRebateCompanyShareDto(
+    Guid CompanyId, string CompanyCode, decimal Quantity, decimal Amount, decimal SharePercent, decimal RebateShare, decimal ReceivedShare);
 
 /// <summary>
 /// Lũy kế một kỳ tính bậc. State: Future (chưa tới kỳ), Open (đang trong kỳ), Ended (đã hết kỳ). TargetStatus: None (không đặt bậc mục
@@ -126,17 +128,64 @@ public sealed record VolumeRebateCompanyShareDto(Guid CompanyId, string CompanyC
 /// <param name="TargetStatus">Tình trạng so bậc mục tiêu.</param>
 /// <param name="IsNearNextTier">Sắp chạm bậc kế tiếp (đã đạt từ (100 − X)% ngưỡng).</param>
 /// <param name="Companies">Phần của từng công ty (ở công ty thành viên chỉ có công ty mình).</param>
+/// <param name="DueDate">Hạn ghi nhận thực nhận = cuối kỳ + 30 ngày (lát G6b).</param>
+/// <param name="ReceivedAmount">Thực nhận gộp (không tính bản ghi đã hủy).</param>
+/// <param name="ShortAmount">Còn thiếu = phải nhận − thực nhận (không âm).</param>
+/// <param name="ReceiptStatus">Received, NotDue, NotReached, Waiting, Short – như chiết khấu hợp đồng (design.md mục 18.21).</param>
 public sealed record VolumeRebatePeriodDto(
     DateOnly PeriodFrom, DateOnly PeriodTo, string State, decimal Volume, decimal Amount, int? TierNo, decimal Percent, decimal RebateAmount,
     int? NextTierNo, decimal? NextFromValue, decimal? Shortfall, decimal? Forecast, decimal? TargetFromValue, string TargetStatus,
-    bool IsNearNextTier, IReadOnlyList<VolumeRebateCompanyShareDto> Companies);
+    bool IsNearNextTier, IReadOnlyList<VolumeRebateCompanyShareDto> Companies, DateOnly DueDate, decimal ReceivedAmount, decimal ShortAmount,
+    string ReceiptStatus);
+
+/// <summary>Phần thực nhận của một công ty trong một bản ghi thực nhận (chia lúc ghi, lưu cố định).</summary>
+/// <param name="CompanyId">Công ty.</param>
+/// <param name="CompanyCode">Mã công ty.</param>
+/// <param name="PurchaseAmount">Doanh số kỳ của công ty lúc ghi.</param>
+/// <param name="SharePercent">Tỷ lệ doanh số (%).</param>
+/// <param name="Amount">Phần thực nhận.</param>
+public sealed record VolumeRebateReceiptShareDto(Guid CompanyId, string CompanyCode, decimal PurchaseAmount, decimal SharePercent, decimal Amount);
+
+/// <summary>Một lần ghi nhận chiết khấu sản lượng gộp thực nhận (lát G6b).</summary>
+/// <param name="Id">Id (chủ đính kèm loại VolumeRebateReceipt).</param>
+/// <param name="AgreementId">Thỏa thuận.</param>
+/// <param name="PeriodFrom">Ngày đầu kỳ.</param>
+/// <param name="PeriodTo">Ngày cuối kỳ.</param>
+/// <param name="ReceivedOn">Ngày nhận.</param>
+/// <param name="Amount">Số tiền thực nhận gộp.</param>
+/// <param name="Form">DebtOffset, Transfer, Goods, Other.</param>
+/// <param name="RefNo">Số chứng từ đối chiếu.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="IsCancelled">Đã hủy.</param>
+/// <param name="CancelReason">Lý do hủy.</param>
+/// <param name="CreatedAt">Thời điểm ghi.</param>
+/// <param name="CreatedByName">Người ghi.</param>
+/// <param name="Shares">Phần từng công ty (ở công ty thành viên chỉ có công ty mình).</param>
+public sealed record VolumeRebateReceiptDto(
+    Guid Id, Guid AgreementId, DateOnly PeriodFrom, DateOnly PeriodTo, DateOnly ReceivedOn, decimal Amount, string Form, string? RefNo, string? Note,
+    bool IsCancelled, string? CancelReason, DateTimeOffset CreatedAt, string? CreatedByName, IReadOnlyList<VolumeRebateReceiptShareDto> Shares);
+
+/// <summary>Ghi nhận chiết khấu sản lượng gộp thực nhận cho một kỳ đã kết thúc.</summary>
+/// <param name="PeriodFrom">Ngày đầu kỳ.</param>
+/// <param name="ReceivedOn">Ngày nhận (sau ngày cuối kỳ, không sau hôm nay).</param>
+/// <param name="Amount">Số tiền (VND, &gt; 0).</param>
+/// <param name="Form">DebtOffset, Transfer, Goods, Other.</param>
+/// <param name="RefNo">Số chứng từ đối chiếu.</param>
+/// <param name="Note">Ghi chú.</param>
+public sealed record SaveVolumeRebateReceiptRequest(
+    DateOnly PeriodFrom, DateOnly ReceivedOn, decimal Amount, string Form, string? RefNo, string? Note);
 
 /// <summary>Lũy kế mọi kỳ của một thỏa thuận.</summary>
 /// <param name="AgreementId">Thỏa thuận.</param>
 /// <param name="Basis">Cơ sở tính bậc.</param>
 /// <param name="UomCode">ĐVT sản lượng (tính theo số lượng).</param>
 /// <param name="Periods">Các kỳ theo thời gian.</param>
-public sealed record VolumeRebateProgressDto(Guid AgreementId, string Basis, string? UomCode, IReadOnlyList<VolumeRebatePeriodDto> Periods);
+/// <param name="GraceDays">Số ngày sau cuối kỳ để ghi nhận thực nhận.</param>
+/// <param name="CanRecord">Được ghi/hủy thực nhận (thỏa thuận hiệu lực của công ty đang làm việc, có quyền lập, mặt hàng trong phạm vi).</param>
+/// <param name="Receipts">Các lần ghi nhận thực nhận (kể cả đã hủy), theo kỳ và ngày nhận.</param>
+public sealed record VolumeRebateProgressDto(
+    Guid AgreementId, string Basis, string? UomCode, IReadOnlyList<VolumeRebatePeriodDto> Periods, int GraceDays, bool CanRecord,
+    IReadOnlyList<VolumeRebateReceiptDto> Receipts);
 
 /// <summary>Một dòng màn hình theo dõi bậc chiết khấu: kỳ hiện tại (hoặc kỳ cuối vừa hết) của một thỏa thuận hiệu lực.</summary>
 /// <param name="AgreementId">Thỏa thuận.</param>
@@ -148,9 +197,11 @@ public sealed record VolumeRebateProgressDto(Guid AgreementId, string Basis, str
 /// <param name="UomCode">ĐVT sản lượng.</param>
 /// <param name="TargetTierNo">Bậc mục tiêu.</param>
 /// <param name="Period">Kỳ.</param>
+/// <param name="UnreceivedPeriods">Số kỳ đã quá hạn ghi nhận mà còn thiếu thực nhận (lát G6b).</param>
+/// <param name="UnreceivedAmount">Tổng còn thiếu của các kỳ đó.</param>
 public sealed record VolumeRebateTrackingRowDto(
     Guid AgreementId, string No, string Title, string SupplierCode, string SupplierName, string Basis, string? UomCode, int? TargetTierNo,
-    VolumeRebatePeriodDto Period);
+    VolumeRebatePeriodDto Period, int UnreceivedPeriods, decimal UnreceivedAmount);
 
 /// <summary>
 /// Thỏa thuận chiết khấu bậc theo sản lượng gộp (design.md mục 18.25 – lát G6a): tổng công ty lập cho NCC × nhóm hàng, áp cho các công ty
@@ -232,9 +283,28 @@ public interface IVolumeRebateService
     /// <returns>Lũy kế theo kỳ.</returns>
     Task<VolumeRebateProgressDto> ProgressAsync(Guid id, decimal? nearPercent, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Ghi nhận thực nhận cho một kỳ đã kết thúc (lát G6b): chỉ tổng công ty, thỏa thuận Hiệu lực; chia phần cho các công ty theo tỷ lệ doanh số
+    /// kỳ lúc ghi.
+    /// </summary>
+    /// <param name="id">Thỏa thuận.</param>
+    /// <param name="request">Nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bản ghi vừa lập (Id dùng để tải đính kèm).</returns>
+    /// <exception cref="Common.ForbiddenAccessException">Khi không phải thỏa thuận của công ty đang làm việc hoặc mặt hàng ngoài phạm vi.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kỳ chưa kết thúc, ngày/số tiền sai, kỳ chưa có doanh số.</exception>
+    Task<VolumeRebateReceiptDto> RecordReceiptAsync(Guid id, SaveVolumeRebateReceiptRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Hủy một bản ghi thực nhận (bắt buộc lý do); bản ghi giữ lại, không tính.</summary>
+    /// <param name="receiptId">Bản ghi thực nhận.</param>
+    /// <param name="request">Lý do.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bản ghi sau khi hủy.</returns>
+    Task<VolumeRebateReceiptDto> CancelReceiptAsync(Guid receiptId, CancelVolumeRebateRequest request, CancellationToken cancellationToken);
+
     /// <summary>Theo dõi bậc: kỳ hiện tại của mọi thỏa thuận hiệu lực (kể cả thỏa thuận hết hạn trong 31 ngày qua).</summary>
     /// <param name="nearPercent">X% để cảnh báo sắp chạm bậc (1–50, mặc định 10).</param>
-    /// <param name="onlyAlerts">Chỉ dòng sắp chạm bậc, nguy cơ hụt hoặc đã hụt bậc mục tiêu.</param>
+    /// <param name="onlyAlerts">Chỉ dòng sắp chạm bậc, nguy cơ hụt, đã hụt bậc mục tiêu hoặc thiếu thực nhận quá hạn ghi nhận.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Các dòng theo dõi.</returns>
     Task<IReadOnlyList<VolumeRebateTrackingRowDto>> TrackingAsync(decimal? nearPercent, bool onlyAlerts, CancellationToken cancellationToken);
@@ -272,5 +342,18 @@ public sealed class CancelVolumeRebateRequestValidator : AbstractValidator<Cance
     public CancelVolumeRebateRequestValidator()
     {
         RuleFor(x => x.Reason).NotEmpty().WithMessage("Hãy nhập lý do hủy.").MaximumLength(1000);
+    }
+}
+
+/// <summary>Kiểm tra yêu cầu ghi nhận thực nhận chiết khấu sản lượng gộp.</summary>
+public sealed class SaveVolumeRebateReceiptRequestValidator : AbstractValidator<SaveVolumeRebateReceiptRequest>
+{
+    /// <summary>Khai báo quy tắc.</summary>
+    public SaveVolumeRebateReceiptRequestValidator()
+    {
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Số tiền thực nhận phải lớn hơn 0.");
+        RuleFor(x => x.Form).NotEmpty().WithMessage("Hãy chọn hình thức nhận.");
+        RuleFor(x => x.RefNo).MaximumLength(100);
+        RuleFor(x => x.Note).MaximumLength(500);
     }
 }

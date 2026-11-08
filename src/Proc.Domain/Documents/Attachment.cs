@@ -53,6 +53,9 @@ public static class AttachmentOwnerTypes
     /// <summary>Thỏa thuận chiết khấu sản lượng gộp (văn bản thỏa thuận, thư chính sách của NCC – lát G6a).</summary>
     public const string VolumeRebateAgreement = "VolumeRebateAgreement";
 
+    /// <summary>Lần ghi nhận chiết khấu sản lượng gộp thực nhận (biên bản đối chiếu, phiếu kế toán – lát G6b).</summary>
+    public const string VolumeRebateReceipt = "VolumeRebateReceipt";
+
     /// <summary>Phiếu khảo sát giá thị trường (báo giá, ảnh chụp bảng giá – lát G4a).</summary>
     public const string MarketPriceSurvey = "MarketPriceSurvey";
 
@@ -62,7 +65,7 @@ public static class AttachmentOwnerTypes
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
-        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement];
+        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt];
 }
 
 /// <summary>

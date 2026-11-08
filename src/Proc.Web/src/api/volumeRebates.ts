@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { RebatePeriodStatus, RebateReceiptForm } from './contracts'
 import type { ApprovalStep } from './purchasing'
 
 /** Trạng thái thỏa thuận chiết khấu sản lượng gộp (design.md mục 18.25 – lát G6a). */
@@ -187,6 +188,8 @@ export interface VolumeRebateShare {
   amount: number
   sharePercent: number
   rebateShare: number
+  /** Thực nhận được chia (lát G6b). */
+  receivedShare: number
 }
 
 /** Lũy kế một kỳ tính bậc. */
@@ -207,6 +210,48 @@ export interface VolumeRebatePeriodRow {
   targetStatus: VolumeRebateTargetStatus
   isNearNextTier: boolean
   companies: VolumeRebateShare[]
+  /** Hạn ghi nhận thực nhận = cuối kỳ + 30 ngày. */
+  dueDate: string
+  receivedAmount: number
+  shortAmount: number
+  receiptStatus: RebatePeriodStatus
+}
+
+/** Phần thực nhận của một công ty trong một lần ghi nhận (chia theo tỷ lệ doanh số kỳ lúc ghi). */
+export interface VolumeRebateReceiptShare {
+  companyId: string
+  companyCode: string
+  purchaseAmount: number
+  sharePercent: number
+  amount: number
+}
+
+/** Một lần ghi nhận chiết khấu sản lượng gộp thực nhận (lát G6b). */
+export interface VolumeRebateReceipt {
+  id: string
+  agreementId: string
+  periodFrom: string
+  periodTo: string
+  receivedOn: string
+  amount: number
+  form: RebateReceiptForm
+  refNo: string | null
+  note: string | null
+  isCancelled: boolean
+  cancelReason: string | null
+  createdAt: string
+  createdByName: string | null
+  shares: VolumeRebateReceiptShare[]
+}
+
+/** Dữ liệu ghi nhận thực nhận. */
+export interface SaveVolumeRebateReceiptInput {
+  periodFrom: string
+  receivedOn: string
+  amount: number
+  form: RebateReceiptForm
+  refNo: string | null
+  note: string | null
 }
 
 /** Lũy kế mọi kỳ của một thỏa thuận. */
@@ -215,6 +260,10 @@ export interface VolumeRebateProgress {
   basis: VolumeRebateBasis
   uomCode: string | null
   periods: VolumeRebatePeriodRow[]
+  graceDays: number
+  /** Được ghi/hủy thực nhận (tổng công ty, thỏa thuận hiệu lực, có quyền lập). */
+  canRecord: boolean
+  receipts: VolumeRebateReceipt[]
 }
 
 /** Một dòng màn hình theo dõi bậc (kỳ hiện tại của thỏa thuận hiệu lực). */
@@ -228,6 +277,9 @@ export interface VolumeRebateTrackingRow {
   uomCode: string | null
   targetTierNo: number | null
   period: VolumeRebatePeriodRow
+  /** Số kỳ quá hạn ghi nhận mà còn thiếu thực nhận. */
+  unreceivedPeriods: number
+  unreceivedAmount: number
 }
 
 const BASE = '/api/volume-rebates'
@@ -302,6 +354,17 @@ export function useVolumeRebateMutations() {
     reject: useMutation({ mutationFn: decide('reject'), onSuccess }),
     cancel: useMutation({
       mutationFn: ({ id, reason }: { id: string; reason: string }) => apiFetch<VolumeRebate>(`${BASE}/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
+    /** Ghi thực nhận cho kỳ đã kết thúc (lát G6b); trả bản ghi để tải đính kèm theo Id. */
+    recordReceipt: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: SaveVolumeRebateReceiptInput }) =>
+        apiFetch<VolumeRebateReceipt>(`${BASE}/${id}/receipts`, { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    cancelReceipt: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<VolumeRebateReceipt>(`${BASE}/receipts/${id}/cancel`, { method: 'POST', body: { reason } }),
       onSuccess,
     }),
   }

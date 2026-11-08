@@ -1239,6 +1239,7 @@ Bước 4–5 của đề xuất: với từng mã hàng chung, so giá mua gi�
 Loại chủ thêm ở lát A4: `SourcingRequest` (quyền Rfq.View/Rfq.Manage), `ContractAmendment` (Contract.View/Contract.Manage),
 `SupplierReview` (SupplierReview.View/Manage), `ControlFinding` (Control.Anomaly.View / Control.Finding.Manage), `ConflictDeclaration`
 (không thuộc công ty; người kê khai tự xem/đính kèm, người khác cần Conflict.View để xem, Conflict.Manage để đính kèm/xóa – mục 18.8).
+Lát G6b: `VolumeRebateReceipt` – lần ghi nhận thực nhận chiết khấu sản lượng gộp (Pricing.VolumeRebate.View/Manage, thuộc tổng công ty).
 
 | Quy tắc | Lý do |
 | --- | --- |
@@ -1544,6 +1545,7 @@ hiệu bất thường, kết quả gửi thẳng lãnh đạo, không qua Nhóm
 | **Mua ngoài hợp đồng cao theo người lập PO** (P5): như PRCW (mục 18.17) – ngoài = lệch giá + không có giá đã duyệt, mẫu số bỏ dòng không xác định; vượt **5%** (= KPI ≥ 95%, chỉnh được) là dấu hiệu, từ gấp đôi → Cao | Người mua thường xuyên mua ngoài giá được duyệt |
 | **Hóa đơn tính cả hàng thiếu/không đạt** (V7, V8) và **hàng/hóa đơn có trước PO** (hợp thức hóa – mục 18.11): lấy từ đối chiếu MATCH3 (mục 18.15) dung sai 0 đ. Hóa đơn tính cả hàng thiếu, nhận hàng hoặc hóa đơn trước ngày PO → Cao; chỉ nhận hàng trước ngày duyệt PO → Trung bình | Dùng đúng số liệu báo cáo kế toán đã xem |
 | **Xung đột lợi ích** (N4): PO (trừ nháp, hủy) có người lập hoặc người đã duyệt có kê khai (mục 18.8) với NCC còn hiệu lực vào ngày PO; Cao | Chặn duyệt chỉ áp từ lúc kê khai; dấu hiệu bắt cả kê khai lùi ngày hiệu lực và người lập |
+| **Chiết khấu sản lượng gộp chưa ghi nhận** (lát G6b, mục 18.25): kỳ tính bậc của thỏa thuận CKB Hiệu lực có hạn ghi nhận (cuối kỳ + 30 ngày) trong khoảng xem, đã qua, mà thực nhận gộp < chiết khấu gộp của bậc đạt. Một dòng gộp ở **công ty sở hữu thỏa thuận** (tổng công ty; không báo riêng ở công ty áp dụng để không đếm trùng khi xem toàn tập đoàn). Chưa ghi nhận đồng nào → Cao; thiếu một phần → Trung bình; tiền = còn thiếu; mở thỏa thuận (CKB) | Cùng số tab Thực nhận |
 | **Chiết khấu/tài trợ chưa ghi nhận** (P10, lát F4b): kỳ quyết toán của cam kết trên hợp đồng có **hạn ghi nhận** (cuối kỳ + 30 ngày) trong khoảng xem, đã qua, mà thực nhận < phải nhận (cùng số tab Chiết khấu – tài trợ, mục 18.21). Chưa ghi nhận đồng nào → Cao; thiếu một phần → Trung bình; tiền = còn thiếu; mở hợp đồng (CTR) | Không báo 0 giả |
 | PO không có filter nhóm hàng ở đầu phiếu: dấu hiệu sát ngưỡng và xung đột lợi ích tính theo đầu PO (giá trị cả phiếu) | Người có phạm vi nhóm hàng hẹp vẫn thấy số phiếu, giá trị PO như ở danh sách PO |
 | **Sổ vi phạm** (màn hình VIOL, `/api/control/findings`, bảng `ControlFinding`, số loại **VP** theo mẫu đánh số chứng từ): KSNB (`Control.Finding.Manage`) ghi nhận tại công ty đang làm việc – ngày phát hiện, mức **Thường/Nghiêm trọng**, tiêu đề (≤ 200), mô tả/bằng chứng (≤ 2.000), NCC; lập từ dấu hiệu thì giữ loại dấu hiệu và chứng từ liên quan (không sửa được). Dấu hiệu của công ty khác: chuyển công ty làm việc rồi ghi nhận | Mỗi pháp nhân một sổ; không ghi chéo công ty |
@@ -1851,11 +1853,27 @@ sắp chạm/hụt bậc, chia chiết khấu theo tỷ lệ doanh số. Các qu
 | CKBT: kỳ hiện tại (chưa tới hiệu lực → kỳ đầu, đã hết hạn → kỳ cuối) của mọi thỏa thuận **Hiệu lực** có hiệu lực đến ≥ hôm nay − 31 ngày; lọc "Chỉ dòng có cảnh báo" | Đối chiếu chiết khấu kỳ cuối với NCC sau khi hết hạn |
 | Quyền `Pricing.VolumeRebate.View` (vai trò mẫu: mọi vai trò Ban CUVT xem nghiệp vụ mua), `.Manage` (DAMPHAN), `.Approve` (TRUONGBANCUVT, HOIDONG). Có trong Việc cần làm, tra cứu chứng từ | Không kiêm nhiệm |
 
-**G6b** (làm sau): ghi **thực nhận** chiết khấu theo kỳ của thỏa thuận (như mục 18.21) và chia phần thực nhận cho từng công ty theo tỷ lệ
-doanh số; dấu hiệu KSNB khi thiếu.
-
 Migration `V0_20_0_ChietKhauSanLuongGop` (bảng `VolumeRebateAgreement`, `VolumeRebateCompany`, `VolumeRebateTier`, `VolumeRebateLine` –
 bảng mới, `Down()` xóa bảng, mất thỏa thuận; AuditLog vẫn giữ).
+
+**G6b – Thực nhận chiết khấu sản lượng gộp** (08/11/2026; tab **THỰC NHẬN** của CKB, `POST /api/volume-rebates/{id}/receipts`,
+`POST /api/volume-rebates/receipts/{receiptId}/cancel`; lũy kế `GET …/{id}/progress` trả thêm thực nhận). Quy tắc "chỉ ghi sau khi kỳ kết thúc"
+do người dùng chốt 08/11/2026; các quy tắc khác tự đặt theo mặc định an toàn, giống chiết khấu hợp đồng (mục 18.21):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Thực nhận** (`VolumeRebateReceipt`) ghi cho một kỳ tính bậc của thỏa thuận **Hiệu lực**: ngày nhận, số tiền gộp > 0 (2 số lẻ), hình thức **Giảm trừ công nợ / Chuyển khoản / Hàng (quy ra tiền) / Khác**, số chứng từ đối chiếu (≤ 100), Ghi chú (≤ 500), tab Đính kèm (loại chủ `VolumeRebateReceipt`, đính kèm được ngay khi ghi). Kỳ nhận diện bằng **ngày bắt đầu kỳ** | Như mục 18.21 |
+| **Chỉ ghi sau khi kỳ kết thúc** (hôm nay > ngày cuối kỳ) và **ngày nhận sau ngày cuối kỳ**, không sau hôm nay. Giao diện chỉ hiện nút Ghi nhận ở kỳ đã kết thúc; máy chủ kiểm tra lại | Người dùng chốt 08/11/2026: bậc và số phải nhận chỉ chốt khi hết kỳ |
+| Chỉ **tổng công ty** (công ty sở hữu thỏa thuận) ghi/hủy, quyền `Pricing.VolumeRebate.Manage`, mặt hàng của thỏa thuận trong phạm vi nhóm hàng | Tổng công ty/Ban thương lượng và đối chiếu với NCC |
+| **Chia phần thực nhận** cho các công ty áp dụng có doanh số trong kỳ, theo tỷ lệ doanh số kỳ **tại lúc ghi**: phần = thực nhận × doanh số công ty ÷ doanh số gộp (2 số lẻ), số lẻ dồn vào công ty doanh số lớn nhất. Lưu cố định ở `VolumeRebateReceiptShare` (doanh số căn cứ, tỷ lệ, số tiền) – PO về sau thay đổi không làm đổi số đã chia. Ví dụ nhận 30.000, doanh số A 1.200.000, B 1.000.000 → A 16.363,64, B 13.636,36. Kỳ chưa có doanh số → không ghi được | Kế toán từng pháp nhân hạch toán theo số đã chia |
+| **Không xóa**: ghi sai thì **hủy** (bắt buộc lý do, ≤ 500), bản ghi và phần chia giữ lại, không tính. Mọi thay đổi vào AuditLog | KSNB đối chiếu được |
+| Mỗi kỳ: **phải nhận** = chiết khấu gộp của bậc đạt (G6a), **đã nhận** = Σ thực nhận chưa hủy, **còn thiếu**, **hạn ghi nhận** = cuối kỳ + 30 ngày, **tình trạng** Đủ / Chưa hết kỳ / Không phải nhận / Chờ ghi nhận / **Thiếu** (dùng chung quy tắc với mục 18.21 – `RebateSettlement`). Mở dòng kỳ xem phải nhận và đã nhận được chia của từng công ty | Cùng cách hiểu với chiết khấu hợp đồng |
+| Công ty áp dụng xem tab Thực nhận của thỏa thuận hiệu lực: tổng gộp và **chỉ phần của công ty mình**; không ghi, không hủy, không mở đính kèm (đính kèm thuộc tổng công ty như thỏa thuận) | Doanh số, phần của pháp nhân khác là thông tin riêng |
+| **CKBT** thêm cột "Đã nhận kỳ này" và "Thiếu thực nhận quá hạn" (số kỳ đã qua hạn ghi nhận mà còn thiếu + tổng còn thiếu); lọc "Chỉ dòng có cảnh báo" tính cả dòng này | Kỳ hiện tại đang chạy nhưng kỳ trước chưa đòi đủ vẫn phải nhắc |
+| Dấu hiệu KSNB **Chiết khấu sản lượng gộp chưa ghi nhận** (`UnrecordedVolumeRebate`, mục 18.19) | Quyết định: dấu hiệu KSNB khi thiếu |
+
+Migration `V0_20_0_ThucNhanChietKhauSanLuong` (bảng `VolumeRebateReceipt`, `VolumeRebateReceiptShare` – bảng mới, `Down()` xóa bảng, mất các
+lần ghi nhận; AuditLog vẫn giữ).
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 

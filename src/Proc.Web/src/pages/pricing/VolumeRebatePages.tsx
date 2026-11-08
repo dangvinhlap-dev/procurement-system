@@ -41,6 +41,7 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { DATE_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
+import { VolumeRebateReceiptPanel } from './VolumeRebateReceiptPanel'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 
 /** Đường dẫn danh sách thỏa thuận chiết khấu sản lượng gộp (màn hình CKB). */
@@ -577,6 +578,10 @@ export function VolumeRebatePage() {
           ),
         },
         ...(doc ? [{ key: 'progress', label: 'Lũy kế', children: <ProgressPanel doc={doc} /> }] : []),
+        // Thực nhận theo kỳ (lát G6b) chỉ có ý nghĩa khi thỏa thuận đã hiệu lực (hủy rồi vẫn xem lại các lần đã ghi).
+        ...(doc && (doc.status === 'Active' || doc.status === 'Cancelled')
+          ? [{ key: 'receipts', label: 'Thực nhận', children: <VolumeRebateReceiptPanel doc={doc} /> }]
+          : []),
         attachmentTab,
         ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
       ]}
@@ -647,7 +652,10 @@ export function VolumeRebateTrackingPage() {
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const tracking = useVolumeRebateTracking(near, onlyAlerts)
   const rows = tracking.data ?? []
-  const alerts = rows.filter((r) => r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed').length
+  /** Dòng cần chú ý: sắp chạm/hụt bậc, hoặc có kỳ quá hạn ghi nhận còn thiếu thực nhận (lát G6b) – khớp lọc "Chỉ dòng có cảnh báo" của máy chủ. */
+  const isAlert = (r: VolumeRebateTrackingRow) =>
+    r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed' || r.unreceivedPeriods > 0
+  const alerts = rows.filter(isAlert).length
   const volume = (r: VolumeRebateTrackingRow, v: number | null) => formatVolume(r.basis, v, r.uomCode)
   const target = (s: VolumeRebateTargetStatus) => volumeRebateTargetLabels[s]
   const columns: GridColumn<VolumeRebateTrackingRow>[] = [
@@ -672,6 +680,12 @@ export function VolumeRebateTrackingPage() {
       key: 'near', title: 'Sắp chạm bậc', width: 110, type: 'status', auditField: false,
       value: (r) => (r.period.isNearNextTier ? `Sắp chạm bậc ${r.period.nextTierNo}` : ''), tone: (r) => (r.period.isNearNextTier ? 'warning' : 'neutral'),
     },
+    { key: 'received', title: 'Đã nhận kỳ này', width: 120, type: 'money', value: (r) => r.period.receivedAmount, auditField: false },
+    {
+      key: 'unreceived', title: 'Thiếu thực nhận quá hạn', width: 170, type: 'status', auditField: false,
+      value: (r) => (r.unreceivedPeriods > 0 ? `${r.unreceivedPeriods} kỳ – ${formatMoney(r.unreceivedAmount)}` : ''),
+      tone: (r) => (r.unreceivedPeriods > 0 ? 'error' : 'neutral'),
+    },
   ]
   return (
     <ListPage
@@ -684,7 +698,7 @@ export function VolumeRebateTrackingPage() {
       rowKey={(r) => r.agreementId}
       loading={tracking.isLoading}
       onOpenRow={(r) => navigate(`${VOLUME_REBATE_PATH}/${r.agreementId}`)}
-      isMarked={(r) => r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed'}
+      isMarked={isAlert}
       notice={
         tracking.error ? (
           <Alert type="error" showIcon title={tracking.error.message} />
@@ -692,7 +706,7 @@ export function VolumeRebateTrackingPage() {
           <Alert
             type={alerts > 0 ? 'warning' : 'info'}
             showIcon
-            title={`${alerts.toLocaleString('vi-VN')} / ${rows.length.toLocaleString('vi-VN')} thỏa thuận cần chú ý (sắp chạm bậc, nguy cơ hụt hoặc đã hụt bậc mục tiêu). Lũy kế theo PO đã duyệt/đã đóng của các công ty áp dụng; dự báo theo nhịp mua từ đầu kỳ.`}
+            title={`${alerts.toLocaleString('vi-VN')} / ${rows.length.toLocaleString('vi-VN')} thỏa thuận cần chú ý (sắp chạm bậc, nguy cơ hụt, đã hụt bậc mục tiêu hoặc thiếu thực nhận quá hạn). Lũy kế theo PO đã duyệt/đã đóng của các công ty áp dụng; dự báo theo nhịp mua từ đầu kỳ.`}
           />
         )
       }
