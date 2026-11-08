@@ -425,7 +425,8 @@ public sealed class PooledOrderService : IPooledOrderService
 
         var draft = x.Status == PooledOrderStatus.Draft;
         var margin = x.MarginPercent ?? await MarginPercentAsync(cancellationToken);
-        var plans = draft && approval is not null
+        // Kế hoạch hiện cả khi đã tạo PO (để đối chiếu); cờ vượt biên độ chỉ tính khi còn nháp.
+        var plans = approval is not null
             ? await PlansAsync(approval.Period, companyIds, itemIds, cancellationToken)
             : new Dictionary<(Guid CompanyId, Guid ItemId), decimal>();
 
