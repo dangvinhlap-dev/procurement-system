@@ -146,6 +146,51 @@ public static class PricingEndpoints
             })
             .RequirePermission(Permissions.Pricing.MonthlyApprovalManage);
 
+        // Thỏa thuận chiết khấu bậc sản lượng gộp (design.md mục 18.25 – lát G6a): tổng công ty lập, Ban cung ứng duyệt theo quy trình loại CKB;
+        // theo dõi lũy kế các công ty so với bậc, cảnh báo sắp chạm/hụt bậc, chia chiết khấu theo tỷ lệ doanh số.
+        var rebates = app.MapGroup("/api/volume-rebates").WithTags("Chiết khấu sản lượng gộp");
+        rebates.MapGet("/", (IVolumeRebateService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateView);
+        rebates.MapGet("/tracking", (decimal? nearPercent, bool? onlyAlerts, IVolumeRebateService s, CancellationToken ct) =>
+                s.TrackingAsync(nearPercent, onlyAlerts ?? false, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateView);
+        rebates.MapGet("/{id:guid}", (Guid id, IVolumeRebateService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateView);
+        rebates.MapGet("/{id:guid}/progress", (Guid id, decimal? nearPercent, IVolumeRebateService s, CancellationToken ct) =>
+                s.ProgressAsync(id, nearPercent, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateView);
+        rebates.MapPost("/", async (SaveVolumeRebateRequest request, IVolumeRebateService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/volume-rebates/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage)
+            .Validate<SaveVolumeRebateRequest>();
+        rebates.MapPut("/{id:guid}", (Guid id, SaveVolumeRebateRequest request, IVolumeRebateService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage)
+            .Validate<SaveVolumeRebateRequest>();
+        rebates.MapPost("/{id:guid}/submit", (Guid id, IVolumeRebateService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage);
+        rebates.MapPost("/{id:guid}/recall", (Guid id, IVolumeRebateService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage);
+        rebates.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IVolumeRebateService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateApprove);
+        rebates.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IVolumeRebateService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateApprove);
+        rebates.MapPost("/{id:guid}/cancel", (Guid id, CancelVolumeRebateRequest request, IVolumeRebateService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage)
+            .Validate<CancelVolumeRebateRequest>();
+        rebates.MapPost("/{id:guid}/copy", async (Guid id, IVolumeRebateService s, CancellationToken ct) =>
+            {
+                var created = await s.CopyAsync(id, ct);
+                return Results.Created($"/api/volume-rebates/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage);
+
         // Phiếu khảo sát giá thị trường – ngân hàng giá (design.md mục 18.25 – lát G4a): Văn phòng Ban lập ở tổng công ty, chốt, không qua duyệt.
         var surveys = app.MapGroup("/api/market-price-surveys").WithTags("Khảo sát giá thị trường");
         surveys.MapGet("/", (IMarketPriceSurveyService s, CancellationToken ct) => s.ListAsync(ct))

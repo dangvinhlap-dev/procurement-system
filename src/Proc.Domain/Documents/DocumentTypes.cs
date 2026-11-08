@@ -53,6 +53,9 @@ public static class DocumentTypes
     /// <summary>Phiếu duyệt NCC và giá tháng (lát G2, design.md mục 18.25).</summary>
     public const string MonthlySupplierApproval = "GTH";
 
+    /// <summary>Thỏa thuận chiết khấu bậc sản lượng gộp (lát G6a, design.md mục 18.25).</summary>
+    public const string VolumeRebate = "CKB";
+
     /// <summary>Phiếu khảo sát giá thị trường – ngân hàng giá (lát G4a, design.md mục 18.25).</summary>
     public const string MarketPriceSurvey = "KSG";
 
@@ -82,6 +85,7 @@ public static class DocumentTypes
         new(Sourcing, "Danh sách tìm nguồn"),
         new(SoleSource, "Phê duyệt NCC độc quyền"),
         new(MonthlySupplierApproval, "Duyệt NCC và giá tháng"),
+        new(VolumeRebate, "Thỏa thuận chiết khấu sản lượng gộp"),
         new(MarketPriceSurvey, "Khảo sát giá thị trường"),
         new(DemandPlan, "Kế hoạch nhu cầu"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),

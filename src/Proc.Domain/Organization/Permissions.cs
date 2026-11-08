@@ -178,6 +178,12 @@ public static class Permissions
         public const string MonthlyApprovalManage = "Pricing.MonthlyApproval.Manage";
         /// <summary>Quyền "Duyệt phiếu NCC và giá tháng" (Ban cung ứng).</summary>
         public const string MonthlyApprovalApprove = "Pricing.MonthlyApproval.Approve";
+        /// <summary>Quyền "Xem thỏa thuận chiết khấu sản lượng gộp, theo dõi bậc" (lát G6a, design.md mục 18.25).</summary>
+        public const string VolumeRebateView = "Pricing.VolumeRebate.View";
+        /// <summary>Quyền "Lập, gửi duyệt, hủy thỏa thuận chiết khấu sản lượng gộp".</summary>
+        public const string VolumeRebateManage = "Pricing.VolumeRebate.Manage";
+        /// <summary>Quyền "Duyệt thỏa thuận chiết khấu sản lượng gộp" (Ban cung ứng).</summary>
+        public const string VolumeRebateApprove = "Pricing.VolumeRebate.Approve";
         /// <summary>Quyền "Xem ngân hàng giá – phiếu khảo sát giá thị trường" (lát G4a, design.md mục 18.25).</summary>
         public const string PriceBankView = "Pricing.PriceBank.View";
         /// <summary>Quyền "Lập, chốt, hủy phiếu khảo sát giá thị trường" (Văn phòng Ban).</summary>
@@ -305,6 +311,9 @@ public static class Permissions
         new(Pricing.MonthlyApprovalView, "Xem phiếu duyệt NCC và giá tháng"),
         new(Pricing.MonthlyApprovalManage, "Lập, gửi duyệt, điều chỉnh, hủy phiếu duyệt NCC và giá tháng"),
         new(Pricing.MonthlyApprovalApprove, "Duyệt NCC và giá tháng"),
+        new(Pricing.VolumeRebateView, "Xem thỏa thuận chiết khấu sản lượng gộp, theo dõi bậc"),
+        new(Pricing.VolumeRebateManage, "Lập, gửi duyệt, hủy thỏa thuận chiết khấu sản lượng gộp"),
+        new(Pricing.VolumeRebateApprove, "Duyệt thỏa thuận chiết khấu sản lượng gộp"),
         new(Pricing.PriceBankView, "Xem ngân hàng giá (khảo sát giá thị trường)"),
         new(Pricing.PriceBankManage, "Lập, chốt, hủy phiếu khảo sát giá thị trường"),
         new(Sourcing.RfqView, "Xem yêu cầu báo giá, tìm nguồn"),

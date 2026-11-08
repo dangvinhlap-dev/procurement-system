@@ -199,3 +199,84 @@ internal sealed class MonthlySupplierApprovalLineConfiguration : IEntityTypeConf
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.BackupSupplierId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng VolumeRebateAgreement – thỏa thuận chiết khấu bậc sản lượng gộp (design.md mục 18.25, lát G6a).</summary>
+internal sealed class VolumeRebateAgreementConfiguration : IEntityTypeConfiguration<VolumeRebateAgreement>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateAgreement> builder)
+    {
+        builder.ToTable("VolumeRebateAgreement");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.RelatedSupplierIds);
+        builder.Ignore(x => x.IsLive);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        // Dò trùng NCC × thời hạn và theo dõi thỏa thuận đang hiệu lực.
+        builder.HasIndex(x => new { x.SupplierId, x.Status });
+        builder.Property(x => x.Title).HasMaxLength(VolumeRebateAgreement.TitleMaxLength).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(VolumeRebateAgreement.TextMaxLength);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(VolumeRebateAgreement.TextMaxLength);
+        builder.ToTable(t => t.HasCheckConstraint("CK_VolumeRebateAgreement_Validity", "\"ValidTo\" >= \"ValidFrom\""));
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ItemCategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.AgreementId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Tiers).WithOne().HasForeignKey(t => t.AgreementId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Tiers).HasField("_tiers").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Companies).WithOne().HasForeignKey(c => c.AgreementId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Companies).HasField("_companies").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng VolumeRebateCompany – công ty áp dụng thỏa thuận chiết khấu sản lượng gộp.</summary>
+internal sealed class VolumeRebateCompanyConfiguration : IEntityTypeConfiguration<VolumeRebateCompany>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateCompany> builder)
+    {
+        builder.ToTable("VolumeRebateCompany");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.AgreementId, x.CompanyId }).IsUnique();
+        builder.HasIndex(x => x.CompanyId);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng VolumeRebateTier – bậc chiết khấu.</summary>
+internal sealed class VolumeRebateTierConfiguration : IEntityTypeConfiguration<VolumeRebateTier>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateTier> builder)
+    {
+        builder.ToTable("VolumeRebateTier");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.AgreementId, x.TierNo }).IsUnique();
+        // Ngưỡng là số lượng (4 số lẻ) hoặc tiền (2 số lẻ) tùy cơ sở – lấy độ chính xác lớn hơn.
+        builder.Property(x => x.FromValue).HasPrecision(19, 4);
+        builder.Property(x => x.Percent).HasPrecision(9, 4);
+    }
+}
+
+/// <summary>Cấu hình bảng VolumeRebateLine – mặt hàng tính sản lượng gộp.</summary>
+internal sealed class VolumeRebateLineConfiguration : IEntityTypeConfiguration<VolumeRebateLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateLine> builder)
+    {
+        builder.ToTable("VolumeRebateLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.AgreementId, x.ItemId }).IsUnique();
+        builder.HasIndex(x => x.ItemId);
+        builder.Property(x => x.UomFactor).HasPrecision(18, 6);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

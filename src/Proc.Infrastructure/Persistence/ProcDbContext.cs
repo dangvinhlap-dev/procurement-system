@@ -177,6 +177,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Công ty áp dụng của phiếu duyệt tháng.</summary>
     public DbSet<Proc.Domain.Pricing.MonthlySupplierApprovalCompany> MonthlySupplierApprovalCompanies => Set<Proc.Domain.Pricing.MonthlySupplierApprovalCompany>();
 
+    /// <summary>Thỏa thuận chiết khấu bậc sản lượng gộp (lọc theo công ty và nhóm hàng của thỏa thuận – design.md mục 18.25, G6a).</summary>
+    public DbSet<Proc.Domain.Pricing.VolumeRebateAgreement> VolumeRebateAgreements => Set<Proc.Domain.Pricing.VolumeRebateAgreement>();
+
+    /// <summary>Công ty áp dụng của thỏa thuận chiết khấu sản lượng gộp.</summary>
+    public DbSet<Proc.Domain.Pricing.VolumeRebateCompany> VolumeRebateCompanies => Set<Proc.Domain.Pricing.VolumeRebateCompany>();
+
     /// <summary>Phiếu khảo sát giá thị trường – ngân hàng giá (lọc theo công ty và phạm vi nhóm hàng của phiếu – design.md mục 18.25).</summary>
     public DbSet<Proc.Domain.Pricing.MarketPriceSurvey> MarketPriceSurveys => Set<Proc.Domain.Pricing.MarketPriceSurvey>();
 
@@ -327,6 +333,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
             ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
         // Phiếu duyệt NCC và giá tháng theo nhóm hàng của phiếu: người không được nhóm hàng đó không thấy phiếu (design.md mục 9.2, 18.25).
         modelBuilder.Entity<Proc.Domain.Pricing.MonthlySupplierApproval>().HasQueryFilter(
+            ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
+        // Thỏa thuận chiết khấu sản lượng gộp cũng theo nhóm hàng của thỏa thuận (design.md mục 9.2, 18.25 – G6a).
+        modelBuilder.Entity<Proc.Domain.Pricing.VolumeRebateAgreement>().HasQueryFilter(
             ItemCategoryFilter, x => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(x.ItemCategoryId));
         // Phiếu khảo sát giá cũng theo nhóm hàng của phiếu.
         modelBuilder.Entity<Proc.Domain.Pricing.MarketPriceSurvey>().HasQueryFilter(

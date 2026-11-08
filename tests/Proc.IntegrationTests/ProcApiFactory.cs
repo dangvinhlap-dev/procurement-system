@@ -237,6 +237,23 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Duyệt xong đơn mua hàng đang chờ duyệt ngay trong CSDL (bỏ qua các bước chờ, PO Đã duyệt) – dùng khi test nghiệp vụ khác chỉ cần PO đã
+    /// duyệt làm số liệu (ví dụ lũy kế chiết khấu sản lượng gộp). Luồng duyệt thật kiểm tra ở <c>PurchasingTests</c>.
+    /// </summary>
+    /// <param name="orderId">Id PO đã gửi duyệt.</param>
+    public async Task FinishPurchaseOrderApprovalAsync(Guid orderId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var order = await db.PurchaseOrders.IgnoreQueryFilters().SingleAsync(o => o.Id == orderId);
+        foreach (var step in await db.ApprovalSteps.IgnoreQueryFilters()
+                     .Where(st => st.DocumentId == orderId && st.Status == Proc.Domain.Purchasing.ApprovalStepStatus.Pending).ToListAsync())
+            step.Skip();
+        if (order.Status == Proc.Domain.Purchasing.ApprovalDocumentStatus.Submitted) order.MarkApproved(DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Mật khẩu dùng cho tài khoản tạo trong test.</summary>
     public const string TestPassword = "matkhau123";
 

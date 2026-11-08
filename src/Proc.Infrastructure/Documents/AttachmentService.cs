@@ -35,6 +35,7 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.SupplierReview] = (Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage),
             [AttachmentOwnerTypes.ControlFinding] = (Permissions.Control.AnomalyView, Permissions.Control.FindingManage),
             [AttachmentOwnerTypes.MonthlySupplierApproval] = (Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalManage),
+            [AttachmentOwnerTypes.VolumeRebateAgreement] = (Permissions.Pricing.VolumeRebateView, Permissions.Pricing.VolumeRebateManage),
             [AttachmentOwnerTypes.MarketPriceSurvey] = (Permissions.Pricing.PriceBankView, Permissions.Pricing.PriceBankManage),
             [AttachmentOwnerTypes.DemandPlan] = (Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
@@ -191,6 +192,9 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.MarketPriceSurvey => await _db.MarketPriceSurveys.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.MonthlySupplierApproval => await _db.MonthlySupplierApprovals.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            // Thỏa thuận chiết khấu sản lượng gộp thuộc tổng công ty: đính kèm (văn bản thỏa thuận) xem, thêm khi đang làm việc ở tổng công ty.
+            AttachmentOwnerTypes.VolumeRebateAgreement => await _db.VolumeRebateAgreements.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.DemandPlan => await _db.DemandPlans.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
