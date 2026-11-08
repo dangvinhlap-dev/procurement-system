@@ -1890,6 +1890,24 @@ do người dùng chốt 08/11/2026; các quy tắc khác tự đặt theo mặc
 Migration `V0_20_0_ThucNhanChietKhauSanLuong` (bảng `VolumeRebateReceipt`, `VolumeRebateReceiptShare` – bảng mới, `Down()` xóa bảng, mất các
 lần ghi nhận; AuditLog vẫn giữ).
 
+**G7 – Đặt hàng gộp và phân bổ** (08/11/2026; màn hình **DHG**, Mua hàng → Đặt hàng gộp, `/api/pooled-orders`, số loại **DHG**, ví dụ
+DHG-TCT-2611-0001). Người dùng chốt 06/11/2026: **mỗi pháp nhân vẫn một PO**, thêm công cụ đặt gộp. Các quy tắc dưới tự đặt theo mặc định an
+toàn (người dùng "làm tiếp" 08/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu `PooledOrder` thuộc **tổng công ty** – chỉ lập, sửa, hủy, tạo PO khi đang làm việc ở tổng công ty; quyền `Purchase.PooledOrder.View` / `Purchase.PooledOrder.Manage` (vai trò mẫu VANHANH, CUCTRUONGPHONG, CUCDATHANG có Manage; mọi vai trò xem nghiệp vụ mua có View). Đầu phiếu: **ngày đặt**, **phiếu GTH Đã duyệt** của tháng chứa ngày đặt, **NCC** (NCC chính hoặc dự phòng trên phiếu GTH), ngày giao dự kiến (≥ ngày đặt), Ghi chú; tab **Đính kèm** (loại chủ `PooledOrder`) | Phòng cung ứng chung đặt hàng cho các công ty đúng NCC và giá Ban đã duyệt trong tháng – không tự chọn NCC |
+| **Công ty nhận hàng** thuộc các công ty áp dụng phiếu GTH; mỗi công ty một **kho nhận** (mặc định kho Main, phải thuộc đúng công ty, đang dùng) và **bộ phận** (không bắt buộc, cùng công ty – dùng cho ngân sách bộ phận) | Mỗi pháp nhân nhận hàng, ghi sổ, ngân sách riêng |
+| Dòng = **dòng phiếu GTH** (mặt hàng × ĐVT của phiếu, mỗi dòng một lần); **đơn giá = giá Ban duyệt cho NCC đã chọn** (chính → giá chính, dự phòng → giá dự phòng), không sửa; SL phân bổ cho từng công ty ≥ 0, 4 số lẻ; tổng dòng > 0 | Không tự thỏa thuận giá ngoài khung Ban duyệt |
+| **Phân bổ đề xuất** theo tỷ lệ **kế hoạch nhu cầu tháng** đã chốt (KHN, cột tháng của ngày đặt, quy về ĐVT dòng) của từng công ty: đề xuất = tổng × KH công ty ÷ tổng KH. Nút "Phân bổ theo kế hoạch" chia số nguyên khi tổng là số nguyên (dư cho phần lẻ lớn nhất), ngược lại 4 số lẻ. Ví dụ tổng 10, KH A 2, B 1 → A 7, B 3 | Quy tắc phân bổ do Ban duyệt – theo nhu cầu đã lập |
+| **Biên độ**: mỗi công ty được lệch đề xuất tối đa **dung sai = max(tổng dòng × biên độ % ÷ 100, 1 ĐVT)**; biên độ là tham số **`POOLED_MARGIN_PERCENT`** của tổng công ty (SEC, mặc định **10%**, 0–100). Ví dụ tổng 100, KH A 60, B 40 → A được 50–70. Mặt hàng **không có kế hoạch** ở công ty nào → phân bổ tự do nhưng **bắt buộc lý do phân bổ**. Kiểm tra lúc **Tạo PO** (lưu nháp được, phiếu hiện cảnh báo dòng vượt) – vượt thì chặn | Phòng cung ứng chỉ điều chỉnh phân bổ trong biên độ cho phép; vượt thì đề xuất Ban (sửa kế hoạch hoặc biên độ) |
+| **Tạo PO**: sinh mỗi công ty có SL **một PO nháp** tại chính công ty đó (ngày đặt, NCC, kho, bộ phận, ngày giao của phiếu; dòng SL phân bổ, giá GTH, chiết khấu 0, VAT mặc định của mặt hàng; ghi chú "Đặt hàng gộp theo phiếu DHG-…"), chạy **dưới phạm vi của người dùng tại công ty đó** (`ICompanyScopeRunner`) qua dịch vụ PO thường – cần **quyền tạo PO tại từng công ty**; NCC phải áp dụng tại công ty, ngân sách, giá theo phiếu tháng kiểm tra như lập tay. **Một giao dịch**: một công ty lỗi thì không PO nào được tạo, lỗi báo kèm mã công ty. Kiểm tra lại phiếu GTH còn Đã duyệt và giá không đổi | Mỗi pháp nhân độc lập: PO là chứng từ của công ty, đi duyệt theo cấp duyệt của công ty đó (G3: hạn mức tháng, POL…) |
+| Sau Tạo PO phiếu thành **Đã tạo PO** (chụp % biên độ đã áp), không sửa, không hủy – PO sai thì hủy PO ở công ty của nó. Phiếu nháp hủy được, bắt buộc lý do. Phiếu hiện số và trạng thái PO đã sinh | Truy vết từ phiếu gộp tới từng PO |
+| Đọc dữ liệu công ty thành viên bỏ filter công ty **có giới hạn**: kho, bộ phận đang dùng và kế hoạch nhu cầu tháng (chỉ số tổng) của các công ty áp dụng phiếu GTH; số, trạng thái PO do chính phiếu sinh ra | Phòng cung ứng chung cần căn cứ phân bổ; ghi chứng từ vẫn qua phạm vi công ty kia |
+
+Migration `V0_20_0_DatHangGop` (bảng `PooledOrder`, `PooledOrderCompany`, `PooledOrderLine`, `PooledOrderAllocation`, cột
+`CompanyParameter.PooledMarginPercent` – `Down()` xóa, mất phiếu đặt gộp; PO đã sinh vẫn còn).
+
 **G10 – Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ** (08/11/2026; Hệ thống → Vai trò → "Bộ vai trò mẫu…", Hệ thống → Quy trình duyệt →
 "Cấu hình duyệt mẫu theo sơ đồ…", `GET/POST /api/approval-rules/template`):
 

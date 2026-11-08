@@ -30,6 +30,7 @@ public static class RoleTemplates
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
+        Permissions.Purchase.PooledOrderView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -65,7 +66,7 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PoCreate, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
-            Permissions.Report.PurchaseView, Permissions.MasterData.SupplierReviewManage,
+            Permissions.Report.PurchaseView, Permissions.MasterData.SupplierReviewManage, Permissions.Purchase.PooledOrderManage,
         ]),
         new("HOIDONG", "Hội đồng xét chọn & duyệt giá", "Duyệt kết quả chọn thầu, bảng giá, hồ sơ NCC, hợp đồng nguyên tắc",
         [
@@ -173,6 +174,7 @@ public static class RoleTemplates
             Permissions.MasterData.SupplierReviewManage,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies, Permissions.Purchase.DemandPlanViewAllCompanies,
+            Permissions.Purchase.PooledOrderManage,
         ]),
         new("CUCDATHANG", "Nhân viên cung ứng (Phòng cung ứng chung)", "Nhóm cung ứng F&B/VT: tìm kiếm, đánh giá NCC, hỏi giá (RFQ); lập PO theo NCC và giá Ban đã duyệt, theo dõi giao hàng – không tự đổi NCC/giá",
         [
@@ -180,6 +182,7 @@ public static class RoleTemplates
             Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
             Permissions.MasterData.SupplierReviewManage,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.PooledOrderManage,
         ]),
         new("DONVIDATHANG", "Đơn vị đặt hàng (nhà hàng, NDAT, F&B…)", "Lập nhu cầu (đề nghị mua, kế hoạch nhu cầu); xem phiếu nhập để xác nhận số lượng, chất lượng",
         [

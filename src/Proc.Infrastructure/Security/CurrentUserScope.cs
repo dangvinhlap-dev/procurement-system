@@ -59,6 +59,23 @@ public sealed class CurrentUserScope : ICurrentUserScope
         ItemCategoryIds = itemCategoryIds;
     }
 
+    /// <summary>Chụp phạm vi hiện tại để trả lại sau khi chạy tạm ở công ty khác (<see cref="CompanyScopeRunner"/>).</summary>
+    /// <returns>Bản chụp.</returns>
+    internal ScopeSnapshot Capture() => new(UserId, CompanyId, Permissions, AllWarehouses, WarehouseIds, AllItemCategories, ItemCategoryIds);
+
+    /// <summary>Trả lại phạm vi đã chụp.</summary>
+    /// <param name="snapshot">Bản chụp từ <see cref="Capture"/>.</param>
+    internal void Restore(ScopeSnapshot snapshot)
+    {
+        UserId = snapshot.UserId;
+        CompanyId = snapshot.CompanyId;
+        Permissions = snapshot.Permissions;
+        AllWarehouses = snapshot.AllWarehouses;
+        WarehouseIds = snapshot.WarehouseIds;
+        AllItemCategories = snapshot.AllItemCategories;
+        ItemCategoryIds = snapshot.ItemCategoryIds;
+    }
+
     /// <inheritdoc />
     public bool HasPermission(string permission) => CompanyId is not null && Permissions.Contains(permission);
 
@@ -90,3 +107,8 @@ public sealed class CurrentUserScope : ICurrentUserScope
             throw new ForbiddenAccessException("Bạn không được làm việc với kho này.");
     }
 }
+
+/// <summary>Bản chụp phạm vi của <see cref="CurrentUserScope"/>.</summary>
+internal sealed record ScopeSnapshot(
+    Guid? UserId, Guid? CompanyId, IReadOnlySet<string> Permissions, bool AllWarehouses, IReadOnlyList<Guid> WarehouseIds,
+    bool AllItemCategories, IReadOnlyList<Guid> ItemCategoryIds);

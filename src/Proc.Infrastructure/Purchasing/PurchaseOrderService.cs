@@ -96,7 +96,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         await CheckHeaderAsync(request.SupplierId, request.WarehouseId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, null, cancellationToken);
         var departmentId = await ResolveDepartmentAsync(request.DepartmentId, lines, null, cancellationToken);
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        // Dùng chung giao dịch của lời gọi bên ngoài nếu có: đặt hàng gộp tạo PO cho nhiều công ty trong một giao dịch (lát G7).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.PurchaseOrder, request.Date, cancellationToken);
         var order = PurchaseOrder.Create(companyId, no, ToHeader(request, departmentId));
         order.SetLines(lines);

@@ -9,7 +9,7 @@ import { apiDownload, apiFetch, apiUpload } from './client'
 /** Loại đối tượng được đính kèm (khớp AttachmentOwnerTypes). */
 export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'PurchaseRequest' | 'PurchaseOrder' | 'InventoryDocument' | 'PurchaseContract'
   | 'SoleSourceApproval' | 'SourcingRequest' | 'ContractAmendment' | 'SupplierReview' | 'ControlFinding' | 'ConflictDeclaration' | 'MonthlySupplierApproval'
-  | 'MarketPriceSurvey' | 'DemandPlan' | 'VolumeRebateAgreement' | 'VolumeRebateReceipt'
+  | 'MarketPriceSurvey' | 'DemandPlan' | 'VolumeRebateAgreement' | 'VolumeRebateReceipt' | 'PooledOrder'
 
 /** Một file đính kèm. */
 export interface AttachmentItem {

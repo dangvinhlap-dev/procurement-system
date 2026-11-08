@@ -75,6 +75,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Pricing.VolumeRebateView, DocumentTypes.VolumeRebate);
         Add(Permissions.Pricing.PriceBankView, DocumentTypes.MarketPriceSurvey);
         Add(Permissions.Purchase.DemandPlanView, DocumentTypes.DemandPlan);
+        Add(Permissions.Purchase.PooledOrderView, DocumentTypes.PooledOrder);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
         if (_scope.HasPermission(Permissions.Control.AnomalyView) || _scope.HasPermission(Permissions.Control.FindingReceive)
             || _scope.HasPermission(Permissions.Control.FindingManage))
@@ -342,6 +343,25 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 {
                     MarketSurveyStatus.Confirmed => DocumentProgress.Done,
                     MarketSurveyStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.PooledOrder) && !acted)
+        {
+            // Phiếu đặt hàng gộp không qua duyệt (PO sinh ra mới qua duyệt ở từng công ty); filter công ty giữ nguyên (phiếu của tổng công ty).
+            var q = _db.PooledOrders.AsNoTracking().Where(d => d.OrderDate >= from && d.OrderDate <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            var rows = await q.OrderByDescending(d => d.OrderDate).Take(take)
+                .Select(d => new { d.Id, d.No, d.OrderDate, d.Status, d.CreatedBy, d.CreatedAt, Lines = d.Lines.Count, Orders = d.Companies.Count(c => c.PurchaseOrderId != null) })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PooledOrder, d.Id, d.No, d.OrderDate, null, null, null,
+                $"Đặt hàng gộp – {d.Lines} mặt hàng, {d.Orders} PO", null, d.Status.ToString(),
+                d.Status switch
+                {
+                    PooledOrderStatus.Ordered => DocumentProgress.Done,
+                    PooledOrderStatus.Cancelled => DocumentProgress.Cancelled,
                     _ => DocumentProgress.Open,
                 },
                 d.CreatedBy, d.CreatedAt)));

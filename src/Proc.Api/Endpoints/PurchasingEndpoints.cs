@@ -190,6 +190,35 @@ public static class PurchasingEndpoints
                 s.CancelAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.DemandPlanManage)
             .Validate<CancelDemandPlanRequest>();
+        // Phiếu đặt hàng gộp (design.md mục 18.25 – lát G7): Phòng cung ứng chung lập ở tổng công ty, phân bổ cho các công ty, sinh mỗi pháp
+        // nhân một PO nháp. Tạo PO còn cần quyền tạo PO tại từng công ty (kiểm tra trong dịch vụ, dưới phạm vi công ty đó).
+        var pooled = app.MapGroup("/api/pooled-orders").WithTags("Đặt hàng gộp");
+        pooled.MapGet("/", (IPooledOrderService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderView);
+        pooled.MapGet("/approvals", (DateOnly date, IPooledOrderService s, CancellationToken ct) => s.ApprovalsAsync(date, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderManage);
+        pooled.MapGet("/context", (Guid approvalId, Guid supplierId, IPooledOrderService s, CancellationToken ct) =>
+                s.ContextAsync(approvalId, supplierId, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderManage);
+        pooled.MapGet("/{id:guid}", (Guid id, IPooledOrderService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderView);
+        pooled.MapPost("/", async (SavePooledOrderRequest request, IPooledOrderService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/pooled-orders/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.PooledOrderManage)
+            .Validate<SavePooledOrderRequest>();
+        pooled.MapPut("/{id:guid}", (Guid id, SavePooledOrderRequest request, IPooledOrderService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderManage)
+            .Validate<SavePooledOrderRequest>();
+        pooled.MapPost("/{id:guid}/cancel", (Guid id, CancelPooledOrderRequest request, IPooledOrderService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderManage);
+        pooled.MapPost("/{id:guid}/create-orders", (Guid id, IPooledOrderService s, CancellationToken ct) => s.CreateOrdersAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PooledOrderManage);
+
         return app;
     }
 }

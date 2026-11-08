@@ -38,6 +38,7 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.VolumeRebateAgreement] = (Permissions.Pricing.VolumeRebateView, Permissions.Pricing.VolumeRebateManage),
             [AttachmentOwnerTypes.VolumeRebateReceipt] = (Permissions.Pricing.VolumeRebateView, Permissions.Pricing.VolumeRebateManage),
             [AttachmentOwnerTypes.MarketPriceSurvey] = (Permissions.Pricing.PriceBankView, Permissions.Pricing.PriceBankManage),
+            [AttachmentOwnerTypes.PooledOrder] = (Permissions.Purchase.PooledOrderView, Permissions.Purchase.PooledOrderManage),
             [AttachmentOwnerTypes.DemandPlan] = (Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
             [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
@@ -191,6 +192,9 @@ public sealed class AttachmentService : IAttachmentService
             // Phiếu duyệt tháng thuộc tổng công ty: đính kèm (biên bản họp Ban) xem, thêm khi đang làm việc ở tổng công ty.
             // Phiếu khảo sát giá thuộc tổng công ty (filter công ty giữ nguyên).
             AttachmentOwnerTypes.MarketPriceSurvey => await _db.MarketPriceSurveys.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            // Phiếu đặt hàng gộp thuộc tổng công ty (filter công ty giữ nguyên) – lát G7.
+            AttachmentOwnerTypes.PooledOrder => await _db.PooledOrders.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.MonthlySupplierApproval => await _db.MonthlySupplierApprovals.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),

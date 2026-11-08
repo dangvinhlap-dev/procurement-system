@@ -15,6 +15,9 @@ public static class SystemParameterCodes
     /// <summary>% cảnh báo giá cao trên PO so với giá thấp nhất tập đoàn – sửa được (design.md mục 8.5).</summary>
     public const string PoHighPriceWarnPercent = "PO_HIGH_PRICE_WARN_PERCENT";
 
+    /// <summary>% biên độ phân bổ đặt hàng gộp – sửa được ở tổng công ty (lát G7, design.md mục 18.25).</summary>
+    public const string PooledMarginPercent = "POOLED_MARGIN_PERCENT";
+
     /// <summary>Bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng – bật/tắt (design.md mục 18.14).</summary>
     public const string ReceiptQcRequired = "RECEIPT_QC_REQUIRED";
 

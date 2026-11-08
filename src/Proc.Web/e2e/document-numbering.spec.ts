@@ -13,7 +13,8 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Đánh số chứng từ' }).click()
 
   await expect(page.getByRole('heading', { name: 'Đánh số chứng từ – DTV' })).toBeVisible()
-  await expect(page.locator('.data-grid-row')).toHaveCount(19)
+  // 20 loại – thêm DHG đặt hàng gộp (lát G7).
+  await expect(page.locator('.data-grid-row')).toHaveCount(20)
   // Năm/tháng theo giờ máy (Việt Nam), giống server tính kỳ theo giờ Việt Nam.
   const now = new Date()
   const yymm = String(now.getFullYear()).slice(2) + String(now.getMonth() + 1).padStart(2, '0')

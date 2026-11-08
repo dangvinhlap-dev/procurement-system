@@ -62,10 +62,13 @@ public static class AttachmentOwnerTypes
     /// <summary>Phiếu kế hoạch nhu cầu (định mức, nhu cầu kho, bộ phận – lát G5a).</summary>
     public const string DemandPlan = "DemandPlan";
 
+    /// <summary>Phiếu đặt hàng gộp (xác nhận của NCC, bảng phân bổ – lát G7).</summary>
+    public const string PooledOrder = "PooledOrder";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
-        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt];
+        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder];
 }
 
 /// <summary>

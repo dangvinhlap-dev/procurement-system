@@ -127,6 +127,12 @@ public static class Permissions
         /// thương lượng. Không có quyền này chỉ thấy nhu cầu của công ty đang làm việc.
         /// </summary>
         public const string DemandPlanViewAllCompanies = "Purchase.DemandPlan.ViewAllCompanies";
+        /// <summary>Quyền "Xem phiếu đặt hàng gộp" (lát G7, design.md mục 18.25).</summary>
+        public const string PooledOrderView = "Purchase.PooledOrder.View";
+        /// <summary>
+        /// Quyền "Lập, sửa, hủy phiếu đặt hàng gộp và tạo PO cho các công ty" – tạo PO còn cần quyền tạo PO tại từng công ty nhận hàng.
+        /// </summary>
+        public const string PooledOrderManage = "Purchase.PooledOrder.Manage";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -293,6 +299,8 @@ public static class Permissions
         new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),
+        new(Purchase.PooledOrderView, "Xem phiếu đặt hàng gộp"),
+        new(Purchase.PooledOrderManage, "Lập phiếu đặt hàng gộp, tạo PO cho các công ty"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
