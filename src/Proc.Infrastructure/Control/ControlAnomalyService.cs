@@ -7,8 +7,10 @@ using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Pricing;
 using Proc.Infrastructure.Purchasing;
 using Proc.Infrastructure.Reports;
 
@@ -66,6 +68,7 @@ public sealed class ControlAnomalyService : IControlAnomalyService
         items.AddRange(await ReceiptIssuesAsync(query, companies, cancellationToken));
         items.AddRange(await ConflictsAsync(query, companies, cancellationToken));
         items.AddRange(await UnrecordedRebatesAsync(query, companies, cancellationToken));
+        items.AddRange(await UnrecordedVolumeRebatesAsync(query, companies, cancellationToken));
 
         // Họ tên người liên quan: dịch vụ ghi Id người dùng vào UserName, đổi sang họ tên một lần ở đây.
         var userIds = items.Select(i => Guid.TryParse(i.UserName, out var id) ? id : (Guid?)null).OfType<Guid>().Distinct().ToList();
@@ -87,6 +90,8 @@ public sealed class ControlAnomalyService : IControlAnomalyService
             Summary(AnomalyCodes.ConflictOfInterest, "Người lập hoặc người duyệt PO có kê khai quan hệ lợi ích với NCC còn hiệu lực vào ngày PO."),
             Summary(AnomalyCodes.UnrecordedRebate,
                 $"Kỳ quyết toán chiết khấu/tài trợ của hợp đồng nguyên tắc quá hạn ghi nhận (cuối kỳ + {ContractRebateTracker.GraceDays} ngày) trong khoảng xem mà thực nhận ít hơn phải nhận."),
+            Summary(AnomalyCodes.UnrecordedVolumeRebate,
+                $"Kỳ tính bậc của thỏa thuận chiết khấu sản lượng gộp (CKB) quá hạn ghi nhận (cuối kỳ + {RebateSettlement.GraceDays} ngày) trong khoảng xem mà thực nhận ít hơn chiết khấu của bậc đạt được."),
         };
         return new AnomalyResult(query.From, query.To, query.AllCompanies, summary, result);
 
@@ -127,6 +132,52 @@ public sealed class ControlAnomalyService : IControlAnomalyService
                     $"đã ghi nhận {Money(r.Received)}, hạn ghi nhận {r.Due:dd/MM/yyyy}.");
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Chiết khấu sản lượng gộp chưa ghi nhận (lát G6b – design.md mục 18.25): kỳ tính bậc của thỏa thuận CKB Hiệu lực có hạn ghi nhận (cuối kỳ +
+    /// 30 ngày) trong khoảng xem và đã qua, mà thực nhận gộp ít hơn chiết khấu gộp của bậc đạt được – cùng số với tab Thực nhận của thỏa thuận.
+    /// Báo một dòng gộp ở công ty sở hữu thỏa thuận (tổng công ty – nơi đối chiếu với NCC); công ty áp dụng không nhận dòng riêng để không đếm
+    /// trùng khi xem toàn tập đoàn. Chưa ghi nhận đồng nào → Cao; thiếu một phần → Trung bình; tiền = còn thiếu.
+    /// </summary>
+    private async Task<IEnumerable<AnomalyDto>> UnrecordedVolumeRebatesAsync(
+        AnomalyQuery query, Dictionary<Guid, string> companies, CancellationToken cancellationToken)
+    {
+        var today = _clock.TodayInVietnam();
+        var earliestEnd = query.From.AddDays(-RebateSettlement.GraceDays);
+        var source = query.AllCompanies
+            ? _db.VolumeRebateAgreements.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            : _db.VolumeRebateAgreements;
+        var agreements = await source.AsNoTracking().Include(x => x.Lines).Include(x => x.Tiers).Include(x => x.Companies).AsSplitQuery()
+            .Where(x => x.Status == VolumeRebateStatus.Active && x.ValidTo >= earliestEnd && x.ValidFrom <= query.To)
+            .ToListAsync(cancellationToken);
+        if (agreements.Count == 0) return [];
+        var volumes = await VolumeRebateTracker.VolumesAsync(_db, agreements, cancellationToken);
+        var received = await VolumeRebateTracker.ReceivedAsync(_db, agreements.Select(a => a.Id).ToList(), cancellationToken);
+        var supplierIds = agreements.Select(a => a.SupplierId).Distinct().ToList();
+        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => (s.Code, s.Name), cancellationToken);
+        var result = new List<AnomalyDto>();
+        foreach (var a in agreements)
+        {
+            foreach (var (from, to) in a.Periods())
+            {
+                var due = RebateSettlement.DueDate(to);
+                if (due < query.From || due > query.To) continue;
+                var r = a.Evaluate(from, to, VolumeRebateTracker.PeriodVolumes(a, from, to, volumes, companies), today, VolumeRebateCalculation.DefaultNearPercent);
+                var got = received.Total.GetValueOrDefault((a.Id, from));
+                if (RebateSettlement.StatusOf(today, to, r.Rebate, got) != RebateSettlement.Short) continue;
+                var supplier = suppliers.GetValueOrDefault(a.SupplierId);
+                result.Add(new AnomalyDto(
+                    AnomalyCodes.UnrecordedVolumeRebate, got == 0 ? AnomalySeverities.High : AnomalySeverities.Medium, a.CompanyId,
+                    companies.GetValueOrDefault(a.CompanyId, string.Empty), due, DocumentTypes.VolumeRebate, a.Id, a.No, supplier.Code, supplier.Name,
+                    a.CreatedBy?.ToString(), r.Rebate - got,
+                    $"{a.Title} – kỳ {from:dd/MM/yyyy}–{to:dd/MM/yyyy}: bậc {r.Tier?.TierNo} ({r.Tier?.Percent.ToString("0.####", Vi)}%), doanh số gộp {Money(r.Amount)}, " +
+                    $"phải nhận {Money(r.Rebate)}, đã ghi nhận {Money(got)}, hạn ghi nhận {due:dd/MM/yyyy}."));
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

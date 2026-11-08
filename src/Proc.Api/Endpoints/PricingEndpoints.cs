@@ -190,6 +190,15 @@ public static class PricingEndpoints
                 return Results.Created($"/api/volume-rebates/{created.Id}", created);
             })
             .RequirePermission(Permissions.Pricing.VolumeRebateManage);
+        // Thực nhận chiết khấu theo kỳ đã kết thúc (lát G6b): tổng công ty ghi, chia phần cho công ty áp dụng theo tỷ lệ doanh số.
+        rebates.MapPost("/{id:guid}/receipts", (Guid id, SaveVolumeRebateReceiptRequest request, IVolumeRebateService s, CancellationToken ct) =>
+                s.RecordReceiptAsync(id, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage)
+            .Validate<SaveVolumeRebateReceiptRequest>();
+        rebates.MapPost("/receipts/{receiptId:guid}/cancel",
+                (Guid receiptId, CancelVolumeRebateRequest request, IVolumeRebateService s, CancellationToken ct) => s.CancelReceiptAsync(receiptId, request, ct))
+            .RequirePermission(Permissions.Pricing.VolumeRebateManage)
+            .Validate<CancelVolumeRebateRequest>();
 
         // Phiếu khảo sát giá thị trường – ngân hàng giá (design.md mục 18.25 – lát G4a): Văn phòng Ban lập ở tổng công ty, chốt, không qua duyệt.
         var surveys = app.MapGroup("/api/market-price-surveys").WithTags("Khảo sát giá thị trường");

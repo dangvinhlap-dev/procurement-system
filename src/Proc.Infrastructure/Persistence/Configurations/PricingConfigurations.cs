@@ -235,6 +235,45 @@ internal sealed class VolumeRebateAgreementConfiguration : IEntityTypeConfigurat
     }
 }
 
+/// <summary>Cấu hình bảng VolumeRebateReceipt – chiết khấu sản lượng gộp thực nhận (lát G6b, design.md mục 18.25).</summary>
+internal sealed class VolumeRebateReceiptConfiguration : IEntityTypeConfiguration<VolumeRebateReceipt>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateReceipt> builder)
+    {
+        builder.ToTable("VolumeRebateReceipt");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.AgreementId, x.PeriodFrom });
+        builder.HasIndex(x => x.CompanyId);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.RefNo).HasMaxLength(VolumeRebateReceipt.RefNoMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(VolumeRebateReceipt.NoteMaxLength);
+        builder.Property(x => x.CancelReason).HasMaxLength(VolumeRebateReceipt.NoteMaxLength);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        // Thỏa thuận không xóa (chỉ hủy) nên Restrict: không để mất thực nhận đã ghi.
+        builder.HasOne<VolumeRebateAgreement>().WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Shares).WithOne().HasForeignKey(s => s.ReceiptId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Shares).HasField("_shares").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng VolumeRebateReceiptShare – phần thực nhận của từng công ty áp dụng.</summary>
+internal sealed class VolumeRebateReceiptShareConfiguration : IEntityTypeConfiguration<VolumeRebateReceiptShare>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<VolumeRebateReceiptShare> builder)
+    {
+        builder.ToTable("VolumeRebateReceiptShare");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.ReceiptId, x.CompanyId }).IsUnique();
+        builder.HasIndex(x => x.CompanyId);
+        builder.Property(x => x.PurchaseAmount).HasPrecision(19, 2);
+        builder.Property(x => x.SharePercent).HasPrecision(9, 4);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng VolumeRebateCompany – công ty áp dụng thỏa thuận chiết khấu sản lượng gộp.</summary>
 internal sealed class VolumeRebateCompanyConfiguration : IEntityTypeConfiguration<VolumeRebateCompany>
 {

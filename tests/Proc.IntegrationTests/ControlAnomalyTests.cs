@@ -138,6 +138,7 @@ public class ControlAnomalyTests
             [
                 (AnomalyCodes.HighPriceRepeat, 1), (AnomalyCodes.NearThreshold, 1), (AnomalyCodes.BankAccountChange, 1), (AnomalyCodes.OffContract, 1),
                 (AnomalyCodes.InvoiceShortage, 1), (AnomalyCodes.BackdatedOrder, 1), (AnomalyCodes.ConflictOfInterest, 4), (AnomalyCodes.UnrecordedRebate, 0),
+                (AnomalyCodes.UnrecordedVolumeRebate, 0),
             ],
             result.Summary.Select(s => (s.Code, s.Count)));
         Assert.True(result.Summary.Single(s => s.Code == AnomalyCodes.UnrecordedRebate).Measured);
@@ -183,7 +184,7 @@ public class ControlAnomalyTests
         var ksnbName = $"kn.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(ksnbName, f.CompanyCode, ksnbRole);
         var ksnb = await _factory.CreateClientInCompanyAsync(ksnbName, ProcApiFactory.TestPassword, f.CompanyCode);
-        Assert.Equal(8, (await ReadAsync<AnomalyResult>(await ksnb.GetAsync(url, Ct))).Summary.Count);
+        Assert.Equal(9, (await ReadAsync<AnomalyResult>(await ksnb.GetAsync(url, Ct))).Summary.Count);
         Assert.Equal(HttpStatusCode.Forbidden, (await ksnb.GetAsync(url + "&allCompanies=true", Ct)).StatusCode);
         // Toàn tập đoàn (quản trị): vẫn thấy dấu hiệu của công ty này.
         var all = await ReadAsync<AnomalyResult>(await f.Buyer.GetAsync(url + "&allCompanies=true", Ct));
