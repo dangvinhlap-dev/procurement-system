@@ -79,6 +79,7 @@ public static class ApprovalTypes
         new(ContractAmendment, "Phụ lục hợp đồng nguyên tắc", Permissions.Purchase.ContractApprove, "Giá trị dự kiến sau phụ lục"),
         new(DocumentTypes.SoleSource, "Phê duyệt NCC độc quyền", Permissions.MasterData.SoleSourceApprove, null),
         new(DocumentTypes.MonthlySupplierApproval, "Duyệt NCC và giá tháng", Permissions.Pricing.MonthlyApprovalApprove, null),
+        new(DocumentTypes.VolumeRebate, "Thỏa thuận chiết khấu sản lượng gộp", Permissions.Pricing.VolumeRebateApprove, null),
     ];
 
     /// <summary>Tìm loại theo mã (không phân biệt hoa thường, bỏ khoảng trắng); null nếu không có duyệt.</summary>
