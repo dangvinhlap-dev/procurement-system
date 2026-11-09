@@ -348,29 +348,32 @@ public sealed record StandardSavingResult(
     IReadOnlyList<StandardSavingRowDto> Items);
 
 /// <summary>
-/// Một mặt hàng trong báo cáo NCC đủ điều kiện (design.md mục 18.25 – quyết định thành lập Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC).
+/// Một nhóm hàng trong báo cáo NCC đủ điều kiện (design.md mục 18.25 – quyết định thành lập Ban cung ứng: tối thiểu 03 NCC; Q1 08/11/2026 –
+/// đếm theo nhóm hàng, lát G1b).
 /// </summary>
-/// <param name="ItemId">Mặt hàng.</param>
-/// <param name="ItemCode">Mã hàng.</param>
-/// <param name="ItemName">Tên hàng.</param>
-/// <param name="CategoryName">Nhóm hàng.</param>
-/// <param name="ApprovedCount">Số NCC Đã duyệt có khai báo bán mặt hàng (NCC – sản phẩm).</param>
+/// <param name="CategoryId">Nhóm hàng (nhóm trực tiếp chứa mặt hàng đang dùng).</param>
+/// <param name="CategoryCode">Mã nhóm hàng.</param>
+/// <param name="CategoryName">Tên nhóm hàng.</param>
+/// <param name="ItemCount">Số mặt hàng đang dùng của nhóm (trong phạm vi nhóm hàng của người xem).</param>
+/// <param name="ApprovedCount">Số NCC Đã duyệt cung cấp nhóm: ngành hàng là nhóm này hoặc nhóm cha, hoặc có dòng NCC – sản phẩm của mặt
+/// hàng trong nhóm.</param>
 /// <param name="PotentialCount">Số NCC Tiềm năng (nguồn bổ sung của Văn phòng Ban).</param>
 /// <param name="SuspendedCount">Số NCC Tạm ngưng.</param>
 /// <param name="Missing">Số NCC Đã duyệt còn thiếu so với mức tối thiểu (0 khi đủ hoặc được miễn).</param>
-/// <param name="Status">Ok (đủ), Short (thiếu), SoleSource (miễn – có phiếu NCC độc quyền còn tác dụng hôm nay).</param>
+/// <param name="Status">Ok (đủ), Short (thiếu), SoleSource (miễn – mọi mặt hàng của nhóm có phiếu NCC độc quyền còn tác dụng hôm nay).</param>
 /// <param name="ApprovedSuppliers">Tên NCC Đã duyệt, NCC ưu tiên đứng đầu, cách nhau "; ".</param>
-/// <param name="SoleSourceNo">Số phiếu NCC độc quyền khi được miễn.</param>
+/// <param name="SoleSourceItemCount">Số mặt hàng của nhóm có phiếu NCC độc quyền còn tác dụng.</param>
+/// <param name="SoleSourceNo">Các số phiếu NCC độc quyền còn tác dụng của mặt hàng trong nhóm (cách nhau "; "), null khi không có.</param>
 public sealed record SupplierCoverageRowDto(
-    Guid ItemId, string ItemCode, string ItemName, string CategoryName, int ApprovedCount, int PotentialCount, int SuspendedCount, int Missing,
-    string Status, string ApprovedSuppliers, string? SoleSourceNo);
+    Guid CategoryId, string CategoryCode, string CategoryName, int ItemCount, int ApprovedCount, int PotentialCount, int SuspendedCount,
+    int Missing, string Status, string ApprovedSuppliers, int SoleSourceItemCount, string? SoleSourceNo);
 
-/// <summary>Báo cáo NCC đủ điều kiện theo mặt hàng.</summary>
+/// <summary>Báo cáo NCC đủ điều kiện theo nhóm hàng.</summary>
 /// <param name="MinSuppliers">Số NCC tối thiểu đang xét.</param>
-/// <param name="ItemCount">Số mặt hàng đang dùng trong phạm vi (trước lọc "chỉ thiếu").</param>
-/// <param name="ShortCount">Số mặt hàng thiếu NCC.</param>
-/// <param name="Items">Các dòng: thiếu nhiều lên đầu, rồi theo mã hàng.</param>
-public sealed record SupplierCoverageResult(int MinSuppliers, int ItemCount, int ShortCount, IReadOnlyList<SupplierCoverageRowDto> Items);
+/// <param name="CategoryCount">Số nhóm hàng có mặt hàng đang dùng trong phạm vi (trước lọc "chỉ thiếu").</param>
+/// <param name="ShortCount">Số nhóm hàng thiếu NCC.</param>
+/// <param name="Categories">Các dòng: thiếu nhiều lên đầu, rồi theo mã nhóm.</param>
+public sealed record SupplierCoverageResult(int MinSuppliers, int CategoryCount, int ShortCount, IReadOnlyList<SupplierCoverageRowDto> Categories);
 
 /// <summary>Trạng thái dòng báo cáo NCC đủ điều kiện.</summary>
 public static class SupplierCoverageStatuses
@@ -485,12 +488,13 @@ public interface IPurchaseReportService
     Task<StandardSavingResult> GetStandardSavingsAsync(PurchaseReportPeriod period, Guid? categoryId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// NCC đủ điều kiện theo mặt hàng (design.md mục 18.25): mỗi mặt hàng đang dùng đếm NCC Đã duyệt khai báo bán mặt hàng; ít hơn
-    /// <paramref name="minSuppliers"/> là thiếu, trừ khi công ty đang làm việc có phiếu NCC độc quyền còn tác dụng hôm nay cho mặt hàng.
+    /// NCC đủ điều kiện theo nhóm hàng (design.md mục 18.25, lát G1b): mỗi nhóm hàng có mặt hàng đang dùng đếm NCC Đã duyệt cung cấp nhóm
+    /// (ngành hàng là nhóm hoặc nhóm cha, hoặc NCC – sản phẩm của mặt hàng trong nhóm); ít hơn <paramref name="minSuppliers"/> là thiếu, trừ
+    /// khi mọi mặt hàng của nhóm có phiếu NCC độc quyền còn tác dụng hôm nay ở công ty đang làm việc.
     /// </summary>
     /// <param name="minSuppliers">Số NCC tối thiểu (1–20, quyết định Ban cung ứng: 3).</param>
     /// <param name="categoryId">Nhóm hàng (gồm nhóm con); null = mọi nhóm.</param>
-    /// <param name="onlyShort">Chỉ trả mặt hàng thiếu.</param>
+    /// <param name="onlyShort">Chỉ trả nhóm hàng thiếu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Báo cáo.</returns>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi số NCC tối thiểu ngoài 1–20.</exception>

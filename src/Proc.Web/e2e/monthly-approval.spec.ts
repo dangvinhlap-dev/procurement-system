@@ -74,9 +74,9 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   await expect(page.getByLabel('Hạn mức dòng 1')).toHaveValue('1.200')
   await expect(page.getByLabel('Giá trần dòng 1')).toHaveValue('90.000')
 
-  // Ngoại lệ (lát H2): mặt hàng mới chỉ có NCC chính + dự phòng – chưa đủ 03 NCC đủ điều kiện; chưa giải trình thì không gửi được.
+  // Ngoại lệ (lát H2, đếm theo nhóm hàng – G1b): nhóm hàng mới chỉ có NCC chính + dự phòng – chưa đủ 03 NCC đủ điều kiện; chưa giải trình thì không gửi được.
   await expect(page.getByLabel('Ngoại lệ dòng 1')).toBeVisible()
-  await expect(page.locator('.line-grid-readonly', { hasText: 'Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)' })).toBeVisible()
+  await expect(page.locator('.line-grid-readonly', { hasText: 'Nhóm hàng chỉ có 2 NCC đủ điều kiện (tối thiểu 3)' })).toBeVisible()
   await expect(page.locator('.ant-alert-warning', { hasText: 'Chủ tịch/TGĐ' })).toBeVisible()
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await expect(page.getByText(/hãy nhập giải trình ngoại lệ/)).toBeVisible()

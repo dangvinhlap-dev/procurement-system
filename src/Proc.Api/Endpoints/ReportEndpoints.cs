@@ -64,7 +64,7 @@ public static class ReportEndpoints
         reports.MapGet("/standard-savings", (DateOnly from, DateOnly to, bool? allCompanies, Guid? categoryId, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetStandardSavingsAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), categoryId, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
-        // NCC đủ điều kiện theo mặt hàng – quyết định Ban cung ứng: tối thiểu 03 NCC mỗi mặt hàng (design.md mục 18.25).
+        // NCC đủ điều kiện theo nhóm hàng – quyết định Ban cung ứng: tối thiểu 03 NCC mỗi nhóm hàng (design.md mục 18.25, Q1 – lát G1b).
         reports.MapGet("/supplier-coverage", (int? minSuppliers, Guid? categoryId, bool? onlyShort, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSupplierCoverageAsync(minSuppliers ?? 3, categoryId, onlyShort ?? false, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

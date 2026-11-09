@@ -463,15 +463,17 @@ public sealed class MonthlySupplierApprovalLine : Entity
 /// </summary>
 public static class MonthlyApprovalExceptions
 {
-    /// <summary>Số NCC đủ điều kiện tối thiểu mỗi mặt hàng – theo quyết định thành lập Ban (như mức mặc định của SUPCOV, lát G1).</summary>
+    /// <summary>Số NCC đủ điều kiện tối thiểu mỗi nhóm hàng – theo quyết định thành lập Ban, đếm theo nhóm hàng (Q1 – lát G1b; như mức mặc định
+    /// của SUPCOV).</summary>
     public const int MinSuppliers = 3;
 
     /// <summary>
     /// Ngoại lệ của một dòng.
-    /// Ví dụ: 2 NCC đủ điều kiện, giá chính 12.000 &gt; mục tiêu 11.500 → ["Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)",
+    /// Ví dụ: nhóm hàng có 2 NCC đủ điều kiện, giá chính 12.000 &gt; mục tiêu 11.500 → ["Nhóm hàng chỉ có 2 NCC đủ điều kiện (tối thiểu 3)",
     /// "Giá NCC chính 12.000 vượt giá mục tiêu 11.500"].
     /// </summary>
-    /// <param name="qualifiedSuppliers">Số NCC Đã duyệt cung cấp mặt hàng (NCC – sản phẩm, cộng NCC chính/dự phòng của dòng).</param>
+    /// <param name="qualifiedSuppliers">Số NCC Đã duyệt cung cấp nhóm hàng của mặt hàng (ngành hàng là nhóm/nhóm cha hoặc NCC – sản phẩm của
+    /// mặt hàng trong nhóm, cộng NCC chính/dự phòng của dòng).</param>
     /// <param name="soleSourceNo">Số phiếu NCC độc quyền còn tác dụng của mặt hàng (nếu có).</param>
     /// <param name="unitPrice">Giá NCC chính.</param>
     /// <param name="backupUnitPrice">Giá NCC dự phòng.</param>
@@ -483,8 +485,8 @@ public static class MonthlyApprovalExceptions
         var result = new List<string>();
         if (qualifiedSuppliers < MinSuppliers)
             result.Add(soleSourceNo is null
-                ? $"Chỉ có {qualifiedSuppliers} NCC đủ điều kiện (tối thiểu {MinSuppliers})"
-                : $"NCC độc quyền theo {soleSourceNo} – {qualifiedSuppliers} NCC đủ điều kiện");
+                ? $"Nhóm hàng chỉ có {qualifiedSuppliers} NCC đủ điều kiện (tối thiểu {MinSuppliers})"
+                : $"NCC độc quyền theo {soleSourceNo} – nhóm hàng có {qualifiedSuppliers} NCC đủ điều kiện");
         if (targetPrice is { } target)
         {
             if (unitPrice > target) result.Add($"Giá NCC chính {Vnd(unitPrice)} vượt giá mục tiêu {Vnd(target)}");

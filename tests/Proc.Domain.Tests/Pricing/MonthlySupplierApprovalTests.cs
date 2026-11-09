@@ -128,12 +128,12 @@ public class MonthlySupplierApprovalTests
     [Fact]
     public void NgoaiLe_ItNcc_DocQuyen_VuotMucTieu_BatBuocGiaiTrinh_TuKhaiNgoaiLe()
     {
-        // Quy tắc từng dòng (lát H2): dưới 3 NCC đủ điều kiện; độc quyền; giá chính/dự phòng vượt giá mục tiêu (bằng mục tiêu thì không).
+        // Quy tắc từng dòng (lát H2): nhóm hàng dưới 3 NCC đủ điều kiện (G1b); độc quyền; giá chính/dự phòng vượt giá mục tiêu (bằng mục tiêu thì không).
         Assert.Empty(MonthlyApprovalExceptions.ForLine(3, null, 12_000m, 12_500m, 12_500m));
-        Assert.Equal(["Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)", "Giá NCC chính 12.000 vượt giá mục tiêu 11.500",
+        Assert.Equal(["Nhóm hàng chỉ có 2 NCC đủ điều kiện (tối thiểu 3)", "Giá NCC chính 12.000 vượt giá mục tiêu 11.500",
                 "Giá NCC dự phòng 12.500,5 vượt giá mục tiêu 11.500"],
             MonthlyApprovalExceptions.ForLine(2, null, 12_000m, 12_500.5m, 11_500m));
-        Assert.Equal(["NCC độc quyền theo NDQ-TCT-2612-0001 – 1 NCC đủ điều kiện"],
+        Assert.Equal(["NCC độc quyền theo NDQ-TCT-2612-0001 – nhóm hàng có 1 NCC đủ điều kiện"],
             MonthlyApprovalExceptions.ForLine(1, "NDQ-TCT-2612-0001", 12_000m, null, null));
 
         // Có ngoại lệ mà chưa giải trình thì không gửi được; có giải trình thì qua chặng ngoại lệ.

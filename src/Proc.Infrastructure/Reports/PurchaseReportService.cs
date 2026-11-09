@@ -652,7 +652,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
         var today = _clock.TodayInVietnam();
         // Mặt hàng, NCC – sản phẩm đi qua filter phạm vi nhóm hàng; phiếu độc quyền qua filter công ty đang làm việc (CLAUDE.md mục 4).
         var items = await _db.Items.AsNoTracking().Where(i => i.IsActive)
-            .Join(_db.ItemCategories.AsNoTracking(), i => i.CategoryId, c => c.Id, (i, c) => new { i.Id, i.Code, i.Name, i.CategoryId, CategoryName = c.Name })
+            .Join(_db.ItemCategories.AsNoTracking(), i => i.CategoryId, c => c.Id, (i, c) => new { i.Id, i.CategoryId, CategoryCode = c.Code, CategoryName = c.Name })
             .ToListAsync(cancellationToken);
         if (categoryId is { } root)
         {
@@ -660,33 +660,35 @@ public sealed class PurchaseReportService : IPurchaseReportService
             items = items.Where(i => ItemAdministration.IsUnder(i.CategoryId, root, parents)).ToList();
         }
 
-        var links = (await _db.SupplierItems.AsNoTracking()
-                .Join(_db.Suppliers.AsNoTracking(), l => l.SupplierId, s => s.Id, (l, s) => new { l.ItemId, l.IsPreferred, s.Name, s.Status })
-                .ToListAsync(cancellationToken))
-            .ToLookup(l => l.ItemId);
+        // Đếm theo nhóm hàng trực tiếp của mặt hàng (Q1 08/11/2026 – lát G1b): NCC có ngành hàng là nhóm/nhóm cha hoặc NCC – sản phẩm
+        // của mặt hàng trong nhóm (QualifiedSuppliers).
+        var groups = items.GroupBy(i => (i.CategoryId, i.CategoryCode, i.CategoryName)).ToList();
+        var candidates = await QualifiedSuppliers.ByCategoryAsync(_db, groups.Select(g => g.Key.CategoryId).ToList(), cancellationToken);
         var soleSources = (await _db.SoleSourceApprovals.AsNoTracking()
                 .Where(x => x.Status == SoleSourceStatus.Approved && x.ValidFrom <= today && x.ReviewDate >= today)
                 .Select(x => new { x.ItemId, x.No, x.ValidFrom })
                 .ToListAsync(cancellationToken))
             .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ValidFrom).First().No);
 
-        var rows = items.Select(i =>
+        var rows = groups.Select(g =>
             {
-                var l = links[i.Id].ToList();
+                var l = candidates[g.Key.CategoryId];
                 var approved = l.Where(x => x.Status == SupplierStatus.Approved).OrderByDescending(x => x.IsPreferred).ThenBy(x => x.Name).ToList();
-                var sole = soleSources.GetValueOrDefault(i.Id);
-                // Độc quyền đã duyệt thì miễn mức tối thiểu – không thể có đủ NCC (design.md mục 18.9).
+                var sole = g.Select(i => soleSources.GetValueOrDefault(i.Id)).ToList();
+                // Độc quyền đã duyệt thì không thể có đủ NCC (design.md mục 18.9) – nhưng phiếu độc quyền theo mặt hàng: nhóm chỉ được miễn
+                // khi mọi mặt hàng đang dùng của nhóm đều có phiếu còn tác dụng.
                 var status = approved.Count >= minSuppliers ? SupplierCoverageStatuses.Ok
-                    : sole is not null ? SupplierCoverageStatuses.SoleSource : SupplierCoverageStatuses.Short;
+                    : sole.All(n => n is not null) ? SupplierCoverageStatuses.SoleSource : SupplierCoverageStatuses.Short;
                 var missing = status == SupplierCoverageStatuses.Short ? minSuppliers - approved.Count : 0;
-                return new SupplierCoverageRowDto(i.Id, i.Code, i.Name, i.CategoryName, approved.Count,
+                var soleNos = sole.OfType<string>().Distinct().Order(StringComparer.Ordinal).ToList();
+                return new SupplierCoverageRowDto(g.Key.CategoryId, g.Key.CategoryCode, g.Key.CategoryName, g.Count(), approved.Count,
                     l.Count(x => x.Status == SupplierStatus.Potential), l.Count(x => x.Status == SupplierStatus.Suspended), missing, status,
-                    string.Join("; ", approved.Select(x => x.Name)), status == SupplierCoverageStatuses.SoleSource ? sole : null);
+                    string.Join("; ", approved.Select(x => x.Name)), sole.Count(n => n is not null), soleNos.Count == 0 ? null : string.Join("; ", soleNos));
             })
             .ToList();
         var shortCount = rows.Count(r => r.Status == SupplierCoverageStatuses.Short);
         var shown = rows.Where(r => !onlyShort || r.Status == SupplierCoverageStatuses.Short)
-            .OrderByDescending(r => r.Missing).ThenBy(r => r.ItemCode, StringComparer.Ordinal).ToList();
+            .OrderByDescending(r => r.Missing).ThenBy(r => r.CategoryCode, StringComparer.Ordinal).ToList();
         return new SupplierCoverageResult(minSuppliers, rows.Count, shortCount, shown);
     }
 
