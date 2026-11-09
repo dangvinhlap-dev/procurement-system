@@ -54,7 +54,40 @@ public class StockLedgerTests
     }
 
     [Fact]
+    public void NghiemThu_SauGhiSo_KhongDatPhaiCoYKien_ThuKhoKhongTuXacNhan_BoGhiSoThiXoa()
+    {
+        // Lát H4 (design.md mục 18.25): đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập đã ghi sổ.
+        var (doc, _) = PostableReceipt();
+        var storekeeper = Guid.CreateVersion7();
+        var orderer = Guid.CreateVersion7();
+        doc.CreatedBy = storekeeper;
+        var at = DateTimeOffset.UtcNow;
+        Assert.Contains("chưa ghi sổ", Assert.Throws<BusinessRuleException>(() => doc.ConfirmAcceptance(true, null, orderer, at)).Message);
+
+        var poster = Guid.CreateVersion7();
+        doc.MarkPosted(Guid.CreateVersion7(), at, poster);
+        // Người lập, người ghi sổ (thủ kho) không tự nghiệm thu.
+        Assert.Throws<BusinessRuleException>(() => doc.ConfirmAcceptance(true, null, storekeeper, at));
+        Assert.Throws<BusinessRuleException>(() => doc.ConfirmAcceptance(true, null, poster, at));
+        // Không đạt phải có ý kiến, tối đa 500 ký tự.
+        Assert.Contains("phải ghi ý kiến", Assert.Throws<BusinessRuleException>(() => doc.ConfirmAcceptance(false, "  ", orderer, at)).Message);
+        Assert.Throws<BusinessRuleException>(() => doc.ConfirmAcceptance(false, new string('x', 501), orderer, at));
+
+        doc.ConfirmAcceptance(false, " Thiếu 2 hộp, móp vỏ ", orderer, at);
+        Assert.Equal((ReceiptAcceptance.Disputed, "Thiếu 2 hộp, móp vỏ", (Guid?)orderer, (DateTimeOffset?)at),
+            (doc.Acceptance, doc.AcceptanceNote, doc.AcceptedBy, doc.AcceptedAt));
+        // NCC giao bù: xác nhận lại đạt.
+        doc.ConfirmAcceptance(true, null, orderer, at);
+        Assert.Equal((ReceiptAcceptance.Accepted, (string?)null), (doc.Acceptance, doc.AcceptanceNote));
+
+        // Bỏ ghi sổ để sửa: xác nhận cũ bị xóa, ghi sổ lại phải xác nhận lại.
+        doc.MarkUnposted();
+        Assert.Equal((ReceiptAcceptance.None, (Guid?)null, (DateTimeOffset?)null), (doc.Acceptance, doc.AcceptedBy, doc.AcceptedAt));
+    }
+
+    [Fact]
     public void GhiSo_BoGhiSo_ChuyenTrangThai()
+
     {
         var (doc, _) = PostableReceipt();
         var period = Guid.CreateVersion7();

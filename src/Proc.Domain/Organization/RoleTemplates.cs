@@ -76,11 +76,14 @@ public static class RoleTemplates
             Permissions.Report.PriceViewAllCompanies, Permissions.MasterData.SoleSourceApprove,
             Permissions.Pricing.MonthlyApprovalApprove, Permissions.Pricing.VolumeRebateApprove,
         ]),
-        new("DENGHI", "Người đề nghị mua (bộ phận)", "Lập đề nghị mua hàng cho bộ phận",
+        new("DENGHI", "Người đề nghị mua (bộ phận)", "Lập đề nghị mua hàng cho bộ phận, xác nhận nghiệm thu hàng nhận",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
             Permissions.Inventory.StockView,
+            // Đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập (lát H4 – sơ đồ mục 3).
+            Permissions.Inventory.DocumentView, Permissions.Inventory.ReceiptAccept,
         ]),
+
         new("KHO", "Kho", "Nhận hàng, ghi sổ phiếu kho, xem tồn",
         [
             .. CatalogView, Permissions.Purchase.PoView, Permissions.Inventory.DocumentView,

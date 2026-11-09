@@ -117,6 +117,11 @@ public sealed record InventoryLineDto(
 /// <param name="Reason">Phiếu điều chỉnh: lý do điều chỉnh.</param>
 /// <param name="CountReportNo">Phiếu điều chỉnh: số biên bản kiểm kê.</param>
 /// <param name="Version">Phiên bản dòng – web gửi lại ở header If-Match khi sửa, thao tác (lát R2).</param>
+/// <param name="Acceptance">Phiếu nhập mua: xác nhận nghiệm thu của đơn vị đặt hàng – None, Accepted, Disputed (lát H4).</param>
+/// <param name="AcceptanceNote">Ý kiến nghiệm thu.</param>
+/// <param name="AcceptedByName">Người xác nhận nghiệm thu.</param>
+/// <param name="AcceptedAt">Thời điểm xác nhận nghiệm thu.</param>
+/// <param name="CanConfirmAcceptance">Người xem xác nhận nghiệm thu được (phiếu nhập đã ghi sổ, có quyền, không phải người lập/ghi sổ).</param>
 public sealed record InventoryDocumentDto(
     Guid Id, string DocType, string No, DateOnly Date, string Status, Guid? FromWarehouseId, Guid? ToWarehouseId, Guid? SupplierId,
     string? SupplierCode, string? SupplierName, string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, string? DeliveryNoteNo,
@@ -125,7 +130,8 @@ public sealed record InventoryDocumentDto(
     string? Receiver = null, Guid? LinkedDocumentId = null, string? LinkedDocumentNo = null,
     Guid? CounterCompanyId = null, string? CounterCompanyCode = null, string? CounterCompanyName = null, string? ReceiveStatus = null,
     Guid? PurchaseOrderId = null, string? PurchaseOrderNo = null, decimal? InvoiceAmount = null, bool CanUpdateInvoice = false,
-    string? Reason = null, string? CountReportNo = null, uint Version = 0);
+    string? Reason = null, string? CountReportNo = null, uint Version = 0, string Acceptance = "None", string? AcceptanceNote = null,
+    string? AcceptedByName = null, DateTimeOffset? AcceptedAt = null, bool CanConfirmAcceptance = false);
 
 /// <summary>Một dòng gửi lên khi lưu; Id trống = dòng mới.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -170,6 +176,11 @@ public sealed record SaveReceiptRequest(
 /// <param name="InvoiceDate">Ngày hóa đơn.</param>
 /// <param name="InvoiceAmount">Tổng tiền thanh toán trên hóa đơn (gồm VAT); null = chưa có.</param>
 public sealed record UpdateReceiptInvoiceRequest(string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount);
+
+/// <summary>Đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập mua đã ghi sổ (lát H4, design.md mục 18.25).</summary>
+/// <param name="Accepted">true = đạt; false = không đạt.</param>
+/// <param name="Note">Ý kiến (≤ 500 ký tự), bắt buộc khi không đạt.</param>
+public sealed record ConfirmReceiptAcceptanceRequest(bool Accepted, string? Note);
 
 /// <summary>Một dòng trả NCC gửi lên khi lưu: chỉ chọn dòng nhập gốc và số lượng trả; hàng, ĐVT, lô, giá lấy theo dòng gốc.</summary>
 /// <param name="Id">Id dòng đã có.</param>
@@ -356,6 +367,17 @@ public interface IInventoryDocumentService
     /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người sửa.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
     Task<InventoryDocumentDto> UpdateReceiptInvoiceAsync(Guid id, UpdateReceiptInvoiceRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập mua đã ghi sổ (lát H4, design.md mục 18.25); xác nhận lại được.</summary>
+    /// <param name="id">Id phiếu nhập mua.</param>
+    /// <param name="request">Đạt/không đạt và ý kiến.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Phiếu sau khi xác nhận.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi phiếu chưa ghi sổ, thiếu ý kiến khi không đạt, hoặc người lập/ghi sổ tự xác nhận.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người xác nhận.</exception>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu.</exception>
+    Task<InventoryDocumentDto> ConfirmReceiptAcceptanceAsync(Guid id, ConfirmReceiptAcceptanceRequest request, CancellationToken cancellationToken);
+
 
     /// <summary>Hủy phiếu nháp (giữ số phiếu).</summary>
     /// <param name="id">Id phiếu.</param>

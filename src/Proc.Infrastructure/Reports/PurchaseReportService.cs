@@ -123,7 +123,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
             .Join(db.Suppliers, d => d.SupplierId, s => s.Id, (d, s) => new
             {
                 d.Id, d.CompanyId, d.No, d.Date, SupplierCode = s.Code, SupplierName = s.Name, d.PurchaseOrderId, d.TotalAmount, d.TotalVat,
-                d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount,
+                d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, d.Acceptance,
             })
             .ToListAsync(cancellationToken);
         var documentIds = documents.Select(d => d.Id).ToList();
@@ -176,10 +176,14 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 else if (approvedDate is { } approved && d.Date < approved) issues.Add(ThreeWayMatchIssues.ReceivedBeforeApproval);
                 if (d.InvoiceDate is { } invoiceDate && invoiceDate < order.Date) issues.Add(ThreeWayMatchIssues.InvoiceBeforeOrder);
             }
+            // Đơn vị đặt hàng không đồng ý nghiệm thu: kế toán chờ Phòng cung ứng xử lý trước khi thanh toán (lát H4). Chưa xác nhận chỉ hiện ở cột
+            // Nghiệm thu, không tính là cảnh báo – công ty chưa dùng bước nghiệm thu không bị báo hàng loạt.
+            if (d.Acceptance == ReceiptAcceptance.Disputed) issues.Add(ThreeWayMatchIssues.AcceptanceDisputed);
 
             all.Add((d.CompanyId, new ThreeWayMatchRowDto(
                 d.Id, d.No, d.Date, d.SupplierCode, d.SupplierName, d.PurchaseOrderId, order?.No, order?.Date, approvedDate, order?.Total,
-                receiptTotal, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, difference, result, issues)));
+                receiptTotal, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate, d.InvoiceAmount, difference, result, issues, d.Acceptance.ToString())));
+
         }
 
         return (all, hidden.Count);
