@@ -38,6 +38,7 @@ import {
   type SourcingSavingRow,
   type SupplierEvaluationRow,
 } from '../../api/reports'
+import { receiptAcceptanceLabels, type ReceiptAcceptance } from '../../api/inventoryDocuments'
 import { screens } from '../../app/screens'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -229,7 +230,11 @@ const matchIssueLabels: Record<ThreeWayMatchIssue, string> = {
   ReceivedBeforeOrder: 'Nhận hàng trước ngày PO',
   ReceivedBeforeApproval: 'Nhận hàng trước ngày duyệt PO',
   InvoiceBeforeOrder: 'Hóa đơn trước ngày PO',
+  AcceptanceDisputed: 'Đơn vị đặt hàng không đồng ý nghiệm thu',
 }
+
+/** Màu đèn nghiệm thu (lát H4): chưa xác nhận chỉ là trạng thái, không phải lỗi. */
+const acceptanceTone: Record<ReceiptAcceptance, StatusTone> = { None: 'neutral', Accepted: 'success', Disputed: 'error' }
 
 const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
   { key: 'no', title: 'Phiếu nhập', width: 150, value: (r) => r.documentNo },
@@ -254,8 +259,18 @@ const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
     tone: (r) => matchStatusTone[r.result],
     groupable: true,
   },
+  {
+    key: 'acceptance',
+    title: 'Nghiệm thu',
+    width: 110,
+    type: 'status',
+    value: (r) => receiptAcceptanceLabels[r.acceptance],
+    tone: (r) => acceptanceTone[r.acceptance],
+    groupable: true,
+  },
   { key: 'issues', title: 'Cảnh báo', width: 320, value: (r) => r.issues.map((i) => matchIssueLabels[i]).join('; ') },
 ]
+
 
 const defaultMatchFilter = () => ({
   from: dayjs().startOf('month').format('YYYY-MM-DD'),

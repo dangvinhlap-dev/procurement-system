@@ -64,7 +64,14 @@ public static class InventoryEndpoints
             .RequirePermission(Permissions.Inventory.DocumentCreate)
             .Validate<UpdateReceiptInvoiceRequest>();
 
-        receipts.MapGet("/{id:guid}/returnable", (Guid id, Guid? excludeDocumentId, IInventoryDocumentService s, CancellationToken ct) =>
+        // Đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập đã ghi sổ – lát H4, design.md mục 18.25.
+        receipts.MapPost("/{id:guid}/acceptance", (Guid id, ConfirmReceiptAcceptanceRequest request, IInventoryDocumentService s, CancellationToken ct) =>
+                s.ConfirmReceiptAcceptanceAsync(id, request, ct))
+            .RequirePermission(Permissions.Inventory.ReceiptAccept)
+            .Validate<ConfirmReceiptAcceptanceRequest>();
+
+        receipts.MapGet("/{id:guid}/returnable",
+ (Guid id, Guid? excludeDocumentId, IInventoryDocumentService s, CancellationToken ct) =>
                 s.GetReturnableLinesAsync(id, excludeDocumentId, ct))
             .RequirePermission(Permissions.Inventory.DocumentView);
 

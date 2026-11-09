@@ -106,6 +106,22 @@ public sealed record InventoryLineData(
     Guid? SourceLineId = null, Guid? PurchaseOrderLineId = null, decimal? DeliveredQty = null, decimal RejectedQty = 0,
     QcResult QcResult = QcResult.NotChecked, string? QcNote = null, int? Direction = null, decimal? BookQty = null, decimal? CountedQty = null);
 
+/// <summary>
+/// Xác nhận nghiệm thu của đơn vị đặt hàng trên phiếu nhập mua đã ghi sổ (lát H4, design.md mục 18.25 – sơ đồ mục 3: đơn vị đặt hàng xác nhận
+/// số lượng, chất lượng, nghiệm thu trước khi đối chiếu thanh toán).
+/// </summary>
+public enum ReceiptAcceptance
+{
+    /// <summary>Chưa xác nhận.</summary>
+    None = 0,
+
+    /// <summary>Đơn vị đặt hàng xác nhận đạt (đúng SL, chất lượng).</summary>
+    Accepted = 1,
+
+    /// <summary>Đơn vị đặt hàng không đồng ý nghiệm thu – có ý kiến (bắt buộc), Phòng cung ứng xử lý với NCC (trả hàng, giao bù…).</summary>
+    Disputed = 2,
+}
+
 /// <summary>Kết quả kiểm tra chất lượng dòng phiếu nhập mua (design.md mục 18.14 – đề xuất Ban CUVT V7).</summary>
 public enum QcResult
 {
@@ -176,6 +192,18 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
     /// (design.md mục 18.15), không đổi giá vốn – giá nhập kho vẫn theo đơn giá dòng.
     /// </summary>
     public decimal? InvoiceAmount { get; private set; }
+
+    /// <summary>Phiếu nhập mua: xác nhận nghiệm thu của đơn vị đặt hàng (lát H4); bỏ ghi sổ thì về <see cref="ReceiptAcceptance.None"/>.</summary>
+    public ReceiptAcceptance Acceptance { get; private set; }
+
+    /// <summary>Ý kiến nghiệm thu (tối đa 500 ký tự) – bắt buộc khi không đạt.</summary>
+    public string? AcceptanceNote { get; private set; }
+
+    /// <summary>Người xác nhận nghiệm thu.</summary>
+    public Guid? AcceptedBy { get; private set; }
+
+    /// <summary>Thời điểm xác nhận nghiệm thu (UTC).</summary>
+    public DateTimeOffset? AcceptedAt { get; private set; }
 
     /// <summary>Số phiếu giao hàng của NCC.</summary>
     public string? DeliveryNoteNo { get; private set; }
@@ -278,6 +306,31 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         InvoiceSeries = Clean(invoice.InvoiceSeries);
         InvoiceDate = invoice.InvoiceDate;
         InvoiceAmount = CheckInvoiceAmount(invoice.InvoiceAmount);
+    }
+
+    /// <summary>
+    /// Đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập mua đã ghi sổ (lát H4, design.md mục 18.25): đạt, hoặc không đạt kèm ý kiến. Xác nhận lại
+    /// được (ví dụ NCC đã giao bù sau lần không đạt) – mọi lần đổi vào AuditLog. Người lập hoặc người ghi sổ phiếu (thủ kho) không tự xác nhận:
+    /// tách người nhận hàng và người dùng hàng – nguyên tắc kiểm soát nội bộ.
+    /// </summary>
+    /// <param name="accepted">true = đạt; false = không đạt.</param>
+    /// <param name="note">Ý kiến (≤ 500 ký tự), bắt buộc khi không đạt.</param>
+    /// <param name="userId">Người xác nhận.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi không phải phiếu nhập mua đã ghi sổ, thiếu ý kiến, ý kiến quá dài hoặc người lập/ghi sổ tự xác nhận.</exception>
+    public void ConfirmAcceptance(bool accepted, string? note, Guid userId, DateTimeOffset at)
+    {
+        if (DocType != DocumentTypes.GoodsReceipt) throw new BusinessRuleException("Chỉ phiếu nhập mua NCC mới xác nhận nghiệm thu.");
+        if (Status != DocumentStatus.Posted) throw new BusinessRuleException($"Phiếu {No} chưa ghi sổ – nhận hàng xong (ghi sổ) mới xác nhận nghiệm thu.");
+        if (userId == CreatedBy || userId == PostedBy)
+            throw new BusinessRuleException("Người lập hoặc ghi sổ phiếu nhập không tự xác nhận nghiệm thu – đơn vị đặt hàng xác nhận.");
+        var cleaned = Clean(note);
+        if (!accepted && cleaned is null) throw new BusinessRuleException("Không đạt nghiệm thu phải ghi ý kiến (thiếu, hỏng, sai quy cách…).");
+        if (cleaned?.Length > 500) throw new BusinessRuleException("Ý kiến nghiệm thu tối đa 500 ký tự.");
+        Acceptance = accepted ? ReceiptAcceptance.Accepted : ReceiptAcceptance.Disputed;
+        AcceptanceNote = cleaned;
+        AcceptedBy = userId;
+        AcceptedAt = at;
     }
 
     /// <summary>Tiền hóa đơn không âm, làm tròn 2 chữ số theo kiểu tiền numeric(19,2).</summary>
@@ -587,6 +640,12 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         PeriodId = null;
         PostedAt = null;
         PostedBy = null;
+        // Bỏ ghi sổ để sửa SL, hàng: xác nhận nghiệm thu cũ không còn đúng – ghi sổ lại thì đơn vị đặt hàng xác nhận lại (lát H4).
+        Acceptance = ReceiptAcceptance.None;
+        AcceptanceNote = null;
+        AcceptedBy = null;
+        AcceptedAt = null;
+
     }
 
     /// <summary>Hủy phiếu nháp: giữ số phiếu và lịch sử, không dùng lại được.</summary>

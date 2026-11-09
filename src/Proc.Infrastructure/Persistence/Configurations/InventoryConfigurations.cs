@@ -56,6 +56,9 @@ internal sealed class InventoryDocumentConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
         builder.Property(x => x.TotalVat).HasPrecision(19, 2);
         builder.Property(x => x.InvoiceAmount).HasPrecision(19, 2);
+        // Xác nhận nghiệm thu của đơn vị đặt hàng (lát H4).
+        builder.Property(x => x.AcceptanceNote).HasMaxLength(500);
+
 
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         // Kho trỏ tới khóa (Id, CompanyId) của Warehouse: CSDL tự chặn chứng từ dùng kho của công ty khác (design.md mục 12.2).

@@ -152,7 +152,19 @@ public sealed class ConfirmIntercompanyReceiptRequestValidator : AbstractValidat
     }
 }
 
+/// <summary>Kiểm tra xác nhận nghiệm thu phiếu nhập mua (lát H4).</summary>
+public sealed class ConfirmReceiptAcceptanceRequestValidator : AbstractValidator<ConfirmReceiptAcceptanceRequest>
+{
+    /// <summary>Khai báo các quy tắc.</summary>
+    public ConfirmReceiptAcceptanceRequestValidator()
+    {
+        RuleFor(x => x.Note).MaximumLength(500).WithMessage("Ý kiến nghiệm thu tối đa 500 ký tự.");
+        RuleFor(x => x.Note).NotEmpty().When(x => !x.Accepted).WithMessage("Không đạt nghiệm thu phải ghi ý kiến (thiếu, hỏng, sai quy cách…).");
+    }
+}
+
 /// <summary>Kiểm tra cập nhật hóa đơn NCC của phiếu nhập mua.</summary>
+
 public sealed class UpdateReceiptInvoiceRequestValidator : AbstractValidator<UpdateReceiptInvoiceRequest>
 {
     /// <summary>Khai báo các quy tắc.</summary>

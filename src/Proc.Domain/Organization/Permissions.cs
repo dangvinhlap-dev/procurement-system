@@ -162,6 +162,10 @@ public static class Permissions
         /// kiểm kê không tự ghi tăng/giảm tồn (design.md mục 6.1).
         /// </summary>
         public const string AdjustmentPost = "Inventory.Adjustment.Post";
+        /// <summary>
+        /// Quyền "Xác nhận nghiệm thu phiếu nhập mua" – đơn vị đặt hàng xác nhận đạt/không đạt trên phiếu nhập đã ghi sổ (lát H4, design.md mục 18.25).
+        /// </summary>
+        public const string ReceiptAccept = "Inventory.Receipt.Accept";
         /// <summary>Quyền "Xem tồn kho, thẻ kho".</summary>
         public const string StockView = "Inventory.Stock.View";
         /// <summary>Quyền "Xem kỳ kho".</summary>
@@ -318,7 +322,9 @@ public static class Permissions
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
         new(Inventory.DocumentUnpost, "Bỏ ghi sổ chứng từ kho"),
+        new(Inventory.ReceiptAccept, "Xác nhận nghiệm thu phiếu nhập mua (đơn vị đặt hàng)"),
         new(Inventory.AdjustmentCreate, "Lập phiếu điều chỉnh, kiểm kê kho"),
+
         new(Inventory.AdjustmentPost, "Ghi sổ phiếu điều chỉnh, kiểm kê kho"),
         new(Inventory.StockView, "Xem tồn kho, thẻ kho"),
         new(Inventory.PeriodView, "Xem kỳ kho"),

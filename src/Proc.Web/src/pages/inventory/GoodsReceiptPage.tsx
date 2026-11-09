@@ -1,5 +1,5 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { AuditOutlined, FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
+import { AuditOutlined, CheckCircleOutlined, FileDoneOutlined, FileProtectOutlined } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -9,6 +9,7 @@ import { apiOpenPdf } from '../../api/client'
 import {
   documentStatusLabels,
   qcResultLabels,
+  receiptAcceptanceLabels,
   useGoodsReceiptMutations,
   useInventoryDocument,
   useItemLookup,
@@ -28,6 +29,7 @@ import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/Docum
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { documentStatusTone } from './documentStatus'
+import { ReceiptAcceptanceDialog } from './ReceiptAcceptanceDialog'
 import { ReceiptInvoiceDialog } from './ReceiptInvoiceDialog'
 import { useDocumentCommands } from './useDocumentCommands'
 
@@ -98,6 +100,7 @@ export function GoodsReceiptPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [editingInvoice, setEditingInvoice] = useState(false)
+  const [confirmingAcceptance, setConfirmingAcceptance] = useState(false)
   const addRef = useRef<(() => void) | null>(null)
 
   const doc = document.data
@@ -231,6 +234,15 @@ export function GoodsReceiptPage() {
   }
   const actions = (
     <>
+      {doc?.canConfirmAcceptance && (
+        <Button
+          icon={<CheckCircleOutlined />}
+          onClick={() => setConfirmingAcceptance(true)}
+          title="Đơn vị đặt hàng xác nhận số lượng, chất lượng hàng đã nhận (đạt / không đạt)"
+        >
+          Xác nhận nghiệm thu
+        </Button>
+      )}
       {doc?.canUpdateInvoice && (
         <Button icon={<AuditOutlined />} onClick={() => setEditingInvoice(true)} title="Cập nhật số, ngày, tiền hóa đơn NCC về sau khi ghi sổ">
           Cập nhật hóa đơn
@@ -490,10 +502,25 @@ export function GoodsReceiptPage() {
     ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
     : { label: doc ? documentStatusLabels[doc.status] : '', tone: doc ? documentStatusTone[doc.status] : ('neutral' as const) }
 
+  // Nghiệm thu của đơn vị đặt hàng trên phiếu đã ghi sổ (lát H4): đạt – xanh, không đạt – đỏ kèm ý kiến, chưa xác nhận – nhắc nhẹ.
+  const acceptanceNotice =
+    doc && doc.status === 'Posted' && doc.acceptance
+      ? doc.acceptance === 'None'
+        ? <Alert type="info" showIcon title="Đơn vị đặt hàng chưa xác nhận nghiệm thu." />
+        : (
+          <Alert
+            type={doc.acceptance === 'Accepted' ? 'success' : 'error'}
+            showIcon
+            title={`Nghiệm thu: ${receiptAcceptanceLabels[doc.acceptance]} – ${doc.acceptedByName ?? ''} lúc ${formatDateTime(doc.acceptedAt ?? null)}${doc.acceptanceNote ? ` · Ý kiến: ${doc.acceptanceNote}` : ''}`}
+          />
+        )
+      : null
+
   return (
     <>
     <DocumentForm
       title="Phiếu nhập mua từ NCC"
+
       extraTabs={[attachmentTab]}
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'InventoryDocument', id: doc?.id, fields: { warehouseId: 'ToWarehouseId' } }}
@@ -502,7 +529,14 @@ export function GoodsReceiptPage() {
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={document.isLoading}
       error={error ?? (document.error ? document.error.message : null)}
-      notice={doc?.readOnlyReason && <Alert type="info" showIcon title={doc.readOnlyReason} />}
+      notice={
+        (doc?.readOnlyReason || acceptanceNotice) && (
+          <>
+            {doc?.readOnlyReason && <Alert type="info" showIcon title={doc.readOnlyReason} />}
+            {acceptanceNotice}
+          </>
+        )
+      }
       form={form}
       initialValues={{ date: dayjs(), lines: [] }}
       readOnly={readOnly}
@@ -596,6 +630,9 @@ export function GoodsReceiptPage() {
       }
     />
     {doc?.canUpdateInvoice && <ReceiptInvoiceDialog doc={doc} open={editingInvoice} onClose={() => setEditingInvoice(false)} />}
+    {doc?.canConfirmAcceptance && (
+      <ReceiptAcceptanceDialog doc={doc} open={confirmingAcceptance} onClose={() => setConfirmingAcceptance(false)} />
+    )}
     </>
   )
 }

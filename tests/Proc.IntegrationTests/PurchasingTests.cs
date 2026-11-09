@@ -395,7 +395,60 @@ public partial class PurchasingTests
     }
 
     [Fact]
+    public async Task NghiemThu_DonViDatHangXacNhan_ThuKhoKhongTuXacNhan_HienTrenDoiChieu()
+    {
+        // Lát H4 (design.md mục 18.25): thủ kho (Buyer) nhập và ghi sổ; đơn vị đặt hàng xác nhận nghiệm thu, kế toán thấy trên MATCH3.
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
+        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
+        var grn = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts",
+            new SaveReceiptRequest(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
+                [new(null, f.ItemId, f.Cai, 10, 1, null, null, null, null, po.Lines[0].Id, 10, 0, "Passed", null)], po.Id), Ct));
+
+        // Đơn vị đặt hàng: chỉ quyền xem chứng từ kho + xác nhận nghiệm thu.
+        var roleCode = UniqueCode("N");
+        await _factory.CreateRoleAsync(roleCode, Permissions.Inventory.DocumentView, Permissions.Inventory.ReceiptAccept);
+        var userName = $"nt.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(userName, f.CompanyCode, roleCode);
+        var orderer = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, f.CompanyCode);
+        string Url(Guid id) => $"/api/goods-receipts/{id}/acceptance";
+
+        // Phiếu nháp chưa xác nhận được; người không có quyền bị chặn.
+        Assert.Contains("chưa ghi sổ", await TitleAsync(await orderer.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(true, null), Ct)));
+        Assert.Equal(HttpStatusCode.Forbidden, (await approver.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(true, null), Ct)).StatusCode);
+        grn = await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
+        Assert.Equal(("None", false), (grn.Acceptance, grn.CanConfirmAcceptance));
+
+        // Thủ kho (người lập, ghi sổ) không tự xác nhận dù có quyền.
+        Assert.Contains("không tự xác nhận", await TitleAsync(await f.Buyer.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(true, null), Ct)));
+        Assert.True((await ReadAsync<InventoryDocumentDto>(await orderer.GetAsync($"/api/inventory-documents/{grn.Id}", Ct))).CanConfirmAcceptance);
+
+        // Không đạt bắt buộc ý kiến; xác nhận không đạt → MATCH3 có cột Nghiệm thu và cảnh báo.
+        Assert.Contains("phải ghi ý kiến", await TitleAsync(await orderer.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(false, " "), Ct)));
+        grn = await ReadAsync<InventoryDocumentDto>(await orderer.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(false, "Sai quy cách 2 cái"), Ct));
+        Assert.Equal(("Disputed", "Sai quy cách 2 cái", "Posted"), (grn.Acceptance, grn.AcceptanceNote, grn.Status));
+        Assert.NotNull(grn.AcceptedByName);
+        var url = $"/api/reports/three-way-match?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&tolerance=1";
+        var row = Assert.Single((await ReadAsync<ThreeWayMatchResult>(await f.Buyer.GetAsync(url, Ct))).Rows, r => r.DocumentId == grn.Id);
+        Assert.Equal("Disputed", row.Acceptance);
+        Assert.Contains(ThreeWayMatchIssues.AcceptanceDisputed, row.Issues);
+
+        // NCC đổi hàng: xác nhận lại đạt – hết cảnh báo nghiệm thu.
+        grn = await ReadAsync<InventoryDocumentDto>(await orderer.PostAsJsonAsync(Url(grn.Id), new ConfirmReceiptAcceptanceRequest(true, "Đã đổi hàng"), Ct));
+        row = Assert.Single((await ReadAsync<ThreeWayMatchResult>(await f.Buyer.GetAsync(url, Ct))).Rows, r => r.DocumentId == grn.Id);
+        Assert.Equal("Accepted", row.Acceptance);
+        Assert.DoesNotContain(ThreeWayMatchIssues.AcceptanceDisputed, row.Issues);
+
+        // Bỏ ghi sổ thì xóa xác nhận.
+        grn = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn.Id}/unpost", null, Ct));
+        Assert.Equal(("Draft", "None", (string?)null), (grn.Status, grn.Acceptance, grn.AcceptanceNote));
+    }
+
+    [Fact]
     public async Task LuongPrPoNhapKho_DuyetMotCap_NhanDuThiDongPo()
+
     {
         var f = await ArrangeAsync();
         var (approver, _) = await ApproverAsync(f);

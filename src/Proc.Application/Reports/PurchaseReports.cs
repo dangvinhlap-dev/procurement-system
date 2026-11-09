@@ -106,6 +106,9 @@ public static class ThreeWayMatchIssues
 
     /// <summary>Ngày hóa đơn trước ngày đơn mua hàng.</summary>
     public const string InvoiceBeforeOrder = "InvoiceBeforeOrder";
+
+    /// <summary>Đơn vị đặt hàng không đồng ý nghiệm thu phiếu nhập (lát H4).</summary>
+    public const string AcceptanceDisputed = "AcceptanceDisputed";
 }
 
 /// <summary>Một phiếu nhập mua trên báo cáo đối chiếu PO – nhận – hóa đơn (design.md mục 18.15).</summary>
@@ -127,10 +130,13 @@ public static class ThreeWayMatchIssues
 /// <param name="Difference">Hóa đơn − phiếu nhập (null khi chưa có tiền hóa đơn).</param>
 /// <param name="Result">Matched (khớp), NoInvoice (chưa có hóa đơn), Mismatch (lệch tiền).</param>
 /// <param name="Issues">Các mã cảnh báo <see cref="ThreeWayMatchIssues"/>.</param>
+/// <param name="Acceptance">Xác nhận nghiệm thu của đơn vị đặt hàng: None (chưa), Accepted (đạt), Disputed (không đạt) – lát H4.</param>
 public sealed record ThreeWayMatchRowDto(
     Guid DocumentId, string DocumentNo, DateOnly Date, string SupplierCode, string SupplierName, Guid? PurchaseOrderId, string? PurchaseOrderNo,
     DateOnly? PurchaseOrderDate, DateOnly? PurchaseOrderApprovedDate, decimal? OrderTotal, decimal ReceiptTotal, string? InvoiceNo,
-    string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount, decimal? Difference, string Result, IReadOnlyList<string> Issues);
+    string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount, decimal? Difference, string Result, IReadOnlyList<string> Issues,
+    string Acceptance = "None");
+
 
 /// <summary>Báo cáo đối chiếu PO – nhận – hóa đơn: dòng và tổng hợp.</summary>
 /// <param name="Rows">Phiếu nhập (đã lọc nếu chỉ lấy phiếu có cảnh báo).</param>

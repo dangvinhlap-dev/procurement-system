@@ -154,6 +154,24 @@ export interface InventoryDocument {
   reason?: string | null
   /** Phiếu điều chỉnh: số biên bản kiểm kê. */
   countReportNo?: string | null
+  /** Phiếu nhập mua: xác nhận nghiệm thu của đơn vị đặt hàng (lát H4). */
+  acceptance?: ReceiptAcceptance
+  /** Ý kiến nghiệm thu (bắt buộc khi không đạt). */
+  acceptanceNote?: string | null
+  acceptedByName?: string | null
+  acceptedAt?: string | null
+  /** Người xem xác nhận nghiệm thu được (phiếu đã ghi sổ, có quyền, không phải người lập/ghi sổ). */
+  canConfirmAcceptance?: boolean
+}
+
+/** Xác nhận nghiệm thu phiếu nhập mua của đơn vị đặt hàng (lát H4, design.md mục 18.25). */
+export type ReceiptAcceptance = 'None' | 'Accepted' | 'Disputed'
+
+/** Chữ hiển thị của trạng thái nghiệm thu. */
+export const receiptAcceptanceLabels: Record<ReceiptAcceptance, string> = {
+  None: 'Chưa xác nhận',
+  Accepted: 'Đạt',
+  Disputed: 'Không đạt',
 }
 
 /** Một dòng gửi lên khi lưu; id null = dòng mới. */
@@ -201,7 +219,21 @@ export interface ReceiptInvoiceInput {
   invoiceAmount: number | null
 }
 
+/** Đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập mua đã ghi sổ (lát H4) – không đổi sổ kho; xác nhận lại được. */
+export function useConfirmReceiptAcceptance() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: { accepted: boolean; note: string | null } }) =>
+      apiFetch<InventoryDocument>(`/api/goods-receipts/${id}/acceptance`, { method: 'POST', body: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory-documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+  })
+}
+
 /** Cập nhật hóa đơn NCC của phiếu nhập mua (cả khi đã ghi sổ) – không đổi sổ kho. */
+
 export function useUpdateReceiptInvoice() {
   const queryClient = useQueryClient()
   return useMutation({

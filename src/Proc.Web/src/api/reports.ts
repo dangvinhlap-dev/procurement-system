@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { ReceiptAcceptance } from './inventoryDocuments'
 
 /*
  * Kiểu dữ liệu và hàm gọi API báo cáo kho (khớp Proc.Application.Reports – StockReports.cs, design.md mục 11.2).
@@ -546,6 +547,7 @@ export type ThreeWayMatchIssue =
   | 'ReceivedBeforeOrder'
   | 'ReceivedBeforeApproval'
   | 'InvoiceBeforeOrder'
+  | 'AcceptanceDisputed'
 
 /** Một phiếu nhập mua trên báo cáo đối chiếu PO – nhận – hóa đơn. */
 export interface ThreeWayMatchRow {
@@ -567,7 +569,10 @@ export interface ThreeWayMatchRow {
   difference: number | null
   result: ThreeWayMatchStatus
   issues: ThreeWayMatchIssue[]
+  /** Xác nhận nghiệm thu của đơn vị đặt hàng (lát H4). */
+  acceptance: ReceiptAcceptance
 }
+
 
 /** Báo cáo đối chiếu PO – nhận – hóa đơn: dòng và tổng hợp. */
 export interface ThreeWayMatchResult {
