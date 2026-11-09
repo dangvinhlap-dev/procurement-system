@@ -1,6 +1,6 @@
 ﻿# Tiến độ dự án
 
-Cập nhật: 09/11/2026 (sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 09/11/2026 (G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -459,7 +459,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 **Các lát chưa làm (ghi nhận 08/11/2026 theo yêu cầu người dùng):**
 - Phân tích sơ đồ phê duyệt (xong 08/11/2026): `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy). Người dùng chốt Q1–Q6
-  (design.md 18.25). Thứ tự làm: **G10 (xong)** → **G7 (xong)** → **H1 (xong)** → **H2 (xong)** → **H3 (xong)** → **H4 (xong)** → **G1b (xong)** → **G8 (xong)** → **G11 (xong)** → G12; G9 hoãn.
+  (design.md 18.25). Thứ tự làm: **G10 (xong)** → **G7 (xong)** → **H1 (xong)** → **H2 (xong)** → **H3 (xong)** → **H4 (xong)** → **G1b (xong)** → **G8 (xong)** → **G11 (xong)** → **G12 (xong)**; G9 hoãn.
 - ~~**H1** ý kiến thẩm định của thành viên chuyên môn (GTH, RFQ, hợp đồng, hồ sơ NCC) – không phải cấp duyệt.~~ Xong 09/11/2026.
 - ~~**H2** phiếu GTH có ngoại lệ → thêm chặng Chủ tịch/TGĐ (Q6).~~ Xong 09/11/2026.
 - ~~**H3** PO vượt giá trần → phải Chủ tịch/TGĐ duyệt (Q3).~~ Xong 09/11/2026.
@@ -478,20 +478,20 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   từ kế hoạch nhu cầu đã chốt (`PurchaseRequestService.UsageNormsAsync`, DTO dòng `NormStatus/NormQty/NormRequestedQty/NormThrough`), cột
   "Định mức LK" + cảnh báo đầu phiếu (`UsageNormNotice.tsx`), chỉ cảnh báo; không migration. Test tích hợp `UsageNormTests`, e2e
   `usage-norm.spec.ts`. `dotnet test` 605/605; Playwright 114/115 (lỗi sẵn có volume-rebate); build, tsc, oxlint qua. Quy tắc tự đặt ghi ở design.md 18.25 (G11).
-- **G12** báo cáo tháng cho Ban – **đang làm** (nhánh `feature/g12-bao-cao-thang-ban`, design.md 18.25 mục G12):
-  - Bước 1 (xong): backend `IBoardMonthlyReportService` (`Reports/BoardMonthlyReport.cs`, `BoardMonthlyReportService`, Excel
-    `BoardMonthlyReportExcel`), API `GET /api/reports/board-monthly` + `/excel`; test tích hợp `BoardMonthlyReportTests` qua.
-  - Bước 2 (xong): màn hình **BCBAN** (`pages/reports/BoardMonthlyReportPage.tsx`, `api/boardReport.ts`) – ListPage lưới chỉ tiêu, bấm đúp
-    mở DetailDrawer lưới cùng cột báo cáo chi tiết (xuất `KpiGrid`, `OutOfContractGrid`, `PriceVarianceGrid`, `SupplierCoverageGrid`,
-    `SupplierOnboardingGrid`, `VolumeRebateTrackingGrid`, `ControlFindingGrid`), nút "Xuất gói Excel"; `MONTH_INPUT_FORMATS` dùng chung;
-    DataGrid không vẽ chấm trạng thái khi ô trống. e2e `board-monthly.spec.ts` qua, ảnh `board-monthly*.png`.
-  - Còn: chạy đủ bộ kiểm tra, merge.
-- Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11 (bản gần nhất 0.20.0).
+- ~~**G12** báo cáo tháng cho Ban.~~ Xong 09/11/2026 (nhánh `feature/g12-bao-cao-thang-ban`, design.md 18.25 mục G12): màn hình **BCBAN**
+  (Báo cáo → Báo cáo tháng cho Ban) ghép đúng số các báo cáo chi tiết – tổng quan mua + tỷ lệ mua theo giá đã duyệt (PRCW), 9 KPI, tiết kiệm
+  (SAVE, SAVSTD), mua ngoài giá đã duyệt top 10, biến động giá top 10, CKB gộp (CKBT), NCC đủ điều kiện (SUPCOV), hồ sơ NCC mới (HSN), KSNB
+  (chỉ người có quyền KSNB); mục thiếu quyền ghi "Không có quyền xem". Người có quyền xem toàn tập đoàn mặc định **Toàn tập đoàn** (cả 02
+  công ty – người dùng yêu cầu 09/11/2026); KPI vẫn chỉ công ty đang làm việc (ghi chú trên mục). Bấm đúp mở ngăn kéo lưới cùng cột báo cáo
+  chi tiết; "Xuất gói Excel" mỗi mục một sheet (`GET /api/reports/board-monthly/excel`). Không migration. DataGrid không vẽ chấm trạng thái
+  khi ô trống. Test tích hợp `BoardMonthlyReportTests`, e2e `board-monthly.spec.ts`. `dotnet test` 606/606; Playwright 115/116 lần đủ bộ
+  (contract.spec hộp thoại nhập Excel chập chờn – chạy lại qua); build, tsc, oxlint qua.
+- Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11, G12 (bản gần nhất 0.20.0).
 
 
 
 0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c, G5a, G5b, **G5c** xong (người dùng cho làm tiếp 07/11/2026).
-   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b**, **G10**, **G7** xong (08/11/2026). **H1**, **H2**, **H3**, **H4**, **G1b**, **G8**, **G11** xong (09/11/2026). Tiếp theo: **G12** báo cáo tháng cho Ban. G5a đã phát hành trong 0.20.0;
+   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b**, **G10**, **G7** xong (08/11/2026). **H1**, **H2**, **H3**, **H4**, **G1b**, **G8**, **G11**, **G12** xong (09/11/2026) – đợt G1–G12 hoàn tất (G9 hoãn). G5a đã phát hành trong 0.20.0;
    G5b, G5c, G6a, G6b, G10, G7 chưa phát hành. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
    Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
    TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới

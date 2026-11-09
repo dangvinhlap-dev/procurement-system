@@ -47,7 +47,7 @@ interface Indicator {
   report: string | null
 }
 
-/** Tháng trước – Ban họp xem kết quả tháng đã qua. */
+/** Tháng trước – Ban họp xem kết quả tháng đã qua; người xem được toàn tập đoàn thì mặc định cả 02 công ty (Ban quyết định chung). */
 const defaultFilter = (allCompanies: boolean): BoardMonthlyFilter => {
   const m = dayjs().subtract(1, 'month')
   return { year: m.year(), month: m.month() + 1, allCompanies }
@@ -349,7 +349,7 @@ export function BoardMonthlyReportPage() {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canViewAll = hasPermission(Permission.PurchaseViewAllCompanies)
-  const [filter, setFilter] = useState(() => defaultFilter(false))
+  const [filter, setFilter] = useState(() => defaultFilter(canViewAll))
   const [opened, setOpened] = useState<BoardSection | null>(null)
   const [exporting, setExporting] = useState(false)
   const report = useBoardMonthlyReport(filter)
@@ -416,7 +416,7 @@ export function BoardMonthlyReportPage() {
             )
           )
         }
-        onClearFilters={() => setFilter(defaultFilter(false))}
+        onClearFilters={() => setFilter(defaultFilter(canViewAll))}
         filters={
           <>
             <FilterField label="Tháng" width={120}>

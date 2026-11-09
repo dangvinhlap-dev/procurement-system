@@ -102,6 +102,13 @@ public class BoardMonthlyReportTests
             report.Sections.Select(s => s.Code));
         Assert.All(report.Sections, s => Assert.True(s.Available));
 
+        // Toàn tập đoàn (mặc định trên màn hình với người có quyền – cả 02 công ty): gồm cả PO của công ty này; KPI ghi rõ chỉ công ty đang làm việc.
+        var group = await ReadAsync<BoardMonthlyReportDto>(await client.GetAsync($"{Url}?year={Today.Year}&month={Today.Month}&allCompanies=true", Ct));
+        Assert.True(group.AllCompanies);
+        Assert.True(group.Purchase!.TotalAmount >= purchase.TotalAmount);
+        Assert.Contains(group.OutOfContract!, l => l.OrderNo == po.No || group.OutOfContractCount > BoardMonthlyReportLimits.TopRows);
+        Assert.StartsWith($"Chỉ công ty {company.Code}", group.Sections.Single(s => s.Code == BoardReportSections.Kpi).Note);
+
         // Người chỉ có quyền báo cáo mua: mục CKB, NCC đủ điều kiện, hồ sơ NCC mới để trống kèm ghi chú; không có mục KSNB; không xem toàn tập đoàn.
         var viewerRole = UniqueCode("V");
         await _factory.CreateRoleAsync(viewerRole, Permissions.Report.PurchaseView);

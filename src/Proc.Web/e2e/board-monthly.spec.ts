@@ -4,7 +4,8 @@ import { loginViaApi } from './helpers.ts'
 import { openByCommand } from './inventoryHelpers.ts'
 
 /**
- * Báo cáo tháng cho Ban (BCBAN – lát G12, design.md mục 18.25): quản trị mở màn hình, chọn tháng hiện tại bằng cách gõ MM/yyyy; lưới chỉ tiêu
+ * Báo cáo tháng cho Ban (BCBAN – lát G12, design.md mục 18.25): quản trị (được xem toàn tập đoàn) mở màn hình – mặc định toàn tập đoàn (cả
+ * 02 công ty), bỏ chọn thì về công ty đang làm việc; chọn tháng hiện tại bằng cách gõ MM/yyyy; lưới chỉ tiêu
  * có đủ các mục (quản trị có quyền KSNB nên thấy cả mục kiểm soát nội bộ); bấm đúp mở chi tiết mục KPI (cùng cột màn hình KPI); tải gói Excel.
  * Số liệu từng mục khớp báo cáo chi tiết kiểm tra ở test tích hợp BoardMonthlyReportTests.
  */
@@ -13,6 +14,11 @@ test('báo cáo tháng cho Ban: chọn tháng, xem chi tiết mục, xuất gói
   await page.goto('/')
   await openByCommand(page, 'BCBAN')
   await expect(page.getByRole('heading', { name: 'Báo cáo tháng cho Ban' })).toBeVisible()
+
+  // Mặc định toàn tập đoàn với người có quyền xem toàn tập đoàn.
+  await expect(page.getByRole('checkbox', { name: 'Toàn tập đoàn' })).toBeChecked()
+  await expect(page.locator('.ant-alert')).toContainText('toàn tập đoàn')
+  await page.getByRole('checkbox', { name: 'Toàn tập đoàn' }).uncheck()
 
   const now = new Date()
   const month = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
