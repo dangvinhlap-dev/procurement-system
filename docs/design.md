@@ -1270,7 +1270,7 @@ phân quyền** – phần mềm không viết cứng cấp duyệt hay người
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9); bộ cấp phụ cùng quyền PR/PO: **POX** (ngoại lệ giá, mục 18.10), **POK** (PO khẩn, mục 18.11), **PRB**/**POB** (vượt ngân sách, mục 18.24), **POL** (ngoài danh sách/giá, mục 18.25), **GTX** (phiếu GTH có ngoại lệ – chặng Chủ tịch/TGĐ, lát H2). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
+| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9); bộ cấp phụ cùng quyền PR/PO: **POX** (ngoại lệ giá, mục 18.10), **POK** (PO khẩn, mục 18.11), **PRB**/**POB** (vượt ngân sách, mục 18.24), **POL** (ngoài danh sách/giá, mục 18.25), **POC** (PO vượt giá trần – chặng Chủ tịch/TGĐ, lát H3), **GTX** (phiếu GTH có ngoại lệ – chặng Chủ tịch/TGĐ, lát H2). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
 | Mỗi loại có **quyền duyệt riêng**: `Purchase.PR.Approve`, `Purchase.PO.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `MasterData.Supplier.Approve`, `Purchase.Contract.Approve`. Người duyệt phải có quyền đó **tại công ty của phiếu** (quyền gán theo công ty – mục 9); cấp có vai trò thì phải có thêm vai trò đó tại công ty. Muốn người Tổng công ty duyệt phiếu của công ty thành viên thì gán vai trò cho họ tại công ty thành viên | Công ty nào duyệt do phân quyền |
 | Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC, NDQ không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến, CTA giá trị dự kiến sau phụ lục | Duyệt mấy cấp do người dùng quyết định |
 | Người lập không tự duyệt; từ chối bắt buộc lý do, về nháp; lịch sử `ApprovalStep` chỉ thêm – như PR/PO (mục 6.7) | Tách người lập – người duyệt (G3) |
@@ -1713,7 +1713,7 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
 | Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
 
-Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
 → G12; G9 hoãn.
 
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
@@ -1762,8 +1762,8 @@ Migration `V0_19_0_PoTheoPhieuThang` (cột `PurchaseOrderLine.MonthlyApprovalLi
 khi sửa nháp; `Down()` xóa hai cột, mất liên kết phiếu tháng và cờ trên PO, AuditLog vẫn giữ).
 
 **G4 – Ngân hàng giá** (06/11/2026, chia lát): G4a phiếu khảo sát giá thị trường; G4b giá chuẩn/trần/mục tiêu trên dòng phiếu duyệt tháng
-(Ban duyệt cùng phiếu, hiện giá thị trường gần nhất để tham khảo) và PO vượt giá trần – **chỉ cảnh báo, không chặn, mọi mặt hàng** (người
-dùng chốt 06/11/2026); G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu: chưa làm (khi có yêu cầu).
+(Ban duyệt cùng phiếu, hiện giá thị trường gần nhất để tham khảo) và PO vượt giá trần – **không chặn, mọi mặt hàng** (người dùng chốt
+06/11/2026; từ lát H3 – Q3 – PO vượt trần phải qua chặng Chủ tịch/TGĐ); G4c báo cáo tiết kiệm so giá chuẩn. Chỉ số nguyên liệu: chưa làm (khi có yêu cầu).
 
 **G4a – Phiếu khảo sát giá thị trường** (màn hình **KSG**, Giá và NCC → Khảo sát giá thị trường, `/api/market-price-surveys`, số loại **KSG**,
 ví dụ KSG-TCT-2611-0001 theo ngày khảo sát):
@@ -1785,7 +1785,7 @@ AuditLog vẫn giữ).
 | --- | --- |
 | Dòng phiếu GTH thêm **giá chuẩn**, **giá trần**, **giá mục tiêu** theo ĐVT dòng (VND, trước VAT, đã trừ chiết khấu), đều không bắt buộc, ≥ 0, 6 số lẻ. Có trần thì giá NCC chính, giá dự phòng, giá chuẩn, giá mục tiêu **không vượt trần**. Điều chỉnh / chép sang tháng sau giữ ba giá | Ban duyệt các mốc giá cùng kết quả tháng; phiếu không tự mâu thuẫn với trần của chính nó |
 | Lưới GTH có cột **Giá thị trường** (chỉ xem, cần quyền `Pricing.PriceBank.View`): phiếu khảo sát Đã chốt mới nhất của mặt hàng trong 180 ngày, giá thấp nhất của phiếu đó quy về ĐVT dòng (giá cơ sở × hệ số); rê chuột thấy số phiếu, ngày, từng nguồn | Ban so giá đề xuất với thị trường khi duyệt (G4a) |
-| **PO vượt giá trần**: dòng PO có phiếu tháng (`MonthlyApprovalLineId`, kể cả NCC ngoài danh sách) và PO bằng VND – trần quy về ĐVT dòng PO (trần ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng, 6 số lẻ); **giá ròng sau chiết khấu, trước VAT** > trần → cột Nguồn giá ghi "Vượt giá trần …", đầu phiếu cảnh báo vàng. **Chỉ cảnh báo, không chặn** gửi/duyệt, áp mọi mặt hàng (người dùng chốt 06/11/2026). Tính lúc đọc, không lưu cờ | Người duyệt thấy rõ để cân nhắc; NCC chính/dự phòng đúng giá tháng không bao giờ vượt trần |
+| **PO vượt giá trần**: dòng PO có phiếu tháng (`MonthlyApprovalLineId`, kể cả NCC ngoài danh sách) và PO bằng VND – trần quy về ĐVT dòng PO (trần ÷ hệ số ĐVT phiếu × hệ số ĐVT dòng, 6 số lẻ); **giá ròng sau chiết khấu, trước VAT** > trần → cột Nguồn giá ghi "Vượt giá trần …", đầu phiếu cảnh báo vàng. **Không chặn** gửi, áp mọi mặt hàng (người dùng chốt 06/11/2026); **gửi duyệt phải qua chặng "Vượt giá trần" – Chủ tịch/TGĐ** (lát H3, Q3 – thay "chỉ cảnh báo"). Tính lúc đọc và lúc gửi, không lưu cờ (chặng duyệt đã ghi trong lượt) | Người duyệt thấy rõ để cân nhắc; NCC chính/dự phòng đúng giá tháng không bao giờ vượt trần |
 
 Migration `V0_19_0_GiaChuanTranMucTieu` (3 cột numeric(19,6) cho phép null trên `MonthlySupplierApprovalLine`; `Down()` xóa cột, mất các giá này,
 AuditLog vẫn giữ).
@@ -1914,7 +1914,7 @@ Migration `V0_20_0_DatHangGop` (bảng `PooledOrder`, `PooledOrderCompany`, `Poo
 | Quy tắc | Lý do |
 | --- | --- |
 | Thêm vai trò mẫu theo sơ đồ (giữ các vai trò mẫu cũ): **CHUTICH** Chủ tịch HĐQT/TGĐ (duyệt PR, PO, hợp đồng, NCC độc quyền, nhận báo cáo KSNB); **PHOBAN** Phó ban – Hội đồng (duyệt NCC, giá tháng, kết quả thầu, bảng giá, hợp đồng, chiết khấu, độc quyền; kiểm tra PO); Trưởng ban dùng **TRUONGBANCUVT**; **THAMDINHCL**, **THAMDINHPL** thành viên chuyên môn (xem, đánh giá NCC – không quyền duyệt); **VPBDIEUPHOI**, **VPBPHANTICH** Văn phòng Ban (phân tích giá, ngân hàng giá, đề xuất NCC/giá, lập phiếu GTH, đề xuất chọn thầu – không lập hồ sơ NCC, không duyệt, không đặt hàng); **CUCTRUONGPHONG**, **CUCDATHANG** Phòng cung ứng chung (tìm kiếm, đánh giá NCC, hỏi giá RFQ, lập PO, theo dõi giao hàng; Trưởng phòng duyệt tiếp nhận PR – không lập/duyệt giá, không lập GTH); **DONVIDATHANG** đơn vị đặt hàng (PR, kế hoạch nhu cầu, xem phiếu nhập) | Sơ đồ mục 1, 3; Q2 |
-| **Cấu hình duyệt mẫu** (`ApprovalRuleTemplates`): PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch; POL, POX, POK, NDQ – Phó ban → Chủ tịch; RFQ – Phó ban → Trưởng ban; bảng giá – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; **chỉ ở tổng công ty**: GTH, CKB – Phó ban → Phó ban → Trưởng ban (3 thành viên Hội đồng thay biểu quyết), GTX (GTH có ngoại lệ – H2) – Chủ tịch, hồ sơ NCC – Trưởng ban. Vượt ngân sách (PRB, POB) không có trên sơ đồ – không cấu hình mẫu | Sơ đồ mục 2, 4 |
+| **Cấu hình duyệt mẫu** (`ApprovalRuleTemplates`): PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch; POL, POX, POK, NDQ – Phó ban → Chủ tịch; POC (PO vượt giá trần – H3) – Chủ tịch; RFQ – Phó ban → Trưởng ban; bảng giá – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; **chỉ ở tổng công ty**: GTH, CKB – Phó ban → Phó ban → Trưởng ban (3 thành viên Hội đồng thay biểu quyết), GTX (GTH có ngoại lệ – H2) – Chủ tịch, hồ sơ NCC – Trưởng ban. Vượt ngân sách (PRB, POB) không có trên sơ đồ – không cấu hình mẫu | Sơ đồ mục 2, 4 |
 | Xem trước từng cấp với tình trạng: Sẽ tạo / Đã cấu hình – giữ nguyên / Thiếu vai trò mẫu / Chỉ ở tổng công ty. Áp cho **công ty đang làm việc**, chỉ tạo loại phiếu **chưa có cấp nào** và đủ vai trò mẫu của cả loại (thiếu một vai trò thì bỏ cả loại); không sửa cấu hình đã có; mọi cấp **ngưỡng 0** – người quản trị sửa ngưỡng theo phân quyền nội bộ. Xem: `System.Parameter.View`; áp: `System.Parameter.Manage` | Nguyên tắc "duyệt mấy cấp do người quản trị cấu hình" (mục 18.6) |
 
 Không có migration (vai trò, cấp duyệt là dữ liệu tạo khi người quản trị bấm).
@@ -1946,6 +1946,18 @@ Migration `V0_20_0_YKienThamDinh` (bảng `AppraisalOpinion` – bảng mới, `
 
 Migration `V0_20_0_GthNgoaiLe` (cột `ExceptionNote` varchar(1000) null, `HasException` boolean mặc định false trên `MonthlySupplierApproval`;
 `Down()` xóa hai cột, mất giải trình và cờ ngoại lệ; AuditLog vẫn giữ).
+
+**H3 – PO vượt giá trần lên Chủ tịch/TGĐ** (09/11/2026, quyết định Q3 – thay "chỉ cảnh báo" của G4b):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| PO có dòng **giá ròng (sau chiết khấu, trước VAT) > giá trần** của phiếu duyệt tháng (cách quy ĐVT, chỉ PO VND như G4b; kể cả NCC ngoài danh sách) vẫn gửi duyệt được, nhưng thêm **chặng 5 "Vượt giá trần"** sau mọi chặng khác (thường → ngoại lệ giá → vượt ngân sách → ngoài danh sách/giá → vượt giá trần), theo bộ cấp loại **POC** "Đơn mua hàng vượt giá trần" (APRL, ngưỡng tổng thanh toán gồm VAT, **luôn ít nhất một cấp**; chưa cấu hình → một cấp, ai có quyền duyệt PO). Cùng quyền `Purchase.PO.Approve`. Vượt trần tính lại lúc gửi (cả chạy thử cho popup) | Sơ đồ: vượt giá trần là ngoại lệ phải Chủ tịch/TGĐ quyết |
+| **Không lặp người duyệt**: cấp POC có vai trò **đã có ở chặng trước của cùng lượt** thì bỏ cấp đó (`ApprovalPlan.WithoutPlannedRoles`) – ví dụ PO 3 cấp Phó ban → Phó ban → Chủ tịch đã có Chủ tịch nên không thêm chặng 5; PO nhỏ chỉ qua Phó ban thì thêm Chủ tịch ở chặng 5. Cấp POC không gắn vai trò (chưa cấu hình) luôn giữ | Mỗi người chỉ duyệt một cấp trong lượt (R3) – thêm lại Chủ tịch sẽ kẹt phiếu; Chủ tịch đã duyệt PO là đạt yêu cầu "lên Chủ tịch" |
+| Cấu hình duyệt mẫu (G10): **POC – cấp 1 CHUTICH**, mọi công ty. Đầu phiếu PO cảnh báo vàng nêu chặng "Vượt giá trần" (Chủ tịch/TGĐ); lịch sử duyệt và popup gửi duyệt ghi tên chặng | Người lập thấy trước, người duyệt thấy rõ lý do |
+
+Không đổi CSDL (không migration). Lưu ý: chặng POX, POL (mẫu cấp 2 Chủ tịch) chưa áp quy tắc bỏ cấp trùng vai trò – PO lớn có Chủ tịch ở chặng
+thường mà lệch giá/ngoài danh sách thì người quản trị cần sửa ngưỡng hoặc vai trò để không kẹt (R3).
+
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 
