@@ -2,7 +2,8 @@ import { CheckOutlined, CloseCircleOutlined, CloseOutlined, MinusCircleOutlined,
 import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { previewApproval, type ApprovalStep, type PurchaseActions, type PurchaseStatus } from '../../api/purchasing'
+import { MONTHLY_STAGE_LABELS } from '../../api/monthlyApprovals'
+import { PURCHASE_STAGE_LABELS, previewApproval, type ApprovalStep, type PurchaseActions, type PurchaseStatus } from '../../api/purchasing'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { ApprovalChain, ApproveInfo } from './ApprovalHistory'
 
@@ -130,6 +131,9 @@ export function confirmReject(modal: AppApi['modal'], message: AppApi['message']
   })
 }
 
+/** Tên chặng phụ trong popup gửi duyệt theo loại phiếu – cùng nhãn với tab Lịch sử duyệt. */
+const STAGE_LABELS_BY_TYPE: Record<string, Record<number, string>> = { PR: PURCHASE_STAGE_LABELS, PO: PURCHASE_STAGE_LABELS, GTH: MONTHLY_STAGE_LABELS }
+
 /**
  * Gửi duyệt có xem trước (yêu cầu người dùng 03/11/2026): lưu phiếu, hỏi server chuỗi duyệt dự kiến (chạy thử – không lưu gì) rồi mới hỏi
  * xác nhận, popup liệt kê từng cấp và người duyệt được. Lỗi khiến phiếu không gửi được (như khi gửi thật) báo ngay, không mở popup.
@@ -166,7 +170,15 @@ export async function confirmSubmitWithPreview(
   modal.confirm({
     title: options.title,
     width: 520,
-    content: <ApprovalChain steps={preview.steps} approvedImmediately={preview.approvedImmediately} byCompany={options.byCompany} />,
+    content: (
+      <ApprovalChain
+        steps={preview.steps}
+        approvedImmediately={preview.approvedImmediately}
+        byCompany={options.byCompany}
+        stageLabels={STAGE_LABELS_BY_TYPE[options.docType]}
+      />
+    ),
+
     okText: options.okText ?? 'Gửi duyệt',
     cancelText: 'Không',
     onOk: () => options.onSubmit(id),
