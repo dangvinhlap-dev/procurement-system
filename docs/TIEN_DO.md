@@ -1,6 +1,6 @@
 ﻿# Tiến độ dự án
 
-Cập nhật: 09/11/2026 (G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 09/11/2026 (sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -464,10 +464,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - ~~**H2** phiếu GTH có ngoại lệ → thêm chặng Chủ tịch/TGĐ (Q6).~~ Xong 09/11/2026.
 - ~~**H3** PO vượt giá trần → phải Chủ tịch/TGĐ duyệt (Q3).~~ Xong 09/11/2026.
 - ~~**H4** đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập.~~ Xong 09/11/2026.
-- **Lỗi cần xem**: e2e `volume-rebate` (CKB) lỗi ổn định từ 09/11/2026 – ô "% chiết khấu bậc 2" nhận chữ số vào ô ngưỡng. Lần chạy đủ bộ
-  sau G1b (09/11/2026, API 5000 + Vite 5173) thì qua – có thể chỉ lỗi khi chạy API 5010/Vite 5180; lỗi lại thì xem tiếp.
-  **09/11/2026 sau G11: lỗi lại ổn định cả trên `main` (API 5000/Vite 5173)** – không báo "Đã lưu thỏa thuận CKB-…"; cần sửa (nhánh `fix/`)
-  trước G12. Bộ Playwright khác 114/115 qua.
+- ~~**Lỗi e2e `volume-rebate`** (CKB) chập chờn – chữ số "% chiết khấu bậc 2" rơi vào ô ngưỡng.~~ Sửa 09/11/2026 (nhánh
+  `fix/e2e-volume-rebate`): nguyên nhân ở `LineGrid` – "Thêm dòng"/F2 đặt con trỏ vào dòng mới bằng `setTimeout` 50 ms và tìm dòng toàn trang;
+  máy chậm thì con trỏ nhảy về ô ngưỡng giữa lúc đang gõ ô % (người dùng gõ nhanh cũng gặp; form hai lưới có thể đặt nhầm lưới). Nay đặt
+  con trỏ trong `useLayoutEffect` ngay khi dòng mới vẽ xong, tìm trong chính lưới (ref); test chờ số dòng tăng rồi mới gõ.
+  `dotnet test` 605/605; Playwright 113/115 lần đủ bộ (auth chụp đăng nhập, sole-sources chập chờn do tải – chạy lại qua, ép tải 12/12),
+  volume-rebate ép tải 8 luồng qua; build, tsc, oxlint qua.
 - ~~**G1b** đếm tối thiểu 03 NCC theo nhóm hàng (Q1).~~ Xong 09/11/2026.
 - ~~**G7** đặt hàng gộp và phân bổ.~~ Xong 08/11/2026.
 - ~~**G8** hồ sơ đánh giá NCC mới.~~ Xong 09/11/2026 (xem bảng Đã xong).

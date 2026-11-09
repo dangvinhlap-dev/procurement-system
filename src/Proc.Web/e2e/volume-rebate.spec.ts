@@ -50,9 +50,11 @@ test('lập thỏa thuận chiết khấu sản lượng gộp, xem lũy kế, g
   // Tab Bậc chiết khấu: hai bậc 1.000 cái 1% – 2.000 cái 2%.
   await page.getByRole('tab', { name: 'Bậc chiết khấu' }).click()
   const tiers = page.getByRole('tabpanel', { name: 'Bậc chiết khấu' })
-  for (const [from, pct] of [['1000', '1'], ['2000', '2']]) {
+  for (const [i, [from, pct]] of [['1000', '1'], ['2000', '2']].entries()) {
+    const n = i + 1
     await tiers.getByRole('button', { name: /Thêm dòng/ }).click()
-    const n = await tiers.getByLabel(/^Ngưỡng bậc \d+$/).count()
+    // Chờ dòng mới vẽ xong rồi mới gõ – đếm ngay sau khi bấm có thể còn ra số dòng cũ.
+    await expect(tiers.getByLabel(/^Ngưỡng bậc \d+$/)).toHaveCount(n)
     await page.getByLabel(`Ngưỡng bậc ${n}`).fill(from)
     await page.getByLabel(`% chiết khấu bậc ${n}`).fill(pct)
   }

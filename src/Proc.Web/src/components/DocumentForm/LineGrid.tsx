@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Form, type FormListFieldData } from 'antd'
-import { useEffect, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type MutableRefObject, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type MutableRefObject, type ReactNode } from 'react'
 import { layoutTokens } from '../../theme'
 import { hasOpenPopup } from '../../utils/popup'
 
@@ -115,20 +115,31 @@ function LineGridBody({
       return next
     })
 
-  // Thêm dòng rồi đặt con trỏ vào ô nhập đầu tiên của dòng mới (chờ React vẽ xong dòng).
+  const rootRef = useRef<HTMLDivElement>(null)
+  // Cờ "vừa thêm dòng, cần đặt con trỏ vào dòng mới" – xử lý ở useLayoutEffect bên dưới.
+  const focusNewRow = useRef(false)
+
+  // Thêm dòng rồi đặt con trỏ vào ô nhập đầu tiên của dòng mới.
   useEffect(() => {
     if (!addRef) return
     addRef.current = () => {
+      focusNewRow.current = true
       onAdd()
-      setTimeout(() => {
-        const rows = document.querySelectorAll<HTMLTableRowElement>('.line-grid tbody tr.line-grid-row')
-        rows[rows.length - 1]?.querySelector<HTMLElement>('input:not([disabled])')?.focus()
-      }, 50)
     }
     return () => {
       addRef.current = null
     }
   }, [addRef, onAdd])
+
+  // Đặt con trỏ ngay khi React vẽ xong dòng mới (trước khi trình duyệt nhận phím tiếp theo). Trước đây chờ setTimeout 50 ms: máy chậm
+  // thì con trỏ nhảy về dòng mới giữa lúc người dùng đã gõ sang ô khác – chữ số rơi nhầm ô (lỗi e2e volume-rebate 09/11/2026).
+  // Tìm dòng trong chính lưới này, không tìm toàn trang: form có hai lưới (dòng hàng + bậc chiết khấu) thì không đặt nhầm lưới.
+  useLayoutEffect(() => {
+    if (!focusNewRow.current) return
+    focusNewRow.current = false
+    const rows = rootRef.current?.querySelectorAll<HTMLTableRowElement>('tbody tr.line-grid-row')
+    rows?.[rows.length - 1]?.querySelector<HTMLElement>('input:not([disabled])')?.focus()
+  }, [fields.length])
 
   // Enter sang ô nhập kế tiếp, như Excel. Ô đang mở danh sách thả xuống thì để Enter chọn mục.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -145,7 +156,7 @@ function LineGridBody({
   }
 
   return (
-    <div className="line-grid" onKeyDown={onKeyDown}>
+    <div className="line-grid" ref={rootRef} onKeyDown={onKeyDown}>
       {/* scrollX: bảng rộng bằng tổng độ rộng cột (tối thiểu 100% – CSS), nhiều cột thì cuộn ngang thay vì ép cột hẹp (docs/ui-style.md mục 5). */}
       <table style={scrollX ? { width: 44 + columns.reduce((sum, c) => sum + widthOf(c), 0) + (readOnly ? 0 : 32) } : undefined}>
         <thead>
