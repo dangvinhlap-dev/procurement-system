@@ -112,6 +112,9 @@ interface SourceInfo {
   plans: CompanyPlan[]
 }
 
+/** Lý do khóa "Tạo PO" khi thiếu quyền đặc biệt (giống câu máy chủ, không kèm mã công ty). */
+const MEMBER_PO_BLOCKED = 'Tạo PO cho công ty thành viên cần quyền đặc biệt "Tạo PO cho công ty thành viên" tại tổng công ty – liên hệ quản trị để được cấp.'
+
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Tổng phân bổ của dòng (4 số lẻ). */
@@ -122,8 +125,9 @@ const sumAlloc = (alloc: LineValues['alloc']) => Math.round(Object.values(alloc 
  * @param doc Phiếu đã tải (null khi lập mới).
  * @param margin % biên độ đang áp.
  * @param editable Phiếu đang sửa được.
+ * @param blocked Lý do không tạo PO được (thiếu quyền), null nếu được.
  */
-function PooledNotices({ doc, margin, editable }: { doc: PooledOrder | undefined; margin: number; editable: boolean }) {
+function PooledNotices({ doc, margin, editable, blocked }: { doc: PooledOrder | undefined; margin: number; editable: boolean; blocked: string | null }) {
   const created = doc?.companies.filter((c) => c.purchaseOrderNo) ?? []
   const notices = [
     doc?.status === 'Ordered' && (
@@ -134,6 +138,7 @@ function PooledNotices({ doc, margin, editable }: { doc: PooledOrder | undefined
     ),
     doc?.status === 'Cancelled' && <Alert key="cancel" type="error" showIcon title={`Đã hủy ${doc.cancelledOn ? formatDate(doc.cancelledOn) : ''}: ${doc.cancelReason ?? ''}`} />,
     doc?.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
+    editable && blocked && <Alert key="blocked" type="warning" showIcon title={blocked} />,
     editable && (
       <Alert key="margin" type="info" showIcon
         title={`Biên độ phân bổ ${margin.toLocaleString('vi-VN')}%: mỗi công ty được lệch SL đề xuất theo tỷ lệ kế hoạch nhu cầu tháng tối đa max(tổng dòng × ${margin.toLocaleString('vi-VN')}%, 1 ĐVT). Ô có dấu cảnh báo đang vượt – không tạo PO được. Mặt hàng chưa có kế hoạch ở công ty nào thì phải ghi lý do phân bổ.`} />
@@ -170,6 +175,13 @@ export function PooledOrderPage() {
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
   const watchedCompanies = Form.useWatch('companies', form) as CompanyValues[] | undefined
+  // Tạo PO cho công ty thành viên cần quyền đặc biệt ở tổng công ty (design.md mục 18.25, G7c). Phiếu đã lưu: máy chủ tính theo công ty có SL;
+  // lập mới: báo sớm theo công ty áp dụng phiếu tháng (máy chủ vẫn kiểm tra lại khi bấm).
+  const createBlocked = doc
+    ? doc.actions.createOrdersBlockedReason
+    : (watchedCompanies ?? []).some((c) => c?.companyId && c.companyId !== workingCompany?.id) && !hasPermission(Permission.PooledOrderCreateMemberPo)
+      ? MEMBER_PO_BLOCKED
+      : null
   const companyRows = useMemo(() => watchedCompanies ?? [], [watchedCompanies])
   const approvals = usePooledApprovals(!readOnly && orderDate ? orderDate.format('YYYY-MM-DD') : null)
   const context = usePooledContext(readOnly ? undefined : approvalId, readOnly ? undefined : supplierId)
@@ -552,7 +564,7 @@ export function PooledOrderPage() {
           <Button icon={<PartitionOutlined />} onClick={distributeAll} disabled={!context.data}>
             Phân bổ theo kế hoạch
           </Button>
-          <Button icon={<CheckOutlined />} onClick={createOrders} loading={mutations.createOrders.isPending}>
+          <Button icon={<CheckOutlined />} onClick={createOrders} loading={mutations.createOrders.isPending} disabled={!!createBlocked} title={createBlocked ?? undefined}>
             Tạo PO
           </Button>
         </>
@@ -584,7 +596,7 @@ export function PooledOrderPage() {
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={query.isLoading}
       error={error ?? (query.error ? query.error.message : null) ?? (context.error ? context.error.message : null)}
-      notice={<PooledNotices doc={doc} margin={margin} editable={!readOnly} />}
+      notice={<PooledNotices doc={doc} margin={margin} editable={!readOnly} blocked={createBlocked} />}
       form={form}
       initialValues={{ orderDate: dayjs(), companies: [], lines: [] }}
       readOnly={readOnly}

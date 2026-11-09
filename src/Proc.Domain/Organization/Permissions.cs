@@ -130,9 +130,16 @@ public static class Permissions
         /// <summary>Quyền "Xem phiếu đặt hàng gộp" (lát G7, design.md mục 18.25).</summary>
         public const string PooledOrderView = "Purchase.PooledOrder.View";
         /// <summary>
-        /// Quyền "Lập, sửa, hủy phiếu đặt hàng gộp và tạo PO cho các công ty" – tạo PO còn cần quyền tạo PO tại từng công ty nhận hàng.
+        /// Quyền "Lập, sửa, hủy phiếu đặt hàng gộp và bấm tạo PO" – phần PO của tổng công ty cần thêm quyền tạo PO tại tổng công ty, phần
+        /// của công ty thành viên cần quyền đặc biệt <see cref="PooledOrderCreateMemberPo"/>.
         /// </summary>
         public const string PooledOrderManage = "Purchase.PooledOrder.Manage";
+        /// <summary>
+        /// Quyền đặc biệt "Tạo PO cho công ty thành viên" (lát G7c, design.md mục 18.25): cấp ở vai trò tại tổng công ty; người có quyền này tạo
+        /// được PO cho công ty thành viên từ phiếu đặt hàng gộp dù không có vai trò ở công ty đó (PO lập thay mặt tổng công ty, vẫn kiểm tra kho,
+        /// NCC áp dụng, ngân sách, giá theo công ty nhận). Không thuộc vai trò mẫu nào – quản trị cấp riêng.
+        /// </summary>
+        public const string PooledOrderCreateMemberPo = "Purchase.PooledOrder.CreateMemberPo";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -300,7 +307,8 @@ public static class Permissions
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),
         new(Purchase.PooledOrderView, "Xem phiếu đặt hàng gộp"),
-        new(Purchase.PooledOrderManage, "Lập phiếu đặt hàng gộp, tạo PO cho các công ty"),
+        new(Purchase.PooledOrderManage, "Lập phiếu đặt hàng gộp, bấm tạo PO"),
+        new(Purchase.PooledOrderCreateMemberPo, "Tạo PO cho công ty thành viên (quyền đặc biệt của tổng công ty)"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
