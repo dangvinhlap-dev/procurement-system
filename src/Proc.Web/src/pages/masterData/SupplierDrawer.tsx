@@ -3,6 +3,7 @@ import { Alert, App, Button, Checkbox, Form, Input, Rate } from 'antd'
 import { Select } from '../../classic/Select'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { onboardingStatusLabels, type SupplierOnboardingStatus } from '../../api/supplierOnboardings'
 import { EMPTY_GUID, previewApproval } from '../../api/purchasing'
 import { changeKindLabels } from '../../api/supplierApprovals'
 import { ApprovalGroups } from '../purchasing/ApprovalHistory'
@@ -266,6 +267,28 @@ export function SupplierDrawer({
                       {`: ${changeKindLabels[r.kind]} → ${r.proposedSummary} (chờ ${r.waitingFor ?? ''})`}
                     </div>
                   ))}
+                />
+              )}
+              {/* NCC tạo từ lát G8 chưa duyệt: lên Đã duyệt qua hồ sơ đánh giá NCC mới (design.md mục 18.25), không đổi trạng thái ở đây. */}
+              {detail?.requiresOnboarding && detail.status === 'Potential' && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  title={
+                    detail.latestOnboarding ? (
+                      <>
+                        NCC mới – lên Đã duyệt qua hồ sơ đánh giá NCC mới:{' '}
+                        <Link to={`/gia-ncc/ho-so-ncc-moi/${detail.latestOnboarding.id}`}>{detail.latestOnboarding.no}</Link>
+                        {` (${onboardingStatusLabels[detail.latestOnboarding.status as SupplierOnboardingStatus] ?? detail.latestOnboarding.status})`}
+                      </>
+                    ) : (
+                      <>
+                        NCC mới – muốn đưa vào Đã duyệt hãy lập <Link to="/gia-ncc/ho-so-ncc-moi/moi">hồ sơ đánh giá NCC mới (HSN)</Link>: Phòng
+                        cung ứng đánh giá, Văn phòng Ban đề xuất, Hội đồng duyệt.
+                      </>
+                    )
+                  }
                 />
               )}
               <div className="detail-grid">

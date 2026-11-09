@@ -203,6 +203,10 @@ public sealed class SupplierAdministration : ISupplierAdministration
         {
             Version = s.Version,
             Categories = (await CategoriesOfAsync([id], cancellationToken)).GetValueOrDefault(id) ?? [],
+            RequiresOnboarding = s.RequiresOnboarding,
+            // Hồ sơ thuộc tổng công ty: filter công ty giữ nguyên, ở công ty thành viên thì không thấy (null).
+            LatestOnboarding = await _db.SupplierOnboardings.AsNoTracking().Where(o => o.SupplierId == id).OrderByDescending(o => o.CreatedAt)
+                .Select(o => new SupplierOnboardingRefDto(o.Id, o.No, o.Status.ToString())).FirstOrDefaultAsync(cancellationToken),
         };
     }
 

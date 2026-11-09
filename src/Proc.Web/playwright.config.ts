@@ -12,6 +12,8 @@ const apiUrl = process.env.E2E_API_URL ?? 'http://localhost:5000'
 
 export default defineConfig({
   testDir: './e2e',
+  // Bật tham số chuyển tiếp HSN (lát G8) để các test dựng NCC "Đã duyệt" như trước – xem e2e/global-setup.ts.
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
   reporter: [['list']],
   use: {

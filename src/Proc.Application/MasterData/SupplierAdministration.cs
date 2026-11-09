@@ -115,6 +115,12 @@ public sealed record SupplierDetailDto(
 {
     /// <summary>Ngành hàng NCC cung cấp, chọn từ danh mục Nhóm hàng (design.md mục 5.3, 5.8).</summary>
     public IReadOnlyList<SupplierCategoryRefDto> Categories { get; init; } = [];
+
+    /// <summary>NCC tạo từ lát G8: lên Đã duyệt phải qua hồ sơ đánh giá NCC mới (design.md mục 18.25).</summary>
+    public bool RequiresOnboarding { get; init; }
+
+    /// <summary>Hồ sơ đánh giá NCC mới gần nhất của NCC – chỉ khi người xem đang ở tổng công ty.</summary>
+    public SupplierOnboardingRefDto? LatestOnboarding { get; init; }
 }
 
 /// <summary>Thông tin NCC gửi lên khi thêm (kèm mã) hoặc sửa.</summary>

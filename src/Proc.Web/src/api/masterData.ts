@@ -1,4 +1,4 @@
-import type { SupplierChangeRequest } from './supplierApprovals'
+import type { SupplierChangeRequest, SupplierOnboardingRef } from './supplierApprovals'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
@@ -390,6 +390,10 @@ export interface SupplierDetail extends Omit<SupplierInput, 'code' | 'categoryId
   canEdit: boolean
   /** Yêu cầu duyệt đang chờ (trạng thái, tài khoản ngân hàng) – design.md mục 18.6. */
   pendingRequests: SupplierChangeRequest[] | null
+  /** NCC tạo từ lát G8: lên Đã duyệt phải qua hồ sơ đánh giá NCC mới (HSN – design.md mục 18.25). */
+  requiresOnboarding: boolean
+  /** Hồ sơ HSN gần nhất (chỉ khi đang ở tổng công ty). */
+  latestOnboarding: SupplierOnboardingRef | null
 }
 
 /** Danh sách nhóm NCC. */

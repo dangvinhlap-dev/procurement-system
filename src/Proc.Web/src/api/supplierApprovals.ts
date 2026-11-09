@@ -28,6 +28,15 @@ export interface SupplierChangeRequest {
   approvals: ApprovalStep[]
   canApprove: boolean
   canCancel: boolean
+  /** Hồ sơ đánh giá NCC mới đi kèm (lát G8) – chỉ có khi đang làm việc ở tổng công ty. */
+  onboarding?: SupplierOnboardingRef | null
+}
+
+/** Tham chiếu ngắn tới hồ sơ đánh giá NCC mới (HSN). */
+export interface SupplierOnboardingRef {
+  id: string
+  no: string
+  status: string
 }
 
 /** Nhãn loại thay đổi. */

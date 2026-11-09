@@ -1,6 +1,6 @@
 import { Alert, App, Button, Descriptions, Input, Modal } from 'antd'
 import { useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   changeKindLabels,
   changeStatusLabels,
@@ -168,6 +168,12 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
                 <Descriptions.Item label="Loại">{changeKindLabels[r.kind]}</Descriptions.Item>
                 <Descriptions.Item label="Hiện tại">{r.currentSummary}</Descriptions.Item>
                 <Descriptions.Item label="Đề nghị">{r.proposedSummary}</Descriptions.Item>
+                {r.onboarding && (
+                  // Yêu cầu lập từ hồ sơ đánh giá NCC mới (lát G8) – người duyệt mở hồ sơ xem đánh giá, giấy tờ, đề xuất.
+                  <Descriptions.Item label="Hồ sơ NCC mới">
+                    <Link to={`/gia-ncc/ho-so-ncc-moi/${r.onboarding.id}`}>{r.onboarding.no}</Link>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Đang chờ">{r.waitingFor ?? '—'}</Descriptions.Item>
                 <Descriptions.Item label="Người lập">{`${r.createdByName ?? ''} – ${formatDateTime(r.createdAt)}`}</Descriptions.Item>
                 {r.rejectReason && <Descriptions.Item label="Lý do từ chối">{r.rejectReason}</Descriptions.Item>}

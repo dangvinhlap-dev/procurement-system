@@ -70,6 +70,7 @@ export const docTypeLabels: Record<string, string> = {
   CKB: 'Thỏa thuận chiết khấu sản lượng gộp',
   KHN: 'Kế hoạch nhu cầu',
   DGN: 'Đánh giá NCC định kỳ',
+  HSN: 'Hồ sơ đánh giá NCC mới',
   VP: 'Vi phạm KSNB',
 }
 
@@ -86,6 +87,7 @@ export function documentPath(docType: string, id: string): string | null {
     PRL: '/gia-ncc/bang-gia', SRC: '/dau-thau/tim-nguon', RFQ: '/dau-thau/rfq', CTR: '/mua-hang/hop-dong-khung',
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang', KSG: '/gia-ncc/khao-sat-gia', CKB: '/gia-ncc/chiet-khau-san-luong', KHN: '/mua-hang/ke-hoach-nhu-cau',
+    HSN: '/gia-ncc/ho-so-ncc-moi',
   }
   return pages[docType] ? `${pages[docType]}/${id}` : null
 }

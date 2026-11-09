@@ -154,6 +154,12 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
             .ToDictionaryAsync(s => s.Id, s => (s.Code, s.Name), cancellationToken);
         var userIds = requests.Select(r => r.CreatedBy).OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        // Hồ sơ NCC mới đi kèm (G8) – thuộc tổng công ty, filter công ty giữ nguyên: ở công ty thành viên không có liên kết.
+        var requestIds = requests.Select(r => (Guid?)r.Id).ToList();
+        var onboardings = (await _db.SupplierOnboardings.AsNoTracking().Where(o => requestIds.Contains(o.ChangeRequestId))
+                .Select(o => new { o.ChangeRequestId, Ref = new SupplierOnboardingRefDto(o.Id, o.No, o.Status.ToString()) })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(o => o.ChangeRequestId!.Value, o => o.Ref);
         var result = new List<SupplierChangeRequestDto>();
         foreach (var r in requests)
         {
@@ -165,7 +171,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
             result.Add(new SupplierChangeRequestDto(
                 r.Id, r.No, r.SupplierId, code, name, r.Kind.ToString(), r.CurrentSummary, r.ProposedSummary, r.Status.ToString(),
                 r.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, r.CreatedAt, r.ApprovedAt, r.RejectReason, waiting, approvals,
-                canApprove, r.IsAwaitingApproval && r.CreatedBy == _scope.UserId));
+                canApprove, r.IsAwaitingApproval && r.CreatedBy == _scope.UserId) { Onboarding = onboardings.GetValueOrDefault(r.Id) });
         }
 
         return result;
