@@ -1,6 +1,6 @@
 ﻿# Tiến độ dự án
 
-Cập nhật: 09/11/2026 (G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 09/11/2026 (phát hành 0.21.0, bản test 5007 nâng lên 0.21.0; G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -486,7 +486,17 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   chi tiết; "Xuất gói Excel" mỗi mục một sheet (`GET /api/reports/board-monthly/excel`). Không migration. DataGrid không vẽ chấm trạng thái
   khi ô trống. Test tích hợp `BoardMonthlyReportTests`, e2e `board-monthly.spec.ts`. `dotnet test` 606/606; Playwright 115/116 lần đủ bộ
   (contract.spec hộp thoại nhập Excel chập chờn – chạy lại qua); build, tsc, oxlint qua.
-- Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11, G12 (bản gần nhất 0.20.0).
+- **Phát hành 0.21.0 (09/11/2026)**: tag `v0.21.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.21.0 (gói
+  `procurement-0.21.0.zip`) – G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11, G12; 7 migration (65 → 72), script
+  `db/scripts/0.21.0.sql` chạy thử 2 lần trên bản sao `procurement_kiemtra_0210` (từ CSDL bản test 5007; số dòng PO/NCC/AuditLog giữ nguyên).
+  Kiểm tra trước phát hành: build 0 cảnh báo (bổ sung XML doc `PurchaseRequestLineDto`), `dotnet test` 606/606, `npm run build`, tsc, oxlint
+  qua; Playwright lần đủ bộ gần nhất 115/116 (G12). **Bản test cổng 5007 nâng tại chỗ lên 0.21.0**: `app` = 0.21.0, `app-0.20.0` = bản cũ,
+  sao lưu trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.21.0.dump`, PID trong `pid.txt`; `/health` Healthy 0.21.0; gán quyền mới
+  qua API: TOANQUYEN (đủ 12), DAMPHAN (CKB lập, DHG lập, HSN lập/đề xuất, xem toàn tập đoàn), TRUONGBANCUVT/HOIDONG (CKB xem + duyệt, DHG
+  xem, HSN xem, xem toàn tập đoàn), VANHANH/KSNB (xem CKB, DHG, HSN), DUYETNCC (xem HSN), PHAPCHE (ghi ý kiến thẩm định, xem HSN), DENGHI
+  (xem chứng từ kho + nghiệm thu). Chưa tạo vai trò mẫu mới, chưa cấu hình duyệt CKB/GTX/POC/HSN (để người dùng tự thử; chưa cấu hình thì
+  duyệt một cấp). CSDL bản sao `procurement_kiemtra_0200`, `procurement_kiemtra_0210` còn giữ – xóa khi người dùng đồng ý.
+- Nhánh cũ đã merge `feature/d1-diem-dat-hang-lai`, `feature/h1-y-kien-tham-dinh` chưa xóa (lệnh xóa bị chặn – chờ người dùng).
 
 
 
