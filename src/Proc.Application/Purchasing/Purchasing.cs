@@ -185,6 +185,26 @@ public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool 
 /// trong phạm vi kho của người xem).
 /// Định mức sử dụng (lát G11, design.md mục 18.25) – mọi SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến <paramref name="NormThrough"/>:
 /// </summary>
+/// <param name="Id">Id dòng.</param>
+/// <param name="LineNo">Số thứ tự dòng.</param>
+/// <param name="ItemId">Mặt hàng.</param>
+/// <param name="ItemCode">Mã mặt hàng.</param>
+/// <param name="ItemName">Tên mặt hàng.</param>
+/// <param name="UomId">ĐVT trên phiếu.</param>
+/// <param name="UomCode">Mã ĐVT trên phiếu.</param>
+/// <param name="Qty">SL đề nghị theo ĐVT trên phiếu.</param>
+/// <param name="UomFactor">Hệ số quy đổi ĐVT trên phiếu → ĐVT cơ sở.</param>
+/// <param name="BaseQty">SL theo ĐVT cơ sở (= Qty × UomFactor).</param>
+/// <param name="BaseUomCode">Mã ĐVT cơ sở.</param>
+/// <param name="EstPrice">Đơn giá dự kiến.</param>
+/// <param name="Amount">Thành tiền dự kiến.</param>
+/// <param name="SuggestedSupplierId">NCC đề xuất (không bắt buộc).</param>
+/// <param name="SuggestedSupplierCode">Mã NCC đề xuất.</param>
+/// <param name="NeededDate">Ngày cần hàng của dòng.</param>
+/// <param name="Note">Ghi chú dòng.</param>
+/// <param name="OrderedQty">SL đã lên PO (chưa hủy) theo ĐVT trên phiếu.</param>
+/// <param name="OnHandQty">Tồn hiện tại (ĐVT cơ sở, trong phạm vi kho của người xem).</param>
+/// <param name="OnOrderQty">SL đang đặt chưa nhận (ĐVT cơ sở).</param>
 /// <param name="NormStatus">null = không kiểm tra (nhóm hàng chưa có kế hoạch nhu cầu đã chốt năm đó, hoặc phiếu đã hủy);
 /// "Ok" trong định mức; "Over" vượt định mức; "NoPlan" nhóm hàng có kế hoạch nhưng mặt hàng không có trong kế hoạch.</param>
 /// <param name="NormQty">SL kế hoạch nhu cầu đã chốt lũy kế.</param>

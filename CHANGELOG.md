@@ -3,6 +3,65 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.21.0] - 2026-11-09
+
+### Thêm mới
+- **Tổng hợp nhu cầu gộp** (màn hình KHNTH, Mua hàng → Tổng hợp nhu cầu; lát G5b): cộng các phiếu kế hoạch nhu cầu đã chốt, quy về ĐVT cơ
+  sở, mỗi công ty một cột, theo năm, quý hoặc tháng, lọc theo nhóm hàng. Quyền mới `Purchase.DemandPlan.ViewAllCompanies` cho phép xem toàn tập đoàn.
+- **Lấy SL kế hoạch** cho RFQ và hợp đồng nguyên tắc (lát G5c): chọn khoảng ngày (tối đa 36 tháng, tháng không trọn tính theo số ngày),
+  xem trước số lượng theo từng công ty rồi chép vào lưới. Số lượng lẻ theo ĐVT dòng có ba cách xử lý: làm tròn lên, đổi sang ĐVT cơ sở (chỉ RFQ) hoặc giữ số lẻ.
+- **Chiết khấu bậc theo sản lượng gộp** (màn hình CKB và báo cáo theo dõi CKBT; lát G6a, G6b): tổng công ty lập thỏa thuận theo NCC × nhóm
+  hàng, gồm bậc ngưỡng và % chiết khấu, rồi trình duyệt. Tab Lũy kế cộng sản lượng PO của các công ty và dự báo bậc đạt được. Tab Thực nhận ghi
+  khoản chiết khấu đã nhận sau khi kỳ kết thúc, chia cho từng công ty theo tỷ lệ doanh số và cảnh báo khoản thiếu đã quá hạn. Quyền mới
+  `Pricing.VolumeRebate.View/Manage/Approve`.
+- **Đặt hàng gộp và phân bổ** (màn hình DHG; lát G7, G7c): tổng công ty đặt hàng theo phiếu GTH đã duyệt, phân bổ số lượng cho từng công ty
+  (đề xuất theo kế hoạch nhu cầu, biên độ theo tham số `POOLED_MARGIN_PERCENT`, mặc định 10%). Nút "Tạo PO" lập mỗi công ty một PO nháp.
+  Quyền mới `Purchase.PooledOrder.View/Manage`. Quyền đặc biệt `Purchase.PooledOrder.CreateMemberPo` cho phép tạo PO cho công ty thành viên
+  dù người dùng không có vai trò ở công ty đó.
+- **Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ phê duyệt** (lát G10): thêm 9 vai trò mẫu (Chủ tịch/TGĐ, Phó ban, thẩm định chất lượng/pháp
+  lý, Văn phòng Ban, Phòng cung ứng…) và hộp thoại "Cấu hình duyệt mẫu theo sơ đồ…" ở màn hình Quy trình duyệt. Hộp thoại chỉ tạo cấu hình
+  cho loại phiếu chưa có, mọi cấp đặt ngưỡng 0.
+- **Ý kiến thẩm định của thành viên chuyên môn** (tab THẨM ĐỊNH trên GTH, RFQ, hợp đồng, NCC; lát H1): ghi Đạt hoặc Không đạt, có nội dung
+  và đính kèm. Ý kiến không phải một cấp duyệt nhưng hiện trong hộp thoại Duyệt. Quyền mới `Sourcing.Appraisal.Give`.
+- **Phiếu GTH có ngoại lệ phải lên Chủ tịch/TGĐ** (lát H2): ngoại lệ gồm dưới 03 NCC đủ điều kiện, NCC độc quyền, giá vượt giá mục tiêu.
+  Phiếu có ngoại lệ phải giải trình mới gửi được và thêm chặng duyệt GTX.
+- **PO vượt giá trần phải lên Chủ tịch/TGĐ** (lát H3): thêm chặng duyệt POC. Trước đây vượt giá trần chỉ cảnh báo.
+- **Đơn vị đặt hàng xác nhận nghiệm thu** trên phiếu nhập mua đã ghi sổ (lát H4): chọn Đạt hoặc Không đạt (Không đạt phải ghi ý kiến).
+  Người lập hoặc ghi sổ phiếu không tự xác nhận được. Kết quả hiện trên màn hình đối chiếu 3 chiều MATCH3. Quyền mới `Inventory.Receipt.Accept`.
+- **Hồ sơ đánh giá NCC mới** (màn hình HSN; lát G8): giấy tờ pháp lý, 6 tiêu chí đánh giá, đề xuất duyệt qua luồng duyệt NCC. NCC tạo từ bản
+  này phải có hồ sơ được duyệt mới chuyển sang Đã duyệt được; tham số tổng công ty `SUPPLIER_ONBOARDING_OPTIONAL` cho phép bỏ qua.
+  Quyền mới `MasterData.SupplierOnboarding.View/Manage/Propose`.
+- **Định mức sử dụng trên PR** (lát G11): cột "Định mức LK" tính lũy kế từ kế hoạch nhu cầu đã chốt; cảnh báo đầu phiếu khi đề nghị vượt
+  định mức. Chỉ cảnh báo, không chặn.
+- **Báo cáo tháng cho Ban** (màn hình BCBAN, Báo cáo → Báo cáo tháng cho Ban; lát G12): ghép số liệu tổng quan mua, KPI, tiết kiệm, mua ngoài
+  giá đã duyệt, biến động giá, CKB, NCC đủ điều kiện, hồ sơ NCC mới và KSNB. Mặc định xem toàn tập đoàn nếu người dùng có quyền. Nút
+  "Xuất gói Excel" xuất mỗi mục một sheet.
+
+### Thay đổi
+- Màn hình SUPCOV đếm số NCC tối thiểu (03) **theo nhóm hàng** thay vì theo mặt hàng (lát G1b).
+
+### Sửa lỗi
+- Lưới dòng (LineGrid): khi bấm "Thêm dòng" hoặc F2, con trỏ có lúc nhảy về ô khác trong lúc đang gõ (gặp trên máy chậm hoặc form có hai lưới).
+- Đèn trạng thái trong một số khung hiện thành ô trắng.
+
+### Thay đổi CSDL
+- 7 migration mới (65 → 72): `V0_20_0_ChietKhauSanLuongGop`, `V0_20_0_ThucNhanChietKhauSanLuong`, `V0_20_0_DatHangGop`,
+  `V0_20_0_YKienThamDinh`, `V0_20_0_GthNgoaiLe`, `V0_20_0_XacNhanNghiemThu`, `V0_20_0_HoSoDanhGiaNccMoi` (tên mang tiền tố 0.20.0 vì
+  được lập trước khi chốt số bản). Các migration chỉ thêm bảng/cột, không xóa dữ liệu. Script: `db/scripts/0.21.0.sql` (đã chạy thử 2 lần
+  trên bản sao CSDL test 0.20.0, không lỗi, dữ liệu giữ nguyên).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.21.0.sql`, sau đó thay gói ứng dụng. Nếu nâng từ bản
+  cũ hơn 0.20.0: chạy lần lượt các script trước đó.
+- Gán các quyền mới nêu ở trên cho vai trò đang dùng. Có thể dùng "Bộ vai trò mẫu…" và "Cấu hình duyệt mẫu theo sơ đồ…" để tạo nhanh.
+- Các loại duyệt mới CKB, GTX, POC, hồ sơ NCC: nếu công ty chưa cấu hình ở Quy trình duyệt thì phiếu chỉ cần duyệt một cấp, ai có quyền duyệt cũng duyệt được.
+- NCC tạo mới sau khi nâng cấp phải có hồ sơ HSN được duyệt. Nếu chưa muốn áp dụng, bật tham số `SUPPLIER_ONBOARDING_OPTIONAL` ở tổng công ty.
+
+### Cách quay lại bản trước
+- Cách 1: khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.20.0`.
+- Cách 2: gỡ migration về `20261107031744_V0_20_0_KeHoachNhuCau`. `Down()` xóa các bảng CKB, đặt hàng gộp, ý kiến thẩm định, hồ sơ NCC mới
+  và cột ngoại lệ GTH, nghiệm thu phiếu nhập, nên **mất dữ liệu các chức năng mới đã nhập**.
+
 ## [0.20.0] - 2026-11-07
 
 ### Thêm mới
