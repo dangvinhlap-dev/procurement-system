@@ -9,6 +9,9 @@ public static class SystemParameterCodes
     /// <summary>Bắt buộc đủ hồ sơ trình mới chọn thầu (gửi duyệt kết quả) – bật/tắt (design.md mục 8.6).</summary>
     public const string RfqDossierRequired = "RFQ_DOSSIER_REQUIRED";
 
+    /// <summary>Cho NCC mới lên Đã duyệt không qua hồ sơ đánh giá NCC mới (HSN – lát G8); chỉ tham số của tổng công ty có tác dụng.</summary>
+    public const string SupplierOnboardingOptional = "SUPPLIER_ONBOARDING_OPTIONAL";
+
     /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
     public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
 

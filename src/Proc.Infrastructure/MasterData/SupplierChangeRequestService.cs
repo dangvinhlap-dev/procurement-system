@@ -19,6 +19,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly ApprovalEngine _approvals;
+    private readonly IClock _clock;
 
     /// <summary>Tạo dịch vụ.</summary>
     public SupplierChangeRequestService(ProcDbContext db, ICurrentUserScope scope, IClock clock)
@@ -26,14 +27,16 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
         _db = db;
         _scope = scope;
         _approvals = new ApprovalEngine(db, scope, clock);
+        _clock = clock;
     }
 
     /// <summary>
     /// Lập và gửi duyệt một yêu cầu (chưa lưu – người gọi lưu cùng thay đổi khác của NCC). Công ty liên quan = công ty đang mua của NCC
     /// (<c>SupplierCompany</c> đang giao dịch), chốt lúc gửi; chặng cuối là Tổng công ty.
     /// </summary>
+    /// <returns>Yêu cầu vừa lập (đã thêm vào DbContext).</returns>
     /// <exception cref="BusinessRuleException">Khi NCC đang có yêu cầu cùng loại chờ duyệt.</exception>
-    internal static async Task SubmitAsync(
+    internal static async Task<SupplierChangeRequest> SubmitAsync(
         ProcDbContext db, ApprovalEngine approvals, Supplier supplier, Func<string, SupplierChangeRequest> create,
         CancellationToken cancellationToken)
     {
@@ -60,6 +63,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
         db.SupplierChangeRequests.Add(request);
         await approvals.SubmitStagedAsync(request, related, headOffice, cancellationToken);
         if (request.Status == SupplierChangeRequestStatus.Approved) request.ApplyTo(supplier);
+        return request;
     }
 
     /// <inheritdoc />
@@ -93,6 +97,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
             // Tổng công ty duyệt lần cuối: áp thay đổi vào NCC trong cùng lần lưu.
             var supplier = await _db.Suppliers.SingleAsync(s => s.Id == change.SupplierId, cancellationToken);
             change.ApplyTo(supplier);
+            await SupplierOnboardingSync.AfterChangeRequestAsync(_db, change, _clock.UtcNow, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -104,6 +109,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
     {
         var change = await FindAsync(id, cancellationToken);
         await _approvals.RejectAsync(change, request.Comment, cancellationToken);
+        await SupplierOnboardingSync.AfterChangeRequestAsync(_db, change, _clock.UtcNow, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -112,11 +118,25 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
     public async Task<SupplierChangeRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken)
     {
         var change = await FindAsync(id, cancellationToken);
-        if (change.CreatedBy != _scope.UserId) throw new ForbiddenAccessException("Chỉ người lập được rút yêu cầu.");
-        change.Cancel();
-        await _approvals.SkipPendingAsync(change, cancellationToken);
+        await WithdrawAsync(_db, _scope, _approvals, change, _clock.UtcNow, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Người lập rút yêu cầu còn chờ: bỏ các bước đang chờ, hồ sơ NCC mới đi kèm (nếu có) về Đã đánh giá. Dùng chung cho SUPAPR và nút
+    /// "Rút đề xuất" trên hồ sơ HSN (chưa lưu – người gọi lưu).
+    /// </summary>
+    /// <exception cref="ForbiddenAccessException">Khi người rút không phải người lập yêu cầu.</exception>
+    /// <exception cref="BusinessRuleException">Khi yêu cầu không còn chờ duyệt.</exception>
+    internal static async Task WithdrawAsync(
+        ProcDbContext db, ICurrentUserScope scope, ApprovalEngine approvals, SupplierChangeRequest change, DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (change.CreatedBy != scope.UserId) throw new ForbiddenAccessException("Chỉ người lập được rút yêu cầu.");
+        change.Cancel();
+        await approvals.SkipPendingAsync(change, cancellationToken);
+        await SupplierOnboardingSync.AfterChangeRequestAsync(db, change, now, cancellationToken);
     }
 
     private async Task<SupplierChangeRequest> FindAsync(Guid id, CancellationToken cancellationToken)
@@ -134,6 +154,12 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
             .ToDictionaryAsync(s => s.Id, s => (s.Code, s.Name), cancellationToken);
         var userIds = requests.Select(r => r.CreatedBy).OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        // Hồ sơ NCC mới đi kèm (G8) – thuộc tổng công ty, filter công ty giữ nguyên: ở công ty thành viên không có liên kết.
+        var requestIds = requests.Select(r => (Guid?)r.Id).ToList();
+        var onboardings = (await _db.SupplierOnboardings.AsNoTracking().Where(o => requestIds.Contains(o.ChangeRequestId))
+                .Select(o => new { o.ChangeRequestId, Ref = new SupplierOnboardingRefDto(o.Id, o.No, o.Status.ToString()) })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(o => o.ChangeRequestId!.Value, o => o.Ref);
         var result = new List<SupplierChangeRequestDto>();
         foreach (var r in requests)
         {
@@ -145,7 +171,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
             result.Add(new SupplierChangeRequestDto(
                 r.Id, r.No, r.SupplierId, code, name, r.Kind.ToString(), r.CurrentSummary, r.ProposedSummary, r.Status.ToString(),
                 r.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, r.CreatedAt, r.ApprovedAt, r.RejectReason, waiting, approvals,
-                canApprove, r.IsAwaitingApproval && r.CreatedBy == _scope.UserId));
+                canApprove, r.IsAwaitingApproval && r.CreatedBy == _scope.UserId) { Onboarding = onboardings.GetValueOrDefault(r.Id) });
         }
 
         return result;

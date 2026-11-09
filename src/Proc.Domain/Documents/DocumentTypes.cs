@@ -71,6 +71,9 @@ public static class DocumentTypes
     /// <summary>Phiếu đánh giá NCC định kỳ theo quý (lát F4a, design.md mục 18.20).</summary>
     public const string SupplierReview = "DGN";
 
+    /// <summary>Hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25).</summary>
+    public const string SupplierOnboarding = "HSN";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -94,6 +97,7 @@ public static class DocumentTypes
         new(PooledOrder, "Đặt hàng gộp"),
         new(ControlFinding, "Vi phạm kiểm soát nội bộ"),
         new(SupplierReview, "Đánh giá nhà cung cấp định kỳ"),
+        new(SupplierOnboarding, "Hồ sơ đánh giá nhà cung cấp mới"),
     ];
 
     /// <summary>

@@ -173,6 +173,12 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
     /// <summary>Lý do tạm ngưng / đưa vào danh sách đen.</summary>
     public string? StatusNote { get; private set; }
 
+    /// <summary>
+    /// NCC tạo từ lát G8 trở đi: lên Đã duyệt phải qua hồ sơ đánh giá NCC mới (HSN, design.md mục 18.25). NCC có trước bản này giữ cách
+    /// duyệt cũ (cột mặc định false) – người dùng chốt 09/11/2026.
+    /// </summary>
+    public bool RequiresOnboarding { get; private set; }
+
     /// <summary>Công ty thành viên mà NCC này đại diện (NCC nội bộ, dùng cho mua bán liên công ty ICS/ICR); mỗi công ty tối đa một.</summary>
     public Guid? InternalCompanyId { get; private set; }
 
@@ -198,7 +204,7 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
         var normalized = CodeRules.Normalize(code);
         if (!CodeRules.IsExtendedCode(normalized, 2, CodeMaxLength))
             throw new BusinessRuleException($"Mã NCC gồm 2–{CodeMaxLength} ký tự chữ không dấu (A–Z), số hoặc - . _ /.");
-        var supplier = new Supplier { Code = normalized };
+        var supplier = new Supplier { Code = normalized, RequiresOnboarding = true };
         supplier.ChangeGroup(group);
         supplier.Update(info);
         return supplier;

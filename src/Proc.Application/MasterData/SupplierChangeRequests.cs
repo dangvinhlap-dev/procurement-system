@@ -23,7 +23,17 @@ namespace Proc.Application.MasterData;
 public sealed record SupplierChangeRequestDto(
     Guid Id, string No, Guid SupplierId, string SupplierCode, string SupplierName, string Kind, string CurrentSummary, string ProposedSummary,
     string Status, string? CreatedByName, DateTimeOffset CreatedAt, DateTimeOffset? ApprovedAt, string? RejectReason, string? WaitingFor,
-    IReadOnlyList<ApprovalStepDto> Approvals, bool CanApprove, bool CanCancel);
+    IReadOnlyList<ApprovalStepDto> Approvals, bool CanApprove, bool CanCancel)
+{
+    /// <summary>Hồ sơ đánh giá NCC mới đi kèm (lát G8) – chỉ có khi người xem đang làm việc ở tổng công ty (hồ sơ thuộc tổng công ty).</summary>
+    public SupplierOnboardingRefDto? Onboarding { get; init; }
+}
+
+/// <summary>Tham chiếu ngắn tới hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25).</summary>
+/// <param name="Id">Id hồ sơ.</param>
+/// <param name="No">Số hồ sơ HSN.</param>
+/// <param name="Status">Trạng thái (tên enum).</param>
+public sealed record SupplierOnboardingRefDto(Guid Id, string No, string Status);
 
 /// <summary>
 /// Yêu cầu duyệt NCC (design.md mục 18.6, quyết định Q7): đưa NCC vào Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng. Yêu cầu tự lập khi

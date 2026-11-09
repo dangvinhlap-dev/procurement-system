@@ -41,6 +41,7 @@ import { PriceComparisonPage } from './pages/pricing/PriceComparisonPage'
 import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/SupplierPriceListPages'
 import { MonthlyApprovalListPage, MonthlyApprovalPage } from './pages/pricing/MonthlyApprovalPages'
 import { MarketSurveyListPage, MarketSurveyPage } from './pages/pricing/MarketSurveyPages'
+import { SupplierOnboardingListPage, SupplierOnboardingPage } from './pages/pricing/SupplierOnboardingPages'
 import { PooledOrderListPage, PooledOrderPage } from './pages/purchasing/PooledOrderPages'
 import { VolumeRebateListPage, VolumeRebatePage, VolumeRebateTrackingPage } from './pages/pricing/VolumeRebatePages'
 import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
@@ -105,6 +106,7 @@ const implemented: Record<string, ReactNode> = {
   COI: <ConflictListPage />,
   NDQ: <SoleSourceListPage />,
   SUPREV: <SupplierReviewPage />,
+  HSN: <SupplierOnboardingListPage />,
   SUPCOV: <SupplierCoveragePage />,
   SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
@@ -185,6 +187,7 @@ const documentPages = [
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },
+  { code: 'HSN', element: <SupplierOnboardingPage /> },
   { code: 'CKB', element: <VolumeRebatePage /> },
   { code: 'KHN', element: <DemandPlanPage /> },
   { code: 'DHG', element: <PooledOrderPage /> },

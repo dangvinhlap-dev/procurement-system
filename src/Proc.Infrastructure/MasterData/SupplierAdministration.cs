@@ -203,6 +203,10 @@ public sealed class SupplierAdministration : ISupplierAdministration
         {
             Version = s.Version,
             Categories = (await CategoriesOfAsync([id], cancellationToken)).GetValueOrDefault(id) ?? [],
+            RequiresOnboarding = s.RequiresOnboarding,
+            // Hồ sơ thuộc tổng công ty: filter công ty giữ nguyên, ở công ty thành viên thì không thấy (null).
+            LatestOnboarding = await _db.SupplierOnboardings.AsNoTracking().Where(o => o.SupplierId == id).OrderByDescending(o => o.CreatedAt)
+                .Select(o => new SupplierOnboardingRefDto(o.Id, o.No, o.Status.ToString())).FirstOrDefaultAsync(cancellationToken),
         };
     }
 
@@ -323,6 +327,7 @@ public sealed class SupplierAdministration : ISupplierAdministration
     {
         var status = ParseStatus(request.Status);
         var deferStatus = supplier.StatusChangeNeedsApproval(status);
+        if (deferStatus && status == SupplierStatus.Approved) await EnsureOnboardingNotRequiredAsync(supplier, request.InternalCompanyId, cancellationToken);
         if (!deferStatus) supplier.SetStatus(status, request.StatusNote);
         supplier.SetContacts(request.Contacts.Select(c => new SupplierContactData(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)));
         var banks = Supplier.NormalizeBankAccounts(request.BankAccounts.Select(b =>
@@ -352,6 +357,25 @@ public sealed class SupplierAdministration : ISupplierAdministration
 
         supplier.LinkInternalCompany(request.InternalCompanyId);
         return new DeferredChanges(deferStatus ? status : null, request.StatusNote, deferBanks ? banks : null);
+    }
+
+    /// <summary>
+    /// NCC tạo từ lát G8 trở đi lên Đã duyệt phải qua hồ sơ đánh giá NCC mới (HSN): Phòng cung ứng đánh giá, Văn phòng Ban đề xuất, Hội đồng
+    /// duyệt (design.md mục 18.25, người dùng chốt 09/11/2026). Ngoại lệ: NCC nội bộ (công ty thành viên – không cần thẩm định năng lực) và khi
+    /// tổng công ty bật tham số <see cref="CompanyParameter.AllowSupplierWithoutOnboarding"/> (chuyển tiếp).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi NCC mới chưa qua hồ sơ.</exception>
+    private async Task EnsureOnboardingNotRequiredAsync(Supplier supplier, Guid? internalCompanyId, CancellationToken cancellationToken)
+    {
+        if (!supplier.RequiresOnboarding || internalCompanyId is not null) return;
+        // Danh mục NCC dùng chung: chỉ tham số của tổng công ty có tác dụng, dù người lưu đang làm việc ở công ty nào – bỏ filter công ty, chỉ đọc
+        // đúng một cờ của tổng công ty.
+        var allowed = await _db.CompanyParameters.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .AnyAsync(p => p.AllowSupplierWithoutOnboarding && _db.Companies.Any(c => c.Id == p.CompanyId && c.IsHeadOffice), cancellationToken);
+        if (allowed) return;
+        throw new BusinessRuleException(
+            $"NCC {supplier.Code} là NCC mới – muốn đưa vào Đã duyệt hãy lập hồ sơ đánh giá NCC mới (màn hình HSN): Phòng cung ứng đánh giá, " +
+            "Văn phòng Ban đề xuất, Hội đồng duyệt.");
     }
 
     /// <summary>Lập yêu cầu duyệt cho phần thay đổi bị giữ lại (chưa lưu – lưu cùng NCC).</summary>
