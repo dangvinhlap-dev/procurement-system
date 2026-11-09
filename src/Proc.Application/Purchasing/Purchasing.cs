@@ -183,11 +183,19 @@ public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool 
 /// <summary>
 /// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu; OnHandQty: tồn hiện tại của mặt hàng ở công ty (ĐVT cơ sở,
 /// trong phạm vi kho của người xem).
+/// Định mức sử dụng (lát G11, design.md mục 18.25) – mọi SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến <paramref name="NormThrough"/>:
 /// </summary>
+/// <param name="NormStatus">null = không kiểm tra (nhóm hàng chưa có kế hoạch nhu cầu đã chốt năm đó, hoặc phiếu đã hủy);
+/// "Ok" trong định mức; "Over" vượt định mức; "NoPlan" nhóm hàng có kế hoạch nhưng mặt hàng không có trong kế hoạch.</param>
+/// <param name="NormQty">SL kế hoạch nhu cầu đã chốt lũy kế.</param>
+/// <param name="NormRequestedQty">SL đã đề nghị lũy kế: PR khác đã gửi/duyệt (PR đã đóng phần còn lại tính phần đã lên PO) + các dòng
+/// cùng mặt hàng của chính phiếu có ngày cần trong khoảng.</param>
+/// <param name="NormThrough">Ngày cuối tháng cần hàng của dòng (ngày cần dòng → ngày cần đầu phiếu → ngày đề nghị).</param>
 public sealed record PurchaseRequestLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal EstPrice, decimal Amount, Guid? SuggestedSupplierId, string? SuggestedSupplierCode,
-    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty, decimal OnOrderQty);
+    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty, decimal OnOrderQty,
+    string? NormStatus = null, decimal NormQty = 0, decimal NormRequestedQty = 0, DateOnly? NormThrough = null);
 
 /// <summary>
 /// Chi tiết PR. DepartmentId: bộ phận trong danh mục; Department: tên bộ phận để hiển thị, PR cũ chưa có danh mục thì là

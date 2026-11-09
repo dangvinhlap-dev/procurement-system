@@ -1433,7 +1433,7 @@ Nguồn: đề xuất Ban CUVT "Quy định thời gian xử lý" (V6) và kiể
 | **Hạn** = ngày PR đủ duyệt (giờ Việt Nam) + N ngày làm việc (thứ 2–6; PR duyệt thứ 7/CN tính từ thứ 2; **chưa trừ ngày lễ**). Mốc hoàn thành = ngày **PO đầu tiên được duyệt** có dòng lấy từ dòng PR đó. Trạng thái: Đúng hạn (PO duyệt ≤ hạn), Trễ, Đang xử lý (chưa có PO, còn hạn), Quá hạn (chưa có PO, qua hạn). **% đúng SLA** = đúng hạn / (đúng hạn + trễ + quá hạn) | "Phát hành PO trong … sau khi đủ phê duyệt"; dòng đang xử lý chưa tính vào tỷ lệ |
 | Báo cáo **SLA mua hàng** (màn hình SLA, Báo cáo, quyền `Report.Purchase.View`): PR duyệt trong khoảng ngày (tối đa 1 năm) của công ty đang làm việc; dòng trễ/quá hạn tô màu; đầu trang % đúng SLA (mục tiêu ≥ 95%); bấm đúp mở PO (hoặc PR nếu chưa có PO) | KPI đúng SLA (đợt F dùng lại) |
 | **Đang đặt** trên dòng PR: SL đang đặt của mặt hàng tại công ty (ĐVT cơ sở) = Σ trên PO **đã duyệt** chưa nhận đủ của (SL đặt − SL đã nhận theo phiếu nhập đã ghi sổ), mỗi dòng không âm; hiện cạnh "Tồn hiện tại" | V2: kiểm tra hàng đang đặt trước khi đề nghị, tránh mua trùng |
-| Chưa làm: lịch nghỉ lễ cho SLA; SLA theo ngày giờ (đang tính theo ngày); định mức sử dụng (V2 phần 2) | Làm khi có yêu cầu |
+| Chưa làm: lịch nghỉ lễ cho SLA; SLA theo ngày giờ (đang tính theo ngày). Định mức sử dụng (V2 phần 2): lát G11 (mục 18.25) | Làm khi có yêu cầu |
 
 Migration `V0_13_0_ThamSoSla` (cột `SlaPricedDays`, `SlaSourcingDays`, `SlaUrgentDays` của `CompanyParameter`, mặc định 1/5/1 – `Down()` xóa
 cột, mất SLA công ty đã sửa).
@@ -1713,7 +1713,7 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
 | Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
 
-Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu – xong 09/11/2026) → G1b (xong 09/11/2026) → G8 → G11
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu – xong 09/11/2026) → G1b (xong 09/11/2026) → G8 (xong 09/11/2026) → G11 (xong 09/11/2026)
 → G12; G9 hoãn.
 
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
@@ -1991,6 +1991,21 @@ dùng lại luồng duyệt NCC, đề xuất là bước riêng của Văn phò
 Migration `V0_20_0_HoSoDanhGiaNccMoi` (bảng `SupplierOnboarding` – bảng mới; cột `Supplier.RequiresOnboarding` boolean mặc định false,
 `CompanyParameter.AllowSupplierWithoutOnboarding` boolean mặc định false; `Down()` xóa bảng và hai cột – mất các hồ sơ và cờ của NCC tạo sau
 bản này, AuditLog vẫn giữ).
+
+**G11 – Định mức sử dụng, PR cảnh báo vượt định mức** (09/11/2026; quyết định: Phòng cung ứng chung "kiểm tra tính hợp lệ của yêu cầu mua
+(ngân sách, định mức, quy cách)", tóm tắt quyết định "G11. Định mức sử dụng; PR cảnh báo vượt định mức"; V2 phần 2 – mục 18.13). Quy tắc tự
+đặt (người dùng "làm tiếp" 09/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Định mức** = SL **kế hoạch nhu cầu Đã chốt** (KHN – G5a) của công ty đang làm việc × mặt hàng, quy ĐVT cơ sở (SL tháng × hệ số ĐVT dòng kế hoạch, 4 số lẻ), **lũy kế từ tháng 1 đến hết tháng cần hàng** của dòng PR. Tháng cần hàng lấy theo ngày cần của dòng → ngày cần đầu phiếu → ngày đề nghị | Kế hoạch nhu cầu lập từ đề xuất định mức của kho, bộ phận – không khai định mức hai nơi. Lũy kế cho phép tháng trước dùng ít thì tháng sau mua bù, tránh cảnh báo khi PR gom nhu cầu nhiều tuần |
+| **Đã đề nghị** = Σ SL cơ sở dòng PR **khác** cùng công ty × mặt hàng ở trạng thái Đã gửi / Đã duyệt (PR **đã đóng phần còn lại** – R6 – chỉ tính phần đã lên PO), ngày cần trong khoảng lũy kế, **cộng** mọi dòng cùng mặt hàng của chính phiếu trong khoảng (kể cả khi phiếu còn nháp). Không tính Nháp khác, Đã hủy (bị từ chối là về Nháp) | Người lập thấy ngay phiếu đang nhập có làm vượt không; nháp của người khác chưa là nhu cầu chính thức |
+| Đã đề nghị > định mức → **Vượt** (tam giác vàng ở ô "Định mức LK" của dòng, cảnh báo vàng đầu phiếu liệt kê dòng vượt). Nhóm hàng có kế hoạch mà mặt hàng không có dòng kế hoạch → **Ngoài kế hoạch** (cảnh báo như trên). **Chỉ cảnh báo** – không chặn lưu, gửi, duyệt; người duyệt thấy cùng cảnh báo | Tóm tắt quyết định ghi "cảnh báo"; ngân sách (mục 18.24) đã là chốt chặn tiền |
+| Chỉ kiểm tra khi **nhóm hàng của mặt hàng hoặc một nhóm cha** có phiếu kế hoạch Đã chốt của năm đó ở công ty; không thì ô trống, không cảnh báo. Phiếu đã hủy không kiểm tra | Công ty/nhóm hàng chưa lập kế hoạch không bị cảnh báo hàng loạt |
+| Tính lúc đọc phiếu (không lưu), theo phạm vi công ty và nhóm hàng của người xem; không cần quyền `Purchase.DemandPlan.View` (chỉ hiện số liệu định mức của chính mặt hàng trên phiếu) | Số liệu luôn theo kế hoạch, PR mới nhất; người lập PR thường không có quyền xem màn hình KHN |
+
+Ô **Định mức LK** trên lưới dòng PR hiện "đã đề nghị / định mức" (ĐVT cơ sở), rê chuột thấy kỳ lũy kế, ví dụ "Lũy kế 01–02/2027: đã đề
+nghị 23 / định mức 20 CAI". Không có migration (`PurchaseRequestLineDto` thêm `NormStatus`, `NormQty`, `NormRequestedQty`, `NormThrough`).
 
 
 
