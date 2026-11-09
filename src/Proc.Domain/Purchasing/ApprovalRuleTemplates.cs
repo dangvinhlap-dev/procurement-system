@@ -31,6 +31,7 @@ public static class ApprovalRuleTemplates
         new(DocumentTypes.PurchaseOrder, 3, ChuTich, false, "Bước 4: Chủ tịch/TGĐ duyệt PO theo phân quyền – sửa ngưỡng theo phân quyền nội bộ"),
         new(ApprovalTypes.PurchaseOrderOffList, 1, PhoBan, false, "Ngoại lệ mua ngoài danh sách/giá: Hội đồng xem xét"),
         new(ApprovalTypes.PurchaseOrderOffList, 2, ChuTich, false, "Ngoại lệ: Chủ tịch/TGĐ phê duyệt"),
+        new(ApprovalTypes.PurchaseOrderOverCeiling, 1, ChuTich, false, "PO vượt giá trần → Chủ tịch/TGĐ phê duyệt (Q3, lát H3)"),
         new(ApprovalTypes.PurchaseOrderPriceException, 1, PhoBan, false, "Ngoại lệ lệch giá đã duyệt: Hội đồng xem xét"),
         new(ApprovalTypes.PurchaseOrderPriceException, 2, ChuTich, false, "Ngoại lệ: Chủ tịch/TGĐ phê duyệt"),
         new(ApprovalTypes.PurchaseOrderEmergency, 1, PhoBan, false, "Ngoại lệ khẩn cấp: Hội đồng xem xét"),

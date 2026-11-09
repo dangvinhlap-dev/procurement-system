@@ -64,8 +64,11 @@ internal sealed class ApprovalEngine
     /// <param name="extraStages">Các chặng phụ: mã loại trong <see cref="ApprovalTypes"/> và số chặng (tăng dần).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <param name="ruleType">Bộ cấp duyệt thay thế cho chặng 1 (như <see cref="SubmitAsync"/>).</param>
+    /// <param name="skipPlannedRoleTypes">Loại chặng phụ chỉ đòi "phải lên đúng vai trò này": bỏ cấp có vai trò đã có ở các chặng trước
+    /// (<see cref="ApprovalPlan.WithoutPlannedRoles"/>) – PO vượt giá trần (POC, lát H3); chặng có thể không còn cấp nào.</param>
     public async Task SubmitWithStagesAsync(
-        IApprovalSubject document, IReadOnlyList<(string Type, int Stage)> extraStages, CancellationToken cancellationToken, string? ruleType = null)
+        IApprovalSubject document, IReadOnlyList<(string Type, int Stage)> extraStages, CancellationToken cancellationToken, string? ruleType = null,
+        IReadOnlyCollection<string>? skipPlannedRoleTypes = null)
     {
         var round = document.Submit();
         var steps = ApprovalPlan.Levels(await BaseRulesAsync(document, ruleType, cancellationToken), document.ApprovalAmount)
@@ -74,8 +77,11 @@ internal sealed class ApprovalEngine
         foreach (var (type, stage) in extraStages.OrderBy(x => x.Stage))
         {
             var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == type).ToListAsync(cancellationToken);
-            steps.AddRange(ApprovalPlan.ExceptionLevels(rules, document.ApprovalAmount)
-                .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, stage)));
+            var levels = ApprovalPlan.ExceptionLevels(rules, document.ApprovalAmount);
+            if (skipPlannedRoleTypes?.Contains(type) == true)
+                levels = ApprovalPlan.WithoutPlannedRoles(levels, steps.Select(s => s.RoleId).ToList());
+            steps.AddRange(levels.Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, stage)));
+
         }
 
         await StartAsync(document, steps, cancellationToken);

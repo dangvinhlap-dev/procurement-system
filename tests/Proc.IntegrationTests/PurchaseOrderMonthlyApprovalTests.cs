@@ -101,12 +101,12 @@ public class PurchaseOrderMonthlyApprovalTests
             await ReadAsync<PurchaseOrderDto>(await client.PostAsync($"/api/purchase-orders/{id}/submit", null, Ct));
 
         // NCC ngoài danh sách tháng: dòng gắn cờ, gửi duyệt qua thêm chặng 4 "Ngoài danh sách/giá". Giá 13.000 vượt trần 12.600 của mặt
-        // hàng (áp cả NCC ngoài danh sách): chỉ cảnh báo, vẫn gửi duyệt được.
+        // hàng (áp cả NCC ngoài danh sách): thêm chặng 5 "Vượt giá trần" (Q3, lát H3).
         var offList = await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(outsider, item, 1, 13_000), Ct));
         Assert.Equal(("None", true, gth.No, true), (offList.Lines[0].PriceSource, offList.Lines[0].IsOffMonthlyList, offList.Lines[0].MonthlyApprovalNo, offList.IsOffApprovedList));
         Assert.Equal(((decimal?)12_600m, true, true), (offList.Lines[0].CeilingPrice, offList.Lines[0].IsOverCeiling, offList.IsOverCeiling));
         offList = await SubmitAsync(offList.Id);
-        Assert.Equal([1, 4], offList.Approvals.Select(s => s.Stage));
+        Assert.Equal([1, 4, 5], offList.Approvals.Select(s => s.Stage));
         Assert.True(offList.IsOverCeiling);
 
         // Mặt hàng không có phiếu tháng, không có giá đã duyệt: bắt buộc duyệt (thay quy tắc "chỉ gắn cờ" của mục 18.10).
@@ -132,4 +132,73 @@ public class PurchaseOrderMonthlyApprovalTests
             Po(backup, item, 39, 12_500) with { Lines = [new(line.Id, item, cai, 39, 12_500, 0, "10", null, null, null)] }, Ct));
         Assert.Equal("Submitted", (await SubmitAsync(backupPo.Id)).Status);
     }
+
+    [Fact]
+    public async Task PoVuotGiaTran_LenChuTich_KhongLapLaiKhiChuTichDaDuyetPo()
+    {
+        var userName = $"h3.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT"]);
+        var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
+        var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
+            new CreateCompanyRequest(UniqueCode("H"), "Công ty thử vượt giá trần", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
+        var client = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
+        var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
+        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm thử vượt trần {Guid.NewGuid():N}", null, null), Ct));
+        var item = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, "Van khóa H3", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+        var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
+        async Task<Guid> SupplierAsync(string name)
+        {
+            var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
+                new SaveSupplierRequest(null, groupId, name, null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
+            await _factory.FinishSupplierApprovalAsync(supplier.Id);
+            await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
+            return supplier.Id;
+        }
+
+        var main = await SupplierAsync("NCC chính H3");
+        var backup = await SupplierAsync("NCC dự phòng H3");
+        var outsider = await SupplierAsync("NCC ngoài danh sách H3");
+        var warehouse = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
+        // Phiếu tháng: giá chính 10.000, dự phòng 10.200, trần 10.500 (/cái).
+        var gth = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(GthUrl, new SaveMonthlyApprovalRequest(
+            new DateOnly(Today.Year, Today.Month, 1), category.Id, [company.Id], null,
+            [new(null, item, cai, main, 10_000m, backup, 10_200m, null, null, null, 10_500m, null)], "Mới 2 NCC – trình Chủ tịch"), Ct));
+        await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{GthUrl}/{gth.Id}/submit", null, Ct));
+        await _factory.FinishMonthlyApprovalAsync(gth.Id);
+
+        // Loại duyệt POC có trong APRL.
+        Assert.Contains(await ReadAsync<List<ApprovalTypeDto>>(await client.GetAsync("/api/approval-rules/types", Ct)), t => t.Code == "POC");
+
+        // Công ty cấu hình: PO cấp 1 Phó ban (mọi giá trị), cấp 2 Chủ tịch từ 50.000.000; POC cấp 1 Chủ tịch.
+        var deputy = await _factory.CreateRoleAsync(UniqueCode("P"), Permissions.Purchase.PoApprove);
+        var chairman = await _factory.CreateRoleAsync(UniqueCode("C"), Permissions.Purchase.PoApprove);
+        await ReadAsync<ApprovalRuleDto>(await client.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 1, 0, deputy), Ct));
+        await ReadAsync<ApprovalRuleDto>(await client.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PO", 2, 50_000_000, chairman), Ct));
+        await ReadAsync<ApprovalRuleDto>(await client.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("POC", 1, 0, chairman), Ct));
+
+        SavePurchaseOrderRequest Po(decimal qty, decimal price) =>
+            new(Today, outsider, warehouse, null, null, null, null, 0, null, [new(null, item, cai, qty, price, 0, "10", null, null, null)]);
+        async Task<PurchaseOrderDto> SubmitAsync(decimal qty, decimal price) => await ReadAsync<PurchaseOrderDto>(await client.PostAsync(
+            $"/api/purchase-orders/{(await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders", Po(qty, price), Ct))).Id}/submit", null, Ct));
+
+        // PO nhỏ (10 × 11.000 > trần 10.500): chặng PO chỉ Phó ban → thêm chặng 5 Chủ tịch.
+        var small = await SubmitAsync(10, 11_000);
+        Assert.True(small.IsOverCeiling);
+        var chairmanName = small.Approvals.Single(s => s.Stage == 5).RoleName;
+        Assert.Equal([(1, 1), (4, 1), (5, 1)], small.Approvals.Select(s => (s.Stage, s.Level)));
+        Assert.NotNull(chairmanName);
+
+        // PO lớn (5.000 × 11.000 = 55.000.000 trước VAT): chặng PO đã có Chủ tịch ở cấp 2 → không thêm chặng 5 (mỗi người một cấp – R3).
+        var large = await SubmitAsync(5_000, 11_000);
+        Assert.Equal([(1, 1), (1, 2), (4, 1)], large.Approvals.Select(s => (s.Stage, s.Level)));
+        Assert.Equal(chairmanName, large.Approvals.Single(s => s.Stage == 1 && s.Level == 2).RoleName);
+
+        // Giá không vượt trần (10.400 ≤ 10.500): không có chặng 5.
+        var under = await SubmitAsync(10, 10_400);
+        Assert.False(under.IsOverCeiling);
+        Assert.DoesNotContain(under.Approvals, s => s.Stage == 5);
+    }
+
 }

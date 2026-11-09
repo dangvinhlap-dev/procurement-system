@@ -42,11 +42,26 @@ public class PurchasingTests
     }
 
     [Fact]
+    public void ChangVuotGiaTran_BoCapCoVaiTroDaDuyetChangTruoc()
+    {
+        // Lát H3: chặng PO vượt giá trần chỉ đòi "lên Chủ tịch/TGĐ" – Chủ tịch đã có ở chặng trước thì không thêm cấp đó (R3: mỗi người một cấp).
+        var deputy = Guid.CreateVersion7();
+        var chairman = Guid.CreateVersion7();
+        IReadOnlyList<(int, Guid?)> stage = [(1, chairman)];
+        Assert.Empty(ApprovalPlan.WithoutPlannedRoles(stage, [deputy, chairman]));
+        Assert.Equal([(1, (Guid?)chairman)], ApprovalPlan.WithoutPlannedRoles(stage, [deputy, null]));
+        // Cấp không gắn vai trò (chưa cấu hình – ai có quyền duyệt) luôn giữ.
+        Assert.Equal([(1, (Guid?)null)], ApprovalPlan.WithoutPlannedRoles([(1, null)], [null, deputy]));
+        Assert.True(ApprovalRule.Create(Company, "POC", 1, 0, chairman).DocType == "POC");
+    }
+
+
+    [Fact]
     public void LoaiDuyetDungChung_PrlRfqNccCtr_NguongChiChoLoaiCoGiaTri()
     {
         var role = Guid.CreateVersion7();
 
-        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "GTX", "CKB"], ApprovalTypes.All.Select(t => t.Code));
+        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "POC", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "GTX", "CKB"], ApprovalTypes.All.Select(t => t.Code));
         Assert.Equal("PRL", ApprovalRule.Create(Company, " prl ", 1, 0, role).DocType);
         Assert.Equal(5_000_000m, ApprovalRule.Create(Company, "RFQ", 2, 5_000_000, role).MinAmount);
         Assert.Equal(100m, ApprovalRule.Create(Company, "CTR", 1, 100, role).MinAmount);
