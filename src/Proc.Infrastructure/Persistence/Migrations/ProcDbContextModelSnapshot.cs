@@ -2864,6 +2864,13 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExceptionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("HasException")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("ItemCategoryId")
                         .HasColumnType("uuid");
 

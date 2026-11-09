@@ -68,7 +68,7 @@ public class StandardSavingsReportTests
         // Phiếu tháng: chính 12.000, dự phòng 12.500, giá chuẩn 12.200, trần 12.600, mục tiêu 11.800; Ban duyệt.
         var gth = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(GthUrl, new SaveMonthlyApprovalRequest(
             new DateOnly(Today.Year, Today.Month, 1), category.Id, [company.Id], null,
-            [new(null, item, cai, main, 12_000m, backup, 12_500m, null, null, 12_200m, 12_600m, 11_800m)]), Ct));
+            [new(null, item, cai, main, 12_000m, backup, 12_500m, null, null, 12_200m, 12_600m, 11_800m)], "Giá trên mục tiêu"), Ct));
         await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{GthUrl}/{gth.Id}/submit", null, Ct));
         var boardRole = UniqueCode("B");
         await _factory.CreateRoleAsync(boardRole, Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
@@ -76,6 +76,7 @@ public class StandardSavingsReportTests
         await _factory.CreateScopedUserAsync(boardUser, "TCT", boardRole);
         var board = await _factory.CreateClientInCompanyAsync(boardUser, ProcApiFactory.TestPassword, "TCT");
         await ReadAsync<MonthlyApprovalDto>(await board.PostAsJsonAsync($"{GthUrl}/{gth.Id}/approve", new ApprovalActionRequest(null), Ct));
+        await _factory.FinishMonthlyApprovalAsync(gth.Id); // chặng ngoại lệ Chủ tịch/TGĐ (lát H2)
 
         // Người duyệt PO của công ty (người lập không tự duyệt).
         var poRole = UniqueCode("D");

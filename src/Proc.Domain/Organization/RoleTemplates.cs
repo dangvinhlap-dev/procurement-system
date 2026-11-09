@@ -123,11 +123,13 @@ public static class RoleTemplates
         // dùng TRUONGBANCUVT ở trên. Nguyên tắc: Phòng cung ứng chung **tìm kiếm, đánh giá NCC** (người dùng chốt 08/11/2026 – Q2, khớp bước 2
         // của sơ đồ) và đặt hàng đúng NCC/giá đã duyệt, không lập/duyệt giá; Văn phòng Ban phân tích giá, đề xuất danh sách NCC và giá (không
         // duyệt, không đặt hàng, không lập hồ sơ NCC); thành viên chuyên môn ghi ý kiến thẩm định (lát H1), không có quyền duyệt (không biểu quyết).
-        new("CHUTICH", "Chủ tịch HĐQT / Tổng Giám đốc", "Phê duyệt ngoại lệ (ngoài danh sách/giá, lệch giá, khẩn cấp, độc quyền), duyệt PO, hợp đồng theo phân quyền nội bộ; nhận báo cáo KSNB",
+        new("CHUTICH", "Chủ tịch HĐQT / Tổng Giám đốc", "Phê duyệt ngoại lệ (ngoài danh sách/giá, lệch giá, khẩn cấp, độc quyền, phiếu duyệt NCC & giá tháng có ngoại lệ), duyệt PO, hợp đồng theo phân quyền nội bộ; nhận báo cáo KSNB",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractApprove,
             Permissions.MasterData.SoleSourceApprove,
+            // Phê duyệt ngoại lệ ở bước Hội đồng duyệt NCC & giá tháng (Q6 – chặng GTX, lát H2).
+            Permissions.Pricing.MonthlyApprovalApprove,
             Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.Control.FindingReceive,

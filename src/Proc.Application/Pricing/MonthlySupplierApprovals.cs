@@ -14,9 +14,10 @@ namespace Proc.Application.Pricing;
 /// <param name="Status">Draft, Submitted, Approved, Replaced, Cancelled.</param>
 /// <param name="ReplacesNo">Số phiếu được điều chỉnh (nếu là phiếu điều chỉnh).</param>
 /// <param name="CreatedByName">Người lập.</param>
+/// <param name="HasException">Lượt gửi gần nhất có ngoại lệ – qua chặng Chủ tịch/TGĐ (lát H2).</param>
 public sealed record MonthlyApprovalListItemDto(
     Guid Id, string No, DateOnly Period, string CategoryCode, string CategoryName, string CompanyCodes, int LineCount, string Status,
-    string? ReplacesNo, string? CreatedByName);
+    string? ReplacesNo, string? CreatedByName, bool HasException = false);
 
 /// <summary>Một dòng phiếu duyệt tháng.</summary>
 /// <param name="Id">Id dòng.</param>
@@ -40,11 +41,15 @@ public sealed record MonthlyApprovalListItemDto(
 /// <param name="StandardPrice">Giá chuẩn (lát G4b).</param>
 /// <param name="CeilingPrice">Giá trần.</param>
 /// <param name="TargetPrice">Giá mục tiêu.</param>
+/// <param name="Exceptions">
+/// Ngoại lệ tự phát hiện của dòng (lát H2: chưa đủ 03 NCC đủ điều kiện, độc quyền, giá vượt giá mục tiêu) – tính lúc đọc khi phiếu nháp/chờ
+/// duyệt, rỗng khi phiếu đã có quyết định.
+/// </param>
 public sealed record MonthlyApprovalLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, Guid MainSupplierId, string MainSupplierCode,
     string MainSupplierName, decimal UnitPrice, Guid? BackupSupplierId, string? BackupSupplierCode, string? BackupSupplierName,
     decimal? BackupUnitPrice, decimal? QuantityLimit, string? Note, decimal UomFactor = 1m, decimal? StandardPrice = null,
-    decimal? CeilingPrice = null, decimal? TargetPrice = null);
+    decimal? CeilingPrice = null, decimal? TargetPrice = null, IReadOnlyList<string>? Exceptions = null);
 
 /// <summary>Thao tác được phép trên phiếu duyệt tháng.</summary>
 /// <param name="CanEdit">Sửa, gửi duyệt (nháp, đang làm việc ở tổng công ty, có quyền lập).</param>
@@ -66,14 +71,16 @@ public sealed record MonthlyApprovalCompanyDto(Guid Id, string Code, string Name
 /// <summary>Chi tiết phiếu duyệt NCC và giá tháng.</summary>
 /// <remarks>
 /// <paramref name="ReplacesId"/>/<paramref name="ReplacesNo"/>: phiếu được điều chỉnh; <paramref name="ReplacedById"/>/<paramref name="ReplacedByNo"/>:
-/// phiếu điều chỉnh của phiếu này (đang soạn, chờ duyệt hoặc đã duyệt); <paramref name="Approvals"/>: lịch sử duyệt.
+/// phiếu điều chỉnh của phiếu này (đang soạn, chờ duyệt hoặc đã duyệt); <paramref name="Approvals"/>: lịch sử duyệt (bước chặng 2 là chặng
+/// ngoại lệ Chủ tịch/TGĐ); <paramref name="ExceptionNote"/>: giải trình ngoại lệ; <paramref name="HasException"/>: lượt gửi gần nhất có ngoại lệ
+/// (lát H2).
 /// </remarks>
 public sealed record MonthlyApprovalDto(
     Guid Id, string No, string CompanyCode, DateOnly Period, Guid ItemCategoryId, string CategoryCode, string CategoryName,
     IReadOnlyList<MonthlyApprovalCompanyDto> Companies, string? Note, string Status, string? RejectReason, DateTimeOffset? ApprovedAt,
     DateOnly? CancelledOn, string? CancelReason, Guid? ReplacesId, string? ReplacesNo, Guid? ReplacedById, string? ReplacedByNo,
     DateTimeOffset CreatedAt, string? CreatedByName, IReadOnlyList<MonthlyApprovalLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals,
-    MonthlyApprovalActions Actions);
+    MonthlyApprovalActions Actions, string? ExceptionNote = null, bool HasException = false);
 
 /// <summary>Lưu phiếu duyệt tháng.</summary>
 /// <param name="Period">Tháng áp dụng (ngày nào trong tháng cũng được – lưu ngày đầu tháng).</param>
@@ -81,8 +88,13 @@ public sealed record MonthlyApprovalDto(
 /// <param name="CompanyIds">Các công ty áp dụng.</param>
 /// <param name="Note">Ghi chú.</param>
 /// <param name="Lines">Các dòng.</param>
+/// <param name="ExceptionNote">
+/// Giải trình ngoại lệ (lát H2): bắt buộc khi phiếu có ngoại lệ tự phát hiện; ghi khi không có ngoại lệ tự phát hiện là người lập tự khai phiếu
+/// có ngoại lệ – phiếu cũng qua chặng Chủ tịch/TGĐ.
+/// </param>
 public sealed record SaveMonthlyApprovalRequest(
-    DateOnly Period, Guid ItemCategoryId, IReadOnlyList<Guid> CompanyIds, string? Note, IReadOnlyList<SaveMonthlyApprovalLineRequest> Lines);
+    DateOnly Period, Guid ItemCategoryId, IReadOnlyList<Guid> CompanyIds, string? Note, IReadOnlyList<SaveMonthlyApprovalLineRequest> Lines,
+    string? ExceptionNote = null);
 
 /// <summary>Lưu một dòng phiếu duyệt tháng; giá chuẩn/trần/mục tiêu không bắt buộc (lát G4b).</summary>
 public sealed record SaveMonthlyApprovalLineRequest(
@@ -133,7 +145,9 @@ public interface IMonthlySupplierApprovalService
     /// <returns>Phiếu sau khi sửa.</returns>
     Task<MonthlyApprovalDto> UpdateAsync(Guid id, SaveMonthlyApprovalRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Gửi duyệt (kiểm tra lại NCC và trùng lặp).</summary>
+    /// <summary>
+    /// Gửi duyệt (kiểm tra lại NCC và trùng lặp). Phiếu có ngoại lệ (lát H2) phải có giải trình và qua thêm chặng Chủ tịch/TGĐ (GTX).
+    /// </summary>
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Phiếu (Chờ duyệt, hoặc Đã duyệt nếu không có cấp nào).</returns>
@@ -188,6 +202,7 @@ public sealed class SaveMonthlyApprovalRequestValidator : AbstractValidator<Save
         RuleFor(x => x.ItemCategoryId).NotEmpty().WithMessage("Hãy chọn nhóm hàng.");
         RuleFor(x => x.CompanyIds).NotEmpty().WithMessage("Hãy chọn ít nhất một công ty áp dụng.");
         RuleFor(x => x.Note).MaximumLength(1000);
+        RuleFor(x => x.ExceptionNote).MaximumLength(1000).WithMessage("Giải trình ngoại lệ tối đa 1.000 ký tự.");
         RuleFor(x => x.Lines).NotEmpty().WithMessage("Phiếu phải có ít nhất một mặt hàng.");
         RuleForEach(x => x.Lines).ChildRules(l =>
         {

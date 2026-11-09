@@ -29,7 +29,12 @@ public enum MonthlyApprovalStatus
 /// <param name="ItemCategoryId">Nhóm hàng.</param>
 /// <param name="CompanyIds">Các công ty áp dụng (ít nhất một).</param>
 /// <param name="Note">Ghi chú.</param>
-public sealed record MonthlyApprovalHeader(DateOnly Period, Guid ItemCategoryId, IReadOnlyList<Guid> CompanyIds, string? Note);
+/// <param name="ExceptionNote">
+/// Giải trình ngoại lệ (lát H2): bắt buộc khi phiếu có ngoại lệ tự phát hiện; người lập ghi giải trình mà không có ngoại lệ tự phát hiện là
+/// tự khai phiếu có ngoại lệ – phiếu cũng qua chặng Chủ tịch/TGĐ.
+/// </param>
+public sealed record MonthlyApprovalHeader(
+    DateOnly Period, Guid ItemCategoryId, IReadOnlyList<Guid> CompanyIds, string? Note, string? ExceptionNote = null);
 
 /// <summary>Dữ liệu một dòng phiếu duyệt tháng.</summary>
 /// <param name="Id">Id dòng đang có (null = dòng mới).</param>
@@ -88,6 +93,14 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
 
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
+
+    /// <summary>Giải trình ngoại lệ (lát H2) – xem <see cref="MonthlyApprovalHeader.ExceptionNote"/>.</summary>
+    public string? ExceptionNote { get; private set; }
+
+    /// <summary>
+    /// Lượt gửi duyệt gần nhất có ngoại lệ nên qua chặng Chủ tịch/TGĐ (chốt lúc gửi – điều kiện như số NCC đủ điều kiện có thể đổi sau đó).
+    /// </summary>
+    public bool HasException { get; private set; }
 
     /// <summary>Trạng thái.</summary>
     public MonthlyApprovalStatus Status { get; private set; } = MonthlyApprovalStatus.Draft;
@@ -163,6 +176,9 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
         if (companies.Count == 0) throw new BusinessRuleException("Hãy chọn ít nhất một công ty áp dụng.");
         var note = Clean(header.Note);
         if (note is { Length: > TextMaxLength }) throw new BusinessRuleException($"Ghi chú tối đa {TextMaxLength} ký tự.");
+        var exceptionNote = Clean(header.ExceptionNote);
+        if (exceptionNote is { Length: > TextMaxLength }) throw new BusinessRuleException($"Giải trình ngoại lệ tối đa {TextMaxLength} ký tự.");
+        ExceptionNote = exceptionNote;
         Period = header.Period;
         ItemCategoryId = header.ItemCategoryId;
         Note = note;
@@ -203,6 +219,25 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
         }
 
         _lines.RemoveAll(l => !keep.Contains(l));
+    }
+
+    /// <summary>
+    /// Chốt ngoại lệ trước khi gửi duyệt (lát H2, design.md mục 18.25 – Q6): có ngoại lệ tự phát hiện thì bắt buộc giải trình; phiếu có ngoại
+    /// lệ (tự phát hiện hoặc người lập đã ghi giải trình) qua thêm chặng Chủ tịch/TGĐ.
+    /// </summary>
+    /// <param name="exceptions">Ngoại lệ tự phát hiện của các dòng (<see cref="MonthlyApprovalExceptions"/>).</param>
+    /// <returns>Phiếu có qua chặng ngoại lệ không.</returns>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc có ngoại lệ mà chưa giải trình.</exception>
+    public bool PrepareSubmit(IReadOnlyList<string> exceptions)
+    {
+        ArgumentNullException.ThrowIfNull(exceptions);
+        EnsureStatus(MonthlyApprovalStatus.Draft, "nháp");
+        if (exceptions.Count > 0 && ExceptionNote is null)
+            throw new BusinessRuleException(
+                $"Phiếu {No} có ngoại lệ ({string.Join("; ", exceptions.Take(3))}{(exceptions.Count > 3 ? "; …" : "")}) – hãy nhập giải trình ngoại lệ "
+                + "trước khi gửi duyệt (phiếu sẽ qua thêm chặng Chủ tịch/TGĐ).");
+        HasException = exceptions.Count > 0 || ExceptionNote is not null;
+        return HasException;
     }
 
     /// <summary>Gửi duyệt: Nháp → Chờ duyệt, xóa lý do từ chối cũ.</summary>
@@ -263,7 +298,8 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
 
     /// <summary>Đầu phiếu hiện tại (để chép sang phiếu điều chỉnh / tháng sau).</summary>
     /// <param name="period">Tháng của phiếu mới.</param>
-    public MonthlyApprovalHeader HeaderFor(DateOnly period) => new(period, ItemCategoryId, _companies.Select(c => c.CompanyId).ToList(), Note);
+    public MonthlyApprovalHeader HeaderFor(DateOnly period) =>
+        new(period, ItemCategoryId, _companies.Select(c => c.CompanyId).ToList(), Note, ExceptionNote);
 
     /// <summary>Dòng hiện tại dưới dạng dữ liệu dòng mới (Id null) – để chép sang phiếu khác.</summary>
     public IReadOnlyList<MonthlyApprovalLineData> CopyLines() =>
@@ -417,4 +453,48 @@ public sealed class MonthlySupplierApprovalLine : Entity
         if (price < 0 || decimal.Round(price, 6) != price || price >= MaxPrice)
             throw new BusinessRuleException($"{prefix}: {what} phải ≥ 0, tối đa 6 chữ số thập phân.");
     }
+}
+
+/// <summary>
+/// Ngoại lệ tự phát hiện của một dòng phiếu duyệt NCC và giá tháng (lát H2, design.md mục 18.25 – quyết định Q6: phiếu GTH có ngoại lệ lên
+/// Chủ tịch/TGĐ). Ngoại lệ: mặt hàng chưa đủ <see cref="MinSuppliers"/> NCC đủ điều kiện (gồm cả trường hợp độc quyền – không thể có đủ NCC
+/// nhưng vẫn là ngoại lệ phải lên Chủ tịch); giá NCC chính hoặc dự phòng vượt giá mục tiêu. Giá vượt trần không có ở đây vì phiếu không lưu
+/// được giá vượt trần của chính nó (lát G4b).
+/// </summary>
+public static class MonthlyApprovalExceptions
+{
+    /// <summary>Số NCC đủ điều kiện tối thiểu mỗi mặt hàng – theo quyết định thành lập Ban (như mức mặc định của SUPCOV, lát G1).</summary>
+    public const int MinSuppliers = 3;
+
+    /// <summary>
+    /// Ngoại lệ của một dòng.
+    /// Ví dụ: 2 NCC đủ điều kiện, giá chính 12.000 &gt; mục tiêu 11.500 → ["Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)",
+    /// "Giá NCC chính 12.000 vượt giá mục tiêu 11.500"].
+    /// </summary>
+    /// <param name="qualifiedSuppliers">Số NCC Đã duyệt cung cấp mặt hàng (NCC – sản phẩm, cộng NCC chính/dự phòng của dòng).</param>
+    /// <param name="soleSourceNo">Số phiếu NCC độc quyền còn tác dụng của mặt hàng (nếu có).</param>
+    /// <param name="unitPrice">Giá NCC chính.</param>
+    /// <param name="backupUnitPrice">Giá NCC dự phòng.</param>
+    /// <param name="targetPrice">Giá mục tiêu.</param>
+    /// <returns>Danh sách mô tả ngoại lệ (rỗng = không có).</returns>
+    public static IReadOnlyList<string> ForLine(
+        int qualifiedSuppliers, string? soleSourceNo, decimal unitPrice, decimal? backupUnitPrice, decimal? targetPrice)
+    {
+        var result = new List<string>();
+        if (qualifiedSuppliers < MinSuppliers)
+            result.Add(soleSourceNo is null
+                ? $"Chỉ có {qualifiedSuppliers} NCC đủ điều kiện (tối thiểu {MinSuppliers})"
+                : $"NCC độc quyền theo {soleSourceNo} – {qualifiedSuppliers} NCC đủ điều kiện");
+        if (targetPrice is { } target)
+        {
+            if (unitPrice > target) result.Add($"Giá NCC chính {Vnd(unitPrice)} vượt giá mục tiêu {Vnd(target)}");
+            if (backupUnitPrice is { } backup && backup > target) result.Add($"Giá NCC dự phòng {Vnd(backup)} vượt giá mục tiêu {Vnd(target)}");
+        }
+
+        return result;
+    }
+
+    /// <summary>Số kiểu Việt Nam (1.234.567,5), bỏ số 0 thừa sau dấu phẩy.</summary>
+    private static string Vnd(decimal value) =>
+        value.ToString("#,0.######", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
 }

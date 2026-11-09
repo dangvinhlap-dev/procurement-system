@@ -36,7 +36,12 @@ export interface MonthlyApprovalListItem {
   status: MonthlyApprovalStatus
   replacesNo: string | null
   createdByName: string | null
+  /** Lượt gửi gần nhất có ngoại lệ – qua chặng Chủ tịch/TGĐ (lát H2). */
+  hasException: boolean
 }
+
+/** Nhãn chặng trong lịch sử duyệt GTH: chặng 2 là ngoại lệ lên Chủ tịch/TGĐ (lát H2, design.md mục 18.25 – Q6). */
+export const MONTHLY_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ – Chủ tịch/TGĐ' }
 
 /** Một dòng mặt hàng của phiếu. */
 export interface MonthlyApprovalLine {
@@ -65,6 +70,8 @@ export interface MonthlyApprovalLine {
   ceilingPrice: number | null
   /** Giá mục tiêu để đàm phán. */
   targetPrice: number | null
+  /** Ngoại lệ tự phát hiện (chưa đủ 03 NCC đủ điều kiện, độc quyền, giá vượt mục tiêu) – server tính khi nháp/chờ duyệt. */
+  exceptions: string[]
 }
 
 /** Công ty chọn được để áp dụng phiếu. */
@@ -110,6 +117,10 @@ export interface MonthlyApproval {
   lines: MonthlyApprovalLine[]
   approvals: ApprovalStep[]
   actions: MonthlyApprovalActions
+  /** Giải trình ngoại lệ (lát H2). */
+  exceptionNote: string | null
+  /** Lượt gửi gần nhất có ngoại lệ. */
+  hasException: boolean
 }
 
 /** Dữ liệu lưu phiếu. */
@@ -118,6 +129,8 @@ export interface SaveMonthlyApprovalInput {
   itemCategoryId: string
   companyIds: string[]
   note: string | null
+  /** Giải trình ngoại lệ – bắt buộc khi có ngoại lệ; ghi khi không có là tự khai ngoại lệ (lát H2). */
+  exceptionNote: string | null
   lines: {
     id: string | null
     itemId: string

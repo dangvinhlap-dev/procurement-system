@@ -73,5 +73,9 @@ public class ApprovalRuleTemplateTests
         // PO theo sơ đồ: 02 Phó ban kiểm tra, xác nhận rồi Chủ tịch/TGĐ duyệt.
         Assert.Equal(["PHOBAN", "PHOBAN", "CHUTICH"],
             ApprovalRuleTemplates.Procurement.Where(r => r.DocType == "PO").OrderBy(r => r.Level).Select(r => r.RoleCode));
+
+        // Q6 (lát H2): phiếu GTH có ngoại lệ → Chủ tịch/TGĐ phê duyệt, chỉ ở tổng công ty như GTH.
+        Assert.Equal([("CHUTICH", true)],
+            ApprovalRuleTemplates.Procurement.Where(r => r.DocType == "GTX").Select(r => (r.RoleCode, r.HeadOfficeOnly)));
     }
 }
