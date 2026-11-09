@@ -1,4 +1,4 @@
-namespace Proc.Domain.Organization;
+﻿namespace Proc.Domain.Organization;
 
 /// <summary>Khai báo một quyền chức năng.</summary>
 /// <param name="Code">Mã quyền dạng Module.Đối tượng.Hành động (design.md mục 9.1).</param>
@@ -214,6 +214,11 @@ public static class Permissions
         public const string RfqAward = "Sourcing.Rfq.Award";
         /// <summary>Quyền "Duyệt kết quả chọn thầu" (hội đồng – design.md mục 18.6).</summary>
         public const string RfqApproveAward = "Sourcing.Rfq.ApproveAward";
+        /// <summary>
+        /// Quyền "Ghi ý kiến thẩm định" của thành viên chuyên môn trên phiếu GTH, RFQ, hợp đồng, hồ sơ NCC (lát H1 – design.md mục 18.25).
+        /// Không phải quyền duyệt: ý kiến không chặn, không thay lượt duyệt.
+        /// </summary>
+        public const string AppraisalGive = "Sourcing.Appraisal.Give";
     }
 
     /// <summary>Báo cáo.</summary>
@@ -336,6 +341,7 @@ public static class Permissions
         new(Sourcing.RfqManage, "Lập yêu cầu báo giá"),
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),
         new(Sourcing.RfqApproveAward, "Duyệt kết quả chọn thầu"),
+        new(Sourcing.AppraisalGive, "Ghi ý kiến thẩm định (GTH, RFQ, hợp đồng, hồ sơ NCC)"),
         new(Report.StockView, "Xem báo cáo nhập – xuất – tồn"),
         new(Report.PurchaseView, "Xem báo cáo mua hàng"),
         new(Report.PriceViewAllCompanies, "Xem so sánh giá toàn tập đoàn"),

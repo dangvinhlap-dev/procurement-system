@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -250,6 +250,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
 
     /// <summary>File đính kèm dùng chung (design.md mục 18.4).</summary>
     public DbSet<Proc.Domain.Documents.Attachment> Attachments => Set<Proc.Domain.Documents.Attachment>();
+
+    /// <summary>Ý kiến thẩm định của thành viên chuyên môn (lát H1 – design.md mục 18.25).</summary>
+    public DbSet<Proc.Domain.Documents.AppraisalOpinion> AppraisalOpinions => Set<Proc.Domain.Documents.AppraisalOpinion>();
 
     /// <summary>
     /// Cấu hình bảng Identity, áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure, rồi gắn filter phạm vi.

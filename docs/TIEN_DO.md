@@ -1,6 +1,6 @@
-# Tiến độ dự án
+﻿# Tiến độ dự án
 
-Cập nhật: 09/11/2026 (G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 09/11/2026 (H1a: ý kiến thẩm định – backend; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -141,6 +141,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **H1 – ý kiến thẩm định** (09/11/2026, nhánh `feature/h1-y-kien-tham-dinh`, design.md 18.25 mục H1):
+  - **H1a (xong)**: `AppraisalOpinion` (Đạt/Không đạt, khía cạnh Chất lượng/Pháp lý/Khác, nội dung, rút có lý do), `AppraisalOpinionService`,
+    API `/api/appraisal-opinions` (GET, POST, `/{id}/withdraw`), quyền `Sourcing.Appraisal.Give` (THAMDINHCL, THAMDINHPL, PHAPCHE), đính
+    kèm loại chủ `AppraisalOpinion` (chỉ người ghi thêm). Chủ: GTH, RFQ, hợp đồng, NCC. Migration `V0_20_0_YKienThamDinh`. Test: domain
+    `AppraisalOpinionTests` (3), tích hợp `AppraisalOpinionTests` (2). `dotnet test` 590/590.
+  - **H1b (tiếp theo)**: tab "Thẩm định" trên 4 màn hình (GTH, RFQ, hợp đồng, NCC) + cảnh báo khi duyệt có ý kiến Không đạt + Playwright.
 - **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
   tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,
   L8 RFQ đếm NCC mời thay báo giá + báo giá sau hạn, L9 hủy PO đã duyệt không lý do, cảnh báo CS1573.

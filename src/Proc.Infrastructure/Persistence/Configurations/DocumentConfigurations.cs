@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.Documents;
 using Proc.Domain.Organization;
@@ -53,6 +53,23 @@ public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachmen
         builder.Property(x => x.Note).HasMaxLength(Attachment.NoteMaxLength);
         builder.HasIndex(x => x.StoragePath).IsUnique();
         // Truy vấn chính: file của một đối tượng. Không khóa ngoại tới chủ vì chủ nằm ở nhiều bảng khác nhau (OwnerType).
+        builder.HasIndex(x => new { x.OwnerType, x.OwnerId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng AppraisalOpinion – ý kiến thẩm định của thành viên chuyên môn (lát H1, design.md mục 18.25).</summary>
+public sealed class AppraisalOpinionConfiguration : IEntityTypeConfiguration<AppraisalOpinion>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<AppraisalOpinion> builder)
+    {
+        builder.ToTable("AppraisalOpinion");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.OwnerType).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Content).HasMaxLength(AppraisalOpinion.ContentMaxLength).IsRequired();
+        builder.Property(x => x.WithdrawReason).HasMaxLength(AppraisalOpinion.ReasonMaxLength);
+        // Như đính kèm: chủ nằm ở nhiều bảng (OwnerType) nên không có khóa ngoại tới chủ; truy vấn chính là ý kiến của một đối tượng.
         builder.HasIndex(x => new { x.OwnerType, x.OwnerId });
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
