@@ -2007,6 +2007,21 @@ bản này, AuditLog vẫn giữ).
 Ô **Định mức LK** trên lưới dòng PR hiện "đã đề nghị / định mức" (ĐVT cơ sở), rê chuột thấy kỳ lũy kế, ví dụ "Lũy kế 01–02/2027: đã đề
 nghị 23 / định mức 20 CAI". Không có migration (`PurchaseRequestLineDto` thêm `NormStatus`, `NormQty`, `NormRequestedQty`, `NormThrough`).
 
+**G12 – Gói báo cáo tháng cho Ban** (09/11/2026; quyết định: Văn phòng Ban "lập báo cáo tuần và tháng cho Ban", Trưởng phòng/Trưởng bộ phận
+cung ứng "báo cáo kết quả cho Ban hằng tháng", Phòng cung ứng chung "báo cáo kết quả và chiết khấu cho Ban"; màn hình **BCBAN**, Báo cáo →
+Báo cáo tháng cho Ban, `GET /api/reports/board-monthly?year=&month=&allCompanies=`, Excel `GET /api/reports/board-monthly/excel?…`):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Chọn **tháng** (mặc định tháng trước), so **tháng trước liền trước**; công ty đang làm việc hoặc **Toàn tập đoàn** (cần `Report.Purchase.ViewAllCompanies`) – người có quyền này thì **mặc định Toàn tập đoàn** (cả 02 công ty, yêu cầu người dùng 09/11/2026). Quyền màn hình `Report.Purchase.View` | Ban họp theo tháng, quyết định chung cho cả 02 công ty |
+| Mỗi mục lấy **đúng số của báo cáo chi tiết** (gọi cùng dịch vụ, không tính lại), bấm mở báo cáo đó: Tổng quan mua hàng + tỷ lệ mua theo giá đã duyệt + cơ cấu nguồn giá (PRCW); 9 KPI (KPI – chỉ công ty đang làm việc, chưa có KPI toàn tập đoàn); Tiết kiệm đấu thầu (SAVE – tỷ lệ = tiết kiệm ÷ (giá trị trúng + tiết kiệm), như KPI) và so giá chuẩn (SAVSTD); Mua ngoài giá đã duyệt – **10 dòng** tiền chênh lớn nhất (PRCW); Biến động giá – tổng ảnh hưởng, số mặt hàng tăng/giảm, **10 mặt hàng** tăng giá ảnh hưởng lớn nhất (PRVAR); Chiết khấu sản lượng gộp – kỳ tính bậc đang chạy (CKBT); NCC đủ điều kiện – nhóm hàng chưa đủ **3** NCC đã duyệt (SUPCOV); Hồ sơ NCC mới có ngày hồ sơ trong tháng, theo trạng thái hiện tại (HSN) | Một nơi cho Ban xem kết quả, tiết kiệm, tuân thủ, chiết khấu, tiến độ bổ sung NCC; số khớp báo cáo chi tiết nên không phải đối chiếu |
+| Mục CKB, NCC đủ điều kiện, hồ sơ NCC mới cần thêm quyền xem riêng (`Pricing.VolumeRebate.View`, `MasterData.Supplier.View`, `MasterData.SupplierOnboarding.View`); thiếu quyền thì mục ghi "Không có quyền xem", các mục khác vẫn hiện | Như trang chủ – không chặn cả báo cáo vì một mục |
+| Mục **Kiểm soát nội bộ** (số dấu hiệu Cao/Trung bình theo loại – ANOM; vi phạm ghi nhận trong tháng, số vụ nghiêm trọng đã kết luận – VIOL) **chỉ hiện** với người có `Control.Anomaly.View` hoặc `Control.Finding.Receive` (chỉ có quyền nhận thì chỉ thấy sổ vi phạm); người không có quyền không thấy cả tên mục | Kết quả KSNB gửi thẳng lãnh đạo, không qua người bị giám sát (mục 18.19) |
+| CKB và NCC đủ điều kiện là **tình trạng tại lúc xem**, không theo tháng chọn (ghi chú trên mục) | Hai báo cáo nguồn không có số theo kỳ quá khứ |
+| **Xuất Excel**: sheet Tổng quan (mua hàng, nguồn giá, tiết kiệm, trạng thái các mục) và một sheet cho mỗi mục có số liệu; ô số giữ kiểu số. Tên file `BaoCaoThangBan_{yyyy-MM}_{mã công ty}.xlsx` (toàn tập đoàn: `_TapDoan`) | Văn phòng Ban gửi/in cho Ban, sửa thêm nhận xét trong Excel |
+
+Không có migration.
+
 
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)

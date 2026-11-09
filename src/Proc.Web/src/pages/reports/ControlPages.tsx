@@ -16,6 +16,7 @@ import {
 } from '../../api/control'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatMoney, vnNumberInput } from '../../utils/format'
@@ -292,4 +293,9 @@ export function ControlFindingListPage() {
       )}
     </>
   )
+}
+
+/** Lưới sổ vi phạm chỉ xem (cùng cột màn hình VIOL) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function ControlFindingGrid({ rows }: { rows: ControlFinding[] }) {
+  return <DataGrid rows={rows} columns={findingColumns} rowKey={(r) => r.id} groupBy={null} onGroupByChange={() => {}} />
 }

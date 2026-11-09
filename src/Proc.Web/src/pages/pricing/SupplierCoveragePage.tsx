@@ -3,6 +3,7 @@ import { TreeSelect } from '../../classic/TreeSelect'
 import { useMemo, useState } from 'react'
 import { useItemCategories } from '../../api/masterData'
 import { useSupplierCoverage, type SupplierCoverageRow, type SupplierCoverageStatus } from '../../api/reports'
+import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { vnNumberInput } from '../../utils/format'
@@ -112,4 +113,9 @@ export function SupplierCoveragePage() {
       }
     />
   )
+}
+
+/** Lưới nhóm hàng NCC đủ điều kiện chỉ xem (cùng cột màn hình SUPCOV) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function SupplierCoverageGrid({ rows }: { rows: SupplierCoverageRow[] }) {
+  return <DataGrid rows={rows} columns={columns} rowKey={(r) => r.categoryId} groupBy={null} onGroupByChange={() => {}} />
 }

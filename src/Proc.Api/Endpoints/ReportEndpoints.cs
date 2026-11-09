@@ -71,6 +71,16 @@ public static class ReportEndpoints
         // Bảng KPI Ban Cung ứng, mục tiêu theo tham số công ty (design.md mục 18.18).
         reports.MapGet("/kpi", (DateOnly from, DateOnly to, IKpiService s, CancellationToken ct) => s.GetAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Gói báo cáo tháng cho Ban cung ứng (lát G12, design.md mục 18.25): mục thiếu quyền riêng thì dịch vụ để trống.
+        reports.MapGet("/board-monthly", (int year, int month, bool? allCompanies, IBoardMonthlyReportService s, CancellationToken ct) =>
+                s.GetAsync(year, month, allCompanies ?? false, ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
+        reports.MapGet("/board-monthly/excel", async (int year, int month, bool? allCompanies, IBoardMonthlyReportService s, CancellationToken ct) =>
+            {
+                var file = await s.ExportAsync(year, month, allCompanies ?? false, ct);
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Report.PurchaseView);
 
         // Xuất chứng từ cho kế toán (mục 11.5): docTypes nhiều giá trị (?docTypes=GRN&docTypes=RTV), trống = tất cả.
         var accounting = app.MapGroup("/api/accounting-export").WithTags("Xuất cho kế toán");

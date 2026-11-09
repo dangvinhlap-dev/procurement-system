@@ -34,7 +34,7 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
-import { formatDate, formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
+import { MONTH_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
 
@@ -42,7 +42,7 @@ import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purc
 export const MONTHLY_APPROVAL_PATH = '/gia-ncc/duyet-thang'
 
 /** Ô tháng gõ tay MM/yyyy (gõ nhanh 122026, 12.2026) hoặc chọn trên lịch tháng. */
-const MONTH_FORMATS = ['MM/YYYY', 'MM.YYYY', 'MMYYYY', 'M/YYYY']
+const MONTH_FORMATS = MONTH_INPUT_FORMATS
 
 /** Tháng hiển thị MM/yyyy từ ngày đầu tháng "yyyy-MM-dd". */
 const formatMonth = (value: string) => dayjs(value).format('MM/YYYY')

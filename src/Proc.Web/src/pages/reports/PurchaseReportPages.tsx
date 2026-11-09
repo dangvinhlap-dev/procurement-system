@@ -42,6 +42,7 @@ import { receiptAcceptanceLabels, type ReceiptAcceptance } from '../../api/inven
 import { screens } from '../../app/screens'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { formatDate, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
@@ -919,4 +920,19 @@ export function KpiReportPage() {
       filters={<LogDateRangeFilter value={range} onChange={(r) => setRange({ ...range, ...r })} />}
     />
   )
+}
+
+/** Lưới bảng KPI chỉ xem (cùng cột màn hình KPI) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function KpiGrid({ rows }: { rows: KpiRow[] }) {
+  return <DataGrid rows={rows} columns={kpiColumns} rowKey={(r) => r.code} groupBy={null} onGroupByChange={() => {}} isMarked={(r) => r.met === false} />
+}
+
+/** Lưới dòng mua ngoài giá đã duyệt chỉ xem (cùng cột màn hình PRCW) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function OutOfContractGrid({ rows }: { rows: OutOfContractLine[] }) {
+  return <DataGrid rows={rows} columns={outOfContractColumns} rowKey={(r) => `${r.orderId}|${r.lineNo}`} groupBy={null} onGroupByChange={() => {}} />
+}
+
+/** Lưới biến động giá chỉ xem (cùng cột màn hình PRVAR) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function PriceVarianceGrid({ rows }: { rows: PriceVarianceRow[] }) {
+  return <DataGrid rows={rows} columns={varianceColumns} rowKey={(r) => r.itemId} groupBy={null} onGroupByChange={() => {}} />
 }
