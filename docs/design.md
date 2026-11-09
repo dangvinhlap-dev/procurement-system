@@ -1713,7 +1713,7 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
 | Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
 
-Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu – xong 09/11/2026) → G1b → G8 → G11
 → G12; G9 hoãn.
 
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
@@ -1957,6 +1957,21 @@ Migration `V0_20_0_GthNgoaiLe` (cột `ExceptionNote` varchar(1000) null, `HasEx
 
 Không đổi CSDL (không migration). Lưu ý: chặng POX, POL (mẫu cấp 2 Chủ tịch) chưa áp quy tắc bỏ cấp trùng vai trò – PO lớn có Chủ tịch ở chặng
 thường mà lệch giá/ngoài danh sách thì người quản trị cần sửa ngưỡng hoặc vai trò để không kẹt (R3).
+
+**H4 – Đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập** (09/11/2026, sơ đồ mục 3 – đơn vị đặt hàng "xác nhận số lượng, chất lượng,
+nghiệm thu"; trước đây chỉ thủ kho lập phiếu nhập):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Phiếu nhập mua NCC **đã ghi sổ** có lệnh **"Xác nhận nghiệm thu"** (`POST /api/goods-receipts/{id}/acceptance`): **Đạt**, hoặc **Không đạt** kèm **ý kiến bắt buộc** (≤ 500 ký tự). Xác nhận lại được (ví dụ NCC đã đổi/giao bù) – mọi lần đổi vào AuditLog. Không xét kỳ kho (không đổi sổ kho, giá vốn – như cập nhật hóa đơn mục 18.15) | Hàng nhận về phải được đơn vị dùng hàng xác nhận trước khi kế toán đối chiếu thanh toán |
+| Quyền mới **`Inventory.Receipt.Accept`** "Xác nhận nghiệm thu phiếu nhập mua (đơn vị đặt hàng)"; vai trò mẫu **DENGHI** thêm quyền này và quyền xem chứng từ kho. **Người lập hoặc người ghi sổ phiếu nhập** (thủ kho) không tự xác nhận | Tách người nhận hàng và người dùng hàng – kiểm soát nội bộ. Tài khoản chưa gắn bộ phận nên không giới hạn theo bộ phận đặt hàng của PO |
+| **Bỏ ghi sổ** phiếu nhập thì xóa xác nhận (ghi sổ lại phải xác nhận lại) | SL/hàng có thể đã sửa – xác nhận cũ không còn đúng |
+| Phiếu nhập hiện thông báo: chưa xác nhận (xanh dương), Đạt (xanh lá), Không đạt + ý kiến (đỏ). Báo cáo **MATCH3** thêm cột **Nghiệm thu** (Chưa xác nhận / Đạt / Không đạt) và cảnh báo **"Đơn vị đặt hàng không đồng ý nghiệm thu"** khi Không đạt; chưa xác nhận **không** tính là cảnh báo | Kế toán thấy trước khi thanh toán; công ty chưa dùng bước nghiệm thu không bị báo hàng loạt |
+
+Migration `V0_20_0_XacNhanNghiemThu` (cột `Acceptance` integer mặc định 0, `AcceptanceNote` varchar(500), `AcceptedBy` uuid, `AcceptedAt`
+timestamptz trên `InventoryDocument`; `Down()` xóa bốn cột – mất kết quả nghiệm thu, AuditLog vẫn giữ). Chưa bắt buộc nghiệm thu trước bước
+nào (thanh toán ở phần mềm kế toán – Q5); nếu cần chặn thì thêm tham số công ty sau.
+
 
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
