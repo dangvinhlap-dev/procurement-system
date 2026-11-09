@@ -478,7 +478,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   từ kế hoạch nhu cầu đã chốt (`PurchaseRequestService.UsageNormsAsync`, DTO dòng `NormStatus/NormQty/NormRequestedQty/NormThrough`), cột
   "Định mức LK" + cảnh báo đầu phiếu (`UsageNormNotice.tsx`), chỉ cảnh báo; không migration. Test tích hợp `UsageNormTests`, e2e
   `usage-norm.spec.ts`. `dotnet test` 605/605; Playwright 114/115 (lỗi sẵn có volume-rebate); build, tsc, oxlint qua. Quy tắc tự đặt ghi ở design.md 18.25 (G11).
-- **G12** báo cáo tháng cho Ban.
+- **G12** báo cáo tháng cho Ban – **đang làm** (nhánh `feature/g12-bao-cao-thang-ban`, design.md 18.25 mục G12):
+  - Bước 1 (xong): backend `IBoardMonthlyReportService` (`Reports/BoardMonthlyReport.cs`, `BoardMonthlyReportService`, Excel
+    `BoardMonthlyReportExcel`), API `GET /api/reports/board-monthly` + `/excel`; test tích hợp `BoardMonthlyReportTests` qua.
+  - Còn: giao diện màn hình BCBAN, e2e `board-monthly.spec.ts` + chụp màn hình, chạy đủ bộ kiểm tra, merge.
 - Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11 (bản gần nhất 0.20.0).
 
 
