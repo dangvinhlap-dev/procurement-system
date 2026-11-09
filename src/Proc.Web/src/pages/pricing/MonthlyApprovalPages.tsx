@@ -25,6 +25,9 @@ import { withPendingApprovers } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
+import { AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
+import { useAppraisals } from '../../api/appraisals'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
@@ -154,6 +157,9 @@ export function MonthlyApprovalPage() {
   const readOnly = isNew ? !canCreate : !doc?.actions.canEdit
   // Đính kèm biên bản họp Ban, bảng so sánh giá – quyền theo quyền lập phiếu (design.md mục 18.4).
   const attachmentTab = useAttachmentTab('MonthlySupplierApproval', doc?.id, hasPermission(Permission.MonthlyApprovalManage))
+  // Ý kiến thẩm định của thành viên chuyên môn (lát H1) – Hội đồng xem trước khi duyệt, không phải cấp duyệt.
+  const appraisalTabs = useAppraisalTab('MonthlySupplierApproval', doc?.id)
+  const appraisals = useAppraisals('MonthlySupplierApproval', doc?.id).data
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -254,6 +260,7 @@ export function MonthlyApprovalPage() {
       content: (
         <>
           <p>Duyệt cấp cuối thì đây là kết quả tháng: Phòng cung ứng chung đặt hàng đúng NCC, giá và hạn mức trên phiếu.</p>
+          <AppraisalSummary data={appraisals} />
           {approveContent(doc)}
         </>
       ),
@@ -508,6 +515,7 @@ export function MonthlyApprovalPage() {
     <DocumentForm
       title="Duyệt NCC và giá tháng"
       extraTabs={[
+        ...appraisalTabs,
         attachmentTab,
         ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
       ]}

@@ -19,6 +19,7 @@ import { useCompanies } from '../../api/organization'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
+import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { SupplierCategoryField } from './SupplierCategoryField'
@@ -101,6 +102,8 @@ export function SupplierDrawer({
   const [saving, setSaving] = useState(false)
 
   const isNew = supplierId === null
+  // Ý kiến thẩm định hồ sơ NCC của thành viên chuyên môn (lát H1) – NCC dùng chung nên mọi công ty cùng thấy.
+  const appraisalTabs = useAppraisalTab('Supplier', supplierId ?? undefined)
   const detail = supplier.data
   const editable = isNew ? canManage : detail?.canEdit === true
   const status = Form.useWatch('status', form)
@@ -453,6 +456,7 @@ export function SupplierDrawer({
                 label: 'Hồ sơ đính kèm',
                 children: <AttachmentPanel ownerType="Supplier" ownerId={supplierId} canManage={hasPermission(Permission.SupplierManage)} />,
               },
+              ...appraisalTabs,
             ]
           : []),
       ]}

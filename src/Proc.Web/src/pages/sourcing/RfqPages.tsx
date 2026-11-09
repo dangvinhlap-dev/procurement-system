@@ -40,6 +40,9 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
+import { AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
+import { useAppraisals } from '../../api/appraisals'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
@@ -149,6 +152,9 @@ export function RfqPage() {
   const readOnly = isNew ? !hasPermission(Permission.RfqManage) : !doc?.actions.canEdit
   // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
   const attachmentTab = useAttachmentTab('Rfq', doc?.id, hasPermission(Permission.RfqManage))
+  // Ý kiến thẩm định hồ sơ thầu (lát H1) – Hội đồng xem trước khi duyệt kết quả chọn thầu.
+  const appraisalTabs = useAppraisalTab('Rfq', doc?.id)
+  const appraisals = useAppraisals('Rfq', doc?.id).data
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -386,6 +392,7 @@ export function RfqPage() {
         <>
           <p>Giá trị trúng thầu {formatMoney(doc.awardAmount)} đ. Duyệt cấp cuối thì giá trúng thầu vào lịch sử giá, tạo được đơn mua hàng.</p>
           <p>{dossierSummary(doc.dossier)}</p>
+          <AppraisalSummary data={appraisals} />
           {approveContent(doc)}
         </>
       ),
@@ -775,7 +782,7 @@ export function RfqPage() {
             <LineGrid name="lines" auditEntity="RfqLine" columns={columns} readOnly={readOnly} addRef={addRef} newLine={() => ({ id: null, qty: 1, sourcePrLineId: null })} />
           </>
         }
-        extraTabs={[...extraTabs, attachmentTab]}
+        extraTabs={[...extraTabs, ...appraisalTabs, attachmentTab]}
       />
       {picking && <RequestLinePicker onCancel={() => setPicking(false)} onPick={addFromRequests} />}
       {planning && (
