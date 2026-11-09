@@ -61,6 +61,7 @@ import {
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
 import { AccountingExportPage } from './pages/reports/AccountingExportPage'
+import { BoardMonthlyReportPage } from './pages/reports/BoardMonthlyReportPage'
 import { PurchaseHistoryMappingPage } from './pages/reports/PurchaseHistoryMappingPage'
 import { PurchaseAnalysisPage } from './pages/reports/PurchaseAnalysisPage'
 import { PurchaseHistoryPage } from './pages/reports/PurchaseHistoryPage'
@@ -135,6 +136,7 @@ const implemented: Record<string, ReactNode> = {
   PRVAR: <PriceVarianceReportPage />,
   SAVSTD: <StandardSavingsReportPage />,
   KPI: <KpiReportPage />,
+  BCBAN: <BoardMonthlyReportPage />,
   ANOM: <AnomalyReportPage />,
   VIOL: <ControlFindingListPage />,
   ACCX: <AccountingExportPage />,

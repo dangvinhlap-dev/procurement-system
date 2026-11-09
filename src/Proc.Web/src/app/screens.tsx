@@ -181,6 +181,7 @@ export const screens: Screen[] = [
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SAVE', title: 'Tiết kiệm từ đấu thầu', navLabel: 'Tiết kiệm đấu thầu', path: '/bao-cao/tiet-kiem-dau-thau', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PRCW', title: 'Giá mua & mua ngoài hợp đồng', navLabel: 'Mua ngoài hợp đồng', path: '/bao-cao/gia-mua-ngoai-hop-dong', icon: <AuditOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'BCBAN', title: 'Báo cáo tháng cho Ban', navLabel: 'Báo cáo tháng cho Ban', path: '/bao-cao/bao-cao-thang-ban', icon: <SolutionOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'KPI', title: 'Bảng KPI cung ứng', navLabel: 'Bảng KPI', path: '/bao-cao/kpi', icon: <DashboardOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'PRVAR', title: 'Biến động giá mua', navLabel: 'Biến động giá mua', path: '/bao-cao/bien-dong-gia-mua', icon: <LineChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SAVSTD', title: 'Tiết kiệm so giá chuẩn', navLabel: 'Tiết kiệm so giá chuẩn', path: '/bao-cao/tiet-kiem-gia-chuan', icon: <FundOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },

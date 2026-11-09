@@ -29,12 +29,12 @@ import {
   type VolumeRebatePeriod,
   type VolumeRebatePeriodRow,
   type VolumeRebateShare,
-  type VolumeRebateTargetStatus,
   type VolumeRebateTrackingRow,
 } from '../../api/volumeRebates'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
@@ -642,6 +642,42 @@ export function VolumeRebatePage() {
   )
 }
 
+/** Dòng cần chú ý: sắp chạm/hụt bậc, hoặc có kỳ quá hạn ghi nhận còn thiếu thực nhận (lát G6b) – khớp lọc "Chỉ dòng có cảnh báo" của máy chủ. */
+const isTrackingAlert = (r: VolumeRebateTrackingRow) =>
+  r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed' || r.unreceivedPeriods > 0
+
+const trackingVolume = (r: VolumeRebateTrackingRow, v: number | null) => formatVolume(r.basis, v, r.uomCode)
+
+const trackingColumns: GridColumn<VolumeRebateTrackingRow>[] = [
+  { key: 'no', title: 'Số thỏa thuận', width: 140, value: (r) => r.no },
+  { key: 'title', title: 'Tên thỏa thuận', width: 200, value: (r) => r.title },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 190, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  { key: 'period', title: 'Kỳ', width: 160, value: (r) => `${formatDate(r.period.periodFrom)} – ${formatDate(r.period.periodTo)}`, auditField: false },
+  { key: 'state', title: 'Tình trạng kỳ', width: 105, value: (r) => volumeRebateStateLabels[r.period.state], groupable: true, auditField: false },
+  { key: 'volume', title: 'Lũy kế', width: 130, value: (r) => trackingVolume(r, r.period.volume), auditField: false },
+  { key: 'tier', title: 'Bậc đạt', width: 70, type: 'quantity', value: (r) => r.period.tierNo, auditField: false },
+  { key: 'percent', title: '% CK', width: 70, value: (r) => formatPercent(r.period.percent), auditField: false },
+  { key: 'rebate', title: 'CK phải nhận', width: 120, type: 'money', value: (r) => r.period.rebateAmount, auditField: false },
+  { key: 'next', title: 'Bậc kế', width: 65, type: 'quantity', value: (r) => r.period.nextTierNo, auditField: false },
+  { key: 'shortfall', title: 'Còn thiếu lên bậc kế', width: 140, value: (r) => trackingVolume(r, r.period.shortfall), auditField: false },
+  { key: 'forecast', title: 'Dự báo cuối kỳ', width: 130, value: (r) => trackingVolume(r, r.period.forecast), auditField: false },
+  { key: 'targetTier', title: 'Bậc mục tiêu', width: 90, type: 'quantity', value: (r) => r.targetTierNo, auditField: false },
+  {
+    key: 'target', title: 'So bậc mục tiêu', width: 150, type: 'status', groupable: true, auditField: false,
+    value: (r) => volumeRebateTargetLabels[r.period.targetStatus], tone: (r) => volumeRebateTargetTone[r.period.targetStatus],
+  },
+  {
+    key: 'near', title: 'Sắp chạm bậc', width: 110, type: 'status', auditField: false,
+    value: (r) => (r.period.isNearNextTier ? `Sắp chạm bậc ${r.period.nextTierNo}` : ''), tone: (r) => (r.period.isNearNextTier ? 'warning' : 'neutral'),
+  },
+  { key: 'received', title: 'Đã nhận kỳ này', width: 120, type: 'money', value: (r) => r.period.receivedAmount, auditField: false },
+  {
+    key: 'unreceived', title: 'Thiếu thực nhận quá hạn', width: 170, type: 'status', auditField: false,
+    value: (r) => (r.unreceivedPeriods > 0 ? `${r.unreceivedPeriods} kỳ – ${formatMoney(r.unreceivedAmount)}` : ''),
+    tone: (r) => (r.unreceivedPeriods > 0 ? 'error' : 'neutral'),
+  },
+]
+
 /**
  * Giá và NCC → Theo dõi bậc chiết khấu (CKBT – design.md mục 18.25, lát G6a): kỳ hiện tại của mọi thỏa thuận hiệu lực (kể cả vừa hết hạn
  * trong 31 ngày) – lũy kế gộp, bậc đạt, còn thiếu lên bậc kế, dự báo cuối kỳ; cảnh báo sắp chạm bậc và nguy cơ/hụt bậc mục tiêu.
@@ -652,41 +688,7 @@ export function VolumeRebateTrackingPage() {
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const tracking = useVolumeRebateTracking(near, onlyAlerts)
   const rows = tracking.data ?? []
-  /** Dòng cần chú ý: sắp chạm/hụt bậc, hoặc có kỳ quá hạn ghi nhận còn thiếu thực nhận (lát G6b) – khớp lọc "Chỉ dòng có cảnh báo" của máy chủ. */
-  const isAlert = (r: VolumeRebateTrackingRow) =>
-    r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed' || r.unreceivedPeriods > 0
-  const alerts = rows.filter(isAlert).length
-  const volume = (r: VolumeRebateTrackingRow, v: number | null) => formatVolume(r.basis, v, r.uomCode)
-  const target = (s: VolumeRebateTargetStatus) => volumeRebateTargetLabels[s]
-  const columns: GridColumn<VolumeRebateTrackingRow>[] = [
-    { key: 'no', title: 'Số thỏa thuận', width: 140, value: (r) => r.no },
-    { key: 'title', title: 'Tên thỏa thuận', width: 200, value: (r) => r.title },
-    { key: 'supplier', title: 'Nhà cung cấp', width: 190, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
-    { key: 'period', title: 'Kỳ', width: 160, value: (r) => `${formatDate(r.period.periodFrom)} – ${formatDate(r.period.periodTo)}`, auditField: false },
-    { key: 'state', title: 'Tình trạng kỳ', width: 105, value: (r) => volumeRebateStateLabels[r.period.state], groupable: true, auditField: false },
-    { key: 'volume', title: 'Lũy kế', width: 130, value: (r) => volume(r, r.period.volume), auditField: false },
-    { key: 'tier', title: 'Bậc đạt', width: 70, type: 'quantity', value: (r) => r.period.tierNo, auditField: false },
-    { key: 'percent', title: '% CK', width: 70, value: (r) => formatPercent(r.period.percent), auditField: false },
-    { key: 'rebate', title: 'CK phải nhận', width: 120, type: 'money', value: (r) => r.period.rebateAmount, auditField: false },
-    { key: 'next', title: 'Bậc kế', width: 65, type: 'quantity', value: (r) => r.period.nextTierNo, auditField: false },
-    { key: 'shortfall', title: 'Còn thiếu lên bậc kế', width: 140, value: (r) => volume(r, r.period.shortfall), auditField: false },
-    { key: 'forecast', title: 'Dự báo cuối kỳ', width: 130, value: (r) => volume(r, r.period.forecast), auditField: false },
-    { key: 'targetTier', title: 'Bậc mục tiêu', width: 90, type: 'quantity', value: (r) => r.targetTierNo, auditField: false },
-    {
-      key: 'target', title: 'So bậc mục tiêu', width: 150, type: 'status', groupable: true, auditField: false,
-      value: (r) => target(r.period.targetStatus), tone: (r) => volumeRebateTargetTone[r.period.targetStatus],
-    },
-    {
-      key: 'near', title: 'Sắp chạm bậc', width: 110, type: 'status', auditField: false,
-      value: (r) => (r.period.isNearNextTier ? `Sắp chạm bậc ${r.period.nextTierNo}` : ''), tone: (r) => (r.period.isNearNextTier ? 'warning' : 'neutral'),
-    },
-    { key: 'received', title: 'Đã nhận kỳ này', width: 120, type: 'money', value: (r) => r.period.receivedAmount, auditField: false },
-    {
-      key: 'unreceived', title: 'Thiếu thực nhận quá hạn', width: 170, type: 'status', auditField: false,
-      value: (r) => (r.unreceivedPeriods > 0 ? `${r.unreceivedPeriods} kỳ – ${formatMoney(r.unreceivedAmount)}` : ''),
-      tone: (r) => (r.unreceivedPeriods > 0 ? 'error' : 'neutral'),
-    },
-  ]
+  const alerts = rows.filter(isTrackingAlert).length
   return (
     <ListPage
       title="Theo dõi bậc chiết khấu sản lượng gộp"
@@ -694,11 +696,11 @@ export function VolumeRebateTrackingPage() {
       exportSubtitle={`Cảnh báo sắp chạm bậc từ ${100 - near}% ngưỡng`}
       canCreate={false}
       rows={rows}
-      columns={columns}
+      columns={trackingColumns}
       rowKey={(r) => r.agreementId}
       loading={tracking.isLoading}
       onOpenRow={(r) => navigate(`${VOLUME_REBATE_PATH}/${r.agreementId}`)}
-      isMarked={isAlert}
+      isMarked={isTrackingAlert}
       notice={
         tracking.error ? (
           <Alert type="error" showIcon title={tracking.error.message} />
@@ -735,4 +737,9 @@ export function VolumeRebateTrackingPage() {
       }
     />
   )
+}
+
+/** Lưới theo dõi bậc chỉ xem (cùng cột màn hình CKBT) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function VolumeRebateTrackingGrid({ rows }: { rows: VolumeRebateTrackingRow[] }) {
+  return <DataGrid rows={rows} columns={trackingColumns} rowKey={(r) => r.agreementId} groupBy={null} onGroupByChange={() => {}} isMarked={isTrackingAlert} />
 }

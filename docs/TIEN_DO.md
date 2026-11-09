@@ -481,7 +481,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - **G12** báo cáo tháng cho Ban – **đang làm** (nhánh `feature/g12-bao-cao-thang-ban`, design.md 18.25 mục G12):
   - Bước 1 (xong): backend `IBoardMonthlyReportService` (`Reports/BoardMonthlyReport.cs`, `BoardMonthlyReportService`, Excel
     `BoardMonthlyReportExcel`), API `GET /api/reports/board-monthly` + `/excel`; test tích hợp `BoardMonthlyReportTests` qua.
-  - Còn: giao diện màn hình BCBAN, e2e `board-monthly.spec.ts` + chụp màn hình, chạy đủ bộ kiểm tra, merge.
+  - Bước 2 (xong): màn hình **BCBAN** (`pages/reports/BoardMonthlyReportPage.tsx`, `api/boardReport.ts`) – ListPage lưới chỉ tiêu, bấm đúp
+    mở DetailDrawer lưới cùng cột báo cáo chi tiết (xuất `KpiGrid`, `OutOfContractGrid`, `PriceVarianceGrid`, `SupplierCoverageGrid`,
+    `SupplierOnboardingGrid`, `VolumeRebateTrackingGrid`, `ControlFindingGrid`), nút "Xuất gói Excel"; `MONTH_INPUT_FORMATS` dùng chung;
+    DataGrid không vẽ chấm trạng thái khi ô trống. e2e `board-monthly.spec.ts` qua, ảnh `board-monthly*.png`.
+  - Còn: chạy đủ bộ kiểm tra, merge.
 - Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11 (bản gần nhất 0.20.0).
 
 

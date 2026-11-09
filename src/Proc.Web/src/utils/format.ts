@@ -62,3 +62,6 @@ export const vnNumberInput = {
  * Kiểu đầu tiên là kiểu hiển thị dd/MM/yyyy (CLAUDE.md mục 5); các kiểu sau cho gõ nhanh, ví dụ "05122026" hoặc "5/12/2026" → 05/12/2026.
  */
 export const DATE_INPUT_FORMATS = ['DD/MM/YYYY', 'DDMMYYYY', 'D/M/YYYY', 'DD.MM.YYYY', 'DD-MM-YYYY']
+
+/** Các kiểu gõ cho ô tháng: MM/yyyy (gõ nhanh 122026, 12.2026, 1/2027) hoặc chọn trên lịch tháng. */
+export const MONTH_INPUT_FORMATS = ['MM/YYYY', 'MM.YYYY', 'MMYYYY', 'M/YYYY']

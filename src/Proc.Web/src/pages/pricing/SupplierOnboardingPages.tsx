@@ -24,6 +24,7 @@ import { Select } from '../../classic/Select'
 import { TreeSelect } from '../../classic/TreeSelect'
 import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
@@ -477,4 +478,9 @@ export function SupplierOnboardingPage() {
       lines={<LineGrid name="documents" columns={docColumns} readOnly={readOnly} fixedRows newLine={() => ({})} />}
     />
   )
+}
+
+/** Lưới hồ sơ NCC mới chỉ xem (cùng cột màn hình HSN) – dùng ở báo cáo tháng cho Ban (lát G12). */
+export function SupplierOnboardingGrid({ rows }: { rows: SupplierOnboardingListItem[] }) {
+  return <DataGrid rows={rows} columns={listColumns} rowKey={(r) => r.id} groupBy={null} onGroupByChange={() => {}} />
 }

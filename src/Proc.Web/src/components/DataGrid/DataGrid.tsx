@@ -357,6 +357,8 @@ export function DataGrid<T>({
 function renderCell<T>(column: GridColumn<T>, row: T) {
   const text = cellText(column, row)
   if (column.type === 'status') {
+    // Ô trạng thái trống (ví dụ dòng không có cảnh báo) không vẽ chấm: chấm màu luôn phải có chữ đi kèm (docs/ui-style.md mục 2).
+    if (!text) return null
     const tone = column.tone?.(row) ?? 'neutral'
     return (
       <span className={`data-grid-status tone-${tone}`} title={text}>
