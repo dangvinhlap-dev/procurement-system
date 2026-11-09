@@ -54,6 +54,13 @@ public static class ApprovalTypes
     public const string PurchaseOrderOffList = "POL";
 
     /// <summary>
+    /// PO vượt giá trần (lát H3, design.md mục 18.25 – quyết định Q3): PO có dòng giá ròng vượt giá trần của phiếu duyệt NCC và giá tháng phải
+    /// lên Chủ tịch/TGĐ duyệt – thêm chặng này sau mọi chặng khác (luôn ít nhất một cấp, bỏ cấp có vai trò đã duyệt ở chặng trước), cùng quyền
+    /// duyệt PO. Chỉ là bộ cấp cấu hình ở APRL.
+    /// </summary>
+    public const string PurchaseOrderOverCeiling = "POC";
+
+    /// <summary>
     /// Ngoại lệ phiếu duyệt NCC và giá tháng (lát H2, design.md mục 18.25 – quyết định Q6): phiếu GTH có ngoại lệ (mặt hàng chưa đủ 03 NCC đủ
     /// điều kiện, độc quyền, giá vượt giá mục tiêu, hoặc người lập khai ngoại lệ) qua thêm chặng Chủ tịch/TGĐ sau các cấp Hội đồng, cùng quyền
     /// duyệt GTH. Chỉ là bộ cấp cấu hình ở APRL của tổng công ty.
@@ -72,6 +79,9 @@ public static class ApprovalTypes
     /// <summary>Chặng mua ngoài danh sách/giá đã duyệt (design.md mục 18.25) – sau chặng vượt ngân sách nếu có.</summary>
     public const int OffListStage = 4;
 
+    /// <summary>Chặng PO vượt giá trần – Chủ tịch/TGĐ (lát H3), sau chặng ngoài danh sách/giá nếu có.</summary>
+    public const int OverCeilingStage = 5;
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
@@ -82,6 +92,7 @@ public static class ApprovalTypes
         new(PurchaseRequestOverBudget, "Vượt ngân sách đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
         new(PurchaseOrderOverBudget, "Vượt ngân sách đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(PurchaseOrderOffList, "Mua ngoài danh sách/giá đã duyệt", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
+        new(PurchaseOrderOverCeiling, "Đơn mua hàng vượt giá trần", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),

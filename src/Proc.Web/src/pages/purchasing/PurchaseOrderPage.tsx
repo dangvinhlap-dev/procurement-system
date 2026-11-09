@@ -604,12 +604,13 @@ export function PurchaseOrderPage() {
                 title={'Có dòng mua ngoài danh sách NCC/giá đã duyệt (NCC không phải NCC chính/dự phòng của phiếu duyệt tháng, hoặc chưa có giá đã duyệt): PO phải qua thêm chặng duyệt "Ngoài danh sách/giá".'}
               />
             )}
-            {/* Vượt giá trần của phiếu duyệt tháng chỉ cảnh báo, không chặn gửi duyệt (người dùng chốt 06/11/2026 – mục 18.25, G4b). */}
+            {/* Vượt giá trần của phiếu duyệt tháng không chặn gửi nhưng phải lên Chủ tịch/TGĐ duyệt (Q3, lát H3 – mục 18.25). */}
             {doc?.isOverCeiling && (
               <Alert
                 type="warning"
                 showIcon
-                title="Có dòng giá ròng (sau chiết khấu) vượt giá trần của phiếu duyệt NCC và giá tháng – xem cột Nguồn giá. Vẫn gửi duyệt được; người duyệt cân nhắc."
+                title={'Có dòng giá ròng (sau chiết khấu) vượt giá trần của phiếu duyệt NCC và giá tháng – xem cột Nguồn giá. PO phải qua thêm chặng duyệt "Vượt giá trần" (Chủ tịch/TGĐ).'}
+
               />
             )}
           </>

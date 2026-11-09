@@ -331,7 +331,7 @@ export interface PurchaseOrderLine {
   isOffMonthlyList: boolean
   /** Giá trần của phiếu tháng quy về ĐVT dòng (lát G4b); null = không có trần. */
   ceilingPrice: number | null
-  /** Giá ròng (sau chiết khấu) vượt giá trần – chỉ cảnh báo, không chặn. */
+  /** Giá ròng (sau chiết khấu) vượt giá trần – không chặn, gửi duyệt qua thêm chặng "Vượt giá trần" (POC, lát H3). */
   isOverCeiling: boolean
   /** Mã hàng theo NCC chép từ NCC – sản phẩm lúc lưu/gửi (design.md mục 5.9); null = NCC chưa khai báo. */
   supplierItemCode: string | null
@@ -388,7 +388,7 @@ export interface PurchaseOrder extends ClosedRemaining {
   isOutOfContract: boolean
   /** Có dòng ngoài danh sách tháng hoặc không có giá đã duyệt – gửi duyệt qua thêm chặng "Ngoài danh sách/giá" (POL, mục 18.25). */
   isOffApprovedList: boolean
-  /** Có dòng giá ròng vượt giá trần của phiếu duyệt tháng – cảnh báo, không chặn (mục 18.25, G4b). */
+  /** Có dòng giá ròng vượt giá trần của phiếu duyệt tháng – không chặn, gửi duyệt qua thêm chặng Chủ tịch/TGĐ (POC – mục 18.25, H3). */
   isOverCeiling: boolean
   /** Bộ phận đặt hàng (design.md mục 18.10). */
   departmentId: string | null
@@ -791,5 +791,6 @@ export function useSaveBudget() {
   })
 }
 
-/** Nhãn chặng phụ của PR, PO trong lịch sử duyệt: 2 = ngoại lệ giá (design.md mục 18.10), 3 = vượt ngân sách (mục 18.24). */
-export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách', 4: 'Ngoài danh sách/giá' }
+/** Nhãn chặng phụ của PR, PO trong lịch sử duyệt: 2 = ngoại lệ giá (design.md mục 18.10), 3 = vượt ngân sách (mục 18.24), 4 = ngoài danh sách/giá, 5 = vượt giá trần – Chủ tịch/TGĐ (mục 18.25). */
+export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách', 4: 'Ngoài danh sách/giá', 5: 'Vượt giá trần' }
+

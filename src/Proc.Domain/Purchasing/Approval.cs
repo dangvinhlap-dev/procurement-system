@@ -247,4 +247,18 @@ public static class ApprovalPlan
         var levels = Levels(rules, total);
         return levels.Count > 0 ? levels : [rules.OrderBy(r => r.Level).Select(r => (r.Level, (Guid?)r.RoleId)).First()];
     }
+
+    /// <summary>
+    /// Bỏ các cấp có vai trò đã có trong các chặng trước của cùng lượt duyệt (lát H3, design.md mục 18.25). Dùng cho chặng chỉ đòi "phải lên
+    /// đúng người này duyệt" (PO vượt giá trần → Chủ tịch/TGĐ): người đó đã duyệt ở chặng trước thì yêu cầu đã đạt, thêm lại cấp cùng vai trò
+    /// thì kẹt vì mỗi người chỉ duyệt một cấp trong lượt (lát R3). Cấp không gắn vai trò (ai có quyền cũng duyệt) luôn giữ.
+    /// Ví dụ PO 3 cấp Phó ban → Phó ban → Chủ tịch, chặng vượt trần cấp 1 Chủ tịch: không thêm cấp nào; PO dưới ngưỡng cấp Chủ tịch (chỉ 2 cấp
+    /// Phó ban): thêm cấp Chủ tịch ở chặng vượt trần.
+    /// </summary>
+    /// <param name="levels">Các cấp của chặng đang xét.</param>
+    /// <param name="plannedRoleIds">Vai trò của các cấp đã có trong lượt (chặng trước).</param>
+    /// <returns>Các cấp còn lại, giữ thứ tự; có thể rỗng.</returns>
+    public static IReadOnlyList<(int Level, Guid? RoleId)> WithoutPlannedRoles(
+        IReadOnlyList<(int Level, Guid? RoleId)> levels, IReadOnlyCollection<Guid?> plannedRoleIds) =>
+        levels.Where(l => l.RoleId is null || !plannedRoleIds.Contains(l.RoleId)).ToList();
 }

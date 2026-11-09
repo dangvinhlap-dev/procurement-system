@@ -126,23 +126,31 @@ export function ApprovalHistory({ steps, createdByName, createdAt, byCompany = f
  * @param steps Các bước của lượt sẽ gửi (từ API xem trước).
  * @param approvedImmediately Dưới mọi ngưỡng – gửi là duyệt ngay.
  * @param byCompany Duyệt nhiều công ty – ghi công ty trên từng cấp.
+ * @param stageLabels Tên chặng phụ theo số chặng (như ApprovalHistory) – ví dụ PO: "Vượt giá trần" (lát H3); không có thì chặng 2 là "Chặng ngoại lệ".
  */
 export function ApprovalChain({
   steps,
   approvedImmediately,
   byCompany = false,
   hideIntro = false,
+  stageLabels,
 }: {
   steps: ApprovalStep[]
   approvedImmediately: boolean
   byCompany?: boolean
   /** Bỏ câu mở đầu (dùng trong popup duyệt NCC – nhiều khối). */
   hideIntro?: boolean
+  stageLabels?: Record<number, string>
 }) {
-  // Chặng 2 cùng công ty = chặng duyệt ngoại lệ (PO lệch giá – design.md mục 18.10); duyệt NCC thì chặng 2 là Tổng công ty.
+  // Chặng 2 cùng công ty = chặng duyệt ngoại lệ (PO lệch giá – design.md mục 18.10); duyệt NCC thì chặng 2 là Tổng công ty. Loại phiếu có
+  // nhãn chặng (PR, PO, GTH) thì ghi đúng tên chặng – người gửi thấy trước PO phải qua chặng Chủ tịch/TGĐ khi vượt giá trần (lát H3).
+  const labelled = !byCompany && !!stageLabels && steps.some((s) => stageLabels[s.stage] !== undefined)
   const staged = steps.some((s) => s.stage === 2)
   const stageLabel = (s: ApprovalStep) =>
-    !staged ? '' : byCompany ? (s.stage === 2 ? 'Tổng công ty (cuối) · ' : 'Công ty liên quan · ') : s.stage === 2 ? 'Chặng ngoại lệ · ' : 'Duyệt thường · '
+    labelled
+      ? `${stageLabels?.[s.stage] ?? 'Duyệt thường'} · `
+      : !staged ? '' : byCompany ? (s.stage === 2 ? 'Tổng công ty (cuối) · ' : 'Công ty liên quan · ') : s.stage === 2 ? 'Chặng ngoại lệ · ' : 'Duyệt thường · '
+
   if (approvedImmediately) return <p>Phiếu dưới mọi ngưỡng duyệt đã cấu hình – gửi là được duyệt ngay, không cần ai duyệt.</p>
   return (
     <div className="approval-chain">
