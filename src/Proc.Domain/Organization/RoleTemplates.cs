@@ -30,7 +30,7 @@ public static class RoleTemplates
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
-        Permissions.Purchase.PooledOrderView,
+        Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -61,6 +61,7 @@ public static class RoleTemplates
             Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
             Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Purchase.DemandPlanManage,
             Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.Pricing.VolumeRebateManage,
+            Permissions.MasterData.SupplierOnboardingManage,
         ]),
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [
@@ -162,7 +163,7 @@ public static class RoleTemplates
             Permissions.MasterData.ItemManage, Permissions.Pricing.PriceListManage, Permissions.Sourcing.RfqAward,
             Permissions.Purchase.ContractManage, Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
             Permissions.Pricing.MonthlyApprovalManage, Permissions.Pricing.PriceBankManage, Permissions.Pricing.VolumeRebateManage,
-            Permissions.Purchase.DemandPlanViewAllCompanies,
+            Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.MasterData.SupplierOnboardingPropose,
             Permissions.Report.PurchaseView, Permissions.Report.PriceViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Analysis.PurchaseHistoryView, Permissions.Analysis.PurchaseHistoryImport, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
         ]),
@@ -170,14 +171,14 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Sourcing.RfqAward, Permissions.MasterData.SoleSourceManage, Permissions.MasterData.SupplierReviewManage,
-            Permissions.Pricing.PriceBankManage, Permissions.Pricing.MonthlyApprovalManage,
+            Permissions.Pricing.PriceBankManage, Permissions.Pricing.MonthlyApprovalManage, Permissions.MasterData.SupplierOnboardingPropose,
             Permissions.Report.PriceViewAllCompanies, Permissions.Analysis.PurchaseHistoryView, Permissions.Analysis.PurchaseHistoryViewAllCompanies,
         ]),
         new("CUCTRUONGPHONG", "Trưởng phòng cung ứng chung", "Tiếp nhận, kiểm tra hồ sơ, quy cách đề nghị mua; điều hành tìm kiếm, đánh giá NCC (≥ 03 NCC mỗi nhóm hàng); đặt hàng cho các công ty đúng NCC và giá đã duyệt, theo dõi giao hàng",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
-            Permissions.MasterData.SupplierReviewManage,
+            Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies, Permissions.Purchase.DemandPlanViewAllCompanies,
             Permissions.Purchase.PooledOrderManage,
@@ -186,7 +187,7 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
-            Permissions.MasterData.SupplierReviewManage,
+            Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
             Permissions.Purchase.PooledOrderManage,
         ]),

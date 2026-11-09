@@ -67,6 +67,16 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>Bật/tắt bắt buộc đủ hồ sơ trình khi chọn thầu; null = về mặc định (tắt).</summary>
     public void ChangeRequireRfqDossierComplete(bool? value) => RequireRfqDossierComplete = value ?? false;
 
+    /// <summary>
+    /// Cho NCC tạo mới lên Đã duyệt bằng cách đổi trạng thái trên form NCC, không qua hồ sơ đánh giá NCC mới (HSN – lát G8, design.md
+    /// mục 18.25). Mặc định tắt = bắt buộc hồ sơ (người dùng chốt 09/11/2026); chỉ đọc tham số của tổng công ty (danh mục NCC dùng chung).
+    /// Bật khi chuyển tiếp/nhập NCC hàng loạt.
+    /// </summary>
+    public bool AllowSupplierWithoutOnboarding { get; private set; }
+
+    /// <summary>Bật/tắt cho duyệt NCC mới không qua hồ sơ HSN; null = về mặc định (tắt – bắt buộc hồ sơ).</summary>
+    public void ChangeAllowSupplierWithoutOnboarding(bool? value) => AllowSupplierWithoutOnboarding = value ?? false;
+
     /// <summary>Bật/tắt bắt buộc kiểm tra chất lượng khi ghi sổ nhận hàng; null = về mặc định (tắt).</summary>
     public void ChangeRequireReceiptQc(bool? value) => RequireReceiptQc = value ?? false;
 

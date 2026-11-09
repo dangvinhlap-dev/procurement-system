@@ -77,6 +77,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Purchase.DemandPlanView, DocumentTypes.DemandPlan);
         Add(Permissions.Purchase.PooledOrderView, DocumentTypes.PooledOrder);
         Add(Permissions.MasterData.SupplierReviewView, DocumentTypes.SupplierReview);
+        Add(Permissions.MasterData.SupplierOnboardingView, DocumentTypes.SupplierOnboarding);
         if (_scope.HasPermission(Permissions.Control.AnomalyView) || _scope.HasPermission(Permissions.Control.FindingReceive)
             || _scope.HasPermission(Permissions.Control.FindingManage))
             types.Add(DocumentTypes.ControlFinding);
@@ -400,6 +401,26 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 {
                     SupplierReviewStatus.Completed => DocumentProgress.Done,
                     SupplierReviewStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.SupplierOnboarding) && !acted)
+        {
+            // Hồ sơ NCC mới (G8): Đã duyệt là xong; Từ chối, Không đề xuất, Hủy là kết thúc không thành.
+            var q = _db.SupplierOnboardings.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            var rows = await q.OrderByDescending(d => d.Date).Take(take)
+                .Select(d => new { d.Id, d.No, d.Date, d.SupplierId, d.Status, d.CreatedBy, d.CreatedAt })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.SupplierOnboarding, d.Id, d.No, d.Date, d.SupplierId, null, null,
+                "Hồ sơ đánh giá NCC mới", null, d.Status.ToString(),
+                d.Status switch
+                {
+                    SupplierOnboardingStatus.Approved => DocumentProgress.Done,
+                    SupplierOnboardingStatus.Rejected or SupplierOnboardingStatus.NotRecommended or SupplierOnboardingStatus.Cancelled =>
+                        DocumentProgress.Cancelled,
                     _ => DocumentProgress.Open,
                 },
                 d.CreatedBy, d.CreatedAt)));

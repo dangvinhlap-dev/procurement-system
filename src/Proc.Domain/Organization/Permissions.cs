@@ -85,6 +85,12 @@ public static class Permissions
         public const string SupplierReviewView = "MasterData.SupplierReview.View";
         /// <summary>Quyền "Lập, hoàn thành, hủy phiếu đánh giá NCC định kỳ" (design.md mục 18.20).</summary>
         public const string SupplierReviewManage = "MasterData.SupplierReview.Manage";
+        /// <summary>Quyền "Xem hồ sơ đánh giá NCC mới" (lát G8, design.md mục 18.25).</summary>
+        public const string SupplierOnboardingView = "MasterData.SupplierOnboarding.View";
+        /// <summary>Quyền "Lập, đánh giá, hủy hồ sơ NCC mới" – Phòng cung ứng chung (Q2).</summary>
+        public const string SupplierOnboardingManage = "MasterData.SupplierOnboarding.Manage";
+        /// <summary>Quyền "Đề xuất / không đề xuất NCC mới lên Hội đồng" – Văn phòng Ban (Q2).</summary>
+        public const string SupplierOnboardingPropose = "MasterData.SupplierOnboarding.Propose";
 
         /// <summary>
         /// Sửa thông tin danh mục dùng chung (công ty, ĐVT, nhóm hàng, hàng hóa, nhóm NCC, NCC) ở bất kỳ công ty nào – trừ mã; thêm mới vẫn
@@ -300,6 +306,9 @@ public static class Permissions
         new(MasterData.SoleSourceApprove, "Duyệt NCC độc quyền"),
         new(MasterData.SupplierReviewView, "Xem đánh giá NCC định kỳ"),
         new(MasterData.SupplierReviewManage, "Lập, hoàn thành, hủy phiếu đánh giá NCC định kỳ"),
+        new(MasterData.SupplierOnboardingView, "Xem hồ sơ đánh giá NCC mới"),
+        new(MasterData.SupplierOnboardingManage, "Lập, đánh giá, hủy hồ sơ đánh giá NCC mới"),
+        new(MasterData.SupplierOnboardingPropose, "Đề xuất NCC mới lên Hội đồng"),
         new(MasterData.CatalogEditShared, "Sửa thông tin danh mục dùng chung (trừ mã)"),
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),

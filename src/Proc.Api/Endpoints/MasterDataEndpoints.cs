@@ -224,6 +224,44 @@ public static class MasterDataEndpoints
             .RequirePermission(Permissions.MasterData.SupplierReviewManage)
             .Validate<CancelSupplierReviewRequest>();
 
+        // Hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25): Phòng cung ứng lập, đánh giá; Văn phòng Ban đề xuất; Hội đồng duyệt ở SUPAPR.
+        var onboardings = app.MapGroup("/api/supplier-onboardings").WithTags("Hồ sơ đánh giá NCC mới").RequireAuthorization();
+        string[] onboardingAny =
+        [
+            Permissions.MasterData.SupplierOnboardingView, Permissions.MasterData.SupplierOnboardingManage, Permissions.MasterData.SupplierOnboardingPropose,
+        ];
+        onboardings.MapGet("/", (string? status, ISupplierOnboardingService s, CancellationToken ct) => s.ListAsync(status, ct))
+            .RequireAnyPermission(onboardingAny);
+        onboardings.MapGet("/{id:guid}", (Guid id, ISupplierOnboardingService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(onboardingAny);
+        onboardings.MapPost("/", async (SaveSupplierOnboardingRequest request, ISupplierOnboardingService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/supplier-onboardings/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingManage)
+            .Validate<SaveSupplierOnboardingRequest>();
+        onboardings.MapPut("/{id:guid}", (Guid id, SaveSupplierOnboardingRequest request, ISupplierOnboardingService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingManage)
+            .Validate<SaveSupplierOnboardingRequest>();
+        onboardings.MapPost("/{id:guid}/evaluate", (Guid id, SaveSupplierOnboardingRequest request, ISupplierOnboardingService s, CancellationToken ct) =>
+                s.EvaluateAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingManage)
+            .Validate<SaveSupplierOnboardingRequest>();
+        onboardings.MapPost("/{id:guid}/reopen", (Guid id, ISupplierOnboardingService s, CancellationToken ct) => s.ReopenAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingManage);
+        onboardings.MapPost("/{id:guid}/propose", (Guid id, ProposeSupplierOnboardingRequest request, ISupplierOnboardingService s, CancellationToken ct) =>
+                s.ProposeAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingPropose)
+            .Validate<ProposeSupplierOnboardingRequest>();
+        onboardings.MapPost("/{id:guid}/withdraw", (Guid id, ISupplierOnboardingService s, CancellationToken ct) => s.WithdrawAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingPropose);
+        onboardings.MapPost("/{id:guid}/cancel", (Guid id, CancelSupplierOnboardingRequest request, ISupplierOnboardingService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.MasterData.SupplierOnboardingManage)
+            .Validate<CancelSupplierOnboardingRequest>();
+
         // NCC áp dụng tại công ty đang làm việc: mỗi công ty tự quản lý, nên quyền quản lý NCC tại chính công ty đó là đủ.
         suppliers.MapGet("/{id:guid}/company", (Guid id, ISupplierLinkAdministration s, CancellationToken ct) => s.GetCompanyLinkAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);

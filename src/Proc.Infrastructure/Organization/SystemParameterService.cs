@@ -68,6 +68,10 @@ public sealed class SystemParameterService : ISystemParameterService
                 pooledMargin == CompanyParameter.DefaultPooledMarginPercent, true,
                 "Phiếu đặt hàng gộp (DHG) lập ở tổng công ty dùng tham số của tổng công ty: SL phân bổ cho mỗi công ty được lệch so với đề xuất theo " +
                 $"tỷ lệ kế hoạch nhu cầu tháng tối đa max(tổng SL dòng × % ÷ 100, 1 ĐVT); vượt thì không tạo PO được (0–{CompanyParameter.MaxPooledMarginPercent:0}%)."),
+            Toggle(SystemParameterCodes.SupplierOnboardingOptional, "Cho duyệt NCC mới không qua hồ sơ đánh giá (HSN)",
+                parameter?.AllowSupplierWithoutOnboarding ?? false,
+                "Tắt (mặc định): NCC tạo mới muốn lên Đã duyệt phải qua hồ sơ đánh giá NCC mới – Phòng cung ứng đánh giá, Văn phòng Ban đề xuất, " +
+                "Hội đồng duyệt. Bật: đổi trạng thái trên form NCC như NCC cũ (dùng khi chuyển tiếp). Chỉ tham số của tổng công ty có tác dụng.", "Nhà cung cấp"),
             Toggle(SystemParameterCodes.ReceiptQcRequired, "Bắt buộc kiểm tra chất lượng khi nhận hàng", parameter?.RequireReceiptQc ?? false,
                 "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
             Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
@@ -100,6 +104,7 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
         [SystemParameterCodes.PooledMarginPercent] = nameof(CompanyParameter.PooledMarginPercent),
         [SystemParameterCodes.RfqDossierRequired] = nameof(CompanyParameter.RequireRfqDossierComplete),
+        [SystemParameterCodes.SupplierOnboardingOptional] = nameof(CompanyParameter.AllowSupplierWithoutOnboarding),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
         [SystemParameterCodes.ReceiptPoRequired] = nameof(CompanyParameter.RequireReceiptPo),
@@ -181,9 +186,11 @@ public sealed class SystemParameterService : ISystemParameterService
             case SystemParameterCodes.ReceiptSeparatePoCreator:
             case SystemParameterCodes.ReceiptPoRequired:
             case SystemParameterCodes.RfqDossierRequired:
+            case SystemParameterCodes.SupplierOnboardingOptional:
                 var on = ParseToggle(request.Value);
                 var row = await GetOrCreateAsync(companyId, cancellationToken);
                 if (key == SystemParameterCodes.ReceiptQcRequired) row.ChangeRequireReceiptQc(on);
+                else if (key == SystemParameterCodes.SupplierOnboardingOptional) row.ChangeAllowSupplierWithoutOnboarding(on);
                 else if (key == SystemParameterCodes.RfqDossierRequired) row.ChangeRequireRfqDossierComplete(on);
                 else if (key == SystemParameterCodes.ReceiptPoRequired) row.ChangeRequireReceiptPo(on);
                 else row.ChangeSeparatePoCreatorFromReceipt(on);

@@ -89,6 +89,8 @@ internal sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         // Mã số thuế NCC là duy nhất (design.md mục 5.3); NCC chưa khai báo thì bỏ qua.
         builder.Property(x => x.TaxCode).HasMaxLength(20);
         builder.HasIndex(x => x.TaxCode).IsUnique().HasFilter("\"TaxCode\" IS NOT NULL");
+        // NCC có trước lát G8 nhận false (giữ cách duyệt cũ); NCC tạo mới đặt true trong Supplier.Create.
+        builder.Property(x => x.RequiresOnboarding).HasDefaultValue(false);
         builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.Phone).HasMaxLength(50);
         builder.Property(x => x.Email).HasMaxLength(256);
@@ -310,5 +312,36 @@ internal sealed class SupplierReviewConfiguration : IEntityTypeConfiguration<Sup
         builder.Ignore(x => x.Scores);
         builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng SupplierOnboarding – hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25).</summary>
+internal sealed class SupplierOnboardingConfiguration : IEntityTypeConfiguration<SupplierOnboarding>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierOnboarding> builder)
+    {
+        builder.ToTable("SupplierOnboarding");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        // Mỗi NCC tối đa một hồ sơ còn mở (1 Nháp, 2 Đã đánh giá, 3 Chờ duyệt) – chặn cả khi hai người lập cùng lúc.
+        builder.HasIndex(x => x.SupplierId).IsUnique().HasFilter("\"Status\" IN (1, 2, 3)").HasDatabaseName("UX_SupplierOnboarding_Open");
+        builder.HasIndex(x => x.ChangeRequestId);
+        builder.Property(x => x.Source).HasMaxLength(SupplierOnboarding.ShortTextMaxLength);
+        builder.Property(x => x.DocumentsJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.Score).HasPrecision(5, 2);
+        builder.Property(x => x.Comment).HasMaxLength(SupplierOnboarding.TextMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(SupplierOnboarding.TextMaxLength);
+        builder.Property(x => x.ProposalComment).HasMaxLength(SupplierOnboarding.TextMaxLength);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(SupplierOnboarding.TextMaxLength);
+        builder.Ignore(x => x.Scores);
+        builder.Ignore(x => x.Documents);
+        builder.Ignore(x => x.IsOpen);
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierChangeRequest>().WithMany().HasForeignKey(x => x.ChangeRequestId).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -33,6 +33,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.SourcingRequest] = (Permissions.Sourcing.RfqView, Permissions.Sourcing.RfqManage),
             [AttachmentOwnerTypes.ContractAmendment] = (Permissions.Purchase.ContractView, Permissions.Purchase.ContractManage),
             [AttachmentOwnerTypes.SupplierReview] = (Permissions.MasterData.SupplierReviewView, Permissions.MasterData.SupplierReviewManage),
+            // Hồ sơ NCC mới (G8): Phòng cung ứng chung đính kèm giấy tờ; Văn phòng Ban, Hội đồng xem.
+            [AttachmentOwnerTypes.SupplierOnboarding] = (Permissions.MasterData.SupplierOnboardingView, Permissions.MasterData.SupplierOnboardingManage),
             [AttachmentOwnerTypes.ControlFinding] = (Permissions.Control.AnomalyView, Permissions.Control.FindingManage),
             [AttachmentOwnerTypes.MonthlySupplierApproval] = (Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalManage),
             [AttachmentOwnerTypes.VolumeRebateAgreement] = (Permissions.Pricing.VolumeRebateView, Permissions.Pricing.VolumeRebateManage),
@@ -193,6 +195,8 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.ContractAmendment => await _db.PurchaseContractAmendments.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.SupplierReview => await _db.SupplierReviews.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.SupplierOnboarding => await _db.SupplierOnboardings.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.ControlFinding => await _db.ControlFindings.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),

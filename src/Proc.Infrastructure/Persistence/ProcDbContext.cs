@@ -121,6 +121,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Phiếu đánh giá NCC định kỳ theo quý (lọc theo công ty – design.md mục 18.20).</summary>
     public DbSet<SupplierReview> SupplierReviews => Set<SupplierReview>();
 
+    /// <summary>Hồ sơ đánh giá NCC mới (thuộc tổng công ty, lọc theo công ty – lát G8, design.md mục 18.25).</summary>
+    public DbSet<SupplierOnboarding> SupplierOnboardings => Set<SupplierOnboarding>();
+
     /// <summary>NCC áp dụng cho công ty (lọc theo công ty).</summary>
     public DbSet<SupplierCompany> SupplierCompanies => Set<SupplierCompany>();
 

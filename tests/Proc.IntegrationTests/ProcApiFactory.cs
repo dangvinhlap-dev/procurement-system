@@ -75,6 +75,33 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         }
 
         await DatabaseInitializer.SeedAsync(scope.ServiceProvider, CancellationToken.None);
+        await AllowSupplierWithoutOnboardingAsync(db, true);
+    }
+
+    /// <summary>
+    /// Bật/tắt tham số tổng công ty "Cho duyệt NCC mới không qua hồ sơ HSN" (lát G8). Dữ liệu test mặc định bật để các test nghiệp vụ khác vẫn
+    /// tạo NCC "Đã duyệt" như trước; test hồ sơ NCC mới tắt đi để kiểm quy tắc bắt buộc.
+    /// </summary>
+    /// <param name="allow">true = cho duyệt không cần hồ sơ.</param>
+    /// <returns>Task.</returns>
+    public async Task AllowSupplierWithoutOnboardingAsync(bool allow)
+    {
+        using var scope = Services.CreateScope();
+        await AllowSupplierWithoutOnboardingAsync(scope.ServiceProvider.GetRequiredService<ProcDbContext>(), allow);
+    }
+
+    private static async Task AllowSupplierWithoutOnboardingAsync(ProcDbContext db, bool allow)
+    {
+        var headOffice = await db.Companies.IgnoreQueryFilters().Where(c => c.IsHeadOffice).Select(c => c.Id).SingleAsync();
+        var parameter = await db.CompanyParameters.IgnoreQueryFilters().SingleOrDefaultAsync(p => p.CompanyId == headOffice);
+        if (parameter is null)
+        {
+            parameter = Proc.Domain.Organization.CompanyParameter.Create(headOffice);
+            db.CompanyParameters.Add(parameter);
+        }
+
+        parameter.ChangeAllowSupplierWithoutOnboarding(allow);
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
