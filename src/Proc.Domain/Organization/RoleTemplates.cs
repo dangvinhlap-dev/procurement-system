@@ -1,4 +1,4 @@
-namespace Proc.Domain.Organization;
+﻿namespace Proc.Domain.Organization;
 
 /// <summary>Một vai trò mẫu.</summary>
 /// <param name="Code">Mã vai trò.</param>
@@ -99,7 +99,7 @@ public static class RoleTemplates
         new("PHAPCHE", "Pháp chế", "Xem hồ sơ NCC, hồ sơ thầu, hợp đồng để rà soát pháp lý",
         [
             .. CatalogView, Permissions.Purchase.ContractView, Permissions.Pricing.PriceListView,
-            Permissions.Sourcing.RfqView,
+            Permissions.Sourcing.RfqView, Permissions.Sourcing.AppraisalGive,
         ]),
         new("KSNB", "Kiểm soát nội bộ", "Giám sát độc lập: chỉ xem mọi nghiệp vụ, báo cáo toàn tập đoàn và nhật ký thao tác; rà dấu hiệu bất thường, ghi nhận vi phạm",
         [
@@ -122,7 +122,7 @@ public static class RoleTemplates
         // ---- Theo sơ đồ tổ chức & lưu đồ phê duyệt mua sắm của Ban & Phòng cung ứng chung (lát G10 – design.md mục 18.25). Trưởng ban
         // dùng TRUONGBANCUVT ở trên. Nguyên tắc: Phòng cung ứng chung **tìm kiếm, đánh giá NCC** (người dùng chốt 08/11/2026 – Q2, khớp bước 2
         // của sơ đồ) và đặt hàng đúng NCC/giá đã duyệt, không lập/duyệt giá; Văn phòng Ban phân tích giá, đề xuất danh sách NCC và giá (không
-        // duyệt, không đặt hàng, không lập hồ sơ NCC); thành viên chuyên môn thẩm định, không có quyền duyệt (không biểu quyết).
+        // duyệt, không đặt hàng, không lập hồ sơ NCC); thành viên chuyên môn ghi ý kiến thẩm định (lát H1), không có quyền duyệt (không biểu quyết).
         new("CHUTICH", "Chủ tịch HĐQT / Tổng Giám đốc", "Phê duyệt ngoại lệ (ngoài danh sách/giá, lệch giá, khẩn cấp, độc quyền), duyệt PO, hợp đồng theo phân quyền nội bộ; nhận báo cáo KSNB",
         [
             .. CatalogView, .. ProcurementView,
@@ -145,10 +145,11 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.MasterData.SupplierReviewManage, Permissions.Inventory.DocumentView, Permissions.Report.PurchaseView,
+            Permissions.Sourcing.AppraisalGive,
         ]),
         new("THAMDINHPL", "Thẩm định pháp lý (thành viên chuyên môn)", "Thẩm định điều khoản pháp lý của hồ sơ NCC, hồ sơ thầu, hợp đồng – không biểu quyết, không duyệt",
         [
-            .. CatalogView, .. ProcurementView, Permissions.MasterData.ConflictView,
+            .. CatalogView, .. ProcurementView, Permissions.MasterData.ConflictView, Permissions.Sourcing.AppraisalGive,
         ]),
         new("VPBDIEUPHOI", "Điều phối Văn phòng Ban", "Trưởng phòng/bộ phận điều phối Văn phòng Ban: tổng hợp nhu cầu, phân tích giá, đề xuất danh sách NCC và giá tháng, ngân hàng giá, thỏa thuận chiết khấu – không duyệt",
         [

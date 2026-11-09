@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Proc.Application.Common;
@@ -42,11 +42,14 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.DemandPlan] = (Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
             [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
+            // Ý kiến thẩm định (lát H1): quyền theo chủ của ý kiến và người ghi – kiểm tra riêng qua IAppraisalOpinionService.
+            [AttachmentOwnerTypes.AppraisalOpinion] = (string.Empty, string.Empty),
         };
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
+    private readonly IAppraisalOpinionService _appraisals;
     private readonly string _root;
     private readonly int _maxFileSizeMb;
 
@@ -57,11 +60,14 @@ public sealed class AttachmentService : IAttachmentService
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="clock">Đồng hồ.</param>
     /// <param name="options">Thư mục gốc (Api đã đổi đường dẫn tương đối thành tuyệt đối).</param>
-    public AttachmentService(ProcDbContext db, ICurrentUserScope scope, IClock clock, IOptions<AttachmentOptions> options)
+    /// <param name="appraisals">Ý kiến thẩm định – kiểm tra quyền đính kèm của ý kiến (lát H1).</param>
+    public AttachmentService(
+        ProcDbContext db, ICurrentUserScope scope, IClock clock, IOptions<AttachmentOptions> options, IAppraisalOpinionService appraisals)
     {
         _db = db;
         _scope = scope;
         _clock = clock;
+        _appraisals = appraisals;
         _root = Path.GetFullPath(options.Value.RootPath);
         _maxFileSizeMb = options.Value.MaxFileSizeMb;
     }
@@ -162,6 +168,7 @@ public sealed class AttachmentService : IAttachmentService
         // ADJ, không cần quyền lập chứng từ kho thường – kiểm tra sau khi biết loại phiếu.
         var adjustmentAware = manage && ownerType == AttachmentOwnerTypes.InventoryDocument;
         if (ownerType == AttachmentOwnerTypes.ConflictDeclaration) return await RequireConflictDeclarationAsync(ownerId, manage, cancellationToken);
+        if (ownerType == AttachmentOwnerTypes.AppraisalOpinion) return await _appraisals.RequireAttachmentAccessAsync(ownerId, manage, cancellationToken);
         if (!adjustmentAware) _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
 
         // Select CompanyId dạng Guid? để một kiểu chung cho mọi loại chủ; NCC trả null có chủ đích (danh mục dùng chung – mục 5).

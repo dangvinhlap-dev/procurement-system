@@ -1919,6 +1919,21 @@ Migration `V0_20_0_DatHangGop` (bảng `PooledOrder`, `PooledOrderCompany`, `Poo
 
 Không có migration (vai trò, cấp duyệt là dữ liệu tạo khi người quản trị bấm).
 
+**H1 – Ý kiến thẩm định của thành viên chuyên môn** (09/11/2026; tab **Thẩm định** trên phiếu GTH, RFQ, hợp đồng nguyên tắc, hồ sơ NCC,
+`/api/appraisal-opinions`). Sơ đồ: thành viên chuyên môn (thẩm định chất lượng, pháp lý) tham gia thẩm định trước khi Hội đồng quyết, **không
+biểu quyết**. Các quy tắc dưới tự đặt theo mặc định an toàn (người dùng "làm tiếp" 09/11/2026):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| Ý kiến (`AppraisalOpinion`) gắn một đối tượng: phiếu **GTH**, **RFQ**, **hợp đồng nguyên tắc**, **NCC**; gồm **khía cạnh** Chất lượng / Pháp lý / Khác, **kết luận Đạt / Không đạt**, **nội dung** bắt buộc (≤ 2.000 ký tự); tab Đính kèm của ý kiến (loại chủ `AppraisalOpinion`, biên bản thẩm định, kết quả kiểm nghiệm) | Sơ đồ: ý kiến Đạt/Không đạt kèm nội dung |
+| **Không phải cấp duyệt**: không chặn gửi/duyệt, không thay lượt duyệt APRL. Người duyệt thấy tổng hợp (số Đạt, số Không đạt còn hiệu lực) và từng ý kiến (người ghi, vai trò, thời điểm) trước khi duyệt: tab Thẩm định (nhãn kèm số ý kiến, số không đạt) và hộp thoại Duyệt của GTH, RFQ (kết quả thầu), hợp đồng, yêu cầu duyệt NCC hiện tóm tắt – có ý kiến Không đạt thì cảnh báo vàng | Thành viên chuyên môn không biểu quyết; Hội đồng quyết |
+| Ghi cần quyền **`Sourcing.Appraisal.Give`** (vai trò mẫu THAMDINHCL, THAMDINHPL, PHAPCHE) kèm quyền xem đối tượng; xem theo quyền xem đối tượng (GTH, RFQ, hợp đồng, NCC). Đối tượng đọc qua phạm vi công ty – GTH thuộc tổng công ty nên thẩm định GTH khi đang làm việc ở tổng công ty | Không thêm quyền xem riêng; giữ pháp nhân độc lập |
+| Chỉ ghi khi đối tượng **chưa có quyết định cuối cùng**: GTH Nháp/Chờ duyệt; RFQ Nháp/Đã gửi/Chờ duyệt kết quả; hợp đồng Nháp/Chờ duyệt; NCC chưa vào danh sách đen | Ý kiến để Hội đồng tham khảo trước khi quyết |
+| **Người lập** đối tượng không tự ghi ý kiến cho đối tượng của mình | Không kiêm nhiệm, như "người lập không tự duyệt" (mục 18.6) |
+| **Chỉ thêm, không sửa/xóa**: ghi sai thì **người ghi rút** (bắt buộc lý do ≤ 500) khi đối tượng còn mở, rồi ghi ý kiến mới; ý kiến đã rút vẫn hiện (gạch, kèm lý do) nhưng không tính vào tổng hợp. Đối tượng đã quyết thì không rút, không đính kèm thêm. Đính kèm của ý kiến chỉ người ghi thêm/xóa. Mọi thay đổi vào AuditLog | Hội đồng quyết dựa trên ý kiến – KSNB đối chiếu được |
+
+Migration `V0_20_0_YKienThamDinh` (bảng `AppraisalOpinion` – bảng mới, `Down()` xóa bảng, mất các ý kiến đã ghi; AuditLog vẫn giữ).
+
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 
 Rà soát toàn bộ phần mềm, người dùng duyệt làm 8 lát (R1–R8). Mỗi lát một nhánh, quy tắc mới ghi ở đây.

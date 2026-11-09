@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -153,6 +153,7 @@ app.MapSystemParameterEndpoints();
 app.MapNotificationEndpoints();
 app.MapDocumentRegistryEndpoints();
 app.MapAttachmentEndpoints();
+app.MapAppraisalOpinionEndpoints();
 
 // /api lạ trả 404 (không phải 401 do chính sách mặc định, cũng không rơi vào trang giao diện bên dưới).
 app.MapFallback("/api/{**path}", () => Results.NotFound()).AllowAnonymous();

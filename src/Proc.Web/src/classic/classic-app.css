@@ -25,6 +25,11 @@
   --erp-icon-danger: #d0281e;
   --erp-icon-success: #1e8f2e;
   --erp-icon-warning: #c48a00;
+  /* Đèn trạng thái (.erp-light – classic.css) dùng cả ngoài .erp-classic (panel trong DocumentForm, hộp thoại): khai báo lại ở gốc, cùng mã
+     màu với classic.css, nếu không đèn hiện ô trắng. */
+  --erp-light-green: #2e9e3a;
+  --erp-light-yellow: #e8b400;
+  --erp-light-red: #d0281e;
   --erp-font-mono: Consolas, 'Courier New', monospace;
   /* Chữ phụ (giá trị trống trong lịch sử thay đổi…) – cùng mã màu với --erp-text-muted của classic.css, dùng được cả trong hộp thoại. */
   --erp-text-muted: #5a6b7d;
@@ -560,6 +565,7 @@ body.erp-col-resizing {
 .ant-btn .anticon-save,
 .ant-btn .anticon-plus,
 .ant-btn .anticon-plus-square,
+.ant-btn .anticon-plus-circle,
 .ant-btn .anticon-file-add,
 .ant-btn .anticon-check,
 .ant-btn .anticon-check-circle,

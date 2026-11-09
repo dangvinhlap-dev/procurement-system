@@ -19,6 +19,8 @@ import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent } from '../purchasing/useApprovalCommands'
 import { withPendingApprovers } from '../../api/purchasing'
 import { SupplierProfile } from './SupplierProfile'
+import { AppraisalPanel, AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
+import { useAppraisals } from '../../api/appraisals'
 
 /** Đường dẫn màn hình duyệt NCC; trang đầy đủ một yêu cầu là `${SUPPLIER_APPROVAL_PATH}/:id`. */
 export const SUPPLIER_APPROVAL_PATH = '/gia-ncc/duyet-ncc'
@@ -99,6 +101,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const r = request.data
+  const appraisals = useAppraisals('Supplier', r?.supplierId).data
 
   const run = async (action: () => Promise<unknown>, done: string) => {
     setError(null)
@@ -120,7 +123,12 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
           onClick={() =>
             modal.confirm({
               title: `Duyệt yêu cầu ${r.no}?`,
-              content: approveContent(r),
+              content: (
+                <>
+                  <AppraisalSummary data={appraisals} />
+                  {approveContent(r)}
+                </>
+              ),
               okText: 'Duyệt',
               cancelText: 'Không',
               onOk: () => run(() => actions.approve.mutateAsync({ id }), 'Đã duyệt.'),
@@ -173,6 +181,8 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
             // Người duyệt chỉ xem/tải file; tải lên, xóa làm ở màn hình NCC (design.md mục 18.4).
             children: r && <AttachmentPanel ownerType="Supplier" ownerId={r.supplierId} canManage={false} />,
           },
+          // Ý kiến thẩm định hồ sơ NCC (lát H1) – người duyệt xem trước khi duyệt; ghi ý kiến cũng được ở đây.
+          { key: 'appraisals', label: 'Thẩm định', children: r && <AppraisalPanel ownerType="Supplier" ownerId={r.supplierId} /> },
           { key: 'history', label: 'Lịch sử duyệt', children: r && <ApprovalHistory steps={r.approvals} byCompany createdByName={r.createdByName} createdAt={r.createdAt} /> },
         ]}
       />

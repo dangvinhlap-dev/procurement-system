@@ -26,6 +26,9 @@ import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
+import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
+import { AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
+import { useAppraisals } from '../../api/appraisals'
 import { DocumentForm, DocumentTotal } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
@@ -217,6 +220,9 @@ export function ContractPage() {
     }, { replace: true })
   const readOnly = isNew ? !hasPermission(Permission.ContractManage) : !doc?.actions.canEdit
   const attachmentTab = useAttachmentTab('PurchaseContract', doc?.id, hasPermission(Permission.ContractManage))
+  // Ý kiến thẩm định điều khoản, chất lượng (lát H1) – người duyệt xem trước khi duyệt hợp đồng.
+  const appraisalTabs = useAppraisalTab('PurchaseContract', doc?.id)
+  const appraisals = useAppraisals('PurchaseContract', doc?.id).data
 
   const supplierId = Form.useWatch('supplierId', form) as string | undefined
   const priceListId = Form.useWatch('priceListId', form) as string | undefined
@@ -363,6 +369,7 @@ export function ContractPage() {
       content: (
         <>
           <p>Giá trị dự kiến {formatMoney(doc.expectedAmount)} đ. Duyệt cấp cuối thì hợp đồng có hiệu lực.</p>
+          <AppraisalSummary data={appraisals} />
           {approveContent(doc)}
         </>
       ),
@@ -710,6 +717,7 @@ export function ContractPage() {
             ? [{ key: 'amendments', label: `Phụ lục (${doc.amendments.length})`, children: <AmendmentTable rows={doc.amendments} onOpen={openAmendment} /> }]
             : []),
           ...(doc && doc.approvals.length > 0 ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+          ...appraisalTabs,
           attachmentTab,
         ]}
       />

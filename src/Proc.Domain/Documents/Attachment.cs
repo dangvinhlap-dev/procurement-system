@@ -1,4 +1,4 @@
-using Proc.Domain.Common;
+﻿using Proc.Domain.Common;
 
 namespace Proc.Domain.Documents;
 
@@ -65,10 +65,13 @@ public static class AttachmentOwnerTypes
     /// <summary>Phiếu đặt hàng gộp (xác nhận của NCC, bảng phân bổ – lát G7).</summary>
     public const string PooledOrder = "PooledOrder";
 
+    /// <summary>Ý kiến thẩm định của thành viên chuyên môn (biên bản thẩm định, kết quả kiểm nghiệm – lát H1).</summary>
+    public const string AppraisalOpinion = "AppraisalOpinion";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
-        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder];
+        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion];
 }
 
 /// <summary>
