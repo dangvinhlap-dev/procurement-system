@@ -53,6 +53,16 @@ public static class ApprovalTypes
     /// </summary>
     public const string PurchaseOrderOffList = "POL";
 
+    /// <summary>
+    /// Ngoại lệ phiếu duyệt NCC và giá tháng (lát H2, design.md mục 18.25 – quyết định Q6): phiếu GTH có ngoại lệ (mặt hàng chưa đủ 03 NCC đủ
+    /// điều kiện, độc quyền, giá vượt giá mục tiêu, hoặc người lập khai ngoại lệ) qua thêm chặng Chủ tịch/TGĐ sau các cấp Hội đồng, cùng quyền
+    /// duyệt GTH. Chỉ là bộ cấp cấu hình ở APRL của tổng công ty.
+    /// </summary>
+    public const string MonthlyApprovalException = "GTX";
+
+    /// <summary>Chặng ngoại lệ của phiếu GTH (Chủ tịch/TGĐ – lát H2) trong <c>ApprovalStep.Stage</c>, sau chặng Hội đồng.</summary>
+    public const int MonthlyApprovalExceptionStage = 2;
+
     /// <summary>Chặng ngoại lệ giá PO (design.md mục 18.10) trong <c>ApprovalStep.Stage</c>.</summary>
     public const int PriceExceptionStage = 2;
 
@@ -79,6 +89,7 @@ public static class ApprovalTypes
         new(ContractAmendment, "Phụ lục hợp đồng nguyên tắc", Permissions.Purchase.ContractApprove, "Giá trị dự kiến sau phụ lục"),
         new(DocumentTypes.SoleSource, "Phê duyệt NCC độc quyền", Permissions.MasterData.SoleSourceApprove, null),
         new(DocumentTypes.MonthlySupplierApproval, "Duyệt NCC và giá tháng", Permissions.Pricing.MonthlyApprovalApprove, null),
+        new(MonthlyApprovalException, "Ngoại lệ duyệt NCC và giá tháng", Permissions.Pricing.MonthlyApprovalApprove, null),
         new(DocumentTypes.VolumeRebate, "Thỏa thuận chiết khấu sản lượng gộp", Permissions.Pricing.VolumeRebateApprove, null),
     ];
 

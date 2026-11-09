@@ -221,6 +221,24 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     }
 
     /// <summary>
+    /// Duyệt xong các cấp còn chờ của phiếu duyệt NCC và giá tháng ngay trong CSDL (ví dụ chặng ngoại lệ Chủ tịch/TGĐ – lát H2) – dùng khi test
+    /// nghiệp vụ khác cần phiếu GTH đã duyệt. Luồng duyệt thật (chặng ngoại lệ, người lập không tự duyệt) kiểm tra ở <c>MonthlySupplierApprovalTests</c>.
+    /// </summary>
+    /// <param name="approvalId">Id phiếu GTH đang chờ duyệt.</param>
+    public async Task FinishMonthlyApprovalAsync(Guid approvalId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var approval = await db.MonthlySupplierApprovals.IgnoreQueryFilters().SingleAsync(p => p.Id == approvalId);
+        if (approval.Status != Proc.Domain.Pricing.MonthlyApprovalStatus.Submitted) return;
+        foreach (var step in await db.ApprovalSteps.IgnoreQueryFilters()
+                     .Where(st => st.DocumentId == approvalId && st.Status == Proc.Domain.Purchasing.ApprovalStepStatus.Pending).ToListAsync())
+            step.Skip();
+        approval.MarkApproved(DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
     /// Duyệt xong kết quả chọn thầu đang chờ duyệt ngay trong CSDL (bỏ qua các bước chờ, RFQ Đã chọn thầu) – dùng khi test nghiệp vụ khác
     /// cần RFQ đã chọn thầu. Luồng duyệt thật kiểm tra ở <c>SourcingTests</c>.
     /// </summary>

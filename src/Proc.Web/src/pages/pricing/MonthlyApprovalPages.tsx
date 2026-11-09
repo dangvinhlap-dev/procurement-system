@@ -1,6 +1,7 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import {
   CheckOutlined, CloseCircleOutlined, CloseOutlined, CopyOutlined, EditOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined,
+  WarningFilled,
 } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Flex, Form, Input, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
@@ -11,6 +12,7 @@ import { useItemLookup } from '../../api/inventoryDocuments'
 import { useMarketPrices } from '../../api/marketSurveys'
 import { useItemCategories, useSuppliers } from '../../api/masterData'
 import {
+  MONTHLY_STAGE_LABELS,
   monthlyApprovalStatusLabels,
   monthlyApprovalStatusTone,
   useMonthlyApproval,
@@ -55,6 +57,8 @@ const listColumns: GridColumn<MonthlyApprovalListItem>[] = [
     key: 'status', title: 'Trạng thái', width: 170, type: 'status', groupable: true,
     value: (r) => monthlyApprovalStatusLabels[r.status], tone: (r) => monthlyApprovalStatusTone[r.status],
   },
+  // Lượt gửi gần nhất có ngoại lệ – qua chặng Chủ tịch/TGĐ (lát H2).
+  { key: 'exception', title: 'Ngoại lệ', width: 80, value: (r) => (r.hasException ? 'Có' : ''), groupable: true },
   { key: 'replaces', title: 'Điều chỉnh phiếu', width: 150, value: (r) => r.replacesNo },
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
@@ -105,6 +109,7 @@ interface FormValues {
   itemCategoryId?: string
   companyIds: string[]
   note?: string
+  exceptionNote?: string
   lines: LineValues[]
 }
 
@@ -128,9 +133,24 @@ function MonthlyNotices({ doc, onOpen }: { doc: MonthlyApproval; onOpen: (id: st
         title={<>{doc.status === 'Replaced' ? 'Đã thay bằng phiếu điều chỉnh' : 'Đang có phiếu điều chỉnh'} {link(doc.replacedById, doc.replacedByNo)}.</>} />
     ),
     doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
+    // Q6 (lát H2): phiếu có ngoại lệ qua thêm chặng Chủ tịch/TGĐ sau Hội đồng; còn nháp thì nhắc nhập giải trình.
+    exceptionCount(doc) > 0 && (
+      <Alert key="exception" type="warning" showIcon
+        title={`Có ${exceptionCount(doc)} ngoại lệ ở cột Ngoại lệ (chưa đủ 03 NCC đủ điều kiện, độc quyền, giá vượt giá mục tiêu): phiếu phải có `
+          + 'giải trình ngoại lệ và qua thêm chặng duyệt Chủ tịch/TGĐ sau Hội đồng.'} />
+    ),
+    exceptionCount(doc) === 0 && doc.exceptionNote && doc.status === 'Draft' && (
+      <Alert key="declared" type="warning" showIcon title="Đã ghi giải trình ngoại lệ: khi gửi, phiếu qua thêm chặng duyệt Chủ tịch/TGĐ." />
+    ),
+    doc.hasException && doc.status !== 'Draft' && exceptionCount(doc) === 0 && (
+      <Alert key="had-exception" type="info" showIcon title={`Phiếu có ngoại lệ – qua chặng Chủ tịch/TGĐ. Giải trình: ${doc.exceptionNote ?? ''}`} />
+    ),
   ].filter(Boolean)
   return notices.length ? <Flex vertical gap={8}>{notices}</Flex> : null
 }
+
+/** Tổng số ngoại lệ tự phát hiện trên các dòng (server tính khi phiếu nháp/chờ duyệt – lát H2). */
+const exceptionCount = (doc: MonthlyApproval) => doc.lines.reduce((sum, l) => sum + (l.exceptions?.length ?? 0), 0)
 
 /**
  * Trang phiếu duyệt NCC và giá tháng trên khuôn DocumentForm: tháng, nhóm hàng, công ty áp dụng, ghi chú; dòng: mặt hàng, ĐVT, NCC chính +
@@ -179,6 +199,7 @@ export function MonthlyApprovalPage() {
     itemCategoryId: doc.itemCategoryId,
     companyIds: doc.companies.map((c) => c.id),
     note: doc.note ?? '',
+    exceptionNote: doc.exceptionNote ?? '',
     lines: doc.lines.map((l) => ({
       id: l.id, itemId: l.itemId, uomId: l.uomId, mainSupplierId: l.mainSupplierId, unitPrice: l.unitPrice, backupSupplierId: l.backupSupplierId,
       backupUnitPrice: l.backupUnitPrice, quantityLimit: l.quantityLimit, note: l.note ?? '', standardPrice: l.standardPrice,
@@ -203,6 +224,7 @@ export function MonthlyApprovalPage() {
       itemCategoryId: values.itemCategoryId!,
       companyIds: values.companyIds ?? [],
       note: orNull(values.note),
+      exceptionNote: orNull(values.exceptionNote),
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, mainSupplierId: l.mainSupplierId!, unitPrice: l.unitPrice ?? 0,
         backupSupplierId: l.backupSupplierId ?? null, backupUnitPrice: l.backupSupplierId ? (l.backupUnitPrice ?? null) : null,
@@ -260,6 +282,10 @@ export function MonthlyApprovalPage() {
       content: (
         <>
           <p>Duyệt cấp cuối thì đây là kết quả tháng: Phòng cung ứng chung đặt hàng đúng NCC, giá và hạn mức trên phiếu.</p>
+          {doc.hasException && (
+            <Alert type="warning" showIcon
+              title={`Phiếu có ngoại lệ (${exceptionCount(doc)} ở các dòng) – qua chặng Chủ tịch/TGĐ. Giải trình: ${doc.exceptionNote ?? ''}`} />
+          )}
           <AppraisalSummary data={appraisals} />
           {approveContent(doc)}
         </>
@@ -369,6 +395,21 @@ export function MonthlyApprovalPage() {
     )
   }
 
+  /**
+   * Ngoại lệ của dòng (lát H2) theo dữ liệu đã lưu: tam giác vàng + mô tả, rê chuột xem đủ; dòng chưa lưu thì trống (lưu nháp để tính).
+   * @param index Chỉ số dòng trong lưới.
+   */
+  const exceptionCell = (index: number) => {
+    const id = lines[index]?.id
+    const found = id ? (doc?.lines.find((l) => l.id === id)?.exceptions ?? []) : []
+    if (found.length === 0) return <span className="line-grid-readonly" />
+    return (
+      <span className="line-grid-readonly" title={found.join('\n')}>
+        <WarningFilled className="line-grid-alert-icon" aria-label={`Ngoại lệ dòng ${index + 1}`} /> {found.join('; ')}
+      </span>
+    )
+  }
+
   const priceInput = (
     name: number, field: 'unitPrice' | 'backupUnitPrice' | 'standardPrice' | 'ceilingPrice' | 'targetPrice', label: string, required: boolean,
   ) => (
@@ -446,6 +487,7 @@ export function MonthlyApprovalPage() {
     { key: 'ceiling', title: 'Giá trần', width: 105, align: 'right', render: (field) => priceInput(field.name, 'ceilingPrice', 'Giá trần', false) },
     { key: 'target', title: 'Giá mục tiêu', width: 105, align: 'right', render: (field) => priceInput(field.name, 'targetPrice', 'Giá mục tiêu', false) },
     { key: 'market', title: 'Giá thị trường', width: 110, align: 'right', render: (field) => marketCell(field.name) },
+    { key: 'exception', title: 'Ngoại lệ', width: 220, render: (field) => exceptionCell(field.name) },
     {
       key: 'note', title: 'Ghi chú', width: 180,
       render: (field) => (
@@ -517,7 +559,7 @@ export function MonthlyApprovalPage() {
       extraTabs={[
         ...appraisalTabs,
         attachmentTab,
-        ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+        ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={MONTHLY_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
       ]}
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'MonthlySupplierApproval', id: doc?.id }}
@@ -547,6 +589,11 @@ export function MonthlyApprovalPage() {
           </Form.Item>
           <Form.Item label="Ghi chú" name="note" rules={[{ max: 1000 }]}>
             <Input aria-label="Ghi chú" />
+          </Form.Item>
+          {/* Bắt buộc khi có ngoại lệ ở cột Ngoại lệ; ghi khi không có thì là tự khai ngoại lệ – cũng lên Chủ tịch/TGĐ (Q6, lát H2). */}
+          <Form.Item label="Giải trình ngoại lệ" name="exceptionNote" rules={[{ max: 1000 }]}
+            tooltip="Bắt buộc khi phiếu có ngoại lệ (cột Ngoại lệ). Có giải trình thì phiếu qua thêm chặng duyệt Chủ tịch/TGĐ.">
+            <Input aria-label="Giải trình ngoại lệ" />
           </Form.Item>
         </>
       }

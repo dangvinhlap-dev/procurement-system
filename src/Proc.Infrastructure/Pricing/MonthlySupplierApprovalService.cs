@@ -8,6 +8,7 @@ using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Pricing;
+using Proc.Domain.Purchasing;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Organization;
 using Proc.Infrastructure.Persistence;
@@ -18,7 +19,8 @@ namespace Proc.Infrastructure.Pricing;
 /// <summary>
 /// Phiếu duyệt NCC và giá tháng (design.md mục 18.25 – lát G2). Phiếu thuộc tổng công ty (lập, sửa, duyệt khi đang làm việc ở tổng công ty, qua
 /// <see cref="ApprovalEngine"/> theo quy trình loại GTH – người lập không tự duyệt, người có xung đột lợi ích với NCC trên phiếu không duyệt);
-/// công ty thành viên chỉ đọc phiếu đã duyệt/đã thay áp cho mình – các truy vấn đó bỏ filter công ty có điều kiện, ghi rõ tại chỗ.
+/// công ty thành viên chỉ đọc phiếu đã duyệt/đã thay áp cho mình – các truy vấn đó bỏ filter công ty có điều kiện, ghi rõ tại chỗ. Phiếu có
+/// ngoại lệ qua thêm chặng Chủ tịch/TGĐ (loại GTX – lát H2).
 /// </summary>
 public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalService
 {
@@ -49,7 +51,11 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
                 from x in Visible().AsNoTracking()
                 join c in _db.ItemCategories on x.ItemCategoryId equals c.Id
                 orderby x.Period descending, x.No descending
-                select new { x.Id, x.No, x.Period, CategoryCode = c.Code, CategoryName = c.Name, Lines = x.Lines.Count, x.Status, x.ReplacesId, x.CreatedBy })
+                select new
+                {
+                    x.Id, x.No, x.Period, CategoryCode = c.Code, CategoryName = c.Name, Lines = x.Lines.Count, x.Status, x.ReplacesId, x.CreatedBy,
+                    x.HasException,
+                })
             .Take(2000)
             .ToListAsync(cancellationToken);
         var ids = rows.Select(r => r.Id).ToList();
@@ -59,7 +65,8 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         var users = await UserNamesAsync(rows.Select(r => r.CreatedBy), cancellationToken);
         return rows.Select(r => new MonthlyApprovalListItemDto(
                 r.Id, r.No, r.Period, r.CategoryCode, r.CategoryName, string.Join(", ", companies[r.Id]), r.Lines, r.Status.ToString(),
-                r.ReplacesId is { } rid ? replacedNos.GetValueOrDefault(rid) : null, r.CreatedBy is { } u ? users.GetValueOrDefault(u) : null))
+                r.ReplacesId is { } rid ? replacedNos.GetValueOrDefault(rid) : null, r.CreatedBy is { } u ? users.GetValueOrDefault(u) : null,
+                r.HasException))
             .ToList();
     }
 
@@ -112,7 +119,13 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         await EnsureItemsVisibleAsync(approval, cancellationToken);
         // Kiểm tra lại lúc gửi: NCC có thể đã bị tạm ngưng/đưa vào danh sách đen, hoặc đã có phiếu khác trùng mặt hàng từ lúc soạn nháp.
         await CheckAsync(approval.HeaderFor(approval.Period), approval.CopyLines(), approval.Id, approval.ReplacesId, cancellationToken);
-        await _approvals.SubmitAsync(approval, cancellationToken);
+        // Ngoại lệ chốt lúc gửi (Q6 – lát H2): có ngoại lệ thì sau các cấp Hội đồng (GTH) là chặng Chủ tịch/TGĐ (GTX, luôn ít nhất một cấp).
+        var exceptions = (await ExceptionsAsync(approval, cancellationToken)).SelectMany(e => e.Value).ToList();
+        if (approval.PrepareSubmit(exceptions))
+            await _approvals.SubmitWithStagesAsync(
+                approval, [(ApprovalTypes.MonthlyApprovalException, ApprovalTypes.MonthlyApprovalExceptionStage)], cancellationToken);
+        else
+            await _approvals.SubmitAsync(approval, cancellationToken);
         await CompleteReplacementAsync(approval, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -273,6 +286,37 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         if (bad is not null) throw new BusinessRuleException($"NCC {bad.Code} chưa ở trạng thái Đã duyệt – không chọn làm NCC chính/dự phòng được.");
     }
 
+    /// <summary>
+    /// Ngoại lệ tự phát hiện của từng dòng (lát H2, <see cref="MonthlyApprovalExceptions"/>), khóa theo mặt hàng (mỗi mặt hàng một dòng), mô tả
+    /// có tiền tố mã hàng. NCC đủ điều kiện = NCC Đã duyệt có dòng NCC – sản phẩm của mặt hàng (như SUPCOV – lát G1) cộng NCC chính/dự phòng
+    /// của dòng (đã kiểm tra Đã duyệt). Đọc qua filter phạm vi nhóm hàng và công ty đang làm việc (tổng công ty – phiếu độc quyền của tổng
+    /// công ty) như mọi truy vấn khác.
+    /// </summary>
+    private async Task<Dictionary<Guid, IReadOnlyList<string>>> ExceptionsAsync(MonthlySupplierApproval approval, CancellationToken cancellationToken)
+    {
+        var today = _clock.TodayInVietnam();
+        var itemIds = approval.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var links = (await _db.SupplierItems.AsNoTracking().Where(l => itemIds.Contains(l.ItemId))
+                .Join(_db.Suppliers.AsNoTracking().Where(s => s.Status == SupplierStatus.Approved), l => l.SupplierId, s => s.Id,
+                    (l, s) => new { l.ItemId, SupplierId = s.Id })
+                .ToListAsync(cancellationToken))
+            .ToLookup(x => x.ItemId, x => x.SupplierId);
+        var soleSources = (await _db.SoleSourceApprovals.AsNoTracking()
+                .Where(x => itemIds.Contains(x.ItemId) && x.Status == SoleSourceStatus.Approved && x.ValidFrom <= today && x.ReviewDate >= today)
+                .Select(x => new { x.ItemId, x.No, x.ValidFrom })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ValidFrom).First().No);
+        var codes = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.Code, cancellationToken);
+        return approval.Lines.ToDictionary(l => l.ItemId, l =>
+        {
+            var suppliers = links[l.ItemId].Append(l.MainSupplierId).ToList();
+            if (l.BackupSupplierId is { } backup) suppliers.Add(backup);
+            return (IReadOnlyList<string>)MonthlyApprovalExceptions
+                .ForLine(suppliers.Distinct().Count(), soleSources.GetValueOrDefault(l.ItemId), l.UnitPrice, l.BackupUnitPrice, l.TargetPrice)
+                .Select(e => $"{codes.GetValueOrDefault(l.ItemId)}: {e}").ToList();
+        });
+    }
+
     private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
     {
         if (!await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken))
@@ -368,6 +412,10 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             manageable && x.Status is MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced && x.Period.AddMonths(1) >= currentMonth,
             readOnly);
 
+        // Ngoại lệ tính lúc đọc khi phiếu còn trên đường duyệt ở tổng công ty (H2) – phiếu đã có quyết định chỉ giữ cờ chốt lúc gửi.
+        var exceptions = own && x.Status is MonthlyApprovalStatus.Draft or MonthlyApprovalStatus.Submitted && items.Count == itemIds.Count
+            ? await ExceptionsAsync(x, cancellationToken)
+            : [];
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
             var item = items.GetValueOrDefault(l.ItemId);
@@ -376,7 +424,8 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             return new MonthlyApprovalLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.MainSupplierId, main?.Code ?? "", main?.Name ?? "", l.UnitPrice, l.BackupSupplierId, backup?.Code, backup?.Name, l.BackupUnitPrice,
-                l.QuantityLimit, l.Note, l.UomFactor, l.StandardPrice, l.CeilingPrice, l.TargetPrice);
+                l.QuantityLimit, l.Note, l.UomFactor, l.StandardPrice, l.CeilingPrice, l.TargetPrice,
+                exceptions.GetValueOrDefault(l.ItemId)?.Select(e => e[(e.IndexOf(": ", StringComparison.Ordinal) + 2)..]).ToList() ?? []);
         }).ToList();
         var approvals = await _approvals.HistoryAsync(x.DocType, x.Id, cancellationToken, x);
         return new MonthlyApprovalDto(
@@ -385,12 +434,13 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             companies.Where(c => appliedIds.Contains(c.Id)).OrderByDescending(c => c.IsHeadOffice).ThenBy(c => c.Code)
                 .Select(c => new MonthlyApprovalCompanyDto(c.Id, c.Code, c.Name)).ToList(),
             x.Note, x.Status.ToString(), x.RejectReason, x.ApprovedAt, x.CancelledOn, x.CancelReason, x.ReplacesId, replacesNo, replacedBy?.Id,
-            replacedBy?.No, x.CreatedAt, x.CreatedBy is { } u ? users.GetValueOrDefault(u) : null, lines, approvals, actions);
+            replacedBy?.No, x.CreatedAt, x.CreatedBy is { } u ? users.GetValueOrDefault(u) : null, lines, approvals, actions, x.ExceptionNote,
+            x.HasException);
     }
 
     /// <summary>Tháng lưu là ngày đầu tháng của ngày gửi lên.</summary>
     private static MonthlyApprovalHeader ToHeader(SaveMonthlyApprovalRequest r) =>
-        new(new DateOnly(r.Period.Year, r.Period.Month, 1), r.ItemCategoryId, r.CompanyIds, r.Note);
+        new(new DateOnly(r.Period.Year, r.Period.Month, 1), r.ItemCategoryId, r.CompanyIds, r.Note, r.ExceptionNote);
 
     private static SaveMonthlyApprovalLineRequest ToRequest(MonthlyApprovalLineData d) =>
         new(null, d.ItemId, d.UomId, d.MainSupplierId, d.UnitPrice, d.BackupSupplierId, d.BackupUnitPrice, d.QuantityLimit, d.Note,

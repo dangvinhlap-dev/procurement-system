@@ -45,8 +45,8 @@ public class ApprovalRuleTemplateTests
         // Công ty mới: mọi loại chưa cấu hình → sẽ tạo; phiếu chung của Ban chỉ áp ở tổng công ty.
         var preview = await ReadAsync<List<ApprovalRuleTemplateDto>>(await member.GetAsync("/api/approval-rules/template", Ct));
         Assert.Equal(ApprovalRuleTemplates.Procurement.Count, preview.Count);
-        Assert.All(preview.Where(r => r.DocType is "GTH" or "CKB" or "NCC"), r => Assert.Equal("HeadOfficeOnly", r.Status));
-        Assert.All(preview.Where(r => r.DocType is not ("GTH" or "CKB" or "NCC")), r => Assert.Equal("Create", r.Status));
+        Assert.All(preview.Where(r => r.DocType is "GTH" or "GTX" or "CKB" or "NCC"), r => Assert.Equal("HeadOfficeOnly", r.Status));
+        Assert.All(preview.Where(r => r.DocType is not ("GTH" or "GTX" or "CKB" or "NCC")), r => Assert.Equal("Create", r.Status));
         Assert.Contains(preview, r => r is { DocType: "PO", Level: 2, RoleCode: "PHOBAN" } && r.RoleName == "Phó ban cung ứng (Hội đồng)");
 
         // Có sẵn cấp PR do người quản trị cấu hình → giữ nguyên PR, không thêm cấp mẫu.
@@ -57,7 +57,7 @@ public class ApprovalRuleTemplateTests
         var applied = await ReadAsync<ApplyApprovalRuleTemplateResult>(await member.PostAsync("/api/approval-rules/template", null, Ct));
         var expected = ApprovalRuleTemplates.Procurement.Count(t => !t.HeadOfficeOnly && t.DocType != "PR");
         Assert.Equal(expected, applied.Created);
-        Assert.All(applied.Rows.Where(r => !(r.DocType is "GTH" or "CKB" or "NCC")), r => Assert.Equal("Configured", r.Status));
+        Assert.All(applied.Rows.Where(r => !(r.DocType is "GTH" or "GTX" or "CKB" or "NCC")), r => Assert.Equal("Configured", r.Status));
 
         var rules = await ReadAsync<List<ApprovalRuleDto>>(await member.GetAsync("/api/approval-rules", Ct));
         Assert.Equal([(1, "PHOBAN", 0m), (2, "PHOBAN", 0m), (3, "CHUTICH", 0m)],

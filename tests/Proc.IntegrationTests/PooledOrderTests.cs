@@ -87,7 +87,8 @@ public class PooledOrderTests
 
         // Phiếu GTH tháng cho A, B: NCC chính 12.000, dự phòng 12.500; Ban (người khác) duyệt.
         var gth = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(GthUrl, new SaveMonthlyApprovalRequest(
-            month, category.Id, [companyA.Id, companyB.Id], null, [new(null, item, cai, main, 12_000m, backup, 12_500m, null, null)]), Ct));
+            month, category.Id, [companyA.Id, companyB.Id], null, [new(null, item, cai, main, 12_000m, backup, 12_500m, null, null)],
+            "Mới 2 NCC đủ điều kiện"), Ct));
         await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{GthUrl}/{gth.Id}/submit", null, Ct));
         var boardRole = UniqueCode("B");
         await _factory.CreateRoleAsync(boardRole, Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
@@ -95,6 +96,7 @@ public class PooledOrderTests
         await _factory.CreateScopedUserAsync(boardUser, "TCT", boardRole);
         var board = await _factory.CreateClientInCompanyAsync(boardUser, ProcApiFactory.TestPassword, "TCT");
         await ReadAsync<MonthlyApprovalDto>(await board.PostAsJsonAsync($"{GthUrl}/{gth.Id}/approve", new ApprovalActionRequest(null), Ct));
+        await _factory.FinishMonthlyApprovalAsync(gth.Id); // chặng ngoại lệ Chủ tịch/TGĐ (lát H2)
 
         // Chọn phiếu GTH của tháng và NCC; ngữ cảnh: giá dự phòng cho NCC dự phòng, kế hoạch A 60 / B 40, kho Main đứng đầu.
         var approvals = await ReadAsync<List<PooledApprovalOptionDto>>(await head.GetAsync($"{Url}/approvals?date={Today:yyyy-MM-dd}", Ct));

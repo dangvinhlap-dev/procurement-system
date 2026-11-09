@@ -71,8 +71,11 @@ test('lập phiếu đặt hàng gộp, phân bổ theo kế hoạch, tạo PO c
   const gth = await head.send<{ id: string; no: string }>('post', '/api/monthly-supplier-approvals', {
     period: month, itemCategoryId: category.id, companyIds: companies.filter((c) => ['TCT', 'BHA'].includes(c.code)).map((c) => c.id), note: null,
     lines: [{ id: null, itemId: item.id, uomId: cai, mainSupplierId: supplier.id, unitPrice: 20000, backupSupplierId: null, backupUnitPrice: null, quantityLimit: null, note: null }],
+    // Mặt hàng mới một NCC – ngoại lệ (lát H2): giải trình, qua thêm chặng Chủ tịch/TGĐ do người thứ hai duyệt.
+    exceptionNote: 'Mặt hàng mới, một NCC',
   })
   await head.send('post', `/api/monthly-supplier-approvals/${gth.id}/submit`, null)
+  await approveGthAsNewAdmin(request, head, gth.id)
   await approveGthAsNewAdmin(request, head, gth.id)
 
   await loginViaApi(page)

@@ -68,6 +68,11 @@ public class MonthlySupplierApprovalTests
         return supplier.Id;
     }
 
+    /// <summary>Thêm dòng NCC – sản phẩm: NCC Đã duyệt có dòng này là NCC đủ điều kiện của mặt hàng (lát G1, H2).</summary>
+    private async Task LinkAsync(HttpClient head, Guid supplierId, Guid itemId, Guid uomId) =>
+        await ReadAsync<SupplierItemDto>(await head.PostAsJsonAsync($"/api/suppliers/{supplierId}/items",
+            new SaveSupplierItemRequest(itemId, null, uomId, null, null, false), Ct));
+
     /// <summary>Nhóm hàng mới với hai mặt hàng (mỗi test một nhóm để không trùng phiếu của test khác).</summary>
     private async Task<(Guid CategoryId, Guid FirstItem, Guid SecondItem, Guid Uom)> CategoryAsync(HttpClient head, string name)
     {
@@ -87,7 +92,11 @@ public class MonthlySupplierApprovalTests
         var main = await SupplierAsync(head, "NCC chính tháng");
         var backup = await SupplierAsync(head, "NCC dự phòng tháng");
         var potential = await SupplierAsync(head, "NCC tiềm năng tháng", approved: false);
+        var third = await SupplierAsync(head, "NCC thứ ba tháng");
         var (categoryId, item1, item2, cai) = await CategoryAsync(head, "Bao bì tháng");
+        // Đủ 03 NCC đủ điều kiện mỗi mặt hàng (chính, dự phòng + một NCC có dòng NCC – sản phẩm) – phiếu không có ngoại lệ (lát H2).
+        await LinkAsync(head, third, item1, cai);
+        await LinkAsync(head, third, item2, cai);
         var tct = await _factory.GetCompanyIdAsync("TCT");
         var bha = await _factory.GetCompanyIdAsync("BHA");
         SaveMonthlyApprovalRequest Request(DateOnly period, params SaveMonthlyApprovalLineRequest[] lines) =>
@@ -114,8 +123,10 @@ public class MonthlySupplierApprovalTests
         Assert.DoesNotContain((await member.GetFromJsonAsync<List<MonthlyApprovalListItemDto>>(Url, Ct))!, r => r.Id == draft.Id);
 
         // Người lập gửi, không tự duyệt; người duyệt (Ban) thấy ở Việc cần làm và duyệt.
+        Assert.All(draft.Lines, l => Assert.Empty(l.Exceptions!));
         var submitted = await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{Url}/{draft.Id}/submit", null, Ct));
-        Assert.Equal(("Submitted", false), (submitted.Status, submitted.Actions.CanApprove));
+        Assert.Equal(("Submitted", false, false), (submitted.Status, submitted.Actions.CanApprove, submitted.HasException));
+        Assert.All(submitted.Approvals, s => Assert.Equal(1, s.Stage));
         Assert.Contains("không tự duyệt", await TitleAsync(await head.PostAsJsonAsync($"{Url}/{draft.Id}/approve", new ApprovalActionRequest(null), Ct)));
         var board = await UserWithAsync(Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
         Assert.Contains((await board.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!,
@@ -160,7 +171,7 @@ public class MonthlySupplierApprovalTests
         var (categoryId, item1, _, cai) = await CategoryAsync(head, "Hóa chất tháng");
         var tct = await _factory.GetCompanyIdAsync("TCT");
         var request = new SaveMonthlyApprovalRequest(ThisMonth.AddMonths(1), categoryId, [tct], null,
-            [new SaveMonthlyApprovalLineRequest(null, item1, cai, main, 30_000m, null, null, null, "Không giới hạn")]);
+            [new SaveMonthlyApprovalLineRequest(null, item1, cai, main, 30_000m, null, null, null, "Không giới hạn")], "Hóa chất mới, một NCC");
         var draft = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(Url, request, Ct));
         Assert.Null(draft.Lines[0].QuantityLimit);
         await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{Url}/{draft.Id}/submit", null, Ct));
@@ -184,5 +195,53 @@ public class MonthlySupplierApprovalTests
 
         // Phiếu đã hủy không chặn lập phiếu mới cùng mặt hàng × tháng.
         await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(Url, request, Ct));
+    }
+
+    [Fact]
+    public async Task CoNgoaiLe_BatBuocGiaiTrinh_ThemChangChuTich_NguoiDuyetHoiDongKhongDuyetTiep()
+    {
+        var (head, _) = await ManagerAsync();
+        var main = await SupplierAsync(head, "NCC chính ngoại lệ");
+        var backup = await SupplierAsync(head, "NCC dự phòng ngoại lệ");
+        var third = await SupplierAsync(head, "NCC thứ ba ngoại lệ");
+        var (categoryId, item1, item2, cai) = await CategoryAsync(head, "Phụ tùng ngoại lệ");
+        await LinkAsync(head, third, item1, cai);
+        var tct = await _factory.GetCompanyIdAsync("TCT");
+        // Dòng 1 đủ 3 NCC, giá không vượt mục tiêu; dòng 2 chỉ có NCC chính + dự phòng, giá chính 12.000 vượt mục tiêu 11.500.
+        SaveMonthlyApprovalRequest Request(string? exceptionNote) => new(ThisMonth.AddMonths(1), categoryId, [tct], null,
+        [
+            new(null, item1, cai, main, 12_000m, backup, 12_500m, null, null, null, null, 12_500m),
+            new(null, item2, cai, main, 12_000m, backup, 11_000m, null, null, null, null, 11_500m),
+        ], exceptionNote);
+        var draft = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(Url, Request(null), Ct));
+        Assert.Empty(draft.Lines[0].Exceptions!);
+        Assert.Equal(["Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)", "Giá NCC chính 12.000 vượt giá mục tiêu 11.500"], draft.Lines[1].Exceptions);
+
+        // Chưa giải trình thì không gửi được (kể cả chạy thử gửi duyệt cho popup).
+        Assert.Contains("giải trình ngoại lệ", await TitleAsync(await head.PostAsync($"{Url}/{draft.Id}/submit", null, Ct)));
+        draft = await ReadAsync<MonthlyApprovalDto>(await head.PutAsJsonAsync($"{Url}/{draft.Id}", Request("Mặt hàng mới, giá thị trường tăng"), Ct));
+        Assert.Equal("Mặt hàng mới, giá thị trường tăng", draft.ExceptionNote);
+
+        // Gửi: chặng 1 Hội đồng (GTH) rồi chặng 2 Chủ tịch/TGĐ (GTX – chưa cấu hình thì một cấp).
+        var submitted = await ReadAsync<MonthlyApprovalDto>(await head.PostAsync($"{Url}/{draft.Id}/submit", null, Ct));
+        Assert.True(submitted.HasException);
+        Assert.Equal([1, 2], submitted.Approvals.Select(s => s.Stage).Order());
+        Assert.Contains((await head.GetFromJsonAsync<List<MonthlyApprovalListItemDto>>(Url, Ct))!, r => r.Id == draft.Id && r.HasException);
+
+        // Thành viên Hội đồng duyệt chặng 1; không duyệt tiếp chặng Chủ tịch (mỗi cấp một người – R3).
+        var board = await UserWithAsync(Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
+        var afterBoard = await ReadAsync<MonthlyApprovalDto>(await board.PostAsJsonAsync($"{Url}/{draft.Id}/approve", new ApprovalActionRequest("Hội đồng đồng ý"), Ct));
+        Assert.Equal(("Submitted", false), (afterBoard.Status, afterBoard.Actions.CanApprove));
+        Assert.Contains("người khác duyệt", await TitleAsync(await board.PostAsJsonAsync($"{Url}/{draft.Id}/approve", new ApprovalActionRequest(null), Ct)));
+
+        // Chủ tịch/TGĐ thấy ở Việc cần làm và duyệt cấp cuối.
+        var chairman = await UserWithAsync(Permissions.Pricing.MonthlyApprovalView, Permissions.Pricing.MonthlyApprovalApprove);
+        Assert.Contains((await chairman.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!, p => p.DocumentId == draft.Id);
+        var approved = await ReadAsync<MonthlyApprovalDto>(await chairman.PostAsJsonAsync($"{Url}/{draft.Id}/approve", new ApprovalActionRequest("Phê duyệt ngoại lệ"), Ct));
+        Assert.Equal(("Approved", true), (approved.Status, approved.HasException));
+        Assert.All(approved.Lines, l => Assert.Empty(l.Exceptions!));
+
+        // Loại duyệt GTX có trong APRL.
+        Assert.Contains((await head.GetFromJsonAsync<List<ApprovalTypeDto>>("/api/approval-rules/types", Ct))!, t => t.Code == "GTX");
     }
 }

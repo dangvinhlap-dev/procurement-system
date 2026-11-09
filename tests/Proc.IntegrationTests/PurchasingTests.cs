@@ -449,7 +449,7 @@ public partial class PurchasingTests
         var (_, role) = await ApproverAsync(f);
 
         var types = await f.Buyer.GetFromJsonAsync<List<ApprovalTypeDto>>("/api/approval-rules/types", Ct);
-        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "CKB"], types!.Select(t => t.Code));
+        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "GTX", "CKB"], types!.Select(t => t.Code));
         Assert.Null(types!.Single(t => t.Code == "NCC").AmountLabel);
 
         var prl = await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("prl", 1, 0, role), Ct));

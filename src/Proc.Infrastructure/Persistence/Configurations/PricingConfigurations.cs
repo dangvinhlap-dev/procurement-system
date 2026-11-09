@@ -103,6 +103,7 @@ internal sealed class MonthlySupplierApprovalConfiguration : IEntityTypeConfigur
         builder.Property(x => x.Note).HasMaxLength(MonthlySupplierApproval.TextMaxLength);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
         builder.Property(x => x.CancelReason).HasMaxLength(MonthlySupplierApproval.TextMaxLength);
+        builder.Property(x => x.ExceptionNote).HasMaxLength(MonthlySupplierApproval.TextMaxLength);
         builder.ToTable(t => t.HasCheckConstraint("CK_MonthlySupplierApproval_Period", "EXTRACT(DAY FROM \"Period\") = 1"));
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ItemCategory>().WithMany().HasForeignKey(x => x.ItemCategoryId).OnDelete(DeleteBehavior.Restrict);

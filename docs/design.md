@@ -1270,7 +1270,7 @@ phân quyền** – phần mềm không viết cứng cấp duyệt hay người
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9); bộ cấp phụ cùng quyền PR/PO: **POX** (ngoại lệ giá, mục 18.10), **POK** (PO khẩn, mục 18.11), **PRB**/**POB** (vượt ngân sách, mục 18.24). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
+| Loại phiếu có duyệt (`ApprovalTypes`): PR, PO, **PRL** (bảng giá NCC), **RFQ** (kết quả chọn thầu), **NCC** (hồ sơ NCC: Đã duyệt/Danh sách đen, đổi tài khoản ngân hàng), **CTR** (hợp đồng nguyên tắc), **CTA** (phụ lục hợp đồng nguyên tắc – lát B4b, mục 18.7), **NDQ** (phê duyệt NCC độc quyền – lát B5b, mục 18.9); bộ cấp phụ cùng quyền PR/PO: **POX** (ngoại lệ giá, mục 18.10), **POK** (PO khẩn, mục 18.11), **PRB**/**POB** (vượt ngân sách, mục 18.24), **POL** (ngoài danh sách/giá, mục 18.25), **GTX** (phiếu GTH có ngoại lệ – chặng Chủ tịch/TGĐ, lát H2). Cấu hình cấp duyệt được ngay ở màn hình APRL; việc gửi duyệt của PRL, RFQ, NCC, CTR làm ở lát B1–B4 | Nền dùng chung cho đợt B |
 | Mỗi loại có **quyền duyệt riêng**: `Purchase.PR.Approve`, `Purchase.PO.Approve`, `Pricing.PriceList.Approve`, `Sourcing.Rfq.ApproveAward`, `MasterData.Supplier.Approve`, `Purchase.Contract.Approve`. Người duyệt phải có quyền đó **tại công ty của phiếu** (quyền gán theo công ty – mục 9); cấp có vai trò thì phải có thêm vai trò đó tại công ty. Muốn người Tổng công ty duyệt phiếu của công ty thành viên thì gán vai trò cho họ tại công ty thành viên | Công ty nào duyệt do phân quyền |
 | Số cấp (1–9), ngưỡng, vai trò mỗi cấp do người có `System.Parameter.Manage` cấu hình theo công ty × loại; chưa cấu hình thì một cấp, ai có quyền duyệt cũng duyệt được. PRL, NCC, NDQ không xét giá trị: ngưỡng luôn 0 (mọi phiếu qua đủ các cấp); RFQ xét giá trị trúng thầu, CTR giá trị dự kiến, CTA giá trị dự kiến sau phụ lục | Duyệt mấy cấp do người dùng quyết định |
 | Người lập không tự duyệt; từ chối bắt buộc lý do, về nháp; lịch sử `ApprovalStep` chỉ thêm – như PR/PO (mục 6.7) | Tách người lập – người duyệt (G3) |
@@ -1713,7 +1713,7 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
 | Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
 
-Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 → H3 → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 → H4 (đơn vị đặt hàng xác nhận nghiệm thu) → G1b → G8 → G11
 → G12; G9 hoãn.
 
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
@@ -1914,7 +1914,7 @@ Migration `V0_20_0_DatHangGop` (bảng `PooledOrder`, `PooledOrderCompany`, `Poo
 | Quy tắc | Lý do |
 | --- | --- |
 | Thêm vai trò mẫu theo sơ đồ (giữ các vai trò mẫu cũ): **CHUTICH** Chủ tịch HĐQT/TGĐ (duyệt PR, PO, hợp đồng, NCC độc quyền, nhận báo cáo KSNB); **PHOBAN** Phó ban – Hội đồng (duyệt NCC, giá tháng, kết quả thầu, bảng giá, hợp đồng, chiết khấu, độc quyền; kiểm tra PO); Trưởng ban dùng **TRUONGBANCUVT**; **THAMDINHCL**, **THAMDINHPL** thành viên chuyên môn (xem, đánh giá NCC – không quyền duyệt); **VPBDIEUPHOI**, **VPBPHANTICH** Văn phòng Ban (phân tích giá, ngân hàng giá, đề xuất NCC/giá, lập phiếu GTH, đề xuất chọn thầu – không lập hồ sơ NCC, không duyệt, không đặt hàng); **CUCTRUONGPHONG**, **CUCDATHANG** Phòng cung ứng chung (tìm kiếm, đánh giá NCC, hỏi giá RFQ, lập PO, theo dõi giao hàng; Trưởng phòng duyệt tiếp nhận PR – không lập/duyệt giá, không lập GTH); **DONVIDATHANG** đơn vị đặt hàng (PR, kế hoạch nhu cầu, xem phiếu nhập) | Sơ đồ mục 1, 3; Q2 |
-| **Cấu hình duyệt mẫu** (`ApprovalRuleTemplates`): PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch; POL, POX, POK, NDQ – Phó ban → Chủ tịch; RFQ – Phó ban → Trưởng ban; bảng giá – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; **chỉ ở tổng công ty**: GTH, CKB – Phó ban → Phó ban → Trưởng ban (3 thành viên Hội đồng thay biểu quyết), hồ sơ NCC – Trưởng ban. Vượt ngân sách (PRB, POB) không có trên sơ đồ – không cấu hình mẫu | Sơ đồ mục 2, 4 |
+| **Cấu hình duyệt mẫu** (`ApprovalRuleTemplates`): PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch; POL, POX, POK, NDQ – Phó ban → Chủ tịch; RFQ – Phó ban → Trưởng ban; bảng giá – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; **chỉ ở tổng công ty**: GTH, CKB – Phó ban → Phó ban → Trưởng ban (3 thành viên Hội đồng thay biểu quyết), GTX (GTH có ngoại lệ – H2) – Chủ tịch, hồ sơ NCC – Trưởng ban. Vượt ngân sách (PRB, POB) không có trên sơ đồ – không cấu hình mẫu | Sơ đồ mục 2, 4 |
 | Xem trước từng cấp với tình trạng: Sẽ tạo / Đã cấu hình – giữ nguyên / Thiếu vai trò mẫu / Chỉ ở tổng công ty. Áp cho **công ty đang làm việc**, chỉ tạo loại phiếu **chưa có cấp nào** và đủ vai trò mẫu của cả loại (thiếu một vai trò thì bỏ cả loại); không sửa cấu hình đã có; mọi cấp **ngưỡng 0** – người quản trị sửa ngưỡng theo phân quyền nội bộ. Xem: `System.Parameter.View`; áp: `System.Parameter.Manage` | Nguyên tắc "duyệt mấy cấp do người quản trị cấu hình" (mục 18.6) |
 
 Không có migration (vai trò, cấp duyệt là dữ liệu tạo khi người quản trị bấm).
@@ -1933,6 +1933,19 @@ biểu quyết**. Các quy tắc dưới tự đặt theo mặc định an toàn
 | **Chỉ thêm, không sửa/xóa**: ghi sai thì **người ghi rút** (bắt buộc lý do ≤ 500) khi đối tượng còn mở, rồi ghi ý kiến mới; ý kiến đã rút vẫn hiện (gạch, kèm lý do) nhưng không tính vào tổng hợp. Đối tượng đã quyết thì không rút, không đính kèm thêm. Đính kèm của ý kiến chỉ người ghi thêm/xóa. Mọi thay đổi vào AuditLog | Hội đồng quyết dựa trên ý kiến – KSNB đối chiếu được |
 
 Migration `V0_20_0_YKienThamDinh` (bảng `AppraisalOpinion` – bảng mới, `Down()` xóa bảng, mất các ý kiến đã ghi; AuditLog vẫn giữ).
+
+**H2 – Phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ** (09/11/2026, quyết định Q6 – sơ đồ bước 3 "Có ngoại lệ? → Chủ tịch HĐQT/TGĐ phê duyệt"):
+
+| Quy tắc | Lý do |
+| --- | --- |
+| **Ngoại lệ tự phát hiện** của từng dòng (`MonthlyApprovalExceptions`): (1) mặt hàng có **dưới 03 NCC đủ điều kiện** = NCC Đã duyệt có dòng NCC – sản phẩm của mặt hàng (như SUPCOV – G1) cộng NCC chính/dự phòng của dòng; có phiếu **NCC độc quyền** còn tác dụng (tại tổng công ty) thì ghi "NCC độc quyền theo NDQ-…" – độc quyền vẫn là ngoại lệ; (2) giá NCC chính hoặc dự phòng **vượt giá mục tiêu** (bằng thì không). Giá vượt trần không có vì phiếu không lưu được giá vượt trần của chính nó (G4b). Đếm theo mặt hàng; G1b đổi sang đếm theo nhóm hàng (Q1) | Báo cáo phân tích sơ đồ: "dòng < 3 NCC đủ điều kiện, NCC độc quyền, giá vượt trần/mục tiêu" |
+| Ngoại lệ tính lúc đọc khi phiếu Nháp/Chờ duyệt ở tổng công ty: lưới GTH có cột **Ngoại lệ** (tam giác vàng + mô tả, rê chuột xem đủ; dòng chưa lưu thì lưu nháp để tính), đầu phiếu cảnh báo vàng | Văn phòng Ban thấy trước khi gửi, Hội đồng thấy khi duyệt |
+| Đầu phiếu thêm ô **Giải trình ngoại lệ** (≤ 1.000 ký tự, chép theo khi điều chỉnh/chép sang tháng sau). Có ngoại lệ tự phát hiện mà chưa giải trình → **chặn gửi duyệt** (kể cả chạy thử cho popup). Không có ngoại lệ tự phát hiện mà người lập ghi giải trình = **tự khai ngoại lệ** (ngoại lệ khác: hạn mức bất thường, điều kiện thanh toán…) – cũng lên Chủ tịch/TGĐ | Chủ tịch/TGĐ cần lý do để phê duyệt; ngoại lệ không phát hiện được bằng máy vẫn đi đúng kênh |
+| Gửi duyệt phiếu có ngoại lệ: sau các cấp Hội đồng (chặng 1, loại GTH) thêm **chặng 2 "Ngoại lệ – Chủ tịch/TGĐ"** theo bộ cấp loại **GTX** "Ngoại lệ duyệt NCC và giá tháng" của tổng công ty (APRL, không xét giá trị, **luôn ít nhất một cấp**; chưa cấu hình → một cấp, ai có quyền duyệt GTH). Cùng quyền `Pricing.MonthlyApproval.Approve`; quy tắc chung giữ nguyên (người lập không tự duyệt, xung đột lợi ích, mỗi cấp một người – R3). Cờ `HasException` chốt lúc gửi (danh sách GTH có cột "Ngoại lệ"); popup Duyệt nêu ngoại lệ và giải trình | Hội đồng xem xét, Chủ tịch/TGĐ phê duyệt ngoại lệ |
+| Cấu hình duyệt mẫu (G10): **GTX – cấp 1 CHUTICH**, chỉ ở tổng công ty; vai trò mẫu **CHUTICH** thêm quyền duyệt GTH (vai trò CHUTICH đã tạo trước bản này giữ nguyên quyền khi áp lại vai trò mẫu – người quản trị thêm quyền "Duyệt phiếu NCC và giá tháng" bằng tay) | Sơ đồ mục 2, 4 |
+
+Migration `V0_20_0_GthNgoaiLe` (cột `ExceptionNote` varchar(1000) null, `HasException` boolean mặc định false trên `MonthlySupplierApproval`;
+`Down()` xóa hai cột, mất giải trình và cờ ngoại lệ; AuditLog vẫn giữ).
 
 ### 18.26 Rà soát lỗi và luồng nghiệp vụ (06/11/2026)
 

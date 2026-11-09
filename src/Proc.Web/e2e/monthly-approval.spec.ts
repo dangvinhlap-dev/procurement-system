@@ -4,8 +4,10 @@ import { api, approveSupplier, chooseOption, openByCommand, pickOption, unique }
 
 /**
  * Duyệt NCC và giá tháng (GTH – design.md mục 18.25, lát G2): quản trị ở tổng công ty lập phiếu tháng sau × nhóm hàng cho TCT và BHA, dòng
- * mặt hàng có NCC chính, giá, NCC dự phòng, giá dự phòng, hạn mức SL; lưu, gửi duyệt (người lập không tự duyệt). Luồng duyệt, điều chỉnh,
- * công ty áp dụng chỉ xem kiểm tra ở test tích hợp MonthlySupplierApprovalTests. Nhóm hàng, mặt hàng, NCC tạo mới mỗi lần chạy.
+ * mặt hàng có NCC chính, giá, NCC dự phòng, giá dự phòng, hạn mức SL; lưu, gửi duyệt (người lập không tự duyệt). Mặt hàng mới chỉ có 2 NCC đủ
+ * điều kiện nên là ngoại lệ (lát H2): cột Ngoại lệ có tam giác vàng, chưa giải trình thì không gửi được, gửi xong lịch sử duyệt có chặng
+ * "Ngoại lệ – Chủ tịch/TGĐ". Luồng duyệt, điều chỉnh, công ty áp dụng chỉ xem kiểm tra ở test tích hợp MonthlySupplierApprovalTests. Nhóm
+ * hàng, mặt hàng, NCC tạo mới mỗi lần chạy.
  */
 test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hình', async ({ page, request }) => {
   test.setTimeout(90_000)
@@ -72,6 +74,15 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   await expect(page.getByLabel('Hạn mức dòng 1')).toHaveValue('1.200')
   await expect(page.getByLabel('Giá trần dòng 1')).toHaveValue('90.000')
 
+  // Ngoại lệ (lát H2): mặt hàng mới chỉ có NCC chính + dự phòng – chưa đủ 03 NCC đủ điều kiện; chưa giải trình thì không gửi được.
+  await expect(page.getByLabel('Ngoại lệ dòng 1')).toBeVisible()
+  await expect(page.locator('.line-grid-readonly', { hasText: 'Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)' })).toBeVisible()
+  await expect(page.locator('.ant-alert-warning', { hasText: 'Chủ tịch/TGĐ' })).toBeVisible()
+  await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
+  await expect(page.getByText(/hãy nhập giải trình ngoại lệ/)).toBeVisible()
+  await expect(page.locator('.ant-modal-confirm')).toHaveCount(0)
+  await page.getByLabel('Giải trình ngoại lệ').fill('Mặt hàng mới, Phòng cung ứng đang tìm thêm NCC')
+
   // Gửi duyệt có popup xem trước người duyệt; người lập không tự duyệt.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   const dialog = page.locator('.ant-modal-confirm')
@@ -82,6 +93,9 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   await expect(page.getByRole('button', { name: /(^| )Duyệt$/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Rút về nháp$/ })).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/monthly-approval.png' })
+  await page.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
+  await expect(page.getByText('Ngoại lệ – Chủ tịch/TGĐ').first()).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/monthly-approval-exception.png' })
 
   await page.getByRole('button', { name: /(^| )Đóng$/ }).click()
   await expect(page.locator('.data-grid-row', { hasText: category.code })).toContainText('Chờ duyệt')

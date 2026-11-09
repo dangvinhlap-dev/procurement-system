@@ -40,6 +40,7 @@ public static class ApprovalRuleTemplates
         new(DocumentTypes.MonthlySupplierApproval, 1, PhoBan, true, "Bước 3: Hội đồng duyệt NCC & giá tháng – Phó ban thứ nhất"),
         new(DocumentTypes.MonthlySupplierApproval, 2, PhoBan, true, "Bước 3: Phó ban thứ hai"),
         new(DocumentTypes.MonthlySupplierApproval, 3, TruongBan, true, "Bước 3: Trưởng ban (thay biểu quyết 3 thành viên – G9 hoãn)"),
+        new(ApprovalTypes.MonthlyApprovalException, 1, ChuTich, true, "Bước 3: có ngoại lệ → Chủ tịch/TGĐ phê duyệt (Q6, lát H2)"),
         new(DocumentTypes.VolumeRebate, 1, PhoBan, true, "Hội đồng duyệt thỏa thuận chiết khấu – Phó ban thứ nhất"),
         new(DocumentTypes.VolumeRebate, 2, PhoBan, true, "Phó ban thứ hai"),
         new(DocumentTypes.VolumeRebate, 3, TruongBan, true, "Trưởng ban"),
