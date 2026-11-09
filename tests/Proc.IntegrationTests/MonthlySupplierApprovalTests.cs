@@ -204,10 +204,16 @@ public class MonthlySupplierApprovalTests
         var main = await SupplierAsync(head, "NCC chính ngoại lệ");
         var backup = await SupplierAsync(head, "NCC dự phòng ngoại lệ");
         var third = await SupplierAsync(head, "NCC thứ ba ngoại lệ");
-        var (categoryId, item1, item2, cai) = await CategoryAsync(head, "Phụ tùng ngoại lệ");
+        var (categoryId, item1, _, cai) = await CategoryAsync(head, "Phụ tùng ngoại lệ");
         await LinkAsync(head, third, item1, cai);
+        // Đếm theo nhóm hàng (G1b): mặt hàng dòng 2 ở nhóm con – NCC thứ ba có dòng NCC – sản phẩm ở nhóm cha không tính cho nhóm con.
+        var child = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, $"Nhóm con ngoại lệ {UniqueCode("")}", categoryId, null), Ct));
+        var item2 = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, "Phụ tùng nhóm con", null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false,
+                null, null, []), Ct))).Id;
         var tct = await _factory.GetCompanyIdAsync("TCT");
-        // Dòng 1 đủ 3 NCC, giá không vượt mục tiêu; dòng 2 chỉ có NCC chính + dự phòng, giá chính 12.000 vượt mục tiêu 11.500.
+        // Dòng 1 đủ 3 NCC, giá không vượt mục tiêu; dòng 2 nhóm con chỉ có NCC chính + dự phòng, giá chính 12.000 vượt mục tiêu 11.500.
         SaveMonthlyApprovalRequest Request(string? exceptionNote) => new(ThisMonth.AddMonths(1), categoryId, [tct], null,
         [
             new(null, item1, cai, main, 12_000m, backup, 12_500m, null, null, null, null, 12_500m),
@@ -215,7 +221,7 @@ public class MonthlySupplierApprovalTests
         ], exceptionNote);
         var draft = await ReadAsync<MonthlyApprovalDto>(await head.PostAsJsonAsync(Url, Request(null), Ct));
         Assert.Empty(draft.Lines[0].Exceptions!);
-        Assert.Equal(["Chỉ có 2 NCC đủ điều kiện (tối thiểu 3)", "Giá NCC chính 12.000 vượt giá mục tiêu 11.500"], draft.Lines[1].Exceptions);
+        Assert.Equal(["Nhóm hàng chỉ có 2 NCC đủ điều kiện (tối thiểu 3)", "Giá NCC chính 12.000 vượt giá mục tiêu 11.500"], draft.Lines[1].Exceptions);
 
         // Chưa giải trình thì không gửi được (kể cả chạy thử gửi duyệt cho popup).
         Assert.Contains("giải trình ngoại lệ", await TitleAsync(await head.PostAsync($"{Url}/{draft.Id}/submit", null, Ct)));

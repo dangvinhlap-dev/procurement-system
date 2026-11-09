@@ -1713,21 +1713,21 @@ ngân hàng giá, kế hoạch nhu cầu – chỉ đề xuất, không chọn N
 | Q5 – thanh toán | Giữ ở phần mềm kế toán (quyết định 6) | – |
 | Q6 – ngoại lệ ở bước Hội đồng duyệt NCC & giá | Thêm chặng **Chủ tịch/TGĐ** cho phiếu GTH có ngoại lệ | H2 |
 
-Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu – xong 09/11/2026) → G1b → G8 → G11
+Thứ tự làm sau phân tích sơ đồ: G10 → G7 → H1 (ý kiến thẩm định) → H2 (xong 09/11/2026) → H3 (xong 09/11/2026) → H4 (đơn vị đặt hàng xác nhận nghiệm thu – xong 09/11/2026) → G1b (xong 09/11/2026) → G8 → G11
 → G12; G9 hoãn.
 
 Kế hoạch lát: G1 NCC đủ điều kiện; G2 phiếu duyệt NCC và giá tháng; G3 PO kiểm tra theo phiếu tháng; G4 ngân hàng giá; G5 kế hoạch nhu
 cầu; G6 chiết khấu bậc theo sản lượng gộp; G7 đặt hàng gộp và phân bổ; G8 hồ sơ đánh giá NCC mới; G9 biểu quyết (hoãn); G10 vai trò mẫu
 theo quyết định; G11 định mức sử dụng; G12 báo cáo tháng cho Ban.
 
-**G1 – NCC đủ điều kiện theo mặt hàng** (màn hình **SUPCOV**, Giá và NCC → NCC đủ điều kiện, `GET /api/reports/supplier-coverage?minSuppliers=&categoryId=&onlyShort=`):
+**G1 – NCC đủ điều kiện** (G1b 09/11/2026: đếm theo **nhóm hàng**; màn hình **SUPCOV**, Giá và NCC → NCC đủ điều kiện, `GET /api/reports/supplier-coverage?minSuppliers=&categoryId=&onlyShort=`):
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Mỗi mặt hàng **đang dùng** (trong phạm vi nhóm hàng của người xem) đếm NCC **Đã duyệt** có dòng NCC – sản phẩm (mục 5.9) của mặt hàng; kèm số NCC Tiềm năng, Tạm ngưng để tham khảo | Quyết định: duy trì danh sách NCC đủ điều kiện, tối thiểu 03 NCC mỗi mặt hàng; NCC tiềm năng là nguồn Văn phòng Ban đang bổ sung |
+| **G1b (Q1, 09/11/2026)**: mỗi dòng là một **nhóm hàng** – nhóm trực tiếp chứa mặt hàng **đang dùng** (trong phạm vi nhóm hàng của người xem), kèm số mặt hàng. NCC **cung cấp nhóm X** khi có **ngành hàng** (`SupplierCategory`, mục 5.3) là X **hoặc nhóm cha** của X, hoặc có dòng NCC – sản phẩm (mục 5.9) của một mặt hàng thuộc trực tiếp X (`QualifiedSuppliers`). Đếm NCC **Đã duyệt**; kèm số NCC Tiềm năng, Tạm ngưng để tham khảo. Ngành hàng chỉ ở nhóm con không tính cho nhóm cha | Quyết định: duy trì danh sách NCC đủ điều kiện, tối thiểu 03 NCC; Q1 chốt đếm theo nhóm hàng (thay đếm theo mặt hàng của G1). NCC đăng ký ngành cha cung cấp được cả nhóm con; ngành con chỉ phủ một phần nhóm cha |
 | Số NCC tối thiểu nhập trên màn hình, **mặc định 3**, 1–20 | Mức của quyết định; xem thử mức khác không cần tham số |
-| Ít hơn mức tối thiểu là **Thiếu** (cột Còn thiếu = mức − số đã duyệt), trừ khi công ty đang làm việc có phiếu **NCC độc quyền** còn tác dụng hôm nay cho mặt hàng (mục 18.9) – **Miễn**, hiện số phiếu | Độc quyền đã giải trình, duyệt thì không thể có đủ 3 NCC |
-| Mặc định chỉ hiện mặt hàng thiếu, thiếu nhiều lên đầu; NCC đã duyệt liệt kê NCC ưu tiên đứng đầu. Quyền xem `MasterData.Supplier.View` | Văn phòng Ban thấy ngay việc cần làm |
+| Ít hơn mức tối thiểu là **Thiếu** (cột Còn thiếu = mức − số đã duyệt), trừ khi **mọi** mặt hàng đang dùng của nhóm có phiếu **NCC độc quyền** còn tác dụng hôm nay ở công ty đang làm việc (mục 18.9) – **Miễn**; cột "MH độc quyền" và số phiếu hiện cả khi chỉ một phần mặt hàng độc quyền | Độc quyền đã giải trình, duyệt thì không thể có đủ 3 NCC |
+| Mặc định chỉ hiện nhóm hàng thiếu, thiếu nhiều lên đầu; NCC đã duyệt liệt kê NCC ưu tiên (của ít nhất một mặt hàng trong nhóm) đứng đầu. Quyền xem `MasterData.Supplier.View` | Văn phòng Ban thấy ngay việc cần làm |
 
 Không có migration.
 
@@ -1938,7 +1938,7 @@ Migration `V0_20_0_YKienThamDinh` (bảng `AppraisalOpinion` – bảng mới, `
 
 | Quy tắc | Lý do |
 | --- | --- |
-| **Ngoại lệ tự phát hiện** của từng dòng (`MonthlyApprovalExceptions`): (1) mặt hàng có **dưới 03 NCC đủ điều kiện** = NCC Đã duyệt có dòng NCC – sản phẩm của mặt hàng (như SUPCOV – G1) cộng NCC chính/dự phòng của dòng; có phiếu **NCC độc quyền** còn tác dụng (tại tổng công ty) thì ghi "NCC độc quyền theo NDQ-…" – độc quyền vẫn là ngoại lệ; (2) giá NCC chính hoặc dự phòng **vượt giá mục tiêu** (bằng thì không). Giá vượt trần không có vì phiếu không lưu được giá vượt trần của chính nó (G4b). Đếm theo mặt hàng; G1b đổi sang đếm theo nhóm hàng (Q1) | Báo cáo phân tích sơ đồ: "dòng < 3 NCC đủ điều kiện, NCC độc quyền, giá vượt trần/mục tiêu" |
+| **Ngoại lệ tự phát hiện** của từng dòng (`MonthlyApprovalExceptions`): (1) **nhóm hàng** của mặt hàng có **dưới 03 NCC đủ điều kiện** = NCC Đã duyệt cung cấp nhóm (như SUPCOV – G1b: ngành hàng là nhóm/nhóm cha hoặc NCC – sản phẩm của mặt hàng trong nhóm) cộng NCC chính/dự phòng của dòng – "Nhóm hàng chỉ có N NCC đủ điều kiện (tối thiểu 3)"; có phiếu **NCC độc quyền** còn tác dụng (tại tổng công ty) thì ghi "NCC độc quyền theo NDQ-…" – độc quyền vẫn là ngoại lệ; (2) giá NCC chính hoặc dự phòng **vượt giá mục tiêu** (bằng thì không). Giá vượt trần không có vì phiếu không lưu được giá vượt trần của chính nó (G4b). Từ G1b (09/11/2026) đếm theo nhóm hàng (Q1); phiếu độc quyền vẫn theo mặt hàng | Báo cáo phân tích sơ đồ: "dòng < 3 NCC đủ điều kiện, NCC độc quyền, giá vượt trần/mục tiêu" |
 | Ngoại lệ tính lúc đọc khi phiếu Nháp/Chờ duyệt ở tổng công ty: lưới GTH có cột **Ngoại lệ** (tam giác vàng + mô tả, rê chuột xem đủ; dòng chưa lưu thì lưu nháp để tính), đầu phiếu cảnh báo vàng | Văn phòng Ban thấy trước khi gửi, Hội đồng thấy khi duyệt |
 | Đầu phiếu thêm ô **Giải trình ngoại lệ** (≤ 1.000 ký tự, chép theo khi điều chỉnh/chép sang tháng sau). Có ngoại lệ tự phát hiện mà chưa giải trình → **chặn gửi duyệt** (kể cả chạy thử cho popup). Không có ngoại lệ tự phát hiện mà người lập ghi giải trình = **tự khai ngoại lệ** (ngoại lệ khác: hạn mức bất thường, điều kiện thanh toán…) – cũng lên Chủ tịch/TGĐ | Chủ tịch/TGĐ cần lý do để phê duyệt; ngoại lệ không phát hiện được bằng máy vẫn đi đúng kênh |
 | Gửi duyệt phiếu có ngoại lệ: sau các cấp Hội đồng (chặng 1, loại GTH) thêm **chặng 2 "Ngoại lệ – Chủ tịch/TGĐ"** theo bộ cấp loại **GTX** "Ngoại lệ duyệt NCC và giá tháng" của tổng công ty (APRL, không xét giá trị, **luôn ít nhất một cấp**; chưa cấu hình → một cấp, ai có quyền duyệt GTH). Cùng quyền `Pricing.MonthlyApproval.Approve`; quy tắc chung giữ nguyên (người lập không tự duyệt, xung đột lợi ích, mỗi cấp một người – R3). Cờ `HasException` chốt lúc gửi (danh sách GTH có cột "Ngoại lệ"); popup Duyệt nêu ngoại lệ và giải trình | Hội đồng xem xét, Chủ tịch/TGĐ phê duyệt ngoại lệ |

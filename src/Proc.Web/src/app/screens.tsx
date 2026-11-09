@@ -150,7 +150,7 @@ export const screens: Screen[] = [
   // Chiết khấu bậc theo sản lượng gộp (design.md mục 18.25 – lát G6a): thỏa thuận tổng công ty lập, Ban duyệt; theo dõi lũy kế so với bậc.
   { code: 'CKB', title: 'Chiết khấu sản lượng gộp', navLabel: 'Chiết khấu sản lượng gộp', path: '/gia-ncc/chiet-khau-san-luong', icon: <FundOutlined />, group: 'pricing', permission: Permission.VolumeRebateView },
   { code: 'CKBT', title: 'Theo dõi bậc chiết khấu sản lượng gộp', navLabel: 'Theo dõi bậc chiết khấu', path: '/gia-ncc/theo-doi-bac-chiet-khau', icon: <FundOutlined />, group: 'pricing', permission: Permission.VolumeRebateView },
-  { code: 'SUPCOV', title: 'NCC đủ điều kiện theo mặt hàng', navLabel: 'NCC đủ điều kiện', path: '/gia-ncc/ncc-du-dieu-kien', icon: <SafetyCertificateOutlined />, group: 'pricing', permission: Permission.SupplierView },
+  { code: 'SUPCOV', title: 'NCC đủ điều kiện theo nhóm hàng', navLabel: 'NCC đủ điều kiện', path: '/gia-ncc/ncc-du-dieu-kien', icon: <SafetyCertificateOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'SUPREV', title: 'Đánh giá NCC định kỳ', navLabel: 'Đánh giá NCC định kỳ', path: '/gia-ncc/danh-gia-ncc-dinh-ky', icon: <StarOutlined />, group: 'pricing', anyPermission: [Permission.SupplierReviewView, Permission.SupplierReviewManage] },
   { code: 'SGRP', title: 'Nhóm nhà cung cấp', navLabel: 'Nhóm NCC', path: '/gia-ncc/nhom-ncc', icon: <GroupOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },

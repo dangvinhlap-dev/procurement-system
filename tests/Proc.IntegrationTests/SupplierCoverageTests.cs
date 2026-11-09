@@ -9,8 +9,9 @@ using Proc.Domain.Organization;
 namespace Proc.IntegrationTests;
 
 /// <summary>
-/// NCC đủ điều kiện theo mặt hàng (lát G1, design.md mục 18.25 – quyết định thành lập Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC):
-/// chỉ đếm NCC Đã duyệt; NCC độc quyền đã duyệt còn tác dụng thì miễn; lọc nhóm hàng và "chỉ thiếu"; cần quyền xem NCC.
+/// NCC đủ điều kiện theo nhóm hàng (lát G1 → G1b, design.md mục 18.25 – quyết định thành lập Ban cung ứng: tối thiểu 03 NCC; Q1 08/11/2026:
+/// đếm theo nhóm hàng): NCC Đã duyệt có ngành hàng là nhóm/nhóm cha hoặc dòng NCC – sản phẩm của mặt hàng trong nhóm; nhóm mà mọi mặt hàng
+/// có NCC độc quyền đã duyệt còn tác dụng thì miễn; lọc nhóm hàng và "chỉ thiếu"; cần quyền xem NCC.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public class SupplierCoverageTests
@@ -40,11 +41,12 @@ public class SupplierCoverageTests
         return await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
     }
 
-    /// <summary>NCC theo trạng thái; Đã duyệt thì đi hết quy trình duyệt NCC.</summary>
-    private async Task<Guid> SupplierAsync(HttpClient head, Guid groupId, string name, string status)
+    /// <summary>NCC theo trạng thái, kèm ngành hàng (nếu có); Đã duyệt thì đi hết quy trình duyệt NCC.</summary>
+    private async Task<Guid> SupplierAsync(HttpClient head, Guid groupId, string name, string status, params Guid[] categoryIds)
     {
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
-            new SaveSupplierRequest(null, groupId, name, null, false, null, null, null, null, null, null, null, null, status, null, null, [], []), Ct));
+            new SaveSupplierRequest(null, groupId, name, null, false, null, null, null, null, null, null, null, null, status, null, null, [], [],
+                categoryIds), Ct));
         if (status == "Approved") await _factory.FinishSupplierApprovalAsync(supplier.Id);
         return supplier.Id;
     }
@@ -54,60 +56,68 @@ public class SupplierCoverageTests
             new SaveSupplierItemRequest(itemId, null, uomId, null, null, preferred), Ct));
 
     [Fact]
-    public async Task DemNccDaDuyet_DocQuyenDuocMien_LocChiThieu_CanQuyenXemNcc()
+    public async Task DemTheoNhomHang_NganhHangNhomCha_DocQuyenDuocMien_LocChiThieu_CanQuyenXemNcc()
     {
         var userName = $"cm.{Guid.NewGuid():N}"[..16];
         await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT"]);
         var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm đủ NCC {UniqueCode("")}", null, null), Ct));
-        async Task<ItemDetailDto> Item(string name) => await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
-        var enough = await Item("Gạo tám thơm");
-        var shortItem = await Item("Dầu ăn 5 lít");
-        var sole = await Item("Phụ tùng máy làm kem");
+        async Task<ItemCategoryDetailDto> Category(string name, Guid? parentId) => await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync(
+            "/api/item-categories", new CreateItemCategoryRequest(null, $"{name} {UniqueCode("")}", parentId, null), Ct));
+        async Task<ItemDetailDto> Item(string name, Guid categoryId) => await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+        // Nhóm cha (không có mặt hàng) và ba nhóm con: đủ, thiếu, độc quyền.
+        var parent = await Category("Nhóm đủ NCC", null);
+        var enough = await Category("Gạo", parent.Id);
+        var shortCategory = await Category("Dầu ăn", parent.Id);
+        var soleCategory = await Category("Phụ tùng máy kem", parent.Id);
+        var rice1 = await Item("Gạo tám thơm", enough.Id);
+        var rice2 = await Item("Gạo nếp", enough.Id);
+        var oil = await Item("Dầu ăn 5 lít", shortCategory.Id);
+        var sole = await Item("Phụ tùng máy làm kem", soleCategory.Id);
 
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var a = await SupplierAsync(head, groupId, "NCC gạo An", "Approved");
         var b = await SupplierAsync(head, groupId, "NCC gạo Bình", "Approved");
-        var c = await SupplierAsync(head, groupId, "NCC gạo Cường", "Approved");
+        // Ngành hàng nhóm cha tính cho mọi nhóm con; ngành hàng đúng nhóm con chỉ tính cho nhóm đó.
+        var c = await SupplierAsync(head, groupId, "NCC tổng hợp Cường", "Approved", parent.Id);
+        await SupplierAsync(head, groupId, "NCC dầu Dũng", "Approved", shortCategory.Id);
         var potential = await SupplierAsync(head, groupId, "NCC dầu tiềm năng", "Potential");
-        await LinkAsync(head, a, enough.Id, cai);
-        await LinkAsync(head, b, enough.Id, cai, preferred: true);
-        await LinkAsync(head, c, enough.Id, cai);
-        await LinkAsync(head, a, shortItem.Id, cai);
-        await LinkAsync(head, potential, shortItem.Id, cai);
+        // Mỗi mặt hàng gạo chỉ một NCC – theo mặt hàng là thiếu, theo nhóm hàng thì nhóm Gạo đủ 3 (An, Bình, Cường).
+        await LinkAsync(head, a, rice1.Id, cai);
+        await LinkAsync(head, b, rice2.Id, cai, preferred: true);
+        await LinkAsync(head, potential, oil.Id, cai);
         await LinkAsync(head, c, sole.Id, cai);
 
-        // Phiếu NCC độc quyền đã duyệt (người khác duyệt) cho mặt hàng thứ ba.
+        // Phiếu NCC độc quyền đã duyệt (người khác duyệt) cho mặt hàng duy nhất của nhóm thứ ba.
         var ndq = await ReadAsync<SoleSourceDto>(await head.PostAsJsonAsync("/api/sole-sources",
             new SaveSoleSourceRequest(c, sole.Id, "Chỉ hãng này có phụ tùng", Today, Today.AddMonths(6)), Ct));
         await ReadAsync<SoleSourceDto>(await head.PostAsync($"/api/sole-sources/{ndq.Id}/submit", null, Ct));
         var approver = await UserWithAsync(Permissions.MasterData.SoleSourceView, Permissions.MasterData.SoleSourceApprove);
         await ReadAsync<SoleSourceDto>(await approver.PostAsJsonAsync($"/api/sole-sources/{ndq.Id}/approve", new ApprovalActionRequest(null), Ct));
 
-        var report = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={category.Id}", Ct));
-        Assert.Equal((3, 3, 1), (report.MinSuppliers, report.ItemCount, report.ShortCount));
+        var report = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={parent.Id}", Ct));
+        // Nhóm cha không có mặt hàng nên không thành dòng.
+        Assert.Equal((3, 3, 1), (report.MinSuppliers, report.CategoryCount, report.ShortCount));
         // Thiếu nhiều lên đầu.
-        Assert.Equal(shortItem.Id, report.Items[0].ItemId);
-        var s = report.Items[0];
-        Assert.Equal((1, 1, 0, 2, SupplierCoverageStatuses.Short, "NCC gạo An"), (s.ApprovedCount, s.PotentialCount, s.SuspendedCount, s.Missing, s.Status, s.ApprovedSuppliers));
-        var e = report.Items.Single(r => r.ItemId == enough.Id);
-        Assert.Equal((3, SupplierCoverageStatuses.Ok, "NCC gạo Bình; NCC gạo An; NCC gạo Cường"), (e.ApprovedCount, e.Status, e.ApprovedSuppliers));
-        var so = report.Items.Single(r => r.ItemId == sole.Id);
-        Assert.Equal((SupplierCoverageStatuses.SoleSource, 0, ndq.No), (so.Status, so.Missing, so.SoleSourceNo));
+        var s = report.Categories[0];
+        Assert.Equal((shortCategory.Id, 1, 2, 1, 0, 1, SupplierCoverageStatuses.Short, "NCC dầu Dũng; NCC tổng hợp Cường"),
+            (s.CategoryId, s.ItemCount, s.ApprovedCount, s.PotentialCount, s.SuspendedCount, s.Missing, s.Status, s.ApprovedSuppliers));
+        var e = report.Categories.Single(r => r.CategoryId == enough.Id);
+        Assert.Equal((2, 3, SupplierCoverageStatuses.Ok, "NCC gạo Bình; NCC gạo An; NCC tổng hợp Cường"), (e.ItemCount, e.ApprovedCount, e.Status, e.ApprovedSuppliers));
+        var so = report.Categories.Single(r => r.CategoryId == soleCategory.Id);
+        Assert.Equal((1, SupplierCoverageStatuses.SoleSource, 0, 1, ndq.No), (so.ApprovedCount, so.Status, so.Missing, so.SoleSourceItemCount, so.SoleSourceNo));
 
-        // Chỉ thiếu; mức tối thiểu 1 thì mọi mặt hàng đủ; ngoài 1–20 bị chặn.
-        var onlyShort = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={category.Id}&onlyShort=true", Ct));
-        Assert.Equal([shortItem.Id], onlyShort.Items.Select(r => r.ItemId));
-        var one = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={category.Id}&minSuppliers=1", Ct));
-        Assert.All(one.Items, r => Assert.Equal(SupplierCoverageStatuses.Ok, r.Status));
+        // Chỉ thiếu; mức tối thiểu 1 thì mọi nhóm đủ; ngoài 1–20 bị chặn.
+        var onlyShort = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={parent.Id}&onlyShort=true", Ct));
+        Assert.Equal([shortCategory.Id], onlyShort.Categories.Select(r => r.CategoryId));
+        var one = await ReadAsync<SupplierCoverageResult>(await head.GetAsync($"/api/reports/supplier-coverage?categoryId={parent.Id}&minSuppliers=1", Ct));
+        Assert.All(one.Categories, r => Assert.Equal(SupplierCoverageStatuses.Ok, r.Status));
         Assert.Equal(HttpStatusCode.BadRequest, (await head.GetAsync("/api/reports/supplier-coverage?minSuppliers=0", Ct)).StatusCode);
 
         // Quyền: xem NCC là đủ; không có thì 403.
         var viewer = await UserWithAsync(Permissions.MasterData.SupplierView);
-        Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync($"/api/reports/supplier-coverage?categoryId={category.Id}", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync($"/api/reports/supplier-coverage?categoryId={parent.Id}", Ct)).StatusCode);
         var other = await UserWithAsync(Permissions.MasterData.ItemView);
         Assert.Equal(HttpStatusCode.Forbidden, (await other.GetAsync("/api/reports/supplier-coverage", Ct)).StatusCode);
     }

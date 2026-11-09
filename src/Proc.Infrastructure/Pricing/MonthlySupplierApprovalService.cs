@@ -288,32 +288,31 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
 
     /// <summary>
     /// Ngoại lệ tự phát hiện của từng dòng (lát H2, <see cref="MonthlyApprovalExceptions"/>), khóa theo mặt hàng (mỗi mặt hàng một dòng), mô tả
-    /// có tiền tố mã hàng. NCC đủ điều kiện = NCC Đã duyệt có dòng NCC – sản phẩm của mặt hàng (như SUPCOV – lát G1) cộng NCC chính/dự phòng
-    /// của dòng (đã kiểm tra Đã duyệt). Đọc qua filter phạm vi nhóm hàng và công ty đang làm việc (tổng công ty – phiếu độc quyền của tổng
-    /// công ty) như mọi truy vấn khác.
+    /// có tiền tố mã hàng. NCC đủ điều kiện đếm theo <b>nhóm hàng</b> của mặt hàng (Q1 – lát G1b, như SUPCOV): NCC Đã duyệt cung cấp nhóm
+    /// (<see cref="QualifiedSuppliers"/>) cộng NCC chính/dự phòng của dòng (đã kiểm tra Đã duyệt); phiếu độc quyền vẫn theo mặt hàng. Đọc qua
+    /// filter phạm vi nhóm hàng và công ty đang làm việc (tổng công ty – phiếu độc quyền của tổng công ty) như mọi truy vấn khác.
     /// </summary>
     private async Task<Dictionary<Guid, IReadOnlyList<string>>> ExceptionsAsync(MonthlySupplierApproval approval, CancellationToken cancellationToken)
     {
         var today = _clock.TodayInVietnam();
         var itemIds = approval.Lines.Select(l => l.ItemId).Distinct().ToList();
-        var links = (await _db.SupplierItems.AsNoTracking().Where(l => itemIds.Contains(l.ItemId))
-                .Join(_db.Suppliers.AsNoTracking().Where(s => s.Status == SupplierStatus.Approved), l => l.SupplierId, s => s.Id,
-                    (l, s) => new { l.ItemId, SupplierId = s.Id })
-                .ToListAsync(cancellationToken))
-            .ToLookup(x => x.ItemId, x => x.SupplierId);
         var soleSources = (await _db.SoleSourceApprovals.AsNoTracking()
                 .Where(x => itemIds.Contains(x.ItemId) && x.Status == SoleSourceStatus.Approved && x.ValidFrom <= today && x.ReviewDate >= today)
                 .Select(x => new { x.ItemId, x.No, x.ValidFrom })
                 .ToListAsync(cancellationToken))
             .GroupBy(x => x.ItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ValidFrom).First().No);
-        var codes = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.Code, cancellationToken);
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id, i => new { i.Code, i.CategoryId }, cancellationToken);
+        var byCategory = await QualifiedSuppliers.ByCategoryAsync(_db, items.Values.Select(i => i.CategoryId).ToList(), cancellationToken);
         return approval.Lines.ToDictionary(l => l.ItemId, l =>
         {
-            var suppliers = links[l.ItemId].Append(l.MainSupplierId).ToList();
+            var item = items.GetValueOrDefault(l.ItemId);
+            var suppliers = (item is null ? [] : byCategory[item.CategoryId])
+                .Where(x => x.Status == SupplierStatus.Approved).Select(x => x.SupplierId).Append(l.MainSupplierId).ToList();
             if (l.BackupSupplierId is { } backup) suppliers.Add(backup);
             return (IReadOnlyList<string>)MonthlyApprovalExceptions
                 .ForLine(suppliers.Distinct().Count(), soleSources.GetValueOrDefault(l.ItemId), l.UnitPrice, l.BackupUnitPrice, l.TargetPrice)
-                .Select(e => $"{codes.GetValueOrDefault(l.ItemId)}: {e}").ToList();
+                .Select(e => $"{item?.Code}: {e}").ToList();
         });
     }
 

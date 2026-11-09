@@ -758,37 +758,41 @@ export function useKpi(range: { from: string; to: string }) {
   })
 }
 
-/** Trạng thái một mặt hàng trong báo cáo NCC đủ điều kiện: đủ / thiếu / miễn vì NCC độc quyền. */
+/** Trạng thái một nhóm hàng trong báo cáo NCC đủ điều kiện: đủ / thiếu / miễn vì NCC độc quyền. */
 export type SupplierCoverageStatus = 'Ok' | 'Short' | 'SoleSource'
 
-/** Một mặt hàng: số NCC Đã duyệt khai báo bán mặt hàng so với mức tối thiểu (design.md mục 18.25). */
+/**
+ * Một nhóm hàng: số NCC Đã duyệt cung cấp nhóm (ngành hàng là nhóm/nhóm cha hoặc NCC – sản phẩm của mặt hàng trong nhóm) so với mức tối
+ * thiểu (design.md mục 18.25, Q1 – lát G1b).
+ */
 export interface SupplierCoverageRow {
-  itemId: string
-  itemCode: string
-  itemName: string
+  categoryId: string
+  categoryCode: string
   categoryName: string
+  itemCount: number
   approvedCount: number
   potentialCount: number
   suspendedCount: number
   missing: number
   status: SupplierCoverageStatus
   approvedSuppliers: string
+  soleSourceItemCount: number
   soleSourceNo: string | null
 }
 
-/** Báo cáo NCC đủ điều kiện theo mặt hàng. */
+/** Báo cáo NCC đủ điều kiện theo nhóm hàng. */
 export interface SupplierCoverageResult {
   minSuppliers: number
-  itemCount: number
+  categoryCount: number
   shortCount: number
-  items: SupplierCoverageRow[]
+  categories: SupplierCoverageRow[]
 }
 
 /**
- * NCC đủ điều kiện theo mặt hàng – quyết định Ban cung ứng: mỗi mặt hàng tối thiểu 03 NCC (design.md mục 18.25).
+ * NCC đủ điều kiện theo nhóm hàng – quyết định Ban cung ứng: tối thiểu 03 NCC, đếm theo nhóm hàng (design.md mục 18.25, Q1 – lát G1b).
  * @param minSuppliers Số NCC tối thiểu (1–20).
  * @param categoryId Nhóm hàng (gồm nhóm con), không có = mọi nhóm.
- * @param onlyShort Chỉ mặt hàng thiếu.
+ * @param onlyShort Chỉ nhóm hàng thiếu.
  */
 export function useSupplierCoverage(minSuppliers: number, categoryId: string | undefined, onlyShort: boolean) {
   const companyId = useCompanyId()
