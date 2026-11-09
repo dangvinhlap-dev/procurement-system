@@ -327,6 +327,92 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             .ToDictionary(g => g.Key, g => g.Sum(l => Math.Max(0, l.BaseQty - received.GetValueOrDefault(l.Id))));
     }
 
+    /// <summary>Kết quả kiểm tra định mức sử dụng của một dòng PR (lát G11) – SL theo ĐVT cơ sở.</summary>
+    private sealed record UsageNorm(string Status, decimal NormQty, decimal RequestedQty, DateOnly Through);
+
+    /// <summary>
+    /// Kiểm tra định mức sử dụng từng dòng PR – lát G11, design.md mục 18.25 (quyết định: Phòng cung ứng chung kiểm tra yêu cầu mua theo
+    /// định mức; định mức căn cứ kế hoạch nhu cầu đã chốt của công ty). Mọi SL theo ĐVT cơ sở, lũy kế từ 01/01 đến hết tháng cần hàng T
+    /// của dòng (ngày cần dòng → ngày cần đầu phiếu → ngày đề nghị):
+    /// định mức = Σ tháng 1..T của dòng kế hoạch Đã chốt (SL tháng × hệ số ĐVT, làm tròn 4 số lẻ từng tháng);
+    /// đã đề nghị = Σ dòng PR khác Đã gửi/Đã duyệt (Đã đóng phần còn lại: chỉ phần đã lên PO) có ngày cần trong khoảng
+    /// + mọi dòng cùng mặt hàng của chính phiếu có ngày cần trong khoảng.
+    /// Ví dụ kế hoạch 10/10/10 cái tháng 1–3, PR khác 15 cái tháng 2, dòng này 8 cái tháng 2 → 23 &gt; 20 → vượt (chỉ cảnh báo).
+    /// Chỉ kiểm tra khi nhóm hàng của mặt hàng hoặc một nhóm cha có phiếu kế hoạch Đã chốt của năm đó – nhóm chưa lập kế hoạch thì không
+    /// cảnh báo hàng loạt; nhóm có kế hoạch mà mặt hàng không có dòng → "NoPlan" (ngoài kế hoạch).
+    /// </summary>
+    /// <param name="pr">Phiếu (đã có Id dòng).</param>
+    /// <param name="itemCategories">Nhóm hàng của các mặt hàng người xem thấy được (mặt hàng ngoài phạm vi không kiểm tra).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Kết quả theo Id dòng PR; dòng không kiểm tra thì không có.</returns>
+    private async Task<Dictionary<Guid, UsageNorm>> UsageNormsAsync(
+        PurchaseRequest pr, IReadOnlyDictionary<Guid, Guid> itemCategories, CancellationToken cancellationToken)
+    {
+        if (pr.Status == ApprovalDocumentStatus.Cancelled || pr.Lines.Count == 0) return [];
+        DateOnly Needed(DateOnly? lineDate) => lineDate ?? pr.NeededDate ?? pr.Date;
+        var years = pr.Lines.Select(l => Needed(l.NeededDate).Year).Distinct().ToList();
+        // Global query filter: chỉ phiếu kế hoạch của công ty đang làm việc.
+        var plans = await _db.DemandPlans.AsNoTracking()
+            .Where(p => p.Status == DemandPlanStatus.Confirmed && years.Contains(p.Year))
+            .Select(p => new { p.Id, p.Year, p.ItemCategoryId }).ToListAsync(cancellationToken);
+        if (plans.Count == 0) return [];
+
+        var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var planIds = plans.Select(p => p.Id).ToList();
+        var planLines = await _db.Set<DemandPlanLine>().AsNoTracking()
+            .Where(l => planIds.Contains(l.PlanId) && itemIds.Contains(l.ItemId)).ToListAsync(cancellationToken);
+        var parents = await _db.ItemCategories.AsNoTracking().Select(c => new { c.Id, c.ParentId })
+            .ToDictionaryAsync(c => c.Id, c => c.ParentId, cancellationToken);
+        var plannedCategories = plans.Select(p => (p.Year, p.ItemCategoryId)).ToHashSet();
+        bool Covered(Guid categoryId, int year)
+        {
+            // Đi ngược lên nhóm cha; giới hạn số bước phòng dữ liệu vòng lặp.
+            Guid? current = categoryId;
+            for (var depth = 0; current is { } id && depth < 50; depth++)
+            {
+                if (plannedCategories.Contains((year, id))) return true;
+                current = parents.GetValueOrDefault(id);
+            }
+            return false;
+        }
+
+        var fromDate = new DateOnly(years.Min(), 1, 1);
+        var toDate = new DateOnly(years.Max(), 12, 31);
+        var others = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where r.Id != pr.Id && itemIds.Contains(l.ItemId)
+                      && (r.Status == ApprovalDocumentStatus.Submitted || r.Status == ApprovalDocumentStatus.Approved
+                          || r.Status == ApprovalDocumentStatus.Closed)
+                      && (l.NeededDate ?? r.NeededDate ?? r.Date) >= fromDate && (l.NeededDate ?? r.NeededDate ?? r.Date) <= toDate
+                select new { l.Id, l.ItemId, l.BaseQty, Needed = l.NeededDate ?? r.NeededDate ?? r.Date, r.Status })
+            .ToListAsync(cancellationToken);
+        // PR đã đóng phần còn lại (lát R6): phần chưa lên PO không còn là nhu cầu.
+        var closedOrdered = await OrderedBaseByLineAsync(
+            others.Where(o => o.Status == ApprovalDocumentStatus.Closed).Select(o => o.Id).ToList(), null, cancellationToken);
+        var requestedRows = others.Select(o => (o.ItemId, o.Needed,
+                Qty: o.Status == ApprovalDocumentStatus.Closed ? closedOrdered.GetValueOrDefault(o.Id) : o.BaseQty))
+            .Concat(pr.Lines.Select(l => (l.ItemId, Needed: Needed(l.NeededDate), Qty: l.BaseQty)))
+            .ToList();
+
+        var result = new Dictionary<Guid, UsageNorm>();
+        foreach (var line in pr.Lines)
+        {
+            if (!itemCategories.TryGetValue(line.ItemId, out var categoryId)) continue;
+            var needed = Needed(line.NeededDate);
+            if (!Covered(categoryId, needed.Year)) continue;
+            var start = new DateOnly(needed.Year, 1, 1);
+            var through = new DateOnly(needed.Year, needed.Month, DateTime.DaysInMonth(needed.Year, needed.Month));
+            var yearPlans = plans.Where(p => p.Year == needed.Year).Select(p => p.Id).ToHashSet();
+            var rows = planLines.Where(p => p.ItemId == line.ItemId && yearPlans.Contains(p.PlanId)).ToList();
+            var norm = rows.Sum(p => p.Months.Take(needed.Month).Sum(q => Math.Round(q * p.UomFactor, 4, MidpointRounding.AwayFromZero)));
+            var requested = requestedRows.Where(r => r.ItemId == line.ItemId && r.Needed >= start && r.Needed <= through).Sum(r => r.Qty);
+            var status = rows.Count == 0 ? "NoPlan" : requested > norm ? "Over" : "Ok";
+            result[line.Id] = new UsageNorm(status, norm, requested, through);
+        }
+        return result;
+    }
+
     /// <summary>Hàng mới chưa có mã gửi lên: ĐVT phải có trong danh mục ĐVT.</summary>
     /// <exception cref="NotFoundException">Khi ĐVT không có.</exception>
     private async Task<List<PurchaseRequestNewItemData>> ResolveNewItemsAsync(
@@ -354,7 +440,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     {
         var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
-            .Select(i => new { i.Id, i.Code, i.Name, i.BaseUomId }).ToDictionaryAsync(i => i.Id, cancellationToken);
+            .Select(i => new { i.Id, i.Code, i.Name, i.BaseUomId, i.CategoryId }).ToDictionaryAsync(i => i.Id, cancellationToken);
+        var norms = await UsageNormsAsync(pr, items.ToDictionary(i => i.Key, i => i.Value.CategoryId), cancellationToken);
         var uomIds = pr.Lines.Select(l => l.UomId).Concat(pr.NewItems.Select(n => n.UomId)).Concat(items.Values.Select(i => i.BaseUomId)).Distinct().ToList();
         var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
         var supplierIds = pr.Lines.Select(l => l.SuggestedSupplierId).OfType<Guid>().Distinct().ToList();
@@ -372,12 +459,13 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var lines = pr.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
             var item = items.GetValueOrDefault(l.ItemId);
+            var norm = norms.GetValueOrDefault(l.Id);
             return new PurchaseRequestLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.EstPrice, l.Amount,
                 l.SuggestedSupplierId, l.SuggestedSupplierId is { } s ? suppliers.GetValueOrDefault(s) : null, l.NeededDate, l.Note,
                 Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), onHand.GetValueOrDefault(l.ItemId),
-                onOrder.GetValueOrDefault(l.ItemId));
+                onOrder.GetValueOrDefault(l.ItemId), norm?.Status, norm?.NormQty ?? 0, norm?.RequestedQty ?? 0, norm?.Through);
         }).ToList();
 
         var sourcingIds = pr.NewItems.Select(n => n.SourcingRequestId).OfType<Guid>().ToList();

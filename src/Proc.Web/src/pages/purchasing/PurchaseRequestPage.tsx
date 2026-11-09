@@ -29,6 +29,7 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
+import { UsageNormCell, UsageNormNotice } from './UsageNormNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 
@@ -272,6 +273,8 @@ export function PurchaseRequestPage() {
     { key: 'onHand', title: 'Tồn hiện tại', width: 95, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onHandQty) : '') },
     // Hàng đang đặt (PO đã duyệt chưa nhận đủ) – kiểm tra trước khi đề nghị thêm (design.md mục 18.13, V2).
     { key: 'onOrder', title: 'Đang đặt', width: 90, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onOrderQty) : '') },
+    // Định mức sử dụng lũy kế theo kế hoạch nhu cầu đã chốt – chỉ cảnh báo (lát G11, design.md mục 18.25).
+    { key: 'norm', title: 'Định mức LK', width: 120, align: 'right', render: (_, index) => <UsageNormCell line={savedLine(index)} index={index} /> },
     { key: 'price', title: 'Giá tham khảo', width: 115, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.estPrice) : 'Tự lấy khi lưu') },
     { key: 'amount', title: 'Thành tiền dự kiến', width: 125, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.amount) : '') },
     {
@@ -457,6 +460,7 @@ export function PurchaseRequestPage() {
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
           )}
           <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+          <UsageNormNotice lines={doc?.lines} />
           <ClosedRemainingNotice doc={doc} />
         </>
       }

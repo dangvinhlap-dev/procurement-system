@@ -207,6 +207,17 @@ export interface PurchaseRequestLine {
   onHandQty: number
   /** SL đang đặt của mặt hàng tại công ty (PO đã duyệt chưa nhận đủ, ĐVT cơ sở) – design.md mục 18.13. */
   onOrderQty: number
+  /**
+   * Định mức sử dụng (lát G11, design.md mục 18.25): null = không kiểm tra; Ok; Over – vượt; NoPlan – ngoài kế hoạch nhu cầu.
+   * SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến normThrough.
+   */
+  normStatus: 'Ok' | 'Over' | 'NoPlan' | null
+  /** SL kế hoạch nhu cầu đã chốt lũy kế. */
+  normQty: number
+  /** SL đã đề nghị lũy kế (PR khác đã gửi/duyệt + các dòng của phiếu này). */
+  normRequestedQty: number
+  /** Ngày cuối tháng cần hàng của dòng (yyyy-MM-dd). */
+  normThrough: string | null
 }
 
 /** Chi tiết PR. */

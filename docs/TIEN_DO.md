@@ -459,25 +459,30 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 **Các lát chưa làm (ghi nhận 08/11/2026 theo yêu cầu người dùng):**
 - Phân tích sơ đồ phê duyệt (xong 08/11/2026): `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy). Người dùng chốt Q1–Q6
-  (design.md 18.25). Thứ tự làm: **G10 (xong)** → **G7 (xong)** → **H1 (xong)** → **H2 (xong)** → **H3 (xong)** → **H4 (xong)** → **G1b (xong)** → **G8 (xong)** → G11 → G12; G9 hoãn.
+  (design.md 18.25). Thứ tự làm: **G10 (xong)** → **G7 (xong)** → **H1 (xong)** → **H2 (xong)** → **H3 (xong)** → **H4 (xong)** → **G1b (xong)** → **G8 (xong)** → **G11 (xong)** → G12; G9 hoãn.
 - ~~**H1** ý kiến thẩm định của thành viên chuyên môn (GTH, RFQ, hợp đồng, hồ sơ NCC) – không phải cấp duyệt.~~ Xong 09/11/2026.
 - ~~**H2** phiếu GTH có ngoại lệ → thêm chặng Chủ tịch/TGĐ (Q6).~~ Xong 09/11/2026.
 - ~~**H3** PO vượt giá trần → phải Chủ tịch/TGĐ duyệt (Q3).~~ Xong 09/11/2026.
 - ~~**H4** đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập.~~ Xong 09/11/2026.
 - **Lỗi cần xem**: e2e `volume-rebate` (CKB) lỗi ổn định từ 09/11/2026 – ô "% chiết khấu bậc 2" nhận chữ số vào ô ngưỡng. Lần chạy đủ bộ
   sau G1b (09/11/2026, API 5000 + Vite 5173) thì qua – có thể chỉ lỗi khi chạy API 5010/Vite 5180; lỗi lại thì xem tiếp.
+  **09/11/2026 sau G11: lỗi lại ổn định cả trên `main` (API 5000/Vite 5173)** – không báo "Đã lưu thỏa thuận CKB-…"; cần sửa (nhánh `fix/`)
+  trước G12. Bộ Playwright khác 114/115 qua.
 - ~~**G1b** đếm tối thiểu 03 NCC theo nhóm hàng (Q1).~~ Xong 09/11/2026.
 - ~~**G7** đặt hàng gộp và phân bổ.~~ Xong 08/11/2026.
 - ~~**G8** hồ sơ đánh giá NCC mới.~~ Xong 09/11/2026 (xem bảng Đã xong).
 - **G9** biểu quyết Ban – **hoãn** (tạm dùng duyệt nhiều cấp APRL).
-- **G11** định mức sử dụng (căn cứ kế hoạch nhu cầu).
+- ~~**G11** định mức sử dụng (căn cứ kế hoạch nhu cầu).~~ Xong 09/11/2026 (nhánh `feature/g11-dinh-muc-su-dung`): PR tính định mức lũy kế
+  từ kế hoạch nhu cầu đã chốt (`PurchaseRequestService.UsageNormsAsync`, DTO dòng `NormStatus/NormQty/NormRequestedQty/NormThrough`), cột
+  "Định mức LK" + cảnh báo đầu phiếu (`UsageNormNotice.tsx`), chỉ cảnh báo; không migration. Test tích hợp `UsageNormTests`, e2e
+  `usage-norm.spec.ts`. `dotnet test` 605/605; Playwright 114/115 (lỗi sẵn có volume-rebate); build, tsc, oxlint qua. Quy tắc tự đặt ghi ở design.md 18.25 (G11).
 - **G12** báo cáo tháng cho Ban.
-- Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8 (bản gần nhất 0.20.0).
+- Chưa phát hành: G5b, G5c, G6a, G6b, G10, G7, G7c, H1, H2, H3, H4, G1b, G8, G11 (bản gần nhất 0.20.0).
 
 
 
 0. **Đợt QĐ Ban cung ứng** (design.md 18.25): G1, G2, G3, G4a, G4b, G4c, G5a, G5b, **G5c** xong (người dùng cho làm tiếp 07/11/2026).
-   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b**, **G10**, **G7** xong (08/11/2026). **H1**, **H2**, **H3**, **H4**, **G1b**, **G8** xong (09/11/2026). Tiếp theo: **G11** định mức sử dụng, rồi G12. G5a đã phát hành trong 0.20.0;
+   G5c xong (07/11/2026), bổ sung chia theo ngày + xử lý SL lẻ (G5c+). **G6a**, **G6b**, **G10**, **G7** xong (08/11/2026). **H1**, **H2**, **H3**, **H4**, **G1b**, **G8**, **G11** xong (09/11/2026). Tiếp theo: **G12** báo cáo tháng cho Ban. G5a đã phát hành trong 0.20.0;
    G5b, G5c, G6a, G6b, G10, G7 chưa phát hành. G1–G4c đã phát hành trong 0.19.0 (bản test 5007 đã nâng lên 0.19.0).
    Đã lập `docs/DuLieuThu_KichBanTest_0.18.0.docx` (06/11/2026) cho người dùng gửi user test bản 0.18.0 cổng 5007: 38 kịch bản hồi quy
    TC01–TC38 (cập nhật: đính kèm 2 MB, PO APH duyệt 3 cấp aph.nguoib/c/d, PO nhiều cấp theo giá trị chuyển sang BMI) + 16 kịch bản mới
