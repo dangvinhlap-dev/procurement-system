@@ -47,6 +47,8 @@ export const Permission = {
   DemandPlanViewAllCompanies: 'Purchase.DemandPlan.ViewAllCompanies',
   PooledOrderView: 'Purchase.PooledOrder.View',
   PooledOrderManage: 'Purchase.PooledOrder.Manage',
+  /** Quyền đặc biệt của tổng công ty: tạo PO cho công ty thành viên từ phiếu đặt hàng gộp (G7c). */
+  PooledOrderCreateMemberPo: 'Purchase.PooledOrder.CreateMemberPo',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',

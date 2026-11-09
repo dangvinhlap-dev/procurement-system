@@ -15,8 +15,9 @@ namespace Proc.Infrastructure.Purchasing;
 /// <summary>
 /// Phiếu đặt hàng gộp (design.md mục 18.25, lát G7). Phiếu thuộc tổng công ty: lập, sửa, hủy, tạo PO khi đang làm việc ở tổng công ty.
 /// Đọc dữ liệu công ty thành viên bỏ filter công ty, có giới hạn (ghi lý do ở từng chỗ): kho/bộ phận và kế hoạch nhu cầu tháng của các công
-/// ty áp dụng phiếu GTH, số và trạng thái PO do chính phiếu sinh ra. Ghi PO cho công ty thành viên chạy dưới phạm vi của người dùng tại công
-/// ty đó (<see cref="ICompanyScopeRunner"/>) qua chính <see cref="IPurchaseOrderService"/> – không lập PO bằng đường riêng.
+/// ty áp dụng phiếu GTH, số và trạng thái PO do chính phiếu sinh ra. Ghi PO cho công ty thành viên cần quyền đặc biệt "Tạo PO cho công ty
+/// thành viên" ở tổng công ty (G7c), chạy thay mặt tổng công ty (<see cref="ICompanyScopeRunner"/>) qua chính
+/// <see cref="IPurchaseOrderService"/> – không lập PO bằng đường riêng.
 /// </summary>
 public sealed class PooledOrderService : IPooledOrderService
 {
@@ -194,6 +195,13 @@ public sealed class PooledOrderService : IPooledOrderService
             line => companyIds.Select(c => new CompanyPlan(c, PlanIn(plans, c, line.ItemId, line.UomFactor))).ToList(), margin,
             c => companies.GetValueOrDefault(c)?.Code ?? "?");
 
+        // Kiểm tra quyền trước khi tạo PO nào (design.md mục 18.25, G7c): phần của tổng công ty cần quyền tạo PO ở tổng công ty; phần của công
+        // ty thành viên cần quyền đặc biệt "Tạo PO cho công ty thành viên".
+        var blocked = CreateOrdersBlockedReason(
+            order.Companies.Where(c => order.Lines.Any(l => l.QtyFor(c.CompanyId) > 0)).Select(c => c.CompanyId).ToList(),
+            c => companies.GetValueOrDefault(c)?.Code ?? "?");
+        if (blocked is not null) throw new ForbiddenAccessException(blocked);
+
         var itemIds = order.Lines.Select(l => l.ItemId).Distinct().ToList();
         var vats = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.VatCode, cancellationToken);
         var created = new Dictionary<Guid, Guid>();
@@ -219,20 +227,34 @@ public sealed class PooledOrderService : IPooledOrderService
     }
 
     /// <summary>
-    /// Lập PO nháp tại công ty thành viên dưới phạm vi của người dùng tại đó: phải có quyền tạo PO ở công ty đó (quyền API chỉ kiểm tra ở
-    /// tổng công ty); kho, NCC áp dụng, ngân sách, giá theo phiếu tháng đều do <see cref="IPurchaseOrderService"/> kiểm tra như lập tay.
-    /// Lỗi báo kèm mã công ty.
+    /// Lý do không tạo PO được theo quyền của người dùng ở tổng công ty (design.md mục 18.25, G7c), null nếu được.
+    /// </summary>
+    /// <param name="companyIds">Công ty nhận có SL trên phiếu.</param>
+    /// <param name="codeOf">Mã công ty để báo lỗi.</param>
+    /// <returns>Lý do hoặc null.</returns>
+    private string? CreateOrdersBlockedReason(IReadOnlyCollection<Guid> companyIds, Func<Guid, string> codeOf)
+    {
+        if (companyIds.Any(c => c == _scope.CompanyId) && !_scope.HasPermission(Permissions.Purchase.PoCreate))
+            return "Bạn không có quyền tạo đơn mua hàng tại tổng công ty.";
+        var members = companyIds.Where(c => c != _scope.CompanyId).Select(codeOf).Order(StringComparer.Ordinal).ToList();
+        return members.Count > 0 && !_scope.HasPermission(Permissions.Purchase.PooledOrderCreateMemberPo)
+            ? $"Công ty {string.Join(", ", members)}: tạo PO cho công ty thành viên cần quyền đặc biệt \"Tạo PO cho công ty thành viên\" tại tổng công ty – liên hệ quản trị để được cấp."
+            : null;
+    }
+
+    /// <summary>
+    /// Lập PO nháp cho một công ty nhận hàng qua chính <see cref="IPurchaseOrderService"/>: công ty đang làm việc (tổng công ty) dùng phạm vi
+    /// hiện tại; công ty thành viên chạy thay mặt tổng công ty (<see cref="ICompanyScopeRunner"/>) – quyền đặc biệt đã kiểm tra ở
+    /// <see cref="CreateOrdersAsync"/>. Kho, NCC áp dụng, ngân sách, giá theo phiếu tháng đều kiểm tra theo công ty nhận như lập tay. Lỗi báo
+    /// kèm mã công ty.
     /// </summary>
     private async Task<Guid> CreateOrderAtAsync(Guid companyId, string companyCode, SavePurchaseOrderRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            return await _runner.RunAsync(companyId, async () =>
-            {
-                if (!_scope.HasPermission(Permissions.Purchase.PoCreate))
-                    throw new ForbiddenAccessException("Bạn không có quyền tạo đơn mua hàng tại công ty này.");
-                return (await _orders.CreateAsync(request, cancellationToken)).Id;
-            }, cancellationToken);
+            if (companyId == _scope.CompanyId) return (await _orders.CreateAsync(request, cancellationToken)).Id;
+            return await _runner.RunOnBehalfAsync(companyId, [Permissions.Purchase.PoView, Permissions.Purchase.PoCreate],
+                async () => (await _orders.CreateAsync(request, cancellationToken)).Id, cancellationToken);
         }
         catch (BusinessRuleException ex)
         {
@@ -434,7 +456,12 @@ public sealed class PooledOrderService : IPooledOrderService
         string? readOnly = !headOffice ? "Phiếu đặt hàng gộp chỉ sửa khi đang làm việc ở tổng công ty."
             : items.Count < itemIds.Count ? "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được."
             : !_scope.HasPermission(Permissions.Purchase.PooledOrderManage) ? "Bạn không có quyền lập, sửa phiếu đặt hàng gộp." : null;
-        var actions = new PooledOrderActions(readOnly is null && draft, readOnly is null && draft, readOnly is null && draft, readOnly);
+        var editable = readOnly is null && draft;
+        var blocked = editable
+            ? CreateOrdersBlockedReason(
+                companyIds.Where(c => x.Lines.Any(l => l.QtyFor(c) > 0)).ToList(), c => companies.GetValueOrDefault(c)?.Code ?? "?")
+            : null;
+        var actions = new PooledOrderActions(editable, editable && blocked is null, editable, readOnly, blocked);
 
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>
         {

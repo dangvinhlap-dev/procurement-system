@@ -24,8 +24,11 @@ public sealed record PooledOrderLineDto(
     decimal TotalQty, decimal Amount, decimal Tolerance, bool HasPlan, string? AllocationReason, string? Note,
     IReadOnlyList<PooledAllocationDto> Allocations);
 
-/// <summary>Thao tác được phép trên phiếu đặt gộp; ReadOnlyReason giải thích khi không sửa được.</summary>
-public sealed record PooledOrderActions(bool CanEdit, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason);
+/// <summary>
+/// Thao tác được phép trên phiếu đặt gộp; ReadOnlyReason giải thích khi không sửa được; CreateOrdersBlockedReason giải thích khi sửa được nhưng
+/// không tạo PO được (thiếu quyền tạo PO ở tổng công ty hoặc quyền đặc biệt tạo PO cho công ty thành viên).
+/// </summary>
+public sealed record PooledOrderActions(bool CanEdit, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, string? CreateOrdersBlockedReason);
 
 /// <summary>
 /// Chi tiết phiếu đặt hàng gộp. MarginPercent: % biên độ – tham số hiện hành của tổng công ty khi còn nháp, mức đã áp khi đã tạo PO.

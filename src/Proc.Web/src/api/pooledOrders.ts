@@ -85,6 +85,8 @@ export interface PooledOrderActions {
   canCreateOrders: boolean
   canCancel: boolean
   readOnlyReason: string | null
+  /** Lý do không tạo PO được dù sửa được (thiếu quyền tạo PO ở tổng công ty / quyền đặc biệt tạo PO cho công ty thành viên). */
+  createOrdersBlockedReason: string | null
 }
 
 /** Chi tiết phiếu. */

@@ -124,20 +124,47 @@ public class PooledOrderTests
         Assert.Contains("vượt biên độ 10%", blocked);
         Assert.Contains($"{companyA.Code}: phân bổ 75, đề xuất theo kế hoạch 60 ± 10", blocked);
 
-        // Người chỉ có vai trò ở tổng công ty và công ty A: tạo PO lỗi ở B → không PO nào được tạo (kể cả của A), phiếu vẫn nháp.
+        // Không có quyền đặc biệt "Tạo PO cho công ty thành viên": có quyền lập phiếu và tạo PO ở tổng công ty vẫn không tạo được PO cho A, B
+        // – nút khóa kèm lý do, API từ chối trước khi tạo PO nào.
         order = await ReadAsync<PooledOrderDto>(await head.PutAsJsonAsync($"{Url}/{order.Id}", Request(68, 32, order.Lines[0].Id), Ct));
-        var partialUser = $"g7p.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateUserAsync(partialUser, ProcApiFactory.TestPassword, ["TCT", companyA.Code]);
-        var partial = await _factory.CreateClientInCompanyAsync(partialUser, ProcApiFactory.TestPassword, "TCT");
+        var plainRole = UniqueCode("D");
+        await _factory.CreateRoleAsync(plainRole, Permissions.Purchase.PooledOrderView, Permissions.Purchase.PooledOrderManage,
+            Permissions.Purchase.PoView, Permissions.Purchase.PoCreate);
+        var plainUser = $"g7p.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(plainUser, "TCT", plainRole);
+        var plain = await _factory.CreateClientInCompanyAsync(plainUser, ProcApiFactory.TestPassword, "TCT");
+        var plainActions = (await ReadAsync<PooledOrderDto>(await plain.GetAsync($"{Url}/{order.Id}", Ct))).Actions;
+        Assert.False(plainActions.CanCreateOrders);
+        Assert.Contains("quyền đặc biệt", plainActions.CreateOrdersBlockedReason);
         var poCountA = (await ReadAsync<PurchaseDocumentListResult>(await clientA.GetAsync("/api/purchase-orders", Ct))).Items.Count;
-        var denied = await partial.PostAsync($"{Url}/{order.Id}/create-orders", null, Ct);
+        var denied = await plain.PostAsync($"{Url}/{order.Id}/create-orders", null, Ct);
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
-        Assert.Contains($"Công ty {companyB.Code}", await TitleAsync(denied));
+        var deniedTitle = await TitleAsync(denied);
+        Assert.Contains("quyền đặc biệt", deniedTitle);
+        Assert.Contains(companyA.Code, deniedTitle);
+        Assert.Contains(companyB.Code, deniedTitle);
+
+        // Có quyền đặc biệt thì không cần vai trò ở A, B (PO lập thay mặt tổng công ty, kiểm tra theo công ty nhận). B ngừng áp dụng NCC →
+        // lỗi ở B, không PO nào được tạo (kể cả của A), phiếu vẫn nháp.
+        var specialRole = UniqueCode("E");
+        await _factory.CreateRoleAsync(specialRole, Permissions.Purchase.PooledOrderView, Permissions.Purchase.PooledOrderManage,
+            Permissions.Purchase.PooledOrderCreateMemberPo);
+        var specialUser = $"g7s.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(specialUser, "TCT", specialRole);
+        var special = await _factory.CreateClientInCompanyAsync(specialUser, ProcApiFactory.TestPassword, "TCT");
+        var specialActions = (await ReadAsync<PooledOrderDto>(await special.GetAsync($"{Url}/{order.Id}", Ct))).Actions;
+        Assert.Equal((true, (string?)null), (specialActions.CanCreateOrders, specialActions.CreateOrdersBlockedReason));
+        await ReadAsync<SupplierCompanyDto>(await clientB.PutAsJsonAsync($"/api/suppliers/{main}/company", new SaveSupplierCompanyRequest(null, null, false), Ct));
+        var failed = await TitleAsync(await special.PostAsync($"{Url}/{order.Id}/create-orders", null, Ct));
+        Assert.Contains($"Công ty {companyB.Code}:", failed);
+        Assert.Contains("chưa được áp dụng", failed);
         Assert.Equal(poCountA, (await ReadAsync<PurchaseDocumentListResult>(await clientA.GetAsync("/api/purchase-orders", Ct))).Items.Count);
         Assert.Equal("Draft", (await ReadAsync<PooledOrderDto>(await head.GetAsync($"{Url}/{order.Id}", Ct))).Status);
+        await ReadAsync<SupplierCompanyDto>(await clientB.PutAsJsonAsync($"/api/suppliers/{main}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
 
-        // A 68, B 32 trong biên độ: mỗi công ty một PO nháp giá GTH, ghi chú dẫn số phiếu đặt gộp; phiếu khóa, không hủy.
-        order = await ReadAsync<PooledOrderDto>(await head.PostAsync($"{Url}/{order.Id}/create-orders", null, Ct));
+        // A 68, B 32 trong biên độ, người có quyền đặc biệt tạo PO: mỗi công ty một PO nháp giá GTH, ghi chú dẫn số phiếu đặt gộp; phiếu khóa,
+        // không hủy.
+        order = await ReadAsync<PooledOrderDto>(await special.PostAsync($"{Url}/{order.Id}/create-orders", null, Ct));
         Assert.Equal(("Ordered", 10m, false), (order.Status, order.MarginPercent, order.Actions.CanEdit));
         var rowA = order.Companies.Single(c => c.CompanyId == companyA.Id);
         Assert.Equal(("Draft", 816_000m), (rowA.PurchaseOrderStatus, rowA.Amount));
