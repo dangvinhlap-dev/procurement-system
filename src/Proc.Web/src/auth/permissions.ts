@@ -52,6 +52,10 @@ export const Permission = {
   PooledOrderManage: 'Purchase.PooledOrder.Manage',
   /** Quyền đặc biệt của tổng công ty: tạo PO cho công ty thành viên từ phiếu đặt hàng gộp (G7c). */
   PooledOrderCreateMemberPo: 'Purchase.PooledOrder.CreateMemberPo',
+  /** Phiếu xác nhận nhận hàng XNH (lát K2, design.md mục 19.4): xem, lập/xác nhận/điều chỉnh, nghiệm thu. */
+  ReceiptView: 'Purchase.Receipt.View',
+  ReceiptManage: 'Purchase.Receipt.Manage',
+  ReceiptAccept: 'Purchase.Receipt.Accept',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',

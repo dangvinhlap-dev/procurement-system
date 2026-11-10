@@ -389,6 +389,30 @@ public static class SupplierCoverageStatuses
 }
 
 /// <summary>
+/// Một dòng PO trên báo cáo SL đặt – SL thực nhận / OTIF (lát K2, design.md mục 19.4). SL theo ĐVT dòng PO. ReceivedQty: SL thực nhận từ
+/// phiếu XNH đã xác nhận (gồm điều chỉnh); ShortQty = SL đặt − SL thực nhận (âm = nhận thừa trong dung sai); DueDate: ngày giao của dòng,
+/// không có thì ngày giao dự kiến của PO; LastReceiptDate: ngày nhận cuối (null = chưa nhận); OnTime: có nhận và ngày nhận cuối ≤ hạn giao,
+/// null khi không có hạn giao (không chấm); InFull: SL thực nhận ≥ SL đặt; ClosedManually: PO đã "Hoàn thành" bằng tay.
+/// </summary>
+public sealed record OrderFulfillmentRowDto(
+    Guid OrderId, string OrderNo, DateOnly OrderDate, string CompanyCode, string SupplierCode, string SupplierName, int LineNo, string ItemCode,
+    string ItemName, string UomCode, decimal OrderedQty, decimal ReceivedQty, decimal ShortQty, DateOnly? DueDate, DateOnly? LastReceiptDate,
+    bool? OnTime, bool InFull, bool ClosedManually);
+
+/// <summary>
+/// Tổng hợp OTIF theo NCC. Lines: số dòng PO; ScoredLines: số dòng có hạn giao (được chấm đúng hạn, OTIF); InFullPct = dòng đủ ÷ Lines;
+/// OnTimePct, OtifPct = dòng đạt ÷ ScoredLines, 1 số lẻ, null khi mẫu số 0.
+/// </summary>
+public sealed record OrderFulfillmentSupplierDto(
+    string SupplierCode, string SupplierName, int Lines, int InFullLines, int ScoredLines, int OnTimeLines, int OtifLines, decimal? InFullPct,
+    decimal? OnTimePct, decimal? OtifPct);
+
+/// <summary>Báo cáo SL đặt – SL thực nhận / OTIF: dòng PO và tổng hợp theo NCC, kèm dòng tổng.</summary>
+public sealed record OrderFulfillmentResult(
+    IReadOnlyList<OrderFulfillmentRowDto> Rows, IReadOnlyList<OrderFulfillmentSupplierDto> Suppliers, OrderFulfillmentSupplierDto Total,
+    bool AllCompanies);
+
+/// <summary>
 /// Báo cáo mua hàng, đánh giá NCC, tiết kiệm từ đấu thầu (design.md mục 11, 11.3). Mặc định chỉ công ty đang làm việc; xem toàn tập đoàn cần
 /// quyền <c>Report.Purchase.ViewAllCompanies</c>.
 /// </summary>
@@ -415,6 +439,17 @@ public interface IPurchaseReportService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<IReadOnlyList<SupplierEvaluationRowDto>> GetSupplierEvaluationAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// SL đặt – SL thực nhận / OTIF (lát K2, design.md mục 19.4): mọi dòng PO đã duyệt (chưa hủy) có ngày PO trong khoảng, SL thực nhận theo
+    /// phiếu XNH đã xác nhận.
+    /// </summary>
+    /// <param name="period">Khoảng ngày PO, phạm vi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
+    Task<OrderFulfillmentResult> GetOrderFulfillmentAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
 
     /// <summary>Tiết kiệm từ đấu thầu: các dòng RFQ chọn thầu trong khoảng ngày.</summary>
     /// <param name="period">Khoảng ngày chọn thầu, phạm vi.</param>

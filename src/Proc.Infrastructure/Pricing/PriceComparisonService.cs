@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Pricing;
-using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.Organization;
 using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
@@ -186,22 +184,23 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
-    /// <summary>Lấy giá thực mua từ phiếu nhập mua đã ghi sổ của các mặt hàng từ ngày since.</summary>
+    /// <summary>
+    /// Lấy giá thực mua từ phiếu xác nhận nhận hàng XNH đã xác nhận của các mặt hàng từ ngày since (từ 0.22.0 thay phiếu nhập kho – design.md
+    /// mục 19.4); chỉ dòng có SL thực nhận.
+    /// </summary>
     private async Task<List<Entry>> ReceiptEntriesAsync(bool allCompanies, IReadOnlyList<Guid> itemIds, DateOnly since, CancellationToken cancellationToken)
     {
-        // IgnoreQueryFilters áp cho cả câu truy vấn (mọi bảng trong đó), nên chỉ bỏ filter khi xem toàn tập đoàn (đã kiểm quyền) –
-        // bỏ filter công ty và kho, xem ghi chú lớp. Chế độ công ty mình giữ nguyên mọi filter (dòng lọc qua phiếu, phiếu lọc công ty, kho).
-        var lines = allCompanies
-            ? _db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.WarehouseFilter])
-            : _db.InventoryDocumentLines;
+        // Chỉ bỏ filter công ty khi xem toàn tập đoàn (đã kiểm quyền) – xem ghi chú lớp.
+        var confirmations = allCompanies
+            ? _db.GoodsReceiptConfirmations.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            : _db.GoodsReceiptConfirmations;
         var rows = await (
-                from l in lines.AsNoTracking()
-                join d in _db.InventoryDocuments on l.DocumentId equals d.Id
-                where d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.Date >= since && itemIds.Contains(l.ItemId)
-                      && d.SupplierId != null && l.BaseQty > 0
-                select new { l.ItemId, d.CompanyId, SupplierId = d.SupplierId!.Value, d.Date, d.No, l.BaseQty, l.Amount })
+                from l in _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking()
+                join d in confirmations on l.ConfirmationId equals d.Id
+                where d.Status == ReceiptConfirmationStatus.Confirmed && d.Date >= since && itemIds.Contains(l.ItemId) && l.ReceivedBaseQty > 0
+                select new { l.ItemId, d.CompanyId, d.SupplierId, d.Date, d.No, BaseQty = l.ReceivedBaseQty, l.Amount })
             .ToListAsync(cancellationToken);
-        // Phiếu nhập không có chiết khấu riêng: đơn giá đã là giá thực mua nên giá cơ sở = thành tiền / SL cơ sở.
+        // Đơn giá XNH đã là giá thực mua (sau chiết khấu của PO) nên giá cơ sở = thành tiền / SL cơ sở.
         return rows.Select(r => new Entry(
                 r.ItemId, r.CompanyId, r.SupplierId, r.Date, "Receipt", r.No, r.BaseQty, r.Amount,
                 Math.Round(r.Amount / r.BaseQty, 6, MidpointRounding.AwayFromZero)))

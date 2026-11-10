@@ -5,9 +5,9 @@ using Proc.Application.MasterData;
 using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
+using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.MasterData;
@@ -189,20 +189,20 @@ public sealed class SupplierReviewService : ISupplierReviewService
 
     /// <summary>
     /// Số liệu theo NCC trong khoảng ngày, dùng đúng báo cáo SUPEVAL (giá trị nhập, đúng hạn, trả hàng, xếp loại) và QCDEV (tỷ lệ dòng đạt ÷
-    /// dòng đã kiểm tra, ví dụ 19/20 → 95,00%). Thuộc diện phải đánh giá = có ít nhất một phiếu nhập mua đã ghi sổ.
+    /// dòng đã kiểm tra, ví dụ 19/20 → 95,00%). Thuộc diện phải đánh giá = có ít nhất một phiếu nhận hàng XNH đã xác nhận (từ 0.22.0 –
+    /// design.md mục 19.4).
     /// </summary>
     private async Task<Dictionary<Guid, SupplierQuarter>> MetricsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var evaluation = await _reports.GetSupplierEvaluationAsync(new PurchaseReportPeriod(from, to, false), cancellationToken);
-        // Cùng cách đếm của QCDEV (dòng phiếu nhập mua đã ghi sổ, đi qua filter công ty, kho, nhóm hàng), nhóm theo NCC.
+        // Cùng cách đếm của QCDEV (dòng XNH đã xác nhận, đi qua filter công ty, nhóm hàng), nhóm theo NCC.
         var quality = await (
-                from l in _db.InventoryDocumentLines.AsNoTracking()
-                join d in _db.InventoryDocuments on l.DocumentId equals d.Id
+                from l in _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking()
+                join d in _db.GoodsReceiptConfirmations on l.ConfirmationId equals d.Id
                 join i in _db.Items on l.ItemId equals i.Id
-                where d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted && d.SupplierId != null
-                      && d.Date >= @from && d.Date <= to && l.QcResult != QcResult.NotChecked
-                group l by d.SupplierId!.Value into g
-                select new { SupplierId = g.Key, Checked = g.Count(), Passed = g.Count(l => l.QcResult == QcResult.Passed) })
+                where d.Status == ReceiptConfirmationStatus.Confirmed && d.Date >= @from && d.Date <= to && l.CheckResult != ReceiptCheckResult.NotChecked
+                group l by d.SupplierId into g
+                select new { SupplierId = g.Key, Checked = g.Count(), Passed = g.Count(l => l.CheckResult == ReceiptCheckResult.Passed) })
             .ToDictionaryAsync(q => q.SupplierId, q => Pct(q.Passed, q.Checked), cancellationToken);
         return evaluation.ToDictionary(e => e.SupplierId, e => new SupplierQuarter(
             e.SupplierCode, e.SupplierName, e.ReceiptCount > 0,

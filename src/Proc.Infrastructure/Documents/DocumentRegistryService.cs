@@ -66,6 +66,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Purchase.PrView, DocumentTypes.PurchaseRequest);
         Add(Permissions.Purchase.PoView, DocumentTypes.PurchaseOrder);
         Add(Permissions.Inventory.DocumentView, InventoryTypes);
+        Add(Permissions.Purchase.ReceiptView, DocumentTypes.GoodsReceiptConfirmation);
         Add(Permissions.Pricing.PriceListView, DocumentTypes.PriceList);
         Add(Permissions.Sourcing.RfqView, DocumentTypes.Sourcing, DocumentTypes.RequestForQuotation);
         Add(Permissions.Purchase.ContractView, DocumentTypes.Contract, ApprovalTypes.ContractAmendment);
@@ -426,6 +427,25 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 d.CreatedBy, d.CreatedAt)));
         }
 
+        if (wanted.Contains(DocumentTypes.GoodsReceiptConfirmation) && !acted)
+        {
+            // Phiếu xác nhận nhận hàng XNH (lát K2): đã xác nhận là xong.
+            var q = _db.GoodsReceiptConfirmations.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            var rows = await q.OrderByDescending(d => d.Date).Take(take)
+                .Select(d => new { d.Id, d.No, d.Date, d.SupplierId, d.WarehouseId, Amount = d.TotalAmount + d.TotalVat, d.Status, d.CreatedBy, d.CreatedAt })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.GoodsReceiptConfirmation, d.Id, d.No, d.Date, d.SupplierId, d.WarehouseId, null,
+                "Xác nhận nhận hàng", d.Amount, d.Status.ToString(),
+                d.Status switch
+                {
+                    ReceiptConfirmationStatus.Confirmed => DocumentProgress.Done,
+                    ReceiptConfirmationStatus.Cancelled => DocumentProgress.Cancelled,
+                    _ => DocumentProgress.Open,
+                },
+                d.CreatedBy, d.CreatedAt)));
+        }
+
         if (wanted.Contains(DocumentTypes.ControlFinding) && !acted)
         {
             var q = _db.ControlFindings.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
@@ -552,6 +572,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         (_, "Terminated") => "Chấm dứt",
         (_, "Ended") => "Đã kết thúc",
         (_, "Completed") => "Hoàn thành",
+        (_, "Confirmed") => "Đã xác nhận",
         (_, "Concluded") => "Đã kết luận",
         (_, "Open") when docType == DocumentTypes.ControlFinding => "Đang xử lý",
         (_, "Open") => "Đang tìm nguồn",

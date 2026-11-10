@@ -95,7 +95,7 @@ public class PurchaseReportTests
     }
 
     /// <summary>PO đã duyệt một dòng (giá trước CK, CK 0%).</summary>
-    private static async Task<PurchaseOrderDto> ApprovedPoAsync(Fixture f, Guid supplierId, DateOnly date, DateOnly expected, decimal qty, decimal price)
+    private static async Task<PurchaseOrderDto> ApprovedPoAsync(Fixture f, Guid supplierId, DateOnly date, DateOnly? expected, decimal qty, decimal price)
     {
         var po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-orders",
             new SavePurchaseOrderRequest(date, supplierId, f.Kt, expected, null, null, null, 0, null, [new(null, f.ItemId, f.Cai, qty, price, 0, "10", null, null, null)]), Ct));
@@ -106,13 +106,12 @@ public class PurchaseReportTests
         return po;
     }
 
-    /// <summary>Phiếu nhập mua đã ghi sổ hôm nay; có PO thì nhận theo dòng PO (giá theo PO).</summary>
-    private static async Task<InventoryDocumentDto> ReceiveAsync(Fixture f, Guid supplierId, decimal qty, decimal price, PurchaseOrderDto? po = null)
+    /// <summary>Phiếu xác nhận nhận hàng XNH đã xác nhận hôm nay theo dòng 1 của PO (giá theo PO) – design.md mục 19.4.</summary>
+    private static async Task<ReceiptConfirmationDto> ReceiveAsync(Fixture f, PurchaseOrderDto po, decimal qty)
     {
-        var grn = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, f.Kt, supplierId, null, null, null, null, null, null,
-                [new(null, f.ItemId, f.Cai, qty, price, "10", null, null, null, po?.Lines[0].Id)], po?.Id), Ct));
-        return await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
+        var xnh = await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync("/api/receipt-confirmations",
+            new SaveReceiptConfirmationRequest(po.Id, Today, null, null, null, null, null, null, null, [new(po.Lines[0].Id, qty, qty, 0, "Passed", null, null)]), Ct));
+        return await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
     }
 
     [Fact]
@@ -142,16 +141,15 @@ public class PurchaseReportTests
     {
         var f = await ArrangeAsync();
         var (a, b, c) = (f.Suppliers[0], f.Suppliers[1], f.Suppliers[2]);
-        // A: hẹn giao sau 5 ngày, nhận hôm nay → đúng hạn. B: hẹn giao 2 ngày trước, nhận hôm nay → trễ 2 ngày, trả 1/5.
-        // C: nhập không theo PO → không chấm đúng hạn.
+        // Nhận bằng XNH (design.md mục 19.4). A: hẹn giao sau 5 ngày, nhận hôm nay → đúng hạn. B: hẹn giao 2 ngày trước, nhận hôm nay → trễ
+        // 2 ngày, trả 1/5 (điều chỉnh giảm SL thực nhận). C: PO không hẹn ngày giao → không chấm đúng hạn.
         var poA = await ApprovedPoAsync(f, a, Today.AddDays(-10), Today.AddDays(5), 10, 100_000);
         var poB = await ApprovedPoAsync(f, b, Today.AddDays(-10), Today.AddDays(-2), 5, 200_000);
-        await ReceiveAsync(f, a, 10, 1, poA);
-        var grnB = await ReceiveAsync(f, b, 5, 1, poB);
-        await ReceiveAsync(f, c, 2, 50_000);
-        var rtv = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-returns",
-            new SaveReturnRequest(Today, grnB.Id, null, "Hàng lỗi", [new(null, grnB.Lines[0].Id, 1, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{rtv.Id}/post", null, Ct));
+        var poC = await ApprovedPoAsync(f, c, Today.AddDays(-10), null, 2, 50_000);
+        await ReceiveAsync(f, poA, 10);
+        var xnhB = await ReceiveAsync(f, poB, 5);
+        await ReceiveAsync(f, poC, 2);
+        await TestReceipts.AdjustAsync(f.Buyer, xnhB, -1);
 
         var range = $"from={Today.AddDays(-30):yyyy-MM-dd}&to={Today:yyyy-MM-dd}";
         var spend = await ReadAsync<PurchaseSpendResult>(await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}&groupBy=supplier", Ct));

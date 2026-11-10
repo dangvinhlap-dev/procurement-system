@@ -168,6 +168,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Đơn mua hàng (lọc theo công ty).</summary>
     public DbSet<Proc.Domain.Purchasing.PurchaseOrder> PurchaseOrders => Set<Proc.Domain.Purchasing.PurchaseOrder>();
 
+    /// <summary>Phiếu xác nhận nhận hàng XNH (lát K2, design.md mục 19.4).</summary>
+    public DbSet<Proc.Domain.Purchasing.GoodsReceiptConfirmation> GoodsReceiptConfirmations => Set<Proc.Domain.Purchasing.GoodsReceiptConfirmation>();
+
     /// <summary>Bảng giá nội bộ (lọc theo công ty bán).</summary>
     public DbSet<Proc.Domain.Pricing.InternalPrice> InternalPrices => Set<Proc.Domain.Pricing.InternalPrice>();
 

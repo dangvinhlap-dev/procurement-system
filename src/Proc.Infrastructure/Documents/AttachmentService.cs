@@ -27,6 +27,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.PurchaseRequest] = (Permissions.Purchase.PrView, Permissions.Purchase.PrCreate),
             [AttachmentOwnerTypes.PurchaseOrder] = (Permissions.Purchase.PoView, Permissions.Purchase.PoCreate),
             [AttachmentOwnerTypes.InventoryDocument] = (Permissions.Inventory.DocumentView, Permissions.Inventory.DocumentCreate),
+            // Phiếu xác nhận nhận hàng XNH (lát K2): thủ kho / phòng ban đề xuất đính kèm phiếu giao, biên bản nghiệm thu, ảnh hàng.
+            [AttachmentOwnerTypes.GoodsReceiptConfirmation] = (Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage),
             [AttachmentOwnerTypes.PurchaseContract] = (Permissions.Purchase.ContractView, Permissions.Purchase.ContractManage),
             [AttachmentOwnerTypes.SoleSourceApproval] = (Permissions.MasterData.SoleSourceView, Permissions.MasterData.SoleSourceManage),
             // Lát A4 (mọi form có đính kèm): quyền theo màn hình chủ, giống các service tương ứng.
@@ -198,6 +200,8 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.SupplierReview => await _db.SupplierReviews.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.SupplierOnboarding => await _db.SupplierOnboardings.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.GoodsReceiptConfirmation => await _db.GoodsReceiptConfirmations.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.ControlFinding => await _db.ControlFindings.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),

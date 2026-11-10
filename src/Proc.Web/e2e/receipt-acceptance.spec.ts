@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, seedPostedReceipt, unique } from './inventoryHelpers.ts'
+import { api, seedPostedReceipt, unique } from './inventoryHelpers.ts'
 
 /**
- * Lát H4 (design.md mục 18.25 – sơ đồ mục 3): thủ kho (quản trị) nhập và ghi sổ phiếu nhập; người của đơn vị đặt hàng mở phiếu, bấm "Xác nhận
- * nghiệm thu": chọn Không đạt mà chưa ghi ý kiến thì bị chặn; ghi ý kiến thì phiếu hiện "Nghiệm thu: Không đạt"; báo cáo MATCH3 có cột
- * Nghiệm thu và cảnh báo. Quy tắc thủ kho không tự xác nhận, bỏ ghi sổ thì xóa xác nhận kiểm tra ở test tích hợp.
+ * Lát H4 (design.md mục 18.25 – sơ đồ mục 3), code kho cũ (còn đến K3): thủ kho (quản trị) nhập và ghi sổ phiếu nhập; người của đơn vị đặt
+ * hàng mở phiếu, bấm "Xác nhận nghiệm thu": chọn Không đạt mà chưa ghi ý kiến thì bị chặn; ghi ý kiến thì phiếu hiện "Nghiệm thu: Không đạt".
+ * Từ 0.22.0 báo cáo MATCH3 theo phiếu XNH – nghiệm thu XNH và MATCH3 kiểm tra ở receipt-confirmation.spec.ts, three-way-match.spec.ts.
  */
-test('đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập, hiện trên đối chiếu MATCH3, chụp màn hình', async ({ page, request }) => {
+test('đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập kho cũ, chụp màn hình', async ({ page, request }) => {
   test.setTimeout(90_000)
   const seed = await seedPostedReceipt(request)
   const bha = await api(request, 'BHA')
@@ -41,10 +41,4 @@ test('đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập, hiện tr
   await expect(page.locator('.ant-message')).toContainText(`Đã xác nhận nghiệm thu phiếu ${seed.receiptNo}: Không đạt.`)
   await expect(page.getByRole('alert').filter({ hasText: 'Nghiệm thu: Không đạt' })).toContainText('Thiếu 1 hộp, 2 hộp móp')
   await page.screenshot({ path: 'e2e/screenshots/receipt-acceptance.png' })
-
-  // Kế toán thấy trên báo cáo đối chiếu PO – nhận – hóa đơn.
-  await openByCommand(page, 'MATCH3')
-  const row = page.locator('tr').filter({ hasText: seed.receiptNo })
-  await expect(row).toContainText('Không đạt')
-  await expect(row).toContainText('Đơn vị đặt hàng không đồng ý nghiệm thu')
 })

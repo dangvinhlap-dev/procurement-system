@@ -2128,8 +2128,30 @@ Công ty dùng phần mềm kho riêng. Thay thế:
 - Màn hình phân quyền không còn nhóm quyền Kho và các quyền báo cáo kho; vai trò mẫu không còn quyền kho.
 - **Không xóa dữ liệu**: dòng quyền kho trong vai trò đang có, phiếu kho, sổ kho giữ nguyên đến K3. Đặt `true` là quay về như 0.21.0.
 - Danh mục kho (`Warehouse`) **giữ** – dùng làm nơi nhận hàng của PO/đề nghị mua.
-- CSDL test (`appsettings.Testing.json`) tạm đặt `true` để các test cũ dựa trên phiếu nhập (MATCH3, đánh giá NCC, KPI…) còn chạy đến khi
-  lát K2 chuyển nguồn "đã nhận" sang XNH; test riêng của K1 chạy với cấu hình tắt.
+- CSDL test (`appsettings.Testing.json`) đặt `true` để test của code kho cũ (phiếu kho, tồn, kỳ kho) còn chạy đến khi gỡ ở K3; từ K2 các test
+  mua hàng, báo cáo dùng XNH (không phụ thuộc cấu hình này); test riêng của K1 chạy với cấu hình tắt.
+
+**Lát K2 – phiếu xác nhận nhận hàng XNH (0.22.0).** Bảng `GoodsReceiptConfirmation` (+ dòng, lịch sử điều chỉnh), số chứng từ loại **XNH**:
+
+- Lập **theo một PO đã duyệt** (chưa nhận đủ, chưa hoàn thành); NCC, nơi nhận lấy theo PO. Mỗi dòng theo một dòng PO, SL theo ĐVT của dòng PO:
+  SL theo phiếu giao của NCC, **SL đạt (= SL thực nhận)**, SL không đạt, kết quả kiểm tra (Đạt / Không đạt / Chưa kiểm tra), ghi chú kiểm tra.
+  Đạt + không đạt ≤ phiếu giao; có SL không đạt thì kết quả "Không đạt" và bắt buộc ghi chú. Giá thực mua, thuế suất lấy từ dòng PO.
+  Header: ngày nhận, số phiếu giao, người giao, hóa đơn NCC (số, ký hiệu, ngày, tiền – cập nhật được cả sau khi xác nhận), ghi chú, đính kèm.
+- Trạng thái **Nháp → Đã xác nhận** (hủy được khi còn nháp). Xác nhận: SL thực nhận (các XNH đã xác nhận + phiếu này) không vượt SL đặt ×
+  (1 + dung sai %) của PO; tham số công ty "bắt buộc kiểm tra chất lượng" (mọi dòng có kết quả) và "tách người lập PO" (người lập PO không xác
+  nhận) vẫn áp dụng. Mọi dòng PO nhận đủ thì PO **Đã nhận đủ** tự động; "Hoàn thành PO" (đóng phần còn lại) như cũ; còn XNH nháp thì không
+  hoàn thành PO được; PO có XNH chưa hủy thì không hủy PO.
+- **Điều chỉnh SL thực nhận** (thay trả NCC – RTV): trên XNH đã xác nhận, từng dòng, ± SL, bắt buộc lý do, lưu lịch sử (chỉ thêm). Giảm thì PO
+  mở lại (trừ PO đã hoàn thành bằng tay); tăng không vượt SL đặt + dung sai, không tăng khi PO đã hủy/hoàn thành.
+- **Nghiệm thu** của đơn vị đặt hàng (Q8): Đạt / Không đạt (bắt buộc ý kiến); người lập hoặc người xác nhận XNH không tự nghiệm thu.
+- Quyền: `Purchase.Receipt.View` (xem), `Purchase.Receipt.Manage` (lập, xác nhận, điều chỉnh, hóa đơn – thủ kho nơi nhận; dịch vụ: phòng ban đề
+  xuất), `Purchase.Receipt.Accept` (nghiệm thu). Lập/xác nhận cần nơi nhận trong phạm vi kho của người dùng; xem và nghiệm thu chỉ theo công ty.
+- **Nguồn "SL đã nhận"** từ 0.22.0 là XNH đã xác nhận: cột SL nhận thực tế của PO, theo dõi giao hàng, ngân sách (PO đã hoàn thành), PR đang
+  đặt, giá nhận gần nhất trên PR, so sánh giá, báo cáo sai lệch nhận hàng (QCDEV), MATCH3 và dấu hiệu KSNB, chi tiêu – đánh giá NCC (trả NCC =
+  tổng điều chỉnh giảm, tính theo ngày nhận của phiếu), đánh giá NCC định kỳ. Phiếu nhập kho cũ không còn tính (code kho cũ dùng hàm riêng đến K3).
+- **Báo cáo SL đặt – SL thực nhận / OTIF** (`/api/reports/order-fulfillment`): mọi dòng PO đã duyệt có ngày PO trong khoảng – SL đặt, SL thực
+  nhận, còn thiếu, hạn giao (ngày giao dòng hoặc ngày giao dự kiến PO), ngày nhận cuối; đúng hạn = đã nhận và ngày nhận cuối ≤ hạn (dòng không
+  hạn giao không chấm), đủ = thực nhận ≥ đặt; tổng hợp % đủ, % đúng hạn, % OTIF theo NCC.
 
 **Lát K3 – gỡ (0.28.0).** Xóa code phân hệ kho và bảng kho bằng migration có `Down()`; chỉ làm sau khi người dùng xác nhận đã sao lưu.
 

@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 import { api, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
 /**
  * Luồng mua hàng ở BHA (design.md mục 6.2, 6.7): người lập (tài khoản mới) lập PR, gửi duyệt → quản trị duyệt ở Việc cần làm →
- * người lập lập PO lấy dòng từ PR, gửi duyệt → quản trị duyệt → phiếu nhập theo PO lấy dòng còn lại, ghi sổ → PO Đã nhận đủ.
- * Mặt hàng, NCC (áp dụng tại BHA) tạo sẵn qua API; giá tham khảo = giá nhập gần nhất 50.000 đ/hộp.
+ * người lập lập PO lấy dòng từ PR, gửi duyệt → quản trị duyệt → phiếu xác nhận nhận hàng XNH theo PO lấy dòng còn lại, xác nhận → PO Đã
+ * nhận đủ (từ 0.22.0 – design.md mục 19.4). Mặt hàng, NCC (áp dụng tại BHA) tạo sẵn qua API; giá tham khảo = giá nhận gần nhất 50.000 đ/hộp.
  */
 
 /** Ghi sổ/gửi duyệt/duyệt qua hộp xác nhận rồi chờ thông báo. */
@@ -21,7 +22,10 @@ async function confirm(page: Page, button: string, messageText: string | RegExp)
 test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async ({ browser, page, request }) => {
   // Luồng dài (hai người dùng, 5 phiếu): chạy song song với các test khác có thể quá 30 giây mặc định.
   test.setTimeout(90_000)
-  const { itemCode, supplierCode } = await seedPostedReceipt(request)
+  // Giá nhận gần nhất 50.000 đ/hộp: một PO đã nhận đủ bằng XNH.
+  const seed = await seedApprovedPo(request, 10)
+  await receiveByApi(seed.bha, seed.po.id, seed.po.lines[0].id, 10)
+  const { itemCode, supplierCode } = seed
   // Người lập: tài khoản mới, vai trò quản trị tại BHA (người lập không tự duyệt được phiếu của mình).
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
@@ -164,17 +168,18 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await expect(buyer.locator('.ant-message')).toContainText(`Đã xác nhận bổ sung hồ sơ đơn ${poNo}.`)
   await expect(buyer.getByRole('alert').filter({ hasText: 'đã bổ sung hồ sơ' })).toContainText('Biên bản sự cố máy cán')
 
-  // 5. Phiếu nhập theo PO: chọn PO, lấy dòng còn lại (giá 48.000 theo PO), ghi sổ → PO Đã nhận đủ.
-  await openByCommand(page, 'GRN')
+  // 5. Phiếu xác nhận nhận hàng XNH theo PO: chọn PO → tự lấy dòng còn lại (giá 48.000 theo PO), kết quả kiểm tra Đạt, xác nhận → PO Đã
+  // nhận đủ.
+  await openByCommand(page, 'XNH')
   await page.getByRole('button', { name: 'Tạo mới' }).click()
   await chooseOption(page, 'Đơn mua hàng', poNo)
-  await page.getByRole('button', { name: 'Lấy các dòng còn lại của PO' }).click()
-  await expect(page.getByLabel('Đơn giá dòng 1')).toBeDisabled()
   await expect(page.locator('.line-grid-row').first()).toContainText('576.000')
-  // Kiểm tra chất lượng dòng (design.md mục 18.14): Đạt.
   await page.getByRole('combobox', { name: 'Kết quả kiểm tra dòng 1' }).click()
   await pickOption(page, 'Đạt')
-  await confirm(page, 'Ghi sổ', /Đã ghi sổ phiếu GRN-BHA-\d{4}-\d{4}\./)
+  // Nút trên thanh lệnh (cây điều hướng cũng có mục "Xác nhận nhận hàng").
+  await page.locator('button.ant-btn', { hasText: 'Xác nhận nhận hàng' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click()
+  await expect(page.locator('.ant-message')).toContainText(/Đã xác nhận nhận hàng phiếu XNH-BHA-\d{4}-\d{4}\./)
   await openByCommand(page, 'PO')
   await expect(page.locator('.data-grid-row', { hasText: poNo })).toContainText('Đã nhận đủ')
   await buyerContext.close()

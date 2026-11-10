@@ -121,6 +121,8 @@ export const screens: Screen[] = [
 
   { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing', permission: Permission.PrView },
   { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },
+  // Phiếu xác nhận nhận hàng thay phiếu nhập kho từ 0.22.0 (lát K2, design.md mục 19.4): thủ kho / phòng ban đề xuất lập, đơn vị đặt hàng nghiệm thu.
+  { code: 'XNH', title: 'Xác nhận nhận hàng (XNH)', navLabel: 'Xác nhận nhận hàng', path: '/mua-hang/xac-nhan-nhan-hang', icon: <InboxOutlined />, group: 'purchasing', anyPermission: [Permission.ReceiptView, Permission.ReceiptManage, Permission.ReceiptAccept] },
   { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing', permission: Permission.PoView },
   { code: 'KHN', title: 'Kế hoạch nhu cầu', navLabel: 'Kế hoạch nhu cầu', path: '/mua-hang/ke-hoach-nhu-cau', icon: <CalendarOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
   { code: 'KHNTH', title: 'Tổng hợp nhu cầu', navLabel: 'Tổng hợp nhu cầu', path: '/mua-hang/tong-hop-nhu-cau', icon: <BarChartOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
@@ -176,6 +178,7 @@ export const screens: Screen[] = [
   { code: 'PRPEND', title: 'PR chưa xử lý', navLabel: 'PR chưa xử lý', path: '/bao-cao/pr-chua-xu-ly', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SLA', title: 'SLA mua hàng', navLabel: 'SLA mua hàng', path: '/bao-cao/sla-mua-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'QCDEV', title: 'Sai lệch nhận hàng', navLabel: 'Sai lệch nhận hàng', path: '/bao-cao/sai-lech-nhan-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  { code: 'OTIF', title: 'SL đặt – SL thực nhận (OTIF)', navLabel: 'SL đặt – thực nhận', path: '/bao-cao/sl-dat-thuc-nhan', icon: <DiffOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'MATCH3', title: 'Đối chiếu PO – nhận – hóa đơn', navLabel: 'Đối chiếu PO – nhận – HĐ', path: '/bao-cao/doi-chieu-po-nhan-hoa-don', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },

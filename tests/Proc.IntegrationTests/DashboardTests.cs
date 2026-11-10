@@ -65,7 +65,8 @@ public class DashboardTests
         await _factory.CreateScopedUserAsync(approverName2, company.Code, approverRole);
         var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
 
-        // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); phiếu nhập nháp; phiếu nhập đã ghi sổ 2 × 50.000 trong tháng.
+        // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); phiếu nhập kho nháp (code kho cũ); nhận 2 × 50.000 theo PO bằng XNH trong tháng
+        // (chi tiêu từ 0.22.0 tính theo XNH – design.md mục 19.4).
         var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(buyer), null, Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 5, null, null, null)]), Ct));
         await ReadAsync<PurchaseRequestDto>(await buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
@@ -78,9 +79,9 @@ public class DashboardTests
         await ReadAsync<PurchaseOrderDto>(await approver2.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",
             new SaveReceiptRequest(Today, kt, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 1, 50_000, "10", null, null, null)]), Ct));
-        var posted = await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, kt, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 2, 50_000, "10", null, null, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await buyer.PostAsync($"/api/inventory-documents/{posted.Id}/post", null, Ct));
+        var xnh = await ReadAsync<ReceiptConfirmationDto>(await buyer.PostAsJsonAsync("/api/receipt-confirmations",
+            new SaveReceiptConfirmationRequest(po.Id, Today, null, null, null, null, null, null, null, [new(po.Lines[0].Id, 2, 2, 0, "Passed", null, null)]), Ct));
+        await ReadAsync<ReceiptConfirmationDto>(await buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
 
         // Người lập (quản trị): đủ mọi phần.
         var dashboard = await ReadAsync<DashboardDto>(await buyer.GetAsync("/api/dashboard", Ct));

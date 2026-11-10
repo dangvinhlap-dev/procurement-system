@@ -1,13 +1,17 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { openByCommand, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { openByCommand, switchCompany } from './inventoryHelpers.ts'
+import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
 /**
  * Đánh giá NCC định kỳ theo quý (lát F4a, design.md mục 18.20): NCC có phiếu nhập mua đã ghi sổ trong quý hiện ra "Chưa đánh giá";
  * bấm đúp lập phiếu, chấm 6 tiêu chí, kết luận, "Hoàn thành" thì phiếu khóa và dòng chuyển "Hoàn thành".
  */
 test('đánh giá NCC theo quý: lập phiếu, chấm điểm, hoàn thành', async ({ page, request }) => {
-  const { supplierCode } = await seedPostedReceipt(request)
+  // Nhận 10 hộp × 50.000 bằng phiếu XNH theo PO đã duyệt (từ 0.22.0 – design.md mục 19.4).
+  const seed = await seedApprovedPo(request, 10)
+  await receiveByApi(seed.bha, seed.po.id, seed.po.lines[0].id, 10)
+  const { supplierCode } = seed
   const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }))
   const year = today.getFullYear()
   const quarter = Math.floor(today.getMonth() / 3) + 1

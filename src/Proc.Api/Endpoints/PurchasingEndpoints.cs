@@ -107,12 +107,12 @@ public static class PurchasingEndpoints
         po.MapGet("/group-min-prices", (Guid[]? itemIds, Guid? excludeOrderId, Proc.Application.Pricing.IPriceComparisonService s, CancellationToken ct) =>
                 s.GroupMinPricesAsync(itemIds ?? [], excludeOrderId, ct))
             .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
-        // Thủ kho lập phiếu nhập theo PO cần đọc đơn dù không có quyền xem danh sách đơn mua hàng.
+        // Người lập phiếu nhận hàng XNH (thủ kho, phòng ban đề xuất dịch vụ) cần đọc đơn dù không có quyền xem danh sách đơn mua hàng.
         po.MapGet("/{id:guid}", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.GetAsync(id, ct))
-            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Inventory.DocumentCreate);
+            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage, Permissions.Inventory.DocumentCreate);
         po.MapGet("/receivable", (IPurchaseOrderService s, CancellationToken ct) =>
                 s.SearchAsync(new PurchaseDocumentQuery(DateOnly.MinValue, DateOnly.MaxValue, "Approved"), ct))
-            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Inventory.DocumentCreate);
+            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage, Permissions.Inventory.DocumentCreate);
         po.MapPost("/", async (SavePurchaseOrderRequest request, IPurchaseOrderService s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);
@@ -144,6 +144,45 @@ public static class PurchasingEndpoints
         po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
                 s.CompleteDocsAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
+
+        // Phiếu xác nhận nhận hàng XNH (lát K2, design.md mục 19.4): thủ kho / phòng ban đề xuất lập, xác nhận, điều chỉnh; đơn vị đặt
+        // hàng nghiệm thu.
+        var receipts = app.MapGroup("/api/receipt-confirmations").WithTags("Xác nhận nhận hàng");
+        string[] receiptAny = [Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptAccept];
+        receipts.MapGet("/", (DateOnly? from, DateOnly? to, string? status, Guid? purchaseOrderId, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.SearchAsync(new ReceiptConfirmationQuery(from, to, status, purchaseOrderId), ct))
+            .RequireAnyPermission(receiptAny);
+        receipts.MapGet("/{id:guid}", (Guid id, IReceiptConfirmationService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(receiptAny);
+        receipts.MapPost("/", async (SaveReceiptConfirmationRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/receipt-confirmations/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.ReceiptManage)
+            .Validate<SaveReceiptConfirmationRequest>();
+        receipts.MapPut("/{id:guid}", (Guid id, SaveReceiptConfirmationRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptManage)
+            .Validate<SaveReceiptConfirmationRequest>();
+        receipts.MapPost("/{id:guid}/confirm", (Guid id, IReceiptConfirmationService s, CancellationToken ct) => s.ConfirmAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptManage);
+        receipts.MapPost("/{id:guid}/cancel", (Guid id, CancelReceiptConfirmationRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptManage)
+            .Validate<CancelReceiptConfirmationRequest>();
+        receipts.MapPut("/{id:guid}/invoice", (Guid id, UpdateReceiptConfirmationInvoiceRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.UpdateInvoiceAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptManage)
+            .Validate<UpdateReceiptConfirmationInvoiceRequest>();
+        receipts.MapPost("/{id:guid}/acceptance", (Guid id, ReceiptAcceptanceRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.ConfirmAcceptanceAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptAccept)
+            .Validate<ReceiptAcceptanceRequest>();
+        receipts.MapPost("/{id:guid}/adjustments", (Guid id, AdjustReceiptRequest request, IReceiptConfirmationService s, CancellationToken ct) =>
+                s.AdjustAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ReceiptManage)
+            .Validate<AdjustReceiptRequest>();
 
         // Ngân sách bộ phận × tháng (lát C3, design.md mục 18.24).
         var budgets = app.MapGroup("/api/budgets").WithTags("Ngân sách bộ phận");

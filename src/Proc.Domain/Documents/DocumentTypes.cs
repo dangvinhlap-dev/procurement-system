@@ -74,6 +74,9 @@ public static class DocumentTypes
     /// <summary>Hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25).</summary>
     public const string SupplierOnboarding = "HSN";
 
+    /// <summary>Phiếu xác nhận nhận hàng theo PO – thay phiếu nhập kho từ bản 0.22.0 (lát K2, design.md mục 19.4).</summary>
+    public const string GoodsReceiptConfirmation = "XNH";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -81,6 +84,7 @@ public static class DocumentTypes
         new(RequestForQuotation, "Yêu cầu báo giá"),
         new(PurchaseOrder, "Đơn mua hàng"),
         new(Contract, "Hợp đồng nguyên tắc"),
+        new(GoodsReceiptConfirmation, "Xác nhận nhận hàng"),
         new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
         new(ReturnToVendor, "Phiếu xuất trả NCC"),
         new(Transfer, "Phiếu chuyển kho nội bộ"),

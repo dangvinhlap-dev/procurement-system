@@ -116,11 +116,11 @@ public class ControlAnomalyTests
         var near = new List<PurchaseOrderDto>();
         for (var i = 0; i < 3; i++) near.Add(await ApprovedAsync(f.SupplierB, f.Item2, 1, 820_000, 0));
 
-        // Phiếu nhập PO a1: giao 5, đạt 4, không đạt 1; hóa đơn tính đủ 5 cái (522.500) và ghi ngày trước ngày PO.
-        var grn = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, f.Kt, f.SupplierA.Id, "0000777", "1C26TAA", Today.AddDays(-1), null, null, null,
-                [new(null, f.Item1, f.Cai, 4, 1, null, null, null, null, a1.Lines[0].Id, 5, 1, "Failed", "1 cái vỡ")], a1.Id, 522_500), Ct));
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
+        // Phiếu nhận hàng XNH PO a1 (design.md mục 19.4): giao 5, đạt 4, không đạt 1; hóa đơn tính đủ 5 cái (522.500) và ghi ngày trước ngày PO.
+        var grn = await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync("/api/receipt-confirmations",
+            new SaveReceiptConfirmationRequest(a1.Id, Today, null, null, null, "0000777", "1C26TAA", Today.AddDays(-1), 522_500,
+                [new(a1.Lines[0].Id, 5, 4, 1, "Failed", "1 cái vỡ", null)]), Ct));
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{grn.Id}/confirm", null, Ct));
 
         // Đổi tài khoản ngân hàng NCC A (qua duyệt), người lập PO kê khai quan hệ lợi ích với NCC B từ hôm nay.
         var supplier = f.SupplierA;
@@ -162,7 +162,7 @@ public class ControlAnomalyTests
         Assert.Contains("100%", off.Detail);
 
         var shortage = result.Items.Single(i => i.Code == AnomalyCodes.InvoiceShortage);
-        Assert.Equal((AnomalySeverities.High, "GRN", grn.Id, (decimal?)104_500m), (shortage.Severity, shortage.ScreenCode, shortage.TargetId, shortage.Amount));
+        Assert.Equal((AnomalySeverities.High, "XNH", grn.Id, (decimal?)104_500m), (shortage.Severity, shortage.ScreenCode, shortage.TargetId, shortage.Amount));
         var backdated = result.Items.Single(i => i.Code == AnomalyCodes.BackdatedOrder);
         Assert.Equal((AnomalySeverities.High, grn.Id), (backdated.Severity, backdated.TargetId));
         Assert.Contains("hóa đơn", backdated.Detail);

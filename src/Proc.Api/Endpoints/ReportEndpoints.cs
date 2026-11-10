@@ -43,6 +43,10 @@ public static class ReportEndpoints
         reports.MapGet("/supplier-evaluation", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSupplierEvaluationAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // SL đặt – SL thực nhận / OTIF (lát K2, design.md mục 19.4).
+        reports.MapGet("/order-fulfillment", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetOrderFulfillmentAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/receipt-quality", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetReceiptQualityAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/three-way-match", (DateOnly from, DateOnly to, decimal? tolerance, bool? onlyIssues, IPurchaseReportService s, CancellationToken ct) =>

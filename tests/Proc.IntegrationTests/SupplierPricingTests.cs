@@ -88,13 +88,9 @@ public partial class SupplierPricingTests
         return await ReadAsync<PriceListDto>(await client.GetAsync($"/api/price-lists/{id}", Ct));
     }
 
-    /// <summary>Nhập mua đã ghi sổ: qty cái × giá.</summary>
-    private static async Task ReceiveAsync(Fixture f, Member m, decimal qty, decimal price)
-    {
-        var grn = await ReadAsync<InventoryDocumentDto>(await m.Client.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, m.Kt, f.SupplierId, null, null, null, null, null, null, [new(null, f.ItemId, f.Cai, qty, price, "10", null, null, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await m.Client.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
-    }
+    /// <summary>Nhận hàng đã xác nhận (PO đã duyệt + XNH – design.md mục 19.4): qty cái × giá.</summary>
+    private Task ReceiveAsync(Fixture f, Member m, decimal qty, decimal price) =>
+        TestReceipts.ReceiveAsync(_factory, m.Client, f.SupplierId, m.Kt, [new(f.ItemId, f.Cai, qty, price)], Today);
 
     [Fact]
     public async Task BangGia_GoiYGiaPo_BangRiengCongTyUuTienHonBangToanTapDoan()
@@ -168,7 +164,8 @@ public partial class SupplierPricingTests
         Assert.Equal((10m, true, 40m), (rows[b.Code].AboveGroupMinPct, rows[b.Code].IsAboveThreshold, rows[b.Code].Qty12Months));
         Assert.Equal((110_000m, 120_000m), (rows[b.Code].MinPrice!.Value, rows[b.Code].MaxPrice!.Value));
         Assert.Equal(95_000m, all.PriceLists.Single().BaseNetPrice);
-        Assert.Equal(4, all.History.Count);
+        // Lịch sử: 3 phiếu nhận hàng XNH + 3 PO của chúng + 1 bảng giá.
+        Assert.Equal(7, all.History.Count);
 
         // Giá tham khảo PR chỉ lấy giá nhập của chính công ty: công ty C chưa nhập lần nào → 0.
         var c = await MemberAsync(f);

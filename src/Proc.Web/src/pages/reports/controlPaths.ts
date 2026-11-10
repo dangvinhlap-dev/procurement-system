@@ -1,6 +1,6 @@
 /**
  * Đường dẫn mở chứng từ liên quan của dấu hiệu bất thường/vi phạm KSNB (design.md mục 18.19).
- * @param screenCode Mã màn hình: PO, GRN (mở trang phiếu), SUPAPR (trang yêu cầu duyệt NCC), PRCW (báo cáo mua ngoài hợp đồng),
+ * @param screenCode Mã màn hình: PO, XNH (phiếu xác nhận nhận hàng – từ 0.22.0), GRN (phiếu nhập kho cũ), SUPAPR (trang yêu cầu duyệt NCC), PRCW (báo cáo mua ngoài hợp đồng),
  *   CTR (hợp đồng nguyên tắc – chiết khấu/tài trợ chưa ghi nhận).
  * @param targetId Chứng từ cần mở.
  * @returns Đường dẫn; null nếu không mở được.
@@ -9,6 +9,8 @@ export function controlRefPath(screenCode: string | null, targetId: string | nul
   switch (screenCode) {
     case 'PO':
       return targetId ? `/mua-hang/po/${targetId}` : null
+    case 'XNH':
+      return targetId ? `/mua-hang/xac-nhan-nhan-hang/${targetId}` : null
     case 'GRN':
       return targetId ? `/kho/grn/${targetId}` : null
     case 'SUPAPR':

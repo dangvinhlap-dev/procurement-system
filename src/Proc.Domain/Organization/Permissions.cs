@@ -146,6 +146,18 @@ public static class Permissions
         /// NCC áp dụng, ngân sách, giá theo công ty nhận). Không thuộc vai trò mẫu nào – quản trị cấp riêng.
         /// </summary>
         public const string PooledOrderCreateMemberPo = "Purchase.PooledOrder.CreateMemberPo";
+
+        /// <summary>Quyền "Xem phiếu xác nhận nhận hàng XNH" (lát K2, design.md mục 19.4).</summary>
+        public const string ReceiptView = "Purchase.Receipt.View";
+
+        /// <summary>
+        /// Quyền "Lập, xác nhận, điều chỉnh XNH": hàng – thủ kho nơi nhận; dịch vụ – phòng ban đề xuất (Q8). Chỉ lập được cho PO có nơi nhận
+        /// trong phạm vi kho của người dùng.
+        /// </summary>
+        public const string ReceiptManage = "Purchase.Receipt.Manage";
+
+        /// <summary>Quyền "Xác nhận nghiệm thu XNH" của đơn vị đặt hàng (Q8; thay Inventory.Receipt.Accept của kho cũ).</summary>
+        public const string ReceiptAccept = "Purchase.Receipt.Accept";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -327,6 +339,9 @@ public static class Permissions
         new(Purchase.PooledOrderView, "Xem phiếu đặt hàng gộp"),
         new(Purchase.PooledOrderManage, "Lập phiếu đặt hàng gộp, bấm tạo PO"),
         new(Purchase.PooledOrderCreateMemberPo, "Tạo PO cho công ty thành viên (quyền đặc biệt của tổng công ty)"),
+        new(Purchase.ReceiptView, "Xem phiếu xác nhận nhận hàng (XNH)"),
+        new(Purchase.ReceiptManage, "Lập, xác nhận, điều chỉnh phiếu xác nhận nhận hàng"),
+        new(Purchase.ReceiptAccept, "Xác nhận nghiệm thu hàng nhận (đơn vị đặt hàng)"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),

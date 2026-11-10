@@ -264,19 +264,18 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     }
 
     /// <summary>
-    /// Giá nhập gần nhất theo ĐVT cơ sở (đơn giá dòng ÷ hệ số ĐVT) của các mặt hàng, từ phiếu nhập mua đã ghi sổ của công ty đang
-    /// làm việc (mọi kho – giá không phụ thuộc phạm vi kho).
+    /// Giá nhận hàng gần nhất theo ĐVT cơ sở (giá thực mua ÷ hệ số ĐVT) của các mặt hàng, từ phiếu xác nhận nhận hàng XNH đã xác nhận của
+    /// công ty đang làm việc (từ 0.22.0 thay phiếu nhập kho – design.md mục 19.4; mọi nơi nhận).
     /// </summary>
     internal async Task<Dictionary<Guid, decimal>> LastPurchasePricesAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
     {
-        // IgnoreQueryFilters tắt filter công ty cho cả câu truy vấn (cả bảng phiếu) nên phải lọc công ty tường minh – mỗi công ty
-        // là pháp nhân độc lập, không lấy giá nhập của công ty khác (CLAUDE.md mục 4).
-        var companyId = _scope.RequireCompany();
+        // Phiếu đi qua filter công ty – mỗi công ty là pháp nhân độc lập, không lấy giá nhận của công ty khác (CLAUDE.md mục 4).
+        _scope.RequireCompany();
         var rows = await (
-                from l in _db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
-                join d in _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]) on l.DocumentId equals d.Id
-                where d.CompanyId == companyId && itemIds.Contains(l.ItemId) && d.DocType == DocumentTypes.GoodsReceipt && d.Status == DocumentStatus.Posted
-                orderby d.Date descending, d.PostedAt descending
+                from l in _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking()
+                join d in _db.GoodsReceiptConfirmations on l.ConfirmationId equals d.Id
+                where itemIds.Contains(l.ItemId) && d.Status == ReceiptConfirmationStatus.Confirmed
+                orderby d.Date descending, d.ConfirmedAt descending
                 select new { l.ItemId, l.UnitPrice, l.UomFactor })
             .ToListAsync(cancellationToken);
         return rows.GroupBy(r => r.ItemId).ToDictionary(g => g.Key, g => Math.Round(g.First().UnitPrice / g.First().UomFactor, 6, MidpointRounding.AwayFromZero));
@@ -312,7 +311,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
 
     /// <summary>
     /// SL đang đặt (ĐVT cơ sở) theo mặt hàng tại công ty – design.md mục 18.13 (V2: kiểm tra hàng đang đặt trước khi đề nghị): tổng trên
-    /// các PO đã duyệt còn chờ nhận (chưa nhận đủ) của SL đặt − SL đã nhận theo phiếu nhập đã ghi sổ, mỗi dòng không âm.
+    /// các PO đã duyệt còn chờ nhận (chưa nhận đủ) của SL đặt − SL thực nhận theo phiếu XNH đã xác nhận, mỗi dòng không âm.
     /// Ví dụ PO 100 cái đã nhận 30 → đang đặt 70.
     /// </summary>
     private async Task<Dictionary<Guid, decimal>> OnOrderBaseByItemAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)

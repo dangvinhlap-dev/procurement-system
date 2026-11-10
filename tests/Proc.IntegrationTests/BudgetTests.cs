@@ -63,9 +63,8 @@ public class BudgetTests
         var warehouse = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var calendar = await ReadAsync<InventoryCalendarDto>(await client.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
         await ReadAsync<InventoryPeriodDto>(await client.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
-        var grn = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, warehouse, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 1, 1_000_000, "10", null, null, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await client.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
+        // Giá tham khảo của PR = giá nhận hàng gần nhất (XNH): 1.000.000/cái. PO nhận không gắn bộ phận nên không tính vào ngân sách.
+        await TestReceipts.ReceiveAsync(_factory, client, supplier.Id, warehouse, [new(item.Id, cai, 1, 1_000_000)], Today);
         var px1 = await ReadAsync<DepartmentDto>(await client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));
         var px2 = await ReadAsync<DepartmentDto>(await client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX2", "Phân xưởng 2", null), Ct));
         return new Fixture(client, company.Code, item.Id, cai, supplier.Id, warehouse, px1.Id, px2.Id);
