@@ -1,4 +1,6 @@
+using Proc.Api.Security;
 using Proc.Application.Notifications;
+using Proc.Domain.Organization;
 
 namespace Proc.Api.Endpoints;
 
@@ -30,6 +32,12 @@ public static class NotificationEndpoints
             await s.MarkAllReadAsync(ct);
             return Results.NoContent();
         });
+
+        // Email bản sao thông báo (lát O2b): người quản trị xem cấu hình, hàng chờ và gửi thư thử tới chính mình.
+        group.MapGet("/email/status", (INotificationEmailService s, CancellationToken ct) => s.StatusAsync(ct))
+            .RequirePermission(Permissions.System.ParameterView);
+        group.MapPost("/email/test", async (INotificationEmailService s, CancellationToken ct) => new { sentTo = await s.SendTestAsync(ct) })
+            .RequirePermission(Permissions.System.ParameterManage);
 
         return app;
     }

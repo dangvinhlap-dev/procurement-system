@@ -105,7 +105,7 @@ public class DynamicApproverTests
         pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         Assert.Equal("Submitted", pr.Status);
         Assert.Equal(["Trưởng phòng ban PX1", "GĐ khối SX"], pr.Approvals.Select(a => a.RoleName));
-        Assert.Equal(1, pr.Approvals[0].NextApprovers!.Count);
+        Assert.Single(pr.Approvals[0].NextApprovers!);
 
         // Người có quyền duyệt nhưng không phải Trưởng phòng ban của bộ phận thì không duyệt được cấp 1.
         var wrong = await ActAsync(f.Other.Client, pr.Id, "approve");

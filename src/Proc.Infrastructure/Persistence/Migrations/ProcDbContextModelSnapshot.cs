@@ -2253,6 +2253,19 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("EmailAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmailNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("EmailState")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("EmailedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -2285,6 +2298,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Notification_EmailPending")
+                        .HasFilter("\"EmailState\" = 0");
 
                     b.HasIndex("UserId", "CompanyId", "CreatedAt");
 

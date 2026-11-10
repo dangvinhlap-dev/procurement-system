@@ -9,6 +9,7 @@ import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
+import { OpenLinkPage } from './pages/OpenLinkPage'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
@@ -261,6 +262,8 @@ export const router = createBrowserRouter([
         path: '/mua-hang/po/mau',
         element: <ScreenGuard screen={screens.find((s) => s.code === 'PO')!}><DemoPurchaseOrderListPage /></ScreenGuard>,
       },
+      // Nút "Mở trên phần mềm" trong email thông báo (lát O2b): đổi công ty rồi mở phiếu – quyền do trang đích kiểm tra.
+      { path: '/mo/:screen/:id?', element: <OpenLinkPage /> },
       { path: '*', element: <PlaceholderPage /> },
     ],
   },

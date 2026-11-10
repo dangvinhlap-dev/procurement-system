@@ -4,7 +4,7 @@ import { Select } from '../classic/Select'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { notificationTypeLabels, useNotificationMutations, useNotifications, type AppNotification } from '../api/notifications'
-import { screens } from '../app/screens'
+import { notificationTargetPath } from '../app/notificationTarget'
 import type { GridColumn } from '../components/DataGrid/types'
 import { FilterField, ListPage } from '../components/ListPage/ListPage'
 
@@ -25,23 +25,6 @@ const columns: GridColumn<AppNotification>[] = [
 ]
 
 /**
- * Đường dẫn mở khi bấm thông báo: phiếu (PR, PO, ICR…) mở thẳng trang phiếu; kỳ kho (PER) mở màn hình Kỳ kho vì kỳ không có trang
- * riêng. Mã màn hình không còn (đổi menu) thì mở trang chủ.
- */
-function targetPath(n: AppNotification): string {
-  // Phiếu vốn mở trong ngăn kéo danh sách (yêu cầu duyệt NCC, NCC độc quyền, vi phạm KSNB, phụ lục hợp đồng) mở trang đầy đủ của nó
-  // (TC-3) – xem đủ nội dung và duyệt ngay trên trang. Mã thông báo NCC/CTA không trùng mã màn hình nên tra riêng.
-  const drawerPaths: Record<string, string> = {
-    NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VIOL: '/bao-cao/so-vi-pham', CTA: '/mua-hang/hop-dong-khung/phu-luc',
-  }
-  const drawerPath = drawerPaths[n.screenCode]
-  if (drawerPath) return n.targetId ? `${drawerPath}/${n.targetId}` : n.screenCode === 'CTA' ? '/mua-hang/hop-dong-khung' : drawerPath
-  const screen = screens.find((s) => s.code === n.screenCode)
-  if (!screen) return '/'
-  return n.targetId && n.screenCode !== 'PER' ? `${screen.path}/${n.targetId}` : screen.path
-}
-
-/**
  * Hằng ngày → Thông báo (design.md mục 11.6): thông báo của tôi tại công ty đang làm việc – phiếu chờ tôi duyệt, phiếu tôi lập được
  * duyệt/bị từ chối, hàng nội bộ chờ nhận, kỳ kho mở lại. Bấm đúp/Enter/mũi tên ">" thì đánh dấu đã đọc và mở phiếu.
  */
@@ -58,7 +41,7 @@ export function NotificationPage() {
   const open = (n: AppNotification) => {
     // Đánh dấu đọc chạy nền: mở phiếu ngay, không chờ máy chủ.
     if (!n.readAt) mutations.markRead.mutate(n.id)
-    navigate(targetPath(n))
+    navigate(notificationTargetPath(n.screenCode, n.targetId))
   }
 
   const markAll = async () => {

@@ -61,3 +61,17 @@ test('PR gửi duyệt → chuông có số → mở thông báo vào phiếu �
   await page.goBack()
   await expect(page.locator('.data-grid-row', { hasText: pr.no })).toContainText('Đã đọc')
 })
+
+/**
+ * Nút "Mở trên phần mềm" trong email thông báo (lát O2b): `/mo/{mã màn hình}?cty={công ty}` đổi sang công ty của thông báo rồi mở màn hình.
+ */
+test('đường dẫn trong email: đổi công ty rồi mở màn hình', async ({ page, request }) => {
+  const login = await request.post('/api/auth/login', { data: { userName: 'admin', password: 'Admin@2026' } })
+  const { user } = (await login.json()) as { user: { companies: { id: string; code: string }[] } }
+  const bha = user.companies.find((c) => c.code === 'BHA')!.id
+  await loginViaApi(page)
+  await page.goto(`/mo/todo?cty=${bha}`)
+  await expect(page).toHaveURL(/\/hang-ngay\/viec-can-lam$/)
+  await expect(page.getByRole('heading', { name: /Việc cần làm/ })).toBeVisible()
+  await expect(page.getByText('BHA – Công ty Thép Bắc Hà').first()).toBeVisible()
+})

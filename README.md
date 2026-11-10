@@ -56,6 +56,8 @@ Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md
    `docker compose up -d db` rồi với từng file, ví dụ
    `docker compose exec db psql -U proc -d procurement -v ON_ERROR_STOP=1 -f /db/scripts/0.1.0.sql` (tiếp 0.5.0, 0.7.0…).
 5. `docker compose up -d`, mở trang web, đăng nhập bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD` rồi **đổi mật khẩu ngay**.
+6. (Tùy chọn) Gửi email thông báo qua SMTP của công ty: đặt `EMAIL_ENABLED=true`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`,
+   `EMAIL_PASSWORD`, `EMAIL_FROM`, `EMAIL_APP_URL` (địa chỉ mở phần mềm) trong `.env`, rồi `docker compose up -d`.
 
 **Nâng cấp lên bản mới** (xem CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó)
 1. Sao lưu trước: `docker compose exec backup sh -c 'pg_dump -Fc -f /backups/truoc-nang-cap.dump'`.

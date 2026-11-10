@@ -133,6 +133,9 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Reports.IDashboardService, Proc.Infrastructure.Reports.DashboardService>();
         services.AddScoped<Proc.Application.Reports.IAccountingExportService, Proc.Infrastructure.Reports.AccountingExportService>();
         services.AddScoped<Proc.Application.Notifications.INotificationService, Proc.Infrastructure.Notifications.NotificationService>();
+        // Email bản sao thông báo (lát O2b): bộ gửi SMTP + dịch vụ quét; dịch vụ nền đăng ký ở Api cùng cấu hình mục Email.
+        services.AddSingleton<Proc.Application.Notifications.IEmailSender, Proc.Infrastructure.Notifications.SmtpEmailSender>();
+        services.AddScoped<Proc.Application.Notifications.INotificationEmailService, Proc.Infrastructure.Notifications.NotificationEmailService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryService, Proc.Infrastructure.Analysis.PurchaseHistoryService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryMappingService, Proc.Infrastructure.Analysis.PurchaseHistoryMappingService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseAnalysisService, Proc.Infrastructure.Analysis.PurchaseAnalysisService>();

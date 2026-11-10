@@ -2145,6 +2145,25 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   người khác có quyền duyệt, không phải người lập. Ủy quyền hết hạn khi phiếu còn chờ thì phiếu chờ người giữ vị trí hoặc ủy quyền mới.
 - Thu hồi hoặc hết hạn: từ lúc đó không duyệt thay nữa; bước đã duyệt thay giữ nguyên.
 
+**Lát O2b – email thông báo qua SMTP (0.22.0, Q14 "công ty đã có SMTP").** Quy tắc (mặc định tự chọn ghi "tự đặt"):
+
+- Email là **bản sao của thông báo trong phần mềm** (mục 11.6): mọi thông báo hệ thống sinh ra (chờ duyệt, chờ duyệt thay, đã duyệt, bị từ
+  chối, đã duyệt thay, hàng nội bộ chờ nhận, KSNB, nhắc quá hạn ở O2c…) được gửi thêm một thư tới **email trong hồ sơ người dùng**. Không có
+  thông báo nào chỉ gửi email. Chưa có tùy chọn người dùng tắt nhận thư (tự đặt – làm khi có yêu cầu).
+- Gửi bằng **dịch vụ nền** trong tiến trình ứng dụng (MailKit, mỗi `Email:PollSeconds` giây quét thông báo chờ gửi, cũ trước) – thao tác nghiệp
+  vụ không chờ máy chủ thư, máy chủ thư lỗi không làm hỏng thao tác. Bảng `Notification` thêm trạng thái gửi email: Chờ gửi → Đã gửi / Bỏ qua
+  (người nhận chưa khai email, đã ngừng dùng, thông báo cũ hơn `Email:MaxAgeHours` = 24 giờ khi đến lượt) / Lỗi (thử `Email:MaxAttempts` = 5
+  lần, mỗi lần quét một lần). Thông báo có trước bản 0.22.0 đánh dấu Bỏ qua (migration `V0_22_0_EmailThongBao`).
+- Cấu hình mục `Email` (appsettings hoặc biến môi trường `Email__…`): `Enabled` (mặc định **false** – máy dev, test không gửi thư thật), `Host`,
+  `Port`, `Security` (Auto/StartTls/SslOnConnect/None), `UserName`, `Password` (chỉ đặt trên máy chủ), `FromAddress`, `FromName`, `AppBaseUrl`.
+  Bật mà thiếu Host/FromAddress thì ứng dụng báo lỗi khi khởi động.
+- Thư: tiêu đề "[mã công ty] tiêu đề thông báo", nội dung thông báo + tên công ty + nút **"Mở trên phần mềm"** trỏ `AppBaseUrl/mo/{mã màn
+  hình}/{Id}?cty={công ty}` – trang này đổi sang công ty của thông báo rồi mở phiếu (chưa đăng nhập thì đăng nhập trước; quyền do trang phiếu
+  kiểm tra). Không gửi đính kèm, không ghi nội dung thư vào log.
+- Quản trị: `GET /api/notifications/email/status` (quyền xem tham số) – cấu hình (không lộ mật khẩu), số thư chờ / lỗi;
+  `POST /api/notifications/email/test` (quyền sửa tham số) – gửi thư thử tới email của chính mình.
+- Giả định một tiến trình ứng dụng (IIS một worker, một container); nhiều tiến trình cùng quét có thể gửi trùng thư.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
