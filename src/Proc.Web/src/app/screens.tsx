@@ -199,6 +199,7 @@ export const screens: Screen[] = [
   { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },
   { code: 'WH', title: 'Danh mục kho', navLabel: 'Kho', path: '/he-thong/kho', icon: <ApartmentOutlined />, group: 'system', permission: Permission.WarehouseView },
   { code: 'DEPT', title: 'Danh mục bộ phận', navLabel: 'Bộ phận', path: '/he-thong/bo-phan', icon: <ClusterOutlined />, group: 'system', permission: Permission.DepartmentView },
+  { code: 'DIV', title: 'Danh mục khối', navLabel: 'Khối', path: '/he-thong/khoi', icon: <ClusterOutlined />, group: 'system', permission: Permission.DepartmentView },
   { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system', permission: Permission.UserView },
   { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
   { code: 'APRL', title: 'Quy trình duyệt', navLabel: 'Quy trình duyệt', path: '/he-thong/quy-trinh-duyet', icon: <CheckSquareOutlined />, group: 'system', permission: Permission.ParameterView },

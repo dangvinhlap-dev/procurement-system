@@ -33,8 +33,13 @@ internal sealed class NextApproverResolver
     /// <param name="RoleId">Vai trò bắt buộc của cấp; null = ai có quyền duyệt.</param>
     /// <param name="IsPreparer">Người lập (và người tương đương – RFQ: người chọn thầu) không tự duyệt.</param>
     /// <param name="SupplierIds">NCC của phiếu để loại người có kê khai xung đột lợi ích.</param>
+    /// <param name="OnlyUsers">
+    /// Bước người duyệt động (lát O1): chỉ người này (Trưởng phòng ban / GĐ khối hiện hành); rỗng = chưa khai báo, không ai duyệt được;
+    /// null = bước theo vai trò.
+    /// </param>
     public sealed record PendingStep(
-        Guid Key, string DocType, Guid CompanyId, Guid? RoleId, Func<Guid, bool> IsPreparer, IReadOnlyCollection<Guid> SupplierIds);
+        Guid Key, string DocType, Guid CompanyId, Guid? RoleId, Func<Guid, bool> IsPreparer, IReadOnlyCollection<Guid> SupplierIds,
+        IReadOnlyCollection<Guid>? OnlyUsers = null);
 
     /// <summary>Id những người duyệt được từng bước.</summary>
     /// <param name="steps">Các bước đang chờ.</param>
@@ -71,7 +76,8 @@ internal sealed class NextApproverResolver
         {
             var candidates = byRule[(step.CompanyId, ApprovalEngine.ApprovePermission(step.DocType), step.RoleId)];
             result[step.Key] = candidates
-                .Where(u => !step.IsPreparer(u) && !step.SupplierIds.Any(s => conflicts.Contains((u, s))))
+                .Where(u => (step.OnlyUsers is null || step.OnlyUsers.Contains(u))
+                    && !step.IsPreparer(u) && !step.SupplierIds.Any(s => conflicts.Contains((u, s))))
                 .ToList();
         }
 

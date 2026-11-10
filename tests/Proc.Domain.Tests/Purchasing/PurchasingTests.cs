@@ -57,6 +57,26 @@ public class PurchasingTests
 
 
     [Fact]
+    public void NguoiDuyetDong_ChiLoaiCoBoPhan_KhongCanVaiTro_BuocGhiBoPhan()
+    {
+        var role = Guid.CreateVersion7();
+        var department = Guid.CreateVersion7();
+
+        var head = ApprovalRule.Create(Company, "PR", 1, 0, role, ApproverKind.DepartmentHead);
+        Assert.Equal((ApproverKind.DepartmentHead, (Guid?)null), (head.Kind, head.RoleId));
+        Assert.Equal(ApproverKind.DivisionDirector, ApprovalRule.Create(Company, "POC", 1, 0, null, ApproverKind.DivisionDirector).Kind);
+        Assert.Contains("chỉ chọn được người duyệt theo vai trò",
+            Assert.Throws<BusinessRuleException>(() => ApprovalRule.Create(Company, "NCC", 1, 0, null, ApproverKind.DepartmentHead)).Message);
+        Assert.Equal("Hãy chọn vai trò duyệt.", Assert.Throws<BusinessRuleException>(() => ApprovalRule.Create(Company, "PR", 1, 0, null)).Message);
+        Assert.Throws<BusinessRuleException>(() => ApprovalRule.Create(Company, "PR", 1, 0, role, (ApproverKind)9));
+
+        var step = ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, role, kind: ApproverKind.DepartmentHead, departmentId: department);
+        Assert.Equal((ApproverKind.DepartmentHead, (Guid?)null, (Guid?)department), (step.Kind, step.RoleId, step.DepartmentId));
+        Assert.Throws<BusinessRuleException>(() => ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, null, kind: ApproverKind.DivisionDirector));
+        Assert.Null(ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, role, departmentId: department).DepartmentId);
+    }
+
+    [Fact]
     public void LoaiDuyetDungChung_PrlRfqNccCtr_NguongChiChoLoaiCoGiaTri()
     {
         var role = Guid.CreateVersion7();

@@ -20,6 +20,7 @@ import {
   usePurchaseDocuments,
   type ApprovalDocType,
   type ApprovalRule,
+  type ApproverKind,
   type DeliveryTracking,
   type PendingApproval,
   type PurchaseKind,
@@ -220,7 +221,14 @@ const ruleColumns = (typeName: (code: string) => string): GridColumn<ApprovalRul
   { key: 'type', title: 'Loại phiếu', width: 200, value: (r) => `${typeName(r.docType)} (${r.docType})`, groupable: true },
   { key: 'level', title: 'Cấp', width: 60, type: 'quantity', value: (r) => r.level },
   { key: 'min', title: 'Từ giá trị', width: 140, type: 'money', value: (r) => r.minAmount },
-  { key: 'role', title: 'Vai trò duyệt', width: 240, value: (r) => `${r.roleCode} – ${r.roleName}`, groupable: true },
+  {
+    key: 'role',
+    title: 'Người duyệt',
+    width: 240,
+    // Cấp người duyệt động (lát O1) không có mã vai trò – hiện tên loại người duyệt.
+    value: (r) => (r.roleCode ? `${r.roleCode} – ${r.roleName}` : (r.roleName ?? '')),
+    groupable: true,
+  },
 ]
 
 /**
@@ -271,7 +279,7 @@ export function ApprovalRuleListPage() {
  */
 function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule | null; canManage: boolean; onClose: () => void }) {
   const { message, modal } = App.useApp()
-  const [form] = Form.useForm<{ docType: string; level: number; minAmount: number; roleId?: string }>()
+  const [form] = Form.useForm<{ docType: string; level: number; minAmount: number; roleId?: string; approverKind: ApproverKind }>()
   const mutations = useApprovalRuleMutations()
   const roles = useRoles()
   const types = useApprovalTypes()
@@ -279,6 +287,9 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
   // Loại không xét giá trị (bảng giá, hồ sơ NCC): mọi phiếu qua đủ các cấp, ngưỡng cố định 0 – design.md mục 18.6.
   const amountLabel = types.data?.find((t) => t.code === docType)?.amountLabel ?? null
   const noAmount = types.data !== undefined && amountLabel === null
+  // Người duyệt động chỉ cho loại phiếu có bộ phận (PR, PO và các bộ cấp phụ) – lát O1.
+  const hasDepartment = types.data?.find((t) => t.code === docType)?.hasDepartment ?? false
+  const approverKind = Form.useWatch('approverKind', form) ?? rule?.approverKind ?? 'Role'
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -287,7 +298,14 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
     if (!values) return
     setError(null)
     setSaving(true)
-    const input = { docType: values.docType, level: values.level, minAmount: noAmount ? 0 : (values.minAmount ?? 0), roleId: values.roleId! }
+    const kind: ApproverKind = hasDepartment ? (values.approverKind ?? 'Role') : 'Role'
+    const input = {
+      docType: values.docType,
+      level: values.level,
+      minAmount: noAmount ? 0 : (values.minAmount ?? 0),
+      roleId: kind === 'Role' ? (values.roleId ?? null) : null,
+      approverKind: kind,
+    }
     try {
       if (rule) await mutations.update.mutateAsync({ id: rule.id, input })
       else await mutations.create.mutateAsync(input)
@@ -330,7 +348,11 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
       error={error}
       form={form}
       readOnly={!canManage}
-      initialValues={rule ? { docType: rule.docType, level: rule.level, minAmount: rule.minAmount, roleId: rule.roleId } : { docType: 'PR', level: 1, minAmount: 0 }}
+      initialValues={
+        rule
+          ? { docType: rule.docType, level: rule.level, minAmount: rule.minAmount, roleId: rule.roleId ?? undefined, approverKind: rule.approverKind }
+          : { docType: 'PR', level: 1, minAmount: 0, approverKind: 'Role' }
+      }
       extraActions={canManage && rule ? <Button danger onClick={remove}>Xóa cấp này</Button> : undefined}
       tabs={[
         {
@@ -341,7 +363,10 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
               <Form.Item label="Loại phiếu" name="docType">
                 <Select disabled={rule !== null} loading={types.isLoading}
                   options={(types.data ?? []).map((t) => ({ value: t.code, label: `${t.name} (${t.code})` }))}
-                  onChange={() => form.setFieldValue('minAmount', 0)} />
+                  onChange={() => {
+                    form.setFieldValue('minAmount', 0)
+                    form.setFieldValue('approverKind', 'Role')
+                  }} />
               </Form.Item>
               <Form.Item label="Cấp" name="level" rules={[{ required: true, type: 'number', min: 1, max: 9, message: 'Cấp từ 1 đến 9.' }]}>
                 <InputNumber style={{ width: '100%' }} min={1} max={9} precision={0} />
@@ -350,10 +375,23 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
                 extra={noAmount ? 'Loại này không xét giá trị: mọi phiếu đều qua cấp này.' : `Xét theo ${(amountLabel ?? 'tổng giá trị').toLowerCase()}: từ số này trở lên mới phải qua cấp này.`}>
                 <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} disabled={noAmount} />
               </Form.Item>
-              <Form.Item label="Vai trò duyệt" name="roleId" rules={[{ required: true, message: 'Chọn vai trò.' }]}
-                extra="Người có vai trò này tại công ty và có quyền duyệt loại phiếu.">
-                <Select showSearch={{ optionFilterProp: 'label' }} options={(roles.data ?? []).map((r) => ({ value: r.id, label: `${r.code} – ${r.name}` }))} />
+              <Form.Item label="Người duyệt" name="approverKind"
+                extra={hasDepartment
+                  ? 'Trưởng phòng ban / GĐ khối: lấy theo bộ phận trên phiếu (Hệ thống → Bộ phận, Khối); chưa khai báo thì phiếu không gửi duyệt được.'
+                  : 'Loại phiếu này không có bộ phận – chỉ duyệt theo vai trò.'}>
+                <Select showSearch={false} disabled={!hasDepartment}
+                  options={[
+                    { value: 'Role', label: 'Theo vai trò' },
+                    { value: 'DepartmentHead', label: 'Trưởng phòng ban của phiếu' },
+                    { value: 'DivisionDirector', label: 'GĐ khối của phiếu' },
+                  ]} />
               </Form.Item>
+              {approverKind === 'Role' && (
+                <Form.Item label="Vai trò duyệt" name="roleId" rules={[{ required: true, message: 'Chọn vai trò.' }]}
+                  extra="Người có vai trò này tại công ty và có quyền duyệt loại phiếu.">
+                  <Select showSearch={{ optionFilterProp: 'label' }} options={(roles.data ?? []).map((r) => ({ value: r.id, label: `${r.code} – ${r.name}` }))} />
+                </Form.Item>
+              )}
             </div>
           ),
         },

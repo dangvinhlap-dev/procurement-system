@@ -9,7 +9,10 @@ namespace Proc.Domain.Purchasing;
 /// <param name="Name">Tên hiển thị, dùng trong câu thông báo ("Bảng giá NCC PRL-0001 chờ bạn duyệt").</param>
 /// <param name="ApprovePermission">Quyền duyệt loại này (người duyệt cần quyền, cấp có vai trò thì cần thêm vai trò).</param>
 /// <param name="AmountLabel">Ý nghĩa giá trị xét ngưỡng; null = loại không có giá trị tiền (ngưỡng luôn 0).</param>
-public sealed record ApprovalTypeInfo(string Code, string Name, string ApprovePermission, string? AmountLabel);
+/// <param name="HasDepartment">
+/// Phiếu có bộ phận (PR, PO và các bộ cấp phụ của chúng) – cấu hình được người duyệt động Trưởng phòng ban / GĐ khối (lát O1).
+/// </param>
+public sealed record ApprovalTypeInfo(string Code, string Name, string ApprovePermission, string? AmountLabel, bool HasDepartment = false);
 
 /// <summary>
 /// Các loại đối tượng có duyệt (design.md mục 6.2, 18.6). Lát A3 mở rộng từ PR, PO sang bảng giá NCC (PRL), kết quả chọn thầu (RFQ),
@@ -85,14 +88,14 @@ public static class ApprovalTypes
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
-        new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
-        new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
-        new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
-        new(PurchaseOrderEmergency, "Đơn mua hàng khẩn cấp", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
-        new(PurchaseRequestOverBudget, "Vượt ngân sách đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến"),
-        new(PurchaseOrderOverBudget, "Vượt ngân sách đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
-        new(PurchaseOrderOffList, "Mua ngoài danh sách/giá đã duyệt", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
-        new(PurchaseOrderOverCeiling, "Đơn mua hàng vượt giá trần", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT"),
+        new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true),
+        new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
+        new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
+        new(PurchaseOrderEmergency, "Đơn mua hàng khẩn cấp", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
+        new(PurchaseRequestOverBudget, "Vượt ngân sách đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true),
+        new(PurchaseOrderOverBudget, "Vượt ngân sách đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
+        new(PurchaseOrderOffList, "Mua ngoài danh sách/giá đã duyệt", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
+        new(PurchaseOrderOverCeiling, "Đơn mua hàng vượt giá trần", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),
@@ -171,4 +174,10 @@ public interface IApprovalSubject
     /// (design.md mục 18.8). Mặc định không có NCC (PR).
     /// </summary>
     IReadOnlyCollection<Guid> RelatedSupplierIds => [];
+
+    /// <summary>
+    /// Bộ phận của phiếu – để tìm người duyệt động Trưởng phòng ban / Giám đốc khối (lát O1, design.md mục 19.3). Mặc định không có (loại
+    /// phiếu không có bộ phận chỉ cấu hình được người duyệt theo vai trò).
+    /// </summary>
+    Guid? ApprovalDepartmentId => null;
 }

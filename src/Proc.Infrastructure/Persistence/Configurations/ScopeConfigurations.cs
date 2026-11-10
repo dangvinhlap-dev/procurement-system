@@ -79,6 +79,45 @@ internal sealed class DepartmentConfiguration : IEntityTypeConfiguration<Departm
         // Khóa (Id, CompanyId) để PR trỏ tới bộ phận kèm công ty – CSDL tự chặn PR dùng bộ phận của công ty khác.
         builder.HasAlternateKey(x => new { x.Id, x.CompanyId });
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        // Khối cùng công ty (khóa ngoại kép) và Trưởng phòng ban là tài khoản có thật – lát O1, design.md mục 19.3.
+        builder.HasOne<Division>().WithMany()
+            .HasForeignKey(x => new { x.DivisionId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.ManagerUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng Division – khối của công ty (lát O1, design.md mục 19.3).</summary>
+internal sealed class DivisionConfiguration : IEntityTypeConfiguration<Division>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Division> builder)
+    {
+        builder.ToTable("Division");
+        builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(Division.NameMaxLength).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        // Khóa (Id, CompanyId) để bộ phận trỏ tới khối kèm công ty – CSDL chặn gán khối của công ty khác.
+        builder.HasAlternateKey(x => new { x.Id, x.CompanyId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.DirectorUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng UserDepartment – bộ phận của người dùng tại công ty (lát O1).</summary>
+internal sealed class UserDepartmentConfiguration : IEntityTypeConfiguration<UserDepartment>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<UserDepartment> builder)
+    {
+        builder.ToTable("UserDepartment");
+        // Mỗi người tối đa một bộ phận ở mỗi công ty.
+        builder.HasIndex(x => new { x.UserId, x.CompanyId }).IsUnique();
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

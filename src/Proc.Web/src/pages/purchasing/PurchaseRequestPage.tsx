@@ -3,11 +3,11 @@ import { FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useFetchSupplierItem, useSupplierItemLookup, useUoms } from '../../api/masterData'
-import { useDepartments, useWarehouses } from '../../api/organization'
+import { useDepartments, useMyDepartment, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
   purchaseStatusText,
@@ -110,6 +110,11 @@ export function PurchaseRequestPage() {
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
   const doc = request.data
+  // Phiếu mới: điền sẵn bộ phận của người lập tại công ty (lát O1 – gán ở Người dùng → Phân quyền); người lập vẫn đổi được.
+  const myDepartment = useMyDepartment(isNew)
+  useEffect(() => {
+    if (isNew && myDepartment.data && !form.getFieldValue('departmentId')) form.setFieldValue('departmentId', myDepartment.data)
+  }, [isNew, myDepartment.data, form])
   const readOnly = isNew ? !hasPermission(Permission.PrCreate) : !doc?.actions.canEdit
   // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
   const attachmentTab = useAttachmentTab('PurchaseRequest', doc?.id, hasPermission(Permission.PrCreate))

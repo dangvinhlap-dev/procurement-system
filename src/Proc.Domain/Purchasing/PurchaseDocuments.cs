@@ -285,6 +285,9 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     /// <summary>Bộ phận tính ngân sách (design.md mục 18.24); null = không kiểm tra ngân sách.</summary>
     public abstract Guid? BudgetDepartmentId { get; }
 
+    /// <summary>Bộ phận của phiếu cho người duyệt động Trưởng phòng ban / GĐ khối (lát O1) – cùng bộ phận tính ngân sách.</summary>
+    public Guid? ApprovalDepartmentId => BudgetDepartmentId;
+
     /// <summary>Giá trị phiếu tính vào ngân sách – tiền hàng chưa VAT (PR: tổng dự kiến; PO: tổng tiền sau chiết khấu).</summary>
     public abstract decimal BudgetedAmount { get; }
 

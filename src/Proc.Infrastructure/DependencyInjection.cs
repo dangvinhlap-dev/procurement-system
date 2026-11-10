@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<ICompanyAdministration, CompanyAdministration>();
         services.AddScoped<IWarehouseAdministration, WarehouseAdministration>();
         services.AddScoped<IDepartmentAdministration, DepartmentAdministration>();
+        services.AddScoped<IDivisionAdministration, DivisionAdministration>();
         services.AddScoped<IUomAdministration, UomAdministration>();
         services.AddScoped<Proc.Application.Pricing.IInternalPriceAdministration, Proc.Infrastructure.Pricing.InternalPriceAdministration>();
         services.AddScoped<Proc.Application.Pricing.IPriceListService, Proc.Infrastructure.Pricing.PriceListService>();

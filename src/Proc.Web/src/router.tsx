@@ -89,6 +89,7 @@ import { WarehouseListPage } from './pages/system/WarehouseListPage'
 import { AnomalyReportPage, ControlFindingListPage } from './pages/reports/ControlPages'
 import { ControlFindingDetailPage } from './pages/reports/ControlFindingDrawer'
 import { DepartmentListPage } from './pages/system/DepartmentListPage'
+import { DivisionListPage } from './pages/system/DivisionListPage'
 
 /** Màn hình đã làm, theo mã; màn hình khác trong danh mục mở trang "đang xây dựng". */
 const implemented: Record<string, ReactNode> = {
@@ -170,6 +171,7 @@ const implemented: Record<string, ReactNode> = {
   ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
   DEPT: <DepartmentListPage />,
+  DIV: <DivisionListPage />,
   USER: <UserListPage />,
   ROLE: <RoleListPage />,
   LOG: <AuditLogListPage />,

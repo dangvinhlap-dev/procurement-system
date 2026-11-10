@@ -10,7 +10,11 @@ import { DepartmentDrawer } from './DepartmentDrawer'
 const columns: GridColumn<Department>[] = [
   { key: 'code', title: 'Mã bộ phận', width: 110, value: (r) => r.code },
   { key: 'name', title: 'Tên bộ phận', width: 260, value: (r) => r.name },
-  { key: 'manager', title: 'Trưởng bộ phận', width: 180, value: (r) => r.managerName },
+  { key: 'division', title: 'Khối', width: 200, value: (r) => r.divisionName, groupable: true },
+  { key: 'managerUser', title: 'Trưởng phòng ban', width: 180, value: (r) => r.managerUserName },
+  { key: 'director', title: 'Giám đốc khối', width: 180, value: (r) => r.directorName },
+  { key: 'manager', title: 'Trưởng bộ phận (tên in)', width: 180, value: (r) => r.managerName },
+  { key: 'members', title: 'Số người', width: 90, type: 'quantity', value: (r) => r.memberCount },
   { key: 'requests', title: 'Số PR', width: 90, type: 'quantity', value: (r) => r.requestCount },
   {
     key: 'status',

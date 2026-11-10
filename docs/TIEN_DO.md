@@ -1,6 +1,6 @@
 ﻿# Tiến độ dự án
 
-Cập nhật: 10/11/2026 (K2: phiếu xác nhận nhận hàng XNH, báo cáo OTIF; K1: tắt phân hệ kho – bắt đầu hệ thống mới từ 0.22.0, design.md mục 19; tài liệu hướng dẫn sử dụng, hướng dẫn cài đặt chi tiết, ghi chú hàm nội bộ; trước đó 09/11/2026: phát hành 0.21.0, bản test 5007 nâng lên 0.21.0; G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 10/11/2026 (O1: khối, Trưởng phòng ban, GĐ khối, người duyệt động; K2: phiếu xác nhận nhận hàng XNH, báo cáo OTIF; K1: tắt phân hệ kho – bắt đầu hệ thống mới từ 0.22.0, design.md mục 19; tài liệu hướng dẫn sử dụng, hướng dẫn cài đặt chi tiết, ghi chú hàm nội bộ; trước đó 09/11/2026: phát hành 0.21.0, bản test 5007 nâng lên 0.21.0; G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -150,6 +150,27 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
+  O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3
+  (phiếu chưa có trường loại mua).
+  - **O1a (xong 10/11/2026)**: danh mục **Khối** (`Division`: mã, tên, Giám đốc khối = tài khoản, ngừng dùng) – màn hình **DIV**
+    (Hệ thống → Khối), cùng quyền danh mục bộ phận; bộ phận thêm Khối + **Trưởng phòng ban (tài khoản)** (giữ ô "Trưởng bộ phận (tên in)");
+    người dùng thuộc bộ phận theo công ty (`UserDepartment`, ô "Bộ phận" ở tab Phân quyền của Người dùng) – PR mới tự điền bộ phận của người lập
+    (`GET /api/departments/mine`). Trưởng phòng ban / GĐ khối phải là tài khoản còn hoạt động có vai trò tại công ty
+    (`GET /api/departments/user-options`). Migration `V0_22_0_KhoiPhongBan` (Down mất danh mục khối, gán người/bộ phận). Test tích hợp
+    `DivisionTests` (2), e2e `divisions.spec.ts`. Kiểm tra: dotnet build 0 cảnh báo, dotnet test 323 + 299 qua, tsc, oxlint, npm run build,
+    Playwright divisions + departments + administration 9/9 (API 5010 + Vite 127.0.0.1:5190 – cổng 5180/5181 vướng Vite cũ).
+    Lưu ý môi trường: **Google Drive đồng bộ thư mục dự án giữ file `obj\...\MvcTestingAppManifest.json`** làm `dotnet test` báo khóa file –
+    chờ vài chục giây rồi build lại là qua.
+  - **O1b (xong 10/11/2026)**: APRL chọn **người duyệt** của cấp: Theo vai trò / **Trưởng phòng ban của phiếu** / **GĐ khối của phiếu** (chỉ loại có
+    bộ phận: PR, PO, POX, POK, PRB, POB, POL, POC – `ApprovalTypeInfo.HasDepartment`). `ApprovalRule.Kind` (RoleId cho phép null),
+    `ApprovalStep.Kind` + `DepartmentId`; `DynamicApprovers` tìm người theo danh mục **hiện hành lúc duyệt**; `ApprovalEngine` chặn gửi khi thiếu
+    bộ phận / Trưởng phòng ban / khối / GĐ khối, tài khoản ngừng dùng, chưa có quyền duyệt, là người lập, hoặc một người giữ hai cấp động; nút
+    Duyệt, Việc cần làm, người duyệt tiếp theo (lịch sử duyệt, tra cứu chứng từ) theo đúng người. Lịch sử hiện "Trưởng phòng ban PX1",
+    "GĐ khối SX". Migration `V0_22_0_DuyetDong` (Kind mặc định 1; Down xóa cấp động). Ghi quy tắc design.md mục 19.3 (lát O1), hướng dẫn sử
+    dụng 01/02/08. Test: domain `NguoiDuyetDong_…`, tích hợp `DynamicApproverTests` (2), e2e `divisions.spec.ts` thêm APRL. Kiểm tra: build
+    0 cảnh báo, dotnet test 325 tích hợp + 300 domain qua, tsc, oxlint, npm run build, Playwright divisions/departments/administration/
+    approval-rule-template/purchasing/document-registry 15/15.
 - **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
   tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,
   L8 RFQ đếm NCC mời thay báo giá + báo giá sau hạn, L9 hủy PO đã duyệt không lý do, cảnh báo CS1573.

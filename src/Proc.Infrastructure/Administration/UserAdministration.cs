@@ -129,7 +129,9 @@ public sealed class UserAdministration : IUserAdministration
             await _organization.GetWarehousesAsync(cancellationToken),
             await _organization.GetItemCategoriesAsync(cancellationToken),
             MustLimitWarehouses: !_scope.AllWarehouses,
-            MustLimitItemCategories: !_scope.AllItemCategories);
+            MustLimitItemCategories: !_scope.AllItemCategories,
+            Departments: await _db.Departments.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.Code)
+                .Select(d => new UserDepartmentOptionDto(d.Id, d.Code, d.Name)).ToListAsync(cancellationToken));
     }
 
     /// <inheritdoc />
@@ -265,6 +267,8 @@ public sealed class UserAdministration : IUserAdministration
         foreach (var categoryId in categoryIds.Except(current.ItemCategoryIds))
             _db.UserItemCategoryScopes.Add(UserItemCategoryScope.Allow(userId, companyId, categoryId));
 
+        await ApplyDepartmentAsync(userId, companyId, roleIds.Count == 0 ? null : access.DepartmentId, cancellationToken);
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -314,7 +318,28 @@ public sealed class UserAdministration : IUserAdministration
         if (hasRoles && requested.Count == 0 && !callerHasAll && !keepsAll) throw new BusinessRuleException(mustLimitMessage);
     }
 
-    /// <summary>Vai trò, kho, nhóm hàng hiện có của người dùng tại một công ty (đọc thẳng bảng phân quyền).</summary>
+    /// <summary>
+    /// Gán, chuyển hoặc bỏ bộ phận của người dùng tại công ty (lát O1). Bộ phận đọc qua filter công ty nên không gán được bộ phận công ty khác;
+    /// giữ nguyên bộ phận đang gán dù đã ngừng dùng, chỉ gán mới phải là bộ phận còn sử dụng.
+    /// </summary>
+    private async Task ApplyDepartmentAsync(Guid userId, Guid companyId, Guid? departmentId, CancellationToken cancellationToken)
+    {
+        var current = await _db.UserDepartments.SingleOrDefaultAsync(x => x.UserId == userId && x.CompanyId == companyId, cancellationToken);
+        if (departmentId is null || departmentId == Guid.Empty)
+        {
+            if (current is not null) _db.UserDepartments.Remove(current);
+            return;
+        }
+
+        if (current?.DepartmentId == departmentId) return;
+        var department = await _db.Departments.SingleOrDefaultAsync(d => d.Id == departmentId, cancellationToken)
+            ?? throw new BusinessRuleException("Bộ phận không thuộc công ty đang làm việc.");
+        if (!department.IsActive) throw new BusinessRuleException($"Bộ phận {department.Code} đã ngừng dùng.");
+        if (current is null) _db.UserDepartments.Add(UserDepartment.Assign(userId, department));
+        else current.MoveTo(department);
+    }
+
+    /// <summary>Vai trò, kho, nhóm hàng, bộ phận hiện có của người dùng tại một công ty (đọc thẳng bảng phân quyền).</summary>
     private async Task<UserAccessDto> LoadAccessAsync(Guid userId, Guid companyId, CancellationToken cancellationToken)
     {
         var roleIds = await _db.UserCompanyRoles.AsNoTracking()
@@ -329,7 +354,11 @@ public sealed class UserAdministration : IUserAdministration
             .Where(x => x.UserId == userId && x.CompanyId == companyId)
             .Select(x => x.ItemCategoryId)
             .ToListAsync(cancellationToken);
-        return new UserAccessDto(roleIds, warehouseIds, categoryIds);
+        var departmentId = await _db.UserDepartments.AsNoTracking()
+            .Where(x => x.UserId == userId && x.CompanyId == companyId)
+            .Select(x => (Guid?)x.DepartmentId)
+            .SingleOrDefaultAsync(cancellationToken);
+        return new UserAccessDto(roleIds, warehouseIds, categoryIds, departmentId);
     }
 
     /// <summary>Chặn khi người đang đăng nhập không được quản lý tài khoản này.</summary>

@@ -28,8 +28,19 @@ public sealed class Department : AuditableEntity, ICompanyOwned
     /// <summary>Tên bộ phận.</summary>
     public string Name { get; private set; } = string.Empty;
 
-    /// <summary>Trưởng bộ phận (họ tên).</summary>
+    /// <summary>Trưởng bộ phận (họ tên in trên phiếu).</summary>
     public string? ManagerName { get; private set; }
+
+    /// <summary>
+    /// Khối của bộ phận (lát O1, design.md mục 19.3) – Giám đốc khối là người duyệt cấp "GĐ khối của phiếu"; null = chưa gán khối.
+    /// </summary>
+    public Guid? DivisionId { get; private set; }
+
+    /// <summary>
+    /// Trưởng phòng ban (tài khoản người dùng có quyền tại công ty) – người duyệt cấp "Trưởng phòng ban của phiếu" (lát O1); null = chưa khai,
+    /// phiếu cần cấp này bị chặn gửi duyệt.
+    /// </summary>
+    public Guid? ManagerUserId { get; private set; }
 
     /// <summary>Còn sử dụng. Bộ phận ngừng dùng không chọn được trên PR mới nhưng vẫn hiện trên phiếu cũ.</summary>
     public bool IsActive { get; private set; } = true;
@@ -67,5 +78,17 @@ public sealed class Department : AuditableEntity, ICompanyOwned
         Name = name.Trim();
         ManagerName = string.IsNullOrWhiteSpace(managerName) ? null : managerName.Trim();
         IsActive = isActive;
+    }
+
+    /// <summary>
+    /// Gán khối và Trưởng phòng ban (tài khoản) – dữ liệu cho người duyệt động (lát O1). Dịch vụ kiểm tra khối cùng công ty và tài khoản có
+    /// quyền tại công ty trước khi gọi.
+    /// </summary>
+    /// <param name="divisionId">Khối; null = bỏ gán.</param>
+    /// <param name="managerUserId">Trưởng phòng ban; null = chưa khai.</param>
+    public void AssignOrganization(Guid? divisionId, Guid? managerUserId)
+    {
+        DivisionId = divisionId == Guid.Empty ? null : divisionId;
+        ManagerUserId = managerUserId == Guid.Empty ? null : managerUserId;
     }
 }

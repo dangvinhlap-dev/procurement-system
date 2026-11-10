@@ -27,10 +27,12 @@ public sealed record UserListItemDto(
 /// <param name="RoleIds">Vai trò được gán; rỗng = không làm việc ở công ty này.</param>
 /// <param name="WarehouseIds">Kho được phép; rỗng = mọi kho của công ty (design.md mục 9.2).</param>
 /// <param name="ItemCategoryIds">Nhóm hàng được phép (kế thừa xuống nhóm con); rỗng = mọi nhóm hàng.</param>
+/// <param name="DepartmentId">Bộ phận của người dùng tại công ty (lát O1) – điền sẵn khi lập đề nghị mua; null = chưa gán.</param>
 public sealed record UserAccessDto(
     IReadOnlyList<Guid> RoleIds,
     IReadOnlyList<Guid> WarehouseIds,
-    IReadOnlyList<Guid> ItemCategoryIds);
+    IReadOnlyList<Guid> ItemCategoryIds,
+    Guid? DepartmentId = null);
 
 /// <summary>Chi tiết người dùng cho ngăn kéo chi tiết.</summary>
 /// <param name="Id">Id tài khoản.</param>
@@ -70,12 +72,20 @@ public sealed record AssignableRoleDto(Guid Id, string Code, string Name, bool C
 /// <param name="ItemCategories">Nhóm hàng trong phạm vi của người đang thao tác.</param>
 /// <param name="MustLimitWarehouses">Người đang thao tác bị giới hạn kho, nên phải chọn ít nhất một kho (không cấp "mọi kho").</param>
 /// <param name="MustLimitItemCategories">Tương tự cho nhóm hàng.</param>
+/// <param name="Departments">Bộ phận còn sử dụng của công ty (lát O1).</param>
 public sealed record UserAccessOptionsDto(
     IReadOnlyList<AssignableRoleDto> Roles,
     IReadOnlyList<WarehouseDto> Warehouses,
     IReadOnlyList<ItemCategoryDto> ItemCategories,
     bool MustLimitWarehouses,
-    bool MustLimitItemCategories);
+    bool MustLimitItemCategories,
+    IReadOnlyList<UserDepartmentOptionDto>? Departments = null);
+
+/// <summary>Bộ phận chọn được cho người dùng.</summary>
+/// <param name="Id">Id bộ phận.</param>
+/// <param name="Code">Mã.</param>
+/// <param name="Name">Tên.</param>
+public sealed record UserDepartmentOptionDto(Guid Id, string Code, string Name);
 
 /// <summary>Tạo tài khoản mới, kèm gán vai trò và phạm vi tại công ty đang làm việc.</summary>
 /// <param name="UserName">Tên đăng nhập (chữ thường không dấu, số, dấu chấm, gạch).</param>

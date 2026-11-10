@@ -38,6 +38,11 @@ danh mục (DSDM)** – xem 08. Chưa cấu hình dải thì không thêm mới 
 Danh mục bộ phận của từng công ty (mã, tên, trưởng bộ phận). PR **bắt buộc** chọn bộ phận; ngân sách khai theo bộ phận. Khai báo bộ phận
 trước khi người dùng lập PR. Quyền `Organization.Department.View/Manage`.
 
+Từ bản 0.22.0 (lát O1): mỗi bộ phận gán **Khối** và **Trưởng phòng ban (tài khoản)** – người duyệt cấp "Trưởng phòng ban của phiếu" ở Quy trình
+duyệt; ô "Trưởng bộ phận (tên in)" chỉ để in. **Khối (DIV – Hệ thống → Khối)**: mã, tên, **Giám đốc khối** (tài khoản) – người duyệt cấp
+"GĐ khối của phiếu". Chỉ chọn được tài khoản có vai trò tại công ty. Người dùng gán vào bộ phận ở Người dùng → tab Phân quyền (ô "Bộ phận");
+khi người đó lập PR, bộ phận được điền sẵn.
+
 ## 2.5 Đơn vị tính (UOM)
 
 Mã 1–10 chữ/số (ví dụ CAI, HOP, KG), tên. Chỉ ngừng dùng được khi không còn mặt hàng đang dùng ĐVT đó.

@@ -2105,6 +2105,24 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 
 Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng ban của phiếu (lát O1). Vượt dự toán / định mức thêm chặng duyệt (Q5).
 
+**Lát O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động (0.22.0).** Quy tắc (mặc định tự chọn ghi "tự đặt"):
+
+- **Khối** (`Division`, màn hình DIV – Hệ thống → Khối): danh mục của từng công ty như bộ phận (mã 2–20 ký tự, không đổi; ngừng dùng thay xóa),
+  có **Giám đốc khối** là tài khoản. Cùng quyền với danh mục bộ phận (`Organization.Department.View/Manage`).
+- **Bộ phận** thêm **Khối** và **Trưởng phòng ban (tài khoản)**; ô chữ cũ đổi tên "Trưởng bộ phận (tên in)", giữ để in. Trưởng phòng ban / GĐ khối
+  phải là tài khoản còn hoạt động **có vai trò tại công ty** (chỉ kiểm tra khi đổi người). Khối ngừng dùng: bộ phận đang gán giữ khối, không gán mới.
+- **Người dùng thuộc bộ phận** (`UserDepartment`): mỗi người tối đa một bộ phận ở mỗi công ty, chọn ở Người dùng → Phân quyền; bỏ hết vai trò tại
+  công ty thì bỏ luôn bộ phận. Chỉ dùng điền sẵn bộ phận khi lập đề nghị mua (người lập đổi được) – không ảnh hưởng phạm vi dữ liệu (tự đặt).
+- **Người duyệt của cấp** ở APRL: *Theo vai trò* (như cũ), *Trưởng phòng ban của phiếu*, *GĐ khối của phiếu*. Hai loại sau chỉ cho loại phiếu có
+  bộ phận – PR, PO và các bộ cấp phụ (POX, POK, PRB, POB, POL, POC); bộ phận của phiếu là bộ phận đề nghị (PR) / bộ phận đặt hàng (PO).
+- Bước duyệt ghi loại người duyệt + bộ phận của phiếu lúc gửi; **người duyệt xác định lúc duyệt** theo danh mục hiện hành – đổi Trưởng phòng ban
+  khi phiếu đang chờ thì người mới duyệt (tự đặt). Người duyệt vẫn phải có quyền duyệt loại phiếu tại công ty, không phải người lập, không vướng kê
+  khai xung đột lợi ích, mỗi người một cấp trong lượt (R3). Lịch sử duyệt hiện "Trưởng phòng ban PX1", "GĐ khối HCNS" ở cột vai trò.
+- **Chặn gửi duyệt** (phiếu giữ Nháp, báo rõ chỗ sửa) khi có cấp động mà: phiếu chưa có bộ phận; bộ phận chưa khai Trưởng phòng ban / chưa gán khối;
+  khối chưa khai GĐ khối; tài khoản đó đã ngừng dùng hoặc chưa có quyền duyệt loại phiếu; người đó là **người lập** (Trưởng phòng ban tự lập
+  phiếu của bộ phận mình phải nhờ người khác lập – tự đặt, ủy quyền ở O2); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
+- "Chuỗi duyệt theo loại mua" (A/B/DV/C) làm cùng lát Y3 khi đề nghị mua có trường loại mua.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
