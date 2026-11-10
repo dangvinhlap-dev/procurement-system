@@ -22,6 +22,9 @@ public static class NotificationTypes
 
     /// <summary>KSNB ghi nhận hoặc kết luận vi phạm – gửi thẳng lãnh đạo (design.md mục 18.19).</summary>
     public const string ControlFinding = "ControlFinding";
+
+    /// <summary>Người được ủy quyền vừa duyệt/từ chối thay mình (lát O2, design.md mục 19.3).</summary>
+    public const string DelegatedAction = "DelegatedAction";
 }
 
 /// <summary>

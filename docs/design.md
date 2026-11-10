@@ -2120,8 +2120,30 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   khai xung đột lợi ích, mỗi người một cấp trong lượt (R3). Lịch sử duyệt hiện "Trưởng phòng ban PX1", "GĐ khối HCNS" ở cột vai trò.
 - **Chặn gửi duyệt** (phiếu giữ Nháp, báo rõ chỗ sửa) khi có cấp động mà: phiếu chưa có bộ phận; bộ phận chưa khai Trưởng phòng ban / chưa gán khối;
   khối chưa khai GĐ khối; tài khoản đó đã ngừng dùng hoặc chưa có quyền duyệt loại phiếu; người đó là **người lập** (Trưởng phòng ban tự lập
-  phiếu của bộ phận mình phải nhờ người khác lập – tự đặt, ủy quyền ở O2); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
+  phiếu của bộ phận mình phải nhờ người khác lập hoặc ủy quyền duyệt – lát O2a); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
 - "Chuỗi duyệt theo loại mua" (A/B/DV/C) làm cùng lát Y3 khi đề nghị mua có trường loại mua.
+
+**Lát O2a – ủy quyền duyệt có thời hạn (0.22.0, Q9).** Quy tắc (mặc định tự chọn ghi "tự đặt"):
+
+- Màn hình **UQD** (Việc hằng ngày → Ủy quyền duyệt), bảng `ApprovalDelegation` theo công ty: người ủy quyền, người được ủy quyền, loại phiếu
+  (một loại hoặc **mọi loại**; không có các bộ cấp phụ POX, POK, PRB, POB, POL, POC, GTX – đã nằm trong loại phiếu gốc), từ ngày – đến hết ngày
+  (ngày Việt Nam), lý do (bắt buộc), ghi chú, tab đính kèm (giấy ủy quyền). Không lập lùi ngày; tối đa **90 ngày** một lần (tự đặt – lâu hơn thì đổi
+  người giữ vị trí); không trùng ủy quyền chưa thu hồi cùng hai người, chồng loại phiếu và chồng ngày. Không sửa: sai thì **thu hồi** rồi lập lại.
+- Ai có quyền duyệt cũng **tự ủy quyền** (không cần quyền riêng); quyền `Organization.Delegation.Manage` lập thay người khác, thu hồi, xem mọi ủy
+  quyền của công ty. Người khác chỉ thấy ủy quyền mình lập hoặc mình được nhận. Thu hồi: người ủy quyền hoặc người quản lý (người được ủy quyền
+  không tự thu hồi). Người ủy quyền và người được ủy quyền phải là tài khoản đang hoạt động **có quyền duyệt** loại phiếu (mọi loại: ít nhất một
+  quyền duyệt) tại công ty – ủy quyền chỉ cho mượn **vị trí** của cấp (vai trò của cấp, Trưởng phòng ban / GĐ khối của phiếu), không cho quyền chức
+  năng (API duyệt vẫn đòi quyền duyệt).
+- **Duyệt thay**: trong thời hạn, người được ủy quyền duyệt/từ chối được bước mà người ủy quyền đang giữ vị trí, khi bản thân: không phải người lập,
+  không vướng kê khai xung đột lợi ích, chưa duyệt cấp nào trong lượt; và người ủy quyền: còn quyền duyệt tại công ty, không vướng xung đột lợi ích,
+  chưa duyệt (tự duyệt hoặc được duyệt thay) cấp nào trong lượt. Người ủy quyền **được là người lập** – người duyệt thật vẫn khác người lập (tự đặt).
+  Tự giữ vị trí thì duyệt bằng tư cách của mình (không tính là duyệt thay). Người ủy quyền vẫn tự duyệt được trong thời gian ủy quyền (tự đặt).
+- Bước ghi `OnBehalfOf` = người ủy quyền; lịch sử duyệt hiện **"Bình (thay An)"**; cả hai người tính là đã duyệt một cấp trong lượt (R3). Người
+  ủy quyền nhận thông báo "đã được duyệt/từ chối thay bạn". Người được ủy quyền nhận thông báo chờ duyệt "chờ bạn duyệt thay An", phiếu hiện ở
+  Việc cần làm; người duyệt tiếp theo (lịch sử duyệt, tra cứu chứng từ) hiện "Bình (thay An)".
+- **Trưởng phòng ban / GĐ khối tự lập phiếu** bộ phận mình (lát O1 chặn gửi): gửi được khi người đó đang có ủy quyền (hôm nay, đúng loại phiếu) cho
+  người khác có quyền duyệt, không phải người lập. Ủy quyền hết hạn khi phiếu còn chờ thì phiếu chờ người giữ vị trí hoặc ủy quyền mới.
+- Thu hồi hoặc hết hạn: từ lúc đó không duyệt thay nữa; bước đã duyệt thay giữ nguyên.
 
 ### 19.4 Bỏ phân hệ kho
 

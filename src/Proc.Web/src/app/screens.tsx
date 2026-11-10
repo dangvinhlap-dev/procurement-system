@@ -1,5 +1,6 @@
 import {
   AlertOutlined,
+  UserSwitchOutlined,
   ApartmentOutlined,
   AuditOutlined,
   CalculatorOutlined,
@@ -116,6 +117,7 @@ export const moduleGroups: ModuleGroup[] = [
 export const screens: Screen[] = [
   { code: 'HOME', title: 'Trang chủ', navLabel: 'Trang chủ', path: '/', icon: <HomeOutlined />, group: 'daily' },
   { code: 'TODO', title: 'Việc cần làm', navLabel: 'Việc cần làm', path: '/hang-ngay/viec-can-lam', icon: <CheckSquareOutlined />, group: 'daily' },
+  { code: 'UQD', title: 'Ủy quyền duyệt', navLabel: 'Ủy quyền duyệt', path: '/hang-ngay/uy-quyen-duyet', icon: <UserSwitchOutlined />, group: 'daily' },
   { code: 'NOTI', title: 'Thông báo', navLabel: 'Thông báo', path: '/hang-ngay/thong-bao', icon: <BellOutlined />, group: 'daily' },
   { code: 'DOCS', title: 'Tra cứu chứng từ', navLabel: 'Tra cứu chứng từ', path: '/hang-ngay/tra-cuu-chung-tu', icon: <FileSearchOutlined />, group: 'daily' },
 

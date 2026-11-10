@@ -16,6 +16,7 @@ export const Permission = {
   WarehouseManage: 'Organization.Warehouse.Manage',
   DepartmentView: 'Organization.Department.View',
   DepartmentManage: 'Organization.Department.Manage',
+  DelegationManage: 'Organization.Delegation.Manage',
   ItemCategoryView: 'MasterData.ItemCategory.View',
   ItemCategoryManage: 'MasterData.ItemCategory.Manage',
   ItemView: 'MasterData.Item.View',

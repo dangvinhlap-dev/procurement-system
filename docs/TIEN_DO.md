@@ -150,6 +150,19 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **O2 – ủy quyền duyệt, email, nhắc quá hạn, duyệt trên điện thoại** (design.md mục 19.1 Q9, 19.3; lộ trình 0.22.0; nhánh
+  `feature/o2-uy-quyen-email`). Chia bước: O2a ủy quyền duyệt → O2b email SMTP (MailKit, gửi bản sao thông báo qua dịch vụ nền) → O2c nhắc
+  quá hạn 1 ngày làm việc → O2d trang duyệt gọn cho điện thoại.
+  - **O2a (xong 10/11/2026)**: bảng `ApprovalDelegation` (công ty, người ủy quyền → người được ủy quyền, loại phiếu hoặc mọi loại, từ–đến ngày
+    ≤ 90 ngày, lý do, ghi chú, thu hồi), màn hình **UQD** (Việc hằng ngày → Ủy quyền duyệt) có tab đính kèm; quyền mới
+    `Organization.Delegation.Manage` (lập thay, thu hồi, xem toàn công ty – tự ủy quyền không cần quyền). `ApprovalEngine.ActorAsync`: không giữ
+    vị trí thì xét ủy quyền đang tác dụng; bước ghi `OnBehalfOf`, lịch sử "B (thay A)", R3 tính cả người được duyệt thay; thông báo "chờ bạn
+    duyệt thay A" và "đã được duyệt thay bạn" (`DelegatedAction`); người duyệt tiếp theo (`NextApproverResolver.CandidatesAsync`) gồm người được
+    ủy quyền. Trưởng phòng ban tự lập phiếu gửi được khi đang ủy quyền. Migration `V0_22_0_UyQuyenDuyet` (Down mất ủy quyền + dấu duyệt thay).
+    Test tích hợp `ApprovalDelegationTests` (2), e2e `delegations.spec.ts`. Kiểm tra: dotnet build 0 cảnh báo, dotnet test 627/627, tsc, oxlint,
+    npm run build, Playwright delegations/divisions/notifications 4/4 (API 5010 + Vite 127.0.0.1:5191 – cổng 5190 còn Vite cũ).
+    Lưu ý: Google Drive giữ `src\Proc.Api\obj\...\rjsmrazor.dswa.cache.json` rất lâu (vòng chờ 30 giây qua ở lần thứ 15).
+
 - **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
   O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3
   (phiếu chưa có trường loại mua).

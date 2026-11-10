@@ -46,6 +46,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.DemandPlan] = (Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
             [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
+            // Ủy quyền duyệt (lát O2): ai cũng tự ủy quyền được (không mã quyền) – kiểm tra riêng theo người ủy quyền / được ủy quyền.
+            [AttachmentOwnerTypes.ApprovalDelegation] = (string.Empty, string.Empty),
             // Ý kiến thẩm định (lát H1): quyền theo chủ của ý kiến và người ghi – kiểm tra riêng qua IAppraisalOpinionService.
             [AttachmentOwnerTypes.AppraisalOpinion] = (string.Empty, string.Empty),
         };
@@ -173,6 +175,7 @@ public sealed class AttachmentService : IAttachmentService
         // ADJ, không cần quyền lập chứng từ kho thường – kiểm tra sau khi biết loại phiếu.
         var adjustmentAware = manage && ownerType == AttachmentOwnerTypes.InventoryDocument;
         if (ownerType == AttachmentOwnerTypes.ConflictDeclaration) return await RequireConflictDeclarationAsync(ownerId, manage, cancellationToken);
+        if (ownerType == AttachmentOwnerTypes.ApprovalDelegation) return await RequireApprovalDelegationAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.AppraisalOpinion) return await _appraisals.RequireAttachmentAccessAsync(ownerId, manage, cancellationToken);
         if (!adjustmentAware) _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
 
@@ -247,6 +250,21 @@ public sealed class AttachmentService : IAttachmentService
             : _scope.HasPermission(Permissions.MasterData.ConflictView) || _scope.HasPermission(Permissions.MasterData.ConflictManage);
         if (!allowed) throw new ForbiddenAccessException("Bạn không có quyền với kê khai xung đột lợi ích của người khác.");
         return null;
+    }
+
+    /// <summary>
+    /// Chủ là ủy quyền duyệt (lát O2) – lọc theo công ty đang làm việc. Người ủy quyền, người được ủy quyền xem được; đính kèm/xóa: người ủy
+    /// quyền hoặc người có quyền quản lý ủy quyền; người có quyền quản lý xem mọi ủy quyền – giống ApprovalDelegationService.
+    /// </summary>
+    private async Task<Guid?> RequireApprovalDelegationAsync(Guid ownerId, bool manage, CancellationToken cancellationToken)
+    {
+        var owner = await _db.ApprovalDelegations.Where(x => x.Id == ownerId)
+                .Select(x => new { x.CompanyId, x.DelegatorUserId, x.DelegateUserId }).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
+        var allowed = _scope.HasPermission(Permissions.Organization.DelegationManage) || owner.DelegatorUserId == _scope.UserId
+            || (!manage && owner.DelegateUserId == _scope.UserId);
+        if (!allowed) throw new ForbiddenAccessException("Bạn không có quyền với ủy quyền duyệt này.");
+        return owner.CompanyId;
     }
 
     /// <summary>

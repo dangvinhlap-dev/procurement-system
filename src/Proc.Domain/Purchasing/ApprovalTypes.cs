@@ -107,6 +107,16 @@ public static class ApprovalTypes
         new(DocumentTypes.VolumeRebate, "Thỏa thuận chiết khấu sản lượng gộp", Permissions.Pricing.VolumeRebateApprove, null),
     ];
 
+    /// <summary>
+    /// Mã chỉ là bộ cấp duyệt phụ/thay thế (chặng ngoại lệ, PO khẩn cấp…) – bước duyệt của chúng vẫn mang loại phiếu gốc (PR, PO, GTH). Dùng lọc
+    /// danh sách loại phiếu khi lập ủy quyền duyệt (lát O2): ủy quyền "Đơn mua hàng" đã gồm mọi chặng của PO.
+    /// </summary>
+    public static readonly IReadOnlySet<string> RuleOnlyCodes = new HashSet<string>
+    {
+        PurchaseOrderPriceException, PurchaseOrderEmergency, PurchaseRequestOverBudget, PurchaseOrderOverBudget, PurchaseOrderOffList,
+        PurchaseOrderOverCeiling, MonthlyApprovalException,
+    };
+
     /// <summary>Tìm loại theo mã (không phân biệt hoa thường, bỏ khoảng trắng); null nếu không có duyệt.</summary>
     public static ApprovalTypeInfo? Find(string? code)
     {
