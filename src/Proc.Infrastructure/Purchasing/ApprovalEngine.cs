@@ -362,25 +362,66 @@ internal sealed class ApprovalEngine
     /// Báo người duyệt được cấp đang chờ (design.md mục 11.6): có quyền duyệt loại phiếu tại công ty; cấp có vai trò thì phải có vai trò
     /// đó – cùng điều kiện với <see cref="ApproveBlockerAsync"/>. Người lập không nhận (không tự duyệt được).
     /// </summary>
-    private async Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
+    private Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken) =>
+        NotifyCandidatesAsync(document, step, NotificationTypes.ApprovalPending, string.Empty, string.Empty, string.Empty, cancellationToken);
+
+    /// <summary>
+    /// Nhắc những người duyệt được một bước đã chờ quá 1 ngày làm việc (lát O2c, design.md mục 19.3) – cùng người nhận với thông báo chờ duyệt
+    /// (tính lại lúc nhắc: ủy quyền mới, người mới được gán vai trò cũng nhận). Gọi từ dịch vụ nền nên không có người đang thao tác.
+    /// Ví dụ: "Nhắc: Đề nghị mua hàng PR-0012 chờ bạn duyệt quá hạn" – "… đang chờ duyệt cấp 1 từ 09/11/2026 08:00, đã quá 1 ngày làm việc
+    /// (nhắc lần 1)."
+    /// </summary>
+    /// <param name="document">Phiếu đang chờ duyệt.</param>
+    /// <param name="step">Bước đang đến lượt.</param>
+    /// <param name="waitingSince">Mốc bước bắt đầu đến lượt (<see cref="ApprovalOverdue.WaitingSince"/>).</param>
+    /// <param name="sequence">Lần nhắc thứ mấy.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số người nhận (0 = không còn ai duyệt được bước).</returns>
+    public Task<int> RemindOverdueAsync(
+        IApprovalSubject document, ApprovalStep step, DateTimeOffset waitingSince, int sequence, CancellationToken cancellationToken)
     {
-        // Người nhận = "người duyệt tiếp theo" (NextApproverResolver: quyền, vai trò, không phải người lập, không vướng xung đột lợi ích),
-        // gồm cả người được ủy quyền duyệt thay (lát O2) – câu báo ghi rõ duyệt thay ai.
+        var since = TimeZoneInfo.ConvertTime(waitingSince, VietnamTime.Zone).ToString("dd/MM/yyyy HH:mm", VietnameseCulture);
+        return NotifyCandidatesAsync(document, step, NotificationTypes.ApprovalOverdue, "Nhắc: ", " quá hạn",
+            $" từ {since}, đã quá 1 ngày làm việc (nhắc lần {sequence})", cancellationToken);
+    }
+
+    /// <summary>
+    /// Gửi thông báo cho những người duyệt được bước. Người nhận = "người duyệt tiếp theo" (NextApproverResolver: quyền, vai trò, không phải người
+    /// lập, không vướng xung đột lợi ích), gồm cả người được ủy quyền duyệt thay (lát O2) – câu báo ghi rõ duyệt thay ai.
+    /// </summary>
+    /// <param name="document">Phiếu.</param>
+    /// <param name="step">Bước đang đến lượt.</param>
+    /// <param name="type">Loại thông báo (chờ duyệt / nhắc quá hạn).</param>
+    /// <param name="titlePrefix">Chữ trước tiêu đề ("Nhắc: ").</param>
+    /// <param name="titleSuffix">Chữ sau tiêu đề (" quá hạn").</param>
+    /// <param name="detail">Chữ chèn sau "đang chờ duyệt cấp n" trong nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số người nhận.</returns>
+    private async Task<int> NotifyCandidatesAsync(
+        IApprovalSubject document, ApprovalStep step, string type, string titlePrefix, string titleSuffix, string detail,
+        CancellationToken cancellationToken)
+    {
         var candidates = (await _approvers.CandidatesAsync([await PendingStepAsync(document, step, cancellationToken)], cancellationToken))[step.Id]
             .Where(c => document.CreatedBy is not null || c.UserId != _scope.UserId).ToList();
-        var waiting = ApprovalTypes.Get(document.DocType).AmountLabel is null
+        var waiting = (ApprovalTypes.Get(document.DocType).AmountLabel is null
             ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}"
-            : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}";
-        _notifications.Add(step.CompanyId, candidates.Where(c => c.OnBehalfOf is null).Select(c => c.UserId), NotificationTypes.ApprovalPending,
-            $"{Noun(document)} {document.No} chờ bạn duyệt", waiting + ".", document.DocType, document.Id);
+            : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}")
+            + detail;
+        _notifications.Add(step.CompanyId, candidates.Where(c => c.OnBehalfOf is null).Select(c => c.UserId), type,
+            $"{titlePrefix}{Noun(document)} {document.No} chờ bạn duyệt{titleSuffix}", waiting + ".", document.DocType, document.Id);
         var delegated = candidates.Where(c => c.OnBehalfOf is not null).ToList();
-        if (delegated.Count == 0) return;
-        var delegatorIds = delegated.Select(c => c.OnBehalfOf!.Value).Distinct().ToList();
-        var names = await _db.Users.AsNoTracking().Where(u => delegatorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
-        foreach (var c in delegated)
-            _notifications.Add(step.CompanyId, [c.UserId], NotificationTypes.ApprovalPending,
-                $"{Noun(document)} {document.No} chờ bạn duyệt thay {names.GetValueOrDefault(c.OnBehalfOf!.Value)}",
-                $"{waiting} – bạn được {names.GetValueOrDefault(c.OnBehalfOf!.Value)} ủy quyền duyệt thay.", document.DocType, document.Id);
+        if (delegated.Count > 0)
+        {
+            var delegatorIds = delegated.Select(c => c.OnBehalfOf!.Value).Distinct().ToList();
+            var names = await _db.Users.AsNoTracking().Where(u => delegatorIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+            foreach (var c in delegated)
+                _notifications.Add(step.CompanyId, [c.UserId], type,
+                    $"{titlePrefix}{Noun(document)} {document.No} chờ bạn duyệt thay {names.GetValueOrDefault(c.OnBehalfOf!.Value)}{titleSuffix}",
+                    $"{waiting} – bạn được {names.GetValueOrDefault(c.OnBehalfOf!.Value)} ủy quyền duyệt thay.", document.DocType, document.Id);
+        }
+
+        return candidates.Where(c => c.UserId != _scope.UserId).Select(c => c.UserId).Distinct().Count();
     }
 
     /// <summary>Báo người ủy quyền biết người được ủy quyền vừa duyệt/từ chối thay mình (lát O2).</summary>
@@ -444,7 +485,9 @@ internal sealed class ApprovalEngine
     /// <summary>NCC của đối tượng duyệt; phụ lục hợp đồng lấy NCC của hợp đồng gốc.</summary>
     private async Task<IReadOnlyCollection<Guid>> SupplierIdsAsync(IApprovalSubject document, CancellationToken cancellationToken) => document switch
     {
-        PurchaseContractAmendment amendment => await _db.PurchaseContracts.AsNoTracking()
+        // Bỏ filter công ty: phụ lục đã nạp (qua phạm vi người dùng, hoặc bởi dịch vụ nhắc quá hạn chạy nền không có người dùng – lát O2c), chỉ
+        // lấy NCC của đúng hợp đồng gốc.
+        PurchaseContractAmendment amendment => await _db.PurchaseContracts.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
             .Where(c => c.Id == amendment.ContractId).Select(c => c.SupplierId).ToListAsync(cancellationToken),
         _ => document.RelatedSupplierIds,
     };

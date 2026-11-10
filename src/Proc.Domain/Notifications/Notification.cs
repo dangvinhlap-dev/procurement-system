@@ -25,6 +25,9 @@ public static class NotificationTypes
 
     /// <summary>Người được ủy quyền vừa duyệt/từ chối thay mình (lát O2, design.md mục 19.3).</summary>
     public const string DelegatedAction = "DelegatedAction";
+
+    /// <summary>Nhắc: phiếu chờ mình duyệt đã quá 1 ngày làm việc (lát O2c, design.md mục 19.3).</summary>
+    public const string ApprovalOverdue = "ApprovalOverdue";
 }
 
 /// <summary>

@@ -66,6 +66,21 @@ internal sealed class ApprovalDelegationConfiguration : IEntityTypeConfiguration
     }
 }
 
+/// <summary>Cấu hình bảng ApprovalReminder – các lần nhắc quá hạn duyệt (lát O2c, design.md mục 19.3).</summary>
+internal sealed class ApprovalReminderConfiguration : IEntityTypeConfiguration<ApprovalReminder>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ApprovalReminder> builder)
+    {
+        builder.ToTable("ApprovalReminder");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        // Mỗi bước mỗi lần nhắc một dòng – hai tiến trình cùng quét thì lần lưu sau báo lỗi trùng, không gửi trùng thông báo.
+        builder.HasIndex(x => new { x.ApprovalStepId, x.Sequence }).IsUnique();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ApprovalStep>().WithMany().HasForeignKey(x => x.ApprovalStepId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng PurchaseRequest (design.md mục 10.2, 12.1).</summary>
 internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<PurchaseRequest>
 {

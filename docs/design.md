@@ -2164,6 +2164,22 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   `POST /api/notifications/email/test` (quyền sửa tham số) – gửi thư thử tới email của chính mình.
 - Giả định một tiến trình ứng dụng (IIS một worker, một container); nhiều tiến trình cùng quét có thể gửi trùng thư.
 
+**Lát O2c – nhắc quá hạn duyệt (0.22.0, Q9 "nhắc sau 1 ngày làm việc").** Quy tắc (tự đặt, người dùng "làm tiếp" 10/11/2026):
+
+- **Mốc đến lượt** của một bước: lúc gửi duyệt; hoặc lúc bước đứng trước duyệt xong – cấp thấp hơn cùng công ty cùng chặng, hoặc bước cuối của
+  chặng trước. Bước của công ty khác cùng chặng (duyệt song song, mục 18.6) không đổi mốc. Bước cũ trước 0.17.0 không có thời điểm gửi thì không nhắc.
+- **Quá hạn** khi đã qua **1 ngày làm việc** kể từ mốc (cùng giờ của ngày làm việc kế tiếp; thứ 2–6, **chưa trừ ngày lễ** – như SLA mục 18.13;
+  đến lượt vào thứ 7/CN thì tính từ 0 giờ thứ 2). Ví dụ gửi thứ 6 15:00 → quá hạn thứ 2 15:00.
+- Nhắc **người duyệt được bước lúc nhắc** (cùng điều kiện với thông báo chờ duyệt: quyền, vai trò, Trưởng phòng ban / GĐ khối hiện hành, không phải
+  người lập, chưa duyệt cấp khác trong lượt, không vướng xung đột lợi ích; gồm người được ủy quyền – "chờ bạn duyệt thay A"). Thông báo loại
+  **"Quá hạn duyệt"** (`ApprovalOverdue`): "Nhắc: Đề nghị mua hàng PR-… chờ bạn duyệt quá hạn" – nội dung nêu cấp, mốc đến lượt, lần nhắc; có
+  email bản sao (O2b) khi bật email. Người lập không nhận nhắc.
+- **Nhắc lại** mỗi 1 ngày làm việc kể từ lần nhắc trước, tối đa `ApprovalReminder:MaxReminders` = **3** lần mỗi bước; không nhắc vào thứ 7/CN
+  (dịch vụ dừng lâu cũng không nhắc dồn). Bước không còn ai duyệt được vẫn tính một lần nhắc (0 người nhận). Phiếu đã duyệt/từ chối/rút thì thôi.
+- Chạy bằng **dịch vụ nền** quét mỗi `ApprovalReminder:PollMinutes` = 15 phút (mặc định bật, `Enabled=false` để tắt; môi trường test tắt). Bảng
+  `ApprovalReminder` (bước, lần nhắc, thời điểm, số người nhận; khóa duy nhất bước + lần – hai tiến trình cùng quét không nhắc trùng), migration
+  `V0_22_0_NhacQuaHanDuyet`. Chưa có báo cáo/thống kê phiếu quá hạn (làm khi có yêu cầu).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

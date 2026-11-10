@@ -3767,6 +3767,36 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("ApprovalDelegation", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("RemindedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ApprovalStepId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("ApprovalReminder", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7216,6 +7246,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("RevokedBy")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalReminder", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.ApprovalStep", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovalStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalRule", b =>

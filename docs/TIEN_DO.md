@@ -171,7 +171,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     (thông báo cũ = Bỏ qua). Test tích hợp `NotificationEmailTests` (bộ gửi giả), e2e `notifications.spec.ts` thêm đường dẫn email.
     Sửa cảnh báo xUnit2013 ở DynamicApproverTests. Kiểm tra: build 0 cảnh báo, dotnet test 628/628, tsc, oxlint, npm run build, Playwright
     notifications + delegations 3/3. Chưa làm: màn hình quản trị email (đang chỉ có API).
-  - **Còn lại**: O2c nhắc quá hạn (thông báo + email cho người duyệt khi bước chờ quá 1 ngày làm việc), O2d trang duyệt gọn cho điện thoại.
+  - **O2c (xong 10/11/2026)**: nhắc quá hạn duyệt – bước đến lượt quá **1 ngày làm việc** (thứ 2–6, chưa trừ lễ; mốc = lúc gửi hoặc lúc cấp
+    trước/chặng trước duyệt xong – `ApprovalOverdue.WaitingSince`, `AddWorkingDay`) thì thông báo loại `ApprovalOverdue` "Quá hạn duyệt" (kèm
+    email bản sao O2b) cho người duyệt được bước lúc nhắc (gồm người được ủy quyền); nhắc lại cách 1 ngày làm việc, tối đa 3 lần/bước, không nhắc
+    thứ 7/CN. `ApprovalEngine.RemindOverdueAsync` (dùng chung đường gửi với thông báo chờ duyệt), `ApprovalReminderService` +
+    `ApprovalReminderBackgroundService` (mỗi 15 phút), cấu hình mục `ApprovalReminder` (mặc định bật, Testing tắt), bảng `ApprovalReminder`
+    (khóa duy nhất bước + lần) – migration `V0_22_0_NhacQuaHanDuyet`. `SupplierIdsAsync` của phụ lục HĐ bỏ filter công ty (chạy nền). Ghi
+    design.md 19.3, deploy-windows.md, README, appsettings.Production.example.json. Test: domain `ApprovalOverdueTests` (7), tích hợp
+    `ApprovalReminderTests` (đồng hồ giả). Kiểm tra: build 0 cảnh báo, dotnet test 636/636, tsc, oxlint, npm run build qua; không chạy Playwright
+    (giao diện chỉ thêm nhãn loại thông báo, dịch vụ nhắc tắt ở môi trường test).
+  - **Còn lại**: O2d trang duyệt gọn cho điện thoại.
 
 - **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
   O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3

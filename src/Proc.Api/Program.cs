@@ -47,6 +47,10 @@ builder.Services.AddOptions<Proc.Infrastructure.Notifications.EmailOptions>()
         "Email:Enabled = true thì phải khai Email:Host và Email:FromAddress.")
     .ValidateOnStart();
 builder.Services.AddHostedService<Proc.Infrastructure.Notifications.EmailBackgroundService>();
+// Nhắc quá hạn duyệt sau 1 ngày làm việc (lát O2c, design.md mục 19.3) – mặc định bật, môi trường Testing tắt.
+builder.Services.AddOptions<Proc.Infrastructure.Purchasing.ApprovalReminderOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Purchasing.ApprovalReminderOptions.Section));
+builder.Services.AddHostedService<Proc.Infrastructure.Purchasing.ApprovalReminderBackgroundService>();
 // Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
 builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()
     .Bind(builder.Configuration.GetSection("Attachments"))
