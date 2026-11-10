@@ -26,6 +26,8 @@ export interface UserAccess {
   roleIds: string[]
   warehouseIds: string[]
   itemCategoryIds: string[]
+  /** Bộ phận tại công ty (lát O1) – điền sẵn khi lập đề nghị mua; null = chưa gán. */
+  departmentId?: string | null
 }
 
 /** Chi tiết người dùng. */
@@ -50,6 +52,8 @@ export interface UserAccessOptions {
   itemCategories: { id: string; code: string; name: string; parentId: string | null; isActive: boolean }[]
   mustLimitWarehouses: boolean
   mustLimitItemCategories: boolean
+  /** Bộ phận còn sử dụng của công ty (lát O1). */
+  departments?: { id: string; code: string; name: string }[]
 }
 
 /** Dữ liệu tạo tài khoản. */

@@ -6,7 +6,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Endpoint danh mục tổ chức: công ty, kho, bộ phận (design.md mục 5.1, 5.6, 18.5). Dữ liệu đã được lọc theo phạm vi người dùng;
+/// Endpoint danh mục tổ chức: công ty, kho, bộ phận, khối (design.md mục 5.1, 5.6, 18.5, 19.3). Dữ liệu đã được lọc theo phạm vi người dùng;
 /// quy tắc thêm/sửa (chỉ ở tổng công ty, kho tổng, phạm vi kho) nằm ở dịch vụ.
 /// </summary>
 public static class OrganizationEndpoints
@@ -72,6 +72,30 @@ public static class OrganizationEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Organization.DepartmentManage)
             .Validate<UpdateDepartmentRequest>();
+        // Tài khoản chọn làm Trưởng phòng ban / Giám đốc khối (lát O1) – chỉ người sửa danh mục cần.
+        departments.MapGet("/user-options", (IDepartmentAdministration s, CancellationToken ct) => s.UserOptionsAsync(ct))
+            .RequirePermission(Permissions.Organization.DepartmentManage);
+        // Bộ phận của chính người dùng tại công ty đang làm việc – điền sẵn khi lập đề nghị mua; ai đăng nhập cũng hỏi được của mình.
+        departments.MapGet("/mine", async (IDepartmentAdministration s, CancellationToken ct) => Results.Ok(new { departmentId = await s.MineAsync(ct) }))
+            .RequireAuthorization();
+
+        // Khối (lát O1, design.md mục 19.3): cùng quyền với danh mục bộ phận – khối chỉ là nhóm bộ phận kèm Giám đốc khối.
+        var divisions = app.MapGroup("/api/divisions").WithTags("Danh mục");
+        divisions.MapGet("/", (IDivisionAdministration s, CancellationToken ct) => s.ListAsync(ct))
+            .RequirePermission(Permissions.Organization.DepartmentView);
+        divisions.MapGet("/{id:guid}", (Guid id, IDivisionAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.Organization.DepartmentView);
+        divisions.MapPost("/", async (CreateDivisionRequest request, IDivisionAdministration s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/divisions/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Organization.DepartmentManage)
+            .Validate<CreateDivisionRequest>();
+        divisions.MapPut("/{id:guid}", (Guid id, UpdateDivisionRequest request, IDivisionAdministration s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Organization.DepartmentManage)
+            .Validate<UpdateDivisionRequest>();
 
         return app;
     }

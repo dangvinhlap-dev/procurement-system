@@ -12,6 +12,7 @@ import {
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { Select } from '../../classic/Select'
 import { formatDateTime } from '../../utils/format'
 
 /** Giá trị của form người dùng (cả hai tab). */
@@ -26,6 +27,7 @@ interface UserFormValues {
   warehouseIds: string[]
   categoryMode: 'all' | 'some'
   categoryIds: string[]
+  departmentId: string | null
 }
 
 const emptyValues: UserFormValues = {
@@ -39,6 +41,7 @@ const emptyValues: UserFormValues = {
   warehouseIds: [],
   categoryMode: 'all',
   categoryIds: [],
+  departmentId: null,
 }
 
 /** Chuyển chi tiết từ server thành giá trị form; danh sách kho/nhóm rỗng nghĩa là "tất cả" (design.md mục 9.2). */
@@ -55,15 +58,17 @@ function toFormValues(user: UserDetail): UserFormValues {
     warehouseIds: access.warehouseIds,
     categoryMode: access.itemCategoryIds.length > 0 ? 'some' : 'all',
     categoryIds: access.itemCategoryIds,
+    departmentId: access.departmentId ?? null,
   }
 }
 
-/** Đổi giá trị form người dùng thành quyền truy cập gửi API (vai trò, kho, nhóm hàng). */
+/** Đổi giá trị form người dùng thành quyền truy cập gửi API (vai trò, kho, nhóm hàng, bộ phận). */
 function toAccess(v: UserFormValues): UserAccess {
   return {
     roleIds: v.roleIds,
     warehouseIds: v.warehouseMode === 'some' ? v.warehouseIds : [],
     itemCategoryIds: v.categoryMode === 'some' ? v.categoryIds : [],
+    departmentId: v.roleIds.length > 0 ? (v.departmentId ?? null) : null,
   }
 }
 
@@ -132,7 +137,8 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
         const accessChanged =
           !sameSet(access.roleIds, detail.access.roleIds) ||
           !sameSet(access.warehouseIds, detail.access.warehouseIds) ||
-          !sameSet(access.itemCategoryIds, detail.access.itemCategoryIds)
+          !sameSet(access.itemCategoryIds, detail.access.itemCategoryIds) ||
+          (access.departmentId ?? null) !== (detail.access.departmentId ?? null)
         if (canEditAccess && accessChanged) await mutations.setAccess.mutateAsync({ id: detail.id, access })
         message.success(`Đã lưu người dùng ${detail.userName}.`)
       }
@@ -311,6 +317,20 @@ function AccessTab({
           </Checkbox.Group>
         </Form.Item>
         <div className="detail-hint">Không chọn vai trò nào = người dùng không làm việc ở công ty này.</div>
+      </fieldset>
+
+      <fieldset className="detail-section">
+        <legend>Bộ phận tại {companyLabel}</legend>
+        <Form.Item name="departmentId" noStyle>
+          <Select
+            allowClear
+            disabled={disabled || noRole}
+            placeholder="Chưa gán bộ phận"
+            style={{ width: 320 }}
+            options={(options.departments ?? []).map((d) => ({ value: d.id, label: `${d.code} – ${d.name}` }))}
+          />
+        </Form.Item>
+        <div className="detail-hint">Bộ phận được điền sẵn khi người dùng lập đề nghị mua.</div>
       </fieldset>
 
       <fieldset className="detail-section">

@@ -150,6 +150,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
+  O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3
+  (phiếu chưa có trường loại mua).
+  - **O1a (xong 10/11/2026)**: danh mục **Khối** (`Division`: mã, tên, Giám đốc khối = tài khoản, ngừng dùng) – màn hình **DIV**
+    (Hệ thống → Khối), cùng quyền danh mục bộ phận; bộ phận thêm Khối + **Trưởng phòng ban (tài khoản)** (giữ ô "Trưởng bộ phận (tên in)");
+    người dùng thuộc bộ phận theo công ty (`UserDepartment`, ô "Bộ phận" ở tab Phân quyền của Người dùng) – PR mới tự điền bộ phận của người lập
+    (`GET /api/departments/mine`). Trưởng phòng ban / GĐ khối phải là tài khoản còn hoạt động có vai trò tại công ty
+    (`GET /api/departments/user-options`). Migration `V0_22_0_KhoiPhongBan` (Down mất danh mục khối, gán người/bộ phận). Test tích hợp
+    `DivisionTests` (2), e2e `divisions.spec.ts`. Kiểm tra: dotnet build 0 cảnh báo, dotnet test 323 + 299 qua, tsc, oxlint, npm run build,
+    Playwright divisions + departments + administration 9/9 (API 5010 + Vite 127.0.0.1:5190 – cổng 5180/5181 vướng Vite cũ).
+    Lưu ý môi trường: **Google Drive đồng bộ thư mục dự án giữ file `obj\...\MvcTestingAppManifest.json`** làm `dotnet test` báo khóa file –
+    chờ vài chục giây rồi build lại là qua.
 - **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
   tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,
   L8 RFQ đếm NCC mời thay báo giá + báo giá sau hạn, L9 hủy PO đã duyệt không lý do, cảnh báo CS1573.

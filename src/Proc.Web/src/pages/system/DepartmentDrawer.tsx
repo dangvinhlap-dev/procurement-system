@@ -1,6 +1,13 @@
 import { App, Checkbox, Form, Input } from 'antd'
 import { useState } from 'react'
-import { useDepartmentMutations, type Department } from '../../api/organization'
+import { Select } from '../../classic/Select'
+import {
+  useDepartmentMutations,
+  useDivisions,
+  useOrganizationUserOptions,
+  userSelectOptions,
+  type Department,
+} from '../../api/organization'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
@@ -9,12 +16,15 @@ interface DepartmentFormValues {
   code: string
   name: string
   managerName: string
+  divisionId: string | null
+  managerUserId: string | null
   isActive: boolean
 }
 
 /**
  * Ngăn kéo chi tiết bộ phận. Mã không đổi được sau khi tạo (đã nằm trên PR); ngừng dùng thì PR mới không chọn được,
- * PR cũ vẫn hiện tên bộ phận (design.md mục 18.5).
+ * PR cũ vẫn hiện tên bộ phận (design.md mục 18.5). Khối và Trưởng phòng ban (tài khoản) là dữ liệu cho người duyệt động của quy trình duyệt
+ * (lát O1, mục 19.3).
  * @param department Bộ phận đang mở; null = thêm mới.
  * @param onClose Đóng ngăn kéo.
  */
@@ -28,11 +38,15 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
 
   const isNew = department === null
   const editable = hasPermission(Permission.DepartmentManage)
+  const divisions = useDivisions()
+  const users = useOrganizationUserOptions(editable)
 
   const initialValues: DepartmentFormValues = {
     code: department?.code ?? '',
     name: department?.name ?? '',
     managerName: department?.managerName ?? '',
+    divisionId: department?.divisionId ?? null,
+    managerUserId: department?.managerUserId ?? null,
     isActive: department?.isActive ?? true,
   }
 
@@ -46,7 +60,12 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
     }
     setError(null)
     setSaving(true)
-    const input = { name: values.name.trim(), managerName: values.managerName?.trim() ? values.managerName.trim() : null }
+    const input = {
+      name: values.name.trim(),
+      managerName: values.managerName?.trim() ? values.managerName.trim() : null,
+      divisionId: values.divisionId ?? null,
+      managerUserId: values.managerUserId ?? null,
+    }
     try {
       if (isNew) {
         await mutations.create.mutateAsync({ ...input, code: values.code })
@@ -100,7 +119,32 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
               >
                 <Input />
               </Form.Item>
-              <Form.Item label="Trưởng bộ phận" name="managerName" rules={[{ max: 200 }]}>
+              <Form.Item label="Khối" name="divisionId" extra="Giám đốc khối của khối là người duyệt cấp “GĐ khối của phiếu”.">
+                <Select
+                  allowClear
+                  placeholder="Chọn khối"
+                  loading={divisions.isLoading}
+                  options={(divisions.data ?? [])
+                    .filter((d) => d.isActive || d.id === department?.divisionId)
+                    .map((d) => ({ value: d.id, label: `${d.code} – ${d.name}` }))}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Trưởng phòng ban (tài khoản)"
+                name="managerUserId"
+                extra="Người duyệt cấp “Trưởng phòng ban của phiếu”. Chỉ chọn được tài khoản có vai trò tại công ty."
+              >
+                <Select
+                  allowClear
+                  placeholder="Chọn tài khoản"
+                  loading={users.isLoading}
+                  options={userSelectOptions(users.data, {
+                    id: department?.managerUserId ?? null,
+                    name: department?.managerUserName ?? null,
+                  })}
+                />
+              </Form.Item>
+              <Form.Item label="Trưởng bộ phận (tên in)" name="managerName" rules={[{ max: 200 }]}>
                 <Input />
               </Form.Item>
               {!isNew && (

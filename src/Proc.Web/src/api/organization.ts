@@ -170,12 +170,52 @@ export interface Department {
   isActive: boolean
   /** Số PR đã ghi bộ phận này. */
   requestCount: number
+  /** Khối (lát O1, design.md mục 19.3). */
+  divisionId: string | null
+  /** "Mã – tên" khối. */
+  divisionName: string | null
+  /** Trưởng phòng ban (tài khoản) – người duyệt cấp "Trưởng phòng ban của phiếu". */
+  managerUserId: string | null
+  /** Họ tên Trưởng phòng ban. */
+  managerUserName: string | null
+  /** Họ tên Giám đốc khối của khối đã gán. */
+  directorName: string | null
+  /** Số người dùng thuộc bộ phận. */
+  memberCount: number
 }
 
 /** Thông tin bộ phận khi thêm/sửa. */
 export interface DepartmentInput {
   name: string
   managerName: string | null
+  divisionId: string | null
+  managerUserId: string | null
+}
+
+/** Khối của công ty đang làm việc – khớp Proc.Application.Organization.DivisionDto (lát O1). */
+export interface Division {
+  id: string
+  code: string
+  name: string
+  /** Giám đốc khối (tài khoản) – người duyệt cấp "GĐ khối của phiếu". */
+  directorUserId: string | null
+  directorName: string | null
+  isActive: boolean
+  /** Số bộ phận thuộc khối. */
+  departmentCount: number
+}
+
+/** Thông tin khối khi thêm/sửa. */
+export interface DivisionInput {
+  name: string
+  directorUserId: string | null
+}
+
+/** Tài khoản chọn được làm Trưởng phòng ban / Giám đốc khối (có vai trò tại công ty đang làm việc). */
+export interface OrganizationUserOption {
+  id: string
+  userName: string
+  fullName: string
 }
 
 /** Bộ phận của công ty đang làm việc (cả bộ phận ngừng dùng), theo mã. Người lập/xem PR cũng đọc được để chọn bộ phận. */
@@ -204,4 +244,69 @@ export function useDepartmentMutations() {
       onSuccess,
     }),
   }
+}
+
+/** Khối của công ty đang làm việc (cả khối ngừng dùng), theo mã – lát O1. */
+export function useDivisions(enabled = true) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['divisions', companyId],
+    queryFn: () => apiFetch<Division[]>('/api/divisions'),
+    enabled,
+  })
+}
+
+/** Thêm, sửa khối. Lưu xong tải lại khối và bộ phận (bộ phận hiện tên khối, GĐ khối). */
+export function useDivisionMutations() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['divisions'] })
+    void queryClient.invalidateQueries({ queryKey: ['departments'] })
+  }
+  return {
+    create: useMutation({
+      mutationFn: (input: DivisionInput & { code: string }) => apiFetch<Division>('/api/divisions', { method: 'POST', body: input }),
+      onSuccess,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: DivisionInput & { isActive: boolean } }) =>
+        apiFetch<Division>(`/api/divisions/${id}`, { method: 'PUT', body: input }),
+      onSuccess,
+    }),
+  }
+}
+
+/** Tài khoản chọn làm Trưởng phòng ban / Giám đốc khối (chỉ người sửa danh mục bộ phận gọi được). */
+export function useOrganizationUserOptions(enabled = true) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['department-user-options', companyId],
+    queryFn: () => apiFetch<OrganizationUserOption[]>('/api/departments/user-options'),
+    enabled,
+  })
+}
+
+/** Bộ phận của chính người dùng tại công ty đang làm việc – điền sẵn khi lập đề nghị mua (null = chưa gán). */
+export function useMyDepartment(enabled = true) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['my-department', companyId],
+    queryFn: async () => (await apiFetch<{ departmentId: string | null }>('/api/departments/mine')).departmentId,
+    enabled,
+  })
+}
+
+/**
+ * Lựa chọn tài khoản cho ô Trưởng phòng ban / Giám đốc khối: "Họ tên (tên đăng nhập)". Tài khoản đang gán mà không còn trong danh sách
+ * (mất quyền tại công ty) vẫn hiện tên để người sửa thấy và đổi.
+ * @param options Tài khoản có vai trò tại công ty.
+ * @param current Id và họ tên đang gán.
+ */
+export function userSelectOptions(
+  options: OrganizationUserOption[] | undefined,
+  current?: { id: string | null; name: string | null },
+) {
+  const list = (options ?? []).map((u) => ({ value: u.id, label: `${u.fullName} (${u.userName})` }))
+  if (current?.id && !list.some((o) => o.value === current.id)) list.unshift({ value: current.id, label: current.name ?? current.id })
+  return list
 }
