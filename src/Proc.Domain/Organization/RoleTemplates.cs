@@ -30,7 +30,7 @@ public static class RoleTemplates
         Permissions.Pricing.PriceListView, Permissions.Pricing.CompareView, Permissions.Sourcing.RfqView,
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
-        Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView,
+        Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView, Permissions.Purchase.ReceiptView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -83,6 +83,8 @@ public static class RoleTemplates
             Permissions.Inventory.StockView,
             // Đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập (lát H4 – sơ đồ mục 3).
             Permissions.Inventory.DocumentView, Permissions.Inventory.ReceiptAccept,
+            // Từ 0.22.0: dịch vụ do phòng ban đề xuất lập XNH (biên bản nghiệm thu); đơn vị đặt hàng nghiệm thu XNH (Q8, design.md mục 19.1).
+            Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptAccept,
         ]),
 
         new("KHO", "Kho", "Nhận hàng, ghi sổ phiếu kho, xem tồn",
@@ -90,6 +92,8 @@ public static class RoleTemplates
             .. CatalogView, Permissions.Purchase.PoView, Permissions.Inventory.DocumentView,
             Permissions.Inventory.DocumentCreate, Permissions.Inventory.DocumentPost, Permissions.Inventory.AdjustmentCreate,
             Permissions.Inventory.StockView, Permissions.Inventory.PeriodView, Permissions.Report.StockView,
+            // Từ 0.22.0: thủ kho nơi nhận lập XNH (Q8).
+            Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage,
         ]),
         new("KETOAN", "Kế toán", "Đối chiếu PO – phiếu nhận, đóng kỳ kho, xuất chứng từ cho phần mềm kế toán",
         [
@@ -99,6 +103,7 @@ public static class RoleTemplates
             // Kho lập phiếu điều chỉnh/kiểm kê, kế toán ghi sổ – tách người kiểm kê và người ghi tăng/giảm tồn (design.md mục 6.1).
             Permissions.Inventory.AdjustmentPost,
             Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.AccountingExport,
+            Permissions.Purchase.ReceiptView,
         ]),
         new("PHAPCHE", "Pháp chế", "Xem hồ sơ NCC, hồ sơ thầu, hợp đồng để rà soát pháp lý",
         [
@@ -196,6 +201,7 @@ public static class RoleTemplates
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
             Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
+            Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept,
         ]),
     ];
 }

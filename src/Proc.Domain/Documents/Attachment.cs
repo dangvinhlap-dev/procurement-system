@@ -71,10 +71,14 @@ public static class AttachmentOwnerTypes
     /// <summary>Hồ sơ đánh giá NCC mới (giấy phép kinh doanh, chứng nhận chất lượng, báo giá, kết quả thử mẫu – lát G8).</summary>
     public const string SupplierOnboarding = "SupplierOnboarding";
 
+    /// <summary>Phiếu xác nhận nhận hàng XNH (phiếu giao NCC, biên bản nghiệm thu, ảnh hàng – lát K2).</summary>
+    public const string GoodsReceiptConfirmation = "GoodsReceiptConfirmation";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
-        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding];
+        MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
+        GoodsReceiptConfirmation];
 }
 
 /// <summary>
