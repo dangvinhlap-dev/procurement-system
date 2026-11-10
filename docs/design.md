@@ -2057,7 +2057,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | --- | --- | --- |
 | Q1 | Bỏ kho thế nào | **Tắt ở 0.22.0** (lát K1), **gỡ hẳn code + bảng ở 0.28.0** (lát K3) sau khi người dùng xác nhận đã sao lưu và làm sạch dữ liệu thử |
 | Q2 | Ai nhập tồn trên đề nghị mua | Thủ kho của nơi nhận; mỗi đề nghị một nơi nhận |
-| Q3 | Bảng tổng hợp 2A/2B | Giữ, bật/tắt "bắt buộc qua bảng tổng hợp" bằng tham số; **danh sách đơn vị mua chờ người dùng cung cấp** (trước lát Y5) |
+| Q3 | Bảng tổng hợp 2A/2B | Giữ, bật/tắt "bắt buộc qua bảng tổng hợp" bằng tham số. **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
 | Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
 | Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt |
 | Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC chỉ kiểm định mức nhóm B; dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
@@ -2068,7 +2068,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | Q11 | NCC vào Portal | Qua lời mời trước; trang đăng ký công khai làm sau nếu cần; quản trị NCC tự tạo người dùng con |
 | Q12 | Chức năng đợt Ban cung ứng (GTH, DHG, CKB, KHN) | Giữ; công ty chưa dùng thì ẩn bằng phân quyền |
 | Q13 | Bản in, chữ ký | Tiêu đề canh giữa "chữ V"; **duyệt điện tử là chính thức**, bản in ghi tên + thời điểm người duyệt |
-| Q14 | Hạ tầng Portal | Nên có tên miền riêng ra internet, phần nội bộ chỉ LAN/VPN; **chờ người dùng cho biết hạ tầng** (trước lát P1b) |
+| Q14 | Hạ tầng Portal | **Có tên miền riêng mở ra internet** cho Portal, phần nội bộ chỉ LAN/VPN; máy chủ **Windows (IIS)** (người dùng chốt 10/11/2026). Khi lập trình và test chạy trong **mạng LAN** (không cần tên miền): địa chỉ Portal, URL trong email mời lấy từ cấu hình, không viết cứng |
 | Q15 | Mở thầu | Phòng CUVT mở khi đến hạn, ghi nhật ký; NCC không thấy giá NCC khác |
 | Q16 | Đề nghị thanh toán | **Đưa vào hệ thống** (chỉ đề nghị + duyệt + trạng thái Đã chi, không làm sổ cái – thay quyết định cũ "thanh toán ở phần mềm kế toán"); chỉ thanh toán hàng đã nhận, có hóa đơn; tạm ứng làm sau |
 | Q17 | Nhóm C tạp vụ; mua nội bộ | Có trong phạm vi; mua nội bộ = PO đặt cho NCC nội bộ |

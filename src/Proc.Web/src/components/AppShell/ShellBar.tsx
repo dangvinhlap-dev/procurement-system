@@ -93,7 +93,12 @@ export function ShellBar({
   // Đã dùng mũi tên chọn màn hình sau lần gõ cuối – khi đó Enter mở màn hình đó dù từ khóa có `*`.
   const navigated = useRef(false)
 
-  // Nhóm vẫn hiện để giữ bố cục cố định; không có màn hình được phép thì báo rõ trong menu.
+  // Nhóm vẫn hiện để giữ bố cục cố định; không có màn hình được phép thì báo rõ trong menu. Riêng nhóm Kho: phân hệ kho tắt từ 0.22.0
+  // (design.md mục 19.4) nên không còn màn hình nào thì ẩn hẳn nhóm.
+  const groups = useMemo(
+    () => moduleGroups.filter((g) => g.key !== 'inventory' || screens.some((s) => s.group === 'inventory')),
+    [screens],
+  )
   const menuItemsOf = (group: ModuleKey): MenuItems => {
     const items: MenuItems = screens
       .filter((s) => s.group === group)
@@ -107,7 +112,7 @@ export function ShellBar({
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || !e.code.startsWith('Key')) return
       const letter = e.code.slice(3).toLowerCase()
-      const group = moduleGroups.find((g) => normalizeVi(g.label[g.hotkeyIndex]) === letter)
+      const group = groups.find((g) => normalizeVi(g.label[g.hotkeyIndex]) === letter)
       if (!group) return
       // Chặn trình duyệt dùng Alt + chữ cho menu riêng của nó.
       e.preventDefault()
@@ -116,7 +121,7 @@ export function ShellBar({
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [groups])
 
   const openScreen = (code: string) => {
     const screen = screens.find((s) => s.code === code)
@@ -137,7 +142,7 @@ export function ShellBar({
           <Button type="text" aria-label="Quay lại" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
         </Tooltip>
         <nav className="app-shell-menu" role="menubar" aria-label="Menu module">
-          {moduleGroups.map((g) => (
+          {groups.map((g) => (
             <Dropdown
               key={g.key}
               trigger={['click']}
