@@ -325,7 +325,7 @@ public sealed class ControlAnomalyService : IControlAnomalyService
         foreach (var (companyId, r) in rows)
         {
             AnomalyDto Make(string code, string severity, decimal? amount, string detail) => new(
-                code, severity, companyId, companies.GetValueOrDefault(companyId, string.Empty), r.Date, "GRN", r.DocumentId, r.DocumentNo,
+                code, severity, companyId, companies.GetValueOrDefault(companyId, string.Empty), r.Date, DocumentTypes.GoodsReceiptConfirmation, r.DocumentId, r.DocumentNo,
                 r.SupplierCode, r.SupplierName, creators.GetValueOrDefault(r.DocumentId)?.ToString(), amount, detail);
 
             if (r.Issues.Contains(ThreeWayMatchIssues.InvoiceIncludesShortage))
@@ -393,12 +393,12 @@ public sealed class ControlAnomalyService : IControlAnomalyService
         return result;
     }
 
-    /// <summary>Người lập phiếu nhập (để KSNB biết ai nhận hàng).</summary>
+    /// <summary>Người lập phiếu nhận hàng XNH (để KSNB biết ai nhận hàng – design.md mục 19.4).</summary>
     private async Task<Dictionary<Guid, Guid?>> DocumentCreatorsAsync(List<Guid> documentIds, bool allCompanies, CancellationToken cancellationToken)
     {
         var documents = allCompanies
-            ? _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.WarehouseFilter])
-            : _db.InventoryDocuments;
+            ? _db.GoodsReceiptConfirmations.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            : _db.GoodsReceiptConfirmations;
         return await documents.AsNoTracking().Where(d => documentIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.CreatedBy, cancellationToken);
     }
 

@@ -66,11 +66,8 @@ public class SupplierReviewTests
 
         var a = await SupplierAsync("NCC đánh giá A");
         var b = await SupplierAsync("NCC đánh giá B");
-        // Nhập thẳng NCC A: 10 cái × 100.000, kiểm tra Đạt.
-        var grn = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, kt, a, null, null, null, null, null, null,
-                [new(null, item.Id, cai, 10, 100_000, "10", null, null, null, null, null, 0, "Passed", null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await client.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
+        // Nhận hàng NCC A (PO + XNH – design.md mục 19.4): 10 cái × 100.000, kiểm tra Đạt.
+        await TestReceipts.ReceiveAsync(_factory, client, a, kt, [new(item.Id, cai, 10, 100_000)], Today);
 
         var (year, quarter) = (Today.Year, (Today.Month - 1) / 3 + 1);
         var boardUrl = $"/api/supplier-reviews?year={year}&quarter={quarter}";
