@@ -413,9 +413,12 @@ public sealed class ControlAnomalyService : IControlAnomalyService
         return new DateTimeOffset(local, VietnamTime.Zone.GetUtcOffset(local)).ToUniversalTime();
     }
 
+    /// <summary>Định dạng số tiền kiểu Việt Nam, làm tròn đến đồng (dùng trong mô tả bất thường).</summary>
     private static string Money(decimal value) => Math.Round(value, 0, MidpointRounding.AwayFromZero).ToString("#,##0", Vi);
 
+    /// <summary>Định dạng tỷ lệ phần trăm tối đa 2 số lẻ.</summary>
     private static string Pct(decimal value) => value.ToString("0.##", Vi) + "%";
 
+    /// <summary>Chữ rỗng thì hiện "(không có)" cho dễ đọc trong mô tả.</summary>
     private static string Blank(string text) => string.IsNullOrWhiteSpace(text) ? "(không có)" : text;
 }

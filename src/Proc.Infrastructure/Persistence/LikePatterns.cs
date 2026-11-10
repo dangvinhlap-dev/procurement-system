@@ -29,6 +29,7 @@ internal static class LikePatterns
     /// <returns>Ví dụ "VT_" → "VT\_%".</returns>
     public static string StartsWith(string prefix) => EscapeText(prefix) + "%";
 
+    /// <summary>Thoát các ký tự đặc biệt của LIKE (\ % _) để chữ người dùng gõ được so khớp nguyên văn.</summary>
     private static string EscapeText(string text) =>
         text.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("%", "\\%", StringComparison.Ordinal)

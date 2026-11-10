@@ -346,6 +346,7 @@ internal sealed class DataSeeder
     private void WorkIn(Guid? companyId) =>
         _scope.Initialize(Guid.Empty, companyId, [], allWarehouses: true, [], allItemCategories: true, []);
 
+    /// <summary>Tạo công ty mẫu nếu chưa có (theo mã).</summary>
     private async Task<Company> EnsureCompanyAsync(SeedCompany item, bool isHeadOffice, CancellationToken ct)
     {
         var code = item.Code.Trim().ToUpperInvariant();
@@ -360,6 +361,7 @@ internal sealed class DataSeeder
         return company;
     }
 
+    /// <summary>Tạo các kho mẫu của công ty nếu chưa có.</summary>
     private async Task<List<Warehouse>> EnsureWarehousesAsync(Company company, List<SeedWarehouse> items, CancellationToken ct)
     {
         WorkIn(company.Id);
@@ -380,6 +382,7 @@ internal sealed class DataSeeder
         return existing;
     }
 
+    /// <summary>Tạo kỳ kho tháng hiện tại (trạng thái Open) cho công ty nếu chưa có.</summary>
     private async Task EnsureCurrentPeriodAsync(Guid companyId, CancellationToken ct)
     {
         WorkIn(companyId);
@@ -402,6 +405,7 @@ internal sealed class DataSeeder
         WorkIn(null);
     }
 
+    /// <summary>Tạo các nhóm NCC mẫu nếu chưa có.</summary>
     private async Task EnsureSupplierGroupsAsync(CancellationToken ct)
     {
         var existing = await _db.SupplierGroups.Select(g => g.Code).ToListAsync(ct);
@@ -414,6 +418,7 @@ internal sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Tạo cấu hình đánh số danh mục mặc định nếu chưa có.</summary>
     private async Task EnsureCatalogNumberingsAsync(CancellationToken ct)
     {
         var existing = await _db.CatalogNumberings.Where(n => n.CategoryId == null).Select(n => n.Catalog).ToListAsync(ct);
@@ -422,6 +427,7 @@ internal sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Tạo các ĐVT mẫu nếu chưa có.</summary>
     private async Task EnsureUomsAsync(CancellationToken ct)
     {
         var existing = await _db.Uoms.Select(u => u.Code).ToListAsync(ct);
@@ -434,6 +440,7 @@ internal sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Tạo cây nhóm hàng mẫu nếu chưa có, trả từ điển mã → nhóm.</summary>
     private async Task<Dictionary<string, ItemCategory>> EnsureItemCategoriesAsync(CancellationToken ct)
     {
         // Nhóm hàng dùng chung toàn tập đoàn (không có CompanyId) nên chỉ cần mở phạm vi nhóm hàng.
@@ -454,6 +461,7 @@ internal sealed class DataSeeder
         return existing;
     }
 
+    /// <summary>Tạo vai trò nếu chưa có và đồng bộ danh sách quyền của vai trò mẫu.</summary>
     private async Task<Role> EnsureRoleAsync(string code, string name, List<string> permissions, CancellationToken ct)
     {
         var normalized = code.Trim().ToUpperInvariant();
@@ -477,6 +485,7 @@ internal sealed class DataSeeder
         return role;
     }
 
+    /// <summary>Tạo tài khoản mẫu nếu chưa có (đã có thì giữ nguyên, không đổi mật khẩu).</summary>
     private async Task<AppUser> EnsureUserAsync(string userName, string fullName, string password, Guid defaultCompanyId, CancellationToken ct)
     {
         var user = await _users.FindByNameAsync(userName);
@@ -493,6 +502,7 @@ internal sealed class DataSeeder
         return user;
     }
 
+    /// <summary>Gán người dùng vào công ty với vai trò, kho và nhóm hàng được phép.</summary>
     private async Task EnsureAssignmentAsync(
         Guid userId,
         Company company,

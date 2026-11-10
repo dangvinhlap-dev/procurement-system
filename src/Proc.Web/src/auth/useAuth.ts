@@ -23,6 +23,7 @@ export interface AuthContextValue {
   hasPermission: (permission: string) => boolean
 }
 
+/** Ngữ cảnh React chứa người dùng đăng nhập, công ty đang làm việc và các hàm đăng nhập/đăng xuất. */
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**

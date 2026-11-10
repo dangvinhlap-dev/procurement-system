@@ -37,6 +37,7 @@ function descendantsOf(all: WarehouseDetail[], rootId: string): Set<string> {
   return result
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | undefined) => (value?.trim() ? value.trim() : null)
 
 /**

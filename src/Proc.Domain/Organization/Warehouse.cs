@@ -121,6 +121,7 @@ public sealed class Warehouse : AuditableEntity, ICompanyOwned
     /// <summary>Dùng lại kho đã ngừng.</summary>
     public void Activate() => IsActive = true;
 
+    /// <summary>Tạo kho sau khi kiểm tra công ty, mã, tên và loại kho (Main/Sub).</summary>
     private static Warehouse Create(Guid companyId, string code, string name, WarehouseType type, Guid? parentWarehouseId)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Kho phải thuộc một công ty.");

@@ -366,8 +366,10 @@ public sealed class PooledOrderService : IPooledOrderService
         await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.PooledMarginPercent).FirstOrDefaultAsync(cancellationToken)
         ?? CompanyParameter.DefaultPooledMarginPercent;
 
+    /// <summary>Mã và tên một công ty dùng trong phiếu đặt gộp.</summary>
     private sealed record CompanyInfo(Guid Id, string Code, string Name);
 
+    /// <summary>Lấy mã và tên các công ty theo danh sách Id.</summary>
     private async Task<Dictionary<Guid, CompanyInfo>> CompaniesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
     {
         var list = ids.Distinct().ToList();
@@ -396,6 +398,7 @@ public sealed class PooledOrderService : IPooledOrderService
             .ToList();
     }
 
+    /// <summary>Bắt buộc đang làm việc ở tổng công ty (phòng cung ứng chung đặt hàng cho các công ty).</summary>
     private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
     {
         // Phòng cung ứng chung đặt hàng cho các công ty – phiếu thuộc tổng công ty (quyết định thành lập Ban, mục 18.25).
@@ -404,6 +407,7 @@ public sealed class PooledOrderService : IPooledOrderService
         return _scope.RequireCompany();
     }
 
+    /// <summary>Tìm phiếu đặt gộp của tổng công ty kèm công ty nhận và dòng phân bổ; không thấy thì báo lỗi 404.</summary>
     private async Task<PooledOrder> FindOwnAsync(Guid id, CancellationToken cancellationToken)
     {
         await RequireHeadOfficeAsync(cancellationToken);
@@ -412,6 +416,7 @@ public sealed class PooledOrderService : IPooledOrderService
                ?? throw new NotFoundException("Không tìm thấy phiếu đặt hàng gộp.");
     }
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
@@ -421,6 +426,7 @@ public sealed class PooledOrderService : IPooledOrderService
     /// <summary>Tiền VND làm tròn 2 số (numeric(19,2) – CLAUDE.md mục 4).</summary>
     private static decimal Money(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
+    /// <summary>Đổi phiếu đặt gộp sang DTO kèm phiếu GTH nguồn, công ty nhận, PO đã sinh và người lập.</summary>
     private async Task<PooledOrderDto> ToDtoAsync(PooledOrder x, CancellationToken cancellationToken)
     {
         var approval = await _db.MonthlySupplierApprovals.AsNoTracking().Where(a => a.Id == x.MonthlyApprovalId)

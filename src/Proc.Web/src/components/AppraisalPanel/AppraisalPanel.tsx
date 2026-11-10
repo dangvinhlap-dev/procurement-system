@@ -22,6 +22,7 @@ import { renderRequiredMark } from '../RequiredMark/requiredMark'
 /** Độ dài nội dung tối đa – khớp AppraisalOpinion.ContentMaxLength. */
 const CONTENT_MAX = 2000
 
+/** Danh sách lựa chọn khía cạnh thẩm định cho ô chọn. */
 const aspectOptions = (Object.keys(appraisalAspectLabels) as AppraisalAspect[]).map((value) => ({ value, label: appraisalAspectLabels[value] }))
 
 /** Đèn + chữ kết luận (màu không là thông tin duy nhất – docs/ui-style.md mục 2). */

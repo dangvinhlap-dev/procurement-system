@@ -278,6 +278,7 @@ public sealed class VolumeRebateService : IVolumeRebateService
                         || (x.Status == VolumeRebateStatus.Active && x.Companies.Any(c => c.CompanyId == companyId)));
     }
 
+    /// <summary>Nạp thỏa thuận chiết khấu bậc mà công ty đang làm việc được xem (kèm dòng, bậc, công ty áp dụng).</summary>
     private async Task<VolumeRebateAgreement> LoadVisibleAsync(Guid id, CancellationToken cancellationToken) =>
         await Visible().AsNoTracking().Include(x => x.Lines).Include(x => x.Tiers).Include(x => x.Companies).AsSplitQuery()
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
@@ -393,8 +394,10 @@ public sealed class VolumeRebateService : IVolumeRebateService
             .ToList();
     }
 
+    /// <summary>Ngưỡng "sắp đạt bậc" (%) – không truyền thì dùng mặc định, giới hạn trong khoảng hợp lệ.</summary>
     private static decimal Near(decimal? nearPercent) => Math.Clamp(nearPercent ?? VolumeRebateCalculation.DefaultNearPercent, 1m, 50m);
 
+    /// <summary>ĐVT tính sản lượng của thỏa thuận (chỉ khi tính theo số lượng).</summary>
     private async Task<string?> UomCodeAsync(VolumeRebateAgreement a, CancellationToken cancellationToken)
     {
         if (a.Basis != VolumeRebateBasis.Quantity || a.Lines.Count == 0) return null;
@@ -402,6 +405,7 @@ public sealed class VolumeRebateService : IVolumeRebateService
         return await _db.Uoms.AsNoTracking().Where(u => u.Id == uomId).Select(u => u.Code).SingleOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>Bắt buộc đang làm việc ở tổng công ty (thỏa thuận chiết khấu sản lượng do tổng công ty lập).</summary>
     private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
     {
         if (!await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken))
@@ -433,18 +437,21 @@ public sealed class VolumeRebateService : IVolumeRebateService
             .ToList();
     }
 
+    /// <summary>Mọi mặt hàng của thỏa thuận có nằm trong phạm vi nhóm hàng của người dùng không.</summary>
     private async Task<bool> ItemsVisibleAsync(VolumeRebateAgreement agreement, CancellationToken cancellationToken)
     {
         var ids = agreement.Lines.Select(l => l.ItemId).Distinct().ToList();
         return await _db.Items.CountAsync(i => ids.Contains(i.Id), cancellationToken) == ids.Count;
     }
 
+    /// <summary>Chặn khi thỏa thuận có mặt hàng ngoài phạm vi nhóm hàng của người dùng.</summary>
     private async Task EnsureItemsVisibleAsync(VolumeRebateAgreement agreement, CancellationToken cancellationToken)
     {
         if (!await ItemsVisibleAsync(agreement, cancellationToken))
             throw new ForbiddenAccessException("Thỏa thuận có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không thao tác được.");
     }
 
+    /// <summary>Lấy mã các công ty áp dụng của từng thỏa thuận.</summary>
     private async Task<ILookup<Guid, string>> CompanyCodesAsync(IReadOnlyList<Guid> agreementIds, CancellationToken cancellationToken) =>
         (await (
                 from a in _db.VolumeRebateCompanies.AsNoTracking()
@@ -455,18 +462,21 @@ public sealed class VolumeRebateService : IVolumeRebateService
             .ToListAsync(cancellationToken))
         .ToLookup(x => x.AgreementId, x => x.Code);
 
+    /// <summary>Lấy mã công ty theo danh sách Id.</summary>
     private async Task<Dictionary<Guid, string>> CompanyCodeMapAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
     {
         var list = ids.Distinct().ToList();
         return await _db.Companies.AsNoTracking().Where(c => list.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
     }
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
         return await _db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
     }
 
+    /// <summary>Đổi thỏa thuận chiết khấu bậc sang DTO kèm mặt hàng, bậc, công ty áp dụng, người lập/duyệt.</summary>
     private async Task<VolumeRebateDto> ToDtoAsync(VolumeRebateAgreement x, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();

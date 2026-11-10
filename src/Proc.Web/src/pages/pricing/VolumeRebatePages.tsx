@@ -136,6 +136,7 @@ interface FormValues {
   tiers: TierValues[]
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Đèn + chữ (màu không là thông tin duy nhất – docs/ui-style.md mục 2). */
@@ -646,6 +647,7 @@ export function VolumeRebatePage() {
 const isTrackingAlert = (r: VolumeRebateTrackingRow) =>
   r.period.isNearNextTier || r.period.targetStatus === 'AtRisk' || r.period.targetStatus === 'Missed' || r.unreceivedPeriods > 0
 
+/** Hiện sản lượng theo cơ sở tính (số lượng kèm ĐVT hoặc số tiền). */
 const trackingVolume = (r: VolumeRebateTrackingRow, v: number | null) => formatVolume(r.basis, v, r.uomCode)
 
 const trackingColumns: GridColumn<VolumeRebateTrackingRow>[] = [

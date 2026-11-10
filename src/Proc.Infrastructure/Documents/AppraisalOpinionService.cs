@@ -100,6 +100,7 @@ public sealed class AppraisalOpinionService : IAppraisalOpinionService
         return owner.CompanyId;
     }
 
+    /// <summary>Tìm ý kiến thẩm định theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<AppraisalOpinion> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.AppraisalOpinions.FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy ý kiến thẩm định.");

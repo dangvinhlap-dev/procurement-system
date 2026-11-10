@@ -148,6 +148,7 @@ public sealed class PurchaseContractRebate : Entity
             : Amount ?? 0m;
     }
 
+    /// <summary>Kiểm tra và gán một cam kết chiết khấu/tài trợ của hợp đồng (loại, cách tính, kỳ, hình thức nhận).</summary>
     internal void Set(int lineNo, ContractRebateData data)
     {
         var prefix = $"Cam kết {lineNo}";

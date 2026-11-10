@@ -114,8 +114,10 @@ public static class AuthEndpoints
         return Results.NoContent();
     }
 
+    /// <summary>Trả lỗi theo chuẩn ProblemDetails với mã HTTP và thông báo tiếng Việt.</summary>
     private static IResult Problem(int status, string message) => Results.Problem(title: message, statusCode: status);
 
+    /// <summary>Đổi thời điểm UTC sang giờ Việt Nam (HH:mm) để báo cho người dùng biết lúc nào hết khóa; null thì ghi "ít phút".</summary>
     private static string FormatVietnamTime(DateTimeOffset? utc) =>
         utc is null ? "ít phút" : TimeZoneInfo.ConvertTime(utc.Value, VietnamTime.Zone).ToString("HH:mm");
 }

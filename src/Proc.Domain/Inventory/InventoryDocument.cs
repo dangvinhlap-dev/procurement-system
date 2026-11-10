@@ -659,6 +659,7 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         Status = DocumentStatus.Cancelled;
     }
 
+    /// <summary>Bỏ dòng số lượng 0, đánh lại số thứ tự dòng và tính lại tổng tiền phiếu.</summary>
     private void Recalculate()
     {
         _lines.RemoveAll(l => l.Qty == 0);
@@ -668,6 +669,7 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
         TotalVat = _lines.Sum(l => l.VatAmount);
     }
 
+    /// <summary>Chặn sửa khi phiếu không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         // Chứng từ đã ghi sổ không sửa trực tiếp – bỏ ghi sổ khi kỳ còn mở, hoặc lập chứng từ điều chỉnh (CLAUDE.md mục 4).
@@ -675,6 +677,7 @@ public sealed class InventoryDocument : AuditableEntity, ICompanyOwned, IHasDocu
             throw new BusinessRuleException($"Phiếu {No} không còn ở trạng thái nháp nên không sửa, hủy được.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -788,6 +791,7 @@ public sealed class InventoryDocumentLine : Entity
         Note = note;
     }
 
+    /// <summary>Đánh lại số thứ tự dòng (gọi từ phiếu cha sau khi thêm/xóa dòng).</summary>
     internal void Renumber(int lineNo) => LineNo = lineNo;
 
     /// <summary>

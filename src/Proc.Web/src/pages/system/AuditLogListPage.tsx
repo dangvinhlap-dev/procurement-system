@@ -16,6 +16,7 @@ const actionLabels: Record<string, { label: string; tone: StatusTone }> = {
   Delete: { label: 'Xóa', tone: 'error' },
 }
 
+/** Nhãn tiếng Việt của loại thao tác trong nhật ký (thêm, sửa, xóa); lạ thì giữ nguyên. */
 const actionLabel = (action: string) => actionLabels[action]?.label ?? action
 
 /** Người thao tác; dòng không có người là do hệ thống tự làm (khởi tạo dữ liệu, job nền). */

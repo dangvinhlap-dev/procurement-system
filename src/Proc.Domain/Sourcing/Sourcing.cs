@@ -187,6 +187,7 @@ public sealed class SourcingRequest : AuditableEntity, ICompanyOwned, IHasDocume
         Status = SourcingStatus.Cancelled;
     }
 
+    /// <summary>Thêm một NCC ứng viên vào phiếu tìm nguồn và trả về để gán dữ liệu.</summary>
     private SourcingCandidate AddCandidate(Guid supplierId)
     {
         var candidate = new SourcingCandidate(Id, supplierId);
@@ -194,11 +195,13 @@ public sealed class SourcingRequest : AuditableEntity, ICompanyOwned, IHasDocume
         return candidate;
     }
 
+    /// <summary>Chặn sửa khi phiếu tìm nguồn đã đóng hoặc đã hủy.</summary>
     private void EnsureOpen()
     {
         if (Status != SourcingStatus.Open) throw new BusinessRuleException($"Phiếu {No} đã đóng hoặc đã hủy – không sửa được.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -229,6 +232,7 @@ public sealed class SourcingCandidate : Entity
     /// <summary>Ghi chú (hồ sơ năng lực, nhận xét).</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Gán NCC, trạng thái và ghi chú của NCC ứng viên.</summary>
     internal void Set(Guid supplierId, CandidateStatus status, string? note)
     {
         if (!Enum.IsDefined(status)) throw new BusinessRuleException("Trạng thái NCC ứng viên không hợp lệ.");
@@ -766,6 +770,7 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         Status = RfqStatus.Cancelled;
     }
 
+    /// <summary>Thêm một dòng RFQ trống và trả về để gán dữ liệu.</summary>
     private RfqLine AddLine()
     {
         var line = new RfqLine(Id);
@@ -781,18 +786,22 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         return quote is null ? 0m : Math.Round(line.Qty * quote.UnitPrice * (100m - quote.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Chặn thao tác khi RFQ không ở trạng thái Đang nhận báo giá.</summary>
     private void EnsureSent()
     {
         if (Status != RfqStatus.Sent) throw new BusinessRuleException($"RFQ {No} không ở trạng thái đang nhận báo giá.");
     }
 
+    /// <summary>Chặn thao tác khi RFQ không ở trạng thái Chờ duyệt kết quả chọn thầu.</summary>
     private void EnsureAwardPending()
     {
         if (Status != RfqStatus.AwardPending) throw new BusinessRuleException($"RFQ {No} không ở trạng thái chờ duyệt kết quả chọn thầu.");
     }
 
+    /// <summary>Chặn sửa khi RFQ không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != RfqStatus.Draft) throw new BusinessRuleException($"RFQ {No} không còn ở trạng thái nháp – không sửa được.");
@@ -839,6 +848,7 @@ public sealed class RfqLine : Entity
     /// <summary>Lý do chọn (bắt buộc khi không phải giá thấp nhất).</summary>
     public string? AwardReason { get; private set; }
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng RFQ (mặt hàng, ĐVT, số lượng).</summary>
     internal void Set(int lineNo, RfqLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";
@@ -857,6 +867,7 @@ public sealed class RfqLine : Entity
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
     }
 
+    /// <summary>Ghi NCC trúng thầu và lý do chọn cho dòng RFQ; bỏ chọn thì xóa luôn lý do.</summary>
     internal void SetAward(Guid? supplierId, string? reason)
     {
         AwardedSupplierId = supplierId;
@@ -925,6 +936,7 @@ public sealed class RfqSupplier : Entity
     /// <summary>Giá từng dòng.</summary>
     public IReadOnlyList<QuotationLine> QuotationLines => _quotationLines;
 
+    /// <summary>Ghi báo giá của NCC: điểm chấm (chất lượng, giao hàng, thanh toán) và giá từng dòng.</summary>
     internal void SetQuotation(QuotationHeader header, IReadOnlyList<QuotationLineData> lines)
     {
         foreach (var (score, name) in new[] { (header.QualityScore, "chất lượng"), (header.DeliveryScore, "giao hàng"), (header.PaymentScore, "thanh toán"), (header.WarrantyScore, "bảo hành") })
@@ -951,10 +963,13 @@ public sealed class RfqSupplier : Entity
         }
     }
 
+    /// <summary>Gắn PO đã tạo từ báo giá trúng thầu.</summary>
     internal void LinkPurchaseOrder(Guid purchaseOrderId) => PurchaseOrderId = purchaseOrderId;
 
+    /// <summary>Gắn bảng giá NCC đã tạo từ báo giá trúng thầu.</summary>
     internal void LinkPriceList(Guid priceListId) => PriceListId = priceListId;
 
+    /// <summary>Gắn hợp đồng nguyên tắc đã tạo từ báo giá trúng thầu.</summary>
     internal void LinkContract(Guid contractId) => ContractId = contractId;
 }
 
@@ -984,6 +999,7 @@ public sealed class RfqDossierItem : Entity
     /// <summary>Ghi chú (số biên bản, nơi lưu…).</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Đánh dấu mục hồ sơ trình đã đủ hay chưa kèm ghi chú.</summary>
     internal void Set(bool isDone, string? note)
     {
         IsDone = isDone;
@@ -1031,6 +1047,7 @@ public sealed class QuotationLine : Entity
     /// <returns>Giá cơ sở.</returns>
     public decimal BaseNetPrice(decimal uomFactor) => PricingMath.BaseNetPrice(UnitPrice, DiscountPct, uomFactor);
 
+    /// <summary>Kiểm tra và gán giá một dòng báo giá (đơn giá ≥ 0, tối đa 6 số lẻ).</summary>
     internal void Set(QuotationLineData data)
     {
         if (data.UnitPrice < 0 || decimal.Round(data.UnitPrice, 6) != data.UnitPrice || data.UnitPrice >= 10_000_000_000_000m)

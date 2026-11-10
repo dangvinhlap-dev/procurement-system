@@ -189,6 +189,7 @@ public sealed class SoleSourceService : ISoleSourceService
             throw new BusinessRuleException($"Đã có phiếu {overlap} cho NCC và mặt hàng này trùng thời gian – sửa phiếu đó hoặc chọn thời gian khác.");
     }
 
+    /// <summary>Kiểm tra NCC tồn tại và không nằm trong danh sách đen.</summary>
     private async Task CheckSupplierAsync(Guid supplierId, CancellationToken cancellationToken)
     {
         var supplier = await _db.Suppliers.AsNoTracking().Where(s => s.Id == supplierId).Select(s => new { s.Code, s.Status }).SingleOrDefaultAsync(cancellationToken)
@@ -196,6 +197,7 @@ public sealed class SoleSourceService : ISoleSourceService
         if (supplier.Status == SupplierStatus.Blacklisted) throw new BusinessRuleException($"NCC {supplier.Code} đang ở danh sách đen.");
     }
 
+    /// <summary>Tìm phiếu NCC độc quyền theo Id trong công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<SoleSourceApproval> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -203,12 +205,14 @@ public sealed class SoleSourceService : ISoleSourceService
             ?? throw new NotFoundException("Không tìm thấy phiếu NCC độc quyền.");
     }
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
         return await _db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
     }
 
+    /// <summary>Đổi phiếu NCC độc quyền sang DTO kèm tên NCC, mặt hàng, người duyệt và cờ còn hiệu lực.</summary>
     private async Task<SoleSourceDto> ToDtoAsync(SoleSourceApproval x, CancellationToken cancellationToken)
     {
         var today = _clock.TodayInVietnam();

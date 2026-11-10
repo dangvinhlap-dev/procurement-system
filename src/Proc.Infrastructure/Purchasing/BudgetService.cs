@@ -61,6 +61,7 @@ public sealed class BudgetService : IBudgetService
         return (await BuildAsync(year, departmentId, cancellationToken)).Single();
     }
 
+    /// <summary>Dựng bảng ngân sách năm theo bộ phận × tháng kèm số đã dùng (PR, PO).</summary>
     private async Task<List<DepartmentBudgetYearDto>> BuildAsync(int year, Guid? departmentId, CancellationToken cancellationToken)
     {
         var budgets = await _db.DepartmentBudgets.AsNoTracking()

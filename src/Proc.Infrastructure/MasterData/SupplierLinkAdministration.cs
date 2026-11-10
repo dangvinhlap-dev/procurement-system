@@ -214,6 +214,7 @@ public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Chiếu danh sách mặt hàng NCC bán sang DTO kèm mã, tên, ĐVT mua.</summary>
     private async Task<IReadOnlyList<SupplierItemDto>> QueryAsync(IQueryable<SupplierItem> links, bool byItem, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -234,10 +235,12 @@ public sealed class SupplierLinkAdministration : ISupplierLinkAdministration
             .ToList();
     }
 
+    /// <summary>Tìm mặt hàng theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<Item> FindItemAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.Items.AsNoTracking().SingleOrDefaultAsync(i => i.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).");
 
+    /// <summary>Đổi yêu cầu lưu mặt hàng NCC bán thành dữ liệu cho Domain.</summary>
     private static SupplierItemData ToData(SaveSupplierItemRequest r) =>
         new(r.SupplierItemCode, r.PurchaseUomId, r.Moq, r.LeadTimeDays, r.IsPreferred);
 }

@@ -67,6 +67,7 @@ public sealed class DepartmentAdministration : IDepartmentAdministration
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Chiếu bộ phận sang DTO kèm số PR đã dùng (để biết có xóa được không).</summary>
     private IQueryable<DepartmentDto> Project(IQueryable<Department> departments) =>
         departments.Select(d => new DepartmentDto(
             d.Id, d.Code, d.Name, d.ManagerName, d.IsActive, _db.PurchaseRequests.Count(r => r.DepartmentId == d.Id)));

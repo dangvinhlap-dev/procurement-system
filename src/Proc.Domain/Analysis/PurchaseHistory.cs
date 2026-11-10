@@ -312,6 +312,7 @@ public sealed class PurchaseHistoryRecord : Entity, ICompanyOwned
         SupplierId = supplierId;
     }
 
+    /// <summary>Kiểm tra độ dài các trường chữ trước khi lưu, báo lỗi theo nhãn tiếng Việt thay vì lỗi CSDL.</summary>
     private void CheckLengths()
     {
         (string Field, string Label, string? Value)[] fields =
@@ -332,5 +333,6 @@ public sealed class PurchaseHistoryRecord : Entity, ICompanyOwned
         }
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

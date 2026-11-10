@@ -86,6 +86,7 @@ export function ControlFindingDetailPage() {
   )
 }
 
+/** Form nhập phát hiện vi phạm kiểm soát (có thể điền sẵn từ một bất thường). */
 function FindingForm({
   finding,
   prefill,

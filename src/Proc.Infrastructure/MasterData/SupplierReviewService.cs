@@ -221,14 +221,17 @@ public sealed class SupplierReviewService : ISupplierReviewService
             throw new ForbiddenAccessException("Bạn không có quyền xem đánh giá NCC định kỳ.");
     }
 
+    /// <summary>Tìm phiếu đánh giá NCC định kỳ theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<SupplierReview> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.SupplierReviews.SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy phiếu đánh giá NCC.");
 
+    /// <summary>Đổi yêu cầu lưu phiếu đánh giá NCC thành dữ liệu cho Domain (điểm 6 tiêu chí).</summary>
     private static SupplierReviewData Data(SaveSupplierReviewRequest r) =>
         new(r.Date, new SupplierReviewScores(r.PriceScore, r.QualityScore, r.DeliveryScore, r.WarrantyScore, r.PaymentScore, r.ComplianceScore),
             string.IsNullOrWhiteSpace(r.Result) ? null : Enum.Parse<SupplierReviewResult>(r.Result), r.Comment);
 
+    /// <summary>Chiếu một phiếu đánh giá NCC sang DTO; không thấy trả null.</summary>
     private async Task<SupplierReviewDto?> ProjectAsync(Guid id, CancellationToken cancellationToken)
     {
         var row = await (

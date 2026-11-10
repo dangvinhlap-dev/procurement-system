@@ -153,6 +153,7 @@ public sealed class AttachmentService : IAttachmentService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Tìm file đính kèm chưa xóa theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<Attachment> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.Attachments.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy file đính kèm.");
@@ -275,6 +276,7 @@ public sealed class AttachmentService : IAttachmentService
         return total;
     }
 
+    /// <summary>Xóa file trên đĩa nếu có; lỗi xóa file không làm hỏng thao tác chính (file mồ côi dọn sau).</summary>
     private static void TryDelete(string path)
     {
         try

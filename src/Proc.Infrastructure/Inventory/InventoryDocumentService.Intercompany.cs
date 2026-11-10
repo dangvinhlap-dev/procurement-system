@@ -203,6 +203,7 @@ public sealed partial class InventoryDocumentService
         return sale.Lines.All(l => received.GetValueOrDefault(l.Id) >= l.BaseQty) ? "Full" : "Short";
     }
 
+    /// <summary>Đổi yêu cầu lưu phiếu xuất bán nội bộ (ICS) thành dữ liệu header cho Domain.</summary>
     private static SaleHeader ToSaleHeader(SaveSaleRequest r) =>
         new(r.Date, r.FromWarehouseId, r.BuyerCompanyId, r.InvoiceNo, r.InvoiceDate, r.Deliverer, r.Note);
 

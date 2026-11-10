@@ -185,6 +185,7 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
         if (Status == ApprovalStepStatus.Pending) Status = ApprovalStepStatus.Skipped;
     }
 
+    /// <summary>Ghi kết quả một bước duyệt (duyệt/từ chối), người duyệt, thời điểm và ý kiến; bước đã xử lý thì báo lỗi.</summary>
     private void Act(ApprovalStepStatus status, Guid userId, DateTimeOffset at, string? comment)
     {
         if (Status != ApprovalStepStatus.Pending) throw new BusinessRuleException("Bước duyệt này đã xử lý xong.");

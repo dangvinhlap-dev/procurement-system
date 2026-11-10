@@ -114,6 +114,7 @@ export interface BoardMonthlyFilter {
   allCompanies: boolean
 }
 
+/** Chuỗi tham số URL (năm, tháng, toàn tập đoàn) của báo cáo tháng cho Ban. */
 const boardQuery = (f: BoardMonthlyFilter) =>
   new URLSearchParams({ year: String(f.year), month: String(f.month), allCompanies: String(f.allCompanies) }).toString()
 

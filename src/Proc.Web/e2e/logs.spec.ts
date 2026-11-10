@@ -10,6 +10,7 @@ async function switchCompany(page: Page, label: string) {
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
 }
 
+/** Mở màn hình bằng cách bấm mục trên cây điều hướng. */
 async function openScreen(page: Page, navLabel: string) {
   await page.getByTestId('nav-tree').getByRole('button', { name: navLabel }).click()
 }

@@ -152,6 +152,7 @@ internal sealed partial class ExcelRowReader
         throw new ExcelRowException($"\"{header}\" phải là ngày dd/MM/yyyy (đang là \"{text}\").");
     }
 
+    /// <summary>Mẫu số chỉ có dấu chấm phân cách hàng nghìn (1.234.567) để đọc đúng số kiểu Việt Nam.</summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?\d{1,3}(\.\d{3})+$")]
     private static partial System.Text.RegularExpressions.Regex ThousandsOnlyRegex();
 }

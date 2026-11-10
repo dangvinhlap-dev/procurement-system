@@ -88,6 +88,7 @@ export interface StockReportFilter {
   days: number
 }
 
+/** Chuỗi tham số URL của báo cáo kho (số ngày, kho, nhóm hàng…), bỏ tham số trống. */
 function toQuery(filter: StockReportFilter) {
   const params = new URLSearchParams({ days: String(filter.days) })
   if (filter.warehouseId) params.set('warehouseId', filter.warehouseId)
@@ -286,6 +287,7 @@ export interface PurchaseReportPeriod {
   allCompanies: boolean
 }
 
+/** Chuỗi tham số URL khoảng ngày và cờ toàn tập đoàn của báo cáo mua hàng. */
 const periodQuery = (p: PurchaseReportPeriod) => new URLSearchParams({ from: p.from, to: p.to, allCompanies: String(p.allCompanies) })
 
 /** Dòng PR chưa xử lý của công ty đang làm việc. */

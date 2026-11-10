@@ -100,6 +100,7 @@ public static class PurchaseSla
         return day;
     }
 
+    /// <summary>Ngày làm việc = thứ Hai đến thứ Sáu (dùng tính hạn theo ngày làm việc).</summary>
     private static bool IsWorkingDay(DateOnly day) => day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
 }
 
@@ -575,6 +576,7 @@ public sealed class PurchaseRequest : ApprovableDocument
     /// <summary>Tổng dự kiến = dòng có mã + hàng mới chưa gắn mã (đã gắn thì tính ở dòng có mã sinh ra, không đếm hai lần).</summary>
     private void RecomputeTotal() => TotalAmount = _lines.Sum(l => l.Amount) + _newItems.Where(n => n.LinkedLineId is null).Sum(n => n.Amount);
 
+    /// <summary>Lấy hàng mới chưa có mã của PR đã duyệt; PR chưa duyệt hoặc không thấy dòng thì báo lỗi.</summary>
     private PurchaseRequestNewItem ApprovedNewItem(Guid newItemId)
     {
         if (Status != ApprovalDocumentStatus.Approved)
@@ -637,6 +639,7 @@ public sealed class PurchaseRequestNewItem : Entity
     /// <summary>Dòng PR có mã sinh ra khi gắn mã.</summary>
     public Guid? LinkedLineId { get; internal set; }
 
+    /// <summary>Kiểm tra và gán một dòng hàng mới chưa có mã (mô tả, quy cách, số lượng, ĐVT).</summary>
     internal void Set(int lineNo, PurchaseRequestNewItemData data)
     {
         var prefix = $"Hàng mới dòng {lineNo}";
@@ -708,6 +711,7 @@ public sealed class PurchaseRequestLine : Entity
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng PR (mặt hàng, ĐVT, số lượng, giá dự kiến, ngày cần).</summary>
     internal void Set(int lineNo, PurchaseRequestLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";
@@ -727,6 +731,7 @@ public sealed class PurchaseRequestLine : Entity
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
     }
 
+    /// <summary>Kiểm tra mặt hàng của dòng: đúng mặt hàng đã chọn và còn đang dùng (dòng cũ giữ được mặt hàng đã ngừng).</summary>
     private void CheckItem(Item item, PurchaseRequestLineData data, string prefix)
     {
         if (data.ItemId != item.Id) throw new BusinessRuleException($"{prefix}: mặt hàng không khớp.");
@@ -735,6 +740,7 @@ public sealed class PurchaseRequestLine : Entity
             throw new BusinessRuleException($"{prefix}: số lượng phải lớn hơn 0, tối đa 4 chữ số thập phân.");
     }
 
+    /// <summary>Hệ số quy đổi từ ĐVT trên dòng về ĐVT cơ sở; ĐVT không thuộc mặt hàng thì báo lỗi.</summary>
     private static decimal Factor(Item item, Guid uomId, string prefix) =>
         uomId == item.BaseUomId ? 1m
         : item.Conversions.FirstOrDefault(c => c.UomId == uomId)?.Factor
@@ -978,6 +984,7 @@ public sealed class PurchaseOrder : ApprovableDocument
         }
     }
 
+    /// <summary>Tính lại các cờ cảnh báo của PO (lệch giá, ngoài hợp đồng, ngoài danh sách NCC duyệt) từ các dòng.</summary>
     private void RefreshPriceFlags()
     {
         HasPriceException = _lines.Any(l => l.IsPriceDeviation);

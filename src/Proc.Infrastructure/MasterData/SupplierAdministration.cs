@@ -396,13 +396,16 @@ public sealed class SupplierAdministration : ISupplierAdministration
         }
     }
 
+    /// <summary>Tìm nhóm NCC theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<SupplierGroup> FindGroupAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.SupplierGroups.SingleOrDefaultAsync(g => g.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy nhóm NCC.");
 
+    /// <summary>Đổi yêu cầu lưu NCC thành dữ liệu thông tin chung cho Domain.</summary>
     private static SupplierInfo ToInfo(SaveSupplierRequest r) =>
         new(r.Name, r.ShortName, r.IsForeign, r.TaxCode, r.Address, r.Phone, r.Email, r.Website, r.PaymentTerms, r.SupplyScope, r.Rating);
 
+    /// <summary>Đổi chuỗi trạng thái NCC thành enum; giá trị lạ thì báo lỗi.</summary>
     private static SupplierStatus ParseStatus(string? status) =>
         Enum.TryParse<SupplierStatus>(status, ignoreCase: true, out var value) && Enum.IsDefined(value)
             ? value

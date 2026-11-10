@@ -93,6 +93,7 @@ public sealed class ConflictDeclarationService : IConflictDeclarationService
         return _db.ConflictDeclarations.AsNoTracking().Where(d => all || d.UserId == me);
     }
 
+    /// <summary>Chiếu kê khai xung đột lợi ích sang DTO kèm tên người kê khai và cờ còn hiệu lực.</summary>
     private IQueryable<ConflictDeclarationDto> Project(IQueryable<ConflictDeclaration> declarations)
     {
         var today = _clock.TodayInVietnam();

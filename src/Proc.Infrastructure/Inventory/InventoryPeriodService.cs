@@ -131,12 +131,14 @@ public sealed partial class InventoryPeriodService : IInventoryPeriodService
             : $"Phải mở kỳ {latest.StartDate.AddMonths(1):MM/yyyy} trước (mở kỳ tuần tự theo tháng).";
     }
 
+    /// <summary>Lấy công ty đang làm việc (bắt buộc đã chọn công ty).</summary>
     private async Task<Company> CompanyAsync(CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
         return await _db.Companies.AsNoTracking().SingleAsync(c => c.Id == companyId, cancellationToken);
     }
 
+    /// <summary>Đổi kỳ kho sang DTO kèm các cờ được phép mở/đóng/mở lại.</summary>
     private static InventoryPeriodDto ToDto(InventoryPeriod p, bool canOpen, bool canClose = false, bool canReopen = false) =>
         new(p.Id, p.Year, p.Month, p.Label, p.StartDate, p.EndDate, p.Status.ToString(), p.ClosedAt, canOpen, canClose, canReopen, p.ReopenReason);
 }

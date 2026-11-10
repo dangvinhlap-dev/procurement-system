@@ -98,6 +98,7 @@ public sealed class SourcingService : ISourcingService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Nạp phiếu tìm nguồn kèm NCC ứng viên; không thấy thì báo lỗi 404.</summary>
     private async Task<SourcingRequest> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -115,6 +116,7 @@ public sealed class SourcingService : ISourcingService
             throw new NotFoundException("Không tìm thấy nhà cung cấp.");
     }
 
+    /// <summary>Đổi phiếu tìm nguồn sang DTO kèm mặt hàng và NCC ứng viên.</summary>
     private async Task<SourcingDto> ToDtoAsync(SourcingRequest request, CancellationToken cancellationToken)
     {
         var item = request.ItemId is { } itemId
@@ -145,9 +147,11 @@ public sealed class SourcingService : ISourcingService
             request.Status == SourcingStatus.Open && _scope.HasPermission(Permissions.Sourcing.RfqManage));
     }
 
+    /// <summary>Đổi yêu cầu lưu phiếu tìm nguồn thành dữ liệu header cho Domain.</summary>
     private static SourcingHeader ToHeader(SaveSourcingRequest r) =>
         new(r.Date, r.ItemId, r.Description, r.Specification, r.Qty, r.Deadline, r.Responsible, r.Note);
 
+    /// <summary>Đổi danh sách NCC ứng viên từ API thành dữ liệu cho Domain.</summary>
     private static List<SourcingCandidateData> ToCandidates(SaveSourcingRequest r) =>
         r.Candidates.Select(c => new SourcingCandidateData(
                 c.Id, c.SupplierId,

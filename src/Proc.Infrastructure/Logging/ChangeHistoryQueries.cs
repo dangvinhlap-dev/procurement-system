@@ -129,6 +129,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
         return result;
     }
 
+    /// <summary>Lấy nhật ký thay đổi của các bản ghi, mới nhất trước.</summary>
     private Task<List<AuditLog>> LogsOfAsync(string entityType, string[] ids, CancellationToken ct) =>
         _db.AuditLogs.AsNoTracking()
             .Where(x => x.EntityType == entityType && ids.Contains(x.EntityId))
@@ -189,6 +190,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
         return result;
     }
 
+    /// <summary>Lấy họ tên người thực hiện các thay đổi trong nhật ký.</summary>
     private async Task<Dictionary<Guid, string>> FullNamesAsync(List<AuditLog> logs, CancellationToken ct)
     {
         var ids = logs.Where(l => l.UserId != null).Select(l => l.UserId!.Value).Distinct().ToList();
@@ -243,6 +245,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
             ?? properties.FirstOrDefault(p => string.Equals(p.Name, name + "Id", StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Thông tin một ô cho phím F1: tên bảng, tên cột, kiểu dữ liệu, nhãn tiếng Việt.</summary>
     private FieldInfoDto InfoOf(IEntityType type, AuditDescriptor descriptor, IProperty? property)
     {
         var table = type.GetTableName();
@@ -266,6 +269,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
             descriptor.Redact.Contains(property.Name));
     }
 
+    /// <summary>Phân loại kiểu giá trị của cột (tham chiếu, ngày, số, chữ…) để hiển thị lịch sử đúng định dạng.</summary>
     private static string KindOf(IProperty property)
     {
         if (property.IsForeignKey() || IsUserReference(property)) return FieldValueKinds.Reference;
@@ -415,6 +419,7 @@ public sealed class ChangeHistoryQueries : IChangeHistoryQueries
         return await owned.Where(KeyPredicate<TOwned>(key, values)).FirstOrDefaultAsync(ct);
     }
 
+    /// <summary>Đổi chuỗi lưu trong AuditLog về kiểu dữ liệu của cột; không đổi được thì trả false.</summary>
     private static bool TryConvert(string text, Type type, out object value)
     {
         var clr = Nullable.GetUnderlyingType(type) ?? type;

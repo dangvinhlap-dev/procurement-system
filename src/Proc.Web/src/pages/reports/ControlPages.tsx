@@ -35,6 +35,7 @@ const defaultQuery = (): AnomalyQuery => ({
   offContractPct: 5,
 })
 
+/** Chữ mức độ bất thường: Cao / Trung bình. */
 const severityText = (r: Anomaly) => (r.severity === 'High' ? 'Cao' : 'Trung bình')
 
 const anomalyColumns: GridColumn<Anomaly>[] = [

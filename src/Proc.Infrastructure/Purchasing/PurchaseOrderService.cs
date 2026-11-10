@@ -515,6 +515,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         return $"Hợp đồng {contract.No} chỉ cho bộ phận {string.Join(", ", allowed)} đặt hàng – {who} không tính giá theo hợp đồng.";
     }
 
+    /// <summary>Tổng số lượng đã nhận (ĐVT cơ sở) theo từng dòng PO, tính trên phiếu nhập đã ghi sổ trừ phiếu trả hàng.</summary>
     private async Task<Dictionary<Guid, decimal>> ReceivedBaseByOrderAsync(IReadOnlyList<Guid> orderIds, CancellationToken cancellationToken) =>
         await (
                 from l in _db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
@@ -592,6 +593,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         }
     }
 
+    /// <summary>Nạp PO kèm dòng của công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<PurchaseOrder> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -599,6 +601,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             ?? throw new NotFoundException("Không tìm thấy đơn mua hàng.");
     }
 
+    /// <summary>Chặn khi PO có mặt hàng ngoài phạm vi nhóm hàng của người dùng.</summary>
     private async Task EnsureItemsVisibleAsync(PurchaseOrder order, CancellationToken cancellationToken)
     {
         var ids = order.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -640,6 +643,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         return result;
     }
 
+    /// <summary>Đổi PO sang DTO kèm mặt hàng, NCC, kho, số đã nhận, cảnh báo giá và người lập/duyệt.</summary>
     private async Task<PurchaseOrderDto> ToDtoAsync(PurchaseOrder order, CancellationToken cancellationToken)
     {
         var itemIds = order.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -726,6 +730,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
+    /// <summary>Đổi yêu cầu lưu PO thành dữ liệu header cho Domain.</summary>
     private static PurchaseOrderHeader ToHeader(SavePurchaseOrderRequest r, Guid? departmentId) =>
         new(r.Date, r.SupplierId, r.WarehouseId, r.ExpectedDate, r.PaymentTerms, r.DeliveryTerms, r.DeliveryAddress, r.ReceiveTolerancePct, r.Note,
             departmentId, ParsePurchaseType(r.PurchaseType), r.EmergencyReason, r.DocsDueDate);

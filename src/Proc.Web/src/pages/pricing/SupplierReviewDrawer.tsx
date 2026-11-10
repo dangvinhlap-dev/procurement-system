@@ -112,6 +112,7 @@ export function SupplierReviewDetailPage() {
   )
 }
 
+/** Form nhập phiếu đánh giá NCC định kỳ (điểm 6 tiêu chí, nhận xét). */
 function ReviewForm({
   review,
   fresh,

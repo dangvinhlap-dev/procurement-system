@@ -139,6 +139,7 @@ public sealed class SupplierChangeRequestService : ISupplierChangeRequestService
         await SupplierOnboardingSync.AfterChangeRequestAsync(db, change, now, cancellationToken);
     }
 
+    /// <summary>Tìm yêu cầu sửa NCC theo Id trong công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<SupplierChangeRequest> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();

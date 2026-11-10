@@ -117,18 +117,22 @@ public sealed class ControlFindingService : IControlFindingService
         publisher.Add(finding.CompanyId, receivers, NotificationTypes.ControlFinding, title, message, "VIOL", finding.Id);
     }
 
+    /// <summary>Tìm phát hiện vi phạm theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<ControlFinding> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.ControlFindings.SingleOrDefaultAsync(f => f.Id == id, cancellationToken) ?? throw new NotFoundException("Không tìm thấy vi phạm.");
 
+    /// <summary>Kiểm tra NCC gắn với phát hiện vi phạm có tồn tại.</summary>
     private async Task CheckSupplierAsync(Guid? supplierId, CancellationToken cancellationToken)
     {
         if (supplierId is { } id && !await _db.Suppliers.AnyAsync(s => s.Id == id, cancellationToken))
             throw new BusinessRuleException("Không tìm thấy nhà cung cấp.");
     }
 
+    /// <summary>Đổi yêu cầu lưu từ API thành dữ liệu cho Domain.</summary>
     private static ControlFindingData Data(SaveControlFindingRequest request) =>
         new(request.Date, Enum.Parse<FindingSeverity>(request.Severity), request.Title, request.Description, request.SupplierId);
 
+    /// <summary>Chiếu danh sách phát hiện vi phạm sang DTO trả về giao diện.</summary>
     private IQueryable<ControlFindingDto> Project(IQueryable<ControlFinding> query) =>
         from f in query.AsNoTracking()
         select new ControlFindingDto(

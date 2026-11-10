@@ -58,6 +58,7 @@ function toFormValues(user: UserDetail): UserFormValues {
   }
 }
 
+/** Đổi giá trị form người dùng thành quyền truy cập gửi API (vai trò, kho, nhóm hàng). */
 function toAccess(v: UserFormValues): UserAccess {
   return {
     roleIds: v.roleIds,
@@ -66,6 +67,7 @@ function toAccess(v: UserFormValues): UserAccess {
   }
 }
 
+/** Hai danh sách có cùng phần tử không (không xét thứ tự) – để biết người dùng có đổi phân quyền không. */
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
 
 /**

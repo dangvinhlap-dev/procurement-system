@@ -246,23 +246,27 @@ export type RebateReceiptForm = 'DebtOffset' | 'Transfer' | 'Goods' | 'Other'
 /** Tình trạng một kỳ quyết toán. */
 export type RebatePeriodStatus = 'NotDue' | 'Waiting' | 'Received' | 'NotReached' | 'Short'
 
+/** Nhãn tiếng Việt của loại cam kết chiết khấu/tài trợ trong hợp đồng. */
 export const rebateKindLabels: Record<RebateKind, string> = {
   SalesVolume: 'Chiết khấu doanh số',
   Sponsorship: 'Tài trợ',
   Other: 'Chiết khấu/hỗ trợ khác',
 }
 
+/** Nhãn tiếng Việt của cách tính chiết khấu (% doanh số, số tiền cố định…). */
 export const rebateMethodLabels: Record<RebateMethod, string> = {
   Percent: '% doanh số',
   FixedAmount: 'Số tiền mỗi kỳ',
 }
 
+/** Nhãn tiếng Việt của kỳ tính chiết khấu (quý, năm…). */
 export const rebatePeriodLabels: Record<RebatePeriod, string> = {
   Quarter: 'Quý',
   Year: 'Năm',
   WholeContract: 'Cả hợp đồng',
 }
 
+/** Nhãn tiếng Việt của hình thức nhận chiết khấu (giảm trừ công nợ, chuyển khoản…). */
 export const rebateReceiptFormLabels: Record<RebateReceiptForm, string> = {
   DebtOffset: 'Giảm trừ công nợ',
   Transfer: 'Chuyển khoản',
@@ -270,6 +274,7 @@ export const rebateReceiptFormLabels: Record<RebateReceiptForm, string> = {
   Other: 'Khác',
 }
 
+/** Nhãn tiếng Việt của tình trạng một kỳ chiết khấu. */
 export const rebatePeriodStatusLabels: Record<RebatePeriodStatus, string> = {
   NotDue: 'Chưa hết kỳ',
   Waiting: 'Chờ ghi nhận',
@@ -278,6 +283,7 @@ export const rebatePeriodStatusLabels: Record<RebatePeriodStatus, string> = {
   Short: 'Thiếu',
 }
 
+/** Màu đèn của tình trạng kỳ chiết khấu (luôn đi kèm chữ – docs/ui-style.md mục 2). */
 export const rebatePeriodStatusTone: Record<RebatePeriodStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
   NotDue: 'neutral',
   Waiting: 'warning',
@@ -353,6 +359,7 @@ export interface SaveRebateReceiptInput {
   note: string | null
 }
 
+/** Id công ty đang làm việc – đưa vào khóa truy vấn để đổi công ty thì tải lại dữ liệu. */
 const useCompanyId = () => useAuth().workingCompany?.id
 
 /** Danh sách hợp đồng nguyên tắc của công ty đang làm việc. */

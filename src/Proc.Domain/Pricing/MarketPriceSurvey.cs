@@ -185,11 +185,13 @@ public sealed class MarketPriceSurvey : AuditableEntity, ICompanyOwned, IHasDocu
         CancelReason = clean;
     }
 
+    /// <summary>Chặn sửa khi phiếu khảo sát không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != MarketSurveyStatus.Draft) throw new BusinessRuleException($"Phiếu {No} không ở trạng thái nháp.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -241,6 +243,7 @@ public sealed class MarketPriceSurveyLine : Entity
     /// </summary>
     public decimal BaseUnitPrice => Math.Round(UnitPrice / UomFactor, 6, MidpointRounding.AwayFromZero);
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng khảo sát giá (mặt hàng, nguồn, giá).</summary>
     internal void Set(int lineNo, MarketSurveyLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";

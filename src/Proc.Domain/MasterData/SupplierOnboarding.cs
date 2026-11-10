@@ -417,6 +417,7 @@ public sealed class SupplierOnboarding : AuditableEntity, ICompanyOwned, IVersio
     public static string NameOf(string code) =>
         SupplierOnboardingDocuments.All.FirstOrDefault(d => d.Code == code).Name ?? code;
 
+    /// <summary>Kiểm tra được phép lập đề xuất: hồ sơ đã đánh giá và người đề xuất khác người đánh giá (tách biệt nhiệm vụ).</summary>
     private void EnsureCanPropose(Guid by)
     {
         EnsureStatus(SupplierOnboardingStatus.Evaluated, "Đã đánh giá");
@@ -424,6 +425,7 @@ public sealed class SupplierOnboarding : AuditableEntity, ICompanyOwned, IVersio
             throw new BusinessRuleException("Người hoàn thành đánh giá không tự đề xuất – Văn phòng Ban đề xuất (tách người đánh giá và người đề xuất).");
     }
 
+    /// <summary>Ghi kết luận đề xuất (đồng ý/không) và nhận xét của người đề xuất.</summary>
     private void SetProposal(bool recommended, string? comment, DateTimeOffset at, Guid by)
     {
         var cleaned = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
@@ -431,11 +433,13 @@ public sealed class SupplierOnboarding : AuditableEntity, ICompanyOwned, IVersio
         (Recommended, ProposalComment, ProposedAt, ProposedBy) = (recommended, cleaned, at, by);
     }
 
+    /// <summary>Chặn thao tác khi hồ sơ không ở trạng thái mong đợi; name là tên trạng thái tiếng Việt để báo lỗi.</summary>
     private void EnsureStatus(SupplierOnboardingStatus expected, string name)
     {
         if (Status != expected) throw new BusinessRuleException($"Hồ sơ {No} không ở trạng thái {name}.");
     }
 
+    /// <summary>Kiểm tra và gán dữ liệu hồ sơ đánh giá NCC mới từ form.</summary>
     private void Apply(SupplierOnboardingData data, DateOnly today)
     {
         if (data.CategoryId == Guid.Empty) throw new BusinessRuleException("Hãy chọn nhóm hàng đề xuất NCC cung cấp.");
@@ -469,6 +473,7 @@ public sealed class SupplierOnboarding : AuditableEntity, ICompanyOwned, IVersio
         Note = note;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu, chuỗi rỗng thành null và báo lỗi nếu dài quá max ký tự.</summary>
     private static string? Clean(string? text, int max, string label)
     {
         var cleaned = string.IsNullOrWhiteSpace(text) ? null : text.Trim();

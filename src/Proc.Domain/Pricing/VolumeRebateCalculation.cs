@@ -100,6 +100,7 @@ public static class VolumeRebateCalculation
         return Allocate(volumes, volumes.Sum(v => v.Amount), rebate);
     }
 
+    /// <summary>Chia số tiền chiết khấu cho các công ty theo tỷ lệ doanh số (làm tròn 2 số lẻ); phần chênh do làm tròn dồn vào công ty có doanh số lớn nhất để tổng khớp.</summary>
     private static List<VolumeRebateShare> Allocate(IReadOnlyList<VolumeRebateCompanyVolume> volumes, decimal amount, decimal rebate)
     {
         var shares = volumes.Select(v => new VolumeRebateShare(

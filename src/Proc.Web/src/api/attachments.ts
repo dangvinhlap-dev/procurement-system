@@ -59,6 +59,7 @@ export const attachmentExtensions = [
   '.zip', '.rar', '.7z', '.msg', '.eml', '.xml',
 ]
 
+/** Khóa bộ nhớ đệm TanStack Query cho danh sách đính kèm của một chứng từ (tách theo công ty để đổi công ty không lẫn dữ liệu). */
 const queryKey = (companyId: string, ownerType: AttachmentOwnerType, ownerId: string) => ['attachments', companyId, ownerType, ownerId]
 
 /**

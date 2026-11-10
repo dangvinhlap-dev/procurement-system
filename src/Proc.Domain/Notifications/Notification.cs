@@ -101,5 +101,6 @@ public sealed class Notification : Entity, ICompanyOwned
     /// <param name="at">Thời điểm đọc (UTC).</param>
     public void MarkRead(DateTimeOffset at) => ReadAt ??= at;
 
+    /// <summary>Cắt chuỗi về tối đa max ký tự, thêm dấu "…" khi bị cắt.</summary>
     private static string Cut(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
 }

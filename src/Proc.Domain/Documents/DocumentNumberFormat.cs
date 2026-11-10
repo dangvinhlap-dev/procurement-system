@@ -123,6 +123,7 @@ public sealed partial class DocumentNumberFormat
         return result.ToString();
     }
 
+    /// <summary>Thêm đoạn chữ cố định vào mẫu số chứng từ; chỉ cho ký tự an toàn trong số phiếu.</summary>
     private static void AddLiteral(List<Part> parts, string literal)
     {
         if (literal.Length == 0) return;
@@ -134,6 +135,7 @@ public sealed partial class DocumentNumberFormat
         parts.Add(new Part(literal, null, 0));
     }
 
+    /// <summary>Đổi một token trong ngoặc nhọn ({CTY}, {YYYY}, {0000}…) thành phần tử của mẫu số chứng từ.</summary>
     private static Part ParseToken(string token)
     {
         if (token is Company or Year4 or Year2 or Month or YearMonth) return new Part(null, token, 0);
@@ -151,9 +153,11 @@ public sealed partial class DocumentNumberFormat
     /// <summary>Một phần của mẫu: chữ cố định, mã thời gian/công ty, hoặc nhóm số (Digits &gt; 0).</summary>
     private sealed record Part(string? Literal, string? Token, int Digits);
 
+    /// <summary>Mẫu token hợp lệ trong mẫu số chứng từ.</summary>
     [GeneratedRegex(@"\{([^{}]*)\}")]
     private static partial Regex TokenRegex();
 
+    /// <summary>Mẫu đoạn chữ cố định hợp lệ trong mẫu số chứng từ.</summary>
     [GeneratedRegex(@"^[A-Z0-9\-/._]+$")]
     private static partial Regex LiteralRegex();
 }

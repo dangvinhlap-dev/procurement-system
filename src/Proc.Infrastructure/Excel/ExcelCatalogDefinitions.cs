@@ -281,6 +281,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         ["Consumable"] = "Vật tư tiêu hao",
     };
 
+    /// <summary>Các cặp cột (ĐVT quy đổi, hệ số) trong file Excel mặt hàng.</summary>
     private static readonly (string Uom, string Factor)[] ConversionColumns = [(Uom1, Factor1), (Uom2, Factor2), (Uom3, Factor3)];
 
     /// <inheritdoc />
@@ -414,10 +415,12 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         return false;
     }
 
+    /// <summary>Đổi chi tiết mặt hàng đang có thành yêu cầu cập nhật (giữ nguyên các trường file Excel không có).</summary>
     private static UpdateItemRequest ToUpdate(ItemDetailDto d, IReadOnlyList<ItemUomConversionInput> conversions, bool isActive) =>
         new(d.Name, d.EnglishName, d.Type, d.CategoryId, d.BaseUomId, d.Specification, d.Brand, d.Origin, d.Barcode, d.VatCode,
             d.TechnicalSpecs, d.TrackLot, d.TrackExpiry, d.MinStock, d.MaxStock, conversions, isActive, d.SafetyStock, d.ReorderPoint, d.IsCritical);
 
+    /// <summary>Tìm Id ĐVT theo mã trong file Excel; không thấy thì báo lỗi dòng.</summary>
     private async Task<Guid> UomIdAsync(string code, CancellationToken cancellationToken)
     {
         var normalized = CodeRules.Normalize(code);

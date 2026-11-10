@@ -238,14 +238,17 @@ public sealed partial class InventoryDocumentService
             id => totals.SingleOrDefault(t => t.ItemId == id) is { Qty: > 0 } t ? t.Amount / t.Qty : 0m);
     }
 
+    /// <summary>Chặn ghi sổ khi phiếu còn mặt hàng đã ngừng dùng.</summary>
     private static void EnsureItemsActive(InventoryDocument document, Dictionary<Guid, Item> items)
     {
         foreach (var line in document.Lines.Where(l => !items[l.ItemId].IsActive))
             throw new BusinessRuleException($"Dòng {line.LineNo}: mặt hàng {items[line.ItemId].Code} đã ngừng dùng.");
     }
 
+    /// <summary>Định dạng số lượng kiểu Việt Nam (tối đa 4 số lẻ) cho thông báo lỗi.</summary>
     private static string Format(decimal value) => value.ToString("#,##0.####", VietnameseCulture);
 
+    /// <summary>Đổi yêu cầu lưu phiếu chuyển kho (TRF) thành dữ liệu header cho Domain.</summary>
     private static TransferHeader ToTransferHeader(SaveTransferRequest r) =>
         new(r.Date, r.FromWarehouseId, r.ToWarehouseId, r.Deliverer, r.Receiver, r.Note);
 }

@@ -302,6 +302,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _ => null,
     };
 
+    /// <summary>Lấy thông tin công ty đang làm việc để in đầu phiếu (tên, địa chỉ, mã số thuế).</summary>
     private async Task<PrintCompany> CompanyAsync(CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
@@ -314,13 +315,18 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private async Task<string?> WarehouseNameAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.Warehouses.AsNoTracking().Where(w => w.Id == id).Select(w => w.Code + " – " + w.Name).SingleOrDefaultAsync(cancellationToken);
 
+    /// <summary>Định dạng tiền VND kiểu Việt Nam, không số lẻ.</summary>
     private static string Money(decimal value) => Math.Round(value, 0, MidpointRounding.AwayFromZero).ToString("#,##0", Vi);
 
+    /// <summary>Định dạng số lượng kiểu Việt Nam, tối đa 4 số lẻ.</summary>
     private static string Qty(decimal value) => value.ToString("#,##0.####", Vi);
 
+    /// <summary>Định dạng đơn giá kiểu Việt Nam, tối đa 2 số lẻ.</summary>
     private static string Price(decimal value) => value.ToString("#,##0.##", Vi);
 
+    /// <summary>Hiện mã VAT: mã toàn số thì thêm "%", mã khác (KCT, KKKNT) giữ nguyên.</summary>
     private static string Vat(string? code) => code is null ? "" : code.All(char.IsDigit) ? $"{code}%" : code;
 
+    /// <summary>Định dạng ngày dd/MM/yyyy.</summary>
     private static string? Date(DateOnly? value) => value?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 }

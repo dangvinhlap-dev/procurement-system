@@ -23,6 +23,7 @@ async function adminApi(request: APIRequestContext) {
   }
 }
 
+/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
   await box.fill(code)

@@ -84,6 +84,7 @@ public sealed class UomAdministration : IUomAdministration
         return new UomDto(uom.Id, uom.Code, uom.Name, uom.IsActive, count);
     }
 
+    /// <summary>Chỉ tổng công ty và người có quyền mọi nhóm hàng mới được sửa danh mục dùng chung.</summary>
     private async Task RequireManageAsync(CancellationToken cancellationToken)
     {
         await HeadOffice.RequireAsync(_db, _scope, "đơn vị tính", cancellationToken);
@@ -195,6 +196,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Ngừng dùng nhóm hàng; còn nhóm con đang dùng thì báo lỗi.</summary>
     private async Task DeactivateAsync(ItemCategory category, CancellationToken cancellationToken)
     {
         var children = await _db.ItemCategories.Where(c => c.ParentId == category.Id && c.IsActive).Select(c => c.Code).ToListAsync(cancellationToken);
@@ -218,6 +220,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
         }
     }
 
+    /// <summary>Tìm nhóm cha theo Id trong phạm vi người dùng; ngoài phạm vi hoặc không có thì báo lỗi.</summary>
     private async Task<ItemCategory> FindParentAsync(Guid parentId, CancellationToken cancellationToken)
     {
         var parent = await _db.ItemCategories.SingleOrDefaultAsync(c => c.Id == parentId, cancellationToken)
@@ -254,6 +257,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
             : new ForbiddenAccessException($"Nhóm hàng {code} ngoài phạm vi nhóm hàng của bạn – chỉ xem được.");
     }
 
+    /// <summary>Lấy chi tiết một nhóm hàng (tính cả đường dẫn và cấp trên cây).</summary>
     private async Task<ItemCategoryDetailDto> GetAsync(Guid id, CancellationToken cancellationToken) =>
         (await ListAsync(cancellationToken)).Single(c => c.Id == id);
 

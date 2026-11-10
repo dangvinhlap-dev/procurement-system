@@ -136,6 +136,7 @@ internal sealed class BudgetUsage
         return result;
     }
 
+    /// <summary>Cộng dồn số tiền vào khóa (bộ phận, tháng).</summary>
     private static void Add(Dictionary<(Guid, int), decimal> result, (Guid, int) key, decimal amount) =>
         result[key] = result.GetValueOrDefault(key) + amount;
 }

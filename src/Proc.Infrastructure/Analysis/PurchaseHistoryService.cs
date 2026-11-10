@@ -370,6 +370,7 @@ public sealed class PurchaseHistoryService : IPurchaseHistoryService
         await import.CompleteAsync(cancellationToken);
     }
 
+    /// <summary>Đọc chữ của một cột; ô lỗi định dạng thì trả null thay vì dừng cả file.</summary>
     private static string? SafeText(ExcelRowReader row, string header)
     {
         try

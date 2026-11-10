@@ -54,6 +54,7 @@ interface AdjustmentFormValues {
   lines: AdjustmentLineValues[]
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 const cellNumber = { ...vnNumberInput, variant: 'borderless', style: { width: '100%' } } as const

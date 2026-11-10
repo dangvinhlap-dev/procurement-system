@@ -65,6 +65,7 @@ interface ReceiptFormValues {
   lines: LineValues[]
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Ô số trong lưới dòng: không viền, căn phải, kiểu số Việt Nam. */

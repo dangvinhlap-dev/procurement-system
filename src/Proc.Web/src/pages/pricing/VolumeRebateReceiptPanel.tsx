@@ -29,6 +29,7 @@ const NEAR = 10
 /** Số tiền phông đơn cách, canh phải (docs/ui-style.md mục 3). */
 const money = (v: number) => <span style={{ fontFamily: 'var(--erp-font-mono)' }}>{formatMoney(v)}</span>
 
+/** Danh sách lựa chọn hình thức nhận chiết khấu cho ô chọn. */
 const formOptions = (Object.keys(rebateReceiptFormLabels) as RebateReceiptForm[]).map((value) => ({ value, label: rebateReceiptFormLabels[value] }))
 
 /** Đèn + chữ tình trạng thực nhận của kỳ (màu không là thông tin duy nhất – docs/ui-style.md mục 2). */

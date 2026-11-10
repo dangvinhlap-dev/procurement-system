@@ -273,6 +273,7 @@ const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
 ]
 
 
+/** Bộ lọc mặc định của báo cáo đối chiếu: từ đầu tháng đến hôm nay. */
 const defaultMatchFilter = () => ({
   from: dayjs().startOf('month').format('YYYY-MM-DD'),
   to: dayjs().format('YYYY-MM-DD'),

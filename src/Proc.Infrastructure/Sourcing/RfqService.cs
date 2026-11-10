@@ -411,9 +411,11 @@ public sealed class RfqService : IRfqService
             ? status
             : throw new BusinessRuleException("Trạng thái phải là Draft, Sent, AwardPending, Awarded hoặc Cancelled.");
 
+    /// <summary>Truy vấn RFQ kèm dòng, NCC mời, báo giá và hồ sơ trình.</summary>
     private IQueryable<Rfq> Query() =>
         _db.Rfqs.Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(s => s.QuotationLines).Include(r => r.DossierItems).AsSplitQuery();
 
+    /// <summary>Nạp RFQ của công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<Rfq> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -466,6 +468,7 @@ public sealed class RfqService : IRfqService
     private Task CheckAwardedSuppliersAsync(Rfq rfq, CancellationToken cancellationToken) =>
         CheckSuppliersAsync(rfq.Lines.Select(l => l.AwardedSupplierId).OfType<Guid>().Distinct().ToList(), cancellationToken);
 
+    /// <summary>Kiểm tra phiếu tìm nguồn gắn với RFQ có tồn tại.</summary>
     private async Task CheckSourcingAsync(Guid? sourcingId, CancellationToken cancellationToken)
     {
         if (sourcingId is { } id && !await _db.SourcingRequests.AnyAsync(s => s.Id == id, cancellationToken))
@@ -481,6 +484,7 @@ public sealed class RfqService : IRfqService
         foreach (var supplierId in supplierIds) sourcing.TrackRfq(supplierId, status);
     }
 
+    /// <summary>Đổi RFQ sang DTO kèm mặt hàng, NCC mời, báo giá, điểm chấm và kết quả chọn thầu.</summary>
     private async Task<RfqDto> ToDtoAsync(Rfq rfq, CancellationToken cancellationToken)
     {
         var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -590,6 +594,7 @@ public sealed class RfqService : IRfqService
             rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList()) { Version = rfq.Version, FewQuotesReason = rfq.FewQuotesReason, DeadlineExtensionReason = rfq.DeadlineExtensionReason, QuotedSupplierCount = rfq.QuotedSupplierCount };
     }
 
+    /// <summary>Đổi yêu cầu lưu RFQ thành dữ liệu header cho Domain (kèm trọng số chấm điểm).</summary>
     private static RfqHeader ToHeader(SaveRfqRequest r) =>
         new(r.Date, r.Title, r.Deadline, r.SourcingId, new RfqWeights(r.Weights.Price, r.Weights.Quality, r.Weights.Delivery, r.Weights.Payment, r.Weights.Warranty), r.Note);
 }

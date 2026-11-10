@@ -153,6 +153,7 @@ public sealed class MarketPriceSurveyService : IMarketPriceSurveyService
             throw new BusinessRuleException("Có nhà cung cấp không tồn tại.");
     }
 
+    /// <summary>Bắt buộc đang làm việc ở tổng công ty (ngân hàng giá do Văn phòng Ban xây dựng).</summary>
     private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
     {
         // Ngân hàng giá do Văn phòng Ban (tổng công ty) xây dựng – quyết định thành lập Ban cung ứng.
@@ -161,6 +162,7 @@ public sealed class MarketPriceSurveyService : IMarketPriceSurveyService
         return _scope.RequireCompany();
     }
 
+    /// <summary>Tìm phiếu khảo sát giá của tổng công ty kèm dòng; không thấy thì báo lỗi 404.</summary>
     private async Task<MarketPriceSurvey> FindOwnAsync(Guid id, CancellationToken cancellationToken)
     {
         await RequireHeadOfficeAsync(cancellationToken);
@@ -184,12 +186,14 @@ public sealed class MarketPriceSurveyService : IMarketPriceSurveyService
             .ToList();
     }
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
         return await _db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
     }
 
+    /// <summary>Đổi phiếu khảo sát giá sang DTO kèm mã/tên mặt hàng, ĐVT và tên người lập.</summary>
     private async Task<MarketSurveyDto> ToDtoAsync(MarketPriceSurvey x, CancellationToken cancellationToken)
     {
         var itemIds = x.Lines.Select(l => l.ItemId).Distinct().ToList();

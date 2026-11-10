@@ -358,6 +358,7 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
     /// <returns>true nếu phải lập yêu cầu duyệt.</returns>
     public bool StatusChangeNeedsApproval(SupplierStatus to) => to != Status && to is SupplierStatus.Approved or SupplierStatus.Blacklisted;
 
+    /// <summary>Đồng bộ danh sách con (liên hệ, tài khoản ngân hàng) với dữ liệu form: dòng có Id thì sửa, dòng không Id thì thêm, dòng không còn trong form thì xóa.</summary>
     private static void Merge<TRow, TData>(
         List<TRow> rows, List<TData> data, Func<TRow, Guid> rowId, Func<TData, Guid?> dataId,
         Func<TData, TRow> create, Action<TRow, TData> apply, string label)
@@ -385,11 +386,14 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
         rows.RemoveAll(r => !keep.Contains(r));
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Mẫu mã số thuế Việt Nam: 10 số, hoặc 10 số + "-" + 3 số (chi nhánh).</summary>
     [GeneratedRegex(@"^\d{10}(-\d{3})?$")]
     private static partial Regex VietnamTaxCodeRegex();
 
+    /// <summary>Mẫu số tài khoản ngân hàng: 4–30 chữ in hoa hoặc số.</summary>
     [GeneratedRegex("^[A-Z0-9]{4,30}$")]
     private static partial Regex BankAccountRegex();
 }
@@ -422,6 +426,7 @@ public sealed class SupplierContact : Entity
     /// <summary>Người liên hệ chính.</summary>
     public bool IsPrimary { get; private set; }
 
+    /// <summary>Gán dữ liệu người liên hệ từ form (bỏ khoảng trắng, chuỗi rỗng thành null).</summary>
     internal void Set(SupplierContactData d)
     {
         Name = d.Name.Trim();
@@ -460,6 +465,7 @@ public sealed class SupplierBankAccount : Entity
     /// <summary>Tài khoản mặc định khi thanh toán.</summary>
     public bool IsDefault { get; private set; }
 
+    /// <summary>Gán dữ liệu tài khoản ngân hàng từ form.</summary>
     internal void Set(SupplierBankAccountData d)
     {
         BankName = d.BankName.Trim();

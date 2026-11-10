@@ -69,6 +69,7 @@ const emptyValues: SupplierFormValues = {
   bankAccounts: [],
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Hàng ô nhập của một dòng bảng con (người liên hệ, tài khoản), cột cuối là nút xóa. */

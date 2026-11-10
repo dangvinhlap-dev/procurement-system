@@ -256,13 +256,16 @@ public sealed class PurchaseContractAmendment : AuditableEntity, ICompanyOwned, 
         Status = ContractAmendmentStatus.Cancelled;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Chặn sửa khi phụ lục không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != ContractAmendmentStatus.Draft) throw new BusinessRuleException($"Phụ lục {No} không còn ở trạng thái nháp – không sửa được.");
     }
 
+    /// <summary>Chặn thao tác khi phụ lục không ở trạng thái Chờ duyệt.</summary>
     private void EnsureSubmitted()
     {
         if (Status != ContractAmendmentStatus.Submitted) throw new BusinessRuleException($"Phụ lục {No} không ở trạng thái chờ duyệt.");

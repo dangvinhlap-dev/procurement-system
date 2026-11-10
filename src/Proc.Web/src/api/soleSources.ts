@@ -87,6 +87,7 @@ export function soleSourceStateLabel(r: Pick<SoleSourceListItem, 'status' | 'isE
   return r.isEffective ? 'Đang hiệu lực' : 'Chưa tới ngày hiệu lực'
 }
 
+/** Id công ty đang làm việc – đưa vào khóa truy vấn để đổi công ty thì tải lại dữ liệu. */
 function useCompanyId(): string {
   return useAuth().workingCompany?.id ?? ''
 }

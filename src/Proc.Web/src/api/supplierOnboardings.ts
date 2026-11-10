@@ -132,6 +132,7 @@ export type SaveSupplierOnboardingInput = {
 
 const BASE = '/api/supplier-onboardings'
 
+/** Id công ty đang làm việc – đưa vào khóa truy vấn để đổi công ty thì tải lại dữ liệu. */
 function useCompanyId(): string {
   return useAuth().workingCompany?.id ?? ''
 }
