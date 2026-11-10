@@ -7,13 +7,23 @@ namespace Proc.Application.Purchasing;
 /// <param name="DocType">Loại chứng từ (PR, PO).</param>
 /// <param name="Level">Cấp.</param>
 /// <param name="MinAmount">Ngưỡng giá trị (phiếu ≥ ngưỡng mới qua cấp này).</param>
-/// <param name="RoleId">Vai trò được duyệt.</param>
+/// <param name="RoleId">Vai trò được duyệt; null khi cấp do người duyệt động.</param>
 /// <param name="RoleCode">Mã vai trò.</param>
-/// <param name="RoleName">Tên vai trò.</param>
-public sealed record ApprovalRuleDto(Guid Id, string DocType, int Level, decimal MinAmount, Guid RoleId, string RoleCode, string RoleName);
+/// <param name="RoleName">Tên vai trò; người duyệt động thì là "Trưởng phòng ban của phiếu" / "GĐ khối của phiếu".</param>
+/// <param name="ApproverKind">Ai duyệt (lát O1): Role, DepartmentHead, DivisionDirector.</param>
+public sealed record ApprovalRuleDto(
+    Guid Id, string DocType, int Level, decimal MinAmount, Guid? RoleId, string? RoleCode, string? RoleName, string ApproverKind = "Role");
 
 /// <summary>Thêm/sửa một cấp duyệt.</summary>
-public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal MinAmount, Guid RoleId);
+/// <param name="DocType">Loại phiếu duyệt.</param>
+/// <param name="Level">Cấp 1–9.</param>
+/// <param name="MinAmount">Ngưỡng giá trị.</param>
+/// <param name="RoleId">Vai trò duyệt (bắt buộc khi người duyệt theo vai trò).</param>
+/// <param name="ApproverKind">
+/// Ai duyệt (lát O1): Role (mặc định), DepartmentHead – Trưởng phòng ban của phiếu, DivisionDirector – GĐ khối của phiếu; hai loại sau chỉ cho
+/// loại phiếu có bộ phận (PR, PO và bộ cấp phụ).
+/// </param>
+public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal MinAmount, Guid? RoleId, string? ApproverKind = null);
 
 /// <summary>Một bước trong lịch sử duyệt của phiếu.</summary>
 /// <param name="Round">Lượt gửi.</param>
@@ -56,7 +66,8 @@ public sealed record PendingApprovalDto(string DocType, string DocTypeName, Guid
 /// <param name="Code">Mã loại (PR, PO, PRL, RFQ, NCC, CTR).</param>
 /// <param name="Name">Tên loại.</param>
 /// <param name="AmountLabel">Giá trị xét ngưỡng; null = không xét giá trị (ngưỡng luôn 0).</param>
-public sealed record ApprovalTypeDto(string Code, string Name, string? AmountLabel);
+/// <param name="HasDepartment">Phiếu có bộ phận – chọn được người duyệt Trưởng phòng ban / GĐ khối của phiếu (lát O1).</param>
+public sealed record ApprovalTypeDto(string Code, string Name, string? AmountLabel, bool HasDepartment = false);
 
 /// <summary>Một cấp duyệt mẫu theo sơ đồ (lát G10).</summary>
 /// <param name="DocType">Loại phiếu.</param>
@@ -519,7 +530,12 @@ public sealed class SaveApprovalRuleRequestValidator : AbstractValidator<SaveApp
     public SaveApprovalRuleRequestValidator()
     {
         RuleFor(x => x.DocType).NotEmpty().WithMessage("Hãy chọn loại chứng từ.");
-        RuleFor(x => x.RoleId).NotEmpty().WithMessage("Hãy chọn vai trò duyệt.");
+        // Vai trò chỉ bắt buộc khi duyệt theo vai trò; người duyệt động (Trưởng phòng ban / GĐ khối) không cần – domain kiểm tra lại.
+        RuleFor(x => x.RoleId).NotEmpty().WithMessage("Hãy chọn vai trò duyệt.")
+            .When(x => string.IsNullOrWhiteSpace(x.ApproverKind) || x.ApproverKind == nameof(Domain.Purchasing.ApproverKind.Role));
+        RuleFor(x => x.ApproverKind)
+            .Must(k => string.IsNullOrWhiteSpace(k) || Enum.TryParse<Domain.Purchasing.ApproverKind>(k, ignoreCase: false, out var v) && Enum.IsDefined(v))
+            .WithMessage("Người duyệt phải là Role, DepartmentHead hoặc DivisionDirector.");
     }
 }
 

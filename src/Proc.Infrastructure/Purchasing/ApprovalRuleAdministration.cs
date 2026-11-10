@@ -40,8 +40,9 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     public async Task<ApprovalRuleDto> CreateAsync(SaveApprovalRuleRequest request, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
-        await EnsureRoleAsync(request.RoleId, cancellationToken);
-        var rule = ApprovalRule.Create(companyId, request.DocType, request.Level, request.MinAmount, request.RoleId);
+        var kind = KindOf(request);
+        if (kind == ApproverKind.Role) await EnsureRoleAsync(request.RoleId, cancellationToken);
+        var rule = ApprovalRule.Create(companyId, request.DocType, request.Level, request.MinAmount, request.RoleId, kind);
         await EnsureConsistentAsync(rule, cancellationToken);
         _db.ApprovalRules.Add(rule);
         await _db.SaveChangesAsync(cancellationToken);
@@ -53,8 +54,9 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     {
         _scope.RequireCompany();
         var rule = await _db.ApprovalRules.SingleOrDefaultAsync(r => r.Id == id, cancellationToken) ?? throw new NotFoundException("Không tìm thấy cấp duyệt.");
-        await EnsureRoleAsync(request.RoleId, cancellationToken);
-        rule.Update(request.Level, request.MinAmount, request.RoleId);
+        var kind = KindOf(request);
+        if (kind == ApproverKind.Role) await EnsureRoleAsync(request.RoleId, cancellationToken);
+        rule.Update(request.Level, request.MinAmount, request.RoleId, kind);
         await EnsureConsistentAsync(rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await Query(id).SingleAsync(cancellationToken);
@@ -110,7 +112,7 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ApprovalTypeDto> Types() => ApprovalTypes.All.Select(t => new ApprovalTypeDto(t.Code, t.Name, t.AmountLabel)).ToList();
+    public IReadOnlyList<ApprovalTypeDto> Types() => ApprovalTypes.All.Select(t => new ApprovalTypeDto(t.Code, t.Name, t.AmountLabel, t.HasDepartment)).ToList();
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<PendingApprovalDto>> PendingForMeAsync(CancellationToken cancellationToken)
@@ -296,17 +298,33 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
             throw new BusinessRuleException("Ngưỡng giá trị phải tăng dần theo cấp duyệt (cấp sau không thấp hơn cấp trước).");
     }
 
-    /// <summary>Kiểm tra vai trò tồn tại; không có thì báo lỗi 404.</summary>
-    private async Task EnsureRoleAsync(Guid roleId, CancellationToken cancellationToken)
+    /// <summary>Kiểm tra vai trò tồn tại; không có thì báo lỗi 404 (chưa chọn thì domain báo "Hãy chọn vai trò duyệt").</summary>
+    private async Task EnsureRoleAsync(Guid? roleId, CancellationToken cancellationToken)
     {
-        if (!await _db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken)) throw new NotFoundException("Không tìm thấy vai trò.");
+        if (roleId is { } id && !await _db.Roles.AnyAsync(r => r.Id == id, cancellationToken)) throw new NotFoundException("Không tìm thấy vai trò.");
     }
 
-    /// <summary>Truy vấn quy tắc duyệt kèm tên vai trò; truyền id để lấy một quy tắc.</summary>
+    /// <summary>Loại người duyệt trong yêu cầu; để trống là theo vai trò (validator đã chặn giá trị lạ).</summary>
+    private static ApproverKind KindOf(SaveApprovalRuleRequest request) =>
+        string.IsNullOrWhiteSpace(request.ApproverKind) ? ApproverKind.Role : Enum.Parse<ApproverKind>(request.ApproverKind);
+
+    /// <summary>
+    /// Truy vấn quy tắc duyệt kèm tên vai trò; truyền id để lấy một quy tắc. Cấp người duyệt động không có vai trò – tên hiện theo loại
+    /// (<see cref="DynamicApprovers.KindLabel"/>).
+    /// </summary>
     private IQueryable<ApprovalRuleDto> Query(Guid? id = null) =>
         from r in _db.ApprovalRules.AsNoTracking()
         where id == null || r.Id == id
-        join role in _db.Roles on r.RoleId equals role.Id
+        join role in _db.Roles on r.RoleId equals role.Id into roles
+        from role in roles.DefaultIfEmpty()
         orderby r.DocType, r.Level
-        select new ApprovalRuleDto(r.Id, r.DocType, r.Level, r.MinAmount, r.RoleId, role.Code, role.Name);
+        select new ApprovalRuleDto(
+            r.Id, r.DocType, r.Level, r.MinAmount, r.RoleId, role == null ? null : role.Code,
+            role != null ? role.Name
+            : r.Kind == ApproverKind.DepartmentHead ? DynamicApprovers.DepartmentHeadLabel
+            : r.Kind == ApproverKind.DivisionDirector ? DynamicApprovers.DivisionDirectorLabel
+            : null,
+            r.Kind == ApproverKind.DepartmentHead ? nameof(ApproverKind.DepartmentHead)
+            : r.Kind == ApproverKind.DivisionDirector ? nameof(ApproverKind.DivisionDirector)
+            : nameof(ApproverKind.Role));
 }

@@ -55,6 +55,11 @@ Chặn tự nâng quyền: chỉ gán được vai trò có quyền nằm trong 
 Cấu hình theo **công ty đang làm việc × loại phiếu**: mỗi cấp có **số cấp** (1–9), **ngưỡng giá trị** và **vai trò** được duyệt; ngưỡng tăng
 dần theo cấp. Phiếu phải qua mọi cấp có ngưỡng ≤ giá trị phiếu, lần lượt từ thấp lên cao.
 
+**Người duyệt** của cấp (từ 0.22.0): *Theo vai trò*, *Trưởng phòng ban của phiếu* hoặc *GĐ khối của phiếu* (hai loại sau chỉ cho PR, PO và các
+bộ cấp phụ của chúng). Người duyệt động lấy theo bộ phận trên phiếu (khai ở Bộ phận, Khối) tại thời điểm duyệt. Phiếu không gửi duyệt được
+nếu bộ phận chưa khai Trưởng phòng ban / chưa gán khối / khối chưa có GĐ khối, người đó chưa có quyền duyệt, là người lập phiếu, hoặc một người
+vừa là Trưởng phòng ban vừa là GĐ khối – thông báo chỉ rõ chỗ cần sửa.
+
 | Mã | Loại | Giá trị xét ngưỡng |
 | --- | --- | --- |
 | PR | Đề nghị mua hàng | Tổng dự kiến |

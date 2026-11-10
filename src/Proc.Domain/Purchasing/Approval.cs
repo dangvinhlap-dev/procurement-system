@@ -38,6 +38,23 @@ public enum ApprovalStepStatus
 }
 
 /// <summary>
+/// Ai duyệt một cấp (lát O1, design.md mục 19.3): theo vai trò như trước, hoặc người duyệt **động** theo bộ phận của phiếu – Trưởng phòng ban
+/// (danh mục bộ phận) hay Giám đốc khối của khối chứa bộ phận. Chỉ loại phiếu có bộ phận (<see cref="ApprovalTypeInfo.HasDepartment"/>) dùng
+/// được người duyệt động.
+/// </summary>
+public enum ApproverKind
+{
+    /// <summary>Người có vai trò của cấp (hoặc bất kỳ ai có quyền duyệt khi cấp không gắn vai trò).</summary>
+    Role = 1,
+
+    /// <summary>Trưởng phòng ban của bộ phận ghi trên phiếu.</summary>
+    DepartmentHead = 2,
+
+    /// <summary>Giám đốc khối của khối chứa bộ phận ghi trên phiếu.</summary>
+    DivisionDirector = 3,
+}
+
+/// <summary>
 /// Một cấp trong quy trình duyệt của công ty (design.md mục 5 – <c>ApprovalRule</c>, mục 6.2): loại chứng từ, thứ tự cấp, ngưỡng giá
 /// trị và vai trò được duyệt. Phiếu có tổng giá trị ≥ ngưỡng của cấp nào thì phải qua cấp đó; duyệt lần lượt cấp thấp → cao.
 /// Ví dụ PR: cấp 1 ≥ 0 đ – Trưởng bộ phận; cấp 2 ≥ 50.000.000 đ – Giám đốc → PR 80 triệu qua 2 cấp, PR 10 triệu qua 1 cấp.
@@ -65,35 +82,61 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     /// <summary>Ngưỡng: phiếu có tổng giá trị ≥ số này mới phải qua cấp này – numeric(19,2).</summary>
     public decimal MinAmount { get; private set; }
 
-    /// <summary>Vai trò được duyệt ở cấp này (người có vai trò đó tại công ty và có quyền duyệt loại phiếu).</summary>
-    public Guid RoleId { get; private set; }
+    /// <summary>
+    /// Vai trò được duyệt ở cấp này (người có vai trò đó tại công ty và có quyền duyệt loại phiếu); null khi cấp do người duyệt động
+    /// (<see cref="Kind"/> khác <see cref="ApproverKind.Role"/>).
+    /// </summary>
+    public Guid? RoleId { get; private set; }
+
+    /// <summary>Ai duyệt cấp này: vai trò, Trưởng phòng ban hoặc Giám đốc khối của phiếu (lát O1).</summary>
+    public ApproverKind Kind { get; private set; } = ApproverKind.Role;
 
     /// <summary>Nhãn trong nhật ký.</summary>
     public string Label => $"{DocType} cấp {Level}";
 
     /// <summary>Tạo một cấp duyệt.</summary>
-    /// <exception cref="BusinessRuleException">Khi loại chứng từ, cấp, ngưỡng không hợp lệ.</exception>
-    public static ApprovalRule Create(Guid companyId, string docType, int level, decimal minAmount, Guid roleId)
+    /// <param name="companyId">Công ty.</param>
+    /// <param name="docType">Loại phiếu duyệt.</param>
+    /// <param name="level">Cấp 1–9.</param>
+    /// <param name="minAmount">Ngưỡng giá trị.</param>
+    /// <param name="roleId">Vai trò duyệt (bắt buộc khi <paramref name="kind"/> là vai trò).</param>
+    /// <param name="kind">Ai duyệt cấp này.</param>
+    /// <returns>Cấp duyệt.</returns>
+    /// <exception cref="BusinessRuleException">Khi loại chứng từ, cấp, ngưỡng, người duyệt không hợp lệ.</exception>
+    public static ApprovalRule Create(Guid companyId, string docType, int level, decimal minAmount, Guid? roleId, ApproverKind kind = ApproverKind.Role)
     {
         if (companyId == Guid.Empty) throw new BusinessRuleException("Quy trình duyệt phải thuộc một công ty.");
         var rule = new ApprovalRule { CompanyId = companyId, DocType = ApprovalTypes.Get(docType).Code };
-        rule.Update(level, minAmount, roleId);
+        rule.Update(level, minAmount, roleId, kind);
         return rule;
     }
 
-    /// <summary>Sửa cấp, ngưỡng, vai trò.</summary>
-    /// <exception cref="BusinessRuleException">Khi cấp ngoài 1–9, ngưỡng âm (hoặc khác 0 với loại không xét giá trị) hoặc chưa chọn vai trò.</exception>
-    public void Update(int level, decimal minAmount, Guid roleId)
+    /// <summary>Sửa cấp, ngưỡng, người duyệt.</summary>
+    /// <param name="level">Cấp 1–9.</param>
+    /// <param name="minAmount">Ngưỡng giá trị.</param>
+    /// <param name="roleId">Vai trò duyệt (bắt buộc khi <paramref name="kind"/> là vai trò; bỏ qua với người duyệt động).</param>
+    /// <param name="kind">Ai duyệt cấp này.</param>
+    /// <exception cref="BusinessRuleException">
+    /// Khi cấp ngoài 1–9, ngưỡng âm (hoặc khác 0 với loại không xét giá trị), chưa chọn vai trò, hoặc chọn người duyệt động cho loại phiếu
+    /// không có bộ phận.
+    /// </exception>
+    public void Update(int level, decimal minAmount, Guid? roleId, ApproverKind kind = ApproverKind.Role)
     {
         if (level is < 1 or > MaxLevel) throw new BusinessRuleException($"Cấp duyệt phải từ 1 đến {MaxLevel}.");
         if (minAmount < 0) throw new BusinessRuleException("Ngưỡng giá trị không được âm.");
+        var type = ApprovalTypes.Get(DocType);
         // Loại không có giá trị tiền (bảng giá, hồ sơ NCC) mọi phiếu đều qua đủ các cấp – ngưỡng khác 0 sẽ không bao giờ đạt.
-        if (minAmount != 0 && ApprovalTypes.Get(DocType).AmountLabel is null)
+        if (minAmount != 0 && type.AmountLabel is null)
             throw new BusinessRuleException($"Loại {DocType} không xét theo giá trị – ngưỡng phải là 0.");
-        if (roleId == Guid.Empty) throw new BusinessRuleException("Hãy chọn vai trò duyệt.");
+        if (!Enum.IsDefined(kind)) throw new BusinessRuleException("Người duyệt không hợp lệ.");
+        // Người duyệt động lấy theo bộ phận của phiếu – loại không có bộ phận (bảng giá, hồ sơ NCC…) sẽ không bao giờ tìm được người duyệt.
+        if (kind != ApproverKind.Role && !type.HasDepartment)
+            throw new BusinessRuleException($"Loại {DocType} không có bộ phận trên phiếu – chỉ chọn được người duyệt theo vai trò.");
+        if (kind == ApproverKind.Role && (roleId is null || roleId == Guid.Empty)) throw new BusinessRuleException("Hãy chọn vai trò duyệt.");
         Level = level;
         MinAmount = Math.Round(minAmount, 2, MidpointRounding.AwayFromZero);
-        RoleId = roleId;
+        Kind = kind;
+        RoleId = kind == ApproverKind.Role ? roleId : null;
     }
 }
 
@@ -132,8 +175,17 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     /// <summary>Cấp (trong công ty của bước).</summary>
     public int Level { get; private set; }
 
-    /// <summary>Vai trò được duyệt; null = bất kỳ ai có quyền duyệt (công ty chưa cấu hình quy trình).</summary>
+    /// <summary>Vai trò được duyệt; null = bất kỳ ai có quyền duyệt (công ty chưa cấu hình quy trình) hoặc cấp do người duyệt động.</summary>
     public Guid? RoleId { get; private set; }
+
+    /// <summary>
+    /// Ai duyệt bước này (lát O1): vai trò, hoặc Trưởng phòng ban / Giám đốc khối của <see cref="DepartmentId"/>. Người duyệt động xác định lúc
+    /// duyệt theo danh mục hiện hành – đổi Trưởng phòng ban khi phiếu đang chờ thì người mới duyệt.
+    /// </summary>
+    public ApproverKind Kind { get; private set; } = ApproverKind.Role;
+
+    /// <summary>Bộ phận của phiếu lúc gửi duyệt – chỉ có ở bước người duyệt động.</summary>
+    public Guid? DepartmentId { get; private set; }
 
     /// <summary>Kết quả.</summary>
     public ApprovalStepStatus Status { get; private set; } = ApprovalStepStatus.Pending;
@@ -163,9 +215,28 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     }
 
     /// <summary>Tạo bước chờ duyệt.</summary>
+    /// <param name="companyId">Công ty duyệt bước.</param>
+    /// <param name="docType">Loại phiếu.</param>
+    /// <param name="documentId">Phiếu.</param>
+    /// <param name="round">Lượt gửi.</param>
+    /// <param name="level">Cấp.</param>
+    /// <param name="roleId">Vai trò (null = ai có quyền duyệt, hoặc người duyệt động).</param>
+    /// <param name="stage">Chặng.</param>
+    /// <param name="kind">Ai duyệt bước.</param>
+    /// <param name="departmentId">Bộ phận của phiếu (bắt buộc với người duyệt động).</param>
     /// <returns>Bước duyệt.</returns>
-    public static ApprovalStep Create(Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId, int stage = 1) =>
-        new() { CompanyId = companyId, DocType = docType, DocumentId = documentId, Round = round, Level = level, RoleId = roleId, Stage = stage };
+    /// <exception cref="BusinessRuleException">Khi bước người duyệt động thiếu bộ phận.</exception>
+    public static ApprovalStep Create(
+        Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId, int stage = 1,
+        ApproverKind kind = ApproverKind.Role, Guid? departmentId = null)
+    {
+        if (kind != ApproverKind.Role && departmentId is null) throw new BusinessRuleException("Bước duyệt theo bộ phận phải có bộ phận của phiếu.");
+        return new()
+        {
+            CompanyId = companyId, DocType = docType, DocumentId = documentId, Round = round, Level = level, Stage = stage, Kind = kind,
+            RoleId = kind == ApproverKind.Role ? roleId : null, DepartmentId = kind == ApproverKind.Role ? null : departmentId,
+        };
+    }
 
     /// <summary>Ghi kết quả duyệt.</summary>
     /// <exception cref="BusinessRuleException">Khi bước không còn chờ duyệt.</exception>

@@ -38,6 +38,8 @@ internal sealed class ApprovalStepConfiguration : IEntityTypeConfiguration<Appro
         // Việc cần làm: tìm bước đang chờ theo công ty.
         builder.HasIndex(x => new { x.CompanyId, x.Status });
         builder.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
+        // Bộ phận của phiếu ở bước người duyệt động (lát O1).
+        builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

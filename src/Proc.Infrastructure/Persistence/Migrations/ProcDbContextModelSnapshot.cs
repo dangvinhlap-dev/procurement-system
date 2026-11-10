@@ -3702,6 +3702,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
@@ -3709,7 +3712,7 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
-                    b.Property<Guid>("RoleId")
+                    b.Property<Guid?>("RoleId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -3746,6 +3749,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("DocType")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -3753,6 +3759,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Level")
                         .HasColumnType("integer");
@@ -3782,6 +3791,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("RoleId");
 
@@ -7103,12 +7114,16 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Organization.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalStep", b =>
                 {
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Organization.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")

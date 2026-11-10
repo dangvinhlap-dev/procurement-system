@@ -528,12 +528,15 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 .Select(s => new { s.DocumentId, s.DocType, s.Round, ActedBy = s.ActedBy!.Value })
                 .ToListAsync(cancellationToken))
             .ToLookup(s => (s.DocumentId, s.DocType, s.Round), s => s.ActedBy);
+        // Bước người duyệt động (lát O1): chỉ Trưởng phòng ban / GĐ khối hiện hành của bộ phận trên phiếu.
+        var dynamic = await new DynamicApprovers(_db).ResolveAsync(active, cancellationToken);
         var names = await _approvers.NamesAsync(active.Select(step =>
         {
             var row = openRows[step.DocumentId];
             var approvedBy = approved[(step.DocumentId, step.DocType, step.Round)].ToHashSet();
+            IReadOnlyCollection<Guid>? only = dynamic.TryGetValue(step.Id, out var d) ? (d.UserId is { } id ? [id] : []) : null;
             return new NextApproverResolver.PendingStep(step.Id, step.DocType, step.CompanyId, step.RoleId,
-                u => u == row.CreatedBy || approvedBy.Contains(u), row.SupplierId is { } sid ? [sid] : []);
+                u => u == row.CreatedBy || approvedBy.Contains(u), row.SupplierId is { } sid ? [sid] : [], only);
         }).ToList(), cancellationToken);
         return active.GroupBy(s => s.DocumentId).ToDictionary(
             g => g.Key,

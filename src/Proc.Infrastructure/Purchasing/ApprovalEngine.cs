@@ -21,6 +21,7 @@ internal sealed class ApprovalEngine
     private readonly IClock _clock;
     private readonly NotificationPublisher _notifications;
     private readonly NextApproverResolver _approvers;
+    private readonly DynamicApprovers _dynamic;
 
     /// <summary>Tạo cơ chế duyệt.</summary>
     public ApprovalEngine(ProcDbContext db, ICurrentUserScope scope, IClock clock)
@@ -30,6 +31,7 @@ internal sealed class ApprovalEngine
         _clock = clock;
         _notifications = new NotificationPublisher(db, scope, clock);
         _approvers = new NextApproverResolver(db, scope, clock);
+        _dynamic = new DynamicApprovers(db);
     }
 
     /// <summary>Quyền duyệt theo loại phiếu.</summary>
@@ -47,10 +49,58 @@ internal sealed class ApprovalEngine
     {
         var round = document.Submit();
         var rules = await BaseRulesAsync(document, ruleType, cancellationToken);
-        var steps = ApprovalPlan.Levels(rules, document.ApprovalAmount)
-            .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
-            .ToList();
+        var steps = Steps(document, rules, ApprovalPlan.Levels(rules, document.ApprovalAmount), round, stage: 1).ToList();
+        await EnsureDynamicApproversAsync(document, steps, cancellationToken);
         await StartAsync(document, steps, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sinh bước của các cấp đã chọn tại công ty của phiếu, mang theo loại người duyệt của cấp (lát O1). Cấp người duyệt động ghi bộ phận của
+    /// phiếu; phiếu không có bộ phận thì không gửi được (không ai làm Trưởng phòng ban / GĐ khối của phiếu).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi có cấp người duyệt động mà phiếu chưa có bộ phận.</exception>
+    private static IEnumerable<ApprovalStep> Steps(
+        IApprovalSubject document, IReadOnlyList<ApprovalRule> rules, IEnumerable<(int Level, Guid? RoleId)> levels, int round, int stage)
+    {
+        foreach (var (level, roleId) in levels)
+        {
+            var kind = rules.FirstOrDefault(r => r.Level == level)?.Kind ?? ApproverKind.Role;
+            if (kind != ApproverKind.Role && document.ApprovalDepartmentId is null)
+                throw new BusinessRuleException(
+                    $"Cấp {level} của quy trình duyệt do {DynamicApprovers.KindLabel(kind)} duyệt – hãy chọn bộ phận cho phiếu {document.No} rồi gửi lại.");
+            yield return ApprovalStep.Create(
+                document.CompanyId, document.DocType, document.Id, round, level, roleId, stage, kind, kind == ApproverKind.Role ? null : document.ApprovalDepartmentId);
+        }
+    }
+
+    /// <summary>
+    /// Chặn gửi duyệt khi cấp người duyệt động chưa có người duyệt được (lát O1, design.md mục 19.3 – "phòng ban chưa khai trưởng / GĐ khối thì
+    /// chặn gửi kèm thông báo rõ"): bộ phận chưa khai Trưởng phòng ban, chưa gán khối, khối chưa khai GĐ khối, tài khoản đã ngừng dùng, chưa có
+    /// quyền duyệt loại phiếu tại công ty; người đó là người lập (không tự duyệt); hoặc một người giữ hai cấp động (mỗi người một cấp – lát R3).
+    /// Kiểm tra trước khi lưu nên phiếu vẫn ở nháp.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Lý do cụ thể, chỉ chỗ cần sửa.</exception>
+    private async Task EnsureDynamicApproversAsync(IApprovalSubject document, IReadOnlyList<ApprovalStep> steps, CancellationToken cancellationToken)
+    {
+        var resolved = await _dynamic.ResolveAsync(steps, cancellationToken);
+        if (resolved.Count == 0) return;
+        var approvers = await _notifications.UsersWithPermissionAsync(document.CompanyId, ApprovePermission(document.DocType), null, null, cancellationToken);
+        var seen = new Dictionary<Guid, string>();
+        foreach (var step in steps.Where(DynamicApprovers.IsDynamic).OrderBy(s => s.Stage).ThenBy(s => s.Level))
+        {
+            var r = resolved[step.Id];
+            if (r.UserId is not { } userId) throw new BusinessRuleException($"Không gửi duyệt được – cấp {step.Level} ({r.Label}): {r.Problem}");
+            if (document.IsPreparedBy(userId))
+                throw new BusinessRuleException(
+                    $"Cấp {step.Level} do {r.Label} ({r.UserName}) duyệt nhưng đó là người lập phiếu – người lập không tự duyệt. Nhờ người khác lập phiếu hoặc đổi {r.Label}.");
+            if (!approvers.Contains(userId))
+                throw new BusinessRuleException(
+                    $"{r.Label} ({r.UserName}) chưa có quyền duyệt {Noun(document).ToLowerInvariant()} tại công ty – hãy phân quyền trước khi gửi duyệt.");
+            if (seen.TryGetValue(userId, out var other))
+                throw new BusinessRuleException(
+                    $"{r.UserName} vừa là {other} vừa là {r.Label} – mỗi cấp phải do một người khác duyệt; sửa danh mục bộ phận/khối hoặc quy trình duyệt.");
+            seen[userId] = r.Label;
+        }
     }
 
     /// <summary>
@@ -71,19 +121,18 @@ internal sealed class ApprovalEngine
         IReadOnlyCollection<string>? skipPlannedRoleTypes = null)
     {
         var round = document.Submit();
-        var steps = ApprovalPlan.Levels(await BaseRulesAsync(document, ruleType, cancellationToken), document.ApprovalAmount)
-            .Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId))
-            .ToList();
+        var baseRules = await BaseRulesAsync(document, ruleType, cancellationToken);
+        var steps = Steps(document, baseRules, ApprovalPlan.Levels(baseRules, document.ApprovalAmount), round, stage: 1).ToList();
         foreach (var (type, stage) in extraStages.OrderBy(x => x.Stage))
         {
             var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == type).ToListAsync(cancellationToken);
             var levels = ApprovalPlan.ExceptionLevels(rules, document.ApprovalAmount);
             if (skipPlannedRoleTypes?.Contains(type) == true)
                 levels = ApprovalPlan.WithoutPlannedRoles(levels, steps.Select(s => s.RoleId).ToList());
-            steps.AddRange(levels.Select(l => ApprovalStep.Create(document.CompanyId, document.DocType, document.Id, round, l.Level, l.RoleId, stage)));
-
+            steps.AddRange(Steps(document, rules, levels, round, stage));
         }
 
+        await EnsureDynamicApproversAsync(document, steps, cancellationToken);
         await StartAsync(document, steps, cancellationToken);
     }
 
@@ -175,6 +224,14 @@ internal sealed class ApprovalEngine
         if (!_scope.HasPermission(ApprovePermission(document.DocType))) return "Bạn không có quyền duyệt loại phiếu này.";
         if (await ConflictBlockerAsync(userId.Value, await SupplierIdsAsync(document, cancellationToken), cancellationToken) is { } conflict)
             return conflict;
+        // Cấp người duyệt động (lát O1): chỉ đúng Trưởng phòng ban / GĐ khối hiện hành của bộ phận trên phiếu.
+        if (DynamicApprovers.IsDynamic(step))
+        {
+            var dynamic = (await _dynamic.ResolveAsync([step], cancellationToken))[step.Id];
+            if (dynamic.UserId is null) return $"Cấp {step.Level} ({dynamic.Label}) chưa có người duyệt: {dynamic.Problem}";
+            if (dynamic.UserId != userId) return $"Cấp {step.Level} do {dynamic.Label} ({dynamic.UserName}) duyệt.";
+        }
+
         if (step.RoleId is { } roleId
             && !await _db.UserCompanyRoles.AnyAsync(u => u.UserId == userId && u.CompanyId == step.CompanyId && u.RoleId == roleId, cancellationToken))
         {
@@ -257,7 +314,14 @@ internal sealed class ApprovalEngine
     {
         var approvedBy = ApprovedBy(await RoundStepsAsync(document, cancellationToken));
         return new(step.Id, document.DocType, step.CompanyId, step.RoleId, u => document.IsPreparedBy(u) || approvedBy.Contains(u),
-            await SupplierIdsAsync(document, cancellationToken));
+            await SupplierIdsAsync(document, cancellationToken), await OnlyUsersAsync(step, cancellationToken));
+    }
+
+    /// <summary>Người duyệt duy nhất của bước người duyệt động (rỗng khi chưa khai báo); null với bước theo vai trò.</summary>
+    private async Task<IReadOnlyCollection<Guid>?> OnlyUsersAsync(ApprovalStep step, CancellationToken cancellationToken)
+    {
+        if (!DynamicApprovers.IsDynamic(step)) return null;
+        return (await _dynamic.ResolveAsync([step], cancellationToken))[step.Id].UserId is { } id ? [id] : [];
     }
 
     /// <summary>Người đã duyệt một cấp trong các bước cho trước (cùng lượt) – không duyệt thêm cấp khác (lát R3, design.md mục 18.26).</summary>
@@ -352,8 +416,12 @@ internal sealed class ApprovalEngine
             next = await _approvers.NamesAsync(pendingSteps, cancellationToken);
         }
 
+        // Bước người duyệt động hiện nhãn theo bộ phận ("Trưởng phòng ban PX1", "GĐ khối HCNS") ở cột vai trò.
+        var dynamicLabels = await _dynamic.ResolveAsync(steps, cancellationToken);
         return steps.Select(s => new ApprovalStepDto(
-                s.Round, s.Level, s.RoleId is { } r ? roles.GetValueOrDefault(r) : null, s.Status.ToString(),
+                s.Round, s.Level,
+                dynamicLabels.TryGetValue(s.Id, out var dynamic) ? dynamic.Label : s.RoleId is { } r ? roles.GetValueOrDefault(r) : null,
+                s.Status.ToString(),
                 s.ActedBy is { } u ? users.GetValueOrDefault(u) : null, s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
                 activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 !activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,

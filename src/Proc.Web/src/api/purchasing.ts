@@ -503,6 +503,8 @@ export interface ApprovalType {
   name: string
   /** Giá trị xét ngưỡng; null = không xét giá trị (ngưỡng luôn 0). */
   amountLabel: string | null
+  /** Phiếu có bộ phận – chọn được người duyệt Trưởng phòng ban / GĐ khối của phiếu (lát O1). */
+  hasDepartment: boolean
 }
 
 /** Phiếu chờ tôi duyệt. */
@@ -524,17 +526,25 @@ export interface ApprovalRule {
   docType: ApprovalDocType
   level: number
   minAmount: number
-  roleId: string
-  roleCode: string
-  roleName: string
+  /** Vai trò; null khi cấp do người duyệt động. */
+  roleId: string | null
+  roleCode: string | null
+  /** Tên vai trò, hoặc "Trưởng phòng ban của phiếu" / "GĐ khối của phiếu". */
+  roleName: string | null
+  /** Ai duyệt cấp này (lát O1). */
+  approverKind: ApproverKind
 }
+
+/** Ai duyệt một cấp: theo vai trò, Trưởng phòng ban hoặc GĐ khối của bộ phận trên phiếu (lát O1, design.md mục 19.3). */
+export type ApproverKind = 'Role' | 'DepartmentHead' | 'DivisionDirector'
 
 /** Nội dung cấp duyệt. */
 export interface SaveApprovalRuleInput {
   docType: string
   level: number
   minAmount: number
-  roleId: string
+  roleId: string | null
+  approverKind: ApproverKind
 }
 
 /** Loại phiếu mua hàng: đường dẫn API. */
