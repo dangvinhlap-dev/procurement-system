@@ -42,6 +42,7 @@ import { PriceListListPage, SupplierPriceListPage } from './pages/pricing/Suppli
 import { MonthlyApprovalListPage, MonthlyApprovalPage } from './pages/pricing/MonthlyApprovalPages'
 import { MarketSurveyListPage, MarketSurveyPage } from './pages/pricing/MarketSurveyPages'
 import { SupplierOnboardingListPage, SupplierOnboardingPage } from './pages/pricing/SupplierOnboardingPages'
+import { ReceiptConfirmationListPage, ReceiptConfirmationPage } from './pages/purchasing/ReceiptConfirmationPages'
 import { PooledOrderListPage, PooledOrderPage } from './pages/purchasing/PooledOrderPages'
 import { VolumeRebateListPage, VolumeRebatePage, VolumeRebateTrackingPage } from './pages/pricing/VolumeRebatePages'
 import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
@@ -52,6 +53,7 @@ import {
   PurchaseSlaReportPage,
   ReceiptQualityReportPage,
   ThreeWayMatchReportPage,
+  OrderFulfillmentReportPage,
   PurchaseSpendReportPage,
   SourcingSavingsReportPage,
   ContractComplianceReportPage,
@@ -108,6 +110,7 @@ const implemented: Record<string, ReactNode> = {
   NDQ: <SoleSourceListPage />,
   SUPREV: <SupplierReviewPage />,
   HSN: <SupplierOnboardingListPage />,
+  XNH: <ReceiptConfirmationListPage />,
   SUPCOV: <SupplierCoveragePage />,
   SGRP: <SupplierGroupListPage />,
   ITEM: <ItemListPage />,
@@ -129,6 +132,7 @@ const implemented: Record<string, ReactNode> = {
   SLA: <PurchaseSlaReportPage />,
   QCDEV: <ReceiptQualityReportPage />,
   MATCH3: <ThreeWayMatchReportPage />,
+  OTIF: <OrderFulfillmentReportPage />,
   RPSUP: <PurchaseSpendReportPage />,
   SUPEVAL: <SupplierEvaluationReportPage />,
   SAVE: <SourcingSavingsReportPage />,
@@ -190,6 +194,7 @@ const documentPages = [
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },
   { code: 'HSN', element: <SupplierOnboardingPage /> },
+  { code: 'XNH', element: <ReceiptConfirmationPage /> },
   { code: 'CKB', element: <VolumeRebatePage /> },
   { code: 'KHN', element: <DemandPlanPage /> },
   { code: 'DHG', element: <PooledOrderPage /> },

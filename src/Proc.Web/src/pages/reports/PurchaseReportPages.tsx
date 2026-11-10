@@ -28,6 +28,9 @@ import {
   usePurchaseSpend,
   useSourcingSavings,
   useSupplierEvaluation,
+  useOrderFulfillment,
+  type OrderFulfillmentRow,
+  type OrderFulfillmentSupplier,
   type PendingRequestLine,
   type PurchaseSlaRow,
   type SlaCategory,
@@ -38,7 +41,7 @@ import {
   type SourcingSavingRow,
   type SupplierEvaluationRow,
 } from '../../api/reports'
-import { receiptAcceptanceLabels, type ReceiptAcceptance } from '../../api/inventoryDocuments'
+import { receiptAcceptanceLabels, type ReceiptAcceptance } from '../../api/receiptConfirmations'
 import { screens } from '../../app/screens'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -168,13 +171,13 @@ export function PurchaseSlaReportPage() {
 const qcLabels: Record<ReceiptQualityRow['qcResult'], string> = { NotChecked: 'Chưa kiểm tra', Passed: 'Đạt', Failed: 'Không đạt' }
 
 const qualityColumns: GridColumn<ReceiptQualityRow>[] = [
-  { key: 'no', title: 'Phiếu nhập', width: 150, value: (r) => r.documentNo },
+  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'po', title: 'PO', width: 150, value: (r) => r.purchaseOrderNo },
   { key: 'item', title: 'Mặt hàng', width: 230, value: (r) => `${r.itemCode} – ${r.itemName}` },
   { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
-  { key: 'delivered', title: 'SL chứng từ', width: 90, type: 'quantity', value: (r) => r.deliveredQty },
+  { key: 'delivered', title: 'SL phiếu giao', width: 90, type: 'quantity', value: (r) => r.deliveredQty },
   { key: 'qty', title: 'SL nhận đạt', width: 90, type: 'quantity', value: (r) => r.qty },
   { key: 'rejected', title: 'SL không đạt', width: 90, type: 'quantity', value: (r) => r.rejectedQty },
   { key: 'diff', title: 'Thiếu/thừa', width: 85, type: 'quantity', value: (r) => r.discrepancyQty },
@@ -183,8 +186,8 @@ const qualityColumns: GridColumn<ReceiptQualityRow>[] = [
 ]
 
 /**
- * Báo cáo → Sai lệch nhận hàng (design.md mục 18.14 – V7): dòng phiếu nhập mua NCC đã ghi sổ có hàng không đạt hoặc thiếu/thừa so với
- * chứng từ giao; đầu trang % dòng đạt chất lượng trên các dòng đã kiểm tra. Bấm đúp mở phiếu nhập.
+ * Báo cáo → Sai lệch nhận hàng (design.md mục 18.14 – V7; từ 0.22.0 theo phiếu XNH – mục 19.4): dòng XNH đã xác nhận có hàng không đạt hoặc
+ * thiếu/thừa so với phiếu giao; đầu trang % dòng đạt chất lượng trên các dòng đã kiểm tra. Bấm đúp mở phiếu XNH.
  */
 export function ReceiptQualityReportPage() {
   const navigate = useNavigate()
@@ -195,13 +198,13 @@ export function ReceiptQualityReportPage() {
     <ListPage
       title="Sai lệch nhận hàng"
       exportFileName="sai-lech-nhan-hang"
-      exportSubtitle={`Phiếu nhập từ ${formatDate(range.from)} đến ${formatDate(range.to)}`}
+      exportSubtitle={`Phiếu nhận hàng từ ${formatDate(range.from)} đến ${formatDate(range.to)}`}
       canCreate={false}
       rows={data?.rows ?? []}
       columns={qualityColumns}
       rowKey={(r) => `${r.documentId}|${r.lineNo}`}
       loading={report.isLoading}
-      onOpenRow={(r) => navigate(`/kho/grn/${r.documentId}`)}
+      onOpenRow={(r) => navigate(`/mua-hang/xac-nhan-nhan-hang/${r.documentId}`)}
       notice={
         report.error ? (
           <Alert type="error" showIcon title={report.error.message} />
@@ -238,8 +241,8 @@ const matchIssueLabels: Record<ThreeWayMatchIssue, string> = {
 const acceptanceTone: Record<ReceiptAcceptance, StatusTone> = { None: 'neutral', Accepted: 'success', Disputed: 'error' }
 
 const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
-  { key: 'no', title: 'Phiếu nhập', width: 150, value: (r) => r.documentNo },
-  { key: 'date', title: 'Ngày nhập', width: 90, type: 'date', value: (r) => r.date },
+  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo },
+  { key: 'date', title: 'Ngày nhận', width: 90, type: 'date', value: (r) => r.date },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'po', title: 'PO', width: 140, value: (r) => r.purchaseOrderNo },
   { key: 'poDate', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.purchaseOrderDate },
@@ -283,8 +286,8 @@ const defaultMatchFilter = () => ({
 
 /**
  * Báo cáo → Đối chiếu PO – nhận – hóa đơn (design.md mục 18.15, M5/V8 – báo cáo cho kế toán; thanh toán vẫn ở phần mềm kế toán):
- * mỗi phiếu nhập mua NCC đã ghi sổ trong khoảng ngày – tiền hóa đơn so với tiền nhận (theo dung sai), ngày nhận/hóa đơn so với ngày PO.
- * Bấm đúp mở phiếu nhập để cập nhật hóa đơn.
+ * mỗi phiếu xác nhận nhận hàng XNH đã xác nhận trong khoảng ngày (từ 0.22.0 – mục 19.4) – tiền hóa đơn so với tiền thực nhận (theo dung
+ * sai), ngày nhận/hóa đơn so với ngày PO. Bấm đúp mở phiếu XNH để cập nhật hóa đơn.
  */
 export function ThreeWayMatchReportPage() {
   const navigate = useNavigate()
@@ -295,13 +298,13 @@ export function ThreeWayMatchReportPage() {
     <ListPage
       title="Đối chiếu PO – nhận – hóa đơn"
       exportFileName="doi-chieu-po-nhan-hoa-don"
-      exportSubtitle={`Phiếu nhập từ ${formatDate(filter.from)} đến ${formatDate(filter.to)} – dung sai ${formatMoney(filter.tolerance)} đ`}
+      exportSubtitle={`Phiếu nhận hàng từ ${formatDate(filter.from)} đến ${formatDate(filter.to)} – dung sai ${formatMoney(filter.tolerance)} đ`}
       canCreate={false}
       rows={data?.rows ?? []}
       columns={matchColumns}
       rowKey={(r) => r.documentId}
       loading={report.isLoading}
-      onOpenRow={(r) => navigate(`/kho/grn/${r.documentId}`)}
+      onOpenRow={(r) => navigate(`/mua-hang/xac-nhan-nhan-hang/${r.documentId}`)}
       notice={
         report.error ? (
           <Alert type="error" showIcon title={report.error.message} />
@@ -393,7 +396,7 @@ const groupLabels: Record<PurchaseSpendGroup, string> = {
 const spendColumns = (groupBy: PurchaseSpendGroup): GridColumn<PurchaseSpendRow>[] => [
   { key: 'code', title: `Mã ${groupLabels[groupBy].toLowerCase()}`, width: 130, value: (r) => r.code },
   { key: 'name', title: groupLabels[groupBy], width: 280, value: (r) => r.name },
-  { key: 'count', title: 'Số phiếu nhập', width: 100, type: 'quantity', value: (r) => r.receiptCount },
+  { key: 'count', title: 'Số phiếu nhận', width: 100, type: 'quantity', value: (r) => r.receiptCount },
   { key: 'receipt', title: 'Giá trị nhập', width: 140, type: 'money', value: (r) => r.receiptAmount },
   { key: 'return', title: 'Giá trị trả', width: 130, type: 'money', value: (r) => r.returnAmount },
   { key: 'net', title: 'Mua thuần', width: 140, type: 'money', value: (r) => r.netAmount },
@@ -401,8 +404,8 @@ const spendColumns = (groupBy: PurchaseSpendGroup): GridColumn<PurchaseSpendRow>
 ]
 
 /**
- * Báo cáo → Mua hàng theo NCC (design.md mục 11, 11.3): giá trị trước VAT của phiếu nhập mua NCC và phiếu trả NCC đã ghi sổ trong khoảng
- * ngày, nhóm theo NCC, nhóm hàng, mặt hàng hoặc công ty; mua thuần = nhập − trả. Không gồm mua nội bộ.
+ * Báo cáo → Mua hàng theo NCC (design.md mục 11, 11.3): giá trị trước VAT của hàng thực nhận (phiếu XNH đã xác nhận – mục 19.4) và phần
+ * trả NCC (điều chỉnh giảm) trong khoảng ngày, nhóm theo NCC, nhóm hàng, mặt hàng hoặc công ty; mua thuần = nhận − trả.
  */
 export function PurchaseSpendReportPage() {
   const [period, setPeriod] = useState(defaultPeriod)
@@ -454,7 +457,7 @@ export function PurchaseSpendReportPage() {
 const evaluationColumns: GridColumn<SupplierEvaluationRow>[] = [
   { key: 'code', title: 'Mã NCC', width: 120, value: (r) => r.supplierCode },
   { key: 'name', title: 'Nhà cung cấp', width: 260, value: (r) => r.supplierName },
-  { key: 'count', title: 'Số phiếu nhập', width: 100, type: 'quantity', value: (r) => r.receiptCount },
+  { key: 'count', title: 'Số phiếu nhận', width: 100, type: 'quantity', value: (r) => r.receiptCount },
   { key: 'receipt', title: 'Giá trị nhập', width: 130, type: 'money', value: (r) => r.receiptAmount },
   { key: 'return', title: 'Giá trị trả', width: 120, type: 'money', value: (r) => r.returnAmount },
   { key: 'returnPct', title: 'Tỷ lệ trả (%)', width: 100, type: 'quantity', value: (r) => r.returnPct },
@@ -498,12 +501,112 @@ export function SupplierEvaluationReportPage() {
           <Alert
             type="info"
             showIcon
-            title="Đúng hạn: ngày phiếu nhập ≤ ngày giao của dòng PO (không có thì ngày giao dự kiến của PO). Tô màu: có giao trễ hoặc trả hàng. Xếp loại theo ngưỡng ở Hệ thống → Xếp loại NCC."
+            title="Đúng hạn: ngày nhận hàng (XNH) ≤ ngày giao của dòng PO (không có thì ngày giao dự kiến của PO). Tô màu: có giao trễ hoặc trả hàng. Xếp loại theo ngưỡng ở Hệ thống → Xếp loại NCC."
           />
         )
       }
       onClearFilters={() => setPeriod(defaultPeriod())}
       filters={<PeriodFilters value={period} onChange={setPeriod} />}
+    />
+  )
+}
+
+/** Chữ % kiểu Việt Nam, 1 số lẻ; null = không chấm. */
+const pctText = (value: number | null) => (value == null ? '—' : `${String(value).replace('.', ',')}%`)
+
+const fulfillmentColumns: GridColumn<OrderFulfillmentRow>[] = [
+  { key: 'no', title: 'Đơn mua hàng', width: 150, value: (r) => r.orderNo },
+  { key: 'date', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.orderDate },
+  { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  { key: 'item', title: 'Mặt hàng', width: 220, value: (r) => `${r.itemCode} – ${r.itemName}` },
+  { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
+  { key: 'ordered', title: 'SL đặt', width: 90, type: 'quantity', value: (r) => r.orderedQty },
+  { key: 'received', title: 'SL thực nhận', width: 90, type: 'quantity', value: (r) => r.receivedQty },
+  { key: 'short', title: 'Còn thiếu', width: 90, type: 'quantity', value: (r) => r.shortQty },
+  { key: 'due', title: 'Hạn giao', width: 90, type: 'date', value: (r) => r.dueDate },
+  { key: 'last', title: 'Ngày nhận cuối', width: 100, type: 'date', value: (r) => r.lastReceiptDate },
+  {
+    key: 'onTime', title: 'Đúng hạn', width: 90, type: 'status', groupable: true,
+    value: (r) => (r.onTime == null ? 'Không chấm' : r.onTime ? 'Đúng hạn' : 'Trễ'),
+    tone: (r) => (r.onTime == null ? 'neutral' : r.onTime ? 'success' : 'error'),
+  },
+  {
+    key: 'inFull', title: 'Đủ SL', width: 80, type: 'status', groupable: true,
+    value: (r) => (r.inFull ? 'Đủ' : 'Thiếu'), tone: (r) => (r.inFull ? 'success' : 'warning'),
+  },
+  { key: 'closed', title: 'PO hoàn thành', width: 100, value: (r) => (r.closedManually ? 'Đã hoàn thành' : '') },
+]
+
+const fulfillmentSupplierColumns: GridColumn<OrderFulfillmentSupplier>[] = [
+  { key: 'supplier', title: 'Nhà cung cấp', width: 260, value: (r) => `${r.supplierCode} – ${r.supplierName}` },
+  { key: 'lines', title: 'Số dòng PO', width: 90, type: 'quantity', value: (r) => r.lines },
+  { key: 'inFull', title: 'Dòng đủ', width: 80, type: 'quantity', value: (r) => r.inFullLines },
+  { key: 'inFullPct', title: '% đủ', width: 80, type: 'quantity', value: (r) => r.inFullPct },
+  { key: 'scored', title: 'Dòng có hạn', width: 90, type: 'quantity', value: (r) => r.scoredLines },
+  { key: 'onTime', title: 'Đúng hạn', width: 80, type: 'quantity', value: (r) => r.onTimeLines },
+  { key: 'onTimePct', title: '% đúng hạn', width: 90, type: 'quantity', value: (r) => r.onTimePct },
+  { key: 'otif', title: 'OTIF', width: 70, type: 'quantity', value: (r) => r.otifLines },
+  { key: 'otifPct', title: '% OTIF', width: 80, type: 'quantity', value: (r) => r.otifPct },
+]
+
+/**
+ * Báo cáo → SL đặt – SL thực nhận (OTIF – lát K2, design.md mục 19.4): mọi dòng PO đã duyệt có ngày PO trong khoảng, SL thực nhận theo
+ * phiếu XNH đã xác nhận; đúng hạn (ngày nhận cuối ≤ hạn giao), đủ (thực nhận ≥ đặt), OTIF = cả hai. Xem theo dòng PO hoặc tổng hợp theo NCC.
+ */
+export function OrderFulfillmentReportPage() {
+  const navigate = useNavigate()
+  const [period, setPeriod] = useState(defaultPeriod)
+  const [view, setView] = useState<'lines' | 'suppliers'>('lines')
+  const report = useOrderFulfillment(period)
+  const total = report.data?.total
+  const notice = report.error ? (
+    <Alert type="error" showIcon title={report.error.message} />
+  ) : total ? (
+    <Alert type="info" showIcon
+      title={`Tổng ${total.lines} dòng PO: đủ ${pctText(total.inFullPct)} · đúng hạn ${pctText(total.onTimePct)} · OTIF ${pctText(total.otifPct)} (đúng hạn, OTIF tính trên ${total.scoredLines} dòng có hạn giao).`} />
+  ) : null
+  const filters = (
+    <>
+      <PeriodFilters value={period} onChange={setPeriod} />
+      <FilterField label="Xem theo" width={130}>
+        {(id) => (
+          <Select id={id} value={view} showSearch={false} onChange={(v) => setView(v as 'lines' | 'suppliers')}
+            options={[{ value: 'lines', label: 'Dòng PO' }, { value: 'suppliers', label: 'Nhà cung cấp' }]} />
+        )}
+      </FilterField>
+    </>
+  )
+  return view === 'lines' ? (
+    <ListPage
+      title="SL đặt – SL thực nhận (OTIF)"
+      exportFileName="sl-dat-thuc-nhan"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={report.data?.rows ?? []}
+      columns={fulfillmentColumns}
+      rowKey={(r) => `${r.orderId}|${r.lineNo}`}
+      loading={report.isLoading}
+      isMarked={(r) => r.onTime === false || !r.inFull}
+      onOpenRow={(r) => navigate(`/mua-hang/po/${r.orderId}`)}
+      notice={notice}
+      onClearFilters={() => setPeriod(defaultPeriod())}
+      filters={filters}
+    />
+  ) : (
+    <ListPage
+      title="SL đặt – SL thực nhận (OTIF)"
+      exportFileName="otif-theo-ncc"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={report.data?.suppliers ?? []}
+      columns={fulfillmentSupplierColumns}
+      rowKey={(r) => r.supplierCode}
+      loading={report.isLoading}
+      isMarked={(r) => r.otifPct != null && r.otifPct < 100}
+      notice={notice}
+      onClearFilters={() => setPeriod(defaultPeriod())}
+      filters={filters}
     />
   )
 }

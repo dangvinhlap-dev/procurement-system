@@ -1,10 +1,10 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { DollarOutlined, FileAddOutlined, FileDoneOutlined, WarningFilled } from '@ant-design/icons'
+import { DollarOutlined, FileAddOutlined, FileDoneOutlined, InboxOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Space, Table, Tooltip } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useSupplierItemLookup, vatOptions } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
@@ -98,6 +98,7 @@ function computeLine(line: PoLineValues | undefined) {
  */
 export function PurchaseOrderPage() {
   const { id = 'moi' } = useParams()
+  const navigate = useNavigate()
   const isNew = id === 'moi'
   const { hasPermission } = useAuth()
   const { message, modal } = App.useApp()
@@ -547,7 +548,7 @@ export function PurchaseOrderPage() {
     },
     ...(showReceiving
       ? ([
-          { key: 'received', title: 'Đã nhận', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.receivedQty ?? 0)) },
+          { key: 'received', title: 'SL thực nhận', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.receivedQty ?? 0)) },
           { key: 'remaining', title: 'Còn lại', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.remainingQty ?? 0)) },
         ] as LineColumn[])
       : []),
@@ -626,6 +627,12 @@ export function PurchaseOrderPage() {
             {doc?.canCompleteDocs && (
               <Button icon={<FileDoneOutlined />} onClick={confirmCompleteDocs} loading={completeDocs.isPending}>
                 Đã bổ sung hồ sơ
+              </Button>
+            )}
+            {/* Nhận hàng theo PO bằng phiếu XNH (lát K2, design.md mục 19.4) – PO đã duyệt, chưa nhận đủ. */}
+            {doc?.status === 'Approved' && hasPermission(Permission.ReceiptManage) && (
+              <Button icon={<InboxOutlined />} onClick={() => navigate(`/mua-hang/xac-nhan-nhan-hang/moi?po=${doc.id}`)}>
+                Lập phiếu nhận hàng
               </Button>
             )}
             {actions}

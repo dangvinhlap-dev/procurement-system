@@ -316,6 +316,66 @@ export function usePurchaseSpend(period: PurchaseReportPeriod, groupBy: Purchase
   })
 }
 
+/** Một dòng PO trên báo cáo SL đặt – SL thực nhận / OTIF (lát K2, design.md mục 19.4). */
+export interface OrderFulfillmentRow {
+  orderId: string
+  orderNo: string
+  orderDate: string
+  companyCode: string
+  supplierCode: string
+  supplierName: string
+  lineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  orderedQty: number
+  receivedQty: number
+  /** SL đặt − thực nhận (âm = nhận thừa trong dung sai). */
+  shortQty: number
+  dueDate: string | null
+  lastReceiptDate: string | null
+  /** null = dòng không có hạn giao (không chấm). */
+  onTime: boolean | null
+  inFull: boolean
+  closedManually: boolean
+}
+
+/** Tổng hợp OTIF theo NCC (hoặc dòng tổng). */
+export interface OrderFulfillmentSupplier {
+  supplierCode: string
+  supplierName: string
+  lines: number
+  inFullLines: number
+  scoredLines: number
+  onTimeLines: number
+  otifLines: number
+  inFullPct: number | null
+  onTimePct: number | null
+  otifPct: number | null
+}
+
+/** Báo cáo SL đặt – SL thực nhận / OTIF. */
+export interface OrderFulfillmentResult {
+  rows: OrderFulfillmentRow[]
+  suppliers: OrderFulfillmentSupplier[]
+  total: OrderFulfillmentSupplier
+  allCompanies: boolean
+}
+
+/**
+ * SL đặt – SL thực nhận / OTIF theo ngày PO.
+ * @param period Khoảng ngày PO, phạm vi.
+ */
+export function useOrderFulfillment(period: PurchaseReportPeriod) {
+  const companyId = useCompanyId()
+  const query = periodQuery(period).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'order-fulfillment', query],
+    queryFn: () => apiFetch<OrderFulfillmentResult>(`/api/reports/order-fulfillment?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /**
  * Đánh giá NCC trong khoảng ngày.
  * @param period Khoảng ngày, phạm vi.
