@@ -149,6 +149,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **K2 – phiếu xác nhận nhận hàng XNH (nhánh `feature/k2-xnh`, bắt đầu 10/11/2026, design.md mục 19.4).**
+  - K2a (xong): domain `GoodsReceiptConfirmation` (dòng theo dòng PO: SL giao / đạt / không đạt, kết quả kiểm tra, hóa đơn, nghiệm thu,
+    điều chỉnh SL thực nhận có lý do + lịch sử `GoodsReceiptAdjustment`), loại chứng từ XNH, quyền `Purchase.Receipt.View/Manage/Accept`
+    + vai trò mẫu (KHO, DENGHI, DONVIDATHANG, KETOAN, ProcurementView), migration `V0_22_0_XacNhanNhanHang`, `/api/receipt-confirmations`,
+    đính kèm, tra cứu chứng từ. `PurchaseOrderReceipts.ReceivedBaseByLineAsync` đọc XNH (PO, ngân sách, PR đang đặt, theo dõi giao hàng);
+    code kho cũ dùng `LegacyGrnReceivedBaseByLineAsync`. Test: domain 7, tích hợp 2 + chuyển 3 test luồng PO sang XNH. `dotnet test` qua.
+  - Còn: K2b báo cáo (MATCH3, chất lượng nhận hàng, đánh giá NCC, KPI, so sánh giá, KSNB, trang chủ… chuyển sang XNH; báo cáo SL đặt –
+    SL thực nhận/OTIF); K2c giao diện XNH + nút trên PO + e2e; cập nhật design.md 19.4, appsettings.Testing.
+
 - **Rà soát lỗi 06/11/2026 – người dùng duyệt làm lát R1 → R8** (design.md 18.26). Lỗi tìm được: L1 ghi sổ trùng đồng thời (đã kiểm chứng
   tồn ×2), L2 không khóa sửa trùng, L3 một người duyệt nhiều cấp, L4 GRN ngoài PO, L5 RTV không trừ PO, L6/L7 không đóng phần còn lại PO/PR,
   L8 RFQ đếm NCC mời thay báo giá + báo giá sau hạn, L9 hủy PO đã duyệt không lý do, cảnh báo CS1573.
