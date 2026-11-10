@@ -240,7 +240,7 @@ public sealed class StockReportService : IStockReportService
                                                  || o.Status == ApprovalDocumentStatus.Approved)
                 select new { l.Id, l.ItemId, l.BaseQty, o.Status })
             .ToListAsync(cancellationToken);
-        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(
+        var received = await PurchaseOrderReceipts.LegacyGrnReceivedBaseByLineAsync(
             _db, poLines.Where(l => l.Status == ApprovalDocumentStatus.Approved).Select(l => l.Id).ToList(), null, cancellationToken);
         var onOrder = poLines.GroupBy(l => l.ItemId)
             .ToDictionary(g => g.Key, g => g.Sum(l => Math.Max(0, l.BaseQty - received.GetValueOrDefault(l.Id))));

@@ -6,7 +6,6 @@ using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Pricing;
@@ -16,8 +15,8 @@ using Proc.Infrastructure.Persistence;
 namespace Proc.Infrastructure.Purchasing;
 
 /// <summary>
-/// Đơn mua hàng (design.md mục 6.2, 10.3). SL đã nhận của dòng PO tính từ các phiếu nhập mua đã ghi sổ trỏ về dòng đó – không lưu
-/// riêng, nên bỏ ghi sổ phiếu nhập là SL đã nhận tự giảm.
+/// Đơn mua hàng (design.md mục 6.2, 10.3). SL đã nhận của dòng PO tính từ các phiếu xác nhận nhận hàng XNH đã xác nhận trỏ về dòng đó
+/// (từ bản 0.22.0 – design.md mục 19.4) – không lưu riêng, nên điều chỉnh SL thực nhận trên XNH là SL đã nhận tự đổi.
 /// </summary>
 public sealed class PurchaseOrderService : IPurchaseOrderService
 {
@@ -209,10 +208,12 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     public async Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null)
     {
         var order = await LoadAsync(id, cancellationToken);
-        // Đã có phiếu nhập (chưa hủy) theo PO thì không hủy – hàng đã/đang về theo đơn này.
-        var receipts = await _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]).AsNoTracking()
-            .Where(d => d.PurchaseOrderId == id && d.Status != DocumentStatus.Cancelled).Select(d => d.No).ToListAsync(cancellationToken);
-        if (receipts.Count > 0) throw new BusinessRuleException($"Đơn {order.No} đã có phiếu nhập {string.Join(", ", receipts)} – không hủy được.");
+        // Đã có phiếu xác nhận nhận hàng (chưa hủy) theo PO thì không hủy – hàng đã/đang về theo đơn này; dùng "Hoàn thành PO" (đóng phần
+        // còn lại) thay cho hủy.
+        var receipts = await _db.GoodsReceiptConfirmations.AsNoTracking()
+            .Where(c => c.PurchaseOrderId == id && c.Status != ReceiptConfirmationStatus.Cancelled).Select(c => c.No).ToListAsync(cancellationToken);
+        if (receipts.Count > 0)
+            throw new BusinessRuleException($"Đơn {order.No} đã có phiếu nhận hàng {string.Join(", ", receipts)} – không hủy được (dùng Hoàn thành PO).");
         order.Cancel(reason);
         await _approvals.SkipPendingAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -222,16 +223,16 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     /// <inheritdoc />
     public async Task<PurchaseOrderDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken)
     {
-        // Khóa PO: phiếu nhập đang ghi sổ cùng lúc phải xong trước, rồi mới xét còn phiếu nhập nháp / đã nhận chưa (lát R1).
+        // Khóa PO: phiếu nhận hàng đang xác nhận cùng lúc phải xong trước, rồi mới xét còn phiếu nháp / đã nhận chưa (lát R1).
         await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         await RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken);
         var order = await LoadAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(order, cancellationToken);
-        // Phiếu nhập nháp theo PO phải ghi sổ hoặc hủy trước – không để phiếu treo trỏ vào PO đã đóng (lát R6, design.md mục 18.26).
-        var drafts = await _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]).AsNoTracking()
-            .Where(d => d.PurchaseOrderId == id && d.Status == DocumentStatus.Draft).Select(d => d.No).ToListAsync(cancellationToken);
+        // Phiếu nhận hàng nháp theo PO phải xác nhận hoặc hủy trước – không để phiếu treo trỏ vào PO đã đóng (lát R6, design.md mục 18.26).
+        var drafts = await _db.GoodsReceiptConfirmations.AsNoTracking()
+            .Where(c => c.PurchaseOrderId == id && c.Status == ReceiptConfirmationStatus.Draft).Select(c => c.No).ToListAsync(cancellationToken);
         if (drafts.Count > 0)
-            throw new BusinessRuleException($"Đơn {order.No} còn phiếu nhập nháp {string.Join(", ", drafts)} – ghi sổ hoặc hủy trước khi đóng phần còn lại.");
+            throw new BusinessRuleException($"Đơn {order.No} còn phiếu nhận hàng nháp {string.Join(", ", drafts)} – xác nhận hoặc hủy trước khi hoàn thành PO.");
         var received = await ReceivedBaseByLineAsync(order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
         if (!received.Values.Any(q => q > 0))
             throw new BusinessRuleException($"Đơn {order.No} chưa nhận hàng – dùng lệnh Hủy phiếu thay cho đóng phần còn lại.");
@@ -278,7 +279,6 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     internal Task<Dictionary<Guid, decimal>> ReceivedBaseByLineAsync(IReadOnlyList<Guid> poLineIds, Guid? excludeDocumentId, CancellationToken cancellationToken) =>
         PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, poLineIds, excludeDocumentId, cancellationToken);
 
-    // IgnoreQueryFilters tắt filter công ty cho cả câu truy vấn; an toàn vì orderIds đã lấy qua filter công ty.
     /// <inheritdoc />
     public async Task<IReadOnlyList<PoApprovedPriceDto>> ApprovedPricesAsync(
         Guid supplierId, DateOnly date, IReadOnlyList<Guid> itemIds, Guid? departmentId, CancellationToken cancellationToken)
@@ -515,14 +515,14 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         return $"Hợp đồng {contract.No} chỉ cho bộ phận {string.Join(", ", allowed)} đặt hàng – {who} không tính giá theo hợp đồng.";
     }
 
-    /// <summary>Tổng số lượng đã nhận (ĐVT cơ sở) theo từng dòng PO, tính trên phiếu nhập đã ghi sổ trừ phiếu trả hàng.</summary>
+    /// <summary>Tổng SL thực nhận (ĐVT cơ sở) theo từng PO, tính trên phiếu XNH đã xác nhận (gồm điều chỉnh) – design.md mục 19.4.</summary>
     private async Task<Dictionary<Guid, decimal>> ReceivedBaseByOrderAsync(IReadOnlyList<Guid> orderIds, CancellationToken cancellationToken) =>
         await (
-                from l in _db.InventoryDocumentLines.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
-                join d in _db.InventoryDocuments.IgnoreQueryFilters([ProcDbContext.WarehouseFilter]) on l.DocumentId equals d.Id
-                where d.PurchaseOrderId != null && orderIds.Contains(d.PurchaseOrderId.Value) && d.Status == DocumentStatus.Posted
-                group l by d.PurchaseOrderId!.Value into g
-                select new { g.Key, Qty = g.Sum(x => x.BaseQty) })
+                from l in _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking()
+                join c in _db.GoodsReceiptConfirmations on l.ConfirmationId equals c.Id
+                where orderIds.Contains(c.PurchaseOrderId) && c.Status == ReceiptConfirmationStatus.Confirmed
+                group l by c.PurchaseOrderId into g
+                select new { g.Key, Qty = g.Sum(x => x.ReceivedBaseQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
 
     /// <summary>

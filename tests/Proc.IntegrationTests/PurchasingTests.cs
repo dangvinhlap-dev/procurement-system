@@ -15,7 +15,7 @@ using Proc.Domain.Organization;
 namespace Proc.IntegrationTests;
 
 /// <summary>
-/// Mua hàng (design.md mục 6.2, 10.2, 10.3): PR → duyệt → PO từ PR → duyệt → phiếu nhập theo PO → PO nhận đủ; duyệt nhiều cấp theo
+/// Mua hàng (design.md mục 6.2, 10.2, 10.3, 19.4): PR → duyệt → PO từ PR → duyệt → nhận hàng theo PO (XNH) → PO nhận đủ; duyệt nhiều cấp theo
 /// ngưỡng và vai trò; từ chối; dưới ngưỡng tự duyệt. Mỗi test một công ty mới để quy trình duyệt không ảnh hưởng test khác.
 /// </summary>
 [Collection(ApiCollection.Name)]
@@ -99,6 +99,15 @@ public partial class PurchasingTests
         f.Buyer.PostAsJsonAsync("/api/goods-receipts",
             new SaveReceiptRequest(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
                 [new(null, f.ItemId, f.Cai, qty, 1, null, null, null, null, po.Lines[0].Id)], po.Id), Ct);
+
+    /// <summary>Lập XNH nháp nhận <paramref name="qty"/> (đạt hết) của dòng 1 PO (lát K2).</summary>
+    private static Task<HttpResponseMessage> ReceiveXnhAsync(Fixture f, PurchaseOrderDto po, decimal qty) =>
+        f.Buyer.PostAsJsonAsync("/api/receipt-confirmations",
+            new SaveReceiptConfirmationRequest(po.Id, Today, null, null, null, null, null, null, null, [new(po.Lines[0].Id, qty, qty, 0, "Passed", null, null)]), Ct);
+
+    /// <summary>Xác nhận XNH.</summary>
+    private static async Task<ReceiptConfirmationDto> ConfirmXnhAsync(Fixture f, ReceiptConfirmationDto xnh) =>
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
 
     private static Task<HttpResponseMessage> PostDocAsync(Fixture f, Guid id) => f.Buyer.PostAsync($"/api/inventory-documents/{id}/post", null, Ct);
 
@@ -207,8 +216,8 @@ public partial class PurchasingTests
     }
 
     /// <summary>
-    /// Lát R5 (design.md mục 18.26): trả NCC hàng của phiếu nhập theo PO trừ vào SL đã nhận – PO đã nhận đủ mở lại để NCC giao bù; giao bù
-    /// đủ thì PO đóng lại. Bỏ ghi sổ phiếu trả thì SL đã nhận cộng lại.
+    /// Lát R5 (design.md mục 18.26), từ 0.22.0 qua XNH (mục 19.4): trả NCC = điều chỉnh giảm SL thực nhận – PO đã nhận đủ mở lại để NCC giao
+    /// bù; giao bù đủ thì PO đóng lại, không nhận thêm.
     /// </summary>
     [Fact]
     public async Task TraNcc_TruSlDaNhanCuaPo_MoLaiDeGiaoBu()
@@ -218,26 +227,19 @@ public partial class PurchasingTests
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
-        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 10));
-        grn = await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
+        var xnh = await ConfirmXnhAsync(f, await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 10)));
         Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
 
-        var rtv = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-returns",
-            new SaveReturnRequest(Today, grn.Id, null, "Hàng lỗi", [new(null, grn.Lines[0].Id, 3, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, rtv.Id));
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync($"/api/receipt-confirmations/{xnh.Id}/adjustments",
+            new AdjustReceiptRequest(xnh.Lines[0].Id, -3, "Hàng lỗi trả NCC"), Ct));
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
         Assert.Equal(("Approved", 7m, 3m), (po.Status, po.Lines[0].ReceivedQty, po.Lines[0].RemainingQty));
 
         // Giao bù: nhận tối đa 3 (không dung sai).
-        Assert.Contains("vượt SL còn nhận được", await TitleAsync(await ReceiveAsync(f, po, 4)));
-        var replacement = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 3));
-        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, replacement.Id));
+        Assert.Contains("vượt SL còn nhận được", await TitleAsync(await ReceiveXnhAsync(f, po, 4)));
+        await ConfirmXnhAsync(f, await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 3)));
         Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
-
-        // Bỏ ghi sổ phiếu trả: SL đã nhận thành 13 (vẫn đủ) – PO giữ Đã nhận đủ.
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{rtv.Id}/unpost", null, Ct));
-        po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
-        Assert.Equal(("Closed", 13m), (po.Status, po.Lines[0].ReceivedQty));
+        Assert.Contains("không nhận hàng", await TitleAsync(await ReceiveXnhAsync(f, po, 1)));
     }
 
     /// <summary>
@@ -271,16 +273,18 @@ public partial class PurchasingTests
         Assert.DoesNotContain(open!, l => l.PrLineId == pr.Lines[0].Id);
         Assert.Contains("chưa được duyệt", await TitleAsync(await CreatePoAsync(f, 1, pr.Lines[0].Id)));
 
-        // PO: nhận 3/4 rồi đóng phần còn lại; không nhận thêm; bỏ ghi sổ phiếu nhập vẫn giữ Đã đóng.
-        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 3));
-        var draft = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 1));
-        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id));
-        Assert.Contains("phiếu nhập nháp", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("NCC hết hàng"), Ct)));
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{draft.Id}/cancel", null, Ct));
+        // PO: nhận 3/4 (XNH) rồi đóng phần còn lại; không nhận thêm; điều chỉnh giảm SL thực nhận vẫn giữ Đã đóng.
+        var xnh = await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 3));
+        var draft = await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 1));
+        xnh = await ConfirmXnhAsync(f, xnh);
+        Assert.Contains("phiếu nhận hàng nháp", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("NCC hết hàng"), Ct)));
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync($"/api/receipt-confirmations/{draft.Id}/cancel",
+            new CancelReceiptConfirmationRequest("Lập trùng"), Ct));
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/close-remaining", new CloseRemainingRequest("NCC hết hàng"), Ct));
         Assert.Equal(("Closed", "NCC hết hàng", 3m), (po.Status, po.ClosedReason, po.Lines[0].ReceivedQty));
-        Assert.Contains("đã nhận đủ hoặc đã hủy", await TitleAsync(await ReceiveAsync(f, po, 1)));
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn.Id}/unpost", null, Ct));
+        Assert.Contains("không nhận hàng", await TitleAsync(await ReceiveXnhAsync(f, po, 1)));
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync($"/api/receipt-confirmations/{xnh.Id}/adjustments",
+            new AdjustReceiptRequest(xnh.Lines[0].Id, -1, "Trả 1 cái lỗi"), Ct));
         Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
     }
 
@@ -446,9 +450,9 @@ public partial class PurchasingTests
         Assert.Equal(("Draft", "None", (string?)null), (grn.Status, grn.Acceptance, grn.AcceptanceNote));
     }
 
+    /// <summary>Luồng PR → PO → nhận hàng (từ 0.22.0 bằng XNH – design.md mục 19.4) → nhận đủ thì PO đóng.</summary>
     [Fact]
     public async Task LuongPrPoNhapKho_DuyetMotCap_NhanDuThiDongPo()
-
     {
         var f = await ArrangeAsync();
         var (approver, _) = await ApproverAsync(f);
@@ -471,27 +475,28 @@ public partial class PurchasingTests
         Assert.Equal((950_000m, 95_000m, pr.No), (po.TotalAmount, po.TotalVat, po.Lines[0].SourcePrNo));
         Assert.Contains("vượt SL còn chưa đặt", await TitleAsync(await CreatePoAsync(f, 1, pr.Lines[0].Id)));
         Assert.Contains("đã lên đơn mua hàng", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/cancel", null, Ct)));
-        Assert.Contains("chưa duyệt", await TitleAsync(await ReceiveAsync(f, po, 1)));
+        Assert.Contains("chưa duyệt", await TitleAsync(await ReceiveXnhAsync(f, po, 1)));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
         Assert.Equal("Approved", po.Status);
 
         // Nhận lần 1: 6 cái, giá thực mua 95.000 (sau CK 5%), thuế suất theo PO.
-        var grn1 = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 6));
-        Assert.Equal((95_000m, "10", po.No), (grn1.Lines[0].UnitPrice, grn1.Lines[0].VatCode, grn1.PurchaseOrderNo));
-        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn1.Id));
+        var xnh1 = await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 6));
+        Assert.Equal((95_000m, "10", po.No), (xnh1.Lines[0].UnitPrice, xnh1.Lines[0].VatCode, xnh1.PurchaseOrderNo));
+        await ConfirmXnhAsync(f, xnh1);
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct));
         Assert.Equal(("Approved", 6m, 4m), (po.Status, po.Lines[0].ReceivedQty, po.Lines[0].RemainingQty));
         var tracking = await f.Buyer.GetFromJsonAsync<List<DeliveryTrackingDto>>("/api/purchase-orders/tracking", Ct);
         Assert.Equal(4m, tracking!.Single(t => t.OrderId == po.Id).RemainingQty);
-        Assert.Contains("đã có phiếu nhập", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/cancel", null, Ct)));
+        Assert.Contains("đã có phiếu nhận hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel",
+            new CancelDocumentRequest("Không mua nữa"), Ct)));
 
-        // Nhận vượt (dung sai 0%) bị chặn; nhận đủ thì PO đóng; bỏ ghi sổ thì PO mở lại.
-        Assert.Contains("vượt SL còn nhận được", await TitleAsync(await ReceiveAsync(f, po, 5)));
-        var grn2 = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 4));
-        await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn2.Id));
+        // Nhận vượt (dung sai 0%) bị chặn; nhận đủ thì PO đóng; điều chỉnh giảm thì PO mở lại.
+        Assert.Contains("vượt SL còn nhận được", await TitleAsync(await ReceiveXnhAsync(f, po, 5)));
+        var xnh2 = await ConfirmXnhAsync(f, await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 4)));
         Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
-        await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsync($"/api/inventory-documents/{grn2.Id}/unpost", null, Ct));
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync($"/api/receipt-confirmations/{xnh2.Id}/adjustments",
+            new AdjustReceiptRequest(xnh2.Lines[0].Id, -1, "Trả 1 cái"), Ct));
         Assert.Equal("Approved", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
     }
 

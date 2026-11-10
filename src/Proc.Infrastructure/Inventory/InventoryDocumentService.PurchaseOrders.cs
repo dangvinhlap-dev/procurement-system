@@ -92,7 +92,7 @@ public sealed partial class InventoryDocumentService
         if (orderId is not { } id) return;
         await RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken);
         var order = await _db.PurchaseOrders.Include(o => o.Lines).SingleAsync(o => o.Id == id, cancellationToken);
-        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        var received = await PurchaseOrderReceipts.LegacyGrnReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
         if (order.Lines.All(l => received.GetValueOrDefault(l.Id) >= l.BaseQty)) order.CloseReceived();
         else order.ReopenReceiving();
     }
@@ -115,7 +115,7 @@ public sealed partial class InventoryDocumentService
     private async Task CheckOrderQuantitiesAsync(
         PurchaseOrder order, IReadOnlyList<(Guid PoLineId, decimal Qty, int LineNo)> lines, Guid? documentId, CancellationToken cancellationToken)
     {
-        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), documentId, cancellationToken);
+        var received = await PurchaseOrderReceipts.LegacyGrnReceivedBaseByLineAsync(_db, order.Lines.Select(l => l.Id).ToList(), documentId, cancellationToken);
         foreach (var group in lines.GroupBy(l => l.PoLineId))
         {
             var poLine = order.Lines.FirstOrDefault(p => p.Id == group.Key)

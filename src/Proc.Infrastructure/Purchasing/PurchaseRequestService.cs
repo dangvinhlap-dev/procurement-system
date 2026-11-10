@@ -312,7 +312,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
 
     /// <summary>
     /// SL đang đặt (ĐVT cơ sở) theo mặt hàng tại công ty – design.md mục 18.13 (V2: kiểm tra hàng đang đặt trước khi đề nghị): tổng trên
-    /// các PO đã duyệt còn chờ nhận (chưa nhận đủ) của SL đặt − SL đã nhận theo phiếu nhập đã ghi sổ, mỗi dòng không âm.
+    /// các PO đã duyệt còn chờ nhận (chưa nhận đủ) của SL đặt − SL thực nhận theo phiếu XNH đã xác nhận, mỗi dòng không âm.
     /// Ví dụ PO 100 cái đã nhận 30 → đang đặt 70.
     /// </summary>
     private async Task<Dictionary<Guid, decimal>> OnOrderBaseByItemAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
