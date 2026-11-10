@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { approvePriceList, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { approvePriceList, chooseOption, openByCommand, pickOption, switchCompany } from './inventoryHelpers.ts'
+import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
 /**
  * Bảng giá NCC và so sánh giá (design.md mục 8.1, 8.2): tổng công ty lập bảng giá toàn tập đoàn, gửi duyệt, người duyệt giá duyệt → so sánh
@@ -20,7 +21,10 @@ async function confirm(page: Page, button: string, messageText: string | RegExp)
 
 test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duyệt, lệch giá qua duyệt ngoại lệ', async ({ page, request }) => {
   test.setTimeout(90_000)
-  const { itemCode, supplierCode } = await seedPostedReceipt(request)
+  // Nhận 10 hộp × 50.000 bằng phiếu XNH theo PO đã duyệt (từ 0.22.0 – design.md mục 19.4).
+  const seed = await seedApprovedPo(request, 10)
+  await receiveByApi(seed.bha, seed.po.id, seed.po.lines[0].id, 10)
+  const { itemCode, supplierCode } = seed
   await loginViaApi(page)
   await page.goto('/')
 

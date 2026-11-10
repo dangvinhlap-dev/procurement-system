@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, openByCommand, switchCompany, unique } from './inventoryHelpers.ts'
+import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
 /**
  * Ngân sách bộ phận × tháng (lát C3, design.md mục 18.24): khai ngân sách tháng hiện tại ở màn hình BUDG, PR vượt ngân sách hiện cảnh
  * báo ở đầu phiếu và gửi duyệt được (thêm chặng "Vượt ngân sách"), bảng ngân sách báo bộ phận vượt.
  */
 test('khai ngân sách bộ phận, PR vượt ngân sách có cảnh báo và chặng duyệt riêng', async ({ page, request }) => {
-  const seed = await seedPostedReceipt(request)
+  // Giá nhận gần nhất 50.000/hộp: PO đã duyệt (không gắn bộ phận – không tính ngân sách) nhận đủ 10 hộp bằng XNH (design.md mục 19.4).
+  const seed = await seedApprovedPo(request, 10)
+  await receiveByApi(seed.bha, seed.po.id, seed.po.lines[0].id, 10)
   const bha = await api(request, 'BHA')
   const code = unique('NS')
   const department = await bha.send<{ id: string }>('post', '/api/departments', { code, name: `Phân xưởng ${code}`, managerName: null })
