@@ -63,6 +63,7 @@ public sealed class CompanyScopeMiddleware
         }
     }
 
+    /// <summary>Trả lỗi ProblemDetails ngay trong middleware (chưa vào endpoint nên không dùng được Results trả về).</summary>
     private static Task WriteProblemAsync(HttpContext context, int status, string title) =>
         Results.Problem(title: title, statusCode: status).ExecuteAsync(context);
 }

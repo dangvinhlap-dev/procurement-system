@@ -233,6 +233,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 select new { g.Key, Qty = g.Sum(x => x.BaseQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
 
+    /// <summary>Tổng số lượng đã đặt (ĐVT cơ sở) theo từng dòng PR, tính trên PO chưa hủy.</summary>
     private async Task<Dictionary<Guid, decimal>> OrderedBaseByRequestAsync(IReadOnlyList<Guid> requestIds, CancellationToken cancellationToken) =>
         await (
                 from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
@@ -281,6 +282,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         return rows.GroupBy(r => r.ItemId).ToDictionary(g => g.Key, g => Math.Round(g.First().UnitPrice / g.First().UomFactor, 6, MidpointRounding.AwayFromZero));
     }
 
+    /// <summary>Kiểm tra kho nhận còn đang dùng; không thấy thì báo lỗi 404.</summary>
     private async Task CheckWarehouseAsync(Guid? warehouseId, CancellationToken cancellationToken)
     {
         if (warehouseId is { } id && !await _db.Warehouses.AnyAsync(w => w.Id == id && w.IsActive, cancellationToken))
@@ -510,6 +512,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             ? s
             : throw new BusinessRuleException("Trạng thái phải là Draft, Submitted, Approved, Closed hoặc Cancelled.");
 
+    /// <summary>Đổi yêu cầu lưu PR thành dữ liệu header cho Domain (mức ưu tiên mặc định Thường).</summary>
     private static PurchaseRequestHeader ToHeader(SavePurchaseRequestRequest r) =>
         new(r.Date, r.DepartmentId, r.Purpose, r.NeededDate, r.WarehouseId,
             Enum.TryParse<PurchasePriority>(r.Priority, ignoreCase: true, out var p) && Enum.IsDefined(p)

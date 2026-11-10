@@ -12,6 +12,7 @@ public static class PdfFonts
     /// <summary>Tên họ phông dùng trong mẫu phiếu; bộ chọn phông đổi sang file thật.</summary>
     public const string Family = "Proc Sans";
 
+    /// <summary>Các cặp phông chữ (thường, đậm) có dấu tiếng Việt, thử lần lượt trên Windows và Linux.</summary>
     private static readonly (string Regular, string Bold)[] Candidates =
     [
         ("arial.ttf", "arialbd.ttf"),
@@ -57,6 +58,7 @@ public static class PdfFonts
         }
     }
 
+    /// <summary>Tìm file phông trong các thư mục, so tên không phân biệt hoa thường (Linux phân biệt hoa thường).</summary>
     private static string? Find(IEnumerable<string> directories, string fileName) =>
         directories
             .Where(Directory.Exists)

@@ -86,6 +86,7 @@ public sealed record ContractTerms(
             throw new BusinessRuleException("Hạn mức công nợ phải ≥ 0, tối đa 2 chữ số thập phân.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -424,6 +425,7 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
     /// </summary>
     public bool ExpiresWithin(DateOnly today, int days) => Status == ContractStatus.Active && DaysToExpiry(today) >= 0 && DaysToExpiry(today) <= days;
 
+    /// <summary>Thêm một dòng hợp đồng trống vào danh sách và trả về để gán dữ liệu.</summary>
     private PurchaseContractLine AddLine()
     {
         var line = new PurchaseContractLine(Id);
@@ -431,11 +433,14 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         return line;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Lấy các điều khoản hợp đồng từ dữ liệu header form.</summary>
     private static ContractTerms ToTerms(ContractHeader h) =>
         new(h.PriceAdjustmentTerms, h.PaymentTerms, h.CreditLimit, h.DeliveryTerms, h.DiscountTerms, h.SponsorshipTerms, h.PenaltyTerms, h.OtherTerms);
 
+    /// <summary>Gán các điều khoản hợp đồng (đã chuẩn hóa: bỏ khoảng trắng, kiểm tra độ dài).</summary>
     private void SetTerms(ContractTerms terms)
     {
         var t = terms.Normalized();
@@ -449,11 +454,13 @@ public sealed class PurchaseContract : AuditableEntity, ICompanyOwned, IHasDocum
         OtherTerms = t.OtherTerms;
     }
 
+    /// <summary>Chặn sửa khi hợp đồng không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != ContractStatus.Draft) throw new BusinessRuleException($"Hợp đồng {No} không còn ở trạng thái nháp – không sửa được.");
     }
 
+    /// <summary>Chặn thao tác khi hợp đồng không ở trạng thái Chờ duyệt.</summary>
     private void EnsureSubmitted()
     {
         if (Status != ContractStatus.Submitted) throw new BusinessRuleException($"Hợp đồng {No} không ở trạng thái chờ duyệt.");
@@ -502,6 +509,7 @@ public sealed class PurchaseContractLine : Entity
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng hợp đồng (mặt hàng, ĐVT, sản lượng, giá).</summary>
     internal void Set(int lineNo, ContractLineData data, Item item, ContractLinePrice price)
     {
         var prefix = $"Dòng {lineNo}";

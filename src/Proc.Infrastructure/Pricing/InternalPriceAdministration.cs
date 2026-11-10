@@ -138,6 +138,7 @@ public sealed class InternalPriceAdministration : IInternalPriceAdministration
                 (clash.ValidTo is { } to ? $" đến {to:dd/MM/yyyy}" : "") + " – chồng khoảng hiệu lực. Đặt ngày hết hiệu lực cho giá cũ trước.");
     }
 
+    /// <summary>Truy vấn giá bán nội bộ kèm mã/tên mặt hàng, ĐVT; truyền id để lấy một dòng.</summary>
     private IQueryable<InternalPriceDto> Query(Guid? id = null) =>
         from p in _db.InternalPrices.AsNoTracking()
         where id == null || p.Id == id

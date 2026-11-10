@@ -126,6 +126,7 @@ internal sealed class ApprovalEngine
         await StartAsync(document, steps, cancellationToken);
     }
 
+    /// <summary>Bắt đầu quy trình duyệt: không có bước nào thì duyệt ngay, có thì báo người duyệt cấp đầu.</summary>
     private async Task StartAsync(IApprovalSubject document, List<ApprovalStep> steps, CancellationToken cancellationToken)
     {
         if (steps.Count == 0)

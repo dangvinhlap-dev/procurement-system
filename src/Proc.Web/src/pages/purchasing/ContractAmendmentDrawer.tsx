@@ -38,6 +38,7 @@ interface FormValues extends Partial<Record<keyof ContractTerms, string | number
   note?: string
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null)
 
 /**

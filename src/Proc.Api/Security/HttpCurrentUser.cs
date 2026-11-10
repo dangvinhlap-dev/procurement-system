@@ -50,6 +50,7 @@ public sealed class HttpRequestContext : IRequestContext
     // TestServer (test tích hợp) không có địa chỉ mạng thật.
     private string? Local() => _accessor.HttpContext is null ? null : "local";
 
+    /// <summary>Cắt chuỗi về tối đa max ký tự (vừa độ dài cột audit); chuỗi rỗng trả null.</summary>
     private static string? Truncate(string? value, int max) =>
         string.IsNullOrEmpty(value) ? null : value.Length <= max ? value : value[..max];
 }

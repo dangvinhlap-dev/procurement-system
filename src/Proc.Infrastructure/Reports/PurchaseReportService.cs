@@ -692,6 +692,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
         return new SupplierCoverageResult(minSuppliers, rows.Count, shortCount, shown);
     }
 
+    /// <summary>Tỷ lệ phần trăm part/total, làm tròn 2 số lẻ; total = 0 thì trả 0.</summary>
     private static decimal Share(decimal part, decimal total) => total == 0 ? 0 : Math.Round(part * 100m / total, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
@@ -765,6 +766,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
             .ToList();
     }
 
+    /// <summary>Làm tròn tiền 2 số lẻ theo kiểu thông thường (0,5 làm tròn lên).</summary>
     private static decimal Money(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>Kiểm tra khoảng ngày và quyền xem toàn tập đoàn.</summary>

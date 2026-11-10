@@ -204,6 +204,7 @@ public sealed class PurchaseHistoryMappingService : IPurchaseHistoryMappingServi
         return new PurchaseHistoryMappingResult(updated);
     }
 
+    /// <summary>Loại ánh xạ là mặt hàng (true) hay NCC (false); loại khác thì báo lỗi.</summary>
     private static bool IsItem(string? kind) => kind switch
     {
         PurchaseHistoryMappingKinds.Item => true,
@@ -243,6 +244,7 @@ public sealed class PurchaseHistoryMappingService : IPurchaseHistoryMappingServi
         return isItem ? rows : rows.Where(r => PurchaseHistoryKeys.Supplier(r.TaxCode, r.SupplierName) == key).ToList();
     }
 
+    /// <summary>Lấy Id các dòng dữ liệu mua lịch sử có cùng khóa nguồn (mã vật tư cũ hoặc NCC cũ).</summary>
     private async Task<List<Guid>> RecordIdsAsync(bool isItem, string key, CancellationToken cancellationToken) =>
         (await SourceRowsAsync(isItem, key, cancellationToken)).Select(r => r.Id).ToList();
 
@@ -264,14 +266,17 @@ public sealed class PurchaseHistoryMappingService : IPurchaseHistoryMappingServi
         return updated;
     }
 
+    /// <summary>Giá trị xuất hiện nhiều nhất (bỏ null); hòa thì lấy theo thứ tự chữ để kết quả ổn định.</summary>
     private static string? MostCommon(IEnumerable<string?> values) =>
         values.Where(v => v != null).GroupBy(v => v!, StringComparer.Ordinal)
             .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
             .Select(g => g.Key).FirstOrDefault();
 
+    /// <summary>Một dòng dữ liệu mua lịch sử đọc ra để gom nhóm theo khóa nguồn.</summary>
     private sealed record SourceRow(
         string ItemCode, string ItemName, string? Specification, string Uom, string SupplierName, string? TaxCode, decimal Amount,
         DateOnly PurchaseDate, Guid? TargetId);
 
+    /// <summary>Một dòng dữ liệu mua lịch sử kèm Id, dùng để gợi ý mặt hàng/NCC trùng gần đúng.</summary>
     private sealed record SourceRecord(Guid Id, string ItemName, string? Specification, string SupplierName, string? TaxCode);
 }

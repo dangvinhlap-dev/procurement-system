@@ -115,6 +115,7 @@ interface SourceInfo {
 /** Lý do khóa "Tạo PO" khi thiếu quyền đặc biệt (giống câu máy chủ, không kèm mã công ty). */
 const MEMBER_PO_BLOCKED = 'Tạo PO cho công ty thành viên cần quyền đặc biệt "Tạo PO cho công ty thành viên" tại tổng công ty – liên hệ quản trị để được cấp.'
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Tổng phân bổ của dòng (4 số lẻ). */

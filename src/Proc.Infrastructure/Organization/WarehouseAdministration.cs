@@ -96,6 +96,7 @@ public sealed class WarehouseAdministration : IWarehouseAdministration
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Ngừng dùng kho: kho tổng không ngừng được (Domain báo lỗi); kho còn kho con đang dùng thì phải ngừng kho con trước.</summary>
     private async Task DeactivateAsync(Warehouse warehouse, CancellationToken cancellationToken)
     {
         // Quy tắc kho tổng (trong Domain) báo trước: kho tổng không bao giờ ngừng được, dù có hay không có kho con.
@@ -127,6 +128,7 @@ public sealed class WarehouseAdministration : IWarehouseAdministration
         }
     }
 
+    /// <summary>Tìm kho cha theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<Warehouse> FindParentAsync(Guid parentId, CancellationToken cancellationToken)
     {
         var parent = await _db.Warehouses.SingleOrDefaultAsync(w => w.Id == parentId, cancellationToken)
@@ -135,10 +137,12 @@ public sealed class WarehouseAdministration : IWarehouseAdministration
         return parent;
     }
 
+    /// <summary>Tìm kho theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<Warehouse> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.Warehouses.SingleOrDefaultAsync(w => w.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy kho.");
 
+    /// <summary>Đổi kho sang DTO chi tiết kèm mã kho cha.</summary>
     private static WarehouseDetailDto ToDto(Warehouse w, string? parentCode) =>
         new(w.Id, w.Code, w.Name, w.Type == WarehouseType.Main ? "Main" : "Sub", w.ParentWarehouseId, parentCode,
             w.Address, w.Keeper, w.AllowNegativeStock, w.IsActive);

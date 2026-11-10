@@ -191,6 +191,7 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Chặn khi người dùng không có quyền xem hoặc quản lý hồ sơ đánh giá NCC mới.</summary>
     private void EnsureView()
     {
         _scope.RequireCompany();
@@ -200,6 +201,7 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
             throw new ForbiddenAccessException("Bạn không có quyền xem hồ sơ đánh giá NCC mới.");
     }
 
+    /// <summary>Tìm hồ sơ đánh giá NCC mới theo Id (chỉ ở tổng công ty); không thấy thì báo lỗi 404.</summary>
     private async Task<SupplierOnboarding> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         await HeadOffice.RequireAsync(_db, _scope, What, cancellationToken);
@@ -207,6 +209,7 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
             ?? throw new NotFoundException("Không tìm thấy hồ sơ đánh giá NCC mới.");
     }
 
+    /// <summary>Tìm hồ sơ để sửa – yêu cầu thêm quyền quản lý.</summary>
     private async Task<SupplierOnboarding> FindForManageAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.EnsurePermission(Permissions.MasterData.SupplierOnboardingManage);
@@ -230,12 +233,14 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
         if (!category.IsActive) throw new BusinessRuleException($"Nhóm hàng {category.Code} đã ngừng dùng.");
     }
 
+    /// <summary>Đổi yêu cầu lưu hồ sơ đánh giá NCC mới thành dữ liệu cho Domain (mã hồ sơ in hoa).</summary>
     private static SupplierOnboardingData Data(SaveSupplierOnboardingRequest r) =>
         new(r.Date, r.CategoryId, r.Source,
             (r.Documents ?? []).Select(d => new SupplierOnboardingDocument(d.Code.Trim().ToUpperInvariant(), d.Provided, d.ValidTo, d.Note)).ToList(),
             new SupplierOnboardingScores(r.PriceScore, r.SampleQualityScore, r.CapacityScore, r.DeliveryScore, r.PaymentScore, r.LegalScore),
             string.IsNullOrWhiteSpace(r.Result) ? null : Enum.Parse<SupplierOnboardingResult>(r.Result, true), r.Comment, r.Note);
 
+    /// <summary>Đổi hồ sơ đánh giá NCC mới sang DTO kèm thông tin NCC và người thực hiện từng bước.</summary>
     private async Task<SupplierOnboardingDto> ToDtoAsync(SupplierOnboarding o, CancellationToken cancellationToken)
     {
         var supplier = await _db.Suppliers.AsNoTracking().Where(s => s.Id == o.SupplierId)

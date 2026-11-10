@@ -72,6 +72,7 @@ public sealed class DashboardService : IDashboardService
         return new DashboardDto(today, purchase, stock, spend, counts);
     }
 
+    /// <summary>Số liệu mua hàng cho trang chủ: phiếu chờ tôi duyệt, PR/PO đang mở.</summary>
     private async Task<DashboardPurchaseDto> PurchaseAsync(CancellationToken cancellationToken)
     {
         // Phiếu chờ tôi duyệt: ai đăng nhập cũng xem được danh sách của chính mình (màn hình Việc cần làm).
@@ -99,6 +100,7 @@ public sealed class DashboardService : IDashboardService
         return new DashboardPurchaseDto(approvals, pendingRequests, overdueRequests, openOrders, lateOrders, openRfqs);
     }
 
+    /// <summary>Số liệu kho cho trang chủ (chỉ khi có quyền xem kho): phiếu nháp, hàng dưới tồn tối thiểu.</summary>
     private async Task<DashboardStockDto?> StockAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var canDocuments = _scope.HasPermission(Permissions.Inventory.DocumentView);

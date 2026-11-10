@@ -173,6 +173,7 @@ public sealed class StockLedgerEntry : Entity, ICompanyOwned
         return Create(document, line, warehouseId, -1, periodId, amount, isCostFinal: false, unitCost);
     }
 
+    /// <summary>Tạo một bút toán sổ kho cho một dòng phiếu: hướng nhập (+1) hoặc xuất (-1), kỳ, giá trị và cờ giá vốn đã chốt.</summary>
     private static StockLedgerEntry Create(
         InventoryDocument document, InventoryDocumentLine line, Guid warehouseId, int direction, Guid periodId, decimal amount,
         bool isCostFinal, decimal? unitCost = null) =>

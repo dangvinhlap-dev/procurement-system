@@ -311,8 +311,10 @@ public sealed class StockReportService : IStockReportService
         return await onHand.ToListAsync(cancellationToken);
     }
 
+    /// <summary>Mã và tên kho cho dòng báo cáo.</summary>
     private sealed record WarehouseName(string Code, string Name);
 
+    /// <summary>Mã, tên, nhóm hàng và ĐVT cơ sở của mặt hàng cho dòng báo cáo.</summary>
     private sealed record ItemName(string Code, string Name, string CategoryCode, string CategoryName, string UomCode);
 
     /// <summary>Tên kho và mặt hàng cho các dòng báo cáo.</summary>

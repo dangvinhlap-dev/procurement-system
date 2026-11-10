@@ -204,6 +204,7 @@ public sealed partial class ContractService : IContractAmendmentService
             throw new BusinessRuleException($"Gia hạn trùng thời gian với hợp đồng {overlap} của cùng NCC – mỗi công ty một hợp đồng với NCC trong một thời kỳ.");
     }
 
+    /// <summary>Đổi phụ lục hợp đồng sang DTO kèm thông tin NCC, điều khoản cũ/mới và người lập/duyệt.</summary>
     private async Task<ContractAmendmentDto> ToAmendmentDtoAsync(PurchaseContractAmendment a, PurchaseContract contract, CancellationToken cancellationToken)
     {
         var supplier = await _db.Suppliers.AsNoTracking().Where(s => s.Id == contract.SupplierId).Select(s => new { s.Code, s.Name }).SingleAsync(cancellationToken);
@@ -243,9 +244,11 @@ public sealed partial class ContractService : IContractAmendmentService
                     u == null ? null : u.FullName, a.ApprovedAt))
             .ToListAsync(cancellationToken);
 
+    /// <summary>Đổi điều khoản hợp đồng sang DTO.</summary>
     private static ContractTermsDto TermsDto(ContractTerms t) =>
         new(t.PriceAdjustmentTerms, t.PaymentTerms, t.CreditLimit, t.DeliveryTerms, t.DiscountTerms, t.SponsorshipTerms, t.PenaltyTerms, t.OtherTerms);
 
+    /// <summary>Đổi yêu cầu lưu phụ lục thành dữ liệu cho Domain.</summary>
     private static ContractAmendmentData ToAmendmentData(SaveContractAmendmentRequest r) =>
         new(r.PaperNo, r.Reason, r.SignDate, r.NewValidTo, r.NewPriceListId,
             new ContractTerms(r.PriceAdjustmentTerms, r.PaymentTerms, r.CreditLimit, r.DeliveryTerms, r.DiscountTerms, r.SponsorshipTerms, r.PenaltyTerms, r.OtherTerms),

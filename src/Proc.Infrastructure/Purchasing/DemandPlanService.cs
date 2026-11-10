@@ -356,6 +356,7 @@ public sealed class DemandPlanService : IDemandPlanService
         }
     }
 
+    /// <summary>Tìm phiếu kế hoạch nhu cầu của công ty đang làm việc để sửa (yêu cầu quyền quản lý).</summary>
     private async Task<DemandPlan> FindOwnAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -381,12 +382,14 @@ public sealed class DemandPlanService : IDemandPlanService
             .ToList();
     }
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
         return await _db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
     }
 
+    /// <summary>Đổi phiếu kế hoạch nhu cầu sang DTO kèm mặt hàng, ĐVT và người lập/chốt.</summary>
     private async Task<DemandPlanDto> ToDtoAsync(DemandPlan x, CancellationToken cancellationToken)
     {
         var itemIds = x.Lines.Select(l => l.ItemId).Distinct().ToList();

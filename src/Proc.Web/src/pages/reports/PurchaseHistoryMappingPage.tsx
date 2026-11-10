@@ -28,6 +28,7 @@ const labels = {
   supplier: { code: 'MST', name: 'Tên NCC', target: 'NCC trong danh mục', targetCode: 'Mã NCC' },
 } as const
 
+/** Cột lưới cho màn hình ánh xạ theo loại (mặt hàng hoặc NCC). */
 function columnsFor(kind: PurchaseHistoryMappingKind): GridColumn<PurchaseHistorySource>[] {
   const l = labels[kind]
   return [

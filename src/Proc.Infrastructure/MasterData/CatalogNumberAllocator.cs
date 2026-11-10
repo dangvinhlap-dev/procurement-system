@@ -68,6 +68,7 @@ public sealed class CatalogNumberAllocator
         return numbering.NextCode(prefix, existing);
     }
 
+    /// <summary>Các mã đã dùng của danh mục theo tiền tố (cả mã đã lưu lẫn mã đang chờ lưu) để cấp số tiếp theo.</summary>
     private async Task<List<string>> CodesAsync(string catalog, string prefix, CancellationToken cancellationToken)
     {
         var stored = await StoredCodesAsync(catalog, prefix, cancellationToken);

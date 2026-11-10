@@ -12,6 +12,7 @@ import { useSharedCatalogRights } from '../../auth/useSharedCatalogRights'
 import { SharedCatalogNotice } from '../../components/ListPage/SharedCatalogNotice'
 import { ItemDrawer } from './ItemDrawer'
 
+/** Hiện mã VAT: KCT giữ nguyên, mã số thì thêm "%". */
 const vatLabel = (code: string | null) => (code === null ? '' : code === 'KCT' ? 'KCT' : `${code}%`)
 
 const columns: GridColumn<ItemListItem>[] = [

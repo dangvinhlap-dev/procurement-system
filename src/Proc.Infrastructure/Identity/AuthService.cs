@@ -149,6 +149,7 @@ public sealed class AuthService : IAuthService
         }
     }
 
+    /// <summary>Ghi nhật ký truy cập (đăng nhập, đăng xuất, sai mật khẩu…).</summary>
     private Task LogAsync(AccessEvent accessEvent, Guid? userId, string? userName, string? detail, CancellationToken cancellationToken) =>
         _accessLog.WriteAsync(accessEvent, userId, userName, null, detail, cancellationToken);
 

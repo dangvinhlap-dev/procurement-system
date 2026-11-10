@@ -258,11 +258,13 @@ public sealed class SupplierReview : AuditableEntity, ICompanyOwned
     /// <summary>Điểm hiện tại theo thứ tự tiêu chí.</summary>
     public SupplierReviewScores Scores => new(PriceScore, QualityScore, DeliveryScore, WarrantyScore, PaymentScore, ComplianceScore);
 
+    /// <summary>Chặn sửa khi phiếu đánh giá không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != SupplierReviewStatus.Draft) throw new BusinessRuleException("Phiếu đánh giá không còn ở trạng thái Nháp.");
     }
 
+    /// <summary>Kiểm tra và gán dữ liệu phiếu đánh giá NCC định kỳ (ngày đánh giá không trước ngày đầu quý).</summary>
     private void Apply(SupplierReviewData data, DateOnly today)
     {
         var (start, _) = QuarterRange(Year, Quarter);

@@ -77,6 +77,7 @@ public sealed class AccountingExportService : IAccountingExportService
         decimal Amount, string? VatCode, decimal VatAmount, string BaseUomCode, decimal BaseQty, decimal UnitCost, decimal CostAmount, bool IsCostFinal,
         string? LotNo, DateOnly? ExpiryDate, string DocTypeName);
 
+    /// <summary>Lấy các dòng chứng từ kho đã ghi sổ trong khoảng ngày để xuất sang phần mềm kế toán.</summary>
     private async Task<List<Line>> LinesAsync(AccountingExportQuery query, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -167,6 +168,7 @@ public sealed class AccountingExportService : IAccountingExportService
         return null;
     }
 
+    /// <summary>Gom dòng thành chứng từ (một dòng mỗi phiếu) với tổng tiền hàng, VAT, thanh toán.</summary>
     private static List<AccountingDocumentDto> Summarize(IEnumerable<Line> lines) =>
         lines.GroupBy(l => l.DocumentId)
             .Select(g =>
@@ -220,6 +222,7 @@ public sealed class AccountingExportService : IAccountingExportService
         new("Diễn giải", "text", 30, "Ghi chú chứng từ."),
     ];
 
+    /// <summary>Giá trị các cột của một dòng chi tiết trong file Excel xuất kế toán.</summary>
     private static object?[] LineValues(Line l) =>
     [
         l.Date, l.No, l.DocType, l.DocTypeName, l.PostedDate, l.PartnerCode, l.PartnerLocalCode, l.PartnerName, l.PartnerTaxCode,
@@ -237,6 +240,7 @@ public sealed class AccountingExportService : IAccountingExportService
         new("Giá vốn chính thức", "text", 10, ""),
     ];
 
+    /// <summary>Giá trị các cột của một chứng từ trong sheet tổng hợp file Excel xuất kế toán.</summary>
     private static object?[] DocumentValues(AccountingDocumentDto d) =>
     [
         d.Date, d.No, d.DocType, DocTypeNames[d.DocType], d.PartnerCode, d.PartnerLocalCode, d.PartnerName, d.PartnerTaxCode, d.InvoiceNo, d.InvoiceSeries,
@@ -292,6 +296,7 @@ public sealed class AccountingExportService : IAccountingExportService
         sheet.SheetView.FreezeRows(header);
     }
 
+    /// <summary>Ghi sheet hướng dẫn dùng file cho phần mềm kế toán.</summary>
     private static void WriteGuide(IXLWorksheet sheet)
     {
         sheet.Cell(1, 1).Value = "Hướng dẫn dùng file cho phần mềm kế toán";

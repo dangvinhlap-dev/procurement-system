@@ -10,6 +10,7 @@ export interface CountedDifference {
   countedQty: number
 }
 
+/** Khóa duy nhất của một dòng phiếu kiểm kê: mặt hàng + số lô. */
 const rowKey = (r: CountSheetRow) => `${r.itemId}|${r.lotNo ?? ''}`
 
 /**

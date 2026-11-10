@@ -45,6 +45,7 @@ const DOCUMENTS = [
   { code: 'FINANCE', name: 'Báo cáo / năng lực tài chính', isRequiredForPass: false },
 ]
 
+/** Chữ kết luận đề xuất của hồ sơ đánh giá NCC mới. */
 const recommendLabel = (r: boolean | null) => (r === null ? '' : r ? 'Đề xuất' : 'Không đề xuất')
 
 const listColumns: GridColumn<SupplierOnboardingListItem>[] = [
@@ -112,6 +113,7 @@ type FormValues = {
   note?: string
 } & Partial<Record<OnboardingScoreKey, number | null>>
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /**

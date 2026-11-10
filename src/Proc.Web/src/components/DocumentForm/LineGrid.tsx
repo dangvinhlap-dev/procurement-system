@@ -67,6 +67,7 @@ export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fix
   )
 }
 
+/** Thân lưới dòng: vẽ tiêu đề cột co giãn được, các dòng nhập và dòng tổng. */
 function LineGridBody({
   fields,
   columns,

@@ -157,5 +157,6 @@ public sealed class AppraisalOpinion : AuditableEntity
         WithdrawnAt = now;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

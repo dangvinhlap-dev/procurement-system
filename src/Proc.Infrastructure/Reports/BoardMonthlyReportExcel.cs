@@ -242,10 +242,12 @@ public static class BoardMonthlyReportExcel
         return startRow + 3 + rows.Count;
     }
 
+    /// <summary>Đặt độ rộng lần lượt cho các cột của sheet.</summary>
     private static void Widths(IXLWorksheet sheet, params double[] widths)
     {
         for (var c = 0; c < widths.Length; c++) sheet.Column(c + 1).Width = widths[c];
     }
 
+    /// <summary>Tên hiển thị của mã; không có thì giữ nguyên mã.</summary>
     private static string Label(Dictionary<string, string> labels, string code) => labels.GetValueOrDefault(code, code);
 }

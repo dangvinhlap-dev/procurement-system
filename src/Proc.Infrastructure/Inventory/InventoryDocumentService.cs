@@ -392,6 +392,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
 
     private static readonly System.Globalization.CultureInfo VietnameseCulture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 
+    /// <summary>Đổi phiếu nhập đang có thành yêu cầu lưu (dùng khi sao chép hoặc sửa một phần).</summary>
     private static SaveReceiptRequest ToRequest(InventoryDocument d) =>
         new(d.Date, d.ToWarehouseId ?? Guid.Empty, d.SupplierId ?? Guid.Empty, d.InvoiceNo, d.InvoiceSeries, d.InvoiceDate,
             d.DeliveryNoteNo, d.Deliverer, d.Note, [], d.PurchaseOrderId);
@@ -453,6 +454,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
             throw new ForbiddenAccessException("Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không sửa được.");
     }
 
+    /// <summary>Nạp phiếu kho kèm dòng theo Id và kiểm tra đúng loại phiếu; không thấy thì báo lỗi 404.</summary>
     private async Task<InventoryDocument> LoadAsync(Guid id, string docType, CancellationToken cancellationToken)
     {
         var document = await _db.InventoryDocuments.Include(d => d.Lines).SingleOrDefaultAsync(d => d.Id == id, cancellationToken)
@@ -461,6 +463,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
         return document;
     }
 
+    /// <summary>Đổi phiếu kho sang DTO, kèm mã/tên mặt hàng, ĐVT, kho và tên người lập.</summary>
     private async Task<InventoryDocumentDto> ToDtoAsync(InventoryDocument d, CancellationToken cancellationToken)
     {
         var itemIds = d.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -534,6 +537,7 @@ public sealed partial class InventoryDocumentService : IInventoryDocumentService
 
     }
 
+    /// <summary>Đổi yêu cầu lưu phiếu nhập mua thành dữ liệu header cho Domain.</summary>
     private static ReceiptHeader ToHeader(SaveReceiptRequest r) =>
         new(r.Date, r.WarehouseId, r.SupplierId, r.InvoiceNo, r.InvoiceSeries, r.InvoiceDate, r.DeliveryNoteNo, r.Deliverer, r.Note, r.PurchaseOrderId,
             r.InvoiceAmount);

@@ -222,11 +222,13 @@ public sealed class DemandPlan : AuditableEntity, ICompanyOwned, IHasDocumentNum
         if (year > today.Year + MaxYearsAhead) throw new BusinessRuleException($"Chỉ lập kế hoạch tối đa đến năm {today.Year + MaxYearsAhead}.");
     }
 
+    /// <summary>Chặn sửa khi phiếu không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != DemandPlanStatus.Draft) throw new BusinessRuleException($"Phiếu {No} không ở trạng thái nháp.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -303,6 +305,7 @@ public sealed class DemandPlanLine : Entity
     /// <summary>Tổng năm theo ĐVT dòng.</summary>
     public decimal Total => Months.Sum();
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng kế hoạch nhu cầu (mặt hàng, ĐVT, số lượng 12 tháng).</summary>
     internal void Set(int lineNo, DemandPlanLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";

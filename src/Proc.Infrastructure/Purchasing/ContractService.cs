@@ -171,9 +171,11 @@ public sealed partial class ContractService : IContractService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <summary>Truy vấn hợp đồng kèm dòng, bộ phận được đặt và cam kết chiết khấu.</summary>
     private IQueryable<PurchaseContract> Query() =>
         _db.PurchaseContracts.Include(c => c.Lines).Include(c => c.Departments).Include(c => c.Rebates).AsSplitQuery();
 
+    /// <summary>Nạp hợp đồng của công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<PurchaseContract> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -264,6 +266,7 @@ public sealed partial class ContractService : IContractService
                         && c.ValidFrom <= to && from <= c.ValidTo)
             .Select(c => c.No).FirstOrDefaultAsync(cancellationToken);
 
+    /// <summary>Đổi hợp đồng sang DTO kèm mặt hàng, NCC, bảng giá, sản lượng đã đặt và người lập/duyệt.</summary>
     private async Task<ContractDto> ToDtoAsync(PurchaseContract contract, CancellationToken cancellationToken)
     {
         var itemIds = contract.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -318,17 +321,20 @@ public sealed partial class ContractService : IContractService
         new(r.Id, r.LineNo, r.Kind.ToString(), r.Method.ToString(), (r.Method == RebateMethod.Percent ? r.Rate : r.Amount) ?? 0m, r.MinPurchaseAmount,
             r.Period.ToString(), r.Description);
 
+    /// <summary>Đổi các cam kết chiết khấu/tài trợ từ API thành dữ liệu cho Domain.</summary>
     private static List<ContractRebateData> ToRebates(IReadOnlyList<SaveContractRebateRequest> rebates) =>
         rebates.Select((r, index) => new ContractRebateData(
                 r.Id, Parse<RebateKind>(r.Kind, index, "loại"), Parse<RebateMethod>(r.Method, index, "cách tính"), r.Value, r.MinPurchaseAmount,
                 Parse<RebatePeriod>(r.Period, index, "kỳ quyết toán"), r.Description))
             .ToList();
 
+    /// <summary>Đổi chuỗi thành enum; giá trị lạ thì báo lỗi kèm số thứ tự cam kết và tên trường.</summary>
     private static T Parse<T>(string? value, int index, string field) where T : struct, Enum =>
         Enum.TryParse<T>(value, true, out var result) && Enum.IsDefined(result)
             ? result
             : throw new BusinessRuleException($"Cam kết {index + 1}: {field} không hợp lệ.");
 
+    /// <summary>Đổi yêu cầu lưu hợp đồng thành dữ liệu header cho Domain.</summary>
     private static ContractHeader ToHeader(SaveContractRequest r) =>
         new(r.SupplierId, r.PriceListId, r.ContractNo, r.Title, r.SignDate, r.ValidFrom, r.ValidTo, r.PriceAdjustmentTerms, r.PaymentTerms, r.CreditLimit,
             r.DeliveryTerms, r.DiscountTerms, r.SponsorshipTerms, r.PenaltyTerms, r.OtherTerms, r.Note);

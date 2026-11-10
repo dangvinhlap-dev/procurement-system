@@ -166,6 +166,7 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
+    /// <summary>Lấy các dòng bảng giá còn hiệu lực của mặt hàng (bảng của công ty, bảng toàn tập đoàn; xem toàn tập đoàn thì lấy mọi bảng).</summary>
     private async Task<List<PriceListRow>> PriceListRowsAsync(Guid companyId, bool allCompanies, Guid itemId, DateOnly today, CancellationToken cancellationToken)
     {
         // Bỏ filter công ty: xem toàn tập đoàn (đã kiểm quyền) thấy mọi bảng giá; không thì chỉ bảng của mình + bảng toàn tập đoàn.
@@ -185,6 +186,7 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
+    /// <summary>Lấy giá thực mua từ phiếu nhập mua đã ghi sổ của các mặt hàng từ ngày since.</summary>
     private async Task<List<Entry>> ReceiptEntriesAsync(bool allCompanies, IReadOnlyList<Guid> itemIds, DateOnly since, CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters áp cho cả câu truy vấn (mọi bảng trong đó), nên chỉ bỏ filter khi xem toàn tập đoàn (đã kiểm quyền) –
@@ -206,6 +208,7 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
+    /// <summary>Lấy giá đặt mua từ PO đã duyệt của các mặt hàng từ ngày since (bỏ PO đang xem để không tự so với chính nó).</summary>
     private async Task<List<Entry>> OrderEntriesAsync(
         bool allCompanies, IReadOnlyList<Guid> itemIds, DateOnly since, Guid? excludeOrderId, CancellationToken cancellationToken)
     {
@@ -247,8 +250,10 @@ public sealed class PriceComparisonService : IPriceComparisonService
             .ToList();
     }
 
+    /// <summary>Một giá thực mua/đặt mua đã quy về ĐVT cơ sở, dùng tính thấp nhất/cao nhất/bình quân.</summary>
     private sealed record Entry(Guid ItemId, Guid CompanyId, Guid SupplierId, DateOnly Date, string Source, string No, decimal BaseQty, decimal Amount, decimal BasePrice);
 
+    /// <summary>Một dòng bảng giá còn hiệu lực dùng để so sánh giá.</summary>
     private sealed record PriceListRow(
         Guid CompanyId, bool IsGroupWide, Guid SupplierId, string No, DateOnly ValidFrom, DateOnly? ValidTo, string UomCode, decimal UomFactor,
         decimal MinQty, decimal UnitPrice, decimal DiscountPct, decimal BaseNetPrice);

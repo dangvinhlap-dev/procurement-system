@@ -312,11 +312,13 @@ public sealed class PooledOrder : AuditableEntity, ICompanyOwned, IHasDocumentNu
         CancelReason = clean;
     }
 
+    /// <summary>Chặn sửa khi phiếu không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != PooledOrderStatus.Draft) throw new BusinessRuleException($"Phiếu {No} không ở trạng thái nháp.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     internal static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -349,12 +351,14 @@ public sealed class PooledOrderCompany : Entity
     /// <summary>PO đã sinh cho công ty (null = chưa tạo hoặc công ty không có SL).</summary>
     public Guid? PurchaseOrderId { get; private set; }
 
+    /// <summary>Gán kho nhận và bộ phận đặt hàng của công ty nhận.</summary>
     internal void Set(Guid warehouseId, Guid? departmentId)
     {
         WarehouseId = warehouseId;
         DepartmentId = departmentId;
     }
 
+    /// <summary>Gắn PO đã sinh cho công ty nhận khi phát hành phiếu đặt gộp.</summary>
     internal void LinkOrder(Guid purchaseOrderId) => PurchaseOrderId = purchaseOrderId;
 }
 
@@ -411,6 +415,7 @@ public sealed class PooledOrderLine : Entity
     /// <returns>Số lượng theo ĐVT dòng.</returns>
     public decimal QtyFor(Guid companyId) => _allocations.FirstOrDefault(a => a.CompanyId == companyId)?.Qty ?? 0m;
 
+    /// <summary>Kiểm tra và gán một dòng đặt gộp: khớp dòng phiếu GTH nguồn, chỉ phân bổ cho công ty áp dụng.</summary>
     internal void Set(int lineNo, PooledOrderLineData data, PooledOrderLineSource source, IReadOnlySet<Guid> companyIds)
     {
         var prefix = $"Dòng {lineNo} ({source.ItemCode})";

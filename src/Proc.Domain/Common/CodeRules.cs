@@ -35,9 +35,11 @@ public static partial class CodeRules
     public static bool IsExtendedCode(string code, int minLength, int maxLength) =>
         code.Length >= minLength && code.Length <= maxLength && ExtendedRegex().IsMatch(code);
 
+    /// <summary>Mẫu mã chỉ gồm chữ in hoa và số (do trình biên dịch sinh mã regex).</summary>
     [GeneratedRegex("^[A-Z0-9]+$")]
     private static partial Regex AlphanumericRegex();
 
+    /// <summary>Mẫu mã mở rộng: chữ in hoa, số và các ký tự . _ / - (không đứng đầu).</summary>
     [GeneratedRegex(@"^[A-Z0-9][A-Z0-9._/\-]*$")]
     private static partial Regex ExtendedRegex();
 }

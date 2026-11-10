@@ -104,6 +104,7 @@ public sealed class KpiService : IKpiService
     /// <summary>Các chỉ số theo kỳ của một khoảng ngày.</summary>
     private sealed record PeriodKpi(Ratio Saving, Ratio Contract, Ratio Sla, Ratio OnTime, Ratio Quality, Ratio Emergency, Ratio Violation);
 
+    /// <summary>Tính các chỉ số KPI mua hàng của một khoảng ngày.</summary>
     private async Task<PeriodKpi> PeriodAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var period = new PurchaseReportPeriod(from, to, false);

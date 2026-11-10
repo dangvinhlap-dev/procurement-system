@@ -13,6 +13,7 @@ import { type ThemeConfig } from 'antd'
  */
 const popupFrame = '0 0 0 1px #7f9db9, 2px 2px 0 rgba(27, 42, 58, 0.18)'
 
+/** Token giao diện Ant Design theo phong cách ERP cổ điển (chữ 12px Tahoma, bo góc 2px, không hiệu ứng) – docs/ui-style.md. */
 export const appTheme: ThemeConfig = {
   token: {
     fontFamily: 'Tahoma, "Segoe UI", Arial, sans-serif',

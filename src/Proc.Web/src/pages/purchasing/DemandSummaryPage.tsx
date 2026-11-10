@@ -12,6 +12,7 @@ import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { buildCategoryTree } from '../masterData/categoryTree'
 
+/** Năm hiện tại (mặc định của ô lọc năm). */
 const thisYear = () => new Date().getFullYear()
 
 /** Kỳ xem: cả năm, một quý hoặc một tháng – tách 12 tháng × N công ty thành một cột mỗi công ty cho dễ đọc. */

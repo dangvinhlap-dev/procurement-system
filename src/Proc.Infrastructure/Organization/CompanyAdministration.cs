@@ -123,6 +123,7 @@ public sealed class CompanyAdministration : ICompanyAdministration
             _db.UserItemCategoryScopes.Add(UserItemCategoryScope.Allow(userId, companyId, categoryId));
     }
 
+    /// <summary>Kiểm tra mã số thuế công ty không trùng công ty khác.</summary>
     private async Task EnsureTaxCodeUniqueAsync(Company company, CancellationToken cancellationToken)
     {
         // Mỗi công ty là một pháp nhân, có mã số thuế riêng (chỉ mục duy nhất trong CSDL chặn lần cuối).
@@ -139,12 +140,15 @@ public sealed class CompanyAdministration : ICompanyAdministration
     private bool CanEdit(bool atHeadOffice) =>
         _scope.HasPermission(Permissions.MasterData.CatalogEditShared) || (atHeadOffice && _scope.HasPermission(Permissions.System.CompanyManage));
 
+    /// <summary>Người dùng có đang làm việc ở tổng công ty không.</summary>
     private Task<bool> AtHeadOfficeAsync(CancellationToken cancellationToken) =>
         HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
 
+    /// <summary>Bắt buộc đang làm việc ở tổng công ty mới được quản lý danh mục công ty.</summary>
     private Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken) =>
         HeadOffice.RequireAsync(_db, _scope, "công ty", cancellationToken);
 
+    /// <summary>Đổi công ty sang DTO chi tiết kèm cờ được sửa.</summary>
     private static CompanyDetailDto ToDetail(Company c, bool canEdit) =>
         new(c.Id, c.Code, c.Name, c.ShortName, c.TaxCode, c.Address, c.Representative, c.IsHeadOffice,
             c.AccountingCurrency, c.StartDate, c.IsActive, canEdit);

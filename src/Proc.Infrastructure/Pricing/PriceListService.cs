@@ -202,6 +202,7 @@ public sealed class PriceListService : IPriceListService
     /// <summary>Hôm nay theo giờ Việt Nam (CLAUDE.md mục 5).</summary>
     private DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone).DateTime);
 
+    /// <summary>Nạp bảng giá kèm dòng của công ty đang làm việc; không thấy thì báo lỗi 404.</summary>
     private async Task<SupplierPriceList> LoadOwnAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -228,6 +229,7 @@ public sealed class PriceListService : IPriceListService
         }
     }
 
+    /// <summary>Kiểm tra NCC tồn tại và không nằm trong danh sách đen.</summary>
     private async Task CheckSupplierAsync(Guid supplierId, CancellationToken cancellationToken)
     {
         var supplier = await _db.Suppliers.AsNoTracking().SingleOrDefaultAsync(s => s.Id == supplierId, cancellationToken)
@@ -247,6 +249,7 @@ public sealed class PriceListService : IPriceListService
             .ToList();
     }
 
+    /// <summary>Chặn khi bảng giá có mặt hàng ngoài phạm vi nhóm hàng của người dùng.</summary>
     private async Task EnsureItemsVisibleAsync(SupplierPriceList list, CancellationToken cancellationToken)
     {
         var ids = list.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -254,6 +257,7 @@ public sealed class PriceListService : IPriceListService
             throw new ForbiddenAccessException("Bảng giá có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không thao tác được.");
     }
 
+    /// <summary>Đổi bảng giá sang DTO kèm mặt hàng, ĐVT, NCC, người lập/duyệt và cờ được sửa.</summary>
     private async Task<PriceListDto> ToDtoAsync(SupplierPriceList list, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
@@ -297,6 +301,7 @@ public sealed class PriceListService : IPriceListService
             list.RejectReason, list.DaysToExpiry(today), list.ExpiresWithin(today, ExpiryWarningDays), approvals) { Version = list.Version };
     }
 
+    /// <summary>Đổi yêu cầu lưu bảng giá thành dữ liệu header cho Domain.</summary>
     private static PriceListHeader ToHeader(SavePriceListRequest r) =>
         new(r.SupplierId, r.Title, r.IsGroupWide, r.ValidFrom, r.ValidTo, r.DeliveryTerms, r.Note);
 }

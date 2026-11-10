@@ -88,6 +88,7 @@ public sealed class ContractRebateService : IContractRebateService
         return await GetTrackingAsync(contract.Id, cancellationToken);
     }
 
+    /// <summary>Nạp hợp đồng kèm dòng và cam kết chiết khấu (chỉ đọc); không thấy thì báo lỗi 404.</summary>
     private async Task<PurchaseContract> LoadAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
@@ -103,6 +104,7 @@ public sealed class ContractRebateService : IContractRebateService
         return await _db.Items.CountAsync(i => ids.Contains(i.Id), cancellationToken) == ids.Count;
     }
 
+    /// <summary>Chặn khi hợp đồng có mặt hàng ngoài phạm vi nhóm hàng của người dùng.</summary>
     private async Task EnsureItemsInScopeAsync(PurchaseContract contract, CancellationToken cancellationToken)
     {
         if (!await ItemsInScopeAsync(contract, cancellationToken))

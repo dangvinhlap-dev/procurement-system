@@ -37,6 +37,7 @@ public static class PrintingEndpoints
     // Không đặt tên file tải về (Content-Disposition: inline) để trình duyệt mở xem ngay; tên file đi trong header riêng cho giao diện.
     private static IResult Pdf(PdfFile file) => new PdfResult(file);
 
+    /// <summary>Kết quả HTTP trả file PDF (in phiếu) – đặt Content-Type, tên file tải về rồi ghi nội dung.</summary>
     private sealed class PdfResult(PdfFile file) : IResult
     {
         public Task ExecuteAsync(HttpContext httpContext)

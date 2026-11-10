@@ -31,6 +31,7 @@ export interface PurchaseOrderRow {
   pinned: boolean
 }
 
+/** Danh sách công ty mẫu cho màn hình thử giao diện (không gọi API). */
 export const demoCompanies = [
   { code: 'TCT', name: 'Tổng công ty' },
   { code: 'BHA', name: 'Công ty Thép Bắc Hà' },

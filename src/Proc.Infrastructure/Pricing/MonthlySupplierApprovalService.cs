@@ -316,6 +316,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
         });
     }
 
+    /// <summary>Bắt buộc đang làm việc ở tổng công ty (phiếu duyệt NCC và giá tháng do tổng công ty lập).</summary>
     private async Task<Guid> RequireHeadOfficeAsync(CancellationToken cancellationToken)
     {
         if (!await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken))
@@ -348,6 +349,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             .ToList();
     }
 
+    /// <summary>Chặn khi phiếu có mặt hàng ngoài phạm vi nhóm hàng của người dùng.</summary>
     private async Task EnsureItemsVisibleAsync(MonthlySupplierApproval approval, CancellationToken cancellationToken)
     {
         var ids = approval.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -355,6 +357,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             throw new ForbiddenAccessException("Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên bạn không thao tác được.");
     }
 
+    /// <summary>Lấy mã các công ty áp dụng của từng phiếu duyệt tháng.</summary>
     private async Task<ILookup<Guid, string>> CompanyCodesAsync(IReadOnlyList<Guid> approvalIds, CancellationToken cancellationToken) =>
         (await (
                 from a in _db.MonthlySupplierApprovalCompanies.AsNoTracking()
@@ -365,12 +368,14 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             .ToListAsync(cancellationToken))
         .ToLookup(x => x.ApprovalId, x => x.Code);
 
+    /// <summary>Lấy họ tên theo danh sách Id người dùng (bỏ null, bỏ trùng).</summary>
     private async Task<Dictionary<Guid, string>> UserNamesAsync(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
     {
         var list = ids.OfType<Guid>().Distinct().ToList();
         return await _db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
     }
 
+    /// <summary>Đổi phiếu duyệt NCC tháng sang DTO kèm mặt hàng, NCC, công ty áp dụng và cờ còn hiệu lực tháng này.</summary>
     private async Task<MonthlyApprovalDto> ToDtoAsync(MonthlySupplierApproval x, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
@@ -441,6 +446,7 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
     private static MonthlyApprovalHeader ToHeader(SaveMonthlyApprovalRequest r) =>
         new(new DateOnly(r.Period.Year, r.Period.Month, 1), r.ItemCategoryId, r.CompanyIds, r.Note, r.ExceptionNote);
 
+    /// <summary>Đổi dòng phiếu duyệt tháng thành yêu cầu lưu (dùng khi sao chép phiếu tháng trước).</summary>
     private static SaveMonthlyApprovalLineRequest ToRequest(MonthlyApprovalLineData d) =>
         new(null, d.ItemId, d.UomId, d.MainSupplierId, d.UnitPrice, d.BackupSupplierId, d.BackupUnitPrice, d.QuantityLimit, d.Note,
             d.StandardPrice, d.CeilingPrice, d.TargetPrice);

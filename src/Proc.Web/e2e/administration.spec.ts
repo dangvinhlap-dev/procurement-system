@@ -8,6 +8,7 @@ import { THUKHO_BHA, loginViaApi } from './helpers.ts'
 
 const unique = () => Date.now().toString(36) + Math.floor(Math.random() * 1000)
 
+/** Mở màn hình bằng cách bấm mục trên cây điều hướng. */
 async function openScreen(page: Page, navLabel: string) {
   await page
     .getByTestId('nav-tree')
@@ -15,11 +16,13 @@ async function openScreen(page: Page, navLabel: string) {
     .click()
 }
 
+/** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
 }
 
+/** Dòng lưới danh sách có chứa chữ cho trước. */
 function gridRow(page: Page, text: string) {
   return page.locator('.data-grid-row', { hasText: text })
 }

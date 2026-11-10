@@ -134,6 +134,7 @@ public sealed class VolumeRebateReceipt : AuditableEntity, ICompanyOwned
         CancelReason = clean;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 

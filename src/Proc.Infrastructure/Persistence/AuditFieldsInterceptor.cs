@@ -42,6 +42,7 @@ public sealed class AuditFieldsInterceptor : SaveChangesInterceptor
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
+    /// <summary>Đóng dấu người tạo/sửa và thời điểm UTC cho các entity có trường audit trước khi lưu.</summary>
     private void Stamp(DbContext? context)
     {
         if (context is null) return;

@@ -29,6 +29,7 @@ function loadState(): { width: number; hidden: boolean } {
   }
 }
 
+/** Lưu độ rộng và trạng thái ẩn/hiện cây điều hướng vào trình duyệt (lỗi lưu thì bỏ qua – chỉ là tiện ích). */
 function saveState(state: { width: number; hidden: boolean }) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))

@@ -106,6 +106,7 @@ public sealed class DocumentNumberService : IDocumentNumberService
         return (await ListAsync(today, cancellationToken)).Single(x => x.DocType == info.Code);
     }
 
+    /// <summary>Lấy mẫu số chứng từ của công ty cho loại phiếu; chưa cấu hình thì dùng mẫu mặc định.</summary>
     private async Task<DocumentNumberFormat> FormatOfAsync(Guid companyId, string type, CancellationToken cancellationToken)
     {
         // Lọc công ty tường minh (bỏ filter công ty đang làm việc) để cấp số được cho công ty khác khi hệ thống sinh chứng từ thay.
@@ -116,9 +117,11 @@ public sealed class DocumentNumberService : IDocumentNumberService
         return pattern is null ? DocumentNumberFormat.Default(type) : DocumentNumberFormat.Parse(pattern);
     }
 
+    /// <summary>Lấy mã công ty để ghép vào số chứng từ.</summary>
     private async Task<string> CompanyCodeAsync(Guid companyId, CancellationToken cancellationToken) =>
         await _db.Companies.Where(c => c.Id == companyId).Select(c => c.Code).SingleAsync(cancellationToken);
 
+    /// <summary>Tạo DTO cấu hình đánh số một loại chứng từ kèm số mẫu minh họa theo ngày hôm nay.</summary>
     private static DocumentNumberingDto ToDto(
         DocumentTypeInfo type,
         string? configuredFormat,

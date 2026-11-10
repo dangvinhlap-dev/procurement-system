@@ -10,17 +10,20 @@ import { loginViaApi } from './helpers.ts'
 /** Mã công ty mới: chữ hoa + số, tối đa 10 ký tự. */
 const uniqueCode = () => `E${Date.now().toString(36).slice(-6)}${Math.floor(Math.random() * 100)}`.toUpperCase()
 
+/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
   await box.fill(code)
   await box.press('Enter')
 }
 
+/** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
 }
 
+/** Dòng lưới danh sách có chứa chữ cho trước. */
 function gridRow(page: Page, text: string) {
   return page.locator('.data-grid-row', { hasText: text })
 }

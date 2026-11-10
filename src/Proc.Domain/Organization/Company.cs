@@ -117,6 +117,7 @@ public sealed partial class Company : AuditableEntity
     /// <summary>Dùng lại công ty đã ngừng.</summary>
     public void Activate() => IsActive = true;
 
+    /// <summary>Chuẩn hóa và kiểm tra mã công ty (mã nằm trong số chứng từ nên chỉ cho chữ và số).</summary>
     private void SetCode(string code)
     {
         var normalized = CodeRules.Normalize(code);
@@ -131,8 +132,10 @@ public sealed partial class Company : AuditableEntity
         Code = normalized;
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Mẫu mã số thuế Việt Nam: 10 số, hoặc 10 số + "-" + 3 số (chi nhánh).</summary>
     [GeneratedRegex(@"^\d{10}(-\d{3})?$")]
     private static partial Regex TaxCodeRegex();
 }

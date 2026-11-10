@@ -78,6 +78,7 @@ public sealed class ExcelTransfer : IExcelTransfer
         }
     }
 
+    /// <summary>Kiểm tra và nhập từng dòng Excel; commit = false thì chỉ kiểm tra rồi hoàn tác, trả danh sách lỗi theo dòng.</summary>
     private async Task<ExcelImportResult> ImportRowsAsync(
         ExcelCatalog definition, List<ExcelRowReader> rows, bool commit, CancellationToken cancellationToken)
     {
@@ -133,6 +134,7 @@ public sealed class ExcelTransfer : IExcelTransfer
         _ => DuplicateKeyMessages.Describe(ex),
     };
 
+    /// <summary>Đọc mã của dòng để báo lỗi; ô hỏng thì trả null.</summary>
     private static string? SafeCode(ExcelCatalog definition, ExcelRowReader row)
     {
         try
@@ -158,9 +160,11 @@ public sealed class ExcelTransfer : IExcelTransfer
         return columns;
     }
 
+    /// <summary>Kết quả nhập thất bại toàn file với một thông báo lỗi.</summary>
     private static ExcelImportResult Failed(ExcelCatalog definition, string message) =>
         new(definition.Key, 0, 0, 0, [new ExcelImportError(0, null, message)], false);
 
+    /// <summary>Các dòng hướng dẫn ghi vào sheet "Hướng dẫn" của file mẫu Excel.</summary>
     private static List<string> Guide(ExcelCatalog definition) =>
     [
         $"Danh mục: {definition.SheetName}. Dòng 1 là tiêu đề cột (cột có dấu * là bắt buộc), dữ liệu từ dòng 2.",
@@ -170,6 +174,7 @@ public sealed class ExcelTransfer : IExcelTransfer
         .. definition.Guide,
     ];
 
+    /// <summary>Tìm định nghĩa danh mục Excel theo khóa; không có thì báo lỗi 404.</summary>
     private ExcelCatalog Find(string catalog) =>
         _catalogs.FirstOrDefault(c => string.Equals(c.Key, catalog, StringComparison.OrdinalIgnoreCase))
         ?? throw new NotFoundException($"Danh mục {catalog} chưa hỗ trợ nhập/xuất Excel.");

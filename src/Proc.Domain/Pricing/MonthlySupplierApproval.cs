@@ -308,11 +308,13 @@ public sealed class MonthlySupplierApproval : AuditableEntity, ICompanyOwned, IH
                 l.QuantityLimit, l.Note, l.StandardPrice, l.CeilingPrice, l.TargetPrice))
             .ToList();
 
+    /// <summary>Chặn thao tác khi phiếu không ở trạng thái mong đợi; name là tên trạng thái tiếng Việt để báo lỗi.</summary>
     private void EnsureStatus(MonthlyApprovalStatus expected, string name)
     {
         if (Status != expected) throw new BusinessRuleException($"Phiếu {No} không ở trạng thái {name}.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -395,6 +397,7 @@ public sealed class MonthlySupplierApprovalLine : Entity
     /// <summary>Giá mục tiêu theo ĐVT dòng – Phòng cung ứng đàm phán hướng tới; null = chưa đặt.</summary>
     public decimal? TargetPrice { get; private set; }
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng phiếu duyệt NCC tháng (mặt hàng, NCC, giá).</summary>
     internal void Set(int lineNo, MonthlyApprovalLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";
@@ -448,6 +451,7 @@ public sealed class MonthlySupplierApprovalLine : Entity
         TargetPrice = data.TargetPrice;
     }
 
+    /// <summary>Kiểm tra đơn giá: không âm, tối đa 6 số lẻ và vừa kiểu numeric(19,6).</summary>
     private static void CheckPrice(string prefix, string what, decimal price)
     {
         if (price < 0 || decimal.Round(price, 6) != price || price >= MaxPrice)

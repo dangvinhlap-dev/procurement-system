@@ -290,6 +290,7 @@ public sealed class Item : AuditableEntity, IVersioned
     /// <summary>Dùng lại.</summary>
     public void Activate() => IsActive = true;
 
+    /// <summary>Kiểm tra số lượng không âm và vừa kiểu numeric(18,4).</summary>
     private static void CheckQuantity(decimal? value, string label)
     {
         // Số lượng lưu numeric(18,4) (CLAUDE.md mục 4): tối đa 14 chữ số phần nguyên, 4 chữ số thập phân.
@@ -297,6 +298,7 @@ public sealed class Item : AuditableEntity, IVersioned
             throw new BusinessRuleException($"{label} phải ≥ 0 và tối đa 4 chữ số thập phân.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -326,5 +328,6 @@ public sealed class ItemUomConversion : Entity
     /// <summary>Số ĐVT cơ sở trong 1 ĐVT này – numeric(18,6).</summary>
     public decimal Factor { get; private set; }
 
+    /// <summary>Đổi hệ số quy đổi ĐVT (gọi từ mặt hàng cha sau khi đã kiểm tra hợp lệ).</summary>
     internal void ChangeFactor(decimal factor) => Factor = factor;
 }

@@ -204,14 +204,17 @@ public sealed class ItemAdministration : IItemAdministration
             .ToList();
     }
 
+    /// <summary>Tìm nhóm hàng theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<ItemCategory> FindCategoryAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.ItemCategories.SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy nhóm hàng (hoặc nhóm ngoài phạm vi của bạn).");
 
+    /// <summary>Tìm ĐVT theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<Uom> FindUomAsync(Guid id, CancellationToken cancellationToken) =>
         await _db.Uoms.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy đơn vị tính.");
 
+    /// <summary>Đổi chuỗi loại hàng thành enum; giá trị lạ thì báo lỗi.</summary>
     private static ItemType ParseType(string? type) =>
         Enum.TryParse<ItemType>(type, ignoreCase: true, out var value) && Enum.IsDefined(value)
             ? value

@@ -191,6 +191,7 @@ public sealed class SoleSourceApproval : AuditableEntity, ICompanyOwned, IHasDoc
     /// <param name="today">Ngày hôm nay.</param>
     public bool IsOverdueOn(DateOnly today) => Status == SoleSourceStatus.Approved && ReviewDate < today;
 
+    /// <summary>Kiểm tra và gán dữ liệu phiếu NCC độc quyền (NCC, mặt hàng, lý do, thời hạn).</summary>
     private void Apply(SoleSourceData data)
     {
         if (data.SupplierId == Guid.Empty) throw new BusinessRuleException("Phải chọn nhà cung cấp.");
@@ -209,6 +210,7 @@ public sealed class SoleSourceApproval : AuditableEntity, ICompanyOwned, IHasDoc
         ReviewDate = data.ReviewDate;
     }
 
+    /// <summary>Chặn thao tác khi phiếu không ở trạng thái mong đợi; name là tên trạng thái tiếng Việt để báo lỗi.</summary>
     private void EnsureStatus(SoleSourceStatus expected, string name)
     {
         if (Status != expected) throw new BusinessRuleException($"Phiếu {No} không ở trạng thái {name}.");

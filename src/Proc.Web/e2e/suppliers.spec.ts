@@ -9,17 +9,20 @@ import { loginViaApi } from './helpers.ts'
 
 const uniqueTaxCode = () => String(1_000_000_000 + Math.floor(Math.random() * 8_999_999_999))
 
+/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
   await box.fill(code)
   await box.press('Enter')
 }
 
+/** Chọn một giá trị trong ô chọn của ngăn kéo chi tiết theo nhãn ô. */
 async function pick(page: Page, label: string, option: string) {
   await page.locator('.detail-drawer').getByLabel(label, { exact: true }).click()
   await page.locator('.ant-select-dropdown:visible').getByTitle(option, { exact: false }).first().click()
 }
 
+/** Dòng lưới danh sách có chứa chữ cho trước. */
 function gridRow(page: Page, text: string) {
   return page.locator('.data-grid-row', { hasText: text })
 }

@@ -400,11 +400,13 @@ public sealed class VolumeRebateAgreement : AuditableEntity, ICompanyOwned, IHas
     /// <returns>Bậc đạt được hoặc null.</returns>
     public VolumeRebateTier? TierFor(decimal volume) => _tiers.Where(t => t.FromValue <= volume).MaxBy(t => t.FromValue);
 
+    /// <summary>Chặn thao tác khi thỏa thuận không ở trạng thái mong đợi; name là tên trạng thái tiếng Việt để báo lỗi.</summary>
     private void EnsureStatus(VolumeRebateStatus expected, string name)
     {
         if (Status != expected) throw new BusinessRuleException($"Thỏa thuận {No} không ở trạng thái {name}.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -486,6 +488,7 @@ public sealed class VolumeRebateLine : Entity
     /// <summary>Ghi chú.</summary>
     public string? Note { get; private set; }
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng thỏa thuận chiết khấu bậc.</summary>
     internal void Set(int lineNo, VolumeRebateLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";

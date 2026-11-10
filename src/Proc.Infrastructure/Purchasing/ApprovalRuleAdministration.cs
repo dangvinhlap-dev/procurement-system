@@ -296,11 +296,13 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
             throw new BusinessRuleException("Ngưỡng giá trị phải tăng dần theo cấp duyệt (cấp sau không thấp hơn cấp trước).");
     }
 
+    /// <summary>Kiểm tra vai trò tồn tại; không có thì báo lỗi 404.</summary>
     private async Task EnsureRoleAsync(Guid roleId, CancellationToken cancellationToken)
     {
         if (!await _db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken)) throw new NotFoundException("Không tìm thấy vai trò.");
     }
 
+    /// <summary>Truy vấn quy tắc duyệt kèm tên vai trò; truyền id để lấy một quy tắc.</summary>
     private IQueryable<ApprovalRuleDto> Query(Guid? id = null) =>
         from r in _db.ApprovalRules.AsNoTracking()
         where id == null || r.Id == id

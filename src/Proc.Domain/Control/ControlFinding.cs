@@ -140,6 +140,7 @@ public sealed class ControlFinding : AuditableEntity, ICompanyOwned
         ConcludedBy = by;
     }
 
+    /// <summary>Kiểm tra và gán dữ liệu phát hiện kiểm soát từ form (mức vi phạm, tiêu đề, mô tả).</summary>
     private void Apply(ControlFindingData data)
     {
         if (!Enum.IsDefined(data.Severity)) throw new BusinessRuleException("Mức vi phạm không hợp lệ.");

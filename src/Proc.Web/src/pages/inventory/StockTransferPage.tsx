@@ -43,6 +43,7 @@ interface TransferFormValues {
   lines: TransferLineValues[]
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /** Số lượng theo ĐVT cơ sở của một dòng (ví dụ 2 thùng × 24 = 48 chai), làm tròn 4 số lẻ như server. */

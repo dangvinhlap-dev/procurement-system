@@ -177,6 +177,7 @@ public sealed class SupplierChangeRequest : AuditableEntity, IApprovalSubject, I
         else supplier.ReplaceBankAccounts(ProposedBankAccounts);
     }
 
+    /// <summary>Chặn thao tác khi yêu cầu sửa NCC không ở trạng thái Chờ duyệt.</summary>
     private void EnsureSubmitted()
     {
         if (Status != SupplierChangeRequestStatus.Submitted) throw new BusinessRuleException($"Yêu cầu {No} không ở trạng thái chờ duyệt.");
@@ -191,6 +192,7 @@ public sealed class SupplierChangeRequest : AuditableEntity, IApprovalSubject, I
         _ => "Danh sách đen",
     };
 
+    /// <summary>Tóm tắt danh sách tài khoản ngân hàng thành một dòng chữ để so sánh trước/sau trong yêu cầu sửa.</summary>
     private static string BankSummary(IEnumerable<(string Bank, string Number, bool IsDefault)> accounts)
     {
         var text = string.Join("; ", accounts.Select(a => $"{a.Bank} {a.Number}{(a.IsDefault ? " (mặc định)" : string.Empty)}"));

@@ -88,6 +88,7 @@ public sealed class InternalPrice : AuditableEntity, ICompanyOwned
     public bool Overlaps(DateOnly from, DateOnly? to) =>
         from <= (ValidTo ?? DateOnly.MaxValue) && ValidFrom <= (to ?? DateOnly.MaxValue);
 
+    /// <summary>Kiểm tra và gán giá bán nội bộ, mã VAT và thời gian hiệu lực.</summary>
     private void Set(decimal unitPrice, string? vatCode, DateOnly validFrom, DateOnly? validTo, string? note)
     {
         if (unitPrice < 0) throw new BusinessRuleException("Giá bán nội bộ không được âm.");

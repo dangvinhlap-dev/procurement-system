@@ -64,6 +64,7 @@ interface PriceCondition {
 }
 
 let nextId = 100
+/** Tạo một dòng PO trống cho màn hình mẫu (Id tăng dần). */
 const newLine = (): PoLine => ({
   id: `l${nextId++}`,
   itemCode: null,
@@ -108,6 +109,7 @@ function lineIssue(l: PoLine): string | null {
   return null
 }
 
+/** Dòng chưa chọn mặt hàng và không có lỗi – coi là dòng trống cuối lưới. */
 const isEmptyLine = (l: PoLine) => !l.itemCode && lineIssue(l) === null
 
 /** Thành tiền dòng = SL × đơn giá, làm tròn đồng (VND không số lẻ – CLAUDE.md mục 5). Ví dụ 1.500 × 18.500 = 27.750.000. */

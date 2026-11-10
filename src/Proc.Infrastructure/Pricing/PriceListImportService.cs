@@ -131,6 +131,7 @@ public sealed partial class PriceListImportService : IPriceListImportService
         }
     }
 
+    /// <summary>Kiểm tra và nhập các dòng Excel bảng giá (gộp theo mã NCC + tên bảng giá); commit = false thì chỉ kiểm tra.</summary>
     private async Task<PriceListImportResult> ImportRowsAsync(List<ExcelRowReader> rows, bool commit, CancellationToken cancellationToken)
     {
         var errors = new List<ExcelImportError>();
@@ -252,6 +253,7 @@ public sealed partial class PriceListImportService : IPriceListImportService
         }
     }
 
+    /// <summary>Đọc giá trị một ô theo kiểu (ngày, có/không, chữ).</summary>
     private static object? Read(ExcelRowReader row, string header, Kind kind) => kind switch
     {
         Kind.Date => row.Date(header),
@@ -272,6 +274,7 @@ public sealed partial class PriceListImportService : IPriceListImportService
         }
     }
 
+    /// <summary>Chạy một bước kiểm tra cho dòng Excel; lỗi thì gắn số dòng vào thông báo.</summary>
     private static void At(ExcelRowReader row, Action check) => At(row, () =>
     {
         check();

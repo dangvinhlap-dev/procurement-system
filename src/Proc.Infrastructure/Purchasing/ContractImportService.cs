@@ -148,6 +148,7 @@ public sealed partial class ContractImportService : IContractImportService
         }
     }
 
+    /// <summary>Kiểm tra và nhập các dòng Excel hợp đồng (gộp theo số HĐ giấy); commit = false thì chỉ kiểm tra.</summary>
     private async Task<ContractImportResult> ImportRowsAsync(List<ExcelRowReader> rows, bool commit, CancellationToken cancellationToken)
     {
         var errors = new List<ExcelImportError>();
@@ -301,6 +302,7 @@ public sealed partial class ContractImportService : IContractImportService
         }
     }
 
+    /// <summary>Đọc giá trị một ô theo kiểu (ngày, số, chữ).</summary>
     private static object? Read(ExcelRowReader row, string header, Kind kind) => kind switch
     {
         Kind.Date => row.Date(header),
@@ -321,6 +323,7 @@ public sealed partial class ContractImportService : IContractImportService
         }
     }
 
+    /// <summary>Chạy một bước kiểm tra cho dòng Excel; lỗi thì gắn số dòng vào thông báo.</summary>
     private static void At(ExcelRowReader row, Action check) => At(row, () =>
     {
         check();
@@ -343,6 +346,7 @@ public sealed partial class ContractImportService : IContractImportService
 
     private static ContractImportResult Failed(string message) => new(0, 0, 0, [new ExcelImportError(0, null, message)], false);
 
+    /// <summary>Mẫu nhận biết lỗi đã có tiền tố "Dòng N" từ Domain để đổi sang số dòng Excel.</summary>
     [GeneratedRegex(@"^Dòng (\d+): (.+)$", RegexOptions.Singleline)]
     private static partial Regex LineErrorRegex();
 

@@ -63,6 +63,7 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
+    /// <summary>Ghi AuditLog cho mọi entity [Auditable] thêm/sửa/xóa trong lượt lưu (giá trị cũ → mới từng trường).</summary>
     private void AddAuditLogs(DbContext? context)
     {
         if (context is null) return;
@@ -139,9 +140,11 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
         return changes;
     }
 
+    /// <summary>Khóa chính của entity ghép thành chuỗi (khóa nhiều cột nối bằng |).</summary>
     private static string KeyOf(EntityEntry entry) =>
         string.Join("|", entry.Metadata.FindPrimaryKey()!.Properties.Select(p => entry.Property(p.Name).CurrentValue));
 
+    /// <summary>Đọc giá trị một thuộc tính để làm nhãn; thuộc tính tính toán không lưu CSDL thì đọc thẳng từ đối tượng.</summary>
     private static object? ValueOf(EntityEntry entry, string propertyName)
     {
         // Nhãn có thể là thuộc tính tính toán không lưu CSDL (kỳ kho: "10/2026" ghép từ Month, Year) – đọc thẳng từ đối tượng.

@@ -329,6 +329,7 @@ public sealed class UserAdministration : IUserAdministration
         return new UserAccessDto(roleIds, warehouseIds, categoryIds);
     }
 
+    /// <summary>Chặn khi người đang đăng nhập không được quản lý tài khoản này.</summary>
     private async Task EnsureCanManageAccountAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!await _grants.CanManageAccountAsync(id, cancellationToken))
@@ -338,9 +339,11 @@ public sealed class UserAdministration : IUserAdministration
         }
     }
 
+    /// <summary>Tìm người dùng theo Id; không thấy thì báo lỗi 404.</summary>
     private async Task<AppUser> FindUserAsync(Guid id) =>
         await _userManager.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("Không tìm thấy người dùng.");
 
+    /// <summary>Chuẩn hóa email: bỏ khoảng trắng, chuỗi rỗng thành null.</summary>
     private static string? NormalizeEmail(string? email) => string.IsNullOrWhiteSpace(email) ? null : email.Trim();
 
     /// <summary>Lỗi của Identity (đã dịch tiếng Việt ở VietnameseIdentityErrorDescriber) chuyển thành lỗi nghiệp vụ 400.</summary>

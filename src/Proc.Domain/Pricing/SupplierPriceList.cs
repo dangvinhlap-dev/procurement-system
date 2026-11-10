@@ -252,16 +252,19 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
     public bool ExpiresWithin(DateOnly today, int days) =>
         Status == PriceListStatus.Active && DaysToExpiry(today) is { } left && left >= 0 && left <= days;
 
+    /// <summary>Chặn thao tác khi bảng giá không ở trạng thái Chờ duyệt.</summary>
     private void EnsureSubmitted()
     {
         if (Status != PriceListStatus.Submitted) throw new BusinessRuleException($"Bảng giá {No} không ở trạng thái chờ duyệt.");
     }
 
+    /// <summary>Chặn sửa khi bảng giá không còn ở trạng thái Nháp.</summary>
     private void EnsureDraft()
     {
         if (Status != PriceListStatus.Draft) throw new BusinessRuleException($"Bảng giá {No} không còn ở trạng thái nháp – không sửa được.");
     }
 
+    /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -311,6 +314,7 @@ public sealed class SupplierPriceListLine : Entity
     /// </summary>
     public decimal BaseNetPrice => PricingMath.BaseNetPrice(UnitPrice, DiscountPct, UomFactor);
 
+    /// <summary>Kiểm tra và gán dữ liệu một dòng bảng giá (mặt hàng, ĐVT, bậc số lượng, đơn giá, chiết khấu).</summary>
     internal void Set(int lineNo, PriceListLineData data, Item item)
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";

@@ -154,6 +154,7 @@ export interface ItemFilter {
   type?: ItemType
 }
 
+/** Id công ty đang làm việc – đưa vào khóa truy vấn để đổi công ty thì tải lại dữ liệu. */
 function useCompanyId(): string {
   return useAuth().workingCompany?.id ?? ''
 }
