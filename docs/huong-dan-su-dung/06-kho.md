@@ -1,5 +1,8 @@
 # 6. Kho
 
+> **Từ bản 0.22.0 phân hệ kho ngừng dùng** – công ty dùng phần mềm kho riêng. Các màn hình dưới đây không còn trên menu; nhận hàng
+> làm bằng phiếu xác nhận nhận hàng theo PO (XNH). Phần này chỉ áp dụng cho bản 0.21.0 trở về trước.
+
 ## 6.1 Nguyên tắc chung
 
 - Mọi phiếu kho đi qua **một sổ kho chung**; chỉ khi **Ghi sổ** tồn kho mới thay đổi. Trạng thái: **Nháp → Đã ghi sổ** · Đã hủy.

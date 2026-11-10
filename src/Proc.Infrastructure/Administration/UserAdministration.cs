@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Proc.Application.Administration;
 using Proc.Application.Common;
 using Proc.Application.Organization;
@@ -32,19 +33,21 @@ public sealed class UserAdministration : IUserAdministration
     /// <param name="scope">Phạm vi của người thao tác.</param>
     /// <param name="organization">Truy vấn kho, nhóm hàng (đã lọc theo phạm vi).</param>
     /// <param name="clock">Đồng hồ.</param>
+    /// <param name="modules">Phân hệ bật/tắt (kiểm tra cấp quyền bỏ qua quyền của phân hệ đang tắt).</param>
     public UserAdministration(
         ProcDbContext db,
         UserManager<AppUser> userManager,
         ICurrentUserScope scope,
         IOrganizationQueries organization,
-        IClock clock)
+        IClock clock,
+        IOptions<ModuleOptions> modules)
     {
         _db = db;
         _userManager = userManager;
         _scope = scope;
         _organization = organization;
         _clock = clock;
-        _grants = new GrantChecker(db, scope);
+        _grants = new GrantChecker(db, scope, modules.Value);
     }
 
     /// <inheritdoc />

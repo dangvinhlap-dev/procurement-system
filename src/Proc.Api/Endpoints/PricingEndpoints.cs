@@ -42,9 +42,10 @@ public static class PricingEndpoints
         prices.MapGet("/resolve", (Guid buyerCompanyId, DateOnly date, Guid[]? itemIds, IInternalPriceAdministration s, CancellationToken ct) =>
                 s.ResolveAsync(buyerCompanyId, date, itemIds ?? [], ct))
             .RequirePermission(Permissions.Inventory.DocumentView);
+        // Bảng giá nội bộ (IPR, quyền xem bảng giá) cũng cần danh sách công ty – vẫn dùng khi phân hệ kho tắt từ 0.22.0 (design.md mục 19.4).
         app.MapGet("/api/group-companies", (IInternalPriceAdministration s, CancellationToken ct) => s.OtherCompaniesAsync(ct))
             .WithTags("Giá nội bộ")
-            .RequirePermission(Permissions.Inventory.DocumentView);
+            .RequireAnyPermission(Permissions.Pricing.PriceListView, Permissions.Inventory.DocumentView);
 
         var lists = app.MapGroup("/api/price-lists").WithTags("Bảng giá NCC");
         // Người lập hợp đồng nguyên tắc cần danh sách bảng giá để gắn bảng giá dùng chung (lát B4a).

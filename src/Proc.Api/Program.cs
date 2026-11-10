@@ -37,6 +37,8 @@ builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddOptions<DatabaseOptions>().Bind(builder.Configuration.GetSection("Database"));
 builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection("Seed"));
+// Bật/tắt phân hệ – kho tắt mặc định từ 0.22.0 (design.md mục 19.4).
+builder.Services.AddOptions<Proc.Application.Common.ModuleOptions>().Bind(builder.Configuration.GetSection(Proc.Application.Common.ModuleOptions.Section));
 builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
 // Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
 builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()

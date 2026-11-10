@@ -395,4 +395,14 @@ public static class Permissions
     ];
 
     private static readonly HashSet<string> KnownCodes = [.. All.Select(p => p.Code)];
+
+    /// <summary>
+    /// Quyền của phân hệ kho: mọi quyền module <c>Inventory</c> cùng báo cáo tồn kho và xuất chứng từ kho cho kế toán (ACCX chỉ xuất phiếu kho).
+    /// Từ bản 0.22.0 phân hệ kho tắt (<c>Modules:InventoryEnabled=false</c>) thì các quyền này bị bỏ khi nạp phạm vi, khi trả quyền cho giao diện,
+    /// khi hiện danh mục quyền và vai trò mẫu – design.md mục 19.4 (lát K1). Gỡ hẳn cùng code kho ở 0.28.0 (lát K3).
+    /// </summary>
+    public static readonly IReadOnlySet<string> InventoryModule = new HashSet<string>(
+        All.Where(p => p.Module == "Inventory").Select(p => p.Code)
+            .Concat([Report.StockView, Report.StockViewAllCompanies, Report.AccountingExport]),
+        StringComparer.Ordinal);
 }

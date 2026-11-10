@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Proc.Application.Common;
 
 namespace Proc.Api.Security;
@@ -29,6 +30,7 @@ public static class PermissionEndpointExtensions
 
             if (!scope.HasPermission(permission))
             {
+                if (ModuleDisabled(context, permission)) return ModuleDisabledProblem();
                 return Results.Problem(
                     title: $"Bạn không có quyền thực hiện chức năng này ({permission}).",
                     statusCode: StatusCodes.Status403Forbidden);
@@ -62,6 +64,7 @@ public static class PermissionEndpointExtensions
 
             if (!permissions.Any(scope.HasPermission))
             {
+                if (permissions.All(p => ModuleDisabled(context, p))) return ModuleDisabledProblem();
                 return Results.Problem(
                     title: $"Bạn không có quyền thực hiện chức năng này ({string.Join(" hoặc ", permissions)}).",
                     statusCode: StatusCodes.Status403Forbidden);
@@ -71,4 +74,16 @@ public static class PermissionEndpointExtensions
         });
         return builder;
     }
+
+    /// <summary>Thông báo khi gọi API của phân hệ kho đã tắt từ 0.22.0 – design.md mục 19.4.</summary>
+    public const string InventoryDisabledMessage =
+        "Phân hệ kho đã ngừng dùng từ bản 0.22.0 (công ty dùng phần mềm kho riêng) – nhận hàng bằng phiếu xác nhận nhận hàng theo PO.";
+
+    /// <summary>Quyền thuộc phân hệ đang tắt (cấu hình <c>Modules</c>).</summary>
+    private static bool ModuleDisabled(EndpointFilterInvocationContext context, string permission) =>
+        context.HttpContext.RequestServices.GetRequiredService<IOptions<ModuleOptions>>().Value.IsDisabled(permission);
+
+    /// <summary>403 kèm lý do phân hệ đã tắt, thay cho câu "không có quyền" dễ hiểu nhầm là thiếu phân quyền.</summary>
+    private static IResult ModuleDisabledProblem() =>
+        Results.Problem(title: InventoryDisabledMessage, statusCode: StatusCodes.Status403Forbidden);
 }

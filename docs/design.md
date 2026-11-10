@@ -9,6 +9,7 @@ Phiên bản tài liệu 1.2 · cập nhật 31/10/2026 · người lập: Đặ
 | 1.1 | 28/10/2026 | Chốt PostgreSQL + Ubuntu + Docker; thêm mục 14 (hạ tầng), 15 (GitHub Codespaces), 16 (quy tắc Claude Code), 17 (giao diện kiểu Windows XP); ví dụ số giá vốn |
 | 1.2 | 31/10/2026 | Mục 17 và docs/ui-guide.md: chuyển giao diện sang SAP Fiori, theme Horizon (giữ React + Ant Design, phông Arial thay "72", lát UI-a theme rồi UI-b bố cục) |
 | 1.3 | 01/11/2026 | Mục 17 và docs/ui-style.md: chuyển giao diện sang phong cách ERP desktop cổ điển (component `src/Proc.Web/src/classic/`); màn hình cũ chuyển dần theo lát riêng |
+| 1.4 | 10/11/2026 | Mục 19: hệ thống từ 0.22.0 – bỏ kho (tắt 0.22.0, gỡ 0.28.0), Portal NCC, quy trình theo biểu mẫu CUVT A/B/DV/C, đề nghị thanh toán, quyết định Q1–Q18, lộ trình 0.22.0–0.28.0 |
 
 ## 1. Phân tích nghiệp vụ và các quyết định cần chốt
 
@@ -112,6 +113,8 @@ Module chỉ gọi nhau qua interface của lớp Application, không truy cập
 - **Thời gian:** lưu UTC, hiển thị giờ Việt Nam (UTC+7); ngày chứng từ là kiểu `date`, không có giờ.
 
 ## 4. Mô hình tổ chức và quy tắc kho
+
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở 0.28.0 – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
 
 Tập đoàn gồm nhiều công ty (kể cả tổng công ty), mỗi công ty có **đúng một kho tổng** và nhiều kho con. Luân chuyển hàng chỉ có hai đường hợp lệ.
 
@@ -297,6 +300,8 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 ## 6. Chứng từ nghiệp vụ và luồng xử lý
 
+> Từ bản 0.22.0 các **chứng từ kho** (phiếu nhập/xuất, ghi sổ) ngừng dùng; nhận hàng bằng XNH – xem mục 19.4.
+
 PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu nhập/xuất là chứng từ **kho**, khi ghi sổ mới sinh dòng trong sổ kho và thay đổi tồn.
 
 ![Hình 3. Mọi chứng từ kho đều ghi sổ vào một sổ kho chung](diagrams/luong.png)
@@ -385,6 +390,8 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 | Chưa làm: gộp PR nhiều công ty (mua tập trung), RFQ, hợp đồng khung, ngoại tệ, gửi mail duyệt (cảnh báo giá cao: mục 8.5) | Giai đoạn 6, 7 |
 
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
+
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở 0.28.0 – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.
 
@@ -2037,6 +2044,113 @@ Rà soát toàn bộ phần mềm, người dùng duyệt làm 8 lát (R1–R8).
 | R5 – trả NCC trừ PO | **SL đã nhận của dòng PO là SL thuần** = SL phiếu nhập đã ghi sổ − SL phiếu trả NCC đã ghi sổ của các phiếu nhập đó (`PurchaseOrderReceipts`). Ghi sổ/bỏ ghi sổ RTV của phiếu nhập theo PO cập nhật lại trạng thái PO: thiếu thì Đã nhận đủ → Đã duyệt (NCC giao bù, nhận theo PO trong SL đặt + dung sai), đủ thì đóng lại. Không mua bù thì đóng phần còn lại (R6). Áp cho mọi chỗ dùng SL đã nhận (PO, theo dõi giao hàng, báo cáo) | Trước đây PO vẫn "Đã nhận đủ" dù hàng đã trả, NCC giao bù không nhập theo PO được |
 | R6 – đóng phần còn lại | Lệnh **"Đóng phần còn lại"** (`POST /api/purchase-orders|purchase-requests/{id}/close-remaining`, lý do bắt buộc ≤ 500 ký tự; quyền như hủy phiếu: `Purchase.PO.Create` / `Purchase.PR.Create`): phiếu **Đã duyệt** → **Đã đóng**, lưu `ClosedReason/ClosedBy/ClosedAt` (migration `V0_19_0_DongPhanConLai`). PO: phải đã nhận một phần (chưa nhận thì Hủy), không còn phiếu nhập nháp theo PO; sau khi đóng không nhận thêm, bỏ ghi sổ phiếu nhập/RTV không mở lại PO. PR: phải đã lên PO (chưa thì Hủy); dòng còn lại không còn ở "dòng PR chờ đặt hàng", PO mới lấy dòng đó bị chặn. **Ngân sách**: PO đã đóng tay chỉ tính phần đã nhận thuần (thành tiền dòng × min(1, đã nhận ÷ SL đặt)), PR đã đóng không giữ phần chưa lên PO. Trạng thái hiện "Đã đóng phần còn lại" kèm người, thời điểm, lý do | Trước đây PO nhận thiếu không hủy được nên treo "Đã duyệt" mãi; PR không đóng được phần thừa |
 | R7 – RFQ hạn nộp, số báo giá; lý do hủy | (1) **Hạn nộp**: quá hạn (hôm nay > hạn) hoặc ngày báo giá sau hạn thì không nhập, sửa báo giá; lệnh **"Gia hạn nhận báo giá"** (`POST /api/rfqs/{id}/extend-deadline`, quyền `Sourcing.Rfq.Manage`, chỉ khi Đang nhận báo giá): hạn mới sau hạn cũ, không trước hôm nay, **lý do bắt buộc** (`Rfq.DeadlineExtensionReason`, nhật ký ghi hạn cũ → mới). (2) **Số báo giá**: lúc chọn thầu đếm **NCC thực sự chào giá**; ít hơn số tối thiểu (tham số `RFQ_MIN_SUPPLIERS`) thì bắt buộc **giải trình ít báo giá** (`AwardRfqRequest.FewQuotesReason` → `Rfq.FewQuotesReason`, hiện trên phiếu cho hội đồng), trừ khi đã giải trình mời thiếu NCC (hoặc NCC độc quyền) và mọi NCC được mời đều chào giá. (3) **Hủy PR/PO đã duyệt bắt buộc lý do** (`CancelDocumentRequest`, cột `CancelReason`); nháp/chờ duyệt hủy không cần lý do. Migration `V0_19_0_RfqHanNopLyDoHuy` | Đề xuất Ban: ít hơn 3 báo giá phải giải trình (mục 8.4); nhập báo giá sau hạn mất công bằng giữa NCC; PO đã duyệt có thể đã gửi NCC |
+
+## 19. Hệ thống từ bản 0.22.0 – bỏ kho, Portal NCC, quy trình theo biểu mẫu CUVT (chốt 10/11/2026)
+
+Nguồn: yêu cầu của người dùng 10/11/2026; biểu mẫu `CUVT nhóm A/B 08.01.2025 (final).xlsx` và nhóm C trong thư mục dự án trung tâm đấu thầu;
+bản phân tích `PhanTich_KeHoach_0.22.0_10-11-2026.pdf`. Người dùng **đồng ý toàn bộ đề xuất** (Q1–Q18) ngày 10/11/2026. Mục này thắng các
+mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
+
+### 19.1 Quyết định đã chốt
+
+| # | Câu hỏi | Quyết định |
+| --- | --- | --- |
+| Q1 | Bỏ kho thế nào | **Tắt ở 0.22.0** (lát K1), **gỡ hẳn code + bảng ở 0.28.0** (lát K3) sau khi người dùng xác nhận đã sao lưu và làm sạch dữ liệu thử |
+| Q2 | Ai nhập tồn trên đề nghị mua | Thủ kho của nơi nhận; mỗi đề nghị một nơi nhận |
+| Q3 | Bảng tổng hợp 2A/2B | Giữ, bật/tắt "bắt buộc qua bảng tổng hợp" bằng tham số. **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
+| Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
+| Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt |
+| Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC chỉ kiểm định mức nhóm B; dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
+| Q7 | Trình giá 1 NCC (3a) hay so sánh 3 NCC (3A) – nhóm A | Theo ngưỡng giá trị (tham số công ty); nhóm B, dịch vụ được trình giá 1 NCC |
+| Q8 | Ai lập XNH | Hàng: thủ kho nơi nhận; dịch vụ: phòng ban đề xuất; đơn vị đặt hàng xác nhận nghiệm thu |
+| Q9 | Ủy quyền, nhắc quá hạn | Có ủy quyền duyệt có thời hạn; nhắc sau 1 ngày làm việc |
+| Q10 | Biểu mẫu 4A/4B | Ký **trước khi đặt hàng** = duyệt PO |
+| Q11 | NCC vào Portal | Qua lời mời trước; trang đăng ký công khai làm sau nếu cần; quản trị NCC tự tạo người dùng con |
+| Q12 | Chức năng đợt Ban cung ứng (GTH, DHG, CKB, KHN) | Giữ; công ty chưa dùng thì ẩn bằng phân quyền |
+| Q13 | Bản in, chữ ký | Tiêu đề canh giữa "chữ V"; **duyệt điện tử là chính thức**, bản in ghi tên + thời điểm người duyệt |
+| Q14 | Hạ tầng Portal | **Có tên miền riêng mở ra internet** cho Portal, phần nội bộ chỉ LAN/VPN; máy chủ **Windows (IIS)** (người dùng chốt 10/11/2026). Khi lập trình và test chạy trong **mạng LAN** (không cần tên miền): địa chỉ Portal, URL trong email mời lấy từ cấu hình, không viết cứng |
+| Q15 | Mở thầu | Phòng CUVT mở khi đến hạn, ghi nhật ký; NCC không thấy giá NCC khác |
+| Q16 | Đề nghị thanh toán | **Đưa vào hệ thống** (chỉ đề nghị + duyệt + trạng thái Đã chi, không làm sổ cái – thay quyết định cũ "thanh toán ở phần mềm kế toán"); chỉ thanh toán hàng đã nhận, có hóa đơn; tạm ứng làm sau |
+| Q17 | Nhóm C tạp vụ; mua nội bộ | Có trong phạm vi; mua nội bộ = PO đặt cho NCC nội bộ |
+| Q18 | Công ty áp dụng biểu mẫu | Cấu hình theo từng công ty |
+
+### 19.2 Loại mua và biểu mẫu
+
+| Loại | Phạm vi | Khung chi phí | Biểu mẫu |
+| --- | --- | --- | --- |
+| A – Công trình | Vật tư công trình có tổng dự toán, mua theo công đoạn đến khi hoàn thiện | Tổng dự toán – lũy kế – còn lại của công trình | 1A, 2A, 3a (1 NCC) / 3A (so sánh 3 NCC), 4A, 5A tiền mặt / chuyển khoản |
+| B – Hàng hóa | Vật tư tiêu hao, định mức tháng, nguyên vật liệu, thực phẩm nhà hàng, tài sản, vật tư công trình chưa có dự toán | Định mức tháng của phòng ban | 1B, 2B, 3B, 4B, 5B |
+| DV – Dịch vụ | Dịch vụ một lần, sửa chữa, thuê ngoài | Như B | Như B, **không có bước Thủ kho**; nhận hàng = nghiệm thu |
+| C – Tạp vụ | Chi phí lặt vặt đã phát sinh, thanh toán gộp | Định mức tháng của phòng ban | 2C bảng kê → 1C đề nghị thanh toán tổng hợp; không qua PR/RFQ/PO |
+
+### 19.3 Quy trình 7 bước và chuỗi duyệt
+
+1. **Đề nghị mua** 1A/1B/DV – người đề xuất lập; Thủ kho nơi nhận nhập tồn từng dòng (A, B), Cần mua = Cần sử dụng − Tồn.
+2. **Bảng tổng hợp** 2A/2B – Phòng CUVT chọn dòng đề nghị đã duyệt, gán đơn vị mua.
+3. **Mời thầu / hỏi giá trên Portal** → so sánh 3A hoặc trình giá 3a/3B; báo giá niêm phong đến giờ mở.
+4. **Đặt hàng** – PO kèm bảng theo dõi 4A/4B (giá cũ, tăng / bằng–giảm, lũy kế, còn lại); NCC xác nhận đơn trên Portal.
+5. **Giao – nhận** – NCC báo giao; nơi nhận lập **XNH** (dịch vụ: biên bản nghiệm thu).
+6. **Hóa đơn** – NCC nộp hóa đơn điện tử (XML) trên Portal; kế toán chấp nhận / trả lại.
+7. **Đề nghị thanh toán** 5A/5B – chọn hóa đơn đã chấp nhận, tài khoản NCC đã duyệt; Đã chi do kế toán ghi.
+
+| Phiếu | Chuỗi duyệt (theo thứ tự) | Cấp |
+| --- | --- | --- |
+| 1A, 1B | Thủ kho (nhập tồn) → Trưởng phòng/ban → Phòng CUVT → Phòng TC-NQ-KT → Trưởng phòng HC (chỉ B) → GĐ khối → Phó CT UBCL&PT → Chủ tịch | 8 |
+| Đề nghị DV | Như 1B, bỏ Thủ kho; TC-NQ-KT chỉ kiểm dự toán | 7 |
+| 2A, 2B | TP CUVT → GĐ khối → Phó CT UBCL&PT → Chủ tịch | 4 |
+| 3a, 3A, 3B | TP CUVT → TP TC-NQ-KT → GĐ TC-NQ-KT → Phó CT UBCL&PT → Chủ tịch | 5 |
+| 4A, 4B (= PO) | TP CUVT → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch | 4 |
+| 5A, 5B, 1C | GĐ khối đề nghị → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch | 4 |
+| 2C | Trưởng phòng ban → GĐ khối → Phòng TC-NQ-KT → Chủ tịch | 4 |
+
+Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng ban của phiếu (lát O1). Vượt dự toán / định mức thêm chặng duyệt (Q5).
+
+### 19.4 Bỏ phân hệ kho
+
+Công ty dùng phần mềm kho riêng. Thay thế:
+
+| Bỏ | Thay bằng |
+| --- | --- |
+| Phiếu nhập mua (GRN), ghi sổ, tồn kho | **XNH – xác nhận nhận hàng theo PO** (SL thực nhận đạt / không đạt, kết quả kiểm tra, số phiếu giao, đính kèm); PO có cột SL nhận thực tế; nhận đủ hoặc "Hoàn thành PO" thì đóng |
+| Trả NCC (RTV) | Điều chỉnh SL thực nhận (lý do, lịch sử); giao bù lập PO mới |
+| ICS/ICR, chuyển kho TRF | Mua nội bộ = PO đặt cho NCC nội bộ, giá bảng giá nội bộ; bên bán xác nhận ở "Đơn bán nội bộ" |
+| Tồn kho, thẻ kho, gợi ý đặt hàng theo tồn | Thủ kho nhập tồn trên đề nghị mua; gợi ý tồn đã xác nhận gần nhất |
+| Kiểm kê, kỳ kho, đóng kỳ, giá vốn | Bỏ hẳn |
+| Báo cáo NXT, SLOW, EXP, GSTK, TRANSIT, ICREC, REORD | Bỏ; thêm báo cáo SL đặt – SL thực nhận, OTIF |
+| ACCX (xuất chứng từ kho) | Xuất PO đã duyệt, XNH, hóa đơn, đề nghị thanh toán (lát Y9) |
+
+**Lát K1 – tắt (0.22.0).** Cấu hình `Modules:InventoryEnabled` (appsettings, mặc định **false**). Khi tắt:
+
+- Khi nạp phạm vi người dùng và khi trả danh sách quyền cho giao diện, hệ thống **bỏ các quyền của phân hệ kho**
+  (`Permissions.InventoryModule`: mọi `Inventory.*`, `Report.Stock.View`, `Report.Stock.ViewAllCompanies`, `Report.Accounting.Export`).
+  Vì vậy menu, ô lệnh, trang chủ, tra cứu chứng từ không còn màn hình/loại phiếu kho; API kho (đọc và ghi, kỳ kho, tồn kho, báo cáo kho,
+  ACCX) trả **403** "Phân hệ kho đã ngừng dùng từ bản 0.22.0…". Không còn ghi sổ nên kỳ kho, tồn âm, giá vốn không còn tác dụng.
+- Màn hình phân quyền không còn nhóm quyền Kho và các quyền báo cáo kho; vai trò mẫu không còn quyền kho.
+- **Không xóa dữ liệu**: dòng quyền kho trong vai trò đang có, phiếu kho, sổ kho giữ nguyên đến K3. Đặt `true` là quay về như 0.21.0.
+- Danh mục kho (`Warehouse`) **giữ** – dùng làm nơi nhận hàng của PO/đề nghị mua.
+- CSDL test (`appsettings.Testing.json`) tạm đặt `true` để các test cũ dựa trên phiếu nhập (MATCH3, đánh giá NCC, KPI…) còn chạy đến khi
+  lát K2 chuyển nguồn "đã nhận" sang XNH; test riêng của K1 chạy với cấu hình tắt.
+
+**Lát K3 – gỡ (0.28.0).** Xóa code phân hệ kho và bảng kho bằng migration có `Down()`; chỉ làm sau khi người dùng xác nhận đã sao lưu.
+
+### 19.5 Portal nhà cung cấp
+
+Trang web riêng `/ncc` cho NCC: tài khoản mời qua email, OTP, người dùng con (P1); hạ tầng tên miền riêng, cô lập dữ liệu NCC, giới hạn
+tần suất, kiểm file (P1b); NCC tự cập nhật hồ sơ, đăng ký mới → HSN (P2); thư mời, hỏi đáp, nộp báo giá niêm phong (P3); xác nhận PO (P4);
+báo giao hàng → XNH (P5); hóa đơn điện tử (P6a); trạng thái thanh toán (P6b); bảng giá, tin nhắn, thẻ điểm NCC (P7). NCC chỉ thấy dữ liệu
+của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiện nay.
+
+### 19.6 Lộ trình
+
+| Bản | Lát | Nội dung |
+| --- | --- | --- |
+| 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
+| 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
+| 0.24.0 | Y6, Y7, X7 | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO |
+| 0.25.0 | P1, P1b, P3 | Portal: tài khoản NCC, hạ tầng, báo giá online |
+| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
+| 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## Nguồn tham khảo
 
