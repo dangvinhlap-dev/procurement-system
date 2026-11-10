@@ -162,6 +162,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Test tích hợp `ApprovalDelegationTests` (2), e2e `delegations.spec.ts`. Kiểm tra: dotnet build 0 cảnh báo, dotnet test 627/627, tsc, oxlint,
     npm run build, Playwright delegations/divisions/notifications 4/4 (API 5010 + Vite 127.0.0.1:5191 – cổng 5190 còn Vite cũ).
     Lưu ý: Google Drive giữ `src\Proc.Api\obj\...\rjsmrazor.dswa.cache.json` rất lâu (vòng chờ 30 giây qua ở lần thứ 15).
+  - **O2b (xong 10/11/2026)**: email bản sao thông báo qua SMTP (MailKit 4.18.2, MIT). `Notification` thêm trạng thái gửi email (Chờ / Đã gửi /
+    Bỏ qua / Lỗi, số lần thử, ghi chú); `NotificationEmailService.DispatchAsync` + `EmailBackgroundService` (quét mỗi `Email:PollSeconds`), bỏ
+    qua người chưa khai email / ngừng dùng / thông báo > 24 giờ, thử lại tối đa 5 lần. Cấu hình mục `Email` (mặc định tắt) trong appsettings,
+    `deploy/windows/appsettings.Production.example.json`, `docker-compose.yml` + `.env.example`; hướng dẫn ở deploy-windows.md, README.
+    API quản trị `GET /api/notifications/email/status`, `POST /api/notifications/email/test`. Thư có nút "Mở trên phần mềm" →
+    trang `/mo/:screen/:id?cty=` (đổi công ty rồi mở phiếu; hàm chung `app/notificationTarget.ts`). Migration `V0_22_0_EmailThongBao`
+    (thông báo cũ = Bỏ qua). Test tích hợp `NotificationEmailTests` (bộ gửi giả), e2e `notifications.spec.ts` thêm đường dẫn email.
+    Sửa cảnh báo xUnit2013 ở DynamicApproverTests. Kiểm tra: build 0 cảnh báo, dotnet test 628/628, tsc, oxlint, npm run build, Playwright
+    notifications + delegations 3/3. Chưa làm: màn hình quản trị email (đang chỉ có API).
+  - **Còn lại**: O2c nhắc quá hạn (thông báo + email cho người duyệt khi bước chờ quá 1 ngày làm việc), O2d trang duyệt gọn cho điện thoại.
 
 - **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
   O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3
