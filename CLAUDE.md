@@ -38,7 +38,8 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 ## 3. Kiến trúc
 - Modular monolith, Clean Architecture: Domain → Application → Infrastructure → Api, cộng Proc.Web.
 - Cấu trúc thư mục theo mục 13.1 của docs/design.md. Module chỉ gọi nhau qua interface của lớp Application.
-- Ghi sổ kho là nguyên tử: lưu chứng từ, ghi StockLedger, cập nhật StockOnHand, ghi audit trong một transaction.
+- (Code kho cũ, chỉ còn đến khi gỡ ở 0.28.0) Ghi sổ kho là nguyên tử: lưu chứng từ, ghi StockLedger, cập nhật StockOnHand, ghi audit
+  trong một transaction.
 - Chạy được cả trên Linux container (Docker) và Windows Server (IIS) từ cùng một bản build, không sửa code:
   - Không viết cứng đường dẫn, host, cổng, chuỗi kết nối trong code; lấy từ appsettings/biến môi trường (Options), có giá trị mặc định
     cho máy dev. Đường dẫn tương đối tính từ ContentRoot, không từ thư mục đang đứng.
@@ -52,15 +53,13 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - Luôn đi qua ICurrentUserScope; không truy vấn bỏ qua global query filter (công ty, kho, nhóm hàng).
   Ngoại lệ đã duyệt 07/11/2026: danh mục tên nhóm hàng ai cũng xem đủ (kèm cờ `IsInScope`) – design.md mục 9.2.
   Lệnh ghi phải kiểm tra lại phạm vi ở tầng Application, không tin dữ liệu từ client.
-- Mỗi công ty có đúng một kho Main; kho Sub thuộc một công ty.
-- Liên công ty chỉ đi kho Main → kho Main, qua cặp chứng từ ICS (xuất bán nội bộ) / ICR (nhập mua nội bộ),
-  giá = giá bán nội bộ (docs/design.md mục 4, 6.3).
-- Kho Sub chỉ chuyển trong cùng công ty (TRF). Cấm chuyển kho Sub sang bất kỳ kho nào của công ty khác.
-- Chỉ ghi sổ khi ngày chứng từ thuộc kỳ Open của công ty đó. Chứng từ đã ghi sổ không sửa trực tiếp:
-  bỏ ghi sổ khi kỳ còn mở, hoặc lập chứng từ điều chỉnh khi kỳ đã đóng.
-- Đóng kỳ tuần tự (tháng N chỉ đóng khi tháng N−1 đã đóng); chỉ mở lại kỳ đã đóng gần nhất.
-- Giá vốn: bình quân gia quyền cuối kỳ tháng theo Company × Item (docs/design.md mục 7).
-- Không cho tồn âm (trừ khi tham số kho cho phép).
+- **Từ bản 0.22.0 bỏ phân hệ kho** (người dùng chốt 10/11/2026 – design.md mục 19): công ty dùng phần mềm kho riêng. Phân hệ kho tắt
+  bằng `Modules:InventoryEnabled=false` (lát K1), gỡ hẳn code + bảng ở 0.28.0 (K3, sau khi người dùng xác nhận sao lưu).
+  **Chức năng mới không đọc/ghi phiếu kho, sổ kho, tồn kho, kỳ kho, giá vốn**; số lượng đã nhận lấy từ phiếu xác nhận nhận hàng XNH
+  (lát K2); tồn kho trên đề nghị mua do Thủ kho nhập tay. Danh mục kho chỉ còn là nơi nhận hàng. Mua nội bộ = PO đặt cho NCC nội bộ.
+  Các quy tắc kho cũ (kho Main/Sub, ICS/ICR, kỳ kho, giá vốn, tồn âm – design.md mục 4, 6, 7) chỉ còn áp cho code kho cũ đến khi gỡ.
+- Quy trình mua theo biểu mẫu CUVT (loại A công trình, B hàng hóa, DV dịch vụ – không có bước Thủ kho, C tạp vụ), duyệt online theo
+  chuỗi của từng biểu mẫu, Portal NCC, đề nghị thanh toán (chỉ đề nghị + duyệt + trạng thái, không làm sổ cái): design.md mục 19.
 - Kiểu số: số lượng numeric(18,4), đơn giá numeric(19,6), tiền numeric(19,2). Không dùng double/float.
 - Mọi thay đổi entity [Auditable] phải vào AuditLog qua SaveChangesInterceptor; AuditLog chỉ thêm, không sửa/xóa.
 - **Mọi form chứng từ/phiếu** (PR, PO, RFQ, HĐ, phiếu kho… và form mới làm sau này) phải có: ô **Ghi chú** nhập được khi tạo; tab
