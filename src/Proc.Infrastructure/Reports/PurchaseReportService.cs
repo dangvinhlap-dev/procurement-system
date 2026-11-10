@@ -9,6 +9,7 @@ using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Reports;
 
@@ -414,6 +415,72 @@ public sealed class PurchaseReportService : IPurchaseReportService
             })
             .OrderByDescending(r => r.ReceiptAmount).ThenBy(r => r.SupplierCode)
             .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<OrderFulfillmentResult> GetOrderFulfillmentAsync(PurchaseReportPeriod period, CancellationToken cancellationToken)
+    {
+        Check(period);
+        // Toàn tập đoàn (đã kiểm quyền ở Check) – xem ghi chú lớp. Dòng PO đi qua mặt hàng (filter nhóm hàng).
+        var orders = period.AllCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
+        var lines = await (
+                from l in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in orders on l.OrderId equals o.Id
+                join c in _db.Companies on o.CompanyId equals c.Id
+                join s in _db.Suppliers on o.SupplierId equals s.Id
+                join i in _db.Items on l.ItemId equals i.Id
+                join u in _db.Uoms on l.UomId equals u.Id
+                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                      && o.Date >= period.From && o.Date <= period.To
+                orderby o.Date, o.No, l.LineNo
+                select new
+                {
+                    o.Id, o.No, o.Date, CompanyCode = c.Code, SupplierCode = s.Code, SupplierName = s.Name, l.LineNo, LineId = l.Id, ItemCode = i.Code,
+                    ItemName = i.Name, UomCode = u.Code, l.Qty, l.UomFactor, l.BaseQty, Due = l.DeliveryDate ?? o.ExpectedDate,
+                    ClosedManually = o.ClosedAt != null,
+                })
+            .ToListAsync(cancellationToken);
+        var lineIds = lines.Select(l => l.LineId).ToList();
+        var received = await PurchaseOrderReceipts.ReceivedBaseByLineAsync(_db, lineIds, null, cancellationToken);
+        // Ngày nhận cuối của dòng: phiếu XNH đã xác nhận có SL thực nhận > 0 (bỏ filter công ty – lineIds đã qua filter).
+        var lastDates = await (
+                from rl in _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking()
+                join d in _db.GoodsReceiptConfirmations.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) on rl.ConfirmationId equals d.Id
+                where lineIds.Contains(rl.PurchaseOrderLineId) && d.Status == ReceiptConfirmationStatus.Confirmed && rl.ReceivedQty > 0
+                group d.Date by rl.PurchaseOrderLineId into g
+                select new { g.Key, Last = g.Max() })
+            .ToDictionaryAsync(x => x.Key, x => x.Last, cancellationToken);
+
+        var rows = lines.Select(l =>
+        {
+            var receivedBase = received.GetValueOrDefault(l.LineId);
+            var receivedQty = l.UomFactor == 0 ? 0m : Math.Round(receivedBase / l.UomFactor, 4, MidpointRounding.AwayFromZero);
+            DateOnly? last = lastDates.TryGetValue(l.LineId, out var date) ? date : null;
+            // Đúng hạn: có hạn giao, đã nhận và lần nhận cuối không sau hạn; chưa nhận mà quá hạn cũng là trễ. Dòng không hạn giao không chấm.
+            bool? onTime = l.Due is not { } due ? null : last is { } d && d <= due;
+            return new OrderFulfillmentRowDto(
+                l.Id, l.No, l.Date, l.CompanyCode, l.SupplierCode, l.SupplierName, l.LineNo, l.ItemCode, l.ItemName, l.UomCode, l.Qty, receivedQty,
+                l.Qty - receivedQty, l.Due, last, onTime, receivedBase >= l.BaseQty, l.ClosedManually);
+        }).ToList();
+        var suppliers = rows.GroupBy(r => (r.SupplierCode, r.SupplierName))
+            .Select(g => Fulfillment(g.Key.SupplierCode, g.Key.SupplierName, g.ToList()))
+            .OrderBy(s => s.OtifPct ?? 101m).ThenBy(s => s.SupplierCode)
+            .ToList();
+        return new OrderFulfillmentResult(rows, suppliers, Fulfillment(string.Empty, "Tổng cộng", rows), period.AllCompanies);
+    }
+
+    /// <summary>
+    /// Tổng hợp OTIF một nhóm dòng. % đủ = dòng đủ ÷ mọi dòng; % đúng hạn, % OTIF = dòng đạt ÷ dòng có hạn giao; 1 số lẻ.
+    /// Ví dụ 4 dòng có hạn, 3 đúng hạn trong đó 2 đủ → đúng hạn 75,0%, OTIF 50,0%.
+    /// </summary>
+    private static OrderFulfillmentSupplierDto Fulfillment(string code, string name, IReadOnlyList<OrderFulfillmentRowDto> rows)
+    {
+        var scored = rows.Count(r => r.OnTime is not null);
+        var inFull = rows.Count(r => r.InFull);
+        var onTime = rows.Count(r => r.OnTime == true);
+        var otif = rows.Count(r => r.OnTime == true && r.InFull);
+        decimal? Pct(int part, int total) => total == 0 ? null : Math.Round(part * 100m / total, 1, MidpointRounding.AwayFromZero);
+        return new OrderFulfillmentSupplierDto(code, name, rows.Count, inFull, scored, onTime, otif, Pct(inFull, rows.Count), Pct(onTime, scored), Pct(otif, scored));
     }
 
     /// <inheritdoc />

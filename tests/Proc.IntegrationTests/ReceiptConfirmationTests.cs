@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Proc.Application.Documents;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
+using Proc.Application.Reports;
 using Proc.Domain.Organization;
 
 namespace Proc.IntegrationTests;
@@ -141,5 +142,33 @@ public partial class PurchasingTests
         var registry = await keeper.GetFromJsonAsync<DocumentRegistryResult>(
             $"/api/document-registry?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}&docTypes=XNH", Ct);
         Assert.Contains(registry!.Rows, d => d.Id == xnh.Id && d.Progress == DocumentProgress.Done && d.StatusName == "Đã xác nhận");
+    }
+
+    /// <summary>Báo cáo SL đặt – SL thực nhận / OTIF (design.md mục 19.4): đủ, thiếu, trễ hạn; tổng hợp theo NCC.</summary>
+    [Fact]
+    public async Task BaoCaoOtif_SlDatSlThucNhan_DungHanVaDu()
+    {
+        var f = await ArrangeAsync();
+        // PO1 hẹn giao sau 5 ngày: nhận đủ 10 hôm nay → đúng hạn, đủ. PO2: nhận 3/4 → đúng hạn, thiếu 1.
+        var po1 = await ApprovedPoAsync(f, 10);
+        await ConfirmXnhAsync(f, await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po1, 10)));
+        var po2 = await ApprovedPoAsync(f, 4);
+        await ConfirmXnhAsync(f, await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po2, 3)));
+        // PO3 hẹn giao hôm qua: nhận đủ 2 hôm nay → trễ.
+        var (po3, _) = await TestReceipts.ReceiveAsync(_factory, f.Buyer, f.SupplierId, f.Kt, [new(f.ItemId, f.Cai, 2, 100_000)], Today,
+            orderDate: Today.AddDays(-3), expectedDate: Today.AddDays(-1));
+
+        var report = await ReadAsync<OrderFulfillmentResult>(await f.Buyer.GetAsync(
+            $"/api/reports/order-fulfillment?from={Today.AddDays(-3):yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
+        var rows = report.Rows.ToDictionary(r => r.OrderId);
+        Assert.Equal((10m, 0m, true, true, (DateOnly?)Today), (rows[po1.Id].ReceivedQty, rows[po1.Id].ShortQty, rows[po1.Id].OnTime, rows[po1.Id].InFull, rows[po1.Id].LastReceiptDate));
+        Assert.Equal((3m, 1m, true, false), (rows[po2.Id].ReceivedQty, rows[po2.Id].ShortQty, rows[po2.Id].OnTime, rows[po2.Id].InFull));
+        Assert.Equal(((bool?)false, true), (rows[po3.Id].OnTime, rows[po3.Id].InFull));
+        // 3 dòng: đủ 2 (66,7%), đúng hạn 2/3 (66,7%), OTIF 1/3 (33,3%).
+        var supplier = Assert.Single(report.Suppliers);
+        Assert.Equal((3, 2, 3, 2, 1, 66.7m, 66.7m, 33.3m),
+            (supplier.Lines, supplier.InFullLines, supplier.ScoredLines, supplier.OnTimeLines, supplier.OtifLines, supplier.InFullPct!.Value,
+                supplier.OnTimePct!.Value, supplier.OtifPct!.Value));
+        Assert.Equal(33.3m, report.Total.OtifPct);
     }
 }
