@@ -150,6 +150,19 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Phát hành 0.22.0 (11/11/2026)**: tag `v0.22.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.0 (gói
+  `procurement-0.22.0.zip`) – K1, K2, O1, O2a–d, O3; 6 migration (72 → 78), script `db/scripts/0.22.0.sql` chạy thử 2 lần trên bản sao
+  `procurement_kiemtra_0220` (từ CSDL bản test 5007; số dòng PO/NCC/AuditLog/thông báo giữ nguyên). Chạy thử script lần đầu **phát hiện lỗi**:
+  SQL viết tay của `V0_22_0_EmailThongBao` thiếu `;` → khối `DO` lỗi cú pháp; đã sửa migration, ghi lưu ý ở `db/scripts/README.md`.
+  Đóng gói `publish.ps1 -NoInstall` (Vite dev đang chạy khóa `node_modules`; lần chạy `npm ci` hỏng đã xóa dở `node_modules` – cài bù bằng
+  `npm install`, lockfile không đổi). Gói chạy thử cổng 5099 trên `procurement_kiemtra_0220`: `/health` Healthy 0.22.0; script chuẩn bị dữ liệu
+  (scratchpad `chuan_bi_0220.py`: gán quyền XNH/ủy quyền cho vai trò cũ, tạo bộ vai trò CUVT, công ty thử **CUV** + bộ phận VT, KTH + 12 tài
+  khoản `cuv.*` mật khẩu Test@2026) và luồng PR 6 cấp CUVT chạy đúng. Sao lưu CSDL bản test: `D:\project\procurement_kiemtra_0150_truoc_0.22.0.dump`.
+  Tài liệu test `docs/DuLieuThu_KichBanTest_0.22.0.docx` (K01–K09 ở BMI, O01–O12 ở CUV, R01–R03 hồi quy; dựng bằng script trên khuôn file 0.19.0).
+  **Chưa nâng bản test cổng 5007**: lệnh dừng tiến trình bản 0.21.0 (PID 18524) bị hệ thống quyền chặn – chờ người dùng cho phép, rồi: dừng →
+  sao lưu lại → `app` → `app-0.21.0`, chép gói + `appsettings.Production.json` cũ → chạy `db/scripts/0.22.0.sql` trên `procurement_kiemtra_0150`
+  → chạy `app\Proc.Api.exe --urls http://0.0.0.0:5007` → chạy `chuan_bi_0220.py http://127.0.0.1:5007 <mật khẩu admin>`.
+
 - **O3 – vai trò mẫu và cấu hình duyệt mẫu theo biểu mẫu CUVT** (design.md mục 19.3 "Lát O3", lộ trình 0.22.0; nhánh
   `feature/o3-vai-tro-mau-bieu-mau`, xong 11/11/2026). Mở rộng cơ chế mẫu G10, không migration:
   - Bộ vai trò mẫu có ô chọn bộ (`?set=BAN|CUVT`, trống = tất cả): bộ CUVT thêm TRUONGPHONGBAN, GDKHOI, TPCUVT, NVCUVT (không duyệt), TPTCKT,
