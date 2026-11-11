@@ -316,6 +316,20 @@ export function ConstructionProjectDrawer({ project, onClose }: { project: Const
                       <Input value={current ? formatMoney(current.estimateAmount) : ''} readOnly style={{ textAlign: 'right', fontFamily: 'var(--erp-font-mono)' }} aria-label="Tổng dự toán hiện hành" />
                     </Form.Item>
                   )}
+                  {!isNew && current && (
+                    <>
+                      {/* Lũy kế theo PO đã duyệt lấy dòng từ đề nghị loại A (lát Y3, Q4) – chỉ xem. */}
+                      <Form.Item
+                        label="Lũy kế đã mua (chưa VAT)"
+                        extra={`Gồm VAT ${formatMoney(current.spentAmountWithVat)} đ. Tính theo PO đã duyệt lấy từ đề nghị mua loại A.`}
+                      >
+                        <Input value={formatMoney(current.spentAmount)} readOnly style={{ textAlign: 'right', fontFamily: 'var(--erp-font-mono)' }} aria-label="Lũy kế đã mua" />
+                      </Form.Item>
+                      <Form.Item label="Còn lại (chưa VAT)">
+                        <Input value={formatMoney(current.remainingAmount)} readOnly style={{ textAlign: 'right', fontFamily: 'var(--erp-font-mono)' }} aria-label="Còn lại" />
+                      </Form.Item>
+                    </>
+                  )}
                   {isNew && (
                     <Form.Item label="Căn cứ dự toán" name="basis" rules={[{ max: 500 }]} extra="Ví dụ: QĐ 12/QĐ-CT phê duyệt dự toán.">
                       <Input maxLength={500} />

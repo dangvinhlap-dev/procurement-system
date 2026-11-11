@@ -177,10 +177,11 @@ public sealed record PurchaseDocumentQuery(DateOnly? From, DateOnly? To, string?
 /// <param name="PurchaseType">PO: loại mua (thường/khẩn cấp).</param>
 /// <param name="DocsOverdue">PO khẩn cấp quá hạn bổ sung hồ sơ.</param>
 /// <param name="ClosedManually">Đã đóng phần còn lại (lát R6) – trạng thái Đã đóng không phải do nhận đủ.</param>
+/// <param name="Category">PR: loại mua Construction (A), Goods (B), Service (DV) – lát Y3; null với PO.</param>
 public sealed record PurchaseDocumentListItemDto(
     Guid Id, string No, DateOnly Date, string Status, string? Description, string? Purpose, DateOnly? NeededDate, decimal Amount,
     int LineCount, string? CreatedByName, decimal Progress, string? Priority, bool? OutOfContract = null, bool? PriceException = null,
-    string? PurchaseType = null, bool? DocsOverdue = null, bool ClosedManually = false);
+    string? PurchaseType = null, bool? DocsOverdue = null, bool ClosedManually = false, string? Category = null);
 
 /// <summary>Kết quả tìm PR/PO.</summary>
 public sealed record PurchaseDocumentListResult(IReadOnlyList<PurchaseDocumentListItemDto> Items, bool Truncated, int Limit);
@@ -262,7 +263,32 @@ public sealed record PurchaseRequestDto(
 
     /// <summary>Lý do hủy (lát R7).</summary>
     public string? CancelReason { get; init; }
+
+    /// <summary>Loại mua (lát Y3): Construction (A), Goods (B), Service (DV).</summary>
+    public string Category { get; init; } = nameof(Domain.Purchasing.PurchaseCategory.Goods);
+
+    /// <summary>Công trình và lũy kế dự toán (chỉ loại A).</summary>
+    public ConstructionBudgetDto? Construction { get; init; }
 }
+
+/// <summary>
+/// Khung chi phí công trình trên đề nghị mua loại A (biểu mẫu 1A – lát Y3, design.md mục 19.2, quyết định Q4): lũy kế đã mua tính theo PO đã
+/// duyệt (cả PO đã đóng) lấy dòng từ các đề nghị loại A của công trình, giá chưa VAT; hiện thêm số có VAT.
+/// </summary>
+/// <param name="ProjectId">Id công trình.</param>
+/// <param name="Code">Mã công trình.</param>
+/// <param name="Name">Tên công trình.</param>
+/// <param name="Status">Trạng thái công trình (InProgress, Completed, Suspended).</param>
+/// <param name="EstimateAmount">Tổng dự toán hiện hành (VND chưa VAT).</param>
+/// <param name="SpentAmount">Lũy kế đã mua chưa VAT.</param>
+/// <param name="SpentAmountWithVat">Lũy kế đã mua gồm VAT.</param>
+/// <param name="RemainingAmount">Còn lại = dự toán − lũy kế chưa VAT (âm = đã vượt).</param>
+/// <param name="RequestAmount">Giá trị dự kiến của đề nghị này tính thêm vào lũy kế: phiếu nháp/chờ duyệt = tổng dự kiến; phiếu đã duyệt trở đi = 0
+/// (phần đã lên PO đã nằm trong lũy kế).</param>
+/// <param name="OverEstimate">Lũy kế + giá trị dự kiến của đề nghị này &gt; dự toán.</param>
+public sealed record ConstructionBudgetDto(
+    Guid ProjectId, string Code, string Name, string Status, decimal EstimateAmount, decimal SpentAmount, decimal SpentAmountWithVat,
+    decimal RemainingAmount, decimal RequestAmount, bool OverEstimate);
 
 /// <summary>Hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="SourcingRequestId">Phiếu tìm nguồn đã lập (nếu có).</param>
@@ -320,9 +346,12 @@ public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid 
 /// <param name="Priority">Mức ưu tiên: Low, Normal, Urgent.</param>
 /// <param name="Note">Ghi chú.</param>
 /// <param name="Lines">Dòng hàng có mã.</param>
+/// <param name="Category">Loại mua (lát Y3): Construction (A), Goods (B – mặc định khi trống), Service (DV).</param>
+/// <param name="ConstructionProjectId">Công trình đang thực hiện – bắt buộc với loại A.</param>
 public sealed record SavePurchaseRequestRequest(
     DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, string Priority, string? Note,
-    IReadOnlyList<SavePurchaseRequestLineRequest> Lines, IReadOnlyList<SavePurchaseRequestNewItemRequest>? NewItems = null);
+    IReadOnlyList<SavePurchaseRequestLineRequest> Lines, IReadOnlyList<SavePurchaseRequestNewItemRequest>? NewItems = null,
+    string? Category = null, Guid? ConstructionProjectId = null);
 
 /// <summary>Dòng PR đã duyệt còn chưa đặt hàng (để lập PO). RemainingQty: SL còn chưa lên PO theo ĐVT của dòng PR.</summary>
 public sealed record OpenRequestLineDto(
@@ -581,6 +610,9 @@ public sealed class SavePurchaseRequestRequestValidator : AbstractValidator<Save
     public SavePurchaseRequestRequestValidator()
     {
         RuleFor(x => x.DepartmentId).NotEmpty().WithMessage("Hãy chọn bộ phận đề nghị.");
+        RuleFor(x => x.Category)
+            .Must(c => string.IsNullOrWhiteSpace(c) || Enum.TryParse<Domain.Purchasing.PurchaseCategory>(c, ignoreCase: true, out var v) && Enum.IsDefined(v))
+            .WithMessage("Loại mua phải là Construction (A), Goods (B) hoặc Service (DV).");
         RuleFor(x => x.Purpose).MaximumLength(500);
         RuleFor(x => x.Note).MaximumLength(1000);
         // PR chỉ gồm hàng mới chưa có mã vẫn hợp lệ (design.md mục 18.12).

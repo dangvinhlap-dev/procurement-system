@@ -5468,6 +5468,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("Category")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2);
+
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -5479,6 +5484,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConstructionProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -5555,6 +5563,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CompanyId", "No")
                         .IsUnique();
+
+                    b.HasIndex("ConstructionProjectId", "CompanyId");
 
                     b.HasIndex("DepartmentId", "CompanyId");
 
@@ -7884,6 +7894,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.ConstructionProject", null)
+                        .WithMany()
+                        .HasForeignKey("ConstructionProjectId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Organization.Department", null)
                         .WithMany()

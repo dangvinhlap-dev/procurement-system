@@ -183,6 +183,8 @@ export interface PurchaseListItem {
   purchaseType: PurchaseType | null
   /** PO khẩn cấp quá hạn bổ sung hồ sơ. */
   docsOverdue: boolean | null
+  /** PR: loại mua A/B/DV (lát Y3); null với PO. */
+  category?: PurchaseCategory | null
 }
 
 /** Kết quả tìm PR/PO. */
@@ -260,6 +262,37 @@ export interface PurchaseRequest extends ClosedRemaining {
   canLinkItem: boolean
   /** Kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát. */
   budget: BudgetCheck | null
+  /** Loại mua A/B/DV (lát Y3, design.md mục 19.2). */
+  category: PurchaseCategory
+  /** Công trình và lũy kế dự toán – chỉ loại A. */
+  construction: ConstructionBudget | null
+}
+
+/** Loại mua của đề nghị mua theo biểu mẫu CUVT: A công trình, B hàng hóa, DV dịch vụ (design.md mục 19.2). */
+export type PurchaseCategory = 'Construction' | 'Goods' | 'Service'
+
+/** Nhãn loại mua (kèm mã biểu mẫu). */
+export const purchaseCategoryLabels: Record<PurchaseCategory, string> = {
+  Construction: 'A – Công trình',
+  Goods: 'B – Hàng hóa',
+  Service: 'DV – Dịch vụ',
+}
+
+/**
+ * Khung chi phí công trình trên đề nghị loại A (biểu mẫu 1A – design.md mục 19.3, Q4): lũy kế theo PO đã duyệt lấy dòng từ đề nghị loại A,
+ * giá chưa VAT; requestAmount là tổng dự kiến của phiếu nháp/chờ duyệt (đã duyệt = 0 vì phần lên PO đã nằm trong lũy kế).
+ */
+export interface ConstructionBudget {
+  projectId: string
+  code: string
+  name: string
+  status: string
+  estimateAmount: number
+  spentAmount: number
+  spentAmountWithVat: number
+  remainingAmount: number
+  requestAmount: number
+  overEstimate: boolean
 }
 
 /** Hàng mới chưa có mã trên PR: không lên PO/RFQ cho tới khi gắn mã hàng. */
@@ -301,6 +334,10 @@ export interface SavePurchaseRequestInput {
     neededDate: string | null
     note: string | null
   }[]
+  /** Loại mua (lát Y3). */
+  category: PurchaseCategory
+  /** Công trình – bắt buộc với loại A. */
+  constructionProjectId: string | null
 }
 
 /** Dòng PO. */

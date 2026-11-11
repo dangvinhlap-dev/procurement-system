@@ -18,6 +18,22 @@ public enum PurchasePriority
     Urgent = 3,
 }
 
+/// <summary>
+/// Loại mua của đề nghị mua hàng theo biểu mẫu CUVT (lát Y3, design.md mục 19.2): quyết định biểu mẫu (1A/1B/đề nghị DV), khung chi phí và
+/// chuỗi duyệt. Nhóm C (tạp vụ) không qua đề nghị mua nên không có ở đây.
+/// </summary>
+public enum PurchaseCategory
+{
+    /// <summary>A – vật tư công trình có tổng dự toán (biểu mẫu 1A): bắt buộc chọn công trình.</summary>
+    Construction = 1,
+
+    /// <summary>B – hàng hóa: vật tư tiêu hao, nguyên vật liệu, tài sản, vật tư công trình chưa có dự toán (biểu mẫu 1B). Mặc định.</summary>
+    Goods = 2,
+
+    /// <summary>DV – dịch vụ một lần, sửa chữa, thuê ngoài: như B nhưng không có bước Thủ kho, nhận hàng = nghiệm thu.</summary>
+    Service = 3,
+}
+
 /// <summary>Đầu phiếu đề nghị mua hàng (design.md mục 10.2).</summary>
 /// <param name="Date">Ngày đề nghị.</param>
 /// <param name="DepartmentId">Bộ phận đề nghị, bắt buộc (danh mục bộ phận của công ty – design.md mục 18.5).</param>
@@ -26,8 +42,11 @@ public enum PurchasePriority
 /// <param name="WarehouseId">Kho nhận dự kiến.</param>
 /// <param name="Priority">Mức ưu tiên.</param>
 /// <param name="Note">Ghi chú.</param>
+/// <param name="Category">Loại mua A/B/DV (lát Y3) – mặc định B hàng hóa.</param>
+/// <param name="ConstructionProjectId">Công trình – bắt buộc với loại A, phải trống với loại khác.</param>
 public sealed record PurchaseRequestHeader(
-    DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, PurchasePriority Priority, string? Note);
+    DateOnly Date, Guid? DepartmentId, string? Purpose, DateOnly? NeededDate, Guid? WarehouseId, PurchasePriority Priority, string? Note,
+    PurchaseCategory Category = PurchaseCategory.Goods, Guid? ConstructionProjectId = null);
 
 /// <summary>Dữ liệu một dòng hàng mới chưa có mã trên PR (design.md mục 18.12).</summary>
 /// <param name="Id">Dòng cũ (sửa) hoặc null (thêm).</param>
@@ -429,6 +448,12 @@ public sealed class PurchaseRequest : ApprovableDocument
     /// <summary>Mức ưu tiên.</summary>
     public PurchasePriority Priority { get; private set; } = PurchasePriority.Normal;
 
+    /// <summary>Loại mua A/B/DV (lát Y3, design.md mục 19.2); phiếu lập trước 0.23.0 là B hàng hóa.</summary>
+    public PurchaseCategory Category { get; private set; } = PurchaseCategory.Goods;
+
+    /// <summary>Công trình (chỉ loại A) – lũy kế đã mua của công trình tính từ PO đã duyệt lấy dòng của các đề nghị này.</summary>
+    public Guid? ConstructionProjectId { get; private set; }
+
     /// <summary>Tổng giá trị dự kiến = Σ SL × đơn giá tham khảo – numeric(19,2).</summary>
     public decimal TotalAmount { get; private set; }
 
@@ -475,7 +500,16 @@ public sealed class PurchaseRequest : ApprovableDocument
         if (header.DepartmentId is null || header.DepartmentId == Guid.Empty) throw new BusinessRuleException("Hãy chọn bộ phận đề nghị.");
         if (header.NeededDate is { } needed && needed < header.Date) throw new BusinessRuleException("Ngày cần hàng không được trước ngày đề nghị.");
         if (!Enum.IsDefined(header.Priority)) throw new BusinessRuleException("Mức ưu tiên không hợp lệ.");
+        if (!Enum.IsDefined(header.Category)) throw new BusinessRuleException("Loại mua không hợp lệ.");
+        // Loại A mua theo công đoạn trong tổng dự toán của một công trình (design.md mục 19.2): phải chọn công trình; loại B/DV không gắn
+        // công trình để lũy kế công trình không đếm nhầm phiếu ngoài dự toán.
+        if (header.Category == PurchaseCategory.Construction && (header.ConstructionProjectId is null || header.ConstructionProjectId == Guid.Empty))
+            throw new BusinessRuleException("Đề nghị mua loại A (công trình) phải chọn công trình.");
+        if (header.Category != PurchaseCategory.Construction && header.ConstructionProjectId is not null)
+            throw new BusinessRuleException("Chỉ đề nghị mua loại A (công trình) mới chọn công trình.");
         Date = header.Date;
+        Category = header.Category;
+        ConstructionProjectId = header.ConstructionProjectId;
         DepartmentId = header.DepartmentId;
         Purpose = Clean(header.Purpose);
         NeededDate = header.NeededDate;

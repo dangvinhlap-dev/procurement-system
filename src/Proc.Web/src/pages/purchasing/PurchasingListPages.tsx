@@ -10,6 +10,7 @@ import { ApprovalRuleTemplateModal } from './ApprovalRuleTemplateModal'
 import type { DateRange } from '../../api/logs'
 import {
   priorityLabels,
+  purchaseCategoryLabels,
   purchaseStatusLabels,
   purchaseStatusText,
   purchaseStatusTone,
@@ -52,6 +53,7 @@ const columnsByKind: Record<PurchaseKind, Column[]> = {
   'purchase-requests': [
     { key: 'no', title: 'Số PR', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'PR', id: r.id }) },
     { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
+    { key: 'category', title: 'Loại mua', width: 110, value: (r) => (r.category ? purchaseCategoryLabels[r.category] : ''), groupable: true },
     { key: 'department', title: 'Bộ phận', width: 150, value: (r) => r.description, groupable: true },
     { key: 'purpose', title: 'Mục đích', width: 200, value: (r) => r.purpose },
     { key: 'needed', title: 'Ngày cần', width: 90, type: 'date', value: (r) => r.neededDate },

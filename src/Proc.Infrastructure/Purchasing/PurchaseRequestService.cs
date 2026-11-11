@@ -54,7 +54,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 orderby r.Date descending, r.No descending
                 select new
                 {
-                    r.Id, r.No, r.Date, r.Status, r.Purpose, r.NeededDate, r.TotalAmount, LineCount = r.Lines.Count,
+                    r.Id, r.No, r.Date, r.Status, r.Purpose, r.NeededDate, r.TotalAmount, LineCount = r.Lines.Count, r.Category,
                     // Tên bộ phận theo danh mục; PR cũ chưa có danh mục thì hiện chữ ghi trước đây (design.md mục 18.5).
                     Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault() ?? r.LegacyDepartment,
                     CreatedBy = u == null ? null : u.FullName, r.Priority,
@@ -67,7 +67,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var items = rows.Take(SearchLimit).Select(r => new PurchaseDocumentListItemDto(
                 r.Id, r.No, r.Date, r.Status.ToString(), r.Department, r.Purpose, r.NeededDate, r.TotalAmount, r.LineCount, r.CreatedBy,
                 r.Base > 0 ? Math.Min(100m, Math.Round(ordered.GetValueOrDefault(r.Id) * 100m / r.Base, 1)) : 0m, r.Priority.ToString(),
-                ClosedManually: r.ClosedManually))
+                ClosedManually: r.ClosedManually, Category: r.Category.ToString()))
             .ToList();
         return new PurchaseDocumentListResult(items, rows.Count > SearchLimit, SearchLimit);
     }
@@ -87,6 +87,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var companyId = _scope.RequireCompany();
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
         await CheckDepartmentAsync(request.DepartmentId, null, cancellationToken);
+        await CheckConstructionProjectAsync(request.ConstructionProjectId, null, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
         var newItems = await ResolveNewItemsAsync(request.NewItems, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
@@ -108,6 +109,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         await EnsureItemsVisibleAsync(pr, cancellationToken);
         await CheckWarehouseAsync(request.WarehouseId, cancellationToken);
         await CheckDepartmentAsync(request.DepartmentId, pr.DepartmentId, cancellationToken);
+        await CheckConstructionProjectAsync(request.ConstructionProjectId, pr.ConstructionProjectId, cancellationToken);
         var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
         var newItems = await ResolveNewItemsAsync(request.NewItems, cancellationToken);
         pr.Update(ToHeader(request));
@@ -123,6 +125,15 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     {
         var pr = await LoadAsync(id, cancellationToken);
         await EnsureItemsVisibleAsync(pr, cancellationToken);
+        // Công trình đã hoàn thành / tạm ngừng thì không mua thêm (design.md mục 19.3, lát Y3) – kể cả phiếu nháp lập trước khi đổi trạng thái.
+        if (pr.ConstructionProjectId is { } projectId)
+        {
+            var project = await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId)
+                .Select(p => new { p.Code, p.Status }).SingleAsync(cancellationToken);
+            if (project.Status != ConstructionProjectStatus.InProgress)
+                throw new BusinessRuleException($"Công trình {project.Code} không còn ở trạng thái Đang thực hiện – không gửi duyệt đề nghị mua được.");
+        }
+
         // Ngân sách tính lại lúc gửi (phiếu khác có thể đã dùng ngân sách từ lúc lưu nháp); vượt thì qua thêm chặng duyệt
         // "vượt ngân sách" PRB – không chặn gửi (design.md mục 18.24, quyết định Q5).
         pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
@@ -319,6 +330,36 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var active = await _db.Departments.Where(d => d.Id == id).Select(d => (bool?)d.IsActive).SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy bộ phận đề nghị (hoặc bộ phận thuộc công ty khác).");
         if (!active && id != currentId) throw new BusinessRuleException("Bộ phận đề nghị đã ngừng dùng.");
+    }
+
+    /// <summary>
+    /// Công trình của đề nghị loại A phải thuộc công ty đang làm việc (global query filter) và đang thực hiện; phiếu đã gắn công trình nay tạm
+    /// ngừng / hoàn thành thì lưu lại vẫn được (giữ nguyên công trình), chặn ở bước gửi duyệt (design.md mục 19.3).
+    /// </summary>
+    private async Task CheckConstructionProjectAsync(Guid? projectId, Guid? currentId, CancellationToken cancellationToken)
+    {
+        if (projectId is not { } id) return;
+        var status = await _db.ConstructionProjects.Where(p => p.Id == id).Select(p => (ConstructionProjectStatus?)p.Status).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy công trình (hoặc công trình thuộc công ty khác).");
+        if (status != ConstructionProjectStatus.InProgress && id != currentId)
+            throw new BusinessRuleException("Công trình không còn ở trạng thái Đang thực hiện – không chọn được trên đề nghị mua mới.");
+    }
+
+    /// <summary>
+    /// Khung chi phí công trình của đề nghị loại A (biểu mẫu 1A): dự toán, lũy kế theo PO đã duyệt, còn lại; phiếu nháp / chờ duyệt cộng thêm
+    /// tổng dự kiến của chính phiếu để báo vượt dự toán (design.md mục 19.3, Q4).
+    /// </summary>
+    private async Task<ConstructionBudgetDto?> ConstructionBudgetAsync(PurchaseRequest pr, CancellationToken cancellationToken)
+    {
+        if (pr.ConstructionProjectId is not { } projectId) return null;
+        var project = await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId)
+            .Select(p => new { p.Code, p.Name, p.Status, p.EstimateAmount }).SingleOrDefaultAsync(cancellationToken);
+        if (project is null) return null;
+        var spent = (await ConstructionSpending.ByProjectAsync(_db, [projectId], cancellationToken)).GetValueOrDefault(projectId);
+        var pending = pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted ? pr.TotalAmount : 0m;
+        return new ConstructionBudgetDto(
+            projectId, project.Code, project.Name, project.Status.ToString(), project.EstimateAmount, spent.Net, spent.Net + spent.Vat,
+            project.EstimateAmount - spent.Net, pending, spent.Net + pending > project.EstimateAmount);
     }
 
     /// <summary>Tải PR kèm dòng có mã và hàng mới chưa có mã (dùng chung cho dịch vụ xử lý hàng mới).</summary>
@@ -526,7 +567,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
-            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null,
+            Category = pr.Category.ToString(), Construction = await ConstructionBudgetAsync(pr, cancellationToken) };
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>
@@ -542,5 +584,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             Enum.TryParse<PurchasePriority>(r.Priority, ignoreCase: true, out var p) && Enum.IsDefined(p)
                 ? p
                 : throw new BusinessRuleException("Mức ưu tiên phải là Low, Normal hoặc Urgent."),
-            r.Note);
+            r.Note,
+            string.IsNullOrWhiteSpace(r.Category) ? PurchaseCategory.Goods
+            : Enum.TryParse<PurchaseCategory>(r.Category, ignoreCase: true, out var c) && Enum.IsDefined(c) ? c
+            : throw new BusinessRuleException("Loại mua phải là Construction (A), Goods (B) hoặc Service (DV)."),
+            r.ConstructionProjectId);
 }
