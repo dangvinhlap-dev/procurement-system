@@ -24,6 +24,7 @@ import { formatDate, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../.
 import { ApprovalHistory } from './ApprovalHistory'
 import { contractTermFields } from './contractTerms'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
+import { confirmApprove } from './approvalDialogs'
 
 /** Đường dẫn trang đầy đủ một phụ lục (`AMENDMENT_PATH/:id`) – mở từ thông báo / Việc cần làm / Tra cứu chứng từ (chỉ biết Id phụ lục). */
 export const AMENDMENT_PATH = '/mua-hang/hop-dong-khung/phu-luc'
@@ -191,7 +192,8 @@ export function ContractAmendmentDrawer({
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'ContractAmendment', ownerId: doc.id },
       title: `Duyệt phụ lục ${doc.no}?`,
       content: (
         <>
@@ -199,15 +201,14 @@ export function ContractAmendmentDrawer({
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment })
           message.success(result.status === 'Approved' ? `Đã duyệt xong – phụ lục ${doc.no} đã áp vào hợp đồng.` : `Đã duyệt cấp của bạn – phụ lục ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -221,8 +222,9 @@ export function ContractAmendmentDrawer({
         message.success(`Đã từ chối phụ lục ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'ContractAmendment', ownerId: doc.id })
 
   const simple = (title: string, okText: string, run: () => Promise<unknown>, done: string, danger: boolean, content: string) =>
     modal.confirm({

@@ -42,6 +42,7 @@ import { toPlannedLines } from './plannedLines'
 import { RebateGrid, RebateTracking, type RebateValues } from './ContractRebatePanel'
 import { contractTermFields as termFields } from './contractTerms'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
+import { confirmApprove } from './approvalDialogs'
 
 const LIST_PATH = '/mua-hang/hop-dong-khung'
 
@@ -365,7 +366,8 @@ export function ContractPage() {
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'PurchaseContract', ownerId: doc.id },
       title: `Duyệt hợp đồng ${doc.no}?`,
       content: (
         <>
@@ -374,15 +376,14 @@ export function ContractPage() {
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment })
           message.success(result.status === 'Active' ? `Đã duyệt xong – hợp đồng ${doc.no} đã có hiệu lực.` : `Đã duyệt cấp của bạn – hợp đồng ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -396,8 +397,9 @@ export function ContractPage() {
         message.success(`Đã từ chối hợp đồng ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'PurchaseContract', ownerId: doc.id })
 
   const simple = (title: string, okText: string, run: () => Promise<unknown>, done: string, danger = false, content?: string) =>
     modal.confirm({

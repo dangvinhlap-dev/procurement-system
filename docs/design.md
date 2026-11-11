@@ -1253,7 +1253,7 @@ Lát G6b: `VolumeRebateReceipt` – lần ghi nhận thực nhận chiết khấ
 | File nằm trong **thư mục trên máy chủ** (`Attachments:RootPath`, mặc định `data/attachments` tính từ thư mục ứng dụng; Docker: volume `attachments` gắn vào `/data/attachments`; Windows/IIS: thư mục ngoài thư mục web, ví dụ `D:\ProcurementData\attachments` – docs/deploy-windows.md), đường dẫn `yyyy/MM/{Id}{đuôi}` – không dùng tên người dùng gửi. Bảng `Attachment`: loại chủ (`OwnerType`) + `OwnerId`, CompanyId của chủ (trống với NCC), tên file gốc, đuôi, loại nội dung, dung lượng, SHA-256, đường dẫn tương đối, ghi chú, người/giờ tải lên, cờ xóa + người/giờ xóa | Quyết định Q6; tên trên đĩa không chứa ký tự lạ hay "../" |
 | Tối đa **2 MB/file** mặc định (A4, 03/11/2026 – trước đó 20 MB theo Q6), cấu hình `Attachments:MaxFileSizeMb` 1–25 (đo khi ghi, không tin dung lượng client báo); chỉ nhận pdf, doc(x), xls(x), csv, ppt(x), txt, xml, jpg/jpeg, png, gif, bmp, tif(f), zip, rar, 7z, msg, eml. Loại nội dung suy từ đuôi; tải xuống luôn dạng `attachment` | Chặn file chạy được, html/svg có thể chạy script trong trình duyệt |
 | **Quyền theo đối tượng chủ**, không thêm mã quyền: xem/tải xuống = quyền xem chủ (Supplier.View, PriceList.View, Rfq.View, PR.View, PO.View, Inventory.Document.View); tải lên/xóa = quyền sửa chủ (Supplier.Manage, PriceList.Manage, Rfq.Manage, PR.Create, PO.Create, Inventory.Document.Create). Chủ đọc qua global query filter: phiếu công ty khác hoặc kho ngoài phạm vi → 404. NCC là danh mục dùng chung nên hồ sơ NCC mọi công ty cùng thấy | Mục 9.2; không lộ việc phiếu có tồn tại |
-| Đính kèm được ở **mọi trạng thái** của chủ (kể cả đã duyệt, đã ghi sổ) | File không đổi số liệu; hóa đơn, biên bản thường có sau khi nhập |
+| Đính kèm được ở **mọi trạng thái** của chủ (kể cả đã duyệt, đã ghi sổ). **Từ lát Z1 (11/11/2026), chứng từ có phê duyệt** (PR, PO, RFQ, bảng giá, hợp đồng, phụ lục, NCC độc quyền, duyệt tháng, chiết khấu sản lượng, đặt hàng gộp, hồ sơ NCC mới) theo mục 20 D1: vẫn thêm được, nhưng từ khi gửi duyệt mọi file khóa (không xóa); file người duyệt đính kèm khi duyệt / từ chối gắn với bước duyệt (`ApprovalStepId`, chỉ cần quyền xem phiếu, trong 30 phút sau khi xử lý); file thêm khi đã duyệt xong là "Bổ sung sau duyệt" (`AddedAfterApproval`); phiếu nháp chưa có bước duyệt xong chỉ người thêm file xóa được | File không đổi số liệu; hóa đơn, biên bản thường có sau khi nhập; ai mở phiếu cũng thấy hồ sơ lúc duyệt |
 | **Xóa mềm**: ẩn khỏi danh sách, file giữ trên đĩa; tải lên/xóa vào Nhật ký (`Attachment` có [Auditable]). Ghi file trước, lưu CSDL sau; lưu CSDL lỗi thì xóa file vừa ghi | Đối chiếu, khôi phục khi xóa nhầm; không có file mồ côi |
 | Sao lưu: container `backup` mỗi đêm chép bổ sung (không ghi đè) volume đính kèm vào `backups/attachments/` | File chỉ thêm, không sửa trên đĩa nên chép bổ sung là đủ |
 
@@ -2312,9 +2312,20 @@ tháng, đặt hàng gộp, chiết khấu sản lượng, hồ sơ NCC mới, X
 | D1 (C2) | **Được thêm file** ở mọi trạng thái; **file của người lập và của các bước đã duyệt không ai sửa/xóa được**. Người lập chỉ xóa file của mình khi phiếu còn **Nháp và chưa từng có bước duyệt xong**; từ khi gửi duyệt mọi file đã có bị khóa. File thêm khi phiếu đã duyệt xong ghi người thêm, thời điểm, đánh dấu **"Bổ sung sau duyệt"**, cũng không xóa được. Thay mục 18.4 dòng "Đính kèm được ở mọi trạng thái… xóa mềm". |
 | D2 (C3) | **Giữ** các thao tác sau duyệt hiện có (PO đóng phần còn lại; XNH cập nhật hóa đơn, điều chỉnh SL thực nhận, nghiệm thu; hợp đồng chấm dứt, phụ lục; phiếu tháng điều chỉnh) – không sửa dữ liệu gốc, ghi bản ghi riêng có lịch sử. |
 | D3 (C4) | Hủy phiếu đã duyệt **không cần duyệt lại**, **bắt buộc lý do**; người hủy phải có **quyền Hủy của từng loại phiếu** trong chuỗi; hủy cả chuỗi **trong một giao dịch** (một phiếu lỗi thì không hủy phiếu nào). PO gộp dòng từ nhiều PR: hủy một PR thì **hủy cả PO**, hộp thoại nêu các PR khác bị ảnh hưởng (SL của chúng trở về "còn lại chưa đặt"). |
-| D4 (C4) | Mỗi loại phiếu có **quyền Hủy riêng**, quản trị gán cho vai trò bất kỳ; khi nâng cấp **tự gán** cho vai trò đang có quyền lập/quản lý loại phiếu đó (không ai mất quyền đang dùng). |
+| D4 (C4) | Mỗi loại phiếu có **quyền Hủy riêng**, quản trị gán cho vai trò bất kỳ. **Sửa 11/11/2026 (người dùng xem lại):** **người lập không được hủy phiếu** của mình; hủy **bắt buộc lý do**; **phiếu đã duyệt** chỉ hủy được bởi **cấp quản lý** (quyền hủy phiếu đã duyệt chỉ gán cho cấp quản lý) **hoặc** việc hủy phải **qua một bước duyệt** – chờ chốt cách nào (20.2a). Bỏ ý "khi nâng cấp tự gán cho vai trò có quyền lập". |
 | D5 (C5) | Thêm trường **Chức vụ** cho người dùng (Hệ thống → Người dùng); trống thì hiện tên vai trò. |
 | D6 | Làm **Z1–Z4 ngay**, trước các lát Y của 0.23.0. |
+
+**20.2a Đã chốt (11/11/2026):** **Hủy phiếu là quyền đặc biệt, chỉ cấp cho admin** (quản trị) – không gán cho người lập hay vai trò
+nghiệp vụ; hủy bắt buộc lý do, không qua bước duyệt. Áp cho mọi hủy phiếu (kể cả phiếu nháp – người lập muốn bỏ phiếu nháp thì nhờ admin).
+
+**Lát Z1 – đã làm (11/11/2026):** hộp thoại **Duyệt** dùng chung (`confirmApprove`, `approvalDialogs.tsx`) có ô "Ý kiến người duyệt"
+(không bắt buộc) + đính kèm; hộp thoại **Từ chối** (`confirmReject`) thêm đính kèm (lý do vẫn bắt buộc). File tải lên sau khi duyệt / từ
+chối thành công, gắn vào bước vừa xử lý. Áp cho PR, PO, RFQ (kết quả chọn thầu), bảng giá, hợp đồng, phụ lục, NCC độc quyền, duyệt tháng,
+chiết khấu sản lượng; yêu cầu duyệt NCC chỉ có ý kiến (đính kèm của NCC là hồ sơ danh mục, không gắn bước duyệt của yêu cầu). Tab Đính
+kèm có cột "Bước duyệt" (Duyệt cấp n / Bổ sung sau duyệt), file khóa hiện "Đã khóa" (rê chuột thấy lý do), không có nút Xóa. Còn lại
+cho lát sau: hộp thoại từ chối riêng của NCC độc quyền, yêu cầu duyệt NCC; đặt hàng gộp, hồ sơ NCC mới (duyệt theo màn hình riêng);
+trang duyệt điện thoại chưa có đính kèm.
 
 ### 20.3 Chia lát (thứ tự làm)
 

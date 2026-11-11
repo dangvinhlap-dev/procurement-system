@@ -185,6 +185,14 @@ export function AttachmentPanel({
             { title: "Ghi chú", dataIndex: "note", ellipsis: true },
             { title: "Người tải lên", dataIndex: "uploadedByName", width: 180 },
             {
+              // Nguồn file theo quy tắc khóa chứng từ có phê duyệt (design.md mục 20): file của bước duyệt, bổ sung sau duyệt.
+              title: "Bước duyệt",
+              key: "stage",
+              width: 130,
+              render: (_: unknown, r: AttachmentItem) =>
+                r.approvalStepLevel != null ? `Duyệt cấp ${r.approvalStepLevel}` : r.addedAfterApproval ? "Bổ sung sau duyệt" : "",
+            },
+            {
               title: "Thời điểm",
               dataIndex: "uploadedAt",
               width: 140,
@@ -196,7 +204,11 @@ export function AttachmentPanel({
                     title: "",
                     key: "actions",
                     width: 70,
-                    render: (_: unknown, r: AttachmentItem) => (
+                    render: (_: unknown, r: AttachmentItem) =>
+                      r.canDelete === false ? (
+                        // File đã khóa (bước duyệt, bổ sung sau duyệt, phiếu đã gửi duyệt) – không hiện nút Xóa, rê chuột thấy lý do.
+                        <Typography.Text type="secondary" title={r.lockReason ?? undefined}>Đã khóa</Typography.Text>
+                      ) : (
                       <Popconfirm
                         title={`Xóa file ${r.fileName}?`}
                         okText="Xóa"

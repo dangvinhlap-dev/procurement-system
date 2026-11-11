@@ -29,6 +29,7 @@ import { withPendingApprovers } from '../../api/purchasing'
 import { formatDateTime, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 
 const LIST_PATH = '/gia-ncc/bang-gia'
 
@@ -232,7 +233,8 @@ export function SupplierPriceListPage() {
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'SupplierPriceList', ownerId: doc.id },
       title: `Duyệt bảng giá ${doc.no}?`,
       content: (
         <>
@@ -240,15 +242,14 @@ export function SupplierPriceListPage() {
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment })
           message.success(result.status === 'Active' ? `Đã duyệt xong – bảng giá ${doc.no} đã có hiệu lực.` : `Đã duyệt cấp của bạn – bảng giá ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -262,8 +263,9 @@ export function SupplierPriceListPage() {
         message.success(`Đã từ chối bảng giá ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'SupplierPriceList', ownerId: doc.id })
 
   const recall = () =>
     doc &&

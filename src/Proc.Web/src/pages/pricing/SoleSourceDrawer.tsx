@@ -1,6 +1,7 @@
 import { CheckOutlined, CloseCircleOutlined, FileAddOutlined, RollbackOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { withPendingApprovers } from '../../api/purchasing'
 import { approveContent, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 import { Alert, App, Button, DatePicker, Form, Input, Modal, Spin } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -220,14 +221,11 @@ function SoleSourceForm({
 
   const approve = () =>
     data &&
-    modal.confirm({
+    confirmApprove(modal, message, {
       title: `Duyệt phiếu ${data.no}?`,
       content: approveContent(data),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
-        await run(() => mutations.approve.mutateAsync({ id: data.id }), 'Đã duyệt.')
-      },
+      attach: { ownerType: 'SoleSourceApproval', ownerId: data.id },
+      onOk: (comment) => run(() => mutations.approve.mutateAsync({ id: data.id, comment: comment ?? undefined }), 'Đã duyệt.'),
     })
 
   const a = data?.actions
