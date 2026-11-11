@@ -205,6 +205,33 @@ public static class PurchasingEndpoints
                 s.SaveAsync(departmentId, year, request, ct))
             .RequirePermission(Permissions.Purchase.BudgetManage);
 
+        // Công trình và dự toán (lát Y2, design.md mục 19.2) – khung chi phí của đề nghị mua loại A.
+        var projects = app.MapGroup("/api/construction-projects").WithTags("Công trình");
+        projects.MapGet("/", (IConstructionProjectService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequireAnyPermission(Permissions.Purchase.ProjectView, Permissions.Purchase.ProjectManage);
+        // Người lập / xem đề nghị mua chọn công trình trên phiếu loại A (Y3) – không cần quyền xem danh mục công trình.
+        projects.MapGet("/options", (IConstructionProjectService s, CancellationToken ct) => s.OptionsAsync(ct))
+            .RequireAnyPermission(
+                Permissions.Purchase.ProjectView, Permissions.Purchase.ProjectManage, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate);
+        projects.MapGet("/{id:guid}", (Guid id, IConstructionProjectService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(Permissions.Purchase.ProjectView, Permissions.Purchase.ProjectManage);
+        projects.MapPost("/", async (CreateConstructionProjectRequest request, IConstructionProjectService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/construction-projects/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.ProjectManage)
+            .Validate<CreateConstructionProjectRequest>();
+        projects.MapPut("/{id:guid}", (Guid id, UpdateConstructionProjectRequest request, IConstructionProjectService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ProjectManage)
+            .Validate<UpdateConstructionProjectRequest>();
+        projects.MapPost("/{id:guid}/estimate-revisions",
+                (Guid id, ReviseConstructionEstimateRequest request, IConstructionProjectService s, CancellationToken ct) =>
+                    s.ReviseEstimateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.ProjectManage)
+            .Validate<ReviseConstructionEstimateRequest>();
+
         // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
         var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
         plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))

@@ -237,7 +237,7 @@ public static class RoleTemplates
         new("DONVIDATHANG", "Đơn vị đặt hàng (nhà hàng, NDAT, F&B…)", "Lập nhu cầu (đề nghị mua, kế hoạch nhu cầu); xem phiếu nhập để xác nhận số lượng, chất lượng",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
-            Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView,
+            Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept,
         ]),
@@ -247,19 +247,19 @@ public static class RoleTemplates
         // Người duyệt các cấp chỉ xem + duyệt, không lập phiếu (không kiêm nhiệm); nhân viên Phòng CUVT lập RFQ, PO nhưng không duyệt.
         new("TRUONGPHONGBAN", "Trưởng phòng/ban (duyệt đề nghị mua của bộ phận)", "Cấp duyệt đầu của đề nghị mua 1A/1B/DV – người duyệt động theo bộ phận của phiếu (khai Trưởng phòng ban ở danh mục bộ phận); xác nhận nghiệm thu hàng nhận",
         [
-            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
             Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept, Permissions.Report.PurchaseView,
         ]),
         new("GDKHOI", "Giám đốc khối", "Duyệt đề nghị mua 1A/1B/DV của các bộ phận trong khối – người duyệt động theo khối của phiếu (khai GĐ khối ở danh mục khối)",
         [
-            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
             Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Report.PurchaseView,
         ]),
         new("TPCUVT", "Trưởng phòng Cung ứng vật tư", "Kiểm tra đề nghị mua (Phòng CUVT), duyệt so sánh/trình giá 3a, 3A, 3B (kết quả chọn thầu), duyệt PO 4A/4B – không lập phiếu",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
-            Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
         new("NVCUVT", "Nhân viên Phòng Cung ứng vật tư", "Tìm kiếm, đánh giá NCC, hỏi giá (RFQ), lập so sánh/trình giá, lập PO, theo dõi giao hàng – không duyệt",
         [
@@ -271,22 +271,22 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
-            Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
         new("GDTCKT", "Giám đốc Tài chính – Nguồn quỹ – Kế toán", "Duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B sau Trưởng phòng TC-NQ-KT",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+            Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
         // Q6: Trưởng phòng HC chỉ kiểm định mức nhóm B – cấp duyệt này thêm vào cấu hình mẫu khi đề nghị mua có loại mua (lát Y3).
         new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) – cấp duyệt thêm khi đề nghị mua có loại mua (lát Y3)",
         [
-            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
         ]),
         new("PHOCTUBCL", "Phó Chủ tịch UBCL&PT", "Phó Chủ tịch Ủy ban Chiến lược & Phát triển: duyệt đề nghị mua 1A/1B/DV và so sánh/trình giá 3a, 3A, 3B trước Chủ tịch",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
     ];
 }

@@ -134,6 +134,10 @@ public static class Permissions
         public const string BudgetView = "Purchase.Budget.View";
         /// <summary>Quyền "Lập, sửa ngân sách bộ phận".</summary>
         public const string BudgetManage = "Purchase.Budget.Manage";
+        /// <summary>Quyền "Xem công trình và dự toán" (lát Y2, design.md mục 19.2).</summary>
+        public const string ProjectView = "Purchase.Project.View";
+        /// <summary>Quyền "Thêm, sửa công trình, điều chỉnh dự toán".</summary>
+        public const string ProjectManage = "Purchase.Project.Manage";
         /// <summary>Quyền "Xem kế hoạch nhu cầu" (lát G5, design.md mục 18.25).</summary>
         public const string DemandPlanView = "Purchase.DemandPlan.View";
         /// <summary>Quyền "Lập, chốt, điều chỉnh, hủy phiếu kế hoạch nhu cầu".</summary>
@@ -345,6 +349,8 @@ public static class Permissions
         new(Purchase.ContractApprove, "Duyệt hợp đồng nguyên tắc"),
         new(Purchase.BudgetView, "Xem ngân sách bộ phận"),
         new(Purchase.BudgetManage, "Lập, sửa ngân sách bộ phận"),
+        new(Purchase.ProjectView, "Xem công trình và dự toán"),
+        new(Purchase.ProjectManage, "Thêm, sửa công trình, điều chỉnh dự toán"),
         new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),

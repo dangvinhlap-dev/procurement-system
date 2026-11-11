@@ -91,6 +91,13 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Ngân sách bộ phận × tháng (lọc theo công ty – design.md mục 18.24).</summary>
     public DbSet<Proc.Domain.Purchasing.DepartmentBudget> DepartmentBudgets => Set<Proc.Domain.Purchasing.DepartmentBudget>();
 
+    /// <summary>Công trình có tổng dự toán (lọc theo công ty – lát Y2, design.md mục 19.2).</summary>
+    public DbSet<Proc.Domain.Purchasing.ConstructionProject> ConstructionProjects => Set<Proc.Domain.Purchasing.ConstructionProject>();
+
+    /// <summary>Lịch sử dự toán công trình – ban đầu và các lần điều chỉnh (lát Y2); đọc qua công trình cha.</summary>
+    public DbSet<Proc.Domain.Purchasing.ConstructionProjectEstimateRevision> ConstructionProjectEstimateRevisions =>
+        Set<Proc.Domain.Purchasing.ConstructionProjectEstimateRevision>();
+
     /// <summary>Nhóm hàng (lọc theo phạm vi nhóm hàng).</summary>
     public DbSet<ItemCategory> ItemCategories => Set<ItemCategory>();
 

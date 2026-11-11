@@ -77,11 +77,14 @@ public static class AttachmentOwnerTypes
     /// <summary>Ủy quyền duyệt (giấy ủy quyền có chữ ký, quyết định cử đi công tác – lát O2).</summary>
     public const string ApprovalDelegation = "ApprovalDelegation";
 
+    /// <summary>Công trình (quyết định phê duyệt / điều chỉnh dự toán, bản vẽ, bảng dự toán chi tiết – lát Y2).</summary>
+    public const string ConstructionProject = "ConstructionProject";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
-        GoodsReceiptConfirmation, ApprovalDelegation];
+        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject];
 }
 
 /// <summary>

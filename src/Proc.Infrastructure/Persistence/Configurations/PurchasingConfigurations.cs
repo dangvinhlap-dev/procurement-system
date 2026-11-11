@@ -270,6 +270,46 @@ internal sealed class DepartmentBudgetConfiguration : IEntityTypeConfiguration<D
     }
 }
 
+/// <summary>Cấu hình bảng ConstructionProject – công trình có tổng dự toán (lát Y2, design.md mục 19.2).</summary>
+internal sealed class ConstructionProjectConfiguration : IEntityTypeConfiguration<ConstructionProject>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ConstructionProject> builder)
+    {
+        builder.ToTable("ConstructionProject");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Code).HasMaxLength(ConstructionProject.CodeMaxLength).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(ConstructionProject.NameMaxLength).IsRequired();
+        builder.Property(x => x.Location).HasMaxLength(ConstructionProject.NameMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(ConstructionProject.TextMaxLength);
+        builder.Property(x => x.EstimateAmount).HasPrecision(19, 2);
+        builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        // Khóa ngoại (DepartmentId, CompanyId) – CSDL chặn công trình gắn phòng ban của công ty khác (như PR, ngân sách – mục 18.5, 18.24).
+        builder.HasOne<Department>().WithMany().HasForeignKey(x => new { x.DepartmentId, x.CompanyId })
+            .HasPrincipalKey(d => new { d.Id, d.CompanyId }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Revisions).WithOne().HasForeignKey(r => r.ProjectId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(x => x.Revisions).HasField("_revisions").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng ConstructionProjectEstimateRevision – lịch sử dự toán công trình (lát Y2).</summary>
+internal sealed class ConstructionProjectEstimateRevisionConfiguration : IEntityTypeConfiguration<ConstructionProjectEstimateRevision>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ConstructionProjectEstimateRevision> builder)
+    {
+        builder.ToTable("ConstructionProjectEstimateRevision");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.PreviousAmount).HasPrecision(19, 2);
+        builder.Property(x => x.NewAmount).HasPrecision(19, 2);
+        builder.Property(x => x.Basis).HasMaxLength(ConstructionProject.TextMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(ConstructionProject.TextMaxLength);
+        // Mỗi lần một dòng – hai người điều chỉnh cùng lúc thì một người bị lỗi trùng thay vì có hai "lần 2".
+        builder.HasIndex(x => new { x.ProjectId, x.RevisionNo }).IsUnique();
+    }
+}
+
 /// <summary>Cấu hình bảng DemandPlan – phiếu kế hoạch nhu cầu (design.md mục 18.25, lát G5a).</summary>
 internal sealed class DemandPlanConfiguration : IEntityTypeConfiguration<DemandPlan>
 {
