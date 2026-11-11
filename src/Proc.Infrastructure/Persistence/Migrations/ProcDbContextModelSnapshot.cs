@@ -499,6 +499,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AddedAfterApproval")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ApprovalStepId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("CompanyId")
                         .HasColumnType("uuid");
 

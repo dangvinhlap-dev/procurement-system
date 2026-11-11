@@ -6,6 +6,7 @@ using Proc.Application.Documents;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Organization;
+using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Documents;
@@ -52,6 +53,21 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.AppraisalOpinion] = (string.Empty, string.Empty),
         };
 
+    /// <summary>
+    /// Loại chủ là chứng từ có phê duyệt – áp quy tắc khóa đính kèm (design.md mục 20, quyết định D1). NCC (danh mục, hồ sơ cập nhật thường
+    /// xuyên), phiếu kho cũ, XNH, kê khai, ủy quyền… giữ quy tắc cũ của mục 18.4.
+    /// </summary>
+    private static readonly HashSet<string> ApprovalOwnerTypes =
+    [
+        AttachmentOwnerTypes.SupplierPriceList, AttachmentOwnerTypes.Rfq, AttachmentOwnerTypes.PurchaseRequest, AttachmentOwnerTypes.PurchaseOrder,
+        AttachmentOwnerTypes.PurchaseContract, AttachmentOwnerTypes.SoleSourceApproval, AttachmentOwnerTypes.ContractAmendment,
+        AttachmentOwnerTypes.SupplierOnboarding, AttachmentOwnerTypes.MonthlySupplierApproval, AttachmentOwnerTypes.VolumeRebateAgreement,
+        AttachmentOwnerTypes.PooledOrder,
+    ];
+
+    /// <summary>Người duyệt đính kèm vào bước mình vừa xử lý trong khoảng này (hộp thoại duyệt tải file ngay sau khi duyệt).</summary>
+    private static readonly TimeSpan ApprovalStepUploadWindow = TimeSpan.FromMinutes(30);
+
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
@@ -82,22 +98,44 @@ public sealed class AttachmentService : IAttachmentService
     public async Task<IReadOnlyList<AttachmentDto>> ListAsync(string ownerType, Guid ownerId, CancellationToken cancellationToken)
     {
         await RequireOwnerAsync(ownerType, ownerId, manage: false, cancellationToken);
-        return await (
+        var rows = await (
                 from a in _db.Attachments.AsNoTracking()
                 where a.OwnerType == ownerType && a.OwnerId == ownerId && !a.IsDeleted
                 join u in _db.Users on a.CreatedBy equals u.Id into users
                 from u in users.DefaultIfEmpty()
+                join st in _db.ApprovalSteps.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) on a.ApprovalStepId equals (Guid?)st.Id into steps
+                from st in steps.DefaultIfEmpty()
                 orderby a.CreatedAt
-                select new AttachmentDto(a.Id, a.FileName, a.ContentType, a.SizeBytes, a.Note, a.CreatedAt, u == null ? null : u.FullName))
+                select new
+                {
+                    a.Id, a.FileName, a.ContentType, a.SizeBytes, a.Note, a.CreatedAt, a.CreatedBy, a.ApprovalStepId, a.AddedAfterApproval,
+                    UploadedBy = u == null ? null : u.FullName, StepLevel = st == null ? (int?)null : st.Level,
+                })
             .ToListAsync(cancellationToken);
+        var state = await ApprovalStateAsync(ownerType, ownerId, cancellationToken);
+        return rows.Select(r =>
+            {
+                var reason = LockReason(state, r.ApprovalStepId, r.AddedAfterApproval, r.CreatedBy);
+                return new AttachmentDto(
+                    r.Id, r.FileName, r.ContentType, r.SizeBytes, r.Note, r.CreatedAt, r.UploadedBy, r.StepLevel, r.AddedAfterApproval,
+                    reason is null, reason);
+            })
+            .ToList();
     }
 
     /// <inheritdoc />
     public async Task<AttachmentDto> UploadAsync(
-        string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken)
+        string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken,
+        bool forApprovalStep = false)
     {
-        var companyId = await RequireOwnerAsync(ownerType, ownerId, manage: true, cancellationToken);
+        // Người duyệt có thể không có quyền lập/sửa phiếu (ví dụ Trưởng ban chỉ duyệt) – file của bước duyệt chỉ cần quyền xem phiếu
+        // nhưng phải là bước chính người đó vừa xử lý (design.md mục 20).
+        var companyId = await RequireOwnerAsync(ownerType, ownerId, manage: !forApprovalStep, cancellationToken);
         Attachment.ValidateFile(fileName, sizeBytes, _maxFileSizeMb);
+        Guid? approvalStepId = null;
+        var addedAfterApproval = false;
+        if (forApprovalStep) approvalStepId = await RecentActedStepAsync(ownerId, cancellationToken);
+        else addedAfterApproval = (await ApprovalStateAsync(ownerType, ownerId, cancellationToken)).Finished;
 
         // Ghi ra file tạm cùng thư mục gốc (đổi tên cùng ổ đĩa là nguyên tử), đo dung lượng thật và băm SHA-256 trong lúc ghi;
         // không tin dung lượng client báo.
@@ -115,7 +153,8 @@ public sealed class AttachmentService : IAttachmentService
                 sha256 = Convert.ToHexStringLower(hash.GetHashAndReset());
             }
 
-            var attachment = Attachment.Create(ownerType, ownerId, companyId, fileName, written, sha256, _clock.UtcNow, note, _maxFileSizeMb);
+            var attachment = Attachment.Create(
+                ownerType, ownerId, companyId, fileName, written, sha256, _clock.UtcNow, note, _maxFileSizeMb, approvalStepId, addedAfterApproval);
             finalPath = ResolvePath(attachment.StoragePath);
             Directory.CreateDirectory(Path.GetDirectoryName(finalPath)!);
             File.Move(tempPath, finalPath);
@@ -124,8 +163,13 @@ public sealed class AttachmentService : IAttachmentService
             await _db.SaveChangesAsync(cancellationToken);
 
             var uploader = await _db.Users.Where(u => u.Id == attachment.CreatedBy).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+            var level = approvalStepId is null ? null : await _db.ApprovalSteps.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+                .Where(x => x.Id == approvalStepId).Select(x => (int?)x.Level).FirstOrDefaultAsync(cancellationToken);
+            var reason = LockReason(
+                await ApprovalStateAsync(ownerType, ownerId, cancellationToken), approvalStepId, attachment.AddedAfterApproval, attachment.CreatedBy);
             return new AttachmentDto(
-                attachment.Id, attachment.FileName, attachment.ContentType, attachment.SizeBytes, attachment.Note, attachment.CreatedAt, uploader);
+                attachment.Id, attachment.FileName, attachment.ContentType, attachment.SizeBytes, attachment.Note, attachment.CreatedAt, uploader,
+                level, attachment.AddedAfterApproval, reason is null, reason);
         }
         catch
         {
@@ -153,8 +197,64 @@ public sealed class AttachmentService : IAttachmentService
     {
         var attachment = await FindAsync(id, cancellationToken);
         await RequireOwnerAsync(attachment.OwnerType, attachment.OwnerId, manage: true, cancellationToken);
+        var state = await ApprovalStateAsync(attachment.OwnerType, attachment.OwnerId, cancellationToken);
+        if (LockReason(state, attachment.ApprovalStepId, attachment.AddedAfterApproval, attachment.CreatedBy) is { } reason)
+            throw new BusinessRuleException(reason);
         attachment.Delete(_scope.UserId ?? Guid.Empty, _clock.UtcNow);
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Tình trạng duyệt của chứng từ chủ, tính từ các bước duyệt (mọi lượt gửi).</summary>
+    /// <param name="IsApprovalOwner">Chủ là chứng từ có phê duyệt – áp quy tắc khóa (design.md mục 20).</param>
+    /// <param name="HasPending">Đang chờ duyệt (còn bước chờ).</param>
+    /// <param name="AnyApproved">Đã có ít nhất một bước duyệt xong (kể cả lượt cũ bị từ chối sau đó).</param>
+    /// <param name="Finished">Đã duyệt xong: không còn bước chờ, lượt gửi cuối không có bước từ chối và có bước đã duyệt.</param>
+    private sealed record ApprovalState(bool IsApprovalOwner, bool HasPending, bool AnyApproved, bool Finished);
+
+    /// <summary>
+    /// Đọc tình trạng duyệt của chủ. Bước duyệt bỏ filter công ty vì chủ đã qua kiểm tra phạm vi (RequireOwnerAsync) – phiếu tổng công ty
+    /// lập cho công ty thành viên có thể có bước duyệt ở công ty khác.
+    /// </summary>
+    private async Task<ApprovalState> ApprovalStateAsync(string ownerType, Guid ownerId, CancellationToken cancellationToken)
+    {
+        if (!ApprovalOwnerTypes.Contains(ownerType)) return new ApprovalState(false, false, false, false);
+        var steps = await _db.ApprovalSteps.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+            .Where(x => x.DocumentId == ownerId).Select(x => new { x.Round, x.Status }).ToListAsync(cancellationToken);
+        if (steps.Count == 0) return new ApprovalState(true, false, false, false);
+        var pending = steps.Any(x => x.Status == ApprovalStepStatus.Pending);
+        var lastRound = steps.Max(x => x.Round);
+        var last = steps.Where(x => x.Round == lastRound).ToList();
+        var finished = !pending && last.All(x => x.Status != ApprovalStepStatus.Rejected) && last.Any(x => x.Status == ApprovalStepStatus.Approved);
+        return new ApprovalState(true, pending, steps.Any(x => x.Status == ApprovalStepStatus.Approved), finished);
+    }
+
+    /// <summary>
+    /// Lý do file không xóa được (design.md mục 20, D1); null nếu xóa được. Chứng từ có phê duyệt: file của bước duyệt và file bổ sung sau
+    /// duyệt luôn khóa; từ khi gửi duyệt (hoặc đã có bước duyệt xong) mọi file khóa; phiếu nháp chưa có bước duyệt xong chỉ người thêm file
+    /// mới xóa được. Chủ khác giữ quy tắc cũ (mục 18.4 – người có quyền sửa chủ xóa được).
+    /// </summary>
+    private string? LockReason(ApprovalState state, Guid? approvalStepId, bool addedAfterApproval, Guid? createdBy)
+    {
+        if (!state.IsApprovalOwner) return null;
+        if (approvalStepId is not null) return "File của bước duyệt – không sửa, xóa được.";
+        if (addedAfterApproval) return "File bổ sung sau duyệt – không xóa được.";
+        if (state.HasPending || state.AnyApproved) return "Phiếu đã gửi duyệt – file đã khóa, chỉ thêm được file mới.";
+        if (createdBy != _scope.UserId) return "Chỉ người thêm file mới xóa được.";
+        return null;
+    }
+
+    /// <summary>Bước duyệt người dùng hiện tại vừa duyệt / từ chối trên phiếu (trong 30 phút) – nơi gắn file của người duyệt.</summary>
+    /// <exception cref="BusinessRuleException">Khi người dùng chưa xử lý bước duyệt nào của phiếu trong khoảng đó.</exception>
+    private async Task<Guid> RecentActedStepAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var userId = _scope.UserId;
+        var since = _clock.UtcNow - ApprovalStepUploadWindow;
+        var stepId = await _db.ApprovalSteps.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+            .Where(x => x.DocumentId == ownerId && x.ActedBy == userId && x.ActedAt >= since
+                && (x.Status == ApprovalStepStatus.Approved || x.Status == ApprovalStepStatus.Rejected))
+            .OrderByDescending(x => x.ActedAt).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken);
+        return stepId ?? throw new BusinessRuleException(
+            "Bạn chưa duyệt / từ chối bước nào của phiếu này – file của bước duyệt chỉ đính kèm được ngay khi duyệt hoặc từ chối.");
     }
 
     /// <summary>Tìm file đính kèm chưa xóa theo Id; không thấy thì báo lỗi 404.</summary>
