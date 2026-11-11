@@ -251,6 +251,36 @@ export function PurchaseOrderPage() {
     else message.info('Không có dòng nào có giá trong hợp đồng/bảng giá đang hiệu lực của NCC này.')
   }
 
+  /**
+   * Dòng vừa chọn mặt hàng / đổi ĐVT chờ tự điền giá đã duyệt (yêu cầu người dùng 11/11/2026 – design.md mục 18.10): chỉ số dòng →
+   * mặt hàng, ĐVT và đơn giá lúc đổi. Giá đã duyệt của mặt hàng mới về sau (API tải lại theo danh sách mặt hàng) nên điền trong effect;
+   * bỏ qua nếu dòng đã đổi mặt hàng/ĐVT khác hoặc người dùng đã tự gõ đơn giá trong lúc chờ.
+   */
+  const pendingAutoPrice = useRef(new Map<number, { itemId: string; uomId: string; unitPrice: number | null | undefined }>())
+  const queueAutoPrice = (index: number, itemId: string | undefined, uomId: string | undefined) => {
+    if (!itemId || !uomId) return
+    const line = form.getFieldValue(['lines', index]) as PoLineValues | undefined
+    pendingAutoPrice.current.set(index, { itemId, uomId, unitPrice: line?.unitPrice })
+  }
+
+  useEffect(() => {
+    const pending = pendingAutoPrice.current
+    // Chờ giá của đúng danh sách mặt hàng hiện tại (không dùng dữ liệu cũ giữ tạm khi đang tải lại).
+    if (readOnly || pending.size === 0 || !supplierPrices.isSuccess || supplierPrices.isFetching || supplierPrices.isPlaceholderData) return
+    for (const [index, want] of pending) {
+      pending.delete(index)
+      const line = form.getFieldValue(['lines', index]) as PoLineValues | undefined
+      if (!line || line.itemId !== want.itemId || line.uomId !== want.uomId || line.unitPrice !== want.unitPrice || line.sourceRfqLineId) continue
+      const p = suggestedPrice(line)
+      if (!p) continue
+      form.setFieldValue(['lines', index, 'unitPrice'], p.unitPrice)
+      form.setFieldValue(['lines', index, 'discountPct'], p.discountPct)
+      if (p.vatCode) form.setFieldValue(['lines', index, 'vatCode'], p.vatCode)
+    }
+    // suggestedPrice đọc supplierPrices.data – chạy lại khi dữ liệu giá về.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierPrices.data, supplierPrices.isFetching, supplierPrices.isPlaceholderData, readOnly, form, lines])
+
   useEffect(() => {
     if (isNew && mainWarehouse && !form.getFieldValue('warehouseId')) form.setFieldValue('warehouseId', mainWarehouse)
   }, [isNew, mainWarehouse, form])
@@ -388,6 +418,7 @@ export function PurchaseOrderPage() {
                 const uomId = purchaseUomId && item?.uoms.some((u) => u.uomId === purchaseUomId) ? purchaseUomId : item?.baseUomId
                 form.setFieldValue(['lines', field.name, 'uomId'], uomId)
                 form.setFieldValue(['lines', field.name, 'vatCode'], item?.vatCode)
+                queueAutoPrice(field.name, v, uomId)
               }}
               popupMatchSelectWidth={420}
             />
@@ -405,6 +436,7 @@ export function PurchaseOrderPage() {
         return (
           <Form.Item name={[field.name, 'uomId']} noStyle rules={[{ required: true, message: 'Chọn ĐVT.' }]}>
             <Select variant="borderless" style={{ width: '100%' }} aria-label={`ĐVT dòng ${field.name + 1}`}
+              onChange={(uomId: string) => queueAutoPrice(field.name, lines[field.name]?.itemId ?? undefined, uomId)}
               options={(item?.uoms ?? []).map((u) => ({ value: u.uomId, label: u.code }))} />
           </Form.Item>
         )

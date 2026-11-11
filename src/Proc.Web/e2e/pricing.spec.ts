@@ -72,7 +72,8 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   await expect(page.locator('.data-grid-row', { hasText: supplierCode })).toContainText('47.000')
   await expect(page.locator('.data-grid-row', { hasText: supplierCode })).toContainText('Toàn tập đoàn')
 
-  // 3. PO ở BHA: cột Giá đã duyệt 47.000 nguồn Bảng giá; đơn giá 0 là lệch giá (tam giác vàng), bấm Áp giá đã duyệt thì hết lệch.
+  // 3. PO ở BHA: chọn mặt hàng thì đơn giá tự điền giá đã duyệt 47.000 nguồn Bảng giá (yêu cầu 11/11/2026); sửa đơn giá về 0 là lệch giá
+  // (tam giác vàng), bấm Áp giá đã duyệt thì hết lệch.
   await switchCompany(page, 'BHA')
   await openByCommand(page, 'PO')
   await page.getByRole('button', { name: 'Tạo mới' }).click()
@@ -85,6 +86,10 @@ test('bảng giá toàn tập đoàn → so sánh giá → PO theo giá đã duy
   const line = page.locator('.line-grid-row').first()
   await expect(line).toContainText('47.000')
   await expect(line).toContainText(/Bảng giá PRL-TCT-\d{4}-\d{4}/)
+  await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('47.000')
+  await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toHaveCount(0)
+  await page.getByLabel('Đơn giá dòng 1').fill('0')
+  await page.getByLabel('Đơn giá dòng 1').press('Tab')
   await expect(page.getByLabel('Lệch giá đã duyệt dòng 1')).toBeVisible()
   await page.getByRole('button', { name: /Áp giá đã duyệt$/ }).click()
   await expect(page.getByLabel('Đơn giá dòng 1')).toHaveValue('47.000')
