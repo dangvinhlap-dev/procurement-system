@@ -188,6 +188,10 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 select o.No)
             .Distinct().ToListAsync(cancellationToken);
         if (orders.Count > 0) throw new BusinessRuleException($"PR {pr.No} đã lên đơn mua hàng {string.Join(", ", orders)} – hủy đơn mua hàng trước.");
+        // PR đã vào bảng tổng hợp 2A/2B chưa hủy (lát Y5b) thì hủy bảng tổng hợp trước – không để bảng trỏ vào PR đã hủy.
+        var summaries = await PurchaseSummaryService.ActiveSummaryNosAsync(_db, [pr.Id], cancellationToken);
+        if (summaries.Count > 0)
+            throw new BusinessRuleException($"PR {pr.No} đang ở bảng tổng hợp {string.Join(", ", summaries)} – hủy bảng tổng hợp trước.");
         pr.Cancel(reason);
         await _approvals.SkipPendingAsync(pr, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);

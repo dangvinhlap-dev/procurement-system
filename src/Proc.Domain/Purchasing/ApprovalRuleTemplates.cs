@@ -83,8 +83,8 @@ public static class ApprovalRuleTemplates
     /// <summary>
     /// Chuỗi ký của biểu mẫu CUVT (lát O3 – design.md mục 19.3, Q6, Q10, Q18), áp cho từng công ty. Ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch –
     /// Q6), người quản trị chỉnh sau. Đề nghị mua theo loại mua (lát Y3c): 1B (PR) 8 cấp có Thủ kho nơi nhận và Trưởng phòng HC kiểm định mức nhóm
-    /// B; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán công trình (PRE) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL). Chưa có (thêm khi
-    /// làm lát tương ứng): bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
+    /// B; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán công trình (PRE) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL); bảng tổng hợp
+    /// 2A/2B (BTH – lát Y5b) 4 cấp. Chưa có (thêm khi làm lát tương ứng): đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
     /// </summary>
     public static readonly IReadOnlyList<ApprovalRuleTemplate> CuvtForms =
     [
@@ -111,6 +111,10 @@ public static class ApprovalRuleTemplates
         new(ApprovalTypes.PurchaseRequestService, 6, "PHOCTUBCL", false, "DV: Phó Chủ tịch UBCL&PT"),
         new(ApprovalTypes.PurchaseRequestService, 7, "CHUTICH", false, "DV: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
         new(ApprovalTypes.PurchaseRequestOverEstimate, 1, "GDTCKT", false, "1A vượt dự toán công trình (Q5): Giám đốc TC-NQ-KT xem xét (tự đặt)"),
+        new(DocumentTypes.PurchaseSummary, 1, "TPCUVT", false, "2A/2B: Trưởng phòng CUVT"),
+        new(DocumentTypes.PurchaseSummary, 2, null, false, "2A/2B: Giám đốc khối của bộ phận đề xuất", ApproverKind.DivisionDirector),
+        new(DocumentTypes.PurchaseSummary, 3, "PHOCTUBCL", false, "2A/2B: Phó Chủ tịch UBCL&PT"),
+        new(DocumentTypes.PurchaseSummary, 4, "CHUTICH", false, "2A/2B: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
         new(DocumentTypes.RequestForQuotation, 1, "TPCUVT", false, "3a/3A/3B: Trưởng phòng CUVT"),
         new(DocumentTypes.RequestForQuotation, 2, "TPTCKT", false, "3a/3A/3B: Trưởng phòng TC-NQ-KT"),
         new(DocumentTypes.RequestForQuotation, 3, "GDTCKT", false, "3a/3A/3B: Giám đốc TC-NQ-KT"),

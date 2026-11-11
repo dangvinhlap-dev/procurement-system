@@ -135,6 +135,9 @@ internal sealed class CancelChainService : ICancelChainService
                     .Where(l => l.SourcePrLineId != null && lineIds.Contains(l.SourcePrLineId.Value)).Select(l => l.OrderId).Distinct()
                     .ToListAsync(cancellationToken);
                 chain.Request = pr;
+                // Bảng tổng hợp 2A/2B chứa dòng của PR (lát Y5b): chưa đưa vào dây chuyền (lát Y5c) – chặn, hủy bảng tổng hợp trước.
+                var summaries = await PurchaseSummaryService.ActiveSummaryNosAsync(_db, [pr.Id], cancellationToken);
+                if (summaries.Count > 0) chain.Blocks.Add($"đề nghị {pr.No} đang ở bảng tổng hợp {string.Join(", ", summaries)} – hủy bảng tổng hợp trước");
                 await AddOrdersAsync(chain, orderIds, allCompanies: false, cancellationToken);
                 await WarnOtherRequestsAsync(chain, pr.Id, cancellationToken);
                 break;

@@ -66,7 +66,7 @@ public static class RoleTemplates
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
         Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView, Permissions.Purchase.ReceiptView,
-        Permissions.Purchase.UnitView,
+        Permissions.Purchase.UnitView, Permissions.Purchase.SummaryView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -175,6 +175,8 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractApprove,
             Permissions.MasterData.SoleSourceApprove,
+            // Cấp cuối của bảng tổng hợp 2A/2B theo biểu mẫu CUVT (lát Y5b).
+            Permissions.Purchase.SummaryApprove,
             // Cấp cuối của so sánh/trình giá 3a, 3A, 3B theo biểu mẫu CUVT (lát O3). Vai trò CHUTICH tạo trước 0.22.0 giữ nguyên quyền –
             // người quản trị thêm "Duyệt kết quả chọn thầu" bằng tay.
             Permissions.Sourcing.RfqApproveAward,
@@ -257,12 +259,15 @@ public static class RoleTemplates
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
             Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Report.PurchaseView,
+            // GĐ khối duyệt bảng tổng hợp 2A/2B của bộ phận trong khối (lát Y5b).
+            Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryApprove,
         ]),
         new("TPCUVT", "Trưởng phòng Cung ứng vật tư", "Kiểm tra đề nghị mua (Phòng CUVT), duyệt so sánh/trình giá 3a, 3A, 3B (kết quả chọn thầu), duyệt PO 4A/4B – không lập phiếu",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
             Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.SummaryApprove,
         ]),
         new("NVCUVT", "Nhân viên Phòng Cung ứng vật tư", "Tìm kiếm, đánh giá NCC, hỏi giá (RFQ), lập so sánh/trình giá, lập PO, theo dõi giao hàng – không duyệt",
         [
@@ -271,6 +276,8 @@ public static class RoleTemplates
             Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward, Permissions.Purchase.PoCreate, Permissions.Report.PurchaseView,
             // Lát Y5a: người lập bảng tổng hợp 2A/2B gán đơn vị mua – tự quản lý danh mục đơn vị mua (Q3).
             Permissions.Purchase.UnitManage,
+            // Lát Y5b: lập bảng tổng hợp 2A/2B (chọn dòng đề nghị đã duyệt, gán đơn vị mua); đọc ngân sách, dự toán trên đầu phiếu.
+            Permissions.Purchase.SummaryManage, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
         ]),
         new("TPTCKT", "Trưởng phòng Tài chính – Nguồn quỹ – Kế toán", "Kiểm dự toán, định mức trên đề nghị mua; duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B về nguồn tiền",
         [
@@ -293,6 +300,7 @@ public static class RoleTemplates
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.SummaryApprove,
         ]),
     ];
 }

@@ -87,10 +87,10 @@ test('áp cấu hình duyệt mẫu theo biểu mẫu CUVT cho công ty mới', 
   await expect(table).toContainText('GDTCKT – Giám đốc Tài chính – Nguồn quỹ – Kế toán')
   await page.screenshot({ path: 'e2e/screenshots/approval-rule-template-cuvt.png' })
 
-  // Lát Y3c: thêm cấp Thủ kho nơi nhận, bộ PRA (1A), PRS (DV), PRE (vượt dự toán) – 32 cấp; Trưởng phòng ban có ở PR, PRA, PRS.
+  // Lát Y3c: thêm cấp Thủ kho nơi nhận, bộ PRA (1A), PRS (DV), PRE (vượt dự toán) – 32 cấp; lát Y5b thêm bảng tổng hợp BTH 4 cấp → 36; Trưởng phòng ban có ở PR, PRA, PRS.
   await expect(table).toContainText('Thủ kho nơi nhận')
-  await dialog.getByRole('button', { name: 'Tạo 32 cấp duyệt' }).click()
-  await expect(page.locator('.ant-message')).toContainText('Đã tạo 32 cấp duyệt theo biểu mẫu CUVT.')
+  await dialog.getByRole('button', { name: 'Tạo 36 cấp duyệt' }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã tạo 36 cấp duyệt theo biểu mẫu CUVT.')
   await expect(page.locator('.data-grid-row', { hasText: 'PHOCTUBCL' }).first()).toBeVisible()
   await expect(page.locator('.data-grid-row', { hasText: 'Trưởng phòng ban của phiếu' })).toHaveCount(3)
   await expect(page.locator('.data-grid-row', { hasText: 'Thủ kho nơi nhận' })).toHaveCount(2)

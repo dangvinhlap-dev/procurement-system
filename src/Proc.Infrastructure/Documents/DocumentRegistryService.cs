@@ -64,6 +64,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         }
 
         Add(Permissions.Purchase.PrView, DocumentTypes.PurchaseRequest);
+        Add(Permissions.Purchase.SummaryView, DocumentTypes.PurchaseSummary);
         Add(Permissions.Purchase.PoView, DocumentTypes.PurchaseOrder);
         Add(Permissions.Inventory.DocumentView, InventoryTypes);
         Add(Permissions.Purchase.ReceiptView, DocumentTypes.GoodsReceiptConfirmation);
@@ -147,6 +148,24 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
                 .Select(d => new { d.Id, d.No, d.Date, d.Purpose, d.TotalAmount, d.Status, d.CreatedBy, d.CreatedAt })
                 .ToListAsync(cancellationToken);
             raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PurchaseRequest, d.Id, d.No, d.Date, null, null, null, d.Purpose,
+                d.TotalAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.PurchaseSummary))
+        {
+            // Bảng tổng hợp 2A/2B (lát Y5b): mô tả = biểu mẫu + bộ phận đề xuất.
+            var q = _db.PurchaseSummaries.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            if (acted) { var actedIds = ActedIds(DocumentTypes.PurchaseSummary); q = q.Where(d => actedIds.Contains(d.Id)); }
+            var rows = await q.OrderByDescending(d => d.Date).Take(take)
+                .Select(d => new
+                {
+                    d.Id, d.No, d.Date, d.Form, d.TotalAmount, d.Status, d.CreatedBy, d.CreatedAt,
+                    Department = _db.Departments.Where(x => x.Id == d.DepartmentId).Select(x => x.Name).FirstOrDefault(),
+                })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PurchaseSummary, d.Id, d.No, d.Date, null, null, null,
+                $"{(d.Form == PurchaseSummaryForm.Construction ? "2A" : "2B")} – {d.Department}",
                 d.TotalAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
         }
 

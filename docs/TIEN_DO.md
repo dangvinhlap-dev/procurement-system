@@ -241,6 +241,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     hướng dẫn 02-danh-muc mục 2.4. Test: domain `PurchasingUnitTests` (6), tích hợp `PurchasingUnitTests` (2), e2e `purchasing-units.spec.ts`.
     Build 0 cảnh báo, `dotnet test` 680/680, tsc, oxlint, `npm run build`; Playwright đủ bộ 135/135 (API thử 5015 Testing bản artifacts scratchpad
     + Vite 5189). **Đã merge.** Tiếp: **Y5b**.
+  - **Y5b (nhánh `feature/y5b-bang-tong-hop`)**: backend phiếu **BTH** – `PurchaseSummary` + dòng (migration `V0_23_0_BangTongHopDeXuat`), 2A cùng
+    công trình / 2B đề nghị B, DV; cùng bộ phận; dòng đề nghị đã duyệt còn cần mua, mỗi dòng một bảng chưa hủy (khóa đề nghị), đơn vị mua từng dòng;
+    khung dự toán / ngân sách đầu phiếu; bộ cấp **BTH** (mẫu CUVT 4 cấp, bộ CUVT 36 cấp), quyền `Purchase.Summary.View/Manage/Approve` + vai trò mẫu;
+    API `/api/purchase-summaries`; nối Việc cần làm, nhắc duyệt, xem trước chuỗi, tra cứu chứng từ, đính kèm; PR trong bảng chưa hủy thì chặn hủy
+    (cả hủy dây chuyền). Web: hằng quyền, nhãn BTH ở tra cứu; e2e `approval-rule-template` (36 cấp), `document-numbering` (23 loại). design.md 19.3
+    đoạn "Lát Y5b". Test: domain `PurchaseSummaryTests` (4), tích hợp `BangTongHop2B_…`, `BangTongHop2A_…`; sửa danh sách loại duyệt ở 2 test cũ.
+    Build 0 cảnh báo, `dotnet test` 686/686, tsc, oxlint, `npm run build`; Playwright đủ bộ 135/135 (API thử 5016 Testing bản artifacts scratchpad +
+    Vite 5191). Tiếp: **Y5c** (giao diện phiếu, tham số bắt buộc qua bảng tổng hợp, hủy dây chuyền).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

@@ -147,6 +147,12 @@ public static class Permissions
         public const string UnitView = "Purchase.Unit.View";
         /// <summary>Quyền "Thêm, sửa đơn vị mua" – tách khỏi quyền bộ phận để giao Phòng CUVT tự quản lý.</summary>
         public const string UnitManage = "Purchase.Unit.Manage";
+        /// <summary>Quyền "Xem bảng tổng hợp đề xuất mua" 2A/2B (lát Y5b, design.md mục 19.3).</summary>
+        public const string SummaryView = "Purchase.Summary.View";
+        /// <summary>Quyền "Lập, sửa, gửi duyệt, hủy nháp bảng tổng hợp đề xuất mua" – Phòng CUVT.</summary>
+        public const string SummaryManage = "Purchase.Summary.Manage";
+        /// <summary>Quyền "Duyệt bảng tổng hợp đề xuất mua" (bộ cấp BTH).</summary>
+        public const string SummaryApprove = "Purchase.Summary.Approve";
         /// <summary>Quyền "Xem kế hoạch nhu cầu" (lát G5, design.md mục 18.25).</summary>
         public const string DemandPlanView = "Purchase.DemandPlan.View";
         /// <summary>Quyền "Lập, chốt, điều chỉnh, hủy phiếu kế hoạch nhu cầu".</summary>
@@ -363,6 +369,9 @@ public static class Permissions
         new(Purchase.ProjectManage, "Thêm, sửa công trình, điều chỉnh dự toán"),
         new(Purchase.UnitView, "Xem danh mục đơn vị mua"),
         new(Purchase.UnitManage, "Thêm, sửa đơn vị mua"),
+        new(Purchase.SummaryView, "Xem bảng tổng hợp đề xuất mua"),
+        new(Purchase.SummaryManage, "Lập, sửa, gửi duyệt bảng tổng hợp đề xuất mua"),
+        new(Purchase.SummaryApprove, "Duyệt bảng tổng hợp đề xuất mua"),
         new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),

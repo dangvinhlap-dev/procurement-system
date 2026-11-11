@@ -2304,11 +2304,28 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
 - API `/api/purchasing-units` (danh sách, chi tiết, thêm, sửa) và `/options` (đơn vị đang dùng, cho người xem danh mục hoặc lập bảng tổng hợp).
   Migration `V0_23_0_DonViMua` (Down mất danh mục đơn vị mua).
 
-**Lát Y5b, Y5c – dự kiến** (chi tiết ghi khi làm): phiếu **BTH** loại 2A (dòng của đề nghị loại A, cùng một công trình) hoặc 2B (đề nghị B, DV),
-cùng một bộ phận đề xuất; Phòng CUVT chọn dòng đề nghị đã duyệt còn cần mua, mỗi dòng đề nghị chỉ ở một bảng tổng hợp chưa hủy, gán đơn vị mua
-từng dòng; đầu phiếu như biểu mẫu (2A: công trình, dự toán, lũy kế gồm số đề xuất, tổng đề xuất; 2B: định mức/dự trù = ngân sách bộ phận tháng,
-lũy kế, tổng đề xuất); bộ cấp duyệt **BTH** (mẫu CUVT: TP CUVT → GĐ khối của phiếu → Phó CT UBCL&PT → Chủ tịch); tham số công ty bật "bắt buộc
-qua bảng tổng hợp" thì dòng đề nghị chỉ lên RFQ/PO khi thuộc bảng tổng hợp đã duyệt (mặc định tắt).
+**Lát Y5b – phiếu bảng tổng hợp BTH + duyệt (backend).** Quy tắc (tự đặt khi chưa chốt riêng):
+
+- Phiếu **BTH** (`PurchaseSummary`, `PurchaseSummaryLine`; migration `V0_23_0_BangTongHopDeXuat`) theo công ty, cùng vòng đời chứng từ có duyệt
+  như PR (Nháp → Chờ duyệt → Đã duyệt; từ chối / rút về nháp; hủy theo mục 20.2a). Biểu mẫu **2A** (Construction) chỉ lấy dòng đề nghị **loại A
+  cùng một công trình** (bắt buộc chọn công trình đang thực hiện); **2B** (Goods) lấy đề nghị **loại B hoặc DV** (không gắn công trình). Mọi dòng
+  cùng **bộ phận đề xuất** của phiếu.
+- Dòng = một dòng đề nghị **Đã duyệt** (không lấy đề nghị đã đóng / hủy) **còn cần mua** = SL cần mua − SL đã lên PO chưa hủy (> 0). SL, đơn giá
+  tham khảo **chụp lúc lưu nháp và chụp lại lúc gửi duyệt**; sau khi gửi không đổi theo đề nghị nữa. Mỗi dòng đề nghị chỉ ở **một bảng chưa hủy**
+  (kiểm tra dưới khóa các đề nghị liên quan). Mỗi dòng bắt buộc **đơn vị mua** đang dùng (đơn vị đã gán sẵn trên dòng giữ được dù đã ngừng dùng).
+- Đầu phiếu (khung chi phí, tính khi xem): 2A – dự toán, lũy kế đã mua (PO đã duyệt của công trình, chưa VAT), tổng đề xuất, còn lại = dự toán −
+  lũy kế − tổng đề xuất (chỉ trừ khi bảng còn nháp / chờ duyệt). 2B – ngân sách bộ phận × tháng của ngày lập, lũy kế đã dùng (mục 18.24 – đã gồm
+  các đề nghị của bảng), còn lại = ngân sách − lũy kế. Bảng tổng hợp **không ghi ngân sách** (đã tính ở đề nghị – tránh đếm hai lần).
+- Bộ cấp duyệt **BTH** ("Bảng tổng hợp đề xuất mua", có bộ phận → cấu hình được GĐ khối của phiếu); chưa cấu hình thì một cấp. Mẫu CUVT 4 cấp:
+  TP CUVT → GĐ khối của bộ phận đề xuất → Phó CT UBCL&PT → Chủ tịch (bộ CUVT nay 36 cấp).
+- Quyền `Purchase.Summary.View` (xem – trong nhóm xem nghiệp vụ mua), `Purchase.Summary.Manage` (lập, sửa, gửi, rút, hủy nháp – NVCUVT, kèm xem
+  ngân sách, công trình), `Purchase.Summary.Approve` (TPCUVT, GDKHOI, PHOCTUBCL, CHUTICH). Đính kèm loại chủ `PurchaseSummary` (khóa sau duyệt).
+- API `/api/purchase-summaries` (danh sách, chi tiết, `/candidates` dòng đề nghị chọn được, thêm, sửa, gửi, rút, duyệt, từ chối, hủy); có trong
+  Việc cần làm (mô tả "2A/2B – bộ phận"), nhắc duyệt quá hạn, xem trước chuỗi duyệt, tra cứu chứng từ.
+- Đề nghị đang ở bảng tổng hợp chưa hủy: **không hủy được** (kể cả hủy dây chuyền) – hủy bảng tổng hợp trước; đưa bảng vào dây chuyền ở Y5c.
+
+**Lát Y5c – dự kiến**: màn hình phiếu BTH (danh sách, form, chọn dòng, in), trang duyệt gọn; tham số công ty bật "bắt buộc qua bảng tổng hợp"
+thì dòng đề nghị chỉ lên RFQ/PO khi thuộc bảng tổng hợp đã duyệt (mặc định tắt); hủy dây chuyền đề nghị → bảng tổng hợp → RFQ/PO.
 
 ### 19.4 Bỏ phân hệ kho
 

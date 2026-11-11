@@ -258,6 +258,43 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.UnitManage)
             .Validate<UpdatePurchasingUnitRequest>();
 
+        // Bảng tổng hợp đề xuất mua 2A/2B (lát Y5b, design.md mục 19.3 bước 2): Phòng CUVT lập, duyệt theo bộ cấp BTH.
+        var summaries = app.MapGroup("/api/purchase-summaries").WithTags("Bảng tổng hợp đề xuất mua");
+        summaries.MapGet("/", (IPurchaseSummaryService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequireAnyPermission(Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryManage, Permissions.Purchase.SummaryApprove);
+        summaries.MapGet("/candidates", (string? form, Guid? departmentId, Guid? constructionProjectId, Guid? summaryId, IPurchaseSummaryService s,
+                    CancellationToken ct) =>
+                s.CandidatesAsync(new PurchaseSummaryCandidateQuery(form, departmentId, constructionProjectId, summaryId), ct))
+            .RequirePermission(Permissions.Purchase.SummaryManage);
+        summaries.MapGet("/{id:guid}", (Guid id, IPurchaseSummaryService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryManage, Permissions.Purchase.SummaryApprove);
+        summaries.MapPost("/", async (SavePurchaseSummaryRequest request, IPurchaseSummaryService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/purchase-summaries/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.SummaryManage)
+            .Validate<SavePurchaseSummaryRequest>();
+        summaries.MapPut("/{id:guid}", (Guid id, SavePurchaseSummaryRequest request, IPurchaseSummaryService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SummaryManage)
+            .Validate<SavePurchaseSummaryRequest>();
+        summaries.MapPost("/{id:guid}/submit", (Guid id, IPurchaseSummaryService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.SummaryManage);
+        // Rút về nháp – người lập (hoặc quản trị); service kiểm tra người lập.
+        summaries.MapPost("/{id:guid}/recall", (Guid id, IPurchaseSummaryService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.SummaryManage);
+        summaries.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPurchaseSummaryService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SummaryApprove);
+        summaries.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseSummaryService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SummaryApprove);
+        // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị (DocumentCancelPolicy kiểm tra trong service); bắt buộc lý do.
+        summaries.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, IPurchaseSummaryService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequireAnyPermission(Permissions.Purchase.SummaryManage, Permissions.System.DocumentCancel);
+
         // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
         var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
         plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))

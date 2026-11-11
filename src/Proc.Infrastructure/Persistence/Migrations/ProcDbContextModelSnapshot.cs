@@ -5718,6 +5718,184 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("PurchaseRequestNewItem", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("BudgetAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal?>("BudgetUsedAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConstructionProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Form")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsOverBudget")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Date");
+
+                    b.HasIndex("CompanyId", "No")
+                        .IsUnique();
+
+                    b.HasIndex("ConstructionProjectId", "CompanyId");
+
+                    b.HasIndex("DepartmentId", "CompanyId");
+
+                    b.ToTable("PurchaseSummary", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummaryLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("BaseQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("EstPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("NeededDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PurchasingUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Qty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SummaryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("UomFactor")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<Guid>("UomId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("RequestLineId");
+
+                    b.HasIndex("UomId");
+
+                    b.HasIndex("PurchasingUnitId", "CompanyId");
+
+                    b.HasIndex("SummaryId", "LineNo");
+
+                    b.ToTable("PurchaseSummaryLine", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchasingUnit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5756,8 +5934,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasAlternateKey("Id", "CompanyId");
 
                     b.HasIndex("CompanyId", "Code")
                         .IsUnique();
@@ -8041,6 +8217,74 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummary", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.ConstructionProject", null)
+                        .WithMany()
+                        .HasForeignKey("ConstructionProjectId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummaryLine", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseRequestLine", null)
+                        .WithMany()
+                        .HasForeignKey("RequestLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseSummary", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SummaryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Uom", null)
+                        .WithMany()
+                        .HasForeignKey("UomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchasingUnit", null)
+                        .WithMany()
+                        .HasForeignKey("PurchasingUnitId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchasingUnit", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -8270,6 +8514,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("NewItems");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummary", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Proc.Domain.Sourcing.Rfq", b =>
