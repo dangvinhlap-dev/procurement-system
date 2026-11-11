@@ -278,6 +278,8 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
   const noAmount = types.data !== undefined && amountLabel === null
   // Người duyệt động chỉ cho loại phiếu có bộ phận (PR, PO và các bộ cấp phụ) – lát O1.
   const hasDepartment = types.data?.find((t) => t.code === docType)?.hasDepartment ?? false
+  // Thủ kho nơi nhận chỉ cho bộ cấp đề nghị mua có nơi nhận (PR, PRA) – lát Y3c.
+  const hasStorekeeper = types.data?.find((t) => t.code === docType)?.hasStorekeeper ?? false
   const approverKind = Form.useWatch('approverKind', form) ?? rule?.approverKind ?? 'Role'
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -366,13 +368,14 @@ function ApprovalRuleDrawer({ rule, canManage, onClose }: { rule: ApprovalRule |
               </Form.Item>
               <Form.Item label="Người duyệt" name="approverKind"
                 extra={hasDepartment
-                  ? 'Trưởng phòng ban / GĐ khối: lấy theo bộ phận trên phiếu (Hệ thống → Bộ phận, Khối); chưa khai báo thì phiếu không gửi duyệt được.'
+                  ? `Trưởng phòng ban / GĐ khối: lấy theo bộ phận trên phiếu (Hệ thống → Bộ phận, Khối); chưa khai báo thì phiếu không gửi duyệt được.${hasStorekeeper ? ' Thủ kho nơi nhận: người có quyền nhập tồn và phạm vi kho chứa nơi nhận – nhập tồn rồi mới duyệt; đề nghị dịch vụ tự bỏ cấp này.' : ''}`
                   : 'Loại phiếu này không có bộ phận – chỉ duyệt theo vai trò.'}>
                 <Select showSearch={false} disabled={!hasDepartment}
                   options={[
                     { value: 'Role', label: 'Theo vai trò' },
                     { value: 'DepartmentHead', label: 'Trưởng phòng ban của phiếu' },
                     { value: 'DivisionDirector', label: 'GĐ khối của phiếu' },
+                    ...(hasStorekeeper ? [{ value: 'Storekeeper', label: 'Thủ kho nơi nhận' }] : []),
                   ]} />
               </Form.Item>
               {approverKind === 'Role' && (

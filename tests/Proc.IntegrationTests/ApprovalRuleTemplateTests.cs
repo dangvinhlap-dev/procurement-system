@@ -102,15 +102,21 @@ public class ApprovalRuleTemplateTests
         var preview = await ReadAsync<List<ApprovalRuleTemplateDto>>(await member.GetAsync("/api/approval-rules/template?set=CUVT", Ct));
         Assert.Equal(ApprovalRuleTemplates.CuvtForms.Count, preview.Count);
         Assert.All(preview, r => Assert.Equal("Create", r.Status));
-        Assert.Contains(preview, r => r is { DocType: "PR", Level: 1, RoleCode: null, ApproverKind: "DepartmentHead", RoleName: "Trưởng phòng ban của phiếu" });
-        Assert.Contains(preview, r => r is { DocType: "PR", Level: 4, ApproverKind: "DivisionDirector", RoleName: "GĐ khối của phiếu" });
+        Assert.Contains(preview, r => r is { DocType: "PR", Level: 1, RoleCode: null, ApproverKind: "Storekeeper", RoleName: "Thủ kho nơi nhận" });
+        Assert.Contains(preview, r => r is { DocType: "PR", Level: 2, RoleCode: null, ApproverKind: "DepartmentHead", RoleName: "Trưởng phòng ban của phiếu" });
+        Assert.Contains(preview, r => r is { DocType: "PR", Level: 6, ApproverKind: "DivisionDirector", RoleName: "GĐ khối của phiếu" });
 
         var applied = await ReadAsync<ApplyApprovalRuleTemplateResult>(await member.PostAsync("/api/approval-rules/template?set=cuvt", null, Ct));
         Assert.Equal(ApprovalRuleTemplates.CuvtForms.Count, applied.Created);
         var rules = await ReadAsync<List<ApprovalRuleDto>>(await member.GetAsync("/api/approval-rules", Ct));
         Assert.Equal(
-            [(1, (string?)null, "DepartmentHead"), (2, "TPCUVT", "Role"), (3, "TPTCKT", "Role"), (4, null, "DivisionDirector"), (5, "PHOCTUBCL", "Role"), (6, "CHUTICH", "Role")],
+            [(1, (string?)null, "Storekeeper"), (2, null, "DepartmentHead"), (3, "TPCUVT", "Role"), (4, "TPTCKT", "Role"), (5, "TPHC", "Role"),
+                (6, null, "DivisionDirector"), (7, "PHOCTUBCL", "Role"), (8, "CHUTICH", "Role")],
             rules.Where(r => r.DocType == "PR").OrderBy(r => r.Level).Select(r => (r.Level, r.RoleCode, r.ApproverKind)));
+        // Lát Y3c: bộ PRA (1A, không TP HC), PRS (DV, không Thủ kho), PRE (vượt dự toán).
+        Assert.Equal(7, rules.Count(r => r.DocType == "PRA"));
+        Assert.DoesNotContain(rules, r => r.DocType == "PRS" && r.ApproverKind == "Storekeeper");
+        Assert.Equal(["GDTCKT"], rules.Where(r => r.DocType == "PRE").Select(r => r.RoleCode));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "CHUTICH"], rules.Where(r => r.DocType == "PO").OrderBy(r => r.Level).Select(r => r.RoleCode));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "PHOCTUBCL", "CHUTICH"], rules.Where(r => r.DocType == "RFQ").OrderBy(r => r.Level).Select(r => r.RoleCode));
         Assert.All(rules, r => Assert.Equal(0m, r.MinAmount));

@@ -137,9 +137,20 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         // Ngân sách tính lại lúc gửi (phiếu khác có thể đã dùng ngân sách từ lúc lưu nháp); vượt thì qua thêm chặng duyệt
         // "vượt ngân sách" PRB – không chặn gửi (design.md mục 18.24, quyết định Q5).
         pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
-        if (pr.IsOverBudget)
-            await _approvals.SubmitWithStagesAsync(pr, [(ApprovalTypes.PurchaseRequestOverBudget, ApprovalTypes.OverBudgetStage)], cancellationToken);
-        else await _approvals.SubmitAsync(pr, cancellationToken);
+        var stages = new List<(string Type, int Stage)>();
+        if (pr.IsOverBudget) stages.Add((ApprovalTypes.PurchaseRequestOverBudget, ApprovalTypes.OverBudgetStage));
+        // Loại A vượt dự toán công trình (lũy kế PO đã duyệt + tổng dự kiến của phiếu > dự toán): thêm chặng PRE, không chặn gửi (lát Y3c – Q5).
+        if (pr.Category == PurchaseCategory.Construction && (await ConstructionBudgetAsync(pr, cancellationToken))?.OverEstimate == true)
+            stages.Add((ApprovalTypes.PurchaseRequestOverEstimate, ApprovalTypes.OverEstimateStage));
+        // Chuỗi duyệt theo loại mua (lát Y3c – Q6): loại A theo bộ PRA, dịch vụ theo bộ PRS; chưa cấu hình thì theo bộ PR (dịch vụ tự bỏ cấp Thủ kho).
+        var ruleType = pr.Category switch
+        {
+            PurchaseCategory.Construction => ApprovalTypes.PurchaseRequestConstruction,
+            PurchaseCategory.Service => ApprovalTypes.PurchaseRequestService,
+            _ => null,
+        };
+        // Phần vượt được xem trước khi trình lên cấp cao nhất – Chủ tịch (người dùng yêu cầu 11/11/2026).
+        await _approvals.SubmitWithStagesAsync(pr, stages, cancellationToken, ruleType, extraBeforeTopLevel: true);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -228,10 +239,14 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         if (pr.WarehouseId is not { } warehouseId) return $"Đề nghị {pr.No} chưa có nơi nhận – không xác định được thủ kho nhập tồn.";
         if (!_scope.AllWarehouses && !_scope.WarehouseIds.Contains(warehouseId))
             throw new ForbiddenAccessException($"Nơi nhận của đề nghị {pr.No} ngoài phạm vi kho của bạn – chỉ thủ kho nơi nhận nhập tồn.");
-        var approved = await _db.ApprovalSteps.AsNoTracking().AnyAsync(s =>
-            s.DocType == DocumentTypes.PurchaseRequest && s.DocumentId == pr.Id && s.Round == pr.ApprovalRound && s.Status == ApprovalStepStatus.Approved,
-            cancellationToken);
-        return approved ? $"Đề nghị {pr.No} đã có cấp duyệt trong lượt này – tồn đã khóa, không sửa được." : null;
+        // Lượt có bước Thủ kho (lát Y3c): tồn khóa khi bước Thủ kho đã duyệt; lượt không có bước Thủ kho: khi đã có cấp nào duyệt (lát Y3b).
+        var round = await _db.ApprovalSteps.AsNoTracking()
+            .Where(s => s.DocType == DocumentTypes.PurchaseRequest && s.DocumentId == pr.Id && s.Round == pr.ApprovalRound)
+            .Select(s => new { s.Kind, s.Status })
+            .ToListAsync(cancellationToken);
+        var keeperSteps = round.Where(s => s.Kind == ApproverKind.Storekeeper).ToList();
+        var locked = (keeperSteps.Count > 0 ? keeperSteps : round).Any(s => s.Status == ApprovalStepStatus.Approved);
+        return locked ? $"Đề nghị {pr.No} đã có cấp duyệt trong lượt này – tồn đã khóa, không sửa được." : null;
     }
 
     /// <summary>
@@ -623,7 +638,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var pendingNew = pr.Status == ApprovalDocumentStatus.Approved && pr.NewItems.Any(n => n.LinkedLineId is null);
 
         var step = pr.Status == ApprovalDocumentStatus.Submitted ? await _approvals.CurrentStepAsync(pr, cancellationToken) : null;
-        var canApprove = step is not null && itemsVisible && await _approvals.ApproveBlockerAsync(pr, step, cancellationToken) is null;
+        // Bước Thủ kho (lát Y3c): thủ kho thấy nút Duyệt sau khi đã nhập tồn trong lượt này.
+        var canApprove = step is not null && itemsVisible && await _approvals.ApproveBlockerAsync(pr, step, cancellationToken) is null
+            && pr.ApproveReadyBlocker(step) is null;
         var canCreate = _scope.HasPermission(Permissions.Purchase.PrCreate);
         string? readOnly = !itemsVisible ? "Phiếu có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được."
             : !canCreate ? "Bạn không có quyền lập, sửa đề nghị mua hàng." : null;

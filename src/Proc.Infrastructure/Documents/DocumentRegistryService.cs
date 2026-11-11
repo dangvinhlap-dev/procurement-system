@@ -538,8 +538,8 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             var row = openRows[step.DocumentId];
             var approvedBy = approved[(step.DocumentId, step.DocType, step.Round)].ToHashSet();
             IReadOnlyCollection<Guid>? only = dynamic.TryGetValue(step.Id, out var d) ? (d.UserId is { } id ? [id] : []) : null;
-            return new NextApproverResolver.PendingStep(step.Id, step.DocType, step.CompanyId, step.RoleId,
-                u => u == row.CreatedBy, row.SupplierId is { } sid ? [sid] : [], only, approvedBy.Contains);
+            // Bước Thủ kho nơi nhận (lát Y3c) lấy quyền nhập tồn + phạm vi kho theo chính bước.
+            return NextApproverResolver.PendingStep.Of(step, u => u == row.CreatedBy, row.SupplierId is { } sid ? [sid] : [], only, approvedBy.Contains);
         }).ToList(), cancellationToken);
         return active.GroupBy(s => s.DocumentId).ToDictionary(
             g => g.Key,

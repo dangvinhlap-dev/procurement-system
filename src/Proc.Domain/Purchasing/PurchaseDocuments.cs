@@ -310,6 +310,15 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     /// <summary>Bộ phận của phiếu cho người duyệt động Trưởng phòng ban / GĐ khối (lát O1) – cùng bộ phận tính ngân sách.</summary>
     public Guid? ApprovalDepartmentId => BudgetDepartmentId;
 
+    /// <inheritdoc />
+    public virtual Guid? ApprovalWarehouseId => null;
+
+    /// <inheritdoc />
+    public virtual bool HasStorekeeperStep => false;
+
+    /// <inheritdoc />
+    public virtual string? ApproveReadyBlocker(ApprovalStep step) => null;
+
     /// <summary>Giá trị phiếu tính vào ngân sách – tiền hàng chưa VAT (PR: tổng dự kiến; PO: tổng tiền sau chiết khấu).</summary>
     public abstract decimal BudgetedAmount { get; }
 
@@ -465,6 +474,27 @@ public sealed class PurchaseRequest : ApprovableDocument
 
     /// <summary>Thời điểm thủ kho xác nhận tồn lần gần nhất (UTC).</summary>
     public DateTimeOffset? StockConfirmedAt { get; private set; }
+
+    /// <summary>Nơi nhận – bước Thủ kho nơi nhận (lát Y3c) lấy thủ kho theo kho này.</summary>
+    public override Guid? ApprovalWarehouseId => WarehouseId;
+
+    /// <summary>Đề nghị dịch vụ không có bước Thủ kho (design.md mục 19.2, Q6); loại A, B có.</summary>
+    public override bool HasStorekeeperStep => Category != PurchaseCategory.Service;
+
+    /// <summary>
+    /// Bước Thủ kho nơi nhận chỉ duyệt được khi thủ kho đã nhập tồn trong lượt này (lát Y3c): xác nhận tồn sau thời điểm gửi duyệt của lượt.
+    /// Tồn của lượt trước (bị từ chối rồi gửi lại) không tính – thủ kho xác nhận lại ở lượt mới (lát Y3b).
+    /// </summary>
+    /// <param name="step">Bước đang đến lượt.</param>
+    /// <returns>Lý do chưa duyệt được hoặc null.</returns>
+    public override string? ApproveReadyBlocker(ApprovalStep step)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        if (step.Kind != ApproverKind.Storekeeper) return null;
+        return StockConfirmedAt is { } at && (step.SubmittedAt is null || at >= step.SubmittedAt)
+            ? null
+            : $"Thủ kho chưa nhập tồn cho đề nghị {No} trong lượt duyệt này – bấm \"Nhập tồn\" trước rồi mới duyệt.";
+    }
 
     /// <summary>Các dòng.</summary>
     public IReadOnlyList<PurchaseRequestLine> Lines => _lines;

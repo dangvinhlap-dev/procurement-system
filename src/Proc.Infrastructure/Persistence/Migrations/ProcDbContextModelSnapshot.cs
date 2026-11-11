@@ -3917,6 +3917,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
@@ -3924,6 +3927,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasIndex("OnBehalfOf");
 
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("WarehouseId");
 
                     b.HasIndex("CompanyId", "Status");
 
@@ -7460,6 +7465,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Organization.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Organization.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

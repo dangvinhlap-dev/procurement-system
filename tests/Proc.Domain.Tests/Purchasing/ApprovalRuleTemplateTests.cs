@@ -129,7 +129,14 @@ public class ApprovalRuleTemplateTests
             var type = ApprovalTypes.Get(rule.DocType);
             Assert.False(rule.HeadOfficeOnly);
             Assert.False(string.IsNullOrWhiteSpace(rule.Note));
-            if (rule.Kind == ApproverKind.Role)
+            if (rule.Kind == ApproverKind.Storekeeper)
+            {
+                // Bước Thủ kho nơi nhận (lát Y3c): người có quyền nhập tồn (vai trò mẫu KHO) + phạm vi kho nơi nhận, chỉ bộ cấp có nơi nhận.
+                Assert.Null(rule.RoleCode);
+                Assert.True(type.HasStorekeeper, $"{rule.DocType}: cấp Thủ kho chỉ cho đề nghị mua có nơi nhận");
+                Assert.Contains(Permissions.Purchase.PrEnterStock, byCode["KHO"]);
+            }
+            else if (rule.Kind == ApproverKind.Role)
             {
                 Assert.True(byCode.ContainsKey(rule.RoleCode!), $"{rule.DocType} cấp {rule.Level}: vai trò {rule.RoleCode} không có trong bộ CUVT");
                 Assert.Contains(type.ApprovePermission, byCode[rule.RoleCode!]);
@@ -144,10 +151,13 @@ public class ApprovalRuleTemplateTests
         foreach (var group in rules.GroupBy(r => r.DocType))
             Assert.Equal(Enumerable.Range(1, group.Count()), group.Select(r => r.Level).Order());
 
-        // Mục 19.3 (Thủ kho, TP HC nhóm B thêm ở lát Y3): 1A/1B/DV, 3a/3A/3B, 4A/4B.
+        // Mục 19.3 (lát Y3c – Q6): 1B có Thủ kho + TP HC; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán (PRE); 3a/3A/3B; 4A/4B.
         static IEnumerable<string> Chain(IEnumerable<ApprovalRuleTemplate> rs, string docType) =>
             rs.Where(r => r.DocType == docType).OrderBy(r => r.Level).Select(r => r.RoleCode ?? r.Kind.ToString());
-        Assert.Equal(["DepartmentHead", "TPCUVT", "TPTCKT", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PR"));
+        Assert.Equal(["Storekeeper", "DepartmentHead", "TPCUVT", "TPTCKT", "TPHC", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PR"));
+        Assert.Equal(["Storekeeper", "DepartmentHead", "TPCUVT", "TPTCKT", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PRA"));
+        Assert.Equal(["DepartmentHead", "TPCUVT", "TPTCKT", "TPHC", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PRS"));
+        Assert.Equal(["GDTCKT"], Chain(rules, "PRE"));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "PHOCTUBCL", "CHUTICH"], Chain(rules, "RFQ"));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "CHUTICH"], Chain(rules, "PO"));
 

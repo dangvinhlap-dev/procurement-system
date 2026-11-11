@@ -3,6 +3,7 @@ using Proc.Application.Common;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Notifications;
+using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Notifications;
 using Proc.Infrastructure.Persistence;
@@ -46,6 +47,15 @@ internal sealed class ApprovalEngine
     public static string ApprovePermission(string docType) => ApprovalTypes.Get(docType).ApprovePermission;
 
     /// <summary>
+    /// Quyền cần có để duyệt một bước: bước Thủ kho nơi nhận cần quyền nhập tồn trên đề nghị mua (lát Y3c – thủ kho không cần quyền duyệt PR,
+    /// quyền đó cho duyệt mọi cấp không gắn vai trò); bước khác cần quyền duyệt loại phiếu.
+    /// </summary>
+    /// <param name="step">Bước duyệt.</param>
+    /// <returns>Mã quyền.</returns>
+    public static string StepPermission(ApprovalStep step) =>
+        step.Kind == ApproverKind.Storekeeper ? Permissions.Purchase.PrEnterStock : ApprovePermission(step.DocType);
+
+    /// <summary>
     /// Gửi duyệt: phiếu sang Chờ duyệt, sinh các bước của lượt mới theo quy trình của công ty phiếu (design.md mục 6.2). Dưới mọi
     /// ngưỡng đã cấu hình thì phiếu được duyệt ngay.
     /// </summary>
@@ -63,15 +73,28 @@ internal sealed class ApprovalEngine
 
     /// <summary>
     /// Sinh bước của các cấp đã chọn tại công ty của phiếu, mang theo loại người duyệt của cấp (lát O1). Cấp người duyệt động ghi bộ phận của
-    /// phiếu; phiếu không có bộ phận thì không gửi được (không ai làm Trưởng phòng ban / GĐ khối của phiếu).
+    /// phiếu; phiếu không có bộ phận thì không gửi được (không ai làm Trưởng phòng ban / GĐ khối của phiếu). Cấp Thủ kho nơi nhận (lát Y3c) ghi
+    /// nơi nhận; phiếu không có bước Thủ kho (đề nghị dịch vụ dùng bộ PR) thì bỏ cấp đó, phiếu chưa có nơi nhận thì không gửi được.
     /// </summary>
-    /// <exception cref="BusinessRuleException">Khi có cấp người duyệt động mà phiếu chưa có bộ phận.</exception>
+    /// <exception cref="BusinessRuleException">Khi có cấp người duyệt động mà phiếu chưa có bộ phận, cấp Thủ kho mà phiếu chưa có nơi nhận.</exception>
     private static IEnumerable<ApprovalStep> Steps(
         IApprovalSubject document, IReadOnlyList<ApprovalRule> rules, IEnumerable<(int Level, Guid? RoleId)> levels, int round, int stage)
     {
         foreach (var (level, roleId) in levels)
         {
             var kind = rules.FirstOrDefault(r => r.Level == level)?.Kind ?? ApproverKind.Role;
+            if (kind == ApproverKind.Storekeeper)
+            {
+                // Dịch vụ không có bước Thủ kho (design.md mục 19.2 – Q6).
+                if (!document.HasStorekeeperStep) continue;
+                if (document.ApprovalWarehouseId is not { } warehouseId)
+                    throw new BusinessRuleException(
+                        $"Cấp {level} của quy trình duyệt do {DynamicApprovers.StorekeeperLabel} duyệt – hãy chọn nơi nhận (kho) cho phiếu {document.No} rồi gửi lại.");
+                yield return ApprovalStep.Create(
+                    document.CompanyId, document.DocType, document.Id, round, level, null, stage, kind, warehouseId: warehouseId);
+                continue;
+            }
+
             if (kind != ApproverKind.Role && document.ApprovalDepartmentId is null)
                 throw new BusinessRuleException(
                     $"Cấp {level} của quy trình duyệt do {DynamicApprovers.KindLabel(kind)} duyệt – hãy chọn bộ phận cho phiếu {document.No} rồi gửi lại.");
@@ -89,6 +112,17 @@ internal sealed class ApprovalEngine
     /// <exception cref="BusinessRuleException">Lý do cụ thể, chỉ chỗ cần sửa.</exception>
     private async Task EnsureDynamicApproversAsync(IApprovalSubject document, IReadOnlyList<ApprovalStep> steps, CancellationToken cancellationToken)
     {
+        // Bước Thủ kho nơi nhận (lát Y3c): phải có ít nhất một người có quyền nhập tồn, phạm vi kho chứa nơi nhận, không phải người lập.
+        foreach (var step in steps.Where(s => s.Kind == ApproverKind.Storekeeper))
+        {
+            var keepers = await _notifications.UsersWithPermissionAsync(
+                document.CompanyId, StepPermission(step), null, step.WarehouseId, cancellationToken);
+            if (keepers.Any(u => !document.IsPreparedBy(u))) continue;
+            var warehouse = await WarehouseCodeAsync(step.WarehouseId, cancellationToken);
+            throw new BusinessRuleException(
+                $"Không gửi duyệt được – cấp {step.Level} ({DynamicApprovers.StorekeeperLabel} {warehouse}): chưa có Thủ kho nào (quyền \"Nhập tồn trên đề nghị mua\", phạm vi kho {warehouse}) ngoài người lập – hãy phân quyền trước khi gửi duyệt.");
+        }
+
         var resolved = await _dynamic.ResolveAsync(steps, cancellationToken);
         if (resolved.Count == 0) return;
         var approvers = await _notifications.UsersWithPermissionAsync(document.CompanyId, ApprovePermission(document.DocType), null, null, cancellationToken);
@@ -111,6 +145,13 @@ internal sealed class ApprovalEngine
             seen[userId] = r.Label;
         }
     }
+
+    /// <summary>Mã kho (nơi nhận) để hiện trong thông báo, nhãn bước Thủ kho.</summary>
+    private async Task<string> WarehouseCodeAsync(Guid? warehouseId, CancellationToken cancellationToken) =>
+        warehouseId is { } id
+            ? await _db.Warehouses.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter]).Where(w => w.Id == id).Select(w => w.Code)
+                .SingleOrDefaultAsync(cancellationToken) ?? string.Empty
+            : string.Empty;
 
     /// <summary>
     /// Người giữ cấp đang có ủy quyền (hôm nay, đúng loại phiếu, tại công ty của bước) cho một người khác có quyền duyệt loại phiếu và không
@@ -139,13 +180,26 @@ internal sealed class ApprovalEngine
     /// <param name="ruleType">Bộ cấp duyệt thay thế cho chặng 1 (như <see cref="SubmitAsync"/>).</param>
     /// <param name="skipPlannedRoleTypes">Loại chặng phụ chỉ đòi "phải lên đúng vai trò này": bỏ cấp có vai trò đã có ở các chặng trước
     /// (<see cref="ApprovalPlan.WithoutPlannedRoles"/>) – PO vượt giá trần (POC, lát H3); chặng có thể không còn cấp nào.</param>
+    /// <param name="extraBeforeTopLevel">
+    /// Chặng phụ chen <b>trước cấp cao nhất</b> của chặng thường (người dùng yêu cầu 11/11/2026 – "phần vượt được xem trước khi trình lên Chủ
+    /// tịch", lát Y3c): cấp cao nhất (không tính cấp Thủ kho) dời sang chặng <see cref="ApprovalTypes.TopLevelStage"/>, chỉ khi có chặng phụ.
+    /// Ví dụ đề nghị 1A 7 cấp vượt dự toán: cấp 1–6 → chặng vượt dự toán → cấp 7 Chủ tịch.
+    /// </param>
     public async Task SubmitWithStagesAsync(
         IApprovalSubject document, IReadOnlyList<(string Type, int Stage)> extraStages, CancellationToken cancellationToken, string? ruleType = null,
-        IReadOnlyCollection<string>? skipPlannedRoleTypes = null)
+        IReadOnlyCollection<string>? skipPlannedRoleTypes = null, bool extraBeforeTopLevel = false)
     {
         var round = document.Submit();
         var baseRules = await BaseRulesAsync(document, ruleType, cancellationToken);
-        var steps = Steps(document, baseRules, ApprovalPlan.Levels(baseRules, document.ApprovalAmount), round, stage: 1).ToList();
+        var baseLevels = ApprovalPlan.Levels(baseRules, document.ApprovalAmount).ToList();
+        (int Level, Guid? RoleId)? top = null;
+        if (extraBeforeTopLevel && extraStages.Count > 0)
+        {
+            var candidates = baseLevels.Where(l => baseRules.FirstOrDefault(r => r.Level == l.Level)?.Kind != ApproverKind.Storekeeper).ToList();
+            if (candidates.Count > 0) top = candidates.MaxBy(l => l.Level);
+        }
+
+        var steps = Steps(document, baseRules, baseLevels.Where(l => top is null || l.Level != top.Value.Level), round, stage: 1).ToList();
         foreach (var (type, stage) in extraStages.OrderBy(x => x.Stage))
         {
             var rules = await _db.ApprovalRules.AsNoTracking().Where(r => r.DocType == type).ToListAsync(cancellationToken);
@@ -155,6 +209,7 @@ internal sealed class ApprovalEngine
             steps.AddRange(Steps(document, rules, levels, round, stage));
         }
 
+        if (top is { } last) steps.AddRange(Steps(document, baseRules, [last], round, ApprovalTypes.TopLevelStage));
         await EnsureDynamicApproversAsync(document, steps, cancellationToken);
         await StartAsync(document, steps, cancellationToken);
     }
@@ -255,7 +310,10 @@ internal sealed class ApprovalEngine
         if (_scope.UserId is not { } userId) return ("Chưa đăng nhập.", null);
         // Tách người lập và người duyệt – nguyên tắc kiểm soát nội bộ.
         if (document.IsPreparedBy(userId)) return ("Người lập không tự duyệt phiếu của mình.", null);
-        if (!_scope.HasPermission(ApprovePermission(document.DocType))) return ("Bạn không có quyền duyệt loại phiếu này.", null);
+        if (!_scope.HasPermission(StepPermission(step)))
+            return (step.Kind == ApproverKind.Storekeeper
+                ? $"Cấp {step.Level} do {DynamicApprovers.StorekeeperLabel} duyệt (người có quyền nhập tồn trên đề nghị mua)."
+                : "Bạn không có quyền duyệt loại phiếu này.", null);
         var supplierIds = await SupplierIdsAsync(document, cancellationToken);
         if (await ConflictBlockerAsync(userId, supplierIds, cancellationToken) is { } conflict) return (conflict, null);
 
@@ -268,6 +326,8 @@ internal sealed class ApprovalEngine
         if (ActedLevel(round, userId) is { } level)
             return (own ?? $"Bạn đã duyệt cấp {level.Level} của phiếu {document.No} trong lượt này – cấp sau phải do người khác duyệt.", null);
         if (own is null) return (null, null);
+        // Bước Thủ kho không xét ủy quyền (lát Y3c): thủ kho khác của cùng nơi nhận làm thay được.
+        if (step.Kind == ApproverKind.Storekeeper) return (own, null);
 
         // Ủy quyền duyệt (lát O2): mượn vị trí của người ủy quyền.
         if (!_myDelegations.TryGetValue(step.CompanyId, out var mine))
@@ -297,6 +357,11 @@ internal sealed class ApprovalEngine
     /// </summary>
     private async Task<string?> PositionBlockerAsync(ApprovalStep step, Guid userId, bool own, CancellationToken cancellationToken)
     {
+        // Thủ kho nơi nhận (lát Y3c): phạm vi kho của người duyệt tại công ty của bước phải chứa nơi nhận (không có dòng phạm vi = mọi kho).
+        if (step.Kind == ApproverKind.Storekeeper
+            && !(await _notifications.UsersWithPermissionAsync(step.CompanyId, StepPermission(step), null, step.WarehouseId, cancellationToken)).Contains(userId))
+            return $"Cấp {step.Level} do {DynamicApprovers.StorekeeperLabel} {await WarehouseCodeAsync(step.WarehouseId, cancellationToken)} duyệt – nơi nhận ngoài phạm vi kho của bạn.";
+
         if (DynamicApprovers.IsDynamic(step))
         {
             var dynamic = (await _dynamic.ResolveAsync([step], cancellationToken))[step.Id];
@@ -326,6 +391,8 @@ internal sealed class ApprovalEngine
         var step = before.FirstOrDefault(s => s.CompanyId == _scope.CompanyId);
         var (reason, onBehalfOf) = await ActorAsync(document, step, cancellationToken);
         if (reason is not null) throw new BusinessRuleException(reason);
+        // Điều kiện của chính phiếu, ví dụ bước Thủ kho phải nhập tồn trước (lát Y3c) – chỉ chặn duyệt, không chặn từ chối.
+        if (document.ApproveReadyBlocker(step!) is { } notReady) throw new BusinessRuleException(notReady);
         step!.Approve(_scope.UserId!.Value, _clock.UtcNow, comment, onBehalfOf);
         NotifyDelegator(document, step, onBehalfOf, "duyệt");
         if (steps.All(s => s.Status != ApprovalStepStatus.Pending))
@@ -407,8 +474,10 @@ internal sealed class ApprovalEngine
             ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}"
             : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}")
             + detail;
+        // Bước Thủ kho (lát Y3c): "chờ bạn nhập tồn" – thủ kho nhập tồn rồi mới duyệt bước này.
+        var action = step.Kind == ApproverKind.Storekeeper ? "nhập tồn" : "duyệt";
         _notifications.Add(step.CompanyId, candidates.Where(c => c.OnBehalfOf is null).Select(c => c.UserId), type,
-            $"{titlePrefix}{Noun(document)} {document.No} chờ bạn duyệt{titleSuffix}", waiting + ".", document.DocType, document.Id);
+            $"{titlePrefix}{Noun(document)} {document.No} chờ bạn {action}{titleSuffix}", waiting + ".", document.DocType, document.Id);
         var delegated = candidates.Where(c => c.OnBehalfOf is not null).ToList();
         if (delegated.Count > 0)
         {
@@ -441,7 +510,7 @@ internal sealed class ApprovalEngine
     private async Task<NextApproverResolver.PendingStep> PendingStepAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
     {
         var approvedBy = ApprovedBy(await RoundStepsAsync(document, cancellationToken));
-        return new(step.Id, document.DocType, step.CompanyId, step.RoleId, document.IsPreparedBy,
+        return NextApproverResolver.PendingStep.Of(step, document.IsPreparedBy,
             await SupplierIdsAsync(document, cancellationToken), await OnlyUsersAsync(step, cancellationToken), approvedBy.Contains);
     }
 
@@ -567,11 +636,17 @@ internal sealed class ApprovalEngine
             next = await _approvers.NamesAsync(pendingSteps, cancellationToken);
         }
 
-        // Bước người duyệt động hiện nhãn theo bộ phận ("Trưởng phòng ban PX1", "GĐ khối HCNS") ở cột vai trò.
-        var dynamicLabels = await _dynamic.ResolveAsync(steps, cancellationToken);
+        // Bước người duyệt động hiện nhãn theo bộ phận ("Trưởng phòng ban PX1", "GĐ khối HCNS") ở cột vai trò; bước Thủ kho theo nơi nhận
+        // ("Thủ kho KT" – lát Y3c).
+        var dynamicLabels = (await _dynamic.ResolveAsync(steps, cancellationToken)).ToDictionary(kv => kv.Key, kv => kv.Value.Label);
+        var warehouseIds = steps.Select(s => s.WarehouseId).OfType<Guid>().Distinct().ToList();
+        var warehouses = warehouseIds.Count == 0 ? [] : await _db.Warehouses.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .Where(w => warehouseIds.Contains(w.Id)).ToDictionaryAsync(w => w.Id, w => w.Code, cancellationToken);
+        foreach (var s in steps.Where(s => s.Kind == ApproverKind.Storekeeper))
+            dynamicLabels[s.Id] = $"Thủ kho {(s.WarehouseId is { } w ? warehouses.GetValueOrDefault(w) : null)}".TrimEnd();
         return steps.Select(s => new ApprovalStepDto(
                 s.Round, s.Level,
-                dynamicLabels.TryGetValue(s.Id, out var dynamic) ? dynamic.Label : s.RoleId is { } r ? roles.GetValueOrDefault(r) : null,
+                dynamicLabels.TryGetValue(s.Id, out var dynamic) ? dynamic : s.RoleId is { } r ? roles.GetValueOrDefault(r) : null,
                 s.Status.ToString(),
                 // Duyệt theo ủy quyền (lát O2): "Bình (thay An)".
                 s.ActedBy is { } u

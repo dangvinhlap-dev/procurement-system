@@ -98,8 +98,7 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     }
 
     /// <summary>Tên cấp người duyệt động như trên cấu hình APRL.</summary>
-    private static string DynamicLabel(ApproverKind kind) =>
-        kind == ApproverKind.DivisionDirector ? DynamicApprovers.DivisionDirectorLabel : DynamicApprovers.DepartmentHeadLabel;
+    private static string DynamicLabel(ApproverKind kind) => DynamicApprovers.KindLabel(kind);
 
     /// <inheritdoc />
     public async Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(string? set, CancellationToken cancellationToken)
@@ -125,7 +124,7 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ApprovalTypeDto> Types() => ApprovalTypes.All.Select(t => new ApprovalTypeDto(t.Code, t.Name, t.AmountLabel, t.HasDepartment)).ToList();
+    public IReadOnlyList<ApprovalTypeDto> Types() => ApprovalTypes.All.Select(t => new ApprovalTypeDto(t.Code, t.Name, t.AmountLabel, t.HasDepartment, t.HasStorekeeper)).ToList();
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<PendingApprovalDto>> PendingForMeAsync(CancellationToken cancellationToken)
@@ -336,8 +335,10 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
             role != null ? role.Name
             : r.Kind == ApproverKind.DepartmentHead ? DynamicApprovers.DepartmentHeadLabel
             : r.Kind == ApproverKind.DivisionDirector ? DynamicApprovers.DivisionDirectorLabel
+            : r.Kind == ApproverKind.Storekeeper ? DynamicApprovers.StorekeeperLabel
             : null,
             r.Kind == ApproverKind.DepartmentHead ? nameof(ApproverKind.DepartmentHead)
             : r.Kind == ApproverKind.DivisionDirector ? nameof(ApproverKind.DivisionDirector)
+            : r.Kind == ApproverKind.Storekeeper ? nameof(ApproverKind.Storekeeper)
             : nameof(ApproverKind.Role));
 }

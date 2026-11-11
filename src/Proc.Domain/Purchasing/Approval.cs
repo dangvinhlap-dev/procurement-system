@@ -52,6 +52,12 @@ public enum ApproverKind
 
     /// <summary>Giám đốc khối của khối chứa bộ phận ghi trên phiếu.</summary>
     DivisionDirector = 3,
+
+    /// <summary>
+    /// Thủ kho nơi nhận (lát Y3c, design.md mục 19.3): người có quyền nhập tồn trên đề nghị mua và phạm vi kho chứa nơi nhận của phiếu. Chỉ bộ
+    /// cấp đề nghị mua có nơi nhận (PR – loại B, PRA – loại A); đề nghị dịch vụ tự bỏ cấp này.
+    /// </summary>
+    Storekeeper = 4,
 }
 
 /// <summary>
@@ -88,7 +94,7 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     /// </summary>
     public Guid? RoleId { get; private set; }
 
-    /// <summary>Ai duyệt cấp này: vai trò, Trưởng phòng ban hoặc Giám đốc khối của phiếu (lát O1).</summary>
+    /// <summary>Ai duyệt cấp này: vai trò, Trưởng phòng ban hoặc Giám đốc khối của phiếu (lát O1), Thủ kho nơi nhận (lát Y3c).</summary>
     public ApproverKind Kind { get; private set; } = ApproverKind.Role;
 
     /// <summary>Nhãn trong nhật ký.</summary>
@@ -117,8 +123,8 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
     /// <param name="roleId">Vai trò duyệt (bắt buộc khi <paramref name="kind"/> là vai trò; bỏ qua với người duyệt động).</param>
     /// <param name="kind">Ai duyệt cấp này.</param>
     /// <exception cref="BusinessRuleException">
-    /// Khi cấp ngoài 1–9, ngưỡng âm (hoặc khác 0 với loại không xét giá trị), chưa chọn vai trò, hoặc chọn người duyệt động cho loại phiếu
-    /// không có bộ phận.
+    /// Khi cấp ngoài 1–9, ngưỡng âm (hoặc khác 0 với loại không xét giá trị), chưa chọn vai trò, chọn người duyệt động cho loại phiếu
+    /// không có bộ phận, hoặc chọn Thủ kho nơi nhận cho loại không có nơi nhận.
     /// </exception>
     public void Update(int level, decimal minAmount, Guid? roleId, ApproverKind kind = ApproverKind.Role)
     {
@@ -132,6 +138,9 @@ public sealed class ApprovalRule : AuditableEntity, ICompanyOwned
         // Người duyệt động lấy theo bộ phận của phiếu – loại không có bộ phận (bảng giá, hồ sơ NCC…) sẽ không bao giờ tìm được người duyệt.
         if (kind != ApproverKind.Role && !type.HasDepartment)
             throw new BusinessRuleException($"Loại {DocType} không có bộ phận trên phiếu – chỉ chọn được người duyệt theo vai trò.");
+        // Thủ kho lấy theo nơi nhận – chỉ đề nghị mua loại A, B có nơi nhận (lát Y3c); dịch vụ, chặng phụ, PO không có bước Thủ kho.
+        if (kind == ApproverKind.Storekeeper && !type.HasStorekeeper)
+            throw new BusinessRuleException($"Loại {DocType} không có bước Thủ kho nơi nhận – chỉ bộ cấp đề nghị mua loại A (PRA), B (PR).");
         if (kind == ApproverKind.Role && (roleId is null || roleId == Guid.Empty)) throw new BusinessRuleException("Hãy chọn vai trò duyệt.");
         Level = level;
         MinAmount = Math.Round(minAmount, 2, MidpointRounding.AwayFromZero);
@@ -187,6 +196,9 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     /// <summary>Bộ phận của phiếu lúc gửi duyệt – chỉ có ở bước người duyệt động.</summary>
     public Guid? DepartmentId { get; private set; }
 
+    /// <summary>Nơi nhận của phiếu lúc gửi duyệt – chỉ có ở bước Thủ kho nơi nhận (lát Y3c).</summary>
+    public Guid? WarehouseId { get; private set; }
+
     /// <summary>Kết quả.</summary>
     public ApprovalStepStatus Status { get; private set; } = ApprovalStepStatus.Pending;
 
@@ -229,18 +241,22 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     /// <param name="roleId">Vai trò (null = ai có quyền duyệt, hoặc người duyệt động).</param>
     /// <param name="stage">Chặng.</param>
     /// <param name="kind">Ai duyệt bước.</param>
-    /// <param name="departmentId">Bộ phận của phiếu (bắt buộc với người duyệt động).</param>
+    /// <param name="departmentId">Bộ phận của phiếu (bắt buộc với Trưởng phòng ban / GĐ khối).</param>
+    /// <param name="warehouseId">Nơi nhận của phiếu (bắt buộc với Thủ kho nơi nhận).</param>
     /// <returns>Bước duyệt.</returns>
-    /// <exception cref="BusinessRuleException">Khi bước người duyệt động thiếu bộ phận.</exception>
+    /// <exception cref="BusinessRuleException">Khi bước người duyệt động thiếu bộ phận, bước Thủ kho thiếu nơi nhận.</exception>
     public static ApprovalStep Create(
         Guid companyId, string docType, Guid documentId, int round, int level, Guid? roleId, int stage = 1,
-        ApproverKind kind = ApproverKind.Role, Guid? departmentId = null)
+        ApproverKind kind = ApproverKind.Role, Guid? departmentId = null, Guid? warehouseId = null)
     {
-        if (kind != ApproverKind.Role && departmentId is null) throw new BusinessRuleException("Bước duyệt theo bộ phận phải có bộ phận của phiếu.");
+        var byDepartment = kind is ApproverKind.DepartmentHead or ApproverKind.DivisionDirector;
+        if (byDepartment && departmentId is null) throw new BusinessRuleException("Bước duyệt theo bộ phận phải có bộ phận của phiếu.");
+        if (kind == ApproverKind.Storekeeper && warehouseId is null) throw new BusinessRuleException("Bước Thủ kho phải có nơi nhận của phiếu.");
         return new()
         {
             CompanyId = companyId, DocType = docType, DocumentId = documentId, Round = round, Level = level, Stage = stage, Kind = kind,
-            RoleId = kind == ApproverKind.Role ? roleId : null, DepartmentId = kind == ApproverKind.Role ? null : departmentId,
+            RoleId = kind == ApproverKind.Role ? roleId : null, DepartmentId = byDepartment ? departmentId : null,
+            WarehouseId = kind == ApproverKind.Storekeeper ? warehouseId : null,
         };
     }
 

@@ -84,10 +84,11 @@ public static class PurchasingEndpoints
         pr.MapPost("/{id:guid}/stock", (Guid id, EnterPurchaseRequestStockRequest request, IPurchaseRequestService s, CancellationToken ct) =>
                 s.EnterStockAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PrEnterStock);
+        // Bước Thủ kho nơi nhận do người có quyền nhập tồn duyệt (lát Y3c); cơ chế duyệt kiểm tra đúng quyền của từng bước.
         pr.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
-            .RequirePermission(Permissions.Purchase.PrApprove);
+            .RequireAnyPermission(Permissions.Purchase.PrApprove, Permissions.Purchase.PrEnterStock);
         pr.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
-            .RequirePermission(Permissions.Purchase.PrApprove);
+            .RequireAnyPermission(Permissions.Purchase.PrApprove, Permissions.Purchase.PrEnterStock);
         // PR đã duyệt bắt buộc lý do hủy (lát R7).
         pr.MapPost("/{id:guid}/cancel", async (Guid id, HttpRequest http, IPurchaseRequestService s, CancellationToken ct) =>
             {
