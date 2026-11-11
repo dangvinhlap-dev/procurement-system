@@ -6,6 +6,7 @@ import { MONTHLY_STAGE_LABELS } from '../../api/monthlyApprovals'
 import { PURCHASE_STAGE_LABELS, previewApproval, type ApprovalStep, type PurchaseActions, type PurchaseStatus } from '../../api/purchasing'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { ApprovalChain, ApproveInfo } from './ApprovalHistory'
+import { approvalInputFor, confirmApprove, uploadApprovalFiles, type ApprovalAttachTarget, type ApprovalInputBox } from './approvalDialogs'
 
 /** Phiếu mua hàng tối thiểu mà lệnh chung cần. */
 interface ApprovableDoc {
@@ -100,33 +101,27 @@ export function confirmWithReason(
  * @param modal Modal của App.useApp().
  * @param message Message của App.useApp().
  * @param title Câu hỏi, ví dụ "Từ chối phiếu PR-0001?".
- * @param onReject Gọi với lý do đã cắt khoảng trắng khi người dùng bấm Từ chối.
+ * @param onReject Gọi với lý do đã cắt khoảng trắng khi người dùng bấm Từ chối; trả false khi từ chối lỗi để khỏi tải file.
+ * @param attach Chứng từ nhận file của người từ chối (design.md mục 20 – mỗi bước duyệt có ý kiến + đính kèm); bỏ trống thì không đính kèm.
  */
-export function confirmReject(modal: AppApi['modal'], message: AppApi['message'], title: string, onReject: (reason: string) => Promise<void>) {
-  let reason = ''
+export function confirmReject(
+  modal: AppApi['modal'], message: AppApi['message'], title: string, onReject: (reason: string) => Promise<boolean | void>,
+  attach?: ApprovalAttachTarget,
+) {
+  const box: ApprovalInputBox = { comment: '', files: [] }
   modal.confirm({
     title,
-    content: (
-      <>
-        <label htmlFor="reject-reason">{renderRequiredMark('Lý do từ chối', { required: true })}</label>
-        <Input.TextArea
-          id="reject-reason"
-          rows={3}
-          maxLength={500}
-          placeholder="Người lập sẽ thấy lý do để sửa"
-          onChange={(e) => (reason = e.target.value)}
-        />
-      </>
-    ),
+    width: 560,
+    content: approvalInputFor(box, message, { label: "Lý do từ chối", required: true, placeholder: "Người lập sẽ thấy lý do để sửa" }),
     okText: 'Từ chối',
     okButtonProps: { danger: true },
     cancelText: 'Không',
     onOk: async () => {
-      if (!reason.trim()) {
+      if (!box.comment.trim()) {
         message.error('Hãy nhập lý do từ chối.')
         throw new Error('missing reason')
       }
-      await onReject(reason.trim())
+      if ((await onReject(box.comment.trim())) !== false) await uploadApprovalFiles(attach, box.files, message)
     },
   })
 }
@@ -240,20 +235,25 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     })
   }
 
+  // File của người duyệt gắn vào chứng từ (design.md mục 20): PR, PO dùng chung hook này.
+  const attach: ApprovalAttachTarget | undefined = doc
+    ? { ownerType: docType === 'PR' ? 'PurchaseRequest' : 'PurchaseOrder', ownerId: doc.id }
+    : undefined
+
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
       title: `Duyệt phiếu ${doc.no}?`,
       content: approveContent(doc),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      attach,
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment })
           message.success(result.status === 'Approved' ? `Đã duyệt xong phiếu ${doc.no}.` : `Đã duyệt cấp của bạn – phiếu ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -267,8 +267,9 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
         message.success(`Đã từ chối phiếu ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, attach)
   }
 
   const cancel = () => {

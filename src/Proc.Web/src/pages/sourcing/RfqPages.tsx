@@ -52,6 +52,7 @@ import { RequestLinePicker } from '../purchasing/PurchaseOrderPage'
 import { PlannedQuantityDialog } from '../purchasing/PlannedQuantityDialog'
 import { toPlannedLines } from '../purchasing/plannedLines'
 import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -387,7 +388,8 @@ export function RfqPage() {
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'Rfq', ownerId: doc.id },
       title: `Duyệt kết quả chọn thầu RFQ ${doc.no}?`,
       content: (
         <>
@@ -397,15 +399,14 @@ export function RfqPage() {
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment })
           message.success(result.status === 'Awarded' ? `Đã duyệt xong kết quả chọn thầu RFQ ${doc.no}.` : `Đã duyệt cấp của bạn – RFQ ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -419,8 +420,9 @@ export function RfqPage() {
         message.success(`Đã từ chối kết quả chọn thầu RFQ ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'Rfq', ownerId: doc.id })
 
   const recall = () =>
     doc &&

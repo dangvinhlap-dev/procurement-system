@@ -150,6 +150,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
+  sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →
+  Z3 ô số chứng từ (sao chép, bấm đúp mở phiếu gốc) → Z4 quyền Hủy đặc biệt **chỉ cấp cho admin** (người lập không hủy được, bắt buộc lý
+  do, kể cả nháp) + hủy dây chuyền từ phiếu cuối về đầu có hộp thoại trình tự. Làm trước các lát Y của 0.23.0.
+  - **Z1 (nhánh `feature/z1-y-kien-dinh-kem-duyet`)**: backend – `Attachment.ApprovalStepId`, `AddedAfterApproval` (migration
+    `V0_23_0_DinhKemBuocDuyet`), `AttachmentService` quy tắc khóa D1, tải file bước duyệt chỉ cần quyền xem (`approvalStep=true`); giao
+    diện – `approvalDialogs.tsx` + `ApprovalInput.tsx` (ý kiến + file), áp cho PR, PO, RFQ, bảng giá, hợp đồng, phụ lục, NCC độc quyền,
+    duyệt tháng, chiết khấu sản lượng, yêu cầu duyệt NCC (chỉ ý kiến); tab Đính kèm cột "Bước duyệt", "Đã khóa". `queryClient` tách ra
+    `app/queryClient.ts` (hộp thoại nằm ngoài QueryClientProvider). Test: tích hợp `ApprovalAttachmentTests` (2), e2e
+    `approval-attachments.spec.ts`; `dotnet test` 642/642.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

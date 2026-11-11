@@ -25,11 +25,11 @@ public static class AttachmentEndpoints
         group.MapGet("/limits", (IOptions<AttachmentOptions> options) => new AttachmentLimitsDto(options.Value.MaxFileSizeMb));
         group.MapGet("/", (string ownerType, Guid ownerId, IAttachmentService s, CancellationToken ct) => s.ListAsync(ownerType, ownerId, ct));
         group.MapPost("/", async (
-                [FromForm] string ownerType, [FromForm] Guid ownerId, [FromForm] string? note, IFormFile file, IAttachmentService s,
-                CancellationToken ct) =>
+                [FromForm] string ownerType, [FromForm] Guid ownerId, [FromForm] string? note, [FromForm] bool? approvalStep, IFormFile file,
+                IAttachmentService s, CancellationToken ct) =>
             {
                 await using var stream = file.OpenReadStream();
-                return Results.Ok(await s.UploadAsync(ownerType, ownerId, file.FileName, file.Length, stream, note, ct));
+                return Results.Ok(await s.UploadAsync(ownerType, ownerId, file.FileName, file.Length, stream, note, ct, approvalStep == true));
             })
             // API dùng JWT trong header, không dùng cookie, nên không có nguy cơ CSRF – tắt kiểm tra antiforgery cho form tải file.
             .DisableAntiforgery();

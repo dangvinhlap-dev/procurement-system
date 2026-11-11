@@ -13,12 +13,7 @@ export const todayVn = () => new Date().toLocaleDateString('en-CA', { timeZone: 
  * @param poId Id PO đang chờ duyệt.
  */
 export async function approveAsNewAdmin(request: APIRequestContext, bha: Awaited<ReturnType<typeof api>>, poId: string) {
-  const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
-  const userName = unique('dy').toLowerCase()
-  await bha.send('post', '/api/users', {
-    userName, fullName: `Người duyệt ${userName}`, email: null, password: 'Demo@2026',
-    access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
-  })
+  const { userName } = await createBhaAdmin(bha)
   const login = await request.post('/api/auth/login', { data: { userName, password: 'Demo@2026' } })
   const { accessToken, user } = (await login.json()) as { accessToken: string; user: { companies: { id: string; code: string }[] } }
   const approved = await request.post(`/api/purchase-orders/${poId}/approve`, {
@@ -29,12 +24,29 @@ export async function approveAsNewAdmin(request: APIRequestContext, bha: Awaited
 }
 
 /**
+ * Tạo một tài khoản quản trị mới tại BHA (mật khẩu Demo@2026) – người duyệt khác người lập.
+ * @param bha API quản trị tại BHA.
+ * @returns Tên đăng nhập, mật khẩu, họ tên.
+ */
+export async function createBhaAdmin(bha: Awaited<ReturnType<typeof api>>) {
+  const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
+  const userName = unique('dy').toLowerCase()
+  const fullName = `Người duyệt ${userName}`
+  await bha.send('post', '/api/users', {
+    userName, fullName, email: null, password: 'Demo@2026',
+    access: { roleIds: [roles.find((r) => r.code === 'ADMIN')!.id], warehouseIds: [], itemCategoryIds: [] },
+  })
+  return { userName, password: 'Demo@2026', fullName }
+}
+
+/**
  * Tạo mặt hàng + NCC áp dụng tại BHA và một PO đã duyệt (qty HOP × 50.000, VAT 10%, kho nhận KT, hẹn giao hôm nay) – chưa nhận hàng.
  * @param request Ngữ cảnh API của Playwright.
  * @param qty SL đặt.
+ * @param approvals Số chặng duyệt qua API (mặc định 2 = duyệt xong); 1 thì PO còn chờ chặng "Ngoài danh sách/giá" để test duyệt trên giao diện.
  * @returns PO (Id, số, Id dòng), mặt hàng, NCC.
  */
-export async function seedApprovedPo(request: APIRequestContext, qty = 10) {
+export async function seedApprovedPo(request: APIRequestContext, qty = 10, approvals = 2) {
   const head = await api(request)
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
@@ -63,7 +75,7 @@ export async function seedApprovedPo(request: APIRequestContext, qty = 10) {
   })
   await bha.send('post', `/api/purchase-orders/${po.id}/submit`, {})
   // Cấp PO thường và chặng "Ngoài danh sách/giá" (POL) – mỗi chặng một người duyệt.
-  for (let i = 0; i < 2; i++) await approveAsNewAdmin(request, bha, po.id)
+  for (let i = 0; i < approvals; i++) await approveAsNewAdmin(request, bha, po.id)
   return { bha, po, itemId: item.id, itemCode: item.code, supplierId: supplier.id, supplierCode: supplier.code, hop, kt }
 }
 

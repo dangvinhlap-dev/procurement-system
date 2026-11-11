@@ -21,6 +21,14 @@ export interface AttachmentItem {
   note: string | null
   uploadedAt: string
   uploadedByName: string | null
+  /** Cấp của bước duyệt mà file thuộc về (người duyệt đính kèm khi duyệt / từ chối – design.md mục 20); null nếu không thuộc bước nào. */
+  approvalStepLevel?: number | null
+  /** File thêm khi phiếu đã duyệt xong ("Bổ sung sau duyệt"). */
+  addedAfterApproval?: boolean
+  /** Người dùng hiện tại xóa được file (máy chủ tính theo quy tắc khóa – design.md mục 20, D1). */
+  canDelete?: boolean
+  /** Lý do không xóa được. */
+  lockReason?: string | null
 }
 
 /** Dung lượng tối đa mặc định (MB) khi chưa đọc được cấu hình máy chủ – khớp Attachment.DefaultMaxFileSizeMb (yêu cầu 03/11/2026). */

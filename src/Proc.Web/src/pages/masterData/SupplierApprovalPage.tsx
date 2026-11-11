@@ -17,6 +17,7 @@ import { formatDateTime } from '../../utils/format'
 import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 import { withPendingApprovers } from '../../api/purchasing'
 import { SupplierProfile } from './SupplierProfile'
 import { AppraisalPanel, AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
@@ -121,7 +122,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
           loading={actions.approve.isPending}
           // Popup nêu người lập và người duyệt sau mình (yêu cầu người dùng 03/11/2026).
           onClick={() =>
-            modal.confirm({
+            confirmApprove(modal, message, {
               title: `Duyệt yêu cầu ${r.no}?`,
               content: (
                 <>
@@ -129,9 +130,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
                   {approveContent(r)}
                 </>
               ),
-              okText: 'Duyệt',
-              cancelText: 'Không',
-              onOk: () => run(() => actions.approve.mutateAsync({ id }), 'Đã duyệt.'),
+              onOk: (comment) => run(() => actions.approve.mutateAsync({ id, comment: comment ?? undefined }), 'Đã duyệt.'),
             })
           }>
           Duyệt

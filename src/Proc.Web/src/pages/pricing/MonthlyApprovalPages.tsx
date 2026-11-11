@@ -37,6 +37,7 @@ import { ListPage } from '../../components/ListPage/ListPage'
 import { MONTH_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, vnNumberInput } from '../../utils/format'
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 
 /** Đường dẫn danh sách phiếu duyệt NCC và giá tháng (màn hình GTH). */
 export const MONTHLY_APPROVAL_PATH = '/gia-ncc/duyet-thang'
@@ -278,7 +279,8 @@ export function MonthlyApprovalPage() {
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'MonthlySupplierApproval', ownerId: doc.id },
       title: `Duyệt phiếu ${doc.no}?`,
       content: (
         <>
@@ -291,15 +293,14 @@ export function MonthlyApprovalPage() {
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment: comment ?? undefined })
           message.success(result.status === 'Approved' ? `Đã duyệt xong phiếu ${doc.no}.` : `Đã duyệt cấp của bạn – phiếu ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -313,8 +314,9 @@ export function MonthlyApprovalPage() {
         message.success(`Đã từ chối phiếu ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'MonthlySupplierApproval', ownerId: doc.id })
 
   const recall = () =>
     doc &&

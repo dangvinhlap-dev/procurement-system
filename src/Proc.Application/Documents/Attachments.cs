@@ -8,8 +8,14 @@ namespace Proc.Application.Documents;
 /// <param name="Note">Ghi chú.</param>
 /// <param name="UploadedAt">Thời điểm tải lên (UTC).</param>
 /// <param name="UploadedByName">Họ tên người tải lên.</param>
+/// <param name="ApprovalStepLevel">Cấp của bước duyệt mà file thuộc về (người duyệt đính kèm khi duyệt / từ chối – design.md mục 20); null nếu
+/// không thuộc bước nào.</param>
+/// <param name="AddedAfterApproval">File thêm khi phiếu đã duyệt xong ("Bổ sung sau duyệt").</param>
+/// <param name="CanDelete">Người dùng hiện tại xóa được file (design.md mục 20, D1: chỉ người thêm, phiếu còn nháp chưa có bước duyệt xong).</param>
+/// <param name="LockReason">Lý do không xóa được (hiện chú thích); null nếu xóa được.</param>
 public sealed record AttachmentDto(
-    Guid Id, string FileName, string ContentType, long SizeBytes, string? Note, DateTimeOffset UploadedAt, string? UploadedByName);
+    Guid Id, string FileName, string ContentType, long SizeBytes, string? Note, DateTimeOffset UploadedAt, string? UploadedByName,
+    int? ApprovalStepLevel = null, bool AddedAfterApproval = false, bool CanDelete = true, string? LockReason = null);
 
 /// <summary>Giới hạn tải lên theo cấu hình máy chủ (design.md mục 18.4).</summary>
 /// <param name="MaxFileSizeMb">Dung lượng tối đa một file (MB), mặc định 2.</param>
@@ -43,13 +49,16 @@ public interface IAttachmentService
     /// <param name="sizeBytes">Dung lượng client báo (kiểm tra sớm; dung lượng thật đo khi ghi).</param>
     /// <param name="content">Nội dung.</param>
     /// <param name="note">Ghi chú.</param>
+    /// <param name="forApprovalStep">File của người duyệt cho bước mình vừa duyệt / từ chối (design.md mục 20): gắn vào bước duyệt gần nhất
+    /// người dùng đã xử lý trên phiếu (trong 30 phút); chỉ cần quyền xem phiếu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File vừa lưu.</returns>
     /// <exception cref="Domain.Common.BusinessRuleException">Đuôi không được nhận, rỗng, quá dung lượng tối đa (cấu hình <c>Attachments:MaxFileSizeMb</c>, mặc định 2 MB).</exception>
     /// <exception cref="Common.ForbiddenAccessException">Không có quyền sửa chủ.</exception>
     /// <exception cref="Common.NotFoundException">Chủ không tồn tại hoặc ngoài phạm vi.</exception>
     Task<AttachmentDto> UploadAsync(
-        string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken);
+        string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken,
+        bool forApprovalStep = false);
 
     /// <summary>Mở file để tải xuống.</summary>
     /// <param name="id">File đính kèm.</param>

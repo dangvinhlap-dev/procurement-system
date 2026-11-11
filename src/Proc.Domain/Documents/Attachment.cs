@@ -189,6 +189,15 @@ public sealed class Attachment : AuditableEntity
     public Guid? DeletedBy { get; private set; }
 
     /// <summary>
+    /// Bước duyệt mà file thuộc về: người duyệt đính kèm khi duyệt / từ chối (design.md mục 20, quyết định D1). Null: file của người lập
+    /// hoặc file bổ sung.
+    /// </summary>
+    public Guid? ApprovalStepId { get; private set; }
+
+    /// <summary>File thêm khi phiếu đã duyệt xong – hiện "Bổ sung sau duyệt", không xóa được (design.md mục 20, D1).</summary>
+    public bool AddedAfterApproval { get; private set; }
+
+    /// <summary>
     /// Tạo bản ghi đính kèm sau khi đã kiểm tra file.
     /// </summary>
     /// <param name="ownerType">Loại đối tượng chủ.</param>
@@ -200,11 +209,13 @@ public sealed class Attachment : AuditableEntity
     /// <param name="uploadedAt">Thời điểm tải lên (UTC) – dùng làm thư mục năm/tháng.</param>
     /// <param name="note">Ghi chú.</param>
     /// <param name="maxFileSizeMb">Dung lượng tối đa một file (MB) theo cấu hình máy chủ.</param>
+    /// <param name="approvalStepId">Bước duyệt của file (người duyệt đính kèm khi duyệt / từ chối); null nếu không thuộc bước nào.</param>
+    /// <param name="addedAfterApproval">File thêm khi phiếu đã duyệt xong (không áp khi đã gắn bước duyệt).</param>
     /// <returns>Bản ghi mới.</returns>
     /// <exception cref="BusinessRuleException">Khi loại chủ, tên, đuôi, dung lượng hoặc ghi chú không hợp lệ.</exception>
     public static Attachment Create(
         string ownerType, Guid ownerId, Guid? companyId, string fileName, long sizeBytes, string sha256, DateTimeOffset uploadedAt, string? note,
-        int maxFileSizeMb = DefaultMaxFileSizeMb)
+        int maxFileSizeMb = DefaultMaxFileSizeMb, Guid? approvalStepId = null, bool addedAfterApproval = false)
     {
         if (!AttachmentOwnerTypes.All.Contains(ownerType)) throw new BusinessRuleException($"Loại đối tượng đính kèm '{ownerType}' không hợp lệ.");
         var name = NormalizeFileName(fileName);
@@ -223,6 +234,8 @@ public sealed class Attachment : AuditableEntity
             SizeBytes = sizeBytes,
             Sha256 = sha256,
             Note = trimmedNote,
+            ApprovalStepId = approvalStepId,
+            AddedAfterApproval = approvalStepId is null && addedAfterApproval,
         };
         attachment.StoragePath = $"{uploadedAt.UtcDateTime:yyyy}/{uploadedAt.UtcDateTime:MM}/{attachment.Id:N}{extension}";
         return attachment;

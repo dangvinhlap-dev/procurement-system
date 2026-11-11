@@ -43,6 +43,7 @@ import { DATE_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, formatQuan
 import { ApprovalHistory } from '../purchasing/ApprovalHistory'
 import { VolumeRebateReceiptPanel } from './VolumeRebateReceiptPanel'
 import { approveContent, confirmReject, confirmSubmitWithPreview } from '../purchasing/useApprovalCommands'
+import { confirmApprove } from '../purchasing/approvalDialogs'
 
 /** Đường dẫn danh sách thỏa thuận chiết khấu sản lượng gộp (màn hình CKB). */
 export const VOLUME_REBATE_PATH = '/gia-ncc/chiet-khau-san-luong'
@@ -355,7 +356,8 @@ export function VolumeRebatePage() {
 
   const approve = () =>
     doc &&
-    modal.confirm({
+    confirmApprove(modal, message, {
+      attach: { ownerType: 'VolumeRebateAgreement', ownerId: doc.id },
       title: `Duyệt thỏa thuận ${doc.no}?`,
       content: (
         <>
@@ -363,15 +365,14 @@ export function VolumeRebatePage() {
           {approveContent(doc)}
         </>
       ),
-      okText: 'Duyệt',
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (comment) => {
         setError(null)
         try {
-          const result = await mutations.approve.mutateAsync({ id: doc.id })
+          const result = await mutations.approve.mutateAsync({ id: doc.id, comment: comment ?? undefined })
           message.success(result.status === 'Active' ? `Đã duyệt xong thỏa thuận ${doc.no}.` : `Đã duyệt cấp của bạn – thỏa thuận ${doc.no} chuyển cấp tiếp theo.`)
         } catch (e) {
           fail(e, 'Không duyệt được.')
+          return false
         }
       },
     })
@@ -385,8 +386,9 @@ export function VolumeRebatePage() {
         message.success(`Đã từ chối thỏa thuận ${doc.no}.`)
       } catch (e) {
         fail(e, 'Không từ chối được.')
+        return false
       }
-    })
+    }, { ownerType: 'VolumeRebateAgreement', ownerId: doc.id })
 
   const recall = () =>
     doc &&
