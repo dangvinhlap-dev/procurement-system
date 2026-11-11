@@ -177,7 +177,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `Application/Common/DocumentCancelPolicy` (nháp – người lập; còn lại – quản trị; bắt buộc lý do) áp cho 15 lệnh hủy + cờ CanCancel;
     migration `V0_23_0_LyDoHuyPhieu` (CancelReason cho hợp đồng, phụ lục, RFQ, tìm nguồn); người dùng yêu cầu thêm **Rút về nháp** → PR, PO
     `POST …/recall` + nút trong `useApprovalCommands`. Giao diện: hộp thoại hủy luôn hỏi lý do (PR, PO, hợp đồng, phụ lục, RFQ, tìm nguồn).
-    Test: tích hợp `DocumentCancelPolicyTests` (2), sửa 10 test cũ (gửi lý do, danh mục quyền −1, HSN đã gửi → 403); e2e `recall-cancel.spec.ts`.
+    Test: tích hợp `DocumentCancelPolicyTests` (2), sửa 10 test cũ (gửi lý do, danh mục quyền −1, HSN đã gửi → 403); e2e `recall-cancel.spec.ts`. `dotnet test` 645/645, build 0 cảnh báo, tsc,
+    oxlint, `npm run build`; Playwright đủ bộ 128/128. **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
