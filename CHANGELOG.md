@@ -3,6 +3,30 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.22.1] - 2026-11-11
+
+Bản vá cho 0.22.0 (phản ánh khi test bản 0.22.0).
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Lưới dòng hàng của đơn mua hàng (PO) cuộn ngang khi nhiều cột, các cột giữ độ rộng mặc định thay vì bị ép hẹp.
+
+### Sửa lỗi
+- PO đã nhận hàng nhưng người dùng không thấy SL thực nhận: cột "SL thực nhận", "Còn lại" nằm cuối lưới 17 cột nên bị đẩy khỏi khung
+  nhìn. Hai cột nay đứng ngay sau "SL đặt". Số liệu nhận hàng (từ phiếu XNH đã xác nhận) vốn đã đúng.
+
+### Thay đổi CSDL
+- Không có (vẫn 78 migration như 0.22.0, không có script 0.22.1).
+
+### Lưu ý khi nâng cấp
+- Từ 0.22.0: chỉ thay gói ứng dụng, giữ `appsettings.Production.json`; không cần chạy script CSDL. Nên sao lưu CSDL theo thói quen.
+- Từ bản cũ hơn 0.22.0: làm theo mục "Lưu ý khi nâng cấp" của 0.22.0 (chạy `db/scripts/0.22.0.sql`), rồi cài gói 0.22.1.
+
+### Cách quay lại bản trước
+- Triển khai lại gói tag `v0.22.0`; không cần thao tác CSDL.
+
 ## [0.22.0] - 2026-11-11
 
 Bản đầu của hệ thống mới theo biểu mẫu CUVT (design.md mục 19): **tắt phân hệ kho** – công ty dùng phần mềm kho riêng.
