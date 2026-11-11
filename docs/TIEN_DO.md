@@ -150,6 +150,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Sửa lỗi cột SL thực nhận trên PO (11/11/2026, nhánh `fix/po-cot-thuc-nhan`)** – người dùng test 0.22.0 báo PO-BMI-2611-0003 đã nhận
+  hàng nhưng PO không ghi nhận SL thực nhận. Kiểm tra: dữ liệu đúng (XNH-BMI-2611-0002 đã xác nhận 10 + 5, XNH-0001 đã hủy; API trả SL thực
+  nhận 10/5, PO "Đã nhận đủ") – lỗi bố trí: cột "SL thực nhận"/"Còn lại" ở cuối lưới 17 cột, bị đẩy khỏi khung nhìn, cột bị ép hẹp. Sửa
+  `PurchaseOrderPage.tsx`: hai cột đặt ngay sau "SL đặt", lưới PO bật `scrollX` (giữ độ rộng cột, cuộn ngang). E2e mới
+  `po-received-column.spec.ts`. Kiểm tra: `dotnet build` 0 cảnh báo, `dotnet test` 640/640, `npm run build`, tsc, oxlint, Playwright
+  (po-received-column, receipt-confirmation, po-over-ceiling, close-remaining, pricing) qua. Bản test 5007 chưa có – vào bản phát hành sau.
+  Cũng ghi nhận khi test K01/K02: thanh menu chữ vẫn hiện "Đấu thầu", "Báo cáo" trống với bmi.kho (đề xuất `fix/an-menu-trong`, chờ người
+  dùng); tài liệu test K04 ghi "Báo cáo → Theo dõi giao hàng" (đúng là Mua hàng → Theo dõi giao hàng); PO không tự điền đơn giá đã duyệt
+  khi chọn mặt hàng (phải bấm "Áp giá đã duyệt") – chờ người dùng chọn.
 - **Phát hành 0.22.0 (11/11/2026)**: tag `v0.22.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.0 (gói
   `procurement-0.22.0.zip`) – K1, K2, O1, O2a–d, O3; 6 migration (72 → 78), script `db/scripts/0.22.0.sql` chạy thử 2 lần trên bản sao
   `procurement_kiemtra_0220` (từ CSDL bản test 5007; số dòng PO/NCC/AuditLog/thông báo giữ nguyên). Chạy thử script lần đầu **phát hiện lỗi**:
