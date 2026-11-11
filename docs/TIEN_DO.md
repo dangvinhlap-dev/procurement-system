@@ -150,6 +150,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Phát hành 0.22.1 (11/11/2026)** – bản vá: cột SL thực nhận/Còn lại trên PO đứng sau SL đặt, lưới PO cuộn ngang. Tag `v0.22.1`,
+  https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.1 (gói `procurement-0.22.1.zip`); không đổi CSDL (78 migration).
+  **Bản test 5007 nâng lên 0.22.1**: `app` = 0.22.1, `app-0.22.0` = bản cũ, gói ở `goi\0.22.1`, sao lưu
+  `D:\project\procurement_kiemtra_0150_truoc_0.22.1.dump`, PID 6556; `/health` Healthy 0.22.1.
 - **Sửa lỗi cột SL thực nhận trên PO (11/11/2026, nhánh `fix/po-cot-thuc-nhan`)** – người dùng test 0.22.0 báo PO-BMI-2611-0003 đã nhận
   hàng nhưng PO không ghi nhận SL thực nhận. Kiểm tra: dữ liệu đúng (XNH-BMI-2611-0002 đã xác nhận 10 + 5, XNH-0001 đã hủy; API trả SL thực
   nhận 10/5, PO "Đã nhận đủ") – lỗi bố trí: cột "SL thực nhận"/"Còn lại" ở cuối lưới 17 cột, bị đẩy khỏi khung nhìn, cột bị ép hẹp. Sửa
