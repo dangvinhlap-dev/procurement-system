@@ -721,6 +721,7 @@ export function RfqPage() {
   return (
     <>
       <DocumentForm
+        approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt } : undefined}
         title="Yêu cầu báo giá (RFQ)"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'Rfq', id: doc?.id }}

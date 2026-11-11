@@ -2329,6 +2329,15 @@ kèm có cột "Bước duyệt" (Duyệt cấp n / Bổ sung sau duyệt), file
 cho lát sau: hộp thoại từ chối riêng của NCC độc quyền, yêu cầu duyệt NCC; đặt hàng gộp, hồ sơ NCC mới (duyệt theo màn hình riêng);
 trang duyệt điện thoại chưa có đính kèm.
 
+**Lát Z2 – đã làm (11/11/2026):** người dùng có trường **Chức vụ** (`User.Position`, tối đa 100 ký tự, Hệ thống → Người dùng; danh sách
+có cột Chức vụ). Lịch sử duyệt (`ApprovalStepDto`) trả thêm tên đăng nhập + chức vụ của người duyệt và người gửi; chức vụ trống thì là tên
+các vai trò của người đó **tại công ty của bước** (D5). Form chứng từ (`DocumentForm`, `DetailDrawer` – prop `approval`) hiện **dải ổ khóa
+vàng** cạnh trạng thái: mỗi bước của **lượt gửi gần nhất** một ổ khóa, đóng = đã duyệt, mở = chưa duyệt (chờ, từ chối, bỏ qua); rê chuột
+thấy cấp, kết quả, người duyệt, giờ ngày. Nút **Kiểm tra phê duyệt** mở bảng: mỗi lượt có **Bước 0** (gửi phê duyệt – người gửi; phiếu chưa
+gửi thì "Lập phiếu" – người lập) rồi **Bước 1 … n**, cột Kết quả, Tên đăng nhập, Họ tên, Chức vụ, Giờ ngày, Ý kiến; nhiều lượt thì có cột
+Lượt. Áp cho PR, PO, RFQ, hợp đồng, phụ lục, bảng giá, NCC độc quyền, duyệt tháng, chiết khấu sản lượng, yêu cầu duyệt NCC. Tab "Lịch sử
+duyệt" dạng cây giữ nguyên. Chưa có: đặt hàng gộp, hồ sơ NCC mới (duyệt theo màn hình riêng), trang duyệt điện thoại.
+
 ### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,

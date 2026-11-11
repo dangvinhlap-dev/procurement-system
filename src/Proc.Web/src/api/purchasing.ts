@@ -67,6 +67,12 @@ export interface ApprovalStep {
   /** Người và thời điểm gửi duyệt lượt của bước; null với dữ liệu cũ. */
   submittedAt?: string | null
   submittedByName?: string | null
+  /** Tên đăng nhập, chức vụ người duyệt/từ chối – "Kiểm tra phê duyệt" (design.md mục 20.1 R4); chức vụ trống thì là tên vai trò. */
+  actedByUserName?: string | null
+  actedByPosition?: string | null
+  /** Tên đăng nhập, chức vụ người gửi duyệt lượt của bước. */
+  submittedByUserName?: string | null
+  submittedByPosition?: string | null
 }
 
 /**

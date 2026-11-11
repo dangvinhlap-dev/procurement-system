@@ -1,6 +1,7 @@
 import { CloseOutlined, RollbackOutlined, SaveOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ApprovalCheckButton, ApprovalLocks, type ApprovalTrailInfo } from '../../classic/ApprovalTrail'
 import { hasOpenPopup } from '../../utils/popup'
 import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
 import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
@@ -51,6 +52,10 @@ export interface DetailDrawerProps {
    * tay), nút "Quay lại" gọi `onClose`.
    */
   asPage?: boolean
+  /**
+   * Phê duyệt của phiếu (design.md mục 20.1 R3, R4) – như DocumentForm: dải ổ khóa vàng cạnh tiêu đề và nút "Kiểm tra phê duyệt".
+   */
+  approval?: ApprovalTrailInfo
 }
 
 /**
@@ -74,6 +79,7 @@ export function DetailDrawer({
   formName,
   audit,
   asPage = false,
+  approval,
 }: DetailDrawerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(tabs[0]?.key)
@@ -118,6 +124,8 @@ export function DetailDrawer({
     </Button>
   )
   const historyButton = audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />
+  const locks = approval && <ApprovalLocks steps={approval.steps} byCompany={approval.byCompany} stageLabels={approval.stageLabels} />
+  const checkButton = approval && <ApprovalCheckButton {...approval} />
   const body = (
     <>
       {error && <Alert type="error" showIcon title={error} className="detail-drawer-error" />}
@@ -154,10 +162,12 @@ export function DetailDrawer({
           <div className="document-form-title">
             <h2>{title}</h2>
             {readOnly && <Tag>Chỉ xem</Tag>}
+            {locks}
           </div>
           <div className="document-form-actions">
             {saveButton}
             {extraActions}
+            {checkButton}
             {historyButton}
             <Button icon={<RollbackOutlined />} onClick={onClose} title="Quay lại danh sách">
               Quay lại
@@ -177,6 +187,7 @@ export function DetailDrawer({
           {title}
           {/* Trạng thái luôn có chữ, không chỉ dựa vào ô bị mờ (ui-guide.md mục 2). */}
           {readOnly && <Tag>Chỉ xem</Tag>}
+          {locks}
         </span>
       }
       onClose={onClose}
@@ -189,6 +200,7 @@ export function DetailDrawer({
       <div className="detail-drawer-actions">
         {saveButton}
         {extraActions}
+        {checkButton}
         {historyButton}
         <Button type="text" icon={<CloseOutlined />} onClick={onClose}>
           Đóng

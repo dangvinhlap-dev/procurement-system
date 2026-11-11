@@ -558,6 +558,7 @@ export function MonthlyApprovalPage() {
 
   return (
     <DocumentForm
+      approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt, stageLabels: MONTHLY_STAGE_LABELS } : undefined}
       title="Duyệt NCC và giá tháng"
       extraTabs={[
         ...appraisalTabs,

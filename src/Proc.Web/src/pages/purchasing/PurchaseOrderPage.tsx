@@ -608,6 +608,7 @@ export function PurchaseOrderPage() {
   return (
     <>
       <DocumentForm
+        approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt, stageLabels: PURCHASE_STAGE_LABELS } : undefined}
         title="Đơn mua hàng"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PurchaseOrder', id: doc?.id }}

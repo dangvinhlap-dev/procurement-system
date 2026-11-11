@@ -2,6 +2,7 @@ import { DownOutlined, PrinterOutlined, UpOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { apiOpenPdf } from '../../api/client'
+import { ApprovalCheckButton, ApprovalLocks, type ApprovalTrailInfo } from '../../classic/ApprovalTrail'
 import type { StatusTone } from '../DataGrid/types'
 import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
 import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
@@ -69,6 +70,11 @@ export interface DocumentFormProps {
    * (cả phiếu và các dòng). Dòng khai báo riêng ở LineGrid (auditEntity).
    */
   audit?: AuditScope
+  /**
+   * Phê duyệt của phiếu (design.md mục 20.1 R3, R4): có thì hiện dải ổ khóa vàng từng bước cạnh trạng thái (đóng = đã duyệt, mở = chưa) và
+   * nút "Kiểm tra phê duyệt" (bước 0…n: tên đăng nhập, họ tên, chức vụ, giờ ngày). Phiếu chưa lưu thì bỏ trống.
+   */
+  approval?: ApprovalTrailInfo
 }
 
 /**
@@ -100,6 +106,7 @@ export function DocumentForm({
   onAddLine,
   printPath,
   audit,
+  approval,
 }: DocumentFormProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(defaultTab)
@@ -148,10 +155,12 @@ export function DocumentForm({
           <h2>{title}</h2>
           <span className="document-form-number">{number ?? '(số phiếu tự cấp khi lưu)'}</span>
           <Tag color={toneColor[status.tone]}>{status.label}</Tag>
+          {approval && <ApprovalLocks steps={approval.steps} byCompany={approval.byCompany} stageLabels={approval.stageLabels} />}
           {meta && <span className="document-form-meta">{meta}</span>}
         </div>
         <div className="document-form-actions">
           {readOnly && actions}
+          {approval && <ApprovalCheckButton {...approval} />}
           {audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />}
           {printPath && (
             <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">

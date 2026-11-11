@@ -19,6 +19,8 @@ export interface UserListItem {
   roleNames: string[]
   companyCodes: string[]
   createdAt: string
+  /** Chức vụ (design.md mục 20.2 D5); null = chưa nhập. */
+  position?: string | null
 }
 
 /** Vai trò, kho, nhóm hàng tại công ty đang làm việc; danh sách kho/nhóm rỗng = tất cả. */
@@ -43,6 +45,8 @@ export interface UserDetail {
   isSelf: boolean
   access: UserAccess
   companyCodes: string[]
+  /** Chức vụ (design.md mục 20.2 D5); null = chưa nhập. */
+  position?: string | null
 }
 
 /** Lựa chọn khi phân quyền tại công ty đang làm việc. */
@@ -63,6 +67,8 @@ export interface CreateUserInput {
   email: string | null
   password: string
   access: UserAccess
+  /** Chức vụ (tùy chọn). */
+  position?: string | null
 }
 
 /** Dữ liệu sửa tài khoản. */
@@ -70,6 +76,8 @@ export interface UpdateUserInput {
   fullName: string
   email: string | null
   isActive: boolean
+  /** Chức vụ; trống = xóa chức vụ (nơi hiển thị dùng tên vai trò). */
+  position: string | null
 }
 
 /** Một dòng trên danh sách vai trò. */

@@ -152,6 +152,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
         asPage={asPage}
         title={r ? `Yêu cầu ${r.no} – ${withPendingApprovers(changeStatusLabels[r.status], r.approvals)}` : 'Yêu cầu duyệt NCC'}
         audit={{ entityType: 'SupplierChangeRequest', id: r?.id }}
+        approval={r ? { steps: r.approvals, createdByName: r.createdByName, createdAt: r.createdAt, byCompany: true } : undefined}
         onClose={onClose}
         loading={request.isLoading}
         error={error}
