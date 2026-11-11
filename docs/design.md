@@ -2291,6 +2291,25 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   7 cấp (bỏ TP HC); PRS 7 cấp (bỏ Thủ kho); PRE 1 cấp Giám đốc TC-NQ-KT (tự đặt – vai trò mẫu GDTCKT thêm quyền duyệt PR). Công ty đã áp bộ PR cũ 6
   cấp thì mẫu không ghi đè (trạng thái "Đã cấu hình") – xóa các cấp PR cũ rồi áp lại nếu muốn bộ mới.
 
+**Lát Y5 – bảng tổng hợp đề xuất mua 2A/2B (0.23.0, Q3).** Tách ba lát: **Y5a** danh mục đơn vị mua; **Y5b** phiếu bảng tổng hợp + duyệt;
+**Y5c** giao diện phiếu, tham số "bắt buộc qua bảng tổng hợp", hủy dây chuyền. Quy tắc tự đặt (người dùng "làm tiếp" 11/11/2026).
+
+**Lát Y5a – danh mục đơn vị mua (Q3 – "đơn vị mua là một danh mục").**
+
+- Màn hình **DVM** (Mua hàng → Đơn vị mua), bảng `PurchasingUnit` theo **công ty**: mã 2–20 ký tự chữ không dấu hoặc số (tự viết hoa, duy nhất
+  trong công ty, **không đổi** sau khi tạo), tên (bắt buộc, ≤ 200), ghi chú (≤ 500), còn sử dụng. Ví dụ trên biểu mẫu 2A/2B: VP NDD, Phòng CUVT.
+- **Không xóa**: đơn vị không dùng nữa thì ngừng dùng – không chọn mới được trên bảng tổng hợp, dòng đã gán giữ nguyên (như danh mục khối).
+- Quyền riêng `Purchase.Unit.View` (xem), `Purchase.Unit.Manage` (thêm, sửa) – tách khỏi quyền bộ phận để giao Phòng CUVT tự quản lý mà không
+  sửa được bộ phận. Bộ vai trò mẫu: quyền xem cho mọi vai trò mẫu có nhóm quyền xem nghiệp vụ mua; quyền quản lý cho NVCUVT (người lập 2A/2B).
+- API `/api/purchasing-units` (danh sách, chi tiết, thêm, sửa) và `/options` (đơn vị đang dùng, cho người xem danh mục hoặc lập bảng tổng hợp).
+  Migration `V0_23_0_DonViMua` (Down mất danh mục đơn vị mua).
+
+**Lát Y5b, Y5c – dự kiến** (chi tiết ghi khi làm): phiếu **BTH** loại 2A (dòng của đề nghị loại A, cùng một công trình) hoặc 2B (đề nghị B, DV),
+cùng một bộ phận đề xuất; Phòng CUVT chọn dòng đề nghị đã duyệt còn cần mua, mỗi dòng đề nghị chỉ ở một bảng tổng hợp chưa hủy, gán đơn vị mua
+từng dòng; đầu phiếu như biểu mẫu (2A: công trình, dự toán, lũy kế gồm số đề xuất, tổng đề xuất; 2B: định mức/dự trù = ngân sách bộ phận tháng,
+lũy kế, tổng đề xuất); bộ cấp duyệt **BTH** (mẫu CUVT: TP CUVT → GĐ khối của phiếu → Phó CT UBCL&PT → Chủ tịch); tham số công ty bật "bắt buộc
+qua bảng tổng hợp" thì dòng đề nghị chỉ lên RFQ/PO khi thuộc bảng tổng hợp đã duyệt (mặc định tắt).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

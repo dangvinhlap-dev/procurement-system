@@ -237,6 +237,27 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.ProjectManage)
             .Validate<ReviseConstructionEstimateRequest>();
 
+        // Danh mục đơn vị mua (lát Y5a, design.md mục 19.3 – Q3): đơn vị được giao mua từng dòng trên bảng tổng hợp 2A/2B.
+        var units = app.MapGroup("/api/purchasing-units").WithTags("Đơn vị mua");
+        units.MapGet("/", (IPurchasingUnitService s, CancellationToken ct) => s.ListAsync(ct))
+            .RequireAnyPermission(Permissions.Purchase.UnitView, Permissions.Purchase.UnitManage);
+        // Danh sách chọn cho người lập/xem bảng tổng hợp (lát Y5b) – mở thêm cho quyền xem đề nghị mua để không phải cấp quyền danh mục.
+        units.MapGet("/options", (IPurchasingUnitService s, CancellationToken ct) => s.OptionsAsync(ct))
+            .RequireAnyPermission(Permissions.Purchase.UnitView, Permissions.Purchase.UnitManage, Permissions.Purchase.PrView);
+        units.MapGet("/{id:guid}", (Guid id, IPurchasingUnitService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(Permissions.Purchase.UnitView, Permissions.Purchase.UnitManage);
+        units.MapPost("/", async (CreatePurchasingUnitRequest request, IPurchasingUnitService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/purchasing-units/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.UnitManage)
+            .Validate<CreatePurchasingUnitRequest>();
+        units.MapPut("/{id:guid}", (Guid id, UpdatePurchasingUnitRequest request, IPurchasingUnitService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.UnitManage)
+            .Validate<UpdatePurchasingUnitRequest>();
+
         // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
         var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
         plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))

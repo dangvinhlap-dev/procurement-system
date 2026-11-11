@@ -362,3 +362,21 @@ internal sealed class DemandPlanLineConfiguration : IEntityTypeConfiguration<Dem
         builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng PurchasingUnit – danh mục đơn vị mua của công ty (lát Y5a, design.md mục 19.3).</summary>
+internal sealed class PurchasingUnitConfiguration : IEntityTypeConfiguration<PurchasingUnit>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchasingUnit> builder)
+    {
+        builder.ToTable("PurchasingUnit");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(PurchasingUnit.NameMaxLength).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(PurchasingUnit.NoteMaxLength);
+        builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        // Khóa (Id, CompanyId) để dòng bảng tổng hợp (lát Y5b) trỏ tới đơn vị kèm công ty – CSDL chặn gán đơn vị của công ty khác.
+        builder.HasAlternateKey(x => new { x.Id, x.CompanyId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

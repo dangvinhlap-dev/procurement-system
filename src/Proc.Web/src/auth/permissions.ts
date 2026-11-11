@@ -49,6 +49,8 @@ export const Permission = {
   BudgetManage: 'Purchase.Budget.Manage',
   ProjectView: 'Purchase.Project.View',
   ProjectManage: 'Purchase.Project.Manage',
+  UnitView: 'Purchase.Unit.View',
+  UnitManage: 'Purchase.Unit.Manage',
   DemandPlanView: 'Purchase.DemandPlan.View',
   DemandPlanManage: 'Purchase.DemandPlan.Manage',
   DemandPlanViewAllCompanies: 'Purchase.DemandPlan.ViewAllCompanies',
