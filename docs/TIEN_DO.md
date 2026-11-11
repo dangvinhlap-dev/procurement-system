@@ -171,7 +171,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `documentPath`, thêm `DHG`); đầu mọi `DocumentForm`, số liên quan trên form PR/PO/RFQ/đặt hàng gộp/NCC; người dùng yêu cầu thêm
     **danh sách và báo cáo** → `DataGrid` cột `docRef` (bấm đúp ô mở phiếu gốc, không mở dòng). Backend: Id phiếu gốc trên dòng PO, dòng RFQ,
     `RfqAwardPriceDto.RfqId`. design.md 20 (đoạn "Lát Z3"), ui-style.md 5e. Test: `PurchaseOrderPriceSourceTests` thêm kiểm tra Id, e2e
-    `doc-no.spec.ts`; e2e `purchasing`, `suppliers` sửa theo ô số chứng từ.
+    `doc-no.spec.ts`; e2e `purchasing`, `suppliers` sửa theo ô số chứng từ, `three-way-match` bấm đúp đúng ô số XNH. `dotnet test` 643/643, build 0
+    cảnh báo, tsc, oxlint, `npm run build`; Playwright đủ bộ 127/127 (Vite mới cổng 5174). **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
