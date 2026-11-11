@@ -2210,6 +2210,28 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
 - Chưa có trong mẫu (thêm khi làm lát tương ứng): bước Thủ kho nhập tồn và Trưởng phòng HC kiểm định mức nhóm B (lát Y3 – đề nghị mua có loại
   mua; trước Y3 đề nghị DV dùng chung chuỗi PR); bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
 
+**Lát Y2 – công trình và dự toán (0.23.0, loại mua A – mục 19.2).** Quy tắc (tự đặt, người dùng "làm tiếp" 11/11/2026):
+
+- Màn hình **CTDT** (Mua hàng → Công trình – dự toán), bảng `ConstructionProject` theo **công ty** (mỗi công ty pháp nhân độc lập): mã 2–30 ký
+  tự chữ không dấu, số, `. _ / -` (tự viết hoa, duy nhất trong công ty, **không đổi** sau khi tạo), tên, **phòng ban đề xuất** (bắt buộc – in trên
+  1A, điền sẵn khi lập đề nghị mua ở Y3; phòng ban ngừng dùng không chọn mới được, công trình đang gắn thì giữ), địa điểm, ngày khởi công,
+  ngày dự kiến hoàn thành (không trước ngày khởi công), ghi chú, tab **Đính kèm** (quyết định phê duyệt / điều chỉnh dự toán, bản vẽ).
+- **Tổng dự toán** tính **VND chưa VAT** (> 0) để so với lũy kế theo PO đã duyệt giá chưa VAT (Q4). Không sửa trực tiếp sau khi tạo: chỉ đổi qua
+  **"Điều chỉnh dự toán"** – dự toán mới (khác hiện hành), ngày hiệu lực, căn cứ (số quyết định…), **lý do bắt buộc**; mỗi lần là một dòng
+  `ConstructionProjectEstimateRevision` (lần 0 = dự toán ban đầu kèm căn cứ), **chỉ thêm, không sửa/xóa** (cùng tinh thần D2 mục 20.2). Tab
+  **Dự toán** liệt kê: lần, ngày hiệu lực, dự toán trước, sau, chênh lệch, căn cứ, lý do, người ghi. Dự toán là con số đã được phê duyệt ở
+  ngoài phần mềm (quyết định) nên **không qua duyệt online** trong phần mềm.
+- **Trạng thái**: Đang thực hiện (chọn được trên đề nghị mua loại A, điều chỉnh dự toán được) · Tạm ngừng · Đã hoàn thành (không chọn trên
+  phiếu mới, không điều chỉnh dự toán – mở lại về Đang thực hiện rồi mới điều chỉnh). Không xóa công trình.
+- Quyền `Purchase.Project.View` (xem), `Purchase.Project.Manage` (tạo, sửa, điều chỉnh dự toán, đính kèm). Bộ vai trò mẫu: quyền xem cho mọi
+  vai trò mẫu đang có quyền xem ngân sách; **quyền quản lý chỉ quản trị gán** (chưa rõ phòng nào giữ dự toán). Danh sách chọn trên phiếu
+  (`GET /api/construction-projects/options` – công trình đang thực hiện) mở cho người xem/lập đề nghị mua.
+- API `/api/construction-projects` (danh sách, `/options`, chi tiết, tạo, sửa, `POST /{id}/estimate-revisions`); migration
+  `V0_23_0_CongTrinhDuToan` (Down mất toàn bộ công trình và lịch sử dự toán).
+- **Để lát Y3**: đề nghị mua có loại mua A/B/DV, PR loại A chọn công trình; **lũy kế đã mua** (PO đã duyệt của đề nghị loại A thuộc công trình,
+  giá chưa VAT, hiện thêm số có VAT – Q4), **còn lại** = dự toán − lũy kế, hiện trên 1A và cột ở CTDT; vượt dự toán thêm chặng duyệt (Q5).
+  Chưa có: dự toán chi tiết theo hạng mục / công đoạn, nhập Excel (làm khi có yêu cầu).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
