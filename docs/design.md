@@ -2317,7 +2317,9 @@ tháng, đặt hàng gộp, chiết khấu sản lượng, hồ sơ NCC mới, X
 | D6 | Làm **Z1–Z4 ngay**, trước các lát Y của 0.23.0. |
 
 **20.2a Đã chốt (11/11/2026):** **Hủy phiếu là quyền đặc biệt, chỉ cấp cho admin** (quản trị) – không gán cho người lập hay vai trò
-nghiệp vụ; hủy bắt buộc lý do, không qua bước duyệt. Áp cho mọi hủy phiếu (kể cả phiếu nháp – người lập muốn bỏ phiếu nháp thì nhờ admin).
+nghiệp vụ; hủy bắt buộc lý do, không qua bước duyệt. **Ngoại lệ (người dùng chốt 11/11/2026):** phiếu đang ở trạng thái **Nháp** (chưa gửi
+duyệt, hoặc bị từ chối / rút về nháp) thì **người lập tự hủy được** phiếu của mình (vẫn bắt buộc lý do) – phiếu nháp chưa có phiếu sau nên
+không có dây chuyền. Phiếu đã gửi duyệt trở đi (Chờ duyệt, Đã duyệt, đang thực hiện…) chỉ admin hủy.
 
 **Lát Z1 – đã làm (11/11/2026):** hộp thoại **Duyệt** dùng chung (`confirmApprove`, `approvalDialogs.tsx`) có ô "Ý kiến người duyệt"
 (không bắt buộc) + đính kèm; hộp thoại **Từ chối** (`confirmReject`) thêm đính kèm (lý do vẫn bắt buộc). File tải lên sau khi duyệt / từ
