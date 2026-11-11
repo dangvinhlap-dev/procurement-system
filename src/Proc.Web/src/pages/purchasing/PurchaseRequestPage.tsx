@@ -10,12 +10,14 @@ import { supplierItemKey, useFetchSupplierItem, useSupplierItemLookup, useUoms }
 import { useDepartments, useMyDepartment, useWarehouses } from '../../api/organization'
 import {
   priorityLabels,
+  purchaseCategoryLabels,
   purchaseStatusText,
   withPendingApprovers,
   purchaseStatusTone,
   usePurchaseMutations,
   usePurchaseRequest,
   usePrNewItemActions,
+  type PurchaseCategory,
   type PurchasePriority,
   type PurchaseRequest,
   type SavePurchaseRequestInput,
@@ -29,6 +31,8 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { formatDateTime, formatMoney, formatQuantity, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
+import { ConstructionBudgetNotice } from './ConstructionBudgetNotice'
+import { useConstructionProjectOptions } from '../../api/constructionProjects'
 import { UsageNormCell, UsageNormNotice } from './UsageNormNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
@@ -63,6 +67,10 @@ interface PrFormValues {
   neededDate?: Dayjs | null
   warehouseId?: string
   priority: PurchasePriority
+  /** Loại mua A/B/DV (lát Y3). */
+  category: PurchaseCategory
+  /** Công trình – chỉ loại A. */
+  constructionProjectId?: string
   note?: string
   lines: PrLineValues[]
   newItems: PrNewItemValues[]
@@ -117,6 +125,17 @@ export function PurchaseRequestPage() {
     if (isNew && myDepartment.data && !form.getFieldValue('departmentId')) form.setFieldValue('departmentId', myDepartment.data)
   }, [isNew, myDepartment.data, form])
   const readOnly = isNew ? !hasPermission(Permission.PrCreate) : !doc?.actions.canEdit
+  // Loại A mua trong tổng dự toán của công trình (design.md mục 19.2): chỉ chọn công trình đang thực hiện; công trình phiếu đã gắn nay tạm
+  // ngừng / hoàn thành vẫn hiện để giữ tên (máy chủ chặn gửi duyệt).
+  const category = Form.useWatch('category', form) as PurchaseCategory | undefined
+  const projectOptions = useConstructionProjectOptions(category === 'Construction')
+  const projectSelect = useMemo(() => {
+    const options = (projectOptions.data ?? []).map((p) => ({ value: p.id, label: `${p.code} – ${p.name}` }))
+    const current = doc?.construction
+    if (current && !options.some((o) => o.value === current.projectId))
+      options.push({ value: current.projectId, label: `${current.code} – ${current.name} (không còn thực hiện)` })
+    return options
+  }, [projectOptions.data, doc?.construction])
   // Đính kèm được cả khi phiếu đã duyệt/ghi sổ (scan hóa đơn, biên bản) – quyền theo quyền lập phiếu, design.md mục 18.4.
   const attachmentTab = useAttachmentTab('PurchaseRequest', doc?.id, hasPermission(Permission.PrCreate))
 
@@ -168,6 +187,8 @@ export function PurchaseRequestPage() {
     neededDate: doc.neededDate ? dayjs(doc.neededDate) : null,
     warehouseId: doc.warehouseId ?? undefined,
     priority: doc.priority,
+    category: doc.category,
+    constructionProjectId: doc.construction?.projectId,
     note: doc.note ?? '',
     lines: doc.lines.map((l) => ({
       id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
@@ -195,6 +216,8 @@ export function PurchaseRequestPage() {
       neededDate: values.neededDate ? values.neededDate.format('YYYY-MM-DD') : null,
       warehouseId: values.warehouseId ?? null,
       priority: values.priority,
+      category: values.category,
+      constructionProjectId: values.category === 'Construction' ? (values.constructionProjectId ?? null) : null,
       note: orNull(values.note),
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, qty: l.qty ?? 0, suggestedSupplierId: l.suggestedSupplierId ?? null,
@@ -468,6 +491,7 @@ export function PurchaseRequestPage() {
             doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
           )}
           <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
+          <ConstructionBudgetNotice construction={doc?.construction} />
           <UsageNormNotice lines={doc?.lines} />
           <ClosedRemainingNotice doc={doc} />
         </>
@@ -476,6 +500,7 @@ export function PurchaseRequestPage() {
       initialValues={{
         date: dayjs(),
         priority: 'Normal',
+        category: 'Goods',
         lines: prefill.map((l) => ({ id: null, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined })),
       }}
       readOnly={readOnly}
@@ -487,6 +512,29 @@ export function PurchaseRequestPage() {
           <Form.Item label="Ngày đề nghị" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
             <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
+          <Form.Item label="Loại mua" name="category" rules={[{ required: true, message: 'Chọn loại mua.' }]}>
+            <Select
+              options={Object.entries(purchaseCategoryLabels).map(([value, label]) => ({ value, label }))}
+              onChange={(v: PurchaseCategory) => {
+                if (v !== 'Construction') form.setFieldValue('constructionProjectId', undefined)
+              }}
+            />
+          </Form.Item>
+          {category === 'Construction' && (
+            <Form.Item label="Công trình" name="constructionProjectId" rules={[{ required: true, message: 'Chọn công trình.' }]}>
+              <Select
+                allowClear
+                options={projectSelect}
+                loading={projectOptions.isLoading}
+                placeholder="Chọn công trình đang thực hiện"
+                onChange={(v: string | undefined) => {
+                  // Điền sẵn phòng ban đề xuất của công trình (in trên 1A); người lập vẫn đổi được.
+                  const project = projectOptions.data?.find((p) => p.id === v)
+                  if (project) form.setFieldValue('departmentId', project.departmentId)
+                }}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             label="Bộ phận đề nghị"
             name="departmentId"

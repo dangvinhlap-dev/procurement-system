@@ -24,7 +24,17 @@ namespace Proc.Application.Purchasing;
 public sealed record ConstructionProjectDto(
     Guid Id, string Code, string Name, Guid DepartmentId, string DepartmentCode, string DepartmentName, string? Location, DateOnly? StartDate,
     DateOnly? ExpectedEndDate, decimal EstimateAmount, decimal InitialEstimateAmount, int RevisionCount, string Status, string? Note,
-    DateTimeOffset CreatedAt, string? CreatedByName, IReadOnlyList<ConstructionProjectRevisionDto> Revisions);
+    DateTimeOffset CreatedAt, string? CreatedByName, IReadOnlyList<ConstructionProjectRevisionDto> Revisions)
+{
+    /// <summary>Lũy kế đã mua chưa VAT: dòng PO đã duyệt / đã đóng lấy từ đề nghị loại A của công trình (lát Y3, Q4).</summary>
+    public decimal SpentAmount { get; init; }
+
+    /// <summary>Lũy kế đã mua gồm VAT.</summary>
+    public decimal SpentAmountWithVat { get; init; }
+
+    /// <summary>Còn lại = dự toán − lũy kế chưa VAT (âm = đã vượt dự toán).</summary>
+    public decimal RemainingAmount { get; init; }
+}
 
 /// <summary>Một lần ghi dự toán.</summary>
 /// <param name="Id">Id dòng.</param>
@@ -83,8 +93,8 @@ public sealed record UpdateConstructionProjectRequest(
 public sealed record ReviseConstructionEstimateRequest(decimal NewAmount, DateOnly EffectiveDate, string? Basis, string Reason);
 
 /// <summary>
-/// Danh mục công trình và dự toán của công ty đang làm việc (lát Y2, design.md mục 19.2). Lũy kế đã mua / còn lại tính theo đề nghị mua loại A
-/// và PO (lát Y3).
+/// Danh mục công trình và dự toán của công ty đang làm việc (lát Y2, design.md mục 19.2). Lũy kế đã mua / còn lại tính theo PO đã duyệt lấy
+/// dòng từ đề nghị mua loại A (lát Y3).
 /// </summary>
 public interface IConstructionProjectService
 {

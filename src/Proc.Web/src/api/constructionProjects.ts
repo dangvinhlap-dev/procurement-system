@@ -50,6 +50,12 @@ export interface ConstructionProject {
   note: string | null
   createdAt: string
   createdByName: string | null
+  /** Lũy kế đã mua chưa VAT – dòng PO đã duyệt/đã đóng lấy từ đề nghị loại A của công trình (lát Y3, Q4). */
+  spentAmount: number
+  /** Lũy kế đã mua gồm VAT. */
+  spentAmountWithVat: number
+  /** Còn lại = dự toán − lũy kế chưa VAT (âm = đã vượt). */
+  remainingAmount: number
   /** Lịch sử dự toán – chỉ có khi đọc chi tiết. */
   revisions: ConstructionProjectRevision[]
 }
@@ -92,6 +98,29 @@ export function useConstructionProjects() {
   return useQuery({
     queryKey: ['construction-projects', companyId],
     queryFn: () => apiFetch<ConstructionProject[]>('/api/construction-projects'),
+  })
+}
+
+/** Công trình để chọn trên phiếu – khớp ConstructionProjectOptionDto. */
+export interface ConstructionProjectOption {
+  id: string
+  code: string
+  name: string
+  departmentId: string
+  estimateAmount: number
+  status: ConstructionProjectStatus
+}
+
+/**
+ * Công trình đang thực hiện để chọn trên đề nghị mua loại A (lát Y3). Mở cho người xem/lập đề nghị mua.
+ * @param enabled Chỉ tải khi form cần (loại A).
+ */
+export function useConstructionProjectOptions(enabled: boolean) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['construction-projects', companyId, 'options'],
+    queryFn: () => apiFetch<ConstructionProjectOption[]>('/api/construction-projects/options'),
+    enabled,
   })
 }
 

@@ -128,11 +128,13 @@ public sealed class ConstructionProjectService : IConstructionProjectService
             .OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         string? UserName(Guid? id) => id is { } x && users.TryGetValue(x, out var n) ? n : null;
+        var spending = await ConstructionSpending.ByProjectAsync(_db, projects.Select(p => p.Id).ToList(), cancellationToken);
 
         return projects.Select(p =>
         {
             var revisions = p.Revisions.OrderBy(r => r.RevisionNo).ToList();
             var department = departments.GetValueOrDefault(p.DepartmentId);
+            var spent = spending.GetValueOrDefault(p.Id);
             var revisionDtos = withRevisions
                 ? revisions.Select(r => new ConstructionProjectRevisionDto(
                     r.Id, r.RevisionNo, r.EffectiveDate, r.PreviousAmount, r.NewAmount, r.NewAmount - r.PreviousAmount, r.Basis, r.Reason, r.CreatedAt,
@@ -141,7 +143,10 @@ public sealed class ConstructionProjectService : IConstructionProjectService
             return new ConstructionProjectDto(
                 p.Id, p.Code, p.Name, p.DepartmentId, department?.Code ?? string.Empty, department?.Name ?? string.Empty, p.Location, p.StartDate,
                 p.ExpectedEndDate, p.EstimateAmount, revisions.FirstOrDefault()?.NewAmount ?? p.EstimateAmount, Math.Max(0, revisions.Count - 1),
-                p.Status.ToString(), p.Note, p.CreatedAt, UserName(p.CreatedBy), revisionDtos);
+                p.Status.ToString(), p.Note, p.CreatedAt, UserName(p.CreatedBy), revisionDtos)
+            {
+                SpentAmount = spent.Net, SpentAmountWithVat = spent.Net + spent.Vat, RemainingAmount = p.EstimateAmount - spent.Net,
+            };
         }).ToList();
     }
 }

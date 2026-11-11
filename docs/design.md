@@ -2232,6 +2232,25 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   giá chưa VAT, hiện thêm số có VAT – Q4), **còn lại** = dự toán − lũy kế, hiện trên 1A và cột ở CTDT; vượt dự toán thêm chặng duyệt (Q5).
   Chưa có: dự toán chi tiết theo hạng mục / công đoạn, nhập Excel (làm khi có yêu cầu).
 
+**Lát Y3 – đề nghị mua 1A/1B/DV (0.23.0).** Tách ba lát: **Y3a** loại mua + công trình + lũy kế; **Y3b** Thủ kho nhập tồn (Cần sử dụng, Tồn,
+Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP HC chỉ nhóm B) + chặng vượt dự toán (Q5).
+
+**Lát Y3a – loại mua và công trình trên đề nghị mua.** Quy tắc (người dùng chốt 11/11/2026: **mọi khoản mua cho công trình bắt buộc đi qua
+đề nghị loại A**; còn lại tự đặt):
+
+- Đề nghị mua có **Loại mua** (`PurchaseRequest.Category`): A – Công trình (`Construction`), B – Hàng hóa (`Goods`, mặc định; phiếu lập trước
+  0.23.0 là B), DV – Dịch vụ (`Service`). Đổi được khi còn nháp. Migration `V0_23_0_LoaiMuaDeNghi` (Down mất loại mua và công trình đã chọn).
+- Loại A **bắt buộc chọn công trình** (`ConstructionProjectId`, khóa ngoại kèm CompanyId); loại B/DV **không gắn** công trình. Chỉ chọn công
+  trình **Đang thực hiện**; phiếu nháp đã gắn công trình nay tạm ngừng / hoàn thành lưu lại được (giữ công trình) nhưng **chặn gửi duyệt**. Chọn
+  công trình trên form thì **điền sẵn phòng ban đề xuất** của công trình vào Bộ phận đề nghị (người lập đổi được).
+- **Lũy kế đã mua** của công trình = tổng dòng PO **đã duyệt hoặc đã đóng** lấy dòng từ đề nghị loại A của công trình, **giá chưa VAT** (sau
+  chiết khấu), hiện thêm số **gồm VAT** (Q4); **Còn lại** = dự toán hiện hành − lũy kế (âm = đã vượt). PO nháp / chờ duyệt / đã hủy không tính;
+  PO không lấy dòng từ đề nghị loại A **không tính vào công trình nào** (vì mọi khoản mua công trình phải qua đề nghị A). PO đã đóng phần còn
+  lại vẫn tính đủ giá trị đã duyệt (tự đặt – điều chỉnh khi làm 4A/4B, lát Y7).
+- Đầu đề nghị loại A hiện khung **dự toán – lũy kế (gồm VAT) – còn lại**; phiếu nháp / chờ duyệt cộng thêm tổng dự kiến của chính phiếu, vượt
+  dự toán thì **cảnh báo vàng, không chặn** (chặng duyệt vượt dự toán làm ở Y3c). Màn hình CTDT có cột Lũy kế đã mua, Lũy kế gồm VAT, Còn lại;
+  ngăn kéo công trình hiện hai ô chỉ đọc. Danh sách đề nghị mua có cột Loại mua.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

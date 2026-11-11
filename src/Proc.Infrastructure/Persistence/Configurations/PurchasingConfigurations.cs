@@ -114,6 +114,11 @@ internal sealed class PurchaseRequestConfiguration : IEntityTypeConfiguration<Pu
         builder.HasOne<Department>().WithMany()
             .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
             .OnDelete(DeleteBehavior.Restrict);
+        // Loại mua A/B/DV (lát Y3); phiếu cũ mặc định B = 2. Công trình cùng công ty với PR (khóa ngoại kèm CompanyId như bộ phận).
+        builder.Property(x => x.Category).HasDefaultValue(PurchaseCategory.Goods).HasSentinel((PurchaseCategory)0);
+        builder.HasOne<ConstructionProject>().WithMany()
+            .HasForeignKey(x => new { x.ConstructionProjectId, x.CompanyId }).HasPrincipalKey(p => new { p.Id, p.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(x => x.NewItems).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
