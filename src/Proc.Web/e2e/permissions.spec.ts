@@ -22,11 +22,13 @@ test('cây điều hướng chỉ hiện màn hình có quyền', async ({ page 
   await expect(nav.getByRole('button', { name: 'Mua hàng', exact: true })).toHaveCount(0)
 })
 
-test('menu nhóm không có quyền báo rõ, chỉ được chọn công ty được gán', async ({ page }) => {
+test('thanh menu ẩn nhóm không có màn hình được phép, chỉ được chọn công ty được gán', async ({ page }) => {
   const menuBar = page.getByTestId('shell-bar')
-  await menuBar.getByRole('menuitem', { name: 'Mua hàng', exact: true }).click()
-  await expect(page.getByRole('menuitem', { name: 'Không có màn hình được phép' })).toBeVisible()
-  await page.keyboard.press('Escape')
+  // Thủ kho BHA không có quyền mua hàng, đấu thầu → hai nhóm không hiện trên thanh menu chữ (như cây điều hướng).
+  await expect(menuBar.getByRole('menuitem', { name: 'Hằng ngày', exact: true })).toBeVisible()
+  await expect(menuBar.getByRole('menuitem', { name: 'Mua hàng', exact: true })).toHaveCount(0)
+  await expect(menuBar.getByRole('menuitem', { name: 'Đấu thầu', exact: true })).toHaveCount(0)
+  await expect(page.getByText('Không có màn hình được phép')).toHaveCount(0)
 
   await menuBar.locator('.app-company-select').click()
   await expect(page.locator('.ant-select-dropdown .ant-select-item-option')).toHaveCount(1)
