@@ -159,7 +159,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   (scratchpad `chuan_bi_0220.py`: gán quyền XNH/ủy quyền cho vai trò cũ, tạo bộ vai trò CUVT, công ty thử **CUV** + bộ phận VT, KTH + 12 tài
   khoản `cuv.*` mật khẩu Test@2026) và luồng PR 6 cấp CUVT chạy đúng. Sao lưu CSDL bản test: `D:\project\procurement_kiemtra_0150_truoc_0.22.0.dump`.
   Tài liệu test `docs/DuLieuThu_KichBanTest_0.22.0.docx` (K01–K09 ở BMI, O01–O12 ở CUV, R01–R03 hồi quy; dựng bằng script trên khuôn file 0.19.0).
-  **Bản test cổng 5007 nâng tại chỗ lên 0.22.0 (11/11/2026)**: `app` = 0.22.0, `app-0.21.0` = bản cũ, gói chép vào `goi .22.0`; sao lưu
+  **Bản test cổng 5007 nâng tại chỗ lên 0.22.0 (11/11/2026)**: `app` = 0.22.0, `app-0.21.0` = bản cũ, gói chép vào `goi\0.22.0`; sao lưu
   ngay trước nâng `D:\project\procurement_kiemtra_0150_truoc_0.22.0_lan2.dump`; chạy `0.22.0.sql` (78 migration); PID 5124 trong `pid.txt`;
   `/health` Healthy 0.22.0 (cả qua http://192.168.1.199:5007). Đã chạy `chuan_bi_0220.py`: gán quyền XNH/ủy quyền cho 8 vai trò cũ, tạo 9 vai trò
   mẫu CUVT, công ty **CUV** (bộ phận KTH, VT), 12 tài khoản `cuv.*` / Test@2026 (đăng nhập thử qua). Chưa áp cấu hình duyệt mẫu – người test làm ở kịch bản.
