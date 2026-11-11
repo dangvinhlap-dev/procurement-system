@@ -158,9 +158,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `pricing.spec.ts` kiểm tra tự điền 47.000. Kiểm tra: tsc, oxlint, `npm run build`; Playwright đủ bộ 124/124 (2 test số phiên bản lỗi
     do máy chủ Vite 5173 chạy từ thời 0.20.0 – Vite đọc phiên bản lúc khởi động; chạy lại trên Vite mới cổng 5174 thì qua). Backend không
     đổi (`dotnet test` 640/640 lần trước).
-  - **Tài liệu test 0.22.0 chưa sửa được** – file `.docx` đang mở trong Word (khóa). Script sửa sẵn ở scratchpad `docx_fix.py` (11 chỗ: K04
-    Mua hàng → Theo dõi giao hàng; K06 xem báo cáo bằng bmi.lap; K09 "Đóng phần còn lại"; K02 nhập đơn giá; "SL thực nhận"; K01 ghi chú menu
-    0.22.1; môi trường 0.22.1). Chờ người dùng đóng Word.
+  - **Tài liệu test 0.22.0 đã sửa** (người dùng đóng Word): K04 Mua hàng → Theo dõi giao hàng; K06 xem báo cáo bằng bmi.lap; K09 "Đóng phần
+    còn lại"; K02 nhập đơn giá (tự điền nếu có giá đã duyệt); "SL thực nhận"; K01 menu ẩn nhóm trống; môi trường 0.22.2.
+- **Phát hành 0.22.2 (11/11/2026)** – bản vá: ẩn nhóm menu trống, PO tự điền đơn giá đã duyệt, sửa tài liệu test. Người dùng viết "phát hành
+  0.22.1" – 0.22.1 đã có tag nên hiểu là bản vá kế tiếp 0.22.2. Tag `v0.22.2`,
+  https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.2; không đổi CSDL. Kiểm tra: build 0 cảnh báo, `dotnet test`
+  640/640, Playwright đủ bộ 124/124. **Bản test 5007 nâng lên 0.22.2**: `app` = 0.22.2, `app-0.22.1` = bản cũ, gói `goi .22.2`, sao lưu
+  `D:\project\procurement_kiemtra_0150_truoc_0.22.2.dump`, PID 11864; `/health` Healthy 0.22.2; bmi.kho không còn thấy Đấu thầu, Báo cáo.
+  Máy chủ Vite dev 5173 chạy từ thời 0.20.0 (hiện sai số phiên bản) – nên khởi động lại.
 - **Mẫu in theo biểu mẫu CUVT (11/11/2026)**: người dùng hỏi vì sao chưa in theo biểu mẫu Excel – đã giải thích để theo lộ trình design.md 19.6
   (Y10 khung in + 1A/1B/DV, 2A/2B ở 0.23.0; 3A/3a/3B, 4A/4B ở 0.24.0; 5A/5B, 1C/2C ở 0.27.0). Người dùng chốt **giữ lộ trình**.
 - **Phát hành 0.22.1 (11/11/2026)** – bản vá: cột SL thực nhận/Còn lại trên PO đứng sau SL đặt, lưới PO cuộn ngang. Tag `v0.22.1`,
