@@ -103,6 +103,19 @@ Mọi ô chọn có tìm kiếm (NCC, mặt hàng, kho, bộ phận, nhóm…) d
   `src/classic/TreeSelect.tsx` – cùng cách tìm `*`, không dấu. **Ô lệnh** (tên màn hình) gõ `*` rồi Enter liệt kê mọi màn hình được phép, mũi
   tên + Enter mới mở. Ô tìm trên máy chủ gọi API khi gõ ≥ 2 ký tự **hoặc** có `*`.
 
+## 5c. Trang điện thoại – duyệt gọn (lát O2d, 11/11/2026)
+
+Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` (xem + Duyệt / Từ chối) dành cho màn hình hẹp, đứng ngoài `AppShell`:
+
+- Bọc bằng `ClassicScreen className="erp-mobile"` + theme `classicMobileTheme` (`classicTheme.ts`); CSS ở `src/classic/classic-mobile.css`, chỉ
+  dùng biến `--erp-*`. Giữ màu, viền 1px, bo 2px, không bóng của phong cách cổ điển.
+- **Ngoại lệ có chủ đích** so với mục 3–4: chữ **14px**, ô/nút cao **36px** (nút Duyệt / Từ chối 40px) để bấm bằng ngón tay; một cột, rộng tối đa 720px.
+- Thanh tiêu đề dải màu dính trên (nút quay lại, tiêu đề, "Bản đầy đủ"); dòng người dùng + ô chọn công ty + đăng xuất.
+- Danh sách là **thẻ** (số phiếu đậm, loại phiếu, nội dung, ngày · cấp · người lập, số tiền phông đơn cách canh phải); khối thông tin có dải
+  tiêu đề như "Thông tin phiếu"; cảnh báo chữ đỏ đậm có nội dung; đèn trạng thái kèm chữ.
+- Vùng Ý kiến + nút **dính đáy màn hình**; Từ chối (icon đỏ) bên trái, Duyệt (icon xanh) bên phải; cả hai hỏi xác nhận.
+- Link "Mở trên phần mềm" trong email mở trên màn hình ≤ 768px tự chuyển sang trang này.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

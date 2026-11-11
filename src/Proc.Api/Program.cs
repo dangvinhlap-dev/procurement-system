@@ -40,6 +40,17 @@ builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection
 // Bật/tắt phân hệ – kho tắt mặc định từ 0.22.0 (design.md mục 19.4).
 builder.Services.AddOptions<Proc.Application.Common.ModuleOptions>().Bind(builder.Configuration.GetSection(Proc.Application.Common.ModuleOptions.Section));
 builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
+// Email bản sao thông báo qua SMTP (lát O2b, design.md mục 19.3) – mặc định tắt; mật khẩu đặt bằng biến môi trường Email__Password.
+builder.Services.AddOptions<Proc.Infrastructure.Notifications.EmailOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Notifications.EmailOptions.Section))
+    .Validate(o => !o.Enabled || (!string.IsNullOrWhiteSpace(o.Host) && !string.IsNullOrWhiteSpace(o.FromAddress)),
+        "Email:Enabled = true thì phải khai Email:Host và Email:FromAddress.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<Proc.Infrastructure.Notifications.EmailBackgroundService>();
+// Nhắc quá hạn duyệt sau 1 ngày làm việc (lát O2c, design.md mục 19.3) – mặc định bật, môi trường Testing tắt.
+builder.Services.AddOptions<Proc.Infrastructure.Purchasing.ApprovalReminderOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Purchasing.ApprovalReminderOptions.Section));
+builder.Services.AddHostedService<Proc.Infrastructure.Purchasing.ApprovalReminderBackgroundService>();
 // Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
 builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()
     .Bind(builder.Configuration.GetSection("Attachments"))

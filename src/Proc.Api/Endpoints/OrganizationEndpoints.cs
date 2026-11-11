@@ -1,12 +1,13 @@
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Organization;
+using Proc.Application.Purchasing;
 using Proc.Domain.Organization;
 
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Endpoint danh mục tổ chức: công ty, kho, bộ phận, khối (design.md mục 5.1, 5.6, 18.5, 19.3). Dữ liệu đã được lọc theo phạm vi người dùng;
+/// Endpoint danh mục tổ chức: công ty, kho, bộ phận, khối, ủy quyền duyệt (design.md mục 5.1, 5.6, 18.5, 19.3). Dữ liệu đã được lọc theo phạm vi người dùng;
 /// quy tắc thêm/sửa (chỉ ở tổng công ty, kho tổng, phạm vi kho) nằm ở dịch vụ.
 /// </summary>
 public static class OrganizationEndpoints
@@ -96,6 +97,20 @@ public static class OrganizationEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Organization.DepartmentManage)
             .Validate<UpdateDivisionRequest>();
+
+        // Ủy quyền duyệt (lát O2, design.md mục 19.3): ai cũng tự ủy quyền được; lập thay, xem toàn bộ cần quyền quản lý (dịch vụ kiểm tra).
+        var delegations = app.MapGroup("/api/approval-delegations").WithTags("Ủy quyền duyệt").RequireAuthorization();
+        delegations.MapGet("/", (IApprovalDelegationService s, CancellationToken ct) => s.ListAsync(ct));
+        delegations.MapGet("/users", (IApprovalDelegationService s, CancellationToken ct) => s.UserOptionsAsync(ct));
+        delegations.MapGet("/doc-types", (IApprovalDelegationService s) => s.DocTypes());
+        delegations.MapGet("/{id:guid}", (Guid id, IApprovalDelegationService s, CancellationToken ct) => s.GetAsync(id, ct));
+        delegations.MapPost("/", async (CreateApprovalDelegationRequest request, IApprovalDelegationService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/approval-delegations/{created.Id}", created);
+            })
+            .Validate<CreateApprovalDelegationRequest>();
+        delegations.MapPost("/{id:guid}/revoke", (Guid id, IApprovalDelegationService s, CancellationToken ct) => s.RevokeAsync(id, ct));
 
         return app;
     }

@@ -168,6 +168,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lịch sử duyệt (lọc theo công ty).</summary>
     public DbSet<Proc.Domain.Purchasing.ApprovalStep> ApprovalSteps => Set<Proc.Domain.Purchasing.ApprovalStep>();
 
+    /// <summary>Ủy quyền duyệt có thời hạn (lọc theo công ty – lát O2).</summary>
+    public DbSet<Proc.Domain.Purchasing.ApprovalDelegation> ApprovalDelegations => Set<Proc.Domain.Purchasing.ApprovalDelegation>();
+
+    /// <summary>Các lần nhắc quá hạn duyệt (lọc theo công ty – lát O2c).</summary>
+    public DbSet<Proc.Domain.Purchasing.ApprovalReminder> ApprovalReminders => Set<Proc.Domain.Purchasing.ApprovalReminder>();
+
     /// <summary>Đề nghị mua hàng (lọc theo công ty).</summary>
     public DbSet<Proc.Domain.Purchasing.PurchaseRequest> PurchaseRequests => Set<Proc.Domain.Purchasing.PurchaseRequest>();
 

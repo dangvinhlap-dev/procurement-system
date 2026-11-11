@@ -196,6 +196,12 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     /// <summary>Thời điểm duyệt/từ chối (UTC).</summary>
     public DateTimeOffset? ActedAt { get; private set; }
 
+    /// <summary>
+    /// Người được duyệt thay (người ủy quyền – lát O2) khi <see cref="ActedBy"/> duyệt/từ chối theo ủy quyền; null = tự duyệt bằng vị trí của mình.
+    /// Cả hai người đều tính là "đã duyệt một cấp" trong lượt (lát R3).
+    /// </summary>
+    public Guid? OnBehalfOf { get; private set; }
+
     /// <summary>Ý kiến (bắt buộc khi từ chối).</summary>
     public string? Comment { get; private set; }
 
@@ -239,15 +245,24 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     }
 
     /// <summary>Ghi kết quả duyệt.</summary>
+    /// <param name="userId">Người duyệt.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <param name="comment">Ý kiến.</param>
+    /// <param name="onBehalfOf">Người ủy quyền khi duyệt thay (lát O2); null = tự duyệt.</param>
     /// <exception cref="BusinessRuleException">Khi bước không còn chờ duyệt.</exception>
-    public void Approve(Guid userId, DateTimeOffset at, string? comment) => Act(ApprovalStepStatus.Approved, userId, at, comment);
+    public void Approve(Guid userId, DateTimeOffset at, string? comment, Guid? onBehalfOf = null) =>
+        Act(ApprovalStepStatus.Approved, userId, at, comment, onBehalfOf);
 
     /// <summary>Ghi từ chối – bắt buộc lý do.</summary>
+    /// <param name="userId">Người từ chối.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <param name="comment">Lý do, bắt buộc.</param>
+    /// <param name="onBehalfOf">Người ủy quyền khi từ chối thay (lát O2); null = tự từ chối.</param>
     /// <exception cref="BusinessRuleException">Khi thiếu lý do hoặc bước không còn chờ duyệt.</exception>
-    public void Reject(Guid userId, DateTimeOffset at, string? comment)
+    public void Reject(Guid userId, DateTimeOffset at, string? comment, Guid? onBehalfOf = null)
     {
         if (string.IsNullOrWhiteSpace(comment)) throw new BusinessRuleException("Phải nhập lý do từ chối.");
-        Act(ApprovalStepStatus.Rejected, userId, at, comment);
+        Act(ApprovalStepStatus.Rejected, userId, at, comment, onBehalfOf);
     }
 
     /// <summary>Bước không cần duyệt nữa (cấp dưới đã từ chối hoặc phiếu bị rút/hủy).</summary>
@@ -257,13 +272,15 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     }
 
     /// <summary>Ghi kết quả một bước duyệt (duyệt/từ chối), người duyệt, thời điểm và ý kiến; bước đã xử lý thì báo lỗi.</summary>
-    private void Act(ApprovalStepStatus status, Guid userId, DateTimeOffset at, string? comment)
+    private void Act(ApprovalStepStatus status, Guid userId, DateTimeOffset at, string? comment, Guid? onBehalfOf)
     {
+        if (onBehalfOf == userId) throw new BusinessRuleException("Không duyệt thay cho chính mình.");
         if (Status != ApprovalStepStatus.Pending) throw new BusinessRuleException("Bước duyệt này đã xử lý xong.");
         if (comment?.Trim().Length > 500) throw new BusinessRuleException("Ý kiến duyệt tối đa 500 ký tự.");
         Status = status;
         ActedBy = userId;
         ActedAt = at;
+        OnBehalfOf = onBehalfOf;
         Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
     }
 }

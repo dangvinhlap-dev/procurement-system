@@ -1,4 +1,5 @@
-import { ApartmentOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, MobileOutlined } from '@ant-design/icons'
+import { approvalFullPaths } from '../../app/approvalRoutes'
 import { Alert, App, Button, Form, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs from 'dayjs'
@@ -18,7 +19,6 @@ import {
   useDeliveryTracking,
   usePendingApprovals,
   usePurchaseDocuments,
-  type ApprovalDocType,
   type ApprovalRule,
   type ApproverKind,
   type DeliveryTracking,
@@ -136,21 +136,6 @@ const pendingColumns: GridColumn<PendingApproval>[] = [
   { key: 'creator', title: 'Người lập', width: 150, value: (r) => r.createdByName, groupable: true },
 ]
 
-/** Đường dẫn mở phiếu chờ duyệt theo loại. */
-const pendingRoutes: Partial<Record<ApprovalDocType, (id: string) => string>> = {
-  PR: (id) => `/mua-hang/pr/${id}`,
-  PO: (id) => `/mua-hang/po/${id}`,
-  PRL: (id) => `/gia-ncc/bang-gia/${id}`,
-  RFQ: (id) => `/dau-thau/rfq/${id}?tab=compare`,
-  CTR: (id) => `/mua-hang/hop-dong-khung/${id}`,
-  CTA: (id) => `/mua-hang/hop-dong-khung/phu-luc/${id}`,
-  // Trang đầy đủ (TC-3): duyệt NCC kèm hồ sơ NCC; NCC độc quyền.
-  NCC: (id) => `/gia-ncc/duyet-ncc/${id}`,
-  NDQ: (id) => `/gia-ncc/ncc-doc-quyen/${id}`,
-  GTH: (id) => `/gia-ncc/duyet-thang/${id}`,
-  CKB: (id) => `/gia-ncc/chiet-khau-san-luong/${id}`,
-}
-
 /** Màn hình Việc cần làm: PR, PO đang chờ chính tôi duyệt ở công ty đang làm việc (design.md mục 6.7). Bấm đúp mở phiếu để duyệt. */
 export function PendingApprovalsPage() {
   const navigate = useNavigate()
@@ -165,9 +150,11 @@ export function PendingApprovalsPage() {
       rowKey={(r) => r.documentId}
       loading={pending.isLoading}
       onOpenRow={(r) => {
-        const route = pendingRoutes[r.docType]
+        const route = approvalFullPaths[r.docType]
         if (route) navigate(route(r.documentId))
       }}
+      // Trang duyệt gọn cho điện thoại (lát O2d) – mở ở đây để người duyệt biết địa chỉ, lưu lối tắt trên điện thoại.
+      actions={<Button icon={<MobileOutlined />} onClick={() => navigate('/duyet')}>Duyệt trên điện thoại</Button>}
       notice={<Alert type="info" showIcon title="Phiếu đang chờ cấp duyệt của bạn. Bấm đúp để mở và Duyệt / Từ chối." />}
     />
   )

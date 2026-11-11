@@ -76,6 +76,8 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
 | `Serilog:WriteTo` (mục `File`) | `path`: `D:\\ProcurementData\\logs\\proc-.log` |
 | `Printing:FontDirectories` | Để trống – Windows có sẵn Arial có dấu tiếng Việt |
+| `Email:*` | Gửi email bản sao thông báo (chờ duyệt, đã duyệt, bị từ chối…) qua SMTP của công ty: `Enabled` = `true`, `Host`, `Port` (587 STARTTLS / 465 SSL), `UserName`, `Password`, `FromAddress`, `AppBaseUrl` = địa chỉ người dùng mở phần mềm (nút "Mở trên phần mềm" trong thư). Để `false` thì không gửi thư |
+| `ApprovalReminder:*` | Nhắc người duyệt khi phiếu chờ quá 1 ngày làm việc (thông báo + email nếu bật email): mặc định `Enabled` = `true`, quét mỗi `PollMinutes` = 15 phút, tối đa `MaxReminders` = 3 lần mỗi cấp. Thường không cần sửa |
 
 Sinh `Jwt:SigningKey` (bộ sinh số ngẫu nhiên dùng cho mật mã):
 
@@ -115,6 +117,9 @@ này ứng dụng báo lỗi khi khởi động).
 **3.6. Kiểm tra** – mở `http://<server>/health` phải thấy `"status":"Healthy"` và số phiên bản; mở `http://<server>`, đăng nhập
 bằng tài khoản quản trị ở bước 3.4 rồi **đổi mật khẩu ngay**. Xem `D:\ProcurementData\logs\proc-<ngày>.log` không có dòng `[ERR]`;
 có dòng `[WRN] Thư mục file đính kèm … nằm trong thư mục ứng dụng` nghĩa là quên đặt `Attachments:RootPath` ra ngoài.
+Đã bật email: gọi `POST /api/notifications/email/test` (quản trị, quyền sửa tham số hệ thống) để gửi thư thử tới email của chính mình;
+`GET /api/notifications/email/status` xem số thư chờ gửi / lỗi. Lỗi gửi ghi ở log (`Gửi email thông báo … lỗi`). Email chạy trong tiến trình
+ứng dụng nên App Pool phải `AlwaysRunning` (bước 3.5) và **chỉ một worker** – nhiều worker có thể gửi trùng thư.
 
 ## 4. Sao lưu hằng đêm
 

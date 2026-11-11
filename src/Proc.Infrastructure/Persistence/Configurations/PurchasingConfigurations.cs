@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
+using Proc.Infrastructure.Identity;
 
 namespace Proc.Infrastructure.Persistence.Configurations;
 
@@ -40,6 +41,43 @@ internal sealed class ApprovalStepConfiguration : IEntityTypeConfiguration<Appro
         builder.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
         // Bộ phận của phiếu ở bước người duyệt động (lát O1).
         builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+        // Người được duyệt thay khi duyệt theo ủy quyền (lát O2).
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.OnBehalfOf).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng ApprovalDelegation – ủy quyền duyệt có thời hạn (lát O2, design.md mục 19.3).</summary>
+internal sealed class ApprovalDelegationConfiguration : IEntityTypeConfiguration<ApprovalDelegation>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ApprovalDelegation> builder)
+    {
+        builder.ToTable("ApprovalDelegation");
+        builder.Property(x => x.DocType).HasMaxLength(10);
+        builder.Property(x => x.Reason).HasMaxLength(ApprovalDelegation.TextMaxLength).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(ApprovalDelegation.TextMaxLength);
+        // Duyệt: tìm ủy quyền của người được ủy quyền tại công ty; thông báo: tìm theo người ủy quyền.
+        builder.HasIndex(x => new { x.CompanyId, x.DelegateUserId });
+        builder.HasIndex(x => new { x.CompanyId, x.DelegatorUserId });
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.DelegatorUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.DelegateUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.RevokedBy).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng ApprovalReminder – các lần nhắc quá hạn duyệt (lát O2c, design.md mục 19.3).</summary>
+internal sealed class ApprovalReminderConfiguration : IEntityTypeConfiguration<ApprovalReminder>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<ApprovalReminder> builder)
+    {
+        builder.ToTable("ApprovalReminder");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        // Mỗi bước mỗi lần nhắc một dòng – hai tiến trình cùng quét thì lần lưu sau báo lỗi trùng, không gửi trùng thông báo.
+        builder.HasIndex(x => new { x.ApprovalStepId, x.Sequence }).IsUnique();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ApprovalStep>().WithMany().HasForeignKey(x => x.ApprovalStepId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

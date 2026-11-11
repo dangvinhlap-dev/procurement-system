@@ -50,6 +50,11 @@ public static class Permissions
         public const string DepartmentView = "Organization.Department.View";
         /// <summary>Quyền "Thêm, sửa bộ phận".</summary>
         public const string DepartmentManage = "Organization.Department.Manage";
+        /// <summary>
+        /// Quyền "Lập, thu hồi ủy quyền duyệt thay người khác; xem mọi ủy quyền" (lát O2). Tự ủy quyền cho người khác duyệt thay mình không cần
+        /// quyền này.
+        /// </summary>
+        public const string DelegationManage = "Organization.Delegation.Manage";
     }
 
     /// <summary>Danh mục dùng chung: nhóm hàng, hàng hóa, nhà cung cấp.</summary>
@@ -304,6 +309,7 @@ public static class Permissions
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),
         new(Organization.DepartmentManage, "Thêm, sửa bộ phận, khối"),
+        new(Organization.DelegationManage, "Lập, thu hồi ủy quyền duyệt thay người khác; xem mọi ủy quyền"),
         new(MasterData.ItemCategoryView, "Xem nhóm hàng"),
         new(MasterData.ItemCategoryManage, "Thêm, sửa nhóm hàng"),
         new(MasterData.ItemView, "Xem hàng hóa"),

@@ -2253,6 +2253,19 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("EmailAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmailNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("EmailState")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("EmailedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -2285,6 +2298,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Notification_EmailPending")
+                        .HasFilter("\"EmailState\" = 0");
 
                     b.HasIndex("UserId", "CompanyId", "CreatedAt");
 
@@ -3683,6 +3700,103 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("VolumeRebateTier", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalDelegation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DelegateUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DelegatorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DocType")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DelegateUserId");
+
+                    b.HasIndex("DelegatorUserId");
+
+                    b.HasIndex("RevokedBy");
+
+                    b.HasIndex("CompanyId", "DelegateUserId");
+
+                    b.HasIndex("CompanyId", "DelegatorUserId");
+
+                    b.ToTable("ApprovalDelegation", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("RemindedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("ApprovalStepId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("ApprovalReminder", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3766,6 +3880,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("OnBehalfOf")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("RoleId")
                         .HasColumnType("uuid");
 
@@ -3793,6 +3910,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("OnBehalfOf");
 
                     b.HasIndex("RoleId");
 
@@ -7103,6 +7222,47 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalDelegation", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("DelegateUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("DelegatorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("RevokedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalReminder", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.ApprovalStep", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovalStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.ApprovalRule", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -7122,6 +7282,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Organization.Department", null)
                         .WithMany()
                         .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("OnBehalfOf")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Organization.Role", null)

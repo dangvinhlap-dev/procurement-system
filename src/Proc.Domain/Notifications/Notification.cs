@@ -22,6 +22,12 @@ public static class NotificationTypes
 
     /// <summary>KSNB ghi nhận hoặc kết luận vi phạm – gửi thẳng lãnh đạo (design.md mục 18.19).</summary>
     public const string ControlFinding = "ControlFinding";
+
+    /// <summary>Người được ủy quyền vừa duyệt/từ chối thay mình (lát O2, design.md mục 19.3).</summary>
+    public const string DelegatedAction = "DelegatedAction";
+
+    /// <summary>Nhắc: phiếu chờ mình duyệt đã quá 1 ngày làm việc (lát O2c, design.md mục 19.3).</summary>
+    public const string ApprovalOverdue = "ApprovalOverdue";
 }
 
 /// <summary>
@@ -101,6 +107,72 @@ public sealed class Notification : Entity, ICompanyOwned
     /// <param name="at">Thời điểm đọc (UTC).</param>
     public void MarkRead(DateTimeOffset at) => ReadAt ??= at;
 
+    /// <summary>Gửi email bản sao (lát O2b): chờ gửi, đã gửi, bỏ qua, lỗi.</summary>
+    public NotificationEmailState EmailState { get; private set; } = NotificationEmailState.Pending;
+
+    /// <summary>Số lần đã thử gửi email.</summary>
+    public int EmailAttempts { get; private set; }
+
+    /// <summary>Thời điểm gửi email xong hoặc thôi gửi (UTC).</summary>
+    public DateTimeOffset? EmailedAt { get; private set; }
+
+    /// <summary>Lỗi lần gửi gần nhất hoặc lý do bỏ qua (ví dụ "Người nhận chưa khai email").</summary>
+    public string? EmailNote { get; private set; }
+
+    /// <summary>Độ dài tối đa của ghi chú gửi email.</summary>
+    public const int EmailNoteMaxLength = 500;
+
+    /// <summary>Đã gửi email.</summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    public void MarkEmailSent(DateTimeOffset at)
+    {
+        EmailAttempts++;
+        EmailState = NotificationEmailState.Sent;
+        EmailedAt = at;
+        EmailNote = null;
+    }
+
+    /// <summary>Thôi gửi email (người nhận không có email, thông báo quá cũ…).</summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <param name="reason">Lý do.</param>
+    public void SkipEmail(DateTimeOffset at, string reason)
+    {
+        EmailState = NotificationEmailState.Skipped;
+        EmailedAt = at;
+        EmailNote = Cut(reason, EmailNoteMaxLength);
+    }
+
+    /// <summary>
+    /// Gửi email lỗi: ghi lỗi, còn lượt thì lần quét sau gửi lại; hết <paramref name="maxAttempts"/> lượt thì thôi (trạng thái Lỗi).
+    /// </summary>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <param name="error">Thông báo lỗi.</param>
+    /// <param name="maxAttempts">Số lần thử tối đa.</param>
+    public void MarkEmailFailed(DateTimeOffset at, string error, int maxAttempts)
+    {
+        EmailAttempts++;
+        EmailNote = Cut(error, EmailNoteMaxLength);
+        if (EmailAttempts < maxAttempts) return;
+        EmailState = NotificationEmailState.Failed;
+        EmailedAt = at;
+    }
+
     /// <summary>Cắt chuỗi về tối đa max ký tự, thêm dấu "…" khi bị cắt.</summary>
     private static string Cut(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
+}
+
+/// <summary>Trạng thái gửi email bản sao của thông báo (lát O2b, design.md mục 19.3).</summary>
+public enum NotificationEmailState
+{
+    /// <summary>Chờ dịch vụ nền gửi.</summary>
+    Pending = 0,
+
+    /// <summary>Đã gửi.</summary>
+    Sent = 1,
+
+    /// <summary>Không gửi: người nhận chưa khai email / ngừng dùng, thông báo quá cũ, hoặc thông báo có trước bản 0.22.0.</summary>
+    Skipped = 2,
+
+    /// <summary>Gửi lỗi quá số lần cho phép.</summary>
+    Failed = 3,
 }

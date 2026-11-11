@@ -30,6 +30,14 @@ services:
       # File đính kèm để ngoài thư mục ứng dụng /app (volume attachments) – design.md mục 18.4.
       Attachments__RootPath: /data/attachments
       Attachments__MaxFileSizeMb: ${ATTACHMENT_MAX_MB:-2}
+      # Email bản sao thông báo qua SMTP của công ty (lát O2b) – mặc định tắt.
+      Email__Enabled: ${EMAIL_ENABLED:-false}
+      Email__Host: ${EMAIL_HOST:-}
+      Email__Port: ${EMAIL_PORT:-587}
+      Email__UserName: ${EMAIL_USERNAME:-}
+      Email__Password: ${EMAIL_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM:-}
+      Email__AppBaseUrl: ${EMAIL_APP_URL:-}
       Seed__AdminUserName: ${ADMIN_USERNAME:-admin}
       Seed__AdminPassword: ${ADMIN_PASSWORD:?Chưa đặt ADMIN_PASSWORD}
       Seed__HeadOffice__Code: ${HEAD_OFFICE_CODE:-TCT}

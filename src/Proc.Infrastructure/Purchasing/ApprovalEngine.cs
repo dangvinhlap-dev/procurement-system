@@ -22,6 +22,12 @@ internal sealed class ApprovalEngine
     private readonly NotificationPublisher _notifications;
     private readonly NextApproverResolver _approvers;
     private readonly DynamicApprovers _dynamic;
+    private readonly DelegationLookup _delegations;
+
+    /// <summary>
+    /// Ủy quyền đang tác dụng cho người dùng hiện tại, theo công ty – nạp một lần mỗi request vì Việc cần làm kiểm tra nhiều phiếu liên tiếp.
+    /// </summary>
+    private readonly Dictionary<Guid, List<DelegationLookup.Active>> _myDelegations = [];
 
     /// <summary>Tạo cơ chế duyệt.</summary>
     public ApprovalEngine(ProcDbContext db, ICurrentUserScope scope, IClock clock)
@@ -32,6 +38,7 @@ internal sealed class ApprovalEngine
         _notifications = new NotificationPublisher(db, scope, clock);
         _approvers = new NextApproverResolver(db, scope, clock);
         _dynamic = new DynamicApprovers(db);
+        _delegations = new DelegationLookup(db, clock);
     }
 
     /// <summary>Quyền duyệt theo loại phiếu.</summary>
@@ -90,9 +97,11 @@ internal sealed class ApprovalEngine
         {
             var r = resolved[step.Id];
             if (r.UserId is not { } userId) throw new BusinessRuleException($"Không gửi duyệt được – cấp {step.Level} ({r.Label}): {r.Problem}");
-            if (document.IsPreparedBy(userId))
+            // Người lập chính là Trưởng phòng ban / GĐ khối: gửi được khi người đó đang ủy quyền cho người khác duyệt thay (lát O2) – người
+            // duyệt thật là người được ủy quyền, vẫn tách khỏi người lập.
+            if (document.IsPreparedBy(userId) && !await HasUsableDelegateAsync(document, step, userId, cancellationToken))
                 throw new BusinessRuleException(
-                    $"Cấp {step.Level} do {r.Label} ({r.UserName}) duyệt nhưng đó là người lập phiếu – người lập không tự duyệt. Nhờ người khác lập phiếu hoặc đổi {r.Label}.");
+                    $"Cấp {step.Level} do {r.Label} ({r.UserName}) duyệt nhưng đó là người lập phiếu – người lập không tự duyệt. Nhờ người khác lập phiếu, đổi {r.Label} hoặc lập ủy quyền duyệt (Việc hằng ngày → Ủy quyền duyệt).");
             if (!approvers.Contains(userId))
                 throw new BusinessRuleException(
                     $"{r.Label} ({r.UserName}) chưa có quyền duyệt {Noun(document).ToLowerInvariant()} tại công ty – hãy phân quyền trước khi gửi duyệt.");
@@ -101,6 +110,20 @@ internal sealed class ApprovalEngine
                     $"{r.UserName} vừa là {other} vừa là {r.Label} – mỗi cấp phải do một người khác duyệt; sửa danh mục bộ phận/khối hoặc quy trình duyệt.");
             seen[userId] = r.Label;
         }
+    }
+
+    /// <summary>
+    /// Người giữ cấp đang có ủy quyền (hôm nay, đúng loại phiếu, tại công ty của bước) cho một người khác có quyền duyệt loại phiếu và không
+    /// phải người lập – dùng khi người giữ cấp động lại là người lập phiếu (lát O2).
+    /// </summary>
+    private async Task<bool> HasUsableDelegateAsync(IApprovalSubject document, ApprovalStep step, Guid holderId, CancellationToken cancellationToken)
+    {
+        var delegates = (await _delegations.ActiveAsync([step.CompanyId], [holderId], null, cancellationToken))
+            .Where(d => d.Covers(step.CompanyId, step.DocType) && !document.IsPreparedBy(d.DelegateUserId))
+            .Select(d => d.DelegateUserId).ToList();
+        if (delegates.Count == 0) return false;
+        var approvers = await _notifications.UsersWithPermissionAsync(step.CompanyId, ApprovePermission(document.DocType), null, null, cancellationToken);
+        return delegates.Any(approvers.Contains);
     }
 
     /// <summary>
@@ -213,18 +236,67 @@ internal sealed class ApprovalEngine
     /// Lý do người dùng hiện tại chưa duyệt được phiếu (null = duyệt được): phiếu phải chờ duyệt và đến lượt công ty đang làm việc; người
     /// lập không tự duyệt; phải có quyền duyệt loại phiếu tại công ty; cấp có vai trò thì người duyệt phải được gán vai trò đó tại công ty.
     /// </summary>
-    public async Task<string?> ApproveBlockerAsync(IApprovalSubject document, ApprovalStep? step, CancellationToken cancellationToken)
+    public async Task<string?> ApproveBlockerAsync(IApprovalSubject document, ApprovalStep? step, CancellationToken cancellationToken) =>
+        (await ActorAsync(document, step, cancellationToken)).Blocker;
+
+    /// <summary>
+    /// Người dùng hiện tại có duyệt/từ chối được bước không, và duyệt với tư cách nào. Điều kiện của chính người thao tác: phiếu đang chờ và đến
+    /// lượt công ty đang làm việc; không phải người lập; có quyền duyệt loại phiếu; không vướng xung đột lợi ích; chưa duyệt cấp khác trong lượt
+    /// (lát R3). Rồi đến "vị trí" của cấp (đúng Trưởng phòng ban / GĐ khối của phiếu, có vai trò của cấp): tự giữ thì duyệt bằng tư cách của mình;
+    /// không thì xét ủy quyền đang tác dụng (lát O2) – người ủy quyền phải giữ vị trí đó, có quyền duyệt tại công ty, không vướng xung đột, chưa
+    /// duyệt cấp khác trong lượt (người ủy quyền được là người lập: người duyệt thật vẫn khác người lập).
+    /// Ví dụ cấp 2 do Trưởng phòng ban PX1 (An) duyệt, An ủy quyền cho Bình 12–20/11: ngày 15/11 Bình duyệt được, bước ghi "Bình (thay An)".
+    /// </summary>
+    /// <returns>(lý do không duyệt được hoặc null, người ủy quyền khi duyệt thay).</returns>
+    private async Task<(string? Blocker, Guid? OnBehalfOf)> ActorAsync(IApprovalSubject document, ApprovalStep? step, CancellationToken cancellationToken)
     {
-        if (!document.IsAwaitingApproval) return $"Phiếu {document.No} không ở trạng thái chờ duyệt.";
-        if (step is null) return $"Phiếu {document.No} chưa đến lượt công ty bạn đang làm việc duyệt.";
-        var userId = _scope.UserId;
-        if (userId is null) return "Chưa đăng nhập.";
+        if (!document.IsAwaitingApproval) return ($"Phiếu {document.No} không ở trạng thái chờ duyệt.", null);
+        if (step is null) return ($"Phiếu {document.No} chưa đến lượt công ty bạn đang làm việc duyệt.", null);
+        if (_scope.UserId is not { } userId) return ("Chưa đăng nhập.", null);
         // Tách người lập và người duyệt – nguyên tắc kiểm soát nội bộ.
-        if (document.IsPreparedBy(userId.Value)) return "Người lập không tự duyệt phiếu của mình.";
-        if (!_scope.HasPermission(ApprovePermission(document.DocType))) return "Bạn không có quyền duyệt loại phiếu này.";
-        if (await ConflictBlockerAsync(userId.Value, await SupplierIdsAsync(document, cancellationToken), cancellationToken) is { } conflict)
-            return conflict;
-        // Cấp người duyệt động (lát O1): chỉ đúng Trưởng phòng ban / GĐ khối hiện hành của bộ phận trên phiếu.
+        if (document.IsPreparedBy(userId)) return ("Người lập không tự duyệt phiếu của mình.", null);
+        if (!_scope.HasPermission(ApprovePermission(document.DocType))) return ("Bạn không có quyền duyệt loại phiếu này.", null);
+        var supplierIds = await SupplierIdsAsync(document, cancellationToken);
+        if (await ConflictBlockerAsync(userId, supplierIds, cancellationToken) is { } conflict) return (conflict, null);
+
+        var own = await PositionBlockerAsync(step, userId, own: true, cancellationToken);
+
+        // Mỗi cấp một người khác nhau trong cùng lượt duyệt: một người có quyền nhiều cấp mà duyệt liên tiếp thì duyệt nhiều cấp mất tác
+        // dụng (lát R3, design.md mục 18.26). Gửi lại sau khi bị từ chối là lượt mới – người đó lại duyệt được một cấp. Duyệt thay (lát O2)
+        // tính cho cả người duyệt lẫn người được duyệt thay. Không giữ vị trí thì báo lý do vị trí trước (như trước lát O2).
+        var round = await RoundStepsAsync(document, cancellationToken);
+        if (ActedLevel(round, userId) is { } level)
+            return (own ?? $"Bạn đã duyệt cấp {level.Level} của phiếu {document.No} trong lượt này – cấp sau phải do người khác duyệt.", null);
+        if (own is null) return (null, null);
+
+        // Ủy quyền duyệt (lát O2): mượn vị trí của người ủy quyền.
+        if (!_myDelegations.TryGetValue(step.CompanyId, out var mine))
+            _myDelegations[step.CompanyId] = mine = await _delegations.ActiveAsync([step.CompanyId], null, userId, cancellationToken);
+        var delegators = mine.Where(d => d.Covers(step.CompanyId, step.DocType) && ActedLevel(round, d.DelegatorUserId) is null)
+            .Select(d => d.DelegatorUserId).Distinct().ToList();
+        if (delegators.Count == 0) return (own, null);
+        var approvers = await _notifications.UsersWithPermissionAsync(step.CompanyId, ApprovePermission(document.DocType), null, null, cancellationToken);
+        foreach (var delegator in delegators.Where(approvers.Contains))
+        {
+            if (await PositionBlockerAsync(step, delegator, own: false, cancellationToken) is not null) continue;
+            if (await ConflictBlockerAsync(delegator, supplierIds, cancellationToken) is not null) continue;
+            return (null, delegator);
+        }
+
+        return (own, null);
+    }
+
+    /// <summary>Bước của lượt mà người này đã duyệt (tự duyệt hoặc được duyệt thay), cấp thấp nhất trước; null nếu chưa.</summary>
+    private static ApprovalStep? ActedLevel(IEnumerable<ApprovalStep> round, Guid userId) =>
+        round.Where(s => s.Status == ApprovalStepStatus.Approved && (s.ActedBy == userId || s.OnBehalfOf == userId))
+            .OrderBy(s => s.Stage).ThenBy(s => s.Level).FirstOrDefault();
+
+    /// <summary>
+    /// Người này có giữ "vị trí" của cấp không: cấp người duyệt động (lát O1) – đúng Trưởng phòng ban / GĐ khối hiện hành của bộ phận trên
+    /// phiếu; cấp có vai trò – được gán vai trò đó tại công ty của bước. Trả lý do (câu cho người đang thao tác khi <paramref name="own"/>) hoặc null.
+    /// </summary>
+    private async Task<string?> PositionBlockerAsync(ApprovalStep step, Guid userId, bool own, CancellationToken cancellationToken)
+    {
         if (DynamicApprovers.IsDynamic(step))
         {
             var dynamic = (await _dynamic.ResolveAsync([step], cancellationToken))[step.Id];
@@ -236,16 +308,8 @@ internal sealed class ApprovalEngine
             && !await _db.UserCompanyRoles.AnyAsync(u => u.UserId == userId && u.CompanyId == step.CompanyId && u.RoleId == roleId, cancellationToken))
         {
             var role = await _db.Roles.Where(r => r.Id == roleId).Select(r => r.Name).SingleOrDefaultAsync(cancellationToken);
-            return $"Cấp {step.Level} do vai trò {role} duyệt – bạn không có vai trò này tại công ty.";
+            return own ? $"Cấp {step.Level} do vai trò {role} duyệt – bạn không có vai trò này tại công ty." : $"Cấp {step.Level} do vai trò {role} duyệt.";
         }
-
-        // Mỗi cấp một người khác nhau trong cùng lượt duyệt: một người có quyền nhiều cấp mà duyệt liên tiếp thì duyệt nhiều cấp mất tác
-        // dụng (lát R3, design.md mục 18.26). Gửi lại sau khi bị từ chối là lượt mới – người đó lại duyệt được một cấp.
-        var approvedLevel = (await RoundStepsAsync(document, cancellationToken))
-            .Where(s => s.Status == ApprovalStepStatus.Approved && s.ActedBy == userId)
-            .OrderBy(s => s.Stage).ThenBy(s => s.Level).FirstOrDefault();
-        if (approvedLevel is not null)
-            return $"Bạn đã duyệt cấp {approvedLevel.Level} của phiếu {document.No} trong lượt này – cấp sau phải do người khác duyệt.";
 
         return null;
     }
@@ -260,8 +324,10 @@ internal sealed class ApprovalEngine
         var steps = await RoundStepsAsync(document, cancellationToken);
         var before = ApprovalProgress.Active(steps);
         var step = before.FirstOrDefault(s => s.CompanyId == _scope.CompanyId);
-        if (await ApproveBlockerAsync(document, step, cancellationToken) is { } reason) throw new BusinessRuleException(reason);
-        step!.Approve(_scope.UserId!.Value, _clock.UtcNow, comment);
+        var (reason, onBehalfOf) = await ActorAsync(document, step, cancellationToken);
+        if (reason is not null) throw new BusinessRuleException(reason);
+        step!.Approve(_scope.UserId!.Value, _clock.UtcNow, comment, onBehalfOf);
+        NotifyDelegator(document, step, onBehalfOf, "duyệt");
         if (steps.All(s => s.Status != ApprovalStepStatus.Pending))
         {
             document.MarkApproved(_clock.UtcNow);
@@ -281,8 +347,10 @@ internal sealed class ApprovalEngine
     public async Task RejectAsync(IApprovalSubject document, string? comment, CancellationToken cancellationToken)
     {
         var step = await CurrentStepAsync(document, cancellationToken);
-        if (await ApproveBlockerAsync(document, step, cancellationToken) is { } reason) throw new BusinessRuleException(reason);
-        step!.Reject(_scope.UserId!.Value, _clock.UtcNow, comment);
+        var (reason, onBehalfOf) = await ActorAsync(document, step, cancellationToken);
+        if (reason is not null) throw new BusinessRuleException(reason);
+        step!.Reject(_scope.UserId!.Value, _clock.UtcNow, comment, onBehalfOf);
+        NotifyDelegator(document, step, onBehalfOf, "từ chối");
         await SkipPendingAsync(document, cancellationToken);
         document.ReturnToDraft(comment);
         var after = document is ApprovableDocument ? " Phiếu đã về Nháp để sửa và gửi lại." : string.Empty;
@@ -294,15 +362,75 @@ internal sealed class ApprovalEngine
     /// Báo người duyệt được cấp đang chờ (design.md mục 11.6): có quyền duyệt loại phiếu tại công ty; cấp có vai trò thì phải có vai trò
     /// đó – cùng điều kiện với <see cref="ApproveBlockerAsync"/>. Người lập không nhận (không tự duyệt được).
     /// </summary>
-    private async Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
+    private Task NotifyApproversAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken) =>
+        NotifyCandidatesAsync(document, step, NotificationTypes.ApprovalPending, string.Empty, string.Empty, string.Empty, cancellationToken);
+
+    /// <summary>
+    /// Nhắc những người duyệt được một bước đã chờ quá 1 ngày làm việc (lát O2c, design.md mục 19.3) – cùng người nhận với thông báo chờ duyệt
+    /// (tính lại lúc nhắc: ủy quyền mới, người mới được gán vai trò cũng nhận). Gọi từ dịch vụ nền nên không có người đang thao tác.
+    /// Ví dụ: "Nhắc: Đề nghị mua hàng PR-0012 chờ bạn duyệt quá hạn" – "… đang chờ duyệt cấp 1 từ 09/11/2026 08:00, đã quá 1 ngày làm việc
+    /// (nhắc lần 1)."
+    /// </summary>
+    /// <param name="document">Phiếu đang chờ duyệt.</param>
+    /// <param name="step">Bước đang đến lượt.</param>
+    /// <param name="waitingSince">Mốc bước bắt đầu đến lượt (<see cref="ApprovalOverdue.WaitingSince"/>).</param>
+    /// <param name="sequence">Lần nhắc thứ mấy.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số người nhận (0 = không còn ai duyệt được bước).</returns>
+    public Task<int> RemindOverdueAsync(
+        IApprovalSubject document, ApprovalStep step, DateTimeOffset waitingSince, int sequence, CancellationToken cancellationToken)
     {
-        // Người nhận = "người duyệt tiếp theo" (NextApproverResolver: quyền, vai trò, không phải người lập, không vướng xung đột lợi ích).
-        var users = (await _approvers.CandidateIdsAsync([await PendingStepAsync(document, step, cancellationToken)], cancellationToken))[step.Id];
-        _notifications.Add(step.CompanyId, users.Where(u => document.CreatedBy is not null || u != _scope.UserId), NotificationTypes.ApprovalPending,
-            $"{Noun(document)} {document.No} chờ bạn duyệt",
-            ApprovalTypes.Get(document.DocType).AmountLabel is null
-                ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}."
-                : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}.",
+        var since = TimeZoneInfo.ConvertTime(waitingSince, VietnamTime.Zone).ToString("dd/MM/yyyy HH:mm", VietnameseCulture);
+        return NotifyCandidatesAsync(document, step, NotificationTypes.ApprovalOverdue, "Nhắc: ", " quá hạn",
+            $" từ {since}, đã quá 1 ngày làm việc (nhắc lần {sequence})", cancellationToken);
+    }
+
+    /// <summary>
+    /// Gửi thông báo cho những người duyệt được bước. Người nhận = "người duyệt tiếp theo" (NextApproverResolver: quyền, vai trò, không phải người
+    /// lập, không vướng xung đột lợi ích), gồm cả người được ủy quyền duyệt thay (lát O2) – câu báo ghi rõ duyệt thay ai.
+    /// </summary>
+    /// <param name="document">Phiếu.</param>
+    /// <param name="step">Bước đang đến lượt.</param>
+    /// <param name="type">Loại thông báo (chờ duyệt / nhắc quá hạn).</param>
+    /// <param name="titlePrefix">Chữ trước tiêu đề ("Nhắc: ").</param>
+    /// <param name="titleSuffix">Chữ sau tiêu đề (" quá hạn").</param>
+    /// <param name="detail">Chữ chèn sau "đang chờ duyệt cấp n" trong nội dung.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số người nhận.</returns>
+    private async Task<int> NotifyCandidatesAsync(
+        IApprovalSubject document, ApprovalStep step, string type, string titlePrefix, string titleSuffix, string detail,
+        CancellationToken cancellationToken)
+    {
+        var candidates = (await _approvers.CandidatesAsync([await PendingStepAsync(document, step, cancellationToken)], cancellationToken))[step.Id]
+            .Where(c => document.CreatedBy is not null || c.UserId != _scope.UserId).ToList();
+        var waiting = (ApprovalTypes.Get(document.DocType).AmountLabel is null
+            ? $"{Noun(document)} {document.No} đang chờ duyệt cấp {step.Level}"
+            : $"{Noun(document)} {document.No} trị giá {document.ApprovalAmount.ToString("N0", VietnameseCulture)} đ đang chờ duyệt cấp {step.Level}")
+            + detail;
+        _notifications.Add(step.CompanyId, candidates.Where(c => c.OnBehalfOf is null).Select(c => c.UserId), type,
+            $"{titlePrefix}{Noun(document)} {document.No} chờ bạn duyệt{titleSuffix}", waiting + ".", document.DocType, document.Id);
+        var delegated = candidates.Where(c => c.OnBehalfOf is not null).ToList();
+        if (delegated.Count > 0)
+        {
+            var delegatorIds = delegated.Select(c => c.OnBehalfOf!.Value).Distinct().ToList();
+            var names = await _db.Users.AsNoTracking().Where(u => delegatorIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+            foreach (var c in delegated)
+                _notifications.Add(step.CompanyId, [c.UserId], type,
+                    $"{titlePrefix}{Noun(document)} {document.No} chờ bạn duyệt thay {names.GetValueOrDefault(c.OnBehalfOf!.Value)}{titleSuffix}",
+                    $"{waiting} – bạn được {names.GetValueOrDefault(c.OnBehalfOf!.Value)} ủy quyền duyệt thay.", document.DocType, document.Id);
+        }
+
+        return candidates.Where(c => c.UserId != _scope.UserId).Select(c => c.UserId).Distinct().Count();
+    }
+
+    /// <summary>Báo người ủy quyền biết người được ủy quyền vừa duyệt/từ chối thay mình (lát O2).</summary>
+    private void NotifyDelegator(IApprovalSubject document, ApprovalStep step, Guid? onBehalfOf, string action)
+    {
+        if (onBehalfOf is not { } delegator) return;
+        _notifications.Add(step.CompanyId, [delegator], NotificationTypes.DelegatedAction,
+            $"{Noun(document)} {document.No} đã được {action} thay bạn",
+            $"Người được bạn ủy quyền đã {action} {Noun(document).ToLowerInvariant()} {document.No} ở cấp {step.Level} thay bạn.",
             document.DocType, document.Id);
     }
 
@@ -313,8 +441,8 @@ internal sealed class ApprovalEngine
     private async Task<NextApproverResolver.PendingStep> PendingStepAsync(IApprovalSubject document, ApprovalStep step, CancellationToken cancellationToken)
     {
         var approvedBy = ApprovedBy(await RoundStepsAsync(document, cancellationToken));
-        return new(step.Id, document.DocType, step.CompanyId, step.RoleId, u => document.IsPreparedBy(u) || approvedBy.Contains(u),
-            await SupplierIdsAsync(document, cancellationToken), await OnlyUsersAsync(step, cancellationToken));
+        return new(step.Id, document.DocType, step.CompanyId, step.RoleId, document.IsPreparedBy,
+            await SupplierIdsAsync(document, cancellationToken), await OnlyUsersAsync(step, cancellationToken), approvedBy.Contains);
     }
 
     /// <summary>Người duyệt duy nhất của bước người duyệt động (rỗng khi chưa khai báo); null với bước theo vai trò.</summary>
@@ -324,11 +452,15 @@ internal sealed class ApprovalEngine
         return (await _dynamic.ResolveAsync([step], cancellationToken))[step.Id].UserId is { } id ? [id] : [];
     }
 
-    /// <summary>Người đã duyệt một cấp trong các bước cho trước (cùng lượt) – không duyệt thêm cấp khác (lát R3, design.md mục 18.26).</summary>
+    /// <summary>
+    /// Người đã duyệt một cấp trong các bước cho trước (cùng lượt) – không duyệt thêm cấp khác (lát R3, design.md mục 18.26). Gồm cả người
+    /// được duyệt thay (lát O2).
+    /// </summary>
     /// <param name="steps">Bước của một lượt duyệt.</param>
     /// <returns>Id người đã duyệt.</returns>
     internal static HashSet<Guid> ApprovedBy(IEnumerable<ApprovalStep> steps) =>
-        steps.Where(s => s.Status == ApprovalStepStatus.Approved && s.ActedBy is not null).Select(s => s.ActedBy!.Value).ToHashSet();
+        steps.Where(s => s.Status == ApprovalStepStatus.Approved)
+            .SelectMany(s => new[] { s.ActedBy, s.OnBehalfOf }).OfType<Guid>().ToHashSet();
 
     /// <summary>
     /// Lý do người dùng không được tham gia quyết định (duyệt, chấm thầu, chọn thầu) vì có kê khai xung đột lợi ích còn hiệu lực hôm nay
@@ -353,7 +485,9 @@ internal sealed class ApprovalEngine
     /// <summary>NCC của đối tượng duyệt; phụ lục hợp đồng lấy NCC của hợp đồng gốc.</summary>
     private async Task<IReadOnlyCollection<Guid>> SupplierIdsAsync(IApprovalSubject document, CancellationToken cancellationToken) => document switch
     {
-        PurchaseContractAmendment amendment => await _db.PurchaseContracts.AsNoTracking()
+        // Bỏ filter công ty: phụ lục đã nạp (qua phạm vi người dùng, hoặc bởi dịch vụ nhắc quá hạn chạy nền không có người dùng – lát O2c), chỉ
+        // lấy NCC của đúng hợp đồng gốc.
+        PurchaseContractAmendment amendment => await _db.PurchaseContracts.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
             .Where(c => c.Id == amendment.ContractId).Select(c => c.SupplierId).ToListAsync(cancellationToken),
         _ => document.RelatedSupplierIds,
     };
@@ -397,7 +531,8 @@ internal sealed class ApprovalEngine
             .OrderBy(s => s.Round).ThenBy(s => s.Stage).ThenBy(s => s.CompanyId).ThenBy(s => s.Level)
             .ToListAsync(cancellationToken);
         var roleIds = steps.Select(s => s.RoleId).OfType<Guid>().Distinct().ToList();
-        var userIds = steps.Select(s => s.ActedBy).Concat(steps.Select(s => s.SubmittedBy)).OfType<Guid>().Distinct().ToList();
+        var userIds = steps.Select(s => s.ActedBy).Concat(steps.Select(s => s.SubmittedBy)).Concat(steps.Select(s => s.OnBehalfOf))
+            .OfType<Guid>().Distinct().ToList();
         var roles = await _db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         var companyIds = steps.Select(s => s.CompanyId).Distinct().ToList();
@@ -422,7 +557,11 @@ internal sealed class ApprovalEngine
                 s.Round, s.Level,
                 dynamicLabels.TryGetValue(s.Id, out var dynamic) ? dynamic.Label : s.RoleId is { } r ? roles.GetValueOrDefault(r) : null,
                 s.Status.ToString(),
-                s.ActedBy is { } u ? users.GetValueOrDefault(u) : null, s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
+                // Duyệt theo ủy quyền (lát O2): "Bình (thay An)".
+                s.ActedBy is { } u
+                    ? s.OnBehalfOf is { } o ? $"{users.GetValueOrDefault(u)} (thay {users.GetValueOrDefault(o)})" : users.GetValueOrDefault(u)
+                    : null,
+                s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
                 activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 !activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 s.SubmittedAt, s.SubmittedBy is { } sb ? users.GetValueOrDefault(sb) : null))

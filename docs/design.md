@@ -2120,8 +2120,77 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   khai xung đột lợi ích, mỗi người một cấp trong lượt (R3). Lịch sử duyệt hiện "Trưởng phòng ban PX1", "GĐ khối HCNS" ở cột vai trò.
 - **Chặn gửi duyệt** (phiếu giữ Nháp, báo rõ chỗ sửa) khi có cấp động mà: phiếu chưa có bộ phận; bộ phận chưa khai Trưởng phòng ban / chưa gán khối;
   khối chưa khai GĐ khối; tài khoản đó đã ngừng dùng hoặc chưa có quyền duyệt loại phiếu; người đó là **người lập** (Trưởng phòng ban tự lập
-  phiếu của bộ phận mình phải nhờ người khác lập – tự đặt, ủy quyền ở O2); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
+  phiếu của bộ phận mình phải nhờ người khác lập hoặc ủy quyền duyệt – lát O2a); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
 - "Chuỗi duyệt theo loại mua" (A/B/DV/C) làm cùng lát Y3 khi đề nghị mua có trường loại mua.
+
+**Lát O2a – ủy quyền duyệt có thời hạn (0.22.0, Q9).** Quy tắc (mặc định tự chọn ghi "tự đặt"):
+
+- Màn hình **UQD** (Việc hằng ngày → Ủy quyền duyệt), bảng `ApprovalDelegation` theo công ty: người ủy quyền, người được ủy quyền, loại phiếu
+  (một loại hoặc **mọi loại**; không có các bộ cấp phụ POX, POK, PRB, POB, POL, POC, GTX – đã nằm trong loại phiếu gốc), từ ngày – đến hết ngày
+  (ngày Việt Nam), lý do (bắt buộc), ghi chú, tab đính kèm (giấy ủy quyền). Không lập lùi ngày; tối đa **90 ngày** một lần (tự đặt – lâu hơn thì đổi
+  người giữ vị trí); không trùng ủy quyền chưa thu hồi cùng hai người, chồng loại phiếu và chồng ngày. Không sửa: sai thì **thu hồi** rồi lập lại.
+- Ai có quyền duyệt cũng **tự ủy quyền** (không cần quyền riêng); quyền `Organization.Delegation.Manage` lập thay người khác, thu hồi, xem mọi ủy
+  quyền của công ty. Người khác chỉ thấy ủy quyền mình lập hoặc mình được nhận. Thu hồi: người ủy quyền hoặc người quản lý (người được ủy quyền
+  không tự thu hồi). Người ủy quyền và người được ủy quyền phải là tài khoản đang hoạt động **có quyền duyệt** loại phiếu (mọi loại: ít nhất một
+  quyền duyệt) tại công ty – ủy quyền chỉ cho mượn **vị trí** của cấp (vai trò của cấp, Trưởng phòng ban / GĐ khối của phiếu), không cho quyền chức
+  năng (API duyệt vẫn đòi quyền duyệt).
+- **Duyệt thay**: trong thời hạn, người được ủy quyền duyệt/từ chối được bước mà người ủy quyền đang giữ vị trí, khi bản thân: không phải người lập,
+  không vướng kê khai xung đột lợi ích, chưa duyệt cấp nào trong lượt; và người ủy quyền: còn quyền duyệt tại công ty, không vướng xung đột lợi ích,
+  chưa duyệt (tự duyệt hoặc được duyệt thay) cấp nào trong lượt. Người ủy quyền **được là người lập** – người duyệt thật vẫn khác người lập (tự đặt).
+  Tự giữ vị trí thì duyệt bằng tư cách của mình (không tính là duyệt thay). Người ủy quyền vẫn tự duyệt được trong thời gian ủy quyền (tự đặt).
+- Bước ghi `OnBehalfOf` = người ủy quyền; lịch sử duyệt hiện **"Bình (thay An)"**; cả hai người tính là đã duyệt một cấp trong lượt (R3). Người
+  ủy quyền nhận thông báo "đã được duyệt/từ chối thay bạn". Người được ủy quyền nhận thông báo chờ duyệt "chờ bạn duyệt thay An", phiếu hiện ở
+  Việc cần làm; người duyệt tiếp theo (lịch sử duyệt, tra cứu chứng từ) hiện "Bình (thay An)".
+- **Trưởng phòng ban / GĐ khối tự lập phiếu** bộ phận mình (lát O1 chặn gửi): gửi được khi người đó đang có ủy quyền (hôm nay, đúng loại phiếu) cho
+  người khác có quyền duyệt, không phải người lập. Ủy quyền hết hạn khi phiếu còn chờ thì phiếu chờ người giữ vị trí hoặc ủy quyền mới.
+- Thu hồi hoặc hết hạn: từ lúc đó không duyệt thay nữa; bước đã duyệt thay giữ nguyên.
+
+**Lát O2b – email thông báo qua SMTP (0.22.0, Q14 "công ty đã có SMTP").** Quy tắc (mặc định tự chọn ghi "tự đặt"):
+
+- Email là **bản sao của thông báo trong phần mềm** (mục 11.6): mọi thông báo hệ thống sinh ra (chờ duyệt, chờ duyệt thay, đã duyệt, bị từ
+  chối, đã duyệt thay, hàng nội bộ chờ nhận, KSNB, nhắc quá hạn ở O2c…) được gửi thêm một thư tới **email trong hồ sơ người dùng**. Không có
+  thông báo nào chỉ gửi email. Chưa có tùy chọn người dùng tắt nhận thư (tự đặt – làm khi có yêu cầu).
+- Gửi bằng **dịch vụ nền** trong tiến trình ứng dụng (MailKit, mỗi `Email:PollSeconds` giây quét thông báo chờ gửi, cũ trước) – thao tác nghiệp
+  vụ không chờ máy chủ thư, máy chủ thư lỗi không làm hỏng thao tác. Bảng `Notification` thêm trạng thái gửi email: Chờ gửi → Đã gửi / Bỏ qua
+  (người nhận chưa khai email, đã ngừng dùng, thông báo cũ hơn `Email:MaxAgeHours` = 24 giờ khi đến lượt) / Lỗi (thử `Email:MaxAttempts` = 5
+  lần, mỗi lần quét một lần). Thông báo có trước bản 0.22.0 đánh dấu Bỏ qua (migration `V0_22_0_EmailThongBao`).
+- Cấu hình mục `Email` (appsettings hoặc biến môi trường `Email__…`): `Enabled` (mặc định **false** – máy dev, test không gửi thư thật), `Host`,
+  `Port`, `Security` (Auto/StartTls/SslOnConnect/None), `UserName`, `Password` (chỉ đặt trên máy chủ), `FromAddress`, `FromName`, `AppBaseUrl`.
+  Bật mà thiếu Host/FromAddress thì ứng dụng báo lỗi khi khởi động.
+- Thư: tiêu đề "[mã công ty] tiêu đề thông báo", nội dung thông báo + tên công ty + nút **"Mở trên phần mềm"** trỏ `AppBaseUrl/mo/{mã màn
+  hình}/{Id}?cty={công ty}` – trang này đổi sang công ty của thông báo rồi mở phiếu (chưa đăng nhập thì đăng nhập trước; quyền do trang phiếu
+  kiểm tra). Không gửi đính kèm, không ghi nội dung thư vào log.
+- Quản trị: `GET /api/notifications/email/status` (quyền xem tham số) – cấu hình (không lộ mật khẩu), số thư chờ / lỗi;
+  `POST /api/notifications/email/test` (quyền sửa tham số) – gửi thư thử tới email của chính mình.
+- Giả định một tiến trình ứng dụng (IIS một worker, một container); nhiều tiến trình cùng quét có thể gửi trùng thư.
+
+**Lát O2c – nhắc quá hạn duyệt (0.22.0, Q9 "nhắc sau 1 ngày làm việc").** Quy tắc (tự đặt, người dùng "làm tiếp" 10/11/2026):
+
+- **Mốc đến lượt** của một bước: lúc gửi duyệt; hoặc lúc bước đứng trước duyệt xong – cấp thấp hơn cùng công ty cùng chặng, hoặc bước cuối của
+  chặng trước. Bước của công ty khác cùng chặng (duyệt song song, mục 18.6) không đổi mốc. Bước cũ trước 0.17.0 không có thời điểm gửi thì không nhắc.
+- **Quá hạn** khi đã qua **1 ngày làm việc** kể từ mốc (cùng giờ của ngày làm việc kế tiếp; thứ 2–6, **chưa trừ ngày lễ** – như SLA mục 18.13;
+  đến lượt vào thứ 7/CN thì tính từ 0 giờ thứ 2). Ví dụ gửi thứ 6 15:00 → quá hạn thứ 2 15:00.
+- Nhắc **người duyệt được bước lúc nhắc** (cùng điều kiện với thông báo chờ duyệt: quyền, vai trò, Trưởng phòng ban / GĐ khối hiện hành, không phải
+  người lập, chưa duyệt cấp khác trong lượt, không vướng xung đột lợi ích; gồm người được ủy quyền – "chờ bạn duyệt thay A"). Thông báo loại
+  **"Quá hạn duyệt"** (`ApprovalOverdue`): "Nhắc: Đề nghị mua hàng PR-… chờ bạn duyệt quá hạn" – nội dung nêu cấp, mốc đến lượt, lần nhắc; có
+  email bản sao (O2b) khi bật email. Người lập không nhận nhắc.
+- **Nhắc lại** mỗi 1 ngày làm việc kể từ lần nhắc trước, tối đa `ApprovalReminder:MaxReminders` = **3** lần mỗi bước; không nhắc vào thứ 7/CN
+  (dịch vụ dừng lâu cũng không nhắc dồn). Bước không còn ai duyệt được vẫn tính một lần nhắc (0 người nhận). Phiếu đã duyệt/từ chối/rút thì thôi.
+- Chạy bằng **dịch vụ nền** quét mỗi `ApprovalReminder:PollMinutes` = 15 phút (mặc định bật, `Enabled=false` để tắt; môi trường test tắt). Bảng
+  `ApprovalReminder` (bước, lần nhắc, thời điểm, số người nhận; khóa duy nhất bước + lần – hai tiến trình cùng quét không nhắc trùng), migration
+  `V0_22_0_NhacQuaHanDuyet`. Chưa có báo cáo/thống kê phiếu quá hạn (làm khi có yêu cầu).
+
+**Lát O2d – duyệt trên điện thoại (0.22.0).** Quy tắc (tự đặt, người dùng "làm tiếp" 11/11/2026):
+
+- Trang **duyệt gọn** `/duyet` (ngoài khung desktop, vẫn bắt đăng nhập; ô chọn công ty): thẻ các phiếu đang chờ **chính người dùng** duyệt ở
+  công ty đang làm việc – cùng nguồn với Việc cần làm (`GET /api/approvals/pending`, gồm phiếu được ủy quyền duyệt thay). Màn hình Việc cần làm có
+  nút "Duyệt trên điện thoại" mở trang này.
+- `/duyet/{loại}/{Id}`: thông tin chung của phiếu; PR, PO thêm dòng hàng, cảnh báo (vượt định mức, vượt giá trần, ngoài danh sách/giá đã duyệt,
+  lệch giá), tổng tiền và lịch sử duyệt lượt hiện tại; loại khác (PRL, RFQ, CTR, CTA, NCC, NDQ, GTH, CKB) có link mở bản đầy đủ để xem kỹ.
+  **Duyệt** (ý kiến tùy chọn) / **Từ chối** (bắt buộc lý do – mục 18.6) gọi đúng API duyệt của loại phiếu, không có API mới; máy chủ kiểm tra lại
+  quyền, lượt, ủy quyền, xung đột lợi ích như trên bản đầy đủ. Phiếu không còn chờ người dùng thì chỉ xem.
+- Link "Mở trên phần mềm" trong email (O2b) mở trên màn hình ≤ 768px chuyển thẳng sang trang duyệt gọn khi loại phiếu duyệt được ở đây.
+- Chưa có: đăng nhập riêng cho điện thoại, thông báo đẩy, duyệt nhiều phiếu một lần (làm khi có yêu cầu).
 
 ### 19.4 Bỏ phân hệ kho
 

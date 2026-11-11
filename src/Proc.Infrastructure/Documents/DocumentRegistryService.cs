@@ -522,12 +522,15 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             .GroupBy(s => s.DocumentId)
             .SelectMany(g => Proc.Domain.Purchasing.ApprovalProgress.Active(g))
             .ToList();
-        // Người đã duyệt một cấp trong lượt đang chạy không duyệt thêm cấp khác (lát R3) – loại khỏi "người duyệt tiếp theo".
+        // Người đã duyệt một cấp trong lượt đang chạy (tự duyệt hoặc được duyệt thay – lát O2) không duyệt thêm cấp khác (lát R3) – loại khỏi
+        // "người duyệt tiếp theo".
         var approved = (await _db.ApprovalSteps.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
                 .Where(s => ids.Contains(s.DocumentId) && s.Status == ApprovalStepStatus.Approved && s.ActedBy != null)
-                .Select(s => new { s.DocumentId, s.DocType, s.Round, ActedBy = s.ActedBy!.Value })
+                .Select(s => new { s.DocumentId, s.DocType, s.Round, ActedBy = s.ActedBy!.Value, s.OnBehalfOf })
                 .ToListAsync(cancellationToken))
-            .ToLookup(s => (s.DocumentId, s.DocType, s.Round), s => s.ActedBy);
+            .SelectMany(s => new[] { (s.DocumentId, s.DocType, s.Round, User: (Guid?)s.ActedBy), (s.DocumentId, s.DocType, s.Round, User: s.OnBehalfOf) })
+            .Where(s => s.User is not null)
+            .ToLookup(s => (s.DocumentId, s.DocType, s.Round), s => s.User!.Value);
         // Bước người duyệt động (lát O1): chỉ Trưởng phòng ban / GĐ khối hiện hành của bộ phận trên phiếu.
         var dynamic = await new DynamicApprovers(_db).ResolveAsync(active, cancellationToken);
         var names = await _approvers.NamesAsync(active.Select(step =>
@@ -536,7 +539,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             var approvedBy = approved[(step.DocumentId, step.DocType, step.Round)].ToHashSet();
             IReadOnlyCollection<Guid>? only = dynamic.TryGetValue(step.Id, out var d) ? (d.UserId is { } id ? [id] : []) : null;
             return new NextApproverResolver.PendingStep(step.Id, step.DocType, step.CompanyId, step.RoleId,
-                u => u == row.CreatedBy || approvedBy.Contains(u), row.SupplierId is { } sid ? [sid] : [], only);
+                u => u == row.CreatedBy, row.SupplierId is { } sid ? [sid] : [], only, approvedBy.Contains);
         }).ToList(), cancellationToken);
         return active.GroupBy(s => s.DocumentId).ToDictionary(
             g => g.Key,

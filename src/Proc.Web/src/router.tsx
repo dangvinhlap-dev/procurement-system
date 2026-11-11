@@ -9,12 +9,15 @@ import { AppShell } from './components/AppShell/AppShell'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
+import { OpenLinkPage } from './pages/OpenLinkPage'
+import { MobileApprovalDetailPage, MobileApprovalListPage } from './pages/mobile/MobileApprovalPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
+import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
 import { SupplierReviewDetailPage } from './pages/pricing/SupplierReviewDrawer'
@@ -104,6 +107,7 @@ const implemented: Record<string, ReactNode> = {
   KHNTH: <DemandSummaryPage />,
   DHG: <PooledOrderListPage />,
   TODO: <PendingApprovalsPage />,
+  UQD: <DelegationListPage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
   SUPAPR: <SupplierApprovalPage />,
@@ -232,6 +236,24 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
   },
+  // Trang duyệt gọn trên điện thoại (lát O2d): khung một cột riêng nên đứng ngoài AppShell. Không gắn quyền màn hình – chỉ hiện phiếu máy chủ
+  // xác định là đang chờ chính người dùng duyệt, máy chủ kiểm tra lại quyền khi duyệt.
+  {
+    path: '/duyet',
+    element: (
+      <RequireAuth>
+        <MobileApprovalListPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/duyet/:docType/:id',
+    element: (
+      <RequireAuth>
+        <MobileApprovalDetailPage />
+      </RequireAuth>
+    ),
+  },
   {
     element: (
       <RequireAuth>
@@ -259,6 +281,8 @@ export const router = createBrowserRouter([
         path: '/mua-hang/po/mau',
         element: <ScreenGuard screen={screens.find((s) => s.code === 'PO')!}><DemoPurchaseOrderListPage /></ScreenGuard>,
       },
+      // Nút "Mở trên phần mềm" trong email thông báo (lát O2b): đổi công ty rồi mở phiếu – quyền do trang đích kiểm tra.
+      { path: '/mo/:screen/:id?', element: <OpenLinkPage /> },
       { path: '*', element: <PlaceholderPage /> },
     ],
   },

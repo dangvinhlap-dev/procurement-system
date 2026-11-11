@@ -10,7 +10,7 @@ import { apiDownload, apiFetch, apiUpload } from './client'
 export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'PurchaseRequest' | 'PurchaseOrder' | 'InventoryDocument' | 'PurchaseContract'
   | 'SoleSourceApproval' | 'SourcingRequest' | 'ContractAmendment' | 'SupplierReview' | 'ControlFinding' | 'ConflictDeclaration' | 'MonthlySupplierApproval'
   | 'MarketPriceSurvey' | 'DemandPlan' | 'VolumeRebateAgreement' | 'VolumeRebateReceipt' | 'PooledOrder' | 'AppraisalOpinion'
-  | 'SupplierOnboarding' | 'GoodsReceiptConfirmation'
+  | 'SupplierOnboarding' | 'GoodsReceiptConfirmation' | 'ApprovalDelegation'
 
 /** Một file đính kèm. */
 export interface AttachmentItem {
