@@ -1,5 +1,5 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { DatabaseOutlined, FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
+import { FileDoneOutlined, FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -539,7 +539,7 @@ export function PurchaseRequestPage() {
       actions={
         <>
           {doc?.canEnterStock && (
-            <Button type="primary" icon={<DatabaseOutlined />} onClick={() => setEnteringStock(true)}>
+            <Button type="primary" icon={<FileDoneOutlined />} onClick={() => setEnteringStock(true)}>
               Nhập tồn
             </Button>
           )}
