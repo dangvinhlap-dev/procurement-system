@@ -42,9 +42,30 @@ internal sealed class NextApproverResolver
     /// <param name="HasActed">
     /// Người đã duyệt một cấp trong lượt này (tự duyệt hoặc được duyệt thay) – không duyệt thêm cấp khác (lát R3); null = chưa ai duyệt.
     /// </param>
+    /// <param name="Permission">Quyền cần có để duyệt bước; null = quyền duyệt loại phiếu. Bước Thủ kho: quyền nhập tồn (lát Y3c).</param>
+    /// <param name="WarehouseId">Bước Thủ kho nơi nhận: người duyệt phải có phạm vi kho chứa kho này; null = không xét phạm vi kho.</param>
+    /// <param name="AllowDelegation">Có xét ủy quyền duyệt thay không (bước Thủ kho không – thủ kho khác cùng kho làm thay được).</param>
     public sealed record PendingStep(
         Guid Key, string DocType, Guid CompanyId, Guid? RoleId, Func<Guid, bool> IsPreparer, IReadOnlyCollection<Guid> SupplierIds,
-        IReadOnlyCollection<Guid>? OnlyUsers = null, Func<Guid, bool>? HasActed = null);
+        IReadOnlyCollection<Guid>? OnlyUsers = null, Func<Guid, bool>? HasActed = null, string? Permission = null, Guid? WarehouseId = null,
+        bool AllowDelegation = true)
+    {
+        /// <summary>
+        /// Bước đang chờ từ bước duyệt đã lưu: lấy quyền, nơi nhận, cho phép ủy quyền theo loại người duyệt của bước (lát Y3c).
+        /// </summary>
+        /// <param name="step">Bước duyệt.</param>
+        /// <param name="isPreparer">Người lập (không tự duyệt).</param>
+        /// <param name="supplierIds">NCC của phiếu.</param>
+        /// <param name="onlyUsers">Người duyệt động (Trưởng phòng ban / GĐ khối) hoặc null.</param>
+        /// <param name="hasActed">Người đã duyệt một cấp trong lượt.</param>
+        /// <returns>Bước đang chờ.</returns>
+        public static PendingStep Of(
+            ApprovalStep step, Func<Guid, bool> isPreparer, IReadOnlyCollection<Guid> supplierIds, IReadOnlyCollection<Guid>? onlyUsers,
+            Func<Guid, bool>? hasActed) =>
+            new(step.Id, step.DocType, step.CompanyId, step.RoleId, isPreparer, supplierIds, onlyUsers, hasActed,
+                ApprovalEngine.StepPermission(step), step.Kind == ApproverKind.Storekeeper ? step.WarehouseId : null,
+                step.Kind != ApproverKind.Storekeeper);
+    }
 
     /// <summary>Một người duyệt được bước.</summary>
     /// <param name="UserId">Người duyệt.</param>
@@ -73,13 +94,13 @@ internal sealed class NextApproverResolver
         if (steps.Count == 0) return result;
 
         // Nhiều phiếu chung công ty – loại – vai trò (tra cứu chứng từ) chỉ hỏi CSDL một lần cho mỗi bộ; vai trò null = mọi người có quyền duyệt
-        // (dùng cho người được ủy quyền).
-        var byRule = new Dictionary<(Guid, string, Guid?), List<Guid>>();
-        async Task<List<Guid>> UsersAsync(Guid companyId, string permission, Guid? roleId)
+        // (dùng cho người được ủy quyền). Bước Thủ kho nơi nhận (lát Y3c) thêm điều kiện phạm vi kho.
+        var byRule = new Dictionary<(Guid, string, Guid?, Guid?), List<Guid>>();
+        async Task<List<Guid>> UsersAsync(Guid companyId, string permission, Guid? roleId, Guid? warehouseId = null)
         {
-            if (!byRule.TryGetValue((companyId, permission, roleId), out var users))
-                byRule[(companyId, permission, roleId)] = users =
-                    await _publisher.UsersWithPermissionAsync(companyId, permission, roleId, null, cancellationToken);
+            if (!byRule.TryGetValue((companyId, permission, roleId, warehouseId), out var users))
+                byRule[(companyId, permission, roleId, warehouseId)] = users =
+                    await _publisher.UsersWithPermissionAsync(companyId, permission, roleId, warehouseId, cancellationToken);
             return users;
         }
 
@@ -87,7 +108,7 @@ internal sealed class NextApproverResolver
         foreach (var step in steps)
         {
             var hasActed = step.HasActed ?? (_ => false);
-            holders[step.Key] = (await UsersAsync(step.CompanyId, ApprovalEngine.ApprovePermission(step.DocType), step.RoleId))
+            holders[step.Key] = (await UsersAsync(step.CompanyId, step.Permission ?? ApprovalEngine.ApprovePermission(step.DocType), step.RoleId, step.WarehouseId))
                 .Where(u => (step.OnlyUsers is null || step.OnlyUsers.Contains(u)) && !hasActed(u))
                 .ToList();
         }
@@ -112,7 +133,9 @@ internal sealed class NextApproverResolver
             bool Free(Guid u) => !step.SupplierIds.Any(s => conflicts.Contains((u, s)));
             var stepHolders = holders[step.Key].Where(Free).ToList();
             var candidates = stepHolders.Where(u => !step.IsPreparer(u)).Select(u => new Candidate(u, null)).ToList();
-            var covering = delegations.Where(d => d.Covers(step.CompanyId, step.DocType) && stepHolders.Contains(d.DelegatorUserId)).ToList();
+            var covering = step.AllowDelegation
+                ? delegations.Where(d => d.Covers(step.CompanyId, step.DocType) && stepHolders.Contains(d.DelegatorUserId)).ToList()
+                : [];
             if (covering.Count > 0)
             {
                 // Người được ủy quyền vẫn phải có quyền duyệt loại phiếu (API duyệt đòi quyền này) – ủy quyền chỉ cho mượn "vị trí" của cấp.

@@ -17,6 +17,9 @@ internal sealed class DynamicApprovers
     /// <summary>Tên loại người duyệt "Giám đốc khối" trên cấu hình APRL.</summary>
     public const string DivisionDirectorLabel = "GĐ khối của phiếu";
 
+    /// <summary>Tên loại người duyệt "Thủ kho nơi nhận" trên cấu hình APRL (lát Y3c).</summary>
+    public const string StorekeeperLabel = "Thủ kho nơi nhận";
+
     private readonly ProcDbContext _db;
 
     /// <summary>Tạo bộ tìm người duyệt động.</summary>
@@ -30,9 +33,12 @@ internal sealed class DynamicApprovers
     /// <param name="Problem">Lý do chưa có người duyệt (câu đầy đủ, chỉ chỗ sửa) hoặc null.</param>
     public sealed record Resolution(Guid? UserId, string? UserName, string Label, string? Problem);
 
-    /// <summary>Bước có người duyệt động không.</summary>
+    /// <summary>
+    /// Bước có người duyệt động theo bộ phận (Trưởng phòng ban / GĐ khối – một người) không. Bước Thủ kho nơi nhận (lát Y3c) không tính: nhiều
+    /// thủ kho cùng một kho đều duyệt được, tìm theo quyền nhập tồn + phạm vi kho (<see cref="ApprovalEngine.StepPermission"/>).
+    /// </summary>
     /// <param name="step">Bước duyệt.</param>
-    public static bool IsDynamic(ApprovalStep step) => step.Kind != ApproverKind.Role;
+    public static bool IsDynamic(ApprovalStep step) => step.Kind is ApproverKind.DepartmentHead or ApproverKind.DivisionDirector;
 
     /// <summary>
     /// Người duyệt động của các bước (bỏ qua bước theo vai trò).
@@ -103,7 +109,12 @@ internal sealed class DynamicApprovers
         return result;
     }
 
-    /// <summary>Tên loại người duyệt động khi chưa biết bộ phận.</summary>
+    /// <summary>Tên loại người duyệt (không theo vai trò) như trên cấu hình APRL, khi chưa biết bộ phận / nơi nhận.</summary>
     /// <param name="kind">Loại người duyệt.</param>
-    public static string KindLabel(ApproverKind kind) => kind == ApproverKind.DivisionDirector ? DivisionDirectorLabel : DepartmentHeadLabel;
+    public static string KindLabel(ApproverKind kind) => kind switch
+    {
+        ApproverKind.DivisionDirector => DivisionDirectorLabel,
+        ApproverKind.Storekeeper => StorekeeperLabel,
+        _ => DepartmentHeadLabel,
+    };
 }

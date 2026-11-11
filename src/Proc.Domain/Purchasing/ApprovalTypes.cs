@@ -12,7 +12,9 @@ namespace Proc.Domain.Purchasing;
 /// <param name="HasDepartment">
 /// Phiếu có bộ phận (PR, PO và các bộ cấp phụ của chúng) – cấu hình được người duyệt động Trưởng phòng ban / GĐ khối (lát O1).
 /// </param>
-public sealed record ApprovalTypeInfo(string Code, string Name, string ApprovePermission, string? AmountLabel, bool HasDepartment = false);
+/// <param name="HasStorekeeper">Bộ cấp đề nghị mua có nơi nhận (PR, PRA) – cấu hình được cấp "Thủ kho nơi nhận" (lát Y3c).</param>
+public sealed record ApprovalTypeInfo(
+    string Code, string Name, string ApprovePermission, string? AmountLabel, bool HasDepartment = false, bool HasStorekeeper = false);
 
 /// <summary>
 /// Các loại đối tượng có duyệt (design.md mục 6.2, 18.6). Lát A3 mở rộng từ PR, PO sang bảng giá NCC (PRL), kết quả chọn thầu (RFQ),
@@ -46,6 +48,24 @@ public static class ApprovalTypes
     /// cấp duyệt PR thường, cùng quyền duyệt PR. Chỉ là bộ cấp duyệt cấu hình riêng ở APRL.
     /// </summary>
     public const string PurchaseRequestOverBudget = "PRB";
+
+    /// <summary>
+    /// Đề nghị mua loại A – công trình (lát Y3c, design.md mục 19.3 – Q6): bộ cấp duyệt thay cho PR khi đề nghị là loại A (1A – không có TP HC);
+    /// chưa cấu hình thì dùng cấp duyệt PR. Cùng quyền duyệt PR.
+    /// </summary>
+    public const string PurchaseRequestConstruction = "PRA";
+
+    /// <summary>
+    /// Đề nghị mua dịch vụ (lát Y3c – Q6): bộ cấp duyệt thay cho PR khi đề nghị là dịch vụ (không có bước Thủ kho); chưa cấu hình thì dùng cấp
+    /// duyệt PR và tự bỏ cấp Thủ kho. Cùng quyền duyệt PR.
+    /// </summary>
+    public const string PurchaseRequestService = "PRS";
+
+    /// <summary>
+    /// Đề nghị mua loại A vượt dự toán công trình (lát Y3c – Q5): thêm chặng duyệt này (luôn ít nhất một cấp) khi lũy kế đã mua + giá trị đề nghị
+    /// vượt dự toán; không chặn gửi. Cùng quyền duyệt PR. Chỉ là bộ cấp cấu hình ở APRL.
+    /// </summary>
+    public const string PurchaseRequestOverEstimate = "PRE";
 
     /// <summary>Vượt ngân sách đơn mua hàng (lát C3, design.md mục 18.24) – như <see cref="PurchaseRequestOverBudget"/>, cùng quyền duyệt PO.</summary>
     public const string PurchaseOrderOverBudget = "POB";
@@ -85,10 +105,23 @@ public static class ApprovalTypes
     /// <summary>Chặng PO vượt giá trần – Chủ tịch/TGĐ (lát H3), sau chặng ngoài danh sách/giá nếu có.</summary>
     public const int OverCeilingStage = 5;
 
+    /// <summary>Chặng đề nghị mua vượt dự toán công trình (lát Y3c), sau chặng vượt ngân sách nếu có.</summary>
+    public const int OverEstimateStage = 6;
+
+    /// <summary>
+    /// Chặng của cấp cao nhất trong chuỗi duyệt thường khi đề nghị mua có chặng vượt (vượt ngân sách/định mức PRB, vượt dự toán PRE): cấp đó
+    /// (Chủ tịch theo biểu mẫu) duyệt sau cùng để phần vượt được xem trước khi trình lên (người dùng yêu cầu 11/11/2026, lát Y3c). Không gắn
+    /// tên chặng riêng – giao diện hiện là "Duyệt thường".
+    /// </summary>
+    public const int TopLevelStage = 9;
+
     /// <summary>Mọi loại có duyệt, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<ApprovalTypeInfo> All =
     [
-        new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true),
+        new(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true, HasStorekeeper: true),
+        new(PurchaseRequestConstruction, "Đề nghị mua công trình (loại A)", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true, HasStorekeeper: true),
+        new(PurchaseRequestService, "Đề nghị mua dịch vụ", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true),
+        new(PurchaseRequestOverEstimate, "Đề nghị mua vượt dự toán công trình", Permissions.Purchase.PrApprove, "Tổng dự kiến", HasDepartment: true),
         new(DocumentTypes.PurchaseOrder, "Đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
         new(PurchaseOrderPriceException, "Ngoại lệ giá đơn mua hàng", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
         new(PurchaseOrderEmergency, "Đơn mua hàng khẩn cấp", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
@@ -113,7 +146,8 @@ public static class ApprovalTypes
     /// </summary>
     public static readonly IReadOnlySet<string> RuleOnlyCodes = new HashSet<string>
     {
-        PurchaseOrderPriceException, PurchaseOrderEmergency, PurchaseRequestOverBudget, PurchaseOrderOverBudget, PurchaseOrderOffList,
+        PurchaseOrderPriceException, PurchaseOrderEmergency, PurchaseRequestOverBudget, PurchaseRequestConstruction, PurchaseRequestService,
+        PurchaseRequestOverEstimate, PurchaseOrderOverBudget, PurchaseOrderOffList,
         PurchaseOrderOverCeiling, MonthlyApprovalException,
     };
 
@@ -190,4 +224,21 @@ public interface IApprovalSubject
     /// phiếu không có bộ phận chỉ cấu hình được người duyệt theo vai trò).
     /// </summary>
     Guid? ApprovalDepartmentId => null;
+
+    /// <summary>
+    /// Nơi nhận của phiếu – để tìm Thủ kho nơi nhận (lát Y3c, design.md mục 19.3). Mặc định không có (loại phiếu không có bước Thủ kho).
+    /// </summary>
+    Guid? ApprovalWarehouseId => null;
+
+    /// <summary>
+    /// Phiếu có bước Thủ kho không – false thì cấp "Thủ kho nơi nhận" của bộ cấp bị bỏ khi gửi (đề nghị dịch vụ dùng bộ PR – lát Y3c).
+    /// </summary>
+    bool HasStorekeeperStep => false;
+
+    /// <summary>
+    /// Điều kiện của chính phiếu để duyệt bước (ngoài quyền, vai trò của người duyệt): null = duyệt được. Ví dụ bước Thủ kho của đề nghị mua
+    /// phải nhập tồn trong lượt này trước (lát Y3c). Không chặn từ chối.
+    /// </summary>
+    /// <param name="step">Bước đang đến lượt.</param>
+    string? ApproveReadyBlocker(ApprovalStep step) => null;
 }

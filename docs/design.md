@@ -1682,7 +1682,7 @@ sách"). Người dùng ra lệnh làm 05/11/2026.
 | **Ngân sách** (`DepartmentBudget`): công ty × bộ phận × năm × tháng, số tiền VND chưa VAT (numeric(19,2), ≥ 0), duy nhất theo công ty × bộ phận × năm × tháng; khóa ngoại (bộ phận, công ty) chặn gắn bộ phận công ty khác. **Không có dòng = tháng đó bộ phận không kiểm soát ngân sách** (bỏ trống ô tháng thì xóa dòng; nhật ký giữ giá trị cũ). Sửa được cả tháng đã qua | Công ty chưa dùng ngân sách không bị ảnh hưởng; mỗi tháng khai riêng |
 | **Đã dùng** của bộ phận × tháng = Σ tiền hàng chưa VAT (sau chiết khấu) của **PO** Chờ duyệt/Đã duyệt/Đã đóng theo **tháng ngày PO** và bộ phận đặt hàng của PO + Σ phần **PR** Chờ duyệt/Đã duyệt **chưa lên PO** theo tháng ngày PR. Phần PR chưa lên PO của dòng = thành tiền × (SL − SL đã lên PO được tính) / SL (ví dụ 10 cái × 1.000.000, PO đặt 4 → còn 6.000.000); hàng mới chưa gắn mã tính đủ. PO/PR nháp, bị từ chối, đã hủy không tính | Cam kết chi gồm cả đề nghị đã gửi; phần PR đã lên PO chỉ đếm một lần (ở PO) |
 | **Kiểm tra trên PR/PO**: server tính lúc lưu và **tính lại lúc gửi duyệt** (phiếu đang xét không tính vào đã dùng; PO đang xét coi phần PR nó đặt là đã lên PO). Vượt khi đã dùng + giá trị phiếu (PR: tổng dự kiến; PO: tổng tiền chưa VAT) > ngân sách. PR luôn có bộ phận; **PO chưa chọn bộ phận** (và không lấy từ PR) **không kiểm tra**. Lưu trên phiếu: ngân sách, đã dùng lúc kiểm tra, cờ vượt (`BudgetAmount`, `BudgetUsedAmount`, `IsOverBudget`) – phiếu đã gửi giữ số liệu lúc gửi cho người duyệt | Số liệu tại thời điểm trình duyệt là căn cứ duyệt |
-| **Vượt ngân sách không chặn**: gửi duyệt được, thêm **chặng "Vượt ngân sách"** (chặng 3, sau chặng ngoại lệ giá POX nếu có) theo bộ cấp loại **PRB** (PR) / **POB** (PO) cấu hình ở APRL theo ngưỡng như loại PR/PO, cùng quyền duyệt PR/PO; luôn ít nhất một cấp (dưới mọi ngưỡng vẫn qua cấp thấp nhất; chưa cấu hình → một cấp, ai có quyền duyệt PR/PO). Quy tắc chung giữ nguyên (người lập không tự duyệt, xung đột lợi ích). Popup gửi duyệt hiện sẵn chặng này (chạy thử lệnh gửi) | Q5; nên gán vai trò riêng (ví dụ lãnh đạo, kế toán) cho cấp PRB/POB để tách người duyệt |
+| **Vượt ngân sách không chặn**: gửi duyệt được, thêm **chặng "Vượt ngân sách"** (chặng 3, sau chặng ngoại lệ giá POX nếu có) theo bộ cấp loại **PRB** (PR) / **POB** (PO) cấu hình ở APRL theo ngưỡng như loại PR/PO, cùng quyền duyệt PR/PO; luôn ít nhất một cấp (dưới mọi ngưỡng vẫn qua cấp thấp nhất; chưa cấu hình → một cấp, ai có quyền duyệt PR/PO). Quy tắc chung giữ nguyên (người lập không tự duyệt, xung đột lợi ích). Popup gửi duyệt hiện sẵn chặng này (chạy thử lệnh gửi). **Từ 0.23.0 (lát Y3c)**: với PR, cấp cao nhất của chuỗi thường dời ra sau chặng này – phần vượt được xem trước khi trình lên Chủ tịch (mục 19.3) | Q5; nên gán vai trò riêng (ví dụ lãnh đạo, kế toán) cho cấp PRB/POB để tách người duyệt |
 | **Giao diện**: màn hình **BUDG** "Ngân sách bộ phận" (Mua hàng; quyền `Purchase.Budget.View` xem, `Purchase.Budget.Manage` khai): lưới bộ phận × 12 tháng chọn hiển thị Ngân sách / Đã dùng / Còn lại, cột cả năm, tình trạng (Chưa khai / Trong ngân sách / Vượt n tháng – dòng vượt đánh dấu); bấm đúp mở ngăn kéo khai 12 tháng (kèm đã dùng, còn lại từng tháng; nút "Chép T01 cho cả năm"). Bộ phận ngừng dùng vẫn hiện nếu năm đó có ngân sách hoặc phiếu. PR/PO: đầu phiếu báo vàng khi vượt (ngân sách, đã dùng, phiếu này, số vượt), phiếu nháp trong ngân sách báo còn lại; lịch sử duyệt ghi chặng "Vượt ngân sách". API `GET /api/budgets/{năm}`, `PUT /api/budgets/{năm}/{bộ phận}` (đủ 12 tháng, null = không kiểm soát) | |
 | **Chưa chốt nghiệp vụ (người dùng 05/11/2026)**: (1) kiểm soát ở PR, ở PO hay cả hai; (2) vượt thì chỉ cảnh báo, thêm chặng duyệt (đang làm), chặn cứng không cho gửi, hay chặn khi vượt quá một tỷ lệ %; (3) tính tiền chưa VAT (đang làm) hay gồm VAT; (4) tháng tính theo ngày phiếu (đang làm), ngày cần hàng hay ngày giao; (5) ngân sách theo bộ phận × tháng (đang làm), quý/năm, nhóm hàng hay khoản mục chi phí; (6) "đã dùng" có tính PR chờ duyệt không, PO đóng khi chưa nhận hết có trả lại phần chưa nhận không; (7) dư tháng trước có cộng sang tháng sau không; (8) PO không có bộ phận thì bỏ qua (đang làm) hay bắt buộc chọn bộ phận. Trong lúc chờ: giữ nguyên code, **không làm thêm** việc ngân sách; công ty không khai ngân sách thì không ảnh hưởng gì | Người dùng chưa quyết định điều kiện chặn |
 | Chưa làm: ngân sách theo nhóm hàng; nhập ngân sách bằng Excel; F1 lịch sử từng ô tháng trên lưới (nhật ký vẫn ghi `DepartmentBudget`); chuyển ngân sách giữa tháng/bộ phận có duyệt; báo cáo thực hiện theo GRN | Làm khi có yêu cầu |
@@ -2059,7 +2059,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | Q2 | Ai nhập tồn trên đề nghị mua | Thủ kho của nơi nhận; mỗi đề nghị một nơi nhận |
 | Q3 | Bảng tổng hợp 2A/2B | Giữ, bật/tắt "bắt buộc qua bảng tổng hợp" bằng tham số. **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
 | Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
-| Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt |
+| Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt; phần vượt được xem trước khi trình lên Chủ tịch (chốt 11/11/2026, lát Y3c) |
 | Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC chỉ kiểm định mức nhóm B; dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
 | Q7 | Trình giá 1 NCC (3a) hay so sánh 3 NCC (3A) – nhóm A | Theo ngưỡng giá trị (tham số công ty); nhóm B, dịch vụ được trình giá 1 NCC |
 | Q8 | Ai lập XNH | Hàng: thủ kho nơi nhận; dịch vụ: phòng ban đề xuất; đơn vị đặt hàng xác nhận nghiệm thu |
@@ -2267,8 +2267,28 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   "Lấy tồn gợi ý" trong hộp thoại "Nhập tồn kho". Đề nghị mua không còn đọc tồn kho của phân hệ kho cũ (cột "Tồn hiện tại" bỏ).
 - API `POST /api/purchase-requests/{id}/stock` (`lines: [{ lineId, stockQty }]`); DTO đề nghị có `canEnterStock`, `enterStockBlocker`,
   `stockConfirmedByName/At`, dòng có `requiredQty`, `stockQty`, `lastStock…`.
-- **Để Y3c**: bước Thủ kho trong chuỗi duyệt 1A/1B (Thủ kho duyệt sau khi đã nhập tồn; bắt buộc nơi nhận với loại A, B khi gửi duyệt; thông báo
-  "chờ nhập tồn" theo bước duyệt).
+- **Y3c** (dưới đây): bước Thủ kho trong chuỗi duyệt 1A/1B.
+
+**Lát Y3c – chuỗi duyệt theo loại mua, bước Thủ kho, chặng vượt dự toán (Q5, Q6).** Quy tắc (mặc định tự chọn ghi "tự đặt"; người dùng chốt
+11/11/2026: **phần vượt được xem trước khi trình lên Chủ tịch**):
+
+- **Bộ cấp theo loại mua** ở APRL: **PR** (1B – hàng hóa), **PRA** (1A – công trình), **PRS** (DV – dịch vụ); đều cùng quyền duyệt PR. Đề nghị loại A
+  dùng PRA, dịch vụ dùng PRS; bộ đó chưa cấu hình thì dùng PR (tự đặt – như POK của PO khẩn). TP HC chỉ có trong PR, PRS (Q6), không có trong PRA.
+- **Cấp "Thủ kho nơi nhận"** (loại người duyệt `Storekeeper`, chỉ cấu hình cho PR, PRA): người duyệt là người có quyền `Purchase.PR.EnterStock`
+  **và** phạm vi kho chứa nơi nhận của phiếu tại công ty (nhiều thủ kho cùng kho đều duyệt được; không cần quyền duyệt PR). Bước ghi nơi nhận lúc
+  gửi (`ApprovalStep.WarehouseId`, migration `V0_23_0_BuocThuKho` – Down mất nơi nhận của bước). Thủ kho **nhập tồn trước rồi mới Duyệt** (tồn xác
+  nhận sau thời điểm gửi của lượt); Từ chối không cần nhập tồn. Tồn khóa khi bước Thủ kho đã duyệt (lượt không có bước Thủ kho: khi có cấp nào
+  duyệt – như Y3b). Không áp ủy quyền duyệt cho bước này (thủ kho khác cùng kho làm thay – tự đặt). Thông báo "… chờ bạn nhập tồn".
+- Đề nghị **dịch vụ** dùng bộ PR thì tự **bỏ cấp Thủ kho**. Có cấp Thủ kho mà phiếu chưa chọn nơi nhận, hoặc nơi nhận chưa có thủ kho nào (ngoài
+  người lập) → **chặn gửi**, phiếu giữ nháp, báo rõ chỗ sửa (tự đặt: nơi nhận chỉ bắt buộc khi bộ cấp có bước Thủ kho).
+- **Vượt dự toán** (Q5): đề nghị loại A có lũy kế đã mua (PO đã duyệt, chưa VAT) + tổng dự kiến của phiếu > dự toán hiện hành lúc gửi → thêm chặng
+  **PRE** "Vượt dự toán công trình" (chặng 6, luôn ít nhất một cấp; chưa cấu hình thì một cấp – ai có quyền duyệt PR), không chặn gửi.
+- **Phần vượt xem trước Chủ tịch** (người dùng yêu cầu 11/11/2026): đề nghị mua có chặng vượt (vượt ngân sách PRB – mục 18.24, vượt dự toán PRE)
+  thì **cấp cao nhất** của chuỗi duyệt thường (không tính cấp Thủ kho; theo biểu mẫu là Chủ tịch) dời ra sau cùng (chặng 9, hiện "Duyệt thường"):
+  ví dụ 1A 7 cấp vượt dự toán: cấp 1–6 → chặng vượt dự toán → cấp 7 Chủ tịch. PO giữ thứ tự cũ (chặng phụ sau mọi cấp PO).
+- **Cấu hình duyệt mẫu CUVT**: PR 8 cấp (Thủ kho → Trưởng phòng ban → TP CUVT → TP TC-NQ-KT → TP HC → GĐ khối → Phó CT UBCL&PT → Chủ tịch); PRA
+  7 cấp (bỏ TP HC); PRS 7 cấp (bỏ Thủ kho); PRE 1 cấp Giám đốc TC-NQ-KT (tự đặt – vai trò mẫu GDTCKT thêm quyền duyệt PR). Công ty đã áp bộ PR cũ 6
+  cấp thì mẫu không ghi đè (trạng thái "Đã cấu hình") – xóa các cấp PR cũ rồi áp lại nếu muốn bộ mới.
 
 ### 19.4 Bỏ phân hệ kho
 

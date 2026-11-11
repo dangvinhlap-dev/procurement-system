@@ -155,18 +155,19 @@ public class BudgetTests
             .Single(r => r.DepartmentId == f.Px1).Months[Today.Month - 1];
         Assert.Equal((6_000_000m, 4_000_000m), (month.Used, month.Remaining));
 
-        // PR2: 5.000.000 → 6.000.000 + 5.000.000 > 10.000.000: lưu nháp, gửi duyệt được nhưng thêm chặng vượt ngân sách (chặng 3).
+        // PR2: 5.000.000 → 6.000.000 + 5.000.000 > 10.000.000: lưu nháp, gửi duyệt được nhưng thêm chặng vượt ngân sách (chặng 3). Phần vượt
+        // được xem trước khi trình lên cấp cao nhất (lát Y3c): cấp cao nhất của chuỗi thường dời ra sau, chặng 9.
         var pr2 = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests", Pr(f, f.Px1, 5), Ct));
         Assert.Equal((6_000_000m, true, 1_000_000m), (pr2.Budget!.UsedAmount, pr2.Budget.IsOver, pr2.Budget.OverAmount));
         pr2 = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr2.Id}/submit", null, Ct));
-        Assert.Equal([(1, false), (3, true)], pr2.Approvals.Select(s => (s.Stage, s.RoleName is not null)));
-        pr2 = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr2.Id}/approve", new ApprovalActionRequest(null), Ct));
-        Assert.Equal("Submitted", pr2.Status);
+        Assert.Equal([(3, true), (9, false)], pr2.Approvals.Select(s => (s.Stage, s.RoleName is not null)));
         Assert.Contains("vai trò", await TitleAsync(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr2.Id}/approve", new ApprovalActionRequest(null), Ct)));
         var budgetUser = $"nb.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(budgetUser, f.CompanyCode, budgetRole);
         var budgetClient = await _factory.CreateClientInCompanyAsync(budgetUser, ProcApiFactory.TestPassword, f.CompanyCode);
         pr2 = await ReadAsync<PurchaseRequestDto>(await budgetClient.PostAsJsonAsync($"/api/purchase-requests/{pr2.Id}/approve", new ApprovalActionRequest("Đồng ý vượt"), Ct));
+        Assert.Equal("Submitted", pr2.Status);
+        pr2 = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr2.Id}/approve", new ApprovalActionRequest(null), Ct));
         Assert.Equal("Approved", pr2.Status);
 
         // PO thêm 1 cái ngoài PR: đã dùng 11.000.000 + 1.000.000 > ngân sách → chặng vượt ngân sách POB.

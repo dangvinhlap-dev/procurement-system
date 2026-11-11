@@ -275,13 +275,14 @@ public static class RoleTemplates
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
             Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
-        new("GDTCKT", "Giám đốc Tài chính – Nguồn quỹ – Kế toán", "Duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B sau Trưởng phòng TC-NQ-KT",
+        // Lát Y3c: duyệt chặng đề nghị mua loại A vượt dự toán công trình (PRE – Q5, tự đặt) nên có quyền duyệt PR.
+        new("GDTCKT", "Giám đốc Tài chính – Nguồn quỹ – Kế toán", "Duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B sau Trưởng phòng TC-NQ-KT; duyệt đề nghị mua công trình vượt dự toán",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
+            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
         ]),
-        // Q6: Trưởng phòng HC chỉ kiểm định mức nhóm B – cấp duyệt này thêm vào cấu hình mẫu khi đề nghị mua có loại mua (lát Y3).
-        new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) – cấp duyệt thêm khi đề nghị mua có loại mua (lát Y3)",
+        // Q6: Trưởng phòng HC kiểm định mức nhóm B (và dịch vụ – như B) – có trong bộ cấp PR, PRS của cấu hình mẫu CUVT, không có trong PRA (lát Y3c).
+        new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) và dịch vụ",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
         ]),

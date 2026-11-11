@@ -41,6 +41,8 @@ internal sealed class ApprovalStepConfiguration : IEntityTypeConfiguration<Appro
         builder.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
         // Bộ phận của phiếu ở bước người duyệt động (lát O1).
         builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+        // Nơi nhận của phiếu ở bước Thủ kho nơi nhận (lát Y3c).
+        builder.HasOne<Warehouse>().WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
         // Người được duyệt thay khi duyệt theo ủy quyền (lát O2).
         builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.OnBehalfOf).OnDelete(DeleteBehavior.Restrict);
     }

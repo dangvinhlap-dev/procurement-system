@@ -82,18 +82,35 @@ public static class ApprovalRuleTemplates
 
     /// <summary>
     /// Chuỗi ký của biểu mẫu CUVT (lát O3 – design.md mục 19.3, Q6, Q10, Q18), áp cho từng công ty. Ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch –
-    /// Q6), người quản trị chỉnh sau. Chưa có trong mẫu (thêm khi làm lát tương ứng): bước Thủ kho nhập tồn và Trưởng phòng HC kiểm định mức
-    /// nhóm B của đề nghị mua (lát Y3 – đề nghị mua có loại mua); bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
-    /// Đề nghị DV khác 1B ở bước Thủ kho và TP HC – nên trước Y3 dùng chung chuỗi PR dưới đây.
+    /// Q6), người quản trị chỉnh sau. Đề nghị mua theo loại mua (lát Y3c): 1B (PR) 8 cấp có Thủ kho nơi nhận và Trưởng phòng HC kiểm định mức nhóm
+    /// B; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán công trình (PRE) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL). Chưa có (thêm khi
+    /// làm lát tương ứng): bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
     /// </summary>
     public static readonly IReadOnlyList<ApprovalRuleTemplate> CuvtForms =
     [
-        new(DocumentTypes.PurchaseRequest, 1, null, false, "1A/1B/DV: Trưởng phòng/ban của bộ phận đề nghị", ApproverKind.DepartmentHead),
-        new(DocumentTypes.PurchaseRequest, 2, "TPCUVT", false, "1A/1B/DV: Phòng CUVT kiểm tra"),
-        new(DocumentTypes.PurchaseRequest, 3, "TPTCKT", false, "1A/1B/DV: Phòng TC-NQ-KT kiểm dự toán/định mức"),
-        new(DocumentTypes.PurchaseRequest, 4, null, false, "1A/1B/DV: Giám đốc khối của bộ phận đề nghị", ApproverKind.DivisionDirector),
-        new(DocumentTypes.PurchaseRequest, 5, "PHOCTUBCL", false, "1A/1B/DV: Phó Chủ tịch UBCL&PT"),
-        new(DocumentTypes.PurchaseRequest, 6, "CHUTICH", false, "1A/1B/DV: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(DocumentTypes.PurchaseRequest, 1, null, false, "1B: Thủ kho nơi nhận nhập tồn, xác nhận", ApproverKind.Storekeeper),
+        new(DocumentTypes.PurchaseRequest, 2, null, false, "1B: Trưởng phòng/ban của bộ phận đề nghị", ApproverKind.DepartmentHead),
+        new(DocumentTypes.PurchaseRequest, 3, "TPCUVT", false, "1B: Phòng CUVT kiểm tra"),
+        new(DocumentTypes.PurchaseRequest, 4, "TPTCKT", false, "1B: Phòng TC-NQ-KT kiểm định mức"),
+        new(DocumentTypes.PurchaseRequest, 5, "TPHC", false, "1B: Trưởng phòng HC kiểm định mức (chỉ nhóm B – Q6)"),
+        new(DocumentTypes.PurchaseRequest, 6, null, false, "1B: Giám đốc khối của bộ phận đề nghị", ApproverKind.DivisionDirector),
+        new(DocumentTypes.PurchaseRequest, 7, "PHOCTUBCL", false, "1B: Phó Chủ tịch UBCL&PT"),
+        new(DocumentTypes.PurchaseRequest, 8, "CHUTICH", false, "1B: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(ApprovalTypes.PurchaseRequestConstruction, 1, null, false, "1A: Thủ kho nơi nhận nhập tồn, xác nhận", ApproverKind.Storekeeper),
+        new(ApprovalTypes.PurchaseRequestConstruction, 2, null, false, "1A: Trưởng phòng/ban của bộ phận đề nghị", ApproverKind.DepartmentHead),
+        new(ApprovalTypes.PurchaseRequestConstruction, 3, "TPCUVT", false, "1A: Phòng CUVT kiểm tra"),
+        new(ApprovalTypes.PurchaseRequestConstruction, 4, "TPTCKT", false, "1A: Phòng TC-NQ-KT kiểm dự toán"),
+        new(ApprovalTypes.PurchaseRequestConstruction, 5, null, false, "1A: Giám đốc khối của bộ phận đề nghị", ApproverKind.DivisionDirector),
+        new(ApprovalTypes.PurchaseRequestConstruction, 6, "PHOCTUBCL", false, "1A: Phó Chủ tịch UBCL&PT"),
+        new(ApprovalTypes.PurchaseRequestConstruction, 7, "CHUTICH", false, "1A: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(ApprovalTypes.PurchaseRequestService, 1, null, false, "DV: Trưởng phòng/ban của bộ phận đề nghị", ApproverKind.DepartmentHead),
+        new(ApprovalTypes.PurchaseRequestService, 2, "TPCUVT", false, "DV: Phòng CUVT kiểm tra"),
+        new(ApprovalTypes.PurchaseRequestService, 3, "TPTCKT", false, "DV: Phòng TC-NQ-KT chỉ kiểm dự toán (Q6)"),
+        new(ApprovalTypes.PurchaseRequestService, 4, "TPHC", false, "DV: Trưởng phòng HC kiểm định mức"),
+        new(ApprovalTypes.PurchaseRequestService, 5, null, false, "DV: Giám đốc khối của bộ phận đề nghị", ApproverKind.DivisionDirector),
+        new(ApprovalTypes.PurchaseRequestService, 6, "PHOCTUBCL", false, "DV: Phó Chủ tịch UBCL&PT"),
+        new(ApprovalTypes.PurchaseRequestService, 7, "CHUTICH", false, "DV: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(ApprovalTypes.PurchaseRequestOverEstimate, 1, "GDTCKT", false, "1A vượt dự toán công trình (Q5): Giám đốc TC-NQ-KT xem xét (tự đặt)"),
         new(DocumentTypes.RequestForQuotation, 1, "TPCUVT", false, "3a/3A/3B: Trưởng phòng CUVT"),
         new(DocumentTypes.RequestForQuotation, 2, "TPTCKT", false, "3a/3A/3B: Trưởng phòng TC-NQ-KT"),
         new(DocumentTypes.RequestForQuotation, 3, "GDTCKT", false, "3a/3A/3B: Giám đốc TC-NQ-KT"),

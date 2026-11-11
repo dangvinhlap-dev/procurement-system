@@ -77,11 +77,29 @@ public class PurchasingTests
     }
 
     [Fact]
+    public void CapThuKhoNoiNhan_ChiPrVaPra_BuocGhiNoiNhan()
+    {
+        // Lát Y3c (design.md mục 19.3): cấp "Thủ kho nơi nhận" chỉ cho bộ cấp đề nghị mua có nơi nhận (PR – loại B, PRA – loại A).
+        var warehouse = Guid.CreateVersion7();
+        Assert.Equal((ApproverKind.Storekeeper, (Guid?)null),
+            (ApprovalRule.Create(Company, "PR", 1, 0, null, ApproverKind.Storekeeper) is var r ? (r.Kind, r.RoleId) : default));
+        Assert.Equal(ApproverKind.Storekeeper, ApprovalRule.Create(Company, "PRA", 1, 0, null, ApproverKind.Storekeeper).Kind);
+        foreach (var docType in new[] { "PRS", "PRE", "PRB", "PO" })
+            Assert.Contains("Thủ kho", Assert.Throws<BusinessRuleException>(() => ApprovalRule.Create(Company, docType, 1, 0, null, ApproverKind.Storekeeper)).Message);
+        Assert.Throws<BusinessRuleException>(() => ApprovalRule.Create(Company, "NCC", 1, 0, null, ApproverKind.Storekeeper));
+
+        var step = ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, null, kind: ApproverKind.Storekeeper, warehouseId: warehouse);
+        Assert.Equal((ApproverKind.Storekeeper, (Guid?)warehouse, (Guid?)null), (step.Kind, step.WarehouseId, step.DepartmentId));
+        Assert.Throws<BusinessRuleException>(() => ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, null, kind: ApproverKind.Storekeeper));
+        Assert.Null(ApprovalStep.Create(Company, "PR", Guid.CreateVersion7(), 1, 1, Guid.CreateVersion7(), warehouseId: warehouse).WarehouseId);
+    }
+
+    [Fact]
     public void LoaiDuyetDungChung_PrlRfqNccCtr_NguongChiChoLoaiCoGiaTri()
     {
         var role = Guid.CreateVersion7();
 
-        Assert.Equal(["PR", "PO", "POX", "POK", "PRB", "POB", "POL", "POC", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "GTX", "CKB"], ApprovalTypes.All.Select(t => t.Code));
+        Assert.Equal(["PR", "PRA", "PRS", "PRE", "PO", "POX", "POK", "PRB", "POB", "POL", "POC", "PRL", "RFQ", "NCC", "CTR", "CTA", "NDQ", "GTH", "GTX", "CKB"], ApprovalTypes.All.Select(t => t.Code));
         Assert.Equal("PRL", ApprovalRule.Create(Company, " prl ", 1, 0, role).DocType);
         Assert.Equal(5_000_000m, ApprovalRule.Create(Company, "RFQ", 2, 5_000_000, role).MinAmount);
         Assert.Equal(100m, ApprovalRule.Create(Company, "CTR", 1, 100, role).MinAmount);
