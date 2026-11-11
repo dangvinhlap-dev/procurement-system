@@ -708,26 +708,32 @@ export function useApprovalTypes() {
 /** Tình trạng một cấp duyệt mẫu: sẽ tạo, loại đã cấu hình (giữ nguyên), thiếu vai trò mẫu, chỉ áp ở tổng công ty. */
 export type ApprovalRuleTemplateStatus = 'Create' | 'Configured' | 'MissingRole' | 'HeadOfficeOnly'
 
-/** Một cấp duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10 – design.md mục 18.25). */
+/** Bộ cấu hình duyệt mẫu: theo sơ đồ phê duyệt mua sắm (lát G10, mục 18.25) hoặc chuỗi ký biểu mẫu CUVT (lát O3, mục 19.3). */
+export type ApprovalRuleTemplateSet = 'SODO' | 'CUVT'
+
+/** Một cấp duyệt mẫu. */
 export interface ApprovalRuleTemplate {
   docType: string
   typeName: string
   level: number
-  roleCode: string
+  /** Mã vai trò mẫu; null khi người duyệt động (Trưởng phòng ban / GĐ khối của phiếu). */
+  roleCode: string | null
   roleName: string | null
   note: string
   status: ApprovalRuleTemplateStatus
+  approverKind: ApproverKind
 }
 
 /**
  * Xem trước cấu hình duyệt mẫu cho công ty đang làm việc.
  * @param enabled Chỉ tải khi hộp thoại mở.
+ * @param set Bộ mẫu.
  */
-export function useApprovalRuleTemplate(enabled: boolean) {
+export function useApprovalRuleTemplate(enabled: boolean, set: ApprovalRuleTemplateSet) {
   const companyId = useAuth().workingCompany?.id ?? ''
   return useQuery({
-    queryKey: ['purchasing', companyId, 'approval-rules', 'template'],
-    queryFn: () => apiFetch<ApprovalRuleTemplate[]>('/api/approval-rules/template'),
+    queryKey: ['purchasing', companyId, 'approval-rules', 'template', set],
+    queryFn: () => apiFetch<ApprovalRuleTemplate[]>(`/api/approval-rules/template?set=${set}`),
     enabled,
   })
 }
@@ -748,7 +754,8 @@ export function useApprovalRuleMutations() {
     }),
     remove: useMutation({ mutationFn: (id: string) => apiFetch<void>(`/api/approval-rules/${id}`, { method: 'DELETE' }), onSuccess }),
     applyTemplate: useMutation({
-      mutationFn: () => apiFetch<{ created: number; rows: ApprovalRuleTemplate[] }>('/api/approval-rules/template', { method: 'POST' }),
+      mutationFn: (set: ApprovalRuleTemplateSet) =>
+        apiFetch<{ created: number; rows: ApprovalRuleTemplate[] }>(`/api/approval-rules/template?set=${set}`, { method: 'POST' }),
       onSuccess,
     }),
   }

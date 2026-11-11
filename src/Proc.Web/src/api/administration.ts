@@ -83,7 +83,20 @@ export interface RoleListItem {
   userCount: number
 }
 
-/** Một vai trò mẫu Ban Cung ứng (design.md mục 18.6). */
+/** Bộ vai trò mẫu: tất cả, Ban cung ứng theo sơ đồ (mục 18.6, G10), vị trí ký biểu mẫu CUVT (lát O3, mục 19.3). */
+export type RoleTemplateSet = 'ALL' | 'BAN' | 'CUVT'
+
+/** Tên các bộ vai trò mẫu để chọn trên hộp thoại. */
+export const ROLE_TEMPLATE_SETS: { value: RoleTemplateSet; label: string }[] = [
+  { value: 'ALL', label: 'Tất cả vai trò mẫu' },
+  { value: 'BAN', label: 'Ban cung ứng theo sơ đồ phê duyệt' },
+  { value: 'CUVT', label: 'Vị trí ký biểu mẫu CUVT (A, B, DV)' },
+]
+
+/** Tham số `set` của API vai trò mẫu (trống = mọi vai trò mẫu). */
+const roleSetQuery = (set: RoleTemplateSet) => (set === 'ALL' ? '' : `?set=${set}`)
+
+/** Một vai trò mẫu Ban Cung ứng (design.md mục 18.6) hoặc biểu mẫu CUVT (lát O3). */
 export interface RoleTemplate {
   code: string
   name: string
@@ -245,7 +258,7 @@ export function useRoleMutations() {
       onSuccess,
     }),
     createFromTemplates: useMutation({
-      mutationFn: () => apiFetch<ApplyRoleTemplatesResult>('/api/roles/templates', { method: 'POST' }),
+      mutationFn: (set: RoleTemplateSet) => apiFetch<ApplyRoleTemplatesResult>(`/api/roles/templates${roleSetQuery(set)}`, { method: 'POST' }),
       onSuccess: () => {
         onSuccess()
         void queryClient.invalidateQueries({ queryKey: ['role-templates'] })
@@ -255,9 +268,14 @@ export function useRoleMutations() {
 }
 
 /**
- * Bộ vai trò mẫu Ban Cung ứng kèm cờ đã có.
+ * Các vai trò mẫu của một bộ kèm cờ đã có.
  * @param enabled Chỉ tải khi mở hộp thoại.
+ * @param set Bộ vai trò mẫu.
  */
-export function useRoleTemplates(enabled: boolean) {
-  return useQuery({ queryKey: ['role-templates'], queryFn: () => apiFetch<RoleTemplate[]>('/api/roles/templates'), enabled })
+export function useRoleTemplates(enabled: boolean, set: RoleTemplateSet) {
+  return useQuery({
+    queryKey: ['role-templates', set],
+    queryFn: () => apiFetch<RoleTemplate[]>(`/api/roles/templates${roleSetQuery(set)}`),
+    enabled,
+  })
 }

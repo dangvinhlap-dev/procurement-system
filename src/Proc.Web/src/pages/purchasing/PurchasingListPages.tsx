@@ -235,8 +235,8 @@ export function ApprovalRuleListPage() {
     <>
       <ListPage
         title={`Quy trình duyệt – ${workingCompany?.code ?? ''}`}
-        // Cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10) – người chỉ xem vẫn mở được để xem trước.
-        actions={<Button icon={<ApartmentOutlined />} onClick={() => setTemplateOpen(true)}>Cấu hình duyệt mẫu theo sơ đồ…</Button>}
+        // Cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10) hoặc biểu mẫu CUVT (lát O3) – người chỉ xem vẫn mở được để xem trước.
+        actions={<Button icon={<ApartmentOutlined />} onClick={() => setTemplateOpen(true)}>Cấu hình duyệt mẫu…</Button>}
         exportFileName="quy-trinh-duyet"
         rows={rules.data ?? []}
         columns={ruleColumns(typeName)}

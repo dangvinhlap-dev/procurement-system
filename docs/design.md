@@ -2192,6 +2192,24 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
 - Link "Mở trên phần mềm" trong email (O2b) mở trên màn hình ≤ 768px chuyển thẳng sang trang duyệt gọn khi loại phiếu duyệt được ở đây.
 - Chưa có: đăng nhập riêng cho điện thoại, thông báo đẩy, duyệt nhiều phiếu một lần (làm khi có yêu cầu).
 
+**Lát O3 – vai trò mẫu và cấu hình duyệt mẫu theo biểu mẫu CUVT (0.22.0, Q6, Q18).** Quy tắc (tự đặt, người dùng "làm tiếp" 11/11/2026):
+
+- Thêm vào cơ chế mẫu của lát G10 (mục 18.25), không đổi cơ chế: chỉ tạo vai trò còn thiếu / loại phiếu chưa có cấp nào, không sửa cái đã có,
+  mọi cấp **ngưỡng 0** (như biểu mẫu – mọi phiếu lên Chủ tịch, Q6), áp cho **công ty đang làm việc** (mỗi công ty tự áp – Q18). Không migration.
+- **Bộ vai trò mẫu** (Hệ thống → Vai trò → "Bộ vai trò mẫu…", ô chọn bộ; `GET/POST /api/roles/templates?set=BAN|CUVT`, trống = mọi vai trò mẫu):
+  bộ **Ban cung ứng** (các vai trò cũ) và bộ **Vị trí ký biểu mẫu CUVT**: TRUONGPHONGBAN Trưởng phòng/ban, GDKHOI Giám đốc khối (hai vai trò chỉ
+  cho quyền duyệt – người duyệt là người duyệt động của lát O1), TPCUVT Trưởng phòng CUVT, NVCUVT nhân viên Phòng CUVT (tìm/đánh giá NCC, RFQ, đề
+  xuất chọn thầu, lập PO – **không duyệt**), TPTCKT / GDTCKT Trưởng phòng / Giám đốc TC-NQ-KT, TPHC Trưởng phòng Hành chính, PHOCTUBCL Phó CT
+  UBCL&PT; dùng chung DENGHI (người đề xuất), KHO (thủ kho nơi nhận), CHUTICH. Người duyệt các cấp không có quyền lập PR, RFQ, PO (không kiêm
+  nhiệm). CHUTICH thêm quyền duyệt kết quả chọn thầu (cấp cuối 3a/3A/3B); vai trò CHUTICH tạo trước 0.22.0 giữ nguyên – người quản trị thêm tay.
+- **Cấu hình duyệt mẫu** (Hệ thống → Quy trình duyệt → "Cấu hình duyệt mẫu…", ô chọn bộ; `GET/POST /api/approval-rules/template?set=SODO|CUVT`,
+  trống = SODO): bộ **theo biểu mẫu CUVT** – PR (1A/1B/DV) Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH;
+  RFQ (3a/3A/3B) TPCUVT → TPTCKT → GDTCKT → PHOCTUBCL → CHUTICH; PO (4A/4B) TPCUVT → TPTCKT → GDTCKT → CHUTICH. Cấp người duyệt động không cần
+  vai trò mẫu. Áp bộ CUVT trước rồi bộ theo sơ đồ thì PR, RFQ, PO giữ chuỗi biểu mẫu, bộ sơ đồ chỉ thêm các loại còn lại (chặng ngoại lệ PO,
+  hợp đồng, độc quyền…).
+- Chưa có trong mẫu (thêm khi làm lát tương ứng): bước Thủ kho nhập tồn và Trưởng phòng HC kiểm định mức nhóm B (lát Y3 – đề nghị mua có loại
+  mua; trước Y3 đề nghị DV dùng chung chuỗi PR); bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

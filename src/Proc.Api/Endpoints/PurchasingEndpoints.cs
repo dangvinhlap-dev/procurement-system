@@ -23,10 +23,11 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.System.ParameterView);
         rules.MapGet("/types", (IApprovalRuleAdministration s) => s.Types())
             .RequirePermission(Permissions.System.ParameterView);
-        // Cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10): xem trước, áp cho loại phiếu chưa cấu hình.
-        rules.MapGet("/template", (IApprovalRuleAdministration s, CancellationToken ct) => s.TemplateAsync(ct))
+        // Cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10, set=SODO – mặc định) hoặc biểu mẫu CUVT (lát O3, set=CUVT): xem trước,
+        // áp cho loại phiếu chưa cấu hình.
+        rules.MapGet("/template", (string? set, IApprovalRuleAdministration s, CancellationToken ct) => s.TemplateAsync(set, ct))
             .RequirePermission(Permissions.System.ParameterView);
-        rules.MapPost("/template", (IApprovalRuleAdministration s, CancellationToken ct) => s.ApplyTemplateAsync(ct))
+        rules.MapPost("/template", (string? set, IApprovalRuleAdministration s, CancellationToken ct) => s.ApplyTemplateAsync(set, ct))
             .RequirePermission(Permissions.System.ParameterManage);
         rules.MapPost("/", async (SaveApprovalRuleRequest request, IApprovalRuleAdministration s, CancellationToken ct) =>
             {

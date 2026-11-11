@@ -104,17 +104,20 @@ public interface IRoleAdministration
     Task<RoleDetailDto> UpdateAsync(Guid id, UpdateRoleRequest request, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Bộ vai trò mẫu Ban Cung ứng kèm cờ đã có hay chưa.
+    /// Bộ vai trò mẫu (Ban Cung ứng – mục 18.6, biểu mẫu CUVT – lát O3) kèm cờ đã có hay chưa.
     /// </summary>
+    /// <param name="set">Mã bộ (BAN, CUVT); trống = mọi vai trò mẫu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Các vai trò mẫu theo thứ tự hiển thị.</returns>
-    Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken);
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi mã bộ không có.</exception>
+    Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(string? set, CancellationToken cancellationToken);
 
     /// <summary>
     /// Tạo các vai trò mẫu còn thiếu. Vai trò đã có mã thì bỏ qua (không sửa quyền người quản trị đã chỉnh); vai trò mẫu có quyền
     /// mà người thao tác không có cũng bỏ qua (chống tự nâng quyền). Gọi lại nhiều lần không sinh trùng.
     /// </summary>
+    /// <param name="set">Mã bộ (BAN, CUVT); trống = mọi vai trò mẫu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Mã đã tạo và các vai trò bỏ qua kèm lý do.</returns>
-    Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(CancellationToken cancellationToken);
+    Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(string? set, CancellationToken cancellationToken);
 }

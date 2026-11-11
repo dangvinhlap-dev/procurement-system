@@ -27,7 +27,10 @@ Chặn tự nâng quyền: chỉ gán được vai trò có quyền nằm trong 
 ## 8.3 Vai trò và phân quyền (ROLE)
 
 - Tạo/sửa vai trò, **tick quyền theo module**. Vai trò ADMIN không sửa được.
-- Nút **Bộ vai trò mẫu…** tạo nhanh các vai trò theo mô hình Ban cung ứng vật tư:
+- Nút **Bộ vai trò mẫu…** tạo nhanh các vai trò còn thiếu; ô **Bộ mẫu** chọn: tất cả, **Ban cung ứng theo sơ đồ phê duyệt** (bảng dưới) hoặc
+  **Vị trí ký biểu mẫu CUVT** (bảng thứ hai). Vai trò đã có giữ nguyên quyền.
+
+Bộ Ban cung ứng:
 
 | Mã | Vai trò |
 | --- | --- |
@@ -46,6 +49,18 @@ Chặn tự nâng quyền: chỉ gán được vai trò có quyền nằm trong 
 | PHAPCHE | Pháp chế |
 | KSNB | Kiểm soát nội bộ (chỉ xem, toàn tập đoàn) |
 | LANHDAO | Lãnh đạo nhận báo cáo KSNB |
+
+Bộ vị trí ký biểu mẫu CUVT (nhóm A, B, DV – từ 0.22.0):
+
+| Mã | Vai trò |
+| --- | --- |
+| TRUONGPHONGBAN | Trưởng phòng/ban – duyệt đề nghị mua của bộ phận (người duyệt động: khai ở danh mục Bộ phận) |
+| GDKHOI | Giám đốc khối (người duyệt động: khai ở danh mục Khối) |
+| TPCUVT, NVCUVT | Phòng Cung ứng vật tư: trưởng phòng (duyệt); nhân viên (NCC, RFQ, PO – không duyệt) |
+| TPTCKT, GDTCKT | Trưởng phòng, Giám đốc Tài chính – Nguồn quỹ – Kế toán |
+| TPHC | Trưởng phòng Hành chính (kiểm định mức nhóm B – cấp duyệt thêm khi đề nghị mua có loại mua) |
+| PHOCTUBCL | Phó Chủ tịch UBCL&PT |
+| DENGHI, KHO, CHUTICH | Dùng chung với bộ Ban cung ứng |
 
 > Khi nâng cấp lên bản mới có quyền mới, **vai trò đã tạo trước không tự có quyền mới** – xem mục "Lưu ý khi nâng cấp" trong `CHANGELOG.md`
 > và tick thêm quyền cho vai trò đang dùng.
@@ -84,10 +99,14 @@ Quy tắc:
 - Người duyệt một cấp phải có **quyền duyệt** loại phiếu **và** được gán **vai trò** của cấp đó tại công ty.
 - Mỗi cấp một người khác nhau trong một lượt; người lập không tự duyệt. Công ty chưa gán vai trò riêng cho các chặng ngoại lệ cần ít nhất 2
   người có quyền duyệt PO.
-- Nút **Cấu hình duyệt mẫu theo sơ đồ…**: xem trước và tạo nhanh cấu hình mẫu (PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch;
-  POL, POX, POK, NDQ – Phó ban → Chủ tịch; POC – Chủ tịch; RFQ – Phó ban → Trưởng ban; PRL – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; ở
-  tổng công ty thêm GTH, CKB – Phó ban → Phó ban → Trưởng ban, GTX – Chủ tịch, hồ sơ NCC – Trưởng ban). Chỉ tạo cho loại **chưa có cấp nào**,
-  mọi cấp **ngưỡng 0** – sửa ngưỡng sau theo phân quyền nội bộ.
+- Nút **Cấu hình duyệt mẫu…**, ô **Bộ mẫu** chọn một trong hai bộ:
+  - **Theo biểu mẫu CUVT**: PR (1A/1B/DV) – Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH;
+    RFQ (3a/3A/3B) – TPCUVT → TPTCKT → GDTCKT → PHOCTUBCL → CHUTICH; PO (4A/4B) – TPCUVT → TPTCKT → GDTCKT → CHUTICH. Khai Trưởng phòng ban,
+    GĐ khối ở danh mục Bộ phận, Khối trước khi gửi duyệt. Nên áp bộ này trước rồi áp bộ theo sơ đồ để có thêm chặng ngoại lệ, hợp đồng.
+  - **Theo sơ đồ phê duyệt của Ban cung ứng** (PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch;
+    POL, POX, POK, NDQ – Phó ban → Chủ tịch; POC – Chủ tịch; RFQ – Phó ban → Trưởng ban; PRL – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; ở
+    tổng công ty thêm GTH, CKB – Phó ban → Phó ban → Trưởng ban, GTX – Chủ tịch, hồ sơ NCC – Trưởng ban). Chỉ tạo cho loại **chưa có cấp nào**,
+    mọi cấp **ngưỡng 0** – sửa ngưỡng sau theo phân quyền nội bộ.
 - Quyền sửa: `System.Parameter.Manage`.
 
 Tài liệu chi tiết cách cấu hình duyệt PO nhiều cấp: `docs/HuongDan_PheDuyetPO_NhieuCap_v2.docx`, `docs/HuongDan_DuyetPO_A_B_C_D.docx`.

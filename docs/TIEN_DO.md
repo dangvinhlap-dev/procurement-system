@@ -1,6 +1,6 @@
 ﻿# Tiến độ dự án
 
-Cập nhật: 10/11/2026 (O1: khối, Trưởng phòng ban, GĐ khối, người duyệt động; K2: phiếu xác nhận nhận hàng XNH, báo cáo OTIF; K1: tắt phân hệ kho – bắt đầu hệ thống mới từ 0.22.0, design.md mục 19; tài liệu hướng dẫn sử dụng, hướng dẫn cài đặt chi tiết, ghi chú hàm nội bộ; trước đó 09/11/2026: phát hành 0.21.0, bản test 5007 nâng lên 0.21.0; G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
+Cập nhật: 11/11/2026 (O3: vai trò mẫu + cấu hình duyệt mẫu theo biểu mẫu CUVT; O2: ủy quyền, email, nhắc quá hạn, duyệt trên điện thoại; 10/11: O1: khối, Trưởng phòng ban, GĐ khối, người duyệt động; K2: phiếu xác nhận nhận hàng XNH, báo cáo OTIF; K1: tắt phân hệ kho – bắt đầu hệ thống mới từ 0.22.0, design.md mục 19; tài liệu hướng dẫn sử dụng, hướng dẫn cài đặt chi tiết, ghi chú hàm nội bộ; trước đó 09/11/2026: phát hành 0.21.0, bản test 5007 nâng lên 0.21.0; G12: báo cáo tháng cho Ban BCBAN; sửa lỗi e2e volume-rebate – focus dòng mới của LineGrid; G8: hồ sơ đánh giá NCC mới HSN – backend + giao diện; G1b: đếm tối thiểu 03 NCC theo nhóm hàng; H4: đơn vị đặt hàng xác nhận nghiệm thu phiếu nhập; H3: PO vượt giá trần lên Chủ tịch/TGĐ; H2: phiếu GTH có ngoại lệ lên Chủ tịch/TGĐ; H1: ý kiến thẩm định của thành viên chuyên môn; G7c: quyền đặc biệt "Tạo PO cho công ty thành viên"; 08/11: G7: đặt hàng gộp DHG – phân bổ trong biên độ, tạo PO từng công ty; G10: vai trò mẫu + cấu hình duyệt mẫu theo sơ đồ; quyết định Q1–Q6; G6b: thực nhận chiết khấu sản lượng gộp, chia phần công ty, KSNB; G6a: thỏa thuận chiết khấu bậc sản lượng gộp CKB + theo dõi bậc CKBT; 07/11: G5c: SL kế hoạch chia theo ngày + xử lý SL lẻ; G5c lấy SL kế hoạch cho RFQ/hợp đồng; G5b tổng hợp nhu cầu gộp + quyền xem toàn tập đoàn; phát hành 0.20.0, bản test 5007 nâng lên 0.20.0; mở rộng NCC cho công ty; G5a phiếu kế hoạch nhu cầu; ngành hàng NCC từ danh mục Nhóm hàng; đồng bộ ô tìm *; mã hàng theo NCC + ĐVT mua trên PR/PO/RFQ; phát hành 0.19.0; trước đó: rà soát lỗi R1–R8, lát C3, phát hành 0.15.0–0.18.0, A4, nhập bảng giá Excel, cảnh báo giá cao, hợp đồng từ kết quả thầu, in PR có hàng mới). Đọc file này đầu mỗi phiên để biết đang ở đâu; cập nhật sau mỗi lát (CLAUDE.md mục 0).
 
 ## Đã xong (đã commit, push, merge vào `main`)
 
@@ -149,6 +149,20 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 Đã sửa test `SupplierPricingTests` lỗi vào ngày mùng 1 (số bảng giá theo ngày hiệu lực = hôm qua).
 
 ## Đang làm
+
+- **O3 – vai trò mẫu và cấu hình duyệt mẫu theo biểu mẫu CUVT** (design.md mục 19.3 "Lát O3", lộ trình 0.22.0; nhánh
+  `feature/o3-vai-tro-mau-bieu-mau`, xong 11/11/2026). Mở rộng cơ chế mẫu G10, không migration:
+  - Bộ vai trò mẫu có ô chọn bộ (`?set=BAN|CUVT`, trống = tất cả): bộ CUVT thêm TRUONGPHONGBAN, GDKHOI, TPCUVT, NVCUVT (không duyệt), TPTCKT,
+    GDTCKT, TPHC, PHOCTUBCL + dùng chung DENGHI, KHO, CHUTICH; CHUTICH thêm quyền duyệt kết quả chọn thầu (vai trò cũ giữ nguyên – thêm tay).
+  - Cấu hình duyệt mẫu có ô chọn bộ (`?set=SODO|CUVT`, trống = SODO; nút đổi tên "Cấu hình duyệt mẫu…"): bộ CUVT – PR 6 cấp (Trưởng phòng ban
+    của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH), RFQ 5 cấp, PO 4 cấp; cấp người duyệt động không cần vai trò mẫu.
+  - Chưa có (thêm ở lát sau): Thủ kho, TP HC nhóm B (Y3); 2A/2B (Y5); 5A/5B, 1C, 2C (Y8, Y11).
+  - Test: domain `ApprovalRuleTemplateTests` (+3), tích hợp `ApprovalRuleTemplateTests` (+1, áp CUVT rồi SODO), Playwright
+    `approval-rule-template.spec` (+1, ảnh `approval-rule-template-cuvt.png`, `role-templates-cuvt.png`); cập nhật hướng dẫn sử dụng 08-he-thong.
+  - Kiểm tra: dotnet build 0 cảnh báo, dotnet test 640/640, tsc, oxlint, npm run build qua; Playwright đủ bộ 121/123 – 2 lỗi (một test thấy
+    "Phiên bản 0.20.0", một không thấy phần tử) do Vite cũ giữ cổng 5173 như ở O2d; chạy lại với Vite mới cổng 5197 (`E2E_WEB_URL=http://127.0.0.1:5197`) đều qua.
+  - **O3 xong → các lát 0.22.0 (K1, K2, O1, O2, O3) hoàn tất.** Tiếp theo: phát hành 0.22.0 khi người dùng yêu cầu (docs/phat-hanh.md), hoặc
+    sang 0.23.0 (Y2 công trình + dự toán, Y3 đề nghị mua 1A/1B/DV + Thủ kho nhập tồn, Y5, Y10).
 
 - **O2 – ủy quyền duyệt, email, nhắc quá hạn, duyệt trên điện thoại** (design.md mục 19.1 Q9, 19.3; lộ trình 0.22.0; nhánh
   `feature/o2-uy-quyen-email`). Chia bước: O2a ủy quyền duyệt → O2b email SMTP (MailKit, gửi bản sao thông báo qua dịch vụ nền) → O2c nhắc

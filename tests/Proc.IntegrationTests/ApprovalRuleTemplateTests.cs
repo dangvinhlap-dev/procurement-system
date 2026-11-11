@@ -77,4 +77,51 @@ public class ApprovalRuleTemplateTests
         Assert.Equal(HttpStatusCode.OK, (await viewerClient.GetAsync("/api/approval-rules/template", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await viewerClient.PostAsync("/api/approval-rules/template", null, Ct)).StatusCode);
     }
+
+    [Fact]
+    public async Task CauHinhDuyetMauBieuMauCuvt_ApChoCongTyMoi_CapDongKhongCanVaiTro_SauDoBoSoDoChiThemLoaiConLai()
+    {
+        var userName = $"ac.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateUserAsync(userName, ProcApiFactory.TestPassword, ["TCT"]);
+        var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
+        // Bộ vai trò biểu mẫu CUVT (lát O3): đủ các vị trí ký trên biểu mẫu.
+        await ReadAsync<ApplyRoleTemplatesResult>(await head.PostAsync("/api/roles/templates?set=CUVT", null, Ct));
+        var cuvtRoles = await ReadAsync<List<RoleTemplateDto>>(await head.GetAsync("/api/roles/templates?set=CUVT", Ct));
+        Assert.Equal(Proc.Domain.Organization.RoleTemplates.InSet("CUVT").Select(t => t.Code), cuvtRoles.Select(t => t.Code));
+        Assert.All(cuvtRoles, t => Assert.True(t.Exists));
+        Assert.Equal(HttpStatusCode.BadRequest, (await head.GetAsync("/api/roles/templates?set=XYZ", Ct)).StatusCode);
+        // Bộ theo sơ đồ cũng cần cho phần sau của test (CSDL test dùng chung có thể đã có).
+        await ReadAsync<ApplyRoleTemplatesResult>(await head.PostAsync("/api/roles/templates", null, Ct));
+
+        var code = $"C{Guid.NewGuid():N}".ToUpperInvariant()[..10];
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, VietnamTime.Zone));
+        await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
+            new CreateCompanyRequest(code, "Công ty thử biểu mẫu CUVT", null, null, null, null, new DateOnly(today.Year, today.Month, 1), "KT", "Kho tổng"), Ct));
+        var member = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, code);
+
+        var preview = await ReadAsync<List<ApprovalRuleTemplateDto>>(await member.GetAsync("/api/approval-rules/template?set=CUVT", Ct));
+        Assert.Equal(ApprovalRuleTemplates.CuvtForms.Count, preview.Count);
+        Assert.All(preview, r => Assert.Equal("Create", r.Status));
+        Assert.Contains(preview, r => r is { DocType: "PR", Level: 1, RoleCode: null, ApproverKind: "DepartmentHead", RoleName: "Trưởng phòng ban của phiếu" });
+        Assert.Contains(preview, r => r is { DocType: "PR", Level: 4, ApproverKind: "DivisionDirector", RoleName: "GĐ khối của phiếu" });
+
+        var applied = await ReadAsync<ApplyApprovalRuleTemplateResult>(await member.PostAsync("/api/approval-rules/template?set=cuvt", null, Ct));
+        Assert.Equal(ApprovalRuleTemplates.CuvtForms.Count, applied.Created);
+        var rules = await ReadAsync<List<ApprovalRuleDto>>(await member.GetAsync("/api/approval-rules", Ct));
+        Assert.Equal(
+            [(1, (string?)null, "DepartmentHead"), (2, "TPCUVT", "Role"), (3, "TPTCKT", "Role"), (4, null, "DivisionDirector"), (5, "PHOCTUBCL", "Role"), (6, "CHUTICH", "Role")],
+            rules.Where(r => r.DocType == "PR").OrderBy(r => r.Level).Select(r => (r.Level, r.RoleCode, r.ApproverKind)));
+        Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "CHUTICH"], rules.Where(r => r.DocType == "PO").OrderBy(r => r.Level).Select(r => r.RoleCode));
+        Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "PHOCTUBCL", "CHUTICH"], rules.Where(r => r.DocType == "RFQ").OrderBy(r => r.Level).Select(r => r.RoleCode));
+        Assert.All(rules, r => Assert.Equal(0m, r.MinAmount));
+
+        // Áp tiếp bộ theo sơ đồ: PR, PO, RFQ giữ nguyên chuỗi biểu mẫu; chỉ thêm loại còn lại (chặng ngoại lệ PO, hợp đồng…).
+        var soDo = await ReadAsync<ApplyApprovalRuleTemplateResult>(await member.PostAsync("/api/approval-rules/template", null, Ct));
+        Assert.Equal(ApprovalRuleTemplates.Procurement.Count(t => !t.HeadOfficeOnly && t.DocType is not ("PR" or "PO" or "RFQ")), soDo.Created);
+        var after = await ReadAsync<List<ApprovalRuleDto>>(await member.GetAsync("/api/approval-rules", Ct));
+        Assert.Equal(4, after.Count(r => r.DocType == "PO"));
+        Assert.Contains(after, r => r is { DocType: "POC", RoleCode: "CHUTICH" });
+        Assert.Equal(0, (await ReadAsync<ApplyApprovalRuleTemplateResult>(await member.PostAsync("/api/approval-rules/template?set=CUVT", null, Ct))).Created);
+        Assert.Equal(HttpStatusCode.BadRequest, (await member.GetAsync("/api/approval-rules/template?set=XYZ", Ct)).StatusCode);
+    }
 }

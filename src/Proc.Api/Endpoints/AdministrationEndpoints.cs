@@ -66,10 +66,11 @@ public static class AdministrationEndpoints
             .RequirePermission(Permissions.System.RoleManage)
             .Validate<UpdateRoleRequest>();
 
-        // Bộ vai trò mẫu Ban Cung ứng (design.md mục 18.6). Route tĩnh "templates" không trùng "{id:guid}".
-        roles.MapGet("/templates", (IRoleAdministration s, CancellationToken ct) => s.ListTemplatesAsync(ct))
+        // Bộ vai trò mẫu Ban Cung ứng (design.md mục 18.6) và biểu mẫu CUVT (lát O3): set=BAN | CUVT, trống = mọi vai trò mẫu.
+        // Route tĩnh "templates" không trùng "{id:guid}".
+        roles.MapGet("/templates", (string? set, IRoleAdministration s, CancellationToken ct) => s.ListTemplatesAsync(set, ct))
             .RequirePermission(Permissions.System.RoleView);
-        roles.MapPost("/templates", (IRoleAdministration s, CancellationToken ct) => s.CreateFromTemplatesAsync(ct))
+        roles.MapPost("/templates", (string? set, IRoleAdministration s, CancellationToken ct) => s.CreateFromTemplatesAsync(set, ct))
             .RequirePermission(Permissions.System.RoleManage);
 
         app.MapGet("/api/permissions", (IRoleAdministration s) => s.GetPermissionCatalog())

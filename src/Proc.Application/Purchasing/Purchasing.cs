@@ -69,17 +69,18 @@ public sealed record PendingApprovalDto(string DocType, string DocTypeName, Guid
 /// <param name="HasDepartment">Phiếu có bộ phận – chọn được người duyệt Trưởng phòng ban / GĐ khối của phiếu (lát O1).</param>
 public sealed record ApprovalTypeDto(string Code, string Name, string? AmountLabel, bool HasDepartment = false);
 
-/// <summary>Một cấp duyệt mẫu theo sơ đồ (lát G10).</summary>
+/// <summary>Một cấp duyệt mẫu theo sơ đồ (lát G10) hoặc biểu mẫu CUVT (lát O3).</summary>
 /// <param name="DocType">Loại phiếu.</param>
 /// <param name="TypeName">Tên loại.</param>
 /// <param name="Level">Cấp.</param>
-/// <param name="RoleCode">Mã vai trò mẫu.</param>
-/// <param name="RoleName">Tên vai trò (trống khi chưa có vai trò).</param>
-/// <param name="Note">Căn cứ trên sơ đồ.</param>
+/// <param name="RoleCode">Mã vai trò mẫu; null khi người duyệt động.</param>
+/// <param name="RoleName">Tên vai trò (trống khi chưa có vai trò); người duyệt động là "Trưởng phòng ban của phiếu" / "GĐ khối của phiếu".</param>
+/// <param name="Note">Căn cứ trên sơ đồ/biểu mẫu.</param>
 /// <param name="Status">Create (sẽ tạo), Configured (loại đã có cấu hình – giữ nguyên), MissingRole (chưa có vai trò mẫu của loại – tạo bộ
 /// vai trò mẫu trước), HeadOfficeOnly (chỉ áp ở tổng công ty).</param>
+/// <param name="ApproverKind">Ai duyệt: Role, DepartmentHead, DivisionDirector (lát O1).</param>
 public sealed record ApprovalRuleTemplateDto(
-    string DocType, string TypeName, int Level, string RoleCode, string? RoleName, string Note, string Status);
+    string DocType, string TypeName, int Level, string? RoleCode, string? RoleName, string Note, string Status, string ApproverKind = "Role");
 
 /// <summary>Kết quả áp cấu hình duyệt mẫu.</summary>
 /// <param name="Created">Số cấp đã tạo.</param>
@@ -121,20 +122,23 @@ public interface IApprovalRuleAdministration
     IReadOnlyList<ApprovalTypeDto> Types();
 
     /// <summary>
-    /// Xem trước cấu hình duyệt mẫu theo sơ đồ phê duyệt mua sắm (lát G10) cho công ty đang làm việc: mỗi cấp mẫu kèm tình trạng sẽ tạo / giữ
-    /// nguyên (loại đã cấu hình) / thiếu vai trò / chỉ áp ở tổng công ty.
+    /// Xem trước cấu hình duyệt mẫu (theo sơ đồ phê duyệt mua sắm – lát G10, hoặc biểu mẫu CUVT – lát O3) cho công ty đang làm việc: mỗi cấp
+    /// mẫu kèm tình trạng sẽ tạo / giữ nguyên (loại đã cấu hình) / thiếu vai trò / chỉ áp ở tổng công ty.
     /// </summary>
+    /// <param name="set">Mã bộ mẫu (SODO, CUVT); trống = SODO.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Các cấp mẫu theo thứ tự loại phiếu, cấp.</returns>
-    Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(CancellationToken cancellationToken);
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi mã bộ không có.</exception>
+    Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(string? set, CancellationToken cancellationToken);
 
     /// <summary>
     /// Áp cấu hình duyệt mẫu cho công ty đang làm việc: chỉ tạo cấp cho loại phiếu chưa có cấp nào và đủ vai trò mẫu cho cả loại; không sửa
     /// cấu hình đã có. Một lần lưu.
     /// </summary>
+    /// <param name="set">Mã bộ mẫu (SODO, CUVT); trống = SODO.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Số cấp đã tạo và tình trạng từng cấp mẫu sau khi áp.</returns>
-    Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(CancellationToken cancellationToken);
+    Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(string? set, CancellationToken cancellationToken);
 
     /// <summary>Các phiếu PR, PO đang chờ người dùng hiện tại duyệt ở công ty đang làm việc.</summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>
