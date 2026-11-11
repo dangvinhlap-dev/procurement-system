@@ -185,6 +185,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     `api/cancelChain.ts`, `pages/purchasing/cancelChainDialog.tsx` cho PR, PO, XNH. Sửa cảnh báo XML doc còn sót của Z4a. Test: tích hợp
     `CancelChainTests` (2), e2e `cancel-chain.spec.ts`. Đợt sau: chuỗi RFQ, bảng giá → hợp đồng → phụ lục, phiếu tháng / đặt hàng gộp → PO.
     Build 0 cảnh báo, `dotnet test` 647/647, tsc, oxlint, `npm run build`; Playwright đủ bộ 129/129. **Đã merge.**
+  - **Z4c – chờ người dùng chốt (11/11/2026)**: mở rộng hủy dây chuyền gặp quy tắc cũ: (1) đặt hàng gộp DHG đã tạo PO thì domain ghi "không
+    hủy phiếu; PO nào sai thì hủy PO đó ở công ty của nó" – PO nằm ở các công ty thành viên khác; (2) RFQ đã chọn thầu không hủy được; PO /
+    bảng giá / hợp đồng tạo từ RFQ; (3) bảng giá chưa có lệnh hủy, hợp đồng đã hiệu lực chỉ "chấm dứt"; (4) phiếu tháng GTH đã duyệt bị DHG,
+    PO tham chiếu giá. Đề xuất mặc định an toàn đã gửi người dùng – xem câu hỏi trong phiên 11/11/2026.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
