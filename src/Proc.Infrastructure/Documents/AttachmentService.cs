@@ -45,6 +45,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.MarketPriceSurvey] = (Permissions.Pricing.PriceBankView, Permissions.Pricing.PriceBankManage),
             [AttachmentOwnerTypes.PooledOrder] = (Permissions.Purchase.PooledOrderView, Permissions.Purchase.PooledOrderManage),
             [AttachmentOwnerTypes.DemandPlan] = (Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage),
+            // Công trình (lát Y2): người quản lý công trình đính kèm quyết định phê duyệt / điều chỉnh dự toán.
+            [AttachmentOwnerTypes.ConstructionProject] = (Permissions.Purchase.ProjectView, Permissions.Purchase.ProjectManage),
             // Kê khai xung đột lợi ích: ai cũng tự kê khai được (không mã quyền) – kiểm tra riêng theo người kê khai, xem RequireOwnerAsync.
             [AttachmentOwnerTypes.ConflictDeclaration] = (string.Empty, string.Empty),
             // Ủy quyền duyệt (lát O2): ai cũng tự ủy quyền được (không mã quyền) – kiểm tra riêng theo người ủy quyền / được ủy quyền.
@@ -324,6 +326,8 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.VolumeRebateReceipt => await _db.VolumeRebateReceipts.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.DemandPlan => await _db.DemandPlans.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.ConstructionProject => await _db.ConstructionProjects.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             _ => await _db.InventoryDocuments.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId, x.DocType)).FirstOrDefaultAsync(cancellationToken),

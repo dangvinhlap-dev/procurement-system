@@ -3932,6 +3932,120 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("ApprovalStep", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ConstructionProject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("EstimateAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<DateOnly?>("ExpectedEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly?>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("DepartmentId", "CompanyId");
+
+                    b.ToTable("ConstructionProject", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ConstructionProjectEstimateRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Basis")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EffectiveDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("NewAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal>("PreviousAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("RevisionNo")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "RevisionNo")
+                        .IsUnique();
+
+                    b.ToTable("ConstructionProjectEstimateRevision", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.ContractRebateReceipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7325,6 +7439,31 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.ConstructionProject", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ConstructionProjectEstimateRevision", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.ConstructionProject", null)
+                        .WithMany("Revisions")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.ContractRebateReceipt", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -7985,6 +8124,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Proc.Domain.Pricing.VolumeRebateReceipt", b =>
                 {
                     b.Navigation("Shares");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.ConstructionProject", b =>
+                {
+                    b.Navigation("Revisions");
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.DemandPlan", b =>
