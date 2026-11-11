@@ -212,6 +212,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   công trình), `ConstructionBudgetNotice.tsx`, cột Loại mua ở danh sách PR, cột lũy kế/còn lại ở CTDT + ô chỉ đọc trong ngăn kéo. Test: domain
   `PurchaseRequestCategoryTests` (2), tích hợp `ConstructionPurchaseTests` (2), e2e `purchase-category.spec.ts`. Build 0 cảnh báo, `dotnet test`
   664/664, tsc, oxlint, `npm run build`; Playwright đủ bộ 132/132 (API thử 5012 Testing bản artifacts + Vite 5186).
+- **Lát Y3b – Thủ kho nhập tồn trên đề nghị mua (11/11/2026, nhánh `feature/y3b-thu-kho-nhap-ton`)** – design.md 19.3 đoạn "Lát Y3b";
+  người dùng đồng ý kế hoạch. Dòng PR: SL cần sử dụng (`RequiredQty`), Tồn (`StockQty`), Cần mua = max(cần − tồn, 0) là `Qty` cũ (PO, RFQ,
+  ngân sách, định mức theo cần mua); đầu PR `StockConfirmedBy/At`; migration `V0_23_0_ThuKhoNhapTon`. Quyền `Purchase.PR.EnterStock` (vai trò
+  mẫu KHO + xem PR); chỉ A/B, chờ duyệt chưa có cấp nào duyệt trong lượt, nơi nhận trong phạm vi kho; `POST /api/purchase-requests/{id}/stock`;
+  gợi ý tồn đã xác nhận gần nhất cùng nơi nhận; PR thôi đọc `StockOnHand`. Giao diện: cột SL cần sử dụng / Tồn (thủ kho) / Cần mua, nút
+  "Nhập tồn" (icon xanh) + `StockEntryDialog.tsx`, thông báo đã/chưa xác nhận tồn, ô "Nơi nhận (kho)". Test: domain `PurchaseRequestStockTests`
+  (4), tích hợp `ThuKhoNoiNhan_NhapTon_...`, e2e `pr-stock-entry.spec.ts`; `purchasing.spec` sửa nhãn ô SL. Build 0 cảnh báo, `dotnet test`
+  669/669, tsc, oxlint, `npm run build` qua; Playwright đủ bộ 133/133 (API thử cổng 5013 Testing, bản artifacts trong scratchpad + Vite 5187). **Đã merge.**
+  **Tiếp theo: Y3c** – chuỗi duyệt theo loại mua (bước Thủ kho, TP HC chỉ nhóm B, DV bỏ Thủ kho) + chặng vượt dự toán (Q5).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

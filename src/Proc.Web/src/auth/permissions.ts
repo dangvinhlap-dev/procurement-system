@@ -38,6 +38,7 @@ export const Permission = {
   PrView: 'Purchase.PR.View',
   PrCreate: 'Purchase.PR.Create',
   PrApprove: 'Purchase.PR.Approve',
+  PrEnterStock: 'Purchase.PR.EnterStock',
   PoView: 'Purchase.PO.View',
   PoCreate: 'Purchase.PO.Create',
   PoApprove: 'Purchase.PO.Approve',

@@ -528,12 +528,12 @@ public partial class PurchasingTests
         await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PR", 2, 1_000_000, directorRole), Ct));
         Assert.Contains("tăng dần", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PR", 3, 500_000, directorRole), Ct)));
 
-        // Giá tham khảo = giá nhận hàng gần nhất (XNH – design.md mục 19.4): nhận 1 cái × 200.000 trước. Tồn kho không đổi (không còn ghi
-        // sổ kho).
+        // Giá tham khảo = giá nhận hàng gần nhất (XNH – design.md mục 19.4): nhận 1 cái × 200.000 trước. Tồn do thủ kho nhập (lát Y3b), chưa nhập thì
+        // cần mua = cần sử dụng.
         await TestReceipts.ReceiveAsync(_factory, f.Buyer, f.SupplierId, f.Kt, [new(f.ItemId, f.Cai, 1, 200_000)], Today);
 
         var pr = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 10));
-        Assert.Equal((200_000m, 2_000_000m, 0m), (pr.Lines[0].EstPrice, pr.TotalAmount, pr.Lines[0].OnHandQty));
+        Assert.Equal((200_000m, 2_000_000m, 10m, (decimal?)null), (pr.Lines[0].EstPrice, pr.TotalAmount, pr.Lines[0].RequiredQty, pr.Lines[0].StockQty));
         await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         // Thông báo chờ duyệt chỉ tới người duyệt cấp đang chờ (design.md mục 11.6); người lập không nhận.
         var pending = Assert.Single(await NotificationApi.MineAsync(head, Ct), n => n.TargetId == pr.Id);

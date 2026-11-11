@@ -214,7 +214,18 @@ export interface PurchaseRequestLine {
   neededDate: string | null
   note: string | null
   orderedQty: number
-  onHandQty: number
+  /** SL cần sử dụng do người đề xuất nhập (lát Y3b); `qty` là SL cần mua = cần sử dụng − tồn, không âm. */
+  requiredQty: number
+  /** Tồn do thủ kho nơi nhận nhập (ĐVT trên dòng); null = chưa nhập. */
+  stockQty: number | null
+  /** Gợi ý: tồn đã xác nhận gần nhất cùng mặt hàng, cùng nơi nhận trên đề nghị khác (chỉ có khi người xem nhập tồn được). */
+  lastStockQty?: number | null
+  /** Số đề nghị chứa tồn gợi ý. */
+  lastStockRequestNo?: string | null
+  /** Id đề nghị chứa tồn gợi ý. */
+  lastStockRequestId?: string | null
+  /** Thời điểm xác nhận tồn gợi ý. */
+  lastStockAt?: string | null
   /** SL đang đặt của mặt hàng tại công ty (PO đã duyệt chưa nhận đủ, ĐVT cơ sở) – design.md mục 18.13. */
   onOrderQty: number
   /**
@@ -266,6 +277,15 @@ export interface PurchaseRequest extends ClosedRemaining {
   category: PurchaseCategory
   /** Công trình và lũy kế dự toán – chỉ loại A. */
   construction: ConstructionBudget | null
+  /** Tên nơi nhận (kho) – thủ kho nơi nhận nhập tồn (lát Y3b). */
+  warehouseName: string | null
+  /** Thủ kho xác nhận tồn lần gần nhất; null = chưa nhập tồn. */
+  stockConfirmedByName: string | null
+  stockConfirmedAt: string | null
+  /** Người xem nhập tồn được (quyền, loại A/B, chờ duyệt chưa cấp nào duyệt, nơi nhận trong phạm vi kho). */
+  canEnterStock: boolean
+  /** Lý do thủ kho chưa nhập tồn được (ví dụ đã có cấp duyệt – tồn đã khóa). */
+  enterStockBlocker: string | null
 }
 
 /** Loại mua của đề nghị mua theo biểu mẫu CUVT: A công trình, B hàng hóa, DV dịch vụ (design.md mục 19.2). */
@@ -662,6 +682,16 @@ export function usePrNewItemActions() {
       onSuccess,
     }),
   }
+}
+
+/** Thủ kho nơi nhận nhập tồn từng dòng của đề nghị mua (lát Y3b, design.md mục 19.3); xong tải lại dữ liệu mua hàng. */
+export function useEnterPrStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, lines }: { id: string; lines: { lineId: string; stockQty: number }[] }) =>
+      apiFetch<PurchaseRequest>(`/api/purchase-requests/${id}/stock`, { method: 'POST', body: { lines } }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['purchasing'] }),
+  })
 }
 
 /** Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11); xong tải lại dữ liệu mua hàng. */

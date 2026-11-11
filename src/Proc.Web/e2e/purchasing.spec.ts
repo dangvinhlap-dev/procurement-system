@@ -59,7 +59,7 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await buyer.keyboard.press('F2')
   await buyer.getByLabel('Mặt hàng dòng 1').fill(itemCode.toLowerCase())
   await pickOption(buyer, itemCode)
-  await buyer.getByLabel('SL đề nghị dòng 1').fill('12')
+  await buyer.getByLabel('SL cần sử dụng dòng 1').fill('12')
   await buyer.keyboard.press('Control+s')
   await expect(buyer.locator('.ant-message')).toContainText(/Đã lưu phiếu PR-BHA-\d{4}-\d{4}\./)
   await expect(buyer.locator('.line-grid-row').first()).toContainText('600.000')

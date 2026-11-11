@@ -5538,6 +5538,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("StockConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("StockConfirmedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
@@ -5609,6 +5615,14 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("RequiredQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("StockQty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<Guid?>("SuggestedSupplierId")
                         .HasColumnType("uuid");

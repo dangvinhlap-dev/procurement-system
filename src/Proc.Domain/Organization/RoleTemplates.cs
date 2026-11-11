@@ -129,6 +129,8 @@ public static class RoleTemplates
             Permissions.Inventory.StockView, Permissions.Inventory.PeriodView, Permissions.Report.StockView,
             // Từ 0.22.0: thủ kho nơi nhận lập XNH (Q8).
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage,
+            // Lát Y3b: thủ kho nơi nhận nhập tồn trên đề nghị mua loại A, B (Q2, design.md mục 19.3).
+            Permissions.Purchase.PrView, Permissions.Purchase.PrEnterStock,
         ]),
         new("KETOAN", "Kế toán", "Đối chiếu PO – phiếu nhận, đóng kỳ kho, xuất chứng từ cho phần mềm kế toán",
         [

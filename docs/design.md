@@ -2251,6 +2251,25 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   dự toán thì **cảnh báo vàng, không chặn** (chặng duyệt vượt dự toán làm ở Y3c). Màn hình CTDT có cột Lũy kế đã mua, Lũy kế gồm VAT, Còn lại;
   ngăn kéo công trình hiện hai ô chỉ đọc. Danh sách đề nghị mua có cột Loại mua.
 
+**Lát Y3b – Thủ kho nhập tồn trên đề nghị mua (Q2).** Quy tắc (tự đặt, người dùng đồng ý kế hoạch 11/11/2026):
+
+- Dòng đề nghị có **SL cần sử dụng** (`RequiredQty` – người đề xuất nhập, ô SL trên form), **Tồn** (`StockQty` – thủ kho nhập, theo ĐVT của dòng,
+  trống = chưa nhập) và **Cần mua** = max(Cần sử dụng − Tồn, 0) – là SL cũ `Qty`, nên PO, RFQ, ngân sách, định mức, thành tiền, tổng phiếu đều
+  tính theo cần mua. Ví dụ cần 10, tồn 4 → mua 6; tồn 12 → mua 0 (dòng vẫn ở phiếu để in 1A/1B nhưng không lên PO). Hàng mới chưa có mã không
+  nhập tồn. Phiếu trước 0.23.0: cần sử dụng = SL cũ (migration `V0_23_0_ThuKhoNhapTon`; Down mất tồn và SL cần sử dụng, SL giữ số cần mua).
+- **Ai, khi nào**: quyền `Purchase.PR.EnterStock` "Nhập tồn trên đề nghị mua" (vai trò mẫu KHO, kèm quyền xem PR) **và** nơi nhận của phiếu nằm
+  trong phạm vi kho của người dùng (thủ kho của nơi nhận – Q2; mỗi đề nghị một nơi nhận, ô "Nơi nhận (kho)" trên form). Chỉ đề nghị loại **A, B**
+  (DV không có bước Thủ kho), phiếu **Chờ duyệt** và **chưa có cấp nào duyệt trong lượt** – đã duyệt thì tồn khóa (mục 20.1). Phải nhập đủ mọi
+  dòng có mã (không có thì 0); nhập lại được nhiều lần trước cấp duyệt đầu. Ghi người + thời điểm xác nhận tồn ở đầu phiếu.
+- Nhập tồn chỉ **giảm** tổng giá trị; chuỗi duyệt, chặng vượt ngân sách đã xác định lúc gửi duyệt không tính lại.
+- Phiếu bị từ chối / rút về nháp: tồn giữ trên dòng còn cùng mặt hàng, cùng ĐVT (đổi thì bỏ tồn); gửi lại thì thủ kho xác nhận ở lượt mới.
+- **Gợi ý tồn**: tồn đã xác nhận gần nhất của cùng mặt hàng, cùng nơi nhận trên đề nghị khác chưa hủy (quy về ĐVT của dòng, kèm số phiếu) – nút
+  "Lấy tồn gợi ý" trong hộp thoại "Nhập tồn kho". Đề nghị mua không còn đọc tồn kho của phân hệ kho cũ (cột "Tồn hiện tại" bỏ).
+- API `POST /api/purchase-requests/{id}/stock` (`lines: [{ lineId, stockQty }]`); DTO đề nghị có `canEnterStock`, `enterStockBlocker`,
+  `stockConfirmedByName/At`, dòng có `requiredQty`, `stockQty`, `lastStock…`.
+- **Để Y3c**: bước Thủ kho trong chuỗi duyệt 1A/1B (Thủ kho duyệt sau khi đã nhập tồn; bắt buộc nơi nhận với loại A, B khi gửi duyệt; thông báo
+  "chờ nhập tồn" theo bước duyệt).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

@@ -80,6 +80,10 @@ public static class PurchasingEndpoints
         // Rút về nháp – người lập (hoặc quản trị); service kiểm tra người lập (yêu cầu người dùng 11/11/2026).
         pr.MapPost("/{id:guid}/recall", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PrCreate);
+        // Thủ kho nơi nhận nhập tồn từng dòng (lát Y3b, design.md mục 19.3); service kiểm tra phạm vi kho, loại mua, khóa sau duyệt.
+        pr.MapPost("/{id:guid}/stock", (Guid id, EnterPurchaseRequestStockRequest request, IPurchaseRequestService s, CancellationToken ct) =>
+                s.EnterStockAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PrEnterStock);
         pr.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PrApprove);
         pr.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
