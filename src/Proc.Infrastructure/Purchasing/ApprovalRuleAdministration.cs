@@ -73,42 +73,55 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ApprovalRuleTemplateDto>> TemplateAsync(string? set, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
+        var templates = ApprovalRuleTemplates.InSet(set);
         var headOffice = await HeadOffice.IsWorkingAtAsync(_db, _scope, cancellationToken);
         // Filter công ty: chỉ cấu hình của công ty đang làm việc.
         var configured = (await _db.ApprovalRules.AsNoTracking().Select(r => r.DocType).Distinct().ToListAsync(cancellationToken)).ToHashSet();
-        var codes = ApprovalRuleTemplates.Procurement.Select(t => t.RoleCode).Distinct().ToList();
+        var codes = templates.Select(t => t.RoleCode).OfType<string>().Distinct().ToList();
         var roles = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code) && r.IsActive).ToDictionaryAsync(r => r.Code, r => r.Name, cancellationToken);
-        // Thiếu một vai trò của loại thì bỏ cả loại – tạo nửa số cấp sẽ cho quy trình khác sơ đồ.
-        var missing = ApprovalRuleTemplates.Procurement.Where(t => !roles.ContainsKey(t.RoleCode)).Select(t => t.DocType).ToHashSet();
-        return ApprovalRuleTemplates.Procurement
+        // Thiếu một vai trò của loại thì bỏ cả loại – tạo nửa số cấp sẽ cho quy trình khác sơ đồ/biểu mẫu. Cấp người duyệt động (Trưởng phòng
+        // ban, GĐ khối của phiếu – lát O1) không cần vai trò.
+        var missing = templates.Where(t => t.RoleCode is { } c && !roles.ContainsKey(c)).Select(t => t.DocType).ToHashSet();
+        return templates
             .Select(t => new ApprovalRuleTemplateDto(
-                t.DocType, ApprovalTypes.Get(t.DocType).Name, t.Level, t.RoleCode, roles.GetValueOrDefault(t.RoleCode), t.Note,
+                t.DocType, ApprovalTypes.Get(t.DocType).Name, t.Level, t.RoleCode,
+                t.RoleCode is { } c ? roles.GetValueOrDefault(c) : DynamicLabel(t.Kind), t.Note,
                 t.HeadOfficeOnly && !headOffice ? "HeadOfficeOnly"
                 : configured.Contains(t.DocType) ? "Configured"
                 : missing.Contains(t.DocType) ? "MissingRole"
-                : "Create"))
+                : "Create",
+                t.Kind.ToString()))
             .ToList();
     }
 
+    /// <summary>Tên cấp người duyệt động như trên cấu hình APRL.</summary>
+    private static string DynamicLabel(ApproverKind kind) =>
+        kind == ApproverKind.DivisionDirector ? DynamicApprovers.DivisionDirectorLabel : DynamicApprovers.DepartmentHeadLabel;
+
     /// <inheritdoc />
-    public async Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(CancellationToken cancellationToken)
+    public async Task<ApplyApprovalRuleTemplateResult> ApplyTemplateAsync(string? set, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
-        var rows = await TemplateAsync(cancellationToken);
+        var rows = await TemplateAsync(set, cancellationToken);
         var toCreate = rows.Where(r => r.Status == "Create").ToList();
         if (toCreate.Count > 0)
         {
-            var codes = toCreate.Select(r => r.RoleCode).Distinct().ToList();
-            var roleIds = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code)).ToDictionaryAsync(r => r.Code, r => r.Id, cancellationToken);
+            var codes = toCreate.Select(r => r.RoleCode).OfType<string>().Distinct().ToList();
+            var roleIds = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code) && r.IsActive).ToDictionaryAsync(r => r.Code, r => r.Id, cancellationToken);
             // Ngưỡng 0: mọi phiếu qua đủ cấp – người quản trị sửa ngưỡng theo phân quyền nội bộ sau khi áp.
-            foreach (var r in toCreate) _db.ApprovalRules.Add(ApprovalRule.Create(companyId, r.DocType, r.Level, 0, roleIds[r.RoleCode]));
+            foreach (var r in toCreate)
+            {
+                var kind = Enum.Parse<ApproverKind>(r.ApproverKind);
+                _db.ApprovalRules.Add(ApprovalRule.Create(companyId, r.DocType, r.Level, 0, r.RoleCode is { } c ? roleIds[c] : null, kind));
+            }
+
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        return new ApplyApprovalRuleTemplateResult(toCreate.Count, await TemplateAsync(cancellationToken));
+        return new ApplyApprovalRuleTemplateResult(toCreate.Count, await TemplateAsync(set, cancellationToken));
     }
 
     /// <inheritdoc />

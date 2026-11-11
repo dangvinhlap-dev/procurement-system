@@ -119,7 +119,7 @@ test.describe('quản trị hệ thống', () => {
   test('bộ vai trò mẫu Ban Cung ứng: tạo vai trò còn thiếu, mở lại thì đã đủ', async ({ page }) => {
     await openScreen(page, 'Vai trò')
     await page.getByRole('button', { name: 'Bộ vai trò mẫu…' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Bộ vai trò mẫu Ban Cung ứng' })
+    const dialog = page.getByRole('dialog', { name: 'Bộ vai trò mẫu' })
     await expect(dialog.getByText('HOIDONG – Hội đồng xét chọn & duyệt giá')).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/role-templates.png', animations: 'disabled' })
     // CSDL Testing dùng chung giữa các lần chạy: có thể đã tạo từ trước.

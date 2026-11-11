@@ -7,14 +7,49 @@
 /// <param name="Permissions">Mã quyền.</param>
 public sealed record RoleTemplate(string Code, string Name, string Description, IReadOnlyList<string> Permissions);
 
+/// <summary>Mã các bộ vai trò mẫu – người quản trị chọn bộ để xem/tạo (lát O3, design.md mục 19.3).</summary>
+public static class RoleTemplateSets
+{
+    /// <summary>Ban Cung ứng và Phòng cung ứng chung theo sơ đồ phê duyệt (mục 18.6, lát G10).</summary>
+    public const string Ban = "BAN";
+
+    /// <summary>Các vị trí ký trên biểu mẫu CUVT nhóm A, B, DV của từng công ty (lát O3, mục 19.3).</summary>
+    public const string Cuvt = "CUVT";
+}
+
 /// <summary>
-/// Bộ vai trò mẫu theo cơ cấu Ban Cung ứng Vật tư tập đoàn (design.md mục 18.6; đề xuất <c>docs/Bancungung.pdf</c>, phân tích G2, G3).
+/// Bộ vai trò mẫu theo cơ cấu Ban Cung ứng Vật tư tập đoàn (design.md mục 18.6; đề xuất <c>docs/Bancungung.pdf</c>, phân tích G2, G3) và
+/// theo các vị trí ký trên biểu mẫu CUVT (lát O3 – mục 19.3).
 /// Chỉ là dữ liệu khởi tạo: tạo vai trò còn thiếu, không sửa vai trò đã có (người quản trị có thể đã chỉnh quyền), không đổi cơ chế
 /// phân quyền. Nguyên tắc không kiêm nhiệm: người đàm phán/chọn NCC (DAMPHAN) không có quyền duyệt giá, duyệt thầu, duyệt hồ sơ NCC –
-/// các quyền duyệt đó thuộc Hội đồng (HOIDONG) và Trưởng ban; KSNB chỉ xem.
+/// các quyền duyệt đó thuộc Hội đồng (HOIDONG) và Trưởng ban; KSNB chỉ xem; nhân viên Phòng CUVT lập RFQ, PO nhưng không duyệt.
 /// </summary>
 public static class RoleTemplates
 {
+    /// <summary>Vai trò chỉ thuộc bộ biểu mẫu CUVT (lát O3) – không có trong bộ Ban cung ứng.</summary>
+    private static readonly HashSet<string> CuvtOnlyCodes =
+        ["TRUONGPHONGBAN", "GDKHOI", "TPCUVT", "NVCUVT", "TPTCKT", "GDTCKT", "TPHC", "PHOCTUBCL"];
+
+    /// <summary>
+    /// Vai trò của bộ biểu mẫu CUVT: các vai trò mới ở trên cộng vai trò dùng chung – DENGHI người đề xuất (lập đề nghị mua, XNH dịch vụ),
+    /// KHO thủ kho nơi nhận (nhập tồn trên đề nghị – lát Y3, lập XNH), CHUTICH (cấp cuối mọi chuỗi).
+    /// </summary>
+    private static readonly HashSet<string> CuvtCodes = [.. CuvtOnlyCodes, "DENGHI", "KHO", "CHUTICH"];
+
+    /// <summary>
+    /// Các vai trò mẫu của một bộ, theo thứ tự hiển thị.
+    /// </summary>
+    /// <param name="set">Mã bộ (<see cref="RoleTemplateSets"/>, không phân biệt hoa thường); trống = mọi vai trò mẫu.</param>
+    /// <returns>Danh sách vai trò mẫu.</returns>
+    /// <exception cref="Common.BusinessRuleException">Khi mã bộ không có.</exception>
+    public static IReadOnlyList<RoleTemplate> InSet(string? set) => set?.Trim().ToUpperInvariant() switch
+    {
+        null or "" => Procurement,
+        RoleTemplateSets.Ban => Procurement.Where(t => !CuvtOnlyCodes.Contains(t.Code)).ToList(),
+        RoleTemplateSets.Cuvt => Procurement.Where(t => CuvtCodes.Contains(t.Code)).ToList(),
+        _ => throw new Common.BusinessRuleException($"Không có bộ vai trò mẫu \"{set}\"."),
+    };
+
     /// <summary>Quyền xem danh mục dùng chung mà hầu hết vai trò cần.</summary>
     private static readonly string[] CatalogView =
     [
@@ -137,6 +172,9 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoApprove, Permissions.Purchase.ContractApprove,
             Permissions.MasterData.SoleSourceApprove,
+            // Cấp cuối của so sánh/trình giá 3a, 3A, 3B theo biểu mẫu CUVT (lát O3). Vai trò CHUTICH tạo trước 0.22.0 giữ nguyên quyền –
+            // người quản trị thêm "Duyệt kết quả chọn thầu" bằng tay.
+            Permissions.Sourcing.RfqApproveAward,
             // Phê duyệt ngoại lệ ở bước Hội đồng duyệt NCC & giá tháng (Q6 – chặng GTX, lát H2).
             Permissions.Pricing.MonthlyApprovalApprove,
             Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
@@ -202,6 +240,53 @@ public static class RoleTemplates
             Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView,
             Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept,
+        ]),
+
+        // ---- Theo các vị trí ký trên biểu mẫu CUVT nhóm A, B, DV (lát O3 – design.md mục 19.3). Mỗi công ty tự có các vị trí này (Q18).
+        // Trưởng phòng ban, GĐ khối là người duyệt động (lát O1): cấp duyệt chọn đúng người theo bộ phận của phiếu, vai trò chỉ cho quyền duyệt.
+        // Người duyệt các cấp chỉ xem + duyệt, không lập phiếu (không kiêm nhiệm); nhân viên Phòng CUVT lập RFQ, PO nhưng không duyệt.
+        new("TRUONGPHONGBAN", "Trưởng phòng/ban (duyệt đề nghị mua của bộ phận)", "Cấp duyệt đầu của đề nghị mua 1A/1B/DV – người duyệt động theo bộ phận của phiếu (khai Trưởng phòng ban ở danh mục bộ phận); xác nhận nghiệm thu hàng nhận",
+        [
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+            Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept, Permissions.Report.PurchaseView,
+        ]),
+        new("GDKHOI", "Giám đốc khối", "Duyệt đề nghị mua 1A/1B/DV của các bộ phận trong khối – người duyệt động theo khối của phiếu (khai GĐ khối ở danh mục khối)",
+        [
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+            Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Report.PurchaseView,
+        ]),
+        new("TPCUVT", "Trưởng phòng Cung ứng vật tư", "Kiểm tra đề nghị mua (Phòng CUVT), duyệt so sánh/trình giá 3a, 3A, 3B (kết quả chọn thầu), duyệt PO 4A/4B – không lập phiếu",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
+            Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+        ]),
+        new("NVCUVT", "Nhân viên Phòng Cung ứng vật tư", "Tìm kiếm, đánh giá NCC, hỏi giá (RFQ), lập so sánh/trình giá, lập PO, theo dõi giao hàng – không duyệt",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.MasterData.SupplierManage, Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
+            Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward, Permissions.Purchase.PoCreate, Permissions.Report.PurchaseView,
+        ]),
+        new("TPTCKT", "Trưởng phòng Tài chính – Nguồn quỹ – Kế toán", "Kiểm dự toán, định mức trên đề nghị mua; duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B về nguồn tiền",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
+            Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+        ]),
+        new("GDTCKT", "Giám đốc Tài chính – Nguồn quỹ – Kế toán", "Duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B sau Trưởng phòng TC-NQ-KT",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
+        ]),
+        // Q6: Trưởng phòng HC chỉ kiểm định mức nhóm B – cấp duyệt này thêm vào cấu hình mẫu khi đề nghị mua có loại mua (lát Y3).
+        new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) – cấp duyệt thêm khi đề nghị mua có loại mua (lát Y3)",
+        [
+            .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView,
+        ]),
+        new("PHOCTUBCL", "Phó Chủ tịch UBCL&PT", "Phó Chủ tịch Ủy ban Chiến lược & Phát triển: duyệt đề nghị mua 1A/1B/DV và so sánh/trình giá 3a, 3A, 3B trước Chủ tịch",
+        [
+            .. CatalogView, .. ProcurementView,
+            Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.BudgetView, Permissions.Report.PurchaseView,
         ]),
     ];
 }

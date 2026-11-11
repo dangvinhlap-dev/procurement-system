@@ -126,21 +126,22 @@ public sealed class RoleAdministration : IRoleAdministration
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<RoleTemplateDto>> ListTemplatesAsync(string? set, CancellationToken cancellationToken)
     {
-        var codes = RoleTemplates.Procurement.Select(t => t.Code).ToList();
+        var templates = RoleTemplates.InSet(set);
+        var codes = templates.Select(t => t.Code).ToList();
         var existing = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code)).Select(r => r.Code).ToListAsync(cancellationToken);
-        return RoleTemplates.Procurement
+        return templates
             .Select(t => new RoleTemplateDto(t.Code, t.Name, t.Description, _modules.Filter(t.Permissions).Distinct().ToList(), existing.Contains(t.Code)))
             .ToList();
     }
 
     /// <inheritdoc />
-    public async Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(CancellationToken cancellationToken)
+    public async Task<ApplyRoleTemplatesResult> CreateFromTemplatesAsync(string? set, CancellationToken cancellationToken)
     {
         var created = new List<string>();
         var skipped = new List<string>();
-        foreach (var template in await ListTemplatesAsync(cancellationToken))
+        foreach (var template in await ListTemplatesAsync(set, cancellationToken))
         {
             if (template.Exists)
             {

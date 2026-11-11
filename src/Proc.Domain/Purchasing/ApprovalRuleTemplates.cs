@@ -5,10 +5,22 @@ namespace Proc.Domain.Purchasing;
 /// <summary>Một cấp duyệt mẫu.</summary>
 /// <param name="DocType">Loại phiếu duyệt (<see cref="ApprovalTypes"/>).</param>
 /// <param name="Level">Cấp, từ 1.</param>
-/// <param name="RoleCode">Mã vai trò mẫu duyệt cấp này (<see cref="Organization.RoleTemplates"/>).</param>
+/// <param name="RoleCode">Mã vai trò mẫu duyệt cấp này (<see cref="Organization.RoleTemplates"/>); null khi người duyệt động.</param>
 /// <param name="HeadOfficeOnly">Chỉ áp khi công ty đang làm việc là tổng công ty (phiếu chung của Ban: GTH, CKB, hồ sơ NCC chặng cuối).</param>
-/// <param name="Note">Căn cứ trên sơ đồ, hiện cho người quản trị.</param>
-public sealed record ApprovalRuleTemplate(string DocType, int Level, string RoleCode, bool HeadOfficeOnly, string Note);
+/// <param name="Note">Căn cứ trên sơ đồ/biểu mẫu, hiện cho người quản trị.</param>
+/// <param name="Kind">Ai duyệt: theo vai trò (mặc định) hoặc Trưởng phòng ban / GĐ khối của phiếu (lát O1).</param>
+public sealed record ApprovalRuleTemplate(
+    string DocType, int Level, string? RoleCode, bool HeadOfficeOnly, string Note, ApproverKind Kind = ApproverKind.Role);
+
+/// <summary>Mã các bộ cấu hình duyệt mẫu (lát O3).</summary>
+public static class ApprovalRuleTemplateSets
+{
+    /// <summary>Theo sơ đồ phê duyệt mua sắm của Ban và Phòng cung ứng chung (lát G10, mục 18.25) – mặc định.</summary>
+    public const string SoDo = "SODO";
+
+    /// <summary>Theo chuỗi ký của biểu mẫu CUVT nhóm A, B, DV (lát O3, mục 19.3).</summary>
+    public const string Cuvt = "CUVT";
+}
 
 /// <summary>
 /// Cấu hình duyệt mẫu theo sơ đồ tổ chức và lưu đồ phê duyệt mua sắm của Ban và Phòng cung ứng chung (lát G10 – design.md mục 18.25). Mọi cấp
@@ -18,6 +30,19 @@ public sealed record ApprovalRuleTemplate(string DocType, int Level, string Role
 /// </summary>
 public static class ApprovalRuleTemplates
 {
+    /// <summary>
+    /// Các cấp mẫu của một bộ.
+    /// </summary>
+    /// <param name="set">Mã bộ (<see cref="ApprovalRuleTemplateSets"/>, không phân biệt hoa thường); trống = theo sơ đồ (G10).</param>
+    /// <returns>Các cấp mẫu theo loại phiếu, cấp.</returns>
+    /// <exception cref="Common.BusinessRuleException">Khi mã bộ không có.</exception>
+    public static IReadOnlyList<ApprovalRuleTemplate> InSet(string? set) => set?.Trim().ToUpperInvariant() switch
+    {
+        null or "" or ApprovalRuleTemplateSets.SoDo => Procurement,
+        ApprovalRuleTemplateSets.Cuvt => CuvtForms,
+        _ => throw new Common.BusinessRuleException($"Không có bộ cấu hình duyệt mẫu \"{set}\"."),
+    };
+
     private const string PhoBan = "PHOBAN";
     private const string TruongBan = "TRUONGBANCUVT";
     private const string ChuTich = "CHUTICH";
@@ -53,5 +78,30 @@ public static class ApprovalRuleTemplates
         new(DocumentTypes.Contract, 2, ChuTich, false, "Hợp đồng khung: Chủ tịch/TGĐ phê duyệt theo phân quyền"),
         new(ApprovalTypes.ContractAmendment, 1, PhoBan, false, "Phụ lục hợp đồng: Hội đồng xác nhận"),
         new(ApprovalTypes.ContractAmendment, 2, ChuTich, false, "Phụ lục hợp đồng: Chủ tịch/TGĐ phê duyệt"),
+    ];
+
+    /// <summary>
+    /// Chuỗi ký của biểu mẫu CUVT (lát O3 – design.md mục 19.3, Q6, Q10, Q18), áp cho từng công ty. Ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch –
+    /// Q6), người quản trị chỉnh sau. Chưa có trong mẫu (thêm khi làm lát tương ứng): bước Thủ kho nhập tồn và Trưởng phòng HC kiểm định mức
+    /// nhóm B của đề nghị mua (lát Y3 – đề nghị mua có loại mua); bảng tổng hợp 2A/2B (Y5); đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
+    /// Đề nghị DV khác 1B ở bước Thủ kho và TP HC – nên trước Y3 dùng chung chuỗi PR dưới đây.
+    /// </summary>
+    public static readonly IReadOnlyList<ApprovalRuleTemplate> CuvtForms =
+    [
+        new(DocumentTypes.PurchaseRequest, 1, null, false, "1A/1B/DV: Trưởng phòng/ban của bộ phận đề nghị", ApproverKind.DepartmentHead),
+        new(DocumentTypes.PurchaseRequest, 2, "TPCUVT", false, "1A/1B/DV: Phòng CUVT kiểm tra"),
+        new(DocumentTypes.PurchaseRequest, 3, "TPTCKT", false, "1A/1B/DV: Phòng TC-NQ-KT kiểm dự toán/định mức"),
+        new(DocumentTypes.PurchaseRequest, 4, null, false, "1A/1B/DV: Giám đốc khối của bộ phận đề nghị", ApproverKind.DivisionDirector),
+        new(DocumentTypes.PurchaseRequest, 5, "PHOCTUBCL", false, "1A/1B/DV: Phó Chủ tịch UBCL&PT"),
+        new(DocumentTypes.PurchaseRequest, 6, "CHUTICH", false, "1A/1B/DV: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(DocumentTypes.RequestForQuotation, 1, "TPCUVT", false, "3a/3A/3B: Trưởng phòng CUVT"),
+        new(DocumentTypes.RequestForQuotation, 2, "TPTCKT", false, "3a/3A/3B: Trưởng phòng TC-NQ-KT"),
+        new(DocumentTypes.RequestForQuotation, 3, "GDTCKT", false, "3a/3A/3B: Giám đốc TC-NQ-KT"),
+        new(DocumentTypes.RequestForQuotation, 4, "PHOCTUBCL", false, "3a/3A/3B: Phó Chủ tịch UBCL&PT"),
+        new(DocumentTypes.RequestForQuotation, 5, "CHUTICH", false, "3a/3A/3B: Chủ tịch duyệt"),
+        new(DocumentTypes.PurchaseOrder, 1, "TPCUVT", false, "4A/4B (ký trước khi đặt hàng = duyệt PO – Q10): Trưởng phòng CUVT"),
+        new(DocumentTypes.PurchaseOrder, 2, "TPTCKT", false, "4A/4B: Trưởng phòng TC-NQ-KT"),
+        new(DocumentTypes.PurchaseOrder, 3, "GDTCKT", false, "4A/4B: Giám đốc TC-NQ-KT"),
+        new(DocumentTypes.PurchaseOrder, 4, "CHUTICH", false, "4A/4B: Chủ tịch duyệt"),
     ];
 }

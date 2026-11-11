@@ -27,7 +27,7 @@ const columns: GridColumn<RoleListItem>[] = [
 
 /**
  * Màn hình Vai trò và phân quyền (design.md mục 9.1, 9.5): danh sách vai trò dùng chung cho mọi công ty;
- * bấm đúp mở ngăn kéo để sửa tên và tick quyền theo module. Nút "Bộ vai trò mẫu" tạo các vai trò Ban Cung ứng còn thiếu (mục 18.6).
+ * bấm đúp mở ngăn kéo để sửa tên và tick quyền theo module. Nút "Bộ vai trò mẫu" tạo các vai trò Ban Cung ứng (mục 18.6) / biểu mẫu CUVT (lát O3) còn thiếu.
  */
 export function RoleListPage() {
   const { hasPermission } = useAuth()
@@ -52,7 +52,7 @@ export function RoleListPage() {
         onOpenRow={(r) => setOpenId(r.id)}
         notice={
           canManage ? (
-            <Alert type="info" showIcon title="Bộ vai trò mẫu theo cơ cấu Ban Cung ứng Vật tư: Trưởng ban, Nhóm Đàm phán, Nhóm Vận hành, Hội đồng, Người đề nghị, Kho, Kế toán, Pháp chế, KSNB."
+            <Alert type="info" showIcon title="Bộ vai trò mẫu: theo cơ cấu Ban Cung ứng Vật tư (Trưởng ban, Hội đồng, Đàm phán, Vận hành, KSNB…) và theo các vị trí ký trên biểu mẫu CUVT (Trưởng phòng ban, Phòng CUVT, TC-NQ-KT, GĐ khối, Phó CT UBCL&PT, Chủ tịch)."
               action={<Button size="small" onClick={() => setTemplatesOpen(true)}>Bộ vai trò mẫu…</Button>} />
           ) : undefined
         }
