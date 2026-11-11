@@ -184,6 +184,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     **chặn hủy, chỉ điều chỉnh**. Domain: `ApprovableDocument.Cancel(reason, inChain)` (PR đã đóng hủy được trong chuỗi). Giao diện:
     `api/cancelChain.ts`, `pages/purchasing/cancelChainDialog.tsx` cho PR, PO, XNH. Sửa cảnh báo XML doc còn sót của Z4a. Test: tích hợp
     `CancelChainTests` (2), e2e `cancel-chain.spec.ts`. Đợt sau: chuỗi RFQ, bảng giá → hợp đồng → phụ lục, phiếu tháng / đặt hàng gộp → PO.
+    Build 0 cảnh báo, `dotnet test` 647/647, tsc, oxlint, `npm run build`; Playwright đủ bộ 129/129. **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
