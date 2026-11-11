@@ -11,10 +11,13 @@ import type { ApprovalStep } from './purchasing'
 const useCompanyId = () => useAuth().workingCompany?.id ?? ''
 
 /** Trạng thái bảng giá NCC: Nháp → Chờ duyệt → Hiệu lực → Ngừng (lát B1 – design.md mục 8.5). */
-export type PriceListStatus = 'Draft' | 'Submitted' | 'Active' | 'Inactive'
+export type PriceListStatus = 'Draft' | 'Submitted' | 'Active' | 'Inactive' | 'Cancelled'
 
 /** Nhãn trạng thái bảng giá. */
-export const priceListStatusLabels: Record<PriceListStatus, string> = { Draft: 'Nháp', Submitted: 'Chờ duyệt', Active: 'Hiệu lực', Inactive: 'Ngừng' }
+/** Nhãn trạng thái bảng giá; Đã hủy – bảng giá nháp hủy theo dây chuyền RFQ (lát Z4c, design.md mục 20.2 E2). */
+export const priceListStatusLabels: Record<PriceListStatus, string> = {
+  Draft: 'Nháp', Submitted: 'Chờ duyệt', Active: 'Hiệu lực', Inactive: 'Ngừng', Cancelled: 'Đã hủy',
+}
 
 /** Tông màu trạng thái bảng giá (cùng cách với PR/PO: nháp xám, chờ duyệt vàng). */
 export const priceListStatusTone: Record<PriceListStatus, 'success' | 'warning' | 'neutral'> = {
@@ -22,6 +25,7 @@ export const priceListStatusTone: Record<PriceListStatus, 'success' | 'warning' 
   Submitted: 'warning',
   Active: 'success',
   Inactive: 'neutral',
+  Cancelled: 'neutral',
 }
 
 /** Một dòng danh sách bảng giá. */

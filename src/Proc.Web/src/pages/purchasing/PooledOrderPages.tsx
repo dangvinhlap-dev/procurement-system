@@ -31,6 +31,7 @@ import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFo
 import { ListPage } from '../../components/ListPage/ListPage'
 import { DATE_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
 import { DocNo } from '../../classic/DocNo'
+import { confirmCancelChain } from './cancelChainDialog'
 
 /** Đường dẫn danh sách phiếu đặt hàng gộp (màn hình DHG). */
 export const POOLED_ORDER_PATH = '/mua-hang/dat-hang-gop'
@@ -331,33 +332,11 @@ export function PooledOrderPage() {
       },
     })
 
+  // Hủy theo dây chuyền (lát Z4c, design.md mục 20.2 E1): phiếu đã tạo PO thì quản trị hủy cả các PO ở mọi công ty; hộp thoại liệt kê trình tự.
   const cancel = () => {
     if (!doc) return
-    let reason = ''
-    modal.confirm({
-      title: `Hủy phiếu ${doc.no}?`,
-      content: (
-        <>
-          <p>Phiếu hủy thì không tạo PO được nữa.</p>
-          <Input.TextArea aria-label="Lý do hủy" rows={3} maxLength={1000} onChange={(e) => (reason = e.target.value)} />
-        </>
-      ),
-      okText: 'Hủy phiếu',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
-        if (!reason.trim()) {
-          message.error('Hãy nhập lý do hủy.')
-          throw new Error('missing reason')
-        }
-        try {
-          await mutations.cancel.mutateAsync({ id: doc.id, reason: reason.trim() })
-          message.success(`Đã hủy phiếu ${doc.no}.`)
-        } catch (e) {
-          fail(e, 'Không hủy được.')
-        }
-      },
-    })
+    setError(null)
+    void confirmCancelChain(modal, message, { docType: 'DHG', id: doc.id, no: doc.no, onError: (text) => setError(text) })
   }
 
   const readonlyCell = (text: string) => <span className="line-grid-readonly">{text}</span>

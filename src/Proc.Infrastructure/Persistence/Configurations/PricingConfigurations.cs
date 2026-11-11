@@ -47,6 +47,7 @@ internal sealed class SupplierPriceListConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Note).HasMaxLength(1000);
         // Thông tin duyệt (lát B1): lượt gửi, lý do từ chối; các thuộc tính tính toán của IApprovalSubject không lưu.
         builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         builder.Ignore(x => x.DocType);
         builder.Ignore(x => x.ApprovalAmount);
         builder.Ignore(x => x.IsAwaitingApproval);

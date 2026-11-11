@@ -55,6 +55,7 @@ import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithRea
 import { confirmApprove } from '../purchasing/approvalDialogs'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { DocNo } from '../../classic/DocNo'
+import { confirmCancelChain } from '../purchasing/cancelChainDialog'
 
 const LIST_PATH = '/dau-thau/rfq'
 
@@ -501,23 +502,13 @@ export function RfqPage() {
       },
     })
 
-  // Hủy bắt buộc lý do (design.md mục 20.2a): RFQ nháp – người lập; đã gửi NCC – chỉ quản trị.
-  const cancel = () =>
-    doc &&
-    confirmWithReason(modal, message, {
-      title: `Hủy RFQ ${doc.no}?`,
-      label: 'Lý do hủy',
-      placeholder: 'Ví dụ: đổi phương án mua, gộp vào RFQ khác',
-      okText: 'Hủy RFQ',
-      onOk: async (reason) => {
-        try {
-          await mutations.cancel.mutateAsync({ id: doc.id, reason })
-          message.success(`Đã hủy RFQ ${doc.no}.`)
-        } catch (e) {
-          fail(e, 'Không hủy được RFQ.')
-        }
-      },
-    })
+  // Hủy theo dây chuyền (lát Z4c, design.md mục 20.2a, E2): RFQ nháp – người lập; đã gửi / đã chọn thầu – quản trị, kèm PO, hợp đồng,
+  // bảng giá nháp tạo từ RFQ; hộp thoại liệt kê trình tự, lý do bắt buộc.
+  const cancel = () => {
+    if (!doc) return
+    setError(null)
+    void confirmCancelChain(modal, message, { docType: 'RFQ', id: doc.id, no: doc.no, onError: (text) => setError(text) })
+  }
 
   /** Thêm các dòng PR đã chọn (SL = SL còn chưa đặt). */
   const addFromRequests = (picked: OpenRequestLine[]) => {

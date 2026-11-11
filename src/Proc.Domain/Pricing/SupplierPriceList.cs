@@ -22,6 +22,12 @@ public enum PriceListStatus
     /// số đã lưu của các trạng thái cũ.
     /// </summary>
     Submitted = 4,
+
+    /// <summary>
+    /// Đã hủy – chỉ bảng giá Nháp, hủy theo dây chuyền RFQ (người dùng chốt 11/11/2026, design.md mục 20.2 E2). Bảng giá đã hiệu lực không hủy –
+    /// dùng Ngừng (E3). Giá trị 5 (thêm sau) để không đổi số đã lưu.
+    /// </summary>
+    Cancelled = 5,
 }
 
 /// <summary>Đầu bảng giá NCC.</summary>
@@ -224,6 +230,24 @@ public sealed class SupplierPriceList : AuditableEntity, ICompanyOwned, IHasDocu
         EnsureSubmitted();
         Status = PriceListStatus.Draft;
         RejectReason = Clean(reason);
+    }
+
+    /// <summary>Lý do hủy (lát Z4c); null với bảng giá chưa hủy.</summary>
+    public string? CancelReason { get; private set; }
+
+    /// <summary>
+    /// Hủy bảng giá Nháp (theo dây chuyền RFQ – design.md mục 20.2 E2). Bảng giá chờ duyệt / hiệu lực / ngừng không hủy (E3).
+    /// </summary>
+    /// <param name="reason">Lý do hủy (bắt buộc, tối đa 500 ký tự).</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc thiếu lý do.</exception>
+    public void Cancel(string reason)
+    {
+        if (Status != PriceListStatus.Draft) throw new BusinessRuleException($"Bảng giá {No} không còn nháp – không hủy được (dùng Ngừng áp dụng).");
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
+        if (text.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
+        Status = PriceListStatus.Cancelled;
+        CancelReason = text;
     }
 
     /// <summary>Ngừng áp dụng: Hiệu lực → Ngừng.</summary>
