@@ -133,6 +133,8 @@ public sealed class ApprovalReminderService : IApprovalReminderService
                     .Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken),
                 DocumentTypes.PurchaseOrder => await _db.PurchaseOrders.AsNoTracking().IgnoreQueryFilters()
                     .Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken),
+                DocumentTypes.PurchaseSummary => await _db.PurchaseSummaries.AsNoTracking().IgnoreQueryFilters()
+                    .Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken),
                 DocumentTypes.PriceList => await _db.SupplierPriceLists.AsNoTracking().IgnoreQueryFilters()
                     .Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken),
                 DocumentTypes.RequestForQuotation => await _db.Rfqs.AsNoTracking().IgnoreQueryFilters()

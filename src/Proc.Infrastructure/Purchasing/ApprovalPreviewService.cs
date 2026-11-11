@@ -32,14 +32,17 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
     private readonly ISupplierChangeRequestService _supplierChanges;
     private readonly Proc.Application.Pricing.IMonthlySupplierApprovalService _monthly;
     private readonly Proc.Application.Pricing.IVolumeRebateService _volumeRebates;
+    private readonly IPurchaseSummaryService _summaries;
 
     /// <summary>Tạo dịch vụ.</summary>
     public ApprovalPreviewService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseRequestService requests, IPurchaseOrderService orders, IPriceListService priceLists,
         IRfqService rfqs, IContractService contracts, IContractAmendmentService amendments, ISoleSourceService soleSources,
         ISupplierAdministration suppliers, ISupplierChangeRequestService supplierChanges,
-        Proc.Application.Pricing.IMonthlySupplierApprovalService monthly, Proc.Application.Pricing.IVolumeRebateService volumeRebates)
+        Proc.Application.Pricing.IMonthlySupplierApprovalService monthly, Proc.Application.Pricing.IVolumeRebateService volumeRebates,
+        IPurchaseSummaryService summaries)
     {
+        _summaries = summaries;
         _volumeRebates = volumeRebates;
         _monthly = monthly;
         _suppliers = suppliers;
@@ -71,6 +74,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
             DocumentTypes.SoleSource => Permissions.MasterData.SoleSourceManage,
             DocumentTypes.MonthlySupplierApproval => Permissions.Pricing.MonthlyApprovalManage,
             DocumentTypes.VolumeRebate => Permissions.Pricing.VolumeRebateManage,
+            DocumentTypes.PurchaseSummary => Permissions.Purchase.SummaryManage,
             _ => throw new BusinessRuleException($"Loại phiếu {docType} không xem trước chuỗi duyệt được."),
         });
 
@@ -88,6 +92,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
                 ApprovalTypes.ContractAmendment => Result(await _amendments.SubmitAmendmentAsync(request.DocumentId, cancellationToken) is var am ? (am.Status, am.Approvals) : default),
                 DocumentTypes.MonthlySupplierApproval => Result(await _monthly.SubmitAsync(request.DocumentId, cancellationToken) is var ms ? (ms.Status, ms.Approvals) : default),
                 DocumentTypes.VolumeRebate => Result(await _volumeRebates.SubmitAsync(request.DocumentId, cancellationToken) is var vr ? (vr.Status, vr.Approvals) : default),
+                DocumentTypes.PurchaseSummary => Result(await _summaries.SubmitAsync(request.DocumentId, cancellationToken) is var bth ? (bth.Status, bth.Approvals) : default),
                 _ => Result(await _soleSources.SubmitAsync(request.DocumentId, cancellationToken) is var ss ? (ss.Status, ss.Approvals) : default),
             };
             // Lượt vừa gửi thử là lượt lớn nhất; không có bước nào ở lượt đó = dưới mọi ngưỡng, gửi là duyệt ngay.

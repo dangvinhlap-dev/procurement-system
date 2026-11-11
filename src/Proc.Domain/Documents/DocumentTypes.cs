@@ -74,6 +74,9 @@ public static class DocumentTypes
     /// <summary>Hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25).</summary>
     public const string SupplierOnboarding = "HSN";
 
+    /// <summary>Bảng tổng hợp đề xuất mua 2A/2B (lát Y5b, design.md mục 19.3).</summary>
+    public const string PurchaseSummary = "BTH";
+
     /// <summary>Phiếu xác nhận nhận hàng theo PO – thay phiếu nhập kho từ bản 0.22.0 (lát K2, design.md mục 19.4).</summary>
     public const string GoodsReceiptConfirmation = "XNH";
 
@@ -81,6 +84,7 @@ public static class DocumentTypes
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
         new(PurchaseRequest, "Đề nghị mua hàng"),
+        new(PurchaseSummary, "Bảng tổng hợp đề xuất mua"),
         new(RequestForQuotation, "Yêu cầu báo giá"),
         new(PurchaseOrder, "Đơn mua hàng"),
         new(Contract, "Hợp đồng nguyên tắc"),

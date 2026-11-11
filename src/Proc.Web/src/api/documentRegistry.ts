@@ -66,6 +66,7 @@ export const docTypeLabels: Record<string, string> = {
   NCC: 'Duyệt nhà cung cấp',
   NDQ: 'NCC độc quyền',
   GTH: 'Duyệt NCC và giá tháng',
+  BTH: 'Bảng tổng hợp đề xuất mua',
   KSG: 'Khảo sát giá thị trường',
   CKB: 'Thỏa thuận chiết khấu sản lượng gộp',
   KHN: 'Kế hoạch nhu cầu',

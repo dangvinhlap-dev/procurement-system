@@ -27,6 +27,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.Rfq] = (Permissions.Sourcing.RfqView, Permissions.Sourcing.RfqManage),
             [AttachmentOwnerTypes.PurchaseRequest] = (Permissions.Purchase.PrView, Permissions.Purchase.PrCreate),
             [AttachmentOwnerTypes.PurchaseOrder] = (Permissions.Purchase.PoView, Permissions.Purchase.PoCreate),
+            // Bảng tổng hợp 2A/2B (lát Y5b): Phòng CUVT đính kèm biên bản, bảng so sánh nhu cầu.
+            [AttachmentOwnerTypes.PurchaseSummary] = (Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryManage),
             [AttachmentOwnerTypes.InventoryDocument] = (Permissions.Inventory.DocumentView, Permissions.Inventory.DocumentCreate),
             // Phiếu xác nhận nhận hàng XNH (lát K2): thủ kho / phòng ban đề xuất đính kèm phiếu giao, biên bản nghiệm thu, ảnh hàng.
             [AttachmentOwnerTypes.GoodsReceiptConfirmation] = (Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage),
@@ -64,7 +66,7 @@ public sealed class AttachmentService : IAttachmentService
         AttachmentOwnerTypes.SupplierPriceList, AttachmentOwnerTypes.Rfq, AttachmentOwnerTypes.PurchaseRequest, AttachmentOwnerTypes.PurchaseOrder,
         AttachmentOwnerTypes.PurchaseContract, AttachmentOwnerTypes.SoleSourceApproval, AttachmentOwnerTypes.ContractAmendment,
         AttachmentOwnerTypes.SupplierOnboarding, AttachmentOwnerTypes.MonthlySupplierApproval, AttachmentOwnerTypes.VolumeRebateAgreement,
-        AttachmentOwnerTypes.PooledOrder,
+        AttachmentOwnerTypes.PooledOrder, AttachmentOwnerTypes.PurchaseSummary,
     ];
 
     /// <summary>Người duyệt đính kèm vào bước mình vừa xử lý trong khoảng này (hộp thoại duyệt tải file ngay sau khi duyệt).</summary>
@@ -293,6 +295,8 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.PurchaseRequest => await _db.PurchaseRequests.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.PurchaseOrder => await _db.PurchaseOrders.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.PurchaseSummary => await _db.PurchaseSummaries.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.PurchaseContract => await _db.PurchaseContracts.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),

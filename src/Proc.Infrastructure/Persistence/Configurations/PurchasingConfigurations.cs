@@ -380,3 +380,68 @@ internal sealed class PurchasingUnitConfiguration : IEntityTypeConfiguration<Pur
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng PurchaseSummary – bảng tổng hợp đề xuất mua 2A/2B (lát Y5b, design.md mục 19.3).</summary>
+internal sealed class PurchaseSummaryConfiguration : IEntityTypeConfiguration<PurchaseSummary>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseSummary> builder)
+    {
+        builder.ToTable("PurchaseSummary");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.DocType);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.Date });
+        builder.Property(x => x.Note).HasMaxLength(PurchaseSummary.NoteMaxLength);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.ClosedReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
+        builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
+        // Cột ngân sách của lớp chung ApprovableDocument – bảng tổng hợp không ghi ngân sách (đã tính ở đề nghị mua), luôn trống.
+        builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        // Bộ phận, công trình cùng công ty với phiếu: khóa ngoại kèm CompanyId như đề nghị mua.
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ConstructionProject>().WithMany()
+            .HasForeignKey(x => new { x.ConstructionProjectId, x.CompanyId }).HasPrincipalKey(p => new { p.Id, p.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.SummaryId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseSummaryLine – dòng bảng tổng hợp (một dòng đề nghị mua + đơn vị mua).</summary>
+internal sealed class PurchaseSummaryLineConfiguration : IEntityTypeConfiguration<PurchaseSummaryLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseSummaryLine> builder)
+    {
+        builder.ToTable("PurchaseSummaryLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.SummaryId, x.LineNo });
+        // Tra "dòng đề nghị đã ở bảng tổng hợp nào" (mỗi dòng đề nghị chỉ ở một bảng chưa hủy – kiểm tra ở tầng Application dưới khóa đề nghị).
+        builder.HasIndex(x => x.RequestLineId);
+        builder.Property(x => x.Qty).HasPrecision(18, 4);
+        builder.Property(x => x.UomFactor).HasPrecision(18, 6);
+        builder.Property(x => x.BaseQty).HasPrecision(18, 4);
+        builder.Property(x => x.EstPrice).HasPrecision(19, 6);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.Note).HasMaxLength(PurchaseSummary.LineNoteMaxLength);
+        builder.HasOne<PurchaseRequest>().WithMany().HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseRequestLine>().WithMany().HasForeignKey(x => x.RequestLineId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Uom>().WithMany().HasForeignKey(x => x.UomId).OnDelete(DeleteBehavior.Restrict);
+        // Đơn vị mua cùng công ty với phiếu (khóa thay thế Id + CompanyId của PurchasingUnit – lát Y5a).
+        builder.HasOne<PurchasingUnit>().WithMany()
+            .HasForeignKey(x => new { x.PurchasingUnitId, x.CompanyId }).HasPrincipalKey(u => new { u.Id, u.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

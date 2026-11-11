@@ -13,8 +13,8 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Đánh số chứng từ' }).click()
 
   await expect(page.getByRole('heading', { name: 'Đánh số chứng từ – DTV' })).toBeVisible()
-  // 22 loại – thêm HSN hồ sơ đánh giá NCC mới (lát G8), XNH xác nhận nhận hàng (lát K2).
-  await expect(page.locator('.data-grid-row')).toHaveCount(22)
+  // 23 loại – thêm HSN hồ sơ đánh giá NCC mới (lát G8), XNH xác nhận nhận hàng (lát K2), BTH bảng tổng hợp đề xuất mua (lát Y5b).
+  await expect(page.locator('.data-grid-row')).toHaveCount(23)
   // Năm/tháng theo giờ máy (Việt Nam), giống server tính kỳ theo giờ Việt Nam.
   const now = new Date()
   const yymm = String(now.getFullYear()).slice(2) + String(now.getMonth() + 1).padStart(2, '0')
