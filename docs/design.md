@@ -2305,7 +2305,18 @@ tháng, đặt hàng gộp, chiết khấu sản lượng, hồ sơ NCC mới, X
 | C5 | Người dùng **chưa có trường Chức vụ** (chỉ có họ tên, vai trò) | R4 |
 | C6 | Số chứng từ liên quan hiện là chữ thường/liên kết, chưa thống nhất ô chữ sao chép + bấm đúp | R5 |
 
-### 20.3 Đề xuất chia lát (chưa làm – chờ chốt 20.2)
+**Người dùng chốt 11/11/2026:**
+
+| # | Quyết định |
+| --- | --- |
+| D1 (C2) | **Được thêm file** ở mọi trạng thái; **file của người lập và của các bước đã duyệt không ai sửa/xóa được**. Người lập chỉ xóa file của mình khi phiếu còn **Nháp và chưa từng có bước duyệt xong**; từ khi gửi duyệt mọi file đã có bị khóa. File thêm khi phiếu đã duyệt xong ghi người thêm, thời điểm, đánh dấu **"Bổ sung sau duyệt"**, cũng không xóa được. Thay mục 18.4 dòng "Đính kèm được ở mọi trạng thái… xóa mềm". |
+| D2 (C3) | **Giữ** các thao tác sau duyệt hiện có (PO đóng phần còn lại; XNH cập nhật hóa đơn, điều chỉnh SL thực nhận, nghiệm thu; hợp đồng chấm dứt, phụ lục; phiếu tháng điều chỉnh) – không sửa dữ liệu gốc, ghi bản ghi riêng có lịch sử. |
+| D3 (C4) | Hủy phiếu đã duyệt **không cần duyệt lại**, **bắt buộc lý do**; người hủy phải có **quyền Hủy của từng loại phiếu** trong chuỗi; hủy cả chuỗi **trong một giao dịch** (một phiếu lỗi thì không hủy phiếu nào). PO gộp dòng từ nhiều PR: hủy một PR thì **hủy cả PO**, hộp thoại nêu các PR khác bị ảnh hưởng (SL của chúng trở về "còn lại chưa đặt"). |
+| D4 (C4) | Mỗi loại phiếu có **quyền Hủy riêng**, quản trị gán cho vai trò bất kỳ; khi nâng cấp **tự gán** cho vai trò đang có quyền lập/quản lý loại phiếu đó (không ai mất quyền đang dùng). |
+| D5 (C5) | Thêm trường **Chức vụ** cho người dùng (Hệ thống → Người dùng); trống thì hiện tên vai trò. |
+| D6 | Làm **Z1–Z4 ngay**, trước các lát Y của 0.23.0. |
+
+### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,
 trường Chức vụ người dùng · Z3 ô số chứng từ dùng chung (sao chép, bấm đúp mở phiếu gốc) · Z4 quyền Hủy riêng từng loại phiếu + hủy dây
