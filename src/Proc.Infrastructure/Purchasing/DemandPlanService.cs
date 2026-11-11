@@ -134,11 +134,13 @@ public sealed class DemandPlanService : IDemandPlanService
     public async Task<DemandPlanDto> CancelAsync(Guid id, CancelDemandPlanRequest request, CancellationToken cancellationToken)
     {
         var plan = await FindOwnAsync(id, cancellationToken);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(_scope, $"phiếu {plan.No}", plan.Status == DemandPlanStatus.Draft, plan.CreatedBy, request.Reason);
         // Phiếu đã chốt đang có phiếu điều chỉnh soạn dở: hủy phiếu điều chỉnh trước, tránh phiếu điều chỉnh mồ côi chốt thay cho phiếu đã hủy.
         var pending = await _db.DemandPlans.AsNoTracking()
             .Where(x => x.ReplacesId == id && x.Status == DemandPlanStatus.Draft).Select(x => x.No).FirstOrDefaultAsync(cancellationToken);
         if (pending is not null) throw new BusinessRuleException($"Phiếu đang có phiếu điều chỉnh {pending} – hủy hoặc chốt phiếu đó trước.");
-        plan.Cancel(_clock.TodayInVietnam(), request.Reason);
+        plan.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -408,7 +410,9 @@ public sealed class DemandPlanService : IDemandPlanService
             : !_scope.HasPermission(Permissions.Purchase.DemandPlanManage) ? "Bạn không có quyền lập, sửa phiếu kế hoạch nhu cầu." : null;
         var actions = new DemandPlanActions(
             readOnly is null && x.Status == DemandPlanStatus.Draft,
-            readOnly is null && x.Status is DemandPlanStatus.Draft or DemandPlanStatus.Confirmed && replacedBy is null,
+            // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
+            readOnly is null && x.Status is DemandPlanStatus.Draft or DemandPlanStatus.Confirmed && replacedBy is null
+                && DocumentCancelPolicy.CanCancel(_scope, x.Status == DemandPlanStatus.Draft, x.CreatedBy),
             readOnly is null && x.Status == DemandPlanStatus.Confirmed && replacedBy is null && x.Year >= _clock.TodayInVietnam().Year,
             readOnly);
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>

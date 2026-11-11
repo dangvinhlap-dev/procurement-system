@@ -37,6 +37,11 @@ public static class Permissions
         public const string ParameterView = "System.Parameter.View";
         /// <summary>Quyền "Sửa tham số hệ thống".</summary>
         public const string ParameterManage = "System.Parameter.Manage";
+        /// <summary>
+        /// Quyền đặc biệt "Hủy phiếu" (design.md mục 20.2a): hủy chứng từ đã gửi duyệt trở đi (chờ duyệt, đã duyệt, đang thực hiện).
+        /// Chỉ cấp cho vai trò Quản trị hệ thống – không gán được cho vai trò khác. Phiếu Nháp thì người lập tự hủy, không cần quyền này.
+        /// </summary>
+        public const string DocumentCancel = "System.Document.Cancel";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -305,6 +310,7 @@ public static class Permissions
         new(System.LogView, "Xem nhật ký thao tác"),
         new(System.ParameterView, "Xem tham số hệ thống"),
         new(System.ParameterManage, "Sửa tham số hệ thống"),
+        new(System.DocumentCancel, "Hủy phiếu đã gửi duyệt (quyền đặc biệt – chỉ quản trị)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

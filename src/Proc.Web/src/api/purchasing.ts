@@ -145,6 +145,8 @@ export interface PurchaseActions {
   readOnlyReason: string | null
   /** Đóng phần còn lại (lát R6): PR đã lên PO một phần, PO đã nhận một phần. */
   canCloseRemaining?: boolean
+  /** Rút về nháp: phiếu chờ duyệt, người xem là người lập hoặc quản trị (yêu cầu người dùng 11/11/2026). */
+  canRecall?: boolean
 }
 
 /** Thông tin đóng phần còn lại của PR/PO (lát R6, design.md mục 18.26). */
@@ -662,6 +664,7 @@ export function usePurchaseMutations<TDoc extends { id: string; no: string }, TI
     approve: useAction('approve'),
     reject: useAction('reject'),
     cancel: useAction('cancel'),
+    recall: useAction('recall'),
     closeRemaining: useAction('close-remaining'),
   }
 }
@@ -674,7 +677,9 @@ export function usePurchaseMutations<TDoc extends { id: string; no: string }, TI
  */
 function actionBody(name: string, comment: string | null | undefined): unknown {
   if (name === 'approve' || name === 'reject') return { comment: comment ?? null }
-  if (name === 'close-remaining' || name === 'cancel') return comment ? { reason: comment } : undefined
+  // Hủy luôn bắt buộc lý do (design.md mục 20.2a) – gửi cả khi trống để máy chủ báo lỗi rõ ràng.
+  if (name === 'cancel') return { reason: comment ?? null }
+  if (name === 'close-remaining') return comment ? { reason: comment } : undefined
   return undefined
 }
 

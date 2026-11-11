@@ -64,7 +64,7 @@ public class PurchaseContractTests
         Assert.Equal(1, contract.Submit());
         Assert.True(contract.IsAwaitingApproval);
         Assert.Throws<BusinessRuleException>(() => contract.Update(Header(Today, Today)));
-        Assert.Throws<BusinessRuleException>(() => contract.Cancel());
+        Assert.Throws<BusinessRuleException>(() => contract.Cancel("Thử hủy"));
         contract.ReturnToDraft("Thiếu biên bản đàm phán");
         Assert.Equal((ContractStatus.Draft, "Thiếu biên bản đàm phán"), (contract.Status, contract.RejectReason));
         Assert.Equal(2, contract.Submit());

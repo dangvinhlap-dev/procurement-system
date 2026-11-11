@@ -41,7 +41,7 @@ import { PlannedQuantityDialog } from './PlannedQuantityDialog'
 import { toPlannedLines } from './plannedLines'
 import { RebateGrid, RebateTracking, type RebateValues } from './ContractRebatePanel'
 import { contractTermFields as termFields } from './contractTerms'
-import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from './useApprovalCommands'
 import { confirmApprove } from './approvalDialogs'
 
 const LIST_PATH = '/mua-hang/hop-dong-khung'
@@ -594,8 +594,20 @@ export function ContractPage() {
       )}
       {!isNew && doc?.actions.canCancel && (
         <Button danger icon={<StopOutlined />}
-          onClick={() => simple(`Hủy hợp đồng ${doc.no}?`, 'Hủy hợp đồng', () => mutations.cancel.mutateAsync(doc.id), `Đã hủy hợp đồng ${doc.no}.`, true,
-            'Hợp đồng đã hủy giữ lại số và lịch sử, không dùng lại được.')}>
+          // Hủy bắt buộc lý do (design.md mục 20.2a).
+          onClick={() => confirmWithReason(modal, message, {
+            title: `Hủy hợp đồng ${doc.no}?`, description: 'Hợp đồng đã hủy giữ lại số và lịch sử, không dùng lại được.', label: 'Lý do hủy',
+            placeholder: 'Ví dụ: lập nhầm, đổi phương án', okText: 'Hủy hợp đồng',
+            onOk: async (reason) => {
+              setError(null)
+              try {
+                await mutations.cancel.mutateAsync({ id: doc.id, reason })
+                message.success(`Đã hủy hợp đồng ${doc.no}.`)
+              } catch (e) {
+                fail(e, 'Không hủy được.')
+              }
+            },
+          })}>
           Hủy hợp đồng
         </Button>
       )}

@@ -113,7 +113,12 @@ export function useSourcingMutations() {
       onSuccess,
     }),
     close: useMutation({ mutationFn: (id: string) => apiFetch<Sourcing>(`/api/sourcing/${id}/close`, { method: 'POST' }), onSuccess }),
-    cancel: useMutation({ mutationFn: (id: string) => apiFetch<Sourcing>(`/api/sourcing/${id}/cancel`, { method: 'POST' }), onSuccess }),
+    // Hủy bắt buộc lý do (design.md mục 20.2a).
+    cancel: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<Sourcing>(`/api/sourcing/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
   }
 }
 
@@ -403,7 +408,10 @@ export function useRfqMutations() {
         void queryClient.invalidateQueries({ queryKey: ['purchasing'] })
       },
     }),
-    cancel: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/cancel`, { method: 'POST' }), onSuccess }),
+    cancel: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) => apiFetch<Rfq>(`/api/rfqs/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
     recall: useMutation({ mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/recall`, { method: 'POST' }), onSuccess }),
     saveDossier: useMutation({
       mutationFn: ({ id, items }: { id: string; items: { code: string; isDone: boolean; note: string | null }[] }) =>

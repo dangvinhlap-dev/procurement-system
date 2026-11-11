@@ -184,7 +184,7 @@ public class SourcingTests
         Assert.Equal((RfqStatus.AwardPending, true, 10_700_000m, user), (rfq.Status, rfq.IsAwaitingApproval, rfq.ApprovalAmount, rfq.AwardedBy));
         Assert.True(((IApprovalSubject)rfq).IsPreparedBy(user));
         Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(a, header, [new(cai, 1, 0, null, null, null)], Today));
-        Assert.Throws<BusinessRuleException>(() => rfq.Cancel());
+        Assert.Throws<BusinessRuleException>(() => rfq.Cancel("Thử hủy"));
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPurchaseOrder(a, Guid.CreateVersion7()));
 
         // Từ chối: về Đang nhận báo giá, giữ lựa chọn cũ làm gợi ý, lưu lý do; gửi lại thì xóa lý do, tăng lượt.
@@ -200,7 +200,7 @@ public class SourcingTests
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPurchaseOrder(b, Guid.CreateVersion7()));
         rfq.LinkPurchaseOrder(a, Guid.CreateVersion7());
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPurchaseOrder(a, Guid.CreateVersion7()));
-        Assert.Throws<BusinessRuleException>(() => rfq.Cancel());
+        Assert.Throws<BusinessRuleException>(() => rfq.Cancel("Thử hủy"));
     }
 
     [Fact]

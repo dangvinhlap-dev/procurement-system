@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseCircleOutlined, CloseOutlined, MinusCircleOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { CheckOutlined, CloseCircleOutlined, CloseOutlined, MinusCircleOutlined, RollbackOutlined, SaveOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
@@ -39,6 +39,8 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
     create: { isPending: boolean }; update: { isPending: boolean }; submit: DocAction<T>; approve: DocAction<T>; reject: DocAction<T>; cancel: DocAction<T>
     /** Đóng phần còn lại (lát R6) – trang không có lệnh này thì bỏ trống. */
     closeRemaining?: DocAction<T>
+    /** Rút về nháp (yêu cầu người dùng 11/11/2026) – trang không có lệnh này thì bỏ trống. */
+    recall?: DocAction<T>
   }
   /** Đường dẫn danh sách, ví dụ "/mua-hang/pr". */
   listPath: string
@@ -274,34 +276,16 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
 
   const cancel = () => {
     if (!doc) return
-    // Phiếu đã duyệt (PO có thể đã gửi NCC) bắt buộc lý do hủy (lát R7, design.md mục 18.26).
-    if (doc.status === 'Approved') {
-      confirmWithReason(modal, message, {
-        title: `Hủy phiếu ${doc.no} đã duyệt?`,
-        description: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
-        label: 'Lý do hủy',
-        placeholder: 'Ví dụ: NCC báo không giao được, đổi phương án mua',
-        okText: 'Hủy phiếu',
-        onOk: async (reason) => {
-          try {
-            await mutations.cancel.mutateAsync({ id: doc.id, comment: reason })
-            message.success(`Đã hủy phiếu ${doc.no}.`)
-          } catch (e) {
-            fail(e, 'Không hủy được phiếu.')
-          }
-        },
-      })
-      return
-    }
-    modal.confirm({
+    // Mọi lần hủy bắt buộc lý do (design.md mục 20.2a): phiếu nháp – người lập tự hủy; đã gửi duyệt trở đi – chỉ quản trị.
+    confirmWithReason(modal, message, {
       title: `Hủy phiếu ${doc.no}?`,
-      content: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
+      description: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
+      label: 'Lý do hủy',
+      placeholder: doc.status === 'Draft' ? 'Ví dụ: lập nhầm, gộp vào phiếu khác' : 'Ví dụ: NCC báo không giao được, đổi phương án mua',
       okText: 'Hủy phiếu',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (reason) => {
         try {
-          await mutations.cancel.mutateAsync({ id: doc.id })
+          await mutations.cancel.mutateAsync({ id: doc.id, comment: reason })
           message.success(`Đã hủy phiếu ${doc.no}.`)
         } catch (e) {
           fail(e, 'Không hủy được phiếu.')
@@ -309,6 +293,26 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
       },
     })
   }
+
+  /** Rút phiếu đang chờ duyệt về Nháp để sửa hoặc tự hủy (yêu cầu người dùng 11/11/2026). */
+  const recall = () =>
+    doc &&
+    mutations.recall &&
+    modal.confirm({
+      title: `Rút phiếu ${doc.no} về nháp?`,
+      content: 'Các bước đang chờ duyệt bị bỏ; sửa xong gửi duyệt lại là lượt duyệt mới.',
+      okText: 'Rút về nháp',
+      cancelText: 'Không',
+      onOk: async () => {
+        setError(null)
+        try {
+          await mutations.recall!.mutateAsync({ id: doc.id })
+          message.success(`Đã rút phiếu ${doc.no} về nháp.`)
+        } catch (e) {
+          fail(e, 'Không rút được phiếu về nháp.')
+        }
+      },
+    })
 
   const closeRemaining = () =>
     doc &&
@@ -351,6 +355,11 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
             Từ chối
           </Button>
         </>
+      )}
+      {!isNew && doc?.actions.canRecall && mutations.recall && (
+        <Button icon={<RollbackOutlined />} onClick={recall} loading={mutations.recall.isPending}>
+          Rút về nháp
+        </Button>
       )}
       {!isNew && doc?.actions.canCloseRemaining && mutations.closeRemaining && (
         <Button danger icon={<MinusCircleOutlined />} onClick={closeRemaining} loading={mutations.closeRemaining.isPending}>

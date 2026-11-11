@@ -42,7 +42,8 @@ public class RoleAdministrationTests
         var groups = await admin.GetFromJsonAsync<List<PermissionGroupDto>>("/api/permissions", Ct);
 
         Assert.Equal("Hệ thống", groups![0].Name);
-        Assert.Equal(Permissions.All.Count, groups.Sum(g => g.Permissions.Count));
+        // Quyền Hủy phiếu chỉ của vai trò Quản trị (design.md mục 20.2a) – không hiện trên màn hình phân quyền.
+        Assert.Equal(Permissions.All.Count - 1, groups.Sum(g => g.Permissions.Count));
         Assert.Contains(groups.Single(g => g.Module == "Purchase").Permissions, p => p.Name == "Duyệt đơn mua hàng");
     }
 

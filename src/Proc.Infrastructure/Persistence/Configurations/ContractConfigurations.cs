@@ -32,6 +32,7 @@ internal sealed class PurchaseContractConfiguration : IEntityTypeConfiguration<P
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.TerminationReason).HasMaxLength(500);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         // Tiền numeric(19,2) – CLAUDE.md mục 4.
         builder.Property(x => x.CreditLimit).HasPrecision(19, 2);
         builder.Ignore(x => x.DocType);
@@ -111,6 +112,7 @@ internal sealed class PurchaseContractAmendmentConfiguration : IEntityTypeConfig
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.ChangeSummary).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         // Tiền numeric(19,2) – CLAUDE.md mục 4.
         builder.Property(x => x.CreditLimit).HasPrecision(19, 2);
         builder.Property(x => x.ExpectedAmount).HasPrecision(19, 2);

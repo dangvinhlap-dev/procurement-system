@@ -200,7 +200,9 @@ public sealed record CloseRemainingRequest(string? Reason);
 /// <param name="CanCancel">Hủy.</param>
 /// <param name="ReadOnlyReason">Lý do chỉ xem.</param>
 /// <param name="CanCloseRemaining">Đóng phần còn lại (lát R6): PR đã duyệt đã lên PO một phần, PO đã duyệt đã nhận một phần.</param>
-public sealed record PurchaseDocumentActions(bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason, bool CanCloseRemaining = false);
+/// <param name="CanRecall">Rút về nháp: phiếu chờ duyệt, người xem là người lập hoặc quản trị (yêu cầu người dùng 11/11/2026).</param>
+public sealed record PurchaseDocumentActions(
+    bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason, bool CanCloseRemaining = false, bool CanRecall = false);
 
 /// <summary>
 /// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu; OnHandQty: tồn hiện tại của mặt hàng ở công ty (ĐVT cơ sở,
@@ -465,6 +467,17 @@ public interface IPurchaseRequestService
     /// <returns>PR đã hủy.</returns>
     Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null);
 
+    /// <summary>
+    /// Rút PR đang chờ duyệt về Nháp (yêu cầu người dùng 11/11/2026): người lập (hoặc quản trị) rút về để sửa hoặc tự hủy – phiếu đã gửi
+    /// duyệt thì chỉ quản trị hủy được (design.md mục 20.2a). Các bước còn chờ bị bỏ qua; gửi lại là lượt duyệt mới.
+    /// </summary>
+    /// <param name="id">Id PR.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>PR đã về Nháp.</returns>
+    /// <exception cref="ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PR không ở trạng thái chờ duyệt.</exception>
+    Task<PurchaseRequestDto> RecallAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>Đóng phần còn lại – PR đã duyệt đã lên PO một phần: phần chưa lên PO không đặt nữa (lát R6, design.md mục 18.26).</summary>
     /// <param name="id">Id phiếu.</param>
     /// <param name="request">Lý do đóng.</param>
@@ -507,6 +520,14 @@ public interface IPurchaseOrderService
     /// <param name="reason">Lý do hủy.</param>
     /// <returns>PO đã hủy.</returns>
     Task<PurchaseOrderDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null);
+
+    /// <summary>Rút PO đang chờ duyệt về Nháp – như <see cref="IPurchaseRequestService.RecallAsync"/>.</summary>
+    /// <param name="id">Id PO.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>PO đã về Nháp.</returns>
+    /// <exception cref="ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PO không ở trạng thái chờ duyệt.</exception>
+    Task<PurchaseOrderDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Đóng phần còn lại – PO đã duyệt đã nhận một phần: phần NCC chưa giao không nhận nữa (lát R6, design.md mục 18.26).</summary>
     /// <param name="id">Id phiếu.</param>

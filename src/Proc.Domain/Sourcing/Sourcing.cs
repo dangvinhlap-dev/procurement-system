@@ -179,12 +179,20 @@ public sealed class SourcingRequest : AuditableEntity, ICompanyOwned, IHasDocume
         Status = SourcingStatus.Closed;
     }
 
+    /// <summary>Lý do hủy (bắt buộc từ lát Z4a – design.md mục 20.2a); null với phiếu hủy trước bản 0.23.0.</summary>
+    public string? CancelReason { get; private set; }
+
     /// <summary>Hủy phiếu.</summary>
-    /// <exception cref="BusinessRuleException">Khi phiếu không còn mở.</exception>
-    public void Cancel()
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn mở hoặc thiếu lý do.</exception>
+    /// <param name="reason">Lý do hủy (bắt buộc, tối đa 500 ký tự) – quyền hủy do tầng Application kiểm tra (DocumentCancelPolicy).</param>
+    public void Cancel(string reason)
     {
         EnsureOpen();
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
+        if (text.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
         Status = SourcingStatus.Cancelled;
+        CancelReason = text;
     }
 
     /// <summary>Thêm một NCC ứng viên vào phiếu tìm nguồn và trả về để gán dữ liệu.</summary>
@@ -761,13 +769,21 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         supplier.LinkContract(contractId);
     }
 
+    /// <summary>Lý do hủy (bắt buộc từ lát Z4a – design.md mục 20.2a); null với phiếu hủy trước bản 0.23.0.</summary>
+    public string? CancelReason { get; private set; }
+
     /// <summary>Hủy RFQ (Nháp hoặc Đã gửi).</summary>
-    /// <exception cref="BusinessRuleException">Khi đang chờ duyệt kết quả, đã chọn thầu hoặc đã hủy.</exception>
-    public void Cancel()
+    /// <exception cref="BusinessRuleException">Khi đang chờ duyệt kết quả, đã chọn thầu, đã hủy hoặc thiếu lý do.</exception>
+    /// <param name="reason">Lý do hủy (bắt buộc, tối đa 500 ký tự) – quyền hủy do tầng Application kiểm tra (DocumentCancelPolicy).</param>
+    public void Cancel(string reason)
     {
         if (Status == RfqStatus.AwardPending) throw new BusinessRuleException($"RFQ {No} đang chờ duyệt kết quả chọn thầu – rút về trước khi hủy.");
         if (Status is RfqStatus.Awarded or RfqStatus.Cancelled) throw new BusinessRuleException($"RFQ {No} đã chọn thầu hoặc đã hủy.");
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
+        if (text.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
         Status = RfqStatus.Cancelled;
+        CancelReason = text;
     }
 
     /// <summary>Thêm một dòng RFQ trống và trả về để gán dữ liệu.</summary>

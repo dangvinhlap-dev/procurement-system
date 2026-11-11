@@ -155,6 +155,8 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     public async Task<PurchaseRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken, string? reason = null)
     {
         var pr = await LoadAsync(id, cancellationToken);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        reason = DocumentCancelPolicy.Authorize(_scope, $"PR {pr.No}", pr.Status == ApprovalDocumentStatus.Draft, pr.CreatedBy, reason);
         // PR đã lên PO (chưa hủy) thì hủy PO trước – không để PO trỏ vào PR đã hủy.
         var lineIds = pr.Lines.Select(l => l.Id).ToList();
         var orders = await (
@@ -169,6 +171,25 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<PurchaseRequestDto> RecallAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var pr = await LoadAsync(id, cancellationToken);
+        // Rút về nháp (yêu cầu người dùng 11/11/2026): phiếu đã gửi duyệt chỉ quản trị hủy được (design.md mục 20.2a), nên người lập cần
+        // rút về Nháp để sửa hoặc tự hủy. Chỉ người lập (hoặc quản trị) rút – người khác có quyền lập không rút phiếu của người khác.
+        if (!CanRecall(pr))
+            throw new ForbiddenAccessException($"Chỉ người lập (hoặc quản trị) rút được phiếu {pr.No} về nháp.");
+        await _approvals.SkipPendingAsync(pr, cancellationToken);
+        pr.ReturnToDraft(null);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>Người dùng hiện tại rút được phiếu về nháp không: phiếu chờ duyệt, là người lập hoặc có quyền Hủy phiếu.</summary>
+    private bool CanRecall(ApprovableDocument document) =>
+        document.Status == ApprovalDocumentStatus.Submitted
+        && (document.CreatedBy == _scope.UserId || _scope.HasPermission(Permissions.System.DocumentCancel));
 
     /// <inheritdoc />
     public async Task<PurchaseRequestDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken)
@@ -491,9 +512,12 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             pr.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             canApprove,
-            pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null,
+            // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị (design.md mục 20.2a).
+            pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null
+                && DocumentCancelPolicy.CanCancel(_scope, pr.Status == ApprovalDocumentStatus.Draft, pr.CreatedBy),
             readOnly,
-            pr.Status == ApprovalDocumentStatus.Approved && readOnly is null && lines.Any(l => l.OrderedQty > 0));
+            pr.Status == ApprovalDocumentStatus.Approved && readOnly is null && lines.Any(l => l.OrderedQty > 0),
+            readOnly is null && CanRecall(pr));
 
         return new PurchaseRequestDto(
             pr.Id, pr.No, pr.Date, pr.Status.ToString(), pr.DepartmentId, department ?? pr.LegacyDepartment, pr.RequesterId is { } r ? users.GetValueOrDefault(r) : null, pr.Purpose,

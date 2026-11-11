@@ -26,6 +26,7 @@ import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachment
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGrid'
 import { ListPage } from '../../components/ListPage/ListPage'
+import { confirmWithReason } from '../purchasing/useApprovalCommands'
 import { formatDateTime, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 
 const LIST_PATH = '/dau-thau/tim-nguon'
@@ -174,24 +175,39 @@ export function SourcingPage() {
     if (isNew) navigate(`${LIST_PATH}/${saved.id}`, { replace: true })
   }
 
-  /** Đóng (đã xong) hoặc hủy phiếu sau khi hỏi lại. */
+  /** Đóng (đã xong) hoặc hủy phiếu sau khi hỏi lại; hủy bắt buộc lý do (design.md mục 20.2a). */
   const finish = (kind: 'close' | 'cancel') =>
     doc &&
-    modal.confirm({
-      title: kind === 'close' ? `Đánh dấu đã xong phiếu ${doc.no}?` : `Hủy phiếu ${doc.no}?`,
-      content: 'Phiếu không sửa được nữa.',
-      okText: kind === 'close' ? 'Đã xong' : 'Hủy phiếu',
-      okButtonProps: { danger: kind === 'cancel' },
-      cancelText: 'Không',
-      onOk: async () => {
-        try {
-          await (kind === 'close' ? mutations.close : mutations.cancel).mutateAsync(doc.id)
-          message.success(kind === 'close' ? `Phiếu ${doc.no} đã xong.` : `Đã hủy phiếu ${doc.no}.`)
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không thực hiện được.')
-        }
-      },
-    })
+    (kind === 'cancel'
+      ? confirmWithReason(modal, message, {
+          title: `Hủy phiếu ${doc.no}?`,
+          description: 'Phiếu không sửa được nữa.',
+          label: 'Lý do hủy',
+          placeholder: 'Ví dụ: đã có NCC, không cần tìm nguồn nữa',
+          okText: 'Hủy phiếu',
+          onOk: async (reason) => {
+            try {
+              await mutations.cancel.mutateAsync({ id: doc.id, reason })
+              message.success(`Đã hủy phiếu ${doc.no}.`)
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Không thực hiện được.')
+            }
+          },
+        })
+      : modal.confirm({
+          title: `Đánh dấu đã xong phiếu ${doc.no}?`,
+          content: 'Phiếu không sửa được nữa.',
+          okText: 'Đã xong',
+          cancelText: 'Không',
+          onOk: async () => {
+            try {
+              await mutations.close.mutateAsync(doc.id)
+              message.success(`Phiếu ${doc.no} đã xong.`)
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Không thực hiện được.')
+            }
+          },
+        }))
 
   const supplierOptions = (suppliers.data?.items ?? [])
     .filter((s) => s.status !== 'Blacklisted')

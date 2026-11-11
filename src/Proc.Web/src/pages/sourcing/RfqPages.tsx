@@ -501,16 +501,17 @@ export function RfqPage() {
       },
     })
 
+  // Hủy bắt buộc lý do (design.md mục 20.2a): RFQ nháp – người lập; đã gửi NCC – chỉ quản trị.
   const cancel = () =>
     doc &&
-    modal.confirm({
+    confirmWithReason(modal, message, {
       title: `Hủy RFQ ${doc.no}?`,
+      label: 'Lý do hủy',
+      placeholder: 'Ví dụ: đổi phương án mua, gộp vào RFQ khác',
       okText: 'Hủy RFQ',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
+      onOk: async (reason) => {
         try {
-          await mutations.cancel.mutateAsync(doc.id)
+          await mutations.cancel.mutateAsync({ id: doc.id, reason })
           message.success(`Đã hủy RFQ ${doc.no}.`)
         } catch (e) {
           fail(e, 'Không hủy được RFQ.')

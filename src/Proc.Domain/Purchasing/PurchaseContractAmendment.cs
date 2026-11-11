@@ -248,12 +248,20 @@ public sealed class PurchaseContractAmendment : AuditableEntity, ICompanyOwned, 
         RejectReason = Clean(reason);
     }
 
+    /// <summary>Lý do hủy (bắt buộc từ lát Z4a – design.md mục 20.2a); null với phiếu hủy trước bản 0.23.0.</summary>
+    public string? CancelReason { get; private set; }
+
     /// <summary>Hủy phụ lục nháp (giữ số và lịch sử).</summary>
-    /// <exception cref="BusinessRuleException">Khi không còn nháp.</exception>
-    public void Cancel()
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc thiếu lý do.</exception>
+    /// <param name="reason">Lý do hủy (bắt buộc, tối đa 500 ký tự) – quyền hủy do tầng Application kiểm tra (DocumentCancelPolicy).</param>
+    public void Cancel(string reason)
     {
         EnsureDraft();
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
+        if (text.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
         Status = ContractAmendmentStatus.Cancelled;
+        CancelReason = text;
     }
 
     /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>

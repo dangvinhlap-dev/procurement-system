@@ -44,7 +44,7 @@ public static class ContractEndpoints
         contracts.MapPost("/{id:guid}/terminate", (Guid id, TerminateContractRequest request, IContractService s, CancellationToken ct) =>
                 s.TerminateAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.ContractManage);
-        contracts.MapPost("/{id:guid}/cancel", (Guid id, IContractService s, CancellationToken ct) => s.CancelAsync(id, ct))
+        contracts.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, IContractService s, CancellationToken ct) => s.CancelAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.ContractManage);
 
         // Nhập Excel hợp đồng hiện hữu (lát B4c): nhập thành hợp đồng nháp của công ty đang làm việc, quyền như lập hợp đồng.
@@ -97,7 +97,7 @@ public static class ContractEndpoints
             .RequirePermission(Permissions.Purchase.ContractManage);
         amendments.MapPost("/{id:guid}/recall", (Guid id, IContractAmendmentService s, CancellationToken ct) => s.RecallAmendmentAsync(id, ct))
             .RequirePermission(Permissions.Purchase.ContractManage);
-        amendments.MapPost("/{id:guid}/cancel", (Guid id, IContractAmendmentService s, CancellationToken ct) => s.CancelAmendmentAsync(id, ct))
+        amendments.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, IContractAmendmentService s, CancellationToken ct) => s.CancelAmendmentAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.ContractManage);
         amendments.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IContractAmendmentService s, CancellationToken ct) =>
                 s.ApproveAmendmentAsync(id, request, ct))

@@ -129,7 +129,7 @@ public partial class ContractTests
         // Hợp đồng thứ hai cùng NCC trùng thời gian: lưu nháp được, gửi duyệt bị chặn; nối tiếp sau ngày hết hạn thì gửi được.
         var second = await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync("/api/contracts", Contract(f, Today.AddMonths(3), Today.AddYears(1)), Ct));
         Assert.Contains("trùng thời gian", await TitleAsync(await f.Client.PostAsync($"/api/contracts/{second.Id}/submit", null, Ct)));
-        await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{second.Id}/cancel", null, Ct));
+        await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{second.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct));
         var next = await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync("/api/contracts", Contract(f, Today.AddMonths(6).AddDays(1), Today.AddYears(1)), Ct));
         Assert.Equal("Submitted", (await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{next.Id}/submit", null, Ct))).Status);
 
@@ -224,7 +224,7 @@ public partial class ContractTests
         var extend = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
             Amendment(contract) with { NewValidTo = Today.AddYears(1).AddMonths(3) }, Ct));
         Assert.Contains("trùng thời gian", await TitleAsync(await f.Client.PostAsync($"/api/contract-amendments/{extend.Id}/submit", null, Ct)));
-        Assert.Equal("Cancelled", (await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsync($"/api/contract-amendments/{extend.Id}/cancel", null, Ct))).Status);
+        Assert.Equal("Cancelled", (await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contract-amendments/{extend.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct))).Status);
         var terms = await ReadAsync<ContractAmendmentDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/amendments",
             Amendment(contract) with { PenaltyTerms = "Phạt 0,2%/ngày chậm giao" }, Ct));
         Assert.Equal(($"{contract.No}-PL03", "Đổi chế tài"), (terms.No, terms.ChangeSummary));

@@ -23,7 +23,7 @@ import { withPendingApprovers } from '../../api/purchasing'
 import { formatDate, formatMoney, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/format'
 import { ApprovalHistory } from './ApprovalHistory'
 import { contractTermFields } from './contractTerms'
-import { approveContent, confirmReject, confirmSubmitWithPreview } from './useApprovalCommands'
+import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from './useApprovalCommands'
 import { confirmApprove } from './approvalDialogs'
 
 /** Đường dẫn trang đầy đủ một phụ lục (`AMENDMENT_PATH/:id`) – mở từ thông báo / Việc cần làm / Tra cứu chứng từ (chỉ biết Id phụ lục). */
@@ -270,8 +270,20 @@ export function ContractAmendmentDrawer({
       )}
       {!isNew && doc?.actions.canCancel && (
         <Button danger icon={<StopOutlined />}
-          onClick={() => simple(`Hủy phụ lục ${doc.no}?`, 'Hủy phụ lục', () => mutations.cancel.mutateAsync(doc.id), `Đã hủy phụ lục ${doc.no}.`, true,
-            'Phụ lục đã hủy giữ lại số và lịch sử; hợp đồng không đổi.')}>
+          // Hủy bắt buộc lý do (design.md mục 20.2a).
+          onClick={() => confirmWithReason(modal, message, {
+            title: `Hủy phụ lục ${doc.no}?`, description: 'Phụ lục đã hủy giữ lại số và lịch sử; hợp đồng không đổi.', label: 'Lý do hủy',
+            placeholder: 'Ví dụ: lập nhầm, đổi phương án', okText: 'Hủy phụ lục',
+            onOk: async (reason) => {
+              setError(null)
+              try {
+                await mutations.cancel.mutateAsync({ id: doc.id, reason })
+                message.success(`Đã hủy phụ lục ${doc.no}.`)
+              } catch (e) {
+                fail(e, 'Không hủy được.')
+              }
+            },
+          })}>
           Hủy phụ lục
         </Button>
       )}

@@ -147,7 +147,10 @@ public sealed class VolumeRebateService : IVolumeRebateService
     public async Task<VolumeRebateDto> CancelAsync(Guid id, CancelVolumeRebateRequest request, CancellationToken cancellationToken)
     {
         var agreement = await FindOwnAsync(id, cancellationToken);
-        agreement.Cancel(_clock.TodayInVietnam(), request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(
+            _scope, $"thỏa thuận {agreement.No}", agreement.Status == VolumeRebateStatus.Draft, agreement.CreatedBy, request.Reason);
+        agreement.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -503,7 +506,9 @@ public sealed class VolumeRebateService : IVolumeRebateService
             manageable && x.Status == VolumeRebateStatus.Draft,
             canApprove,
             manageable && x.Status == VolumeRebateStatus.Submitted,
-            manageable && x.Status is VolumeRebateStatus.Draft or VolumeRebateStatus.Active,
+            // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
+            manageable && x.Status is VolumeRebateStatus.Draft or VolumeRebateStatus.Active
+                && DocumentCancelPolicy.CanCancel(_scope, x.Status == VolumeRebateStatus.Draft, x.CreatedBy),
             manageable && x.Status != VolumeRebateStatus.Submitted,
             readOnly);
 

@@ -230,7 +230,7 @@ public partial class SourcingTests
         // Người chọn thầu không tự duyệt (dù có quyền); đang chờ duyệt thì không nhập báo giá, không hủy.
         Assert.Contains("không tự duyệt", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/approve", new ApprovalActionRequest(null), Ct)));
         Assert.Contains("đang nhận báo giá", await TitleAsync(await f.Client.PutAsJsonAsync($"/api/rfqs/{rfq.Id}/quotations/{b}", Quote(Q(cai, 1)), Ct)));
-        Assert.Contains("rút về", await TitleAsync(await f.Client.PostAsync($"/api/rfqs/{rfq.Id}/cancel", null, Ct)));
+        Assert.Contains("rút về", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct)));
 
         // Hội đồng từ chối (bắt buộc lý do) → về Đang nhận báo giá, giữ lựa chọn cũ; bổ sung báo giá, chọn lại.
         var approver = await ApproverAsync(f);

@@ -187,8 +187,9 @@ public class SupplierOnboardingTests
         onboarding = await ReadAsync<SupplierOnboardingDto>(await PostAsync(evaluator, $"/api/supplier-onboardings/{onboarding.Id}/evaluate", Save(supplier.Id, category.Id)));
         onboarding = await ReadAsync<SupplierOnboardingDto>(await PostAsync(proposer, $"/api/supplier-onboardings/{onboarding.Id}/propose",
             new ProposeSupplierOnboardingRequest(true, null)));
-        Assert.Contains("rút", await TitleAsync(await PostAsync(evaluator, $"/api/supplier-onboardings/{onboarding.Id}/cancel",
-            new CancelSupplierOnboardingRequest("Nhầm"))));
+        // Hồ sơ đã gửi duyệt: chỉ quản trị hủy (design.md mục 20.2a) – người lập bị chặn.
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, (await PostAsync(evaluator, $"/api/supplier-onboardings/{onboarding.Id}/cancel",
+            new CancelSupplierOnboardingRequest("Nhầm"))).StatusCode);
         await ReadAsync<SupplierChangeRequestDto>(await approver.PostAsJsonAsync(
             $"/api/supplier-change-requests/{onboarding.ChangeRequestId}/reject", new ApprovalActionRequest("Chưa đủ năng lực tài chính"), Ct));
         var rejected = await ReadAsync<SupplierOnboardingDto>(await evaluator.GetAsync($"/api/supplier-onboardings/{onboarding.Id}", Ct));

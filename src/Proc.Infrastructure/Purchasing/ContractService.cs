@@ -163,10 +163,12 @@ public sealed partial class ContractService : IContractService
     }
 
     /// <inheritdoc />
-    public async Task<ContractDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<ContractDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken)
     {
         var contract = await LoadAsync(id, cancellationToken);
-        contract.Cancel();
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        contract.Cancel(DocumentCancelPolicy.Authorize(
+            _scope, $"hợp đồng {contract.No}", contract.Status == ContractStatus.Draft, contract.CreatedBy, request.Reason));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -303,7 +305,8 @@ public sealed partial class ContractService : IContractService
         var isActive = contract.Status == ContractStatus.Active && readOnly is null;
         var actions = new ContractActions(
             canEdit, canEdit, canApprove, contract.Status == ContractStatus.Submitted && readOnly is null,
-            isActive && !hasOpenAmendment, canEdit, isActive && !hasOpenAmendment, readOnly);
+            isActive && !hasOpenAmendment, canEdit && DocumentCancelPolicy.CanCancel(_scope, true, contract.CreatedBy), isActive && !hasOpenAmendment,
+            readOnly);
         var today = _clock.TodayInVietnam();
         return new ContractDto(
             contract.Id, contract.No, company, contract.SupplierId, supplier.Code, supplier.Name, contract.PriceListId, priceList.No, priceList.Title,

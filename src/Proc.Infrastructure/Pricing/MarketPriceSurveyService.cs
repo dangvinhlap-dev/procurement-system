@@ -106,7 +106,9 @@ public sealed class MarketPriceSurveyService : IMarketPriceSurveyService
     public async Task<MarketSurveyDto> CancelAsync(Guid id, CancelMarketSurveyRequest request, CancellationToken cancellationToken)
     {
         var survey = await FindOwnAsync(id, cancellationToken);
-        survey.Cancel(_clock.TodayInVietnam(), request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(_scope, $"phiếu {survey.No}", survey.Status == MarketSurveyStatus.Draft, survey.CreatedBy, request.Reason);
+        survey.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -212,7 +214,9 @@ public sealed class MarketPriceSurveyService : IMarketPriceSurveyService
             : !_scope.HasPermission(Permissions.Pricing.PriceBankManage) ? "Bạn không có quyền lập, sửa phiếu khảo sát giá." : null;
         var actions = new MarketSurveyActions(
             readOnly is null && x.Status == MarketSurveyStatus.Draft,
-            readOnly is null && x.Status != MarketSurveyStatus.Cancelled,
+            // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
+            readOnly is null && x.Status != MarketSurveyStatus.Cancelled
+                && DocumentCancelPolicy.CanCancel(_scope, x.Status == MarketSurveyStatus.Draft, x.CreatedBy),
             readOnly);
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>
         {

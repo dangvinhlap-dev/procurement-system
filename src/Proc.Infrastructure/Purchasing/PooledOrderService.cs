@@ -159,7 +159,9 @@ public sealed class PooledOrderService : IPooledOrderService
     public async Task<PooledOrderDto> CancelAsync(Guid id, CancelPooledOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await FindOwnAsync(id, cancellationToken);
-        order.Cancel(_clock.TodayInVietnam(), request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(_scope, $"phiếu {order.No}", order.Status == PooledOrderStatus.Draft, order.CreatedBy, request.Reason);
+        order.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -467,7 +469,8 @@ public sealed class PooledOrderService : IPooledOrderService
             ? CreateOrdersBlockedReason(
                 companyIds.Where(c => x.Lines.Any(l => l.QtyFor(c) > 0)).ToList(), c => companies.GetValueOrDefault(c)?.Code ?? "?")
             : null;
-        var actions = new PooledOrderActions(editable, editable && blocked is null, editable, readOnly, blocked);
+        var actions = new PooledOrderActions(
+            editable, editable && blocked is null, editable && DocumentCancelPolicy.CanCancel(_scope, true, x.CreatedBy), readOnly, blocked);
 
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>
         {

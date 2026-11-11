@@ -132,7 +132,10 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
     public async Task<ReceiptConfirmationDto> CancelAsync(Guid id, CancelReceiptConfirmationRequest request, CancellationToken cancellationToken)
     {
         var confirmation = await LoadAsync(id, cancellationToken);
-        confirmation.Cancel(request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(
+            _scope, $"phiếu {confirmation.No}", confirmation.Status == ReceiptConfirmationStatus.Draft, confirmation.CreatedBy, request.Reason);
+        confirmation.Cancel(reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -332,6 +335,7 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
             _ => null,
         };
         return new ReceiptConfirmationActions(
-            draft && manage, draft && manage, draft && manage, confirmed && manage, (draft || confirmed) && manage, canAccept, reason);
+            draft && manage, draft && manage, draft && manage && DocumentCancelPolicy.CanCancel(_scope, true, c.CreatedBy), confirmed && manage,
+            (draft || confirmed) && manage, canAccept, reason);
     }
 }
