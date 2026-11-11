@@ -45,10 +45,17 @@ public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal 
 /// </param>
 /// <param name="SubmittedAt">Thời điểm gửi duyệt lượt của bước; null với dữ liệu trước bản 0.17.0.</param>
 /// <param name="SubmittedByName">Người gửi duyệt lượt của bước.</param>
+/// <param name="ActedByUserName">Tên đăng nhập người duyệt/từ chối – "Kiểm tra phê duyệt" (design.md mục 20.1 R4).</param>
+/// <param name="ActedByPosition">
+/// Chức vụ người duyệt/từ chối; người dùng chưa nhập chức vụ thì là tên các vai trò của họ tại công ty của bước (quyết định D5).
+/// </param>
+/// <param name="SubmittedByUserName">Tên đăng nhập người gửi duyệt lượt của bước.</param>
+/// <param name="SubmittedByPosition">Chức vụ người gửi duyệt (cùng cách lấy như <paramref name="ActedByPosition"/>).</param>
 public sealed record ApprovalStepDto(
     int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment, string? CompanyCode = null,
     int Stage = 1, IReadOnlyList<string>? NextApprovers = null, IReadOnlyList<string>? UpcomingApprovers = null, DateTimeOffset? SubmittedAt = null,
-    string? SubmittedByName = null);
+    string? SubmittedByName = null, string? ActedByUserName = null, string? ActedByPosition = null, string? SubmittedByUserName = null,
+    string? SubmittedByPosition = null);
 
 /// <summary>Một phiếu đang chờ người dùng hiện tại duyệt (Việc cần làm).</summary>
 /// <param name="DocType">Loại phiếu duyệt (PR, PO…).</param>

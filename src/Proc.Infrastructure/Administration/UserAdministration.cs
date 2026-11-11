@@ -59,7 +59,7 @@ public sealed class UserAdministration : IUserAdministration
         var users = await _db.Users
             .AsNoTracking()
             .OrderBy(u => u.UserName)
-            .Select(u => new { u.Id, u.UserName, u.FullName, u.Email, u.IsActive, u.LockoutEnd, u.CreatedAt })
+            .Select(u => new { u.Id, u.UserName, u.FullName, u.Email, u.IsActive, u.LockoutEnd, u.CreatedAt, u.Position })
             .ToListAsync(cancellationToken);
         var assignments = (await _db.UserCompanyRoles
                 .AsNoTracking()
@@ -77,7 +77,8 @@ public sealed class UserAdministration : IUserAdministration
                 u.LockoutEnd > now,
                 assignments[u.Id].Where(a => a.CompanyId == companyId).Select(a => a.RoleName).Order().ToList(),
                 assignments[u.Id].Select(a => a.CompanyCode).Distinct().Order(StringComparer.Ordinal).ToList(),
-                u.CreatedAt))
+                u.CreatedAt,
+                u.Position))
             .ToList();
     }
 
@@ -108,7 +109,8 @@ public sealed class UserAdministration : IUserAdministration
             await _grants.CanManageAccountAsync(id, cancellationToken),
             id == _scope.UserId,
             access,
-            companyCodes);
+            companyCodes,
+            user.Position);
     }
 
     /// <inheritdoc />
@@ -147,6 +149,7 @@ public sealed class UserAdministration : IUserAdministration
             UserName = request.UserName.Trim(),
             FullName = request.FullName.Trim(),
             Email = NormalizeEmail(request.Email),
+            Position = NormalizePosition(request.Position),
             CreatedAt = _clock.UtcNow,
             DefaultCompanyId = request.Access.RoleIds.Count > 0 ? companyId : null,
         };
@@ -176,6 +179,7 @@ public sealed class UserAdministration : IUserAdministration
 
         user.FullName = request.FullName.Trim();
         user.Email = NormalizeEmail(request.Email);
+        user.Position = NormalizePosition(request.Position);
         user.IsActive = request.IsActive;
         ThrowIfFailed(await _userManager.UpdateAsync(user));
         return await GetAsync(id, cancellationToken);
@@ -377,6 +381,9 @@ public sealed class UserAdministration : IUserAdministration
 
     /// <summary>Chuẩn hóa email: bỏ khoảng trắng, chuỗi rỗng thành null.</summary>
     private static string? NormalizeEmail(string? email) => string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+
+    /// <summary>Chuẩn hóa chức vụ: bỏ khoảng trắng, chuỗi rỗng thành null (nơi hiển thị dùng tên vai trò – design.md mục 20.2 D5).</summary>
+    private static string? NormalizePosition(string? position) => string.IsNullOrWhiteSpace(position) ? null : position.Trim();
 
     /// <summary>Lỗi của Identity (đã dịch tiếng Việt ở VietnameseIdentityErrorDescriber) chuyển thành lỗi nghiệp vụ 400.</summary>
     private static void ThrowIfFailed(IdentityResult result)

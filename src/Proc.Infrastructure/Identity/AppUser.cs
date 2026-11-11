@@ -28,6 +28,12 @@ public sealed class AppUser : IdentityUser<Guid>
     /// <summary>Họ tên hiển thị trên thanh menu, thanh trạng thái, nhật ký.</summary>
     public string FullName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Chức vụ (ví dụ "Trưởng ban Cung ứng") – hiện ở "Kiểm tra phê duyệt" của mọi chứng từ (design.md mục 20.1 R4, quyết định D5);
+    /// null/trống thì nơi hiển thị dùng tên vai trò của người dùng tại công ty của bước duyệt.
+    /// </summary>
+    public string? Position { get; set; }
+
     /// <summary>Công ty mặc định khi đăng nhập.</summary>
     public Guid? DefaultCompanyId { get; set; }
 

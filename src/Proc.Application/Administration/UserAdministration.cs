@@ -12,6 +12,7 @@ namespace Proc.Application.Administration;
 /// <param name="RoleNames">Tên các vai trò tại công ty đang làm việc (rỗng = không làm việc ở công ty này).</param>
 /// <param name="CompanyCodes">Mã mọi công ty người dùng được gán vai trò.</param>
 /// <param name="CreatedAt">Thời điểm tạo (UTC).</param>
+/// <param name="Position">Chức vụ (design.md mục 20.2 D5); null = chưa nhập.</param>
 public sealed record UserListItemDto(
     Guid Id,
     string UserName,
@@ -21,7 +22,8 @@ public sealed record UserListItemDto(
     bool IsLockedOut,
     IReadOnlyList<string> RoleNames,
     IReadOnlyList<string> CompanyCodes,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? Position = null);
 
 /// <summary>Vai trò, kho, nhóm hàng của một người dùng tại một công ty.</summary>
 /// <param name="RoleIds">Vai trò được gán; rỗng = không làm việc ở công ty này.</param>
@@ -46,6 +48,7 @@ public sealed record UserAccessDto(
 /// <param name="IsSelf">Là chính người đang xem (không tự sửa quyền của mình).</param>
 /// <param name="Access">Vai trò và phạm vi tại công ty đang làm việc.</param>
 /// <param name="CompanyCodes">Mã mọi công ty người dùng được gán vai trò.</param>
+/// <param name="Position">Chức vụ (design.md mục 20.2 D5); null = chưa nhập.</param>
 public sealed record UserDetailDto(
     Guid Id,
     string UserName,
@@ -57,7 +60,8 @@ public sealed record UserDetailDto(
     bool CanManageAccount,
     bool IsSelf,
     UserAccessDto Access,
-    IReadOnlyList<string> CompanyCodes);
+    IReadOnlyList<string> CompanyCodes,
+    string? Position = null);
 
 /// <summary>Vai trò chọn được khi gán cho người dùng.</summary>
 /// <param name="Id">Id vai trò.</param>
@@ -93,13 +97,15 @@ public sealed record UserDepartmentOptionDto(Guid Id, string Code, string Name);
 /// <param name="Email">Email (tùy chọn).</param>
 /// <param name="Password">Mật khẩu ban đầu.</param>
 /// <param name="Access">Vai trò và phạm vi tại công ty đang làm việc.</param>
-public sealed record CreateUserRequest(string UserName, string FullName, string? Email, string Password, UserAccessDto Access);
+/// <param name="Position">Chức vụ (tùy chọn – design.md mục 20.2 D5).</param>
+public sealed record CreateUserRequest(string UserName, string FullName, string? Email, string Password, UserAccessDto Access, string? Position = null);
 
 /// <summary>Sửa thông tin tài khoản.</summary>
 /// <param name="FullName">Họ tên.</param>
 /// <param name="Email">Email (tùy chọn).</param>
 /// <param name="IsActive">Còn sử dụng.</param>
-public sealed record UpdateUserRequest(string FullName, string? Email, bool IsActive);
+/// <param name="Position">Chức vụ (tùy chọn – design.md mục 20.2 D5); trống = xóa chức vụ.</param>
+public sealed record UpdateUserRequest(string FullName, string? Email, bool IsActive, string? Position = null);
 
 /// <summary>Quản trị đặt lại mật khẩu cho người dùng (quên mật khẩu, bị khóa).</summary>
 /// <param name="NewPassword">Mật khẩu mới.</param>

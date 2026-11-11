@@ -101,6 +101,7 @@ internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     {
         builder.ToTable("User");
         builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Position).HasMaxLength(100);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.DefaultCompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }

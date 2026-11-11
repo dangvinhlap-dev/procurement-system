@@ -534,8 +534,24 @@ internal sealed class ApprovalEngine
         var userIds = steps.Select(s => s.ActedBy).Concat(steps.Select(s => s.SubmittedBy)).Concat(steps.Select(s => s.OnBehalfOf))
             .OfType<Guid>().Distinct().ToList();
         var roles = await _db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
-        var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        var people = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName, u.UserName, u.Position })
+            .ToDictionaryAsync(u => u.Id, cancellationToken);
+        var users = people.ToDictionary(p => p.Key, p => p.Value.FullName);
         var companyIds = steps.Select(s => s.CompanyId).Distinct().ToList();
+        // Chức vụ trên "Kiểm tra phê duyệt" (design.md mục 20.1 R4): người dùng chưa nhập chức vụ thì hiện tên vai trò của họ tại công ty
+        // của bước (quyết định D5) – người duyệt chặng Tổng công ty mang vai trò ở Tổng công ty, không phải ở công ty của phiếu.
+        var roleNames = (await _db.UserCompanyRoles.AsNoTracking()
+                .Where(x => userIds.Contains(x.UserId) && companyIds.Contains(x.CompanyId))
+                .Select(x => new { x.UserId, x.CompanyId, RoleName = x.Role!.Name })
+                .ToListAsync(cancellationToken))
+            .ToLookup(x => (x.UserId, x.CompanyId), x => x.RoleName);
+        string? Position(Guid? userId, Guid companyId) =>
+            userId is not { } id || !people.TryGetValue(id, out var person) ? null
+            : !string.IsNullOrWhiteSpace(person.Position) ? person.Position
+            : roleNames[(id, companyId)].Order(StringComparer.Ordinal).ToList() is { Count: > 0 } names ? string.Join(", ", names)
+            : null;
+        string? Login(Guid? userId) => userId is { } id && people.TryGetValue(id, out var person) ? person.UserName : null;
         var companies = await _db.Companies.AsNoTracking().Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
         // Mọi bước còn chờ của lượt hiện tại đều tính người duyệt được (yêu cầu người dùng 03/11/2026: người duyệt cấp 1 thấy ai duyệt tiếp
         // sau mình): bước đang đến lượt → NextApprovers ("Chờ: …"), bước sau → UpcomingApprovers ("Sẽ duyệt: …"). Cùng điều kiện với
@@ -564,7 +580,8 @@ internal sealed class ApprovalEngine
                 s.ActedAt, s.Comment, companies.GetValueOrDefault(s.CompanyId), s.Stage,
                 activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 !activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
-                s.SubmittedAt, s.SubmittedBy is { } sb ? users.GetValueOrDefault(sb) : null))
+                s.SubmittedAt, s.SubmittedBy is { } sb ? users.GetValueOrDefault(sb) : null,
+                Login(s.ActedBy), Position(s.ActedBy, s.CompanyId), Login(s.SubmittedBy), Position(s.SubmittedBy, s.CompanyId)))
             .ToList();
     }
 }
