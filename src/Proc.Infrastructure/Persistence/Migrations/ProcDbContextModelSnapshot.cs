@@ -3307,6 +3307,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("ApprovalRound")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 

@@ -470,7 +470,11 @@ public sealed class PooledOrderService : IPooledOrderService
                 companyIds.Where(c => x.Lines.Any(l => l.QtyFor(c) > 0)).ToList(), c => companies.GetValueOrDefault(c)?.Code ?? "?")
             : null;
         var actions = new PooledOrderActions(
-            editable, editable && blocked is null, editable && DocumentCancelPolicy.CanCancel(_scope, true, x.CreatedBy), readOnly, blocked);
+            editable, editable && blocked is null,
+            // Nháp: người lập; đã tạo PO: quản trị hủy theo dây chuyền cùng các PO (người dùng chốt 11/11/2026 – design.md mục 20.2 E1).
+            editable && DocumentCancelPolicy.CanCancel(_scope, true, x.CreatedBy)
+                || headOffice && x.Status == PooledOrderStatus.Ordered && _scope.HasPermission(Permissions.System.DocumentCancel),
+            readOnly, blocked);
 
         var lines = x.Lines.OrderBy(l => l.LineNo).Select(l =>
         {

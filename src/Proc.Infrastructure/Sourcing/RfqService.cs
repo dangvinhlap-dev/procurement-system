@@ -577,7 +577,10 @@ public sealed class RfqService : IRfqService
                 && rfq.Suppliers.Any(s => s.PurchaseOrderId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
             // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
             rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null
-                && DocumentCancelPolicy.CanCancel(_scope, rfq.Status == RfqStatus.Draft, rfq.CreatedBy),
+                && DocumentCancelPolicy.CanCancel(_scope, rfq.Status == RfqStatus.Draft, rfq.CreatedBy)
+                // Đã chọn thầu / chờ duyệt kết quả: quản trị hủy theo dây chuyền (E2).
+                || rfq.Status is RfqStatus.Awarded or RfqStatus.AwardPending && items.Count == itemIds.Count
+                    && _scope.HasPermission(Permissions.System.DocumentCancel),
             readOnly,
             canApprove,
             rfq.IsAwaitingApproval && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward),

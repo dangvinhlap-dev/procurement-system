@@ -299,12 +299,17 @@ public sealed class PooledOrder : AuditableEntity, ICompanyOwned, IHasDocumentNu
     /// <summary>Hủy phiếu nháp – bắt buộc lý do.</summary>
     /// <param name="today">Hôm nay (giờ Việt Nam).</param>
     /// <param name="reason">Lý do.</param>
-    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc thiếu lý do.</exception>
-    public void Cancel(DateOnly today, string? reason)
+    /// <param name="inChain">
+    /// Hủy theo dây chuyền (người dùng chốt 11/11/2026, design.md mục 20.2 E1): quản trị hủy phiếu đã tạo PO thì các PO ở mọi công ty đã hủy
+    /// trước trong cùng giao dịch. Ngoài dây chuyền, phiếu đã tạo PO không hủy được.
+    /// </param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp (ngoài dây chuyền), đã hủy hoặc thiếu lý do.</exception>
+    public void Cancel(DateOnly today, string? reason, bool inChain = false)
     {
-        if (Status == PooledOrderStatus.Ordered)
-            throw new BusinessRuleException($"Phiếu {No} đã tạo PO – không hủy phiếu; PO nào sai thì hủy PO đó ở công ty của nó.");
-        EnsureDraft();
+        if (Status == PooledOrderStatus.Ordered && !inChain)
+            throw new BusinessRuleException($"Phiếu {No} đã tạo PO – hủy theo dây chuyền (hủy các PO đã tạo trước) bằng lệnh Hủy phiếu của quản trị.");
+        if (Status == PooledOrderStatus.Cancelled) throw new BusinessRuleException($"Phiếu {No} đã hủy.");
+        if (!inChain) EnsureDraft();
         var clean = Clean(reason) ?? throw new BusinessRuleException("Hãy nhập lý do hủy.");
         if (clean.Length > TextMaxLength) throw new BusinessRuleException($"Lý do tối đa {TextMaxLength} ký tự.");
         Status = PooledOrderStatus.Cancelled;

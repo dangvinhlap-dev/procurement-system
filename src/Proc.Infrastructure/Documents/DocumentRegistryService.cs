@@ -584,6 +584,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         (_, "Open") => "Đang tìm nguồn",
         (_, "Sent") => "Đang nhận báo giá",
         (_, "AwardPending") => "Chờ duyệt kết quả",
+        (_, "Ordered") => "Đã tạo PO",
         (_, "Awarded") => "Đã chọn thầu",
         _ => status,
     };

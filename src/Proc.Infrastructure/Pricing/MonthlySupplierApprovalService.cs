@@ -174,9 +174,31 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             .Where(x => x.ReplacesId == id && (x.Status == MonthlyApprovalStatus.Draft || x.Status == MonthlyApprovalStatus.Submitted))
             .Select(x => x.No).FirstOrDefaultAsync(cancellationToken);
         if (pending is not null) throw new BusinessRuleException($"Phiếu đang có phiếu điều chỉnh {pending} – hủy hoặc duyệt phiếu đó trước.");
+        if (await UsedByAsync(id, cancellationToken) is { } used)
+            throw new BusinessRuleException($"Phiếu {approval.No} đã được dùng cho {used} – không hủy được; dùng \"Điều chỉnh\" (design.md mục 20.2 E4).");
         approval.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Phiếu tháng đã được dùng chưa (người dùng chốt 11/11/2026, design.md mục 20.2 E4): có phiếu đặt hàng gộp hoặc PO (chưa hủy) lấy giá / NCC
+    /// theo phiếu thì không hủy – dùng Điều chỉnh. PO ở các công ty thành viên: bỏ filter công ty, chỉ đếm dòng PO trỏ vào dòng của phiếu này.
+    /// </summary>
+    /// <returns>Mô tả các phiếu đang dùng (tối đa 5 số), null khi chưa ai dùng.</returns>
+    private async Task<string?> UsedByAsync(Guid approvalId, CancellationToken cancellationToken)
+    {
+        var pooled = await _db.PooledOrders.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter])
+            .Where(p => p.MonthlyApprovalId == approvalId && p.Status != PooledOrderStatus.Cancelled).Select(p => p.No).Take(5).ToListAsync(cancellationToken);
+        var lineIds = _db.Set<MonthlySupplierApprovalLine>().Where(l => l.ApprovalId == approvalId).Select(l => l.Id);
+        var orders = await (
+                from ol in _db.Set<PurchaseOrderLine>()
+                join o in _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) on ol.OrderId equals o.Id
+                where ol.MonthlyApprovalLineId != null && lineIds.Contains(ol.MonthlyApprovalLineId.Value) && o.Status != ApprovalDocumentStatus.Cancelled
+                select o.No)
+            .Distinct().OrderBy(n => n).Take(5).ToListAsync(cancellationToken);
+        var all = pooled.Concat(orders).ToList();
+        return all.Count == 0 ? null : string.Join(", ", all);
     }
 
     /// <inheritdoc />
@@ -417,7 +439,9 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             manageable && x.Status == MonthlyApprovalStatus.Approved && replacedBy is null && x.Period >= currentMonth,
             // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
             manageable && (x.Status == MonthlyApprovalStatus.Draft || (x.Status == MonthlyApprovalStatus.Approved && replacedBy is null))
-                && DocumentCancelPolicy.CanCancel(_scope, x.Status == MonthlyApprovalStatus.Draft, x.CreatedBy),
+                && DocumentCancelPolicy.CanCancel(_scope, x.Status == MonthlyApprovalStatus.Draft, x.CreatedBy)
+                // Đã có DHG / PO dùng phiếu thì không hủy – dùng Điều chỉnh (E4).
+                && (x.Status == MonthlyApprovalStatus.Draft || await UsedByAsync(x.Id, cancellationToken) is null),
             manageable && x.Status is MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced && x.Period.AddMonths(1) >= currentMonth,
             readOnly);
 

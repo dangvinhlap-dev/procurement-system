@@ -2,23 +2,31 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
+using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
 
 /// <summary>
-/// Hủy dây chuyền PR → PO → phiếu xác nhận nhận hàng (lát Z4b, design.md mục 20.2 D3, 20.2a). Chuỗi dựng từ phiếu được chọn đi xuống các
-/// phiếu sau còn hiệu lực: PR → các PO có dòng lấy từ PR (chưa hủy) → các XNH của PO (chưa hủy). Hủy theo thứ tự ngược (XNH → PO → PR) trong
-/// một giao dịch, khóa dòng các phiếu để không ai lập phiếu sau xen vào giữa lúc hủy.
-/// <para>Người dùng chốt 11/11/2026: chuỗi đã có XNH <b>đã xác nhận</b> (hàng đã về) thì <b>chặn hủy</b> – chỉ điều chỉnh SL thực nhận hoặc
-/// đóng phần còn lại; XNH nháp vẫn hủy theo chuỗi.</para>
+/// Hủy dây chuyền (lát Z4b, Z4c – design.md mục 20.2 D3, 20.2a, E1–E4). Chuỗi dựng từ phiếu được chọn đi xuống các phiếu tạo ra từ nó còn
+/// hiệu lực, rồi hủy theo thứ tự ngược (phiếu cuối trước) trong một giao dịch có khóa dòng:
+/// <list type="bullet">
+/// <item>PR → các PO có dòng lấy từ PR → phiếu xác nhận nhận hàng (XNH) của các PO.</item>
+/// <item>PO → XNH. XNH → chính nó.</item>
+/// <item>Đặt hàng gộp (DHG) đã tạo PO → các PO ở mọi công ty → XNH (E1).</item>
+/// <item>RFQ → các PO tạo từ RFQ → XNH; hợp đồng, bảng giá tạo từ RFQ chỉ hủy kèm khi còn Nháp, đã duyệt/hiệu lực thì chặn (E2, E3).</item>
+/// </list>
+/// Người dùng chốt 11/11/2026: chuỗi đã có XNH <b>đã xác nhận</b> (hàng đã về) thì <b>chặn hủy</b> – chỉ điều chỉnh SL thực nhận hoặc đóng
+/// phần còn lại; XNH nháp vẫn hủy theo chuỗi.
 /// </summary>
 internal sealed class CancelChainService : ICancelChainService
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
+    private readonly IClock _clock;
     private readonly ApprovalEngine _approvals;
 
     /// <summary>Tạo service (ApprovalEngine tự tạo như các service phiếu khác – không đăng ký DI riêng).</summary>
@@ -26,19 +34,29 @@ internal sealed class CancelChainService : ICancelChainService
     {
         _db = db;
         _scope = scope;
+        _clock = clock;
         _approvals = new ApprovalEngine(db, scope, clock);
     }
 
-    /// <summary>Chuỗi đã nạp (entity đang theo dõi) theo thứ tự hủy.</summary>
-    private sealed record Chain(
-        List<GoodsReceiptConfirmation> Receipts, List<PurchaseOrder> Orders, PurchaseRequest? Request, List<string> Warnings);
+    /// <summary>Chuỗi đã nạp (entity đang theo dõi). Thứ tự hủy: XNH → PO → hợp đồng → bảng giá → phiếu gốc.</summary>
+    private sealed class Chain
+    {
+        public List<GoodsReceiptConfirmation> Receipts { get; } = [];
+        public List<PurchaseOrder> Orders { get; } = [];
+        public List<PurchaseContract> Contracts { get; } = [];
+        public List<SupplierPriceList> PriceLists { get; } = [];
+        public PurchaseRequest? Request { get; set; }
+        public PooledOrder? Pooled { get; set; }
+        public Rfq? Rfq { get; set; }
+        public List<string> Warnings { get; } = [];
+
+        /// <summary>Lý do chặn không phải quyền (phiếu sau đã duyệt/hiệu lực…).</summary>
+        public List<string> Blocks { get; } = [];
+    }
 
     /// <inheritdoc />
-    public async Task<CancelChainDto> PreviewAsync(string docType, Guid id, CancellationToken cancellationToken)
-    {
-        var chain = await BuildAsync(docType, id, cancellationToken);
-        return ToDto(chain);
-    }
+    public async Task<CancelChainDto> PreviewAsync(string docType, Guid id, CancellationToken cancellationToken) =>
+        ToDto(await BuildAsync(docType, id, cancellationToken));
 
     /// <inheritdoc />
     public async Task<CancelChainDto> CancelAsync(string docType, Guid id, CancelChainRequest request, CancellationToken cancellationToken)
@@ -46,17 +64,17 @@ internal sealed class CancelChainService : ICancelChainService
         var reason = request.Reason?.Trim();
         if (string.IsNullOrEmpty(reason)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
 
-        // Một giao dịch cho cả chuỗi (D3): một phiếu lỗi thì không hủy phiếu nào. Khóa phiếu gốc trước khi dựng chuỗi để PO/XNH lập cùng lúc
-        // (lập PO từ PR, xác nhận nhận hàng) phải chờ – chuỗi dựng ra là đầy đủ.
+        // Một giao dịch cho cả chuỗi (D3): một phiếu lỗi thì không hủy phiếu nào. Khóa phiếu gốc trước khi dựng chuỗi để phiếu sau lập cùng lúc
+        // (lập PO từ PR, tạo PO từ DHG/RFQ, xác nhận nhận hàng) phải chờ – chuỗi dựng ra là đầy đủ.
         await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         await LockRootAsync(docType, id, cancellationToken);
         var chain = await BuildAsync(docType, id, cancellationToken);
         await RowLocks.LockAsync<PurchaseOrder>(_db, chain.Orders.Select(o => o.Id), cancellationToken);
         var preview = ToDto(chain);
-        if (ConfirmedReceiptsBlock(chain) is { } confirmed) throw new BusinessRuleException(confirmed);
-        if (preview.BlockedReason is { } blocked) throw new ForbiddenAccessException(blocked);
+        if (Blocking(chain) is { } block) throw new BusinessRuleException(block);
+        if (preview.BlockedReason is { } denied) throw new ForbiddenAccessException(denied);
 
-        // Chỉ còn XNH nháp trong chuỗi (đã xác nhận thì bị chặn ở trên).
+        // Chỉ còn XNH nháp, hợp đồng/bảng giá nháp trong chuỗi (phiếu đã xác nhận/duyệt bị chặn ở trên).
         foreach (var receipt in chain.Receipts) receipt.Cancel(reason);
         foreach (var order in chain.Orders)
         {
@@ -64,10 +82,19 @@ internal sealed class CancelChainService : ICancelChainService
             await _approvals.SkipPendingAsync(order, cancellationToken);
         }
 
+        foreach (var contract in chain.Contracts) contract.Cancel(reason);
+        foreach (var list in chain.PriceLists) list.Cancel(reason);
         if (chain.Request is { } pr)
         {
             pr.Cancel(reason, inChain: true);
             await _approvals.SkipPendingAsync(pr, cancellationToken);
+        }
+
+        chain.Pooled?.Cancel(_clock.TodayInVietnam(), reason, inChain: true);
+        if (chain.Rfq is { } rfq)
+        {
+            rfq.Cancel(reason, inChain: true);
+            await _approvals.SkipPendingAsync(rfq, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -75,13 +102,18 @@ internal sealed class CancelChainService : ICancelChainService
         return preview;
     }
 
-    /// <summary>Khóa dòng phiếu được chọn (PR/PO/XNH) trong giao dịch đang mở.</summary>
+    /// <summary>Khóa dòng phiếu được chọn trong giao dịch đang mở.</summary>
     private Task LockRootAsync(string docType, Guid id, CancellationToken cancellationToken) => Normalize(docType) switch
     {
         DocumentTypes.PurchaseRequest => RowLocks.LockAsync<PurchaseRequest>(_db, [id], cancellationToken),
         DocumentTypes.PurchaseOrder => RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken),
+        PooledType => RowLocks.LockAsync<PooledOrder>(_db, [id], cancellationToken),
+        DocumentTypes.RequestForQuotation => RowLocks.LockAsync<Rfq>(_db, [id], cancellationToken),
         _ => Task.CompletedTask,
     };
+
+    /// <summary>Mã loại phiếu đặt hàng gộp (mã màn hình DHG – design.md mục 18.25 G7).</summary>
+    private const string PooledType = "DHG";
 
     /// <summary>Mã loại phiếu viết hoa, bỏ khoảng trắng.</summary>
     private static string Normalize(string docType) => (docType ?? string.Empty).Trim().ToUpperInvariant();
@@ -90,26 +122,27 @@ internal sealed class CancelChainService : ICancelChainService
     private async Task<Chain> BuildAsync(string docType, Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        var warnings = new List<string>();
+        var chain = new Chain();
         switch (Normalize(docType))
         {
             case DocumentTypes.PurchaseRequest:
             {
                 var pr = await _db.PurchaseRequests.Include(r => r.Lines).SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
                     ?? throw new NotFoundException("Không tìm thấy đề nghị mua hàng.");
-                EnsureNotCancelled(pr.Status, pr.No);
+                if (pr.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {pr.No} đã hủy.");
                 var lineIds = pr.Lines.Select(l => l.Id).ToList();
                 var orderIds = await _db.Set<PurchaseOrderLine>()
                     .Where(l => l.SourcePrLineId != null && lineIds.Contains(l.SourcePrLineId.Value)).Select(l => l.OrderId).Distinct()
                     .ToListAsync(cancellationToken);
-                var orders = await LoadOrdersAsync(orderIds, cancellationToken);
-                await WarnOtherRequestsAsync(orders, pr.Id, warnings, cancellationToken);
-                return new Chain(await LoadReceiptsAsync(orders, cancellationToken), orders, pr, warnings);
+                chain.Request = pr;
+                await AddOrdersAsync(chain, orderIds, allCompanies: false, cancellationToken);
+                await WarnOtherRequestsAsync(chain, pr.Id, cancellationToken);
+                break;
             }
             case DocumentTypes.PurchaseOrder:
             {
-                var orders = await LoadOrdersAsync([id], cancellationToken);
-                if (orders.Count == 0)
+                await AddOrdersAsync(chain, [id], allCompanies: false, cancellationToken);
+                if (chain.Orders.Count == 0)
                 {
                     // Không có trong danh sách chưa hủy: hoặc không thấy, hoặc đã hủy.
                     var no = await _db.PurchaseOrders.Where(o => o.Id == id).Select(o => o.No).SingleOrDefaultAsync(cancellationToken)
@@ -117,53 +150,96 @@ internal sealed class CancelChainService : ICancelChainService
                     throw new BusinessRuleException($"Phiếu {no} đã hủy.");
                 }
 
-                await WarnOtherRequestsAsync(orders, null, warnings, cancellationToken);
-                return new Chain(await LoadReceiptsAsync(orders, cancellationToken), orders, null, warnings);
+                await WarnOtherRequestsAsync(chain, null, cancellationToken);
+                break;
             }
             case DocumentTypes.GoodsReceiptConfirmation:
             {
                 var receipt = await _db.GoodsReceiptConfirmations.SingleOrDefaultAsync(c => c.Id == id, cancellationToken)
                     ?? throw new NotFoundException("Không tìm thấy phiếu xác nhận nhận hàng.");
                 if (receipt.Status == ReceiptConfirmationStatus.Cancelled) throw new BusinessRuleException($"Phiếu {receipt.No} đã hủy.");
-                return new Chain([receipt], [], null, warnings);
+                chain.Receipts.Add(receipt);
+                break;
+            }
+            case PooledType:
+            {
+                var pooled = await _db.PooledOrders.Include(p => p.Companies).SingleOrDefaultAsync(p => p.Id == id, cancellationToken)
+                    ?? throw new NotFoundException("Không tìm thấy phiếu đặt hàng gộp.");
+                if (pooled.Status == PooledOrderStatus.Cancelled) throw new BusinessRuleException($"Phiếu {pooled.No} đã hủy.");
+                chain.Pooled = pooled;
+                // PO của từng công ty thành viên (E1): chỉ bỏ filter công ty để lấy đúng các PO phiếu đã tạo.
+                await AddOrdersAsync(chain, pooled.Companies.Select(c => c.PurchaseOrderId).OfType<Guid>().ToList(), allCompanies: true, cancellationToken);
+                break;
+            }
+            case DocumentTypes.RequestForQuotation:
+            {
+                var rfq = await _db.Rfqs.Include(r => r.Suppliers).SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
+                    ?? throw new NotFoundException("Không tìm thấy yêu cầu báo giá.");
+                if (rfq.Status == RfqStatus.Cancelled) throw new BusinessRuleException($"RFQ {rfq.No} đã hủy.");
+                chain.Rfq = rfq;
+                await AddOrdersAsync(chain, rfq.Suppliers.Select(s => s.PurchaseOrderId).OfType<Guid>().ToList(), allCompanies: false, cancellationToken);
+                await AddRfqContractsAndPriceListsAsync(chain, rfq, cancellationToken);
+                break;
             }
             default:
-                throw new BusinessRuleException($"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (đợt đầu: PR, PO, phiếu xác nhận nhận hàng).");
+                throw new BusinessRuleException(
+                    $"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (PR, PO, phiếu xác nhận nhận hàng, đặt hàng gộp, RFQ).");
         }
+
+        return chain;
     }
 
-    /// <summary>Chặn khi phiếu gốc đã hủy.</summary>
-    private static void EnsureNotCancelled(ApprovalDocumentStatus status, string no)
+    /// <summary>Nạp các PO chưa hủy (kèm dòng) và XNH chưa hủy của chúng vào chuỗi.</summary>
+    /// <param name="chain">Chuỗi.</param>
+    /// <param name="ids">Id PO.</param>
+    /// <param name="allCompanies">PO ở nhiều công ty (đặt hàng gộp) – bỏ filter công ty, chỉ lấy đúng Id đã ghi trên phiếu gốc.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    private async Task AddOrdersAsync(Chain chain, IReadOnlyCollection<Guid> ids, bool allCompanies, CancellationToken cancellationToken)
     {
-        if (status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {no} đã hủy.");
-    }
-
-    /// <summary>Nạp các PO chưa hủy (kèm dòng) theo Id, thứ tự số phiếu.</summary>
-    private async Task<List<PurchaseOrder>> LoadOrdersAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
-        ids.Count == 0
-            ? []
-            : await _db.PurchaseOrders.Include(o => o.Lines)
-                .Where(o => ids.Contains(o.Id) && o.Status != ApprovalDocumentStatus.Cancelled)
-                .OrderByDescending(o => o.No).ToListAsync(cancellationToken);
-
-    /// <summary>Nạp các phiếu xác nhận nhận hàng chưa hủy của các PO, phiếu mới trước (hủy trước).</summary>
-    private async Task<List<GoodsReceiptConfirmation>> LoadReceiptsAsync(List<PurchaseOrder> orders, CancellationToken cancellationToken)
-    {
-        var ids = orders.Select(o => o.Id).ToList();
-        return ids.Count == 0
-            ? []
-            : await _db.GoodsReceiptConfirmations
-                .Where(c => ids.Contains(c.PurchaseOrderId) && c.Status != ReceiptConfirmationStatus.Cancelled)
-                .OrderByDescending(c => c.No).ToListAsync(cancellationToken);
+        if (ids.Count == 0) return;
+        var orders = allCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
+        chain.Orders.AddRange(await orders.Include(o => o.Lines)
+            .Where(o => ids.Contains(o.Id) && o.Status != ApprovalDocumentStatus.Cancelled)
+            .OrderByDescending(o => o.No).ToListAsync(cancellationToken));
+        var orderIds = chain.Orders.Select(o => o.Id).ToList();
+        if (orderIds.Count == 0) return;
+        var receipts = allCompanies ? _db.GoodsReceiptConfirmations.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.GoodsReceiptConfirmations;
+        chain.Receipts.AddRange(await receipts
+            .Where(c => orderIds.Contains(c.PurchaseOrderId) && c.Status != ReceiptConfirmationStatus.Cancelled)
+            .OrderByDescending(c => c.No).ToListAsync(cancellationToken));
     }
 
     /// <summary>
-    /// PO gộp dòng từ nhiều PR (D3): hủy PO thì hủy cả PO – các PR khác (ngoài PR đang hủy) không bị hủy nhưng SL của chúng trở về "còn lại
-    /// chưa đặt"; hộp thoại nêu rõ để người hủy biết.
+    /// Hợp đồng, bảng giá tạo từ RFQ (E2): còn Nháp thì hủy kèm; đã gửi duyệt / hiệu lực thì chặn – hợp đồng hiệu lực dùng "Chấm dứt", bảng giá
+    /// hiệu lực dùng "Ngừng áp dụng" (E3), vì PO đã có thể lấy giá theo chúng.
     /// </summary>
-    private async Task WarnOtherRequestsAsync(List<PurchaseOrder> orders, Guid? exceptRequestId, List<string> warnings, CancellationToken cancellationToken)
+    private async Task AddRfqContractsAndPriceListsAsync(Chain chain, Rfq rfq, CancellationToken cancellationToken)
     {
-        var prLineIds = orders.SelectMany(o => o.Lines).Select(l => l.SourcePrLineId).OfType<Guid>().Distinct().ToList();
+        var contractIds = rfq.Suppliers.Select(s => s.ContractId).OfType<Guid>().ToList();
+        foreach (var contract in await _db.PurchaseContracts.Where(c => contractIds.Contains(c.Id) && c.Status != ContractStatus.Cancelled)
+                     .OrderByDescending(c => c.No).ToListAsync(cancellationToken))
+        {
+            if (contract.Status == ContractStatus.Draft) chain.Contracts.Add(contract);
+            else chain.Blocks.Add($"hợp đồng {contract.No} tạo từ RFQ đã gửi duyệt / hiệu lực – xử lý riêng (Chấm dứt hợp đồng)");
+        }
+
+        var listIds = rfq.Suppliers.Select(s => s.PriceListId).OfType<Guid>().ToList();
+        foreach (var list in await _db.SupplierPriceLists.IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+                     .Where(p => listIds.Contains(p.Id) && p.Status != PriceListStatus.Cancelled)
+                     .OrderByDescending(p => p.No).ToListAsync(cancellationToken))
+        {
+            if (list.Status == PriceListStatus.Draft) chain.PriceLists.Add(list);
+            else chain.Blocks.Add($"bảng giá {list.No} tạo từ RFQ đã gửi duyệt / hiệu lực – xử lý riêng (Ngừng áp dụng)");
+        }
+    }
+
+    /// <summary>
+    /// PO gộp dòng từ nhiều PR (D3): hủy PO thì hủy cả PO – PR nguồn ngoài PR đang hủy không bị hủy nhưng SL của chúng trở về "còn lại chưa
+    /// đặt"; hộp thoại nêu rõ để người hủy biết.
+    /// </summary>
+    private async Task WarnOtherRequestsAsync(Chain chain, Guid? exceptRequestId, CancellationToken cancellationToken)
+    {
+        var prLineIds = chain.Orders.SelectMany(o => o.Lines).Select(l => l.SourcePrLineId).OfType<Guid>().Distinct().ToList();
         if (prLineIds.Count == 0) return;
         var others = await (
                 from l in _db.Set<PurchaseRequestLine>()
@@ -172,8 +248,8 @@ internal sealed class CancelChainService : ICancelChainService
                 select r.No)
             .Distinct().OrderBy(n => n).ToListAsync(cancellationToken);
         if (others.Count > 0)
-            warnings.Add((exceptRequestId is null ? $"PO có dòng lấy từ PR {string.Join(", ", others)}" : $"PO trong chuỗi có dòng lấy từ PR khác: {string.Join(", ", others)}")
-                         + " – PR không bị hủy, SL đã đặt trở về \"còn lại chưa đặt\" để lập PO khác.");
+            chain.Warnings.Add((exceptRequestId is null ? $"PO có dòng lấy từ PR {string.Join(", ", others)}" : $"PO trong chuỗi có dòng lấy từ PR khác: {string.Join(", ", others)}")
+                               + " – PR không bị hủy, SL đã đặt trở về \"còn lại chưa đặt\" để lập PO khác.");
     }
 
     /// <summary>Đổi chuỗi sang DTO kèm kiểm tra quyền từng phiếu (design.md mục 20.2a).</summary>
@@ -182,6 +258,7 @@ internal sealed class CancelChainService : ICancelChainService
         var items = new List<CancelChainItemDto>();
         var denied = new List<string>();
         var orderNos = chain.Orders.ToDictionary(o => o.Id, o => o.No);
+        var origin = chain.Request?.No ?? chain.Pooled?.No ?? chain.Rfq?.No;
 
         void Add(string docType, string typeName, Guid docId, string no, string status, bool isDraft, Guid? createdBy, string? note)
         {
@@ -194,12 +271,21 @@ internal sealed class CancelChainService : ICancelChainService
                 c.Status == ReceiptConfirmationStatus.Draft, c.CreatedBy, $"Nhận hàng của {orderNos.GetValueOrDefault(c.PurchaseOrderId, "PO")}");
         foreach (var o in chain.Orders)
             Add(DocumentTypes.PurchaseOrder, "Đơn mua hàng", o.Id, o.No, o.Status.ToString(), o.Status == ApprovalDocumentStatus.Draft, o.CreatedBy,
-                chain.Request is { } pr ? $"Có dòng lấy từ {pr.No}" : null);
+                origin is null ? null : chain.Request is not null ? $"Có dòng lấy từ {origin}" : $"Tạo từ {origin}");
+        foreach (var c in chain.Contracts)
+            Add(DocumentTypes.Contract, "Hợp đồng nguyên tắc", c.Id, c.No, c.Status.ToString(), true, c.CreatedBy, $"Tạo từ {origin}");
+        foreach (var p in chain.PriceLists)
+            Add("PRL", "Bảng giá NCC", p.Id, p.No, p.Status.ToString(), true, p.CreatedBy, $"Tạo từ {origin}");
         if (chain.Request is { } request)
             Add(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", request.Id, request.No, request.Status.ToString(),
                 request.Status == ApprovalDocumentStatus.Draft, request.CreatedBy, null);
+        if (chain.Pooled is { } pooled)
+            Add(PooledType, "Đặt hàng gộp", pooled.Id, pooled.No, pooled.Status.ToString(), pooled.Status == PooledOrderStatus.Draft, pooled.CreatedBy,
+                chain.Orders.Count > 0 ? $"Đã tạo {chain.Orders.Count} PO ở các công ty" : null);
+        if (chain.Rfq is { } rfq)
+            Add(DocumentTypes.RequestForQuotation, "Yêu cầu báo giá", rfq.Id, rfq.No, rfq.Status.ToString(), rfq.Status == RfqStatus.Draft, rfq.CreatedBy, null);
 
-        var blocked = ConfirmedReceiptsBlock(chain) ?? (denied.Count == 0
+        var blocked = Blocking(chain) ?? (denied.Count == 0
             ? null
             : $"Bạn không đủ quyền hủy {string.Join(", ", denied)}: phiếu đã gửi duyệt trở đi chỉ quản trị (quyền Hủy phiếu) hủy được; phiếu nháp " +
               "chỉ người lập (design.md mục 20.2a).");
@@ -207,16 +293,16 @@ internal sealed class CancelChainService : ICancelChainService
     }
 
     /// <summary>
-    /// Chặn hủy khi chuỗi có XNH đã xác nhận (người dùng chốt 11/11/2026): hàng đã về thì không hủy chứng từ – dùng "Điều chỉnh SL thực nhận"
-    /// trên XNH hoặc "Đóng phần còn lại" trên PO.
+    /// Lý do chặn không phải quyền: XNH đã xác nhận (người dùng chốt 11/11/2026 – hàng đã về thì chỉ điều chỉnh), hợp đồng / bảng giá tạo từ
+    /// RFQ đã duyệt (E2).
     /// </summary>
-    /// <returns>Câu báo chặn; null khi không có XNH đã xác nhận.</returns>
-    private static string? ConfirmedReceiptsBlock(Chain chain)
+    /// <returns>Câu báo chặn; null khi không có.</returns>
+    private static string? Blocking(Chain chain)
     {
         var confirmed = chain.Receipts.Where(c => c.Status == ReceiptConfirmationStatus.Confirmed).Select(c => c.No).ToList();
-        return confirmed.Count == 0
-            ? null
-            : $"Chuỗi đã có phiếu nhận hàng đã xác nhận {string.Join(", ", confirmed)} – không hủy được; dùng \"Điều chỉnh SL thực nhận\" trên " +
-              "phiếu nhận hàng hoặc \"Đóng phần còn lại\" trên PO.";
+        if (confirmed.Count > 0)
+            return $"Chuỗi đã có phiếu nhận hàng đã xác nhận {string.Join(", ", confirmed)} – không hủy được; dùng \"Điều chỉnh SL thực nhận\" trên " +
+                   "phiếu nhận hàng hoặc \"Đóng phần còn lại\" trên PO.";
+        return chain.Blocks.Count > 0 ? $"Không hủy được: {string.Join("; ", chain.Blocks)}." : null;
     }
 }

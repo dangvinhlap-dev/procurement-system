@@ -2371,6 +2371,22 @@ nhận của PO, ngân sách đã dùng tính từ chứng từ chưa hủy nên
 Hủy của PR, PO, XNH (`cancelChainDialog.tsx`) hiện bảng "Trình tự hủy" + cảnh báo + ô lý do; không đủ quyền / bị chặn thì khóa nút. Đợt sau:
 chuỗi RFQ → PO / bảng giá / hợp đồng; bảng giá → hợp đồng → phụ lục; phiếu tháng / đặt hàng gộp → PO.
 
+**Người dùng chốt 11/11/2026 (Z4c – mở rộng hủy dây chuyền):**
+
+| # | Quyết định |
+| --- | --- |
+| E1 | **Đặt hàng gộp (DHG) đã tạo PO**: quản trị hủy DHG thì hủy luôn các PO nó tạo ở **mọi công ty** (kèm XNH nháp) trong một giao dịch; có PO đã có XNH đã xác nhận thì chặn cả chuỗi. Thay quy tắc cũ "không hủy DHG, hủy từng PO ở công ty của nó". |
+| E2 | **RFQ đã chọn thầu** hủy được theo chuỗi: hủy các PO tạo từ RFQ (kèm XNH nháp); bảng giá, hợp đồng tạo từ RFQ chỉ hủy kèm khi còn **Nháp** – đã duyệt / hiệu lực thì chặn, hướng dẫn xử lý riêng. |
+| E3 | **Bảng giá, hợp đồng đã hiệu lực** không hủy – dùng "Chấm dứt" / ngừng áp dụng (PO đã lấy giá theo chúng). |
+| E4 | **Phiếu duyệt NCC và giá tháng (GTH) đã duyệt** chặn hủy khi đã có DHG hoặc PO (chưa hủy) dùng phiếu – dùng "Điều chỉnh". |
+
+**Lát Z4c – đã làm (11/11/2026):** `CancelChainService` thêm chuỗi **DHG → PO (mọi công ty) → XNH** (E1; PO, XNH ở công ty thành viên đọc
+bỏ filter công ty theo đúng Id phiếu đã tạo) và **RFQ → PO → XNH; hợp đồng, bảng giá tạo từ RFQ** (E2: nháp thì hủy kèm, đã gửi duyệt /
+hiệu lực thì chặn kèm hướng dẫn "Chấm dứt" / "Ngừng áp dụng" – E3). Domain: `PooledOrder.Cancel(…, inChain)`, `Rfq.Cancel(reason, inChain)`
+(đã chọn thầu / chờ duyệt kết quả), bảng giá thêm trạng thái **Đã hủy** (`PriceListStatus.Cancelled = 5`) + lý do hủy (migration
+`V0_23_0_HuyBangGia`). E4: `MonthlySupplierApprovalService` chặn hủy (và tắt nút) khi có DHG / PO chưa hủy dùng phiếu. Giao diện: Hủy
+phiếu của DHG, RFQ dùng hộp thoại trình tự (`cancelChainDialog.tsx`). Thứ tự hủy trong chuỗi: XNH → PO → hợp đồng → bảng giá → phiếu gốc.
+
 ### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,

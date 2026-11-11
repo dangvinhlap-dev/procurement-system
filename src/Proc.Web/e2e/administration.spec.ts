@@ -37,7 +37,10 @@ test.describe('quản trị hệ thống', () => {
     await switchCompany(page, 'BHA')
     await openScreen(page, 'Người dùng')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
+    // Lọc theo tên đăng nhập: lưới cuộn ảo không vẽ dòng ngoài khung nhìn khi CSDL test đã nhiều tài khoản.
+    await page.getByLabel('Tìm kiếm', { exact: true }).fill(THUKHO_BHA.userName)
     await expect(gridRow(page, THUKHO_BHA.userName)).toBeVisible()
+    await page.getByLabel('Tìm kiếm', { exact: true }).fill('')
 
     const userName = `e2e.${unique()}`
     await page.getByRole('button', { name: 'Tạo mới' }).click()
@@ -87,6 +90,8 @@ test.describe('quản trị hệ thống', () => {
     await expect(gridRow(page, THUKHO_BHA.userName)).toHaveCount(0)
     await page.getByLabel('Phạm vi').click()
     await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: 'Tất cả tài khoản' }).click()
+    // CSDL test tích lũy hàng trăm tài khoản qua các lượt e2e – lưới cuộn ảo không vẽ dòng ngoài khung nhìn, nên lọc theo tên đăng nhập.
+    await page.getByLabel('Tìm kiếm', { exact: true }).fill(THUKHO_BHA.userName)
     await expect(gridRow(page, THUKHO_BHA.userName)).toContainText('BHA')
   })
 

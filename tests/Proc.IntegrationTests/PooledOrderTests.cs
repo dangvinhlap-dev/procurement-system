@@ -184,5 +184,23 @@ public class PooledOrderTests
         Assert.Equal("Cancelled", (await ReadAsync<PooledOrderDto>(await head.PostAsJsonAsync($"{Url}/{draft.Id}/cancel", new CancelPooledOrderRequest("Lập trùng"), Ct))).Status);
         var list = await ReadAsync<List<PooledOrderListItemDto>>(await head.GetAsync(Url, Ct));
         Assert.Equal((2, 1_200_000m), (list.Single(x => x.Id == order.Id).OrderCount, list.Single(x => x.Id == order.Id).TotalAmount));
+
+        // E4 (người dùng chốt 11/11/2026): phiếu tháng đã có DHG / PO dùng thì không hủy – dùng Điều chỉnh.
+        Assert.False((await ReadAsync<MonthlyApprovalDto>(await head.GetAsync($"{GthUrl}/{gth.Id}", Ct))).Actions.CanCancel);
+        Assert.Contains("đã được dùng", await TitleAsync(await head.PostAsJsonAsync($"{GthUrl}/{gth.Id}/cancel", new CancelMonthlyApprovalRequest("Thử"), Ct)));
+
+        // E1: quản trị hủy DHG đã tạo PO theo dây chuyền – PO của A, B hủy trước, rồi phiếu DHG; một giao dịch.
+        Assert.True((await ReadAsync<PooledOrderDto>(await head.GetAsync($"{Url}/{order.Id}", Ct))).Actions.CanCancel);
+        var chain = await ReadAsync<CancelChainDto>(await head.GetAsync($"/api/cancel-chain/DHG/{order.Id}", Ct));
+        Assert.Null(chain.BlockedReason);
+        Assert.Equal(["PO", "PO", "DHG"], chain.Items.Select(i => i.DocType));
+        Assert.Equal(order.No, chain.Items[^1].No);
+        await ReadAsync<CancelChainDto>(await head.PostAsJsonAsync($"/api/cancel-chain/DHG/{order.Id}", new CancelChainRequest("Đổi NCC chính"), Ct));
+        Assert.Equal("Cancelled", (await ReadAsync<PooledOrderDto>(await head.GetAsync($"{Url}/{order.Id}", Ct))).Status);
+        Assert.Equal("Cancelled", (await ReadAsync<PurchaseOrderDto>(await clientA.GetAsync($"/api/purchase-orders/{poA.Id}", Ct))).Status);
+        Assert.Equal("Cancelled", (await ReadAsync<PurchaseOrderDto>(await clientB.GetAsync($"/api/purchase-orders/{poB.Id}", Ct))).Status);
+
+        // Không còn DHG / PO dùng phiếu tháng → hủy được.
+        Assert.True((await ReadAsync<MonthlyApprovalDto>(await head.GetAsync($"{GthUrl}/{gth.Id}", Ct))).Actions.CanCancel);
     }
 }

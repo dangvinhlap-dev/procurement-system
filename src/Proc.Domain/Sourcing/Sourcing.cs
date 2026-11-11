@@ -772,13 +772,19 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <summary>Lý do hủy (bắt buộc từ lát Z4a – design.md mục 20.2a); null với phiếu hủy trước bản 0.23.0.</summary>
     public string? CancelReason { get; private set; }
 
-    /// <summary>Hủy RFQ (Nháp hoặc Đã gửi).</summary>
-    /// <exception cref="BusinessRuleException">Khi đang chờ duyệt kết quả, đã chọn thầu, đã hủy hoặc thiếu lý do.</exception>
+    /// <summary>
+    /// Hủy RFQ. Ngoài dây chuyền chỉ hủy được khi Nháp hoặc Đã gửi; <paramref name="inChain"/> = quản trị hủy theo dây chuyền (người dùng chốt
+    /// 11/11/2026, design.md mục 20.2 E2) – RFQ chờ duyệt kết quả hoặc đã chọn thầu cũng hủy được, các phiếu tạo từ RFQ đã hủy trước.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi đã hủy, đang chờ duyệt kết quả / đã chọn thầu (ngoài dây chuyền) hoặc thiếu lý do.</exception>
     /// <param name="reason">Lý do hủy (bắt buộc, tối đa 500 ký tự) – quyền hủy do tầng Application kiểm tra (DocumentCancelPolicy).</param>
-    public void Cancel(string reason)
+    /// <param name="inChain">Đang hủy theo dây chuyền.</param>
+    public void Cancel(string reason, bool inChain = false)
     {
-        if (Status == RfqStatus.AwardPending) throw new BusinessRuleException($"RFQ {No} đang chờ duyệt kết quả chọn thầu – rút về trước khi hủy.");
-        if (Status is RfqStatus.Awarded or RfqStatus.Cancelled) throw new BusinessRuleException($"RFQ {No} đã chọn thầu hoặc đã hủy.");
+        if (Status == RfqStatus.Cancelled) throw new BusinessRuleException($"RFQ {No} đã hủy.");
+        if (!inChain && Status == RfqStatus.AwardPending)
+            throw new BusinessRuleException($"RFQ {No} đang chờ duyệt kết quả chọn thầu – rút về trước khi hủy.");
+        if (!inChain && Status == RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {No} đã chọn thầu hoặc đã hủy.");
         var text = reason?.Trim();
         if (string.IsNullOrEmpty(text)) throw new BusinessRuleException("Hãy nhập lý do hủy.");
         if (text.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
