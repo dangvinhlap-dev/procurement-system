@@ -18,6 +18,7 @@ import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { ConstructionProjectListPage } from './pages/purchasing/ConstructionProjectListPage'
+import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPage'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
@@ -105,6 +106,7 @@ const implemented: Record<string, ReactNode> = {
   POTRK: <DeliveryTrackingPage />,
   BUDG: <BudgetListPage />,
   CTDT: <ConstructionProjectListPage />,
+  DVM: <PurchasingUnitListPage />,
   KHN: <DemandPlanListPage />,
   KHNTH: <DemandSummaryPage />,
   DHG: <PooledOrderListPage />,
