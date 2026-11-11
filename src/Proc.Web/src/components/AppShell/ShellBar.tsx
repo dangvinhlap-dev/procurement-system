@@ -93,18 +93,11 @@ export function ShellBar({
   // Đã dùng mũi tên chọn màn hình sau lần gõ cuối – khi đó Enter mở màn hình đó dù từ khóa có `*`.
   const navigated = useRef(false)
 
-  // Nhóm vẫn hiện để giữ bố cục cố định; không có màn hình được phép thì báo rõ trong menu. Riêng nhóm Kho: phân hệ kho tắt từ 0.22.0
-  // (design.md mục 19.4) nên không còn màn hình nào thì ẩn hẳn nhóm.
-  const groups = useMemo(
-    () => moduleGroups.filter((g) => g.key !== 'inventory' || screens.some((s) => s.group === 'inventory')),
-    [screens],
-  )
-  const menuItemsOf = (group: ModuleKey): MenuItems => {
-    const items: MenuItems = screens
-      .filter((s) => s.group === group)
-      .map((s) => ({ key: s.path, icon: s.icon, label: `${s.navLabel}  (${s.code})` }))
-    return items.length > 0 ? items : [{ key: `none-${group}`, label: 'Không có màn hình được phép', disabled: true }]
-  }
+  // Chỉ hiện nhóm có ít nhất một màn hình được phép – giống cây điều hướng. Trước đây nhóm trống vẫn hiện và báo "Không có màn hình được
+  // phép"; người dùng test 0.22.0 (bmi.kho thấy "Đấu thầu", "Báo cáo" bấm vào trống) yêu cầu ẩn hẳn (11/11/2026).
+  const groups = useMemo(() => moduleGroups.filter((g) => screens.some((s) => s.group === g.key)), [screens])
+  const menuItemsOf = (group: ModuleKey): MenuItems =>
+    screens.filter((s) => s.group === group).map((s) => ({ key: s.path, icon: s.icon, label: `${s.navLabel}  (${s.code})` }))
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null)
   const buttons = useRef(new Map<ModuleKey, HTMLButtonElement>())
 
