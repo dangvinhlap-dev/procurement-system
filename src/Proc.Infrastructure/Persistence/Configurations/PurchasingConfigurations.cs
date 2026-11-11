@@ -159,6 +159,8 @@ internal sealed class PurchaseRequestLineConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(x => new { x.RequestId, x.LineNo });
         // Số lượng numeric(18,4), hệ số numeric(18,6), đơn giá numeric(19,6), tiền numeric(19,2) – CLAUDE.md mục 4.
         builder.Property(x => x.Qty).HasPrecision(18, 4);
+        builder.Property(x => x.RequiredQty).HasPrecision(18, 4);
+        builder.Property(x => x.StockQty).HasPrecision(18, 4);
         builder.Property(x => x.UomFactor).HasPrecision(18, 6);
         builder.Property(x => x.BaseQty).HasPrecision(18, 4);
         builder.Property(x => x.EstPrice).HasPrecision(19, 6);

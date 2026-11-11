@@ -197,6 +197,78 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<PurchaseRequestDto> EnterStockAsync(Guid id, EnterPurchaseRequestStockRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        // Khóa PR: hai thủ kho cùng nhập, hoặc nhập trong lúc rút về nháp, không ghi đè nhau.
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        await RowLocks.LockAsync<PurchaseRequest>(_db, [id], cancellationToken);
+        var pr = await LoadAsync(id, cancellationToken);
+        await EnsureItemsVisibleAsync(pr, cancellationToken);
+        if (await EnterStockBlockerAsync(pr, cancellationToken) is { } blocker) throw new BusinessRuleException(blocker);
+        if (request.Lines.GroupBy(l => l.LineId).Any(g => g.Count() > 1)) throw new BusinessRuleException("Mỗi dòng chỉ nhập tồn một lần.");
+        pr.EnterStock(request.Lines.ToDictionary(l => l.LineId, l => l.StockQty),
+            _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập."), _clock.UtcNow);
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lý do thủ kho chưa nhập tồn được trên PR (lát Y3b, design.md mục 19.3); null = nhập được. Phạm vi kho kiểm tra theo nơi nhận của
+    /// phiếu (thủ kho của nơi nhận – Q2). Đã có cấp duyệt trong lượt thì khóa (design.md mục 20.1 – đã duyệt thì không sửa).
+    /// </summary>
+    /// <exception cref="ForbiddenAccessException">Khi không có quyền nhập tồn hoặc nơi nhận ngoài phạm vi kho.</exception>
+    private async Task<string?> EnterStockBlockerAsync(PurchaseRequest pr, CancellationToken cancellationToken)
+    {
+        if (!_scope.HasPermission(Permissions.Purchase.PrEnterStock)) throw new ForbiddenAccessException("Bạn không có quyền nhập tồn trên đề nghị mua.");
+        if (pr.Category == PurchaseCategory.Service) return $"Đề nghị dịch vụ {pr.No} không có bước Thủ kho nhập tồn.";
+        if (pr.Status != ApprovalDocumentStatus.Submitted) return $"Chỉ nhập tồn khi đề nghị {pr.No} đang chờ duyệt.";
+        if (pr.WarehouseId is not { } warehouseId) return $"Đề nghị {pr.No} chưa có nơi nhận – không xác định được thủ kho nhập tồn.";
+        if (!_scope.AllWarehouses && !_scope.WarehouseIds.Contains(warehouseId))
+            throw new ForbiddenAccessException($"Nơi nhận của đề nghị {pr.No} ngoài phạm vi kho của bạn – chỉ thủ kho nơi nhận nhập tồn.");
+        var approved = await _db.ApprovalSteps.AsNoTracking().AnyAsync(s =>
+            s.DocType == DocumentTypes.PurchaseRequest && s.DocumentId == pr.Id && s.Round == pr.ApprovalRound && s.Status == ApprovalStepStatus.Approved,
+            cancellationToken);
+        return approved ? $"Đề nghị {pr.No} đã có cấp duyệt trong lượt này – tồn đã khóa, không sửa được." : null;
+    }
+
+    /// <summary>
+    /// Cờ nhập tồn cho DTO: chỉ người có quyền nhập tồn, phiếu loại A/B đang chờ duyệt; trả (nhập được, lý do chặn). Không ném lỗi – nơi nhận
+    /// ngoài phạm vi kho thì không hiện nút cũng không hiện lý do (thủ kho kho khác không liên quan).
+    /// </summary>
+    private async Task<(bool Can, string? Blocker)> EnterStockStateAsync(PurchaseRequest pr, bool itemsVisible, CancellationToken cancellationToken)
+    {
+        if (!itemsVisible || !_scope.HasPermission(Permissions.Purchase.PrEnterStock) || pr.Category == PurchaseCategory.Service
+            || pr.Status != ApprovalDocumentStatus.Submitted)
+            return (false, null);
+        if (pr.WarehouseId is { } warehouseId && !_scope.AllWarehouses && !_scope.WarehouseIds.Contains(warehouseId)) return (false, null);
+        var blocker = await EnterStockBlockerAsync(pr, cancellationToken);
+        return (blocker is null, blocker);
+    }
+
+    /// <summary>
+    /// Gợi ý tồn (design.md mục 19.4 "gợi ý tồn đã xác nhận gần nhất"): theo mặt hàng, tồn thủ kho đã nhập trên đề nghị khác chưa hủy cùng
+    /// nơi nhận, lần xác nhận mới nhất; trả tồn theo ĐVT cơ sở để quy về ĐVT của từng dòng.
+    /// </summary>
+    private async Task<Dictionary<Guid, LastStock>> LastStockAsync(PurchaseRequest pr, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where r.Id != pr.Id && r.WarehouseId == pr.WarehouseId && r.Status != ApprovalDocumentStatus.Cancelled
+                      && r.StockConfirmedAt != null && l.StockQty != null && itemIds.Contains(l.ItemId)
+                orderby r.StockConfirmedAt descending
+                select new { l.ItemId, Stock = l.StockQty!.Value, l.UomFactor, r.Id, r.No, At = r.StockConfirmedAt!.Value })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(x => x.ItemId)
+            .ToDictionary(g => g.Key, g => g.Select(x => new LastStock(x.Stock * x.UomFactor, x.Id, x.No, x.At)).First());
+    }
+
+    /// <summary>Tồn gợi ý: SL theo ĐVT cơ sở, đề nghị chứa tồn đó và thời điểm xác nhận.</summary>
+    private sealed record LastStock(decimal BaseQty, Guid RequestId, string No, DateTimeOffset At);
+
     /// <summary>Người dùng hiện tại rút được phiếu về nháp không: phiếu chờ duyệt, là người lập hoặc có quyền Hủy phiếu.</summary>
     private bool CanRecall(ApprovableDocument document) =>
         document.Status == ApprovalDocumentStatus.Submitted
@@ -509,26 +581,33 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
         var supplierIds = pr.Lines.Select(l => l.SuggestedSupplierId).OfType<Guid>().Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code, cancellationToken);
-        var onHand = await _db.StockOnHand.AsNoTracking().Where(s => itemIds.Contains(s.ItemId))
-            .GroupBy(s => s.ItemId).Select(g => new { g.Key, Qty = g.Sum(s => s.Qty) }).ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
+        // Tồn do thủ kho nơi nhận nhập trên phiếu (lát Y3b) – không đọc tồn kho của phân hệ kho cũ (CLAUDE.md mục 4, từ 0.22.0).
+        var itemsVisible = items.Count == itemIds.Count;
+        var (canEnterStock, enterStockBlocker) = await EnterStockStateAsync(pr, itemsVisible, cancellationToken);
+        var lastStock = canEnterStock ? await LastStockAsync(pr, itemIds, cancellationToken) : [];
         var ordered = await OrderedBaseByLineAsync(pr.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
         var onOrder = await OnOrderBaseByItemAsync(itemIds, cancellationToken);
         var department = pr.DepartmentId is { } departmentId
             ? await _db.Departments.Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken)
             : null;
-        var userIds = new[] { pr.CreatedBy, pr.RequesterId }.OfType<Guid>().Distinct().ToList();
+        var userIds = new[] { pr.CreatedBy, pr.RequesterId, pr.StockConfirmedBy }.OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         var lines = pr.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
             var item = items.GetValueOrDefault(l.ItemId);
             var norm = norms.GetValueOrDefault(l.Id);
+            var last = lastStock.GetValueOrDefault(l.ItemId);
             return new PurchaseRequestLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "",
                 l.Qty, l.UomFactor, l.BaseQty, item is null ? "" : uoms.GetValueOrDefault(item.BaseUomId) ?? "", l.EstPrice, l.Amount,
                 l.SuggestedSupplierId, l.SuggestedSupplierId is { } s ? suppliers.GetValueOrDefault(s) : null, l.NeededDate, l.Note,
-                Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), onHand.GetValueOrDefault(l.ItemId),
-                onOrder.GetValueOrDefault(l.ItemId), norm?.Status, norm?.NormQty ?? 0, norm?.RequestedQty ?? 0, norm?.Through);
+                Math.Round(ordered.GetValueOrDefault(l.Id) / l.UomFactor, 4, MidpointRounding.AwayFromZero), l.RequiredQty, l.StockQty,
+                onOrder.GetValueOrDefault(l.ItemId), norm?.Status, norm?.NormQty ?? 0, norm?.RequestedQty ?? 0, norm?.Through)
+            {
+                LastStockQty = last is null ? null : Math.Round(last.BaseQty / l.UomFactor, 4, MidpointRounding.AwayFromZero),
+                LastStockRequestNo = last?.No, LastStockRequestId = last?.RequestId, LastStockAt = last?.At,
+            };
         }).ToList();
 
         var sourcingIds = pr.NewItems.Select(n => n.SourcingRequestId).OfType<Guid>().ToList();
@@ -543,7 +622,6 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             .ToList();
         var pendingNew = pr.Status == ApprovalDocumentStatus.Approved && pr.NewItems.Any(n => n.LinkedLineId is null);
 
-        var itemsVisible = items.Count == itemIds.Count;
         var step = pr.Status == ApprovalDocumentStatus.Submitted ? await _approvals.CurrentStepAsync(pr, cancellationToken) : null;
         var canApprove = step is not null && itemsVisible && await _approvals.ApproveBlockerAsync(pr, step, cancellationToken) is null;
         var canCreate = _scope.HasPermission(Permissions.Purchase.PrCreate);
@@ -568,7 +646,12 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
             pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null,
-            Category = pr.Category.ToString(), Construction = await ConstructionBudgetAsync(pr, cancellationToken) };
+            Category = pr.Category.ToString(), Construction = await ConstructionBudgetAsync(pr, cancellationToken),
+            WarehouseName = pr.WarehouseId is { } warehouseId
+                ? await _db.Warehouses.AsNoTracking().Where(w => w.Id == warehouseId).Select(w => w.Name).SingleOrDefaultAsync(cancellationToken)
+                : null,
+            StockConfirmedByName = pr.StockConfirmedBy is { } stockBy ? users.GetValueOrDefault(stockBy) : null, StockConfirmedAt = pr.StockConfirmedAt,
+            CanEnterStock = canEnterStock, EnterStockBlocker = enterStockBlocker };
     }
 
     /// <summary>Đọc trạng thái từ chuỗi.</summary>

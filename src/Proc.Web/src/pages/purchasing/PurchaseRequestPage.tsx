@@ -1,5 +1,5 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
+import { DatabaseOutlined, FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -36,6 +36,7 @@ import { useConstructionProjectOptions } from '../../api/constructionProjects'
 import { UsageNormCell, UsageNormNotice } from './UsageNormNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
+import { StockEntryDialog } from './StockEntryDialog'
 import { DocNo } from '../../classic/DocNo'
 
 interface PrLineValues {
@@ -115,6 +116,7 @@ export function PurchaseRequestPage() {
   const newItemActions = usePrNewItemActions()
   const { message } = App.useApp()
   const [linking, setLinking] = useState<{ newItemId: string; label: string } | null>(null)
+  const [enteringStock, setEnteringStock] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
@@ -191,7 +193,8 @@ export function PurchaseRequestPage() {
     constructionProjectId: doc.construction?.projectId,
     note: doc.note ?? '',
     lines: doc.lines.map((l) => ({
-      id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
+      // Ô SL trên form là SL cần sử dụng; SL cần mua (l.qty) do máy chủ tính sau khi thủ kho nhập tồn (lát Y3b).
+      id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.requiredQty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
       neededDate: l.neededDate ? dayjs(l.neededDate) : null, note: l.note ?? '',
     })),
     newItems: doc.newItems.map((n) => ({
@@ -291,16 +294,31 @@ export function PurchaseRequestPage() {
     },
     {
       key: 'qty',
-      title: 'SL đề nghị', required: true,
-      width: 100,
+      title: 'SL cần sử dụng', required: true,
+      width: 110,
       align: 'right',
       render: (field) => (
         <Form.Item name={[field.name, 'qty']} noStyle rules={[{ required: true, type: 'number', min: 0.0001, message: 'SL > 0.' }]}>
-          <InputNumber {...vnNumberInput} variant="borderless" style={{ width: '100%' }} min={0} precision={4} aria-label={`SL đề nghị dòng ${field.name + 1}`} />
+          <InputNumber {...vnNumberInput} variant="borderless" style={{ width: '100%' }} min={0} precision={4} aria-label={`SL cần sử dụng dòng ${field.name + 1}`} />
         </Form.Item>
       ),
     },
-    { key: 'onHand', title: 'Tồn hiện tại', width: 95, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onHandQty) : '') },
+    // Tồn do thủ kho nơi nhận nhập, Cần mua = Cần sử dụng − Tồn (lát Y3b, design.md mục 19.3); đề nghị dịch vụ không có bước Thủ kho.
+    ...(category === 'Service'
+      ? []
+      : ([
+          {
+            key: 'stock', title: 'Tồn (thủ kho)', width: 100, align: 'right',
+            render: (_, index) => {
+              const line = savedLine(index)
+              return readonlyCell(line ? (line.stockQty == null ? 'Chưa nhập' : formatQuantity(line.stockQty)) : '')
+            },
+          },
+          {
+            key: 'buy', title: 'Cần mua', width: 90, align: 'right',
+            render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.qty) : ''),
+          },
+        ] satisfies LineColumn[])),
     // Hàng đang đặt (PO đã duyệt chưa nhận đủ) – kiểm tra trước khi đề nghị thêm (design.md mục 18.13, V2).
     { key: 'onOrder', title: 'Đang đặt', width: 90, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onOrderQty) : '') },
     // Định mức sử dụng lũy kế theo kế hoạch nhu cầu đã chốt – chỉ cảnh báo (lát G11, design.md mục 18.25).
@@ -494,6 +512,18 @@ export function PurchaseRequestPage() {
           <ConstructionBudgetNotice construction={doc?.construction} />
           <UsageNormNotice lines={doc?.lines} />
           <ClosedRemainingNotice doc={doc} />
+          {doc && doc.category !== 'Service' && doc.status !== 'Draft' && (
+            <Alert
+              type={doc.stockConfirmedAt ? 'success' : 'warning'}
+              showIcon
+              title={
+                doc.stockConfirmedAt
+                  ? `Thủ kho ${doc.stockConfirmedByName ?? ''} đã xác nhận tồn lúc ${formatDateTime(doc.stockConfirmedAt)}.`
+                  : `Chưa có tồn của thủ kho nơi nhận${doc.warehouseName ? ` (${doc.warehouseName})` : ' – phiếu chưa có kho nhận'}.`
+              }
+            />
+          )}
+          {doc?.enterStockBlocker && <Alert type="info" showIcon title={doc.enterStockBlocker} />}
         </>
       }
       form={form}
@@ -506,7 +536,16 @@ export function PurchaseRequestPage() {
       readOnly={readOnly}
       onSave={save}
       onAddLine={() => addRef.current?.()}
-      actions={actions}
+      actions={
+        <>
+          {doc?.canEnterStock && (
+            <Button type="primary" icon={<DatabaseOutlined />} onClick={() => setEnteringStock(true)}>
+              Nhập tồn
+            </Button>
+          )}
+          {actions}
+        </>
+      }
       header={
         <>
           <Form.Item label="Ngày đề nghị" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
@@ -558,7 +597,7 @@ export function PurchaseRequestPage() {
           <Form.Item label="Ngày cần hàng" name="neededDate">
             <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="Kho nhận dự kiến" name="warehouseId">
+          <Form.Item label="Nơi nhận (kho)" name="warehouseId" tooltip="Thủ kho của nơi nhận nhập tồn trên đề nghị loại A, B">
             <Select allowClear showSearch={{ optionFilterProp: 'label' }}
               options={(warehouses.data ?? []).filter((w) => w.isActive || w.id === doc?.warehouseId).map((w) => ({ value: w.id, label: `${w.code} – ${w.name}` }))} />
           </Form.Item>
@@ -585,6 +624,7 @@ export function PurchaseRequestPage() {
           attachmentTab,
         ]}
     />
+    {enteringStock && doc && <StockEntryDialog doc={doc} onClose={() => setEnteringStock(false)} />}
     {linking && doc && (
       <LinkItemDialog
         label={linking.label}

@@ -60,7 +60,10 @@ public sealed record PurchaseRequestHeader(
 public sealed record PurchaseRequestNewItemData(
     Guid? Id, string? Description, string? Specification, Guid UomId, decimal Qty, decimal EstPrice, DateOnly? NeededDate, string? Note);
 
-/// <summary>Dữ liệu một dòng đề nghị mua hàng.</summary>
+/// <summary>
+/// Dữ liệu một dòng đề nghị mua hàng. <c>Qty</c> là <b>SL cần sử dụng</b> người đề xuất nhập; SL cần mua = cần sử dụng − tồn thủ kho nhập
+/// (lát Y3b) do Domain tính.
+/// </summary>
 public sealed record PurchaseRequestLineData(
     Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal EstPrice, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
 
@@ -454,8 +457,14 @@ public sealed class PurchaseRequest : ApprovableDocument
     /// <summary>Công trình (chỉ loại A) – lũy kế đã mua của công trình tính từ PO đã duyệt lấy dòng của các đề nghị này.</summary>
     public Guid? ConstructionProjectId { get; private set; }
 
-    /// <summary>Tổng giá trị dự kiến = Σ SL × đơn giá tham khảo – numeric(19,2).</summary>
+    /// <summary>Tổng giá trị dự kiến = Σ SL cần mua × đơn giá tham khảo – numeric(19,2).</summary>
     public decimal TotalAmount { get; private set; }
+
+    /// <summary>Thủ kho nơi nhận xác nhận tồn lần gần nhất (lát Y3b, design.md mục 19.3); null = chưa nhập tồn.</summary>
+    public Guid? StockConfirmedBy { get; private set; }
+
+    /// <summary>Thời điểm thủ kho xác nhận tồn lần gần nhất (UTC).</summary>
+    public DateTimeOffset? StockConfirmedAt { get; private set; }
 
     /// <summary>Các dòng.</summary>
     public IReadOnlyList<PurchaseRequestLine> Lines => _lines;
@@ -546,6 +555,37 @@ public sealed class PurchaseRequest : ApprovableDocument
             _lines.Add(line);
             return line;
         }
+    }
+
+    /// <summary>
+    /// Thủ kho nơi nhận nhập tồn từng dòng có mã (lát Y3b, design.md mục 19.3 – Q2): Cần mua = Cần sử dụng − Tồn, không âm; tính lại tổng.
+    /// Chỉ loại A, B (đề nghị dịch vụ không có bước Thủ kho), phiếu đang chờ duyệt và có nơi nhận. Điều kiện "chưa cấp nào duyệt trong lượt"
+    /// (đã duyệt thì khóa – mục 20.1) và phạm vi kho của thủ kho do tầng Application kiểm tra. Hàng mới chưa có mã không nhập tồn (chưa có
+    /// trong kho).
+    /// </summary>
+    /// <param name="stockByLine">Tồn theo Id dòng, theo ĐVT trên dòng – phải đủ mọi dòng có mã.</param>
+    /// <param name="userId">Thủ kho xác nhận.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi sai loại mua, trạng thái, thiếu nơi nhận, thiếu dòng hoặc số tồn sai.</exception>
+    public void EnterStock(IReadOnlyDictionary<Guid, decimal> stockByLine, Guid userId, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(stockByLine);
+        if (Category == PurchaseCategory.Service) throw new BusinessRuleException($"Đề nghị dịch vụ {No} không có bước Thủ kho nhập tồn.");
+        if (Status != ApprovalDocumentStatus.Submitted) throw new BusinessRuleException($"Chỉ nhập tồn khi đề nghị {No} đang chờ duyệt.");
+        if (WarehouseId is null) throw new BusinessRuleException($"Đề nghị {No} chưa có nơi nhận – không xác định được thủ kho nhập tồn.");
+        if (stockByLine.Keys.Any(id => _lines.All(l => l.Id != id)))
+            throw new BusinessRuleException("Có dòng không thuộc đề nghị – hãy tải lại phiếu.");
+        foreach (var line in _lines.OrderBy(l => l.LineNo))
+        {
+            if (!stockByLine.TryGetValue(line.Id, out var stock)) throw new BusinessRuleException($"Dòng {line.LineNo}: hãy nhập tồn (không có thì nhập 0).");
+            if (stock < 0 || decimal.Round(stock, 4) != stock || stock >= 100_000_000_000_000m)
+                throw new BusinessRuleException($"Dòng {line.LineNo}: tồn phải ≥ 0, tối đa 4 chữ số thập phân.");
+        }
+
+        foreach (var line in _lines) line.ApplyStock(stockByLine[line.Id]);
+        StockConfirmedBy = userId;
+        StockConfirmedAt = at;
+        RecomputeTotal();
     }
 
     /// <summary>Thay toàn bộ dòng hàng mới chưa có mã (khi nháp), tính lại tổng.</summary>
@@ -733,8 +773,17 @@ public sealed class PurchaseRequestLine : Entity
     /// <summary>ĐVT.</summary>
     public Guid UomId { get; private set; }
 
-    /// <summary>SL đề nghị – numeric(18,4).</summary>
+    /// <summary>
+    /// SL cần mua – numeric(18,4) = <see cref="RequiredQty"/> − <see cref="StockQty"/>, không âm (lát Y3b); chưa nhập tồn thì bằng SL cần
+    /// sử dụng. PO, RFQ, ngân sách, định mức tính theo số này.
+    /// </summary>
     public decimal Qty { get; private set; }
+
+    /// <summary>SL cần sử dụng do người đề xuất nhập – numeric(18,4) (biểu mẫu 1A/1B, design.md mục 19.3).</summary>
+    public decimal RequiredQty { get; private set; }
+
+    /// <summary>Tồn do thủ kho nơi nhận nhập, theo ĐVT trên dòng – numeric(18,4); null = chưa nhập (lát Y3b).</summary>
+    public decimal? StockQty { get; private set; }
 
     /// <summary>Hệ số ĐVT cơ sở – numeric(18,6).</summary>
     public decimal UomFactor { get; private set; }
@@ -764,17 +813,37 @@ public sealed class PurchaseRequestLine : Entity
         CheckItem(item, data, prefix);
         if (data.EstPrice < 0 || decimal.Round(data.EstPrice, 6) != data.EstPrice)
             throw new BusinessRuleException($"{prefix}: đơn giá tham khảo phải ≥ 0, tối đa 6 chữ số thập phân.");
+        var factor = Factor(item, data.UomId, prefix);
+        // Tồn thủ kho đã nhập (lượt trước) giữ lại khi dòng vẫn cùng mặt hàng, cùng ĐVT; đổi thì bỏ để thủ kho nhập lại ở lượt sau (lát Y3b).
+        if (ItemId != item.Id || UomId != data.UomId) StockQty = null;
         LineNo = lineNo;
         ItemId = item.Id;
         UomId = data.UomId;
-        Qty = data.Qty;
-        UomFactor = Factor(item, data.UomId, prefix);
-        BaseQty = decimal.Round(data.Qty * UomFactor, 4, MidpointRounding.AwayFromZero);
+        RequiredQty = data.Qty;
+        UomFactor = factor;
         EstPrice = data.EstPrice;
-        Amount = decimal.Round(data.Qty * data.EstPrice, 2, MidpointRounding.AwayFromZero);
+        Recompute();
         SuggestedSupplierId = data.SuggestedSupplierId;
         NeededDate = data.NeededDate;
         Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+    }
+
+    /// <summary>Ghi tồn thủ kho nhập (đã kiểm tra ≥ 0) và tính lại SL cần mua.</summary>
+    internal void ApplyStock(decimal stock)
+    {
+        StockQty = stock;
+        Recompute();
+    }
+
+    /// <summary>
+    /// Cần mua = max(Cần sử dụng − Tồn, 0); SL cơ sở, thành tiền theo cần mua. Ví dụ cần 5 hộp, tồn 2 hộp, hệ số 10 → mua 3 hộp = 30 cái;
+    /// tồn 7,5 ≥ cần 3 → mua 0 (dòng giữ trên phiếu để in 1A/1B, không lên PO).
+    /// </summary>
+    private void Recompute()
+    {
+        Qty = Math.Max(RequiredQty - (StockQty ?? 0m), 0m);
+        BaseQty = decimal.Round(Qty * UomFactor, 4, MidpointRounding.AwayFromZero);
+        Amount = decimal.Round(Qty * EstPrice, 2, MidpointRounding.AwayFromZero);
     }
 
     /// <summary>Kiểm tra mặt hàng của dòng: đúng mặt hàng đã chọn và còn đang dùng (dòng cũ giữ được mặt hàng đã ngừng).</summary>

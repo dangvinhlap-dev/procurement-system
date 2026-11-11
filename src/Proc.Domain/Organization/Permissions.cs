@@ -118,6 +118,11 @@ public static class Permissions
         public const string PrCreate = "Purchase.PR.Create";
         /// <summary>Quyền "Duyệt đề nghị mua hàng".</summary>
         public const string PrApprove = "Purchase.PR.Approve";
+        /// <summary>
+        /// Quyền "Nhập tồn trên đề nghị mua" (lát Y3b, design.md mục 19.3 – Q2): thủ kho nơi nhận nhập tồn từng dòng của đề nghị loại A, B đang
+        /// chờ duyệt; chỉ đề nghị có nơi nhận trong phạm vi kho của người dùng.
+        /// </summary>
+        public const string PrEnterStock = "Purchase.PR.EnterStock";
         /// <summary>Quyền "Xem đơn mua hàng".</summary>
         public const string PoView = "Purchase.PO.View";
         /// <summary>Quyền "Lập đơn mua hàng".</summary>
@@ -341,6 +346,7 @@ public static class Permissions
         new(Purchase.PrView, "Xem đề nghị mua hàng"),
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),
         new(Purchase.PrApprove, "Duyệt đề nghị mua hàng"),
+        new(Purchase.PrEnterStock, "Nhập tồn trên đề nghị mua (thủ kho nơi nhận)"),
         new(Purchase.PoView, "Xem đơn mua hàng"),
         new(Purchase.PoCreate, "Lập đơn mua hàng"),
         new(Purchase.PoApprove, "Duyệt đơn mua hàng"),

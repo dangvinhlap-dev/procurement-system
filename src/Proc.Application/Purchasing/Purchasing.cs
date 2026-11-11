@@ -206,8 +206,8 @@ public sealed record PurchaseDocumentActions(
     bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason, bool CanCloseRemaining = false, bool CanRecall = false);
 
 /// <summary>
-/// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu; OnHandQty: tồn hiện tại của mặt hàng ở công ty (ĐVT cơ sở,
-/// trong phạm vi kho của người xem).
+/// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu. Tồn do thủ kho nơi nhận nhập trên phiếu (lát Y3b, design.md mục
+/// 19.3) – không còn đọc tồn kho của phân hệ kho cũ (đã tắt từ 0.22.0).
 /// Định mức sử dụng (lát G11, design.md mục 18.25) – mọi SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến <paramref name="NormThrough"/>:
 /// </summary>
 /// <param name="Id">Id dòng.</param>
@@ -217,9 +217,9 @@ public sealed record PurchaseDocumentActions(
 /// <param name="ItemName">Tên mặt hàng.</param>
 /// <param name="UomId">ĐVT trên phiếu.</param>
 /// <param name="UomCode">Mã ĐVT trên phiếu.</param>
-/// <param name="Qty">SL đề nghị theo ĐVT trên phiếu.</param>
+/// <param name="Qty">SL cần mua theo ĐVT trên phiếu = cần sử dụng − tồn, không âm.</param>
 /// <param name="UomFactor">Hệ số quy đổi ĐVT trên phiếu → ĐVT cơ sở.</param>
-/// <param name="BaseQty">SL theo ĐVT cơ sở (= Qty × UomFactor).</param>
+/// <param name="BaseQty">SL cần mua theo ĐVT cơ sở (= Qty × UomFactor).</param>
 /// <param name="BaseUomCode">Mã ĐVT cơ sở.</param>
 /// <param name="EstPrice">Đơn giá dự kiến.</param>
 /// <param name="Amount">Thành tiền dự kiến.</param>
@@ -228,7 +228,8 @@ public sealed record PurchaseDocumentActions(
 /// <param name="NeededDate">Ngày cần hàng của dòng.</param>
 /// <param name="Note">Ghi chú dòng.</param>
 /// <param name="OrderedQty">SL đã lên PO (chưa hủy) theo ĐVT trên phiếu.</param>
-/// <param name="OnHandQty">Tồn hiện tại (ĐVT cơ sở, trong phạm vi kho của người xem).</param>
+/// <param name="RequiredQty">SL cần sử dụng (người đề xuất nhập) theo ĐVT trên phiếu.</param>
+/// <param name="StockQty">Tồn thủ kho nhập theo ĐVT trên phiếu; null = chưa nhập.</param>
 /// <param name="OnOrderQty">SL đang đặt chưa nhận (ĐVT cơ sở).</param>
 /// <param name="NormStatus">null = không kiểm tra (nhóm hàng chưa có kế hoạch nhu cầu đã chốt năm đó, hoặc phiếu đã hủy);
 /// "Ok" trong định mức; "Over" vượt định mức; "NoPlan" nhóm hàng có kế hoạch nhưng mặt hàng không có trong kế hoạch.</param>
@@ -239,8 +240,24 @@ public sealed record PurchaseDocumentActions(
 public sealed record PurchaseRequestLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
     decimal BaseQty, string BaseUomCode, decimal EstPrice, decimal Amount, Guid? SuggestedSupplierId, string? SuggestedSupplierCode,
-    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal OnHandQty, decimal OnOrderQty,
-    string? NormStatus = null, decimal NormQty = 0, decimal NormRequestedQty = 0, DateOnly? NormThrough = null);
+    DateOnly? NeededDate, string? Note, decimal OrderedQty, decimal RequiredQty, decimal? StockQty, decimal OnOrderQty,
+    string? NormStatus = null, decimal NormQty = 0, decimal NormRequestedQty = 0, DateOnly? NormThrough = null)
+{
+    /// <summary>
+    /// Gợi ý tồn: tồn đã xác nhận gần nhất của cùng mặt hàng tại cùng nơi nhận trên đề nghị khác (chưa hủy), quy về ĐVT của dòng này –
+    /// chỉ có khi người xem đang nhập tồn được (lát Y3b).
+    /// </summary>
+    public decimal? LastStockQty { get; init; }
+
+    /// <summary>Số đề nghị chứa tồn gợi ý.</summary>
+    public string? LastStockRequestNo { get; init; }
+
+    /// <summary>Id đề nghị chứa tồn gợi ý (mở bằng ô số chứng từ).</summary>
+    public Guid? LastStockRequestId { get; init; }
+
+    /// <summary>Thời điểm thủ kho xác nhận tồn gợi ý (UTC).</summary>
+    public DateTimeOffset? LastStockAt { get; init; }
+}
 
 /// <summary>
 /// Chi tiết PR. DepartmentId: bộ phận trong danh mục; Department: tên bộ phận để hiển thị, PR cũ chưa có danh mục thì là
@@ -269,7 +286,33 @@ public sealed record PurchaseRequestDto(
 
     /// <summary>Công trình và lũy kế dự toán (chỉ loại A).</summary>
     public ConstructionBudgetDto? Construction { get; init; }
+
+    /// <summary>Tên nơi nhận (kho) – thủ kho nơi nhận nhập tồn (lát Y3b).</summary>
+    public string? WarehouseName { get; init; }
+
+    /// <summary>Họ tên thủ kho xác nhận tồn lần gần nhất; null = chưa nhập tồn.</summary>
+    public string? StockConfirmedByName { get; init; }
+
+    /// <summary>Thời điểm thủ kho xác nhận tồn (UTC).</summary>
+    public DateTimeOffset? StockConfirmedAt { get; init; }
+
+    /// <summary>
+    /// Người xem nhập tồn được: quyền nhập tồn, loại A/B, chờ duyệt chưa cấp nào duyệt trong lượt, nơi nhận trong phạm vi kho (lát Y3b).
+    /// </summary>
+    public bool CanEnterStock { get; init; }
+
+    /// <summary>Lý do chưa nhập tồn được (hiện cho thủ kho), ví dụ "đã có cấp duyệt – tồn đã khóa"; null khi nhập được hoặc không liên quan.</summary>
+    public string? EnterStockBlocker { get; init; }
 }
+
+/// <summary>Thủ kho nhập tồn trên đề nghị mua (lát Y3b, design.md mục 19.3).</summary>
+/// <param name="Lines">Tồn từng dòng có mã – phải đủ mọi dòng (không có thì 0).</param>
+public sealed record EnterPurchaseRequestStockRequest(IReadOnlyList<PurchaseRequestStockLineRequest> Lines);
+
+/// <summary>Tồn một dòng đề nghị mua.</summary>
+/// <param name="LineId">Id dòng.</param>
+/// <param name="StockQty">Tồn theo ĐVT trên dòng, ≥ 0, tối đa 4 chữ số thập phân.</param>
+public sealed record PurchaseRequestStockLineRequest(Guid LineId, decimal StockQty);
 
 /// <summary>
 /// Khung chi phí công trình trên đề nghị mua loại A (biểu mẫu 1A – lát Y3, design.md mục 19.2, quyết định Q4): lũy kế đã mua tính theo PO đã
@@ -331,7 +374,10 @@ public interface IPurchaseRequestNewItemService
     Task<PurchaseRequestDto> LinkItemAsync(Guid requestId, Guid newItemId, LinkNewItemRequest request, CancellationToken cancellationToken);
 }
 
-/// <summary>Dòng PR gửi lên. Đơn giá tham khảo do server lấy (giá nhập gần nhất), không nhận từ client.</summary>
+/// <summary>
+/// Dòng PR gửi lên. <c>Qty</c> là SL cần sử dụng (SL cần mua do server tính sau khi thủ kho nhập tồn – lát Y3b). Đơn giá tham khảo do
+/// server lấy (giá nhập gần nhất), không nhận từ client.
+/// </summary>
 public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
 
 /// <summary>
@@ -506,6 +552,18 @@ public interface IPurchaseRequestService
     /// <exception cref="Proc.Application.Common.ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PR không ở trạng thái chờ duyệt.</exception>
     Task<PurchaseRequestDto> RecallAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Thủ kho nơi nhận nhập tồn từng dòng (lát Y3b, design.md mục 19.3): Cần mua = Cần sử dụng − Tồn. Chỉ đề nghị loại A, B đang chờ duyệt,
+    /// chưa cấp nào duyệt trong lượt (đã duyệt thì khóa – mục 20), nơi nhận trong phạm vi kho của người dùng.
+    /// </summary>
+    /// <param name="id">Id PR.</param>
+    /// <param name="request">Tồn từng dòng.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>PR sau khi nhập tồn.</returns>
+    /// <exception cref="Proc.Application.Common.ForbiddenAccessException">Khi nơi nhận ngoài phạm vi kho hoặc mặt hàng ngoài phạm vi nhóm hàng.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi sai loại mua, trạng thái, đã có cấp duyệt hoặc số tồn sai.</exception>
+    Task<PurchaseRequestDto> EnterStockAsync(Guid id, EnterPurchaseRequestStockRequest request, CancellationToken cancellationToken);
 
     /// <summary>Đóng phần còn lại – PR đã duyệt đã lên PO một phần: phần chưa lên PO không đặt nữa (lát R6, design.md mục 18.26).</summary>
     /// <param name="id">Id phiếu.</param>
