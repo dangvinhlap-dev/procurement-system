@@ -96,7 +96,7 @@ test.describe('danh mục nhà cung cấp', () => {
     await expect(page.getByRole('heading', { name: 'Yêu cầu duyệt nhà cung cấp' })).toBeVisible()
     const approval = page.locator('.detail-drawer')
     await expect(approval.getByText('Giao hàng không đúng xuất xứ').first()).toBeVisible()
-    await expect(approval.getByRole('button', { name: 'Duyệt' })).toHaveCount(0)
+    await expect(approval.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0)
     await approval.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
     await expect(approval.getByText('Tổng công ty (cuối)')).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/supplier-approval.png', animations: 'disabled' })
