@@ -41,8 +41,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                 type: "timestamp with time zone",
                 nullable: true);
 
-            // Thông báo cũ không gửi email (2 = Skipped).
-            migrationBuilder.Sql("UPDATE \"Notification\" SET \"EmailState\" = 2, \"EmailNote\" = 'Thông báo có trước bản 0.22.0.'");
+            // Thông báo cũ không gửi email (2 = Skipped). Câu SQL kết thúc bằng ";" – script idempotent bọc trong khối DO (db/scripts/README.md).
+            migrationBuilder.Sql("UPDATE \"Notification\" SET \"EmailState\" = 2, \"EmailNote\" = 'Thông báo có trước bản 0.22.0.';");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notification_EmailPending",

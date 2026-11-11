@@ -3,6 +3,67 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.22.0] - 2026-11-11
+
+Bản đầu của hệ thống mới theo biểu mẫu CUVT (design.md mục 19): **tắt phân hệ kho** – công ty dùng phần mềm kho riêng.
+
+### Thêm mới
+- **Phiếu xác nhận nhận hàng XNH** (màn hình XNH, Mua hàng → Xác nhận nhận hàng; lát K2): lập theo một PO đã duyệt, mỗi dòng ghi SL theo phiếu giao, SL
+  đạt (= SL thực nhận), SL không đạt, kết quả kiểm tra; hóa đơn NCC (cập nhật được sau khi xác nhận); Nháp → Đã xác nhận. PO tự chuyển "Đã
+  nhận đủ" khi nhận đủ. **Điều chỉnh SL thực nhận** có lý do và lịch sử, thay cho phiếu trả NCC. Đơn vị đặt hàng **nghiệm thu** Đạt/Không đạt.
+  Quyền mới `Purchase.Receipt.View/Manage/Accept`.
+- **Báo cáo SL đặt – SL thực nhận / OTIF** (màn hình OTIF, Báo cáo → SL đặt – thực nhận; lát K2): từng dòng PO đã duyệt, còn thiếu, đúng hạn, đủ; % đủ, % đúng hạn, % OTIF theo NCC.
+- **Danh mục Khối** (màn hình DIV, Hệ thống → Khối; lát O1) có Giám đốc khối. Bộ phận thêm **Khối** và **Trưởng phòng ban (tài khoản)**;
+  người dùng thuộc một bộ phận ở mỗi công ty (tab Phân quyền của Người dùng) – đề nghị mua mới tự điền bộ phận của người lập.
+- **Người duyệt động** ở Quy trình duyệt (lát O1): cấp duyệt chọn được "Trưởng phòng ban của phiếu" hoặc "GĐ khối của phiếu" (PR, PO và
+  các chặng phụ). Người duyệt xác định theo danh mục lúc duyệt; thiếu khai báo thì chặn gửi duyệt, báo rõ chỗ sửa.
+- **Ủy quyền duyệt có thời hạn** (màn hình UQD, Hằng ngày → Ủy quyền duyệt; lát O2a): ủy quyền một loại phiếu hoặc mọi loại, tối đa 90 ngày,
+  có lý do và đính kèm; người được ủy quyền duyệt thay, lịch sử hiện "Bình (thay An)"; thu hồi được. Quyền mới
+  `Organization.Delegation.Manage` (lập thay người khác, xem mọi ủy quyền).
+- **Email bản sao thông báo** qua SMTP (lát O2b): mọi thông báo gửi thêm thư tới email của người dùng, nút "Mở trên phần mềm". Mặc định
+  **tắt** – bật bằng mục `Email` trong appsettings (Host, Port, tài khoản, `AppBaseUrl`). API kiểm tra: `GET /api/notifications/email/status`,
+  `POST /api/notifications/email/test`.
+- **Nhắc quá hạn duyệt** (lát O2c): bước chờ quá 1 ngày làm việc (thứ 2–6) thì nhắc người duyệt, nhắc lại mỗi ngày làm việc, tối đa 3 lần.
+  Cấu hình mục `ApprovalReminder` (mặc định bật).
+- **Duyệt trên điện thoại** (trang `/duyet`; lát O2d): thẻ phiếu chờ tôi duyệt, xem tóm tắt (dòng hàng, cảnh báo, lịch sử duyệt), Duyệt /
+  Từ chối. Việc cần làm có nút "Duyệt trên điện thoại"; link trong email mở trên màn hình nhỏ tự chuyển sang trang này.
+- **Vai trò mẫu và cấu hình duyệt mẫu theo biểu mẫu CUVT** (lát O3): hộp thoại "Bộ vai trò mẫu…" và "Cấu hình duyệt mẫu…" có ô chọn bộ
+  mẫu. Bộ CUVT thêm 8 vai trò (Trưởng phòng ban, GĐ khối, TP/NV CUVT, TP/GĐ TC-NQ-KT, TP Hành chính, Phó CT UBCL&PT) và chuỗi duyệt PR 6 cấp,
+  RFQ 5 cấp, PO 4 cấp theo biểu mẫu.
+
+### Thay đổi
+- **Tắt phân hệ kho** (lát K1, cấu hình `Modules:InventoryEnabled`, mặc định `false`): ẩn menu, màn hình, báo cáo kho; API kho trả 403.
+  Quyền kho bị bỏ qua khi đăng nhập (dữ liệu quyền, phiếu kho, sổ kho cũ **giữ nguyên**). Danh mục kho giữ làm nơi nhận hàng. Đặt `true` để
+  dùng lại như 0.21.0.
+- **SL đã nhận** của PO, theo dõi giao hàng, ngân sách, MATCH3, KSNB, đánh giá NCC, báo cáo mua hàng đọc từ **phiếu XNH** thay phiếu nhập kho.
+- Nút "Cấu hình duyệt mẫu theo sơ đồ…" đổi tên thành "Cấu hình duyệt mẫu…"; vai trò mẫu CHUTICH thêm quyền duyệt kết quả chọn thầu.
+- Hướng dẫn sử dụng (`docs/huong-dan-su-dung`) và hướng dẫn cài đặt chi tiết (`docs/huong-dan-cai-dat.md`).
+
+### Sửa lỗi
+- Migration `V0_22_0_EmailThongBao`: câu SQL viết tay thiếu dấu `;` làm script idempotent lỗi cú pháp (phát hiện khi chạy thử script, đã sửa
+  trước khi phát hành).
+
+### Thay đổi CSDL
+- 6 migration mới (72 → 78): `V0_22_0_XacNhanNhanHang`, `V0_22_0_KhoiPhongBan`, `V0_22_0_DuyetDong`, `V0_22_0_UyQuyenDuyet`,
+  `V0_22_0_EmailThongBao`, `V0_22_0_NhacQuaHanDuyet`. Chỉ thêm bảng/cột; thông báo cũ đánh dấu "Bỏ qua" gửi email. Không xóa bảng kho.
+  Script: `db/scripts/0.22.0.sql` (đã chạy thử 2 lần trên bản sao CSDL test 0.21.0, không lỗi, dữ liệu giữ nguyên).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.22.0.sql`, sau đó thay gói ứng dụng. Nếu nâng từ bản
+  cũ hơn 0.21.0: chạy lần lượt các script trước đó.
+- **Phân hệ kho tắt ngay sau khi nâng**. SL đã nhận của PO chỉ tính phiếu XNH: PO đã nhận bằng phiếu nhập kho cũ sẽ hiện SL nhận = 0 – lập
+  XNH cho phần đã nhận hoặc "Hoàn thành PO" nếu không cần theo dõi tiếp.
+- Gán quyền mới cho vai trò đang dùng: `Purchase.Receipt.View/Manage/Accept` (thủ kho, phòng ban đề xuất, đơn vị đặt hàng),
+  `Organization.Delegation.Manage` (quản trị). Có thể dùng "Bộ vai trò mẫu…" (bộ Vị trí ký biểu mẫu CUVT) và "Cấu hình duyệt mẫu…".
+- Dùng người duyệt động: khai Khối, Giám đốc khối, Trưởng phòng ban của bộ phận trước khi gửi duyệt phiếu.
+- Email: điền mục `Email` ở `appsettings.Production.json` hoặc biến môi trường `Email__...` (mật khẩu chỉ đặt trên máy chủ), `Enabled=true`.
+- Nhắc quá hạn chạy ngay sau khi nâng: các phiếu đang chờ lâu sẽ nhận nhắc (tối đa 3 lần). Muốn tắt: `ApprovalReminder:Enabled=false`.
+
+### Cách quay lại bản trước
+- Cách 1: khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.21.0`.
+- Cách 2: gỡ migration về `20261109062314_V0_20_0_HoSoDanhGiaNccMoi`. `Down()` xóa bảng XNH, khối, ủy quyền, nhắc quá hạn và các cột mới
+  (Trưởng phòng ban, người duyệt động, trạng thái email), nên **mất dữ liệu các chức năng mới đã nhập**. Bảng kho không bị ảnh hưởng.
+
 ## [0.21.0] - 2026-11-09
 
 ### Thêm mới
