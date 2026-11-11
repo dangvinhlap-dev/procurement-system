@@ -292,6 +292,7 @@ export function ContractAmendmentDrawer({
       asPage={asPage}
       title={isNew ? `Lập phụ lục – hợp đồng ${contract.no}` : `Phụ lục ${doc?.no ?? ''} · ${statusLabel}`}
       audit={{ entityType: 'PurchaseContractAmendment', id: doc?.id }}
+      approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt } : undefined}
       onClose={onClose}
       onSave={canEdit ? save : undefined}
       saving={mutations.create.isPending || mutations.update.isPending}

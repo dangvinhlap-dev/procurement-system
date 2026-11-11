@@ -593,3 +593,25 @@ body.erp-col-resizing {
 .approval-next {
   color: var(--erp-title);
 }
+
+/* ================= Ổ khóa phê duyệt (docs/ui-style.md mục 5d, design.md mục 20.1 R3) ================= */
+/* Mỗi bước duyệt một ổ khóa vàng: đóng = đã duyệt, mở = chưa duyệt; chú thích (title) ghi cấp, kết quả, người duyệt. */
+.erp-approval-locks {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+.erp-approval-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  color: var(--erp-light-yellow);
+  cursor: default;
+}
+.erp-approval-lock.is-open {
+  opacity: 0.85;
+}

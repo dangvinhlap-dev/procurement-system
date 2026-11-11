@@ -38,6 +38,7 @@ export function UserListPage() {
     () => [
       { key: 'userName', title: 'Tên đăng nhập', width: 140, value: (r) => r.userName },
       { key: 'fullName', title: 'Họ tên', width: 180, value: (r) => r.fullName },
+      { key: 'position', title: 'Chức vụ', width: 160, value: (r) => r.position ?? null, groupable: true },
       { key: 'roles', title: `Vai trò tại ${workingCompany?.code ?? ''}`, width: 200, value: (r) => r.roleNames.join(', '), groupable: true },
       { key: 'companies', title: 'Công ty được gán', width: 140, value: (r) => r.companyCodes.join(', '), groupable: true },
       { key: 'email', title: 'Email', width: 180, value: (r) => r.email },

@@ -612,6 +612,7 @@ export function ContractPage() {
   return (
     <>
       <DocumentForm
+        approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt } : undefined}
         title="Hợp đồng nguyên tắc"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PurchaseContract', id: doc?.id }}

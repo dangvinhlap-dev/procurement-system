@@ -160,6 +160,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     duyệt tháng, chiết khấu sản lượng, yêu cầu duyệt NCC (chỉ ý kiến); tab Đính kèm cột "Bước duyệt", "Đã khóa". `queryClient` tách ra
     `app/queryClient.ts` (hộp thoại nằm ngoài QueryClientProvider). Test: tích hợp `ApprovalAttachmentTests` (2), e2e
     `approval-attachments.spec.ts`; `dotnet test` 642/642.
+  - **Z2 (nhánh `feature/z2-o-khoa-kiem-tra-duyet`)**: backend – `User.Position` (Chức vụ, migration `V0_23_0_ChucVuNguoiDung`), DTO/validator
+    người dùng; `ApprovalStepDto` thêm tên đăng nhập + chức vụ người duyệt/người gửi (chức vụ trống → tên vai trò tại công ty của bước).
+    Giao diện – `classic/ApprovalTrail.tsx` (`ApprovalLocks` ổ khóa vàng đóng/mở theo bước của lượt gần nhất, `ApprovalCheckButton` hộp thoại
+    Bước 0…n), gắn qua prop `approval` của `DocumentForm`/`DetailDrawer` cho PR, PO, RFQ, hợp đồng, phụ lục, bảng giá, NCC độc quyền, duyệt
+    tháng, CKB, yêu cầu duyệt NCC; Người dùng có ô + cột Chức vụ. design.md 20 (đoạn "Lát Z2"), ui-style.md mục 5d. Test: tích hợp
+    `KiemTraPheDuyet_TenDangNhap_ChucVu_RongThiLayVaiTro`, e2e `approval-check.spec.ts`; `dotnet test` 643/643, build 0 cảnh báo, tsc, oxlint, `npm run build` qua. Playwright đủ bộ 126/126 (auth, po-list chạy lại trên Vite mới cổng
+    5174 – Vite 5173 còn chạy từ 0.20.0; `suppliers.spec` sửa bộ chọn nút "Duyệt" thành `exact` vì khớp cả nút "Kiểm tra phê duyệt"). **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

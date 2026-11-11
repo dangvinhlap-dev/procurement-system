@@ -455,6 +455,7 @@ export function SupplierPriceListPage() {
 
   return (
     <DocumentForm
+      approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt } : undefined}
       title="Bảng giá nhà cung cấp"
       extraTabs={[
         attachmentTab,

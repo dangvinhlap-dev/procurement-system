@@ -116,6 +116,15 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Vùng Ý kiến + nút **dính đáy màn hình**; Từ chối (icon đỏ) bên trái, Duyệt (icon xanh) bên phải; cả hai hỏi xác nhận.
 - Link "Mở trên phần mềm" trong email mở trên màn hình ≤ 768px tự chuyển sang trang này.
 
+## 5d. Ổ khóa phê duyệt và "Kiểm tra phê duyệt" (lát Z2, 11/11/2026 – design.md mục 20.1 R3, R4)
+
+- Component `src/classic/ApprovalTrail.tsx`: `ApprovalLocks` (dải ổ khóa) và `ApprovalCheckButton` (nút + hộp thoại). Không dùng trực tiếp
+  trong trang: truyền `approval={{ steps, createdByName, createdAt, stageLabels?, byCompany? }}` cho `DocumentForm` hoặc `DetailDrawer`.
+- Ổ khóa đặt ngay sau thẻ trạng thái trên tiêu đề phiếu, icon 14px màu `--erp-light-yellow`, cách nhau 2px: **đóng** (`LockFilled`) = bước đã
+  duyệt, **mở** (`UnlockOutlined`) = chưa duyệt. Luôn có chú thích (title/aria-label) ghi cấp, kết quả, người duyệt, giờ ngày.
+- Nút "Kiểm tra phê duyệt" nằm ở vùng nút bên phải tiêu đề (cạnh "Lịch sử thay đổi", "In phiếu"), bấm được cả khi phiếu chỉ xem; hộp thoại
+  là bảng kẻ ô: (Lượt), Bước, Nội dung, Kết quả, Tên đăng nhập, Họ tên, Chức vụ, Giờ ngày (dd/MM/yyyy HH:mm), Ý kiến.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

@@ -283,6 +283,7 @@ function SoleSourceForm({
         asPage={asPage}
         title={isNew ? 'Lập phiếu NCC độc quyền' : `Phiếu ${data.no} – ${withPendingApprovers(soleSourceStateLabel(data), data.approvals)}`}
         audit={{ entityType: 'SoleSourceApproval', id: data?.id }}
+        approval={data ? { steps: data.approvals, createdByName: data.createdByName, createdAt: data.createdAt } : undefined}
         onClose={onClose}
         onSave={editable ? save : undefined}
         saving={saving}

@@ -570,6 +570,7 @@ export function VolumeRebatePage() {
 
   return (
     <DocumentForm
+      approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt } : undefined}
       title="Chiết khấu sản lượng gộp"
       linesLabel="Mặt hàng"
       extraTabs={[

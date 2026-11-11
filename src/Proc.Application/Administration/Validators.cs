@@ -23,6 +23,7 @@ public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserReq
             .NotEmpty().WithMessage("Hãy nhập mật khẩu ban đầu.")
             .MinimumLength(8).WithMessage("Mật khẩu phải có ít nhất 8 ký tự.")
             .MaximumLength(200);
+        RuleFor(x => x.Position).MaximumLength(100).WithMessage("Chức vụ tối đa 100 ký tự.");
         RuleFor(x => x.Access).NotNull().WithMessage("Thiếu thông tin phân quyền.");
     }
 }
@@ -36,6 +37,7 @@ public sealed class UpdateUserRequestValidator : AbstractValidator<UpdateUserReq
         RuleFor(x => x.FullName).NotEmpty().WithMessage("Hãy nhập họ tên.").MaximumLength(200);
         RuleFor(x => x.Email).EmailAddress().WithMessage("Email không hợp lệ.").MaximumLength(256)
             .When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Position).MaximumLength(100).WithMessage("Chức vụ tối đa 100 ký tự.");
     }
 }
 

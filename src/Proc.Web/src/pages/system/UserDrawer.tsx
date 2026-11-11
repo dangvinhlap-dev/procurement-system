@@ -19,6 +19,8 @@ import { formatDateTime } from '../../utils/format'
 interface UserFormValues {
   userName: string
   fullName: string
+  /** Chức vụ – hiện ở "Kiểm tra phê duyệt" của chứng từ (design.md mục 20.2 D5). */
+  position: string
   email: string
   password: string
   isActive: boolean
@@ -33,6 +35,7 @@ interface UserFormValues {
 const emptyValues: UserFormValues = {
   userName: '',
   fullName: '',
+  position: '',
   email: '',
   password: '',
   isActive: true,
@@ -51,6 +54,7 @@ function toFormValues(user: UserDetail): UserFormValues {
     ...emptyValues,
     userName: user.userName,
     fullName: user.fullName,
+    position: user.position ?? '',
     email: user.email ?? '',
     isActive: user.isActive,
     roleIds: access.roleIds,
@@ -119,6 +123,7 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
         await mutations.create.mutateAsync({
           userName: values.userName.trim(),
           fullName: values.fullName,
+          position: values.position.trim() || null,
           email: values.email || null,
           password: values.password,
           access: toAccess(values),
@@ -126,11 +131,19 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
         message.success(`Đã tạo người dùng ${values.userName.trim()}.`)
       } else if (detail) {
         const infoChanged =
-          values.fullName !== detail.fullName || (values.email || null) !== detail.email || values.isActive !== detail.isActive
+          values.fullName !== detail.fullName ||
+          (values.position.trim() || null) !== (detail.position ?? null) ||
+          (values.email || null) !== detail.email ||
+          values.isActive !== detail.isActive
         if (canEditInfo && infoChanged) {
           await mutations.update.mutateAsync({
             id: detail.id,
-            input: { fullName: values.fullName, email: values.email || null, isActive: values.isActive },
+            input: {
+              fullName: values.fullName,
+              email: values.email || null,
+              isActive: values.isActive,
+              position: values.position.trim() || null,
+            },
           })
         }
         const access = toAccess(values)
@@ -234,6 +247,14 @@ function AccountTab({ isNew, detail, disabled }: { isNew: boolean; detail?: User
       </Form.Item>
       <Form.Item label="Họ tên" name="fullName" rules={[{ required: true, whitespace: true, message: 'Hãy nhập họ tên.' }]}>
         <Input disabled={disabled} />
+      </Form.Item>
+      <Form.Item
+        label="Chức vụ"
+        name="position"
+        extra="Hiện ở “Kiểm tra phê duyệt” của chứng từ; để trống thì hiện tên vai trò."
+        rules={[{ max: 100, message: 'Chức vụ tối đa 100 ký tự.' }]}
+      >
+        <Input disabled={disabled} maxLength={100} />
       </Form.Item>
       <Form.Item label="Email" name="email" rules={[{ type: 'email', message: 'Email không hợp lệ.' }]}>
         <Input disabled={disabled} />
