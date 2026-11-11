@@ -187,8 +187,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     không đổi backend, không migration. Link email `/mo/...` trên màn hình ≤ 768px chuyển sang trang duyệt gọn; Việc cần làm có nút "Duyệt trên
     điện thoại". Ghi design.md 19.3 (O2d), ui-style.md 5c. Test e2e `mobile-approval.spec.ts` (390×844). Kiểm tra: dotnet build 0 cảnh báo,
     dotnet test 636/636, tsc, oxlint, npm run build; Playwright mobile-approval + notifications + delegations + purchasing + dashboard 8/8
-    (dashboard chập chờn khi chạy song song – chạy lại qua).
-  - **O2 hoàn tất** (O2a–O2d).
+    (dashboard chập chờn khi chạy song song – chạy lại qua). Playwright đủ bộ 119/122; 3 lỗi còn lại (auth, po-list "Phiên bản 0.20.0",
+    purchase-analysis) do **Vite cũ còn giữ cổng 5173/5191** từ trước bản 0.21.0 (define phiên bản cũ) và tải song song – chạy lại với Vite mới
+    `npx vite --port 5197 --host 127.0.0.1` + `E2E_WEB_URL=http://127.0.0.1:5197` đều qua.
+  - **O2 hoàn tất** (O2a–O2d), merge vào `main` 11/11/2026. Tiếp theo theo lộ trình 0.22.0 (design.md 19.6): O3.
 
 - **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
   O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3
