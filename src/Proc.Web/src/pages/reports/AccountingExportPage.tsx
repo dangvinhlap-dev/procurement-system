@@ -28,7 +28,7 @@ const docPaths: Record<AccountingDocument['docType'], string> = {
 
 const columns: GridColumn<AccountingDocument>[] = [
   { key: 'date', title: 'Ngày CT', width: 90, type: 'date', value: (r) => r.date },
-  { key: 'no', title: 'Số CT', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số CT', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: r.docType, id: r.documentId }) },
   { key: 'type', title: 'Loại', width: 130, value: (r) => docTypeNames[r.docType], groupable: true },
   { key: 'partner', title: 'Đối tượng', width: 230, value: (r) => (r.partnerCode ? `${r.partnerCode} – ${r.partnerName}` : null), groupable: true },
   { key: 'local', title: 'Mã NCC tại công ty', width: 120, value: (r) => r.partnerLocalCode },

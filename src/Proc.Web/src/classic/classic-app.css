@@ -31,6 +31,10 @@
   --erp-light-yellow: #e8b400;
   --erp-light-red: #d0281e;
   --erp-font-mono: Consolas, 'Courier New', monospace;
+  /* Ô nhập / ô chỉ đọc – cùng mã màu với classic.css (ui-style.md mục 2), dùng cho ô số chứng từ (DocNo). */
+  --erp-input-border: #7f9db9;
+  --erp-input-focus: #1f5fbf;
+  --erp-readonly-bg: #eef2f6;
   /* Chữ phụ (giá trị trống trong lịch sử thay đổi…) – cùng mã màu với --erp-text-muted của classic.css, dùng được cả trong hộp thoại. */
   --erp-text-muted: #5a6b7d;
 }
@@ -614,4 +618,38 @@ body.erp-col-resizing {
 }
 .erp-approval-lock.is-open {
   opacity: 0.85;
+}
+
+/* ================= Ô số chứng từ (docs/ui-style.md mục 5e, design.md mục 20.1 R5) ================= */
+/* Ô chữ chỉ đọc: bấm sao chép, bấm đúp mở phiếu gốc (is-link). Cao 18px để nằm vừa dòng lưới 20px và tiêu đề phiếu. */
+.erp-doc-no {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  max-width: 100%;
+  padding: 0 4px;
+  border: 1px solid var(--erp-input-border);
+  border-radius: 2px;
+  background: var(--erp-readonly-bg);
+  color: var(--ant-color-text);
+  font-family: var(--erp-font-mono);
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: copy;
+  user-select: all;
+  vertical-align: middle;
+}
+.erp-doc-no.is-link {
+  color: var(--erp-title);
+  text-decoration: underline dotted;
+}
+.erp-doc-no:focus-visible {
+  outline: none;
+  border-color: var(--erp-input-focus);
+}
+.erp-doc-no-suffix {
+  font-family: var(--ant-font-family);
+  color: var(--erp-text-muted);
 }

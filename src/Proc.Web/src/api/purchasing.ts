@@ -325,6 +325,16 @@ export interface PurchaseOrderLine {
   sourcePrLineId: string | null
   sourcePrNo: string | null
   receivedQty: number
+  /**
+   * Id phiếu gốc của các số trên dòng (PR nguồn, bảng giá, hợp đồng, RFQ, NCC độc quyền, phiếu tháng) – bấm đúp ô số chứng từ mở phiếu gốc
+   * (design.md mục 20.1 R5); null khi không có hoặc ngoài phạm vi xem.
+   */
+  sourcePrId?: string | null
+  priceListId?: string | null
+  contractId?: string | null
+  sourceRfqId?: string | null
+  soleSourceApprovalId?: string | null
+  monthlyApprovalId?: string | null
   remainingQty: number
   /** Nguồn giá (design.md mục 18.10). */
   priceSource: PriceSource

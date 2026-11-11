@@ -24,6 +24,11 @@ export interface GridColumn<T> {
    * cột "supplier" → SupplierId). false = cột tính toán/ghép, không gắn trường nào.
    */
   auditField?: string | false
+  /**
+   * Cột số chứng từ (design.md mục 20.1 R5): trả loại phiếu + Id phiếu gốc của dòng thì ô hiện bằng ô số chứng từ (`DocNo`) – bấm sao chép,
+   * bấm đúp mở phiếu gốc (không mở dòng của danh sách). null/không khai báo thì ô là chữ thường.
+   */
+  docRef?: (row: T) => { docType: string; id: string | null | undefined } | null
 }
 
 /**

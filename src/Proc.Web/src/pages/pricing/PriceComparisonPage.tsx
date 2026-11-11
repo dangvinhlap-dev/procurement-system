@@ -48,7 +48,7 @@ const purchaseColumns: GridColumn<ComparePurchaseRow>[] = [
 const priceListColumns: GridColumn<ComparePriceListRow>[] = [
   { key: 'supplier', title: 'Nhà cung cấp', width: 230, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'scope', title: 'Áp dụng', width: 110, value: (r) => (r.isGroupWide ? 'Toàn tập đoàn' : r.companyCode), groupable: true },
-  { key: 'no', title: 'Số bảng giá', width: 150, value: (r) => r.priceListNo },
+  { key: 'no', title: 'Số bảng giá', width: 150, value: (r) => r.priceListNo, docRef: () => ({ docType: 'PRL', id: null }) },
   { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
   { key: 'minQty', title: 'Từ SL', width: 80, type: 'quantity', value: (r) => r.minQty },
   { key: 'price', title: 'Đơn giá', width: 110, type: 'money', value: (r) => r.unitPrice },
@@ -63,7 +63,7 @@ const historyColumns: GridColumn<PriceHistoryEntry>[] = [
   { key: 'company', title: 'Công ty', width: 90, value: (r) => r.companyCode, groupable: true },
   { key: 'supplier', title: 'NCC', width: 110, value: (r) => r.supplierCode, groupable: true },
   { key: 'source', title: 'Nguồn', width: 130, value: (r) => priceSourceLabels[r.source], groupable: true },
-  { key: 'no', title: 'Chứng từ', width: 150, value: (r) => r.documentNo },
+  { key: 'no', title: 'Chứng từ', width: 150, value: (r) => r.documentNo, docRef: () => ({ docType: 'PO', id: null }) },
   { key: 'qty', title: 'SL (ĐVT cơ sở)', width: 110, type: 'quantity', value: (r) => r.baseQty },
   { key: 'price', title: 'Giá quy đổi', width: 110, type: 'money', value: (r) => r.basePrice },
 ]

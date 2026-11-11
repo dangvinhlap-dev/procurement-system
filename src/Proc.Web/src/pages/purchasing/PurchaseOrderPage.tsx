@@ -3,7 +3,7 @@ import { DollarOutlined, FileAddOutlined, FileDoneOutlined, InboxOutlined, Warni
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Space, Table, Tooltip } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useSupplierItemLookup, vatOptions } from '../../api/masterData'
@@ -35,6 +35,7 @@ import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
+import { DocNo } from '../../classic/DocNo'
 
 interface PoLineValues {
   id: string | null
@@ -198,12 +199,19 @@ export function PurchaseOrderPage() {
       if (!saved) return undefined
       if (saved.approvedUnitPrice == null)
         return saved.priceSource === 'None' ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
+      // Phiếu gốc của nguồn giá đã lưu – hiện bằng ô số chứng từ (bấm sao chép, bấm đúp mở – design.md mục 20.1 R5).
       const ref =
-        saved.priceSource === 'Rfq' ? saved.sourceRfqNo
-        : saved.priceSource === 'Contract' ? saved.contractNo
-        : saved.priceSource === 'MonthlyApproval' ? saved.monthlyApprovalNo
-        : saved.priceListNo
-      return { unitPrice: saved.approvedUnitPrice, discountPct: saved.approvedDiscountPct ?? 0, sourceText: `${priceSourceLabels[saved.priceSource]} ${ref ?? ''}`.trim() }
+        saved.priceSource === 'Rfq' ? { no: saved.sourceRfqNo, docType: 'RFQ', id: saved.sourceRfqId }
+        : saved.priceSource === 'Contract' ? { no: saved.contractNo, docType: 'CTR', id: saved.contractId }
+        : saved.priceSource === 'MonthlyApproval' ? { no: saved.monthlyApprovalNo, docType: 'GTH', id: saved.monthlyApprovalId }
+        : { no: saved.priceListNo, docType: 'PRL', id: saved.priceListId }
+      return {
+        unitPrice: saved.approvedUnitPrice,
+        discountPct: saved.approvedDiscountPct ?? 0,
+        sourceText: `${priceSourceLabels[saved.priceSource]} ${ref.no ?? ''}`.trim(),
+        sourceLabel: priceSourceLabels[saved.priceSource],
+        ref,
+      }
     }
     if (!line?.itemId || !line.uomId || !supplierId) return undefined
     const p = suggestedPrice(line)
@@ -553,11 +561,25 @@ export function PurchaseOrderPage() {
       // Phiếu NCC độc quyền, mua ngoài danh sách phiếu tháng ghi nhận lúc lưu (design.md mục 18.10, 18.25) – hiện kèm nguồn giá.
       render: (field, index) => {
         const saved = savedLine(index)
-        const sole = saved?.soleSourceNo
-        const offList = saved?.isOffMonthlyList ? `Ngoài danh sách ${saved.monthlyApprovalNo ?? ''}`.trim() : null
-        const overCeiling = saved?.isOverCeiling && saved.ceilingPrice !== null ? `Vượt giá trần ${formatMoney(saved.ceilingPrice)}` : null
-        return readonlyCell(
-          [approvedPrice(field.name)?.sourceText, offList, overCeiling, sole ? `Độc quyền ${sole}` : null].filter(Boolean).join(' · '),
+        const price = approvedPrice(field.name)
+        const parts: ReactNode[] = []
+        // Nguồn giá đã lưu có số phiếu gốc → ô số chứng từ; dòng đang nhập (giá gợi ý) chỉ có chữ.
+        if (price && 'ref' in price && price.ref?.no)
+          parts.push(<>{price.sourceLabel} <DocNo no={price.ref.no} docType={price.ref.docType} id={price.ref.id} /></>)
+        else if (price?.sourceText) parts.push(price.sourceText)
+        if (saved?.isOffMonthlyList)
+          parts.push(<>Ngoài danh sách {saved.monthlyApprovalNo && <DocNo no={saved.monthlyApprovalNo} docType="GTH" id={saved.monthlyApprovalId} />}</>)
+        if (saved?.isOverCeiling && saved.ceilingPrice !== null) parts.push(`Vượt giá trần ${formatMoney(saved.ceilingPrice)}`)
+        if (saved?.soleSourceNo) parts.push(<>Độc quyền <DocNo no={saved.soleSourceNo} docType="NDQ" id={saved.soleSourceApprovalId} /></>)
+        return (
+          <span className="line-grid-readonly">
+            {parts.map((p, i) => (
+              <Fragment key={i}>
+                {i > 0 && ' · '}
+                {p}
+              </Fragment>
+            ))}
+          </span>
         )
       },
     },
@@ -586,7 +608,15 @@ export function PurchaseOrderPage() {
         </Form.Item>
       ),
     },
-    { key: 'pr', title: 'PR nguồn', width: 130, render: (_, index) => readonlyCell(savedLine(index)?.sourcePrNo ?? (lines[index]?.sourcePrLineId ? '(từ PR)' : '')) },
+    {
+      key: 'pr', title: 'PR nguồn', width: 130,
+      render: (_, index) => {
+        const saved = savedLine(index)
+        return saved?.sourcePrNo
+          ? <DocNo no={saved.sourcePrNo} docType="PR" id={saved.sourcePrId} />
+          : readonlyCell(lines[index]?.sourcePrLineId ? '(từ PR)' : '')
+      },
+    },
   ]
 
   /** Trạng thái hồ sơ khẩn cấp hiện ở đầu phiếu (design.md mục 18.11). */

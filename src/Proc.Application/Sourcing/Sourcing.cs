@@ -70,10 +70,10 @@ public sealed record RfqListItemDto(
     Guid Id, string No, DateOnly Date, string Title, DateOnly Deadline, int LineCount, int SupplierCount, int QuotedCount, string Status,
     string? CreatedByName);
 
-/// <summary>Dòng RFQ.</summary>
+/// <summary>Dòng RFQ. SourcePrId: Id PR nguồn – mở phiếu gốc từ ô số chứng từ (design.md mục 20.1 R5).</summary>
 public sealed record RfqLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal UomFactor, decimal Qty, Guid? SourcePrLineId,
-    string? SourcePrNo, string? Note, Guid? AwardedSupplierId, string? AwardReason);
+    string? SourcePrNo, string? Note, Guid? AwardedSupplierId, string? AwardReason, Guid? SourcePrId = null);
 
 /// <summary>Giá một NCC chào cho một dòng RFQ; BaseNetPrice = giá quy về ĐVT cơ sở, trước VAT; IsLowest = thấp nhất của dòng.</summary>
 public sealed record QuotationLineDto(
@@ -346,7 +346,9 @@ public sealed class SaveQuotationRequestValidator : AbstractValidator<SaveQuotat
 /// <param name="UomId">ĐVT.</param>
 /// <param name="UnitPrice">Đơn giá báo giá trúng thầu, trước CK.</param>
 /// <param name="DiscountPct">% chiết khấu báo giá.</param>
-public sealed record RfqAwardPriceDto(Guid RfqLineId, string RfqNo, Guid ItemId, Guid UomId, decimal UnitPrice, decimal DiscountPct);
+/// <param name="RfqId">Id RFQ – mở phiếu gốc từ ô số chứng từ (design.md mục 20.1 R5).</param>
+public sealed record RfqAwardPriceDto(
+    Guid RfqLineId, string RfqNo, Guid ItemId, Guid UomId, decimal UnitPrice, decimal DiscountPct, Guid? RfqId = null);
 
 /// <summary>
 /// Đọc giá trúng thầu cho module mua hàng (module chỉ gọi nhau qua interface – CLAUDE.md mục 3). Tách khỏi <see cref="IRfqService"/>

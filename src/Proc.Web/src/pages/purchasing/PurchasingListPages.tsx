@@ -50,7 +50,7 @@ const statusColumn: Column = {
 /** Cột theo loại phiếu: PR có bộ phận, mục đích, ưu tiên, % đã đặt; PO có NCC, kho nhận, % đã nhận. */
 const columnsByKind: Record<PurchaseKind, Column[]> = {
   'purchase-requests': [
-    { key: 'no', title: 'Số PR', width: 150, value: (r) => r.no },
+    { key: 'no', title: 'Số PR', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'PR', id: r.id }) },
     { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
     { key: 'department', title: 'Bộ phận', width: 150, value: (r) => r.description, groupable: true },
     { key: 'purpose', title: 'Mục đích', width: 200, value: (r) => r.purpose },
@@ -62,7 +62,7 @@ const columnsByKind: Record<PurchaseKind, Column[]> = {
     statusColumn,
   ],
   'purchase-orders': [
-    { key: 'no', title: 'Số PO', width: 150, value: (r) => r.no },
+    { key: 'no', title: 'Số PO', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'PO', id: r.id }) },
     { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
     { key: 'supplier', title: 'Nhà cung cấp', width: 240, value: (r) => r.description, groupable: true },
     { key: 'warehouse', title: 'Kho nhận', width: 80, value: (r) => r.purpose, groupable: true },
@@ -128,7 +128,7 @@ export function PurchaseListPage({ kind, title, path, exportFileName }: { kind: 
 
 const pendingColumns: GridColumn<PendingApproval>[] = [
   { key: 'type', title: 'Loại', width: 120, value: (r) => r.docTypeName, groupable: true },
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: r.docType, id: r.documentId }) },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'description', title: 'Bộ phận / NCC', width: 240, value: (r) => r.description },
   { key: 'amount', title: 'Giá trị', width: 130, type: 'money', value: (r) => r.amount },
@@ -170,7 +170,7 @@ const trackingColumns: GridColumn<DeliveryTracking>[] = [
     tone: (r) => (r.overdue ? 'error' : r.receivedQty > 0 ? 'warning' : 'neutral'),
     groupable: true,
   },
-  { key: 'no', title: 'Số PO', width: 150, value: (r) => r.orderNo },
+  { key: 'no', title: 'Số PO', width: 150, value: (r) => r.orderNo, docRef: (r) => ({ docType: 'PO', id: r.orderId }) },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'item', title: 'Mặt hàng', width: 240, value: (r) => `${r.itemCode} – ${r.itemName}` },
   { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },

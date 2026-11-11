@@ -36,7 +36,7 @@ const columns: GridColumn<SupplierReviewBoardRow>[] = [
     tone: (r) => (r.status === 'Completed' ? 'success' : r.status === 'Draft' ? 'warning' : r.isDue ? 'error' : 'neutral'),
     groupable: true,
   },
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.reviewNo },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.reviewNo, docRef: (r) => ({ docType: 'DGN', id: r.reviewId }) },
   { key: 'date', title: 'Ngày đánh giá', width: 100, type: 'date', value: (r) => r.date },
   { key: 'score', title: 'Điểm', width: 70, type: 'quantity', value: (r) => r.score },
   { key: 'result', title: 'Kết luận', width: 190, value: (r) => (r.result ? reviewResultLabels[r.result] : null), groupable: true },

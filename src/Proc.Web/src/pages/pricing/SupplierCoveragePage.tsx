@@ -26,7 +26,7 @@ const columns: GridColumn<SupplierCoverageRow>[] = [
   { key: 'suspended', title: 'NCC tạm ngưng', width: 115, type: 'quantity', value: (r) => r.suspendedCount },
   { key: 'suppliers', title: 'Các NCC đã duyệt (ưu tiên đứng đầu)', width: 320, value: (r) => r.approvedSuppliers },
   { key: 'soleItems', title: 'MH độc quyền', width: 100, type: 'quantity', value: (r) => r.soleSourceItemCount },
-  { key: 'sole', title: 'Phiếu NCC độc quyền', width: 180, value: (r) => r.soleSourceNo ?? '' },
+  { key: 'sole', title: 'Phiếu NCC độc quyền', width: 180, value: (r) => r.soleSourceNo ?? '', docRef: () => ({ docType: 'NDQ', id: null }) },
 ]
 
 /**

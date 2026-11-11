@@ -49,7 +49,7 @@ const MONTH_FORMATS = MONTH_INPUT_FORMATS
 const formatMonth = (value: string) => dayjs(value).format('MM/YYYY')
 
 const listColumns: GridColumn<MonthlyApprovalListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'GTH', id: r.id }) },
   { key: 'period', title: 'Tháng', width: 80, value: (r) => formatMonth(r.period), groupable: true },
   { key: 'category', title: 'Nhóm hàng', width: 220, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true },
   { key: 'companies', title: 'Công ty áp dụng', width: 160, value: (r) => r.companyCodes },

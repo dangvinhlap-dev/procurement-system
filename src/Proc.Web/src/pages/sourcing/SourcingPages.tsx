@@ -31,7 +31,7 @@ import { formatDateTime, vnNumberInput, DATE_INPUT_FORMATS } from '../../utils/f
 const LIST_PATH = '/dau-thau/tim-nguon'
 
 const listColumns: GridColumn<SourcingListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'SRC', id: r.id }) },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'subject', title: 'Hàng cần tìm', width: 260, value: (r) => r.subject },
   { key: 'qty', title: 'SL dự kiến', width: 90, type: 'quantity', value: (r) => r.qty },

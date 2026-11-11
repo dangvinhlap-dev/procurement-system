@@ -199,7 +199,7 @@ export function AnomalyReportPage() {
 }
 
 const findingColumns: GridColumn<ControlFinding>[] = [
-  { key: 'no', title: 'Số', width: 140, value: (r) => r.no },
+  { key: 'no', title: 'Số', width: 140, value: (r) => r.no, docRef: (r) => ({ docType: 'VP', id: r.id }) },
   { key: 'date', title: 'Ngày phát hiện', width: 100, type: 'date', value: (r) => r.date },
   {
     key: 'severity',

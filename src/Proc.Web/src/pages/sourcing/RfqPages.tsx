@@ -54,11 +54,12 @@ import { toPlannedLines } from '../purchasing/plannedLines'
 import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithReason } from '../purchasing/useApprovalCommands'
 import { confirmApprove } from '../purchasing/approvalDialogs'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
+import { DocNo } from '../../classic/DocNo'
 
 const LIST_PATH = '/dau-thau/rfq'
 
 const listColumns: GridColumn<RfqListItem>[] = [
-  { key: 'no', title: 'Số RFQ', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số RFQ', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'RFQ', id: r.id }) },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'title', title: 'Tiêu đề', width: 260, value: (r) => r.title },
   { key: 'deadline', title: 'Hạn nộp', width: 90, type: 'date', value: (r) => r.deadline },
@@ -588,7 +589,12 @@ export function RfqPage() {
       key: 'pr',
       title: 'PR nguồn',
       width: 140,
-      render: (_, index) => <span className="line-grid-readonly">{savedLine(index)?.sourcePrNo ?? (lines[index]?.sourcePrLineId ? '(từ PR)' : '')}</span>,
+      render: (_, index) => {
+        const saved = savedLine(index)
+        return saved?.sourcePrNo
+          ? <DocNo no={saved.sourcePrNo} docType="PR" id={saved.sourcePrId} />
+          : <span className="line-grid-readonly">{lines[index]?.sourcePrLineId ? '(từ PR)' : ''}</span>
+      },
     },
     {
       key: 'note',
@@ -727,10 +733,13 @@ export function RfqPage() {
         audit={{ entityType: 'Rfq', id: doc?.id }}
         status={status}
         meta={
-          doc &&
-          `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}${doc.sourcingNo ? ` · Từ phiếu tìm nguồn ${doc.sourcingNo}` : ''}${
-            doc.awardedByName && doc.status !== 'Sent' ? ` · Người chọn thầu: ${doc.awardedByName}` : ''
-          }`
+          doc && (
+            <>
+              {`Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
+              {doc.sourcingNo && <> · Từ phiếu tìm nguồn <DocNo no={doc.sourcingNo} docType="SRC" id={doc.sourcingId} /></>}
+              {doc.awardedByName && doc.status !== 'Sent' ? ` · Người chọn thầu: ${doc.awardedByName}` : ''}
+            </>
+          )
         }
         loading={rfq.isLoading}
         error={error ?? (rfq.error ? rfq.error.message : null)}
@@ -1030,9 +1039,10 @@ function ComparisonView({
     { key: 'warranty', label: `Bảo hành (${rfq.weights.warranty}%)`, value: (s) => formatQuantity(s.warrantyScore) },
     { key: 'total', label: 'Tổng điểm (thang 10)', value: (s) => <strong>{formatQuantity(s.totalScore)}</strong> },
     { key: 'awarded', label: 'Giá trị trúng thầu', value: (s) => (s.awardedAmount ? formatMoney(s.awardedAmount) : '') },
-    { key: 'po', label: 'Đơn mua hàng', value: (s) => s.purchaseOrderNo },
-    { key: 'priceList', label: 'Bảng giá NCC', value: (s) => s.priceListNo },
-    { key: 'contract', label: 'Hợp đồng nguyên tắc', value: (s) => s.contractNo },
+    // Phiếu tạo ra từ kết quả chọn thầu: ô số chứng từ – bấm sao chép, bấm đúp mở (design.md mục 20.1 R5).
+    { key: 'po', label: 'Đơn mua hàng', value: (s) => <DocNo no={s.purchaseOrderNo} docType="PO" id={s.purchaseOrderId} /> },
+    { key: 'priceList', label: 'Bảng giá NCC', value: (s) => <DocNo no={s.priceListNo} docType="PRL" id={s.priceListId} /> },
+    { key: 'contract', label: 'Hợp đồng nguyên tắc', value: (s) => <DocNo no={s.contractNo} docType="CTR" id={s.contractId} /> },
     ...(rfq.actions.canQuote
       ? [
           {

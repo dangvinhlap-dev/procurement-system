@@ -1,6 +1,6 @@
 import { Alert, App, Button, Descriptions, Input, Modal } from 'antd'
 import { useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   changeKindLabels,
   changeStatusLabels,
@@ -22,6 +22,7 @@ import { withPendingApprovers } from '../../api/purchasing'
 import { SupplierProfile } from './SupplierProfile'
 import { AppraisalPanel, AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
 import { useAppraisals } from '../../api/appraisals'
+import { DocNo } from '../../classic/DocNo'
 
 /** Đường dẫn màn hình duyệt NCC; trang đầy đủ một yêu cầu là `${SUPPLIER_APPROVAL_PATH}/:id`. */
 export const SUPPLIER_APPROVAL_PATH = '/gia-ncc/duyet-ncc'
@@ -34,7 +35,7 @@ const statusTone: Record<SupplierChangeStatus, 'success' | 'warning' | 'error' |
 }
 
 const columns: GridColumn<SupplierChangeRequest>[] = [
-  { key: 'no', title: 'Số yêu cầu', width: 130, value: (r) => r.no },
+  { key: 'no', title: 'Số yêu cầu', width: 130, value: (r) => r.no, docRef: (r) => ({ docType: 'NCC', id: r.id }) },
   { key: 'supplier', title: 'Nhà cung cấp', width: 240, value: (r) => `${r.supplierCode} – ${r.supplierName}` },
   { key: 'kind', title: 'Loại', width: 170, value: (r) => changeKindLabels[r.kind], groupable: true },
   { key: 'proposed', title: 'Đề nghị', width: 260, value: (r) => r.proposedSummary },
@@ -171,7 +172,7 @@ function SupplierApprovalDrawer({ id, asPage = false, onClose }: { id: string; a
                 {r.onboarding && (
                   // Yêu cầu lập từ hồ sơ đánh giá NCC mới (lát G8) – người duyệt mở hồ sơ xem đánh giá, giấy tờ, đề xuất.
                   <Descriptions.Item label="Hồ sơ NCC mới">
-                    <Link to={`/gia-ncc/ho-so-ncc-moi/${r.onboarding.id}`}>{r.onboarding.no}</Link>
+                    <DocNo no={r.onboarding.no} docType="HSN" id={r.onboarding.id} />
                   </Descriptions.Item>
                 )}
                 <Descriptions.Item label="Đang chờ">{r.waitingFor ?? '—'}</Descriptions.Item>

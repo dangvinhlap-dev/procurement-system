@@ -90,11 +90,12 @@ test.describe('danh mục nhà cung cấp', () => {
     await gridRow(page, code).dblclick()
     await expect(drawer.getByText('Đang chờ duyệt')).toBeVisible()
     await expect(drawer.getByText(/Đổi trạng thái → Danh sách đen – Giao hàng không đúng xuất xứ \(chờ TCT\)/)).toBeVisible()
-    await drawer.getByRole('link', { name: new RegExp(`^${code}-`) }).click()
+    // Số yêu cầu là ô số chứng từ (lát Z3): bấm đúp mở trang đầy đủ của yêu cầu duyệt NCC.
+    await drawer.locator('.erp-doc-no', { hasText: new RegExp(`^${code}-`) }).dblclick()
+    await expect(page).toHaveURL(/\/gia-ncc\/duyet-ncc\/[0-9a-f-]+$/)
 
-    // Màn hình Duyệt NCC: người lập không tự duyệt, chỉ rút được yêu cầu.
-    await expect(page.getByRole('heading', { name: 'Yêu cầu duyệt nhà cung cấp' })).toBeVisible()
-    const approval = page.locator('.detail-drawer')
+    // Người lập không tự duyệt, chỉ rút được yêu cầu.
+    const approval = page.locator('.detail-page')
     await expect(approval.getByText('Giao hàng không đúng xuất xứ').first()).toBeVisible()
     await expect(approval.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0)
     await approval.getByRole('tab', { name: 'Lịch sử duyệt' }).click()
@@ -102,9 +103,7 @@ test.describe('danh mục nhà cung cấp', () => {
     await page.screenshot({ path: 'e2e/screenshots/supplier-approval.png', animations: 'disabled' })
 
     // Trang đầy đủ (mở từ thông báo, Việc cần làm – TC-3): có hồ sơ NCC chỉ xem để người duyệt xem đủ trước khi duyệt.
-    const requestId = new URL(page.url()).searchParams.get('mo')!
-    await page.goto(`/gia-ncc/duyet-ncc/${requestId}`)
-    const full = page.locator('.detail-page')
+    const full = approval
     await expect(full.locator('.document-form-title')).toContainText('Chờ duyệt')
     await expect(page.locator('.detail-drawer')).toHaveCount(0)
     await full.getByRole('tab', { name: 'Hồ sơ NCC' }).click()

@@ -616,7 +616,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     /// <param name="order">Đơn mua hàng (đã nạp dòng).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Theo Id dòng PO; dòng không có phiếu tháng không có trong kết quả.</returns>
-    private async Task<Dictionary<Guid, (string? No, decimal? Ceiling, bool IsOverCeiling)>> MonthlyRefsAsync(
+    private async Task<Dictionary<Guid, (string? No, decimal? Ceiling, bool IsOverCeiling, Guid? Id)>> MonthlyRefsAsync(
         PurchaseOrder order, CancellationToken cancellationToken)
     {
         var monthlyLineIds = order.Lines.Select(l => l.MonthlyApprovalLineId).OfType<Guid>().Distinct().ToList();
@@ -625,9 +625,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 from l in _db.Set<MonthlySupplierApprovalLine>().AsNoTracking()
                 join a in _db.MonthlySupplierApprovals.IgnoreQueryFilters([ProcDbContext.CompanyFilter, ProcDbContext.ItemCategoryFilter]) on l.ApprovalId equals a.Id
                 where monthlyLineIds.Contains(l.Id)
-                select new { l.Id, a.No, l.CeilingPrice, l.UomFactor })
+                select new { l.Id, a.No, l.CeilingPrice, l.UomFactor, ApprovalId = a.Id })
             .ToDictionaryAsync(x => x.Id, cancellationToken);
-        var result = new Dictionary<Guid, (string? No, decimal? Ceiling, bool IsOverCeiling)>();
+        var result = new Dictionary<Guid, (string? No, decimal? Ceiling, bool IsOverCeiling, Guid? Id)>();
         foreach (var line in order.Lines)
         {
             if (line.MonthlyApprovalLineId is not { } monthlyLineId || monthlyLines.GetValueOrDefault(monthlyLineId) is not { } m) continue;
@@ -637,7 +637,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 ? Math.Round(c / m.UomFactor * line.UomFactor, 6, MidpointRounding.AwayFromZero)
                 : null;
             // Vượt trần: giá ròng (sau chiết khấu, trước VAT) > trần, mọi mặt hàng – gửi duyệt phải qua chặng Chủ tịch/TGĐ (Q3, lát H3).
-            result[line.Id] = (m.No, ceiling, ceiling is { } limit && line.NetUnitPrice > limit);
+            result[line.Id] = (m.No, ceiling, ceiling is { } limit && line.NetUnitPrice > limit, m.ApprovalId);
         }
 
         return result;
@@ -658,8 +658,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in _db.PurchaseRequests on l.RequestId equals r.Id
                 where prLineIds.Contains(l.Id)
-                select new { l.Id, r.No })
-            .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
+                select new { l.Id, r.No, RequestId = r.Id })
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
         var received = await ReceivedBaseByLineAsync(order.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
         var docsCompletedBy = order.DocsCompletedBy is { } completedBy
             ? await _db.Users.AsNoTracking().Where(u => u.Id == completedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
@@ -673,7 +673,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var contractNos = await _db.PurchaseContracts.AsNoTracking().Where(c => contractIds.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, c => c.No, cancellationToken);
         var rfqLineIds = order.Lines.Select(l => l.SourceRfqLineId).OfType<Guid>().Distinct().ToList();
-        var rfqNos = (await _awards.GetAsync(order.SupplierId, rfqLineIds, cancellationToken)).ToDictionary(a => a.RfqLineId, a => a.RfqNo);
+        var rfqs = (await _awards.GetAsync(order.SupplierId, rfqLineIds, cancellationToken)).ToDictionary(a => a.RfqLineId);
         var soleSourceIds = order.Lines.Select(l => l.SoleSourceApprovalId).OfType<Guid>().Distinct().ToList();
         var soleSourceNos = await _db.SoleSourceApprovals.AsNoTracking().Where(x => soleSourceIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
@@ -694,13 +694,20 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             return new PurchaseOrderLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "", l.Qty,
                 l.UomFactor, l.BaseQty, l.UnitPrice, l.DiscountPct, l.GrossAmount, l.DiscountAmount, l.Amount, l.VatCode, l.VatAmount, l.DeliveryDate,
-                l.Note, l.SourcePrLineId, l.SourcePrLineId is { } p ? prNos.GetValueOrDefault(p) : null, receivedQty, Math.Max(0, l.Qty - receivedQty),
+                l.Note, l.SourcePrLineId, l.SourcePrLineId is { } p ? prNos.GetValueOrDefault(p)?.No : null, receivedQty, Math.Max(0, l.Qty - receivedQty),
                 l.PriceSource.ToString(), l.ApprovedUnitPrice, l.ApprovedDiscountPct, l.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null,
-                l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqNos.GetValueOrDefault(rl) : null,
+                l.ContractId is { } c ? contractNos.GetValueOrDefault(c) : null, l.SourceRfqLineId is { } rl ? rfqs.GetValueOrDefault(rl)?.RfqNo : null,
                 l.SourceRfqLineId, l.PriceDeviationReason, l.IsPriceDeviation, l.IsOutOfContract,
                 l.SoleSourceApprovalId is { } ss ? soleSourceNos.GetValueOrDefault(ss) : null,
                 monthly.GetValueOrDefault(l.Id).No, l.IsOffMonthlyList, CeilingOf(l), IsOverCeiling(l),
-                l.SupplierItemCode);
+                l.SupplierItemCode,
+                l.SourcePrLineId is { } pr ? prNos.GetValueOrDefault(pr)?.RequestId : null,
+                // Chỉ trả Id khi tra được số – phiếu đã bị lọc khỏi phạm vi thì ô chỉ có số, không mở được.
+                l.PriceListId is { } pid && priceListNos.ContainsKey(pid) ? pid : null,
+                l.ContractId is { } cid && contractNos.ContainsKey(cid) ? cid : null,
+                l.SourceRfqLineId is { } rli ? rfqs.GetValueOrDefault(rli)?.RfqId : null,
+                l.SoleSourceApprovalId is { } sid && soleSourceNos.ContainsKey(sid) ? sid : null,
+                monthly.GetValueOrDefault(l.Id).Id);
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;
