@@ -3,6 +3,34 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.22.2] - 2026-11-11
+
+Bản vá thứ hai cho 0.22.0 (phản ánh khi test bản 0.22.0).
+
+### Thêm mới
+- Đơn mua hàng (PO): chọn mặt hàng hoặc đổi ĐVT mà mặt hàng có giá đã duyệt (phiếu duyệt tháng, kết quả chọn thầu, hợp đồng, bảng giá) thì
+  **tự điền** đơn giá, % CK, thuế suất – không cần bấm "Áp giá đã duyệt". Đã gõ đơn giá trong lúc giá đang tải thì giữ số đã gõ.
+
+### Thay đổi
+- Thanh menu chữ chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm trống vẫn hiện, bấm vào báo "Không có màn hình
+  được phép" – ví dụ thủ kho thấy Đấu thầu, Báo cáo).
+- Tài liệu test `docs/DuLieuThu_KichBanTest_0.22.0.docx`: sửa đường dẫn menu (K04, K06), tên nút (K09), tên cột "SL thực nhận", bước nhập
+  đơn giá (K02), ghi phiên bản 0.22.2.
+
+### Sửa lỗi
+- Không có thêm (sửa lỗi cột SL thực nhận ở 0.22.1).
+
+### Thay đổi CSDL
+- Không có (vẫn 78 migration như 0.22.0, không có script 0.22.2).
+
+### Lưu ý khi nâng cấp
+- Từ 0.22.0 hoặc 0.22.1: chỉ thay gói ứng dụng, giữ `appsettings.Production.json`; không cần chạy script CSDL. Nên sao lưu CSDL theo thói quen.
+- Từ bản cũ hơn 0.22.0: làm theo mục "Lưu ý khi nâng cấp" của 0.22.0 (chạy `db/scripts/0.22.0.sql`), rồi cài gói 0.22.2.
+- Người dùng tải lại trang (Ctrl+F5) để trình duyệt nhận giao diện mới.
+
+### Cách quay lại bản trước
+- Triển khai lại gói tag `v0.22.1`; không cần thao tác CSDL.
+
 ## [0.22.1] - 2026-11-11
 
 Bản vá cho 0.22.0 (phản ánh khi test bản 0.22.0).
