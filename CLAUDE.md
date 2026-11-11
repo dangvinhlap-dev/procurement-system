@@ -65,6 +65,11 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - **Mọi form chứng từ/phiếu** (PR, PO, RFQ, HĐ, phiếu kho… và form mới làm sau này) phải có: ô **Ghi chú** nhập được khi tạo; tab
   **Đính kèm** (`useAttachmentTab`) đính kèm được ngay khi tạo (hàng chờ, lưu xong tự tải lên); file lưu thư mục trên máy chủ, tối đa
   **2 MB/file** mặc định (`Attachments:MaxFileSizeMb`). Loại chủ mới thêm vào `AttachmentOwnerTypes` + `AttachmentService` (design.md 18.4).
+- **Mọi chứng từ có phê duyệt** (người dùng chốt 11/11/2026 – design.md mục 20): mỗi bước duyệt có **ý kiến + đính kèm**; **đã duyệt thì
+  khóa** – không sửa, xóa gì trên phiếu kể cả đính kèm; **quyền Hủy** gán được cho mọi người dùng, hủy **dây chuyền từ phiếu cuối về phiếu
+  đầu** (hộp thoại trình tự, tính lại số liệu); form hiện **ổ khóa vàng từng bước** (đóng = đã duyệt, mở = chưa) và **Kiểm tra phê duyệt**
+  (bước 0…n: tên đăng nhập, họ tên, chức vụ, giờ ngày); **số chứng từ trong ô chữ** – sao chép, bấm đúp mở phiếu gốc. Chi tiết, điểm còn chờ
+  chốt: design.md mục 20.2.
 
 ## 5. Quy ước hiển thị
 - Giao diện hoàn toàn tiếng Việt. Tên code, bảng, cột, API bằng tiếng Anh.

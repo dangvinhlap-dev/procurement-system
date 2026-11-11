@@ -2279,6 +2279,38 @@ của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiệ
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
+## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
+
+Áp cho **mọi chứng từ có phê duyệt** (PR, PO, RFQ/kết quả chọn thầu, hợp đồng, phụ lục, bảng giá, NCC độc quyền, duyệt NCC, phiếu duyệt
+tháng, đặt hàng gộp, chiết khấu sản lượng, hồ sơ NCC mới, XNH… và mọi phiếu làm sau này: đề nghị mua 1A/1B/DV, 2A/2B, 3A/3B, 4A/4B, 5A/5B).
+
+### 20.1 Nguyên văn yêu cầu (tóm tắt đúng ý)
+
+| # | Quy tắc |
+| --- | --- |
+| R1 | Mọi chứng từ từ khi tạo đến phê duyệt có mục **Ý kiến người phê duyệt** và **đính kèm file** (ở từng bước duyệt). **Đã duyệt xong thì không được sửa, xóa bất kỳ thông tin nào trên phiếu, kể cả file đính kèm.** |
+| R2 | Mọi người dùng **được phân quyền Hủy phiếu** (quyền hủy gán được cho bất kỳ vai trò/người dùng). Hủy phiếu thì hệ thống **hủy theo trình tự từ phiếu cuối cùng về phiếu đầu tiên** của chuỗi chứng từ liên quan và **tính lại số liệu trả về chính xác**. Bấm Hủy phiếu thì mở **hộp thoại liệt kê trình tự từng phiếu sẽ hủy** (phiếu nào, thứ tự nào) trước khi xác nhận. |
+| R3 | Tạo xong, **lưu** mới đến **Gửi phê duyệt**. Trên form chứng từ, **mỗi bước phê duyệt là một biểu tượng ổ khóa màu vàng**: bước đã duyệt thì ổ khóa **đóng**, bước chưa duyệt thì ổ khóa **mở**. |
+| R4 | Chứng từ có chức năng **Kiểm tra phê duyệt**, hiện từng dòng: **Bước 0** – tên đăng nhập, họ tên, chức vụ, thời gian (giờ, ngày, tháng, năm) tạo/gửi phê duyệt; tương tự **bước 1 … bước cuối**. Ai mở phiếu cũng biết ai đã duyệt. (Đã có tab Lịch sử duyệt dạng cây và hộp thoại người duyệt khi gửi – mục 18.6 – phải sửa cho đúng ý này.) |
+| R5 | **Mọi số chứng từ** của từng loại phiếu hiện trong **ô chữ**: bấm để **sao chép**, **bấm đúp mở form chứng từ gốc**. |
+
+### 20.2 Hiện trạng và chỗ trái với quy tắc cũ (chờ người dùng chốt – CLAUDE.md mục 1)
+
+| # | Hiện trạng | Trái với |
+| --- | --- | --- |
+| C1 | Duyệt trên máy tính chỉ hỏi xác nhận, **không có ô ý kiến**, không đính kèm theo bước (điện thoại có ô ý kiến) | R1 |
+| C2 | Mục 18.4: **đính kèm được ở mọi trạng thái** (kể cả đã duyệt), xóa mềm được | R1 – cấm xóa sau duyệt; thêm file sau duyệt chưa rõ |
+| C3 | Thao tác sau duyệt đang có: PO "Đóng phần còn lại"; XNH "Cập nhật hóa đơn", "Điều chỉnh SL thực nhận", nghiệm thu; hợp đồng chấm dứt, phụ lục; phiếu tháng điều chỉnh | R1 – cần chốt thao tác nào được giữ |
+| C4 | Mục 6 (dòng "Hủy"): PR đã lên PO không hủy được; PO đã có phiếu nhận không hủy được; quyền hủy gắn với quyền lập/quản lý | R2 – hủy dây chuyền, quyền hủy riêng |
+| C5 | Người dùng **chưa có trường Chức vụ** (chỉ có họ tên, vai trò) | R4 |
+| C6 | Số chứng từ liên quan hiện là chữ thường/liên kết, chưa thống nhất ô chữ sao chép + bấm đúp | R5 |
+
+### 20.3 Đề xuất chia lát (chưa làm – chờ chốt 20.2)
+
+Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,
+trường Chức vụ người dùng · Z3 ô số chứng từ dùng chung (sao chép, bấm đúp mở phiếu gốc) · Z4 quyền Hủy riêng từng loại phiếu + hủy dây
+chuyền (hộp thoại trình tự, hủy ngược trong một giao dịch, tính lại SL đã đặt/đã nhận, ngân sách, sản lượng hợp đồng…).
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
