@@ -26,7 +26,7 @@ public sealed class RfqAwardPriceReader : IRfqAwardPriceReader
                 join s in _db.Set<RfqSupplier>() on new { l.RfqId, SupplierId = l.AwardedSupplierId!.Value } equals new { s.RfqId, s.SupplierId }
                 join q in _db.Set<QuotationLine>() on new { RfqSupplierId = s.Id, RfqLineId = l.Id } equals new { q.RfqSupplierId, q.RfqLineId }
                 where rfqLineIds.Contains(l.Id) && r.Status == RfqStatus.Awarded && l.AwardedSupplierId == supplierId
-                select new RfqAwardPriceDto(l.Id, r.No, l.ItemId, l.UomId, q.UnitPrice, q.DiscountPct))
+                select new RfqAwardPriceDto(l.Id, r.No, l.ItemId, l.UomId, q.UnitPrice, q.DiscountPct, r.Id))
             .ToListAsync(cancellationToken);
     }
 }

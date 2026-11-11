@@ -125,6 +125,15 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Nút "Kiểm tra phê duyệt" nằm ở vùng nút bên phải tiêu đề (cạnh "Lịch sử thay đổi", "In phiếu"), bấm được cả khi phiếu chỉ xem; hộp thoại
   là bảng kẻ ô: (Lượt), Bước, Nội dung, Kết quả, Tên đăng nhập, Họ tên, Chức vụ, Giờ ngày (dd/MM/yyyy HH:mm), Ý kiến.
 
+## 5e. Ô số chứng từ (lát Z3, 11/11/2026 – design.md mục 20.1 R5)
+
+- Mọi số chứng từ (đầu phiếu, số phiếu liên quan trên form, cột số phiếu ở **danh sách và báo cáo**) hiện bằng `DocNo`
+  (`src/classic/DocNo.tsx`): ô chữ chỉ đọc cao 18px, viền 1px `--erp-input-border`, nền `--erp-readonly-bg`, phông đơn cách, bo 2px.
+- **Bấm** = sao chép số (thông báo "Đã sao chép số …"; máy chủ http không cho clipboard thì dùng cách dự phòng); **bấm đúp** hoặc **Enter**
+  = mở form chứng từ gốc (`documentPath`). Ô mở được có chữ xanh đậm gạch chấm (`is-link`); không có Id phiếu gốc thì chỉ sao chép.
+- Lưới `DataGrid`: khai báo `docRef: (r) => ({ docType, id })` trên cột – bấm đúp ô mở phiếu gốc của ô, không mở dòng.
+- Form: số phiếu đầu `DocumentForm` tự là ô chữ; số phiếu liên quan dùng `<DocNo no docType id />` thay cho link chữ.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

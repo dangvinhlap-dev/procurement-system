@@ -30,14 +30,15 @@ import { LineGrid, type LineColumn } from '../../components/DocumentForm/LineGri
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { DATE_INPUT_FORMATS, formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
+import { DocNo } from '../../classic/DocNo'
 
 /** Đường dẫn danh sách phiếu đặt hàng gộp (màn hình DHG). */
 export const POOLED_ORDER_PATH = '/mua-hang/dat-hang-gop'
 
 const listColumns: GridColumn<PooledOrderListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'DHG', id: r.id }) },
   { key: 'date', title: 'Ngày đặt', width: 100, type: 'date', value: (r) => r.orderDate },
-  { key: 'gth', title: 'Phiếu duyệt tháng', width: 150, value: (r) => r.monthlyApprovalNo, groupable: true },
+  { key: 'gth', title: 'Phiếu duyệt tháng', width: 150, value: (r) => r.monthlyApprovalNo, groupable: true, docRef: () => ({ docType: 'GTH', id: null }) },
   { key: 'supplier', title: 'Nhà cung cấp', width: 240, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'lines', title: 'Số mặt hàng', width: 90, type: 'quantity', value: (r) => r.lineCount },
   { key: 'amount', title: 'Thành tiền', width: 130, type: 'money', value: (r) => r.totalAmount },
@@ -534,9 +535,14 @@ export function PooledOrderPage() {
       key: 'po', title: 'PO đã tạo', width: 200,
       render: (field) => {
         const saved = doc?.companies.find((x) => x.companyId === companyRows[field.name]?.companyId)
-        return readonlyCell(saved?.purchaseOrderNo
-          ? `${saved.purchaseOrderNo} (${saved.purchaseOrderStatus ? purchaseStatusLabels[saved.purchaseOrderStatus] : ''})`
-          : '')
+        return saved?.purchaseOrderNo ? (
+          <DocNo
+            no={saved.purchaseOrderNo}
+            docType="PO"
+            id={saved.purchaseOrderId}
+            suffix={saved.purchaseOrderStatus ? `(${purchaseStatusLabels[saved.purchaseOrderStatus]})` : undefined}
+          />
+        ) : readonlyCell('')
       },
     },
   ]

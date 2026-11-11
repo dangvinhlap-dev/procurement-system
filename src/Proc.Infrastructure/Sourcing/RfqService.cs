@@ -499,8 +499,8 @@ public sealed class RfqService : IRfqService
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in _db.PurchaseRequests on l.RequestId equals r.Id
                 where prLineIds.Contains(l.Id)
-                select new { l.Id, r.No })
-            .ToDictionaryAsync(x => x.Id, x => x.No, cancellationToken);
+                select new { l.Id, r.No, RequestId = r.Id })
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
         var orderIds = rfq.Suppliers.Select(s => s.PurchaseOrderId).OfType<Guid>().ToList();
         var orderNos = await _db.PurchaseOrders.AsNoTracking().Where(o => orderIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.No, cancellationToken);
         var priceListIds = rfq.Suppliers.Select(s => s.PriceListId).OfType<Guid>().ToList();
@@ -554,7 +554,8 @@ public sealed class RfqService : IRfqService
             var item = items.GetValueOrDefault(l.ItemId);
             return new RfqLineDto(
                 l.Id, l.LineNo, l.ItemId, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "", l.UomFactor, l.Qty,
-                l.SourcePrLineId, l.SourcePrLineId is { } p ? prNos.GetValueOrDefault(p) : null, l.Note, l.AwardedSupplierId, l.AwardReason);
+                l.SourcePrLineId, l.SourcePrLineId is { } p ? prNos.GetValueOrDefault(p)?.No : null, l.Note, l.AwardedSupplierId, l.AwardReason,
+                l.SourcePrLineId is { } pr ? prNos.GetValueOrDefault(pr)?.RequestId : null);
         }).ToList();
 
         string? readOnly = items.Count < itemIds.Count ? "RFQ có mặt hàng ngoài phạm vi nhóm hàng của bạn nên chỉ xem được."

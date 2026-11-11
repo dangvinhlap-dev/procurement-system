@@ -21,7 +21,7 @@ function tone(r: SoleSourceListItem): 'success' | 'warning' | 'error' | 'neutral
 }
 
 const columns: GridColumn<SoleSourceListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'NDQ', id: r.id }) },
   {
     key: 'status', title: 'Trạng thái', width: 170, type: 'status', value: (r) => soleSourceStateLabel(r), tone, groupable: true,
   },

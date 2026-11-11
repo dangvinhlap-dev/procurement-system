@@ -234,7 +234,8 @@ test('PR hàng mới chưa có mã → tìm nguồn → gắn mã → lên PO đ
   await expect(page.getByLabel('Mô tả hàng mới dòng 1')).toHaveValue('Bulông inox chịu axit M12')
   await page.getByRole('tabpanel').getByRole('button', { name: /Tìm nguồn$/ }).click()
   await expect(page.locator('.ant-message')).toContainText('Đã lập phiếu tìm nguồn')
-  await expect(page.getByRole('tabpanel').getByRole('link')).toBeVisible()
+  // Số phiếu tìm nguồn hiện bằng ô số chứng từ (bấm đúp mở phiếu – lát Z3).
+  await expect(page.getByRole('tabpanel').locator('.erp-doc-no[data-doc-type="SRC"]')).toBeVisible()
   await page.getByRole('tabpanel').getByRole('button', { name: /Gắn mã$/ }).click()
   await page.getByRole('combobox', { name: 'Mặt hàng gắn mã' }).fill(itemCode.toLowerCase())
   await pickOption(page, itemCode)

@@ -7,6 +7,7 @@ import { layoutTokens } from '../../theme'
 import { COLUMN_DRAG_TYPE, GridHeaderCell, type GridHeaderCellProps } from './GridHeaderCell'
 import { cellText, compareCellValues, type GridColumn } from './types'
 import './DataGrid.css'
+import { DocNo } from '../../classic/DocNo'
 
 /** Trên ngưỡng này lưới bật cuộn ảo để không vẽ hết mọi dòng (ui-guide.md: "cuộn ảo khi trên 500 dòng"). */
 const VIRTUAL_THRESHOLD = 500
@@ -366,6 +367,10 @@ function renderCell<T>(column: GridColumn<T>, row: T) {
         {text}
       </span>
     )
+  }
+  if (column.docRef && text) {
+    const ref = column.docRef(row)
+    if (ref) return <DocNo no={text} docType={ref.docType} id={ref.id} />
   }
   return text
 }

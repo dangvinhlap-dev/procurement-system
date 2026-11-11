@@ -47,7 +47,7 @@ import { confirmApprove } from './approvalDialogs'
 const LIST_PATH = '/mua-hang/hop-dong-khung'
 
 const listColumns: GridColumn<ContractListItem>[] = [
-  { key: 'no', title: 'Số hợp đồng', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số hợp đồng', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'CTR', id: r.id }) },
   { key: 'contractNo', title: 'Số HĐ giấy', width: 120, value: (r) => r.contractNo },
   { key: 'title', title: 'Tên hợp đồng', width: 240, value: (r) => r.title },
   { key: 'supplier', title: 'Nhà cung cấp', width: 230, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },

@@ -20,7 +20,7 @@ const progressTone = { Open: 'warning', Done: 'success', Cancelled: 'error' } as
 
 const columns: GridColumn<DocumentRegistryRow>[] = [
   { key: 'docType', title: 'Loại chứng từ', width: 150, value: (r) => docTypeLabels[r.docType] ?? r.docType, groupable: true },
-  { key: 'no', title: 'Số chứng từ', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số chứng từ', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: r.docType, id: r.id }) },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   {
     key: 'progress',

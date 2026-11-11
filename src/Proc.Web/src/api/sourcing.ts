@@ -165,6 +165,8 @@ export interface RfqLine {
   qty: number
   sourcePrLineId: string | null
   sourcePrNo: string | null
+  /** Id PR nguồn – bấm đúp ô số chứng từ mở PR (design.md mục 20.1 R5). */
+  sourcePrId?: string | null
   note: string | null
   awardedSupplierId: string | null
   awardReason: string | null

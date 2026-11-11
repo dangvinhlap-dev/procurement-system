@@ -66,7 +66,7 @@ const formatVolume = (basis: VolumeRebateBasis, value: number | null | undefined
 const formatPercent = (value: number) => `${value.toLocaleString('vi-VN', { maximumFractionDigits: 4 })}%`
 
 const listColumns: GridColumn<VolumeRebateListItem>[] = [
-  { key: 'no', title: 'Số thỏa thuận', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số thỏa thuận', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'CKB', id: r.id }) },
   { key: 'title', title: 'Tên thỏa thuận', width: 220, value: (r) => r.title },
   { key: 'supplier', title: 'Nhà cung cấp', width: 200, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'category', title: 'Nhóm hàng', width: 180, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true },
@@ -654,7 +654,7 @@ const isTrackingAlert = (r: VolumeRebateTrackingRow) =>
 const trackingVolume = (r: VolumeRebateTrackingRow, v: number | null) => formatVolume(r.basis, v, r.uomCode)
 
 const trackingColumns: GridColumn<VolumeRebateTrackingRow>[] = [
-  { key: 'no', title: 'Số thỏa thuận', width: 140, value: (r) => r.no },
+  { key: 'no', title: 'Số thỏa thuận', width: 140, value: (r) => r.no, docRef: (r) => ({ docType: 'CKB', id: r.agreementId }) },
   { key: 'title', title: 'Tên thỏa thuận', width: 200, value: (r) => r.title },
   { key: 'supplier', title: 'Nhà cung cấp', width: 190, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'period', title: 'Kỳ', width: 160, value: (r) => `${formatDate(r.period.periodFrom)} – ${formatDate(r.period.periodTo)}`, auditField: false },

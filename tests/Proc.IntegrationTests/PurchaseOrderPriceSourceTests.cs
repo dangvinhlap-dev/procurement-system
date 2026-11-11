@@ -194,6 +194,8 @@ public class PurchaseOrderPriceSourceTests
         var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
             Po(f, f.SupplierId, new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 4, 50_000, 5, "10", null, null, pr.Lines[0].Id)), Ct));
         Assert.Equal(pr.No, po.Lines[0].SourcePrNo);
+        // Ô số chứng từ (lát Z3, design.md mục 20.1 R5): dòng PO trả Id PR nguồn để bấm đúp mở phiếu gốc.
+        Assert.Equal(pr.Id, po.Lines[0].SourcePrId);
     }
 
     [Fact]
@@ -323,6 +325,8 @@ public class PurchaseOrderPriceSourceTests
             Po(f, f.SupplierId, po.Lines.Select(l => new SavePurchaseOrderLineRequest(l.Id, l.ItemId, l.UomId, l.Qty, l.UnitPrice, l.DiscountPct, l.VatCode,
                 null, null, null)).ToArray()), Ct));
         Assert.All(po.Lines, l => Assert.Equal(("Contract", contract.No, f.PriceListNo), (l.PriceSource, l.ContractNo, l.PriceListNo)));
+        // Id phiếu gốc của số hợp đồng, bảng giá trên dòng – bấm đúp ô số chứng từ mở phiếu (lát Z3).
+        Assert.All(po.Lines, l => Assert.Equal((contract.Id, f.PriceListId), (l.ContractId!.Value, l.PriceListId!.Value)));
 
         // Danh sách PO có cờ ngoài hợp đồng / ngoại lệ giá.
         var listResult = await ReadAsync<PurchaseDocumentListResult>(await f.Client.GetAsync("/api/purchase-orders", Ct));

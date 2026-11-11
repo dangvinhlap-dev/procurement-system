@@ -62,7 +62,7 @@ const pendingColumns: GridColumn<PendingRequestLine>[] = [
     tone: (r) => (r.overdueDays > 0 ? 'error' : 'warning'),
     groupable: true,
   },
-  { key: 'no', title: 'Số PR', width: 140, value: (r) => r.requestNo },
+  { key: 'no', title: 'Số PR', width: 140, value: (r) => r.requestNo, docRef: (r) => ({ docType: 'PR', id: r.requestId }) },
   { key: 'date', title: 'Ngày PR', width: 90, type: 'date', value: (r) => r.date },
   { key: 'department', title: 'Bộ phận', width: 120, value: (r) => r.department, groupable: true },
   { key: 'priority', title: 'Ưu tiên', width: 70, value: (r) => priorityLabels[r.priority], groupable: true },
@@ -117,7 +117,7 @@ const slaStatusLabels: Record<SlaStatus, string> = { OnTime: 'Đúng hạn', Lat
 const slaStatusTone: Record<SlaStatus, StatusTone> = { OnTime: 'success', Late: 'error', InProgress: 'neutral', Overdue: 'error' }
 
 const slaColumns: GridColumn<PurchaseSlaRow>[] = [
-  { key: 'pr', title: 'Số PR', width: 150, value: (r) => r.requestNo },
+  { key: 'pr', title: 'Số PR', width: 150, value: (r) => r.requestNo, docRef: (r) => ({ docType: 'PR', id: r.requestId }) },
   { key: 'approved', title: 'Ngày duyệt PR', width: 100, type: 'date', value: (r) => r.approvedDate },
   { key: 'department', title: 'Bộ phận', width: 140, value: (r) => r.department, groupable: true },
   { key: 'line', title: 'Dòng', width: 55, type: 'quantity', value: (r) => r.lineNo },
@@ -125,7 +125,7 @@ const slaColumns: GridColumn<PurchaseSlaRow>[] = [
   { key: 'category', title: 'Loại yêu cầu', width: 140, value: (r) => slaCategoryLabels[r.category], groupable: true },
   { key: 'sla', title: 'SLA (ngày)', width: 80, type: 'quantity', value: (r) => r.slaDays },
   { key: 'due', title: 'Hạn', width: 95, type: 'date', value: (r) => r.dueDate },
-  { key: 'po', title: 'PO', width: 150, value: (r) => r.orderNo },
+  { key: 'po', title: 'PO', width: 150, value: (r) => r.orderNo, docRef: (r) => ({ docType: 'PO', id: r.orderId }) },
   { key: 'poDate', title: 'Ngày duyệt PO', width: 100, type: 'date', value: (r) => r.orderApprovedDate },
   { key: 'status', title: 'Trạng thái', width: 110, type: 'status', value: (r) => slaStatusLabels[r.status], tone: (r) => slaStatusTone[r.status], groupable: true },
 ]
@@ -171,10 +171,10 @@ export function PurchaseSlaReportPage() {
 const qcLabels: Record<ReceiptQualityRow['qcResult'], string> = { NotChecked: 'Chưa kiểm tra', Passed: 'Đạt', Failed: 'Không đạt' }
 
 const qualityColumns: GridColumn<ReceiptQualityRow>[] = [
-  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo },
+  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo, docRef: (r) => ({ docType: 'XNH', id: r.documentId }) },
   { key: 'date', title: 'Ngày', width: 90, type: 'date', value: (r) => r.date },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
-  { key: 'po', title: 'PO', width: 150, value: (r) => r.purchaseOrderNo },
+  { key: 'po', title: 'PO', width: 150, value: (r) => r.purchaseOrderNo, docRef: () => ({ docType: 'PO', id: null }) },
   { key: 'item', title: 'Mặt hàng', width: 230, value: (r) => `${r.itemCode} – ${r.itemName}` },
   { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
   { key: 'delivered', title: 'SL phiếu giao', width: 90, type: 'quantity', value: (r) => r.deliveredQty },
@@ -241,10 +241,10 @@ const matchIssueLabels: Record<ThreeWayMatchIssue, string> = {
 const acceptanceTone: Record<ReceiptAcceptance, StatusTone> = { None: 'neutral', Accepted: 'success', Disputed: 'error' }
 
 const matchColumns: GridColumn<ThreeWayMatchRow>[] = [
-  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo },
+  { key: 'no', title: 'Phiếu nhận hàng', width: 150, value: (r) => r.documentNo, docRef: (r) => ({ docType: 'XNH', id: r.documentId }) },
   { key: 'date', title: 'Ngày nhận', width: 90, type: 'date', value: (r) => r.date },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
-  { key: 'po', title: 'PO', width: 140, value: (r) => r.purchaseOrderNo },
+  { key: 'po', title: 'PO', width: 140, value: (r) => r.purchaseOrderNo, docRef: (r) => ({ docType: 'PO', id: r.purchaseOrderId }) },
   { key: 'poDate', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.purchaseOrderDate },
   { key: 'poApproved', title: 'Ngày duyệt PO', width: 100, type: 'date', value: (r) => r.purchaseOrderApprovedDate },
   { key: 'poTotal', title: 'Tổng tiền PO', width: 130, type: 'money', value: (r) => r.orderTotal },
@@ -515,7 +515,7 @@ export function SupplierEvaluationReportPage() {
 const pctText = (value: number | null) => (value == null ? '—' : `${String(value).replace('.', ',')}%`)
 
 const fulfillmentColumns: GridColumn<OrderFulfillmentRow>[] = [
-  { key: 'no', title: 'Đơn mua hàng', width: 150, value: (r) => r.orderNo },
+  { key: 'no', title: 'Đơn mua hàng', width: 150, value: (r) => r.orderNo, docRef: (r) => ({ docType: 'PO', id: r.orderId }) },
   { key: 'date', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.orderDate },
   { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
   { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
@@ -613,7 +613,7 @@ export function OrderFulfillmentReportPage() {
 
 const savingColumns: GridColumn<SourcingSavingRow>[] = [
   { key: 'date', title: 'Ngày chọn thầu', width: 100, type: 'date', value: (r) => r.awardDate },
-  { key: 'no', title: 'Số RFQ', width: 140, value: (r) => r.rfqNo, groupable: true },
+  { key: 'no', title: 'Số RFQ', width: 140, value: (r) => r.rfqNo, groupable: true, docRef: (r) => ({ docType: 'RFQ', id: r.rfqId }) },
   { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
   { key: 'item', title: 'Mặt hàng', width: 220, value: (r) => `${r.itemCode} – ${r.itemName}` },
   { key: 'uom', title: 'ĐVT', width: 60, value: (r) => r.uomCode },
@@ -703,7 +703,7 @@ const lastMonth = (): PurchaseReportPeriod => {
 
 const outOfContractColumns: GridColumn<OutOfContractLine>[] = [
   { key: 'date', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.date },
-  { key: 'no', title: 'Số PO', width: 130, value: (r) => r.orderNo, groupable: true },
+  { key: 'no', title: 'Số PO', width: 130, value: (r) => r.orderNo, groupable: true, docRef: (r) => ({ docType: 'PO', id: r.orderId }) },
   { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
   { key: 'department', title: 'Bộ phận', width: 130, value: (r) => r.department, groupable: true },
   { key: 'supplier', title: 'Nhà cung cấp', width: 200, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
@@ -868,7 +868,7 @@ const standardSavingColumns: GridColumn<StandardSavingRow>[] = [
   { key: 'targetGap', title: 'Còn cách mục tiêu', width: 130, type: 'money', value: (r) => r.targetGap },
   { key: 'over', title: 'Dòng vượt trần', width: 100, type: 'quantity', value: (r) => (r.overCeilingLines > 0 ? r.overCeilingLines : null) },
   { key: 'orders', title: 'Số PO', width: 70, type: 'quantity', value: (r) => r.orderCount },
-  { key: 'gth', title: 'Phiếu duyệt tháng', width: 180, value: (r) => r.approvalNos },
+  { key: 'gth', title: 'Phiếu duyệt tháng', width: 180, value: (r) => r.approvalNos, docRef: () => ({ docType: 'GTH', id: null }) },
 ]
 
 /**

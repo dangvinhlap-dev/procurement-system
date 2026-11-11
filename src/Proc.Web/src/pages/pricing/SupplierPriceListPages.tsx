@@ -34,7 +34,7 @@ import { confirmApprove } from '../purchasing/approvalDialogs'
 const LIST_PATH = '/gia-ncc/bang-gia'
 
 const listColumns: GridColumn<PriceListListItem>[] = [
-  { key: 'no', title: 'Số bảng giá', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số bảng giá', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'PRL', id: r.id }) },
   { key: 'title', title: 'Tên bảng giá', width: 220, value: (r) => r.title },
   { key: 'supplier', title: 'Nhà cung cấp', width: 230, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'scope', title: 'Áp dụng', width: 110, value: (r) => (r.isGroupWide ? 'Toàn tập đoàn' : r.companyCode), groupable: true },

@@ -37,7 +37,7 @@ const MAX_YEARS_AHEAD = 2
 const QUARTER_NAMES = ['I', 'II', 'III', 'IV']
 
 const listColumns: GridColumn<DemandPlanListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'KHN', id: r.id }) },
   { key: 'year', title: 'Năm', width: 70, value: (r) => String(r.year), groupable: true },
   { key: 'category', title: 'Nhóm hàng', width: 220, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true },
   { key: 'lines', title: 'Số mặt hàng', width: 90, type: 'quantity', value: (r) => r.lineCount },

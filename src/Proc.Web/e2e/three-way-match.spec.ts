@@ -21,8 +21,8 @@ test('cập nhật hóa đơn sau khi xác nhận nhận hàng rồi đối chi�
   await expect(row).toContainText('Chưa có hóa đơn')
   await expect(row).toContainText(po.no)
 
-  // Bấm đúp mở phiếu XNH, cập nhật hóa đơn về sau.
-  await row.dblclick()
+  // Bấm đúp ô số phiếu XNH mở phiếu (lát Z3 – bấm đúp ô số PO thì mở PO), cập nhật hóa đơn về sau.
+  await row.locator('.erp-doc-no', { hasText: xnh.no }).dblclick()
   await expect(page).toHaveURL(new RegExp(`/mua-hang/xac-nhan-nhan-hang/${xnh.id}`))
   await page.getByRole('button', { name: /Cập nhật hóa đơn$/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Cập nhật hóa đơn NCC' })

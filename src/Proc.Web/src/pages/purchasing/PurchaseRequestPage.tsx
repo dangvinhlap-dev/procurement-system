@@ -4,7 +4,7 @@ import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumbe
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useFetchSupplierItem, useSupplierItemLookup, useUoms } from '../../api/masterData'
 import { useDepartments, useMyDepartment, useWarehouses } from '../../api/organization'
@@ -32,6 +32,7 @@ import { BudgetNotice } from './BudgetNotice'
 import { UsageNormCell, UsageNormNotice } from './UsageNormNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
+import { DocNo } from '../../classic/DocNo'
 
 interface PrLineValues {
   id: string | null
@@ -417,7 +418,7 @@ export function PurchaseRequestPage() {
       key: 'sourcing', title: 'Phiếu tìm nguồn', width: 150,
       render: (_, index) => {
         const saved = savedNewItem(index)
-        if (saved?.sourcingRequestId) return <Link to={`/dau-thau/tim-nguon/${saved.sourcingRequestId}`}>{saved.sourcingNo}</Link>
+        if (saved?.sourcingRequestId) return <DocNo no={saved.sourcingNo} docType="SRC" id={saved.sourcingRequestId} />
         return saved && doc?.canCreateSourcing && !saved.itemId ? (
           <ConfigProvider componentDisabled={false}>
             <Button size="small" icon={<FileSearchOutlined />} loading={newItemActions.createSourcing.isPending} onClick={() => void createSourcing(saved.id)}>

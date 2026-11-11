@@ -30,7 +30,7 @@ import { DATE_INPUT_FORMATS, formatDate, formatDateTime, vnNumberInput } from '.
 export const MARKET_SURVEY_PATH = '/gia-ncc/khao-sat-gia'
 
 const listColumns: GridColumn<MarketSurveyListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'KSG', id: r.id }) },
   { key: 'date', title: 'Ngày khảo sát', width: 100, type: 'date', value: (r) => r.surveyDate },
   { key: 'category', title: 'Nhóm hàng', width: 220, value: (r) => `${r.categoryCode} – ${r.categoryName}`, groupable: true },
   { key: 'lines', title: 'Số dòng giá', width: 90, type: 'quantity', value: (r) => r.lineCount },

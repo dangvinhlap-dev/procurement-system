@@ -44,9 +44,9 @@ const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim
 const cellNumber = { ...vnNumberInput, variant: 'borderless', style: { width: '100%' } } as const
 
 const listColumns: GridColumn<ReceiptConfirmationListItem>[] = [
-  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'XNH', id: r.id }) },
   { key: 'date', title: 'Ngày nhận', width: 90, type: 'date', value: (r) => r.date },
-  { key: 'po', title: 'Đơn mua hàng', width: 150, value: (r) => r.purchaseOrderNo },
+  { key: 'po', title: 'Đơn mua hàng', width: 150, value: (r) => r.purchaseOrderNo, docRef: (r) => ({ docType: 'PO', id: r.purchaseOrderId }) },
   { key: 'supplier', title: 'Nhà cung cấp', width: 240, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
   { key: 'warehouse', title: 'Nơi nhận', width: 90, value: (r) => r.warehouseCode, groupable: true },
   { key: 'delivery', title: 'Phiếu giao NCC', width: 110, value: (r) => r.deliveryNoteNo },

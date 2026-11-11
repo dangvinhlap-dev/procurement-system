@@ -2,7 +2,7 @@ import { CheckOutlined, CloseOutlined, EditOutlined, RollbackOutlined, SaveOutli
 import { Alert, App, Button, Checkbox, DatePicker, Descriptions, Flex, Form, Input, InputNumber } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useItemCategoryCatalog, useSuppliers } from '../../api/masterData'
 import {
   onboardingCriteria,
@@ -32,6 +32,7 @@ import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFo
 import { ListPage } from '../../components/ListPage/ListPage'
 import { DATE_INPUT_FORMATS, formatDateTime, formatQuantity } from '../../utils/format'
 import { buildCategoryTree } from '../masterData/categoryTree'
+import { DocNo } from '../../classic/DocNo'
 
 /** Đường dẫn danh sách hồ sơ đánh giá NCC mới (màn hình HSN). */
 export const ONBOARDING_PATH = '/gia-ncc/ho-so-ncc-moi'
@@ -49,7 +50,7 @@ const DOCUMENTS = [
 const recommendLabel = (r: boolean | null) => (r === null ? '' : r ? 'Đề xuất' : 'Không đề xuất')
 
 const listColumns: GridColumn<SupplierOnboardingListItem>[] = [
-  { key: 'no', title: 'Số hồ sơ', width: 150, value: (r) => r.no },
+  { key: 'no', title: 'Số hồ sơ', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'HSN', id: r.id }) },
   { key: 'date', title: 'Ngày đánh giá', width: 100, type: 'date', value: (r) => r.date },
   { key: 'supplier', title: 'Nhà cung cấp', width: 260, value: (r) => `${r.supplierCode} – ${r.supplierName}` },
   { key: 'category', title: 'Nhóm hàng đề xuất', width: 200, value: (r) => r.categoryName, groupable: true },
@@ -122,7 +123,7 @@ const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim
  */
 function OnboardingNotices({ doc }: { doc: SupplierOnboarding }) {
   const changeLink = doc.changeRequestId && (
-    <Link to={`/gia-ncc/duyet-ncc/${doc.changeRequestId}`}>yêu cầu duyệt {doc.changeRequestNo}</Link>
+    <>yêu cầu duyệt <DocNo no={doc.changeRequestNo} docType="NCC" id={doc.changeRequestId} /></>
   )
   const notices = [
     doc.status === 'Evaluated' && (
@@ -408,7 +409,7 @@ export function SupplierOnboardingPage() {
         <Descriptions.Item label="Ý kiến">{doc.proposalComment ?? '—'}</Descriptions.Item>
         <Descriptions.Item label="Người đề xuất">{doc.proposedByName ? `${doc.proposedByName} – ${formatDateTime(doc.proposedAt!)}` : '—'}</Descriptions.Item>
         <Descriptions.Item label="Yêu cầu duyệt NCC">
-          {doc.changeRequestId ? <Link to={`/gia-ncc/duyet-ncc/${doc.changeRequestId}`}>{doc.changeRequestNo}</Link> : '—'}
+          {doc.changeRequestId ? <DocNo no={doc.changeRequestNo} docType="NCC" id={doc.changeRequestId} /> : '—'}
         </Descriptions.Item>
       </Descriptions>
     ) : <p>Lưu và hoàn thành đánh giá để Văn phòng Ban đề xuất.</p>,

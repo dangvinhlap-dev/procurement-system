@@ -9,6 +9,7 @@ import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
 import { hasOpenPopup } from '../../utils/popup'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DocumentForm.css'
+import { DocNo } from '../../classic/DocNo'
 
 /** Màu thẻ trạng thái phiếu theo sắc thái (màu lấy từ bảng màu có sẵn của antd, không viết màu cứng). */
 const toneColor: Record<StatusTone, string> = {
@@ -153,7 +154,8 @@ export function DocumentForm({
       <div className="document-form-head">
         <div className="document-form-title">
           <h2>{title}</h2>
-          <span className="document-form-number">{number ?? '(số phiếu tự cấp khi lưu)'}</span>
+          {/* Số phiếu trong ô chữ: bấm để sao chép (design.md mục 20.1 R5) – chính phiếu đang mở nên không có bấm đúp mở. */}
+          {number ? <DocNo no={number} className="document-form-number" /> : <span className="document-form-number">(số phiếu tự cấp khi lưu)</span>}
           <Tag color={toneColor[status.tone]}>{status.label}</Tag>
           {approval && <ApprovalLocks steps={approval.steps} byCompany={approval.byCompany} stageLabels={approval.stageLabels} />}
           {meta && <span className="document-form-meta">{meta}</span>}

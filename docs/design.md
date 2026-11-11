@@ -2338,6 +2338,16 @@ gửi thì "Lập phiếu" – người lập) rồi **Bước 1 … n**, cột 
 Lượt. Áp cho PR, PO, RFQ, hợp đồng, phụ lục, bảng giá, NCC độc quyền, duyệt tháng, chiết khấu sản lượng, yêu cầu duyệt NCC. Tab "Lịch sử
 duyệt" dạng cây giữ nguyên. Chưa có: đặt hàng gộp, hồ sơ NCC mới (duyệt theo màn hình riêng), trang duyệt điện thoại.
 
+**Lát Z3 – đã làm (11/11/2026):** ô số chứng từ dùng chung `DocNo` (bấm = sao chép, bấm đúp / Enter = mở phiếu gốc) áp cho số phiếu đầu
+mọi form, các số phiếu liên quan trên form (PR → phiếu tìm nguồn; PO: PR nguồn, nguồn giá – bảng giá / hợp đồng / RFQ / phiếu tháng, ngoài
+danh sách, NCC độc quyền; RFQ: phiếu tìm nguồn, PR nguồn, PO / bảng giá / hợp đồng tạo từ chọn thầu; đặt hàng gộp → PO; NCC ↔ yêu cầu duyệt
+NCC ↔ hồ sơ NCC mới) và – theo yêu cầu người dùng 11/11/2026 – **cột số phiếu ở danh sách và báo cáo** (`DataGrid` cột `docRef`: PR, PO,
+XNH, RFQ, tìm nguồn, bảng giá, hợp đồng, NCC độc quyền, phiếu tháng, CKB, KHN, KSG, DGN, HSN, yêu cầu duyệt NCC, đặt hàng gộp, Việc cần
+làm, Tra cứu chứng từ, báo cáo SLA, thực hiện PO, nhận hàng, đối chiếu 3 chiều, mua ngoài hợp đồng, tiết kiệm RFQ, sổ vi phạm, xuất kế
+toán). Máy chủ trả thêm Id phiếu gốc: dòng PO (`SourcePrId`, `PriceListId`, `ContractId`, `SourceRfqId`, `SoleSourceApprovalId`,
+`MonthlyApprovalId`), dòng RFQ (`SourcePrId`). Số chưa có Id phiếu gốc (phiếu tháng trên danh sách đặt hàng gộp, NCC độc quyền ở báo cáo
+phủ NCC, so sánh giá, PO ở báo cáo chất lượng nhận hàng) chỉ sao chép được. Màn hình kho cũ (sắp gỡ – mục 19) không đổi.
+
 ### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,

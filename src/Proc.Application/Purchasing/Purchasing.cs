@@ -330,6 +330,8 @@ public sealed record OpenRequestLineDto(
 /// <summary>
 /// Dòng PO. ReceivedQty: SL đã nhận (phiếu nhập đã ghi sổ) theo ĐVT trên PO; RemainingQty = SL đặt − đã nhận (không âm). MonthlyApprovalNo:
 /// phiếu duyệt NCC và giá tháng phủ mặt hàng; IsOffMonthlyList: NCC ngoài NCC chính/dự phòng của phiếu đó (design.md mục 18.25).
+/// SourcePrId, PriceListId, ContractId, SourceRfqId, SoleSourceApprovalId, MonthlyApprovalId: Id phiếu gốc của các số trên dòng – bấm đúp ô số
+/// chứng từ mở phiếu gốc (design.md mục 20.1 R5).
 /// </summary>
 public sealed record PurchaseOrderLineDto(
     Guid Id, int LineNo, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode, decimal Qty, decimal UomFactor,
@@ -338,7 +340,8 @@ public sealed record PurchaseOrderLineDto(
     string PriceSource, decimal? ApprovedUnitPrice, decimal? ApprovedDiscountPct, string? PriceListNo, string? ContractNo, string? SourceRfqNo,
     Guid? SourceRfqLineId, string? PriceDeviationReason, bool IsPriceDeviation, bool IsOutOfContract, string? SoleSourceNo,
     string? MonthlyApprovalNo = null, bool IsOffMonthlyList = false, decimal? CeilingPrice = null, bool IsOverCeiling = false,
-    string? SupplierItemCode = null);
+    string? SupplierItemCode = null, Guid? SourcePrId = null, Guid? PriceListId = null, Guid? ContractId = null, Guid? SourceRfqId = null,
+    Guid? SoleSourceApprovalId = null, Guid? MonthlyApprovalId = null);
 
 /// <summary>
 /// Chi tiết PO. Budget: kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát.

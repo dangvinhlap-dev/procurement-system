@@ -25,6 +25,7 @@ import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { SupplierCategoryField } from './SupplierCategoryField'
 import { SupplierCompanyTab, SupplierExtensionTab, SupplierItemsTab } from './SupplierLinkTabs'
+import { DocNo } from '../../classic/DocNo'
 
 interface SupplierFormValues {
   code: string
@@ -264,7 +265,7 @@ export function SupplierDrawer({
                   title="Đang chờ duyệt"
                   description={detail!.pendingRequests!.map((r) => (
                     <div key={r.id}>
-                      <Link to={`/gia-ncc/duyet-ncc?mo=${r.id}`}>{r.no}</Link>
+                      <DocNo no={r.no} docType="NCC" id={r.id} />
                       {`: ${changeKindLabels[r.kind]} → ${r.proposedSummary} (chờ ${r.waitingFor ?? ''})`}
                     </div>
                   ))}
@@ -280,7 +281,7 @@ export function SupplierDrawer({
                     detail.latestOnboarding ? (
                       <>
                         NCC mới – lên Đã duyệt qua hồ sơ đánh giá NCC mới:{' '}
-                        <Link to={`/gia-ncc/ho-so-ncc-moi/${detail.latestOnboarding.id}`}>{detail.latestOnboarding.no}</Link>
+                        <DocNo no={detail.latestOnboarding.no} docType="HSN" id={detail.latestOnboarding.id} />
                         {` (${onboardingStatusLabels[detail.latestOnboarding.status as SupplierOnboardingStatus] ?? detail.latestOnboarding.status})`}
                       </>
                     ) : (
