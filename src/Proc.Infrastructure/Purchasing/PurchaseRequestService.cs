@@ -513,8 +513,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             canApprove,
             // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị (design.md mục 20.2a).
-            pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null
-                && DocumentCancelPolicy.CanCancel(_scope, pr.Status == ApprovalDocumentStatus.Draft, pr.CreatedBy),
+            // PR đã lên PO / đã đóng: quản trị hủy theo dây chuyền (hủy PO, phiếu nhận hàng trước – lát Z4b).
+            pr.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed
+                && readOnly is null && DocumentCancelPolicy.CanCancel(_scope, pr.Status == ApprovalDocumentStatus.Draft, pr.CreatedBy),
             readOnly,
             pr.Status == ApprovalDocumentStatus.Approved && readOnly is null && lines.Any(l => l.OrderedQty > 0),
             readOnly is null && CanRecall(pr));

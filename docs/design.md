@@ -2360,6 +2360,17 @@ người lập hoặc quản trị; các bước còn chờ bị bỏ qua, gửi
 CKB, NCC độc quyền) đã có từ trước. Ngoài phạm vi: phiếu kho cũ (sắp gỡ), "Rút yêu cầu" duyệt NCC và "Rút đề xuất" HSN (là rút, không phải
 hủy), phiếu ghi nhận chiết khấu/tài trợ (không có duyệt).
 
+**Người dùng chốt 11/11/2026 (Z4b):** chuỗi chứng từ **đã có phiếu xác nhận nhận hàng (XNH) đã xác nhận** thì **chặn hủy** – chỉ cho điều
+chỉnh ("Điều chỉnh SL thực nhận" trên XNH, "Đóng phần còn lại" trên PO). XNH nháp vẫn hủy theo chuỗi.
+
+**Lát Z4b – đã làm (11/11/2026): hủy dây chuyền PR → PO → XNH.** `ICancelChainService` (`CancelChainService`): `GET /api/cancel-chain/{loại}/{id}`
+xem trước trình tự (phiếu cuối trước: XNH nháp → PO → PR; loại, số, trạng thái, ghi chú), cảnh báo PR khác của PO gộp dòng (không bị hủy,
+SL đã đặt trở về "còn lại chưa đặt" – D3), lý do bị chặn (XNH đã xác nhận; thiếu quyền theo 20.2a); `POST` hủy cả chuỗi trong **một giao
+dịch** có khóa dòng (một phiếu lỗi thì không hủy phiếu nào), lý do ghi vào mọi phiếu, bỏ các bước duyệt còn chờ. SL đã đặt của PR, SL đã
+nhận của PO, ngân sách đã dùng tính từ chứng từ chưa hủy nên tự trả về đúng. PR đã đóng phần còn lại hủy được theo chuỗi. Giao diện: hộp thoại
+Hủy của PR, PO, XNH (`cancelChainDialog.tsx`) hiện bảng "Trình tự hủy" + cảnh báo + ô lý do; không đủ quyền / bị chặn thì khóa nút. Đợt sau:
+chuỗi RFQ → PO / bảng giá / hợp đồng; bảng giá → hợp đồng → phụ lục; phiếu tháng / đặt hàng gộp → PO.
+
 ### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,

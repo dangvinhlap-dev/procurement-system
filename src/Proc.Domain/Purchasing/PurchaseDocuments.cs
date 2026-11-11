@@ -359,12 +359,21 @@ public abstract class ApprovableDocument : AuditableEntity, ICompanyOwned, IHasD
     /// mà không ghi lý do thì không truy được.
     /// </param>
     /// <exception cref="BusinessRuleException">Khi phiếu đã hủy hoặc đã đóng, hoặc hủy phiếu đã duyệt mà thiếu lý do.</exception>
-    public void Cancel(string? reason = null)
+    public void Cancel(string? reason = null) => Cancel(reason, inChain: false);
+
+    /// <summary>
+    /// Hủy phiếu; <paramref name="inChain"/> = hủy theo dây chuyền (lát Z4b, design.md mục 20.2): quản trị hủy cả chuỗi từ phiếu cuối về phiếu
+    /// đầu nên phiếu <b>đã đóng</b> (đã đóng phần còn lại / đã nhận đủ) cũng hủy được – các phiếu sau nó đã hủy trước trong cùng giao dịch.
+    /// </summary>
+    /// <param name="reason">Lý do hủy, tối đa 500 ký tự; bắt buộc khi phiếu đã duyệt hoặc đã đóng.</param>
+    /// <param name="inChain">Đang hủy theo dây chuyền.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu đã hủy, đã đóng (ngoài dây chuyền) hoặc thiếu lý do.</exception>
+    public void Cancel(string? reason, bool inChain)
     {
-        if (Status is ApprovalDocumentStatus.Cancelled or ApprovalDocumentStatus.Closed)
+        if (Status == ApprovalDocumentStatus.Cancelled || (Status == ApprovalDocumentStatus.Closed && !inChain))
             throw new BusinessRuleException($"Phiếu {No} đã hủy hoặc đã đóng.");
         var text = Clean(reason);
-        if (Status == ApprovalDocumentStatus.Approved && text is null)
+        if (Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed && text is null)
             throw new BusinessRuleException($"Phiếu {No} đã duyệt – hãy nhập lý do hủy.");
         if (text?.Length > 500) throw new BusinessRuleException("Lý do hủy tối đa 500 ký tự.");
         Status = ApprovalDocumentStatus.Cancelled;

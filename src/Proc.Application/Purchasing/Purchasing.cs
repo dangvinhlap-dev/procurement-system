@@ -474,7 +474,7 @@ public interface IPurchaseRequestService
     /// <param name="id">Id PR.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>PR đã về Nháp.</returns>
-    /// <exception cref="ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
+    /// <exception cref="Proc.Application.Common.ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PR không ở trạng thái chờ duyệt.</exception>
     Task<PurchaseRequestDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
@@ -525,7 +525,7 @@ public interface IPurchaseOrderService
     /// <param name="id">Id PO.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>PO đã về Nháp.</returns>
-    /// <exception cref="ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
+    /// <exception cref="Proc.Application.Common.ForbiddenAccessException">Khi không phải người lập và không có quyền Hủy phiếu.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PO không ở trạng thái chờ duyệt.</exception>
     Task<PurchaseOrderDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
