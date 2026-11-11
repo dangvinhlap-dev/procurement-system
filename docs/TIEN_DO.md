@@ -188,7 +188,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Z4c (nhánh `feature/z4c-huy-day-chuyen-mo-rong`)**: người dùng đồng ý cả 4 đề xuất E1–E4 (design.md 20.2). Hủy dây chuyền DHG → PO
     (mọi công ty) → XNH; RFQ → PO → XNH + hợp đồng / bảng giá nháp tạo từ RFQ (đã duyệt thì chặn); bảng giá thêm trạng thái Đã hủy (migration
     `V0_23_0_HuyBangGia`); phiếu tháng đang được DHG / PO dùng thì chặn hủy. Giao diện DHG, RFQ dùng hộp thoại trình tự. Test: tích hợp
-    `CancelChainRfqTests`, bổ sung E1 + E4 vào `PooledOrderTests`.
+    `CancelChainRfqTests`, bổ sung E1 + E4 vào `PooledOrderTests`; e2e `cancel-chain.spec.ts` thêm hủy RFQ đã gửi NCC (chuỗi một phiếu – không
+    hiện bảng, lý do bắt buộc). Sửa e2e `administration.spec.ts`: CSDL test đã 567 tài khoản, lưới cuộn ảo không vẽ dòng `thukho.bha` → lọc
+    bằng ô Tìm kiếm. Build 0 cảnh báo, `dotnet test` 648/648, tsc, oxlint, `npm run build`; Playwright đủ bộ 129/130 (Vite 5174) – test lỗi
+    duy nhất là `administration` ở trên, sửa xong chạy lại cả file qua 7/7; `notifications.spec` có lượt lỗi khi chạy song song, chạy riêng qua.
+    **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
