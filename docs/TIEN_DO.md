@@ -232,6 +232,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   `approval-rule-template.spec` (32 cấp), `administration.spec` (gõ tìm loại phiếu – danh sách cuộn ảo). Build 0 cảnh báo, `dotnet test`
   672/672, tsc, oxlint, `npm run build`; Playwright đủ bộ 134/134 (API thử 5014 Testing bản artifacts scratchpad + Vite 5188). Hướng dẫn sử
   dụng 08-he-thong cập nhật. **Đã merge.** Tiếp theo: các lát còn lại của 0.23.0 (Y5 bảng tổng hợp 2A/2B, Y10 khung in…).
+- **Lát Y5 – bảng tổng hợp đề xuất mua 2A/2B (11/11/2026)** – design.md 19.3 đoạn "Lát Y5"; tách **Y5a** danh mục đơn vị mua → **Y5b** phiếu BTH
+  backend + duyệt (bộ cấp BTH, mẫu CUVT TP CUVT → GĐ khối → Phó CT UBCL&PT → Chủ tịch) → **Y5c** giao diện phiếu, tham số "bắt buộc qua bảng
+  tổng hợp", hủy dây chuyền.
+  - **Y5a (nhánh `feature/y5a-don-vi-mua`)**: `PurchasingUnit` (mã 2–20 không đổi, ngừng dùng thay xóa), migration `V0_23_0_DonViMua`, API
+    `/api/purchasing-units` (+ `/options` mở cho quyền xem PR), quyền `Purchase.Unit.View/Manage` (vai trò mẫu: xem trong nhóm xem nghiệp vụ mua,
+    NVCUVT quản lý). Giao diện màn hình **DVM** (Mua hàng → Đơn vị mua) `PurchasingUnitListPage` + `PurchasingUnitDrawer`, `api/purchasingUnits.ts`;
+    hướng dẫn 02-danh-muc mục 2.4. Test: domain `PurchasingUnitTests` (6), tích hợp `PurchasingUnitTests` (2), e2e `purchasing-units.spec.ts`.
+    Build 0 cảnh báo, `dotnet test` 680/680, tsc, oxlint, `npm run build`; Playwright đủ bộ 135/135 (API thử 5015 Testing bản artifacts scratchpad
+    + Vite 5189). **Đã merge.** Tiếp: **Y5b**.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

@@ -66,6 +66,7 @@ public static class RoleTemplates
         Permissions.MasterData.SoleSourceView, Permissions.MasterData.SupplierReviewView, Permissions.Pricing.MonthlyApprovalView,
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
         Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView, Permissions.Purchase.ReceiptView,
+        Permissions.Purchase.UnitView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -268,6 +269,8 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.MasterData.SupplierManage, Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
             Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward, Permissions.Purchase.PoCreate, Permissions.Report.PurchaseView,
+            // Lát Y5a: người lập bảng tổng hợp 2A/2B gán đơn vị mua – tự quản lý danh mục đơn vị mua (Q3).
+            Permissions.Purchase.UnitManage,
         ]),
         new("TPTCKT", "Trưởng phòng Tài chính – Nguồn quỹ – Kế toán", "Kiểm dự toán, định mức trên đề nghị mua; duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B về nguồn tiền",
         [

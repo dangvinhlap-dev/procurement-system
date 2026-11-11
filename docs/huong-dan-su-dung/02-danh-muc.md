@@ -43,6 +43,11 @@ duyệt; ô "Trưởng bộ phận (tên in)" chỉ để in. **Khối (DIV – 
 "GĐ khối của phiếu". Chỉ chọn được tài khoản có vai trò tại công ty. Người dùng gán vào bộ phận ở Người dùng → tab Phân quyền (ô "Bộ phận");
 khi người đó lập PR, bộ phận được điền sẵn.
 
+**Đơn vị mua (DVM – Mua hàng → Đơn vị mua, bản 0.23.0)**: danh mục của từng công ty các đơn vị được giao đi mua (ví dụ VP NDD, Phòng CUVT) –
+Phòng CUVT gán cho từng dòng trên bảng tổng hợp đề xuất mua 2A/2B. Mã 2–20 chữ không dấu hoặc số, không đổi sau khi tạo; không xóa, đơn vị
+không dùng nữa thì bỏ "Còn sử dụng" (dòng đã gán giữ nguyên). Quyền riêng `Purchase.Unit.View/Manage` – giao Phòng CUVT tự quản lý mà không
+sửa được bộ phận.
+
 ## 2.5 Đơn vị tính (UOM)
 
 Mã 1–10 chữ/số (ví dụ CAI, HOP, KG), tên. Chỉ ngừng dùng được khi không còn mặt hàng đang dùng ĐVT đó.
