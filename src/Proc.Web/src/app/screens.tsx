@@ -7,6 +7,7 @@ import {
   DashboardOutlined,
   BarChartOutlined,
   BankOutlined,
+  BuildOutlined,
   BellOutlined,
   ClusterOutlined,
   FieldNumberOutlined,
@@ -130,6 +131,7 @@ export const screens: Screen[] = [
   { code: 'KHNTH', title: 'Tổng hợp nhu cầu', navLabel: 'Tổng hợp nhu cầu', path: '/mua-hang/tong-hop-nhu-cau', icon: <BarChartOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
   // Đặt hàng gộp (design.md mục 18.25 – lát G7): Phòng cung ứng chung đặt cho các công ty ở tổng công ty, sinh mỗi pháp nhân một PO.
   { code: 'DHG', title: 'Đặt hàng gộp', navLabel: 'Đặt hàng gộp', path: '/mua-hang/dat-hang-gop', icon: <ClusterOutlined />, group: 'purchasing', permission: Permission.PooledOrderView },
+  { code: 'CTDT', title: 'Công trình – dự toán', navLabel: 'Công trình – dự toán', path: '/mua-hang/cong-trinh', icon: <BuildOutlined />, group: 'purchasing', anyPermission: [Permission.ProjectView, Permission.ProjectManage] },
   { code: 'BUDG', title: 'Ngân sách bộ phận', navLabel: 'Ngân sách bộ phận', path: '/mua-hang/ngan-sach', icon: <FundOutlined />, group: 'purchasing', anyPermission: [Permission.BudgetView, Permission.BudgetManage] },
   { code: 'CTR', title: 'Hợp đồng nguyên tắc', navLabel: 'Hợp đồng nguyên tắc', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing', permission: Permission.ContractView },
 
