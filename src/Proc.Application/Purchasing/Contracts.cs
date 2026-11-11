@@ -200,7 +200,9 @@ public interface IContractService
     /// <summary>Hủy hợp đồng nháp.</summary>
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    Task<ContractDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <param name="request">Lý do hủy (bắt buộc – design.md mục 20.2a).</param>
+    Task<ContractDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -251,7 +253,9 @@ public interface IContractAmendmentService
     /// <summary>Hủy phụ lục nháp.</summary>
     /// <param name="id">Id phụ lục.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <param name="request">Lý do hủy (bắt buộc – design.md mục 20.2a).</param>
+    Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>Kết quả nhập Excel hợp đồng hiện hữu.</summary>

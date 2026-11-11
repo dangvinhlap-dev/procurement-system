@@ -113,10 +113,12 @@ public sealed partial class ContractService : IContractAmendmentService
     }
 
     /// <inheritdoc />
-    public async Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<ContractAmendmentDto> CancelAmendmentAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken)
     {
         var (amendment, _) = await LoadAmendmentAsync(id, cancellationToken);
-        amendment.Cancel();
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        amendment.Cancel(DocumentCancelPolicy.Authorize(
+            _scope, $"phụ lục {amendment.No}", amendment.Status == ContractAmendmentStatus.Draft, amendment.CreatedBy, request.Reason));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAmendmentAsync(id, cancellationToken);
     }
@@ -228,7 +230,8 @@ public sealed partial class ContractService : IContractAmendmentService
             a.OldValidTo, a.NewValidTo, a.OldPriceListId, lists[a.OldPriceListId].No, a.NewPriceListId, newList.No, newList.Title, newList.Status.ToString(),
             TermsDto(a.NewTerms), TermsDto(contract.Terms), a.Note, contract.ExpectedAmount, a.ExpectedAmount, a.ChangeSummary, a.Status.ToString(),
             a.RejectReason, a.CreatedAt, createdBy, a.ApprovedAt, await _approvals.HistoryAsync(a.DocType, a.Id, cancellationToken, a),
-            new ContractAmendmentActions(canEdit, canEdit, canApprove, a.Status == ContractAmendmentStatus.Submitted && readOnly is null, canEdit, readOnly)) { Version = a.Version };
+            new ContractAmendmentActions(canEdit, canEdit, canApprove, a.Status == ContractAmendmentStatus.Submitted && readOnly is null,
+                canEdit && DocumentCancelPolicy.CanCancel(_scope, true, a.CreatedBy), readOnly)) { Version = a.Version };
     }
 
     /// <summary>Phụ lục của hợp đồng cho tab Phụ lục, mới nhất trước.</summary>

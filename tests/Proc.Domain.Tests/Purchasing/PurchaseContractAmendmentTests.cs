@@ -76,6 +76,6 @@ public class PurchaseContractAmendmentTests
         Assert.Equal((new DateOnly(2027, 6, 30), newList, "45 ngày", 45_600_000m),
             (contract.ValidTo, contract.PriceListId, contract.PaymentTerms, contract.ExpectedAmount));
         Assert.False(amendment.IsOpen);
-        Assert.Throws<BusinessRuleException>(() => amendment.Cancel());
+        Assert.Throws<BusinessRuleException>(() => amendment.Cancel("Thử hủy"));
     }
 }

@@ -70,6 +70,9 @@ public static class PurchasingEndpoints
             .Validate<SavePurchaseRequestRequest>();
         pr.MapPost("/{id:guid}/submit", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.SubmitAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PrCreate);
+        // Rút về nháp – người lập (hoặc quản trị); service kiểm tra người lập (yêu cầu người dùng 11/11/2026).
+        pr.MapPost("/{id:guid}/recall", (Guid id, IPurchaseRequestService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PrCreate);
         pr.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PrApprove);
         pr.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPurchaseRequestService s, CancellationToken ct) => s.RejectAsync(id, request, ct))
@@ -125,6 +128,8 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PoCreate)
             .Validate<SavePurchaseOrderRequest>();
         po.MapPost("/{id:guid}/submit", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PoCreate);
+        po.MapPost("/{id:guid}/recall", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
         po.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPurchaseOrderService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoApprove);

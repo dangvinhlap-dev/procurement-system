@@ -1,3 +1,4 @@
+using Proc.Application.Purchasing;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -139,7 +140,7 @@ public class AppraisalOpinionTests
         Assert.Equal((1, 0, 2), (list.PassCount, list.FailCount, list.Opinions.Count));
 
         // RFQ đã hủy (có quyết định cuối cùng): khóa ghi, rút ý kiến.
-        await ReadAsync<RfqDto>(await author.PostAsync($"/api/rfqs/{rfq.Id}/cancel", null, Ct));
+        await ReadAsync<RfqDto>(await author.PostAsJsonAsync($"/api/rfqs/{rfq.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct));
         Assert.Contains("quyết định cuối cùng", await TitleAsync(await GiveAsync(legal, "Rfq", rfq.Id, "Legal", "Pass", "Sau khi hủy")));
         var passId = list.Opinions.Single(o => o.Result == "Pass").Id;
         Assert.Contains("quyết định cuối cùng", await TitleAsync(await quality.PostAsJsonAsync($"{Url}/{passId}/withdraw",

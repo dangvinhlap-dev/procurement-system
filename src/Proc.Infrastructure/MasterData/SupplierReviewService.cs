@@ -142,7 +142,9 @@ public sealed class SupplierReviewService : ISupplierReviewService
     {
         _scope.EnsurePermission(Permissions.MasterData.SupplierReviewManage);
         var review = await FindAsync(id, cancellationToken);
-        review.Cancel(request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(_scope, $"phiếu {review.No}", review.Status == SupplierReviewStatus.Draft, review.CreatedBy, request.Reason);
+        review.Cancel(reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }

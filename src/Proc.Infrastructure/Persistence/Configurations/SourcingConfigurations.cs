@@ -14,6 +14,7 @@ internal sealed class SourcingRequestConfiguration : IEntityTypeConfiguration<So
     /// <inheritdoc />
     public void Configure(EntityTypeBuilder<SourcingRequest> builder)
     {
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         builder.ToTable("SourcingRequest");
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Ignore(x => x.DocumentNumber);
@@ -51,6 +52,7 @@ internal sealed class RfqConfiguration : IEntityTypeConfiguration<Rfq>
     /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Rfq> builder)
     {
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
         builder.ToTable("Rfq");
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Ignore(x => x.DocumentNumber);

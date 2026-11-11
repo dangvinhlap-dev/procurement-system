@@ -288,19 +288,19 @@ public partial class PurchasingTests
         Assert.Equal("Closed", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}", Ct))).Status);
     }
 
-    /// <summary>Lát R7 (design.md mục 18.26): hủy PO đã duyệt (có thể đã gửi NCC) bắt buộc lý do; PO nháp hủy không cần lý do.</summary>
+    /// <summary>Lát R7 (design.md mục 18.26), Z4a (mục 20.2a): hủy PO bắt buộc lý do – kể cả PO nháp.</summary>
     [Fact]
     public async Task HuyPoDaDuyet_BatBuocLyDo()
     {
         var f = await ArrangeAsync();
         var (approver, _) = await ApproverAsync(f);
         var draft = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 1, null));
-        Assert.Equal("Cancelled", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{draft.Id}/cancel", null, Ct))).Status);
+        Assert.Equal("Cancelled", (await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{draft.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct))).Status);
 
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 5, null));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
-        Assert.Contains("lý do hủy", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/cancel", null, Ct)));
+        Assert.Contains("lý do hủy", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel", new CancelDocumentRequest(null), Ct)));
         Assert.Contains("lý do hủy", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel", new CancelDocumentRequest(" "), Ct)));
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel", new CancelDocumentRequest("NCC báo không giao được"), Ct));
         Assert.Equal(("Cancelled", "NCC báo không giao được"), (po.Status, po.CancelReason));
@@ -471,7 +471,7 @@ public partial class PurchasingTests
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, pr.Lines[0].Id));
         Assert.Equal((950_000m, 95_000m, pr.No), (po.TotalAmount, po.TotalVat, po.Lines[0].SourcePrNo));
         Assert.Contains("vượt SL còn chưa đặt", await TitleAsync(await CreatePoAsync(f, 1, pr.Lines[0].Id)));
-        Assert.Contains("đã lên đơn mua hàng", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/cancel", null, Ct)));
+        Assert.Contains("đã lên đơn mua hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct)));
         Assert.Contains("chưa duyệt", await TitleAsync(await ReceiveXnhAsync(f, po, 1)));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));

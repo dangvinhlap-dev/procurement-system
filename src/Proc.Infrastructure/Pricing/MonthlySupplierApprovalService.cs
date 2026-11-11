@@ -166,12 +166,15 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
     public async Task<MonthlyApprovalDto> CancelAsync(Guid id, CancelMonthlyApprovalRequest request, CancellationToken cancellationToken)
     {
         var approval = await FindOwnAsync(id, cancellationToken);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
+        var reason = DocumentCancelPolicy.Authorize(
+            _scope, $"phiếu {approval.No}", approval.Status == MonthlyApprovalStatus.Draft, approval.CreatedBy, request.Reason);
         // Phiếu đã duyệt đang có phiếu điều chỉnh soạn dở: hủy phiếu điều chỉnh trước, tránh hai quyết định ngược nhau cho cùng tháng.
         var pending = await _db.MonthlySupplierApprovals.AsNoTracking()
             .Where(x => x.ReplacesId == id && (x.Status == MonthlyApprovalStatus.Draft || x.Status == MonthlyApprovalStatus.Submitted))
             .Select(x => x.No).FirstOrDefaultAsync(cancellationToken);
         if (pending is not null) throw new BusinessRuleException($"Phiếu đang có phiếu điều chỉnh {pending} – hủy hoặc duyệt phiếu đó trước.");
-        approval.Cancel(_clock.TodayInVietnam(), request.Reason);
+        approval.Cancel(_clock.TodayInVietnam(), reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -412,7 +415,9 @@ public sealed class MonthlySupplierApprovalService : IMonthlySupplierApprovalSer
             canApprove,
             manageable && x.Status == MonthlyApprovalStatus.Submitted,
             manageable && x.Status == MonthlyApprovalStatus.Approved && replacedBy is null && x.Period >= currentMonth,
-            manageable && (x.Status == MonthlyApprovalStatus.Draft || (x.Status == MonthlyApprovalStatus.Approved && replacedBy is null)),
+            // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
+            manageable && (x.Status == MonthlyApprovalStatus.Draft || (x.Status == MonthlyApprovalStatus.Approved && replacedBy is null))
+                && DocumentCancelPolicy.CanCancel(_scope, x.Status == MonthlyApprovalStatus.Draft, x.CreatedBy),
             manageable && x.Status is MonthlyApprovalStatus.Approved or MonthlyApprovalStatus.Replaced && x.Period.AddMonths(1) >= currentMonth,
             readOnly);
 

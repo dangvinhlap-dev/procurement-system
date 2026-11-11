@@ -38,7 +38,9 @@ public sealed class RoleAdministration : IRoleAdministration
             .Select(m => new PermissionGroupDto(
                 m.Module,
                 m.Name,
-                Permissions.All.Where(p => p.Module == m.Module && !_modules.IsDisabled(p.Code)).Select(p => new PermissionDto(p.Code, p.Name)).ToList()))
+                Permissions.All.Where(p => p.Module == m.Module && !_modules.IsDisabled(p.Code)
+                    // Quyền Hủy phiếu chỉ vai trò Quản trị có (tự cấp khi khởi động) – không hiện để gán cho vai trò khác (design.md mục 20.2a).
+                    && p.Code != Permissions.System.DocumentCancel).Select(p => new PermissionDto(p.Code, p.Name)).ToList()))
             // Phân hệ kho tắt (0.22.0) thì nhóm Kho không còn quyền nào – bỏ hẳn nhóm khỏi màn hình phân quyền.
             .Where(g => g.Permissions.Count > 0)
             .ToList();
@@ -173,6 +175,9 @@ public sealed class RoleAdministration : IRoleAdministration
     private HashSet<string> CheckPermissions(IEnumerable<string> codes)
     {
         var requested = codes.ToHashSet(StringComparer.Ordinal);
+        // Hủy phiếu là quyền đặc biệt chỉ của vai trò Quản trị hệ thống (design.md mục 20.2a) – hàm này chỉ gán cho vai trò thường.
+        if (requested.Contains(Permissions.System.DocumentCancel))
+            throw new BusinessRuleException("Quyền Hủy phiếu chỉ dành cho vai trò Quản trị hệ thống, không gán cho vai trò khác (design.md mục 20.2a).");
         var unknown = Permissions.FindUnknown(requested);
         if (unknown.Count > 0)
             throw new BusinessRuleException($"Mã quyền không có trong danh mục: {string.Join(", ", unknown)}.");

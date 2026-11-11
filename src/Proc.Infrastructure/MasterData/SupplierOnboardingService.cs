@@ -186,7 +186,10 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
     public async Task<SupplierOnboardingDto> CancelAsync(Guid id, CancelSupplierOnboardingRequest request, CancellationToken cancellationToken)
     {
         var onboarding = await FindForManageAsync(id, cancellationToken);
-        onboarding.Cancel(request.Reason);
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a). Nháp và Đã đánh giá đều chưa gửi duyệt nên coi như nháp – người lập tự hủy được.
+        var reason = DocumentCancelPolicy.Authorize(_scope, $"hồ sơ {onboarding.No}",
+            onboarding.Status is SupplierOnboardingStatus.Draft or SupplierOnboardingStatus.Evaluated, onboarding.CreatedBy, request.Reason);
+        onboarding.Cancel(reason);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -264,7 +267,8 @@ public sealed class SupplierOnboardingService : ISupplierOnboardingService
             CanReopen: manage && o.Status == SupplierOnboardingStatus.Evaluated,
             CanPropose: propose && o.Status == SupplierOnboardingStatus.Evaluated && o.EvaluatedBy != me,
             CanWithdraw: propose && o.Status == SupplierOnboardingStatus.Submitted && changeCreator is not null && changeCreator == me,
-            CanCancel: manage && o.Status is SupplierOnboardingStatus.Draft or SupplierOnboardingStatus.Evaluated);
+            CanCancel: manage && o.Status is SupplierOnboardingStatus.Draft or SupplierOnboardingStatus.Evaluated
+                && DocumentCancelPolicy.CanCancel(_scope, true, o.CreatedBy));
         var documents = o.Documents.Select(d => new SupplierOnboardingDocumentDto(
             d.Code, SupplierOnboarding.NameOf(d.Code), d.Provided, d.ValidTo, d.Note, d.Code == SupplierOnboardingDocuments.License)).ToList();
         string? Name(Guid? id) => id is { } u ? users.GetValueOrDefault(u) : null;

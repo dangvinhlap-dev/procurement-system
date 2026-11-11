@@ -281,10 +281,11 @@ public sealed class RfqService : IRfqService
     }
 
     /// <inheritdoc />
-    public async Task<RfqDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<RfqDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken)
     {
         var rfq = await LoadAsync(id, cancellationToken);
-        rfq.Cancel();
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): RFQ nháp – người lập; đã gửi NCC – chỉ quản trị.
+        rfq.Cancel(DocumentCancelPolicy.Authorize(_scope, $"RFQ {rfq.No}", rfq.Status == RfqStatus.Draft, rfq.CreatedBy, request.Reason));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -574,7 +575,9 @@ public sealed class RfqService : IRfqService
             canAward,
             rfq.Status == RfqStatus.Awarded && readOnly is null && _scope.HasPermission(Permissions.Purchase.PoCreate)
                 && rfq.Suppliers.Any(s => s.PurchaseOrderId is null && rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)),
-            rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null,
+            // Hủy: nháp – người lập; còn lại – chỉ quản trị (design.md mục 20.2a).
+            rfq.Status is RfqStatus.Draft or RfqStatus.Sent && readOnly is null
+                && DocumentCancelPolicy.CanCancel(_scope, rfq.Status == RfqStatus.Draft, rfq.CreatedBy),
             readOnly,
             canApprove,
             rfq.IsAwaitingApproval && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Sourcing.RfqAward),

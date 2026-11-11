@@ -4652,6 +4652,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("ApprovalRound")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -4779,6 +4783,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ChangeSummary")
                         .IsRequired()
@@ -5620,6 +5628,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("AwardedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -5897,6 +5909,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");

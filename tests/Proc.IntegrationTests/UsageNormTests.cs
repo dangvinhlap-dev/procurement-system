@@ -90,7 +90,7 @@ public class UsageNormTests
         Assert.Equal("Submitted", submitted.Status);
 
         // Hủy PR1: không còn tính vào đã đề nghị → PR2 dòng 1 về trong định mức (8 ≤ 20).
-        await ReadAsync<PurchaseRequestDto>(await bha.PostAsync($"/api/purchase-requests/{pr1.Id}/cancel", null, Ct));
+        await ReadAsync<PurchaseRequestDto>(await bha.PostAsJsonAsync($"/api/purchase-requests/{pr1.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct));
         var after = await ReadAsync<PurchaseRequestDto>(await bha.GetAsync($"/api/purchase-requests/{pr2.Id}", Ct));
         Assert.Equal(("Ok", 8m), (after.Lines[0].NormStatus, after.Lines[0].NormRequestedQty));
     }

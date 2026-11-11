@@ -1,3 +1,4 @@
+using Proc.Application.Purchasing;
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
@@ -90,10 +91,12 @@ public sealed class SourcingService : ISourcingService
     }
 
     /// <inheritdoc />
-    public async Task<SourcingDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<SourcingDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken)
     {
         var sourcing = await LoadAsync(id, cancellationToken);
-        sourcing.Cancel();
+        // Quyền hủy + lý do bắt buộc (design.md mục 20.2a). Phiếu tìm nguồn không có bước duyệt: đang mở coi như nháp – người lập tự hủy.
+        sourcing.Cancel(DocumentCancelPolicy.Authorize(
+            _scope, $"phiếu tìm nguồn {sourcing.No}", sourcing.Status == SourcingStatus.Open, sourcing.CreatedBy, request.Reason));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }

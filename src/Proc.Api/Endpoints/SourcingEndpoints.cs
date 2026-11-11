@@ -29,7 +29,7 @@ public static class SourcingEndpoints
             .Validate<SaveSourcingRequest>();
         sourcing.MapPost("/{id:guid}/close", (Guid id, ISourcingService s, CancellationToken ct) => s.CloseAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
-        sourcing.MapPost("/{id:guid}/cancel", (Guid id, ISourcingService s, CancellationToken ct) => s.CancelAsync(id, ct))
+        sourcing.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, ISourcingService s, CancellationToken ct) => s.CancelAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
 
         var rfq = app.MapGroup("/api/rfqs").WithTags("Yêu cầu báo giá");
@@ -72,7 +72,7 @@ public static class SourcingEndpoints
         // Sinh PO cần cả quyền lập PO (kiểm tra thêm trong dịch vụ PO qua endpoint này).
         rfq.MapPost("/{id:guid}/create-orders", (Guid id, IRfqService s, CancellationToken ct) => s.CreateOrdersAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
-        rfq.MapPost("/{id:guid}/cancel", (Guid id, IRfqService s, CancellationToken ct) => s.CancelAsync(id, ct))
+        rfq.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, IRfqService s, CancellationToken ct) => s.CancelAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
         // Lát B3b: hồ sơ trình; sinh bảng giá nháp từ kết quả đã duyệt cần quyền lập bảng giá.
         rfq.MapPut("/{id:guid}/dossier", (Guid id, SaveRfqDossierRequest request, IRfqService s, CancellationToken ct) => s.SaveDossierAsync(id, request, ct))

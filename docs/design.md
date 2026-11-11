@@ -2348,6 +2348,18 @@ toán). Máy chủ trả thêm Id phiếu gốc: dòng PO (`SourcePrId`, `PriceL
 `MonthlyApprovalId`), dòng RFQ (`SourcePrId`). Số chưa có Id phiếu gốc (phiếu tháng trên danh sách đặt hàng gộp, NCC độc quyền ở báo cáo
 phủ NCC, so sánh giá, PO ở báo cáo chất lượng nhận hàng) chỉ sao chép được. Màn hình kho cũ (sắp gỡ – mục 19) không đổi.
 
+**Lát Z4a – đã làm (11/11/2026): quyền Hủy phiếu + Rút về nháp.** Quyền đặc biệt `System.Document.Cancel` ("Hủy phiếu đã gửi duyệt") chỉ
+vai trò Quản trị hệ thống có (tự cấp khi khởi động); màn hình phân quyền vai trò không hiện quyền này, API gán cho vai trò khác báo lỗi.
+Quy tắc chung `DocumentCancelPolicy` áp cho lệnh hủy của PR, PO, XNH, RFQ, phiếu tìm nguồn, hợp đồng, phụ lục, phiếu tháng (GTH), CKB, kế
+hoạch nhu cầu, đặt hàng gộp, khảo sát giá, đánh giá NCC định kỳ, hồ sơ NCC mới: phiếu **Nháp** (phiếu tìm nguồn đang mở; hồ sơ NCC mới Nháp
+/ Đã đánh giá – chưa gửi duyệt) thì **người lập** tự hủy, người khác cùng quyền lập không hủy được; từ khi gửi duyệt chỉ quản trị; **mọi lần
+hủy bắt buộc lý do** (thêm cột lý do hủy cho hợp đồng, phụ lục, RFQ, phiếu tìm nguồn – migration `V0_23_0_LyDoHuyPhieu`). Điều kiện trạng
+thái riêng từng loại giữ nguyên (ví dụ PO đã có phiếu nhận hàng, PR đã lên PO vẫn chặn – hủy dây chuyền làm ở Z4b). Cờ CanCancel trên giao
+diện theo đúng quy tắc. **Rút về nháp** (người dùng yêu cầu 11/11/2026): PR, PO đang chờ duyệt có nút "Rút về nháp" (`POST …/recall`) – chỉ
+người lập hoặc quản trị; các bước còn chờ bị bỏ qua, gửi lại là lượt duyệt mới; các loại khác (hợp đồng, phụ lục, bảng giá, phiếu tháng,
+CKB, NCC độc quyền) đã có từ trước. Ngoài phạm vi: phiếu kho cũ (sắp gỡ), "Rút yêu cầu" duyệt NCC và "Rút đề xuất" HSN (là rút, không phải
+hủy), phiếu ghi nhận chiết khấu/tài trợ (không có duyệt).
+
 ### 20.3 Chia lát (thứ tự làm)
 
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,

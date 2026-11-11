@@ -48,7 +48,7 @@ public partial class SourcingTests
         Assert.Contains("đã có hợp đồng", await TitleAsync(await f.Client.PostAsync(url, null, Ct)));
 
         // Hợp đồng đã hủy thì tạo lại được (hợp đồng mới).
-        await ReadAsync<ContractDto>(await f.Client.PostAsync($"/api/contracts/{contract.Id}/cancel", null, Ct));
+        await ReadAsync<ContractDto>(await f.Client.PostAsJsonAsync($"/api/contracts/{contract.Id}/cancel", new CancelDocumentRequest("Thử hủy"), Ct));
         rfq = await ReadAsync<RfqDto>(await f.Client.GetAsync($"/api/rfqs/{rfq.Id}", Ct));
         Assert.Null(rfq.Suppliers.Single(s => s.SupplierId == a).ContractNo);
         var again = Assert.Single(await ReadAsync<List<CreatedContractDto>>(await f.Client.PostAsync(url, null, Ct)));

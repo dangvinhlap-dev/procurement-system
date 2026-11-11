@@ -386,7 +386,12 @@ export function useContractMutations() {
     }),
     submit: useMutation({ mutationFn: (id: string) => apiFetch<Contract>(`/api/contracts/${id}/submit`, { method: 'POST' }), onSuccess }),
     recall: useMutation({ mutationFn: (id: string) => apiFetch<Contract>(`/api/contracts/${id}/recall`, { method: 'POST' }), onSuccess }),
-    cancel: useMutation({ mutationFn: (id: string) => apiFetch<Contract>(`/api/contracts/${id}/cancel`, { method: 'POST' }), onSuccess }),
+    // Hủy bắt buộc lý do (design.md mục 20.2a).
+    cancel: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<Contract>(`/api/contracts/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
     approve: useMutation({
       mutationFn: ({ id, comment }: { id: string; comment?: string | null }) =>
         apiFetch<Contract>(`/api/contracts/${id}/approve`, { method: 'POST', body: { comment: comment ?? null } }),
@@ -435,7 +440,11 @@ export function useContractAmendmentMutations() {
     }),
     submit: useMutation({ mutationFn: (id: string) => post(id, 'submit'), onSuccess }),
     recall: useMutation({ mutationFn: (id: string) => post(id, 'recall'), onSuccess }),
-    cancel: useMutation({ mutationFn: (id: string) => post(id, 'cancel'), onSuccess }),
+    cancel: useMutation({
+      mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+        apiFetch<ContractAmendment>(`/api/contract-amendments/${id}/cancel`, { method: 'POST', body: { reason } }),
+      onSuccess,
+    }),
     approve: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'approve', comment), onSuccess }),
     reject: useMutation({ mutationFn: ({ id, comment }: { id: string; comment?: string | null }) => decide(id, 'reject', comment), onSuccess }),
   }

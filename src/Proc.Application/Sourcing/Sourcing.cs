@@ -62,7 +62,9 @@ public interface ISourcingService
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Phiếu.</returns>
-    Task<SourcingDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <param name="request">Lý do hủy (bắt buộc – design.md mục 20.2a).</param>
+    Task<SourcingDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>Một dòng danh sách RFQ.</summary>
@@ -261,7 +263,9 @@ public interface IRfqService
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
-    Task<RfqDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <param name="request">Lý do hủy (bắt buộc – design.md mục 20.2a).</param>
+    Task<RfqDto> CancelAsync(Guid id, CancelDocumentRequest request, CancellationToken cancellationToken);
 
     /// <summary>Lưu đánh dấu hồ sơ trình (Nháp/Đang nhận báo giá).</summary>
     /// <param name="id">Id.</param>
