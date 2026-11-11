@@ -335,7 +335,10 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
             _ => null,
         };
         return new ReceiptConfirmationActions(
-            draft && manage, draft && manage, draft && manage && DocumentCancelPolicy.CanCancel(_scope, true, c.CreatedBy), confirmed && manage,
+            draft && manage, draft && manage,
+            // Chỉ hủy phiếu nháp (người lập); đã xác nhận thì chỉ điều chỉnh (người dùng chốt 11/11/2026).
+            draft && manage && DocumentCancelPolicy.CanCancel(_scope, true, c.CreatedBy),
+            confirmed && manage,
             (draft || confirmed) && manage, canAccept, reason);
     }
 }

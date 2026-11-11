@@ -33,6 +33,7 @@ import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFo
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { DATE_INPUT_FORMATS, formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../../utils/format'
 import { LogDateRangeFilter } from '../system/logFilters'
+import { confirmCancelChain } from './cancelChainDialog'
 
 /** Đường dẫn màn hình XNH (screens.tsx). */
 export const RECEIPT_PATH = '/mua-hang/xac-nhan-nhan-hang'
@@ -294,30 +295,11 @@ export function ReceiptConfirmationPage() {
       },
     })
 
+  // Hủy phiếu (lát Z4b): nháp – người lập; đã xác nhận – quản trị; lý do bắt buộc (design.md mục 20.2a).
   const cancel = () => {
     if (!doc) return
-    let reason = ''
-    modal.confirm({
-      title: `Hủy phiếu ${doc.no}?`,
-      content: (
-        <Input.TextArea rows={2} maxLength={500} placeholder="Lý do hủy (bắt buộc)" aria-label="Lý do hủy" onChange={(e) => { reason = e.target.value }} />
-      ),
-      okText: 'Hủy phiếu',
-      okButtonProps: { danger: true },
-      cancelText: 'Không',
-      onOk: async () => {
-        if (!reason.trim()) {
-          message.error('Hãy nhập lý do hủy.')
-          throw new Error('missing reason')
-        }
-        try {
-          await mutations.cancel.mutateAsync({ id: doc.id, reason: reason.trim() })
-          message.success(`Đã hủy phiếu ${doc.no}.`)
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Không hủy được phiếu.')
-        }
-      },
-    })
+    setError(null)
+    void confirmCancelChain(modal, message, { docType: 'XNH', id: doc.id, no: doc.no, onError: (text) => setError(text) })
   }
 
   const actions = (

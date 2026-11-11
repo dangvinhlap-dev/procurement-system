@@ -742,6 +742,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.Status == ApprovalDocumentStatus.Draft && readOnly is null,
             canApprove,
             // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị (design.md mục 20.2a).
+            // PO đã nhận hàng (XNH đã xác nhận) không hủy – chỉ điều chỉnh / đóng phần còn lại (người dùng chốt 11/11/2026).
             order.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted or ApprovalDocumentStatus.Approved && readOnly is null && !anyReceived
                 && DocumentCancelPolicy.CanCancel(_scope, order.Status == ApprovalDocumentStatus.Draft, order.CreatedBy),
             readOnly,

@@ -1,3 +1,4 @@
+using Proc.Application.Common;
 using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Purchasing;
@@ -17,6 +18,12 @@ public static class PurchasingEndpoints
         app.MapPost("/api/approvals/preview", (ApprovalPreviewRequest request, IApprovalPreviewService s, CancellationToken ct) => s.PreviewSubmitAsync(request, ct))
             .WithTags("Quy trình duyệt")
             .RequireAuthorization();
+
+        // Hủy dây chuyền (lát Z4b, design.md mục 20.2): xem trước trình tự và hủy cả chuỗi – quyền từng phiếu kiểm tra trong dịch vụ.
+        var chain = app.MapGroup("/api/cancel-chain").WithTags("Hủy dây chuyền").RequireAuthorization();
+        chain.MapGet("/{docType}/{id:guid}", (string docType, Guid id, ICancelChainService s, CancellationToken ct) => s.PreviewAsync(docType, id, ct));
+        chain.MapPost("/{docType}/{id:guid}", (string docType, Guid id, CancelChainRequest request, ICancelChainService s, CancellationToken ct) =>
+            s.CancelAsync(docType, id, request, ct));
 
         var rules = app.MapGroup("/api/approval-rules").WithTags("Quy trình duyệt");
         rules.MapGet("/", (IApprovalRuleAdministration s, CancellationToken ct) => s.ListAsync(ct))

@@ -7,6 +7,7 @@ import { PURCHASE_STAGE_LABELS, previewApproval, type ApprovalStep, type Purchas
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { ApprovalChain, ApproveInfo } from './ApprovalHistory'
 import { approvalInputFor, confirmApprove, uploadApprovalFiles, type ApprovalAttachTarget, type ApprovalInputBox } from './approvalDialogs'
+import { confirmCancelChain } from './cancelChainDialog'
 
 /** Phiếu mua hàng tối thiểu mà lệnh chung cần. */
 interface ApprovableDoc {
@@ -274,24 +275,12 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     }, attach)
   }
 
+  // Hủy theo dây chuyền (lát Z4b, design.md mục 20.2): hộp thoại liệt kê trình tự từ phiếu cuối về phiếu đầu, lý do bắt buộc; quyền theo
+  // mục 20.2a (nháp – người lập; còn lại – quản trị) do máy chủ kiểm tra và báo trong hộp thoại.
   const cancel = () => {
     if (!doc) return
-    // Mọi lần hủy bắt buộc lý do (design.md mục 20.2a): phiếu nháp – người lập tự hủy; đã gửi duyệt trở đi – chỉ quản trị.
-    confirmWithReason(modal, message, {
-      title: `Hủy phiếu ${doc.no}?`,
-      description: 'Phiếu đã hủy giữ lại số phiếu và lịch sử, không dùng lại được.',
-      label: 'Lý do hủy',
-      placeholder: doc.status === 'Draft' ? 'Ví dụ: lập nhầm, gộp vào phiếu khác' : 'Ví dụ: NCC báo không giao được, đổi phương án mua',
-      okText: 'Hủy phiếu',
-      onOk: async (reason) => {
-        try {
-          await mutations.cancel.mutateAsync({ id: doc.id, comment: reason })
-          message.success(`Đã hủy phiếu ${doc.no}.`)
-        } catch (e) {
-          fail(e, 'Không hủy được phiếu.')
-        }
-      },
-    })
+    setError(null)
+    void confirmCancelChain(modal, message, { docType, id: doc.id, no: doc.no, onError: (text) => setError(text) })
   }
 
   /** Rút phiếu đang chờ duyệt về Nháp để sửa hoặc tự hủy (yêu cầu người dùng 11/11/2026). */
