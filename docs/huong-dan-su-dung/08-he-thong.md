@@ -100,13 +100,19 @@ Quy tắc:
 - Mỗi cấp một người khác nhau trong một lượt; người lập không tự duyệt. Công ty chưa gán vai trò riêng cho các chặng ngoại lệ cần ít nhất 2
   người có quyền duyệt PO.
 - Nút **Cấu hình duyệt mẫu…**, ô **Bộ mẫu** chọn một trong hai bộ:
-  - **Theo biểu mẫu CUVT**: PR (1A/1B/DV) – Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH;
+  - **Theo biểu mẫu CUVT**: PR (1B) – Thủ kho nơi nhận → Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → TPHC → GĐ khối của phiếu → PHOCTUBCL
+    → CHUTICH; PRA (1A – công trình) như PR nhưng không có TPHC; PRS (dịch vụ) như PR nhưng không có Thủ kho; PRE (vượt dự toán) – GDTCKT;
     RFQ (3a/3A/3B) – TPCUVT → TPTCKT → GDTCKT → PHOCTUBCL → CHUTICH; PO (4A/4B) – TPCUVT → TPTCKT → GDTCKT → CHUTICH. Khai Trưởng phòng ban,
     GĐ khối ở danh mục Bộ phận, Khối trước khi gửi duyệt. Nên áp bộ này trước rồi áp bộ theo sơ đồ để có thêm chặng ngoại lệ, hợp đồng.
   - **Theo sơ đồ phê duyệt của Ban cung ứng** (PR – Trưởng phòng cung ứng; PO – Phó ban → Phó ban → Chủ tịch;
     POL, POX, POK, NDQ – Phó ban → Chủ tịch; POC – Chủ tịch; RFQ – Phó ban → Trưởng ban; PRL – Trưởng ban; CTR, CTA – Phó ban → Chủ tịch; ở
     tổng công ty thêm GTH, CKB – Phó ban → Phó ban → Trưởng ban, GTX – Chủ tịch, hồ sơ NCC – Trưởng ban). Chỉ tạo cho loại **chưa có cấp nào**,
     mọi cấp **ngưỡng 0** – sửa ngưỡng sau theo phân quyền nội bộ.
+- **Người duyệt "Thủ kho nơi nhận"** (chỉ loại PR, PRA): người có quyền nhập tồn trên đề nghị mua và phạm vi kho chứa nơi nhận của phiếu.
+  Thủ kho bấm **Nhập tồn** rồi mới **Duyệt** được; đề nghị dịch vụ tự bỏ cấp này. Đề nghị có cấp Thủ kho phải chọn nơi nhận mới gửi duyệt được.
+- Đề nghị mua có **phần vượt** (vượt ngân sách PRB, vượt dự toán công trình PRE): chặng vượt được duyệt **trước cấp cao nhất** (Chủ tịch) của
+  chuỗi thường – cấp cao nhất duyệt sau cùng.
+- Công ty đã áp bộ PR cũ thì bộ mẫu không ghi đè: xóa các cấp PR cũ rồi áp lại nếu muốn chuỗi mới.
 - Quyền sửa: `System.Parameter.Manage`.
 
 Tài liệu chi tiết cách cấu hình duyệt PO nhiều cấp: `docs/HuongDan_PheDuyetPO_NhieuCap_v2.docx`, `docs/HuongDan_DuyetPO_A_B_C_D.docx`.

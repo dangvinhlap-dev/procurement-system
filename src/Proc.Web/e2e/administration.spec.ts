@@ -147,9 +147,12 @@ test.describe('quản trị hệ thống', () => {
     await page.goto('/he-thong/quy-trinh-duyet')
     await page.getByRole('button', { name: 'Tạo mới' }).click()
     const drawer = page.locator('.detail-drawer')
-    await drawer.getByLabel('Loại phiếu').click()
-    for (const name of ['Bảng giá NCC (PRL)', 'Kết quả chọn thầu (RFQ)', 'Hồ sơ nhà cung cấp (NCC)', 'Hợp đồng nguyên tắc (CTR)'])
+    // Danh sách loại dài (thêm PRA, PRS, PRE – lát Y3c) cuộn ảo: gõ tìm từng loại để chắc có trong danh sách.
+    const type = drawer.getByLabel('Loại phiếu')
+    for (const name of ['Bảng giá NCC (PRL)', 'Kết quả chọn thầu (RFQ)', 'Hợp đồng nguyên tắc (CTR)', 'Đề nghị mua công trình (loại A) (PRA)', 'Hồ sơ nhà cung cấp (NCC)']) {
+      await type.fill(name)
       await expect(page.locator('.ant-select-item-option', { hasText: name })).toBeVisible()
+    }
     await page.locator('.ant-select-item-option', { hasText: 'Hồ sơ nhà cung cấp (NCC)' }).click()
     await expect(drawer.getByLabel('Từ giá trị (đ)')).toBeDisabled()
     await expect(drawer.getByText('Loại này không xét giá trị')).toBeVisible()

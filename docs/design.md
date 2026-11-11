@@ -2203,7 +2203,8 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   UBCL&PT; dùng chung DENGHI (người đề xuất), KHO (thủ kho nơi nhận), CHUTICH. Người duyệt các cấp không có quyền lập PR, RFQ, PO (không kiêm
   nhiệm). CHUTICH thêm quyền duyệt kết quả chọn thầu (cấp cuối 3a/3A/3B); vai trò CHUTICH tạo trước 0.22.0 giữ nguyên – người quản trị thêm tay.
 - **Cấu hình duyệt mẫu** (Hệ thống → Quy trình duyệt → "Cấu hình duyệt mẫu…", ô chọn bộ; `GET/POST /api/approval-rules/template?set=SODO|CUVT`,
-  trống = SODO): bộ **theo biểu mẫu CUVT** – PR (1A/1B/DV) Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH;
+  trống = SODO): bộ **theo biểu mẫu CUVT** – PR (1A/1B/DV) Trưởng phòng ban của phiếu → TPCUVT → TPTCKT → GĐ khối của phiếu → PHOCTUBCL → CHUTICH
+  (từ lát Y3c: PR 8 cấp có Thủ kho + TP HC, thêm PRA, PRS, PRE – xem "Lát Y3c");
   RFQ (3a/3A/3B) TPCUVT → TPTCKT → GDTCKT → PHOCTUBCL → CHUTICH; PO (4A/4B) TPCUVT → TPTCKT → GDTCKT → CHUTICH. Cấp người duyệt động không cần
   vai trò mẫu. Áp bộ CUVT trước rồi bộ theo sơ đồ thì PR, RFQ, PO giữ chuỗi biểu mẫu, bộ sơ đồ chỉ thêm các loại còn lại (chặng ngoại lệ PO,
   hợp đồng, độc quyền…).

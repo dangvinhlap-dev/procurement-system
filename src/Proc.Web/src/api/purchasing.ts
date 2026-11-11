@@ -570,7 +570,7 @@ export interface DeliveryTracking {
 }
 
 /** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
-export type ApprovalDocType = 'PR' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ' | 'GTH' | 'CKB'
+export type ApprovalDocType = 'PR' | 'PRA' | 'PRS' | 'PRE' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ' | 'GTH' | 'CKB'
 
 /** Một loại phiếu có duyệt. */
 export interface ApprovalType {
@@ -580,6 +580,8 @@ export interface ApprovalType {
   amountLabel: string | null
   /** Phiếu có bộ phận – chọn được người duyệt Trưởng phòng ban / GĐ khối của phiếu (lát O1). */
   hasDepartment: boolean
+  /** Bộ cấp đề nghị mua có nơi nhận (PR, PRA) – chọn được người duyệt Thủ kho nơi nhận (lát Y3c). */
+  hasStorekeeper?: boolean
 }
 
 /** Phiếu chờ tôi duyệt. */
@@ -604,14 +606,17 @@ export interface ApprovalRule {
   /** Vai trò; null khi cấp do người duyệt động. */
   roleId: string | null
   roleCode: string | null
-  /** Tên vai trò, hoặc "Trưởng phòng ban của phiếu" / "GĐ khối của phiếu". */
+  /** Tên vai trò, hoặc "Trưởng phòng ban của phiếu" / "GĐ khối của phiếu" / "Thủ kho nơi nhận". */
   roleName: string | null
   /** Ai duyệt cấp này (lát O1). */
   approverKind: ApproverKind
 }
 
-/** Ai duyệt một cấp: theo vai trò, Trưởng phòng ban hoặc GĐ khối của bộ phận trên phiếu (lát O1, design.md mục 19.3). */
-export type ApproverKind = 'Role' | 'DepartmentHead' | 'DivisionDirector'
+/**
+ * Ai duyệt một cấp: theo vai trò, Trưởng phòng ban hoặc GĐ khối của bộ phận trên phiếu (lát O1), Thủ kho nơi nhận của đề nghị mua (lát Y3c,
+ * design.md mục 19.3).
+ */
+export type ApproverKind = 'Role' | 'DepartmentHead' | 'DivisionDirector' | 'Storekeeper'
 
 /** Nội dung cấp duyệt. */
 export interface SaveApprovalRuleInput {
@@ -908,5 +913,6 @@ export function useSaveBudget() {
 }
 
 /** Nhãn chặng phụ của PR, PO trong lịch sử duyệt: 2 = ngoại lệ giá (design.md mục 18.10), 3 = vượt ngân sách (mục 18.24), 4 = ngoài danh sách/giá, 5 = vượt giá trần – Chủ tịch/TGĐ (mục 18.25). */
-export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách', 4: 'Ngoài danh sách/giá', 5: 'Vượt giá trần' }
+/** Tên chặng phụ của PR/PO; chặng 9 (cấp cao nhất duyệt sau phần vượt – lát Y3c) không có tên riêng nên hiện "Duyệt thường". */
+export const PURCHASE_STAGE_LABELS: Record<number, string> = { 2: 'Ngoại lệ giá', 3: 'Vượt ngân sách', 4: 'Ngoài danh sách/giá', 5: 'Vượt giá trần', 6: 'Vượt dự toán' }
 
