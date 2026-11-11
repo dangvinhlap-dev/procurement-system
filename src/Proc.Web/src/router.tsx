@@ -10,6 +10,7 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
 import { OpenLinkPage } from './pages/OpenLinkPage'
+import { MobileApprovalDetailPage, MobileApprovalListPage } from './pages/mobile/MobileApprovalPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
@@ -232,6 +233,24 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <CreatePurchaseOrderPreview />
+      </RequireAuth>
+    ),
+  },
+  // Trang duyệt gọn trên điện thoại (lát O2d): khung một cột riêng nên đứng ngoài AppShell. Không gắn quyền màn hình – chỉ hiện phiếu máy chủ
+  // xác định là đang chờ chính người dùng duyệt, máy chủ kiểm tra lại quyền khi duyệt.
+  {
+    path: '/duyet',
+    element: (
+      <RequireAuth>
+        <MobileApprovalListPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/duyet/:docType/:id',
+    element: (
+      <RequireAuth>
+        <MobileApprovalDetailPage />
       </RequireAuth>
     ),
   },

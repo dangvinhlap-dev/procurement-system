@@ -20,8 +20,9 @@ export interface ClassicShortcuts {
  * Gắn lớp .erp-classic (biến CSS --erp-*), lồng theme antd riêng và bắt phím tắt toàn màn hình.
  * @param children Các vùng theo thứ tự: MenuBar, Toolbar, ScreenTitle, CommandBar, nội dung (ClassicBody), StatusBar.
  * @param shortcuts Hàm xử lý phím tắt.
+ * @param className Lớp thêm cạnh .erp-classic – ví dụ `erp-mobile` cho trang duyệt gọn trên điện thoại (docs/ui-style.md mục 5c).
  */
-export function ClassicScreen({ children, shortcuts }: { children: ReactNode; shortcuts?: ClassicShortcuts }) {
+export function ClassicScreen({ children, shortcuts, className }: { children: ReactNode; shortcuts?: ClassicShortcuts; className?: string }) {
   // Giữ bản mới nhất trong ref để chỉ gắn trình nghe phím một lần mà vẫn gọi đúng hàm theo state hiện tại.
   const shortcutsRef = useRef(shortcuts)
   useEffect(() => {
@@ -50,7 +51,7 @@ export function ClassicScreen({ children, shortcuts }: { children: ReactNode; sh
 
   return (
     <ConfigProvider theme={classicTheme}>
-      <div className="erp-classic">{children}</div>
+      <div className={className ? `erp-classic ${className}` : 'erp-classic'}>{children}</div>
     </ConfigProvider>
   )
 }

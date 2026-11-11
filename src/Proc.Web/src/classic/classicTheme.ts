@@ -56,3 +56,11 @@ export const classicTheme: ThemeConfig = {
     motion: false,
   },
 }
+
+/**
+ * Theme antd cho trang duyệt gọn trên điện thoại (lát O2d, docs/ui-style.md mục 5c): giữ màu, bo góc, không bóng của phong cách cổ điển
+ * nhưng chữ 14px và ô/nút cao 36px – ngón tay bấm trúng (khuyến nghị vùng chạm tối thiểu ~36–44px), chữ 12px quá nhỏ trên điện thoại.
+ */
+export const classicMobileTheme: ThemeConfig = {
+  token: { ...classicTheme.token, fontSize: 14, fontSizeSM: 13, controlHeight: 36, controlHeightSM: 28 },
+}

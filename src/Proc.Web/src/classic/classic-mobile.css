@@ -1,0 +1,254 @@
+/*
+ * Trang duyệt gọn trên điện thoại (lát O2d – docs/ui-style.md mục 5c). Gắn cạnh .erp-classic (ClassicScreen className="erp-mobile") nên dùng
+ * lại toàn bộ biến --erp-* của classic.css; chỉ đổi cỡ chữ, chiều cao vùng chạm và bố cục một cột. Không viết màu cứng.
+ */
+.erp-classic.erp-mobile {
+  --erp-font-size: 14px;
+  --erp-mobile-touch: 36px;
+
+  height: auto;
+  min-height: 100vh;
+  font-size: var(--erp-font-size);
+  line-height: 1.4;
+}
+
+/* Thanh tiêu đề dải màu như thanh menu cổ điển; dính trên khi cuộn. */
+.erp-mobile-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap-sm);
+  min-height: 44px;
+  padding: 0 var(--erp-gap);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-mobile-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--erp-title);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.erp-mobile-bar-link {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Dòng người dùng + công ty + đăng xuất. */
+.erp-mobile-user {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap);
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  background: var(--erp-panel-bg);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+
+.erp-mobile-user > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.erp-mobile-company {
+  min-width: 120px;
+}
+
+.erp-mobile-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--erp-gap);
+}
+
+.erp-mobile-body > * + * {
+  margin-top: var(--erp-gap);
+}
+
+.erp-mobile-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.erp-mobile-empty {
+  padding: var(--erp-gap) 0;
+  color: var(--erp-text-muted);
+  text-align: center;
+}
+
+/* Danh sách thẻ phiếu: mỗi thẻ là một nút lớn, viền 1px, không bóng (ui-style mục 4). */
+.erp-mobile-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-mobile-cards > li + li {
+  margin-top: var(--erp-gap-sm);
+}
+
+.erp-mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-gap-xs);
+  width: 100%;
+  min-height: var(--erp-mobile-touch);
+  padding: var(--erp-gap);
+  color: var(--erp-text);
+  font: inherit;
+  text-align: left;
+  background: var(--erp-grid-bg);
+  border: 1px solid var(--erp-grid-line);
+  border-radius: var(--erp-radius);
+  cursor: pointer;
+}
+
+.erp-mobile-card:active,
+.erp-mobile-card:focus-visible {
+  background: var(--erp-grid-selected);
+  border-color: var(--erp-input-focus);
+}
+
+.erp-mobile-card-head,
+.erp-mobile-card-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--erp-gap);
+}
+
+.erp-mobile-card-head > span,
+.erp-mobile-card-foot > span:first-child {
+  color: var(--erp-text-muted);
+  font-size: 13px;
+}
+
+.erp-mobile-card-desc {
+  overflow-wrap: anywhere;
+}
+
+/* Số tiền canh phải, phông đơn cách (ui-style mục 3). */
+.erp-mobile-money {
+  font-family: var(--erp-font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Khối thông tin có dải tiêu đề như khối "Thông tin phiếu" của DocumentForm. */
+.erp-mobile-section {
+  background: var(--erp-grid-bg);
+  border: 1px solid var(--erp-grid-line);
+  border-radius: var(--erp-radius);
+}
+
+.erp-mobile-section > h2 {
+  margin: 0;
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  color: var(--erp-title);
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--erp-grid-head);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+
+.erp-mobile-section > p {
+  margin: var(--erp-gap-sm) var(--erp-gap);
+}
+
+.erp-mobile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--erp-gap);
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+
+.erp-mobile-row:last-child {
+  border-bottom: 0;
+}
+
+.erp-mobile-row > span:last-child {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.erp-mobile-label {
+  flex: none;
+  color: var(--erp-text-muted);
+}
+
+.erp-mobile-lines,
+.erp-mobile-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-mobile-lines > li,
+.erp-mobile-steps > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-gap-xs);
+  padding: var(--erp-gap-sm) var(--erp-gap);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+
+.erp-mobile-steps > li {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--erp-gap);
+}
+
+/* Đèn trạng thái giữ ô vuông 10px – trong hàng flex nó bị co thành vạch. */
+.erp-mobile-steps .erp-light {
+  flex: none;
+}
+
+.erp-mobile-lines > li:last-child,
+.erp-mobile-steps > li:last-child {
+  border-bottom: 0;
+}
+
+.erp-mobile-muted {
+  color: var(--erp-text-muted);
+  font-size: 13px;
+}
+
+/* Cảnh báo: chữ đỏ đậm kèm nội dung – màu không là thông tin duy nhất. */
+.erp-mobile-warn {
+  color: var(--erp-required);
+  font-weight: 700;
+}
+
+/* Vùng quyết định dính đáy màn hình để luôn bấm được Duyệt / Từ chối sau khi cuộn đọc phiếu. */
+.erp-mobile-decision {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-gap-sm);
+  padding: var(--erp-gap);
+  background: var(--erp-panel-bg);
+  border: 1px solid var(--erp-bar-border);
+}
+
+.erp-mobile-actions {
+  display: flex;
+  gap: var(--erp-gap);
+}
+
+.erp-mobile-actions > .ant-btn {
+  flex: 1;
+  height: 40px;
+  font-weight: 700;
+}

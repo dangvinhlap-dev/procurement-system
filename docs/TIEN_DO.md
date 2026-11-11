@@ -180,7 +180,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     design.md 19.3, deploy-windows.md, README, appsettings.Production.example.json. Test: domain `ApprovalOverdueTests` (7), tích hợp
     `ApprovalReminderTests` (đồng hồ giả). Kiểm tra: build 0 cảnh báo, dotnet test 636/636, tsc, oxlint, npm run build qua; không chạy Playwright
     (giao diện chỉ thêm nhãn loại thông báo, dịch vụ nhắc tắt ở môi trường test).
-  - **Còn lại**: O2d trang duyệt gọn cho điện thoại.
+  - **O2d (xong 11/11/2026)**: trang **duyệt gọn cho điện thoại** `/duyet` (thẻ phiếu chờ tôi duyệt, chọn công ty) và `/duyet/:loại/:id` (tóm tắt;
+    PR/PO thêm dòng hàng, cảnh báo, tổng tiền, lịch sử duyệt lượt hiện tại; Duyệt có ý kiến / Từ chối bắt buộc lý do, hỏi xác nhận). Đứng ngoài
+    AppShell, `ClassicScreen className="erp-mobile"` + `classicMobileTheme` + `classic/classic-mobile.css` (chữ 14px, ô 36px – ui-style.md mục 5c).
+    Gọi thẳng API approve/reject sẵn có theo loại (`app/approvalRoutes.ts` – bảng đường dẫn đầy đủ dùng chung với Việc cần làm, `api/mobileApprovals.ts`);
+    không đổi backend, không migration. Link email `/mo/...` trên màn hình ≤ 768px chuyển sang trang duyệt gọn; Việc cần làm có nút "Duyệt trên
+    điện thoại". Ghi design.md 19.3 (O2d), ui-style.md 5c. Test e2e `mobile-approval.spec.ts` (390×844). Kiểm tra: dotnet build 0 cảnh báo,
+    dotnet test 636/636, tsc, oxlint, npm run build; Playwright mobile-approval + notifications + delegations + purchasing + dashboard 8/8
+    (dashboard chập chờn khi chạy song song – chạy lại qua).
+  - **O2 hoàn tất** (O2a–O2d).
 
 - **O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động** (design.md mục 19.3, lộ trình 0.22.0; nhánh `feature/o1-khoi-duyet-dong`). Chia bước:
   O1a tổ chức (backend + giao diện) → O1b cấp duyệt động ở APRL (backend + giao diện) → tài liệu. "Chuỗi duyệt theo loại mua" làm cùng Y3

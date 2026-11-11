@@ -2180,6 +2180,18 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   `ApprovalReminder` (bước, lần nhắc, thời điểm, số người nhận; khóa duy nhất bước + lần – hai tiến trình cùng quét không nhắc trùng), migration
   `V0_22_0_NhacQuaHanDuyet`. Chưa có báo cáo/thống kê phiếu quá hạn (làm khi có yêu cầu).
 
+**Lát O2d – duyệt trên điện thoại (0.22.0).** Quy tắc (tự đặt, người dùng "làm tiếp" 11/11/2026):
+
+- Trang **duyệt gọn** `/duyet` (ngoài khung desktop, vẫn bắt đăng nhập; ô chọn công ty): thẻ các phiếu đang chờ **chính người dùng** duyệt ở
+  công ty đang làm việc – cùng nguồn với Việc cần làm (`GET /api/approvals/pending`, gồm phiếu được ủy quyền duyệt thay). Màn hình Việc cần làm có
+  nút "Duyệt trên điện thoại" mở trang này.
+- `/duyet/{loại}/{Id}`: thông tin chung của phiếu; PR, PO thêm dòng hàng, cảnh báo (vượt định mức, vượt giá trần, ngoài danh sách/giá đã duyệt,
+  lệch giá), tổng tiền và lịch sử duyệt lượt hiện tại; loại khác (PRL, RFQ, CTR, CTA, NCC, NDQ, GTH, CKB) có link mở bản đầy đủ để xem kỹ.
+  **Duyệt** (ý kiến tùy chọn) / **Từ chối** (bắt buộc lý do – mục 18.6) gọi đúng API duyệt của loại phiếu, không có API mới; máy chủ kiểm tra lại
+  quyền, lượt, ủy quyền, xung đột lợi ích như trên bản đầy đủ. Phiếu không còn chờ người dùng thì chỉ xem.
+- Link "Mở trên phần mềm" trong email (O2b) mở trên màn hình ≤ 768px chuyển thẳng sang trang duyệt gọn khi loại phiếu duyệt được ở đây.
+- Chưa có: đăng nhập riêng cho điện thoại, thông báo đẩy, duyệt nhiều phiếu một lần (làm khi có yêu cầu).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
