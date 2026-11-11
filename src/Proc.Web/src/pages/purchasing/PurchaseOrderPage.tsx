@@ -421,6 +421,14 @@ export function PurchaseOrderPage() {
         </Form.Item>
       ),
     },
+    // SL thực nhận (từ phiếu XNH đã xác nhận – design.md mục 19.4) đặt ngay sau SL đặt: để cuối lưới 17 cột thì bị đẩy khỏi khung nhìn,
+    // người dùng tưởng PO chưa ghi nhận nhận hàng (phản ánh khi test 0.22.0, 11/11/2026).
+    ...(showReceiving
+      ? ([
+          { key: 'received', title: 'SL thực nhận', width: 90, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.receivedQty ?? 0)) },
+          { key: 'remaining', title: 'Còn lại', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.remainingQty ?? 0)) },
+        ] as LineColumn[])
+      : []),
     {
       key: 'price',
       title: 'Đơn giá', required: true,
@@ -546,12 +554,6 @@ export function PurchaseOrderPage() {
         </Form.Item>
       ),
     },
-    ...(showReceiving
-      ? ([
-          { key: 'received', title: 'SL thực nhận', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.receivedQty ?? 0)) },
-          { key: 'remaining', title: 'Còn lại', width: 80, align: 'right', render: (_, index) => readonlyCell(formatQuantity(savedLine(index)?.remainingQty ?? 0)) },
-        ] as LineColumn[])
-      : []),
     { key: 'pr', title: 'PR nguồn', width: 130, render: (_, index) => readonlyCell(savedLine(index)?.sourcePrNo ?? (lines[index]?.sourcePrLineId ? '(từ PR)' : '')) },
   ]
 
@@ -709,7 +711,8 @@ export function PurchaseOrderPage() {
                 </Button>
               </Space>
             )}
-            <LineGrid name="lines" auditEntity="PurchaseOrderLine" columns={columns} readOnly={readOnly} addRef={addRef}
+            {/* scrollX: lưới PO 15–17 cột – giữ độ rộng cột mặc định và cuộn ngang thay vì ép cột hẹp (docs/ui-style.md mục 5). */}
+            <LineGrid name="lines" auditEntity="PurchaseOrderLine" columns={columns} readOnly={readOnly} addRef={addRef} scrollX
               newLine={() => ({ id: null, qty: 1, unitPrice: 0, discountPct: 0, sourcePrLineId: null })} />
           </>
         }
