@@ -163,7 +163,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - **Phát hành 0.22.2 (11/11/2026)** – bản vá: ẩn nhóm menu trống, PO tự điền đơn giá đã duyệt, sửa tài liệu test. Người dùng viết "phát hành
   0.22.1" – 0.22.1 đã có tag nên hiểu là bản vá kế tiếp 0.22.2. Tag `v0.22.2`,
   https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.2; không đổi CSDL. Kiểm tra: build 0 cảnh báo, `dotnet test`
-  640/640, Playwright đủ bộ 124/124. **Bản test 5007 nâng lên 0.22.2**: `app` = 0.22.2, `app-0.22.1` = bản cũ, gói `goi .22.2`, sao lưu
+  640/640, Playwright đủ bộ 124/124. **Bản test 5007 nâng lên 0.22.2**: `app` = 0.22.2, `app-0.22.1` = bản cũ, gói `goi\0.22.2`, sao lưu
   `D:\project\procurement_kiemtra_0150_truoc_0.22.2.dump`, PID 11864; `/health` Healthy 0.22.2; bmi.kho không còn thấy Đấu thầu, Báo cáo.
   Máy chủ Vite dev 5173 chạy từ thời 0.20.0 (hiện sai số phiên bản) – nên khởi động lại.
 - **Mẫu in theo biểu mẫu CUVT (11/11/2026)**: người dùng hỏi vì sao chưa in theo biểu mẫu Excel – đã giải thích để theo lộ trình design.md 19.6
