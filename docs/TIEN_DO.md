@@ -150,6 +150,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Mẫu in theo biểu mẫu CUVT (11/11/2026)**: người dùng hỏi vì sao chưa in theo biểu mẫu Excel – đã giải thích để theo lộ trình design.md 19.6
+  (Y10 khung in + 1A/1B/DV, 2A/2B ở 0.23.0; 3A/3a/3B, 4A/4B ở 0.24.0; 5A/5B, 1C/2C ở 0.27.0). Người dùng chốt **giữ lộ trình**.
 - **Phát hành 0.22.1 (11/11/2026)** – bản vá: cột SL thực nhận/Còn lại trên PO đứng sau SL đặt, lưới PO cuộn ngang. Tag `v0.22.1`,
   https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.22.1 (gói `procurement-0.22.1.zip`); không đổi CSDL (78 migration).
   **Bản test 5007 nâng lên 0.22.1**: `app` = 0.22.1, `app-0.22.0` = bản cũ, gói ở `goi\0.22.1`, sao lưu
