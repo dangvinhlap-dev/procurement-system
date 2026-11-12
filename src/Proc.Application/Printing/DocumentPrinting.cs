@@ -32,6 +32,17 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// In kết quả hỏi giá theo biểu mẫu CUVT (lát Y6): 3A so sánh chọn NCC, hoặc 3a/3B bảng trình giá mỗi NCC trúng thầu một trang; khổ ngang.
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="form">"3A" = in bảng so sánh (RFQ loại A); null = theo biểu mẫu của phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi chưa có báo giá, hoặc in 3A cho RFQ không phải loại A.</exception>
+    Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken);
+
     /// <summary>In chứng từ kho (nhập mua, trả NCC, chuyển kho, xuất bán / nhập mua nội bộ).</summary>
     /// <param name="id">Chứng từ kho.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>

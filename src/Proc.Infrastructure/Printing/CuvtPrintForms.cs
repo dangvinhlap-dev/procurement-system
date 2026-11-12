@@ -9,7 +9,7 @@ namespace Proc.Infrastructure.Printing;
 /// Dựng nội dung in theo biểu mẫu CUVT (lát Y10, design.md mục 10.10, 19.2): đề nghị mua 1A (công trình), 1B (hàng hóa), đề nghị dịch vụ
 /// (mẫu 1B không có cột tồn – dịch vụ không qua Thủ kho), bảng tổng hợp 2A/2B. Hàm thuần – chỉ đọc DTO đã lấy theo phạm vi người dùng.
 /// </summary>
-public static class CuvtPrintForms
+public static partial class CuvtPrintForms
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
 
