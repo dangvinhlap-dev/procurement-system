@@ -6,6 +6,7 @@ using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
+using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Purchasing;
@@ -213,9 +214,14 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
         ArgumentNullException.ThrowIfNull(request);
         var summary = await LoadAsync(id, cancellationToken);
         // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị. Hủy xong các dòng đề nghị trở
-        // lại chọn được vào bảng tổng hợp khác. Hủy dây chuyền (bảng → RFQ/PO lấy từ bảng) làm ở lát Y5c.
+        // lại chọn được vào bảng tổng hợp khác.
         var reason = DocumentCancelPolicy.Authorize(
             _scope, $"bảng tổng hợp {summary.No}", summary.Status == ApprovalDocumentStatus.Draft, summary.CreatedBy, request.Reason);
+        // Dòng của bảng đã lên RFQ/PO chưa hủy thì hủy các phiếu đó trước – không để RFQ/PO trỏ vào dòng đề nghị không còn qua bảng tổng hợp
+        // đã duyệt (bắt buộc qua bảng tổng hợp – design.md mục 19.3, lát Y5c).
+        var downstream = await DownstreamNosAsync(summary.Lines.Select(l => l.RequestLineId).ToList(), cancellationToken);
+        if (downstream.Count > 0)
+            throw new BusinessRuleException($"Bảng tổng hợp {summary.No} đã lên {string.Join(", ", downstream)} – hủy các phiếu đó trước.");
         summary.Cancel(reason);
         await _approvals.SkipPendingAsync(summary, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -237,6 +243,59 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
                 where requestIds.Contains(l.RequestId) && s.Status != ApprovalDocumentStatus.Cancelled
                 select s.No)
             .Distinct().OrderBy(no => no).ToListAsync(cancellationToken);
+
+    /// <summary>Số RFQ, PO chưa hủy có dòng lấy từ các dòng đề nghị (theo thứ tự số).</summary>
+    private async Task<List<string>> DownstreamNosAsync(IReadOnlyList<Guid> prLineIds, CancellationToken cancellationToken)
+    {
+        var orders = await (
+                from ol in _db.Set<PurchaseOrderLine>()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where ol.SourcePrLineId != null && prLineIds.Contains(ol.SourcePrLineId.Value) && o.Status != ApprovalDocumentStatus.Cancelled
+                select o.No)
+            .Distinct().ToListAsync(cancellationToken);
+        var rfqs = await (
+                from rl in _db.Set<RfqLine>()
+                join r in _db.Rfqs on rl.RfqId equals r.Id
+                where rl.SourcePrLineId != null && prLineIds.Contains(rl.SourcePrLineId.Value) && r.Status != RfqStatus.Cancelled
+                select r.No)
+            .Distinct().ToListAsync(cancellationToken);
+        return [.. rfqs.Order(), .. orders.Order()];
+    }
+
+    /// <summary>
+    /// Dòng đề nghị thuộc bảng tổng hợp <b>đã duyệt</b> – chỉ những dòng này được lên RFQ/PO. Mọi công ty bắt buộc qua bảng tổng hợp, không có
+    /// tham số tắt (người dùng chốt 12/11/2026 – design.md mục 19.3, lát Y5c).
+    /// </summary>
+    /// <param name="db">DbContext (filter công ty giữ nguyên).</param>
+    /// <returns>Truy vấn Id dòng đề nghị – ghép vào truy vấn khác hoặc lọc tiếp.</returns>
+    internal static IQueryable<Guid> ApprovedSummaryLineIds(ProcDbContext db) =>
+        from l in db.Set<PurchaseSummaryLine>()
+        join s in db.PurchaseSummaries on l.SummaryId equals s.Id
+        where s.Status == ApprovalDocumentStatus.Approved
+        select l.RequestLineId;
+
+    /// <summary>Chặn dòng đề nghị chưa qua bảng tổng hợp đã duyệt khi lấy lên RFQ/PO (design.md mục 19.3, lát Y5c).</summary>
+    /// <param name="db">DbContext.</param>
+    /// <param name="lines">Dòng phiếu có nguồn đề nghị: Id dòng đề nghị, số thứ tự dòng trên phiếu đang lập.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <exception cref="BusinessRuleException">Khi có dòng đề nghị chưa ở bảng tổng hợp đã duyệt.</exception>
+    internal static async Task EnsureApprovedSummaryAsync(
+        ProcDbContext db, IReadOnlyList<(Guid PrLineId, int LineNo)> lines, CancellationToken cancellationToken)
+    {
+        if (lines.Count == 0) return;
+        var ids = lines.Select(l => l.PrLineId).Distinct().ToList();
+        var covered = await ApprovedSummaryLineIds(db).Where(id => ids.Contains(id)).Distinct().ToListAsync(cancellationToken);
+        var missing = lines.Where(l => !covered.Contains(l.PrLineId)).Select(l => ((Guid, int)?)l).FirstOrDefault();
+        if (missing is not { } line) return;
+        var source = await (
+                from l in db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in db.PurchaseRequests on l.RequestId equals r.Id
+                where l.Id == line.Item1
+                select new { r.No, l.LineNo })
+            .FirstOrDefaultAsync(cancellationToken);
+        throw new BusinessRuleException(
+            $"Dòng {line.Item2}: dòng {source?.LineNo} của đề nghị {source?.No} chưa ở bảng tổng hợp đề xuất mua đã duyệt – lập bảng tổng hợp 2A/2B và duyệt trước.");
+    }
 
     /// <summary>
     /// Dòng đề nghị đã ở bảng tổng hợp chưa hủy (trừ bảng <paramref name="exceptSummaryId"/>) – mỗi dòng đề nghị chỉ thuộc một bảng (lát Y5b).

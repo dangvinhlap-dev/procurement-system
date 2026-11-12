@@ -441,7 +441,9 @@ public sealed class RfqService : IRfqService
                 where prLineIds.Contains(l.Id)
                 select new { l.Id, l.ItemId, r.No, r.Status })
             .ToDictionaryAsync(x => x.Id, cancellationToken);
-        return lines.Select((l, index) =>
+        // Dòng đề nghị phải qua bảng tổng hợp đề xuất mua đã duyệt mới được hỏi giá (design.md mục 19.3, lát Y5c) – kiểm sau khi đã kiểm
+        // đề nghị duyệt, cùng mặt hàng để báo lỗi cụ thể hơn trước.
+        var result = lines.Select((l, index) =>
         {
             var item = items.GetValueOrDefault(l.ItemId)
                 ?? throw new NotFoundException($"Dòng {index + 1}: không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).");
@@ -454,6 +456,10 @@ public sealed class RfqService : IRfqService
 
             return (new RfqLineData(l.Id, l.ItemId, l.UomId, l.Qty, l.SourcePrLineId, l.Note), item);
         }).ToList();
+        await PurchaseSummaryService.EnsureApprovedSummaryAsync(
+            _db, lines.Select((l, index) => (l.SourcePrLineId, index + 1)).Where(x => x.SourcePrLineId is not null)
+                .Select(x => (x.SourcePrLineId!.Value, x.Item2)).ToList(), cancellationToken);
+        return result;
     }
 
     /// <summary>NCC phải có trong danh mục và không ở danh sách đen (design.md mục 5.8); NCC Tiềm năng vẫn mời được.</summary>

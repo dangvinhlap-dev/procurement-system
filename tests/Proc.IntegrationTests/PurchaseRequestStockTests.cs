@@ -67,6 +67,7 @@ public partial class PurchasingTests
         Assert.Contains("tồn đã khóa", view.EnterStockBlocker);
         Assert.Contains("tồn đã khóa", await TitleAsync(await EnterStockAsync(keeper, pr, 0)));
         await ReadAsync<PurchaseRequestDto>(await ActAsync(director, "purchase-requests", pr.Id, "approve"));
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
 
         // Đề nghị sau cùng mặt hàng, cùng nơi nhận: gợi ý tồn 4 của đề nghị trước. Tồn 12 ≥ cần 10 → cần mua 0, dòng không lên PO.
         var second = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 10));

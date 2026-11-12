@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Proc.Application.Purchasing;
+using Proc.Application.Sourcing;
 using Proc.Domain.Organization;
 
 namespace Proc.IntegrationTests;
@@ -7,6 +8,7 @@ namespace Proc.IntegrationTests;
 /// <summary>
 /// Lát Y5b (design.md mục 19.3 bước 2): bảng tổng hợp đề xuất mua 2A/2B – chọn dòng đề nghị đã duyệt còn cần mua của một bộ phận (2A: cùng công
 /// trình), gán đơn vị mua từng dòng; mỗi dòng đề nghị chỉ ở một bảng chưa hủy; duyệt theo bộ cấp BTH; hủy bảng thì dòng chọn lại được.
+/// Lát Y5c: mọi công ty bắt buộc qua bảng tổng hợp đã duyệt mới lên RFQ/PO; bảng đã lên RFQ/PO chưa hủy thì không hủy được.
 /// </summary>
 public partial class PurchasingTests
 {
@@ -56,22 +58,21 @@ public partial class PurchasingTests
         var line = pr.Lines.Single();
         var unit = await UnitAsync(f);
 
-        // Đề nghị nháp chưa duyệt không là dòng chọn được; đề nghị đã duyệt đã đặt PO 4/10 → còn cần mua 6.
+        // Đề nghị nháp chưa duyệt không là dòng chọn được; đề nghị đã duyệt còn cần mua đủ 10.
         var draft = await ReadAsync<PurchaseRequestDto>(await CreatePrOfAsync(f, null, null, 3));
-        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 4, line.Id));
         var candidates = await CandidatesAsync(f, "2B");
         Assert.DoesNotContain(candidates, c => c.RequestId == draft.Id);
-        Assert.Equal(6m, candidates.Single(c => c.RequestLineId == line.Id).OpenQty);
+        Assert.Equal(10m, candidates.Single(c => c.RequestLineId == line.Id).OpenQty);
         Assert.Empty(await CandidatesAsync(f, "2A"));
 
-        // 2B lấy được đề nghị loại B: SL chụp 6, thành tiền = SL × đơn giá tham khảo; thiếu đơn vị mua bị chặn.
+        // 2B lấy được đề nghị loại B: SL chụp 10, thành tiền = SL × đơn giá tham khảo; thiếu đơn vị mua bị chặn.
         Assert.Contains("đơn vị mua", await TitleAsync(await SaveSummaryAsync(f, "2B", f.DepartmentId, null, [new(line.Id, Guid.Empty, null)])));
         var summary = await ReadAsync<PurchaseSummaryDto>(await SaveSummaryAsync(f, "2B", f.DepartmentId, null, [new(line.Id, unit.Id, "Mua gấp")]));
         Assert.StartsWith("BTH", summary.No);
         Assert.Equal(("Goods", "Draft"), (summary.Form, summary.Status));
         var sl = summary.Lines.Single();
-        Assert.Equal((6m, unit.Code, pr.No), (sl.Qty, sl.PurchasingUnitCode, sl.RequestNo));
-        Assert.Equal(decimal.Round(6m * sl.EstPrice, 2, MidpointRounding.AwayFromZero), summary.TotalAmount);
+        Assert.Equal((10m, unit.Code, pr.No), (sl.Qty, sl.PurchasingUnitCode, sl.RequestNo));
+        Assert.Equal(decimal.Round(10m * sl.EstPrice, 2, MidpointRounding.AwayFromZero), summary.TotalAmount);
         Assert.Equal(summary.TotalAmount, summary.Frame.ProposedAmount);
 
         // Mỗi dòng đề nghị chỉ ở một bảng chưa hủy: không còn trong danh sách chọn, bảng thứ hai bị chặn.
@@ -82,8 +83,13 @@ public partial class PurchasingTests
         Assert.Contains("loại A", await TitleAsync(await SaveSummaryAsync(f, "2A", f.DepartmentId, project.Id, [new(line.Id, unit.Id, null)], summary.Id)));
         var other = await TestDepartments.CreateAsync(f.Buyer, "Phòng khác");
         Assert.Contains("bộ phận khác", await TitleAsync(await SaveSummaryAsync(f, "2B", other, null, [new(line.Id, unit.Id, null)], summary.Id)));
-        // Đề nghị đang ở bảng tổng hợp chưa hủy: hủy theo thứ tự từ phiếu sau – hủy PO rồi vẫn phải hủy bảng tổng hợp trước.
-        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel", new CancelDocumentRequest("Đặt lại"), Ct));
+        // Bảng còn nháp: dòng đề nghị chưa lên PO được, không là dòng mở (bắt buộc qua bảng tổng hợp đã duyệt – lát Y5c).
+        Assert.Contains("bảng tổng hợp", await TitleAsync(await CreatePoAsync(f, 4, line.Id)));
+        Assert.Contains("bảng tổng hợp", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/rfqs", new SaveRfqRequest(Today, "Hỏi giá", Today.AddDays(7), null,
+            new RfqWeightsDto(60, 20, 10, 5, 5), null, [new SaveRfqLineRequest(null, f.ItemId, f.Cai, 4, line.Id, null)], [f.SupplierId]), Ct)));
+        Assert.DoesNotContain((await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct))!,
+            l => l.RequestId == pr.Id);
+        // Đề nghị đang ở bảng tổng hợp chưa hủy: hủy bảng tổng hợp trước.
         Assert.Contains("bảng tổng hợp", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/cancel",
             new CancelDocumentRequest("Không mua nữa"), Ct)));
 
@@ -94,7 +100,7 @@ public partial class PurchasingTests
         await ReadAsync<ApprovalRuleDto>(await RuleAsync(f, "BTH", 2, secondRole));
         summary = await ReadAsync<PurchaseSummaryDto>(await f.Buyer.PostAsync($"/api/purchase-summaries/{summary.Id}/submit", null, Ct));
         Assert.Equal(("Submitted", 2), (summary.Status, summary.Approvals.Count));
-        // Gửi duyệt chụp lại SL còn cần mua: PO 4 đã hủy → còn 10.
+        // Gửi duyệt chụp lại SL còn cần mua.
         Assert.Equal(10m, summary.Lines.Single().Qty);
         var pending = (await first.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!.Single(p => p.DocumentId == summary.Id);
         Assert.Equal(("BTH", "Bảng tổng hợp đề xuất mua"), (pending.DocType, pending.DocTypeName));
@@ -105,12 +111,22 @@ public partial class PurchasingTests
         Assert.Equal("Approved", summary.Status);
         Assert.False(summary.Actions.CanEdit);
 
-        // Đã duyệt: hủy chỉ quản trị, bắt buộc lý do; hủy xong dòng đề nghị chọn lại được.
+        // Đã duyệt: dòng đề nghị là dòng mở, lên PO được; bảng đã lên PO chưa hủy thì không hủy được – hủy PO trước.
+        Assert.Equal(10m, (await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct))!
+            .Single(l => l.RequestId == pr.Id).RemainingQty);
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 4, line.Id));
+        Assert.Contains(po.No, await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-summaries/{summary.Id}/cancel",
+            new CancelDocumentRequest("Lập lại"), Ct)));
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/cancel", new CancelDocumentRequest("Đặt lại"), Ct));
+
+        // Hủy chỉ quản trị, bắt buộc lý do; hủy xong dòng đề nghị chọn lại được, không còn là dòng mở.
         Assert.Contains("lý do", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-summaries/{summary.Id}/cancel", new CancelDocumentRequest(null), Ct)));
         summary = await ReadAsync<PurchaseSummaryDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-summaries/{summary.Id}/cancel",
             new CancelDocumentRequest("Lập lại theo đơn vị mua khác"), Ct));
         Assert.Equal("Cancelled", summary.Status);
         Assert.Contains(await CandidatesAsync(f, "2B"), c => c.RequestLineId == line.Id);
+        Assert.DoesNotContain((await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct))!,
+            l => l.RequestId == pr.Id);
     }
 
     [Fact]

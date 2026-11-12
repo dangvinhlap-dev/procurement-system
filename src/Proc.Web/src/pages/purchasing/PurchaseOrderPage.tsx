@@ -798,7 +798,7 @@ export function PurchaseOrderPage() {
 }
 
 /**
- * Hộp chọn dòng PR đã duyệt còn chưa đặt hàng.
+ * Hộp chọn dòng PR đã duyệt còn chưa đặt hàng – chỉ dòng đã qua bảng tổng hợp đề xuất mua đã duyệt (bắt buộc mọi công ty, design.md mục 19.3).
  * @param onPick Thêm các dòng đã chọn.
  * @param onCancel Đóng.
  */
@@ -825,7 +825,7 @@ export function RequestLinePicker({ onPick, onCancel }: { onPick: (lines: OpenRe
         scroll={{ y: 360 }}
         dataSource={rows}
         rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys as string[]) }}
-        locale={{ emptyText: 'Không còn dòng PR đã duyệt nào chưa đặt hàng.' }}
+        locale={{ emptyText: 'Không còn dòng đề nghị nào đã qua bảng tổng hợp đã duyệt mà chưa đặt hàng.' }}
         columns={[
           { title: 'Số PR', dataIndex: 'requestNo', width: 150 },
           { title: 'Bộ phận', dataIndex: 'department', width: 120 },

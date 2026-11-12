@@ -2057,7 +2057,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | --- | --- | --- |
 | Q1 | Bỏ kho thế nào | **Tắt ở 0.22.0** (lát K1), **gỡ hẳn code + bảng ở 0.28.0** (lát K3) sau khi người dùng xác nhận đã sao lưu và làm sạch dữ liệu thử |
 | Q2 | Ai nhập tồn trên đề nghị mua | Thủ kho của nơi nhận; mỗi đề nghị một nơi nhận |
-| Q3 | Bảng tổng hợp 2A/2B | Giữ, bật/tắt "bắt buộc qua bảng tổng hợp" bằng tham số. **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
+| Q3 | Bảng tổng hợp 2A/2B | Giữ. **Mọi công ty bắt buộc qua bảng tổng hợp, bật sẵn khi phát hành – không có tham số tắt** (người dùng chốt 12/11/2026, thay cho "bật/tắt bằng tham số"). **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
 | Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
 | Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt; phần vượt được xem trước khi trình lên Chủ tịch (chốt 11/11/2026, lát Y3c) |
 | Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC chỉ kiểm định mức nhóm B; dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
@@ -2292,7 +2292,8 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   cấp thì mẫu không ghi đè (trạng thái "Đã cấu hình") – xóa các cấp PR cũ rồi áp lại nếu muốn bộ mới.
 
 **Lát Y5 – bảng tổng hợp đề xuất mua 2A/2B (0.23.0, Q3).** Tách ba lát: **Y5a** danh mục đơn vị mua; **Y5b** phiếu bảng tổng hợp + duyệt;
-**Y5c** giao diện phiếu, tham số "bắt buộc qua bảng tổng hợp", hủy dây chuyền. Quy tắc tự đặt (người dùng "làm tiếp" 11/11/2026).
+**Y5c** bắt buộc qua bảng tổng hợp + hủy dây chuyền (Y5c-1), giao diện phiếu (Y5c-2). Quy tắc tự đặt (người dùng "làm tiếp" 11/11/2026), riêng
+"bắt buộc mọi công ty" người dùng chốt 12/11/2026.
 
 **Lát Y5a – danh mục đơn vị mua (Q3 – "đơn vị mua là một danh mục").**
 
@@ -2322,10 +2323,22 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   ngân sách, công trình), `Purchase.Summary.Approve` (TPCUVT, GDKHOI, PHOCTUBCL, CHUTICH). Đính kèm loại chủ `PurchaseSummary` (khóa sau duyệt).
 - API `/api/purchase-summaries` (danh sách, chi tiết, `/candidates` dòng đề nghị chọn được, thêm, sửa, gửi, rút, duyệt, từ chối, hủy); có trong
   Việc cần làm (mô tả "2A/2B – bộ phận"), nhắc duyệt quá hạn, xem trước chuỗi duyệt, tra cứu chứng từ.
-- Đề nghị đang ở bảng tổng hợp chưa hủy: **không hủy được** (kể cả hủy dây chuyền) – hủy bảng tổng hợp trước; đưa bảng vào dây chuyền ở Y5c.
+- Đề nghị đang ở bảng tổng hợp chưa hủy: lệnh Hủy phiếu đơn lẻ **không hủy được** – hủy bảng tổng hợp trước, hoặc dùng hủy dây chuyền (Y5c-1).
 
-**Lát Y5c – dự kiến**: màn hình phiếu BTH (danh sách, form, chọn dòng, in), trang duyệt gọn; tham số công ty bật "bắt buộc qua bảng tổng hợp"
-thì dòng đề nghị chỉ lên RFQ/PO khi thuộc bảng tổng hợp đã duyệt (mặc định tắt); hủy dây chuyền đề nghị → bảng tổng hợp → RFQ/PO.
+**Lát Y5c-1 – bắt buộc qua bảng tổng hợp + hủy dây chuyền (người dùng chốt 12/11/2026: "công ty nào cũng phải qua bảng tổng hợp, bật sẵn khi
+phát hành").**
+
+- **Mọi công ty, không tham số tắt**: dòng đề nghị chỉ lên **RFQ / PO** khi thuộc một bảng tổng hợp **Đã duyệt** (chưa hủy). Kiểm tra ở máy chủ
+  khi lưu RFQ, khi lưu và gửi duyệt PO (cả PO sinh từ RFQ); danh sách "dòng đề nghị còn mở" (hộp chọn dòng trên PO/RFQ) chỉ hiện dòng đã qua bảng
+  tổng hợp đã duyệt. SL đặt tối đa vẫn là SL còn chưa đặt của dòng đề nghị (= SL chụp trên bảng, vì chưa qua bảng thì chưa đặt được). Dòng
+  PO/RFQ không lấy từ đề nghị không bị ảnh hưởng. Dữ liệu hiện có là dữ liệu thử – không chuyển đổi dữ liệu cũ.
+- **Hủy bảng tổng hợp đơn lẻ**: dòng của bảng đã lên RFQ hoặc PO chưa hủy thì chặn – hủy các phiếu đó trước (hoặc hủy dây chuyền).
+- **Hủy dây chuyền** (mục 20.2 D3): PR → **bảng tổng hợp chứa dòng của PR** → PO có dòng lấy từ PR hoặc từ dòng của các bảng đó → XNH; hủy từ
+  chính bảng (`/api/cancel-chain/BTH/{id}`): bảng → PO lấy từ dòng của bảng → XNH. Thứ tự hủy XNH → PO → bảng → PR. Bảng có dòng của đề nghị khác
+  thì cảnh báo (đề nghị khác không bị hủy, dòng trở lại chưa qua bảng tổng hợp). RFQ chưa hủy hỏi giá dòng của bảng thì **chặn** – hủy RFQ trước
+  (RFQ có chuỗi riêng gồm PO, hợp đồng, bảng giá).
+
+**Lát Y5c-2 – dự kiến**: màn hình phiếu BTH (danh sách, form, chọn dòng, in), trang duyệt gọn, hộp hủy dây chuyền trên form.
 
 ### 19.4 Bỏ phân hệ kho
 

@@ -14,7 +14,10 @@ namespace Proc.Infrastructure.Purchasing;
 /// Hủy dây chuyền (lát Z4b, Z4c – design.md mục 20.2 D3, 20.2a, E1–E4). Chuỗi dựng từ phiếu được chọn đi xuống các phiếu tạo ra từ nó còn
 /// hiệu lực, rồi hủy theo thứ tự ngược (phiếu cuối trước) trong một giao dịch có khóa dòng:
 /// <list type="bullet">
-/// <item>PR → các PO có dòng lấy từ PR → phiếu xác nhận nhận hàng (XNH) của các PO.</item>
+/// <item>PR → bảng tổng hợp 2A/2B chứa dòng của PR → các PO có dòng lấy từ PR hoặc từ dòng của các bảng đó → phiếu xác nhận nhận hàng (XNH)
+/// của các PO (lát Y5c).</item>
+/// <item>Bảng tổng hợp (BTH) → các PO có dòng lấy từ dòng của bảng → XNH (lát Y5c). RFQ chưa hủy hỏi giá dòng của bảng thì chặn – hủy RFQ
+/// trước (RFQ có chuỗi riêng: PO, hợp đồng, bảng giá).</item>
 /// <item>PO → XNH. XNH → chính nó.</item>
 /// <item>Đặt hàng gộp (DHG) đã tạo PO → các PO ở mọi công ty → XNH (E1).</item>
 /// <item>RFQ → các PO tạo từ RFQ → XNH; hợp đồng, bảng giá tạo từ RFQ chỉ hủy kèm khi còn Nháp, đã duyệt/hiệu lực thì chặn (E2, E3).</item>
@@ -38,13 +41,14 @@ internal sealed class CancelChainService : ICancelChainService
         _approvals = new ApprovalEngine(db, scope, clock);
     }
 
-    /// <summary>Chuỗi đã nạp (entity đang theo dõi). Thứ tự hủy: XNH → PO → hợp đồng → bảng giá → phiếu gốc.</summary>
+    /// <summary>Chuỗi đã nạp (entity đang theo dõi). Thứ tự hủy: XNH → PO → hợp đồng → bảng giá → bảng tổng hợp → phiếu gốc.</summary>
     private sealed class Chain
     {
         public List<GoodsReceiptConfirmation> Receipts { get; } = [];
         public List<PurchaseOrder> Orders { get; } = [];
         public List<PurchaseContract> Contracts { get; } = [];
         public List<SupplierPriceList> PriceLists { get; } = [];
+        public List<PurchaseSummary> Summaries { get; } = [];
         public PurchaseRequest? Request { get; set; }
         public PooledOrder? Pooled { get; set; }
         public Rfq? Rfq { get; set; }
@@ -84,6 +88,12 @@ internal sealed class CancelChainService : ICancelChainService
 
         foreach (var contract in chain.Contracts) contract.Cancel(reason);
         foreach (var list in chain.PriceLists) list.Cancel(reason);
+        foreach (var summary in chain.Summaries)
+        {
+            summary.Cancel(reason, inChain: true);
+            await _approvals.SkipPendingAsync(summary, cancellationToken);
+        }
+
         if (chain.Request is { } pr)
         {
             pr.Cancel(reason, inChain: true);
@@ -107,6 +117,7 @@ internal sealed class CancelChainService : ICancelChainService
     {
         DocumentTypes.PurchaseRequest => RowLocks.LockAsync<PurchaseRequest>(_db, [id], cancellationToken),
         DocumentTypes.PurchaseOrder => RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken),
+        DocumentTypes.PurchaseSummary => RowLocks.LockAsync<PurchaseSummary>(_db, [id], cancellationToken),
         PooledType => RowLocks.LockAsync<PooledOrder>(_db, [id], cancellationToken),
         DocumentTypes.RequestForQuotation => RowLocks.LockAsync<Rfq>(_db, [id], cancellationToken),
         _ => Task.CompletedTask,
@@ -135,11 +146,26 @@ internal sealed class CancelChainService : ICancelChainService
                     .Where(l => l.SourcePrLineId != null && lineIds.Contains(l.SourcePrLineId.Value)).Select(l => l.OrderId).Distinct()
                     .ToListAsync(cancellationToken);
                 chain.Request = pr;
-                // Bảng tổng hợp 2A/2B chứa dòng của PR (lát Y5b): chưa đưa vào dây chuyền (lát Y5c) – chặn, hủy bảng tổng hợp trước.
-                var summaries = await PurchaseSummaryService.ActiveSummaryNosAsync(_db, [pr.Id], cancellationToken);
-                if (summaries.Count > 0) chain.Blocks.Add($"đề nghị {pr.No} đang ở bảng tổng hợp {string.Join(", ", summaries)} – hủy bảng tổng hợp trước");
+                // Bảng tổng hợp 2A/2B chứa dòng của PR (lát Y5c): hủy kèm cả bảng – kéo theo PO lấy từ mọi dòng của bảng (kể cả dòng PR khác).
+                var summaryIds = await _db.Set<PurchaseSummaryLine>().Where(l => l.RequestId == pr.Id).Select(l => l.SummaryId).Distinct()
+                    .ToListAsync(cancellationToken);
+                orderIds = [.. orderIds.Union(await AddSummariesAsync(chain, summaryIds, cancellationToken))];
+                var otherIds = chain.Summaries.SelectMany(s => s.Lines).Select(l => l.RequestId).Where(r => r != pr.Id).Distinct().ToList();
+                var others = await _db.PurchaseRequests.Where(r => otherIds.Contains(r.Id)).Select(r => r.No).OrderBy(n => n).ToListAsync(cancellationToken);
+                if (others.Count > 0)
+                    chain.Warnings.Add($"Bảng tổng hợp trong chuỗi có dòng của đề nghị khác: {string.Join(", ", others)} – đề nghị không bị hủy, dòng của " +
+                                       "chúng trở lại chưa qua bảng tổng hợp để lập bảng khác.");
                 await AddOrdersAsync(chain, orderIds, allCompanies: false, cancellationToken);
                 await WarnOtherRequestsAsync(chain, pr.Id, cancellationToken);
+                break;
+            }
+            case DocumentTypes.PurchaseSummary:
+            {
+                var no = await _db.PurchaseSummaries.Where(s => s.Id == id).Select(s => new { s.No, s.Status }).SingleOrDefaultAsync(cancellationToken)
+                         ?? throw new NotFoundException("Không tìm thấy bảng tổng hợp đề xuất mua.");
+                if (no.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {no.No} đã hủy.");
+                await AddOrdersAsync(chain, await AddSummariesAsync(chain, [id], cancellationToken), allCompanies: false, cancellationToken);
+                await WarnOtherRequestsAsync(chain, null, cancellationToken);
                 break;
             }
             case DocumentTypes.PurchaseOrder:
@@ -186,10 +212,35 @@ internal sealed class CancelChainService : ICancelChainService
             }
             default:
                 throw new BusinessRuleException(
-                    $"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (PR, PO, phiếu xác nhận nhận hàng, đặt hàng gộp, RFQ).");
+                    $"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (PR, bảng tổng hợp, PO, phiếu xác nhận nhận hàng, đặt hàng gộp, RFQ).");
         }
 
         return chain;
+    }
+
+    /// <summary>
+    /// Nạp các bảng tổng hợp chưa hủy vào chuỗi; RFQ chưa hủy hỏi giá dòng của bảng thì chặn (hủy RFQ trước – RFQ có chuỗi riêng).
+    /// </summary>
+    /// <returns>Id các PO có dòng lấy từ dòng đề nghị của các bảng.</returns>
+    private async Task<List<Guid>> AddSummariesAsync(Chain chain, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0) return [];
+        chain.Summaries.AddRange(await _db.PurchaseSummaries.Include(s => s.Lines)
+            .Where(s => ids.Contains(s.Id) && s.Status != ApprovalDocumentStatus.Cancelled)
+            .OrderByDescending(s => s.No).ToListAsync(cancellationToken));
+        var prLineIds = chain.Summaries.SelectMany(s => s.Lines).Select(l => l.RequestLineId).Distinct().ToList();
+        if (prLineIds.Count == 0) return [];
+        var rfqs = await (
+                from rl in _db.Set<RfqLine>()
+                join r in _db.Rfqs on rl.RfqId equals r.Id
+                where rl.SourcePrLineId != null && prLineIds.Contains(rl.SourcePrLineId.Value) && r.Status != RfqStatus.Cancelled
+                select r.No)
+            .Distinct().OrderBy(n => n).ToListAsync(cancellationToken);
+        if (rfqs.Count > 0)
+            chain.Blocks.Add($"RFQ {string.Join(", ", rfqs)} đang hỏi giá dòng của bảng tổng hợp {string.Join(", ", chain.Summaries.Select(s => s.No))} – hủy RFQ trước");
+        return await _db.Set<PurchaseOrderLine>()
+            .Where(l => l.SourcePrLineId != null && prLineIds.Contains(l.SourcePrLineId.Value)).Select(l => l.OrderId).Distinct()
+            .ToListAsync(cancellationToken);
     }
 
     /// <summary>Nạp các PO chưa hủy (kèm dòng) và XNH chưa hủy của chúng vào chuỗi.</summary>
@@ -279,6 +330,9 @@ internal sealed class CancelChainService : ICancelChainService
             Add(DocumentTypes.Contract, "Hợp đồng nguyên tắc", c.Id, c.No, c.Status.ToString(), true, c.CreatedBy, $"Tạo từ {origin}");
         foreach (var p in chain.PriceLists)
             Add("PRL", "Bảng giá NCC", p.Id, p.No, p.Status.ToString(), true, p.CreatedBy, $"Tạo từ {origin}");
+        foreach (var s in chain.Summaries)
+            Add(DocumentTypes.PurchaseSummary, "Bảng tổng hợp đề xuất mua", s.Id, s.No, s.Status.ToString(), s.Status == ApprovalDocumentStatus.Draft,
+                s.CreatedBy, chain.Request is { } source ? $"Có dòng của {source.No}" : null);
         if (chain.Request is { } request)
             Add(DocumentTypes.PurchaseRequest, "Đề nghị mua hàng", request.Id, request.No, request.Status.ToString(),
                 request.Status == ApprovalDocumentStatus.Draft, request.CreatedBy, null);

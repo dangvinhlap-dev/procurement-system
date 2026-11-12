@@ -140,6 +140,7 @@ public class BudgetTests
         Assert.Equal([1], pr1.Approvals.Select(s => s.Stage));
         pr1 = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr1.Id}/approve", new ApprovalActionRequest(null), Ct));
         Assert.Equal("Approved", pr1.Status);
+        await _factory.ApproveSummaryForRequestAsync(pr1.Id);
 
         // PO đặt 4/6 cái của PR1: đã dùng (không gồm PO) = phần PR còn lại 2.000.000; PO 4.000.000 → 6.000.000, không vượt.
         var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",

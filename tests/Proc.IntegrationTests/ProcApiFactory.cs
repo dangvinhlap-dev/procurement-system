@@ -283,6 +283,43 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     }
 
     /// <summary>
+    /// Đưa các dòng chưa ở bảng tổng hợp nào của đề nghị mua đã duyệt vào một bảng tổng hợp 2A/2B <b>đã duyệt</b> ngay trong CSDL (bỏ qua luồng
+    /// duyệt) – mọi công ty bắt buộc qua bảng tổng hợp trước khi lên RFQ/PO (design.md mục 19.3, lát Y5c), test nghiệp vụ khác chỉ cần bước này
+    /// đã xong. Luồng bảng tổng hợp thật kiểm tra ở <c>PurchaseSummaryTests</c>.
+    /// </summary>
+    /// <param name="requestId">Id đề nghị mua đã duyệt.</param>
+    public async Task ApproveSummaryForRequestAsync(Guid requestId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var pr = await db.PurchaseRequests.IgnoreQueryFilters().Include(r => r.Lines).SingleAsync(r => r.Id == requestId);
+        var taken = await (
+                from l in db.Set<Proc.Domain.Purchasing.PurchaseSummaryLine>().IgnoreQueryFilters()
+                join s in db.PurchaseSummaries.IgnoreQueryFilters() on l.SummaryId equals s.Id
+                where l.RequestId == requestId && s.Status != Proc.Domain.Purchasing.ApprovalDocumentStatus.Cancelled
+                select l.RequestLineId)
+            .ToListAsync();
+        var lines = pr.Lines.Where(l => !taken.Contains(l.Id) && l.Qty > 0).ToList();
+        if (lines.Count == 0) return;
+        var suffix = Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
+        var unit = Proc.Domain.Purchasing.PurchasingUnit.Create(pr.CompanyId, "DVT" + suffix, "Đơn vị mua thử", null);
+        db.PurchasingUnits.Add(unit);
+        var form = pr.Category == Proc.Domain.Purchasing.PurchaseCategory.Construction
+            ? Proc.Domain.Purchasing.PurchaseSummaryForm.Construction
+            : Proc.Domain.Purchasing.PurchaseSummaryForm.Goods;
+        var summary = Proc.Domain.Purchasing.PurchaseSummary.Create(pr.CompanyId, "BTH-T-" + suffix,
+            new(DateOnly.FromDateTime(DateTime.Today), form, pr.DepartmentId ?? Guid.Empty, pr.ConstructionProjectId, null));
+        summary.SetLines(lines.Select(l => (
+            new Proc.Domain.Purchasing.PurchaseSummaryLineData(l.Id, unit.Id, null),
+            new Proc.Domain.Purchasing.PurchaseSummaryLineSource(l.Id, pr.Id, pr.No, pr.Category, pr.DepartmentId, pr.ConstructionProjectId,
+                l.ItemId, "-", l.UomId, l.UomFactor, l.Qty, l.EstPrice, l.NeededDate))).ToList());
+        summary.Submit();
+        summary.MarkApproved(DateTimeOffset.UtcNow);
+        db.PurchaseSummaries.Add(summary);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
     /// Duyệt xong đơn mua hàng đang chờ duyệt ngay trong CSDL (bỏ qua các bước chờ, PO Đã duyệt) – dùng khi test nghiệp vụ khác chỉ cần PO đã
     /// duyệt làm số liệu (ví dụ lũy kế chiết khấu sản lượng gộp). Luồng duyệt thật kiểm tra ở <c>PurchasingTests</c>.
     /// </summary>

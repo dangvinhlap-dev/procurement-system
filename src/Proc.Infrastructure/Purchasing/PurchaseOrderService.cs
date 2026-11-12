@@ -612,6 +612,10 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             if (group.Sum(l => l.BaseQty) > remaining)
                 throw new BusinessRuleException($"Dòng {first.LineNo}: vượt SL còn chưa đặt của đề nghị {source.No} dòng {source.LineNo} ({remaining:0.####} theo ĐVT cơ sở).");
         }
+
+        // Mọi công ty bắt buộc qua bảng tổng hợp đề xuất mua đã duyệt trước khi đặt hàng (design.md mục 19.3, lát Y5c).
+        await PurchaseSummaryService.EnsureApprovedSummaryAsync(
+            _db, lines.Where(l => l.PrLineId is not null).Select(l => (l.PrLineId!.Value, l.LineNo)).ToList(), cancellationToken);
     }
 
     /// <summary>Nạp PO kèm dòng của công ty đang làm việc; không thấy thì báo lỗi 404.</summary>

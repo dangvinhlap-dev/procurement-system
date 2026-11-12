@@ -319,12 +319,14 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     public async Task<IReadOnlyList<OpenRequestLineDto>> OpenLinesAsync(CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
+        // Chỉ dòng đã qua bảng tổng hợp đề xuất mua đã duyệt mới lên RFQ/PO được (design.md mục 19.3, lát Y5c).
+        var summarized = PurchaseSummaryService.ApprovedSummaryLineIds(_db);
         var lines = await (
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in _db.PurchaseRequests on l.RequestId equals r.Id
                 join i in _db.Items on l.ItemId equals i.Id
                 join u in _db.Uoms on l.UomId equals u.Id
-                where r.Status == ApprovalDocumentStatus.Approved
+                where r.Status == ApprovalDocumentStatus.Approved && summarized.Contains(l.Id)
                 orderby r.Date, r.No, l.LineNo
                 select new
                 {

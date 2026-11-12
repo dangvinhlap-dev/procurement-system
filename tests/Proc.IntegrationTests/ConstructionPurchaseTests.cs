@@ -44,6 +44,7 @@ public partial class PurchasingTests
         await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "approve"));
         Assert.Equal(0m, pr.Construction!.RequestAmount);
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
 
         // PO từ dòng đề nghị A: 8 × 100.000, CK 5% → 760.000 chưa VAT, VAT 10% 76.000. PO nháp chưa tính; duyệt rồi mới vào lũy kế.
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 8, pr.Lines[0].Id));
