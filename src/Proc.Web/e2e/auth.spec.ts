@@ -34,6 +34,15 @@ test('sai mật khẩu thì hiện thông báo tiếng Việt và ở lại màn
   await expect(page.getByTestId('shell-bar')).toBeVisible()
 })
 
+test('NCC vào nhầm màn hình đăng nhập nội bộ: dòng "Đăng nhập Portal nhà cung cấp" mở trang đăng nhập Portal', async ({ page }) => {
+  await page.goto('/dang-nhap')
+  await expect(page.getByText('Bạn là nhà cung cấp?')).toBeVisible()
+  await page.getByRole('link', { name: 'Đăng nhập Portal nhà cung cấp' }).click()
+
+  await expect(page).toHaveURL(/\/ncc\/dang-nhap$/)
+  await expect(page.getByLabel('Email')).toBeVisible()
+})
+
 test('bỏ trống thì báo ngay trên form, không gọi API', async ({ page }) => {
   await page.goto('/dang-nhap')
   await page.getByRole('button', { name: 'Đăng nhập' }).click()

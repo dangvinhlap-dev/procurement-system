@@ -379,6 +379,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   DAMPHAN, GDTCKT, HOIDONG, KSNB, LANHDAO, PHOCTUBCL, POLAP, TPCUVT, TPTCKT, TRUONGBANCUVT, VANHANH) nhận xem đơn bán nội bộ. Tạo sẵn tài khoản
   Portal thử (`portal_0240.py`): **ncc.thu@vidu.vn / Ncc@2026**, quản trị NCC của NCC000001 (Phú Thịnh) – đăng nhập http://192.168.1.199:5007/ncc,
   đã thử mời → kích hoạt → mật khẩu → OTP → trang chủ qua.
+- **Dòng "Đăng nhập Portal nhà cung cấp" trên màn hình đăng nhập nội bộ (12/11/2026, nhánh `feature/link-portal-dang-nhap`)** – người dùng
+  test 0.24.0 vào nhầm `…/ncc,` (dấu phẩy dính vào link trong tin nhắn của Claude) → ra trang đăng nhập nội bộ, báo sai tên đăng nhập; người
+  dùng đồng ý thêm dòng chỉ đường. `LoginPage.tsx` + `.css`: "Bạn là nhà cung cấp? Đăng nhập Portal nhà cung cấp" → `/ncc/dang-nhap`. E2e
+  `auth.spec.ts` thêm 1 test; tsc, oxlint qua; e2e auth + supplier-portal 8/8; chụp màn hình đối chiếu. Chưa phát hành (vào bản sau). **Đã merge.**
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

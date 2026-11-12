@@ -1,7 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Alert, Button, Form, Input, Typography } from 'antd'
 import { useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import './LoginPage.css'
 
@@ -66,6 +66,10 @@ export function LoginPage() {
               </Button>
             </div>
           </Form>
+          {/* NCC hay vào nhầm trang nội bộ (gõ thiếu /ncc) rồi báo sai tên đăng nhập – chỉ đường sang Portal (design.md 19.5). */}
+          <div className="login-portal">
+            Bạn là nhà cung cấp? <Link to="/ncc/dang-nhap">Đăng nhập Portal nhà cung cấp</Link>
+          </div>
         </div>
         <div className="login-footer">Phiên bản {__APP_VERSION__}</div>
       </div>
