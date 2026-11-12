@@ -153,6 +153,10 @@ public static class Permissions
         public const string SummaryManage = "Purchase.Summary.Manage";
         /// <summary>Quyền "Duyệt bảng tổng hợp đề xuất mua" (bộ cấp BTH).</summary>
         public const string SummaryApprove = "Purchase.Summary.Approve";
+        /// <summary>Quyền "Xem đơn bán nội bộ" – PO công ty khác đặt cho NCC nội bộ của công ty đang làm việc (lát X7, design.md mục 19.3).</summary>
+        public const string InternalSaleView = "Purchase.InternalSale.View";
+        /// <summary>Quyền "Xác nhận, từ chối đơn bán nội bộ" (công ty bán).</summary>
+        public const string InternalSaleManage = "Purchase.InternalSale.Manage";
         /// <summary>Quyền "Xem kế hoạch nhu cầu" (lát G5, design.md mục 18.25).</summary>
         public const string DemandPlanView = "Purchase.DemandPlan.View";
         /// <summary>Quyền "Lập, chốt, điều chỉnh, hủy phiếu kế hoạch nhu cầu".</summary>
@@ -372,6 +376,8 @@ public static class Permissions
         new(Purchase.SummaryView, "Xem bảng tổng hợp đề xuất mua"),
         new(Purchase.SummaryManage, "Lập, sửa, gửi duyệt bảng tổng hợp đề xuất mua"),
         new(Purchase.SummaryApprove, "Duyệt bảng tổng hợp đề xuất mua"),
+        new(Purchase.InternalSaleView, "Xem đơn bán nội bộ"),
+        new(Purchase.InternalSaleManage, "Xác nhận, từ chối đơn bán nội bộ"),
         new(Purchase.DemandPlanView, "Xem kế hoạch nhu cầu"),
         new(Purchase.DemandPlanManage, "Lập, chốt, điều chỉnh, hủy kế hoạch nhu cầu"),
         new(Purchase.DemandPlanViewAllCompanies, "Xem kế hoạch nhu cầu toàn tập đoàn"),

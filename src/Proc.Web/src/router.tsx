@@ -19,6 +19,7 @@ import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/master
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { ConstructionProjectListPage } from './pages/purchasing/ConstructionProjectListPage'
 import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPage'
+import { InternalSaleListPage } from './pages/purchasing/InternalSalePages'
 import { PurchaseSummaryListPage, PurchaseSummaryPage } from './pages/purchasing/PurchaseSummaryPages'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
@@ -108,6 +109,7 @@ const implemented: Record<string, ReactNode> = {
   BUDG: <BudgetListPage />,
   CTDT: <ConstructionProjectListPage />,
   DVM: <PurchasingUnitListPage />,
+  DBN: <InternalSaleListPage />,
   BTH: <PurchaseSummaryListPage />,
   KHN: <DemandPlanListPage />,
   KHNTH: <DemandSummaryPage />,
@@ -226,6 +228,8 @@ const drawerPages = [
   { code: 'NDQ', path: '/gia-ncc/ncc-doc-quyen/:id', element: <SoleSourceDetailPage /> },
   { code: 'SUPREV', path: '/gia-ncc/danh-gia-ncc-dinh-ky/:id', element: <SupplierReviewDetailPage /> },
   { code: 'VIOL', path: '/bao-cao/so-vi-pham/:id', element: <ControlFindingDetailPage /> },
+  // Đơn bán nội bộ (lát X7): mở từ thông báo – danh sách kèm ngăn kéo đơn.
+  { code: 'DBN', path: '/mua-hang/don-ban-noi-bo/:id', element: <InternalSaleListPage /> },
 ]
 
 /**

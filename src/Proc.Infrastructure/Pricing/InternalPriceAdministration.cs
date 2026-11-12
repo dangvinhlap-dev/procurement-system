@@ -71,20 +71,10 @@ public sealed class InternalPriceAdministration : IInternalPriceAdministration
     public async Task<IReadOnlyList<ResolvedInternalPriceDto>> ResolveAsync(
         Guid buyerCompanyId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
     {
-        _scope.RequireCompany();
-        var candidates = await (
-                from p in _db.InternalPrices.AsNoTracking()
-                join i in _db.Items on p.ItemId equals i.Id
-                where itemIds.Contains(p.ItemId)
-                      && (p.BuyerCompanyId == null || p.BuyerCompanyId == buyerCompanyId)
-                      && p.ValidFrom <= date && (p.ValidTo == null || p.ValidTo >= date)
-                select new { p.ItemId, p.BuyerCompanyId, p.UnitPrice, VatCode = p.VatCode ?? i.VatCode, p.ValidFrom })
-            .ToListAsync(cancellationToken);
-        // Giá riêng cho công ty mua thắng giá chung; trong cùng loại không có chồng hiệu lực nên mỗi loại tối đa một dòng.
-        return candidates
-            .GroupBy(c => c.ItemId)
-            .Select(g => g.OrderByDescending(c => c.BuyerCompanyId.HasValue).ThenByDescending(c => c.ValidFrom).First())
-            .Select(c => new ResolvedInternalPriceDto(c.ItemId, c.UnitPrice, c.VatCode))
+        var sellerCompanyId = _scope.RequireCompany();
+        // Công ty đang làm việc là công ty bán – cùng cách tra với PO mua nội bộ (lát X7).
+        return (await InternalPriceLookup.ResolveAsync(_db, sellerCompanyId, buyerCompanyId, date, itemIds, cancellationToken))
+            .Select(kv => new ResolvedInternalPriceDto(kv.Key, kv.Value.UnitPrice, kv.Value.VatCode))
             .ToList();
     }
 

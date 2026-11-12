@@ -311,6 +311,24 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   `PurchaseOrderCategoryTests`, tích hợp `Po_LoaiMuaTheoDeNghi_BangTheoDoi4A_4B_LuyKeGomDonNay`, `PrintingTests` (đơn gửi NCC qua `?form=supplier`,
   4B 60 dòng sang trang), e2e `po-print-4ab.spec.ts`. Build 0 cảnh báo, `dotnet test` 694/694 (lần đủ bộ 693 + test domain mới chạy riêng), tsc, oxlint,
   `npm run build`; Playwright đủ bộ 137/137 (API Testing 5000 + Vite 5173 do Playwright tự bật). **Đã merge.** Tiếp theo: X7 (mua nội bộ qua PO).
+- **Lát X7 – mua nội bộ qua PO (12/11/2026, nhánh `feature/x7-mua-noi-bo`, bản 0.24.0)** – design.md 19.3 "Lát X7". Người dùng chốt giữa lát
+  **"cho nhập tay"**: giá bán nội bộ chỉ là gợi ý (tự điền), không chặn gửi, không bắt lý do lệch giá, không chặng POX/POL.
+  - **Bước 1 (backend + giao diện, chưa e2e)**: Domain `PurchasePriceSource.Internal`, `PurchaseOrder.InternalSellerCompanyId` + `SetInternalSeller`
+    (chặn NCC nội bộ của chính mình) + `ApplyInternalPrices`, `IsPriceDeviation` bỏ dòng Internal; entity `InternalSaleConfirmation` (thuộc công ty
+    bán, mỗi PO một quyết định); quyền `Purchase.InternalSale.View/Manage` (vai trò mẫu: xem trong nhóm xem nghiệp vụ mua, NVCUVT quản lý);
+    thông báo `InternalSaleOrder` (PO duyệt xong → công ty bán), `InternalSaleDecision` (→ người lập PO). Infrastructure `Pricing/InternalPriceLookup`
+    (dùng chung với ICS cũ), `PurchaseOrderService.Internal.cs` (giá gợi ý, API approved-prices trả nguồn Internal, trạng thái bên bán trên PO),
+    `InternalSaleService` + API `/api/internal-sales` (danh sách, chi tiết, confirm, reject); báo cáo PRCW nguồn "Internal" tính là mua theo quy
+    định. Migration `V0_24_0_DonBanNoiBo` (điền lại công ty bán cho PO cũ). Web: `api/internalSales.ts`, màn hình **DBN**
+    `pages/purchasing/InternalSalePages.tsx` (danh sách + ngăn kéo, `/mua-hang/don-ban-noi-bo/:id` từ thông báo), PO ô "Bên bán (mua nội bộ)",
+    nguồn giá "Giá nội bộ (gợi ý)". Test: domain `InternalPurchaseTests` (3), tích hợp `InternalPurchaseTests` (1). Build 0 cảnh báo, `dotnet test`
+    698/698 (trước khi thêm kiểm tra PRCW; chạy lại riêng qua), tsc, oxlint qua.
+  - **Bước 2 (e2e + hướng dẫn)**: e2e `internal-purchase.spec.ts` (BHA mua của NMI – NCC nội bộ NMI dùng lại nếu CSDL test đã có; PO gõ tay
+    16.000 khác giá gợi ý 15.000; NMI xác nhận ở DBN; PO hiện "Đã xác nhận"); ngăn kéo DBN chỉ khóa khi không được quyết định. Hướng dẫn 03-mua-hang
+    mục 3.4 "Mua nội bộ", 06-kho ghi chú thay ICS/ICR. tsc, oxlint, `npm run build` qua; e2e mới qua (API Testing 5000 + Vite 5173 Playwright tự bật).
+    Kiểm tra cuối: build 0 cảnh báo, `dotnet test` 698/698, Playwright đủ bộ 138/138 (Playwright tự bật API Testing 5000 + Vite 5173).
+    Người dùng giữ mặc định: DBN chỉ ô ghi chú (không tab Đính kèm), PRCW tính mua nội bộ là mua đúng quy định. **Đã merge.**
+    Đợt 0.24.0 (Y6, Y7, X7) hoàn tất – chờ người dùng yêu cầu phát hành 0.24.0; sau đó các lát 0.25.0 (Portal P1, P1b, P3).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

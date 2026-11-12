@@ -132,7 +132,7 @@ export interface ResolvedSupplierPrice {
  * của hợp đồng nguyên tắc hiệu lực (Contract) hoặc bảng giá NCC hiệu lực (PriceList).
  */
 export interface ApprovedPoPrice extends ResolvedSupplierPrice {
-  source: 'MonthlyApproval' | 'Contract' | 'PriceList'
+  source: 'MonthlyApproval' | 'Contract' | 'PriceList' | 'Internal'
   contractNo: string | null
 }
 

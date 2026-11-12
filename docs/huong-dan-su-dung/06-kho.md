@@ -66,6 +66,8 @@ nhận hàng của PO đó**.
 
 ## 6.5 Mua bán nội bộ (ICS / ICR)
 
+> Từ bản 0.22.0 phân hệ kho tắt; từ 0.24.0 mua nội bộ làm bằng **PO cho NCC nội bộ** và màn hình **Đơn bán nội bộ** (03 – Mua hàng, mục 3.4).
+
 Liên công ty chỉ đi **kho tổng → kho tổng**, giá = **giá bán nội bộ** (4.2).
 
 **Bên bán – Xuất bán nội bộ (ICS)**

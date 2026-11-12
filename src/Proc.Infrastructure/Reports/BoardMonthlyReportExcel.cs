@@ -19,7 +19,7 @@ public static class BoardMonthlyReportExcel
     /// <summary>Tên nguồn giá – cùng nhãn báo cáo PRCW trên giao diện.</summary>
     private static readonly Dictionary<string, string> SourceLabels = new()
     {
-        ["MonthlyApproval"] = "Duyệt tháng", ["Rfq"] = "Chọn thầu", ["Contract"] = "Hợp đồng", ["PriceList"] = "Bảng giá",
+        ["MonthlyApproval"] = "Duyệt tháng", ["Rfq"] = "Chọn thầu", ["Contract"] = "Hợp đồng", ["PriceList"] = "Bảng giá", ["Internal"] = "Mua nội bộ",
         ["Deviation"] = "Lệch giá đã duyệt", ["None"] = "Không có giá đã duyệt", ["Unknown"] = "Không xác định",
     };
 

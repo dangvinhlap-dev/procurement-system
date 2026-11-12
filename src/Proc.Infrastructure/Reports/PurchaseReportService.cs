@@ -539,7 +539,7 @@ public sealed class PurchaseReportService : IPurchaseReportService
         Check(period);
         var lines = await OrderLinesAsync(period.From, period.To, period.AllCompanies, null, cancellationToken);
         var total = lines.Sum(l => l.Amount);
-        var order = new[] { "MonthlyApproval", "Rfq", "Contract", "PriceList", "Deviation", "None", "Unknown" };
+        var order = new[] { "MonthlyApproval", "Rfq", "Contract", "PriceList", "Internal", "Deviation", "None", "Unknown" };
         var sources = lines.GroupBy(l => l.Kind)
             .Select(g => new PriceSourceSummaryDto(g.Key, g.Count(), g.Sum(l => l.Amount), Share(g.Sum(l => l.Amount), total)))
             .OrderBy(x => Array.IndexOf(order, x.Source))
@@ -548,8 +548,8 @@ public sealed class PurchaseReportService : IPurchaseReportService
         // Tỷ lệ mua theo giá đã duyệt (P5, KPI ≥ 95%): dòng không xác định nguồn (PO trước 0.12.0) không tính vào mẫu số.
         // Ví dụ theo bảng giá 475.000, lệch giá 494.000, không có giá 300.000 → 475.000 ÷ 1.269.000 = 37,43%.
         var known = lines.Where(l => l.Kind != "Unknown").Sum(l => l.Amount);
-        // Giá phiếu duyệt tháng (G3) cũng là giá đã duyệt.
-        var compliant = lines.Where(l => l.Kind is "MonthlyApproval" or "Rfq" or "Contract" or "PriceList").Sum(l => l.Amount);
+        // Giá phiếu duyệt tháng (G3) cũng là giá đã duyệt; mua nội bộ (X7) là mua theo quy định Q17 trong tập đoàn, không phải mua ngoài giá.
+        var compliant = lines.Where(l => l.Kind is "MonthlyApproval" or "Rfq" or "Contract" or "PriceList" or "Internal").Sum(l => l.Amount);
         decimal? compliancePct = known > 0 ? Math.Round(compliant * 100m / known, 2, MidpointRounding.AwayFromZero) : null;
 
         var outLines = lines
@@ -820,7 +820,8 @@ public sealed class PurchaseReportService : IPurchaseReportService
             {
                 var net = Net(r.UnitPrice, r.DiscountPct);
                 decimal? approved = r.ApprovedUnitPrice is { } a ? Net(a, r.ApprovedDiscountPct ?? 0m) : null;
-                var kind = approved is { } ap && ap != net ? "Deviation" : r.PriceSource.ToString();
+                // Giá bán nội bộ chỉ là gợi ý, nhập tay khác không tính lệch giá (lát X7).
+                var kind = r.PriceSource != PurchasePriceSource.Internal && approved is { } ap && ap != net ? "Deviation" : r.PriceSource.ToString();
                 return new OrderLine(
                     r.OrderId, r.No, r.Date, r.CompanyCode, r.Department, r.SupplierCode, r.SupplierName, r.LineNo, r.ItemId, r.ItemCode, r.ItemName,
                     r.BaseUomCode, r.UomCode, r.Qty, r.BaseQty, net, r.Amount, kind, approved, r.PriceDeviationReason)

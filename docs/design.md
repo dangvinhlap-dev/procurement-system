@@ -2444,6 +2444,30 @@ phát hành").**
 - Form PO hiện ô chỉ đọc **"Loại mua – biểu mẫu"** (ví dụ "A – Công trình CT01 – Nhà xưởng · 4A").
 - Chưa làm: logo công ty; NCC xác nhận đơn trên Portal (lát P4, 0.26.0).
 
+**Lát X7 – mua nội bộ qua PO (12/11/2026, bản 0.24.0 – Q17, mục 19.4).** Thay phiếu xuất bán / nhập mua nội bộ ICS/ICR:
+
+- **PO mua nội bộ** = PO đặt cho **NCC nội bộ** (NCC gắn một công ty thành viên – `Supplier.InternalCompanyId`). Mỗi lần lưu nháp / gửi duyệt,
+  PO chép công ty bán vào `PurchaseOrder.InternalSellerCompanyId` (giữ được khi NCC về sau bỏ liên kết). NCC nội bộ của **chính công ty
+  của PO** thì chặn lưu ("không đặt mua của chính mình" – mỗi công ty một pháp nhân, mục 4).
+- **Giá**: giá bán nội bộ của công ty bán cho công ty mua hiệu lực vào ngày PO (Bảng giá nội bộ, mục 6.6 – giá riêng cho công ty mua thắng
+  giá chung; theo ĐVT cơ sở, quy sang ĐVT dòng = giá × hệ số, làm tròn 6 số) là **giá gợi ý**: giao diện tự điền khi chọn mặt hàng / "Áp giá
+  đã duyệt", **người lập nhập tay được** (người dùng chốt 12/11/2026 "cho nhập tay"). Nguồn giá dòng là `Internal` (kể cả khi chưa có giá
+  nội bộ); dòng mua nội bộ **không** tính lệch giá, ngoài hợp đồng, ngoài danh sách tháng → không cần lý do lệch giá, không qua chặng POX / POL.
+  PO nội bộ bỏ qua phiếu duyệt tháng, kết quả chọn thầu, hợp đồng, bảng giá NCC. Duyệt PO như PO thường (bộ cấp PO, ngân sách, 4A/4B).
+- **Đơn bán nội bộ** (màn hình **DBN**, Mua hàng → Đơn bán nội bộ) ở **công ty bán**: liệt kê PO của công ty khác đặt cho công ty mình **đã
+  duyệt** (đang hiệu lực, đã đóng, hoặc bị hủy sau khi duyệt). Xem đầu đơn, dòng hàng (SL đặt, giá, SL công ty mua đã xác nhận nhận – XNH),
+  rồi **Xác nhận** (ghi chú tùy chọn) hoặc **Từ chối** (bắt buộc lý do). Mỗi PO **một** quyết định, không đổi; PO đã hủy / đã đóng, mặt hàng
+  ngoài phạm vi nhóm hàng của người xem, thiếu quyền → chỉ xem. Quyết định lưu ở bảng `InternalSaleConfirmation` **của công ty bán** (không
+  ghi lên PO đã khóa – mục 20 R1), có nhật ký.
+- Đọc PO của công ty khác chỉ qua liên kết công ty bán trên PO (bỏ filter công ty và kho có chủ đích, như cặp ICS–ICR; filter nhóm hàng vẫn
+  áp). PO của công ty mua hiện ô **"Bên bán"**: công ty bán + Chưa gửi (PO chưa duyệt) / Chờ xác nhận / Đã xác nhận / Từ chối, người, giờ,
+  ghi chú.
+- **Thông báo**: PO nội bộ duyệt xong (kể cả duyệt ngay khi gửi vì không có cấp) → người có quyền xác nhận đơn bán tại công ty bán (mở DBN);
+  bên bán xác nhận / từ chối → người lập PO. Bị từ chối thì công ty mua hủy PO (quản trị) hoặc đóng phần còn lại như PO thường.
+- Nhận hàng vẫn bằng **XNH** ở công ty mua; giao bù, điều chỉnh như PO thường. Không còn sinh phiếu kho.
+- Quyền: `Purchase.InternalSale.View` (xem – vai trò mẫu xem nghiệp vụ mua), `Purchase.InternalSale.Manage` (xác nhận, từ chối – vai trò
+  mẫu NVCUVT). Migration `V0_24_0_DonBanNoiBo` (điền lại công ty bán cho PO cũ có NCC nội bộ).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

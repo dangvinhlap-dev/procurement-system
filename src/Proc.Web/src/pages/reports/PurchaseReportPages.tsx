@@ -676,6 +676,7 @@ const priceSourceLabels: Record<PriceSourceKind, string> = {
   Rfq: 'Chọn thầu',
   Contract: 'Hợp đồng',
   PriceList: 'Bảng giá',
+  Internal: 'Mua nội bộ',
   Deviation: 'Lệch giá đã duyệt',
   None: 'Không có giá đã duyệt',
   Unknown: 'Không xác định',

@@ -28,6 +28,12 @@ public static class NotificationTypes
 
     /// <summary>Nhắc: phiếu chờ mình duyệt đã quá 1 ngày làm việc (lát O2c, design.md mục 19.3).</summary>
     public const string ApprovalOverdue = "ApprovalOverdue";
+
+    /// <summary>Công ty khác vừa được duyệt đơn mua đặt cho công ty mình (NCC nội bộ) – chờ xác nhận ở "Đơn bán nội bộ" (lát X7).</summary>
+    public const string InternalSaleOrder = "InternalSaleOrder";
+
+    /// <summary>Công ty bán đã xác nhận / từ chối đơn mua nội bộ – báo người lập PO (lát X7).</summary>
+    public const string InternalSaleDecision = "InternalSaleDecision";
 }
 
 /// <summary>

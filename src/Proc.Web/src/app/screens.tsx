@@ -136,6 +136,8 @@ export const screens: Screen[] = [
   { code: 'DHG', title: 'Đặt hàng gộp', navLabel: 'Đặt hàng gộp', path: '/mua-hang/dat-hang-gop', icon: <ClusterOutlined />, group: 'purchasing', permission: Permission.PooledOrderView },
   { code: 'CTDT', title: 'Công trình – dự toán', navLabel: 'Công trình – dự toán', path: '/mua-hang/cong-trinh', icon: <BuildOutlined />, group: 'purchasing', anyPermission: [Permission.ProjectView, Permission.ProjectManage] },
   // Đơn vị được giao mua từng dòng trên bảng tổng hợp 2A/2B (lát Y5a, design.md mục 19.3 – Q3).
+  // Đơn bán nội bộ (lát X7, design.md mục 19.3): PO công ty khác đặt cho NCC nội bộ của công ty mình – công ty bán xác nhận / từ chối.
+  { code: 'DBN', title: 'Đơn bán nội bộ', navLabel: 'Đơn bán nội bộ', path: '/mua-hang/don-ban-noi-bo', icon: <SwapOutlined />, group: 'purchasing', anyPermission: [Permission.InternalSaleView, Permission.InternalSaleManage] },
   { code: 'DVM', title: 'Danh mục đơn vị mua', navLabel: 'Đơn vị mua', path: '/mua-hang/don-vi-mua', icon: <ClusterOutlined />, group: 'purchasing', anyPermission: [Permission.UnitView, Permission.UnitManage] },
   { code: 'BUDG', title: 'Ngân sách bộ phận', navLabel: 'Ngân sách bộ phận', path: '/mua-hang/ngan-sach', icon: <FundOutlined />, group: 'purchasing', anyPermission: [Permission.BudgetView, Permission.BudgetManage] },
   { code: 'CTR', title: 'Hợp đồng nguyên tắc', navLabel: 'Hợp đồng nguyên tắc', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing', permission: Permission.ContractView },
