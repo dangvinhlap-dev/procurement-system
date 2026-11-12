@@ -153,6 +153,15 @@ test('Portal: NCC hỏi làm rõ, Phòng CUVT trả lời riêng và đăng thô
   await expect(tab).toContainText('Thông báo làm rõ')
   await page.screenshot({ path: 'e2e/screenshots/rfq-qa.png' })
 
+  // Lát P3b-3: tab Email NCC liệt kê thư báo NCC (trả lời riêng NCC hỏi, thông báo làm rõ) – nội dung thư, bảo mật: test tích hợp
+  // `EmailPortal_ThuMoiGiaHanTraLoiThongBaoHuy_ChiTaiKhoanDangDung`.
+  await page.getByRole('tab', { name: /Email NCC/ }).click()
+  const emails = page.getByRole('table', { name: 'Email NCC' })
+  await expect(emails).toContainText('Trả lời câu hỏi')
+  await expect(emails).toContainText('Thông báo làm rõ')
+  await expect(emails).toContainText('Trần Báo Giá')
+  await page.screenshot({ path: 'e2e/screenshots/rfq-portal-emails.png' })
+
   // NCC thấy câu trả lời của mình và thông báo.
   await page.goto('/ncc/dang-nhap')
   await page.evaluate((s) => sessionStorage.setItem('proc.portal.session', JSON.stringify(s)), session)

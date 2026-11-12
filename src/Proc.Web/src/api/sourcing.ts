@@ -483,8 +483,11 @@ export function useRfqClarifications(id: string | null) {
 export function useRfqClarificationMutations() {
   const queryClient = useQueryClient()
   const companyId = useCompanyId()
-  const onSuccess = (data: RfqClarification[], vars: { rfqId: string }) =>
+  const onSuccess = (data: RfqClarification[], vars: { rfqId: string }) => {
     queryClient.setQueryData(['rfqs', companyId, 'clarifications', vars.rfqId], data)
+    // Trả lời / thông báo sinh thư báo NCC (lát P3b-3) – tải lại tab Email NCC.
+    void queryClient.invalidateQueries({ queryKey: ['rfqs', companyId, 'portal-emails', vars.rfqId] })
+  }
   return {
     answer: useMutation({
       mutationFn: ({ rfqId, id, answer }: { rfqId: string; id: string; answer: string }) =>
@@ -590,4 +593,59 @@ export function useRfqMutations() {
       onSuccess,
     }),
   }
+}
+
+/** Loại thư báo NCC qua Portal (lát P3b-3). */
+export type PortalEmailKind = 'RfqInvitation' | 'RfqDeadlineExtended' | 'RfqCancelled' | 'RfqAnswer' | 'RfqNotice'
+
+/** Tên loại thư hiện trên giao diện. */
+export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
+  RfqInvitation: 'Thư mời báo giá',
+  RfqDeadlineExtended: 'Gia hạn nộp',
+  RfqCancelled: 'Hủy thư mời',
+  RfqAnswer: 'Trả lời câu hỏi',
+  RfqNotice: 'Thông báo làm rõ',
+}
+
+/** Trạng thái gửi thư: chờ gửi, đã gửi, thôi gửi, lỗi (hết lượt thử). */
+export type PortalEmailState = 'Pending' | 'Sent' | 'Skipped' | 'Failed'
+
+/** Tên trạng thái gửi thư. */
+export const portalEmailStateLabels: Record<PortalEmailState, string> = {
+  Pending: 'Chờ gửi',
+  Sent: 'Đã gửi',
+  Skipped: 'Thôi gửi',
+  Failed: 'Lỗi',
+}
+
+/** Một thư đã báo NCC về RFQ qua Portal (lát P3b-3): thư mời, gia hạn, hủy, trả lời câu hỏi, thông báo làm rõ. */
+export interface PortalEmail {
+  id: string
+  supplierId: string
+  supplierCode: string | null
+  supplierName: string | null
+  toAddress: string
+  toName: string
+  kind: PortalEmailKind
+  subject: string
+  createdAt: string
+  state: PortalEmailState
+  attempts: number
+  sentAt: string | null
+  /** Lỗi gần nhất hoặc lý do thôi gửi. */
+  note: string | null
+}
+
+/**
+ * Thư đã báo NCC của RFQ (lát P3b-3); null thì không tải. Thư soạn cùng lúc gửi / gia hạn / hủy RFQ, trả lời, đăng thông báo – nên tải lại
+ * mỗi khi mở tab để thấy trạng thái gửi mới nhất.
+ * @param id RFQ.
+ */
+export function useRfqPortalEmails(id: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['rfqs', companyId, 'portal-emails', id],
+    queryFn: () => apiFetch<PortalEmail[]>(`/api/rfqs/${id}/portal-emails`),
+    enabled: !!id,
+  })
 }
