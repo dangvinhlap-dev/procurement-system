@@ -67,16 +67,23 @@ builder.Services.AddOptions<JwtOptions>()
         $"Jwt:SigningKey phải dài ít nhất {JwtOptions.MinSigningKeyLength} ký tự (server thật đặt qua biến môi trường Jwt__SigningKey).")
     .ValidateOnStart();
 
-// Portal NCC (design.md 19.5, lát P1): token audience riêng. Mã OTP / link chỉ được trả trong response ở máy dev và test tự động.
-var exposePortalCodes = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+// Portal NCC (design.md 19.5, lát P1): token audience riêng. Mã OTP / link chỉ được trả trong response ở máy dev, test tự động và máy chủ
+// thử nghiệm trong LAN (Portal:TestServer – bản test cho người dùng, chưa có máy chủ email).
+var isDevelopmentOrTesting = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 builder.Services.AddOptions<Proc.Infrastructure.Portal.PortalOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Portal.PortalOptions.Section))
-    .PostConfigure(o => o.ExposeCodesForTesting = o.ExposeCodesForTesting && exposePortalCodes)
+    .PostConfigure(o => o.ExposeCodesForTesting = o.CanExposeCodes(isDevelopmentOrTesting))
+    .Validate(
+        o => !o.TestServer || o.HostList().Count == 0,
+        "Portal:TestServer (hiện mã OTP trên màn hình) không được bật khi Portal mở ra internet (Portal:Hosts có tên miền).")
     .Validate(
         o => !string.IsNullOrWhiteSpace(o.Audience)
             && !string.Equals(o.Audience, builder.Configuration["Jwt:Audience"] ?? new JwtOptions().Audience, StringComparison.Ordinal),
         "Portal:Audience không được trống và phải khác Jwt:Audience (token NCC không được dùng cho API nội bộ).")
     .ValidateOnStart();
+
+// Giới hạn tần suất API Portal theo IP (lát P1b, design.md 19.5 P1b-1).
+builder.Services.AddPortalRateLimiting();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer()
@@ -130,10 +137,16 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
             attachmentRoot);
 }
 
+if (!isDevelopmentOrTesting && app.Services.GetRequiredService<IOptions<Proc.Infrastructure.Portal.PortalOptions>>().Value.ExposeCodesForTesting)
+    app.Logger.LogWarning("Portal:TestServer đang bật – mã OTP / link đặt lại mật khẩu Portal hiện trên màn hình. Chỉ dùng cho máy chủ thử nghiệm.");
+
 await DatabaseInitializer.InitializeAsync(app.Services);
 
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+// Tên miền Portal chỉ mở trang /ncc + API Portal (lát P1b) – đặt trước file tĩnh và xác thực để chặn sớm.
+app.UseMiddleware<PortalHostMiddleware>();
 
 // Chạy server: image chứa sẵn giao diện React đã build trong wwwroot (design.md mục 14.1).
 // Máy dev không có wwwroot (Vite tự phục vụ ở cổng 5173) nên bỏ qua toàn bộ phần này.
@@ -149,6 +162,7 @@ if (hostsWebApp)
     });
 }
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 // Sau xác thực: nạp phạm vi (công ty từ X-Company-Id, quyền, kho, nhóm hàng) trước khi vào endpoint.

@@ -115,7 +115,8 @@ Mọi form chứng từ/phiếu có:
 - Ô **Ghi chú** nhập được ngay khi tạo phiếu.
 - Tab **Đính kèm (n)**: chọn file **ngay khi tạo phiếu** (file vào hàng chờ, lưu phiếu xong tự tải lên); phiếu đã duyệt/ghi sổ vẫn đính
   kèm thêm được. Mặc định **tối đa 2 MB/file** (quản trị đổi được), chỉ nhận tài liệu, ảnh, file nén, thư điện tử. File chọn quá cỡ bị
-  báo ngay.
+  báo ngay. Máy chủ kiểm **nội dung file khớp đuôi**: file đổi đuôi (ví dụ trang web đặt tên .pdf, chương trình đặt tên .txt) bị từ chối
+  với thông báo "Nội dung file … không đúng định dạng …" – mở file bằng phần mềm gốc, lưu lại đúng định dạng rồi tải lên.
 - Xóa đính kèm là xóa mềm (file vẫn giữ trên máy chủ, có nhật ký). Quyền xem/thêm đính kèm theo quyền xem/sửa phiếu.
 
 ## 1.8 Gửi duyệt và duyệt phiếu

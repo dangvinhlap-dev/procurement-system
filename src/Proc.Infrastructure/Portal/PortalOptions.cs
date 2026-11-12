@@ -52,6 +52,49 @@ public sealed class PortalOptions
     /// môi trường Development/Testing – server thật không bao giờ lộ mã.
     /// </summary>
     public bool ExposeCodesForTesting { get; set; }
+
+    /// <summary>
+    /// Máy chủ thử nghiệm cho người dùng test trong LAN (chưa có máy chủ email): cho phép <see cref="ExposeCodesForTesting"/> có tác dụng
+    /// cả ngoài Development/Testing để mã OTP / link đặt lại mật khẩu hiện trên màn hình Portal. Không được bật cùng <see cref="Hosts"/>
+    /// (Portal mở ra internet) – ứng dụng từ chối khởi động. Server thật để false.
+    /// </summary>
+    public bool TestServer { get; set; }
+
+    /// <summary>
+    /// Có được trả mã OTP / link trong response hay không: chỉ khi bật <see cref="ExposeCodesForTesting"/> và đang ở môi trường dev / test
+    /// tự động hoặc máy chủ thử nghiệm (<see cref="TestServer"/>).
+    /// </summary>
+    /// <param name="isDevelopmentOrTesting">Môi trường Development hoặc Testing.</param>
+    /// <returns>true nếu được lộ mã.</returns>
+    public bool CanExposeCodes(bool isDevelopmentOrTesting) => ExposeCodesForTesting && (isDevelopmentOrTesting || TestServer);
+
+    /// <summary>
+    /// Tên miền riêng của Portal mở ra internet (lát P1b, Q14), nhiều tên cách nhau dấu phẩy, ví dụ "ncc.tapdoan.vn". Truy cập bằng tên
+    /// này chỉ mở được trang <c>/ncc</c>, file tĩnh giao diện và API <c>/api/portal</c>; API nội bộ, <c>/health</c> trả 404, trang nội bộ chuyển
+    /// về <c>/ncc</c>. Trống (mặc định, máy dev và chạy thử LAN) thì không giới hạn theo tên miền.
+    /// </summary>
+    public string Hosts { get; set; } = string.Empty;
+
+    /// <summary>Giới hạn tần suất theo địa chỉ IP cho API Portal (lát P1b).</summary>
+    public PortalRateLimitOptions RateLimit { get; set; } = new();
+
+    /// <summary>Danh sách tên miền Portal đã tách từ <see cref="Hosts"/> (bỏ khoảng trắng, dòng trống).</summary>
+    /// <returns>Các tên miền, so sánh không phân biệt hoa thường.</returns>
+    public IReadOnlyList<string> HostList() =>
+        Hosts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+}
+
+/// <summary>
+/// Giới hạn tần suất API Portal theo IP – cửa sổ cố định 1 phút (design.md 19.5, P1b-1). Chặn dò mật khẩu / OTP từ internet và gửi
+/// tràn email; khóa tạm theo tài khoản (P1-4) vẫn áp riêng.
+/// </summary>
+public sealed class PortalRateLimitOptions
+{
+    /// <summary>Số yêu cầu tối đa mỗi phút mỗi IP vào <c>/api/portal/auth/*</c> (đăng nhập, OTP, kích hoạt, quên mật khẩu). Mặc định 20.</summary>
+    public int AuthPermitPerMinute { get; set; } = 20;
+
+    /// <summary>Số yêu cầu tối đa mỗi phút mỗi IP vào các API Portal khác (đã đăng nhập). Mặc định 300.</summary>
+    public int ApiPermitPerMinute { get; set; } = 300;
 }
 
 /// <summary>Tên scheme xác thực và tên claim của token Portal.</summary>

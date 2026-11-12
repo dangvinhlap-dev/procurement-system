@@ -149,6 +149,14 @@ public class AttachmentTests
         Assert.Equal(HttpStatusCode.BadRequest, big.StatusCode);
         Assert.Contains("2 MB", await TitleAsync(big));
 
+        // Lát P1b (design.md 19.5 P1b-3): trang HTML đổi đuôi .pdf và chương trình đổi đuôi .txt bị chặn theo nội dung, không ghi file.
+        var fakePdf = await UploadAsync(f.Head, AttachmentOwnerTypes.Supplier, f.Supplier.Id, "bao-gia.pdf", "<html><script>x</script>"u8.ToArray());
+        Assert.Equal(HttpStatusCode.BadRequest, fakePdf.StatusCode);
+        Assert.Contains("không đúng định dạng PDF", await TitleAsync(fakePdf));
+        var program = await UploadAsync(f.Head, AttachmentOwnerTypes.Supplier, f.Supplier.Id, "doc-ky.txt", [(byte)'M', (byte)'Z', 0x90, 0]);
+        Assert.Equal(HttpStatusCode.BadRequest, program.StatusCode);
+        Assert.Contains("chương trình chạy được", await TitleAsync(program));
+
         // Giao diện đọc giới hạn từ máy chủ để kiểm tra trước khi gửi.
         var limits = await ReadAsync<AttachmentLimitsDto>(await f.Head.GetAsync("/api/attachments/limits", Ct));
         Assert.Equal(2, limits.MaxFileSizeMb);
@@ -184,7 +192,7 @@ public class AttachmentTests
         var f = await ArrangeAsync();
         var atKp2 = await ReceiptAsync(f, "KP2");
         var uploaded = await ReadAsync<AttachmentDto>(
-            await UploadAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, atKp2.Id, "bien-ban.docx", [80, 75]));
+            await UploadAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, atKp2.Id, "bien-ban.docx", [80, 75, 3, 4]));
 
         // Quản trị NMI (cùng quyền) nhưng phiếu thuộc BHA.
         var nmiAdmin = $"dk.{Guid.NewGuid():N}"[..16];
@@ -224,7 +232,7 @@ public class AttachmentTests
 
         // Người kê khai tự đính kèm văn bản kê khai có chữ ký, không cần mã quyền.
         var uploaded = await ReadAsync<AttachmentDto>(
-            await UploadAsync(staff, AttachmentOwnerTypes.ConflictDeclaration, declaration.Id, "ke-khai.pdf", [37, 80, 68, 70]));
+            await UploadAsync(staff, AttachmentOwnerTypes.ConflictDeclaration, declaration.Id, "ke-khai.pdf", [37, 80, 68, 70, 45]));
         Assert.Equal("ke-khai.pdf", uploaded.FileName);
 
         // Nhân viên khác không có quyền xem kê khai của người khác.

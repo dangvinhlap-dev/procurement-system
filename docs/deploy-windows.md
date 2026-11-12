@@ -77,7 +77,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Serilog:WriteTo` (mục `File`) | `path`: `D:\\ProcurementData\\logs\\proc-.log` |
 | `Printing:FontDirectories` | Để trống – Windows có sẵn Arial có dấu tiếng Việt |
 | `Email:*` | Gửi email bản sao thông báo (chờ duyệt, đã duyệt, bị từ chối…) qua SMTP của công ty: `Enabled` = `true`, `Host`, `Port` (587 STARTTLS / 465 SSL), `UserName`, `Password`, `FromAddress`, `AppBaseUrl` = địa chỉ người dùng mở phần mềm (nút "Mở trên phần mềm" trong thư). Để `false` thì không gửi thư |
-| `Portal:*` | Portal nhà cung cấp (lát P1): `BaseUrl` = địa chỉ NCC mở Portal, ghi vào link mời / đặt lại mật khẩu trong email (ví dụ tên miền Portal mở ra internet; trống thì lấy `Email:AppBaseUrl`, vẫn trống thì lấy địa chỉ trang người mời đang mở – đủ khi thử trong LAN). Đăng nhập Portal cần **email bật** để gửi mã OTP. `Audience` phải khác `Jwt:Audience`. `ExposeCodesForTesting` chỉ có tác dụng ở Development/Testing – server thật luôn tắt. Các thời hạn (`InviteValidHours` 168, `OtpValidMinutes` 10, `LockoutMinutes` 15…) thường không cần sửa |
+| `Portal:*` | Portal nhà cung cấp (lát P1): `BaseUrl` = địa chỉ NCC mở Portal, ghi vào link mời / đặt lại mật khẩu trong email (ví dụ tên miền Portal mở ra internet; trống thì lấy `Email:AppBaseUrl`, vẫn trống thì lấy địa chỉ trang người mời đang mở – đủ khi thử trong LAN). Đăng nhập Portal cần **email bật** để gửi mã OTP. `Audience` phải khác `Jwt:Audience`. `ExposeCodesForTesting` chỉ có tác dụng ở Development/Testing – server thật luôn tắt; máy chủ **thử nghiệm trong LAN** chưa có email đặt thêm `TestServer` = `true` để mã OTP / link đặt lại mật khẩu hiện trên màn hình Portal (ghi cảnh báo vào log; không khởi động nếu đồng thời đặt `Hosts`). Các thời hạn (`InviteValidHours` 168, `OtpValidMinutes` 10, `LockoutMinutes` 15…) thường không cần sửa. Lát P1b: `Hosts` = tên miền Portal mở ra internet (nhiều tên cách dấu phẩy, ví dụ `ncc.tapdoan.vn`) – vào bằng tên này chỉ mở được trang `/ncc` và API Portal (xem 3.5b); `RateLimit:AuthPermitPerMinute` (20) / `RateLimit:ApiPermitPerMinute` (300) = số yêu cầu tối đa mỗi phút mỗi IP vào đăng nhập Portal / API Portal khác, vượt thì báo 429 "Quá nhiều yêu cầu" |
 | `ApprovalReminder:*` | Nhắc người duyệt khi phiếu chờ quá 1 ngày làm việc (thông báo + email nếu bật email): mặc định `Enabled` = `true`, quét mỗi `PollMinutes` = 15 phút, tối đa `MaxReminders` = 3 lần mỗi cấp. Thường không cần sửa |
 
 Sinh `Jwt:SigningKey` (bộ sinh số ngẫu nhiên dùng cho mật mã):
@@ -114,6 +114,21 @@ Nếu "Default Web Site" đang dùng cổng 80 thì dừng nó hoặc đặt bin
 `web.config` trong gói đã: gỡ WebDAV (nếu không IIS chặn PUT/DELETE, báo lỗi 405 khi sửa/xóa), cho phép tải lên tới 30 MB (file
 đính kèm tối đa mặc định 2 MB, đổi bằng `Attachments:MaxFileSizeMb` trong `appsettings.Production.json`, cho phép 1–25 MB; ngoài khoảng
 này ứng dụng báo lỗi khi khởi động).
+
+**3.5b. Tên miền Portal NCC mở ra internet** (lát P1b, design.md 19.5 – quyết định Q14: Portal có tên miền riêng, phần nội bộ chỉ LAN/VPN).
+Cùng website, cùng bản cài; chỉ thêm binding và cấu hình:
+
+1. Trỏ tên miền Portal (ví dụ `ncc.tapdoan.vn`) về IP công khai của server; tường lửa chỉ mở 443 (và 80 nếu cần chuyển hướng) tới IP đó.
+2. IIS Manager → website Procurement → Bindings: thêm `https`, IP công khai, cổng 443, **Host name** `ncc.tapdoan.vn`, chọn chứng chỉ của tên
+   miền, tích **Require Server Name Indication**. Binding nội bộ (ví dụ `http` cổng 80) gắn **IP LAN** của server, không để "All Unassigned",
+   để từ internet không vào được phần nội bộ.
+3. `appsettings.Production.json`: `Portal:Hosts` = `ncc.tapdoan.vn`, `Portal:BaseUrl` = `https://ncc.tapdoan.vn` (link trong email mời).
+4. Thử từ máy ngoài mạng: `https://ncc.tapdoan.vn` tự chuyển sang `/ncc` (trang đăng nhập NCC); `https://ncc.tapdoan.vn/health` và
+   `https://ncc.tapdoan.vn/api/auth/me` phải báo 404.
+
+Giới hạn tần suất đếm theo IP thật của NCC: IIS chạy ứng dụng trong tiến trình nên đã có sẵn IP. Nếu đặt thêm reverse proxy / cân bằng tải
+phía trước IIS thì phải bật forwarded headers (biến môi trường `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`), nếu không mọi NCC bị đếm chung
+theo IP của proxy. File đính kèm (nội bộ và Portal) được kiểm nội dung khớp đuôi, chặn chương trình đổi đuôi (design.md 19.5 P1b-3).
 
 **3.6. Kiểm tra** – mở `http://<server>/health` phải thấy `"status":"Healthy"` và số phiên bản; mở `http://<server>`, đăng nhập
 bằng tài khoản quản trị ở bước 3.4 rồi **đổi mật khẩu ngay**. Xem `D:\ProcurementData\logs\proc-<ngày>.log` không có dòng `[ERR]`;

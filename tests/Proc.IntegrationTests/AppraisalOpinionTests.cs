@@ -69,7 +69,7 @@ public class AppraisalOpinionTests
             { new StringContent("AppraisalOpinion"), "ownerType" },
             { new StringContent(opinionId.ToString()), "ownerId" },
         };
-        var file = new ByteArrayContent("biên bản thẩm định"u8.ToArray());
+        var file = new ByteArrayContent("%PDF-1.4 biên bản thẩm định"u8.ToArray());
         file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(file, "file", "bien-ban.pdf");
         return client.PostAsync("/api/attachments", form, Ct);

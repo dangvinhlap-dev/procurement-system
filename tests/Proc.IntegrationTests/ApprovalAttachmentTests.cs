@@ -22,7 +22,7 @@ public partial class PurchasingTests
             { new StringContent(poId.ToString()), "ownerId" },
         };
         if (approvalStep) form.Add(new StringContent("true"), "approvalStep");
-        var file = new ByteArrayContent([1, 2, 3]);
+        var file = new ByteArrayContent("%PDF-1.4 thu"u8.ToArray());
         file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         form.Add(file, "file", fileName);
         return client.PostAsync("/api/attachments", form, Ct);

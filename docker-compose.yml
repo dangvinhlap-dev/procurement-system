@@ -40,6 +40,8 @@ services:
       Email__AppBaseUrl: ${EMAIL_APP_URL:-}
       # Portal NCC (lát P1): địa chỉ NCC mở Portal ghi vào link mời; trống thì dùng EMAIL_APP_URL.
       Portal__BaseUrl: ${PORTAL_BASE_URL:-}
+      # Tên miền Portal (lát P1b): vào bằng tên này chỉ mở trang /ncc + API Portal. Trống = không giới hạn (chạy thử LAN).
+      Portal__Hosts: ${PORTAL_HOSTS:-}
       Seed__AdminUserName: ${ADMIN_USERNAME:-admin}
       Seed__AdminPassword: ${ADMIN_PASSWORD:?Chưa đặt ADMIN_PASSWORD}
       Seed__HeadOffice__Code: ${HEAD_OFFICE_CODE:-TCT}
