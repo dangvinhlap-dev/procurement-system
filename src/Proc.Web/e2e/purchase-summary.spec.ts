@@ -63,6 +63,14 @@ test('lập bảng tổng hợp 2B, duyệt trên điện thoại, hủy', async
   await expect(page.locator('.document-form-number')).toHaveText(/^BTH-BHA-\d{4}-\d{4}$/)
   const no = (await page.locator('.document-form-number').textContent())!
   const summaryId = /([0-9a-f-]{36})/.exec(page.url())![1]
+  // In theo biểu mẫu 2B (lát Y10): nút "In phiếu" mở PDF ở tab mới.
+  const pdf = page.waitForResponse((r) => r.url().endsWith(`/api/purchase-summaries/${summaryId}/pdf`))
+  const popup = page.waitForEvent('popup')
+  await page.getByRole('button', { name: 'In phiếu' }).click()
+  const pdfResponse = await pdf
+  expect(pdfResponse.status()).toBe(200)
+  expect(pdfResponse.headers()['content-type']).toContain('application/pdf')
+  await (await popup).close()
   // Khung chi phí 2B: ngân sách tháng của bộ phận (bộ phận mới chưa có ngân sách).
   await expect(page.locator('.document-form-content .ant-alert').filter({ hasText: 'chưa có ngân sách tháng' })).toBeVisible()
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Purchasing;
@@ -487,7 +487,7 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
             .ToDictionaryAsync(u => u.Id, u => new { u.Code, u.Name }, cancellationToken);
         var requestIds = summary.Lines.Select(l => l.RequestId).Distinct().ToList();
         var requests = await _db.PurchaseRequests.AsNoTracking().Where(r => requestIds.Contains(r.Id))
-            .ToDictionaryAsync(r => r.Id, r => new { r.No, r.Category }, cancellationToken);
+            .ToDictionaryAsync(r => r.Id, r => new { r.No, r.Category, r.Date, r.Purpose }, cancellationToken);
         var department = await _db.Departments.AsNoTracking().Where(d => d.Id == summary.DepartmentId).Select(d => d.Name)
             .SingleOrDefaultAsync(cancellationToken);
         var createdBy = summary.CreatedBy is { } c
@@ -502,7 +502,11 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
             return new PurchaseSummaryLineDto(
                 l.Id, l.LineNo, l.RequestId, request?.No ?? "", l.RequestLineId, request?.Category.ToString() ?? "", l.ItemId,
                 item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "", l.UomId, uoms.GetValueOrDefault(l.UomId) ?? "", l.Qty, l.EstPrice, l.Amount,
-                l.NeededDate, l.PurchasingUnitId, unit?.Code ?? "", unit?.Name ?? "", l.Note);
+                l.NeededDate, l.PurchasingUnitId, unit?.Code ?? "", unit?.Name ?? "", l.Note)
+            {
+                RequestDate = request?.Date,
+                RequestPurpose = request?.Purpose,
+            };
         }).ToList();
 
         var itemsVisible = items.Count == itemIds.Count;

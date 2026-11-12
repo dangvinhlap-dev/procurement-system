@@ -725,7 +725,7 @@ Dạng **danh sách + ngăn kéo (drawer) chi tiết**: lưới có lọc, tìm 
 | Quy tắc | Lý do |
 | --- | --- |
 | Thư viện **PDFsharp-MigraDoc 6.2.4, giấy phép MIT** – ghim cố định: từ 6.5.0 PDFsharp đổi sang AGPL-3.0 (ràng buộc công khai mã nguồn), trái quy định chỉ dùng thư viện không ràng buộc license; không dùng QuestPDF (miễn phí có điều kiện doanh thu). Gói phụ `System.Security.Cryptography.Pkcs` tham chiếu bản đã vá lỗ hổng | CLAUDE.md mục 2 |
-| In được: đơn mua hàng (PO – "ĐƠN ĐẶT HÀNG" gửi NCC), đề nghị mua hàng (PR), phiếu nhập mua (GRN), xuất trả NCC (RTV), chuyển kho (TRF – không in cột tiền), xuất bán nội bộ (ICS), nhập mua nội bộ (ICR). API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`; quyền như xem phiếu (`Purchase.PO.View`, `Purchase.PR.View`, `Inventory.Document.View`); dữ liệu đọc qua dịch vụ xem phiếu nên phiếu ngoài phạm vi công ty/kho báo không tìm thấy | Không có đường vòng qua phạm vi (mục 9.2) |
+| In được: đơn mua hàng (PO – "ĐƠN ĐẶT HÀNG" gửi NCC), đề nghị mua hàng (PR – từ lát Y10 in theo biểu mẫu CUVT 1A/1B, mục 19.3), bảng tổng hợp 2A/2B (`/api/purchase-summaries/{id}/pdf`), phiếu nhập mua (GRN), xuất trả NCC (RTV), chuyển kho (TRF – không in cột tiền), xuất bán nội bộ (ICS), nhập mua nội bộ (ICR). API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`; quyền như xem phiếu (`Purchase.PO.View`, `Purchase.PR.View`, `Inventory.Document.View`); dữ liệu đọc qua dịch vụ xem phiếu nên phiếu ngoài phạm vi công ty/kho báo không tìm thấy | Không có đường vòng qua phạm vi (mục 9.2) |
 | Khuôn chung A4 dọc: tên, địa chỉ, MST công ty; tên phiếu, số, ngày; thông tin phiếu; bảng dòng (tiêu đề cột lặp lại khi sang trang); tiền hàng, chiết khấu, thuế GTGT, tổng thanh toán; **số tiền bằng chữ** (làm tròn đồng; "không trăm", "lẻ", "mốt", "lăm" theo cách đọc chứng từ kế toán); ghi chú; ô ký tên theo loại phiếu (tên người lập, người duyệt in sẵn); chân trang "Số phiếu – Trang x/y". Phiếu chưa có hiệu lực in dòng đỏ "BẢN NHÁP – chưa duyệt / chưa ghi sổ", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" | Tránh dùng nhầm bản nháp |
 | Phông: Arial (Windows), DejaVu Sans hoặc Liberation Sans (Linux – image Docker cài `fonts-dejavu-core`); thêm thư mục ở `Printing:FontDirectories`. Phông nhúng vào file PDF. Không tìm thấy phông thì báo lỗi tiếng Việt hướng dẫn cài | Image .NET không có phông; cần đủ dấu tiếng Việt |
 | Giao diện: khuôn `DocumentForm` có nút "In phiếu" (Ctrl+P) khi phiếu đã lưu, mở PDF ở tab mới để xem, in, lưu file. Chưa làm: gửi PDF qua email cho NCC | Mục 10.1 |
@@ -2354,6 +2354,33 @@ phát hành").**
 - Sửa lỗi: xem trước chuỗi duyệt BTH lỗi 500 – lệnh gửi duyệt BTH tự mở giao dịch thứ hai; nay dùng chung giao dịch của bên gọi
   (`RowLocks.BeginOrJoinAsync`) như các phiếu khác.
 - **In theo mẫu 2A/2B** chuyển sang lát Y10 (khung mẫu in) để làm một lần cùng 1A/1B/DV.
+
+**Lát Y10 – khung mẫu in theo biểu mẫu CUVT (12/11/2026).** Theo ghi chú trong file Excel biểu mẫu (kế hoạch D11) và quyết định Q13:
+
+- Khuôn `Printing/CuvtFormLayout.cs` + nội dung `Printing/CuvtPrintForms.cs` (hàm thuần): phông Times New Roman (Linux: Liberation Serif /
+  DejaVu Serif của gói `fonts-dejavu-core`; không có thì dùng phông không chân), **số biểu mẫu góc trên phải cỡ 25**, tên công ty + số phiếu
+  góc trái; khối tiêu đề **canh giữa** (tên biểu mẫu 18, phụ đề nhóm vật tư 12, "Ngày d tháng M năm yyyy" 16, dòng thông tin 14 – số tiền in
+  đậm kèm "đ", không dùng "…": chưa có ngân sách ghi "Chưa khai báo", chưa mua ghi "0 đ"); bảng 13, dòng "Tổng cộng" 15; giãn dòng 20 pt.
+  Mọi cỡ chữ nhân **0,8** như Excel in vừa trang (tự đặt – bảng 10 cột vừa A4 dọc). Mẫu 1 khổ dọc, mẫu 2 khổ ngang.
+- **Khối ký sinh từ chuỗi duyệt** (Q13): ô đầu "Người đề nghị" (PR) / "Người lập" (BTH) kèm giờ gửi duyệt, rồi từng bước của lượt duyệt gần
+  nhất theo chặng, cấp (bỏ bước được bỏ qua): chức danh bước, "Đã duyệt HH:mm dd/MM/yyyy", họ tên, chức vụ; bước chưa duyệt ghi "Chưa duyệt",
+  để trống tên; vẫn chừa chỗ ký tay. Dòng đỏ "BẢN NHÁP", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" như mục 10.10.
+- **Đề nghị mua**: loại A → **1A** (tên công trình, tổng dự toán, lũy kế đã mua = PO đã duyệt của công trình chưa VAT – "chỉ số liệu quá
+  khứ", phòng ban đề xuất); loại B → **1B** (phòng ban sử dụng, dự trù chi phí/định mức tháng = ngân sách bộ phận × tháng, lũy kế đã mua
+  trong tháng, mục đích sử dụng); **dịch vụ → mẫu 1B bỏ ba cột Cần sử dụng – Tồn kho – Cần mua** (biểu mẫu 1B đã gồm nhóm DV; dịch vụ không
+  qua Thủ kho – tự đặt). Cột: TT, Tên vật tư, Mô tả (quy cách mặt hàng), ĐVT, Số lượng (Cần sử dụng – Tồn kho – Cần mua), Đơn giá, Thành tiền
+  tham khảo, Ghi chú; dưới bảng "Thời gian cần sử dụng" – "Địa điểm tập kết/giao hàng" (nơi nhận). Hàng mới chưa có mã in nối sau, tên kèm
+  "(chưa có mã)". Thay khuôn chung "PHIẾU ĐỀ NGHỊ MUA HÀNG" của mục 10.10.
+- **Lũy kế đã mua trong tháng (1B) – người dùng chốt 12/11/2026: chỉ tính PO đã duyệt trong tháng, chưa VAT, giống lũy kế công trình ở
+  1A** (`Purchasing/DepartmentSpending.cs`): dòng PO đã duyệt / đã đóng lấy từ đề nghị loại B, DV của bộ phận, tháng theo ngày chứng từ PO;
+  không tính phần đề nghị chưa lên PO (khác số "đã dùng" của ngân sách mục 18.24).
+- **Bảng tổng hợp 2A/2B** (`GET /api/purchase-summaries/{id}/pdf`, quyền xem BTH; nút "In phiếu" trên form): khổ ngang; cột Ngày đề xuất,
+  Số phiếu, Phòng ban đề xuất, Nội dung đề xuất (Tên vật tư, ĐVT, Số lượng, Đơn giá, Thành tiền, Ngày cung ứng, Mục đích sử dụng), **Đơn vị
+  mua – mỗi đơn vị một cột, dòng thuộc đơn vị nào đánh "x"**. Đầu phiếu: 2A tên công trình, phòng ban, tổng dự toán, lũy kế = đã mua của công
+  trình + tổng đề xuất (ghi chú biểu mẫu 2A), tổng tiền đề xuất; 2B phòng ban, định mức/dự trù (ngân sách tháng), lũy kế = PO đã duyệt trong
+  tháng của bộ phận + tổng đề xuất (ghi chú biểu mẫu 2B, cùng cách tính 1B), tổng tiền đề xuất. Dòng bảng tổng hợp (DTO) thêm ngày lập và mục
+  đích của đề nghị.
+- Chưa làm: **logo công ty** (công ty chưa có trường logo – làm khi có yêu cầu); mẫu 3a/3A/3B, 4A/4B, 5A/5B làm cùng các lát Y6, Y7, Y8.
 
 ### 19.4 Bỏ phân hệ kho
 
