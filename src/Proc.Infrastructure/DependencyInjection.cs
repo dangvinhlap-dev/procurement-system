@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Printing.IDocumentPdfService, Proc.Infrastructure.Printing.DocumentPdfService>();
         services.AddScoped<Proc.Application.Sourcing.ISourcingService, Proc.Infrastructure.Sourcing.SourcingService>();
         services.AddScoped<Proc.Application.Sourcing.IRfqService, Proc.Infrastructure.Sourcing.RfqService>();
+        services.AddScoped<Proc.Application.Sourcing.IRfqClarificationService, Proc.Infrastructure.Sourcing.RfqClarificationService>();
         services.AddScoped<Proc.Application.Purchasing.IContractService, Proc.Infrastructure.Purchasing.ContractService>();
         services.AddScoped<Proc.Application.Purchasing.IContractRebateService, Proc.Infrastructure.Purchasing.ContractRebateService>();
         services.AddScoped<Proc.Application.Purchasing.IContractAmendmentService, Proc.Infrastructure.Purchasing.ContractService>();

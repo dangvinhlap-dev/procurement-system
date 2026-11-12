@@ -246,6 +246,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Bản nộp báo giá Portal niêm phong (lát P3a).</summary>
     public DbSet<Proc.Domain.Sourcing.RfqPortalSubmission> RfqPortalSubmissions => Set<Proc.Domain.Sourcing.RfqPortalSubmission>();
 
+    /// <summary>Hỏi đáp làm rõ RFQ giữa NCC và Phòng CUVT (lát P3b-2).</summary>
+    public DbSet<Proc.Domain.Sourcing.RfqClarification> RfqClarifications => Set<Proc.Domain.Sourcing.RfqClarification>();
+
     /// <summary>Hợp đồng nguyên tắc (lát B4a – design.md mục 18.7).</summary>
     public DbSet<Proc.Domain.Purchasing.PurchaseContract> PurchaseContracts => Set<Proc.Domain.Purchasing.PurchaseContract>();
 

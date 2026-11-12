@@ -96,6 +96,9 @@ public static class PortalEndpoints
         rfqs.MapPost("/{id:guid}/quotes", (Guid id, PortalSubmitQuoteRequest request, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
             s.SubmitAsync(Session(http), id, request, ct));
         // Lát P3b-1: file báo giá (2 MB/file, kiểm nội dung như mọi đính kèm); thêm, xóa đến giờ hạn nộp.
+        // Lát P3b-2: NCC gửi câu hỏi làm rõ (trả lời riêng NCC hỏi; thông báo làm rõ công khai trả kèm chi tiết thư mời).
+        rfqs.MapPost("/{id:guid}/questions", (Guid id, PortalAskRequest request, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            s.AskAsync(Session(http), id, request, ct));
         rfqs.MapGet("/{id:guid}/attachments", (Guid id, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
             s.ListAttachmentsAsync(Session(http), id, ct));
         rfqs.MapPost("/{id:guid}/attachments", async (

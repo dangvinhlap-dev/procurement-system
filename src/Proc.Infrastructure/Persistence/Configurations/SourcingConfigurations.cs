@@ -174,6 +174,31 @@ internal sealed class RfqPortalSubmissionConfiguration : IEntityTypeConfiguratio
     }
 }
 
+/// <summary>Cấu hình bảng RfqClarification – hỏi đáp làm rõ RFQ giữa NCC và Phòng CUVT (lát P3b-2).</summary>
+internal sealed class RfqClarificationConfiguration : IEntityTypeConfiguration<RfqClarification>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<RfqClarification> builder)
+    {
+        builder.ToTable("RfqClarification");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => x.RfqId);
+        builder.Property(x => x.Question).HasMaxLength(RfqClarification.TextMaxLength);
+        builder.Property(x => x.Answer).HasMaxLength(RfqClarification.TextMaxLength);
+        builder.Property(x => x.AskedByEmail).HasMaxLength(256);
+        builder.Property(x => x.AnsweredByName).HasMaxLength(200);
+        builder.Ignore(x => x.IsNotice);
+        builder.Ignore(x => x.IsAnswered);
+        // Hai người cùng trả lời một câu hỏi: lệnh UPDATE kèm điều kiện "chưa trả lời" nên người sau nhận lỗi thay vì ghi đè câu trả lời.
+        builder.Property(x => x.AnsweredAt).IsConcurrencyToken();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Rfq>().WithMany().HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.AskedByPortalUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Proc.Infrastructure.Identity.AppUser>().WithMany().HasForeignKey(x => x.AnsweredBy).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Bảng RfqPortalSubmissionLine – giá từng dòng của bản nộp Portal.</summary>
 internal sealed class RfqPortalSubmissionLineConfiguration : IEntityTypeConfiguration<RfqPortalSubmissionLine>
 {
