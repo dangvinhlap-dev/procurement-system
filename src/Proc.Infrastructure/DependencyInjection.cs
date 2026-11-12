@@ -182,6 +182,16 @@ public static class DependencyInjection
         services.AddScoped<JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
 
+        // Portal NCC (design.md 19.5, lát P1): tài khoản riêng, token audience riêng.
+        services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Proc.Domain.MasterData.SupplierPortalUser>,
+            Microsoft.AspNetCore.Identity.PasswordHasher<Proc.Domain.MasterData.SupplierPortalUser>>();
+        services.AddScoped<Proc.Infrastructure.Portal.PortalTokenService>();
+        services.AddScoped<Proc.Infrastructure.Portal.SupplierPortalService>();
+        services.AddScoped<Proc.Application.Portal.ISupplierPortalAccountService>(
+            sp => sp.GetRequiredService<Proc.Infrastructure.Portal.SupplierPortalService>());
+        services.AddScoped<Proc.Application.Portal.IPortalAuthService>(
+            sp => sp.GetRequiredService<Proc.Infrastructure.Portal.SupplierPortalService>());
+
         // Health check thực sự mở kết nối tới CSDL, không chỉ kiểm tra cấu hình.
         services.AddHealthChecks()
             .AddDbContextCheck<ProcDbContext>(DatabaseHealthCheckName);

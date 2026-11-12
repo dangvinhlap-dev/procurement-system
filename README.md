@@ -59,6 +59,7 @@ Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md
 6. (Tùy chọn) Gửi email thông báo qua SMTP của công ty: đặt `EMAIL_ENABLED=true`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`,
    `EMAIL_PASSWORD`, `EMAIL_FROM`, `EMAIL_APP_URL` (địa chỉ mở phần mềm) trong `.env`, rồi `docker compose up -d`.
    Nhắc quá hạn duyệt (phiếu chờ quá 1 ngày làm việc) chạy sẵn, không cần cấu hình; tắt bằng biến `ApprovalReminder__Enabled=false`.
+   Portal nhà cung cấp (`/ncc`) cần bật email để gửi mã OTP; địa chỉ trong link mời NCC đặt bằng `PORTAL_BASE_URL` (trống thì dùng `EMAIL_APP_URL`).
 
 **Nâng cấp lên bản mới** (xem CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó)
 1. Sao lưu trước: `docker compose exec backup sh -c 'pg_dump -Fc -f /backups/truoc-nang-cap.dump'`.

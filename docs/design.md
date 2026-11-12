@@ -2525,6 +2525,21 @@ tần suất, kiểm file (P1b); NCC tự cập nhật hồ sơ, đăng ký mớ
 báo giao hàng → XNH (P5); hóa đơn điện tử (P6a); trạng thái thanh toán (P6b); bảng giá, tin nhắn, thẻ điểm NCC (P7). NCC chỉ thấy dữ liệu
 của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiện nay.
 
+**Lát P1 – tài khoản NCC (đã làm 12/11/2026, bản 0.25.0).** Quy tắc tự đặt (chưa có trong biểu mẫu, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P1-1 | Tài khoản Portal là **bảng riêng** `SupplierPortalUser` (không phải người dùng nội bộ): thuộc một NCC, không công ty, không vai trò/quyền nội bộ. **Email là tên đăng nhập**, lưu chữ thường, **duy nhất toàn hệ thống** (một email chỉ thuộc một NCC). Trạng thái Đã mời → Đang dùng ↔ Đã khóa. |
+| P1-2 | Phòng CUVT (quyền mới `MasterData.Supplier.Portal`, vai trò mẫu NVCUVT) mời từ tab **Tài khoản Portal** của NCC → người được mời là **quản trị NCC**; quản trị NCC mời **người dùng con** trên Portal (Q11). Không mời NCC nội bộ, NCC danh sách đen. Quản trị NCC không tự khóa mình, không khóa / mở tài khoản quản trị (chỉ Phòng CUVT). |
+| P1-3 | **Link mời** dùng một lần, hiệu lực 7 ngày (`Portal:InviteValidHours`); gửi lại thì link cũ mất hiệu lực. Máy chủ chưa bật email thì người mời thấy link để tự chuyển. **Quên mật khẩu**: link đặt lại 60 phút, không báo email có tài khoản hay không. |
+| P1-4 | Đăng nhập **2 bước mỗi lần**: mật khẩu (chính sách như người dùng nội bộ: ≥ 8 ký tự, có chữ số, chữ thường; sai 5 lần khóa tạm 15 phút) + **OTP 6 số qua email** (10 phút, sai tối đa 5 lần/mã). Cần bật email (server thật). Mã trong link và OTP **chỉ lưu băm SHA-256** (`SupplierPortalCode`). |
+| P1-5 | Token Portal là JWT cùng khóa ký nhưng **audience riêng** (`Portal:Audience`, khác `Jwt:Audience`), hiệu lực 120 phút: token NCC không gọi được API nội bộ, token nội bộ không gọi được `/api/portal`. Mỗi request Portal kiểm lại tài khoản: **khóa, đổi mật khẩu** (dấu bảo mật đổi) hoặc **NCC vào danh sách đen** thì token cũ hết hiệu lực ngay. Mọi API Portal lấy NCC từ phiên, không nhận từ client. |
+| P1-6 | Đăng nhập, sai mật khẩu, khóa tạm, đổi mật khẩu của NCC ghi **nhật ký truy cập** với tên `ncc:<email>`; thay đổi tài khoản ghi AuditLog (mật khẩu che). |
+
+Trang `/ncc` (ngoài AppShell): đăng nhập, OTP, kích hoạt, quên / đặt lại mật khẩu, trang chủ (thông tin NCC + tài khoản), Người dùng (quản trị
+NCC), đổi mật khẩu. Migration `V0_25_0_TaiKhoanPortalNcc` (2 bảng mới; `Down()` xóa bảng – mất tài khoản Portal). Cấu hình `Portal:*`
+(docs/deploy-windows.md). Chưa làm ở P1: giới hạn tần suất theo IP, tên miền riêng, kiểm file (P1b); NCC tự sửa hồ sơ (P2).
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |

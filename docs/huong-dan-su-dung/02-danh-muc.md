@@ -92,6 +92,7 @@ Phân loại NCC (ví dụ Trong nước, Nhập khẩu, Nội bộ). Chỉ ng�
 | Sản phẩm/dịch vụ | Mặt hàng NCC bán: **mã hàng theo NCC**, **ĐVT mua**, MOQ, thời gian giao (ngày), NCC ưu tiên |
 | Mở rộng cho công ty | Bảng mọi công ty: Đang giao dịch / Ngừng giao dịch / Chưa mở rộng, mã NCC tại công ty, ngày bắt đầu |
 | Hồ sơ đính kèm | Giấy phép, hợp đồng, chứng chỉ… |
+| Tài khoản Portal | Người của NCC đăng nhập Portal nhà cung cấp: email, họ tên, vai trò, trạng thái, lần đăng nhập gần nhất (xem mục dưới) |
 | Thẩm định | Ý kiến thẩm định của thành viên chuyên môn |
 
 ### Trạng thái NCC
@@ -115,6 +116,25 @@ Một NCC bán cho nhiều công ty thì **không tạo NCC mới** mà mở r�
 4. Ngừng: **Ngừng giao dịch…**. Mở lại giữ mã và ngày công ty đã khai.
 
 Công ty thành viên cũng tự khai NCC mình mua được (quyền `MasterData.Supplier.Manage` tại công ty đó). NCC danh sách đen không mở rộng được.
+
+### Tài khoản Portal nhà cung cấp (từ bản 0.25.0)
+
+NCC vào **Portal nhà cung cấp** (trang `/ncc`, tách riêng phần mềm nội bộ) **qua lời mời** của Phòng Cung ứng vật tư:
+
+1. Mở NCC → tab **Tài khoản Portal** → **Mời quản trị NCC…**: nhập email (là tên đăng nhập), họ tên, chức vụ, điện thoại → **Mời**
+   (quyền `MasterData.Supplier.Portal` – vai trò mẫu Nhân viên Phòng CUVT có sẵn).
+2. Máy chủ gửi email có **link kích hoạt** (dùng một lần, hiệu lực 7 ngày). Máy chủ chưa bật email thì hộp thoại hiện link – bấm
+   **Sao chép link** rồi gửi cho NCC.
+3. NCC mở link, đặt mật khẩu (tối thiểu 8 ký tự, có chữ số và chữ thường) → **Kích hoạt**.
+4. Đăng nhập Portal hai bước: email + mật khẩu, rồi **mã xác nhận 6 số (OTP)** gửi qua email (hiệu lực 10 phút). Sai mật khẩu 5 lần
+   liên tiếp thì khóa tạm 15 phút. Quên mật khẩu: bấm **Quên mật khẩu?** trên trang đăng nhập.
+5. Người được Phòng CUVT mời là **quản trị NCC**: tự mời thêm người dùng của NCC mình (Portal → **Người dùng**), khóa / mở khóa người
+   dùng con. Mỗi email chỉ thuộc một NCC.
+
+Trong tab: **Gửi lại lời mời** (tài khoản chưa kích hoạt – link cũ mất hiệu lực), **Khóa** (người dùng bị đăng xuất ngay), **Mở khóa**.
+Không mời được NCC nội bộ (dùng phần mềm trực tiếp) và NCC danh sách đen; NCC vào danh sách đen thì mọi tài khoản Portal của NCC không
+đăng nhập được. Bản này Portal có: thông tin NCC, tài khoản, người dùng, đổi mật khẩu; báo giá online, xác nhận đơn, giao hàng, hóa đơn
+có ở các bản sau.
 
 ### NCC nội bộ
 

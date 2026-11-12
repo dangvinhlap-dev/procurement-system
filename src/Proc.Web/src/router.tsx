@@ -11,6 +11,17 @@ import { LoginPage } from './pages/LoginPage'
 import { NotificationPage } from './pages/NotificationPage'
 import { OpenLinkPage } from './pages/OpenLinkPage'
 import { MobileApprovalDetailPage, MobileApprovalListPage } from './pages/mobile/MobileApprovalPages'
+import {
+  PortalActivatePage,
+  PortalChangePasswordPage,
+  PortalForgotPasswordPage,
+  PortalHomePage,
+  PortalLayout,
+  PortalLoginPage,
+  PortalResetPasswordPage,
+  PortalUsersPage,
+  RequirePortal,
+} from './portal/PortalPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
@@ -246,6 +257,20 @@ export const router = createBrowserRouter([
         <CreatePurchaseOrderPreview />
       </RequireAuth>
     ),
+  },
+  // Portal nhà cung cấp (lát P1, design.md 19.5): phiên Portal riêng, không cần đăng nhập nội bộ, đứng ngoài AppShell.
+  {
+    path: '/ncc',
+    element: <PortalLayout />,
+    children: [
+      { index: true, element: <RequirePortal><PortalHomePage /></RequirePortal> },
+      { path: 'dang-nhap', element: <PortalLoginPage /> },
+      { path: 'kich-hoat', element: <PortalActivatePage /> },
+      { path: 'quen-mat-khau', element: <PortalForgotPasswordPage /> },
+      { path: 'dat-lai-mat-khau', element: <PortalResetPasswordPage /> },
+      { path: 'nguoi-dung', element: <RequirePortal adminOnly><PortalUsersPage /></RequirePortal> },
+      { path: 'doi-mat-khau', element: <RequirePortal><PortalChangePasswordPage /></RequirePortal> },
+    ],
   },
   // Trang duyệt gọn trên điện thoại (lát O2d): khung một cột riêng nên đứng ngoài AppShell. Không gắn quyền màn hình – chỉ hiện phiếu máy chủ
   // xác định là đang chờ chính người dùng duyệt, máy chủ kiểm tra lại quyền khi duyệt.

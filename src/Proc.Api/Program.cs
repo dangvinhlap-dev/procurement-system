@@ -67,7 +67,33 @@ builder.Services.AddOptions<JwtOptions>()
         $"Jwt:SigningKey phải dài ít nhất {JwtOptions.MinSigningKeyLength} ký tự (server thật đặt qua biến môi trường Jwt__SigningKey).")
     .ValidateOnStart();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+// Portal NCC (design.md 19.5, lát P1): token audience riêng. Mã OTP / link chỉ được trả trong response ở máy dev và test tự động.
+var exposePortalCodes = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+builder.Services.AddOptions<Proc.Infrastructure.Portal.PortalOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Portal.PortalOptions.Section))
+    .PostConfigure(o => o.ExposeCodesForTesting = o.ExposeCodesForTesting && exposePortalCodes)
+    .Validate(
+        o => !string.IsNullOrWhiteSpace(o.Audience)
+            && !string.Equals(o.Audience, builder.Configuration["Jwt:Audience"] ?? new JwtOptions().Audience, StringComparison.Ordinal),
+        "Portal:Audience không được trống và phải khác Jwt:Audience (token NCC không được dùng cho API nội bộ).")
+    .ValidateOnStart();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer()
+    .AddJwtBearer(Proc.Infrastructure.Portal.PortalClaims.Scheme);
+builder.Services.AddOptions<JwtBearerOptions>(Proc.Infrastructure.Portal.PortalClaims.Scheme)
+    .Configure<IOptions<JwtOptions>, IOptions<Proc.Infrastructure.Portal.PortalOptions>>((bearer, jwt, portal) =>
+    {
+        bearer.MapInboundClaims = false;
+        bearer.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = jwt.Value.Issuer,
+            // Chỉ nhận token Portal; token nội bộ (audience nội bộ) bị từ chối ở API Portal và ngược lại.
+            ValidAudience = portal.Value.Audience,
+            IssuerSigningKey = jwt.Value.CreateSecurityKey(),
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
     {
@@ -167,6 +193,7 @@ app.MapNotificationEndpoints();
 app.MapDocumentRegistryEndpoints();
 app.MapAttachmentEndpoints();
 app.MapAppraisalOpinionEndpoints();
+app.MapPortalEndpoints();
 
 // /api lạ trả 404 (không phải 401 do chính sách mặc định, cũng không rơi vào trang giao diện bên dưới).
 app.MapFallback("/api/{**path}", () => Results.NotFound()).AllowAnonymous();

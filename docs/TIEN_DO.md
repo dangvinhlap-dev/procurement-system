@@ -329,6 +329,26 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Kiểm tra cuối: build 0 cảnh báo, `dotnet test` 698/698, Playwright đủ bộ 138/138 (Playwright tự bật API Testing 5000 + Vite 5173).
     Người dùng giữ mặc định: DBN chỉ ô ghi chú (không tab Đính kèm), PRCW tính mua nội bộ là mua đúng quy định. **Đã merge.**
     Đợt 0.24.0 (Y6, Y7, X7) hoàn tất – chờ người dùng yêu cầu phát hành 0.24.0; sau đó các lát 0.25.0 (Portal P1, P1b, P3).
+- **Lát P1 – Portal NCC: tài khoản NCC (12/11/2026, nhánh `feature/p1-portal-tai-khoan-ncc`, bản 0.25.0)** – design.md 19.5 "Lát P1" (quy tắc
+  tự đặt P1-1…P1-6), ui-style.md 5f. Người dùng bảo "làm tiếp" → làm theo lộ trình 19.6.
+  Backend: Domain `SupplierPortalUser` (Đã mời / Đang dùng / Đã khóa, email duy nhất, khóa tạm, dấu bảo mật) + `SupplierPortalCode` (link mời,
+  đặt lại mật khẩu, OTP – chỉ lưu băm SHA-256); migration `V0_25_0_TaiKhoanPortalNcc`; `Infrastructure/Portal` (`PortalOptions` mục `Portal`,
+  `PortalTokenService` – JWT audience riêng, `SupplierPortalService`); scheme JWT "Portal" trong Program.cs (audience phải khác `Jwt:Audience`,
+  `ExposeCodesForTesting` chỉ Development/Testing); `CompanyScopeMiddleware` bỏ qua phiên Portal; endpoint `PortalEndpoints.cs`: nội bộ
+  `/api/suppliers/{id}/portal-users` (xem: SupplierView; mời/gửi lại/khóa/mở: quyền mới `MasterData.Supplier.Portal`, vai trò mẫu NVCUVT),
+  Portal `/api/portal/auth/*` (ẩn danh: invite, activate, login → OTP, verify-otp, forgot/reset-password) và `/api/portal/*` (me, change-password,
+  users – quản trị NCC; filter kiểm phiên mỗi request). Gửi email trực tiếp (OTP cần tới ngay); chưa bật email thì người mời thấy link.
+  Web: tab **Tài khoản Portal** trong ngăn kéo NCC (`SupplierPortalTab`), component dùng chung `PortalUserPanel`; trang `/ncc` (`src/portal/`:
+  đăng nhập 2 bước, kích hoạt, quên/đặt lại mật khẩu, trang chủ, Người dùng, đổi mật khẩu) – phiên Portal riêng (`proc.portal.session`), không
+  dùng `apiFetch` nội bộ. `DataGrid` thêm prop `onSelectRow`; `copyText` tách ra `utils/clipboard.ts`. Cấu hình: `Portal:*` (deploy-windows.md),
+  `PORTAL_BASE_URL` (docker-compose, .env.example, README). Hướng dẫn 02-danh-muc mục "Tài khoản Portal nhà cung cấp".
+  Test: domain `SupplierPortalUserTests` (5), tích hợp `SupplierPortalAccountTests` (2: mời → kích hoạt → OTP, token Portal/nội bộ không
+  dùng chéo, quyền; người dùng con, khóa / đổi mật khẩu làm token cũ hết hiệu lực, quên mật khẩu), e2e `supplier-portal.spec.ts` (tab NCC
+  ở mép dải tab: bấm bằng `dispatchEvent` – chuột Playwright lệch do cuộn dải tab). Kiểm tra: build 0 cảnh báo, `dotnet test` 711/711,
+  tsc, oxlint, `npm run build` qua; Playwright đủ bộ 137/139 – `field-help-catalog`, `suppliers` lỗi vì ngăn kéo vẽ sẵn mọi tab,
+  tiêu đề cột "Họ tên", "Trạng thái" của bảng Portal trùng nhãn ô form NCC → `DetailTab.lazy` (tab không có ô form chỉ vẽ khi mở), tab
+  Portal dùng `lazy`; chạy lại 4 spec NCC (field-help-catalog, suppliers, supplier-portal, supplier-links) qua 6/6. **Đã merge.**
+  Tiếp theo: P1b (hạ tầng Portal: giới hạn tần suất, tên miền riêng, kiểm file), P3 (báo giá online) – hoặc phát hành 0.24.0 khi người dùng yêu cầu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
