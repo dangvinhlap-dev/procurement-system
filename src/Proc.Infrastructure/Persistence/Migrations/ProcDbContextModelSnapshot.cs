@@ -6309,6 +6309,64 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqClarification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("AnsweredAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AnsweredBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AnsweredByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("AskedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AskedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("AskedByPortalUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Question")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("RfqId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnsweredBy");
+
+                    b.HasIndex("AskedByPortalUserId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("RfqId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("RfqClarification", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqDossierItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8697,6 +8755,36 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ConstructionProjectId", "CompanyId")
                         .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqClarification", b =>
+                {
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("AnsweredBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.MasterData.SupplierPortalUser", null)
+                        .WithMany()
+                        .HasForeignKey("AskedByPortalUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Sourcing.Rfq", null)
+                        .WithMany()
+                        .HasForeignKey("RfqId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

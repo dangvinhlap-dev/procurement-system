@@ -85,7 +85,31 @@ public sealed record PortalRfqDto(
 {
     /// <summary>Dung lượng tối đa một file báo giá (MB) theo cấu hình máy chủ (lát P3b-1).</summary>
     public int MaxFileSizeMb { get; init; } = 2;
+
+    /// <summary>Còn gửi câu hỏi làm rõ được (trước giờ hạn, chưa mở – lát P3b-2).</summary>
+    public bool CanAsk { get; init; }
+
+    /// <summary>Hỏi đáp NCC thấy: câu hỏi – trả lời của chính mình và thông báo làm rõ của bên mời, cũ trước (lát P3b-2).</summary>
+    public IReadOnlyList<PortalClarificationDto> Clarifications { get; init; } = [];
 }
+
+/// <summary>
+/// Một mục hỏi đáp NCC thấy trên Portal (lát P3b-2): câu hỏi của chính NCC (trả lời riêng, NCC khác không thấy) hoặc thông báo làm rõ công
+/// khai của bên mời. Không trả tên nhân viên nội bộ trả lời.
+/// </summary>
+/// <param name="Id">Mục hỏi đáp.</param>
+/// <param name="IsNotice">Thông báo làm rõ của bên mời (không có câu hỏi).</param>
+/// <param name="Question">Câu hỏi (null với thông báo).</param>
+/// <param name="AskedAt">Thời điểm hỏi.</param>
+/// <param name="AskedByEmail">Tài khoản Portal hỏi.</param>
+/// <param name="Answer">Câu trả lời / nội dung thông báo (null = chưa trả lời).</param>
+/// <param name="AnsweredAt">Thời điểm trả lời / đăng.</param>
+public sealed record PortalClarificationDto(
+    Guid Id, bool IsNotice, string? Question, DateTimeOffset? AskedAt, string? AskedByEmail, string? Answer, DateTimeOffset? AnsweredAt);
+
+/// <summary>NCC gửi câu hỏi làm rõ.</summary>
+/// <param name="Question">Câu hỏi (tối đa 2.000 ký tự).</param>
+public sealed record PortalAskRequest(string Question);
 
 /// <summary>Giá một dòng NCC nộp.</summary>
 /// <param name="RfqLineId">Dòng RFQ.</param>
@@ -132,6 +156,16 @@ public interface IPortalRfqService
     /// <exception cref="Common.NotFoundException">Khi RFQ không mời NCC này.</exception>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi hết hạn, đã mở, dữ liệu giá sai.</exception>
     Task<PortalRfqDto> SubmitAsync(PortalSession session, Guid id, PortalSubmitQuoteRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Gửi câu hỏi làm rõ (lát P3b-2) – chỉ khi còn nhận báo giá; người lập RFQ nhận thông báo.</summary>
+    /// <param name="session">Phiên Portal.</param>
+    /// <param name="id">RFQ.</param>
+    /// <param name="request">Câu hỏi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Chi tiết thư mời sau khi hỏi.</returns>
+    /// <exception cref="Common.NotFoundException">Khi RFQ không mời NCC này.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi hết hạn, đã mở, câu hỏi trống / quá dài.</exception>
+    Task<PortalRfqDto> AskAsync(PortalSession session, Guid id, PortalAskRequest request, CancellationToken cancellationToken);
 
     /// <summary>File báo giá NCC đã tải lên cho thư mời (lát P3b-1).</summary>
     /// <param name="session">Phiên Portal.</param>

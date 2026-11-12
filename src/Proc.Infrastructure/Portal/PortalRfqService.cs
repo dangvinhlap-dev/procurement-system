@@ -4,8 +4,11 @@ using Proc.Application.Documents;
 using Proc.Application.Portal;
 using Proc.Domain.Common;
 using Proc.Domain.MasterData;
+using Proc.Domain.Notifications;
+using Proc.Domain.Organization;
 using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Documents;
+using Proc.Infrastructure.Notifications;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Portal;
@@ -20,16 +23,41 @@ public sealed class PortalRfqService : IPortalRfqService
     private readonly ProcDbContext _db;
     private readonly IClock _clock;
     private readonly AttachmentService _attachments;
+    private readonly ICurrentUserScope _scope;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
     /// <param name="clock">Đồng hồ.</param>
     /// <param name="attachments">Kho file đính kèm (file báo giá Portal – lát P3b-1).</param>
-    public PortalRfqService(ProcDbContext db, IClock clock, AttachmentService attachments)
+    /// <param name="scope">Phạm vi người dùng nội bộ – phiên Portal không có người dùng nội bộ; chỉ dùng cho bộ sinh thông báo (lát P3b-2).</param>
+    public PortalRfqService(ProcDbContext db, IClock clock, AttachmentService attachments, ICurrentUserScope scope)
     {
         _db = db;
         _clock = clock;
         _attachments = attachments;
+        _scope = scope;
+    }
+
+    /// <inheritdoc />
+    public async Task<PortalRfqDto> AskAsync(PortalSession session, Guid id, PortalAskRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var rfq = await LoadAsync(session.SupplierId, id, cancellationToken);
+        var question = RfqClarification.Ask(
+            rfq, session.SupplierId, session.UserId, session.Email, request.Question, _clock.UtcNow, _clock.NowInVietnam());
+        _db.RfqClarifications.Add(question);
+
+        // Báo người lập RFQ (người trả lời chính); RFQ không rõ người lập thì báo mọi người có quyền lập RFQ tại công ty mời.
+        var publisher = new NotificationPublisher(_db, _scope, _clock);
+        List<Guid> receivers = rfq.CreatedBy is { } creator && await _db.Users.AnyAsync(u => u.Id == creator && u.IsActive, cancellationToken)
+            ? [creator]
+            : await publisher.UsersWithPermissionAsync(rfq.CompanyId, Permissions.Sourcing.RfqManage, null, null, cancellationToken);
+        var supplier = await _db.Suppliers.AsNoTracking().IgnoreQueryFilters().Where(s => s.Id == session.SupplierId)
+            .Select(s => s.Name).SingleOrDefaultAsync(cancellationToken);
+        publisher.Add(rfq.CompanyId, receivers, NotificationTypes.PortalQuestion, $"Câu hỏi làm rõ RFQ {rfq.No}",
+            $"{supplier}: {question.Question}", "RFQ", rfq.Id);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await ToDtoAsync(session.SupplierId, rfq, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -209,8 +237,17 @@ public sealed class PortalRfqService : IPortalRfqService
             "Cancelled" => "Bên mời đã hủy yêu cầu báo giá.",
             _ => "Bên mời đã mở báo giá – không nộp lại được.",
         };
+        // Hỏi đáp: câu hỏi – trả lời của chính NCC (riêng, bảo mật với NCC khác) và thông báo làm rõ công khai (người dùng chốt 12/11/2026).
+        var clarifications = await _db.RfqClarifications.AsNoTracking().IgnoreQueryFilters()
+            .Where(x => x.RfqId == rfq.Id && (x.SupplierId == supplierId || x.SupplierId == null))
+            .OrderBy(x => x.AskedAt ?? x.AnsweredAt).ThenBy(x => x.Id)
+            .Select(x => new PortalClarificationDto(x.Id, x.SupplierId == null, x.Question, x.AskedAt, x.AskedByEmail, x.Answer, x.AnsweredAt))
+            .ToListAsync(cancellationToken);
         return new PortalRfqDto(rfq.Id, rfq.No, companyName, rfq.Title, rfq.Date, rfq.DeadlineAt, rfq.Note, status, status == "Open", closedReason,
-            VatRates.All, lines, latest, history) { MaxFileSizeMb = _attachments.MaxFileSizeMb };
+            VatRates.All, lines, latest, history)
+        {
+            MaxFileSizeMb = _attachments.MaxFileSizeMb, CanAsk = status == "Open", Clarifications = clarifications,
+        };
     }
 
     /// <summary>

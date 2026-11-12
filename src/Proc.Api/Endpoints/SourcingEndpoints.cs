@@ -1,4 +1,4 @@
-using Proc.Api.Security;
+﻿using Proc.Api.Security;
 using Proc.Api.Validation;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
@@ -71,6 +71,16 @@ public static class SourcingEndpoints
             .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapGet("/{id:guid}/sealed-quotes", (Guid id, IRfqService s, CancellationToken ct) => s.GetSealedQuotesAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqViewSealed);
+        // Lát P3b-2: hỏi đáp làm rõ – xem theo quyền xem RFQ; trả lời (riêng NCC hỏi), đăng thông báo làm rõ (mọi NCC được mời) theo quyền lập RFQ.
+        rfq.MapGet("/{id:guid}/clarifications", (Guid id, IRfqClarificationService s, CancellationToken ct) => s.ListAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqView);
+        rfq.MapPost("/{id:guid}/clarifications", (Guid id, AnnounceClarificationRequest request, IRfqClarificationService s, CancellationToken ct) =>
+                s.AnnounceAsync(id, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
+        rfq.MapPost("/{id:guid}/clarifications/{clarificationId:guid}/answer", (
+                Guid id, Guid clarificationId, ReplyClarificationRequest request, IRfqClarificationService s, CancellationToken ct) =>
+                s.ReplyAsync(id, clarificationId, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapPost("/{id:guid}/recall", (Guid id, IRfqService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
         rfq.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))

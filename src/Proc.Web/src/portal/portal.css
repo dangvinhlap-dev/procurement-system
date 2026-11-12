@@ -191,3 +191,11 @@
   align-items: center;
   margin-top: var(--erp-gap);
 }
+
+/* Ô gửi câu hỏi làm rõ (lát P3b-2): ô chữ nhiều dòng + nút bên phải. */
+.erp-portal-qa-ask {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--erp-gap-sm);
+  margin-top: var(--erp-gap);
+}

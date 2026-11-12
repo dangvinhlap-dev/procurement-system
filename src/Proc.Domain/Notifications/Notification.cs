@@ -1,4 +1,4 @@
-using Proc.Domain.Common;
+﻿using Proc.Domain.Common;
 
 namespace Proc.Domain.Notifications;
 
@@ -34,6 +34,9 @@ public static class NotificationTypes
 
     /// <summary>Công ty bán đã xác nhận / từ chối đơn mua nội bộ – báo người lập PO (lát X7).</summary>
     public const string InternalSaleDecision = "InternalSaleDecision";
+
+    /// <summary>NCC gửi câu hỏi làm rõ RFQ trên Portal – báo người lập RFQ (lát P3b-2).</summary>
+    public const string PortalQuestion = "PortalQuestion";
 }
 
 /// <summary>

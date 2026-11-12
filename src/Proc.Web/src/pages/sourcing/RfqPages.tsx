@@ -4,12 +4,14 @@ import {
   CheckOutlined,
   CloseCircleOutlined,
   CloseOutlined,
+  CommentOutlined,
   DollarOutlined,
   EditOutlined,
   EyeOutlined,
   PaperClipOutlined,
   FileAddOutlined,
   FileProtectOutlined,
+  NotificationOutlined,
   RollbackOutlined,
   SaveOutlined,
   SendOutlined,
@@ -17,7 +19,7 @@ import {
   StopOutlined,
   UnlockOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Space, Table, Tag, TimePicker } from 'antd'
+import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Space, Spin, Table, Tag, TimePicker } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -30,10 +32,13 @@ import {
   rfqStatusLabels,
   rfqStatusTone,
   useRfq,
+  useRfqClarificationMutations,
+  useRfqClarifications,
   useRfqMutations,
   useRfqs,
   useSourcing,
   type Rfq,
+  type RfqClarification,
   type RfqDossierItem,
   type RfqListItem,
   type RfqSupplier,
@@ -61,6 +66,7 @@ import { approveContent, confirmReject, confirmSubmitWithPreview, confirmWithRea
 import { confirmApprove } from '../purchasing/approvalDialogs'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { DocNo } from '../../classic/DocNo'
+import { QaThread } from '../../classic/QaThread'
 import { confirmCancelChain } from '../purchasing/cancelChainDialog'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -208,6 +214,9 @@ export function RfqPage() {
   // Ý kiến thẩm định hồ sơ thầu (lát H1) – Hội đồng xem trước khi duyệt kết quả chọn thầu.
   const appraisalTabs = useAppraisalTab('Rfq', doc?.id)
   const appraisals = useAppraisals('Rfq', doc?.id).data
+  // Hỏi đáp làm rõ với NCC trên Portal (lát P3b-2) – chỉ có sau khi gửi NCC.
+  const clarifications = useRfqClarifications(doc && doc.status !== 'Draft' ? doc.id : null)
+  const unanswered = (clarifications.data ?? []).filter((c) => !c.isNotice && !c.answer).length
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -827,6 +836,20 @@ export function RfqPage() {
           },
         ]
       : []),
+    ...(doc && doc.status !== 'Draft'
+      ? [
+          {
+            key: 'qa',
+            label: unanswered > 0 ? `Hỏi đáp NCC (${unanswered} chưa trả lời)` : `Hỏi đáp NCC (${clarifications.data?.length ?? 0})`,
+            children: (
+              // Trả lời, đăng thông báo được dù đầu phiếu đã khóa sau khi gửi NCC.
+              <ConfigProvider componentDisabled={false}>
+                <ClarificationView rfq={doc} items={clarifications.data ?? []} loading={clarifications.isFetching} />
+              </ConfigProvider>
+            ),
+          },
+        ]
+      : []),
     ...(doc
       ? [
           {
@@ -967,6 +990,115 @@ function dossierSummary(dossier: RfqDossierItem[]) {
   return missing.length === 0
     ? `Hồ sơ trình đủ ${dossier.length}/${dossier.length} mục.`
     : `Hồ sơ trình đủ ${dossier.length - missing.length}/${dossier.length} mục – còn thiếu: ${missing.map((d) => d.name.toLowerCase()).join(', ')}.`
+}
+
+/**
+ * Tab "Hỏi đáp NCC" (lát P3b-2 – design.md 19.5, P3-11…P3-14): câu hỏi NCC gửi trên Portal kèm NCC, người hỏi. Người có quyền lập RFQ trả
+ * lời từng câu – **chỉ NCC hỏi thấy** câu trả lời, NCC khác không thấy (người dùng chốt 12/11/2026); thông tin cần báo mọi NCC thì đăng
+ * **thông báo làm rõ** (không nêu NCC nào hỏi). Trả lời, đăng khi RFQ đang nhận báo giá (Đã gửi); trả lời một lần, không sửa.
+ * @param rfq RFQ đã tải.
+ * @param items Hỏi đáp, cũ trước.
+ * @param loading Đang tải.
+ */
+function ClarificationView({ rfq, items, loading }: { rfq: Rfq; items: RfqClarification[]; loading: boolean }) {
+  const { message } = App.useApp()
+  const { hasPermission } = useAuth()
+  const mutations = useRfqClarificationMutations()
+  const [dialog, setDialog] = useState<{ question: RfqClarification | null } | null>(null)
+  const [text, setText] = useState('')
+  const canWrite = hasPermission(Permission.RfqManage) && rfq.status === 'Sent'
+  const busy = mutations.answer.isPending || mutations.announce.isPending
+
+  const open = (question: RfqClarification | null) => {
+    setText('')
+    setDialog({ question })
+  }
+  const save = async () => {
+    const value = text.trim()
+    if (!value || !dialog) {
+      void message.warning(dialog?.question ? 'Hãy nhập câu trả lời.' : 'Hãy nhập nội dung thông báo.')
+      return
+    }
+    try {
+      if (dialog.question) {
+        await mutations.answer.mutateAsync({ rfqId: rfq.id, id: dialog.question.id, answer: value })
+        void message.success(`Đã trả lời ${dialog.question.supplierName ?? 'NCC'}.`)
+      } else {
+        await mutations.announce.mutateAsync({ rfqId: rfq.id, text: value })
+        void message.success('Đã đăng thông báo làm rõ cho mọi NCC được mời.')
+      }
+      setDialog(null)
+    } catch (e) {
+      void message.error(e instanceof Error ? e.message : 'Không lưu được.')
+    }
+  }
+
+  const byId = new Map(items.map((c) => [c.id, c]))
+  const threadItems = items.map((c) => ({
+    id: c.id,
+    isNotice: c.isNotice,
+    askedBy: c.isNotice ? null : `${c.supplierCode ?? ''} – ${c.supplierName ?? ''}${c.askedByEmail ? ` (${c.askedByEmail})` : ''}`,
+    askedAt: c.askedAt,
+    question: c.question,
+    answer: c.answer,
+    answeredAt: c.answeredAt,
+    answeredBy: c.answeredByName,
+  }))
+  return (
+    <div data-testid="rfq-qa" style={{ maxWidth: 1000 }}>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 8 }}
+        title="Câu trả lời chỉ gửi NCC đặt câu hỏi, NCC khác không thấy. Cần báo chung mọi NCC được mời thì đăng thông báo làm rõ (không nêu NCC nào hỏi)."
+      />
+      <Spin spinning={loading}>
+        <QaThread
+          items={threadItems}
+          emptyText="Chưa có câu hỏi nào của NCC."
+          action={(item) => {
+            const question = byId.get(item.id)
+            return canWrite && question && !question.isNotice && !question.answer ? (
+              <Button size="small" icon={<CommentOutlined />} onClick={() => open(question)}>
+                Trả lời…
+              </Button>
+            ) : null
+          }}
+        />
+      </Spin>
+      {canWrite && (
+        <div style={{ marginTop: 8 }}>
+          <Button icon={<NotificationOutlined />} onClick={() => open(null)}>
+            Đăng thông báo làm rõ…
+          </Button>
+        </div>
+      )}
+      <Modal
+        open={!!dialog}
+        title={dialog?.question ? `Trả lời câu hỏi – ${dialog.question.supplierName ?? ''}` : 'Đăng thông báo làm rõ cho mọi NCC được mời'}
+        okText={dialog?.question ? 'Gửi trả lời' : 'Đăng thông báo'}
+        cancelText="Đóng"
+        confirmLoading={busy}
+        onOk={() => void save()}
+        onCancel={() => setDialog(null)}
+        destroyOnHidden
+      >
+        {dialog?.question && <p style={{ whiteSpace: 'pre-wrap' }}>{dialog.question.question}</p>}
+        <Input.TextArea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={2000}
+          autoSize={{ minRows: 4, maxRows: 10 }}
+          aria-label={dialog?.question ? 'Câu trả lời' : 'Nội dung thông báo'}
+        />
+        <p style={{ marginTop: 4 }}>
+          {dialog?.question
+            ? 'Chỉ NCC hỏi thấy câu trả lời. Gửi rồi không sửa được – cần bổ sung thì đăng thông báo làm rõ.'
+            : 'Mọi NCC được mời thấy thông báo trên Portal. Đăng rồi không sửa, xóa được.'}
+        </p>
+      </Modal>
+    </div>
+  )
 }
 
 /**

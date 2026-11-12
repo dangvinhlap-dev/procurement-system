@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { DateInput } from '../classic/DateInput'
+import { QaThread } from '../classic/QaThread'
 import { Select } from '../classic/Select'
 import { DataGrid } from '../components/DataGrid/DataGrid'
 import type { GridColumn, StatusTone } from '../components/DataGrid/types'
@@ -352,6 +353,7 @@ export function PortalRfqPage() {
         </Form>
       </Section>
       <QuoteFiles rfq={data} />
+      <QuoteQuestions rfq={data} />
       {data.submissions.length > 0 && (
         <Section title="Biên nhận các lần nộp">
           <DataGrid
@@ -365,6 +367,82 @@ export function PortalRfqPage() {
         </Section>
       )}
     </>
+  )
+}
+
+/**
+ * Hỏi đáp làm rõ (lát P3b-2 – design.md 19.5, P3-11…P3-14): NCC gửi câu hỏi đến giờ hạn nộp; câu trả lời của bên mời **chỉ NCC hỏi thấy**,
+ * NCC khác không thấy câu hỏi lẫn câu trả lời; thông báo làm rõ của bên mời gửi mọi NCC được mời. Câu hỏi gửi rồi không sửa, xóa.
+ * @param rfq Thư mời đang xem.
+ */
+function QuoteQuestions({ rfq }: { rfq: PortalRfq }) {
+  const { message, modal } = App.useApp()
+  const queryClient = useQueryClient()
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const ask = () => {
+    const question = text.trim()
+    if (!question) {
+      void message.warning('Hãy nhập câu hỏi.')
+      return
+    }
+    modal.confirm({
+      title: 'Gửi câu hỏi',
+      content: 'Gửi câu hỏi cho bên mời? Câu hỏi gửi rồi không sửa, xóa được.',
+      okText: 'Gửi',
+      cancelText: 'Không',
+      onOk: async () => {
+        setBusy(true)
+        try {
+          const updated = await portalApi.ask(rfq.id, question)
+          queryClient.setQueryData(['portal', 'rfq', rfq.id], updated)
+          setText('')
+          void message.success('Đã gửi câu hỏi.')
+        } catch (e) {
+          void message.error(e instanceof Error ? e.message : 'Không gửi được câu hỏi.')
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
+  }
+
+  const items = rfq.clarifications.map((c) => ({
+    id: c.id,
+    isNotice: c.isNotice,
+    askedBy: c.askedByEmail,
+    askedAt: c.askedAt,
+    question: c.question,
+    answer: c.answer,
+    answeredAt: c.answeredAt,
+  }))
+  return (
+    <Section title={`Hỏi đáp với bên mời (${items.length})`}>
+      <div data-testid="portal-qa">
+        <QaThread items={items} emptyText="Chưa có câu hỏi hoặc thông báo làm rõ nào." />
+      </div>
+      {rfq.canAsk && (
+        <div className="erp-portal-qa-ask">
+          <Input.TextArea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={2000}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+            placeholder="Câu hỏi làm rõ về yêu cầu báo giá (quy cách, số lượng, giao hàng…)"
+            aria-label="Câu hỏi"
+          />
+          <Button icon={<SendOutlined />} loading={busy} onClick={ask}>
+            Gửi câu hỏi
+          </Button>
+        </div>
+      )}
+      <p className="erp-portal-hint">
+        {rfq.canAsk
+          ? 'Câu trả lời chỉ công ty bạn thấy; nhà cung cấp khác không thấy câu hỏi của bạn. Không ghi giá chào trong câu hỏi – giá nộp ở phần báo giá để được niêm phong.'
+          : 'Đã hết hạn nộp hoặc bên mời đã mở báo giá – không gửi thêm câu hỏi được.'}
+      </p>
+    </Section>
   )
 }
 

@@ -145,6 +145,16 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   Gửi lại lời mời (vàng), Khóa (đỏ), Mở khóa (xanh) – thao tác trên dòng đang chọn (`DataGrid` prop `onSelectRow`). Tab ngăn kéo không có ô form (như "Tài khoản Portal") khai báo `lazy`
   (`DetailTab`) – chỉ vẽ khi mở, để tiêu đề cột không trùng nhãn ô form ở tab khác.
 
+## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
+
+- Component `src/classic/QaThread.tsx`, CSS `.erp-qa*` trong `classic-app.css`; dùng chung cho Portal ("Hỏi đáp với bên mời") và tab
+  "Hỏi đáp NCC" của RFQ. Mỗi mục là khung viền 1px `--erp-grid-line`, bo 0, không bóng.
+- Dải đầu mục nền `--erp-grid-head` (thông báo làm rõ nền `--erp-tab-bg`): loại ("Câu hỏi n" / "Thông báo làm rõ") đậm `--erp-title`, người,
+  giờ phông đơn cách `--erp-text-muted`; câu chưa trả lời có ô vuông `--erp-light-yellow` kèm chữ "Chưa trả lời"; nút thao tác (ví dụ
+  "Trả lời…") sát phải.
+- Câu trả lời thụt 24px, vạch trái 3px `--erp-subtotal`, nền `--erp-panel-bg`, dòng đầu "Trả lời – người – giờ" chữ `--erp-subtotal` đậm.
+- Khoảng cách viết thẳng 2/4/8px (biến `--erp-gap*` chỉ có trong `ClassicScreen`, không có trong `AppShell`).
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

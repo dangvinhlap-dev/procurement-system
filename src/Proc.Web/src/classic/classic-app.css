@@ -653,3 +653,72 @@ body.erp-col-resizing {
   font-family: var(--ant-font-family);
   color: var(--erp-text-muted);
 }
+
+/* Luồng hỏi đáp (QaThread – lát P3b-2, docs/ui-style.md mục 5g): khung viền 1px, dải đầu loại – người – giờ, không bóng, bo 0. */
+.erp-qa {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.erp-qa-item {
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-input-bg);
+}
+.erp-qa-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 2px 4px;
+  background: var(--erp-grid-head);
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+.erp-qa-item.is-notice .erp-qa-head {
+  background: var(--erp-tab-bg);
+}
+.erp-qa-kind {
+  font-weight: 700;
+  color: var(--erp-title);
+}
+.erp-qa-time {
+  font-family: Consolas, 'Courier New', monospace;
+  color: var(--erp-text-muted);
+}
+.erp-qa-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+}
+.erp-qa-pending > i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--erp-light-yellow);
+  border: 1px solid var(--erp-btn-border);
+}
+.erp-qa-action {
+  margin-left: auto;
+}
+.erp-qa-text {
+  padding: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.erp-qa-answer {
+  margin: 0 4px 4px 24px;
+  border-left: 3px solid var(--erp-subtotal);
+  background: var(--erp-panel-bg);
+}
+.erp-qa-answer-head {
+  padding: 2px 4px 0;
+  font-weight: 700;
+  color: var(--erp-subtotal);
+}
+.erp-qa-empty {
+  margin: 0;
+  color: var(--erp-text-muted);
+}
