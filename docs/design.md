@@ -725,7 +725,7 @@ Dạng **danh sách + ngăn kéo (drawer) chi tiết**: lưới có lọc, tìm 
 | Quy tắc | Lý do |
 | --- | --- |
 | Thư viện **PDFsharp-MigraDoc 6.2.4, giấy phép MIT** – ghim cố định: từ 6.5.0 PDFsharp đổi sang AGPL-3.0 (ràng buộc công khai mã nguồn), trái quy định chỉ dùng thư viện không ràng buộc license; không dùng QuestPDF (miễn phí có điều kiện doanh thu). Gói phụ `System.Security.Cryptography.Pkcs` tham chiếu bản đã vá lỗ hổng | CLAUDE.md mục 2 |
-| In được: đơn mua hàng (PO – "ĐƠN ĐẶT HÀNG" gửi NCC), đề nghị mua hàng (PR – từ lát Y10 in theo biểu mẫu CUVT 1A/1B, mục 19.3), bảng tổng hợp 2A/2B (`/api/purchase-summaries/{id}/pdf`), phiếu nhập mua (GRN), xuất trả NCC (RTV), chuyển kho (TRF – không in cột tiền), xuất bán nội bộ (ICS), nhập mua nội bộ (ICR). API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`; quyền như xem phiếu (`Purchase.PO.View`, `Purchase.PR.View`, `Inventory.Document.View`); dữ liệu đọc qua dịch vụ xem phiếu nên phiếu ngoài phạm vi công ty/kho báo không tìm thấy | Không có đường vòng qua phạm vi (mục 9.2) |
+| In được: đơn mua hàng (PO – từ lát Y7 mặc định bảng theo dõi mua hàng **4A/4B**, `?form=supplier` in "ĐƠN ĐẶT HÀNG" gửi NCC), đề nghị mua hàng (PR – từ lát Y10 in theo biểu mẫu CUVT 1A/1B, mục 19.3), bảng tổng hợp 2A/2B (`/api/purchase-summaries/{id}/pdf`), phiếu nhập mua (GRN), xuất trả NCC (RTV), chuyển kho (TRF – không in cột tiền), xuất bán nội bộ (ICS), nhập mua nội bộ (ICR). API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`; quyền như xem phiếu (`Purchase.PO.View`, `Purchase.PR.View`, `Inventory.Document.View`); dữ liệu đọc qua dịch vụ xem phiếu nên phiếu ngoài phạm vi công ty/kho báo không tìm thấy | Không có đường vòng qua phạm vi (mục 9.2) |
 | Khuôn chung A4 dọc: tên, địa chỉ, MST công ty; tên phiếu, số, ngày; thông tin phiếu; bảng dòng (tiêu đề cột lặp lại khi sang trang); tiền hàng, chiết khấu, thuế GTGT, tổng thanh toán; **số tiền bằng chữ** (làm tròn đồng; "không trăm", "lẻ", "mốt", "lăm" theo cách đọc chứng từ kế toán); ghi chú; ô ký tên theo loại phiếu (tên người lập, người duyệt in sẵn); chân trang "Số phiếu – Trang x/y". Phiếu chưa có hiệu lực in dòng đỏ "BẢN NHÁP – chưa duyệt / chưa ghi sổ", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" | Tránh dùng nhầm bản nháp |
 | Phông: Arial (Windows), DejaVu Sans hoặc Liberation Sans (Linux – image Docker cài `fonts-dejavu-core`); thêm thư mục ở `Printing:FontDirectories`. Phông nhúng vào file PDF. Không tìm thấy phông thì báo lỗi tiếng Việt hướng dẫn cài | Image .NET không có phông; cần đủ dấu tiếng Việt |
 | Giao diện: khuôn `DocumentForm` có nút "In phiếu" (Ctrl+P) khi phiếu đã lưu, mở PDF ở tab mới để xem, in, lưu file. Chưa làm: gửi PDF qua email cho NCC | Mục 10.1 |
@@ -2247,7 +2247,7 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
 - **Lũy kế đã mua** của công trình = tổng dòng PO **đã duyệt hoặc đã đóng** lấy dòng từ đề nghị loại A của công trình, **giá chưa VAT** (sau
   chiết khấu), hiện thêm số **gồm VAT** (Q4); **Còn lại** = dự toán hiện hành − lũy kế (âm = đã vượt). PO nháp / chờ duyệt / đã hủy không tính;
   PO không lấy dòng từ đề nghị loại A **không tính vào công trình nào** (vì mọi khoản mua công trình phải qua đề nghị A). PO đã đóng phần còn
-  lại vẫn tính đủ giá trị đã duyệt (tự đặt – điều chỉnh khi làm 4A/4B, lát Y7).
+  lại vẫn tính đủ giá trị đã duyệt (tự đặt; lát Y7 giữ nguyên – lũy kế là cam kết đã duyệt, khớp số in trên 4A/4B).
 - Đầu đề nghị loại A hiện khung **dự toán – lũy kế (gồm VAT) – còn lại**; phiếu nháp / chờ duyệt cộng thêm tổng dự kiến của chính phiếu, vượt
   dự toán thì **cảnh báo vàng, không chặn** (chặng duyệt vượt dự toán làm ở Y3c). Màn hình CTDT có cột Lũy kế đã mua, Lũy kế gồm VAT, Còn lại;
   ngăn kéo công trình hiện hai ô chỉ đọc. Danh sách đề nghị mua có cột Loại mua.
@@ -2380,7 +2380,7 @@ phát hành").**
   trình + tổng đề xuất (ghi chú biểu mẫu 2A), tổng tiền đề xuất; 2B phòng ban, định mức/dự trù (ngân sách tháng), lũy kế = PO đã duyệt trong
   tháng của bộ phận + tổng đề xuất (ghi chú biểu mẫu 2B, cùng cách tính 1B), tổng tiền đề xuất. Dòng bảng tổng hợp (DTO) thêm ngày lập và mục
   đích của đề nghị.
-- Chưa làm: **logo công ty** (công ty chưa có trường logo – làm khi có yêu cầu); mẫu 3a/3A/3B ở lát Y6 (dưới đây); 4A/4B, 5A/5B làm cùng các lát Y7, Y8.
+- Chưa làm: **logo công ty** (công ty chưa có trường logo – làm khi có yêu cầu); mẫu 3a/3A/3B ở lát Y6, 4A/4B ở lát Y7 (dưới đây); 5A/5B làm cùng lát Y8.
 
 **Lát Y6 – so sánh 3A / trình giá 3a, 3B (0.24.0, Q7).** Quy tắc (tự đặt khi chưa chốt riêng, người dùng "làm tiếp" 12/11/2026):
 
@@ -2413,6 +2413,36 @@ phát hành").**
 - Form RFQ hiện ô chỉ đọc **"Loại mua – biểu mẫu"** (ví dụ "A – Công trình CT01 – Nhà xưởng · 3A so sánh chọn NCC") và "Lý do chọn (3A)".
 - Migration `V0_24_0_RfqBieuMau3` (Down mất loại mua, công trình, biểu mẫu, lý do chọn của RFQ và ngưỡng so sánh).
 - Chưa làm: logo công ty; tách bộ cấp duyệt riêng cho 3a/3A/3B (dùng chung bộ RFQ – làm khi có yêu cầu).
+
+**Lát Y7 – PO theo bảng theo dõi mua hàng 4A / 4B (0.24.0, Q10 "ký trước khi đặt hàng = duyệt PO").** Quy tắc (tự đặt, người dùng "làm tiếp"
+12/11/2026):
+
+- **Loại mua của PO** (`PurchaseOrder.Category`, `ConstructionProjectId`) tính lại mỗi lần lưu nháp theo dòng đề nghị nguồn – **cùng quy tắc RFQ**
+  (lát Y6): có dòng từ đề nghị **loại A** → PO loại A của công trình đó (**4A**); dòng đề nghị A phải **cùng một công trình** và **không trộn** với
+  dòng đề nghị B/DV (mỗi PO một khung chi phí, một biểu mẫu); dòng gõ tay đi được với cả hai loại; không có dòng đề nghị A → loại **B** (**4B**,
+  gồm dịch vụ). PO sinh từ kết quả chọn thầu, đặt hàng gộp đi qua cùng lệnh lưu nên cũng được tính. Migration `V0_24_0_PoBieuMau4` điền lại loại
+  A + công trình cho PO cũ có dòng từ đề nghị A (Down mất loại mua, công trình của PO – tính lại được).
+- Chuỗi duyệt PO **không đổi** (bộ cấp PO và các chặng ngoại lệ; mẫu CUVT TP CUVT → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch như bảng ở 19.3) –
+  duyệt PO chính là ký 4A/4B.
+- **In** (`GET /api/purchase-orders/{id}/pdf`, quyền xem PO, nút "In phiếu"/Ctrl+P): mặc định **"BẢNG THEO DÕI MUA HÀNG"** khổ ngang theo khuôn
+  `CuvtFormLayout`, nội dung `Printing/CuvtPoPrintForms.cs`; `?form=4A|4B` phải khớp loại mua của PO; `?form=supplier` in **đơn đặt hàng gửi NCC**
+  theo khuôn chung mục 10.10 (nút "In đơn gửi NCC" trên PO đã lưu, khi phiếu chỉ xem).
+  - Đầu phiếu 4A: tên công trình, phòng ban đề xuất (của công trình), định mức/dự trù ngân sách = **tổng dự toán**; 4B: tên hàng hóa (mục đích các
+    đề nghị nguồn; không có thì tên tối đa 3 mặt hàng "và N mặt hàng khác"), phòng ban đề xuất (bộ phận của các đề nghị nguồn nếu chỉ một; PO mua
+    thẳng lấy bộ phận đặt hàng), định mức = **ngân sách tháng** của bộ phận theo ngày PO; chưa có thì "Chưa khai báo".
+  - **Lũy kế số tiền đã mua = đã mua trước đây + đơn này** (ghi chú biểu mẫu: "ghi gộp số tiền đã mua trước đây + số tiền kèm theo đề xuất"):
+    đã mua trước đây cùng cách tính 1A / 1B (PO đã duyệt / đã đóng khác của công trình; PO đã duyệt khác trong tháng của bộ phận) **không gồm chính
+    đơn đang in** – in lại sau khi duyệt không tính trùng; đơn này cộng **cả đơn** (kể cả dòng gõ tay). **Số tiền còn lại** = định mức − lũy kế
+    (chưa VAT). Ví dụ dự toán 1.000.000, PO trước 285.000, đơn này 570.000 → lũy kế 855.000, còn lại 145.000.
+  - Cột: Stt, Tên hàng hóa - vật tư, Đặc điểm/quy cách (quy cách mặt hàng), ĐVT, Số lượng, **Đơn giá cũ gần nhất** (như 3a/3B: dòng PO đã duyệt
+    gần nhất cùng mặt hàng, ngày ≤ ngày PO, không tính chính PO, quy về ĐVT của dòng; không có ghi "Lần đầu"), **Đơn giá mới tăng** / **Đơn giá mới
+    bằng-giảm** (giá sau CK trước VAT ghi vào một trong hai cột so với giá cũ; mua lần đầu ghi cột bằng-giảm), Thành tiền, Tên NCC đã mua (kèm
+    điện thoại), Lũy kế, Còn lại – ba cột cuối **gộp ô dọc** như mẫu (bảng > 15 dòng thì chỉ ghi ở dòng đầu, vì ô gộp không tách sang trang).
+  - Dòng "Tổng chưa bao gồm VAT", "Thuế VAT 10%" (một thuế suất; nhiều thì "Thuế VAT"), "TỔNG CỘNG (BAO GỒM VAT)" – cột Thành tiền và Lũy kế (lũy kế
+    VAT = VAT đã mua trước + VAT đơn này); dưới bảng: bằng chữ, hình thức thanh toán, ngày giao dự kiến, địa điểm giao hàng; ghi chú PO.
+  - Ngày in = ngày PO; khối ký "Người lập" + các bước duyệt PO của lượt gần nhất; dòng đỏ "BẢN NHÁP", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" như mục 10.10.
+- Form PO hiện ô chỉ đọc **"Loại mua – biểu mẫu"** (ví dụ "A – Công trình CT01 – Nhà xưởng · 4A").
+- Chưa làm: logo công ty; NCC xác nhận đơn trên Portal (lát P4, 0.26.0).
 
 ### 19.4 Bỏ phân hệ kho
 

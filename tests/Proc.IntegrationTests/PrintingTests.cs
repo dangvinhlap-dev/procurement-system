@@ -73,9 +73,14 @@ public class PrintingTests
         var lines = Enumerable.Range(1, 60).Select(i => new SavePurchaseOrderLineRequest(null, item.Id, cai, i, 12_500, 5, "10", null, null, null)).ToList();
         var po = await ReadAsync<PurchaseOrderDto>(await client.PostAsJsonAsync("/api/purchase-orders",
             new SavePurchaseOrderRequest(Today, supplier.Id, kt, Today.AddDays(5), "30 ngày", "Giao tại kho", null, 0, "Giao giờ hành chính", lines), Ct));
-        var poPdf = await PdfAsync(await client.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct));
+        // Đơn gửi NCC (khuôn chung) – mặc định in bảng theo dõi 4A/4B (lát Y7, test riêng).
+        var poPdf = await PdfAsync(await client.GetAsync($"/api/purchase-orders/{po.Id}/pdf?form=supplier", Ct));
         Assert.Equal($"ĐƠN ĐẶT HÀNG {po.No}", poPdf.Info.Title);
         Assert.True(poPdf.PageCount >= 2, $"60 dòng phải sang trang, có {poPdf.PageCount} trang.");
+        // Bảng theo dõi 4B: quá 15 dòng thì cột NCC / lũy kế / còn lại không gộp dọc (ô gộp không tách trang) – vẫn sang trang được.
+        var trackPdf = await PdfAsync(await client.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct));
+        Assert.Equal($"BẢNG THEO DÕI MUA HÀNG {po.No}", trackPdf.Info.Title);
+        Assert.True(trackPdf.PageCount >= 2, $"60 dòng phải sang trang, có {trackPdf.PageCount} trang.");
 
         var pr = await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)],

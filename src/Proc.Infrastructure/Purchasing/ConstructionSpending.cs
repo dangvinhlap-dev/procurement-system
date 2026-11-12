@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
@@ -17,9 +17,12 @@ internal static class ConstructionSpending
     /// <param name="db">DbContext (đã lọc theo công ty đang làm việc).</param>
     /// <param name="projectIds">Các công trình cần tính.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="excludeOrderId">
+    /// Bỏ một PO khỏi lũy kế – bảng theo dõi 4A (lát Y7) tính "đã mua trước đây" không gồm chính đơn đang in, rồi cộng đơn đó vào sau.
+    /// </param>
     /// <returns>Công trình → (chưa VAT, tiền VAT); công trình chưa mua gì không có trong từ điển.</returns>
     public static async Task<Dictionary<Guid, (decimal Net, decimal Vat)>> ByProjectAsync(
-        ProcDbContext db, IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken)
+        ProcDbContext db, IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken, Guid? excludeOrderId = null)
     {
         if (projectIds.Count == 0) return [];
         var rows = await (
@@ -27,7 +30,7 @@ internal static class ConstructionSpending
                 join o in db.PurchaseOrders on ol.OrderId equals o.Id
                 join l in db.Set<PurchaseRequestLine>() on ol.SourcePrLineId equals l.Id
                 join r in db.PurchaseRequests on l.RequestId equals r.Id
-                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed) && o.Id != excludeOrderId
                       && r.Category == PurchaseCategory.Construction && r.ConstructionProjectId != null
                       && projectIds.Contains(r.ConstructionProjectId.Value)
                 group ol by r.ConstructionProjectId!.Value into g

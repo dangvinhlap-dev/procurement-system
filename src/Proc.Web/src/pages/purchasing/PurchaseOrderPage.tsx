@@ -1,10 +1,11 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { DollarOutlined, FileAddOutlined, FileDoneOutlined, InboxOutlined, WarningFilled } from '@ant-design/icons'
+import { DollarOutlined, FileAddOutlined, FileDoneOutlined, FilePdfOutlined, InboxOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Space, Table, Tooltip } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { apiOpenPdf } from '../../api/client'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useSupplierItemLookup, vatOptions } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
@@ -619,6 +620,21 @@ export function PurchaseOrderPage() {
     },
   ]
 
+  const [printingSupplier, setPrintingSupplier] = useState(false)
+
+  /** In đơn đặt hàng gửi NCC (khuôn chung: mã hàng, giá, CK, thuế, điều khoản giao) – nút "In phiếu" in bảng theo dõi 4A/4B. */
+  const printSupplierOrder = async () => {
+    if (!doc) return
+    setPrintingSupplier(true)
+    try {
+      await apiOpenPdf(`/api/purchase-orders/${doc.id}/pdf?form=supplier`)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Không in được đơn gửi NCC.')
+    } finally {
+      setPrintingSupplier(false)
+    }
+  }
+
   /** Trạng thái hồ sơ khẩn cấp hiện ở đầu phiếu (design.md mục 18.11). */
   const emergencyNotice =
     doc?.purchaseType === 'Emergency' && doc.status !== 'Draft' && doc.status !== 'Cancelled' ? (
@@ -694,6 +710,12 @@ export function PurchaseOrderPage() {
                 Đã bổ sung hồ sơ
               </Button>
             )}
+            {/* "In phiếu" in bảng theo dõi 4A/4B (biểu mẫu ký trước khi đặt hàng – lát Y7); đơn gửi NCC in riêng ở đây. */}
+            {doc && (
+              <Button icon={<FilePdfOutlined />} onClick={() => void printSupplierOrder()} loading={printingSupplier} title="In đơn đặt hàng gửi nhà cung cấp">
+                In đơn gửi NCC
+              </Button>
+            )}
             {/* Nhận hàng theo PO bằng phiếu XNH (lát K2, design.md mục 19.4) – PO đã duyệt, chưa nhận đủ. */}
             {doc?.status === 'Approved' && hasPermission(Permission.ReceiptManage) && (
               <Button icon={<InboxOutlined />} onClick={() => navigate(`/mua-hang/xac-nhan-nhan-hang/moi?po=${doc.id}`)}>
@@ -724,6 +746,15 @@ export function PurchaseOrderPage() {
                 }}
               />
             </Form.Item>
+            {doc && (
+              <Form.Item label="Loại mua – biểu mẫu" tooltip="Theo dòng đề nghị nguồn; lưu nháp thì tính lại. In phiếu ra bảng theo dõi mua hàng 4A/4B (design.md mục 19.3).">
+                <Input
+                  readOnly
+                  data-testid="po-form-code"
+                  value={doc.category === 'Construction' ? `A – Công trình ${doc.constructionProjectName ?? ''} · 4A` : 'B – Hàng hóa, dịch vụ · 4B'}
+                />
+              </Form.Item>
+            )}
             {purchaseType === 'Emergency' && (
               <>
                 <Form.Item label="Lý do khẩn cấp" name="emergencyReason" rules={[{ required: true, whitespace: true, message: 'Ghi lý do khẩn cấp.' }, { max: 500 }]}>

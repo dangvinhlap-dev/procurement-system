@@ -926,6 +926,16 @@ public sealed class PurchaseOrder : ApprovableDocument
     /// <summary>Loại mua (design.md mục 18.11).</summary>
     public PurchaseType PurchaseType { get; private set; } = PurchaseType.Normal;
 
+    /// <summary>
+    /// Loại mua theo biểu mẫu CUVT (lát Y7, design.md mục 19.3): <see cref="PurchaseCategory.Construction"/> khi có dòng lấy từ đề nghị loại A
+    /// (cùng một công trình) – in bảng theo dõi 4A; còn lại <see cref="PurchaseCategory.Goods"/> – gồm cả dịch vụ, vì nhóm B và DV cùng biểu
+    /// mẫu 4B. Tầng Application tính lại mỗi lần lưu nháp (như RFQ, lát Y6).
+    /// </summary>
+    public PurchaseCategory Category { get; private set; } = PurchaseCategory.Goods;
+
+    /// <summary>Công trình của PO loại A (null với loại B).</summary>
+    public Guid? ConstructionProjectId { get; private set; }
+
     /// <summary>Lý do mua khẩn cấp.</summary>
     public string? EmergencyReason { get; private set; }
 
@@ -1039,6 +1049,28 @@ public sealed class PurchaseOrder : ApprovableDocument
         DeliveryAddress = Clean(header.DeliveryAddress);
         ReceiveTolerancePct = header.ReceiveTolerancePct;
         Note = Clean(header.Note);
+    }
+
+    /// <summary>
+    /// Đặt loại mua theo dòng đề nghị nguồn (lát Y7, nháp): loại A phải có công trình; loại B không gắn công trình; dịch vụ ghi là B (cùng 4B).
+    /// </summary>
+    /// <param name="category">Loại mua.</param>
+    /// <param name="constructionProjectId">Công trình (chỉ loại A).</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc loại A thiếu công trình.</exception>
+    public void SetPurchaseCategory(PurchaseCategory category, Guid? constructionProjectId)
+    {
+        EnsureDraft();
+        if (category == PurchaseCategory.Construction)
+        {
+            if (constructionProjectId is null || constructionProjectId == Guid.Empty)
+                throw new BusinessRuleException("Đơn mua vật tư công trình (loại A) phải gắn một công trình.");
+            Category = category;
+            ConstructionProjectId = constructionProjectId;
+            return;
+        }
+
+        Category = PurchaseCategory.Goods;
+        ConstructionProjectId = null;
     }
 
     /// <summary>Thay toàn bộ dòng, tính lại tổng.</summary>

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Pricing;
@@ -100,6 +100,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var no = await _numbers.NextAsync(DocumentTypes.PurchaseOrder, request.Date, cancellationToken);
         var order = PurchaseOrder.Create(companyId, no, ToHeader(request, departmentId));
         order.SetLines(lines);
+        var (category, projectId) = await ResolveCategoryAsync(lines, cancellationToken);
+        order.SetPurchaseCategory(category, projectId);
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         _db.PurchaseOrders.Add(order);
@@ -118,6 +120,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var departmentId = await ResolveDepartmentAsync(request.DepartmentId, lines, order.DepartmentId, cancellationToken);
         order.Update(ToHeader(request, departmentId));
         order.SetLines(lines);
+        var (category, projectId) = await ResolveCategoryAsync(lines, cancellationToken);
+        order.SetPurchaseCategory(category, projectId);
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         await _db.SaveChangesAsync(cancellationToken);
@@ -584,6 +588,35 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     }
 
     /// <summary>
+    /// Loại mua của PO theo dòng đề nghị nguồn (lát Y7, design.md mục 19.3 – cùng quy tắc RFQ ở lát Y6): có dòng từ đề nghị <b>loại A</b> → PO
+    /// loại A của công trình đó (in bảng theo dõi 4A); dòng đề nghị A phải <b>cùng một công trình</b> và <b>không trộn</b> với dòng đề nghị
+    /// B/DV – mỗi PO in một biểu mẫu 4A hoặc 4B, lũy kế – còn lại tính theo một khung chi phí. Dòng gõ tay (ví dụ "Vận chuyển") đi được với cả
+    /// hai loại. Không có dòng đề nghị A → loại B (gồm dịch vụ).
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi trộn dòng đề nghị A với B/DV, hoặc dòng A thuộc nhiều công trình.</exception>
+    private async Task<(PurchaseCategory Category, Guid? ProjectId)> ResolveCategoryAsync(
+        IReadOnlyList<(PurchaseOrderLineData Data, Item Item)> lines, CancellationToken cancellationToken)
+    {
+        var prLineIds = lines.Select(l => l.Data.SourcePrLineId).OfType<Guid>().Distinct().ToList();
+        if (prLineIds.Count == 0) return (PurchaseCategory.Goods, null);
+        var used = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where prLineIds.Contains(l.Id)
+                select new { r.No, r.Category, r.ConstructionProjectId })
+            .Distinct().ToListAsync(cancellationToken);
+        var construction = used.Where(s => s.Category == PurchaseCategory.Construction).ToList();
+        if (construction.Count == 0) return (PurchaseCategory.Goods, null);
+        if (construction.Count < used.Count)
+            throw new BusinessRuleException(
+                $"Không gộp dòng đề nghị vật tư công trình (loại A, ví dụ {construction[0].No}) với dòng đề nghị hàng hóa / dịch vụ " +
+                $"({used.First(s => s.Category != PurchaseCategory.Construction).No}) trong một đơn mua – mỗi đơn in một biểu mẫu 4A hoặc 4B.");
+        if (construction.Select(s => s.ConstructionProjectId).Distinct().Count() > 1)
+            throw new BusinessRuleException("Các dòng đề nghị vật tư công trình của một đơn mua phải cùng một công trình.");
+        return (PurchaseCategory.Construction, construction[0].ConstructionProjectId);
+    }
+
+    /// <summary>
     /// Dòng lấy từ PR: PR phải đã duyệt, cùng công ty, cùng mặt hàng; tổng SL đặt (ĐVT cơ sở) trên các PO chưa hủy không vượt SL đề
     /// nghị (design.md mục 6.2 bước 2 – không đặt quá số được duyệt).
     /// </summary>
@@ -711,6 +744,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var createdBy = order.CreatedBy is { } uid
             ? await _db.Users.AsNoTracking().Where(u => u.Id == uid).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
             : null;
+        var project = order.ConstructionProjectId is { } projectId
+            ? await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId).Select(p => p.Code + " – " + p.Name).SingleOrDefaultAsync(cancellationToken)
+            : null;
 
         var lines = order.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
@@ -763,7 +799,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.DocsDueDate, order.DocsCompletedAt, docsCompletedBy, order.DocsCompletionNote, order.IsDocsOverdue(_clock.TodayInVietnam()),
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
-            order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason,
+            Category = order.Category.ToString(), ConstructionProjectId = order.ConstructionProjectId, ConstructionProjectName = project, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     /// <summary>Đổi yêu cầu lưu PO thành dữ liệu header cho Domain.</summary>

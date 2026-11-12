@@ -129,7 +129,11 @@ bấm **Đã bổ sung hồ sơ**; quá hạn thì PO bị gắn cờ quá hạn
 
 ### Sau khi duyệt
 
-- In PO (PDF, có mã hàng NCC) gửi NCC.
+- **In phiếu** (Ctrl+P) in **bảng theo dõi mua hàng 4A** (PO có dòng từ đề nghị loại A – công trình) hoặc **4B** (hàng hóa, dịch vụ), khổ
+  ngang: giá cũ gần nhất, giá mới ghi cột **tăng** hoặc **bằng–giảm**, lũy kế (đã mua trước đây + đơn này), còn lại theo dự toán / định mức;
+  khối ký là các bước duyệt PO. Ô **Loại mua – biểu mẫu** trên PO cho biết đơn in mẫu nào. PO không gộp dòng đề nghị loại A với dòng đề nghị
+  B/DV, và dòng loại A phải cùng một công trình.
+- **In đơn gửi NCC** (nút trên PO đã lưu): đơn đặt hàng PDF có mã hàng NCC, giá, chiết khấu, thuế, điều khoản giao – gửi NCC.
 - Thủ kho lập **phiếu nhập mua theo PO** (06 – Kho). PO tự chuyển **Đã nhận đủ** khi nhận đủ mọi dòng; bỏ ghi sổ phiếu nhập làm thiếu lại
   thì PO về Đã duyệt. Trả NCC trừ vào số đã nhận – PO đã nhận đủ mà trả lại thì mở lại để NCC giao bù.
 - **Đóng phần còn lại** (bắt buộc lý do): PO nhận thiếu thôi chờ hàng; ngân sách chỉ tính phần đã nhận.

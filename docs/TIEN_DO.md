@@ -301,6 +301,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   thêm bước In phiếu 3B, `system-parameters.spec` đếm 25 tham số. Kiểm tra: build 0 cảnh báo, `dotnet test` 692/692, tsc, oxlint,
   `npm run build`; Playwright đủ bộ 134/136 (API thử 5018 Testing + Vite 5193) – `volume-rebate-receipt` chập chờn chạy lại qua,
   `system-parameters` lỗi thật do thêm tham số (đã sửa, chạy lại qua). **Đã merge.** Tiếp theo: Y7 (PO theo 4A/4B), X7 (mua nội bộ qua PO).
+- **Lát Y7 – PO theo bảng theo dõi mua hàng 4A / 4B (12/11/2026, nhánh `feature/y7-po-bieu-mau-4`, bản 0.24.0)** – design.md 19.3 "Lát Y7", Q10.
+  PO có loại mua + công trình (`PurchaseOrder.Category`, `ConstructionProjectId`, migration `V0_24_0_PoBieuMau4` – điền lại PO cũ có dòng đề nghị
+  A) tính mỗi lần lưu nháp theo dòng đề nghị nguồn như RFQ: A cùng một công trình, không trộn với B/DV. In `GET /api/purchase-orders/{id}/pdf`
+  mặc định "BẢNG THEO DÕI MUA HÀNG" 4A/4B khổ ngang (`Printing/CuvtPoPrintForms.cs`): giá cũ gần nhất (hàm chung `LastPricesAsync` với 3a/3B),
+  giá mới cột tăng / bằng–giảm, NCC, lũy kế = đã mua trước đây (không gồm chính đơn – `ConstructionSpending`/`DepartmentSpending.MonthDetailAsync`
+  thêm tham số bỏ PO) + đơn này, còn lại theo dự toán / ngân sách tháng; ba cột cuối gộp ô dọc (`CuvtColumn.MergeRows`, bảng > 15 dòng không gộp).
+  `?form=supplier` in đơn gửi NCC (khuôn cũ) – nút "In đơn gửi NCC"; form PO ô "Loại mua – biểu mẫu". Hướng dẫn 03-mua-hang mục 3.4. Test: domain
+  `PurchaseOrderCategoryTests`, tích hợp `Po_LoaiMuaTheoDeNghi_BangTheoDoi4A_4B_LuyKeGomDonNay`, `PrintingTests` (đơn gửi NCC qua `?form=supplier`,
+  4B 60 dòng sang trang), e2e `po-print-4ab.spec.ts`. Build 0 cảnh báo, `dotnet test` 694/694 (lần đủ bộ 693 + test domain mới chạy riêng), tsc, oxlint,
+  `npm run build`; Playwright đủ bộ 137/137 (API Testing 5000 + Vite 5173 do Playwright tự bật). **Đã merge.** Tiếp theo: X7 (mua nội bộ qua PO).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

@@ -186,6 +186,12 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
         builder.Property(x => x.DocsCompletionNote).HasMaxLength(500);
         // Bộ phận đặt hàng (lát C1b – design.md mục 18.10).
         builder.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+        // Lát Y7: loại mua theo đề nghị nguồn (PO cũ là B = 2 – migration điền lại theo dòng đề nghị A), công trình cùng công ty (khóa ngoại
+        // kèm CompanyId như PR, RFQ).
+        builder.Property(x => x.Category).HasDefaultValue(PurchaseCategory.Goods).HasSentinel((PurchaseCategory)0);
+        builder.HasOne<ConstructionProject>().WithMany()
+            .HasForeignKey(x => new { x.ConstructionProjectId, x.CompanyId }).HasPrincipalKey(p => new { p.Id, p.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(x => x.DocumentNumber);
         builder.Ignore(x => x.ApprovalAmount);
         builder.Ignore(x => x.IsAwaitingApproval);

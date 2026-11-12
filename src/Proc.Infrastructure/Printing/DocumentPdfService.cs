@@ -63,7 +63,85 @@ public sealed class DocumentPdfService : IDocumentPdfService
     }
 
     /// <inheritdoc />
-    public async Task<PdfFile> PurchaseOrderAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<PdfFile> PurchaseOrderAsync(Guid id, string? form, CancellationToken cancellationToken)
+    {
+        var wanted = form?.Trim();
+        if (string.Equals(wanted, "supplier", StringComparison.OrdinalIgnoreCase)) return await SupplierOrderAsync(id, cancellationToken);
+        if (!string.IsNullOrEmpty(wanted) && wanted is not ("4A" or "4B"))
+            throw new BusinessRuleException("Mẫu in đơn mua hàng không hợp lệ (4A, 4B hoặc supplier).");
+
+        var form4 = await PurchaseOrderFormAsync(id, cancellationToken);
+        if (!string.IsNullOrEmpty(wanted) && wanted != form4.FormNo)
+            throw new BusinessRuleException($"Đơn {form4.No} in theo biểu mẫu {form4.FormNo} (theo loại mua của dòng đề nghị nguồn).");
+        return new PdfFile($"{form4.No}.pdf", CuvtFormLayout.Render(form4));
+    }
+
+    /// <summary>
+    /// Nội dung bảng theo dõi mua hàng 4A/4B của một PO (lát Y7): đọc PO theo phạm vi, số liệu khung chi phí (dự toán công trình / ngân sách
+    /// tháng của bộ phận), phần đã mua trước đây không gồm chính đơn này, giá cũ gần nhất của từng dòng.
+    /// </summary>
+    /// <param name="id">PO.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Biểu mẫu để dựng PDF.</returns>
+    /// <exception cref="NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    public async Task<CuvtForm> PurchaseOrderFormAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var po = await _orders.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var itemIds = po.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var specifications = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id, i => i.Specification, cancellationToken);
+        var phone = await _db.Suppliers.AsNoTracking().Where(s => s.Id == po.SupplierId).Select(s => s.Phone).SingleOrDefaultAsync(cancellationToken);
+        var lastPrices = await LastPricesAsync(
+            po.Lines.Select(l => (l.Id, l.ItemId, l.UomFactor)).ToList(), po.Date, [po.Id], cancellationToken);
+
+        // Đề nghị nguồn: bộ phận và mục đích (4B "Tên hàng hóa").
+        var prLineIds = po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList();
+        var requests = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where prLineIds.Contains(l.Id)
+                select new { r.Id, r.DepartmentId, r.Purpose })
+            .Distinct().ToListAsync(cancellationToken);
+
+        string? projectName = null, departmentName, goodsTitle = null;
+        decimal? budget;
+        (decimal Net, decimal Vat) past;
+        if (po.ConstructionProjectId is { } projectId)
+        {
+            // 4A: khung chi phí là tổng dự toán công trình; đã mua trước đây = PO đã duyệt khác của công trình (lũy kế 1A, Q4).
+            var project = await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId)
+                .Select(p => new { p.Name, p.EstimateAmount, p.DepartmentId }).SingleAsync(cancellationToken);
+            projectName = project.Name;
+            budget = project.EstimateAmount;
+            departmentName = await DepartmentNameAsync(project.DepartmentId, cancellationToken);
+            past = (await ConstructionSpending.ByProjectAsync(_db, [projectId], cancellationToken, po.Id)).GetValueOrDefault(projectId);
+        }
+        else
+        {
+            // 4B: bộ phận của các đề nghị nguồn (một bộ phận), không thì bộ phận đặt hàng của PO; định mức = ngân sách tháng theo ngày PO;
+            // đã mua trước đây = PO đã duyệt khác trong tháng của bộ phận (lũy kế 1B – người dùng chốt 12/11/2026).
+            var departments = requests.Select(r => r.DepartmentId).OfType<Guid>().Distinct().ToList();
+            Guid? department = departments.Count == 1 ? departments[0] : departments.Count == 0 ? po.DepartmentId : null;
+            departmentName = department is { } d ? await DepartmentNameAsync(d, cancellationToken) : null;
+            budget = department is { } bd
+                ? await _db.DepartmentBudgets.AsNoTracking().Where(b => b.DepartmentId == bd && b.Year == po.Date.Year && b.Month == po.Date.Month)
+                    .Select(b => (decimal?)b.Amount).FirstOrDefaultAsync(cancellationToken)
+                : null;
+            past = department is { } sd ? await DepartmentSpending.MonthDetailAsync(_db, sd, po.Date, po.Id, cancellationToken) : (0m, 0m);
+            var purposes = requests.Select(r => r.Purpose?.Trim()).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
+            var names = po.Lines.OrderBy(l => l.LineNo).Select(l => l.ItemName).Distinct().ToList();
+            goodsTitle = purposes.Count > 0 ? string.Join("; ", purposes)
+                : names.Count <= 3 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(3))} và {names.Count - 3} mặt hàng khác";
+        }
+
+        var context = new PoPrintContext(
+            company.Name, projectName, departmentName, goodsTitle, budget, past.Net, past.Vat, phone, specifications, lastPrices);
+        return CuvtPrintForms.PurchaseOrder(po, context);
+    }
+
+    /// <summary>Đơn đặt hàng gửi NCC theo khuôn chung (mục 10.10) – NCC cần mã hàng, giá, chiết khấu, thuế, điều khoản giao.</summary>
+    private async Task<PdfFile> SupplierOrderAsync(Guid id, CancellationToken cancellationToken)
     {
         var po = await _orders.GetAsync(id, cancellationToken);
         var approver = po.Approvals.LastOrDefault(a => a.Status == "Approved")?.ActedByName;
@@ -182,20 +260,8 @@ public sealed class DocumentPdfService : IDocumentPdfService
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => new RfqPrintSupplier(s.Address, s.Phone, existing.Contains(s.Id)), cancellationToken);
 
-        // Giá cũ đã mua gần nhất: dòng PO đã duyệt gần nhất (ngày PO ≤ ngày trình) cùng mặt hàng, giá sau CK trước VAT theo ĐVT cơ sở
-        // (= thành tiền / SL cơ sở), quy về ĐVT của dòng RFQ. Ví dụ PO 2 thùng (24 cái) thành tiền 1.200.000 → 50.000/cái; dòng RFQ ĐVT thùng 12 → 600.000.
         var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
-        var history = await (
-                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
-                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
-                where itemIds.Contains(ol.ItemId) && ol.BaseQty > 0 && o.Date <= date && !ownOrders.Contains(o.Id)
-                      && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
-                select new { ol.ItemId, o.Date, o.CreatedAt, ol.Amount, ol.BaseQty })
-            .ToListAsync(cancellationToken);
-        var lastBase = history.GroupBy(h => h.ItemId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(h => h.Date).ThenByDescending(h => h.CreatedAt).Select(h => h.Amount / h.BaseQty).First());
-        var lastPrices = rfq.Lines.Where(l => lastBase.ContainsKey(l.ItemId))
-            .ToDictionary(l => l.Id, l => Math.Round(lastBase[l.ItemId] * l.UomFactor, 2, MidpointRounding.AwayFromZero));
+        var lastPrices = await LastPricesAsync(rfq.Lines.Select(l => (l.Id, l.ItemId, l.UomFactor)).ToList(), date, ownOrders, cancellationToken);
         var itemVat = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.VatCode, cancellationToken);
 
         var context = new RfqPrintContext(
@@ -203,6 +269,34 @@ public sealed class DocumentPdfService : IDocumentPdfService
             rfq.Lines.ToDictionary(l => l.Id, l => itemVat.GetValueOrDefault(l.ItemId)));
         var forms = CuvtPrintForms.Rfq(rfq, context, form);
         return new PdfFile($"{rfq.No}.pdf", CuvtFormLayout.RenderMany(forms));
+    }
+
+    /// <summary>
+    /// Giá cũ đã mua gần nhất (mẫu 3a/3B, 4A/4B): dòng PO đã duyệt / đã đóng gần nhất (ngày PO ≤ <paramref name="date"/>) cùng mặt hàng, giá
+    /// sau CK trước VAT theo ĐVT cơ sở (= thành tiền / SL cơ sở), quy về ĐVT của dòng. Ví dụ PO 2 thùng (24 cái) thành tiền 1.200.000 →
+    /// 50.000/cái; dòng ĐVT thùng 12 → 600.000.
+    /// </summary>
+    /// <param name="lines">Dòng cần tra: Id dòng, mặt hàng, hệ số ĐVT của dòng.</param>
+    /// <param name="date">Ngày trình / ngày PO.</param>
+    /// <param name="excludeOrders">PO không tính (PO sinh từ chính RFQ, hoặc chính PO đang in).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Id dòng → giá cũ; dòng mua lần đầu không có trong từ điển.</returns>
+    private async Task<Dictionary<Guid, decimal>> LastPricesAsync(
+        IReadOnlyList<(Guid LineId, Guid ItemId, decimal UomFactor)> lines, DateOnly date, IReadOnlyList<Guid> excludeOrders,
+        CancellationToken cancellationToken)
+    {
+        var itemIds = lines.Select(l => l.ItemId).Distinct().ToList();
+        var history = await (
+                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where itemIds.Contains(ol.ItemId) && ol.BaseQty > 0 && o.Date <= date && !excludeOrders.Contains(o.Id)
+                      && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                select new { ol.ItemId, o.Date, o.CreatedAt, ol.Amount, ol.BaseQty })
+            .ToListAsync(cancellationToken);
+        var lastBase = history.GroupBy(h => h.ItemId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(h => h.Date).ThenByDescending(h => h.CreatedAt).Select(h => h.Amount / h.BaseQty).First());
+        return lines.Where(l => lastBase.ContainsKey(l.ItemId))
+            .ToDictionary(l => l.LineId, l => Math.Round(lastBase[l.ItemId] * l.UomFactor, 2, MidpointRounding.AwayFromZero));
     }
 
     /// <summary>Tên bộ phận (trong phạm vi công ty đang làm việc).</summary>

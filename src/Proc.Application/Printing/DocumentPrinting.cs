@@ -11,12 +11,17 @@ public sealed record PdfFile(string FileName, byte[] Content);
 /// </summary>
 public interface IDocumentPdfService
 {
-    /// <summary>In đơn mua hàng (gửi NCC).</summary>
+    /// <summary>
+    /// In đơn mua hàng: mặc định bảng theo dõi mua hàng theo biểu mẫu CUVT 4A (loại A) / 4B – biểu mẫu ký trước khi đặt hàng (lát Y7, khổ
+    /// ngang); <paramref name="form"/> = "supplier" in đơn đặt hàng gửi NCC (khuôn chung mục 10.10).
+    /// </summary>
     /// <param name="id">PO.</param>
+    /// <param name="form">"supplier" = đơn gửi NCC; null hoặc "4A"/"4B" = bảng theo dõi theo loại mua của PO.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
-    Task<PdfFile> PurchaseOrderAsync(Guid id, CancellationToken cancellationToken);
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi <paramref name="form"/> không hợp lệ.</exception>
+    Task<PdfFile> PurchaseOrderAsync(Guid id, string? form, CancellationToken cancellationToken);
 
     /// <summary>In đề nghị mua hàng theo biểu mẫu CUVT: loại A → 1A, loại B → 1B, dịch vụ → 1B không cột tồn (lát Y10).</summary>
     /// <param name="id">PR.</param>
