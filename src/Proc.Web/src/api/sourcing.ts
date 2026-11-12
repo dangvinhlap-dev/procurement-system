@@ -304,6 +304,18 @@ export interface Rfq {
   deadlineExtensionReason?: string | null
   /** Số NCC đã chào giá ít nhất một dòng. */
   quotedSupplierCount?: number
+  /** Loại mua (lát Y6): Construction = A công trình (theo dòng đề nghị nguồn), Goods = B hàng hóa / dịch vụ. */
+  category?: 'Construction' | 'Goods'
+  /** Công trình của RFQ loại A. */
+  constructionProjectId?: string | null
+  /** Mã – tên công trình. */
+  constructionProjectName?: string | null
+  /** Biểu mẫu kết quả 3A / 3a / 3B; null = loại A chưa chọn thầu (tùy giá trị trúng thầu so với ngưỡng). */
+  formCode?: string | null
+  /** Ngưỡng so sánh 3 NCC loại A của công ty (VND chưa VAT). */
+  comparisonThreshold?: number
+  /** Lý do chọn NCC (biểu mẫu 3A). */
+  selectionReason?: string | null
   /** Giá trị trúng thầu (sau CK, trước VAT) – xét ngưỡng duyệt. */
   awardAmount: number
   /** Người chọn thầu. */
@@ -390,9 +402,12 @@ export function useRfqMutations() {
       onSuccess,
     }),
     award: useMutation({
-      mutationFn: ({ id, lines, fewQuotesReason }: {
+      mutationFn: ({ id, lines, fewQuotesReason, selectionReason }: {
         id: string; lines: { rfqLineId: string; supplierId: string | null; reason: string | null }[]; fewQuotesReason?: string | null
-      }) => apiFetch<Rfq>(`/api/rfqs/${id}/award`, { method: 'POST', body: { lines, fewQuotesReason: fewQuotesReason ?? null } }),
+        selectionReason?: string | null
+      }) => apiFetch<Rfq>(`/api/rfqs/${id}/award`, {
+        method: 'POST', body: { lines, fewQuotesReason: fewQuotesReason ?? null, selectionReason: selectionReason ?? null },
+      }),
       onSuccess,
     }),
     // Gia hạn nhận báo giá có lý do (lát R7, design.md mục 18.26).

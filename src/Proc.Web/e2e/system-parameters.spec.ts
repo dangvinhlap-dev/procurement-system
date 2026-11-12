@@ -15,8 +15,10 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % m
   await expect(page.getByRole('heading', { name: 'Tham số hệ thống – DTV' })).toBeVisible()
   // 3 tham số sửa được (thêm % cảnh báo giá cao – mục 8.5) + 1 bật/tắt hồ sơ trình (mục 8.6) + 2 bật/tắt nhận hàng (mục 18.14)
   // + 1 bật/tắt nhập mua theo PO (lát R4 – mục 18.26) + 3 SLA mua hàng (mục 18.13) + 2 chỉ xem + 10 tham số KPI (mục 18.18)
-  // + 1 % biên độ phân bổ đặt hàng gộp (lát G7 – mục 18.25) + 1 bật/tắt duyệt NCC mới không qua hồ sơ HSN (lát G8 – mục 18.25).
-  await expect(page.locator('.data-grid-row')).toHaveCount(24)
+  // + 1 % biên độ phân bổ đặt hàng gộp (lát G7 – mục 18.25) + 1 bật/tắt duyệt NCC mới không qua hồ sơ HSN (lát G8 – mục 18.25)
+  // + 1 ngưỡng so sánh 3 NCC loại A (lát Y6 – mục 19.3, mặc định 0).
+  await expect(page.locator('.data-grid-row')).toHaveCount(25)
+  await expect(page.locator('.data-grid-row', { hasText: 'Ngưỡng so sánh 3 NCC' })).toContainText('0')
   await expect(page.locator('.data-grid-row', { hasText: '% biên độ phân bổ đặt hàng gộp' })).toContainText('10')
   await expect(page.locator('.data-grid-row', { hasText: 'Nhập mua bắt buộc theo đơn mua hàng' })).toContainText('Tắt')
   await expect(page.locator('.data-grid-row', { hasText: 'Bắt buộc đủ hồ sơ trình khi chọn thầu' })).toContainText('Tắt')

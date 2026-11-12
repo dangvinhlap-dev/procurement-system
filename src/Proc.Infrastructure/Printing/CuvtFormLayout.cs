@@ -44,10 +44,36 @@ public sealed record CuvtSigner(string Title, string? Name, string? Detail, stri
 /// <param name="Footnote">Dòng dưới bảng: trái, phải (ví dụ thời gian cần sử dụng – địa điểm giao hàng).</param>
 /// <param name="Note">Ghi chú phiếu.</param>
 /// <param name="Signers">Ô ký theo thứ tự chuỗi duyệt.</param>
+/// <param name="ExtraRows">Dòng tổng phụ sau dòng tổng (lát Y6); null = không có.</param>
+/// <param name="TotalLabel">Chữ của dòng tổng ("Tổng cộng"; mẫu 3a/3B là "Cộng").</param>
+/// <param name="AfterTable">Dòng chữ ngay dưới bảng (bằng chữ, hình thức thanh toán, đề xuất chọn…); null = không có.</param>
 public sealed record CuvtForm(
     string FormNo, string Title, IReadOnlyList<string> Subtitles, string CompanyName, string No, DateOnly Date, bool Landscape, string? StatusNote,
     IReadOnlyList<CuvtInfoLine> Info, IReadOnlyList<CuvtColumn> Columns, IReadOnlyList<string[]> Rows, int TotalSpan,
-    IReadOnlyList<string> TotalCells, (string? Left, string? Right) Footnote, string? Note, IReadOnlyList<CuvtSigner> Signers);
+    IReadOnlyList<string> TotalCells, (string? Left, string? Right) Footnote, string? Note, IReadOnlyList<CuvtSigner> Signers,
+    IReadOnlyList<CuvtExtraRow>? ExtraRows = null, string TotalLabel = "Tổng cộng", IReadOnlyList<CuvtTextLine>? AfterTable = null);
+
+/// <summary>Một ô của dòng tổng phụ dưới bảng (lát Y6).</summary>
+/// <param name="Text">Nội dung.</param>
+/// <param name="Span">Số cột gộp.</param>
+/// <param name="AlignRight">Căn phải (số tiền); không thì căn giữa.</param>
+public sealed record CuvtCell(string Text, int Span = 1, bool AlignRight = true);
+
+/// <summary>
+/// Dòng tổng phụ sau dòng tổng của bảng, ví dụ "Thuế VAT (10%)", "Tổng tiền bao gồm thuế", "Hình thức thanh toán" của mẫu 3a/3A/3B.
+/// </summary>
+/// <param name="Label">Nhãn ở các cột đầu.</param>
+/// <param name="LabelSpan">Số cột đầu gộp cho nhãn.</param>
+/// <param name="Cells">Các ô còn lại, tổng Span = số cột − LabelSpan.</param>
+/// <param name="FontSize">Cỡ chữ theo biểu mẫu (13 thường, 15 dòng "Tổng cộng").</param>
+/// <param name="Bold">In đậm.</param>
+public sealed record CuvtExtraRow(string Label, int LabelSpan, IReadOnlyList<CuvtCell> Cells, double FontSize = 13, bool Bold = false);
+
+/// <summary>Dòng chữ dưới bảng "Nhãn: nội dung" căn trái, ví dụ "Bằng chữ", "Hình thức thanh toán", "Đề xuất chọn".</summary>
+/// <param name="Label">Nhãn (in đậm).</param>
+/// <param name="Value">Nội dung.</param>
+/// <param name="Strong">In đậm nội dung.</param>
+public sealed record CuvtTextLine(string Label, string Value, bool Strong = false);
 
 /// <summary>
 /// Khuôn in theo biểu mẫu CUVT của công ty (lát Y10, design.md mục 10.10 và 19.1 Q13). Quy tắc lấy từ ghi chú trong file Excel biểu mẫu:
@@ -77,14 +103,34 @@ public static class CuvtFormLayout
     /// <summary>Dựng file PDF theo biểu mẫu.</summary>
     /// <param name="form">Nội dung phiếu.</param>
     /// <returns>Nội dung file PDF; tiêu đề tài liệu là "tên biểu mẫu + số phiếu".</returns>
-    public static byte[] Render(CuvtForm form)
+    public static byte[] Render(CuvtForm form) => RenderMany([form]);
+
+    /// <summary>
+    /// Dựng nhiều biểu mẫu vào một file PDF, mỗi biểu mẫu bắt đầu trang mới – ví dụ bảng trình giá 3a/3B của từng NCC trúng thầu (lát Y6).
+    /// </summary>
+    /// <param name="forms">Các biểu mẫu (ít nhất một).</param>
+    /// <returns>Nội dung file PDF; tiêu đề tài liệu theo biểu mẫu đầu.</returns>
+    /// <exception cref="ArgumentException">Khi danh sách rỗng.</exception>
+    public static byte[] RenderMany(IReadOnlyList<CuvtForm> forms)
     {
+        if (forms.Count == 0) throw new ArgumentException("Cần ít nhất một biểu mẫu.", nameof(forms));
         var document = new Document();
-        document.Info.Title = $"{form.Title} {form.No}";
+        document.Info.Title = $"{forms[0].Title} {forms[0].No}";
         var normal = document.Styles[StyleNames.Normal]!;
         normal.Font.Name = PdfFonts.SerifFamily;
         normal.Font.Size = Pt(13);
+        foreach (var form in forms) AddForm(document, form);
 
+        var renderer = new PdfDocumentRenderer { Document = document };
+        renderer.RenderDocument();
+        using var stream = new MemoryStream();
+        renderer.PdfDocument.Save(stream, false);
+        return stream.ToArray();
+    }
+
+    /// <summary>Một biểu mẫu là một section riêng (trang mới, hướng giấy riêng).</summary>
+    private static void AddForm(Document document, CuvtForm form)
+    {
         var section = document.AddSection();
         var setup = section.PageSetup;
         setup.PageFormat = PageFormat.A4;
@@ -105,6 +151,14 @@ public static class CuvtFormLayout
         AddTop(section, form, width);
         AddTitle(section, form);
         AddLines(section, form);
+        foreach (var line in form.AfterTable ?? [])
+        {
+            var p = section.AddParagraph();
+            p.Format.SpaceBefore = Unit.FromMillimeter(1);
+            p.AddFormattedText(line.Label + ": ", TextFormat.Bold);
+            if (line.Strong) p.AddFormattedText(line.Value, TextFormat.Bold);
+            else p.AddText(line.Value);
+        }
 
         if (form.Footnote.Left is not null || form.Footnote.Right is not null)
         {
@@ -126,12 +180,6 @@ public static class CuvtFormLayout
         }
 
         AddSigners(section, form, width);
-
-        var renderer = new PdfDocumentRenderer { Document = document };
-        renderer.RenderDocument();
-        using var stream = new MemoryStream();
-        renderer.PdfDocument.Save(stream, false);
-        return stream.ToArray();
     }
 
     /// <summary>Dòng đầu: tên công ty + số phiếu bên trái; số biểu mẫu cỡ 25 bên phải.</summary>
@@ -224,7 +272,8 @@ public static class CuvtFormLayout
             if (c > 0 && form.Columns[c - 1].Group == column.Group) continue;
             var span = 1;
             while (c + span < form.Columns.Count && form.Columns[c + span].Group == column.Group) span++;
-            top.Cells[c].AddParagraph(column.Group);
+            // Tiêu đề nhóm nhiều dòng (mẫu 3A: "NCC1: tên / Cũ, mới / Điện thoại") – mỗi dòng một đoạn.
+            foreach (var text in column.Group.Split('\n')) top.Cells[c].AddParagraph(text);
             top.Cells[c].MergeRight = span - 1;
         }
 
@@ -241,13 +290,31 @@ public static class CuvtFormLayout
         var total = table.AddRow();
         total.Format.Font.Bold = true;
         total.Format.Font.Size = Pt(15);
-        total.Cells[0].AddParagraph("Tổng cộng").Format.Alignment = ParagraphAlignment.Center;
+        total.Cells[0].AddParagraph(form.TotalLabel).Format.Alignment = ParagraphAlignment.Center;
         total.Cells[0].MergeRight = form.TotalSpan - 1;
         for (var i = 0; i < form.TotalCells.Count; i++)
         {
             var c = form.TotalSpan + i;
             total.Cells[c].AddParagraph(form.TotalCells[i]);
             total.Cells[c].Format.Alignment = Align(form.Columns[c]);
+        }
+
+        foreach (var extra in form.ExtraRows ?? [])
+        {
+            var row = table.AddRow();
+            row.Format.Font.Size = Pt(extra.FontSize);
+            row.Format.Font.Bold = extra.Bold;
+            row.Cells[0].AddParagraph(extra.Label).Format.Alignment = ParagraphAlignment.Center;
+            row.Cells[0].MergeRight = extra.LabelSpan - 1;
+            var c = extra.LabelSpan;
+            foreach (var cell in extra.Cells)
+            {
+                if (c >= form.Columns.Count) break;
+                row.Cells[c].AddParagraph(cell.Text);
+                row.Cells[c].Format.Alignment = cell.AlignRight ? ParagraphAlignment.Right : ParagraphAlignment.Center;
+                row.Cells[c].MergeRight = Math.Max(0, Math.Min(cell.Span, form.Columns.Count - c) - 1);
+                c += cell.Span;
+            }
         }
     }
 

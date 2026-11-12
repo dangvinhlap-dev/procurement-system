@@ -61,4 +61,14 @@ test('RFQ: gia hạn có lý do, chọn thầu khi ít báo giá phải giải t
   await expect(page.locator('.ant-message')).toContainText(`RFQ ${rfq.no}`)
   await expect(page.getByRole('alert').filter({ hasText: 'Hai NCC không phản hồi trong hạn' })).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/rfq-deadline.png' })
+
+  // Lát Y6: RFQ dòng gõ tay là loại B → biểu mẫu 3B (trình giá 1 NCC); "In phiếu" mở PDF bảng trình giá ở tab mới.
+  await expect(page.getByTestId('rfq-form-code')).toHaveValue(/B – Hàng hóa, dịch vụ · 3B/)
+  const pdf = page.waitForResponse((r) => r.url().endsWith(`/api/rfqs/${rfq.id}/pdf`))
+  const popup = page.waitForEvent('popup')
+  await page.getByRole('button', { name: 'In phiếu' }).click()
+  const pdfResponse = await pdf
+  expect(pdfResponse.status()).toBe(200)
+  expect(pdfResponse.headers()['content-type']).toContain('application/pdf')
+  await (await popup).close()
 })

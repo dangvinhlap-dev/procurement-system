@@ -2500,6 +2500,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<decimal>("RfqComparisonThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<int>("RfqMinSuppliers")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -6002,7 +6008,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("Category")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2);
+
                     b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConstructionProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -6030,6 +6044,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int?>("Form")
+                        .HasColumnType("integer");
+
                     b.Property<string>("No")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -6051,6 +6068,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("RejectReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SelectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("timestamp with time zone");
@@ -6089,6 +6110,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("CompanyId", "Status");
+
+                    b.HasIndex("ConstructionProjectId", "CompanyId");
 
                     b.ToTable("Rfq", null, t =>
                         {
@@ -8320,6 +8343,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Sourcing.SourcingRequest", null)
                         .WithMany()
                         .HasForeignKey("SourcingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Purchasing.ConstructionProject", null)
+                        .WithMany()
+                        .HasForeignKey("ConstructionProjectId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

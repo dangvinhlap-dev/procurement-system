@@ -5,6 +5,7 @@ using Proc.Application.Common;
 using Proc.Application.Inventory;
 using Proc.Application.Printing;
 using Proc.Application.Purchasing;
+using Proc.Application.Sourcing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Purchasing;
@@ -27,6 +28,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IPurchaseRequestService _requests;
     private readonly IInventoryDocumentService _inventory;
     private readonly IPurchaseSummaryService _summaries;
+    private readonly IRfqService _rfqs;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -35,10 +37,11 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="requests">Dịch vụ đề nghị mua hàng.</param>
     /// <param name="inventory">Dịch vụ chứng từ kho.</param>
     /// <param name="summaries">Dịch vụ bảng tổng hợp đề xuất mua.</param>
+    /// <param name="rfqs">Dịch vụ yêu cầu báo giá.</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
-        IPurchaseSummaryService summaries, IOptions<PrintingOptions> options)
+        IPurchaseSummaryService summaries, IRfqService rfqs, IOptions<PrintingOptions> options)
     {
         try
         {
@@ -56,6 +59,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _requests = requests;
         _inventory = inventory;
         _summaries = summaries;
+        _rfqs = rfqs;
     }
 
     /// <inheritdoc />
@@ -122,6 +126,88 @@ public sealed class DocumentPdfService : IDocumentPdfService
             : 0;
         return new PdfFile($"{summary.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent)));
     }
+
+    /// <inheritdoc />
+    public async Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken)
+    {
+        var rfq = await _rfqs.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var date = await _db.Rfqs.AsNoTracking().Where(r => r.Id == id).Select(r => r.AwardDate).SingleOrDefaultAsync(cancellationToken) ?? rfq.Date;
+
+        // Đề nghị nguồn: bộ phận và mục đích mua.
+        var prLineIds = rfq.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList();
+        var requests = await (
+                from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
+                join r in _db.PurchaseRequests on l.RequestId equals r.Id
+                where prLineIds.Contains(l.Id)
+                select new { r.Id, r.DepartmentId, r.Purpose })
+            .Distinct().ToListAsync(cancellationToken);
+        var purposes = requests.Select(r => r.Purpose?.Trim()).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
+        var purpose = purposes.Count == 0 ? null : string.Join("; ", purposes);
+
+        string? projectName = null, departmentName = null;
+        decimal? estimate = null, budget = null;
+        decimal spent;
+        if (rfq.ConstructionProjectId is { } projectId)
+        {
+            var project = await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId)
+                .Select(p => new { p.Name, p.EstimateAmount, p.DepartmentId }).SingleAsync(cancellationToken);
+            projectName = project.Name;
+            estimate = project.EstimateAmount;
+            departmentName = await DepartmentNameAsync(project.DepartmentId, cancellationToken);
+            spent = (await ConstructionSpending.ByProjectAsync(_db, [projectId], cancellationToken)).GetValueOrDefault(projectId).Net;
+        }
+        else
+        {
+            // Loại B: số liệu bộ phận chỉ in khi mọi dòng đề nghị cùng một bộ phận (RFQ gộp nhiều bộ phận thì không có một định mức chung).
+            var departments = requests.Select(r => r.DepartmentId).Distinct().ToList();
+            spent = 0;
+            if (departments is [{ } department])
+            {
+                departmentName = await DepartmentNameAsync(department, cancellationToken);
+                budget = await _db.DepartmentBudgets.AsNoTracking()
+                    .Where(b => b.DepartmentId == department && b.Year == date.Year && b.Month == date.Month)
+                    .Select(b => (decimal?)b.Amount).FirstOrDefaultAsync(cancellationToken);
+                spent = await DepartmentSpending.MonthAsync(_db, department, date, cancellationToken);
+            }
+        }
+
+        // NCC cũ = đã có PO đã duyệt với công ty (không tính PO sinh từ chính RFQ này).
+        var ownOrders = rfq.Suppliers.Select(s => s.PurchaseOrderId).OfType<Guid>().ToList();
+        var supplierIds = rfq.Suppliers.Select(s => s.SupplierId).ToList();
+        var existing = await _db.PurchaseOrders.AsNoTracking()
+            .Where(o => supplierIds.Contains(o.SupplierId) && !ownOrders.Contains(o.Id)
+                && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed))
+            .Select(o => o.SupplierId).Distinct().ToListAsync(cancellationToken);
+        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => new RfqPrintSupplier(s.Address, s.Phone, existing.Contains(s.Id)), cancellationToken);
+
+        // Giá cũ đã mua gần nhất: dòng PO đã duyệt gần nhất (ngày PO ≤ ngày trình) cùng mặt hàng, giá sau CK trước VAT theo ĐVT cơ sở
+        // (= thành tiền / SL cơ sở), quy về ĐVT của dòng RFQ. Ví dụ PO 2 thùng (24 cái) thành tiền 1.200.000 → 50.000/cái; dòng RFQ ĐVT thùng 12 → 600.000.
+        var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var history = await (
+                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where itemIds.Contains(ol.ItemId) && ol.BaseQty > 0 && o.Date <= date && !ownOrders.Contains(o.Id)
+                      && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                select new { ol.ItemId, o.Date, o.CreatedAt, ol.Amount, ol.BaseQty })
+            .ToListAsync(cancellationToken);
+        var lastBase = history.GroupBy(h => h.ItemId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(h => h.Date).ThenByDescending(h => h.CreatedAt).Select(h => h.Amount / h.BaseQty).First());
+        var lastPrices = rfq.Lines.Where(l => lastBase.ContainsKey(l.ItemId))
+            .ToDictionary(l => l.Id, l => Math.Round(lastBase[l.ItemId] * l.UomFactor, 2, MidpointRounding.AwayFromZero));
+        var itemVat = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.VatCode, cancellationToken);
+
+        var context = new RfqPrintContext(
+            company.Name, date, projectName, estimate, spent, departmentName, budget, purpose, suppliers, lastPrices,
+            rfq.Lines.ToDictionary(l => l.Id, l => itemVat.GetValueOrDefault(l.ItemId)));
+        var forms = CuvtPrintForms.Rfq(rfq, context, form);
+        return new PdfFile($"{rfq.No}.pdf", CuvtFormLayout.RenderMany(forms));
+    }
+
+    /// <summary>Tên bộ phận (trong phạm vi công ty đang làm việc).</summary>
+    private Task<string?> DepartmentNameAsync(Guid departmentId, CancellationToken cancellationToken) =>
+        _db.Departments.AsNoTracking().Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken);
 
     /// <inheritdoc />
     public async Task<PdfFile> InventoryDocumentAsync(Guid id, CancellationToken cancellationToken)

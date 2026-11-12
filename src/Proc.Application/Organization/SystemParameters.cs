@@ -6,6 +6,9 @@ public static class SystemParameterCodes
     /// <summary>Số NCC tối thiểu khi gửi RFQ – sửa được.</summary>
     public const string RfqMinSuppliers = "RFQ_MIN_SUPPLIERS";
 
+    /// <summary>Ngưỡng so sánh 3 NCC cho vật tư công trình (loại A) – sửa được (lát Y6, design.md mục 19.1 Q7).</summary>
+    public const string RfqComparisonThreshold = "RFQ_COMPARISON_THRESHOLD";
+
     /// <summary>Bắt buộc đủ hồ sơ trình mới chọn thầu (gửi duyệt kết quả) – bật/tắt (design.md mục 8.6).</summary>
     public const string RfqDossierRequired = "RFQ_DOSSIER_REQUIRED";
 
@@ -107,6 +110,11 @@ public interface ISystemParameterService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Giá trị tham số, hoặc mặc định nếu công ty chưa khai báo.</returns>
     Task<int> RfqMinSuppliersAsync(CancellationToken cancellationToken);
+
+    /// <summary>Ngưỡng so sánh 3 NCC loại A của công ty đang làm việc (VND chưa VAT; mặc định 0 – lát Y6).</summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Ngưỡng.</returns>
+    Task<decimal> RfqComparisonThresholdAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// % markup nội bộ mặc định của công ty đang làm việc (dùng gợi ý giá bán nội bộ).

@@ -127,6 +127,27 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         PoHighPriceWarnPercent = v;
     }
 
+    /// <summary>Giới hạn trên của ngưỡng so sánh 3 NCC (1.000 tỷ đồng) – lớn hơn gần như chắc chắn là gõ nhầm.</summary>
+    public const decimal MaxRfqComparisonThreshold = 1_000_000_000_000m;
+
+    /// <summary>
+    /// Ngưỡng so sánh 3 NCC cho vật tư công trình (loại A) – numeric(19,2), VND chưa VAT (lát Y6, design.md mục 19.1 Q7): RFQ loại A có giá
+    /// trị trúng thầu từ ngưỡng trở lên in biểu mẫu so sánh <b>3A</b> (bắt buộc lý do chọn), dưới ngưỡng in bảng trình giá 1 NCC <b>3a</b>.
+    /// Mặc định 0 = mọi RFQ loại A đều so sánh (an toàn nhất, đúng biểu mẫu khi chưa quyết ngưỡng).
+    /// </summary>
+    public decimal RfqComparisonThreshold { get; private set; }
+
+    /// <summary>Đổi ngưỡng so sánh 3 NCC loại A.</summary>
+    /// <param name="value">Số tiền mới (làm tròn đồng); null = về mặc định 0.</param>
+    /// <exception cref="BusinessRuleException">Khi âm hoặc quá <see cref="MaxRfqComparisonThreshold"/>.</exception>
+    public void ChangeRfqComparisonThreshold(decimal? value)
+    {
+        var v = Math.Round(value ?? 0m, 0, MidpointRounding.AwayFromZero);
+        if (v < 0 || v > MaxRfqComparisonThreshold)
+            throw new BusinessRuleException("Ngưỡng so sánh 3 NCC phải từ 0 đến 1.000.000.000.000 đồng.");
+        RfqComparisonThreshold = v;
+    }
+
     /// <summary>% biên độ phân bổ đặt hàng gộp mặc định (lát G7, design.md mục 18.25).</summary>
     public const decimal DefaultPooledMarginPercent = 10m;
 

@@ -2380,7 +2380,39 @@ phát hành").**
   trình + tổng đề xuất (ghi chú biểu mẫu 2A), tổng tiền đề xuất; 2B phòng ban, định mức/dự trù (ngân sách tháng), lũy kế = PO đã duyệt trong
   tháng của bộ phận + tổng đề xuất (ghi chú biểu mẫu 2B, cùng cách tính 1B), tổng tiền đề xuất. Dòng bảng tổng hợp (DTO) thêm ngày lập và mục
   đích của đề nghị.
-- Chưa làm: **logo công ty** (công ty chưa có trường logo – làm khi có yêu cầu); mẫu 3a/3A/3B, 4A/4B, 5A/5B làm cùng các lát Y6, Y7, Y8.
+- Chưa làm: **logo công ty** (công ty chưa có trường logo – làm khi có yêu cầu); mẫu 3a/3A/3B ở lát Y6 (dưới đây); 4A/4B, 5A/5B làm cùng các lát Y7, Y8.
+
+**Lát Y6 – so sánh 3A / trình giá 3a, 3B (0.24.0, Q7).** Quy tắc (tự đặt khi chưa chốt riêng, người dùng "làm tiếp" 12/11/2026):
+
+- **Loại mua của RFQ** (`Rfq.Category`, `ConstructionProjectId`) tính lại mỗi lần lưu nháp theo dòng đề nghị nguồn: có dòng lấy từ đề nghị
+  **loại A** → RFQ loại A của công trình đó; mọi dòng đề nghị A phải **cùng một công trình** và **không trộn** với dòng đề nghị B/DV (mỗi RFQ in
+  một biểu mẫu). Dòng gõ tay (ví dụ "Vận chuyển" trên mẫu 3A) đi được với cả hai loại. Không có dòng đề nghị A → loại **B** (gồm dịch vụ – cùng
+  biểu mẫu 3B). RFQ trước 0.24.0 là B.
+- **Biểu mẫu** (`Rfq.Form`) chốt lúc chọn thầu theo giá trị trúng thầu (chưa VAT) và tham số công ty **"Ngưỡng so sánh 3 NCC – vật tư công
+  trình (loại A)"** (`RFQ_COMPARISON_THRESHOLD`, màn hình Tham số hệ thống, nhóm Đấu thầu; mặc định **0** = mọi RFQ loại A là 3A): loại A ≥ ngưỡng
+  → **3A** "So sánh giá và chọn nhà cung cấp"; loại A dưới ngưỡng → **3a** "Bảng trình duyệt giá khách hàng" 1 NCC; loại B → **3B**. Ví dụ ngưỡng
+  50.000.000: trúng 64.000.000 → 3A; 30.000.000 → 3a. Bị từ chối / rút về rồi chọn lại thì tính lại.
+- **3A bắt buộc "Lý do chọn"** (`Rfq.SelectionReason`, ≤ 1.000 ký tự, mục 4 của mẫu) – hộp thoại hỏi khi bấm "Chọn thầu, gửi duyệt"; 3a/3B không bắt buộc.
+- **Giữ nguyên** quy tắc mời / chào giá tối thiểu số NCC (mục 8.6, lát B3, R7): trình giá 1 NCC vẫn làm được kèm giải trình ít báo giá (an toàn
+  nhất – không bỏ quy tắc cũ khi chưa có quyết định riêng). Chuỗi duyệt RFQ không đổi (bộ cấp RFQ, mẫu CUVT 5 cấp như bảng ở 19.3).
+- **In** (`GET /api/rfqs/{id}/pdf`, quyền xem RFQ, nút "In phiếu" khi đã có báo giá; `?form=3A` in bảng so sánh cho RFQ loại A), khổ ngang,
+  khuôn `CuvtFormLayout` (thêm dòng tổng phụ, dòng chữ dưới bảng, nhiều biểu mẫu một file), nội dung `Printing/CuvtRfqPrintForms.cs`:
+  - **3A**: phòng ban đề xuất (của công trình), định mức/tổng dự toán, mục đích mua (mục đích các đề nghị nguồn, không có thì tiêu đề RFQ); mỗi NCC
+    đã chào giá hai cột Đơn giá – Thành tiền (giá sau CK, chưa VAT), tiêu đề NCC ghi **cũ/mới** (cũ = đã có PO đã duyệt với công ty, không tính PO
+    sinh từ chính RFQ) và điện thoại; NCC trúng thầu đứng đầu. Dưới bảng: tổng chưa thuế, thuế VAT, tổng gồm thuế, hình thức thanh toán, thời gian
+    giao ("2 ngày sau khi đặt hàng" theo báo giá); "Đề xuất chọn" (NCC trúng – chia dòng thì ghi số dòng), "Lý do chọn", lý do không chọn giá thấp
+    nhất từng dòng. RFQ loại A chưa chọn thầu in 3A để xem trước.
+  - **3a / 3B**: mỗi NCC trúng thầu một trang (chưa chọn thầu: mỗi NCC đã chào giá); đầu phiếu 3a tên công trình, tổng dự toán; 3B tên hàng hóa
+    (tiêu đề RFQ), định mức/dự trù chi phí = ngân sách tháng của bộ phận (chỉ khi mọi dòng đề nghị cùng một bộ phận, không thì "Chưa khai báo");
+    **lũy kế số tiền đã mua** "chỉ số liệu quá khứ": 3a = PO đã duyệt của công trình, 3B = PO đã duyệt trong tháng của bộ phận (như 1A/1B); tên,
+    địa chỉ, điện thoại NCC. Cột **Giá cũ đã mua gần nhất** = dòng PO đã duyệt / đã đóng gần nhất (ngày PO ≤ ngày trình) cùng mặt hàng, giá sau CK
+    chưa VAT theo ĐVT cơ sở (thành tiền ÷ SL cơ sở) quy về ĐVT của dòng. Cộng – Thuế VAT (thuế suất báo giá, trống thì của mặt hàng; mỗi dòng làm
+    tròn đồng) – Tổng cộng, bằng chữ, hình thức thanh toán, ghi chú (báo giá + RFQ).
+  - Ngày in = ngày chọn thầu (chưa chọn thì ngày lập); khối ký "Người lập" (người chọn thầu) + các bước duyệt kết quả; dòng đỏ "CHƯA CHỌN THẦU",
+    "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" khi chưa có hiệu lực.
+- Form RFQ hiện ô chỉ đọc **"Loại mua – biểu mẫu"** (ví dụ "A – Công trình CT01 – Nhà xưởng · 3A so sánh chọn NCC") và "Lý do chọn (3A)".
+- Migration `V0_24_0_RfqBieuMau3` (Down mất loại mua, công trình, biểu mẫu, lý do chọn của RFQ và ngưỡng so sánh).
+- Chưa làm: logo công ty; tách bộ cấp duyệt riêng cho 3a/3A/3B (dùng chung bộ RFQ – làm khi có yêu cầu).
 
 ### 19.4 Bỏ phân hệ kho
 

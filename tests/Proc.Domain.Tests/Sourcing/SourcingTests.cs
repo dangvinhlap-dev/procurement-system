@@ -158,6 +158,58 @@ public class SourcingTests
     }
 
     [Fact]
+    public void BieuMau_TheoLoaiMuaVaNguong()
+    {
+        // Lát Y6 (design.md 19.1 Q7): loại A theo ngưỡng; ngưỡng 0 → mọi phiếu A là 3A; loại B, dịch vụ luôn 3B.
+        Assert.Equal(RfqForm.Comparison, RfqForms.For(PurchaseCategory.Construction, 64_000_000, 50_000_000));
+        Assert.Equal(RfqForm.Comparison, RfqForms.For(PurchaseCategory.Construction, 50_000_000, 50_000_000));
+        Assert.Equal(RfqForm.SingleQuote, RfqForms.For(PurchaseCategory.Construction, 30_000_000, 50_000_000));
+        Assert.Equal(RfqForm.Comparison, RfqForms.For(PurchaseCategory.Construction, 1, 0));
+        Assert.Equal(RfqForm.Goods, RfqForms.For(PurchaseCategory.Goods, 999_000_000, 0));
+        Assert.Equal(RfqForm.Goods, RfqForms.For(PurchaseCategory.Service, 1, 0));
+        Assert.Equal(("3A", "3a", "3B"), (RfqForms.Code(RfqForm.Comparison), RfqForms.Code(RfqForm.SingleQuote), RfqForms.Code(RfqForm.Goods)));
+    }
+
+    [Fact]
+    public void ChonThau_BieuMau3A_BatBuocLyDoChon_3a_3B_KhongBatBuoc()
+    {
+        var item = NewItem();
+        Guid a = Guid.CreateVersion7(), b = Guid.CreateVersion7(), c = Guid.CreateVersion7();
+        var rfq = Rfq.Create(Company, "RFQ-A", new RfqHeader(Today, "Xà gồ nhà tứ diện", Today.AddDays(7), null, RfqWeights.Default, null));
+        rfq.SetLines([(new RfqLineData(null, item.Id, Cai.Id, 100, null, null), item)]);
+        Assert.Throws<BusinessRuleException>(() => rfq.SetPurchaseCategory(PurchaseCategory.Construction, null));
+        var project = Guid.CreateVersion7();
+        rfq.SetPurchaseCategory(PurchaseCategory.Construction, project);
+        Assert.Equal((PurchaseCategory.Construction, project), (rfq.Category, rfq.ConstructionProjectId));
+        rfq.SetSuppliers([a, b, c]);
+        rfq.Send(DateTimeOffset.UtcNow, 3, null);
+        var header = new QuotationHeader(Today, null, "CK sau 7 ngày", 8, 8, 8, 8, null);
+        var line = rfq.Lines[0].Id;
+        rfq.SaveQuotation(a, header, [new(line, 300_000, 0, "10", 2, null)], Today);
+        rfq.SaveQuotation(b, header, [new(line, 306_364, 0, "10", 3, null)], Today);
+        rfq.SaveQuotation(c, header, [new(line, 305_455, 0, "10", 4, null)], Today);
+        var user = Guid.CreateVersion7();
+
+        // Trúng thầu 30.000.000 ≥ ngưỡng 20.000.000 → 3A, thiếu lý do chọn thì chặn và không ghi lựa chọn.
+        Assert.Contains("lý do chọn", Assert.Throws<BusinessRuleException>(() =>
+            rfq.Award([new(line, a, null)], user, Today, 3, null, 20_000_000m, " ")).Message);
+        Assert.Null(rfq.Lines[0].AwardedSupplierId);
+        rfq.Award([new(line, a, null)], user, Today, 3, null, 20_000_000m, " Giá tốt hơn, gồm vận chuyển ");
+        Assert.Equal((RfqForm.Comparison, "Giá tốt hơn, gồm vận chuyển"), (rfq.Form, rfq.SelectionReason));
+
+        // Ngưỡng 50.000.000 → 3a: không bắt buộc lý do chọn.
+        rfq.Award([new(line, a, null)], user, Today, 3, null, 50_000_000m);
+        Assert.Equal((RfqForm.SingleQuote, (string?)null), (rfq.Form, rfq.SelectionReason));
+
+        // Loại B: 3B.
+        var goods = SentRfq(item, a, b, c);
+        var cai = goods.Lines[0].Id;
+        goods.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null)], Today);
+        goods.Award([new(cai, a, null)], user, Today, 1, null);
+        Assert.Equal((PurchaseCategory.Goods, RfqForm.Goods), (goods.Category, goods.Form));
+    }
+
+    [Fact]
     public void ChonThau_KhongChonGiaThapNhatPhaiCoLyDo()
     {
         var item = NewItem();
