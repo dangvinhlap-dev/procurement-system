@@ -135,7 +135,7 @@ public sealed class AttachmentService : IAttachmentService
         // Người duyệt có thể không có quyền lập/sửa phiếu (ví dụ Trưởng ban chỉ duyệt) – file của bước duyệt chỉ cần quyền xem phiếu
         // nhưng phải là bước chính người đó vừa xử lý (design.md mục 20).
         var companyId = await RequireOwnerAsync(ownerType, ownerId, manage: !forApprovalStep, cancellationToken);
-        Attachment.ValidateFile(fileName, sizeBytes, _maxFileSizeMb);
+        var extension = Attachment.ValidateFile(fileName, sizeBytes, _maxFileSizeMb);
         Guid? approvalStepId = null;
         var addedAfterApproval = false;
         if (forApprovalStep) approvalStepId = await RecentActedStepAsync(ownerId, cancellationToken);
@@ -153,8 +153,11 @@ public sealed class AttachmentService : IAttachmentService
             await using (var file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             {
-                written = await CopyLimitedAsync(content, file, hash, _maxFileSizeMb, cancellationToken);
+                var header = new byte[FileSignature.HeaderLength];
+                (written, var headerLength) = await CopyLimitedAsync(content, file, hash, header, _maxFileSizeMb, cancellationToken);
                 sha256 = Convert.ToHexStringLower(hash.GetHashAndReset());
+                // Kiểm nội dung khớp đuôi, không phải file chạy được (lát P1b, design.md 19.5 P1b-3); lỗi thì khối catch xóa file tạm.
+                FileSignature.EnsureMatches(extension, fileName, header.AsSpan(0, headerLength));
             }
 
             var attachment = Attachment.Create(
@@ -387,23 +390,35 @@ public sealed class AttachmentService : IAttachmentService
         return full;
     }
 
-    /// <summary>Chép luồng, dừng khi vượt dung lượng tối đa (client có thể báo sai dung lượng).</summary>
-    private static async Task<long> CopyLimitedAsync(
-        Stream source, Stream target, IncrementalHash hash, int maxFileSizeMb, CancellationToken cancellationToken)
+    /// <summary>
+    /// Chép luồng, dừng khi vượt dung lượng tối đa (client có thể báo sai dung lượng); đồng thời giữ các byte đầu file vào
+    /// <paramref name="header"/> để kiểm chữ ký định dạng mà không phải đọc lại file.
+    /// </summary>
+    /// <returns>Tổng số byte đã chép và số byte đầu đã giữ.</returns>
+    private static async Task<(long Total, int HeaderLength)> CopyLimitedAsync(
+        Stream source, Stream target, IncrementalHash hash, byte[] header, int maxFileSizeMb, CancellationToken cancellationToken)
     {
         var maxBytes = Attachment.MegabytesToBytes(maxFileSizeMb);
         var buffer = new byte[81920];
         long total = 0;
+        var headerLength = 0;
         int read;
         while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
         {
             total += read;
             if (total > maxBytes) throw Attachment.TooLarge(maxFileSizeMb);
+            if (headerLength < header.Length)
+            {
+                var take = Math.Min(read, header.Length - headerLength);
+                Array.Copy(buffer, 0, header, headerLength, take);
+                headerLength += take;
+            }
+
             hash.AppendData(buffer, 0, read);
             await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
         }
 
-        return total;
+        return (total, headerLength);
     }
 
     /// <summary>Xóa file trên đĩa nếu có; lỗi xóa file không làm hỏng thao tác chính (file mồ côi dọn sau).</summary>

@@ -2525,7 +2525,7 @@ tần suất, kiểm file (P1b); NCC tự cập nhật hồ sơ, đăng ký mớ
 báo giao hàng → XNH (P5); hóa đơn điện tử (P6a); trạng thái thanh toán (P6b); bảng giá, tin nhắn, thẻ điểm NCC (P7). NCC chỉ thấy dữ liệu
 của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiện nay.
 
-**Lát P1 – tài khoản NCC (đã làm 12/11/2026, bản 0.25.0).** Quy tắc tự đặt (chưa có trong biểu mẫu, người dùng có thể chỉnh):
+**Lát P1 – tài khoản NCC (đã làm 12/11/2026, phát hành trong 0.24.0).** Quy tắc tự đặt (chưa có trong biểu mẫu, người dùng có thể chỉnh):
 
 | # | Quy tắc |
 | --- | --- |
@@ -2540,14 +2540,27 @@ Trang `/ncc` (ngoài AppShell): đăng nhập, OTP, kích hoạt, quên / đặt
 NCC), đổi mật khẩu. Migration `V0_25_0_TaiKhoanPortalNcc` (2 bảng mới; `Down()` xóa bảng – mất tài khoản Portal). Cấu hình `Portal:*`
 (docs/deploy-windows.md). Chưa làm ở P1: giới hạn tần suất theo IP, tên miền riêng, kiểm file (P1b); NCC tự sửa hồ sơ (P2).
 
+**Lát P1b – hạ tầng Portal (đã làm 12/11/2026, phát hành trong 0.24.0).** Quy tắc tự đặt (người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P1b-1 | **Giới hạn tần suất theo IP**, cửa sổ cố định 1 phút: `/api/portal/auth/*` (đăng nhập, OTP, kích hoạt, quên / đặt lại mật khẩu) **20** yêu cầu/phút/IP (`Portal:RateLimit:AuthPermitPerMinute`), API Portal khác **300**/phút/IP (`ApiPermitPerMinute`). Vượt thì **429** + `Retry-After` + "Quá nhiều yêu cầu… thử lại sau N giây", ghi log cảnh báo (IP, đường dẫn). API nội bộ không giới hạn. Khóa tạm theo tài khoản (P1-4) vẫn áp riêng. Sau reverse proxy phải bật forwarded headers để lấy IP thật. |
+| P1b-2 | **Tên miền riêng** (`Portal:Hosts`, nhiều tên cách dấu phẩy): vào bằng tên Portal chỉ mở được trang `/ncc…`, file tĩnh giao diện và `/api/portal/**`; API nội bộ, `/health`, `/openapi` trả **404** (không lộ phần nội bộ); `/` và trang khác **chuyển về `/ncc`**. Để trống (máy dev, chạy thử LAN – Q14) thì không giới hạn. Địa chỉ nội bộ vẫn mở được `/ncc` để thử. IIS: binding tên miền Portal trên IP công khai, binding nội bộ gắn IP LAN (docs/deploy-windows.md 3.5b). |
+| P1b-3 | **Kiểm file theo nội dung** cho **mọi file đính kèm** (nội bộ và Portal): byte đầu file phải khớp đuôi – PDF (`%PDF-` trong 1.024 byte đầu), docx/xlsx/pptx/zip (ZIP), doc/xls/ppt/msg (OLE), jpg, png, gif, bmp, tif, rar, 7z; txt/csv/xml/eml không có chữ ký riêng. File chạy được (exe/dll `MZ`, ELF, Mach-O, script `#!`) bị chặn **dù đổi đuôi**. Không khớp thì báo "Nội dung file … không đúng định dạng …" và không ghi file. Lưu ý: file .xls do phần mềm khác xuất thực chất là HTML sẽ bị từ chối – mở bằng Excel và lưu lại. Chưa quét virus (cần phần mềm diệt virus trên server – làm khi có yêu cầu). |
+| P1b-4 | **Cô lập dữ liệu NCC**: mọi API `/api/portal/**` trừ nhóm đăng nhập bắt buộc phiên Portal (scheme `Portal`, kiểm phiên mỗi request – P1-5) và lấy NCC từ phiên; API nội bộ không khai báo nhận token Portal. Test duyệt toàn bộ endpoint giữ quy tắc này cho các lát Portal sau. |
+| P1b-5 | Mọi phản hồi có tiêu đề bảo mật: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: same-origin` (link mời có mã không lộ sang trang khác). |
+| P1b-6 | **Máy chủ thử nghiệm** (bản test cho người dùng trong LAN, chưa có email): `Portal:TestServer` = true cùng `ExposeCodesForTesting` = true thì mã OTP / link đặt lại mật khẩu hiện trên màn hình Portal ("Môi trường thử – mã xác nhận"), log cảnh báo khi khởi động; **không được bật cùng `Portal:Hosts`** (ứng dụng từ chối khởi động). Server thật để false. |
+
+Không migration. Cấu hình `Portal:Hosts`, `Portal:RateLimit:*` (docs/deploy-windows.md; Docker `PORTAL_HOSTS`).
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
 | --- | --- | --- |
 | 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
-| 0.24.0 | Y6, Y7, X7 | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO |
-| 0.25.0 | P1, P1b, P3 | Portal: tài khoản NCC, hạ tầng, báo giá online |
+| 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
+| 0.25.0 | P3 | Portal: báo giá online |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
