@@ -18,7 +18,9 @@ public static class PrintingEndpoints
     /// <returns>Chính <paramref name="app"/>.</returns>
     public static IEndpointRouteBuilder MapPrintingEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/purchase-orders/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseOrderAsync(id, ct)))
+        // Lát Y7: mặc định bảng theo dõi mua hàng 4A/4B; form=supplier in đơn đặt hàng gửi NCC.
+        app.MapGet("/api/purchase-orders/{id:guid}/pdf",
+                async (Guid id, string? form, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseOrderAsync(id, form, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PoView);
         app.MapGet("/api/purchase-requests/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseRequestAsync(id, ct)))

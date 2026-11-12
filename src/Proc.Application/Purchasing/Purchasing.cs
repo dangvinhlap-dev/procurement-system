@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace Proc.Application.Purchasing;
 
@@ -446,6 +446,18 @@ public sealed record PurchaseOrderDto(
 
     /// <summary>Lý do hủy (lát R7).</summary>
     public string? CancelReason { get; init; }
+
+    /// <summary>Loại mua theo dòng đề nghị nguồn (lát Y7): "Construction" (A – in 4A) hoặc "Goods" (B, gồm dịch vụ – in 4B).</summary>
+    public string Category { get; init; } = "Goods";
+
+    /// <summary>Công trình của PO loại A.</summary>
+    public Guid? ConstructionProjectId { get; init; }
+
+    /// <summary>Mã – tên công trình của PO loại A.</summary>
+    public string? ConstructionProjectName { get; init; }
+
+    /// <summary>Biểu mẫu bảng theo dõi mua hàng khi in: "4A" (loại A) hoặc "4B".</summary>
+    public string FormCode => Category == "Construction" ? "4A" : "4B";
 }
 
 /// <summary>Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11).</summary>

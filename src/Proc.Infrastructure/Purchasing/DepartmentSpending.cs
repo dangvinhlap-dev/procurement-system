@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
@@ -19,19 +19,34 @@ public static class DepartmentSpending
     /// <param name="anyDayInMonth">Một ngày trong tháng cần tính (ngày phiếu).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Lũy kế đã mua chưa VAT (0 khi chưa có PO).</returns>
-    public static async Task<decimal> MonthAsync(ProcDbContext db, Guid departmentId, DateOnly anyDayInMonth, CancellationToken cancellationToken)
+    public static async Task<decimal> MonthAsync(ProcDbContext db, Guid departmentId, DateOnly anyDayInMonth, CancellationToken cancellationToken) =>
+        (await MonthDetailAsync(db, departmentId, anyDayInMonth, null, cancellationToken)).Net;
+
+    /// <summary>
+    /// Như <see cref="MonthAsync"/> nhưng trả cả tiền VAT và bỏ được một PO – bảng theo dõi 4B (lát Y7) tính "đã mua trước đây" không gồm
+    /// chính đơn đang in, rồi cộng đơn đó vào sau (ghi chú biểu mẫu: "ghi gộp số tiền đã mua trước đây + số tiền kèm theo đề xuất").
+    /// </summary>
+    /// <param name="db">DbContext (giữ bộ lọc phạm vi công ty).</param>
+    /// <param name="departmentId">Bộ phận.</param>
+    /// <param name="anyDayInMonth">Một ngày trong tháng cần tính.</param>
+    /// <param name="excludeOrderId">PO bỏ khỏi lũy kế; null = không bỏ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>(chưa VAT, tiền VAT); 0 khi chưa có PO.</returns>
+    public static async Task<(decimal Net, decimal Vat)> MonthDetailAsync(
+        ProcDbContext db, Guid departmentId, DateOnly anyDayInMonth, Guid? excludeOrderId, CancellationToken cancellationToken)
     {
         var monthStart = new DateOnly(anyDayInMonth.Year, anyDayInMonth.Month, 1);
         var nextMonth = monthStart.AddMonths(1);
-        return await (
+        var rows = await (
                 from ol in db.Set<PurchaseOrderLine>().AsNoTracking()
                 join o in db.PurchaseOrders on ol.OrderId equals o.Id
                 join l in db.Set<PurchaseRequestLine>() on ol.SourcePrLineId equals l.Id
                 join r in db.PurchaseRequests on l.RequestId equals r.Id
                 where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
-                      && o.Date >= monthStart && o.Date < nextMonth
+                      && o.Date >= monthStart && o.Date < nextMonth && o.Id != excludeOrderId
                       && r.DepartmentId == departmentId && r.Category != PurchaseCategory.Construction
-                select (decimal?)ol.Amount)
-            .SumAsync(cancellationToken) ?? 0;
+                select new { ol.Amount, ol.VatAmount })
+            .ToListAsync(cancellationToken);
+        return (rows.Sum(x => x.Amount), rows.Sum(x => x.VatAmount));
     }
 }

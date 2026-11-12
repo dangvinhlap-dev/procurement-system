@@ -494,6 +494,13 @@ export interface PurchaseOrder extends ClosedRemaining {
   canCompleteDocs: boolean
   /** Kiểm tra ngân sách bộ phận × tháng lúc lưu/gửi gần nhất (design.md mục 18.24); null = không kiểm soát. */
   budget: BudgetCheck | null
+  /** Loại mua theo dòng đề nghị nguồn (lát Y7): Construction = A (in 4A), Goods = B gồm dịch vụ (in 4B). */
+  category: 'Construction' | 'Goods'
+  constructionProjectId: string | null
+  /** Mã – tên công trình của PO loại A. */
+  constructionProjectName: string | null
+  /** Biểu mẫu bảng theo dõi mua hàng khi in. */
+  formCode: '4A' | '4B'
 }
 
 /** Loại mua của PO: thường hoặc khẩn cấp (duyệt theo cấp POK, bổ sung hồ sơ sau). */

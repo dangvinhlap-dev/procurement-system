@@ -16,7 +16,10 @@ public sealed record CuvtInfoLine(string Label, string Value, bool Strong = fals
 /// <param name="AlignRight">Cột số – căn phải.</param>
 /// <param name="Group">Tiêu đề nhóm ở tầng trên (ví dụ "Số lượng" gồm Cần sử dụng – Tồn kho – Cần mua); null = cột gộp hai tầng.</param>
 /// <param name="Center">Căn giữa (cột STT, ngày, dấu "x" đơn vị mua).</param>
-public sealed record CuvtColumn(string Title, double WidthMm, bool AlignRight = false, string? Group = null, bool Center = false);
+/// <param name="MergeRows">
+/// Gộp dọc mọi dòng của bảng thành một ô, lấy giá trị dòng đầu – cột "Tên Nhà cung cấp đã mua", "Lũy kế", "Còn lại" của mẫu 4A/4B (lát Y7).
+/// </param>
+public sealed record CuvtColumn(string Title, double WidthMm, bool AlignRight = false, string? Group = null, bool Center = false, bool MergeRows = false);
 
 /// <summary>Một ô ký ở cuối biểu mẫu – sinh từ chuỗi duyệt thực tế (design.md mục 19.1 Q13).</summary>
 /// <param name="Title">Chức danh / bước duyệt, ví dụ "Người đề nghị", "Thủ kho KT", "Trưởng phòng ban PX1".</param>
@@ -87,6 +90,9 @@ public sealed record CuvtTextLine(string Label, string Value, bool Strong = fals
 /// </summary>
 public static class CuvtFormLayout
 {
+    /// <summary>Số dòng tối đa của bảng còn gộp dọc các cột <see cref="CuvtColumn.MergeRows"/>.</summary>
+    public const int MaxMergedRows = 15;
+
     /// <summary>Hệ số cỡ chữ so với cỡ ghi trong biểu mẫu Excel (in vừa trang).</summary>
     public const double Scale = 0.8;
 
@@ -277,13 +283,24 @@ public static class CuvtFormLayout
             top.Cells[c].MergeRight = span - 1;
         }
 
-        foreach (var cells in form.Rows)
+        // Ô gộp dọc của MigraDoc không tách sang trang sau: bảng dài hơn MaxMergedRows dòng thì chỉ ghi giá trị ở dòng đầu, không gộp (tự đặt –
+        // 15 dòng × 2 tầng chữ vẫn nằm gọn một trang ngang).
+        var mergeRows = form.Rows.Count > 1 && form.Rows.Count <= MaxMergedRows;
+        for (var r = 0; r < form.Rows.Count; r++)
         {
+            var cells = form.Rows[r];
             var row = table.AddRow();
             for (var c = 0; c < form.Columns.Count; c++)
             {
+                var column = form.Columns[c];
+                row.Cells[c].Format.Alignment = Align(column);
+                if (column.MergeRows && r > 0) continue;
                 row.Cells[c].AddParagraph(cells[c]);
-                row.Cells[c].Format.Alignment = Align(form.Columns[c]);
+                if (column.MergeRows && mergeRows)
+                {
+                    row.Cells[c].MergeDown = form.Rows.Count - 1;
+                    row.Cells[c].VerticalAlignment = VerticalAlignment.Center;
+                }
             }
         }
 
