@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
+import type { InternalSaleStatusInfo } from './internalSales'
 
 /*
  * Kiểu dữ liệu và hàm gọi API mua hàng (khớp Proc.Application.Purchasing): quy trình duyệt, PR, PO, theo dõi giao hàng.
@@ -427,7 +428,7 @@ export interface PurchaseOrderLine {
  * Nguồn giá của dòng PO: phiếu duyệt NCC và giá tháng (đứng đầu – design.md mục 18.25), kết quả chọn thầu, hợp đồng nguyên tắc, bảng giá,
  * ngoài hợp đồng; Unknown = PO trước bản 0.12.0.
  */
-export type PriceSource = 'Unknown' | 'MonthlyApproval' | 'Rfq' | 'Contract' | 'PriceList' | 'None'
+export type PriceSource = 'Unknown' | 'MonthlyApproval' | 'Rfq' | 'Contract' | 'PriceList' | 'None' | 'Internal'
 
 /** Nhãn nguồn giá. */
 export const priceSourceLabels: Record<PriceSource, string> = {
@@ -437,6 +438,7 @@ export const priceSourceLabels: Record<PriceSource, string> = {
   Contract: 'Hợp đồng',
   PriceList: 'Bảng giá',
   None: 'Ngoài hợp đồng',
+  Internal: 'Giá nội bộ (gợi ý)',
 }
 
 /** Chi tiết PO. */
@@ -501,6 +503,8 @@ export interface PurchaseOrder extends ClosedRemaining {
   constructionProjectName: string | null
   /** Biểu mẫu bảng theo dõi mua hàng khi in. */
   formCode: '4A' | '4B'
+  /** PO đặt cho NCC nội bộ (lát X7): công ty bán và trạng thái xác nhận của bên bán; null với NCC ngoài. */
+  internalSale: InternalSaleStatusInfo | null
 }
 
 /** Loại mua của PO: thường hoặc khẩn cấp (duyệt theo cấp POK, bổ sung hồ sơ sau). */

@@ -54,6 +54,8 @@ export const Permission = {
   SummaryView: 'Purchase.Summary.View',
   SummaryManage: 'Purchase.Summary.Manage',
   SummaryApprove: 'Purchase.Summary.Approve',
+  InternalSaleView: 'Purchase.InternalSale.View',
+  InternalSaleManage: 'Purchase.InternalSale.Manage',
   DemandPlanView: 'Purchase.DemandPlan.View',
   DemandPlanManage: 'Purchase.DemandPlan.Manage',
   DemandPlanViewAllCompanies: 'Purchase.DemandPlan.ViewAllCompanies',

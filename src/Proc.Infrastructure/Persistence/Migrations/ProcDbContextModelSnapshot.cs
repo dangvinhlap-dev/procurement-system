@@ -4570,6 +4570,56 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("GoodsReceiptConfirmationLine", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.InternalSaleConfirmation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuyerCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Decision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("OrderNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerCompanyId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .IsUnique();
+
+                    b.ToTable("InternalSaleConfirmation", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PooledOrder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5258,6 +5308,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("HasPriceException")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("InternalSellerCompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsOffApprovedList")
                         .HasColumnType("boolean");
 
@@ -5327,6 +5380,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("InternalSellerCompanyId")
+                        .HasFilter("\"InternalSellerCompanyId\" IS NOT NULL");
 
                     b.HasIndex("SupplierId");
 
@@ -7896,6 +7952,27 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.InternalSaleConfirmation", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("BuyerCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Purchasing.PooledOrder", b =>
                 {
                     b.HasOne("Proc.Domain.Organization.Company", null)
@@ -8100,6 +8177,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Organization.Department", null)
                         .WithMany()
                         .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("InternalSellerCompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)

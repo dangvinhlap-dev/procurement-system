@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { apiOpenPdf } from '../../api/client'
+import { internalSaleStatusLabels } from '../../api/internalSales'
 import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useSupplierItemLookup, vatOptions } from '../../api/masterData'
 import { useDepartments, useWarehouses } from '../../api/organization'
@@ -198,6 +199,9 @@ export function PurchaseOrderPage() {
     const line = lines[index]
     if (readOnly || (line?.sourceRfqLineId && saved?.priceSource === 'Rfq')) {
       if (!saved) return undefined
+      // Mua nội bộ (lát X7): giá bán nội bộ chỉ là gợi ý, không có phiếu gốc, nhập tay khác không tính lệch.
+      if (saved.priceSource === 'Internal')
+        return { unitPrice: saved.approvedUnitPrice, discountPct: 0, sourceText: priceSourceLabels.Internal, internal: true }
       if (saved.approvedUnitPrice == null)
         return saved.priceSource === 'None' ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
       // Phiếu gốc của nguồn giá đã lưu – hiện bằng ô số chứng từ (bấm sao chép, bấm đúp mở – design.md mục 20.1 R5).
@@ -218,15 +222,18 @@ export function PurchaseOrderPage() {
     const p = suggestedPrice(line)
     if (!p) return supplierPrices.isSuccess ? { unitPrice: null, discountPct: 0, sourceText: priceSourceLabels.None } : undefined
     const sourceText =
-      p.source === 'MonthlyApproval' ? `Duyệt tháng ${p.priceListNo}` : p.source === 'Contract' ? `Hợp đồng ${p.contractNo ?? ''}` : `Bảng giá ${p.priceListNo}`
-    return { unitPrice: p.unitPrice, discountPct: p.discountPct, sourceText }
+      p.source === 'MonthlyApproval' ? `Duyệt tháng ${p.priceListNo}`
+      : p.source === 'Contract' ? `Hợp đồng ${p.contractNo ?? ''}`
+      : p.source === 'Internal' ? `${p.priceListNo} (gợi ý)`
+      : `Bảng giá ${p.priceListNo}`
+    return { unitPrice: p.unitPrice, discountPct: p.discountPct, sourceText, internal: p.source === 'Internal' }
   }
 
   /** Dòng có giá đã duyệt mà giá sau CK khác – cần lý do lệch giá (so như server: sau chiết khấu, 6 số lẻ). */
   const isDeviation = (index: number) => {
     const a = approvedPrice(index)
     const line = lines[index]
-    if (!a || a.unitPrice == null || !line) return false
+    if (!a || a.unitPrice == null || !line || ('internal' in a && a.internal)) return false
     return netPrice(line.unitPrice ?? 0, line.discountPct ?? 0) !== netPrice(a.unitPrice, a.discountPct)
   }
 
@@ -752,6 +759,22 @@ export function PurchaseOrderPage() {
                   readOnly
                   data-testid="po-form-code"
                   value={doc.category === 'Construction' ? `A – Công trình ${doc.constructionProjectName ?? ''} · 4A` : 'B – Hàng hóa, dịch vụ · 4B'}
+                />
+              </Form.Item>
+            )}
+            {doc?.internalSale && (
+              <Form.Item
+                label="Bên bán (mua nội bộ)"
+                tooltip="NCC nội bộ: công ty bán xác nhận hoặc từ chối đơn ở màn hình Đơn bán nội bộ sau khi PO được duyệt (design.md mục 19.3 – lát X7)."
+              >
+                <Input
+                  readOnly
+                  data-testid="po-internal-sale"
+                  value={[
+                    `${doc.internalSale.sellerCompanyCode} – ${internalSaleStatusLabels[doc.internalSale.status]}`,
+                    doc.internalSale.decidedByName && `${doc.internalSale.decidedByName}, ${formatDateTime(doc.internalSale.decidedAt)}`,
+                    doc.internalSale.note,
+                  ].filter(Boolean).join(' · ')}
                 />
               </Form.Item>
             )}

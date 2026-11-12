@@ -258,6 +258,20 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.UnitManage)
             .Validate<UpdatePurchasingUnitRequest>();
 
+        // Đơn bán nội bộ (lát X7, design.md mục 19.3): PO công ty khác đặt cho NCC nội bộ của công ty đang làm việc – công ty bán xác nhận / từ chối.
+        var internalSales = app.MapGroup("/api/internal-sales").WithTags("Đơn bán nội bộ");
+        internalSales.MapGet("/", (DateOnly? from, DateOnly? to, string? status, IInternalSaleService s, CancellationToken ct) =>
+                s.SearchAsync(new InternalSaleQuery(from, to, status), ct))
+            .RequireAnyPermission(Permissions.Purchase.InternalSaleView, Permissions.Purchase.InternalSaleManage);
+        internalSales.MapGet("/{orderId:guid}", (Guid orderId, IInternalSaleService s, CancellationToken ct) => s.GetAsync(orderId, ct))
+            .RequireAnyPermission(Permissions.Purchase.InternalSaleView, Permissions.Purchase.InternalSaleManage);
+        internalSales.MapPost("/{orderId:guid}/confirm", (Guid orderId, InternalSaleDecisionRequest request, IInternalSaleService s, CancellationToken ct) =>
+                s.ConfirmAsync(orderId, request, ct))
+            .RequirePermission(Permissions.Purchase.InternalSaleManage);
+        internalSales.MapPost("/{orderId:guid}/reject", (Guid orderId, InternalSaleDecisionRequest request, IInternalSaleService s, CancellationToken ct) =>
+                s.RejectAsync(orderId, request, ct))
+            .RequirePermission(Permissions.Purchase.InternalSaleManage);
+
         // Bảng tổng hợp đề xuất mua 2A/2B (lát Y5b, design.md mục 19.3 bước 2): Phòng CUVT lập, duyệt theo bộ cấp BTH.
         var summaries = app.MapGroup("/api/purchase-summaries").WithTags("Bảng tổng hợp đề xuất mua");
         summaries.MapGet("/", (IPurchaseSummaryService s, CancellationToken ct) => s.ListAsync(ct))

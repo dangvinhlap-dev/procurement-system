@@ -18,7 +18,7 @@ namespace Proc.Infrastructure.Purchasing;
 /// Đơn mua hàng (design.md mục 6.2, 10.3). SL đã nhận của dòng PO tính từ các phiếu xác nhận nhận hàng XNH đã xác nhận trỏ về dòng đó
 /// (từ bản 0.22.0 – design.md mục 19.4) – không lưu riêng, nên điều chỉnh SL thực nhận trên XNH là SL đã nhận tự đổi.
 /// </summary>
-public sealed class PurchaseOrderService : IPurchaseOrderService
+public sealed partial class PurchaseOrderService : IPurchaseOrderService
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
@@ -102,6 +102,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         order.SetLines(lines);
         var (category, projectId) = await ResolveCategoryAsync(lines, cancellationToken);
         order.SetPurchaseCategory(category, projectId);
+        order.SetInternalSeller(await InternalSellerAsync(order.SupplierId, cancellationToken));
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         _db.PurchaseOrders.Add(order);
@@ -122,6 +123,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         order.SetLines(lines);
         var (category, projectId) = await ResolveCategoryAsync(lines, cancellationToken);
         order.SetPurchaseCategory(category, projectId);
+        order.SetInternalSeller(await InternalSellerAsync(order.SupplierId, cancellationToken));
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.ApplyBudgetCheck(await _budgets.CheckAsync(order, cancellationToken));
         await _db.SaveChangesAsync(cancellationToken);
@@ -148,7 +150,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         await CheckHeaderAsync(order.SupplierId, order.WarehouseId, cancellationToken);
         await CheckRequestQuantitiesAsync(order.Lines.Select(l => (l.SourcePrLineId, l.ItemId, l.BaseQty, l.LineNo)).ToList(), order.Id, cancellationToken);
         // Giá đã duyệt tính lại lúc gửi (bảng giá/hợp đồng có thể đã đổi từ lúc lưu nháp); lệch giá phải có lý do và qua chặng duyệt
-        // ngoại lệ – design.md mục 18.10 (quyết định M1).
+        // ngoại lệ – design.md mục 18.10 (quyết định M1). NCC có thể vừa gắn / bỏ gắn công ty (NCC nội bộ) – ghi lại công ty bán trước (lát X7).
+        order.SetInternalSeller(await InternalSellerAsync(order.SupplierId, cancellationToken));
         await ApplyApprovedPricesAsync(order, cancellationToken);
         order.EnsurePriceDeviationsExplained();
         // Hạn mức SL tháng của phiếu duyệt NCC và giá tháng (gộp các công ty áp dụng) – vượt thì chặn gửi (design.md mục 18.25, G3).
@@ -174,6 +177,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         if ((await MonthlyRefsAsync(order, cancellationToken)).Values.Any(m => m.IsOverCeiling))
             stages.Add((ApprovalTypes.PurchaseOrderOverCeiling, ApprovalTypes.OverCeilingStage));
         await _approvals.SubmitWithStagesAsync(order, stages, cancellationToken, ruleType, [ApprovalTypes.PurchaseOrderOverCeiling]);
+        // Không có cấp duyệt nào thì PO duyệt ngay lúc gửi – báo công ty bán như khi duyệt xong (lát X7).
+        await NotifyInternalSellerAsync(order, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -195,6 +200,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     {
         var order = await LoadAsync(id, cancellationToken);
         await _approvals.ApproveAsync(order, request.Comment, cancellationToken);
+        await NotifyInternalSellerAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -311,6 +317,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         _scope.RequireCompany();
         if (itemIds.Count == 0) return [];
         var companyId = _scope.RequireCompany();
+        if (await InternalSellerAsync(supplierId, cancellationToken) is { } seller)
+            return await InternalApprovedPricesAsync(seller, date, itemIds, cancellationToken);
         var contract = await EffectiveContractAsync(supplierId, date, cancellationToken) is { } c && c.Allows(departmentId) ? c : null;
         var tiers = await _prices.ResolveAsync(supplierId, date, itemIds, cancellationToken, contract?.PriceListId);
         // Giá phiếu tháng đứng đầu (G3): mặt hàng có giá tháng cho NCC này thì chỉ trả giá tháng (một bậc từ 0, CK 0 – giá phiếu đã trừ CK);
@@ -388,6 +396,13 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     /// </summary>
     private async Task ApplyApprovedPricesAsync(PurchaseOrder order, CancellationToken cancellationToken)
     {
+        // Mua nội bộ (lát X7): chỉ giá bán nội bộ của công ty bán, làm gợi ý – không xét phiếu tháng, chọn thầu, hợp đồng, bảng giá NCC.
+        if (order.InternalSellerCompanyId is not null)
+        {
+            await ApplyInternalPricesAsync(order, cancellationToken);
+            return;
+        }
+
         // Hợp đồng giới hạn bộ phận được phép đặt mà PO của bộ phận khác (hoặc chưa chọn bộ phận) thì không tính giá theo hợp đồng – G5.
         var contract = await EffectiveContractAsync(order.SupplierId, order.Date, cancellationToken) is { } c && c.Allows(order.DepartmentId) ? c : null;
         var itemIds = order.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -800,7 +815,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             order.PurchaseType == PurchaseType.Emergency && order.DocsCompletedAt is null && readOnly is null
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
             order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason,
-            Category = order.Category.ToString(), ConstructionProjectId = order.ConstructionProjectId, ConstructionProjectName = project, ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            Category = order.Category.ToString(), ConstructionProjectId = order.ConstructionProjectId, ConstructionProjectName = project,
+            InternalSale = await InternalSaleStatusAsync(order, cancellationToken), ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     /// <summary>Đổi yêu cầu lưu PO thành dữ liệu header cho Domain.</summary>

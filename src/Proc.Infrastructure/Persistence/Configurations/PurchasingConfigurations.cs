@@ -219,8 +219,32 @@ internal sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purc
         builder.HasOne<Warehouse>().WithMany()
             .HasForeignKey(x => new { x.WarehouseId, x.CompanyId }).HasPrincipalKey(w => new { w.Id, w.CompanyId })
             .OnDelete(DeleteBehavior.Restrict);
+        // Lát X7: công ty bán của PO mua nội bộ – màn hình "Đơn bán nội bộ" của công ty bán lọc theo cột này.
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.InternalSellerCompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.InternalSellerCompanyId).HasFilter("\"InternalSellerCompanyId\" IS NOT NULL");
         builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.OrderId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>
+/// Cấu hình bảng InternalSaleConfirmation – quyết định của công ty bán với PO mua nội bộ (lát X7, design.md mục 19.3). Mỗi PO tối đa một
+/// quyết định (chỉ mục duy nhất – hai người bấm cùng lúc thì một người bị chặn).
+/// </summary>
+internal sealed class InternalSaleConfirmationConfiguration : IEntityTypeConfiguration<InternalSaleConfirmation>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<InternalSaleConfirmation> builder)
+    {
+        builder.ToTable("InternalSaleConfirmation");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.OrderNo).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(InternalSaleConfirmation.NoteMaxLength);
+        builder.HasIndex(x => x.PurchaseOrderId).IsUnique();
+        builder.HasIndex(x => x.CompanyId);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.BuyerCompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

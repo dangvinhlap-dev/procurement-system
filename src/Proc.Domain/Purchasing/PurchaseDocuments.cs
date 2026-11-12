@@ -179,6 +179,13 @@ public enum PurchasePriceSource
     /// cung ứng là cấp cao nhất nên đứng đầu thứ tự (design.md mục 18.25, lát G3).
     /// </summary>
     MonthlyApproval = 5,
+
+    /// <summary>
+    /// Dòng của PO đặt cho NCC nội bộ (lát X7, design.md mục 19.3, 19.4): giá bán nội bộ của công ty bán cho công ty của PO, hiệu lực vào ngày
+    /// PO, chỉ là <b>giá gợi ý</b> (ghi vào giá đã duyệt để đối chiếu, có thể không có) – người lập nhập tay được (người dùng chốt 12/11/2026),
+    /// nên dòng không bị tính lệch giá, ngoài hợp đồng hay ngoài danh sách.
+    /// </summary>
+    Internal = 6,
 }
 
 /// <summary>Giá đã duyệt tìm được cho một dòng PO.</summary>
@@ -1073,6 +1080,39 @@ public sealed class PurchaseOrder : ApprovableDocument
         ConstructionProjectId = null;
     }
 
+    /// <summary>
+    /// Công ty bán khi PO đặt cho NCC nội bộ (lát X7, design.md mục 19.3): chép từ NCC mỗi lần lưu nháp, để công ty bán thấy đơn ở màn hình
+    /// "Đơn bán nội bộ" kể cả khi NCC về sau bỏ liên kết công ty. null = NCC ngoài tập đoàn.
+    /// </summary>
+    public Guid? InternalSellerCompanyId { get; private set; }
+
+    /// <summary>Ghi công ty bán của NCC nội bộ (nháp).</summary>
+    /// <param name="sellerCompanyId">Công ty mà NCC đại diện; null = NCC ngoài.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc NCC nội bộ là chính công ty của PO.</exception>
+    public void SetInternalSeller(Guid? sellerCompanyId)
+    {
+        EnsureDraft();
+        // Mỗi công ty là một pháp nhân (design.md mục 4): mua nội bộ là mua của công ty khác, không tự đặt mua của chính mình.
+        if (sellerCompanyId == CompanyId)
+            throw new BusinessRuleException("NCC này là NCC nội bộ của chính công ty đang làm việc – không đặt mua của chính mình.");
+        InternalSellerCompanyId = sellerCompanyId;
+    }
+
+    /// <summary>
+    /// Gán giá bán nội bộ gợi ý cho mọi dòng của PO mua nội bộ (lát X7) thay cho <see cref="ApplyApprovedPrices"/>: đơn giá do người lập nhập
+    /// (người dùng chốt 12/11/2026 "cho nhập tay"), nên PO không qua chặng ngoại lệ giá / ngoài danh sách.
+    /// </summary>
+    /// <param name="resolve">Giá bán nội bộ theo ĐVT của dòng, null nếu chưa có.</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc PO không đặt cho NCC nội bộ.</exception>
+    public void ApplyInternalPrices(Func<PurchaseOrderLine, decimal?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(resolve);
+        EnsureDraft();
+        if (InternalSellerCompanyId is null) throw new BusinessRuleException($"Đơn {No} không đặt cho NCC nội bộ.");
+        foreach (var line in _lines) line.ApplyInternalPrice(resolve(line));
+        RefreshPriceFlags();
+    }
+
     /// <summary>Thay toàn bộ dòng, tính lại tổng.</summary>
     /// <exception cref="BusinessRuleException">Khi không còn nháp, không có dòng hoặc dòng sai.</exception>
     public void SetLines(IReadOnlyList<(PurchaseOrderLineData Data, Item Item)> lines)
@@ -1339,10 +1379,12 @@ public sealed class PurchaseOrderLine : Entity
 
     /// <summary>
     /// Giá thực (sau chiết khấu) khác giá đã duyệt (sau chiết khấu). So sau chiết khấu để "đơn giá 100.000, CK 5%" và "đơn giá 95.000,
-    /// CK 0%" coi là như nhau. Lệch cả khi rẻ hơn: giá đã đàm phán là giá mua, đổi giá phải được duyệt (quyết định M1).
+    /// CK 0%" coi là như nhau. Lệch cả khi rẻ hơn: giá đã đàm phán là giá mua, đổi giá phải được duyệt (quyết định M1). Giá bán nội bộ chỉ
+    /// là gợi ý, nhập tay khác không tính lệch (lát X7).
     /// </summary>
     public bool IsPriceDeviation =>
-        ApprovedUnitPrice is { } approved
+        PriceSource != PurchasePriceSource.Internal
+        && ApprovedUnitPrice is { } approved
         && NetUnitPrice != Math.Round(approved * (100m - (ApprovedDiscountPct ?? 0m)) / 100m, 6, MidpointRounding.AwayFromZero);
 
     /// <summary>Mua ngoài hợp đồng: không có giá đã duyệt hoặc lệch giá đã duyệt (P5). Dòng lập trước bản 0.12.0 không tính.</summary>
@@ -1406,5 +1448,22 @@ public sealed class PurchaseOrderLine : Entity
         ContractId = price?.ContractId;
         SourceRfqLineId = price?.RfqLineId;
         if (!IsPriceDeviation) PriceDeviationReason = null;
+    }
+
+    /// <summary>
+    /// Ghi giá bán nội bộ gợi ý của dòng PO mua nội bộ (lát X7): nguồn luôn là <see cref="PurchasePriceSource.Internal"/>, giá gợi ý có thể
+    /// không có; bỏ mọi nguồn giá khác (hợp đồng, bảng giá NCC, chọn thầu, phiếu tháng) và lý do lệch giá vì giá nội bộ nhập tay được.
+    /// </summary>
+    /// <param name="unitPrice">Giá bán nội bộ theo ĐVT của dòng; null khi công ty bán chưa khai giá.</param>
+    internal void ApplyInternalPrice(decimal? unitPrice)
+    {
+        MonthlyApprovalLineId = null;
+        PriceSource = PurchasePriceSource.Internal;
+        ApprovedUnitPrice = unitPrice;
+        ApprovedDiscountPct = unitPrice is null ? null : 0m;
+        PriceListId = null;
+        ContractId = null;
+        SourceRfqLineId = null;
+        PriceDeviationReason = null;
     }
 }

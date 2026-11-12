@@ -456,6 +456,9 @@ public sealed record PurchaseOrderDto(
     /// <summary>Mã – tên công trình của PO loại A.</summary>
     public string? ConstructionProjectName { get; init; }
 
+    /// <summary>PO đặt cho NCC nội bộ (lát X7): công ty bán và trạng thái xác nhận của bên bán; null với NCC ngoài.</summary>
+    public InternalSaleStatusDto? InternalSale { get; init; }
+
     /// <summary>Biểu mẫu bảng theo dõi mua hàng khi in: "4A" (loại A) hoặc "4B".</summary>
     public string FormCode => Category == "Construction" ? "4A" : "4B";
 }
