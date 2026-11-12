@@ -7,6 +7,7 @@ import {
   DollarOutlined,
   EditOutlined,
   EyeOutlined,
+  PaperClipOutlined,
   FileAddOutlined,
   FileProtectOutlined,
   RollbackOutlined,
@@ -43,6 +44,7 @@ import {
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import type { GridColumn } from '../../components/DataGrid/types'
+import { AttachmentPanel } from '../../components/AttachmentPanel/AttachmentPanel'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { useAppraisalTab } from '../../components/AppraisalPanel/useAppraisalTab'
 import { AppraisalSummary } from '../../components/AppraisalPanel/AppraisalPanel'
@@ -1089,6 +1091,8 @@ function ComparisonView({
   onQuote: (supplier: RfqSupplier, scoreOnly: boolean) => void
 }) {
   const canAward = rfq.actions.canAward
+  // File báo giá NCC nộp trên Portal đang xem (lát P3b-1).
+  const [filesOf, setFilesOf] = useState<RfqSupplier | null>(null)
   const set = (lineId: string, patch: Partial<AwardDraft[string]>) =>
     onAwardChange({ ...award, [lineId]: { supplierId: award[lineId]?.supplierId ?? null, reason: award[lineId]?.reason ?? '', ...patch } })
   const isLowestChoice = (lineId: string) => {
@@ -1168,6 +1172,27 @@ function ComparisonView({
     ...(rfq.suppliers.some((s) => (s.portalSubmissionCount ?? 0) > 0)
       ? [{ key: 'portal', label: 'Nộp qua Portal', value: (s: RfqSupplier) => portalText(rfq, s) }]
       : []),
+    // Lát P3b-1: file báo giá NCC tải trên Portal – trước giờ mở chỉ người có quyền xem niêm phong mở được (tải file ghi nhật ký).
+    ...(rfq.suppliers.some((s) => (s.portalAttachmentCount ?? 0) > 0)
+      ? [
+          {
+            key: 'portalFiles',
+            label: 'File báo giá Portal',
+            value: (s: RfqSupplier) => {
+              const count = s.portalAttachmentCount ?? 0
+              if (count === 0) return ''
+              const canOpen = !!rfq.portalQuotesOpenedAt || !!rfq.actions.canViewSealedQuotes
+              return canOpen ? (
+                <Button size="small" icon={<PaperClipOutlined />} onClick={() => setFilesOf(s)} aria-label={`File báo giá ${s.supplierCode}`}>
+                  {count} file
+                </Button>
+              ) : (
+                `${count} file (niêm phong)`
+              )
+            },
+          },
+        ]
+      : []),
     { key: 'lines', label: 'Số dòng chào', value: (s) => `${s.quotedLineCount}/${rfq.lines.length}` },
     { key: 'payment', label: 'Thanh toán', value: (s) => s.paymentTerms },
     { key: 'priceScore', label: `Điểm giá (${rfq.weights.price}%)`, value: (s) => formatQuantity(s.priceScore) },
@@ -1210,6 +1235,19 @@ function ComparisonView({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {filesOf && (
+        <Modal open width={860} title={`File báo giá Portal – ${filesOf.supplierCode} – ${filesOf.supplierName}`} footer={null} onCancel={() => setFilesOf(null)}>
+          {!rfq.portalQuotesOpenedAt && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 8 }}
+              title="Báo giá còn niêm phong – mỗi lần tải file xuống được ghi vào nhật ký truy cập."
+            />
+          )}
+          <AttachmentPanel ownerType="RfqPortalQuote" ownerId={filesOf.invitationId} canManage={false} />
+        </Modal>
+      )}
       <Table
         size="small"
         bordered

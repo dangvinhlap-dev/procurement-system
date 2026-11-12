@@ -2575,6 +2575,18 @@ người/giờ mở, cờ báo giá Portal; bảng `RfqPortalSubmission`, `RfqPo
 Chưa làm ở P3a: **đính kèm file trên form báo giá Portal** (quy tắc mọi form có đính kèm – CLAUDE.md mục 4 – làm ở P3b cùng hỏi đáp), email
 báo NCC khi có thư mời / gia hạn, báo NCC kết quả (P4).
 
+**Lát P3b-1 – file đính kèm báo giá Portal (12/11/2026, bản 0.25.0).** P3b tách: P3b-1 (lát này), P3b-2 hỏi đáp, P3b-3 email thư mời / gia hạn.
+Quy tắc (tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P3-9 | **File báo giá NCC** (loại chủ đính kèm `RfqPortalQuote`, chủ = dòng NCC được mời của RFQ): NCC tải lên **ngay khi có thư mời** (không cần nộp giá trước, nên không cần hàng chờ), thêm, xóa được **đến giờ hạn nộp** khi RFQ chưa mở; sau đó khóa, NCC chỉ tải xuống. Mọi người dùng Portal của NCC thao tác được; file ghi tài khoản Portal tải lên (`Attachment.UploadedByPortalUserId`), xóa là xóa mềm. Giới hạn dung lượng (`Attachments:MaxFileSizeMb`, mặc định 2 MB) và kiểm nội dung khớp đuôi (P1b-3) như mọi đính kèm. |
+| P3-10 | **Niêm phong cùng giá**: nội bộ thấy **số file** trên bảng so sánh ("File báo giá Portal"); xem danh sách, tải file cần quyền xem RFQ và **RFQ đã mở báo giá Portal** – trước đó chỉ người có quyền `Sourcing.Rfq.ViewSealed`, **mỗi lần tải file ghi nhật ký truy cập** ("Xem báo giá niêm phong"). Phần mềm nội bộ **không thêm, xóa** file của NCC (403). NCC khác không thấy (404). |
+
+API Portal: `GET/POST /api/portal/rfqs/{id}/attachments`, `GET …/attachments/{fileId}/content`, `DELETE …/attachments/{fileId}`. Nội bộ dùng API đính
+kèm chung (`ownerType=RfqPortalQuote`, `ownerId` = `RfqSupplierDto.InvitationId`). Migration `V0_25_0_DinhKemBaoGiaPortal` (cột người tải Portal;
+`Down()` xóa cột – mất thông tin người tải).
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2582,7 +2594,7 @@ báo NCC khi có thư mời / gia hạn, báo NCC kết quả (P4).
 | 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
-| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); đính kèm, hỏi đáp, email thư mời (P3b) |
+| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2), email thư mời (P3b-3) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |

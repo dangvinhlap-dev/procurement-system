@@ -182,3 +182,12 @@
   font-family: var(--erp-font-mono);
   text-align: right;
 }
+
+/* Lát P3b-1 – dải nút dưới lưới file báo giá. */
+.erp-portal-file-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--erp-gap);
+  align-items: center;
+  margin-top: var(--erp-gap);
+}

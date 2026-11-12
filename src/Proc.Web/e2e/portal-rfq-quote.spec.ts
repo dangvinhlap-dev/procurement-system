@@ -50,6 +50,14 @@ test('Portal: NCC nộp báo giá niêm phong, nội bộ xem trước giờ m�
   await expect(page.getByTestId('portal-rfq-info')).toContainText(title)
   await expect(page.getByTestId('portal-rfq-info')).toContainText('16:30')
 
+  // Lát P3b-1: tải file báo giá lên ngay (không cần nộp giá trước); file gắn với thư mời, thêm/xóa đến giờ hạn.
+  await page.getByLabel('Ghi chú file').fill('Bảng giá chi tiết')
+  await page.locator('.erp-portal-file-bar input[type=file]').setInputFiles({
+    name: 'BangGia.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4' + String.fromCharCode(10) + '%%EOF'),
+  })
+  await expect(page.locator('.ant-message')).toContainText('Đã tải lên "BangGia.pdf"')
+  await expect(page.getByTestId('portal-quote-files')).toContainText('Bảng giá chi tiết')
+
   // Nhập giá, nộp; hộp xác nhận nói rõ niêm phong đến hạn nộp.
   await page.getByLabel('Đơn giá dòng 1').fill('52000')
   await page.getByLabel('Chiết khấu dòng 1').fill('2')
@@ -81,4 +89,13 @@ test('Portal: NCC nộp báo giá niêm phong, nội bộ xem trước giờ m�
   await expect(sealedDialog).toContainText('52.000')
   await expect(sealedDialog).toContainText('1.019.200')
   await page.screenshot({ path: 'e2e/screenshots/rfq-sealed-quotes.png' })
+  await page.keyboard.press('Escape')
+  await expect(sealedDialog).toBeHidden()
+
+  // File báo giá Portal: người có quyền xem niêm phong mở được danh sách file (tải xuống ghi nhật ký).
+  await page.getByRole('button', { name: /File báo giá NCC/ }).click()
+  const filesDialog = page.getByRole('dialog', { name: /File báo giá Portal/ })
+  await expect(filesDialog).toContainText('BangGia.pdf')
+  await expect(filesDialog).toContainText('niêm phong')
+  await page.screenshot({ path: 'e2e/screenshots/rfq-portal-files.png' })
 })

@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Proc.Api.Security;
 using Proc.Application.Common;
@@ -94,6 +95,29 @@ public static class PortalEndpoints
         rfqs.MapGet("/{id:guid}", (Guid id, HttpContext http, IPortalRfqService s, CancellationToken ct) => s.GetAsync(Session(http), id, ct));
         rfqs.MapPost("/{id:guid}/quotes", (Guid id, PortalSubmitQuoteRequest request, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
             s.SubmitAsync(Session(http), id, request, ct));
+        // Lát P3b-1: file báo giá (2 MB/file, kiểm nội dung như mọi đính kèm); thêm, xóa đến giờ hạn nộp.
+        rfqs.MapGet("/{id:guid}/attachments", (Guid id, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            s.ListAttachmentsAsync(Session(http), id, ct));
+        rfqs.MapPost("/{id:guid}/attachments", async (
+                Guid id, [FromForm] string? note, IFormFile file, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.UploadAttachmentAsync(Session(http), id, file.FileName, file.Length, stream, note, ct));
+            })
+            // Token Portal đi trong header, không dùng cookie – không có nguy cơ CSRF (như API đính kèm nội bộ).
+            .DisableAntiforgery();
+        rfqs.MapGet("/{id:guid}/attachments/{attachmentId:guid}/content", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            {
+                var file = await s.OpenAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.File(file.Content, file.ContentType, file.FileName);
+            });
+        rfqs.MapDelete("/{id:guid}/attachments/{attachmentId:guid}", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            {
+                await s.DeleteAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.NoContent();
+            });
         return app;
     }
 

@@ -221,6 +221,50 @@ export interface PortalRfq {
     lines: PortalQuoteLine[]
   } | null
   submissions: PortalSubmission[]
+  /** Dung lượng tối đa một file báo giá (MB). */
+  maxFileSizeMb: number
+}
+
+/** File báo giá NCC đã tải lên (lát P3b-1). */
+export interface PortalAttachment {
+  id: string
+  fileName: string
+  sizeBytes: number
+  note: string | null
+  uploadedAt: string
+  uploadedByName: string | null
+  canDelete: boolean
+  lockReason: string | null
+}
+
+/**
+ * Gửi request Portal có token, trả Response đã kiểm lỗi (dùng cho tải file lên / xuống – thân không phải JSON).
+ * @param path Đường dẫn.
+ * @param init Phương thức và thân.
+ * @returns Response thành công.
+ */
+async function portalRaw(path: string, init: { method?: string; body?: BodyInit } = {}): Promise<Response> {
+  const headers = new Headers()
+  const token = loadPortalSession()?.accessToken
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  let response: Response
+  try {
+    response = await fetch(path, { method: init.method ?? 'GET', headers, body: init.body })
+  } catch {
+    throw new PortalApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')
+  }
+  if (!response.ok) {
+    let message = `Lỗi HTTP ${response.status}.`
+    try {
+      const body = (await response.json()) as { title?: string }
+      message = body.title ?? message
+    } catch {
+      // Thân không phải JSON – giữ câu mặc định.
+    }
+    if (response.status === 401 && token) onPortalUnauthorized()
+    throw new PortalApiError(response.status, message)
+  }
+  return response
 }
 
 /** Báo giá NCC gửi; dòng không gửi = không chào dòng đó. */
@@ -272,4 +316,24 @@ export const portalApi = {
   /** Nộp / nộp lại báo giá – niêm phong đến giờ mở. */
   submitQuote: (id: string, input: PortalSubmitQuote) =>
     portalFetch<PortalRfq>(`/api/portal/rfqs/${id}/quotes`, { method: 'POST', body: input }),
+  /** File báo giá đã tải lên (lát P3b-1). */
+  attachments: (id: string) => portalFetch<PortalAttachment[]>(`/api/portal/rfqs/${id}/attachments`),
+  /** Tải file báo giá lên. */
+  uploadAttachment: async (id: string, file: File, note: string | null) => {
+    const form = new FormData()
+    form.append('file', file)
+    if (note) form.append('note', note)
+    return (await (await portalRaw(`/api/portal/rfqs/${id}/attachments`, { method: 'POST', body: form })).json()) as PortalAttachment
+  },
+  /** Xóa file báo giá (còn trong hạn nộp). */
+  deleteAttachment: (id: string, attachmentId: string) =>
+    portalFetch<void>(`/api/portal/rfqs/${id}/attachments/${attachmentId}`, { method: 'DELETE' }),
+  /** Tải xuống file báo giá của mình. */
+  downloadAttachment: async (id: string, item: PortalAttachment) => {
+    const response = await portalRaw(`/api/portal/rfqs/${id}/attachments/${item.id}/content`)
+    const url = URL.createObjectURL(await response.blob())
+    const a = Object.assign(document.createElement('a'), { href: url, download: item.fileName })
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }

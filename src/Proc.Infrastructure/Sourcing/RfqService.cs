@@ -627,6 +627,12 @@ public sealed class RfqService : IRfqService
                 .Select(x => new { x.SupplierId, x.Sequence, x.SubmittedAt, x.ContentHash }).ToListAsync(cancellationToken))
             .GroupBy(x => x.SupplierId)
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Last: g.Max(x => x.SubmittedAt), Hash: g.MaxBy(x => x.Sequence)!.ContentHash));
+        // Số file báo giá NCC tải trên Portal theo dòng NCC được mời (lát P3b-1) – chỉ đếm, nội dung xem theo quyền ở API đính kèm.
+        var invitationIds = rfq.Suppliers.Select(s => s.Id).ToList();
+        var portalFiles = await _db.Attachments.AsNoTracking()
+            .Where(a => a.OwnerType == AttachmentOwnerTypes.RfqPortalQuote && invitationIds.Contains(a.OwnerId) && !a.IsDeleted)
+            .GroupBy(a => a.OwnerId).Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
         var userNames = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         // Giá quy đổi thấp nhất của từng dòng trên mọi báo giá – để đánh dấu và chấm điểm giá.
@@ -665,6 +671,8 @@ public sealed class RfqService : IRfqService
                     PortalSubmittedAt = portal.TryGetValue(s.SupplierId, out var p1) ? p1.Last : null,
                     PortalSubmissionCount = portal.TryGetValue(s.SupplierId, out var p2) ? p2.Count : 0,
                     PortalContentHash = rfq.PortalQuotesOpenedAt is not null && portal.TryGetValue(s.SupplierId, out var p3) ? p3.Hash : null,
+                    InvitationId = s.Id,
+                    PortalAttachmentCount = portalFiles.GetValueOrDefault(s.Id),
                 };
             })
             .OrderBy(s => s.SupplierCode)

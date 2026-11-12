@@ -1,9 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
+using Proc.Application.Documents;
 using Proc.Application.Portal;
 using Proc.Domain.Common;
 using Proc.Domain.MasterData;
 using Proc.Domain.Sourcing;
+using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Portal;
@@ -17,14 +19,68 @@ public sealed class PortalRfqService : IPortalRfqService
 {
     private readonly ProcDbContext _db;
     private readonly IClock _clock;
+    private readonly AttachmentService _attachments;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
     /// <param name="clock">Đồng hồ.</param>
-    public PortalRfqService(ProcDbContext db, IClock clock)
+    /// <param name="attachments">Kho file đính kèm (file báo giá Portal – lát P3b-1).</param>
+    public PortalRfqService(ProcDbContext db, IClock clock, AttachmentService attachments)
     {
         _db = db;
         _clock = clock;
+        _attachments = attachments;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AttachmentDto>> ListAttachmentsAsync(PortalSession session, Guid id, CancellationToken cancellationToken)
+    {
+        var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
+        return await _attachments.ListForPortalAsync(invitationId, IsOpen(rfq), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<AttachmentDto> UploadAttachmentAsync(
+        PortalSession session, Guid id, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken)
+    {
+        var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
+        RequireOpen(rfq);
+        return await _attachments.UploadForPortalAsync(invitationId, rfq.CompanyId, session.UserId, fileName, sizeBytes, content, note, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<AttachmentContent> OpenAttachmentAsync(PortalSession session, Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        var (_, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
+        return await _attachments.OpenForPortalAsync(attachmentId, invitationId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteAttachmentAsync(PortalSession session, Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
+        RequireOpen(rfq);
+        await _attachments.DeleteForPortalAsync(attachmentId, invitationId, session.UserId, cancellationToken);
+    }
+
+    /// <summary>RFQ và dòng NCC được mời của phiên (chủ của file báo giá Portal); RFQ không mời NCC này trả 404.</summary>
+    private async Task<(Rfq Rfq, Guid InvitationId)> InvitationAsync(Guid supplierId, Guid id, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(supplierId, id, cancellationToken);
+        return (rfq, rfq.Suppliers.Single(s => s.SupplierId == supplierId).Id);
+    }
+
+    /// <summary>
+    /// Còn nhận báo giá: đang nhận, chưa mở, chưa qua giờ hạn – file báo giá thêm, xóa được đến lúc đó như giá (P3-3); sau đó khóa để bản
+    /// Phòng CUVT mở đúng bản NCC đã nộp.
+    /// </summary>
+    private bool IsOpen(Rfq rfq) =>
+        rfq.Status == RfqStatus.Sent && rfq.PortalQuotesOpenedAt is null && _clock.NowInVietnam() <= rfq.DeadlineAt;
+
+    private void RequireOpen(Rfq rfq)
+    {
+        if (!IsOpen(rfq))
+            throw new BusinessRuleException($"Đã hết hạn nộp báo giá ({rfq.DeadlineText}) hoặc bên mời đã mở báo giá – không thêm, xóa file được.");
     }
 
     /// <inheritdoc />
@@ -154,7 +210,7 @@ public sealed class PortalRfqService : IPortalRfqService
             _ => "Bên mời đã mở báo giá – không nộp lại được.",
         };
         return new PortalRfqDto(rfq.Id, rfq.No, companyName, rfq.Title, rfq.Date, rfq.DeadlineAt, rfq.Note, status, status == "Open", closedReason,
-            VatRates.All, lines, latest, history);
+            VatRates.All, lines, latest, history) { MaxFileSizeMb = _attachments.MaxFileSizeMb };
     }
 
     /// <summary>
