@@ -49,6 +49,14 @@
   min-width: 120px;
 }
 
+/* Dòng chỉ đường cho nhà cung cấp sang Portal /ncc – chữ phụ, kẻ trên mảnh như chân hộp thoại. */
+.login-portal {
+  padding: 8px 0;
+  border-top: 1px solid var(--ant-color-border-secondary);
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+
 .login-footer {
   padding: 8px 16px;
   border-top: 1px solid var(--ant-color-border-secondary);
