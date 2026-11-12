@@ -225,6 +225,10 @@ export interface RfqSupplier {
   portalSubmissionCount?: number
   /** Mã biên nhận bản nộp cuối – chỉ có sau khi mở. */
   portalContentHash?: string | null
+  /** Id dòng NCC được mời – chủ của file báo giá Portal (lát P3b-1). */
+  invitationId?: string
+  /** Số file báo giá NCC tải trên Portal (chỉ số lượng khi còn niêm phong). */
+  portalAttachmentCount?: number
 }
 
 /** Bản nộp Portal còn niêm phong (xem trước giờ mở – cần quyền riêng, có ghi nhật ký). */

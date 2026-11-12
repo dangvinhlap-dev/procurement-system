@@ -83,11 +83,17 @@ public static class AttachmentOwnerTypes
     /// <summary>Bảng tổng hợp đề xuất mua 2A/2B (biên bản, bảng so sánh nhu cầu – lát Y5b).</summary>
     public const string PurchaseSummary = "PurchaseSummary";
 
+    /// <summary>
+    /// File báo giá NCC nộp trên Portal (lát P3b-1, design.md 19.5): chủ là dòng NCC được mời của RFQ (<c>RfqSupplier.Id</c>) – NCC tải lên ngay
+    /// khi có thư mời, không cần hàng chờ. Niêm phong như giá báo giá Portal.
+    /// </summary>
+    public const string RfqPortalQuote = "RfqPortalQuote";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
-        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary];
+        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote];
 }
 
 /// <summary>
@@ -204,6 +210,12 @@ public sealed class Attachment : AuditableEntity
     public bool AddedAfterApproval { get; private set; }
 
     /// <summary>
+    /// Tài khoản Portal NCC đã tải file lên (lát P3b-1); null với file người dùng nội bộ tải (người tải là <c>CreatedBy</c>). Xóa bởi NCC thì
+    /// <see cref="DeletedBy"/> cũng là Id tài khoản Portal.
+    /// </summary>
+    public Guid? UploadedByPortalUserId { get; private set; }
+
+    /// <summary>
     /// Tạo bản ghi đính kèm sau khi đã kiểm tra file.
     /// </summary>
     /// <param name="ownerType">Loại đối tượng chủ.</param>
@@ -217,11 +229,12 @@ public sealed class Attachment : AuditableEntity
     /// <param name="maxFileSizeMb">Dung lượng tối đa một file (MB) theo cấu hình máy chủ.</param>
     /// <param name="approvalStepId">Bước duyệt của file (người duyệt đính kèm khi duyệt / từ chối); null nếu không thuộc bước nào.</param>
     /// <param name="addedAfterApproval">File thêm khi phiếu đã duyệt xong (không áp khi đã gắn bước duyệt).</param>
+    /// <param name="portalUserId">Tài khoản Portal NCC tải lên (lát P3b-1); null = người dùng nội bộ.</param>
     /// <returns>Bản ghi mới.</returns>
     /// <exception cref="BusinessRuleException">Khi loại chủ, tên, đuôi, dung lượng hoặc ghi chú không hợp lệ.</exception>
     public static Attachment Create(
         string ownerType, Guid ownerId, Guid? companyId, string fileName, long sizeBytes, string sha256, DateTimeOffset uploadedAt, string? note,
-        int maxFileSizeMb = DefaultMaxFileSizeMb, Guid? approvalStepId = null, bool addedAfterApproval = false)
+        int maxFileSizeMb = DefaultMaxFileSizeMb, Guid? approvalStepId = null, bool addedAfterApproval = false, Guid? portalUserId = null)
     {
         if (!AttachmentOwnerTypes.All.Contains(ownerType)) throw new BusinessRuleException($"Loại đối tượng đính kèm '{ownerType}' không hợp lệ.");
         var name = NormalizeFileName(fileName);
@@ -242,6 +255,7 @@ public sealed class Attachment : AuditableEntity
             Note = trimmedNote,
             ApprovalStepId = approvalStepId,
             AddedAfterApproval = approvalStepId is null && addedAfterApproval,
+            UploadedByPortalUserId = portalUserId,
         };
         attachment.StoragePath = $"{uploadedAt.UtcDateTime:yyyy}/{uploadedAt.UtcDateTime:MM}/{attachment.Id:N}{extension}";
         return attachment;

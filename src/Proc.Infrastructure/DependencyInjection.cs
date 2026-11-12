@@ -145,7 +145,10 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryService, Proc.Infrastructure.Analysis.PurchaseHistoryService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryMappingService, Proc.Infrastructure.Analysis.PurchaseHistoryMappingService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseAnalysisService, Proc.Infrastructure.Analysis.PurchaseAnalysisService>();
-        services.AddScoped<Proc.Application.Documents.IAttachmentService, Proc.Infrastructure.Documents.AttachmentService>();
+        // Lớp cụ thể đăng ký riêng: Portal NCC dùng các hàm file báo giá không qua phạm vi người dùng nội bộ (lát P3b-1).
+        services.AddScoped<Proc.Infrastructure.Documents.AttachmentService>();
+        services.AddScoped<Proc.Application.Documents.IAttachmentService>(
+            sp => sp.GetRequiredService<Proc.Infrastructure.Documents.AttachmentService>());
         services.AddScoped<Proc.Application.Documents.IAppraisalOpinionService, Proc.Infrastructure.Documents.AppraisalOpinionService>();
         services.AddScoped<IExcelTransfer>(sp => new ExcelTransfer(
             sp.GetRequiredService<ProcDbContext>(), sp.GetRequiredService<ICurrentUserScope>(), sp.GetServices<ExcelCatalog>()));

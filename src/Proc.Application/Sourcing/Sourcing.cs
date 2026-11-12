@@ -102,6 +102,12 @@ public sealed record RfqSupplierDto(
 
     /// <summary>Mã băm bản nộp cuối (biên nhận của NCC) – chỉ trả khi đã mở báo giá Portal.</summary>
     public string? PortalContentHash { get; init; }
+
+    /// <summary>Id dòng NCC được mời (<c>RfqSupplier.Id</c>) – chủ của file báo giá Portal (đính kèm loại RfqPortalQuote, lát P3b-1).</summary>
+    public Guid InvitationId { get; init; }
+
+    /// <summary>Số file báo giá NCC tải lên Portal (hiện cả khi niêm phong – chỉ số lượng).</summary>
+    public int PortalAttachmentCount { get; init; }
 }
 
 /// <summary>Một mục hồ sơ trình (lát B3b); IsAutomatic = hệ thống tự tính (bảng so sánh).</summary>

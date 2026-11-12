@@ -1,3 +1,5 @@
+﻿using Proc.Application.Documents;
+
 namespace Proc.Application.Portal;
 
 /// <summary>
@@ -79,7 +81,11 @@ public sealed record PortalLatestQuoteDto(
 public sealed record PortalRfqDto(
     Guid Id, string No, string CompanyName, string Title, DateOnly Date, DateTime DeadlineAt, string? Note, string Status, bool CanSubmit,
     string? ClosedReason, IReadOnlyList<string> VatCodes, IReadOnlyList<PortalRfqLineDto> Lines, PortalLatestQuoteDto? Latest,
-    IReadOnlyList<PortalSubmissionDto> Submissions);
+    IReadOnlyList<PortalSubmissionDto> Submissions)
+{
+    /// <summary>Dung lượng tối đa một file báo giá (MB) theo cấu hình máy chủ (lát P3b-1).</summary>
+    public int MaxFileSizeMb { get; init; } = 2;
+}
 
 /// <summary>Giá một dòng NCC nộp.</summary>
 /// <param name="RfqLineId">Dòng RFQ.</param>
@@ -126,4 +132,39 @@ public interface IPortalRfqService
     /// <exception cref="Common.NotFoundException">Khi RFQ không mời NCC này.</exception>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi hết hạn, đã mở, dữ liệu giá sai.</exception>
     Task<PortalRfqDto> SubmitAsync(PortalSession session, Guid id, PortalSubmitQuoteRequest request, CancellationToken cancellationToken);
+
+    /// <summary>File báo giá NCC đã tải lên cho thư mời (lát P3b-1).</summary>
+    /// <param name="session">Phiên Portal.</param>
+    /// <param name="id">RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Danh sách file; CanDelete = còn nhận báo giá.</returns>
+    Task<IReadOnlyList<AttachmentDto>> ListAttachmentsAsync(PortalSession session, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Tải file báo giá lên – chỉ khi còn nhận báo giá (trước giờ hạn, chưa mở).</summary>
+    /// <param name="session">Phiên Portal.</param>
+    /// <param name="id">RFQ.</param>
+    /// <param name="fileName">Tên file.</param>
+    /// <param name="sizeBytes">Dung lượng.</param>
+    /// <param name="content">Nội dung.</param>
+    /// <param name="note">Ghi chú.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File vừa tải.</returns>
+    Task<AttachmentDto> UploadAttachmentAsync(
+        PortalSession session, Guid id, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken);
+
+    /// <summary>Tải xuống file báo giá của chính NCC.</summary>
+    /// <param name="session">Phiên Portal.</param>
+    /// <param name="id">RFQ.</param>
+    /// <param name="attachmentId">File.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Nội dung file.</returns>
+    Task<AttachmentContent> OpenAttachmentAsync(PortalSession session, Guid id, Guid attachmentId, CancellationToken cancellationToken);
+
+    /// <summary>Xóa file báo giá – chỉ khi còn nhận báo giá.</summary>
+    /// <param name="session">Phiên Portal.</param>
+    /// <param name="id">RFQ.</param>
+    /// <param name="attachmentId">File.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Task.</returns>
+    Task DeleteAttachmentAsync(PortalSession session, Guid id, Guid attachmentId, CancellationToken cancellationToken);
 }
