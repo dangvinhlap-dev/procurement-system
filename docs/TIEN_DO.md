@@ -369,7 +369,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   – Y6, Y7, X7 + Portal P1, P1b (lộ trình design.md 19.6 sửa: P1, P1b vào 0.24.0; 0.25.0 còn P3). 4 migration (88 → 92; migration Portal giữ tên
   `V0_25_0_TaiKhoanPortalNcc`), script `db/scripts/0.24.0.sql` (idempotent) chạy thử 2 lần trên bản sao `procurement_kiemtra_0240` (từ CSDL bản
   test 5007 0.23.0), không lỗi, số dòng PR/PO/AuditLog/NCC giữ nguyên. Kiểm tra: build 0 cảnh báo, `dotnet test` 746/746 + nhóm Portal 10/10,
-  Playwright 139/139.
+  Playwright 139/139. Đóng gói `publish.ps1 -NoInstall` (chạy bằng `powershell.exe -File` – PowerShell trong phiên dừng vì cảnh báo Vite ở
+  stderr) → `artifacts\procurement-0.24.0.zip`; Release https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.24.0.
+  **Bản test 5007 nâng lên 0.24.0 (12/11/2026)**: `app` = 0.24.0, `app-0.23.0` = bản cũ, gói `goi\0.24.0`, sao lưu
+  `D:\project\procurement_kiemtra_0150_truoc_0.24.0.dump`; chạy `0.24.0.sql` (92 migration); PID 19172 trong `pid.txt`; `/health` Healthy 0.24.0
+  (cả qua http://192.168.1.199:5007). `appsettings.Production.json` thêm mục `Portal`: `BaseUrl` http://192.168.1.199:5007,
+  `ExposeCodesForTesting` + `TestServer` = true (chưa có email – mã OTP hiện trên màn hình Portal). Gán quyền mới qua API (script scratchpad
+  `roles_0240.py`): NVCUVT, TOANQUYEN nhận `MasterData.Supplier.Portal` + `Purchase.InternalSale.View/Manage`; 12 vai trò xem nghiệp vụ (CHUTICH,
+  DAMPHAN, GDTCKT, HOIDONG, KSNB, LANHDAO, PHOCTUBCL, POLAP, TPCUVT, TPTCKT, TRUONGBANCUVT, VANHANH) nhận xem đơn bán nội bộ. Tạo sẵn tài khoản
+  Portal thử (`portal_0240.py`): **ncc.thu@vidu.vn / Ncc@2026**, quản trị NCC của NCC000001 (Phú Thịnh) – đăng nhập http://192.168.1.199:5007/ncc,
+  đã thử mời → kích hoạt → mật khẩu → OTP → trang chủ qua.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
