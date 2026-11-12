@@ -44,6 +44,10 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
 - NCC tải **file báo giá** (bảng giá chi tiết, catalogue…, tối đa 2 MB/file) lên Portal, thêm/xóa đến giờ hạn. Trên RFQ dòng **File báo giá
   Portal** chỉ hiện số file khi còn niêm phong; bấm "n file" để xem (sau khi mở, hoặc người có quyền xem trước giờ mở – mỗi lần tải ghi nhật ký).
   Phần mềm nội bộ không thêm, xóa file của NCC.
+- **Hỏi đáp NCC** (tab "Hỏi đáp NCC" của RFQ đã gửi): NCC gửi câu hỏi làm rõ trên Portal đến giờ hạn nộp; người lập RFQ nhận thông báo
+  (chuông). Bấm **Trả lời…** trên câu hỏi – câu trả lời **chỉ NCC hỏi thấy**, NCC khác không thấy câu hỏi lẫn câu trả lời. Cần báo chung cho
+  mọi NCC được mời (đính chính quy cách, điều kiện giao…) thì bấm **Đăng thông báo làm rõ…** – không nêu NCC nào hỏi. Trả lời, thông báo gửi
+  rồi không sửa, xóa được; tiêu đề tab hiện số câu chưa trả lời.
 - **Sau giờ hạn nộp**: bấm **Mở báo giá Portal** (một lần) → giá các NCC hiện trên bảng so sánh, hệ thống ghi người và giờ mở; kiểm mã biên
   nhận với NCC nếu cần. Sau khi mở không gia hạn được nữa; giá NCC tự nộp không sửa thay – chỉ **Chấm điểm** rồi chọn thầu như thường.
 

@@ -99,3 +99,66 @@ test('Portal: NCC nộp báo giá niêm phong, nội bộ xem trước giờ m�
   await expect(filesDialog).toContainText('niêm phong')
   await page.screenshot({ path: 'e2e/screenshots/rfq-portal-files.png' })
 })
+
+/**
+ * Lát P3b-2 (design.md 19.5, P3-11…P3-14; người dùng chốt 12/11/2026): NCC gửi câu hỏi làm rõ trên Portal → nội bộ thấy ở tab "Hỏi đáp NCC"
+ * kèm NCC hỏi, trả lời riêng NCC đó; đăng thông báo làm rõ cho mọi NCC → NCC thấy câu trả lời và thông báo. Bảo mật với NCC khác: test tích
+ * hợp `HoiDapPortal_TraLoiRiengNccHoi_ThongBaoCongKhai`.
+ */
+test('Portal: NCC hỏi làm rõ, Phòng CUVT trả lời riêng và đăng thông báo', async ({ page, request }) => {
+  test.setTimeout(90_000)
+  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const bha = await api(request, 'BHA')
+  const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const in3 = new Date(Date.now() + 3 * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const rfq = await bha.send<{ id: string; no: string }>('post', '/api/rfqs', {
+    date: today, title: `Hỏi đáp ${unique('Q')}`, deadline: in3, deadlineTime: '16:30', sourcingId: null,
+    weights: { price: 60, quality: 20, delivery: 10, payment: 5, warranty: 5 }, note: null,
+    lines: [{ id: null, itemId, uomId: hop, qty: 20, sourcePrLineId: null, note: null }], supplierIds: [supplierId],
+  })
+  await bha.send('post', `/api/rfqs/${rfq.id}/send`, { reason: 'Chỉ một NCC cung cấp' })
+
+  // NCC gửi câu hỏi (hỏi xác nhận vì gửi rồi không sửa).
+  const session = await portalSession(request, supplierId)
+  await page.goto('/ncc/dang-nhap')
+  await page.evaluate((s) => sessionStorage.setItem('proc.portal.session', JSON.stringify(s)), session)
+  await page.goto(`/ncc/bao-gia/${rfq.id}`)
+  await page.getByLabel('Câu hỏi').fill('Hộp có cần in logo công ty không?')
+  await page.getByRole('button', { name: 'Gửi câu hỏi' }).click()
+  await page.locator('.ant-modal-confirm').getByRole('button', { name: 'Gửi' }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã gửi câu hỏi')
+  const qa = page.getByTestId('portal-qa')
+  await expect(qa).toContainText('Hộp có cần in logo công ty không?')
+  await expect(qa).toContainText('Chưa trả lời')
+
+  // Nội bộ: tab Hỏi đáp NCC báo 1 câu chưa trả lời, thấy NCC hỏi; trả lời, rồi đăng thông báo làm rõ.
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+  await page.goto(`/dau-thau/rfq/${rfq.id}`)
+  await page.getByRole('tab', { name: /Hỏi đáp NCC \(1 chưa trả lời\)/ }).click()
+  const tab = page.getByTestId('rfq-qa')
+  await expect(tab).toContainText('Hộp có cần in logo công ty không?')
+  await expect(tab).toContainText('@ncc-thu.vn')
+  await tab.getByRole('button', { name: /Trả lời…/ }).click()
+  await page.getByLabel('Câu trả lời').fill('Không cần in logo.')
+  await page.getByRole('button', { name: /Gửi trả lời/ }).click()
+  await expect(page.locator('.ant-message')).toContainText('Đã trả lời')
+  await expect(tab).toContainText('Không cần in logo.')
+  await expect(tab).not.toContainText('Chưa trả lời')
+  await tab.getByRole('button', { name: /Đăng thông báo làm rõ/ }).click()
+  await page.getByLabel('Nội dung thông báo').fill('Giao hàng trong giờ hành chính.')
+  await page.getByRole('button', { name: /Đăng thông báo$/ }).click()
+  await expect(tab).toContainText('Thông báo làm rõ')
+  await page.screenshot({ path: 'e2e/screenshots/rfq-qa.png' })
+
+  // NCC thấy câu trả lời của mình và thông báo.
+  await page.goto('/ncc/dang-nhap')
+  await page.evaluate((s) => sessionStorage.setItem('proc.portal.session', JSON.stringify(s)), session)
+  await page.goto(`/ncc/bao-gia/${rfq.id}`)
+  await expect(qa).toContainText('Không cần in logo.')
+  await expect(qa).toContainText('Giao hàng trong giờ hành chính.')
+  await qa.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: 'e2e/screenshots/portal-rfq-qa.png', fullPage: true })
+})

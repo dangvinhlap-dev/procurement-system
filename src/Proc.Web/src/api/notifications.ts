@@ -9,7 +9,7 @@ import { apiFetch } from './client'
 
 /** Loại thông báo. */
 export type NotificationType = 'ApprovalPending' | 'Approved' | 'Rejected' | 'IntercompanyReceipt' | 'PeriodReopened' | 'ControlFinding' | 'DelegatedAction'
-  | 'ApprovalOverdue'
+  | 'ApprovalOverdue' | 'PortalQuestion'
 
 /** Một thông báo. */
 export interface AppNotification {
@@ -37,6 +37,8 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   DelegatedAction: 'Đã duyệt thay',
   /** Nhắc phiếu chờ mình duyệt quá 1 ngày làm việc (lát O2c, design.md mục 19.3). */
   ApprovalOverdue: 'Quá hạn duyệt',
+  /** NCC gửi câu hỏi làm rõ RFQ trên Portal (lát P3b-2). */
+  PortalQuestion: 'Câu hỏi NCC',
 }
 
 /** Thông báo của tôi, mới nhất trước. */

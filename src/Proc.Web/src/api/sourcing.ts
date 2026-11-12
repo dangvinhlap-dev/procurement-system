@@ -447,6 +447,58 @@ export function fetchSealedQuotes(id: string): Promise<SealedQuote[]> {
   return apiFetch<SealedQuote[]>(`/api/rfqs/${id}/sealed-quotes`)
 }
 
+/** Một mục hỏi đáp làm rõ của RFQ phía nội bộ (lát P3b-2): câu hỏi NCC (thấy NCC, người hỏi) hoặc thông báo làm rõ. */
+export interface RfqClarification {
+  id: string
+  isNotice: boolean
+  supplierId: string | null
+  supplierCode: string | null
+  supplierName: string | null
+  question: string | null
+  askedAt: string | null
+  askedByEmail: string | null
+  /** Câu trả lời / nội dung thông báo; null = chưa trả lời. */
+  answer: string | null
+  answeredAt: string | null
+  answeredByName: string | null
+}
+
+/**
+ * Hỏi đáp làm rõ của RFQ (lát P3b-2); null thì không tải.
+ * @param id RFQ.
+ */
+export function useRfqClarifications(id: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['rfqs', companyId, 'clarifications', id],
+    queryFn: () => apiFetch<RfqClarification[]>(`/api/rfqs/${id}/clarifications`),
+    enabled: !!id,
+  })
+}
+
+/**
+ * Trả lời câu hỏi NCC (chỉ NCC hỏi thấy) hoặc đăng thông báo làm rõ (mọi NCC được mời thấy) – lát P3b-2.
+ * Kết quả (danh sách mới) ghi thẳng vào bộ nhớ đệm của hỏi đáp RFQ đó.
+ */
+export function useRfqClarificationMutations() {
+  const queryClient = useQueryClient()
+  const companyId = useCompanyId()
+  const onSuccess = (data: RfqClarification[], vars: { rfqId: string }) =>
+    queryClient.setQueryData(['rfqs', companyId, 'clarifications', vars.rfqId], data)
+  return {
+    answer: useMutation({
+      mutationFn: ({ rfqId, id, answer }: { rfqId: string; id: string; answer: string }) =>
+        apiFetch<RfqClarification[]>(`/api/rfqs/${rfqId}/clarifications/${id}/answer`, { method: 'POST', body: { answer } }),
+      onSuccess,
+    }),
+    announce: useMutation({
+      mutationFn: ({ rfqId, text }: { rfqId: string; text: string }) =>
+        apiFetch<RfqClarification[]>(`/api/rfqs/${rfqId}/clarifications`, { method: 'POST', body: { text } }),
+      onSuccess,
+    }),
+  }
+}
+
 /** Lập, sửa, gửi, nhập báo giá, chọn thầu, sinh PO, hủy RFQ. */
 export function useRfqMutations() {
   const queryClient = useQueryClient()

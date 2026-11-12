@@ -2587,6 +2587,22 @@ API Portal: `GET/POST /api/portal/rfqs/{id}/attachments`, `GET …/attachments/{
 kèm chung (`ownerType=RfqPortalQuote`, `ownerId` = `RfqSupplierDto.InvitationId`). Migration `V0_25_0_DinhKemBaoGiaPortal` (cột người tải Portal;
 `Down()` xóa cột – mất thông tin người tải).
 
+**Lát P3b-2 – hỏi đáp làm rõ RFQ trên Portal (12/11/2026, bản 0.25.0).** Người dùng chốt giữa lát (12/11/2026): **"mặc định là công ty
+công khai cho mọi nhà cung cấp, mỗi nhà CC hỏi thì phòng CUVT phản hồi ứng với từng NCC và chỉ nhà CC hỏi mới nhận được câu trả lời và bảo mật
+với nhà cung cấp khác"**. Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P3-11 | **Câu hỏi**: mọi người dùng Portal của NCC được mời gửi câu hỏi làm rõ (tối đa 2.000 ký tự) khi RFQ còn nhận báo giá – đã gửi, chưa mở báo giá Portal, **chưa qua giờ hạn nộp** (sau đó NCC không nộp lại được nên câu trả lời hết tác dụng). Gửi rồi **không sửa, không xóa**. Người lập RFQ nhận thông báo "Câu hỏi NCC" (kèm tên NCC, câu hỏi); RFQ không rõ người lập thì mọi người có quyền lập RFQ của công ty mời. |
+| P3-12 | **Trả lời riêng**: người có quyền lập RFQ (`Sourcing.Rfq.Manage`) trả lời từng câu trên tab "Hỏi đáp NCC" khi RFQ ở trạng thái Đã gửi; câu trả lời **chỉ NCC hỏi thấy**, NCC khác không thấy câu hỏi lẫn câu trả lời. Trả lời **một lần, không sửa** (hai người cùng trả lời thì người sau báo lỗi); cần bổ sung thì đăng thông báo làm rõ. |
+| P3-13 | **Thông báo làm rõ công khai**: Phòng CUVT đăng thông báo (khi RFQ Đã gửi) – **mọi NCC được mời** thấy trên Portal, không nêu NCC nào hỏi. Không sửa, xóa. |
+| P3-14 | Hỏi đáp không có giá nên **không niêm phong**; NCC được nhắc không ghi giá chào trong câu hỏi. Nội bộ (quyền xem RFQ) thấy đủ NCC hỏi, tài khoản hỏi, người trả lời; NCC không thấy tên nhân viên trả lời. Bảng `RfqClarification` không gắn [Auditable] – câu hỏi do tài khoản Portal tạo, mọi mục không sửa/xóa và tự ghi người – giờ hỏi, người – giờ trả lời. Đính kèm file trong hỏi đáp chưa làm (khi có yêu cầu). |
+
+API Portal: `POST /api/portal/rfqs/{id}/questions` (hỏi đáp trả kèm `GET /api/portal/rfqs/{id}`: `canAsk`, `clarifications`). API nội bộ:
+`GET /api/rfqs/{id}/clarifications` (quyền xem RFQ), `POST /api/rfqs/{id}/clarifications` (thông báo), `POST …/clarifications/{cid}/answer`
+(quyền lập RFQ). Migration `V0_25_0_HoiDapBaoGiaPortal` (bảng `RfqClarification`; `Down()` xóa bảng – mất toàn bộ hỏi đáp). Giao diện: khối
+"Hỏi đáp với bên mời" trên Portal, tab "Hỏi đáp NCC" trên RFQ – component `classic/QaThread.tsx` (ui-style.md mục 5g).
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2594,7 +2610,7 @@ kèm chung (`ownerType=RfqPortalQuote`, `ownerId` = `RfqSupplierDto.InvitationId
 | 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
-| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2), email thư mời (P3b-3) |
+| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email thư mời (P3b-3) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |

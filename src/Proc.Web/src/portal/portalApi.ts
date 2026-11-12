@@ -223,6 +223,22 @@ export interface PortalRfq {
   submissions: PortalSubmission[]
   /** Dung lượng tối đa một file báo giá (MB). */
   maxFileSizeMb: number
+  /** Còn gửi câu hỏi làm rõ được (trước giờ hạn, chưa mở – lát P3b-2). */
+  canAsk: boolean
+  /** Câu hỏi – trả lời của chính NCC (riêng) và thông báo làm rõ công khai của bên mời, cũ trước. */
+  clarifications: PortalClarification[]
+}
+
+/** Một mục hỏi đáp NCC thấy (lát P3b-2): câu hỏi của mình hoặc thông báo làm rõ của bên mời. */
+export interface PortalClarification {
+  id: string
+  isNotice: boolean
+  question: string | null
+  askedAt: string | null
+  askedByEmail: string | null
+  /** Câu trả lời / nội dung thông báo; null = chưa trả lời. */
+  answer: string | null
+  answeredAt: string | null
 }
 
 /** File báo giá NCC đã tải lên (lát P3b-1). */
@@ -316,6 +332,9 @@ export const portalApi = {
   /** Nộp / nộp lại báo giá – niêm phong đến giờ mở. */
   submitQuote: (id: string, input: PortalSubmitQuote) =>
     portalFetch<PortalRfq>(`/api/portal/rfqs/${id}/quotes`, { method: 'POST', body: input }),
+  /** Gửi câu hỏi làm rõ (lát P3b-2) – chỉ NCC mình thấy câu trả lời. */
+  ask: (id: string, question: string) =>
+    portalFetch<PortalRfq>(`/api/portal/rfqs/${id}/questions`, { method: 'POST', body: { question } }),
   /** File báo giá đã tải lên (lát P3b-1). */
   attachments: (id: string) => portalFetch<PortalAttachment[]>(`/api/portal/rfqs/${id}/attachments`),
   /** Tải file báo giá lên. */
