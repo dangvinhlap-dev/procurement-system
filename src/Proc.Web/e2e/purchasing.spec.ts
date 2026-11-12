@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 import { api, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
 import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
+import { approveSummaryForPr } from './summaryHelpers.ts'
 
 /**
  * Luồng mua hàng ở BHA (design.md mục 6.2, 6.7): người lập (tài khoản mới) lập PR, gửi duyệt → quản trị duyệt ở Việc cần làm →
@@ -31,7 +32,7 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
   // Bộ phận đề nghị chọn từ danh mục bộ phận của BHA (design.md mục 18.5).
   const departmentCode = unique('BP')
-  await bha.send('post', '/api/departments', { code: departmentCode, name: `Xưởng cán ${departmentCode}`, managerName: null })
+  const department = await bha.send<{ id: string }>('post', '/api/departments', { code: departmentCode, name: `Xưởng cán ${departmentCode}`, managerName: null })
   const buyerName = unique('mh').toLowerCase()
   await bha.send('post', '/api/users', {
     userName: buyerName, fullName: `Người lập mua hàng ${buyerName}`, email: null, password: 'Demo@2026',
@@ -99,6 +100,9 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   await expect(tree).toContainText(`Lập phiếu: Người lập mua hàng ${buyerName}`)
   await expect(tree).toContainText(/Đã duyệt: .+ lúc \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)
   await expect(tree).toContainText('hoàn thành duyệt')
+  // Bắt buộc qua bảng tổng hợp đề xuất mua đã duyệt trước khi lên PO (lát Y5c) – lập + duyệt bảng qua API (giao diện bảng ở Y5c-2).
+  const prId = /([0-9a-f-]{36})/.exec(page.url())![1]
+  await approveSummaryForPr(request, { userName: buyerName, password: 'Demo@2026' }, 'BHA', prId, department.id)
 
   // 3. Người lập: PO lấy dòng từ PR, NCC, CK 0; gửi duyệt.
   await openByCommand(buyer, 'PO')

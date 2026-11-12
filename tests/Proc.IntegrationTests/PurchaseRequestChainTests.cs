@@ -116,6 +116,7 @@ public partial class PurchasingTests
         first = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{first.Id}/submit", null, Ct));
         Assert.Equal([(1, 1)], first.Approvals.Select(s => (s.Stage, s.Level)));
         await ReadAsync<PurchaseRequestDto>(await ActAsync(head, "purchase-requests", first.Id, "approve"));
+        await _factory.ApproveSummaryForRequestAsync(first.Id);
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 1, first.Lines[0].Id));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         await ReadAsync<PurchaseOrderDto>(await ActAsync(head, "purchase-orders", po.Id, "approve"));

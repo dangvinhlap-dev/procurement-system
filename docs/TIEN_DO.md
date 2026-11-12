@@ -249,6 +249,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     đoạn "Lát Y5b". Test: domain `PurchaseSummaryTests` (4), tích hợp `BangTongHop2B_…`, `BangTongHop2A_…`; sửa danh sách loại duyệt ở 2 test cũ.
     Build 0 cảnh báo, `dotnet test` 686/686, tsc, oxlint, `npm run build`; Playwright đủ bộ 135/135 (API thử 5016 Testing bản artifacts scratchpad +
     Vite 5191). Tiếp: **Y5c** (giao diện phiếu, tham số bắt buộc qua bảng tổng hợp, hủy dây chuyền).
+  - **Y5c-1 (nhánh `feature/y5c-bat-buoc-bang-tong-hop`, 12/11/2026)**: người dùng chốt "công ty nào cũng phải qua bảng tổng hợp, bật sẵn khi
+    phát hành" (thay Q3 "bật/tắt bằng tham số"; dữ liệu hiện có là dữ liệu thử). Dòng đề nghị chỉ lên RFQ/PO khi thuộc bảng tổng hợp **đã duyệt**:
+    kiểm ở `PurchaseOrderService.CheckRequestQuantitiesAsync` (lưu + gửi PO), `RfqService.ResolveLinesAsync`, lọc `OpenLinesAsync`
+    (`PurchaseSummaryService.ApprovedSummaryLineIds` / `EnsureApprovedSummaryAsync`). Hủy bảng đơn lẻ chặn khi dòng đã lên RFQ/PO chưa hủy. Hủy dây
+    chuyền: PR → BTH → PO → XNH và gốc BTH (`/api/cancel-chain/BTH/{id}`), RFQ chưa hủy thì chặn. Web: chú thích + chữ trống hộp chọn dòng PR trên
+    PO. design.md 19.3 (Q3, "Lát Y5c-1"). Test: helper `ProcApiFactory.ApproveSummaryForRequestAsync` (bảng đã duyệt trong CSDL) cho 12 test cũ
+    lấy dòng PR lên PO; `BangTongHop2B_…` viết lại theo quy tắc mới (PO/RFQ bị chặn khi bảng nháp, hủy bảng chặn khi đã lên PO); `LuongPrPo…`
+    thêm kiểm chặn; mới `HuyDayChuyen_TuBangTongHop_…`; e2e `purchasing.spec` lập + duyệt bảng qua API (`e2e/summaryHelpers.ts`). Build 0 cảnh
+    báo, `dotnet test` 687/687, tsc, oxlint, `npm run build`; Playwright đủ bộ 134/135 lần đầu (lỗi đúng ở `purchasing.spec` – PO từ PR chưa qua
+    bảng), sửa xong chạy lại `purchasing.spec` 3/3 (API thử 5016 Testing bản artifacts scratchpad + Vite 5191). Tiếp: **Y5c-2** (giao diện phiếu BTH, trang duyệt gọn, hộp hủy dây chuyền).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

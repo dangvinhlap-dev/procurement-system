@@ -256,6 +256,7 @@ public partial class PurchasingTests
         pr = await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "approve"));
         Assert.False(pr.Actions.CanCloseRemaining);
         Assert.Contains("chưa lên đơn mua hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/close-remaining", new CloseRemainingRequest("Thôi"), Ct)));
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
 
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 4, pr.Lines[0].Id));
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
@@ -465,6 +466,10 @@ public partial class PurchasingTests
         Assert.Equal("Approved", pr.Status);
         Assert.Equal(("Approved", "Đồng ý"), (pr.Approvals.Single().Status, pr.Approvals.Single().Comment));
 
+        // Đề nghị đã duyệt chưa qua bảng tổng hợp đã duyệt: không là dòng mở, không lên PO (bắt buộc mọi công ty – lát Y5c).
+        Assert.DoesNotContain((await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct))!, l => l.RequestId == pr.Id);
+        Assert.Contains("bảng tổng hợp", await TitleAsync(await CreatePoAsync(f, 10, pr.Lines[0].Id)));
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
         var open = await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct);
         Assert.Equal(10m, open!.Single(l => l.RequestId == pr.Id).RemainingQty);
 

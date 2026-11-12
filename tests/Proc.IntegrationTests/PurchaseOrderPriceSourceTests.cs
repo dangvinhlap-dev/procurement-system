@@ -126,7 +126,10 @@ public class PurchaseOrderPriceSourceTests
         {
             var created = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests", request, Ct));
             await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{created.Id}/submit", null, Ct));
-            return await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{created.Id}/approve", new ApprovalActionRequest(null), Ct));
+            var approved = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{created.Id}/approve", new ApprovalActionRequest(null), Ct));
+            // Bắt buộc qua bảng tổng hợp đã duyệt trước khi lên PO (lát Y5c).
+            await _factory.ApproveSummaryForRequestAsync(approved.Id);
+            return approved;
         }
 
         var pr1 = await ApprovedPrAsync(new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", null, f.WarehouseId, "Normal", null,
@@ -189,6 +192,8 @@ public class PurchaseOrderPriceSourceTests
         Assert.NotNull(pr.NewItems[0].ItemCode);
         Assert.Contains("đã gắn mã", await TitleAsync(await f.Client.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/new-items/{newItem.Id}/link-item",
             new LinkNewItemRequest(f.ItemId), Ct)));
+        // Dòng có mã vừa sinh phải qua bảng tổng hợp đã duyệt mới là dòng mở (lát Y5c).
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
         open = await ReadAsync<List<OpenRequestLineDto>>(await f.Client.GetAsync("/api/purchase-requests/open-lines", Ct));
         Assert.Equal(4m, open.Single(l => l.RequestId == pr.Id).RemainingQty);
         var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
@@ -280,6 +285,7 @@ public class PurchaseOrderPriceSourceTests
             new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", Today.AddDays(7), f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 20, null, null, null)]), Ct));
         await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/approve", new ApprovalActionRequest(null), Ct));
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
         var fromPr = Po(f, f.SupplierId, new SavePurchaseOrderLineRequest(null, f.ItemId, f.Cai, 5, 50_000, 5, "10", null, null, pr.Lines[0].Id));
         Assert.Contains("khác bộ phận đặt hàng PX2", await TitleAsync(await f.Client.PostAsJsonAsync("/api/purchase-orders", fromPr with { DepartmentId = px2.Id }, Ct)));
         var po4 = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders", fromPr, Ct));

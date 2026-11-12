@@ -2,13 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.Purchasing;
+using Proc.Application.Sourcing;
 
 namespace Proc.IntegrationTests;
 
 /// <summary>
 /// Lát Z4b (design.md mục 20.2 D3, 20.2a): hủy dây chuyền PR → PO → phiếu xác nhận nhận hàng – xem trước trình tự từ phiếu cuối về phiếu đầu,
 /// hủy cả chuỗi trong một giao dịch, PR khác của PO gộp được cảnh báo và trả SL về "còn lại chưa đặt"; chỉ quản trị hủy phiếu đã gửi duyệt.
-/// Người dùng chốt 11/11/2026: chuỗi đã có XNH đã xác nhận thì chặn hủy – chỉ điều chỉnh.
+/// Người dùng chốt 11/11/2026: chuỗi đã có XNH đã xác nhận thì chặn hủy – chỉ điều chỉnh. Lát Y5c: bảng tổng hợp 2A/2B nằm giữa PR và PO.
 /// </summary>
 public partial class PurchasingTests
 {
@@ -17,7 +18,10 @@ public partial class PurchasingTests
     {
         var pr = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, qty));
         await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
-        return await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "approve"));
+        pr = await ReadAsync<PurchaseRequestDto>(await ActAsync(approver, "purchase-requests", pr.Id, "approve"));
+        // Bắt buộc qua bảng tổng hợp đã duyệt trước khi lên PO (lát Y5c).
+        await _factory.ApproveSummaryForRequestAsync(pr.Id);
+        return pr;
     }
 
     [Fact]
@@ -37,11 +41,13 @@ public partial class PurchasingTests
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
         var xnh = await ReadAsync<ReceiptConfirmationDto>(await ReceiveXnhAsync(f, po, 4));
 
-        // Xem trước: phiếu cuối trước – XNH → PO → PR1; cảnh báo PR2 bị ảnh hưởng.
+        // Xem trước: phiếu cuối trước – XNH → PO → bảng tổng hợp của PR1 → PR1; cảnh báo PR2 bị ảnh hưởng.
         var preview = await f.Buyer.GetFromJsonAsync<CancelChainDto>($"/api/cancel-chain/PR/{pr1.Id}", Ct);
-        Assert.Equal([xnh.No, po.No, pr1.No], preview!.Items.Select(i => i.No));
-        Assert.Equal([1, 2, 3], preview.Items.Select(i => i.Order));
-        Assert.Equal(["XNH", "PO", "PR"], preview.Items.Select(i => i.DocType));
+        Assert.Equal([xnh.No, po.No], preview!.Items.Take(2).Select(i => i.No));
+        Assert.Equal(pr1.No, preview.Items[^1].No);
+        Assert.Equal([1, 2, 3, 4], preview.Items.Select(i => i.Order));
+        Assert.Equal(["XNH", "PO", "BTH", "PR"], preview.Items.Select(i => i.DocType));
+        var summaryId = preview.Items[2].Id;
         Assert.Contains(pr2.No, Assert.Single(preview.Warnings));
         Assert.Null(preview.BlockedReason);
 
@@ -55,7 +61,8 @@ public partial class PurchasingTests
 
         // Quản trị hủy cả chuỗi: XNH nháp, PO, PR1 đã hủy kèm lý do; PR2 còn nguyên, SL trở về còn lại chưa đặt.
         var done = await ReadAsync<CancelChainDto>(await f.Buyer.PostAsJsonAsync($"/api/cancel-chain/PR/{pr1.Id}", new CancelChainRequest("Đổi phương án mua"), Ct));
-        Assert.Equal(3, done.Items.Count);
+        Assert.Equal(4, done.Items.Count);
+        Assert.Equal("Cancelled", (await f.Buyer.GetFromJsonAsync<PurchaseSummaryDto>($"/api/purchase-summaries/{summaryId}", Ct))!.Status);
         var xnhAfter = await f.Buyer.GetFromJsonAsync<ReceiptConfirmationDto>($"/api/receipt-confirmations/{xnh.Id}", Ct);
         var poAfter = await f.Buyer.GetFromJsonAsync<PurchaseOrderDto>($"/api/purchase-orders/{po.Id}", Ct);
         var pr1After = await f.Buyer.GetFromJsonAsync<PurchaseRequestDto>($"/api/purchase-requests/{pr1.Id}", Ct);
@@ -69,6 +76,33 @@ public partial class PurchasingTests
 
         // Hủy lại phiếu đã hủy thì báo lỗi.
         Assert.Contains("đã hủy", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/cancel-chain/PR/{pr1.Id}", new CancelChainRequest("Lần 2"), Ct)));
+    }
+
+    [Fact]
+    public async Task HuyDayChuyen_TuBangTongHop_RfqChuaHuyThiChan_HuyPoRoiBang_DongDeNghiKhongConMo()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var pr = await ApprovedPrAsync(f, approver, 6);
+        var summaryId = (await f.Buyer.GetFromJsonAsync<CancelChainDto>($"/api/cancel-chain/PR/{pr.Id}", Ct))!.Items.Single(i => i.DocType == "BTH").Id;
+        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 6, pr.Lines[0].Id));
+
+        // RFQ chưa hủy hỏi giá dòng của bảng: chặn – RFQ có chuỗi riêng, hủy RFQ trước.
+        var rfq = await ReadAsync<RfqDto>(await f.Buyer.PostAsJsonAsync("/api/rfqs", new SaveRfqRequest(Today, "Hỏi giá", Today.AddDays(7), null,
+            new RfqWeightsDto(60, 20, 10, 5, 5), null, [new SaveRfqLineRequest(null, f.ItemId, f.Cai, 6, pr.Lines[0].Id, null)], [f.SupplierId]), Ct));
+        var preview = (await f.Buyer.GetFromJsonAsync<CancelChainDto>($"/api/cancel-chain/BTH/{summaryId}", Ct))!;
+        Assert.Contains(rfq.No, preview.BlockedReason);
+        Assert.Equal(["PO", "BTH"], preview.Items.Select(i => i.DocType));
+        await ReadAsync<CancelChainDto>(await f.Buyer.PostAsJsonAsync($"/api/cancel-chain/RFQ/{rfq.Id}", new CancelChainRequest("Không hỏi giá"), Ct));
+
+        // Hủy từ bảng: PO rồi bảng; đề nghị còn nguyên nhưng dòng không còn là dòng mở (phải lập bảng tổng hợp khác).
+        var done = await ReadAsync<CancelChainDto>(await f.Buyer.PostAsJsonAsync($"/api/cancel-chain/BTH/{summaryId}", new CancelChainRequest("Lập lại bảng"), Ct));
+        Assert.Equal([po.No], done.Items.Where(i => i.DocType == "PO").Select(i => i.No));
+        Assert.Equal("Cancelled", (await f.Buyer.GetFromJsonAsync<PurchaseOrderDto>($"/api/purchase-orders/{po.Id}", Ct))!.Status);
+        var summary = (await f.Buyer.GetFromJsonAsync<PurchaseSummaryDto>($"/api/purchase-summaries/{summaryId}", Ct))!;
+        Assert.Equal(("Cancelled", "Lập lại bảng"), (summary.Status, summary.CancelReason));
+        Assert.Equal("Approved", (await f.Buyer.GetFromJsonAsync<PurchaseRequestDto>($"/api/purchase-requests/{pr.Id}", Ct))!.Status);
+        Assert.DoesNotContain((await f.Buyer.GetFromJsonAsync<List<OpenRequestLineDto>>("/api/purchase-requests/open-lines", Ct))!, l => l.RequestId == pr.Id);
     }
 
     [Fact]

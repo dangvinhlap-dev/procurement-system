@@ -755,7 +755,7 @@ function actionBody(name: string, comment: string | null | undefined): unknown {
   return undefined
 }
 
-/** Dòng PR đã duyệt còn chưa đặt hàng (lập PO). */
+/** Dòng PR đã duyệt, đã qua bảng tổng hợp đã duyệt, còn chưa đặt hàng (lập PO, RFQ). */
 export function useOpenRequestLines(enabled: boolean) {
   const companyId = useCompanyId()
   return useQuery({
