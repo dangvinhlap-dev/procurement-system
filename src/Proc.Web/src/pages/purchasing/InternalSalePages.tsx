@@ -159,7 +159,7 @@ function InternalSaleDrawer({ orderId, onClose }: { orderId: string; onClose: ()
       loading={sale.isLoading}
       error={error ?? (sale.error instanceof Error ? sale.error.message : null)}
       onClose={onClose}
-      readOnly
+      readOnly={!data?.canDecide}
       extraActions={buttons}
       tabs={[
         {

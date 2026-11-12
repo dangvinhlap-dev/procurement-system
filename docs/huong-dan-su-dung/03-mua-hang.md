@@ -139,6 +139,19 @@ bấm **Đã bổ sung hồ sơ**; quá hạn thì PO bị gắn cờ quá hạn
 - **Đóng phần còn lại** (bắt buộc lý do): PO nhận thiếu thôi chờ hàng; ngân sách chỉ tính phần đã nhận.
 - **Hủy**: PO đã có phiếu nhập (chưa hủy) không hủy được; hủy PO đã duyệt bắt buộc lý do.
 
+### Mua nội bộ (từ bản 0.24.0 – thay phiếu xuất bán / nhập mua nội bộ ICS, ICR)
+
+Mua hàng của công ty khác trong tập đoàn = lập **PO** cho **NCC nội bộ** của công ty đó (NCC có ô "Công ty thành viên" – 02 Danh mục).
+
+- **Bên mua (lập PO)**: chọn NCC nội bộ; chọn mặt hàng thì đơn giá tự điền **giá bán nội bộ** của công ty bán (cột Nguồn giá ghi "Giá nội bộ
+  … (gợi ý)"). Giá này **chỉ là gợi ý – gõ giá khác được**, không phải nhập lý do lệch giá, không thêm chặng duyệt ngoại lệ. Không đặt mua NCC
+  nội bộ của chính công ty mình. PO duyệt như PO thường; nhận hàng bằng **XNH** như thường.
+- Ô **Bên bán (mua nội bộ)** trên PO: công ty bán và trạng thái – *Chưa gửi* (PO chưa duyệt), *Chờ xác nhận*, *Đã xác nhận*, *Từ chối* (kèm
+  người, giờ, ghi chú / lý do). Bị từ chối thì hủy PO (quản trị) hoặc **Đóng phần còn lại**.
+- **Bên bán – Mua hàng → Đơn bán nội bộ (DBN)**: PO đã duyệt của công ty khác đặt cho công ty mình (người có quyền nhận thông báo khi PO duyệt
+  xong). Bấm đúp mở đơn xem đầu đơn, dòng hàng, SL bên mua đã nhận; nhập ghi chú rồi **Xác nhận đơn**, hoặc nhập lý do rồi **Từ chối**. Mỗi đơn
+  quyết định **một lần**, không đổi; người lập PO nhận thông báo. PO đã hủy / đã đóng chỉ xem.
+
 ## 3.5 Theo dõi giao hàng (POTRK)
 
 Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn lại, hạn giao (dòng hoặc đầu phiếu), **quá hạn**. Bấm đúp mở PO.

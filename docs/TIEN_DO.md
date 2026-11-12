@@ -322,7 +322,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     định. Migration `V0_24_0_DonBanNoiBo` (điền lại công ty bán cho PO cũ). Web: `api/internalSales.ts`, màn hình **DBN**
     `pages/purchasing/InternalSalePages.tsx` (danh sách + ngăn kéo, `/mua-hang/don-ban-noi-bo/:id` từ thông báo), PO ô "Bên bán (mua nội bộ)",
     nguồn giá "Giá nội bộ (gợi ý)". Test: domain `InternalPurchaseTests` (3), tích hợp `InternalPurchaseTests` (1). Build 0 cảnh báo, `dotnet test`
-    698/698 (trước khi thêm kiểm tra PRCW; chạy lại riêng qua), tsc, oxlint qua. Còn: e2e `internal-purchase.spec.ts`, hướng dẫn sử dụng, `npm run build`, Playwright đủ bộ.
+    698/698 (trước khi thêm kiểm tra PRCW; chạy lại riêng qua), tsc, oxlint qua.
+  - **Bước 2 (e2e + hướng dẫn)**: e2e `internal-purchase.spec.ts` (BHA mua của NMI – NCC nội bộ NMI dùng lại nếu CSDL test đã có; PO gõ tay
+    16.000 khác giá gợi ý 15.000; NMI xác nhận ở DBN; PO hiện "Đã xác nhận"); ngăn kéo DBN chỉ khóa khi không được quyết định. Hướng dẫn 03-mua-hang
+    mục 3.4 "Mua nội bộ", 06-kho ghi chú thay ICS/ICR. tsc, oxlint, `npm run build` qua; e2e mới qua (API Testing 5000 + Vite 5173 Playwright tự bật).
+    Còn: Playwright đủ bộ, `dotnet test` đủ bộ lần cuối, merge.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
