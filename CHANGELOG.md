@@ -3,6 +3,51 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.24.0] - 2026-11-12
+
+Đợt ba của quy trình biểu mẫu CUVT (design.md mục 19.3): so sánh / trình giá theo biểu mẫu 3A / 3a / 3B, đơn mua hàng theo bảng theo dõi
+4A / 4B, mua nội bộ qua PO. Kèm sớm **Portal nhà cung cấp** – tài khoản NCC và hạ tầng (design.md mục 19.5, lát P1, P1b) để người dùng test.
+
+### Thêm mới
+- **RFQ theo biểu mẫu 3A / 3a / 3B**: RFQ có loại mua (suy từ dòng đề nghị) và công trình; biểu mẫu chốt khi chọn thầu – loại A từ ngưỡng
+  trở lên in **3A bảng so sánh NCC** (bắt buộc lý do chọn), dưới ngưỡng **3a trình giá**, loại B in **3B**. Tham số công ty mới
+  `RFQ_COMPARISON_THRESHOLD` (mặc định 0 = mọi RFQ loại A là 3A). Nút **In phiếu** (khổ ngang): giá cũ đã mua gần nhất, lũy kế, định mức, bằng chữ.
+- **PO theo bảng theo dõi mua hàng 4A / 4B**: PO có loại mua + công trình theo dòng đề nghị nguồn; **In phiếu** mặc định in "BẢNG THEO DÕI MUA
+  HÀNG" khổ ngang (giá cũ / giá mới tăng – giảm, lũy kế gồm đơn này, còn lại theo dự toán / ngân sách tháng); nút **In đơn gửi NCC** in mẫu cũ.
+- **Mua nội bộ qua PO**: PO đặt cho NCC nội bộ ghi **Bên bán (mua nội bộ)**, giá nội bộ **tự điền làm gợi ý** (sửa tay được, không chặn); PO
+  duyệt xong báo công ty bán; màn hình **DBN – Đơn bán nội bộ** để công ty bán xác nhận / từ chối; PO hiện trạng thái bên bán. Báo cáo tỷ lệ mua
+  theo giá đã duyệt tính mua nội bộ là mua đúng quy định. Quyền mới `Purchase.InternalSale.View/Manage`.
+- **Portal nhà cung cấp `/ncc`** (bản đầu): Phòng CUVT mời NCC từ tab **Tài khoản Portal** của ngăn kéo NCC (quyền mới
+  `MasterData.Supplier.Portal`); NCC kích hoạt bằng link mời, đăng nhập **mật khẩu + mã OTP qua email**, quên / đặt lại mật khẩu, đổi mật khẩu;
+  quản trị NCC tự mời / khóa người dùng con. Token Portal tách hẳn với người dùng nội bộ.
+- **Hạ tầng Portal**: giới hạn số yêu cầu theo IP (đăng nhập Portal 20/phút, API Portal 300/phút – báo "Quá nhiều yêu cầu"); **tên miền
+  Portal riêng** (`Portal:Hosts`) – vào bằng tên này chỉ mở được trang NCC và API Portal; tiêu đề bảo mật cho mọi phản hồi.
+- Cấu hình **máy chủ thử nghiệm** `Portal:TestServer`: chưa có email thì mã OTP / link đặt lại mật khẩu hiện trên màn hình Portal để test.
+
+### Thay đổi
+- **Kiểm nội dung file đính kèm** (mọi form): nội dung phải khớp đuôi file; file đổi đuôi (trang web đặt tên .pdf, chương trình đặt tên .txt…)
+  bị từ chối. File .xls do phần mềm khác xuất mà thực chất là HTML cần mở bằng Excel và lưu lại trước khi đính kèm.
+- Ngăn kéo chi tiết: tab không có ô nhập (như "Tài khoản Portal") chỉ vẽ khi mở.
+
+### Thay đổi CSDL
+- 4 migration mới (88 → 92): `V0_24_0_RfqBieuMau3`, `V0_24_0_PoBieuMau4` (điền lại loại mua / công trình cho PO cũ có dòng đề nghị loại A),
+  `V0_24_0_DonBanNoiBo` (điền lại công ty bán cho PO cũ đặt NCC nội bộ), `V0_25_0_TaiKhoanPortalNcc` (2 bảng tài khoản / mã Portal – tên giữ
+  `V0_25_0` vì làm theo lộ trình 0.25.0 trước khi phát hành sớm). Chỉ thêm bảng/cột. Script: `db/scripts/0.24.0.sql`.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.24.0.sql`, sau đó thay gói ứng dụng, giữ
+  `appsettings.Production.json`. Nếu nâng từ bản cũ hơn 0.23.0: chạy các script bản trước theo thứ tự.
+- Gán quyền mới cho vai trò đang dùng (hoặc "Bộ vai trò mẫu…"): `Purchase.InternalSale.View/Manage` (công ty bán xác nhận đơn bán nội bộ),
+  `MasterData.Supplier.Portal` (Phòng CUVT mời NCC vào Portal). Đặt tham số `RFQ_COMPARISON_THRESHOLD` nếu cần ngưỡng 3A / 3a.
+- Portal: đăng nhập cần **bật email** (`Email:*`) để gửi OTP; link mời lấy `Portal:BaseUrl`. Máy chủ thử trong LAN chưa có email: đặt
+  `Portal:ExposeCodesForTesting` = `true` và `Portal:TestServer` = `true`. Mở Portal ra internet: tên miền riêng theo docs/deploy-windows.md mục
+  3.5b (`Portal:Hosts`) – **không** bật `TestServer` trên máy chủ này.
+- Người dùng tải lại trang (Ctrl+F5) để trình duyệt nhận giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.23.0; khôi phục CSDL từ bản sao lưu trước khi nâng (cách an toàn). Hoặc gỡ migration về `20261111104256_V0_23_0_BangTongHopDeXuat`
+  (mất tài khoản Portal, đơn bán nội bộ, loại mua / biểu mẫu của RFQ, PO) – chỉ làm sau khi đã sao lưu.
+
 ## [0.23.0] - 2026-11-12
 
 Quy tắc chung cho chứng từ có phê duyệt (design.md mục 20) và đợt hai của quy trình biểu mẫu CUVT (design.md mục 19.3): công trình – dự
