@@ -3,6 +3,68 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.23.0] - 2026-11-12
+
+Quy tắc chung cho chứng từ có phê duyệt (design.md mục 20) và đợt hai của quy trình biểu mẫu CUVT (design.md mục 19.3): công trình – dự
+toán, đề nghị mua theo loại A/B/DV có Thủ kho nhập tồn, bảng tổng hợp đề xuất mua 2A/2B, in theo biểu mẫu CUVT.
+
+### Thêm mới
+- **Ý kiến + đính kèm từng bước duyệt**: hộp thoại Duyệt / Từ chối có ô ý kiến và đính kèm file; tab Đính kèm có cột "Bước duyệt", "Đã khóa".
+  Phiếu đã duyệt thì khóa đính kèm (không thêm/xóa).
+- **Ổ khóa vàng từng bước** trên tiêu đề phiếu (đóng = đã duyệt, mở = chưa) và nút **"Kiểm tra phê duyệt"** (bước 0…n: tên đăng nhập, họ
+  tên, chức vụ, giờ ngày, ý kiến). Người dùng có thêm ô **Chức vụ** (trống thì lấy tên vai trò).
+- **Ô số chứng từ**: bấm để sao chép, bấm đúp (hoặc Enter) mở phiếu gốc – trên form, danh sách và báo cáo.
+- **Hủy dây chuyền** từ phiếu cuối về phiếu đầu, có hộp thoại trình tự: PR → BTH → PO → XNH, DHG → PO (mọi công ty) → XNH, RFQ → PO → XNH
+  + hợp đồng / bảng giá nháp tạo từ RFQ. Chuỗi có XNH đã xác nhận hoặc hợp đồng / bảng giá đã duyệt thì chặn hủy. Bảng giá có trạng thái Đã hủy.
+- Nút **Rút về nháp** cho đề nghị mua (PR) và đơn mua hàng (PO).
+- Màn hình **CTDT – Công trình – dự toán** (Mua hàng): danh mục công trình theo công ty, điều chỉnh dự toán có lý do và lịch sử, lũy kế đã
+  mua / còn lại theo PO đã duyệt (chỉ dòng lấy từ đề nghị loại A).
+- Đề nghị mua có **Loại mua** (A công trình, B hàng hóa, DV dịch vụ) và **Công trình** (bắt buộc với loại A); thông báo khung dự toán.
+- **Thủ kho nơi nhận nhập tồn** trên đề nghị mua (loại A/B): cột SL cần sử dụng, Tồn, Cần mua = max(cần − tồn, 0); nút "Nhập tồn".
+- Chuỗi duyệt đề nghị mua **theo loại mua**: bộ cấp PRA (loại A), PRS (dịch vụ), PRE (vượt dự toán); loại người duyệt mới **"Thủ kho nơi
+  nhận"** (phải nhập tồn rồi mới duyệt). Phần vượt dự toán / ngân sách được xem trước khi trình cấp cao nhất.
+- Màn hình **DVM – Đơn vị mua** (Mua hàng): danh mục đơn vị mua theo công ty.
+- Màn hình **BTH – Bảng tổng hợp đề xuất mua** (2A theo công trình, 2B hàng hóa/dịch vụ): chọn dòng đề nghị đã duyệt, gán đơn vị mua từng
+  dòng, khung chi phí đầu phiếu, duyệt theo bộ cấp BTH (mẫu CUVT: TP CUVT → GĐ khối → Phó CT UBCL&PT → Chủ tịch), duyệt trên điện thoại.
+- **In theo biểu mẫu CUVT**: đề nghị mua in mẫu 1A / 1B / DV; bảng tổng hợp in mẫu 2A / 2B khổ ngang; khối ký lấy từ chuỗi duyệt.
+  "Lũy kế số tiền đã mua trong tháng" chỉ tính PO đã duyệt trong tháng, chưa VAT.
+- Quyền mới: `Purchase.Project.View/Manage`, `Purchase.PR.EnterStock`, `Purchase.Unit.View/Manage`, `Purchase.Summary.View/Manage/Approve`.
+
+### Thay đổi
+- **Hủy phiếu chỉ quản trị** (quyền `System.Document.Cancel` chỉ có ở ADMIN, không gán được cho vai trò khác); phiếu **Nháp** thì người lập tự
+  hủy được; mọi lần hủy **bắt buộc lý do**.
+- **Mọi công ty bắt buộc qua bảng tổng hợp**: dòng đề nghị mua chỉ lên RFQ / PO khi thuộc bảng tổng hợp **đã duyệt**. Đề nghị đang nằm
+  trong bảng tổng hợp chưa hủy thì không hủy riêng được (dùng hủy dây chuyền).
+- Đề nghị mua thôi đọc tồn kho của phân hệ kho cũ; tồn do Thủ kho nhập tay.
+- Mẫu cấu hình duyệt CUVT: PR 8 cấp, PRA 7, PRS 7, PRE, BTH 4 cấp; vai trò mẫu thêm các quyền mới.
+
+### Sửa lỗi
+- Xem trước chuỗi duyệt bảng tổng hợp báo lỗi 500 (lệnh gửi mở giao dịch thứ hai).
+
+### Thay đổi CSDL
+- 10 migration mới (78 → 88): `V0_23_0_DinhKemBuocDuyet`, `V0_23_0_ChucVuNguoiDung`, `V0_23_0_LyDoHuyPhieu`, `V0_23_0_HuyBangGia`,
+  `V0_23_0_CongTrinhDuToan`, `V0_23_0_LoaiMuaDeNghi`, `V0_23_0_ThuKhoNhapTon`, `V0_23_0_BuocThuKho`, `V0_23_0_DonViMua`,
+  `V0_23_0_BangTongHopDeXuat`. Chỉ thêm bảng/cột; `ThuKhoNhapTon` điền SL cần sử dụng = SL đề nghị cho dòng cũ.
+  Script: `db/scripts/0.23.0.sql` (đã chạy thử 2 lần trên bản sao CSDL bản test 0.22.2, không lỗi, số dòng PR/PO/AuditLog giữ nguyên).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), rồi chạy `db/scripts/0.23.0.sql`, sau đó thay gói ứng dụng, giữ
+  `appsettings.Production.json`. Nếu nâng từ bản cũ hơn 0.22.0: chạy `0.22.0.sql` trước.
+- **Bảng tổng hợp bắt buộc ngay sau khi nâng**: đề nghị mua đã duyệt nhưng chưa lên PO/RFQ phải lập bảng tổng hợp (BTH) và duyệt trước;
+  PO nháp đang lấy dòng đề nghị chưa qua bảng sẽ bị chặn khi lưu / gửi duyệt.
+- Cấu hình duyệt: khai bộ cấp **BTH** (bắt buộc để duyệt bảng tổng hợp); PRA / PRS / PRE tùy chọn (chưa khai PRA/PRS thì dùng PR). Có thể dùng
+  "Cấu hình duyệt mẫu…" bộ CUVT. Chuỗi có cấp "Thủ kho nơi nhận" cần đề nghị ghi Nơi nhận (kho) và kho đó có thủ kho được phân phạm vi.
+- Gán quyền mới cho vai trò đang dùng (hoặc dùng "Bộ vai trò mẫu…"): xem/quản lý công trình, đơn vị mua, bảng tổng hợp; nhập tồn cho thủ kho.
+  Khai danh mục **Đơn vị mua** (DVM) và **Công trình** (CTDT) trước khi lập bảng tổng hợp / đề nghị loại A.
+- Quyền Hủy phiếu cũ đã gán cho vai trò khác ADMIN không còn tác dụng. Điền **Chức vụ** cho người duyệt để in khối ký đúng.
+- Người dùng tải lại trang (Ctrl+F5) để trình duyệt nhận giao diện mới.
+
+### Cách quay lại bản trước
+- Cách 1: khôi phục bản sao lưu trước nâng cấp và triển khai lại tag `v0.22.2`.
+- Cách 2: gỡ migration về `20261110100424_V0_22_0_NhacQuaHanDuyet`. `Down()` xóa bảng công trình – dự toán, đơn vị mua, bảng tổng hợp và
+  các cột mới (chức vụ, lý do hủy, loại mua, công trình, SL cần sử dụng / tồn, bước thủ kho, liên kết đính kèm – bước duyệt), nên **mất dữ
+  liệu các chức năng mới đã nhập**. Bảng giá đã hủy ở 0.23.0 sẽ mang trạng thái bản cũ không biết – nên dùng cách 1.
+
 ## [0.22.2] - 2026-11-11
 
 Bản vá thứ hai cho 0.22.0 (phản ánh khi test bản 0.22.0).
