@@ -16,7 +16,7 @@ using Proc.Infrastructure.Persistence;
 namespace Proc.Infrastructure.Portal;
 
 /// <summary>
-/// Thư báo NCC qua Portal (lát P3b-3 – design.md mục 19.5, P3-15…P3-18). Thư soạn sẵn vào bảng <see cref="SupplierPortalEmail"/> cùng giao dịch
+/// Thư báo NCC qua Portal (lát P3b-3 – design.md mục 19.5, P3-15…P3-18; thư về PO – lát P4a, P4-5). Thư soạn sẵn vào bảng <see cref="SupplierPortalEmail"/> cùng giao dịch
 /// với thao tác RFQ; <see cref="EmailBackgroundService"/> gọi <see cref="DispatchAsync"/> để gửi. Nội dung thư **không có giá, không nêu NCC
 /// khác, không ghi lý do nội bộ** (lý do gia hạn / hủy có thể nhắc tên NCC khác) – NCC xem chi tiết trên Portal sau khi đăng nhập.
 /// </summary>
@@ -24,6 +24,9 @@ public sealed class PortalEmailService : IPortalEmailService
 {
     /// <summary>Loại chứng từ của thư về RFQ.</summary>
     public const string RfqDocType = "RFQ";
+
+    /// <summary>Loại chứng từ của thư về PO (lát P4a).</summary>
+    public const string PurchaseOrderDocType = "PO";
 
     private readonly ProcDbContext _db;
     private readonly IClock _clock;
@@ -57,21 +60,12 @@ public sealed class PortalEmailService : IPortalEmailService
     {
         ArgumentNullException.ThrowIfNull(rfq);
         var supplierIds = rfq.Suppliers.Select(s => s.SupplierId).Where(id => onlySupplierId is null || id == onlySupplierId).Distinct().ToList();
-        if (supplierIds.Count == 0) return 0;
-
-        // Chỉ tài khoản đang dùng (đã kích hoạt, chưa khóa) của NCC không ở danh sách đen – người chưa kích hoạt chưa đăng nhập được để xem thư mời.
-        var recipients = await (
-                from u in _db.SupplierPortalUsers.AsNoTracking()
-                join s in _db.Suppliers.AsNoTracking().IgnoreQueryFilters() on u.SupplierId equals s.Id
-                where supplierIds.Contains(u.SupplierId) && u.Status == SupplierPortalUserStatus.Active && s.Status != SupplierStatus.Blacklisted
-                orderby s.Code, u.Email
-                select new { u.Id, u.SupplierId, u.Email, u.FullName, SupplierName = s.Name })
-            .ToListAsync(cancellationToken);
+        var recipients = await RecipientsAsync(supplierIds, cancellationToken);
         if (recipients.Count == 0) return 0;
 
         var company = await _db.Companies.AsNoTracking().IgnoreQueryFilters().Where(c => c.Id == rfq.CompanyId)
             .Select(c => new { c.Code, c.Name }).SingleAsync(cancellationToken);
-        var link = PortalLink(rfq.Id);
+        var link = PortalLink($"bao-gia/{rfq.Id}");
         var now = _clock.UtcNow;
         foreach (var r in recipients)
         {
@@ -84,6 +78,48 @@ public sealed class PortalEmailService : IPortalEmailService
 
         return recipients.Count;
     }
+
+    /// <inheritdoc />
+    public async Task<int> QueuePurchaseOrderAsync(
+        Proc.Domain.Purchasing.PurchaseOrder order, SupplierPortalEmailKind kind, string? detail, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        // PO mua nội bộ: công ty bán xác nhận ở màn hình Đơn bán nội bộ (lát X7), không qua Portal.
+        if (order.InternalSellerCompanyId is not null) return 0;
+        var recipients = await RecipientsAsync([order.SupplierId], cancellationToken);
+        if (recipients.Count == 0) return 0;
+        var company = await _db.Companies.AsNoTracking().IgnoreQueryFilters().Where(c => c.Id == order.CompanyId)
+            .Select(c => new { c.Code, c.Name }).SingleAsync(cancellationToken);
+        var link = PortalLink($"don-hang/{order.Id}");
+        var now = _clock.UtcNow;
+        foreach (var r in recipients)
+        {
+            var (subject, title, lines) = OrderContent(order, kind, company.Name, r.SupplierName, detail);
+            _db.SupplierPortalEmails.Add(SupplierPortalEmail.Queue(
+                order.CompanyId, r.SupplierId, r.Id, r.Email, r.FullName, kind, PurchaseOrderDocType, order.Id, $"[{company.Code}] {subject}",
+                Html(r.FullName, title, lines, link), Text(r.FullName, title, lines, link), now));
+        }
+
+        return recipients.Count;
+    }
+
+    /// <summary>
+    /// Người nhận: tài khoản Portal đang dùng (đã kích hoạt, chưa khóa) của các NCC không ở danh sách đen – người chưa kích hoạt chưa đăng nhập
+    /// được để xem trên Portal (P3-15).
+    /// </summary>
+    private async Task<List<Recipient>> RecipientsAsync(IReadOnlyCollection<Guid> supplierIds, CancellationToken cancellationToken)
+    {
+        if (supplierIds.Count == 0) return [];
+        return await (
+                from u in _db.SupplierPortalUsers.AsNoTracking()
+                join s in _db.Suppliers.AsNoTracking().IgnoreQueryFilters() on u.SupplierId equals s.Id
+                where supplierIds.Contains(u.SupplierId) && u.Status == SupplierPortalUserStatus.Active && s.Status != SupplierStatus.Blacklisted
+                orderby s.Code, u.Email
+                select new Recipient(u.Id, u.SupplierId, u.Email, u.FullName, s.Name))
+            .ToListAsync(cancellationToken);
+    }
+
+    private sealed record Recipient(Guid Id, Guid SupplierId, string Email, string FullName, string SupplierName);
 
     /// <inheritdoc />
     public async Task<EmailDispatchResult> DispatchAsync(CancellationToken cancellationToken)
@@ -146,10 +182,22 @@ public sealed class PortalEmailService : IPortalEmailService
     {
         // RFQ đi qua bộ lọc công ty đang làm việc; thư cũng có CompanyId nên tự lọc.
         if (!await _db.Rfqs.AsNoTracking().AnyAsync(r => r.Id == rfqId, cancellationToken)) throw new NotFoundException("Không tìm thấy RFQ.");
+        return await ListAsync(RfqDocType, rfqId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SupplierPortalEmailDto>> ListForPurchaseOrderAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        if (!await _db.PurchaseOrders.AsNoTracking().AnyAsync(o => o.Id == orderId, cancellationToken)) throw new NotFoundException("Không tìm thấy PO.");
+        return await ListAsync(PurchaseOrderDocType, orderId, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<SupplierPortalEmailDto>> ListAsync(string docType, Guid docId, CancellationToken cancellationToken)
+    {
         var rows = await (
                 from m in _db.SupplierPortalEmails.AsNoTracking()
                 join s in _db.Suppliers.AsNoTracking().IgnoreQueryFilters() on m.SupplierId equals s.Id
-                where m.DocType == RfqDocType && m.DocId == rfqId
+                where m.DocType == docType && m.DocId == docId
                 orderby m.CreatedAt descending, s.Code, m.ToAddress
                 select new { m, s.Code, s.Name })
             .ToListAsync(cancellationToken);
@@ -203,11 +251,43 @@ public sealed class PortalEmailService : IPortalEmailService
         };
     }
 
-    /// <summary>Link mở thư mời trên Portal; null khi chưa cấu hình địa chỉ (Portal:BaseUrl, rồi Email:AppBaseUrl).</summary>
-    private string? PortalLink(Guid rfqId)
+    /// <summary>
+    /// Tiêu đề và các đoạn thư về PO (lát P4a – P4-5). Thư **không có giá** (NCC xem đủ dòng, giá trên Portal sau khi đăng nhập); thư hủy không ghi
+    /// lý do hủy (lý do nội bộ). Thư mở lại ghi lý do – lý do này Phòng CUVT viết để gửi NCC.
+    /// </summary>
+    internal static (string Subject, string Title, IReadOnlyList<string> Lines) OrderContent(
+        Proc.Domain.Purchasing.PurchaseOrder order, SupplierPortalEmailKind kind, string companyName, string supplierName, string? detail)
+    {
+        var expected = order.ExpectedDate is { } d ? $"Ngày giao dự kiến: {d:dd/MM/yyyy}." : null;
+        var extra = string.IsNullOrWhiteSpace(detail) ? null : detail.Trim();
+        return kind switch
+        {
+            SupplierPortalEmailKind.PurchaseOrderIssued => ($"Đơn đặt hàng {order.No}", $"Đơn đặt hàng {order.No}",
+            [
+                $"{companyName} gửi {supplierName} đơn đặt hàng {order.No} ngày {order.Date:dd/MM/yyyy}.",
+                .. expected is null ? Array.Empty<string>() : [expected],
+                "Quý công ty đăng nhập Portal nhà cung cấp để xem dòng hàng, giá và xác nhận (kèm ngày giao cam kết) hoặc từ chối đơn.",
+            ]),
+            SupplierPortalEmailKind.PurchaseOrderCancelled => ($"Hủy đơn đặt hàng {order.No}", $"Hủy đơn đặt hàng {order.No}",
+            [
+                $"{companyName} đã hủy đơn đặt hàng {order.No} ngày {order.Date:dd/MM/yyyy}.",
+                "Quý công ty không giao hàng theo đơn này. Cần trao đổi thêm xin liên hệ Phòng Cung ứng vật tư.",
+            ]),
+            SupplierPortalEmailKind.PurchaseOrderReopened => ($"Đề nghị phản hồi lại đơn đặt hàng {order.No}", $"Phản hồi lại đơn đặt hàng {order.No}",
+            [
+                $"{companyName} đề nghị quý công ty xác nhận hoặc từ chối lại đơn đặt hàng {order.No} ngày {order.Date:dd/MM/yyyy}.",
+                .. extra is null ? Array.Empty<string>() : [$"Lý do: {extra}"],
+                "Quý công ty đăng nhập Portal nhà cung cấp để phản hồi lại đơn.",
+            ]),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+        };
+    }
+
+    /// <summary>Link mở trang trên Portal (ví dụ "bao-gia/{id}"); null khi chưa cấu hình địa chỉ (Portal:BaseUrl, rồi Email:AppBaseUrl).</summary>
+    private string? PortalLink(string path)
     {
         var baseUrl = new[] { _options.BaseUrl, _emailOptions.CurrentValue.AppBaseUrl }.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-        return baseUrl is null ? null : $"{baseUrl.TrimEnd('/')}/ncc/bao-gia/{rfqId}";
+        return baseUrl is null ? null : $"{baseUrl.TrimEnd('/')}/ncc/{path}";
     }
 
     /// <summary>Thân thư HTML kiểu đơn giản như email thông báo nội bộ; mọi nội dung được mã hóa HTML, xuống dòng giữ nguyên.</summary>

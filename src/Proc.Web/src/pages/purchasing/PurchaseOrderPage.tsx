@@ -36,6 +36,8 @@ import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput,
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
+import { SupplierResponsePanel } from './SupplierResponsePanel'
+import { supplierResponseSummary } from './supplierResponseSummary'
 import { useApprovalCommands } from './useApprovalCommands'
 import { DocNo } from '../../classic/DocNo'
 
@@ -778,6 +780,14 @@ export function PurchaseOrderPage() {
                 />
               </Form.Item>
             )}
+            {doc?.supplierResponse && doc.supplierResponse.status !== 'NotSent' && (
+              <Form.Item
+                label="Xác nhận của NCC"
+                tooltip="NCC xác nhận (kèm ngày giao cam kết) hoặc từ chối đơn trên Portal sau khi PO được duyệt; xem chi tiết, mở lại phản hồi ở tab Xác nhận NCC (design.md mục 19.5 – lát P4a)."
+              >
+                <Input readOnly data-testid="po-supplier-response" value={supplierResponseSummary(doc.supplierResponse)} />
+              </Form.Item>
+            )}
             {purchaseType === 'Emergency' && (
               <>
                 <Form.Item label="Lý do khẩn cấp" name="emergencyReason" rules={[{ required: true, whitespace: true, message: 'Ghi lý do khẩn cấp.' }, { max: 500 }]}>
@@ -842,6 +852,13 @@ export function PurchaseOrderPage() {
           </>
         }
         extraTabs={[
+          ...(doc?.supplierResponse
+            ? [{
+                key: 'supplier-response',
+                label: 'Xác nhận NCC',
+                children: <SupplierResponsePanel orderId={doc.id} orderNo={doc.no} info={doc.supplierResponse} />,
+              }]
+            : []),
           ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={PURCHASE_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
           attachmentTab,
         ]}

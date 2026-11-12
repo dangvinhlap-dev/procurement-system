@@ -199,3 +199,9 @@
   gap: var(--erp-gap-sm);
   margin-top: var(--erp-gap);
 }
+
+/* Lát P4a – khối tổng tiền dưới lưới dòng đơn hàng: nhãn – số canh phải, không rộng hết khung. */
+.erp-portal-totals {
+  max-width: 420px;
+  margin: var(--erp-gap) 0 0 auto;
+}

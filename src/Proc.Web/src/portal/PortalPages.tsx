@@ -63,6 +63,7 @@ export function PortalLayout() {
                 Trang chủ
               </NavLink>
               <NavLink to="/ncc/bao-gia">Thư mời báo giá</NavLink>
+              <NavLink to="/ncc/don-hang">Đơn đặt hàng</NavLink>
               {session.me.isSupplierAdmin && <NavLink to="/ncc/nguoi-dung">Người dùng</NavLink>}
               <NavLink to="/ncc/doi-mat-khau">Đổi mật khẩu</NavLink>
             </nav>

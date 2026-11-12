@@ -89,11 +89,17 @@ public static class AttachmentOwnerTypes
     /// </summary>
     public const string RfqPortalQuote = "RfqPortalQuote";
 
+    /// <summary>
+    /// File NCC gửi kèm phản hồi đơn đặt hàng trên Portal (lát P4a, design.md 19.5 P4-3): chủ là PO (<c>PurchaseOrder.Id</c>) – NCC tải lên trước
+    /// khi xác nhận / từ chối, sau đó khóa; nội bộ chỉ xem.
+    /// </summary>
+    public const string PoSupplierFile = "PoSupplierFile";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
-        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote];
+        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile];
 }
 
 /// <summary>

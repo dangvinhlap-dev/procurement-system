@@ -5,8 +5,8 @@ using Proc.Domain.Sourcing;
 namespace Proc.Application.Portal;
 
 /// <summary>
-/// Một thư đã báo NCC về RFQ, hiện trên tab "Email NCC" của RFQ (lát P3b-3). Kind: RfqInvitation, RfqDeadlineExtended, RfqCancelled,
-/// RfqAnswer, RfqNotice. State: Pending (chờ gửi), Sent, Skipped (thôi gửi), Failed (lỗi hết lượt thử).
+/// Một thư đã báo NCC về RFQ / PO, hiện trên tab "Email NCC" của RFQ (lát P3b-3) và tab "Xác nhận NCC" của PO (lát P4a). Kind: RfqInvitation,
+/// RfqDeadlineExtended, RfqCancelled, RfqAnswer, RfqNotice, PurchaseOrderIssued, PurchaseOrderCancelled, PurchaseOrderReopened. State: Pending (chờ gửi), Sent, Skipped (thôi gửi), Failed (lỗi hết lượt thử).
 /// </summary>
 /// <param name="Id">Thư.</param>
 /// <param name="SupplierId">NCC nhận.</param>
@@ -58,4 +58,22 @@ public interface IPortalEmailService
     /// <returns>Danh sách thư.</returns>
     /// <exception cref="Common.NotFoundException">RFQ không thuộc công ty đang làm việc.</exception>
     Task<IReadOnlyList<SupplierPortalEmailDto>> ListForRfqAsync(Guid rfqId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Soạn thư về một PO cho mọi tài khoản Portal đang dùng của NCC của PO (lát P4a – P4-5) và thêm vào DbContext – **không lưu** (người gọi lưu
+    /// cùng thao tác). PO mua nội bộ (NCC nội bộ) không có thư.
+    /// </summary>
+    /// <param name="order">PO.</param>
+    /// <param name="kind">PurchaseOrderIssued, PurchaseOrderCancelled hoặc PurchaseOrderReopened.</param>
+    /// <param name="detail">Nội dung thêm (lý do mở lại); null nếu không có.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số thư đã soạn.</returns>
+    Task<int> QueuePurchaseOrderAsync(Proc.Domain.Purchasing.PurchaseOrder order, SupplierPortalEmailKind kind, string? detail, CancellationToken cancellationToken);
+
+    /// <summary>Thư đã báo NCC về một PO thuộc công ty đang làm việc (mới trước).</summary>
+    /// <param name="orderId">PO.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Danh sách thư.</returns>
+    /// <exception cref="Common.NotFoundException">PO không thuộc công ty đang làm việc.</exception>
+    Task<IReadOnlyList<SupplierPortalEmailDto>> ListForPurchaseOrderAsync(Guid orderId, CancellationToken cancellationToken);
 }
