@@ -2338,7 +2338,22 @@ phát hành").**
   thì cảnh báo (đề nghị khác không bị hủy, dòng trở lại chưa qua bảng tổng hợp). RFQ chưa hủy hỏi giá dòng của bảng thì **chặn** – hủy RFQ trước
   (RFQ có chuỗi riêng gồm PO, hợp đồng, bảng giá).
 
-**Lát Y5c-2 – dự kiến**: màn hình phiếu BTH (danh sách, form, chọn dòng, in), trang duyệt gọn, hộp hủy dây chuyền trên form.
+**Lát Y5c-2 – giao diện phiếu BTH (12/11/2026).**
+
+- Màn hình **BTH** (Mua hàng → Bảng tổng hợp đề xuất, `/mua-hang/bang-tong-hop`, quyền xem / lập / duyệt BTH): danh sách (số phiếu, ngày,
+  biểu mẫu 2A/2B, bộ phận, công trình, số dòng, tổng đề xuất, trạng thái, người lập) và form `DocumentForm`.
+- Form: ngày lập, biểu mẫu, bộ phận đề xuất, công trình (2A – chọn công trình điền sẵn bộ phận của công trình), ghi chú; **đổi biểu mẫu /
+  bộ phận / công trình thì bỏ hết dòng đã chọn** (mọi dòng cùng biểu mẫu – bộ phận – công trình). Dòng **chỉ lấy qua hộp "Chọn dòng đề nghị"**
+  (nút riêng, cũng là Thêm dòng / F2 – `LineGrid.addLines`): dòng đề nghị chọn được theo đầu phiếu, trừ dòng đã có trên phiếu; chọn sẵn một
+  đơn vị mua cho các dòng chọn. Cột: số đề nghị (`DocNo` mở PR), loại, mặt hàng, ĐVT, SL đề xuất mua, đơn giá tham khảo, thành tiền, ngày cần
+  (chỉ đọc), **đơn vị mua** (bắt buộc), ghi chú. Đầu phiếu hiện khung chi phí (vượt thì cảnh báo vàng). Tab Lịch sử duyệt, Đính kèm.
+- Lệnh dùng chung PR/PO (`useApprovalCommands`, loại `BTH`): lưu nháp, gửi duyệt có xem trước chuỗi duyệt, duyệt / từ chối (ý kiến + đính
+  kèm gắn vào phiếu BTH), rút về nháp, **Hủy phiếu = hộp hủy dây chuyền** (Y5c-1).
+- **Việc cần làm** mở được phiếu BTH; **trang duyệt gọn** `/duyet/BTH/{id}` hiện biểu mẫu, bộ phận, công trình, khung chi phí, dòng đề nghị kèm
+  đơn vị mua, lịch sử duyệt.
+- Sửa lỗi: xem trước chuỗi duyệt BTH lỗi 500 – lệnh gửi duyệt BTH tự mở giao dịch thứ hai; nay dùng chung giao dịch của bên gọi
+  (`RowLocks.BeginOrJoinAsync`) như các phiếu khác.
+- **In theo mẫu 2A/2B** chuyển sang lát Y10 (khung mẫu in) để làm một lần cùng 1A/1B/DV.
 
 ### 19.4 Bỏ phân hệ kho
 

@@ -48,6 +48,7 @@ import {
   ShoppingCartOutlined,
   SolutionOutlined,
   SwapOutlined,
+  TableOutlined,
   CarOutlined,
   ReconciliationOutlined,
   DollarOutlined,
@@ -123,6 +124,8 @@ export const screens: Screen[] = [
   { code: 'DOCS', title: 'Tra cứu chứng từ', navLabel: 'Tra cứu chứng từ', path: '/hang-ngay/tra-cuu-chung-tu', icon: <FileSearchOutlined />, group: 'daily' },
 
   { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing', permission: Permission.PrView },
+  // Bảng tổng hợp đề xuất mua 2A/2B (lát Y5c-2, design.md mục 19.3 bước 2): Phòng CUVT gom dòng đề nghị đã duyệt, gán đơn vị mua, trình duyệt.
+  { code: 'BTH', title: 'Bảng tổng hợp đề xuất mua (BTH)', navLabel: 'Bảng tổng hợp đề xuất', path: '/mua-hang/bang-tong-hop', icon: <TableOutlined />, group: 'purchasing', anyPermission: [Permission.SummaryView, Permission.SummaryManage, Permission.SummaryApprove] },
   { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },
   // Phiếu xác nhận nhận hàng thay phiếu nhập kho từ 0.22.0 (lát K2, design.md mục 19.4): thủ kho / phòng ban đề xuất lập, đơn vị đặt hàng nghiệm thu.
   { code: 'XNH', title: 'Xác nhận nhận hàng (XNH)', navLabel: 'Xác nhận nhận hàng', path: '/mua-hang/xac-nhan-nhan-hang', icon: <InboxOutlined />, group: 'purchasing', anyPermission: [Permission.ReceiptView, Permission.ReceiptManage, Permission.ReceiptAccept] },
