@@ -191,6 +191,8 @@ public static class DependencyInjection
             sp => sp.GetRequiredService<Proc.Infrastructure.Portal.SupplierPortalService>());
         services.AddScoped<Proc.Application.Portal.IPortalAuthService>(
             sp => sp.GetRequiredService<Proc.Infrastructure.Portal.SupplierPortalService>());
+        // Lát P3a: thư mời, báo giá online niêm phong.
+        services.AddScoped<Proc.Application.Portal.IPortalRfqService, Proc.Infrastructure.Portal.PortalRfqService>();
 
         // Health check thực sự mở kết nối tới CSDL, không chỉ kiểm tra cấu hình.
         services.AddHealthChecks()

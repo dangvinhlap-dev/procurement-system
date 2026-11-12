@@ -139,6 +139,98 @@ export async function portalFetch<T>(path: string, init: { method?: string; body
   return (response.status === 204 ? undefined : await response.json()) as T
 }
 
+/** Trạng thái thư mời NCC thấy (lát P3a). */
+export type PortalRfqStatus = 'Open' | 'Closed' | 'Reviewing' | 'Awarded' | 'Cancelled'
+
+/** Nhãn tiếng Việt của trạng thái thư mời. */
+export const portalRfqStatusLabels: Record<PortalRfqStatus, string> = {
+  Open: 'Đang nhận báo giá',
+  Closed: 'Hết hạn nộp – chờ mở',
+  Reviewing: 'Đang xét chọn',
+  Awarded: 'Đã có kết quả',
+  Cancelled: 'Đã hủy',
+}
+
+/** Một thư mời báo giá trong danh sách Portal. deadlineAt là giờ Việt Nam (không kèm múi giờ). */
+export interface PortalRfqListItem {
+  id: string
+  no: string
+  companyName: string
+  title: string
+  date: string
+  deadlineAt: string
+  status: PortalRfqStatus
+  lineCount: number
+  submissionCount: number
+  lastSubmittedAt: string | null
+}
+
+/** Dòng hàng của RFQ trên Portal. */
+export interface PortalRfqLine {
+  id: string
+  lineNo: number
+  itemCode: string
+  itemName: string
+  supplierItemCode: string | null
+  uomCode: string
+  qty: number
+  note: string | null
+}
+
+/** Giá một dòng NCC đã nộp. */
+export interface PortalQuoteLine {
+  rfqLineId: string
+  unitPrice: number
+  discountPct: number
+  vatCode: string | null
+  leadTimeDays: number | null
+  note: string | null
+  amount: number
+}
+
+/** Biên nhận một lần nộp. */
+export interface PortalSubmission {
+  sequence: number
+  submittedAt: string
+  submittedByEmail: string
+  contentHash: string
+  totalAmount: number
+}
+
+/** Chi tiết thư mời kèm bản nộp cuối và lịch sử nộp. */
+export interface PortalRfq {
+  id: string
+  no: string
+  companyName: string
+  title: string
+  date: string
+  deadlineAt: string
+  note: string | null
+  status: PortalRfqStatus
+  canSubmit: boolean
+  closedReason: string | null
+  vatCodes: string[]
+  lines: PortalRfqLine[]
+  latest: {
+    sequence: number
+    submittedAt: string
+    validUntil: string | null
+    paymentTerms: string | null
+    note: string | null
+    contentHash: string
+    lines: PortalQuoteLine[]
+  } | null
+  submissions: PortalSubmission[]
+}
+
+/** Báo giá NCC gửi; dòng không gửi = không chào dòng đó. */
+export interface PortalSubmitQuote {
+  validUntil: string | null
+  paymentTerms: string | null
+  note: string | null
+  lines: { rfqLineId: string; unitPrice: number; discountPct: number; vatCode: string | null; leadTimeDays: number | null; note: string | null }[]
+}
+
 /** Các lệnh API Portal. */
 export const portalApi = {
   /** Đăng nhập bước 1: email + mật khẩu → gửi OTP. */
@@ -173,4 +265,11 @@ export const portalApi = {
   disableUser: (id: string) => portalFetch<SupplierPortalUser>(`/api/portal/users/${id}/disable`, { method: 'POST' }),
   /** Mở khóa người dùng con. */
   enableUser: (id: string) => portalFetch<SupplierPortalUser>(`/api/portal/users/${id}/enable`, { method: 'POST' }),
+  /** Thư mời báo giá của NCC (lát P3a). */
+  rfqs: () => portalFetch<PortalRfqListItem[]>('/api/portal/rfqs'),
+  /** Chi tiết thư mời. */
+  rfq: (id: string) => portalFetch<PortalRfq>(`/api/portal/rfqs/${id}`),
+  /** Nộp / nộp lại báo giá – niêm phong đến giờ mở. */
+  submitQuote: (id: string, input: PortalSubmitQuote) =>
+    portalFetch<PortalRfq>(`/api/portal/rfqs/${id}/quotes`, { method: 'POST', body: input }),
 }

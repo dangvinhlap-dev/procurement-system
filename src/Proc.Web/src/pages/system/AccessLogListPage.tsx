@@ -14,6 +14,7 @@ const eventLabels: Record<AccessEvent, { label: string; tone: StatusTone }> = {
   PasswordChanged: { label: 'Đổi mật khẩu', tone: 'success' },
   PasswordChangeFailed: { label: 'Đổi mật khẩu lỗi', tone: 'warning' },
   CompanySwitched: { label: 'Đổi công ty', tone: 'neutral' },
+  SealedQuoteViewed: { label: 'Xem báo giá niêm phong', tone: 'warning' },
 }
 
 const columns: GridColumn<AccessLogItem>[] = [

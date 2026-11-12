@@ -1,4 +1,4 @@
-# 5. Tìm nguồn và đấu thầu
+﻿# 5. Tìm nguồn và đấu thầu
 
 Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** mời NCC báo giá → nhập **báo giá** → **so sánh, chấm điểm** → **chọn thầu**
 → hội đồng **duyệt kết quả** → **Tạo PO / Tạo bảng giá / Tạo hợp đồng**.
@@ -18,7 +18,7 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
 
 ### Lập và gửi RFQ
 
-1. **Tạo mới** (hoặc từ phiếu tìm nguồn). Đầu phiếu: ngày, tiêu đề, **hạn nộp báo giá**, phiếu tìm nguồn (nếu có), **trọng số 5 tiêu chí**
+1. **Tạo mới** (hoặc từ phiếu tìm nguồn). Đầu phiếu: ngày, tiêu đề, **hạn nộp báo giá – ngày và giờ** (gợi ý 17:00, giờ Việt Nam), phiếu tìm nguồn (nếu có), **trọng số 5 tiêu chí**
    (giá, chất lượng, giao hàng, thanh toán, bảo hành – cộng bằng 100, mặc định 60/20/10/5/5).
 2. Dòng: nhập tay hoặc **lấy từ PR đã duyệt**; mặt hàng, ĐVT, SL. Nút **Lấy SL kế hoạch** lấy SL từ kế hoạch nhu cầu (xem 03 – mục 3.9).
 3. Tab **NCC mời**: tối thiểu theo tham số công ty (mặc định **3**). Mời ít hơn vẫn gửi được khi ghi **giải trình** (nếu mọi dòng có NCC độc
@@ -29,8 +29,20 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
 
 - Bấm vào NCC → **Nhập báo giá**: ngày, hiệu lực, điều kiện thanh toán; từng dòng: **mã hàng NCC**, đơn giá, % CK, VAT, thời gian giao
   (để trống = không chào dòng đó); điểm 0–10 cho chất lượng, giao hàng, thanh toán, bảo hành.
-- **Quá hạn nộp** thì không nhập/sửa báo giá được nữa – bấm **Gia hạn nhận báo giá** (bắt buộc lý do, hiện trên phiếu).
+- **Quá giờ hạn nộp** (ngày + giờ) thì không nhập/sửa báo giá được nữa – bấm **Gia hạn nhận báo giá** (chọn ngày, giờ mới; bắt buộc lý do,
+  hiện trên phiếu). Sau hạn vẫn **Chấm điểm** được (chỉ đổi điểm, không đổi giá).
 - Người có kê khai xung đột lợi ích với bất kỳ NCC được mời nào không nhập báo giá, không chọn thầu.
+
+### Báo giá NCC nộp trên Portal – niêm phong (từ bản 0.25.0)
+
+- NCC có tài khoản Portal (xem 02 – Tài khoản Portal) thấy RFQ đã gửi có mời mình ở mục **Thư mời báo giá** của Portal, tự nhập giá và
+  **Nộp báo giá**; nộp lại được nhiều lần đến giờ hạn, bản cuối có hiệu lực, mỗi lần có **mã biên nhận**. NCC không thấy NCC khác.
+- Trên RFQ, tab So sánh có dòng **Nộp qua Portal**: "Niêm phong – nộp lúc … (n lần)" – **chưa có giá**. Không nhập báo giá thay cho NCC đã
+  nộp Portal, không chọn thầu được khi còn báo giá niêm phong.
+- **Xem báo giá niêm phong** (chỉ người được cấp quyền "Xem báo giá Portal trước giờ mở"): hỏi lại rồi hiện giá; **mỗi lần xem ghi nhật ký
+  truy cập** (Hệ thống → Nhật ký truy cập, sự kiện "Xem báo giá niêm phong").
+- **Sau giờ hạn nộp**: bấm **Mở báo giá Portal** (một lần) → giá các NCC hiện trên bảng so sánh, hệ thống ghi người và giờ mở; kiểm mã biên
+  nhận với NCC nếu cần. Sau khi mở không gia hạn được nữa; giá NCC tự nộp không sửa thay – chỉ **Chấm điểm** rồi chọn thầu như thường.
 
 ### So sánh và chấm điểm
 

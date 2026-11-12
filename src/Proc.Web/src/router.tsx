@@ -22,6 +22,7 @@ import {
   PortalUsersPage,
   RequirePortal,
 } from './portal/PortalPages'
+import { PortalRfqListPage, PortalRfqPage } from './portal/PortalRfqPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
@@ -270,6 +271,8 @@ export const router = createBrowserRouter([
       { path: 'dat-lai-mat-khau', element: <PortalResetPasswordPage /> },
       { path: 'nguoi-dung', element: <RequirePortal adminOnly><PortalUsersPage /></RequirePortal> },
       { path: 'doi-mat-khau', element: <RequirePortal><PortalChangePasswordPage /></RequirePortal> },
+      { path: 'bao-gia', element: <RequirePortal><PortalRfqListPage /></RequirePortal> },
+      { path: 'bao-gia/:id', element: <RequirePortal><PortalRfqPage /></RequirePortal> },
     ],
   },
   // Trang duyệt gọn trên điện thoại (lát O2d): khung một cột riêng nên đứng ngoài AppShell. Không gắn quyền màn hình – chỉ hiện phiếu máy chủ

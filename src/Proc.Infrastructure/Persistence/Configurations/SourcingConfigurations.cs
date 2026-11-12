@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
@@ -82,6 +82,9 @@ internal sealed class RfqConfiguration : IEntityTypeConfiguration<Rfq>
         builder.HasMany(x => x.Suppliers).WithOne().HasForeignKey(s => s.RfqId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Suppliers).HasField("_suppliers").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.Ignore(x => x.Dossier);
+        // Lát P3a: giờ hạn nộp (RFQ cũ 23:59 – giá trị mặc định đặt trong migration), thời điểm hạn tính từ ngày + giờ nên không lưu.
+        builder.Ignore(x => x.DeadlineAt);
+        builder.Ignore(x => x.DeadlineText);
         builder.HasMany(x => x.DossierItems).WithOne().HasForeignKey(d => d.RfqId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.DossierItems).HasField("_dossierItems").UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.ToTable(t => t.HasCheckConstraint(
@@ -144,6 +147,47 @@ internal sealed class RfqSupplierConfiguration : IEntityTypeConfiguration<RfqSup
         builder.HasOne<Proc.Domain.Purchasing.PurchaseContract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.QuotationLines).WithOne().HasForeignKey(q => q.RfqSupplierId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.QuotationLines).HasField("_quotationLines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng RfqPortalSubmission – bản nộp báo giá Portal niêm phong (lát P3a).</summary>
+internal sealed class RfqPortalSubmissionConfiguration : IEntityTypeConfiguration<RfqPortalSubmission>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<RfqPortalSubmission> builder)
+    {
+        builder.ToTable("RfqPortalSubmission");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        // Mỗi NCC mỗi RFQ đánh số lần nộp 1, 2, … không trùng (hai người cùng NCC bấm nộp một lúc thì một người phải nộp lại).
+        builder.HasIndex(x => new { x.RfqId, x.SupplierId, x.Sequence }).IsUnique();
+        builder.HasIndex(x => new { x.SupplierId, x.RfqId });
+        builder.Property(x => x.SubmittedByEmail).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.PaymentTerms).HasMaxLength(200);
+        builder.Property(x => x.Note).HasMaxLength(1000);
+        builder.Property(x => x.ContentHash).HasMaxLength(64).IsFixedLength().IsRequired();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Rfq>().WithMany().HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.SubmittedByPortalUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.SubmissionId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Bảng RfqPortalSubmissionLine – giá từng dòng của bản nộp Portal.</summary>
+internal sealed class RfqPortalSubmissionLineConfiguration : IEntityTypeConfiguration<RfqPortalSubmissionLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<RfqPortalSubmissionLine> builder)
+    {
+        builder.ToTable("RfqPortalSubmissionLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.SubmissionId, x.RfqLineId }).IsUnique();
+        builder.Property(x => x.UnitPrice).HasPrecision(19, 6);
+        builder.Property(x => x.DiscountPct).HasPrecision(9, 4);
+        builder.Property(x => x.VatCode).HasMaxLength(5);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasOne<RfqLine>().WithMany().HasForeignKey(x => x.RfqLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

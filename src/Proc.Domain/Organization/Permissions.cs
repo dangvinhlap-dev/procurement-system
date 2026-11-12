@@ -267,6 +267,11 @@ public static class Permissions
         public const string RfqView = "Sourcing.Rfq.View";
         /// <summary>Quyền "Lập yêu cầu báo giá".</summary>
         public const string RfqManage = "Sourcing.Rfq.Manage";
+        /// <summary>
+        /// Quyền "Xem báo giá Portal trước giờ mở" (lát P3a – người dùng yêu cầu 12/11/2026): xem giá NCC đã nộp trên Portal khi còn niêm phong;
+        /// mỗi lần xem ghi nhật ký truy cập. Không gán trong vai trò mẫu – quản trị cấp cho người được giao.
+        /// </summary>
+        public const string RfqViewSealed = "Sourcing.Rfq.ViewSealed";
         /// <summary>Quyền "Chọn nhà cung cấp trúng thầu".</summary>
         public const string RfqAward = "Sourcing.Rfq.Award";
         /// <summary>Quyền "Duyệt kết quả chọn thầu" (hội đồng – design.md mục 18.6).</summary>
@@ -417,6 +422,7 @@ public static class Permissions
         new(Pricing.PriceBankManage, "Lập, chốt, hủy phiếu khảo sát giá thị trường"),
         new(Sourcing.RfqView, "Xem yêu cầu báo giá, tìm nguồn"),
         new(Sourcing.RfqManage, "Lập yêu cầu báo giá"),
+        new(Sourcing.RfqViewSealed, "Xem báo giá Portal trước giờ mở (ghi nhật ký)"),
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),
         new(Sourcing.RfqApproveAward, "Duyệt kết quả chọn thầu"),
         new(Sourcing.AppraisalGive, "Ghi ý kiến thẩm định (GTH, RFQ, hợp đồng, hồ sơ NCC)"),

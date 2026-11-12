@@ -46,6 +46,7 @@ export type AccessEvent =
   | 'PasswordChanged'
   | 'PasswordChangeFailed'
   | 'CompanySwitched'
+  | 'SealedQuoteViewed'
 
 /** Một dòng nhật ký truy cập. */
 export interface AccessLogItem {

@@ -152,3 +152,33 @@
   border-top: 1px solid var(--erp-grid-line);
   text-align: right;
 }
+
+/* Lát P3a – trang thư mời / nộp báo giá. */
+.erp-portal-hint {
+  margin: 2px 0 0;
+  color: var(--erp-text-muted);
+}
+
+/* Ba ô đầu báo giá trên một dòng (hiệu lực, điều kiện thanh toán, ghi chú); màn hẹp thì xuống dòng. */
+.erp-portal-quote-head {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr;
+  gap: 0 var(--erp-gap);
+}
+
+@media (max-width: 720px) {
+  .erp-portal-quote-head {
+    grid-template-columns: 1fr;
+  }
+}
+
+.erp-portal-body .ant-alert {
+  margin-bottom: var(--erp-gap);
+}
+
+/* Số tiền, số lượng: phông đơn cách, canh phải (ui-style.md mục 3). */
+.erp-portal-body .erp-number {
+  display: block;
+  font-family: var(--erp-font-mono);
+  text-align: right;
+}
