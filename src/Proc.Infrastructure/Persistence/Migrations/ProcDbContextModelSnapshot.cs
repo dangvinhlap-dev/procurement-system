@@ -6212,6 +6212,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeadlineExtensionReason")
                         .HasColumnType("text");
 
+                    b.Property<TimeOnly>("DeadlineTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<int>("DeliveryWeight")
                         .HasColumnType("integer");
 
@@ -6236,6 +6239,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("PaymentWeight")
                         .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("PortalQuotesOpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PortalQuotesOpenedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PriceWeight")
                         .HasColumnType("integer");
@@ -6379,6 +6388,108 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("RfqLine", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqPortalSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly>("QuoteDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RfqId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SubmittedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("SubmittedByPortalUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("SubmittedByPortalUserId");
+
+                    b.HasIndex("SupplierId", "RfqId");
+
+                    b.HasIndex("RfqId", "SupplierId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("RfqPortalSubmission", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqPortalSubmissionLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DiscountPct")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)");
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RfqLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("numeric(19,6)");
+
+                    b.Property<string>("VatCode")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RfqLineId");
+
+                    b.HasIndex("SubmissionId", "RfqLineId")
+                        .IsUnique();
+
+                    b.ToTable("RfqPortalSubmissionLine", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqSupplier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6394,6 +6505,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("HasQuoted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsFromPortal")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -6405,6 +6519,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("PaymentTerms")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("PortalSubmissionId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("PriceListId")
                         .HasColumnType("uuid");
@@ -8620,6 +8737,48 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqPortalSubmission", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Sourcing.Rfq", null)
+                        .WithMany()
+                        .HasForeignKey("RfqId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.SupplierPortalUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByPortalUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqPortalSubmissionLine", b =>
+                {
+                    b.HasOne("Proc.Domain.Sourcing.RfqLine", null)
+                        .WithMany()
+                        .HasForeignKey("RfqLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Sourcing.RfqPortalSubmission", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqSupplier", b =>
                 {
                     b.HasOne("Proc.Domain.Purchasing.PurchaseContract", null)
@@ -8785,6 +8944,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("Suppliers");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Sourcing.RfqPortalSubmission", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Proc.Domain.Sourcing.RfqSupplier", b =>

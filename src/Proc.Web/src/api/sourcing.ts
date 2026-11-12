@@ -217,6 +217,44 @@ export interface RfqSupplier {
   /** Hợp đồng nguyên tắc nháp sinh từ kết quả thầu (design.md mục 8.6); hợp đồng đã hủy thì null. */
   contractId: string | null
   contractNo: string | null
+  /** Báo giá NCC tự nộp trên Portal, đã mở (lát P3a) – không sửa giá thay, chỉ chấm điểm. */
+  isFromPortal?: boolean
+  /** Lần nộp cuối trên Portal (hiện cả khi còn niêm phong – chỉ giờ, không có giá). */
+  portalSubmittedAt?: string | null
+  /** Số lần NCC nộp trên Portal. */
+  portalSubmissionCount?: number
+  /** Mã biên nhận bản nộp cuối – chỉ có sau khi mở. */
+  portalContentHash?: string | null
+}
+
+/** Bản nộp Portal còn niêm phong (xem trước giờ mở – cần quyền riêng, có ghi nhật ký). */
+export interface SealedQuote {
+  supplierId: string
+  supplierCode: string
+  supplierName: string
+  sequence: number
+  submittedAt: string
+  submittedByEmail: string
+  quoteDate: string
+  validUntil: string | null
+  paymentTerms: string | null
+  note: string | null
+  contentHash: string
+  totalAmount: number
+  lines: {
+    rfqLineId: string
+    lineNo: number
+    itemCode: string
+    itemName: string
+    uomCode: string
+    qty: number
+    unitPrice: number
+    discountPct: number
+    vatCode: string | null
+    leadTimeDays: number | null
+    note: string | null
+    amount: number
+  }[]
 }
 
 /** Một mục hồ sơ trình kết quả chọn thầu (lát B3b); isAutomatic = hệ thống tự tính (bảng so sánh). */
@@ -295,6 +333,12 @@ export interface Rfq {
     canCreateContracts: boolean
     /** Gia hạn nhận báo giá (đang nhận báo giá – lát R7). */
     canExtendDeadline?: boolean
+    /** Mở báo giá Portal niêm phong (đã qua giờ hạn nộp, có bản nộp, chưa mở – lát P3a). */
+    canOpenPortalQuotes?: boolean
+    /** Có quyền xem giá báo giá Portal trước giờ mở (ghi nhật ký). */
+    canViewSealedQuotes?: boolean
+    /** Chấm điểm báo giá đã có (cả sau hạn nộp). */
+    canScore?: boolean
   }
   /** Giải trình khi mời ít hơn số NCC tối thiểu. */
   fewSuppliersReason: string | null
@@ -316,6 +360,14 @@ export interface Rfq {
   comparisonThreshold?: number
   /** Lý do chọn NCC (biểu mẫu 3A). */
   selectionReason?: string | null
+  /** Giờ hạn nộp "HH:mm:ss" (giờ Việt Nam, lát P3a); RFQ cũ 23:59. */
+  deadlineTime?: string
+  /** Thời điểm mở báo giá Portal; null = chưa mở. */
+  portalQuotesOpenedAt?: string | null
+  /** Người mở báo giá Portal. */
+  portalQuotesOpenedByName?: string | null
+  /** Số NCC đã nộp báo giá trên Portal (kể cả còn niêm phong). */
+  portalSubmittedSupplierCount?: number
   /** Giá trị trúng thầu (sau CK, trước VAT) – xét ngưỡng duyệt. */
   awardAmount: number
   /** Người chọn thầu. */
@@ -333,6 +385,8 @@ export interface SaveRfqInput {
   date: string
   title: string
   deadline: string
+  /** Giờ hạn nộp "HH:mm" (lát P3a). */
+  deadlineTime: string
   sourcingId: string | null
   weights: RfqWeights
   note: string | null
@@ -379,6 +433,16 @@ export function useRfq(id: string | null) {
   return useQuery({ queryKey: ['rfqs', companyId, 'detail', id], queryFn: () => apiFetch<Rfq>(`/api/rfqs/${id}`), enabled: !!id })
 }
 
+/**
+ * Xem giá báo giá Portal còn niêm phong (lát P3a) – cần quyền "Xem báo giá Portal trước giờ mở"; mỗi lần gọi máy chủ ghi nhật ký truy cập,
+ * nên chỉ gọi khi người dùng bấm xem (không tự tải).
+ * @param id RFQ.
+ * @returns Bản nộp cuối của từng NCC.
+ */
+export function fetchSealedQuotes(id: string): Promise<SealedQuote[]> {
+  return apiFetch<SealedQuote[]>(`/api/rfqs/${id}/sealed-quotes`)
+}
+
 /** Lập, sửa, gửi, nhập báo giá, chọn thầu, sinh PO, hủy RFQ. */
 export function useRfqMutations() {
   const queryClient = useQueryClient()
@@ -412,8 +476,20 @@ export function useRfqMutations() {
     }),
     // Gia hạn nhận báo giá có lý do (lát R7, design.md mục 18.26).
     extendDeadline: useMutation({
-      mutationFn: ({ id, deadline, reason }: { id: string; deadline: string; reason: string }) =>
-        apiFetch<Rfq>(`/api/rfqs/${id}/extend-deadline`, { method: 'POST', body: { deadline, reason } }),
+      mutationFn: ({ id, deadline, deadlineTime, reason }: { id: string; deadline: string; deadlineTime: string; reason: string }) =>
+        apiFetch<Rfq>(`/api/rfqs/${id}/extend-deadline`, { method: 'POST', body: { deadline, deadlineTime, reason } }),
+      onSuccess,
+    }),
+    // Lát P3a: mở báo giá Portal niêm phong sau giờ hạn nộp; chấm điểm báo giá đã có (không đổi giá).
+    openPortalQuotes: useMutation({
+      mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/open-portal-quotes`, { method: 'POST' }),
+      onSuccess,
+    }),
+    score: useMutation({
+      mutationFn: ({ id, supplierId, scores }: {
+        id: string; supplierId: string
+        scores: { qualityScore: number; deliveryScore: number; paymentScore: number; warrantyScore: number }
+      }) => apiFetch<Rfq>(`/api/rfqs/${id}/scores/${supplierId}`, { method: 'PUT', body: scores }),
       onSuccess,
     }),
     createOrders: useMutation({

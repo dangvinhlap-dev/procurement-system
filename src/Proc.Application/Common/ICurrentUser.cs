@@ -75,4 +75,17 @@ public static class VietnamTime
     /// <returns>Ngày hôm nay ở Việt Nam.</returns>
     public static DateOnly TodayInVietnam(this IClock clock) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.UtcNow, Zone).DateTime);
+
+    /// <summary>
+    /// Giờ đồng hồ hiện tại ở Việt Nam (không kèm múi giờ) – so với các mốc ghi theo giờ Việt Nam như hạn nộp báo giá RFQ (lát P3a).
+    /// </summary>
+    /// <param name="clock">Đồng hồ.</param>
+    /// <returns>Ví dụ 12/11/2026 16:59 khi UTC là 09:59.</returns>
+    public static DateTime NowInVietnam(this IClock clock) => TimeZoneInfo.ConvertTime(clock.UtcNow, Zone).DateTime;
+
+    /// <summary>Đổi một thời điểm ghi theo giờ Việt Nam (ngày + giờ) sang UTC.</summary>
+    /// <param name="local">Giờ Việt Nam.</param>
+    /// <returns>Thời điểm UTC tương ứng.</returns>
+    public static DateTimeOffset VietnamToUtc(DateTime local) =>
+        new(TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), Zone), TimeSpan.Zero);
 }

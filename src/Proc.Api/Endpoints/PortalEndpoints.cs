@@ -87,6 +87,13 @@ public static class PortalEndpoints
             s.DisableAsync(Session(http).SupplierId, userId, Session(http), ct));
         users.MapPost("/{userId:guid}/enable", (Guid userId, HttpContext http, ISupplierPortalAccountService s, CancellationToken ct) =>
             s.EnableAsync(Session(http).SupplierId, userId, Session(http), ct));
+
+        // Lát P3a: thư mời báo giá và nộp báo giá niêm phong – mọi người dùng Portal của NCC (không riêng quản trị NCC).
+        var rfqs = portal.MapGroup("/rfqs");
+        rfqs.MapGet("/", (HttpContext http, IPortalRfqService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
+        rfqs.MapGet("/{id:guid}", (Guid id, HttpContext http, IPortalRfqService s, CancellationToken ct) => s.GetAsync(Session(http), id, ct));
+        rfqs.MapPost("/{id:guid}/quotes", (Guid id, PortalSubmitQuoteRequest request, HttpContext http, IPortalRfqService s, CancellationToken ct) =>
+            s.SubmitAsync(Session(http), id, request, ct));
         return app;
     }
 

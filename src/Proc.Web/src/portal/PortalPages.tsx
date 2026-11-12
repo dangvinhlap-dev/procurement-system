@@ -62,6 +62,7 @@ export function PortalLayout() {
               <NavLink to="/ncc" end>
                 Trang chủ
               </NavLink>
+              <NavLink to="/ncc/bao-gia">Thư mời báo giá</NavLink>
               {session.me.isSupplierAdmin && <NavLink to="/ncc/nguoi-dung">Người dùng</NavLink>}
               <NavLink to="/ncc/doi-mat-khau">Đổi mật khẩu</NavLink>
             </nav>
@@ -400,7 +401,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * Trang chủ Portal: thông tin NCC và tài khoản đang dùng. Báo giá, đơn hàng, giao hàng, hóa đơn có ở các lát sau (P3–P6).
+ * Trang chủ Portal: thông tin NCC và tài khoản đang dùng. Thư mời báo giá ở trang riêng (P3a); đơn hàng, giao hàng, hóa đơn có ở các lát sau (P4–P6).
  */
 export function PortalHomePage() {
   const { session } = usePortalSession()
@@ -443,7 +444,7 @@ export function PortalHomePage() {
       <Alert
         type="info"
         showIcon
-        title="Thư mời báo giá, xác nhận đơn hàng, báo giao hàng và hóa đơn sẽ có trên Portal ở các bản cập nhật tới. Thông tin NCC cần sửa, xin báo Phòng Cung ứng vật tư."
+        title="Thư mời báo giá: mở mục Thư mời báo giá để xem và nộp báo giá. Xác nhận đơn hàng, báo giao hàng và hóa đơn sẽ có trên Portal ở các bản cập nhật tới. Thông tin NCC cần sửa, xin báo Phòng Cung ứng vật tư."
       />
     </>
   )

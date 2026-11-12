@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
+using Proc.Application.Logging;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
@@ -32,6 +33,7 @@ public sealed class RfqService : IRfqService
     private readonly IPriceListService _priceLists;
     private readonly IContractService _contracts;
     private readonly ApprovalEngine _approvals;
+    private readonly IAccessLog _accessLog;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -42,10 +44,12 @@ public sealed class RfqService : IRfqService
     /// <param name="parameters">Tham số công ty (số NCC tối thiểu khi gửi).</param>
     /// <param name="priceLists">Dịch vụ bảng giá NCC (sinh bảng giá từ kết quả thầu).</param>
     /// <param name="contracts">Dịch vụ hợp đồng nguyên tắc (sinh hợp đồng từ kết quả thầu).</param>
+    /// <param name="accessLog">Nhật ký truy cập (xem báo giá Portal niêm phong – lát P3a).</param>
     public RfqService(
         ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders,
-        ISystemParameterService parameters, IPriceListService priceLists, IContractService contracts)
+        ISystemParameterService parameters, IPriceListService priceLists, IContractService contracts, IAccessLog accessLog)
     {
+        _accessLog = accessLog;
         _contracts = contracts;
         _db = db;
         _scope = scope;
@@ -166,13 +170,17 @@ public sealed class RfqService : IRfqService
     {
         var rfq = await LoadAsync(id, cancellationToken);
         await RequireNoConflictAsync(rfq, cancellationToken);
+        // NCC đã nộp trên Portal: bản NCC tự nộp là bản gốc, còn niêm phong – Phòng CUVT không nhập thay (lát P3a).
+        if (rfq.PortalQuotesOpenedAt is null
+            && await _db.RfqPortalSubmissions.AnyAsync(x => x.RfqId == rfq.Id && x.SupplierId == supplierId, cancellationToken))
+            throw new BusinessRuleException("NCC này đã nộp báo giá qua Portal (đang niêm phong) – không nhập báo giá thay; mở báo giá Portal sau giờ hạn nộp.");
         rfq.SaveQuotation(
             supplierId,
             new QuotationHeader(
                 request.QuoteDate, request.ValidUntil, request.PaymentTerms, request.QualityScore, request.DeliveryScore, request.PaymentScore,
                 request.WarrantyScore, request.Note),
             request.Lines.Select(l => new QuotationLineData(l.RfqLineId, l.UnitPrice, l.DiscountPct, l.VatCode, l.LeadTimeDays, l.Note)).ToList(),
-            _clock.TodayInVietnam());
+            _clock.NowInVietnam());
         await TrackSourcingAsync(rfq, [supplierId], CandidateStatus.Quoted, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -184,6 +192,9 @@ public sealed class RfqService : IRfqService
         var rfq = await LoadAsync(id, cancellationToken);
         var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
         await RequireNoConflictAsync(rfq, cancellationToken);
+        // Chọn thầu khi còn báo giá Portal niêm phong là bỏ qua giá NCC đã nộp – phải mở trước (lát P3a).
+        if (rfq.PortalQuotesOpenedAt is null && await _db.RfqPortalSubmissions.AnyAsync(x => x.RfqId == rfq.Id, cancellationToken))
+            throw new BusinessRuleException("Còn báo giá Portal niêm phong chưa mở – mở báo giá Portal (sau giờ hạn nộp) rồi mới chọn thầu.");
         rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam(),
             await _parameters.RfqMinSuppliersAsync(cancellationToken), request.FewQuotesReason,
             await _parameters.RfqComparisonThresholdAsync(cancellationToken), request.SelectionReason);
@@ -202,9 +213,81 @@ public sealed class RfqService : IRfqService
     public async Task<RfqDto> ExtendDeadlineAsync(Guid id, ExtendRfqDeadlineRequest request, CancellationToken cancellationToken)
     {
         var rfq = await LoadAsync(id, cancellationToken);
-        rfq.ExtendDeadline(request.Deadline, request.Reason, _clock.TodayInVietnam());
+        rfq.ExtendDeadline(request.Deadline, request.DeadlineTime, request.Reason, _clock.NowInVietnam());
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<RfqDto> OpenPortalQuotesAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(id, cancellationToken);
+        var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
+        var submissions = await _db.RfqPortalSubmissions.Include(x => x.Lines).AsSplitQuery()
+            .Where(x => x.RfqId == rfq.Id).ToListAsync(cancellationToken);
+        // Bản có hiệu lực là lần nộp cuối của mỗi NCC (NCC nộp lại được đến giờ hạn).
+        var latest = submissions.GroupBy(x => x.SupplierId).Select(g => g.MaxBy(x => x.Sequence)!).ToList();
+        rfq.OpenPortalQuotes(latest, _clock.UtcNow, userId, _clock.NowInVietnam());
+        await TrackSourcingAsync(rfq, latest.Select(x => x.SupplierId), CandidateStatus.Quoted, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<RfqDto> ScoreQuotationAsync(Guid id, Guid supplierId, ScoreQuotationRequest request, CancellationToken cancellationToken)
+    {
+        var rfq = await LoadAsync(id, cancellationToken);
+        await RequireNoConflictAsync(rfq, cancellationToken);
+        rfq.ScoreQuotation(supplierId, request.QualityScore, request.DeliveryScore, request.PaymentScore, request.WarrantyScore);
+        await _db.SaveChangesAsync(cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SealedQuoteDto>> GetSealedQuotesAsync(Guid id, CancellationToken cancellationToken)
+    {
+        _scope.RequireCompany();
+        var rfq = await Query().AsNoTracking().SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy RFQ.");
+        if (rfq.PortalQuotesOpenedAt is not null)
+            throw new BusinessRuleException("Báo giá Portal đã mở – xem ngay trên bảng so sánh báo giá.");
+        var submissions = await _db.RfqPortalSubmissions.AsNoTracking().Include(x => x.Lines).AsSplitQuery()
+            .Where(x => x.RfqId == rfq.Id).ToListAsync(cancellationToken);
+        var latest = submissions.GroupBy(x => x.SupplierId).Select(g => g.MaxBy(x => x.Sequence)!).ToList();
+        var supplierIds = latest.Select(x => x.SupplierId).ToList();
+        var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => new { s.Code, s.Name }, cancellationToken);
+        var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id, i => new { i.Code, i.Name }, cancellationToken);
+        var uomIds = rfq.Lines.Select(l => l.UomId).Distinct().ToList();
+        var uoms = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
+        var rfqLines = rfq.Lines.ToDictionary(l => l.Id);
+
+        // Ghi nhật ký trước khi trả giá: người xem trước giờ mở phải để lại dấu vết (người dùng yêu cầu 12/11/2026).
+        var userName = _scope.UserId is { } uid
+            ? await _db.Users.AsNoTracking().Where(u => u.Id == uid).Select(u => u.UserName).SingleOrDefaultAsync(cancellationToken)
+            : null;
+        await _accessLog.WriteAsync(AccessEvent.SealedQuoteViewed, _scope.UserId, userName, rfq.CompanyId,
+            $"Xem {latest.Count} báo giá Portal niêm phong của RFQ {rfq.No} (hạn nộp {rfq.DeadlineText})", cancellationToken);
+
+        return latest.Select(x =>
+            {
+                var lines = x.Lines.Select(l =>
+                {
+                    var line = rfqLines[l.RfqLineId];
+                    var item = items.GetValueOrDefault(line.ItemId);
+                    // Thành tiền = SL × đơn giá × (100 − %CK)/100, làm tròn 2 số – cùng công thức giá trị trúng thầu.
+                    var amount = Math.Round(line.Qty * l.UnitPrice * (100m - l.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
+                    return new SealedQuoteLineDto(l.RfqLineId, line.LineNo, item?.Code ?? "(ngoài phạm vi)", item?.Name ?? "",
+                        uoms.GetValueOrDefault(line.UomId) ?? "", line.Qty, l.UnitPrice, l.DiscountPct, l.VatCode, l.LeadTimeDays, l.Note, amount);
+                }).OrderBy(l => l.LineNo).ToList();
+                var info = suppliers.GetValueOrDefault(x.SupplierId);
+                return new SealedQuoteDto(x.SupplierId, info?.Code ?? "", info?.Name ?? "", x.Sequence, x.SubmittedAt, x.SubmittedByEmail,
+                    x.QuoteDate, x.ValidUntil, x.PaymentTerms, x.Note, x.ContentHash, lines.Sum(l => l.Amount), lines);
+            })
+            .OrderBy(x => x.SupplierCode)
+            .ToList();
     }
 
     /// <summary>
@@ -538,7 +621,12 @@ public sealed class RfqService : IRfqService
         var project = rfq.ConstructionProjectId is { } pid
             ? await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == pid).Select(p => p.Code + " – " + p.Name).SingleOrDefaultAsync(cancellationToken)
             : null;
-        var userIds = new[] { rfq.CreatedBy, rfq.AwardedBy }.OfType<Guid>().Distinct().ToList();
+        var userIds = new[] { rfq.CreatedBy, rfq.AwardedBy, rfq.PortalQuotesOpenedBy }.OfType<Guid>().Distinct().ToList();
+        // Thống kê bản nộp Portal theo NCC: chỉ số lần, giờ nộp, mã băm – không lấy giá (niêm phong – lát P3a).
+        var portal = (await _db.RfqPortalSubmissions.AsNoTracking().Where(x => x.RfqId == rfq.Id)
+                .Select(x => new { x.SupplierId, x.Sequence, x.SubmittedAt, x.ContentHash }).ToListAsync(cancellationToken))
+            .GroupBy(x => x.SupplierId)
+            .ToDictionary(g => g.Key, g => (Count: g.Count(), Last: g.Max(x => x.SubmittedAt), Hash: g.MaxBy(x => x.Sequence)!.ContentHash));
         var userNames = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         // Giá quy đổi thấp nhất của từng dòng trên mọi báo giá – để đánh dấu và chấm điểm giá.
@@ -571,7 +659,13 @@ public sealed class RfqService : IRfqService
                     s.PurchaseOrderId, s.PurchaseOrderId is { } po ? orderNos.GetValueOrDefault(po) : null, quoteLines,
                     s.PriceListId, s.PriceListId is { } pl ? priceListNos.GetValueOrDefault(pl) : null,
                     // Hợp đồng đã hủy không hiện – NCC coi như chưa có hợp đồng.
-                    s.ContractId is { } ct && contractNos.ContainsKey(ct) ? ct : null, s.ContractId is { } cn ? contractNos.GetValueOrDefault(cn) : null);
+                    s.ContractId is { } ct && contractNos.ContainsKey(ct) ? ct : null, s.ContractId is { } cn ? contractNos.GetValueOrDefault(cn) : null)
+                {
+                    IsFromPortal = s.IsFromPortal,
+                    PortalSubmittedAt = portal.TryGetValue(s.SupplierId, out var p1) ? p1.Last : null,
+                    PortalSubmissionCount = portal.TryGetValue(s.SupplierId, out var p2) ? p2.Count : 0,
+                    PortalContentHash = rfq.PortalQuotesOpenedAt is not null && portal.TryGetValue(s.SupplierId, out var p3) ? p3.Hash : null,
+                };
             })
             .OrderBy(s => s.SupplierCode)
             .ToList();
@@ -615,7 +709,13 @@ public sealed class RfqService : IRfqService
             conflict,
             rfq.Status == RfqStatus.Awarded && items.Count == itemIds.Count && _scope.HasPermission(Permissions.Purchase.ContractManage)
                 && rfq.Suppliers.Any(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId) && (s.ContractId is not { } c || !liveContracts.Contains(c))),
-            rfq.Status == RfqStatus.Sent && readOnly is null);
+            rfq.Status == RfqStatus.Sent && readOnly is null)
+        {
+            CanOpenPortalQuotes = rfq.Status == RfqStatus.Sent && readOnly is null && rfq.PortalQuotesOpenedAt is null && portal.Count > 0
+                && _clock.NowInVietnam() > rfq.DeadlineAt,
+            CanViewSealedQuotes = rfq.PortalQuotesOpenedAt is null && portal.Count > 0 && _scope.HasPermission(Permissions.Sourcing.RfqViewSealed),
+            CanScore = rfq.Status == RfqStatus.Sent && readOnly is null && conflict is null && rfq.Suppliers.Any(s => s.HasQuoted),
+        };
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken, rfq);
         return new RfqDto(
             rfq.Id, rfq.No, rfq.Date, rfq.Title, rfq.Deadline, rfq.SourcingId, sourcingNo,
@@ -629,10 +729,14 @@ public sealed class RfqService : IRfqService
             ConstructionProjectName = project,
             FormCode = rfq.Form is { } form ? RfqForms.Code(form) : rfq.Category == PurchaseCategory.Construction ? null : RfqForms.Code(RfqForm.Goods),
             ComparisonThreshold = await _parameters.RfqComparisonThresholdAsync(cancellationToken), SelectionReason = rfq.SelectionReason,
+            DeadlineTime = rfq.DeadlineTime, PortalQuotesOpenedAt = rfq.PortalQuotesOpenedAt,
+            PortalQuotesOpenedByName = rfq.PortalQuotesOpenedBy is { } ob ? userNames.GetValueOrDefault(ob) : null,
+            PortalSubmittedSupplierCount = portal.Count,
         };
     }
 
     /// <summary>Đổi yêu cầu lưu RFQ thành dữ liệu header cho Domain (kèm trọng số chấm điểm).</summary>
     private static RfqHeader ToHeader(SaveRfqRequest r) =>
-        new(r.Date, r.Title, r.Deadline, r.SourcingId, new RfqWeights(r.Weights.Price, r.Weights.Quality, r.Weights.Delivery, r.Weights.Payment, r.Weights.Warranty), r.Note);
+        new(r.Date, r.Title, r.Deadline, r.SourcingId, new RfqWeights(r.Weights.Price, r.Weights.Quality, r.Weights.Delivery, r.Weights.Payment, r.Weights.Warranty), r.Note,
+            r.DeadlineTime);
 }

@@ -6,6 +6,7 @@ import {
   CloseOutlined,
   DollarOutlined,
   EditOutlined,
+  EyeOutlined,
   FileAddOutlined,
   FileProtectOutlined,
   RollbackOutlined,
@@ -13,8 +14,9 @@ import {
   SendOutlined,
   ShoppingCartOutlined,
   StopOutlined,
+  UnlockOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Checkbox, ConfigProvider, DatePicker, Flex, Form, Input, InputNumber, Modal, Space, Table, Tag, TimePicker } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -23,6 +25,7 @@ import { useItemLookup } from '../../api/inventoryDocuments'
 import { supplierItemKey, useSupplierItemLookup, useSuppliers, vatOptions } from '../../api/masterData'
 import { withPendingApprovers, type OpenRequestLine } from '../../api/purchasing'
 import {
+  fetchSealedQuotes,
   rfqStatusLabels,
   rfqStatusTone,
   useRfq,
@@ -35,6 +38,7 @@ import {
   type RfqSupplier,
   type SaveQuotationInput,
   type SaveRfqInput,
+  type SealedQuote,
 } from '../../api/sourcing'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -110,6 +114,8 @@ interface FormValues {
   date: Dayjs
   title?: string
   deadline?: Dayjs
+  /** Giờ hạn nộp (lát P3a). */
+  deadlineTime?: Dayjs | null
   sourcingId?: string | null
   priceWeight?: number
   qualityWeight?: number
@@ -119,6 +125,15 @@ interface FormValues {
   note?: string
   lines: LineValues[]
   supplierIds: string[]
+}
+
+/**
+ * Hạn nộp dạng chữ "dd/MM/yyyy HH:mm" (lát P3a – hạn nộp kèm giờ).
+ * @param doc RFQ.
+ * @returns Ví dụ "20/11/2026 17:00".
+ */
+function deadlineText(doc: Rfq): string {
+  return `${formatDate(doc.deadline)} ${(doc.deadlineTime ?? '23:59').slice(0, 5)}`
 }
 
 /** Lựa chọn chọn thầu đang soạn của một dòng. */
@@ -180,7 +195,8 @@ export function RfqPage() {
   const [search, setSearch] = useState('')
   const [picking, setPicking] = useState(false)
   const [planning, setPlanning] = useState(false)
-  const [quoting, setQuoting] = useState<RfqSupplier | null>(null)
+  const [quoting, setQuoting] = useState<{ supplier: RfqSupplier; scoreOnly: boolean } | null>(null)
+  const [sealed, setSealed] = useState<SealedQuote[] | null>(null)
   const [awardEdits, setAwardEdits] = useState<AwardDraft>({})
   const addRef = useRef<(() => void) | null>(null)
   const doc = rfq.data
@@ -202,6 +218,7 @@ export function RfqPage() {
     date: dayjs(doc.date),
     title: doc.title,
     deadline: dayjs(doc.deadline),
+    deadlineTime: dayjs(`2000-01-01T${doc.deadlineTime ?? '23:59:00'}`),
     sourcingId: doc.sourcingId,
     priceWeight: doc.weights.price,
     qualityWeight: doc.weights.quality,
@@ -258,6 +275,7 @@ export function RfqPage() {
       date: values.date.format('YYYY-MM-DD'),
       title: values.title?.trim() ?? '',
       deadline: values.deadline!.format('YYYY-MM-DD'),
+      deadlineTime: (values.deadlineTime ?? dayjs('2000-01-01T23:59:00')).format('HH:mm'),
       sourcingId: values.sourcingId ?? null,
       weights: {
         price: values.priceWeight ?? 0,
@@ -340,19 +358,23 @@ export function RfqPage() {
 
   /**
    * Gia hạn nhận báo giá (lát R7, design.md mục 18.26): quá hạn nộp thì không nhập, sửa báo giá được – gia hạn có lý do (nhật ký ghi hạn
-   * cũ → mới). Hạn mới phải sau hạn hiện tại và không trước hôm nay.
+   * cũ → mới). Hạn mới (ngày + giờ – lát P3a) phải sau hạn hiện tại và không trước bây giờ; đã mở báo giá Portal thì không gia hạn.
    */
   const extendDeadline = () => {
     if (!doc) return
     let deadline: Dayjs | null = dayjs(doc.deadline).add(7, 'day')
+    let time: Dayjs | null = dayjs(`2000-01-01T${doc.deadlineTime ?? '23:59:00'}`)
     let reason = ''
     modal.confirm({
       title: `Gia hạn nhận báo giá RFQ ${doc.no}?`,
       content: (
         <Flex vertical gap={8}>
-          <span>Hạn hiện tại: {formatDate(doc.deadline)}</span>
+          <span>Hạn hiện tại: {deadlineText(doc)}</span>
           <label htmlFor="rfq-new-deadline">{renderRequiredMark('Hạn mới', { required: true })}</label>
-          <DatePicker id="rfq-new-deadline" format={DATE_INPUT_FORMATS} defaultValue={deadline} onChange={(v) => (deadline = v)} />
+          <Flex gap={4}>
+            <DatePicker id="rfq-new-deadline" format={DATE_INPUT_FORMATS} defaultValue={deadline} onChange={(v) => (deadline = v)} />
+            <TimePicker format="HH:mm" defaultValue={time} onChange={(v) => (time = v)} aria-label="Giờ hạn mới" needConfirm={false} />
+          </Flex>
           <label htmlFor="rfq-extend-reason">{renderRequiredMark('Lý do gia hạn', { required: true })}</label>
           <Input.TextArea id="rfq-extend-reason" rows={3} maxLength={500} placeholder="Ví dụ: NCC xin thêm thời gian chuẩn bị hồ sơ"
             onChange={(e) => (reason = e.target.value)} />
@@ -366,10 +388,55 @@ export function RfqPage() {
           throw new Error('missing input')
         }
         try {
-          await mutations.extendDeadline.mutateAsync({ id: doc.id, deadline: deadline.format('YYYY-MM-DD'), reason: reason.trim() })
-          message.success(`Đã gia hạn nhận báo giá RFQ ${doc.no} đến ${deadline.format('DD/MM/YYYY')}.`)
+          const hhmm = (time ?? dayjs('2000-01-01T23:59:00')).format('HH:mm')
+          await mutations.extendDeadline.mutateAsync({ id: doc.id, deadline: deadline.format('YYYY-MM-DD'), deadlineTime: hhmm, reason: reason.trim() })
+          message.success(`Đã gia hạn nhận báo giá RFQ ${doc.no} đến ${deadline.format('DD/MM/YYYY')} ${hhmm}.`)
         } catch (e) {
           fail(e, 'Không gia hạn được.')
+        }
+      },
+    })
+  }
+
+  /**
+   * Mở báo giá Portal niêm phong (lát P3a, design.md 19.5 – Q15): chỉ sau giờ hạn nộp; chép bản nộp cuối của từng NCC vào bảng so sánh, ghi
+   * người – giờ mở; sau khi mở không gia hạn được nữa.
+   */
+  const openPortalQuotes = () => {
+    if (!doc) return
+    modal.confirm({
+      title: `Mở báo giá Portal của RFQ ${doc.no}?`,
+      content: `${doc.portalSubmittedSupplierCount ?? 0} NCC đã nộp báo giá trên Portal (hạn nộp ${deadlineText(doc)}). Mở xong giá hiện trên bảng so sánh, hệ thống ghi người và giờ mở; không gia hạn nhận báo giá được nữa.`,
+      okText: 'Mở báo giá',
+      cancelText: 'Không',
+      onOk: async () => {
+        try {
+          await mutations.openPortalQuotes.mutateAsync(doc.id)
+          message.success(`Đã mở báo giá Portal của RFQ ${doc.no}.`)
+        } catch (e) {
+          fail(e, 'Không mở được báo giá Portal.')
+        }
+      },
+    })
+  }
+
+  // Xem giá trước giờ mở (quyền riêng – người dùng yêu cầu 12/11/2026): máy chủ ghi nhật ký mỗi lần xem nên hỏi lại trước khi tải.
+  const [loadingSealed, setLoadingSealed] = useState(false)
+  const viewSealed = () => {
+    if (!doc) return
+    modal.confirm({
+      title: 'Xem báo giá Portal trước giờ mở?',
+      content: 'Báo giá còn niêm phong. Lần xem này được ghi vào nhật ký truy cập (người xem, thời điểm, RFQ).',
+      okText: 'Xem',
+      cancelText: 'Không',
+      onOk: async () => {
+        setLoadingSealed(true)
+        try {
+          setSealed(await fetchSealedQuotes(doc.id))
+        } catch (e) {
+          fail(e, 'Không xem được báo giá niêm phong.')
+        } finally {
+          setLoadingSealed(false)
         }
       },
     })
@@ -665,6 +732,16 @@ export function RfqPage() {
           Gia hạn nhận báo giá
         </Button>
       )}
+      {doc?.actions.canOpenPortalQuotes && (
+        <Button icon={<UnlockOutlined />} onClick={openPortalQuotes} loading={mutations.openPortalQuotes.isPending}>
+          Mở báo giá Portal
+        </Button>
+      )}
+      {doc?.actions.canViewSealedQuotes && (
+        <Button icon={<EyeOutlined />} onClick={viewSealed} loading={loadingSealed}>
+          Xem báo giá niêm phong
+        </Button>
+      )}
       {doc?.actions.canAward && (
         <Button type="primary" icon={<CheckOutlined />} onClick={confirmAward} loading={mutations.award.isPending}>
           Chọn thầu, gửi duyệt
@@ -742,7 +819,7 @@ export function RfqPage() {
             children: (
               // Bảng so sánh vẫn thao tác được (nhập báo giá, chọn NCC) dù đầu phiếu đã khóa sau khi gửi.
               <ConfigProvider componentDisabled={false}>
-                <ComparisonView rfq={doc} award={award} onAwardChange={setAwardEdits} onQuote={setQuoting} />
+                <ComparisonView rfq={doc} award={award} onAwardChange={setAwardEdits} onQuote={(supplier, scoreOnly) => setQuoting({ supplier, scoreOnly })} />
               </ConfigProvider>
             ),
           },
@@ -783,7 +860,7 @@ export function RfqPage() {
         notice={doc && <RfqNotices doc={doc} />}
         form={form}
         initialValues={{
-          date: dayjs(), deadline: dayjs().add(7, 'day'), priceWeight: 60, qualityWeight: 20, deliveryWeight: 10, paymentWeight: 5, warrantyWeight: 5,
+          date: dayjs(), deadline: dayjs().add(7, 'day'), deadlineTime: dayjs('2000-01-01T17:00:00'), priceWeight: 60, qualityWeight: 20, deliveryWeight: 10, paymentWeight: 5, warrantyWeight: 5,
           lines: [], supplierIds: [],
         }}
         readOnly={readOnly}
@@ -799,8 +876,15 @@ export function RfqPage() {
             <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề.' }, { max: 200 }]}>
               <Input />
             </Form.Item>
-            <Form.Item label="Hạn nộp báo giá" name="deadline" rules={[{ required: true, message: 'Chọn hạn nộp.' }]}>
-              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+            <Form.Item label="Hạn nộp báo giá" required tooltip="Ngày và giờ hạn nộp (giờ Việt Nam): qua giờ này NCC không nộp được trên Portal, báo giá Portal niêm phong mở được.">
+              <Flex gap={4}>
+                <Form.Item name="deadline" noStyle rules={[{ required: true, message: 'Chọn hạn nộp.' }]}>
+                  <DatePicker format={DATE_INPUT_FORMATS} style={{ flex: 1 }} aria-label="Ngày hạn nộp" />
+                </Form.Item>
+                <Form.Item name="deadlineTime" noStyle>
+                  <TimePicker format="HH:mm" style={{ width: 80 }} aria-label="Giờ hạn nộp" needConfirm={false} />
+                </Form.Item>
+              </Flex>
             </Form.Item>
             {doc && (
               <Form.Item label="Loại mua – biểu mẫu" tooltip="Theo dòng đề nghị nguồn; lưu nháp thì tính lại (design.md mục 19.1 Q7).">
@@ -864,7 +948,10 @@ export function RfqPage() {
           onClose={() => setPlanning(false)}
         />
       )}
-      {quoting && doc && <QuotationDialog rfq={doc} supplier={quoting} onClose={() => setQuoting(null)} />}
+      {quoting && doc && (
+        <QuotationDialog rfq={doc} supplier={quoting.supplier} scoreOnly={quoting.scoreOnly} onClose={() => setQuoting(null)} />
+      )}
+      {sealed && doc && <SealedQuotesDialog rfq={doc} quotes={sealed} onClose={() => setSealed(null)} />}
     </>
   )
 }
@@ -978,7 +1065,7 @@ function RfqNotices({ doc }: { doc: Rfq }) {
     doc.fewSuppliersReason && <Alert key="few" type="warning" showIcon title={`Mời ít hơn ${doc.minSuppliers} NCC – giải trình: ${doc.fewSuppliersReason}`} />,
     doc.fewQuotesReason && <Alert key="fewQuotes" type="warning" showIcon title={`Ít hơn ${doc.minSuppliers} báo giá – giải trình: ${doc.fewQuotesReason}`} />,
     doc.deadlineExtensionReason && (
-      <Alert key="extend" type="info" showIcon title={`Đã gia hạn nhận báo giá đến ${formatDate(doc.deadline)} – lý do: ${doc.deadlineExtensionReason}`} />
+      <Alert key="extend" type="info" showIcon title={`Đã gia hạn nhận báo giá đến ${deadlineText(doc)} – lý do: ${doc.deadlineExtensionReason}`} />
     ),
     doc.actions.readOnlyReason && <Alert key="readonly" type="info" showIcon title={doc.actions.readOnlyReason} />,
     doc.actions.conflictReason && <Alert key="conflict" type="warning" showIcon title={doc.actions.conflictReason} />,
@@ -999,7 +1086,7 @@ function ComparisonView({
   rfq: Rfq
   award: AwardDraft
   onAwardChange: (next: AwardDraft) => void
-  onQuote: (supplier: RfqSupplier) => void
+  onQuote: (supplier: RfqSupplier, scoreOnly: boolean) => void
 }) {
   const canAward = rfq.actions.canAward
   const set = (lineId: string, patch: Partial<AwardDraft[string]>) =>
@@ -1077,6 +1164,10 @@ function ComparisonView({
   type Metric = { key: string; label: string; value: (s: RfqSupplier) => React.ReactNode }
   const metrics: Metric[] = [
     { key: 'quoted', label: 'Báo giá ngày', value: (s) => (s.hasQuoted ? formatDate(s.quoteDate) : 'Chưa báo giá') },
+    // Lát P3a: giờ nộp trên Portal hiện cả khi niêm phong (không có giá); mở rồi thì kèm mã biên nhận để đối chiếu với NCC.
+    ...(rfq.suppliers.some((s) => (s.portalSubmissionCount ?? 0) > 0)
+      ? [{ key: 'portal', label: 'Nộp qua Portal', value: (s: RfqSupplier) => portalText(rfq, s) }]
+      : []),
     { key: 'lines', label: 'Số dòng chào', value: (s) => `${s.quotedLineCount}/${rfq.lines.length}` },
     { key: 'payment', label: 'Thanh toán', value: (s) => s.paymentTerms },
     { key: 'priceScore', label: `Điểm giá (${rfq.weights.price}%)`, value: (s) => formatQuantity(s.priceScore) },
@@ -1090,16 +1181,28 @@ function ComparisonView({
     { key: 'po', label: 'Đơn mua hàng', value: (s) => <DocNo no={s.purchaseOrderNo} docType="PO" id={s.purchaseOrderId} /> },
     { key: 'priceList', label: 'Bảng giá NCC', value: (s) => <DocNo no={s.priceListNo} docType="PRL" id={s.priceListId} /> },
     { key: 'contract', label: 'Hợp đồng nguyên tắc', value: (s) => <DocNo no={s.contractNo} docType="CTR" id={s.contractId} /> },
-    ...(rfq.actions.canQuote
+    ...(rfq.actions.canQuote || rfq.actions.canScore
       ? [
           {
             key: 'action',
             label: '',
-            value: (s: RfqSupplier) => (
-              <Button size="small" icon={<EditOutlined />} onClick={() => onQuote(s)} aria-label={`Nhập báo giá ${s.supplierCode}`}>
-                Nhập báo giá
-              </Button>
-            ),
+            value: (s: RfqSupplier) => {
+              // NCC đã nộp Portal: còn niêm phong thì không nhập thay; đã mở thì chỉ chấm điểm (không sửa giá NCC tự nộp).
+              const sealedPortal = (s.portalSubmissionCount ?? 0) > 0 && !rfq.portalQuotesOpenedAt
+              if (rfq.actions.canQuote && !s.isFromPortal && !sealedPortal)
+                return (
+                  <Button size="small" icon={<EditOutlined />} onClick={() => onQuote(s, false)} aria-label={`Nhập báo giá ${s.supplierCode}`}>
+                    Nhập báo giá
+                  </Button>
+                )
+              if (rfq.actions.canScore && s.hasQuoted)
+                return (
+                  <Button size="small" icon={<EditOutlined />} onClick={() => onQuote(s, true)} aria-label={`Chấm điểm ${s.supplierCode}`}>
+                    Chấm điểm
+                  </Button>
+                )
+              return null
+            },
           },
         ]
       : []),
@@ -1161,11 +1264,13 @@ interface QuoteFormValues {
 
 /**
  * Hộp nhập báo giá của một NCC: ngày, hiệu lực, thanh toán, điểm các tiêu chí ngoài giá (0–10) và đơn giá từng dòng (để trống = không chào).
+ * scoreOnly (lát P3a): báo giá NCC tự nộp trên Portal hoặc đã quá hạn nộp – giá chỉ xem, chỉ lưu điểm.
  * @param rfq RFQ.
  * @param supplier NCC đang nhập.
+ * @param scoreOnly Chỉ chấm điểm.
  * @param onClose Đóng hộp.
  */
-function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSupplier; onClose: () => void }) {
+function QuotationDialog({ rfq, supplier, scoreOnly, onClose }: { rfq: Rfq; supplier: RfqSupplier; scoreOnly: boolean; onClose: () => void }) {
   const [form] = Form.useForm<QuoteFormValues>()
   const { message } = App.useApp()
   const mutations = useRfqMutations()
@@ -1175,6 +1280,25 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
 
   const submit = async () => {
     const values = await form.validateFields()
+    if (scoreOnly) {
+      try {
+        await mutations.score.mutateAsync({
+          id: rfq.id,
+          supplierId: supplier.supplierId,
+          scores: {
+            qualityScore: values.qualityScore ?? 0,
+            deliveryScore: values.deliveryScore ?? 0,
+            paymentScore: values.paymentScore ?? 0,
+            warrantyScore: values.warrantyScore ?? 0,
+          },
+        })
+        message.success(`Đã lưu điểm của ${supplier.supplierCode}.`)
+        onClose()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Không lưu được điểm.')
+      }
+      return
+    }
     const input: SaveQuotationInput = {
       quoteDate: values.quoteDate.format('YYYY-MM-DD'),
       validUntil: values.validUntil ? values.validUntil.format('YYYY-MM-DD') : null,
@@ -1199,7 +1323,7 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
 
   const score = (name: keyof QuoteFormValues, label: string) => (
     <Form.Item label={label} name={name} rules={[{ required: true, type: 'number', min: 0, max: 10, message: '0–10.' }]} style={{ width: 120 }}>
-      <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} max={10} precision={2} />
+      <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} max={10} precision={2} disabled={false} />
     </Form.Item>
   )
 
@@ -1207,17 +1331,28 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
     <Modal
       open
       width={980}
-      title={`Báo giá của ${supplier.supplierCode} – ${supplier.supplierName}`}
-      okText="Lưu báo giá"
+      title={`${scoreOnly ? 'Chấm điểm báo giá' : 'Báo giá'} của ${supplier.supplierCode} – ${supplier.supplierName}`}
+      okText={scoreOnly ? 'Lưu điểm' : 'Lưu báo giá'}
       cancelText="Đóng"
       onOk={submit}
       onCancel={onClose}
-      confirmLoading={mutations.quote.isPending}
+      confirmLoading={mutations.quote.isPending || mutations.score.isPending}
     >
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />}
+      {scoreOnly && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 8 }}
+          title={supplier.isFromPortal
+            ? `Báo giá NCC tự nộp trên Portal${supplier.portalContentHash ? ` (mã biên nhận ${supplier.portalContentHash.slice(0, 12)}…)` : ''} – giá chỉ xem, chỉ chấm điểm.`
+            : 'Đã quá hạn nộp – giá chỉ xem, chỉ chấm điểm.'}
+        />
+      )}
       <Form
         form={form}
         layout="vertical"
+        disabled={scoreOnly}
         initialValues={{
           quoteDate: supplier.quoteDate ? dayjs(supplier.quoteDate) : dayjs(),
           validUntil: supplier.validUntil ? dayjs(supplier.validUntil) : null,
@@ -1316,6 +1451,70 @@ function QuotationDialog({ rfq, supplier, onClose }: { rfq: Rfq; supplier: RfqSu
           <Input />
         </Form.Item>
       </Form>
+    </Modal>
+  )
+}
+
+/**
+ * Chữ ô "Nộp qua Portal" trên bảng so sánh (lát P3a): còn niêm phong thì chỉ giờ nộp, số lần; đã mở thì kèm mã biên nhận để đối chiếu với NCC.
+ * @param rfq RFQ.
+ * @param s NCC.
+ * @returns Chữ hiển thị; NCC không nộp trên Portal thì rỗng.
+ */
+function portalText(rfq: Rfq, s: RfqSupplier): string {
+  const count = s.portalSubmissionCount ?? 0
+  if (count === 0 || !s.portalSubmittedAt) return ''
+  const at = `${formatDateTime(s.portalSubmittedAt)} (${count} lần)`
+  return rfq.portalQuotesOpenedAt
+    ? `Đã mở – nộp ${at}${s.portalContentHash ? `, mã ${s.portalContentHash.slice(0, 12)}…` : ''}`
+    : `Niêm phong – nộp ${at}`
+}
+
+/**
+ * Hộp xem giá báo giá Portal còn niêm phong (lát P3a – người có quyền "Xem báo giá Portal trước giờ mở"; máy chủ đã ghi nhật ký lần xem).
+ * Chỉ xem: muốn so sánh, chọn thầu thì mở báo giá sau giờ hạn nộp.
+ * @param rfq RFQ.
+ * @param quotes Bản nộp cuối của từng NCC.
+ * @param onClose Đóng hộp.
+ */
+function SealedQuotesDialog({ rfq, quotes, onClose }: { rfq: Rfq; quotes: SealedQuote[]; onClose: () => void }) {
+  return (
+    <Modal open width={1000} title={`Báo giá Portal niêm phong – RFQ ${rfq.no}`} footer={null} onCancel={onClose}>
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 8 }}
+        title={`Đang xem trước giờ mở (hạn nộp ${deadlineText(rfq)}) – lần xem đã ghi vào nhật ký truy cập. NCC còn nộp lại được đến hạn.`}
+      />
+      {quotes.map((q) => (
+        <div key={q.supplierId} style={{ marginBottom: 12 }}>
+          <strong>
+            {q.supplierCode} – {q.supplierName}
+          </strong>
+          {` · lần ${q.sequence}, nộp ${formatDateTime(q.submittedAt)} bởi ${q.submittedByEmail} · tổng ${formatMoney(q.totalAmount)} đ`}
+          {q.paymentTerms ? ` · thanh toán: ${q.paymentTerms}` : ''}
+          <Table
+            size="small"
+            bordered
+            rowKey="rfqLineId"
+            pagination={false}
+            dataSource={q.lines}
+            aria-label={`Báo giá niêm phong ${q.supplierCode}`}
+            columns={[
+              { title: 'STT', key: 'lineNo', width: 50, align: 'right', render: (_, l) => l.lineNo },
+              { title: 'Mặt hàng', key: 'item', render: (_, l) => `${l.itemCode} – ${l.itemName}` },
+              { title: 'ĐVT', key: 'uom', width: 60, render: (_, l) => l.uomCode },
+              { title: 'SL', key: 'qty', width: 80, align: 'right', render: (_, l) => formatQuantity(l.qty) },
+              { title: 'Đơn giá', key: 'price', width: 120, align: 'right', render: (_, l) => formatMoney(l.unitPrice) },
+              { title: '% CK', key: 'ck', width: 60, align: 'right', render: (_, l) => formatQuantity(l.discountPct) },
+              { title: 'VAT', key: 'vat', width: 60, render: (_, l) => l.vatCode ?? '' },
+              { title: 'Giao (ngày)', key: 'lead', width: 80, align: 'right', render: (_, l) => l.leadTimeDays ?? '' },
+              { title: 'Thành tiền', key: 'amount', width: 130, align: 'right', render: (_, l) => formatMoney(l.amount) },
+            ]}
+          />
+          <div style={{ fontFamily: 'var(--erp-font-mono)' }}>Mã biên nhận: {q.contentHash}</div>
+        </div>
+      ))}
     </Modal>
   )
 }

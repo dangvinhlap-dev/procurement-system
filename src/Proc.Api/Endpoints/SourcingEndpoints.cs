@@ -63,6 +63,14 @@ public static class SourcingEndpoints
         rfq.MapPost("/{id:guid}/extend-deadline", (Guid id, ExtendRfqDeadlineRequest request, IRfqService s, CancellationToken ct) =>
                 s.ExtendDeadlineAsync(id, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
+        // Lát P3a: mở báo giá Portal niêm phong sau giờ hạn nộp; chấm điểm báo giá đã có; xem giá niêm phong (quyền riêng, ghi nhật ký).
+        rfq.MapPost("/{id:guid}/open-portal-quotes", (Guid id, IRfqService s, CancellationToken ct) => s.OpenPortalQuotesAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
+        rfq.MapPut("/{id:guid}/scores/{supplierId:guid}", (Guid id, Guid supplierId, ScoreQuotationRequest request, IRfqService s, CancellationToken ct) =>
+                s.ScoreQuotationAsync(id, supplierId, request, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
+        rfq.MapGet("/{id:guid}/sealed-quotes", (Guid id, IRfqService s, CancellationToken ct) => s.GetSealedQuotesAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqViewSealed);
         rfq.MapPost("/{id:guid}/recall", (Guid id, IRfqService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
         rfq.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))

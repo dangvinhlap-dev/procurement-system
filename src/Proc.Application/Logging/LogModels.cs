@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Proc.Application.Logging;
 
@@ -26,6 +26,9 @@ public enum AccessEvent
 
     /// <summary>Đổi công ty làm việc.</summary>
     CompanySwitched,
+
+    /// <summary>Xem giá báo giá Portal còn niêm phong, trước giờ mở (lát P3a).</summary>
+    SealedQuoteViewed,
 }
 
 /// <summary>

@@ -15,6 +15,12 @@ public class SourcingTests
     private static readonly Uom Thung = Uom.Create("THUNG", "Thùng");
     private static readonly DateOnly Today = new(2026, 10, 31);
 
+    /// <summary>9 giờ sáng hôm nay (giờ Việt Nam) – trước giờ hạn nộp mặc định 23:59 (lát P3a).</summary>
+    private static readonly DateTime Now = Today.ToDateTime(new TimeOnly(9, 0));
+
+    /// <summary>9 giờ sáng của một ngày.</summary>
+    private static DateTime At(DateOnly date) => date.ToDateTime(new TimeOnly(9, 0));
+
     private static Item NewItem()
     {
         var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
@@ -139,15 +145,15 @@ public class SourcingTests
         var deadline = rfq.Deadline;
 
         Assert.Contains("quá hạn nộp", Assert.Throws<BusinessRuleException>(() =>
-            rfq.SaveQuotation(a, Header(Today), [new(cai, 50_000, 0, null, null, null)], deadline.AddDays(1))).Message);
+            rfq.SaveQuotation(a, Header(Today), [new(cai, 50_000, 0, null, null, null)], At(deadline.AddDays(1)))).Message);
         Assert.Contains("sau hạn nộp", Assert.Throws<BusinessRuleException>(() =>
-            rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], Today)).Message);
+            rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], Now)).Message);
 
-        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline, "Thêm NCC", Today));
-        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline.AddDays(5), " ", Today));
-        rfq.ExtendDeadline(deadline.AddDays(5), " NCC xin thêm thời gian ", Today);
+        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline, null, "Thêm NCC", Now));
+        Assert.Throws<BusinessRuleException>(() => rfq.ExtendDeadline(deadline.AddDays(5), null, " ", Now));
+        rfq.ExtendDeadline(deadline.AddDays(5), null, " NCC xin thêm thời gian ", Now);
         Assert.Equal((deadline.AddDays(5), "NCC xin thêm thời gian"), (rfq.Deadline, rfq.DeadlineExtensionReason));
-        rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], deadline.AddDays(1));
+        rfq.SaveQuotation(a, Header(deadline.AddDays(1)), [new(cai, 50_000, 0, null, null, null)], At(deadline.AddDays(1)));
         Assert.Equal(1, rfq.QuotedSupplierCount);
 
         // Mời 3 nhưng chỉ 1 chào giá, tối thiểu 3: phải giải trình.
@@ -185,9 +191,9 @@ public class SourcingTests
         rfq.Send(DateTimeOffset.UtcNow, 3, null);
         var header = new QuotationHeader(Today, null, "CK sau 7 ngày", 8, 8, 8, 8, null);
         var line = rfq.Lines[0].Id;
-        rfq.SaveQuotation(a, header, [new(line, 300_000, 0, "10", 2, null)], Today);
-        rfq.SaveQuotation(b, header, [new(line, 306_364, 0, "10", 3, null)], Today);
-        rfq.SaveQuotation(c, header, [new(line, 305_455, 0, "10", 4, null)], Today);
+        rfq.SaveQuotation(a, header, [new(line, 300_000, 0, "10", 2, null)], Now);
+        rfq.SaveQuotation(b, header, [new(line, 306_364, 0, "10", 3, null)], Now);
+        rfq.SaveQuotation(c, header, [new(line, 305_455, 0, "10", 4, null)], Now);
         var user = Guid.CreateVersion7();
 
         // Trúng thầu 30.000.000 ≥ ngưỡng 20.000.000 → 3A, thiếu lý do chọn thì chặn và không ghi lựa chọn.
@@ -204,7 +210,7 @@ public class SourcingTests
         // Loại B: 3B.
         var goods = SentRfq(item, a, b, c);
         var cai = goods.Lines[0].Id;
-        goods.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null)], Today);
+        goods.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null)], Now);
         goods.Award([new(cai, a, null)], user, Today, 1, null);
         Assert.Equal((PurchaseCategory.Goods, RfqForm.Goods), (goods.Category, goods.Form));
     }
@@ -217,9 +223,9 @@ public class SourcingTests
         var rfq = SentRfq(item, a, b, c);
         var (cai, thung) = (rfq.Lines[0].Id, rfq.Lines[1].Id);
         var header = new QuotationHeader(Today, null, "30 ngày", 8, 10, 10, 6, null);
-        rfq.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null), new(thung, 600_000, 5, "10", 7, null)], Today);
-        rfq.SaveQuotation(b, header, [new(cai, 48_000, 0, "10", 14, null)], Today);
-        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(Guid.CreateVersion7(), header, [new(cai, 1, 0, null, null, null)], Today));
+        rfq.SaveQuotation(a, header, [new(cai, 50_000, 0, "10", 7, null), new(thung, 600_000, 5, "10", 7, null)], Now);
+        rfq.SaveQuotation(b, header, [new(cai, 48_000, 0, "10", 14, null)], Now);
+        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(Guid.CreateVersion7(), header, [new(cai, 1, 0, null, null, null)], Now));
 
         var user = Guid.CreateVersion7();
         // Dòng thùng: B không chào → không chọn được B.
@@ -235,7 +241,7 @@ public class SourcingTests
         Assert.Equal(1, rfq.Submit());
         Assert.Equal((RfqStatus.AwardPending, true, 10_700_000m, user), (rfq.Status, rfq.IsAwaitingApproval, rfq.ApprovalAmount, rfq.AwardedBy));
         Assert.True(((IApprovalSubject)rfq).IsPreparedBy(user));
-        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(a, header, [new(cai, 1, 0, null, null, null)], Today));
+        Assert.Throws<BusinessRuleException>(() => rfq.SaveQuotation(a, header, [new(cai, 1, 0, null, null, null)], Now));
         Assert.Throws<BusinessRuleException>(() => rfq.Cancel("Thử hủy"));
         Assert.Throws<BusinessRuleException>(() => rfq.LinkPurchaseOrder(a, Guid.CreateVersion7()));
 
@@ -270,7 +276,7 @@ public class SourcingTests
         rfq.SetDossier([new("MINUTES", true, " BB-01/11 "), new("BUDGET", false, null)]);
         rfq.SetDossier([new("BUDGET", true, null)]);
         var cai = rfq.Lines[0].Id;
-        rfq.SaveQuotation(a, new QuotationHeader(Today, null, null, 8, 8, 8, 8, null), [new(cai, 50_000, 0, null, null, null)], Today);
+        rfq.SaveQuotation(a, new QuotationHeader(Today, null, null, 8, 8, 8, 8, null), [new(cai, 50_000, 0, null, null, null)], Now);
         var dossier = rfq.Dossier.ToDictionary(d => d.Code);
         Assert.Equal((true, true), (dossier[RfqDossier.Comparison].IsDone, dossier[RfqDossier.Comparison].IsAutomatic));
         Assert.Equal((true, "BB-01/11"), (dossier["MINUTES"].IsDone, dossier["MINUTES"].Note));

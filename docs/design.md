@@ -2553,6 +2553,28 @@ NCC), đổi mật khẩu. Migration `V0_25_0_TaiKhoanPortalNcc` (2 bảng mới
 
 Không migration. Cấu hình `Portal:Hosts`, `Portal:RateLimit:*` (docs/deploy-windows.md; Docker `PORTAL_HOSTS`).
 
+**Lát P3a – thư mời và báo giá online niêm phong (12/11/2026, bản 0.25.0).** P3 tách hai lát: **P3a** (lát này) và **P3b** (đính kèm file
+báo giá trên Portal, hỏi đáp NCC – Phòng CUVT, email báo thư mời / gia hạn). Người dùng yêu cầu giữa lát (12/11/2026): **"phải kèm giờ, trước
+giờ mở chỉ người có quyền mới được xem"**. Quy tắc (Q15 + tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P3-1 | **Hạn nộp kèm giờ**: RFQ có ngày + **giờ hạn nộp** (HH:mm, giờ Việt Nam – `Rfq.DeadlineTime`; form lập gợi ý 17:00; RFQ lập trước 0.25.0 và API không gửi giờ = 23:59). Mọi kiểm tra hạn nộp (Phòng CUVT nhập báo giá thay – thay quy tắc R7 "hôm nay > hạn", NCC nộp trên Portal, mở báo giá) so **thời điểm** ngày + giờ. Gia hạn chọn ngày + giờ mới: sau hạn cũ, không trước bây giờ, lý do bắt buộc. |
+| P3-2 | **Thư mời trên Portal**: NCC thấy RFQ đã gửi (không còn nháp) có mời NCC mình – số, công ty mời, nội dung, hạn nộp, dòng hàng (mã, tên, mã hàng của chính NCC, ĐVT, SL, ghi chú), ghi chú RFQ. Không thấy NCC khác được mời, giá NCC khác, NCC nào trúng. RFQ không mời NCC này trả 404 như không tồn tại. Trạng thái NCC thấy: Đang nhận báo giá → Hết hạn nộp – chờ mở → Đang xét chọn (đã mở / chờ duyệt kết quả) → Đã có kết quả / Đã hủy. |
+| P3-3 | **Nộp báo giá**: mọi người dùng Portal đang dùng của NCC (không riêng quản trị NCC) nộp được đến đúng giờ hạn: giá từng dòng (đơn giá trước VAT theo ĐVT của dòng, % CK, thuế suất, ngày giao, ghi chú; dòng để trống = không chào), hiệu lực báo giá (không trước hôm nay), điều kiện thanh toán, ghi chú. Ngày báo giá = ngày nộp. **Nộp lại** được nhiều lần trước hạn; mỗi lần là một bản mới (`RfqPortalSubmission`, lần 1, 2, …), **bản cuối có hiệu lực**; bản nộp không sửa, không xóa. Hai người cùng NCC nộp đúng một lúc thì người sau phải nộp lại. |
+| P3-4 | **Biên nhận**: mỗi lần nộp có **mã băm SHA-256** của nội dung (RFQ, NCC, lần nộp, giờ nộp, đầu báo giá, từng dòng) – NCC thấy trong "Biên nhận các lần nộp"; khi mở, Phòng CUVT thấy mã của bản đã mở để đối chiếu với NCC. |
+| P3-5 | **Niêm phong**: trước khi mở, API nội bộ chỉ trả **giờ nộp, số lần nộp** của từng NCC (dòng "Nộp qua Portal: Niêm phong – nộp …" trên bảng so sánh), không trả giá. Bảng bản nộp **không ghi AuditLog** (nhật ký thay đổi có người khác xem được sẽ lộ giá) – dấu vết là chính bản ghi nộp. Phòng CUVT **không nhập báo giá thay** cho NCC đã nộp Portal và **không chọn thầu** khi còn báo giá niêm phong. NCC không nộp Portal thì Phòng CUVT vẫn nhập thay như cũ. |
+| P3-6 | **Xem trước giờ mở – quyền riêng** `Sourcing.Rfq.ViewSealed` "Xem báo giá Portal trước giờ mở (ghi nhật ký)" (yêu cầu người dùng 12/11/2026): nút "Xem báo giá niêm phong" hỏi lại rồi hiện bản nộp cuối của từng NCC (giá, tổng tiền, mã biên nhận); **mỗi lần xem ghi nhật ký truy cập** (sự kiện "Xem báo giá niêm phong": người xem, giờ, RFQ). Không gán quyền này trong vai trò mẫu – quản trị cấp cho người được giao. Xem không làm mở báo giá. |
+| P3-7 | **Mở báo giá** (Q15): nút "Mở báo giá Portal" (quyền lập RFQ) chỉ hiện **sau giờ hạn nộp**, khi có bản nộp và chưa mở; mở **một lần**: chép bản nộp cuối của từng NCC vào báo giá trên RFQ (điểm chấm để 0), ghi **người và giờ mở** (`Rfq.PortalQuotesOpenedAt/By`, có AuditLog). Phòng CUVT đã nhập thay cho NCC đó trước giờ hạn thì bản NCC tự nộp thay thế. Đã mở thì **không gia hạn** được nữa, NCC không nộp lại. |
+| P3-8 | **Sau khi mở**: giá NCC tự nộp **không sửa thay** (`RfqSupplier.IsFromPortal`); Phòng CUVT **chấm điểm** chất lượng, giao hàng, thanh toán, bảo hành bằng lệnh riêng "Chấm điểm" (`PUT /api/rfqs/{id}/scores/{supplierId}`) – làm được cả sau hạn nộp vì không đổi giá (áp cho mọi báo giá đã có). Chọn thầu, duyệt kết quả, sinh PO/bảng giá/hợp đồng như cũ. |
+
+API Portal: `GET /api/portal/rfqs`, `GET /api/portal/rfqs/{id}`, `POST /api/portal/rfqs/{id}/quotes` (NCC lấy từ phiên – P1b-4). API nội bộ:
+`POST /api/rfqs/{id}/open-portal-quotes`, `PUT /api/rfqs/{id}/scores/{supplierId}`, `GET /api/rfqs/{id}/sealed-quotes` (quyền `Sourcing.Rfq.ViewSealed`).
+Trang Portal "Thư mời báo giá" `/ncc/bao-gia`, `/ncc/bao-gia/{id}`. Migration `V0_25_0_BaoGiaPortalNiemPhong` (cột giờ hạn nộp – RFQ cũ 23:59,
+người/giờ mở, cờ báo giá Portal; bảng `RfqPortalSubmission`, `RfqPortalSubmissionLine`; `Down()` mất các bản nộp Portal và giờ hạn nộp).
+Chưa làm ở P3a: **đính kèm file trên form báo giá Portal** (quy tắc mọi form có đính kèm – CLAUDE.md mục 4 – làm ở P3b cùng hỏi đáp), email
+báo NCC khi có thư mời / gia hạn, báo NCC kết quả (P4).
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2560,7 +2582,7 @@ Không migration. Cấu hình `Portal:Hosts`, `Portal:RateLimit:*` (docs/deploy-
 | 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
-| 0.25.0 | P3 | Portal: báo giá online |
+| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); đính kèm, hỏi đáp, email thư mời (P3b) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |

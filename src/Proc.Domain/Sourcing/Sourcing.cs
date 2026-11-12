@@ -328,7 +328,33 @@ public sealed record RfqWeights(int Price, int Quality, int Delivery, int Paymen
 }
 
 /// <summary>Đầu RFQ.</summary>
-public sealed record RfqHeader(DateOnly Date, string Title, DateOnly Deadline, Guid? SourcingId, RfqWeights Weights, string? Note);
+/// <param name="Date">Ngày lập.</param>
+/// <param name="Title">Tiêu đề.</param>
+/// <param name="Deadline">Ngày hạn nộp báo giá.</param>
+/// <param name="SourcingId">Phiếu tìm nguồn.</param>
+/// <param name="Weights">Trọng số tiêu chí.</param>
+/// <param name="Note">Ghi chú.</param>
+/// <param name="DeadlineTime">Giờ hạn nộp (giờ Việt Nam, lát P3a); null = <see cref="RfqDeadline.EndOfDay"/> (hết ngày).</param>
+public sealed record RfqHeader(
+    DateOnly Date, string Title, DateOnly Deadline, Guid? SourcingId, RfqWeights Weights, string? Note, TimeOnly? DeadlineTime = null);
+
+/// <summary>
+/// Giờ hạn nộp báo giá (lát P3a – người dùng yêu cầu 12/11/2026 "phải kèm giờ"): hạn nộp là một thời điểm (ngày + giờ HH:mm, giờ Việt Nam).
+/// Qua thời điểm đó NCC không nộp được trên Portal, Phòng CUVT không nhập báo giá thay; báo giá Portal niêm phong mở được từ thời điểm đó.
+/// </summary>
+public static class RfqDeadline
+{
+    /// <summary>Giờ khi không ghi giờ (RFQ lập trước bản 0.25.0 hoặc API không gửi giờ): 23:59 – coi như hết ngày.</summary>
+    public static readonly TimeOnly EndOfDay = new(23, 59);
+
+    /// <summary>Chuỗi hiển thị "dd/MM/yyyy HH:mm".</summary>
+    /// <param name="date">Ngày hạn.</param>
+    /// <param name="time">Giờ hạn.</param>
+    /// <returns>Ví dụ "20/11/2026 17:00".</returns>
+    public static string Format(DateOnly date, TimeOnly time) =>
+        date.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) + " "
+        + time.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+}
 
 /// <summary>Dữ liệu một dòng RFQ.</summary>
 public sealed record RfqLineData(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SourcePrLineId, string? Note);
@@ -428,6 +454,23 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
 
     /// <summary>Hạn nộp báo giá.</summary>
     public DateOnly Deadline { get; private set; }
+
+    /// <summary>Giờ hạn nộp (giờ Việt Nam, lát P3a); RFQ lập trước bản 0.25.0 là 23:59.</summary>
+    public TimeOnly DeadlineTime { get; private set; } = RfqDeadline.EndOfDay;
+
+    /// <summary>Thời điểm hạn nộp theo giờ Việt Nam (ngày + giờ) – so với "bây giờ" theo giờ Việt Nam.</summary>
+    public DateTime DeadlineAt => Deadline.ToDateTime(DeadlineTime);
+
+    /// <summary>Hạn nộp dạng chữ "dd/MM/yyyy HH:mm".</summary>
+    public string DeadlineText => RfqDeadline.Format(Deadline, DeadlineTime);
+
+    /// <summary>
+    /// Thời điểm Phòng CUVT mở báo giá Portal niêm phong (lát P3a, Q15); null = chưa mở. Mở rồi thì không gia hạn, NCC không nộp lại.
+    /// </summary>
+    public DateTimeOffset? PortalQuotesOpenedAt { get; private set; }
+
+    /// <summary>Người mở báo giá Portal.</summary>
+    public Guid? PortalQuotesOpenedBy { get; private set; }
 
     /// <summary>Phiếu tìm nguồn liên quan.</summary>
     public Guid? SourcingId { get; private set; }
@@ -563,6 +606,7 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         Date = header.Date;
         Title = header.Title.Trim();
         Deadline = header.Deadline;
+        DeadlineTime = TrimSeconds(header.DeadlineTime ?? RfqDeadline.EndOfDay);
         SourcingId = header.SourcingId;
         (PriceWeight, QualityWeight, DeliveryWeight, PaymentWeight, WarrantyWeight) = (w.Price, w.Quality, w.Delivery, w.Payment, w.Warranty);
         Note = string.IsNullOrWhiteSpace(header.Note) ? null : header.Note.Trim();
@@ -675,17 +719,20 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <param name="supplierId">NCC được mời.</param>
     /// <param name="header">Thông tin báo giá.</param>
     /// <param name="lines">Giá từng dòng.</param>
-    /// <param name="today">Hôm nay (giờ Việt Nam): quá hạn nộp thì không nhập, sửa báo giá – gia hạn trước (lát R7).</param>
-    public RfqSupplier SaveQuotation(Guid supplierId, QuotationHeader header, IReadOnlyList<QuotationLineData> lines, DateOnly today)
+    /// <param name="now">Bây giờ theo giờ Việt Nam: quá thời điểm hạn nộp (ngày + giờ) thì không nhập, sửa báo giá – gia hạn trước (lát R7, P3a).</param>
+    public RfqSupplier SaveQuotation(Guid supplierId, QuotationHeader header, IReadOnlyList<QuotationLineData> lines, DateTime now)
     {
         EnsureSent();
         // Báo giá nhập sau hạn nộp (hoặc ghi ngày sau hạn) làm mất tính công bằng giữa các NCC: phải gia hạn RFQ có lý do (lát R7).
-        if (today > Deadline)
-            throw new BusinessRuleException($"RFQ {No} đã quá hạn nộp báo giá {Deadline:dd/MM/yyyy} – gia hạn nhận báo giá (ghi lý do) trước khi nhập, sửa báo giá.");
+        if (now > DeadlineAt)
+            throw new BusinessRuleException($"RFQ {No} đã quá hạn nộp báo giá {DeadlineText} – gia hạn nhận báo giá (ghi lý do) trước khi nhập, sửa báo giá.");
         if (header.QuoteDate > Deadline)
             throw new BusinessRuleException($"Ngày báo giá {header.QuoteDate:dd/MM/yyyy} sau hạn nộp {Deadline:dd/MM/yyyy} – báo giá nộp trễ, gia hạn RFQ nếu chấp nhận.");
         var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)
             ?? throw new BusinessRuleException("NCC này không có trong danh sách được mời của RFQ.");
+        // Giá NCC tự nộp trên Portal là chứng cứ gốc – Phòng CUVT không sửa thay, chỉ chấm điểm (ScoreQuotation) – lát P3a.
+        if (supplier.IsFromPortal)
+            throw new BusinessRuleException("Báo giá của NCC này nộp qua Portal – không nhập, sửa giá thay NCC; chỉ chấm điểm được.");
         foreach (var line in lines)
             if (_lines.All(l => l.Id != line.RfqLineId)) throw new BusinessRuleException("Báo giá có dòng không thuộc RFQ – hãy tải lại phiếu.");
         if (lines.GroupBy(l => l.RfqLineId).Any(g => g.Count() > 1)) throw new BusinessRuleException("Mỗi dòng RFQ chỉ một giá trong một báo giá.");
@@ -766,22 +813,83 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     }
 
     /// <summary>
-    /// Gia hạn nhận báo giá (lát R7, design.md mục 18.26): chỉ khi đang nhận báo giá; hạn mới sau hạn cũ và không trước hôm nay; bắt buộc
-    /// lý do (nhật ký ghi hạn cũ → mới).
+    /// Gia hạn nhận báo giá (lát R7, design.md mục 18.26): chỉ khi đang nhận báo giá, chưa mở báo giá Portal (lát P3a); thời điểm hạn mới
+    /// (ngày + giờ) sau hạn cũ và không trước bây giờ; bắt buộc lý do (nhật ký ghi hạn cũ → mới).
     /// </summary>
-    /// <param name="deadline">Hạn mới.</param>
+    /// <param name="deadline">Ngày hạn mới.</param>
+    /// <param name="time">Giờ hạn mới (giờ Việt Nam); null = giữ giờ hạn hiện tại.</param>
     /// <param name="reason">Lý do, tối đa 500 ký tự.</param>
-    /// <param name="today">Hôm nay (giờ Việt Nam).</param>
-    /// <exception cref="BusinessRuleException">Khi RFQ không đang nhận báo giá, hạn mới không hợp lệ hoặc thiếu lý do.</exception>
-    public void ExtendDeadline(DateOnly deadline, string? reason, DateOnly today)
+    /// <param name="now">Bây giờ theo giờ Việt Nam.</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ không đang nhận báo giá, đã mở báo giá Portal, hạn mới không hợp lệ hoặc thiếu lý do.</exception>
+    public void ExtendDeadline(DateOnly deadline, TimeOnly? time, string? reason, DateTime now)
     {
         EnsureSent();
-        if (deadline <= Deadline) throw new BusinessRuleException($"Hạn mới phải sau hạn hiện tại {Deadline:dd/MM/yyyy}.");
-        if (deadline < today) throw new BusinessRuleException("Hạn mới không được trước hôm nay.");
+        // Đã mở báo giá niêm phong thì giá các NCC đã lộ cho người mở – cho nộp tiếp sẽ không công bằng (lát P3a).
+        if (PortalQuotesOpenedAt is not null)
+            throw new BusinessRuleException($"RFQ {No} đã mở báo giá Portal – không gia hạn nhận báo giá được nữa.");
+        var newTime = TrimSeconds(time ?? DeadlineTime);
+        var newAt = deadline.ToDateTime(newTime);
+        if (newAt <= DeadlineAt) throw new BusinessRuleException($"Hạn mới phải sau hạn hiện tại {DeadlineText}.");
+        if (newAt < now) throw new BusinessRuleException("Hạn mới không được trước thời điểm hiện tại.");
         var text = Clean(reason) ?? throw new BusinessRuleException("Hãy nhập lý do gia hạn.");
         if (text.Length > 500) throw new BusinessRuleException("Lý do gia hạn tối đa 500 ký tự.");
         Deadline = deadline;
+        DeadlineTime = newTime;
         DeadlineExtensionReason = text;
+    }
+
+    /// <summary>
+    /// Mở báo giá Portal niêm phong (lát P3a, Q15 "Phòng CUVT mở khi đến hạn, ghi nhật ký"): chỉ khi đã qua thời điểm hạn nộp; chép bản nộp
+    /// cuối của từng NCC vào báo giá (điểm chấm để 0 – Phòng CUVT chấm sau bằng <see cref="ScoreQuotation"/>); báo giá Phòng CUVT nhập thay
+    /// trước đó cho NCC đã nộp Portal bị thay bằng bản NCC tự nộp. Mở một lần.
+    /// </summary>
+    /// <param name="latest">Bản nộp cuối của mỗi NCC (mỗi NCC một bản).</param>
+    /// <param name="at">Thời điểm mở (UTC).</param>
+    /// <param name="openedBy">Người mở.</param>
+    /// <param name="now">Bây giờ theo giờ Việt Nam.</param>
+    /// <returns>Số báo giá đã mở.</returns>
+    /// <exception cref="BusinessRuleException">Khi RFQ không đang nhận báo giá, chưa đến giờ mở, đã mở, không có bản nộp hoặc bản nộp sai RFQ.</exception>
+    public int OpenPortalQuotes(IReadOnlyList<RfqPortalSubmission> latest, DateTimeOffset at, Guid openedBy, DateTime now)
+    {
+        EnsureSent();
+        if (PortalQuotesOpenedAt is not null) throw new BusinessRuleException($"Báo giá Portal của RFQ {No} đã mở.");
+        if (now <= DeadlineAt)
+            throw new BusinessRuleException($"Chưa đến giờ mở – báo giá Portal niêm phong đến hết hạn nộp {DeadlineText}.");
+        if (latest.Count == 0) throw new BusinessRuleException("Chưa có NCC nào nộp báo giá qua Portal.");
+        if (latest.Any(s => s.RfqId != Id)) throw new BusinessRuleException("Bản nộp không thuộc RFQ này.");
+        if (latest.GroupBy(s => s.SupplierId).Any(g => g.Count() > 1)) throw new BusinessRuleException("Mỗi NCC chỉ mở bản nộp cuối.");
+        foreach (var submission in latest)
+        {
+            var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == submission.SupplierId)
+                ?? throw new BusinessRuleException("NCC nộp báo giá không có trong danh sách được mời.");
+            supplier.SetQuotation(
+                new QuotationHeader(submission.QuoteDate, submission.ValidUntil, submission.PaymentTerms, 0, 0, 0, 0, submission.Note),
+                submission.Lines.Select(l => new QuotationLineData(l.RfqLineId, l.UnitPrice, l.DiscountPct, l.VatCode, l.LeadTimeDays, l.Note)).ToList());
+            supplier.MarkFromPortal(submission.Id);
+        }
+
+        PortalQuotesOpenedAt = at;
+        PortalQuotesOpenedBy = openedBy;
+        return latest.Count;
+    }
+
+    /// <summary>
+    /// Chấm điểm chất lượng, giao hàng, thanh toán, bảo hành của một báo giá đã có (lát P3a): làm được cả sau hạn nộp vì không đổi giá NCC chào –
+    /// cần cho báo giá Portal mở sau hạn.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="quality">Điểm chất lượng 0–10.</param>
+    /// <param name="delivery">Điểm giao hàng 0–10.</param>
+    /// <param name="payment">Điểm thanh toán 0–10.</param>
+    /// <param name="warranty">Điểm bảo hành 0–10.</param>
+    /// <exception cref="BusinessRuleException">Khi RFQ không đang nhận báo giá, NCC không được mời hoặc chưa có báo giá, điểm sai.</exception>
+    public void ScoreQuotation(Guid supplierId, decimal quality, decimal delivery, decimal payment, decimal warranty)
+    {
+        EnsureSent();
+        var supplier = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)
+            ?? throw new BusinessRuleException("NCC này không có trong danh sách được mời của RFQ.");
+        if (!supplier.HasQuoted) throw new BusinessRuleException("NCC này chưa có báo giá để chấm điểm.");
+        supplier.SetScores(quality, delivery, payment, warranty);
     }
 
     /// <summary>Gửi duyệt kết quả chọn thầu: Đã gửi → Chờ duyệt, tăng lượt, xóa lý do từ chối cũ.</summary>
@@ -906,6 +1014,9 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
 
     /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>Giờ hạn nộp chỉ tính đến phút (HH:mm) – bỏ giây để hiển thị và so sánh khớp nhau.</summary>
+    private static TimeOnly TrimSeconds(TimeOnly time) => new(time.Hour, time.Minute);
 
     /// <summary>Chặn thao tác khi RFQ không ở trạng thái Đang nhận báo giá.</summary>
     private void EnsureSent()
@@ -1051,14 +1162,19 @@ public sealed class RfqSupplier : Entity
     /// <summary>Hợp đồng nguyên tắc nháp đã sinh từ kết quả chọn thầu (design.md mục 8.6).</summary>
     public Guid? ContractId { get; private set; }
 
+    /// <summary>Báo giá do NCC tự nộp trên Portal (lát P3a) – Phòng CUVT không sửa giá, chỉ chấm điểm.</summary>
+    public bool IsFromPortal { get; private set; }
+
+    /// <summary>Bản nộp Portal đã mở thành báo giá này (<see cref="RfqPortalSubmission"/>).</summary>
+    public Guid? PortalSubmissionId { get; private set; }
+
     /// <summary>Giá từng dòng.</summary>
     public IReadOnlyList<QuotationLine> QuotationLines => _quotationLines;
 
     /// <summary>Ghi báo giá của NCC: điểm chấm (chất lượng, giao hàng, thanh toán) và giá từng dòng.</summary>
     internal void SetQuotation(QuotationHeader header, IReadOnlyList<QuotationLineData> lines)
     {
-        foreach (var (score, name) in new[] { (header.QualityScore, "chất lượng"), (header.DeliveryScore, "giao hàng"), (header.PaymentScore, "thanh toán"), (header.WarrantyScore, "bảo hành") })
-            if (score is < 0 or > 10 || decimal.Round(score, 2) != score) throw new BusinessRuleException($"Điểm {name} phải từ 0 đến 10, tối đa 2 chữ số thập phân.");
+        ValidateScores(header.QualityScore, header.DeliveryScore, header.PaymentScore, header.WarrantyScore);
         if (header.ValidUntil is { } until && until < header.QuoteDate) throw new BusinessRuleException("Hiệu lực báo giá không được trước ngày báo giá.");
         if (lines.Count == 0) throw new BusinessRuleException("Báo giá phải có giá cho ít nhất một dòng.");
         HasQuoted = true;
@@ -1079,6 +1195,27 @@ public sealed class RfqSupplier : Entity
 
             line.Set(data);
         }
+    }
+
+    /// <summary>Chấm lại điểm (giữ nguyên giá) – lát P3a.</summary>
+    internal void SetScores(decimal quality, decimal delivery, decimal payment, decimal warranty)
+    {
+        ValidateScores(quality, delivery, payment, warranty);
+        (QualityScore, DeliveryScore, PaymentScore, WarrantyScore) = (quality, delivery, payment, warranty);
+    }
+
+    /// <summary>Đánh dấu báo giá đến từ bản nộp Portal đã mở.</summary>
+    internal void MarkFromPortal(Guid submissionId)
+    {
+        IsFromPortal = true;
+        PortalSubmissionId = submissionId;
+    }
+
+    /// <summary>Điểm 0–10, tối đa 2 chữ số thập phân.</summary>
+    private static void ValidateScores(decimal quality, decimal delivery, decimal payment, decimal warranty)
+    {
+        foreach (var (score, name) in new[] { (quality, "chất lượng"), (delivery, "giao hàng"), (payment, "thanh toán"), (warranty, "bảo hành") })
+            if (score is < 0 or > 10 || decimal.Round(score, 2) != score) throw new BusinessRuleException($"Điểm {name} phải từ 0 đến 10, tối đa 2 chữ số thập phân.");
     }
 
     /// <summary>Gắn PO đã tạo từ báo giá trúng thầu.</summary>
@@ -1168,6 +1305,24 @@ public sealed class QuotationLine : Entity
     /// <summary>Kiểm tra và gán giá một dòng báo giá (đơn giá ≥ 0, tối đa 6 số lẻ).</summary>
     internal void Set(QuotationLineData data)
     {
+        var clean = Normalize(data);
+        UnitPrice = clean.UnitPrice;
+        DiscountPct = clean.DiscountPct;
+        VatCode = clean.VatCode;
+        LeadTimeDays = clean.LeadTimeDays;
+        Note = clean.Note;
+    }
+
+    /// <summary>
+    /// Kiểm tra một dòng giá (đơn giá ≥ 0, tối đa 6 số lẻ; CK 0–100%; giao 0–365 ngày; thuế suất trong <see cref="VatRates.All"/>) và chuẩn hóa
+    /// (mã thuế chữ hoa, chuỗi rỗng thành null). Dùng chung cho báo giá nhập thay và bản nộp Portal (lát P3a).
+    /// </summary>
+    /// <param name="data">Dòng giá.</param>
+    /// <returns>Dòng đã chuẩn hóa.</returns>
+    /// <exception cref="BusinessRuleException">Khi dòng giá sai.</exception>
+    public static QuotationLineData Normalize(QuotationLineData data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
         if (data.UnitPrice < 0 || decimal.Round(data.UnitPrice, 6) != data.UnitPrice || data.UnitPrice >= 10_000_000_000_000m)
             throw new BusinessRuleException("Đơn giá báo giá phải ≥ 0, tối đa 6 chữ số thập phân.");
         if (data.DiscountPct is < 0 or > 100) throw new BusinessRuleException("Chiết khấu phải từ 0 đến 100%.");
@@ -1175,11 +1330,9 @@ public sealed class QuotationLine : Entity
         var vat = string.IsNullOrWhiteSpace(data.VatCode) ? null : data.VatCode.Trim().ToUpperInvariant();
         if (vat is not null && !VatRates.All.Contains(vat))
             throw new BusinessRuleException($"Thuế suất phải là một trong {string.Join(", ", VatRates.All)}.");
-        UnitPrice = data.UnitPrice;
-        DiscountPct = data.DiscountPct;
-        VatCode = vat;
-        LeadTimeDays = data.LeadTimeDays;
-        Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+        var note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim();
+        if (note?.Length > 500) throw new BusinessRuleException("Ghi chú dòng báo giá tối đa 500 ký tự.");
+        return data with { VatCode = vat, Note = note };
     }
 }
 

@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Proc.Application.Purchasing;
 
 namespace Proc.Application.Sourcing;
@@ -89,7 +89,20 @@ public sealed record RfqSupplierDto(
     Guid SupplierId, string SupplierCode, string SupplierName, string SupplierStatus, bool HasQuoted, DateOnly? QuoteDate, DateOnly? ValidUntil,
     string? PaymentTerms, decimal QualityScore, decimal DeliveryScore, decimal PaymentScore, decimal WarrantyScore, string? Note,
     decimal PriceScore, decimal TotalScore, int QuotedLineCount, decimal AwardedAmount, Guid? PurchaseOrderId, string? PurchaseOrderNo,
-    IReadOnlyList<QuotationLineDto> Lines, Guid? PriceListId = null, string? PriceListNo = null, Guid? ContractId = null, string? ContractNo = null);
+    IReadOnlyList<QuotationLineDto> Lines, Guid? PriceListId = null, string? PriceListNo = null, Guid? ContractId = null, string? ContractNo = null)
+{
+    /// <summary>Báo giá do NCC tự nộp trên Portal, đã mở (lát P3a) – không sửa giá thay NCC, chỉ chấm điểm.</summary>
+    public bool IsFromPortal { get; init; }
+
+    /// <summary>Thời điểm NCC nộp bản cuối trên Portal (hiện cả khi còn niêm phong – chỉ giờ nộp, không có giá).</summary>
+    public DateTimeOffset? PortalSubmittedAt { get; init; }
+
+    /// <summary>Số lần NCC đã nộp trên Portal.</summary>
+    public int PortalSubmissionCount { get; init; }
+
+    /// <summary>Mã băm bản nộp cuối (biên nhận của NCC) – chỉ trả khi đã mở báo giá Portal.</summary>
+    public string? PortalContentHash { get; init; }
+}
 
 /// <summary>Một mục hồ sơ trình (lát B3b); IsAutomatic = hệ thống tự tính (bảng so sánh).</summary>
 public sealed record RfqDossierItemDto(string Code, string Name, bool IsDone, string? Note, bool IsAutomatic);
@@ -114,7 +127,17 @@ public sealed record CreatedPriceListDto(Guid SupplierId, string SupplierCode, G
 public sealed record RfqActions(
     bool CanEdit, bool CanSend, bool CanQuote, bool CanAward, bool CanCreateOrders, bool CanCancel, string? ReadOnlyReason, bool CanApprove,
     bool CanRecall, bool CanEditDossier = false, bool CanCreatePriceLists = false, string? ConflictReason = null, bool CanCreateContracts = false,
-    bool CanExtendDeadline = false);
+    bool CanExtendDeadline = false)
+{
+    /// <summary>Mở được báo giá Portal niêm phong: quyền lập RFQ, đang nhận báo giá, đã qua giờ hạn nộp, có bản nộp, chưa mở (lát P3a).</summary>
+    public bool CanOpenPortalQuotes { get; init; }
+
+    /// <summary>Có quyền xem giá báo giá Portal trước giờ mở (mỗi lần xem ghi nhật ký) và còn bản nộp niêm phong.</summary>
+    public bool CanViewSealedQuotes { get; init; }
+
+    /// <summary>Chấm điểm được báo giá đã có (cả sau hạn nộp).</summary>
+    public bool CanScore { get; init; }
+}
 
 /// <summary>Trọng số tiêu chí (%), tổng 100.</summary>
 public sealed record RfqWeightsDto(int Price, int Quality, int Delivery, int Payment, int Warranty);
@@ -159,15 +182,27 @@ public sealed record RfqDto(
 
     /// <summary>Lý do chọn NCC (biểu mẫu 3A).</summary>
     public string? SelectionReason { get; init; }
+
+    /// <summary>Giờ hạn nộp (giờ Việt Nam, lát P3a); RFQ lập trước 0.25.0 là 23:59.</summary>
+    public TimeOnly DeadlineTime { get; init; } = new(23, 59);
+
+    /// <summary>Thời điểm mở báo giá Portal niêm phong; null = chưa mở.</summary>
+    public DateTimeOffset? PortalQuotesOpenedAt { get; init; }
+
+    /// <summary>Người mở báo giá Portal.</summary>
+    public string? PortalQuotesOpenedByName { get; init; }
+
+    /// <summary>Số NCC đã nộp báo giá trên Portal (đếm cả khi còn niêm phong).</summary>
+    public int PortalSubmittedSupplierCount { get; init; }
 }
 
 /// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
 public sealed record SendRfqRequest(string? Reason);
 
-/// <summary>Lưu RFQ (nháp).</summary>
+/// <summary>Lưu RFQ (nháp); DeadlineTime = giờ hạn nộp (giờ Việt Nam, lát P3a), null = 23:59.</summary>
 public sealed record SaveRfqRequest(
     DateOnly Date, string Title, DateOnly Deadline, Guid? SourcingId, RfqWeightsDto Weights, string? Note, IReadOnlyList<SaveRfqLineRequest> Lines,
-    IReadOnlyList<Guid> SupplierIds);
+    IReadOnlyList<Guid> SupplierIds, TimeOnly? DeadlineTime = null);
 
 /// <summary>Lưu một dòng RFQ.</summary>
 public sealed record SaveRfqLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SourcePrLineId, string? Note);
@@ -189,7 +224,21 @@ public sealed record AwardRfqRequest(IReadOnlyList<AwardRfqLineRequest> Lines, s
 /// <summary>Gia hạn nhận báo giá (lát R7, design.md mục 18.26).</summary>
 /// <param name="Deadline">Hạn mới.</param>
 /// <param name="Reason">Lý do, bắt buộc.</param>
-public sealed record ExtendRfqDeadlineRequest(DateOnly Deadline, string? Reason);
+/// <param name="DeadlineTime">Giờ hạn mới (giờ Việt Nam, lát P3a); null = giữ giờ hạn hiện tại.</param>
+public sealed record ExtendRfqDeadlineRequest(DateOnly Deadline, string? Reason, TimeOnly? DeadlineTime = null);
+
+/// <summary>Chấm điểm một báo giá đã có (lát P3a) – không đổi giá.</summary>
+public sealed record ScoreQuotationRequest(decimal QualityScore, decimal DeliveryScore, decimal PaymentScore, decimal WarrantyScore);
+
+/// <summary>Giá một dòng trong bản nộp Portal niêm phong; Amount = SL × đơn giá × (100 − %CK)/100, làm tròn 2 số.</summary>
+public sealed record SealedQuoteLineDto(
+    Guid RfqLineId, int LineNo, string ItemCode, string ItemName, string UomCode, decimal Qty, decimal UnitPrice, decimal DiscountPct, string? VatCode,
+    int? LeadTimeDays, string? Note, decimal Amount);
+
+/// <summary>Bản nộp cuối của một NCC trên Portal (xem trước giờ mở – lát P3a, cần quyền riêng, có ghi nhật ký).</summary>
+public sealed record SealedQuoteDto(
+    Guid SupplierId, string SupplierCode, string SupplierName, int Sequence, DateTimeOffset SubmittedAt, string SubmittedByEmail, DateOnly QuoteDate,
+    DateOnly? ValidUntil, string? PaymentTerms, string? Note, string ContentHash, decimal TotalAmount, IReadOnlyList<SealedQuoteLineDto> Lines);
 
 /// <summary>Chọn thầu một dòng.</summary>
 public sealed record AwardRfqLineRequest(Guid RfqLineId, Guid? SupplierId, string? Reason);
@@ -253,6 +302,31 @@ public interface IRfqService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>RFQ.</returns>
     Task<RfqDto> ExtendDeadlineAsync(Guid id, ExtendRfqDeadlineRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Mở báo giá Portal niêm phong sau giờ hạn nộp (lát P3a, Q15): chép bản nộp cuối của từng NCC vào báo giá, ghi người – giờ mở.
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ sau khi mở.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi chưa đến giờ, đã mở, không có bản nộp.</exception>
+    Task<RfqDto> OpenPortalQuotesAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Chấm điểm báo giá đã có của một NCC (cả sau hạn nộp – lát P3a).</summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="supplierId">NCC.</param>
+    /// <param name="request">Điểm.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ sau khi chấm.</returns>
+    Task<RfqDto> ScoreQuotationAsync(Guid id, Guid supplierId, ScoreQuotationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Xem giá các bản nộp Portal còn niêm phong (quyền "Xem báo giá Portal trước giờ mở"); mỗi lần xem ghi nhật ký truy cập (lát P3a).
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bản nộp cuối của từng NCC.</returns>
+    Task<IReadOnlyList<SealedQuoteDto>> GetSealedQuotesAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Duyệt kết quả chọn thầu ở bước đến lượt; duyệt đủ thì RFQ Đã chọn thầu.</summary>
     /// <param name="id">Id.</param>
