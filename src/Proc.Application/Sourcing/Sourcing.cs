@@ -138,6 +138,27 @@ public sealed record RfqDto(
 
     /// <summary>Số NCC đã chào giá ít nhất một dòng.</summary>
     public int QuotedSupplierCount { get; init; }
+
+    /// <summary>Loại mua (lát Y6): "Construction" (A – công trình) hoặc "Goods" (B – hàng hóa, gồm dịch vụ).</summary>
+    public string Category { get; init; } = "Goods";
+
+    /// <summary>Công trình của RFQ loại A.</summary>
+    public Guid? ConstructionProjectId { get; init; }
+
+    /// <summary>Mã – tên công trình của RFQ loại A.</summary>
+    public string? ConstructionProjectName { get; init; }
+
+    /// <summary>
+    /// Biểu mẫu kết quả "3A" / "3a" / "3B": đã chọn thầu thì là biểu mẫu chốt lúc chọn; chưa chọn thì loại B là "3B", loại A null (tùy giá trị
+    /// trúng thầu so với <see cref="ComparisonThreshold"/>).
+    /// </summary>
+    public string? FormCode { get; init; }
+
+    /// <summary>Ngưỡng so sánh 3 NCC loại A của công ty (VND chưa VAT) – trúng thầu từ ngưỡng trở lên là 3A.</summary>
+    public decimal ComparisonThreshold { get; init; }
+
+    /// <summary>Lý do chọn NCC (biểu mẫu 3A).</summary>
+    public string? SelectionReason { get; init; }
 }
 
 /// <summary>Gửi RFQ; Reason = giải trình khi mời ít hơn số NCC tối thiểu (design.md mục 8.6).</summary>
@@ -162,7 +183,8 @@ public sealed record SaveQuotationLineRequest(Guid RfqLineId, decimal UnitPrice,
 /// <summary>Chọn thầu: mỗi dòng một NCC (hoặc null = không trao) kèm lý do.</summary>
 /// <param name="Lines">Lựa chọn từng dòng.</param>
 /// <param name="FewQuotesReason">Giải trình khi số NCC chào giá ít hơn tối thiểu (lát R7).</param>
-public sealed record AwardRfqRequest(IReadOnlyList<AwardRfqLineRequest> Lines, string? FewQuotesReason = null);
+/// <param name="SelectionReason">Lý do chọn NCC – bắt buộc khi biểu mẫu là 3A (lát Y6).</param>
+public sealed record AwardRfqRequest(IReadOnlyList<AwardRfqLineRequest> Lines, string? FewQuotesReason = null, string? SelectionReason = null);
 
 /// <summary>Gia hạn nhận báo giá (lát R7, design.md mục 18.26).</summary>
 /// <param name="Deadline">Hạn mới.</param>

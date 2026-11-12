@@ -65,6 +65,13 @@ internal sealed class RfqConfiguration : IEntityTypeConfiguration<Rfq>
         // Lát B3: giải trình mời thiếu NCC, thông tin duyệt kết quả chọn thầu; các thuộc tính tính toán của IApprovalSubject không lưu.
         builder.Property(x => x.FewSuppliersReason).HasMaxLength(500);
         builder.Property(x => x.RejectReason).HasMaxLength(500);
+        // Lát Y6: loại mua theo đề nghị nguồn (RFQ cũ là B = 2), công trình cùng công ty (khóa ngoại kèm CompanyId như PR), biểu mẫu chốt lúc
+        // chọn thầu, lý do chọn của 3A.
+        builder.Property(x => x.Category).HasDefaultValue(PurchaseCategory.Goods).HasSentinel((PurchaseCategory)0);
+        builder.HasOne<ConstructionProject>().WithMany()
+            .HasForeignKey(x => new { x.ConstructionProjectId, x.CompanyId }).HasPrincipalKey(p => new { p.Id, p.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(x => x.SelectionReason).HasMaxLength(1000);
         builder.Ignore(x => x.DocType);
         builder.Ignore(x => x.ApprovalAmount);
         builder.Ignore(x => x.IsAwaitingApproval);

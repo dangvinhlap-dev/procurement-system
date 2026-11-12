@@ -93,13 +93,14 @@ public sealed class RfqService : IRfqService
     public async Task<RfqDto> CreateAsync(SaveRfqRequest request, CancellationToken cancellationToken)
     {
         var companyId = _scope.RequireCompany();
-        var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
+        var (lines, category, projectId) = await ResolveLinesAsync(request.Lines, cancellationToken);
         await CheckSuppliersAsync(request.SupplierIds, cancellationToken);
         await CheckSourcingAsync(request.SourcingId, cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.RequestForQuotation, request.Date, cancellationToken);
         var rfq = Rfq.Create(companyId, no, ToHeader(request));
         rfq.SetLines(lines);
+        rfq.SetPurchaseCategory(category, projectId);
         rfq.SetSuppliers(request.SupplierIds);
         _db.Rfqs.Add(rfq);
         await _db.SaveChangesAsync(cancellationToken);
@@ -111,11 +112,12 @@ public sealed class RfqService : IRfqService
     public async Task<RfqDto> UpdateAsync(Guid id, SaveRfqRequest request, CancellationToken cancellationToken)
     {
         var rfq = await LoadAsync(id, cancellationToken);
-        var lines = await ResolveLinesAsync(request.Lines, cancellationToken);
+        var (lines, category, projectId) = await ResolveLinesAsync(request.Lines, cancellationToken);
         await CheckSuppliersAsync(request.SupplierIds, cancellationToken);
         await CheckSourcingAsync(request.SourcingId, cancellationToken);
         rfq.Update(ToHeader(request));
         rfq.SetLines(lines);
+        rfq.SetPurchaseCategory(category, projectId);
         rfq.SetSuppliers(request.SupplierIds);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -183,7 +185,8 @@ public sealed class RfqService : IRfqService
         var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
         await RequireNoConflictAsync(rfq, cancellationToken);
         rfq.Award(request.Lines.Select(l => new AwardLineData(l.RfqLineId, l.SupplierId, l.Reason)).ToList(), userId, _clock.TodayInVietnam(),
-            await _parameters.RfqMinSuppliersAsync(cancellationToken), request.FewQuotesReason);
+            await _parameters.RfqMinSuppliersAsync(cancellationToken), request.FewQuotesReason,
+            await _parameters.RfqComparisonThresholdAsync(cancellationToken), request.SelectionReason);
         await CheckAwardedSuppliersAsync(rfq, cancellationToken);
         // Hồ sơ trình thiếu mục mặc định không chặn (hội đồng quyết); công ty bật tham số RFQ_DOSSIER_REQUIRED thì chặn – design.md mục 8.6.
         if (await _db.CompanyParameters.AsNoTracking().AnyAsync(p => p.RequireRfqDossierComplete, cancellationToken)
@@ -428,9 +431,12 @@ public sealed class RfqService : IRfqService
     }
 
     /// <summary>
-    /// Dòng lấy từ PR: PR đã duyệt của công ty, cùng mặt hàng (SL đặt thật kiểm tra khi sinh PO – RFQ chỉ hỏi giá).
+    /// Dòng lấy từ PR: PR đã duyệt của công ty, cùng mặt hàng (SL đặt thật kiểm tra khi sinh PO – RFQ chỉ hỏi giá). Kèm loại mua của RFQ
+    /// (lát Y6): có dòng từ đề nghị loại A → loại A của công trình đó; dòng đề nghị A phải cùng một công trình và không trộn với dòng đề
+    /// nghị B/DV (mỗi RFQ in một biểu mẫu 3A/3a hoặc 3B); dòng gõ tay (ví dụ "Vận chuyển") đi được với cả hai loại.
     /// </summary>
-    private async Task<List<(RfqLineData, Item)>> ResolveLinesAsync(IReadOnlyList<SaveRfqLineRequest> lines, CancellationToken cancellationToken)
+    private async Task<(List<(RfqLineData, Item)> Lines, PurchaseCategory Category, Guid? ProjectId)> ResolveLinesAsync(
+        IReadOnlyList<SaveRfqLineRequest> lines, CancellationToken cancellationToken)
     {
         var ids = lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
@@ -439,7 +445,7 @@ public sealed class RfqService : IRfqService
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in _db.PurchaseRequests on l.RequestId equals r.Id
                 where prLineIds.Contains(l.Id)
-                select new { l.Id, l.ItemId, r.No, r.Status })
+                select new { l.Id, l.ItemId, r.No, r.Status, r.Category, r.ConstructionProjectId })
             .ToDictionaryAsync(x => x.Id, cancellationToken);
         // Dòng đề nghị phải qua bảng tổng hợp đề xuất mua đã duyệt mới được hỏi giá (design.md mục 19.3, lát Y5c) – kiểm sau khi đã kiểm
         // đề nghị duyệt, cùng mặt hàng để báo lỗi cụ thể hơn trước.
@@ -459,7 +465,17 @@ public sealed class RfqService : IRfqService
         await PurchaseSummaryService.EnsureApprovedSummaryAsync(
             _db, lines.Select((l, index) => (l.SourcePrLineId, index + 1)).Where(x => x.SourcePrLineId is not null)
                 .Select(x => (x.SourcePrLineId!.Value, x.Item2)).ToList(), cancellationToken);
-        return result;
+
+        var used = sources.Values.ToList();
+        var construction = used.Where(s => s.Category == PurchaseCategory.Construction).ToList();
+        if (construction.Count == 0) return (result, PurchaseCategory.Goods, null);
+        if (construction.Count < used.Count)
+            throw new BusinessRuleException(
+                $"Không gộp dòng đề nghị vật tư công trình (loại A, ví dụ {construction[0].No}) với dòng đề nghị hàng hóa / dịch vụ " +
+                $"({used.First(s => s.Category != PurchaseCategory.Construction).No}) trong một RFQ – mỗi RFQ in một biểu mẫu 3A/3a hoặc 3B.");
+        if (construction.Select(s => s.ConstructionProjectId).Distinct().Count() > 1)
+            throw new BusinessRuleException("Các dòng đề nghị vật tư công trình của một RFQ phải cùng một công trình.");
+        return (result, PurchaseCategory.Construction, construction[0].ConstructionProjectId);
     }
 
     /// <summary>NCC phải có trong danh mục và không ở danh sách đen (design.md mục 5.8); NCC Tiềm năng vẫn mời được.</summary>
@@ -518,6 +534,9 @@ public sealed class RfqService : IRfqService
             .ToDictionaryAsync(c => c.Id, c => c.No, cancellationToken);
         var sourcingNo = rfq.SourcingId is { } sid
             ? await _db.SourcingRequests.AsNoTracking().Where(s => s.Id == sid).Select(s => s.No).SingleOrDefaultAsync(cancellationToken)
+            : null;
+        var project = rfq.ConstructionProjectId is { } pid
+            ? await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == pid).Select(p => p.Code + " – " + p.Name).SingleOrDefaultAsync(cancellationToken)
             : null;
         var userIds = new[] { rfq.CreatedBy, rfq.AwardedBy }.OfType<Guid>().Distinct().ToList();
         var userNames = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
@@ -604,7 +623,13 @@ public sealed class RfqService : IRfqService
             rfq.CreatedAt, rfq.CreatedBy is { } c ? userNames.GetValueOrDefault(c) : null, rfq.SentAt, rfq.AwardedAt,
             await _parameters.RfqMinSuppliersAsync(cancellationToken), lines, supplierDtos, actions, rfq.FewSuppliersReason, rfq.ApprovalAmount,
             rfq.AwardedBy is { } a ? userNames.GetValueOrDefault(a) : null, rfq.RejectReason, approvals,
-            rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList()) { Version = rfq.Version, FewQuotesReason = rfq.FewQuotesReason, DeadlineExtensionReason = rfq.DeadlineExtensionReason, QuotedSupplierCount = rfq.QuotedSupplierCount };
+            rfq.Dossier.Select(d => new RfqDossierItemDto(d.Code, d.Name, d.IsDone, d.Note, d.IsAutomatic)).ToList()) {
+            Version = rfq.Version, FewQuotesReason = rfq.FewQuotesReason, DeadlineExtensionReason = rfq.DeadlineExtensionReason,
+            QuotedSupplierCount = rfq.QuotedSupplierCount, Category = rfq.Category.ToString(), ConstructionProjectId = rfq.ConstructionProjectId,
+            ConstructionProjectName = project,
+            FormCode = rfq.Form is { } form ? RfqForms.Code(form) : rfq.Category == PurchaseCategory.Construction ? null : RfqForms.Code(RfqForm.Goods),
+            ComparisonThreshold = await _parameters.RfqComparisonThresholdAsync(cancellationToken), SelectionReason = rfq.SelectionReason,
+        };
     }
 
     /// <summary>Đổi yêu cầu lưu RFQ thành dữ liệu header cho Domain (kèm trọng số chấm điểm).</summary>

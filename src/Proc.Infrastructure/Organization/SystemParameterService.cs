@@ -37,6 +37,7 @@ public sealed class SystemParameterService : ISystemParameterService
         var markup = parameter?.InternalMarkupPercent ?? CompanyParameter.DefaultInternalMarkupPercent;
         var warn = parameter?.PoHighPriceWarnPercent ?? CompanyParameter.DefaultPoHighPriceWarnPercent;
         var pooledMargin = parameter?.PooledMarginPercent ?? CompanyParameter.DefaultPooledMarginPercent;
+        var threshold = parameter?.RfqComparisonThreshold ?? 0m;
 
         // Chỉ thấy kho trong phạm vi kho được gán (global query filter) – đúng với những gì người dùng sửa được ở màn hình Kho.
         var negative = await _db.Warehouses.AsNoTracking()
@@ -51,6 +52,11 @@ public sealed class SystemParameterService : ISystemParameterService
             new(SystemParameterCodes.RfqMinSuppliers, "Đấu thầu", "Số NCC tối thiểu khi gửi RFQ",
                 rfqMin.ToString(CultureInfo.InvariantCulture), defaultText, rfqMin == CompanyParameter.DefaultRfqMinSuppliers, true,
                 $"Phải mời đủ số NCC này mới gửi được yêu cầu báo giá (1–{CompanyParameter.MaxRfqMinSuppliers}). RFQ đã gửi không bị ảnh hưởng."),
+            new(SystemParameterCodes.RfqComparisonThreshold, "Đấu thầu", "Ngưỡng so sánh 3 NCC – vật tư công trình (loại A)",
+                FormatMoney(threshold), "0", threshold == 0, true,
+                "RFQ vật tư công trình có giá trị trúng thầu (chưa VAT) từ ngưỡng này trở lên in biểu mẫu so sánh chọn NCC 3A (bắt buộc lý do chọn); " +
+                "dưới ngưỡng in bảng trình giá 1 NCC 3a. Hàng hóa, dịch vụ (loại B) luôn in 3B. 0 = mọi RFQ công trình đều so sánh 3A. " +
+                "Quy tắc mời / chào giá tối thiểu số NCC vẫn áp như cũ."),
             Toggle(SystemParameterCodes.RfqDossierRequired, "Bắt buộc đủ hồ sơ trình khi chọn thầu", parameter?.RequireRfqDossierComplete ?? false,
                 "Bật: hồ sơ trình của RFQ (7 mục) phải đủ mới chọn thầu, gửi hội đồng duyệt được. Tắt: thiếu mục vẫn gửi, hộp thoại duyệt ghi mục còn thiếu.", "Đấu thầu"),
             new(SystemParameterCodes.InternalMarkupPercent, "Giá", "% markup nội bộ mặc định",
@@ -100,6 +106,7 @@ public sealed class SystemParameterService : ISystemParameterService
     private static readonly Dictionary<string, string> AuditFields = new()
     {
         [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
+        [SystemParameterCodes.RfqComparisonThreshold] = nameof(CompanyParameter.RfqComparisonThreshold),
         [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
         [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
         [SystemParameterCodes.PooledMarginPercent] = nameof(CompanyParameter.PooledMarginPercent),
@@ -160,6 +167,20 @@ public sealed class SystemParameterService : ISystemParameterService
                 }
 
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeRfqMinSuppliers(value);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.RfqComparisonThreshold:
+                decimal? money = null;
+                if (!string.IsNullOrWhiteSpace(request.Value))
+                {
+                    // Nhận "50.000.000" (dấu nhóm nghìn kiểu Việt Nam), "50000000" hoặc "50 000 000"; tiền VND không có số lẻ.
+                    var digits = request.Value.Trim().Replace(".", "").Replace(" ", "").Replace(" ", "");
+                    if (!decimal.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedMoney))
+                        throw new BusinessRuleException("Ngưỡng so sánh 3 NCC phải là số tiền đồng, ví dụ 50.000.000.");
+                    money = parsedMoney;
+                }
+
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeRfqComparisonThreshold(money);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             case SystemParameterCodes.InternalMarkupPercent:
@@ -258,6 +279,10 @@ public sealed class SystemParameterService : ISystemParameterService
         ?? CompanyParameter.DefaultRfqMinSuppliers;
 
     /// <inheritdoc />
+    public async Task<decimal> RfqComparisonThresholdAsync(CancellationToken cancellationToken) =>
+        await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.RfqComparisonThreshold).FirstOrDefaultAsync(cancellationToken) ?? 0m;
+
+    /// <inheritdoc />
     public async Task<decimal> InternalMarkupPercentAsync(CancellationToken cancellationToken) =>
         await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.InternalMarkupPercent).FirstOrDefaultAsync(cancellationToken)
         ?? CompanyParameter.DefaultInternalMarkupPercent;
@@ -296,4 +321,7 @@ public sealed class SystemParameterService : ISystemParameterService
 
     /// <summary>Số % kiểu Việt Nam, bỏ số 0 thừa: 12,5000 → "12,5"; 10 → "10".</summary>
     private static string FormatPercent(decimal value) => value.ToString("0.####", CultureInfo.GetCultureInfo("vi-VN"));
+
+    /// <summary>Số tiền VND kiểu Việt Nam, không số lẻ: 50.000.000.</summary>
+    private static string FormatMoney(decimal value) => value.ToString("#,##0", CultureInfo.GetCultureInfo("vi-VN"));
 }

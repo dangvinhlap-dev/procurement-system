@@ -250,6 +250,49 @@ public sealed class SourcingCandidate : Entity
     }
 }
 
+/// <summary>Biểu mẫu kết quả hỏi giá theo bộ biểu mẫu CUVT (lát Y6, design.md mục 19.2).</summary>
+public enum RfqForm
+{
+    /// <summary>3A – so sánh giá và chọn NCC (loại A, giá trị trúng thầu từ ngưỡng so sánh trở lên).</summary>
+    Comparison = 1,
+
+    /// <summary>3a – bảng trình duyệt giá một NCC (loại A dưới ngưỡng so sánh).</summary>
+    SingleQuote = 2,
+
+    /// <summary>3B – bảng trình duyệt giá một NCC (loại B hàng hóa, dịch vụ).</summary>
+    Goods = 3,
+}
+
+/// <summary>
+/// Chọn biểu mẫu kết quả hỏi giá (lát Y6, design.md mục 19.1 Q7): loại A (công trình) theo ngưỡng giá trị – tham số công ty "Ngưỡng so sánh 3
+/// NCC (loại A)"; loại B, dịch vụ được trình giá 1 NCC (3B).
+/// </summary>
+public static class RfqForms
+{
+    /// <summary>
+    /// Biểu mẫu theo loại mua và giá trị trúng thầu (chưa VAT). Ví dụ ngưỡng 50.000.000: phiếu A trúng 64.000.000 → 3A; 30.000.000 → 3a;
+    /// phiếu B bất kỳ → 3B. Ngưỡng 0 (mặc định) → mọi phiếu A đều 3A.
+    /// </summary>
+    /// <param name="category">Loại mua của RFQ.</param>
+    /// <param name="awardAmount">Giá trị trúng thầu (sau CK, trước VAT).</param>
+    /// <param name="comparisonThreshold">Ngưỡng so sánh 3 NCC của công ty.</param>
+    /// <returns>Biểu mẫu.</returns>
+    public static RfqForm For(PurchaseCategory category, decimal awardAmount, decimal comparisonThreshold) =>
+        category != PurchaseCategory.Construction ? RfqForm.Goods
+        : awardAmount >= comparisonThreshold ? RfqForm.Comparison
+        : RfqForm.SingleQuote;
+
+    /// <summary>Số biểu mẫu in trên phiếu: "3A", "3a", "3B".</summary>
+    /// <param name="form">Biểu mẫu.</param>
+    /// <returns>Số biểu mẫu.</returns>
+    public static string Code(RfqForm form) => form switch
+    {
+        RfqForm.Comparison => "3A",
+        RfqForm.SingleQuote => "3a",
+        _ => "3B",
+    };
+}
+
 /// <summary>Trạng thái RFQ.</summary>
 public enum RfqStatus
 {
@@ -456,6 +499,21 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// </remarks>
     public decimal ApprovalAmount => _lines.Sum(AwardedAmount);
 
+    /// <summary>
+    /// Loại mua (lát Y6): <see cref="PurchaseCategory.Construction"/> khi có dòng lấy từ đề nghị loại A (cùng một công trình), còn lại
+    /// <see cref="PurchaseCategory.Goods"/> – gồm cả dịch vụ, vì nhóm B và DV cùng biểu mẫu 3B. Tầng Application tính lại mỗi lần lưu nháp.
+    /// </summary>
+    public PurchaseCategory Category { get; private set; } = PurchaseCategory.Goods;
+
+    /// <summary>Công trình của RFQ loại A (null với loại B).</summary>
+    public Guid? ConstructionProjectId { get; private set; }
+
+    /// <summary>Biểu mẫu kết quả (3A / 3a / 3B) chốt lúc chọn thầu; null khi chưa chọn thầu lần nào.</summary>
+    public RfqForm? Form { get; private set; }
+
+    /// <summary>"Lý do chọn" của biểu mẫu 3A (mục 4 trên mẫu); bắt buộc khi biểu mẫu là 3A, tối đa 1.000 ký tự.</summary>
+    public string? SelectionReason { get; private set; }
+
     /// <summary>Các dòng hàng.</summary>
     public IReadOnlyList<RfqLine> Lines => _lines;
 
@@ -529,6 +587,28 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         }
 
         _lines.RemoveAll(l => !keep.Contains(l));
+    }
+
+    /// <summary>
+    /// Đặt loại mua theo dòng đề nghị nguồn (lát Y6, nháp): loại A phải có công trình; loại B không gắn công trình; dịch vụ ghi là B (cùng 3B).
+    /// </summary>
+    /// <param name="category">Loại mua.</param>
+    /// <param name="constructionProjectId">Công trình (chỉ loại A).</param>
+    /// <exception cref="BusinessRuleException">Khi không còn nháp hoặc loại A thiếu công trình.</exception>
+    public void SetPurchaseCategory(PurchaseCategory category, Guid? constructionProjectId)
+    {
+        EnsureDraft();
+        if (category == PurchaseCategory.Construction)
+        {
+            if (constructionProjectId is null || constructionProjectId == Guid.Empty)
+                throw new BusinessRuleException("RFQ vật tư công trình (loại A) phải gắn một công trình.");
+            Category = category;
+            ConstructionProjectId = constructionProjectId;
+            return;
+        }
+
+        Category = PurchaseCategory.Goods;
+        ConstructionProjectId = null;
     }
 
     /// <summary>Thay danh sách NCC được mời (nháp).</summary>
@@ -624,7 +704,11 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     /// <exception cref="BusinessRuleException">Khi RFQ không ở trạng thái đã gửi hoặc lựa chọn sai quy tắc.</exception>
     /// <param name="minSuppliers">Số NCC tối thiểu (tham số công ty) – so với số NCC thực sự chào giá.</param>
     /// <param name="fewQuotesReason">Giải trình khi số báo giá ít hơn tối thiểu (lát R7).</param>
-    public void Award(IReadOnlyList<AwardLineData> awards, Guid awardedBy, DateOnly today, int minSuppliers, string? fewQuotesReason)
+    /// <param name="comparisonThreshold">Ngưỡng so sánh 3 NCC loại A của công ty (lát Y6) – chọn biểu mẫu 3A hay 3a.</param>
+    /// <param name="selectionReason">"Lý do chọn" – bắt buộc khi biểu mẫu là 3A, tối đa 1.000 ký tự; biểu mẫu khác thì bỏ trống được.</param>
+    public void Award(
+        IReadOnlyList<AwardLineData> awards, Guid awardedBy, DateOnly today, int minSuppliers, string? fewQuotesReason,
+        decimal comparisonThreshold = 0m, string? selectionReason = null)
     {
         EnsureSent();
         if (!awards.Any(a => a.SupplierId is not null)) throw new BusinessRuleException("Hãy chọn NCC trúng thầu cho ít nhất một dòng.");
@@ -665,7 +749,17 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
             if (fewQuotes?.Length > 500) throw new BusinessRuleException("Giải trình ít báo giá tối đa 500 ký tự.");
         }
 
+        // Biểu mẫu theo giá trị trúng thầu của lựa chọn mới (design.md mục 19.1 Q7) – tính trước khi ghi để lỗi không làm hỏng lựa chọn cũ.
+        var amount = chosen.Where(c => c.SupplierId is not null).Sum(c => LineAmount(c.Line, c.SupplierId!.Value));
+        var form = RfqForms.For(Category, amount, comparisonThreshold);
+        var selection = Clean(selectionReason);
+        if (form == RfqForm.Comparison && selection is null)
+            throw new BusinessRuleException("Biểu mẫu so sánh chọn NCC (3A): hãy ghi lý do chọn nhà cung cấp.");
+        if (selection?.Length > 1000) throw new BusinessRuleException("Lý do chọn tối đa 1.000 ký tự.");
+
         foreach (var (line, supplierId, reason) in chosen) line.SetAward(supplierId, reason);
+        Form = form;
+        SelectionReason = selection;
         AwardedBy = awardedBy;
         AwardDate = today;
         FewQuotesReason = fewQuotes;
@@ -801,9 +895,11 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
     }
 
     /// <summary>Thành tiền trúng thầu của một dòng (0 nếu chưa trao) – xem <see cref="ApprovalAmount"/>.</summary>
-    private decimal AwardedAmount(RfqLine line)
+    private decimal AwardedAmount(RfqLine line) => line.AwardedSupplierId is { } supplierId ? LineAmount(line, supplierId) : 0m;
+
+    /// <summary>Thành tiền của một dòng theo báo giá của một NCC (sau CK, trước VAT, làm tròn 2 số); NCC chưa chào dòng này thì 0.</summary>
+    private decimal LineAmount(RfqLine line, Guid supplierId)
     {
-        if (line.AwardedSupplierId is not { } supplierId) return 0m;
         var quote = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId)?.QuotationLines.FirstOrDefault(q => q.RfqLineId == line.Id);
         return quote is null ? 0m : Math.Round(line.Qty * quote.UnitPrice * (100m - quote.DiscountPct) / 100m, 2, MidpointRounding.AwayFromZero);
     }
