@@ -29,16 +29,20 @@ import { supplierItemKey, useSupplierItemLookup, useSuppliers, vatOptions } from
 import { withPendingApprovers, type OpenRequestLine } from '../../api/purchasing'
 import {
   fetchSealedQuotes,
+  portalEmailKindLabels,
+  portalEmailStateLabels,
   rfqStatusLabels,
   rfqStatusTone,
   useRfq,
   useRfqClarificationMutations,
   useRfqClarifications,
   useRfqMutations,
+  useRfqPortalEmails,
   useRfqs,
   useSourcing,
   type Rfq,
   type RfqClarification,
+  type PortalEmail,
   type RfqDossierItem,
   type RfqListItem,
   type RfqSupplier,
@@ -67,6 +71,7 @@ import { confirmApprove } from '../purchasing/approvalDialogs'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
 import { DocNo } from '../../classic/DocNo'
 import { QaThread } from '../../classic/QaThread'
+import { StatusLight, type StatusLevel } from '../../classic/ClassicScreen'
 import { confirmCancelChain } from '../purchasing/cancelChainDialog'
 
 const LIST_PATH = '/dau-thau/rfq'
@@ -217,6 +222,8 @@ export function RfqPage() {
   // Hỏi đáp làm rõ với NCC trên Portal (lát P3b-2) – chỉ có sau khi gửi NCC.
   const clarifications = useRfqClarifications(doc && doc.status !== 'Draft' ? doc.id : null)
   const unanswered = (clarifications.data ?? []).filter((c) => !c.isNotice && !c.answer).length
+  // Thư đã báo NCC qua Portal (lát P3b-3) – cũng chỉ có sau khi gửi NCC.
+  const portalEmails = useRfqPortalEmails(doc && doc.status !== 'Draft' ? doc.id : null)
 
   const watchedLines = Form.useWatch('lines', form) as LineValues[] | undefined
   const lines = useMemo(() => watchedLines ?? [], [watchedLines])
@@ -847,6 +854,15 @@ export function RfqPage() {
                 <ClarificationView rfq={doc} items={clarifications.data ?? []} loading={clarifications.isFetching} />
               </ConfigProvider>
             ),
+          },
+        ]
+      : []),
+    ...(doc && doc.status !== 'Draft'
+      ? [
+          {
+            key: 'emails',
+            label: `Email NCC (${portalEmails.data?.length ?? 0})`,
+            children: <PortalEmailView items={portalEmails.data ?? []} loading={portalEmails.isFetching} />,
           },
         ]
       : []),
@@ -1686,5 +1702,55 @@ function SealedQuotesDialog({ rfq, quotes, onClose }: { rfq: Rfq; quotes: Sealed
         </div>
       ))}
     </Modal>
+  )
+}
+
+/** Màu đèn theo trạng thái gửi thư: đã gửi xanh, chờ gửi / thôi gửi vàng, lỗi đỏ. */
+const portalEmailLevel: Record<PortalEmail['state'], StatusLevel> = { Sent: 'success', Pending: 'warning', Skipped: 'warning', Failed: 'error' }
+
+/**
+ * Tab "Email NCC" (lát P3b-3 – design.md 19.5, P3-15…P3-18): thư phần mềm đã báo NCC qua Portal – thư mời khi gửi RFQ, gia hạn, hủy, trả lời
+ * câu hỏi (chỉ NCC hỏi), thông báo làm rõ (mọi NCC). Chỉ tài khoản Portal đang dùng mới nhận thư; NCC không có tài khoản thì Phòng CUVT báo
+ * theo cách cũ. Chỉ xem – thư do hệ thống soạn, dịch vụ nền gửi.
+ * @param items Thư, mới trước.
+ * @param loading Đang tải.
+ */
+function PortalEmailView({ items, loading }: { items: PortalEmail[]; loading: boolean }) {
+  return (
+    <Flex vertical gap={4}>
+      <span>
+        Thư gửi tới tài khoản Portal đang dùng của NCC được mời. Email máy chủ đang tắt thì thư ở trạng thái "Chờ gửi"; NCC vẫn thấy mọi thông
+        tin khi đăng nhập Portal.
+      </span>
+      <Table<PortalEmail>
+        aria-label="Email NCC"
+        size="small"
+        bordered
+        loading={loading}
+        pagination={false}
+        rowKey="id"
+        dataSource={items}
+        locale={{ emptyText: 'Chưa có thư nào (NCC được mời chưa có tài khoản Portal đang dùng).' }}
+        columns={[
+          { title: 'Giờ soạn', key: 'created', width: 120, render: (_, m) => formatDateTime(m.createdAt) },
+          { title: 'Loại thư', key: 'kind', width: 130, render: (_, m) => portalEmailKindLabels[m.kind] },
+          { title: 'NCC', key: 'supplier', width: 220, render: (_, m) => `${m.supplierCode ?? ''} – ${m.supplierName ?? ''}` },
+          { title: 'Người nhận', key: 'to', width: 240, render: (_, m) => `${m.toName} <${m.toAddress}>` },
+          {
+            title: 'Trạng thái',
+            key: 'state',
+            width: 110,
+            render: (_, m) => (
+              <Flex gap={4} align="center">
+                <StatusLight level={portalEmailLevel[m.state]} label={portalEmailStateLabels[m.state]} />
+                {portalEmailStateLabels[m.state]}
+              </Flex>
+            ),
+          },
+          { title: 'Giờ gửi', key: 'sent', width: 120, render: (_, m) => formatDateTime(m.sentAt) },
+          { title: 'Ghi chú', key: 'note', render: (_, m) => m.note },
+        ]}
+      />
+    </Flex>
   )
 }

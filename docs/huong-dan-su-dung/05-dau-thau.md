@@ -48,6 +48,12 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
   (chuông). Bấm **Trả lời…** trên câu hỏi – câu trả lời **chỉ NCC hỏi thấy**, NCC khác không thấy câu hỏi lẫn câu trả lời. Cần báo chung cho
   mọi NCC được mời (đính chính quy cách, điều kiện giao…) thì bấm **Đăng thông báo làm rõ…** – không nêu NCC nào hỏi. Trả lời, thông báo gửi
   rồi không sửa, xóa được; tiêu đề tab hiện số câu chưa trả lời.
+- **Email báo NCC** (tab "Email NCC" của RFQ đã gửi): phần mềm tự gửi thư tới mọi tài khoản Portal **đang dùng** của NCC được mời khi
+  **gửi RFQ** (thư mời, kèm hạn nộp), **gia hạn** (hạn mới – không gửi lý do gia hạn), **hủy RFQ**, **trả lời câu hỏi** (chỉ NCC hỏi) và
+  **đăng thông báo làm rõ** (mọi NCC). Thư không có giá, không nêu NCC khác; có nút mở Portal khi máy chủ đã cấu hình `Portal:BaseUrl`.
+  Tab liệt kê từng thư: loại thư, NCC, người nhận, trạng thái (Chờ gửi / Đã gửi / Thôi gửi / Lỗi). NCC chưa có tài khoản Portal đang dùng thì
+  không có thư – Phòng CUVT báo NCC theo cách cũ. Máy chủ chưa bật email (`Email:Enabled`) thì thư nằm ở "Chờ gửi"; thư chờ quá 24 giờ thì
+  thôi gửi (tránh báo hạn nộp muộn).
 - **Sau giờ hạn nộp**: bấm **Mở báo giá Portal** (một lần) → giá các NCC hiện trên bảng so sánh, hệ thống ghi người và giờ mở; kiểm mã biên
   nhận với NCC nếu cần. Sau khi mở không gia hạn được nữa; giá NCC tự nộp không sửa thay – chỉ **Chấm điểm** rồi chọn thầu như thường.
 

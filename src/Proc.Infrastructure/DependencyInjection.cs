@@ -197,6 +197,8 @@ public static class DependencyInjection
             sp => sp.GetRequiredService<Proc.Infrastructure.Portal.SupplierPortalService>());
         // Lát P3a: thư mời, báo giá online niêm phong.
         services.AddScoped<Proc.Application.Portal.IPortalRfqService, Proc.Infrastructure.Portal.PortalRfqService>();
+        // Lát P3b-3: thư báo NCC (thư mời, gia hạn, hủy, trả lời, thông báo) – hàng chờ gửi qua dịch vụ nền email.
+        services.AddScoped<Proc.Application.Portal.IPortalEmailService, Proc.Infrastructure.Portal.PortalEmailService>();
 
         // Health check thực sự mở kết nối tới CSDL, không chỉ kiểm tra cấu hình.
         services.AddHealthChecks()

@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
+using Proc.Application.Portal;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
+using Proc.Domain.MasterData;
 using Proc.Domain.Sourcing;
 using Proc.Infrastructure.Persistence;
 
@@ -16,13 +18,16 @@ public sealed class RfqClarificationService : IRfqClarificationService
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
+    private readonly IPortalEmailService _portalEmails;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="clock">Đồng hồ.</param>
-    public RfqClarificationService(ProcDbContext db, ICurrentUserScope scope, IClock clock)
+    /// <param name="portalEmails">Thư báo NCC: câu trả lời (riêng NCC hỏi), thông báo làm rõ (mọi NCC) – lát P3b-3.</param>
+    public RfqClarificationService(ProcDbContext db, ICurrentUserScope scope, IClock clock, IPortalEmailService portalEmails)
     {
+        _portalEmails = portalEmails;
         _db = db;
         _scope = scope;
         _clock = clock;
@@ -45,6 +50,9 @@ public sealed class RfqClarificationService : IRfqClarificationService
             ?? throw new NotFoundException("Không tìm thấy câu hỏi.");
         var (userId, name) = await UserAsync(cancellationToken);
         item.Reply(rfq, userId, name, request.Answer, _clock.UtcNow);
+        // Câu trả lời chỉ gửi NCC hỏi (P3-12, P3-17) – kèm câu hỏi để NCC biết trả lời cho câu nào.
+        await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqAnswer, item.SupplierId,
+            $"Câu hỏi: {item.Question}\nTrả lời: {item.Answer}", cancellationToken);
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -64,7 +72,9 @@ public sealed class RfqClarificationService : IRfqClarificationService
         ArgumentNullException.ThrowIfNull(request);
         var rfq = await LoadAsync(rfqId, cancellationToken);
         var (userId, name) = await UserAsync(cancellationToken);
-        _db.RfqClarifications.Add(RfqClarification.Announce(rfq, userId, name, request.Text, _clock.UtcNow));
+        var notice = RfqClarification.Announce(rfq, userId, name, request.Text, _clock.UtcNow);
+        _db.RfqClarifications.Add(notice);
+        await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqNotice, null, notice.Answer, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await ToDtosAsync(rfq.Id, cancellationToken);
     }

@@ -411,7 +411,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   "Hỏi đáp NCC (n chưa trả lời)" trên RFQ, nhãn thông báo "Câu hỏi NCC". Hướng dẫn 05-dau-thau. Test: tích hợp
   `HoiDapPortal_TraLoiRiengNccHoi_ThongBaoCongKhai` (NCC thứ hai không thấy câu hỏi/trả lời), e2e `portal-rfq-quote.spec` test hỏi đáp.
   Kiểm tra: build 0 cảnh báo, `dotnet test` 756/756, tsc, oxlint, `npm run build` qua; Playwright đủ bộ 142/142. **Đã merge.**
-  Còn lại của 0.25.0: P3b-3 email thư mời / gia hạn / báo câu trả lời cho NCC.
+- **Lát P3b-3 – email báo NCC qua Portal (12/11/2026, nhánh `feature/p3b3-email-thu-moi-ncc`, bản 0.25.0)** – design.md 19.5 "Lát P3b-3"
+  (P3-15…P3-18, tự đặt). Người dùng bảo "làm tiếp". Domain `SupplierPortalEmail` (hàng chờ thư, CompanyId, không [Auditable], trạng thái dùng
+  chung `NotificationEmailState`), migration `V0_25_0_EmailPortalNcc` (95 → 96). `Application/Portal/PortalEmailModels.cs` (`IPortalEmailService`),
+  `Infrastructure/Portal/PortalEmailService.cs`: soạn thư cùng giao dịch cho tài khoản Portal **đang dùng** của NCC (không danh sách đen) – thư
+  mời (`RfqService.SendAsync`), gia hạn (không lý do), hủy RFQ đã gửi (`CancelAsync` + `CancelChainService`), trả lời (chỉ NCC hỏi, kèm câu hỏi),
+  thông báo làm rõ (mọi NCC); `EmailBackgroundService` gửi kèm sau email thông báo (thử lại, quá `MaxAgeHours` thôi gửi, kiểm lại tài khoản lúc
+  gửi). API `GET /api/rfqs/{id}/portal-emails`. Web: tab **"Email NCC (n)"** trên RFQ đã gửi (`PortalEmailView`, đèn trạng thái), hook
+  `useRfqPortalEmails`. Hướng dẫn 05-dau-thau. Test: domain `SupplierPortalEmailTests` (2), tích hợp
+  `EmailPortal_ThuMoiGiaHanTraLoiThongBaoHuy_ChiTaiKhoanDangDung` (tài khoản chưa kích hoạt / bị khóa không nhận, thư không có lý do, không nêu
+  NCC khác), e2e `portal-rfq-quote.spec` thêm bước tab Email NCC. Kiểm tra: build 0 cảnh báo, `dotnet test` 759/759, tsc, oxlint,
+  `npm run build` qua; Playwright đủ bộ 142/142. **Đã merge.** Các lát P3 của 0.25.0 xong – tiếp theo: phát hành 0.25.0 khi người dùng yêu
+  cầu, hoặc các lát 0.26.0 (P4 xác nhận đơn, P5 giao hàng, P6a hóa đơn) theo lộ trình design.md 19.6.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

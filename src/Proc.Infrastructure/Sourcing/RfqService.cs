@@ -3,6 +3,7 @@ using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Logging;
 using Proc.Application.Organization;
+using Proc.Application.Portal;
 using Proc.Application.Pricing;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
@@ -34,6 +35,7 @@ public sealed class RfqService : IRfqService
     private readonly IContractService _contracts;
     private readonly ApprovalEngine _approvals;
     private readonly IAccessLog _accessLog;
+    private readonly IPortalEmailService _portalEmails;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -45,10 +47,13 @@ public sealed class RfqService : IRfqService
     /// <param name="priceLists">Dịch vụ bảng giá NCC (sinh bảng giá từ kết quả thầu).</param>
     /// <param name="contracts">Dịch vụ hợp đồng nguyên tắc (sinh hợp đồng từ kết quả thầu).</param>
     /// <param name="accessLog">Nhật ký truy cập (xem báo giá Portal niêm phong – lát P3a).</param>
+    /// <param name="portalEmails">Thư báo NCC qua Portal: thư mời, gia hạn, hủy (lát P3b-3).</param>
     public RfqService(
         ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPurchaseOrderService orders,
-        ISystemParameterService parameters, IPriceListService priceLists, IContractService contracts, IAccessLog accessLog)
+        ISystemParameterService parameters, IPriceListService priceLists, IContractService contracts, IAccessLog accessLog,
+        IPortalEmailService portalEmails)
     {
+        _portalEmails = portalEmails;
         _accessLog = accessLog;
         _contracts = contracts;
         _db = db;
@@ -139,6 +144,8 @@ public sealed class RfqService : IRfqService
             reason = await SoleSourceReasonAsync(rfq, cancellationToken);
         rfq.Send(_clock.UtcNow, minSuppliers, reason);
         await TrackSourcingAsync(rfq, rfq.Suppliers.Select(s => s.SupplierId), CandidateStatus.RfqSent, cancellationToken);
+        // Thư mời ghi cùng giao dịch gửi RFQ (P3-15): gửi thành công thì chắc chắn có thư chờ gửi cho NCC dùng Portal.
+        await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqInvitation, null, null, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -214,6 +221,8 @@ public sealed class RfqService : IRfqService
     {
         var rfq = await LoadAsync(id, cancellationToken);
         rfq.ExtendDeadline(request.Deadline, request.DeadlineTime, request.Reason, _clock.NowInVietnam());
+        // Báo hạn mới, không gửi lý do gia hạn (P3-16: lý do nội bộ có thể nhắc NCC khác).
+        await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqDeadlineExtended, null, null, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -371,7 +380,10 @@ public sealed class RfqService : IRfqService
     {
         var rfq = await LoadAsync(id, cancellationToken);
         // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): RFQ nháp – người lập; đã gửi NCC – chỉ quản trị.
-        rfq.Cancel(DocumentCancelPolicy.Authorize(_scope, $"RFQ {rfq.No}", rfq.Status == RfqStatus.Draft, rfq.CreatedBy, request.Reason));
+        var wasSent = rfq.Status != RfqStatus.Draft;
+        rfq.Cancel(DocumentCancelPolicy.Authorize(_scope, $"RFQ {rfq.No}", !wasSent, rfq.CreatedBy, request.Reason));
+        // RFQ nháp NCC chưa biết nên không báo (P3-16).
+        if (wasSent) await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqCancelled, null, null, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }

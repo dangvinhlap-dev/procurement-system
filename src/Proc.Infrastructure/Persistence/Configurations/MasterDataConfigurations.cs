@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.MasterData;
 
@@ -379,5 +379,27 @@ internal sealed class SupplierPortalCodeConfiguration : IEntityTypeConfiguration
         builder.HasIndex(x => x.CodeHash);
         builder.HasIndex(x => new { x.PortalUserId, x.Purpose });
         builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+/// <summary>Cấu hình bảng SupplierPortalEmail – hàng chờ thư báo NCC qua Portal (lát P3b-3).</summary>
+internal sealed class SupplierPortalEmailConfiguration : IEntityTypeConfiguration<SupplierPortalEmail>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierPortalEmail> builder)
+    {
+        builder.ToTable("SupplierPortalEmail");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.ToAddress).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.ToName).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.DocType).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Subject).HasMaxLength(SupplierPortalEmail.SubjectMaxLength).IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(SupplierPortalEmail.NoteMaxLength);
+        // Dịch vụ nền lấy thư chờ gửi theo thứ tự cũ trước; RFQ xem danh sách thư của chính nó.
+        builder.HasIndex(x => new { x.State, x.CreatedAt });
+        builder.HasIndex(x => new { x.DocType, x.DocId });
+        builder.HasOne<Proc.Domain.Organization.Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Restrict);
     }
 }

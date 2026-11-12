@@ -2603,6 +2603,18 @@ API Portal: `POST /api/portal/rfqs/{id}/questions` (hỏi đáp trả kèm `GET 
 (quyền lập RFQ). Migration `V0_25_0_HoiDapBaoGiaPortal` (bảng `RfqClarification`; `Down()` xóa bảng – mất toàn bộ hỏi đáp). Giao diện: khối
 "Hỏi đáp với bên mời" trên Portal, tab "Hỏi đáp NCC" trên RFQ – component `classic/QaThread.tsx` (ui-style.md mục 5g).
 
+**Lát P3b-3 – email báo NCC qua Portal (12/11/2026, bản 0.25.0).** Quy tắc (tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P3-15 | **Người nhận**: mọi tài khoản Portal **đang dùng** (đã kích hoạt, chưa khóa) của NCC liên quan; tài khoản mới mời chưa kích hoạt, NCC trong danh sách đen thì không có thư. NCC chưa có tài khoản Portal đang dùng thì Phòng CUVT báo theo cách cũ (thư mời giấy, email tay). Thư mời gửi **khi gửi RFQ** (danh sách NCC chỉ đổi được lúc nháp) – tài khoản kích hoạt sau đó vẫn thấy thư mời trên Portal. |
+| P3-16 | **Loại thư**: thư mời (gửi RFQ, kèm hạn nộp giờ + ngày); gia hạn (hạn mới – **không gửi lý do gia hạn**, lý do nội bộ có thể nhắc NCC khác); hủy (RFQ **đã gửi** bị hủy, kể cả hủy dây chuyền – **không gửi lý do hủy**; RFQ nháp NCC chưa biết nên không báo). Thư không có giá, không nêu NCC khác được mời. |
+| P3-17 | **Hỏi đáp**: câu trả lời gửi **chỉ NCC hỏi** (kèm câu hỏi và câu trả lời – giữ bảo mật P3-12); thông báo làm rõ gửi **mọi NCC được mời** (nội dung thông báo, không nêu NCC nào hỏi). |
+| P3-18 | **Cách gửi**: thư soạn sẵn vào bảng `SupplierPortalEmail` **cùng giao dịch** với thao tác (thao tác thành công thì chắc chắn có thư; lỗi máy chủ thư không làm hỏng thao tác); dịch vụ nền email (O2b) gửi theo cấu hình `Email:*` – thử lại đến `MaxAttempts`, thư quá `MaxAgeHours` (mặc định 24 giờ) thì thôi gửi (tránh báo hạn nộp muộn), lúc gửi kiểm lại tài khoản còn đang dùng / NCC không vào danh sách đen. Link "Mở trên Portal nhà cung cấp" `/ncc/bao-gia/{id}` theo `Portal:BaseUrl` (rồi `Email:AppBaseUrl`); chưa cấu hình thì thư không có link. Nội bộ xem thư trên tab **"Email NCC"** của RFQ (quyền xem RFQ): giờ soạn, loại thư, NCC, người nhận, trạng thái (Chờ gửi / Đã gửi / Thôi gửi / Lỗi), giờ gửi, ghi chú lỗi. Bảng không gắn [Auditable] (hệ thống tự sinh, không ai sửa – chính bản ghi là dấu vết). |
+
+API nội bộ: `GET /api/rfqs/{id}/portal-emails` (quyền xem RFQ). Migration `V0_25_0_EmailPortalNcc` (bảng `SupplierPortalEmail`; `Down()` xóa bảng –
+mất dấu vết thư đã báo NCC, thư chờ không gửi nữa). Báo NCC kết quả chọn thầu, PO: làm ở P4.
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2610,7 +2622,7 @@ API Portal: `POST /api/portal/rfqs/{id}/questions` (hỏi đáp trả kèm `GET 
 | 0.22.0 | K1, K2, O1, O2, O3 | Tắt kho; XNH; khối – trưởng phòng – GĐ khối, duyệt động, chuỗi duyệt theo loại mua; email, ủy quyền, duyệt trên điện thoại; vai trò mẫu theo biểu mẫu |
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
-| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email thư mời (P3b-3) |
+| 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |

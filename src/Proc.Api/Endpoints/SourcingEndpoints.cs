@@ -1,5 +1,6 @@
 ﻿using Proc.Api.Security;
 using Proc.Api.Validation;
+using Proc.Application.Portal;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Organization;
@@ -81,6 +82,9 @@ public static class SourcingEndpoints
                 Guid id, Guid clarificationId, ReplyClarificationRequest request, IRfqClarificationService s, CancellationToken ct) =>
                 s.ReplyAsync(id, clarificationId, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
+        // Lát P3b-3: thư đã báo NCC qua Portal (thư mời, gia hạn, hủy, trả lời, thông báo) – xem theo quyền xem RFQ.
+        rfq.MapGet("/{id:guid}/portal-emails", (Guid id, IPortalEmailService s, CancellationToken ct) => s.ListForRfqAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqView);
         rfq.MapPost("/{id:guid}/recall", (Guid id, IRfqService s, CancellationToken ct) => s.RecallAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqAward);
         rfq.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IRfqService s, CancellationToken ct) => s.ApproveAsync(id, request, ct))

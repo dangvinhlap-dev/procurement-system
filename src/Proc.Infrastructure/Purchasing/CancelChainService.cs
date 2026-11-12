@@ -1,7 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
+using Proc.Application.Portal;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.MasterData;
 using Proc.Domain.Pricing;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
@@ -31,10 +33,16 @@ internal sealed class CancelChainService : ICancelChainService
     private readonly ICurrentUserScope _scope;
     private readonly IClock _clock;
     private readonly ApprovalEngine _approvals;
+    private readonly IPortalEmailService _portalEmails;
 
     /// <summary>Tạo service (ApprovalEngine tự tạo như các service phiếu khác – không đăng ký DI riêng).</summary>
-    public CancelChainService(ProcDbContext db, ICurrentUserScope scope, IClock clock)
+    /// <param name="db">DbContext.</param>
+    /// <param name="scope">Phạm vi người dùng.</param>
+    /// <param name="clock">Đồng hồ.</param>
+    /// <param name="portalEmails">Thư báo NCC khi RFQ đã gửi bị hủy theo dây chuyền (lát P3b-3).</param>
+    public CancelChainService(ProcDbContext db, ICurrentUserScope scope, IClock clock, IPortalEmailService portalEmails)
     {
+        _portalEmails = portalEmails;
         _db = db;
         _scope = scope;
         _clock = clock;
@@ -103,8 +111,10 @@ internal sealed class CancelChainService : ICancelChainService
         chain.Pooled?.Cancel(_clock.TodayInVietnam(), reason, inChain: true);
         if (chain.Rfq is { } rfq)
         {
+            var wasSent = rfq.Status != RfqStatus.Draft;
             rfq.Cancel(reason, inChain: true);
             await _approvals.SkipPendingAsync(rfq, cancellationToken);
+            if (wasSent) await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqCancelled, null, null, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);

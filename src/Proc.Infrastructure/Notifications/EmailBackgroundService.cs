@@ -1,8 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Proc.Application.Notifications;
+using Proc.Application.Portal;
 
 namespace Proc.Infrastructure.Notifications;
 
@@ -42,6 +43,10 @@ public sealed class EmailBackgroundService : BackgroundService
                     var result = await scope.ServiceProvider.GetRequiredService<INotificationEmailService>().DispatchAsync(stoppingToken);
                     if (result.Sent + result.Failed > 0)
                         _logger.LogInformation("Email thông báo: gửi {Sent}, bỏ qua {Skipped}, lỗi {Failed}.", result.Sent, result.Skipped, result.Failed);
+                    // Thư báo NCC qua Portal (lát P3b-3) dùng chung máy chủ thư và chu kỳ quét.
+                    var portal = await scope.ServiceProvider.GetRequiredService<IPortalEmailService>().DispatchAsync(stoppingToken);
+                    if (portal.Sent + portal.Failed > 0)
+                        _logger.LogInformation("Email NCC qua Portal: gửi {Sent}, bỏ qua {Skipped}, lỗi {Failed}.", portal.Sent, portal.Skipped, portal.Failed);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
