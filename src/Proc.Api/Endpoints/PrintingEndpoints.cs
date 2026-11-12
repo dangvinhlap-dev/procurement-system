@@ -1,4 +1,4 @@
-using Proc.Api.Security;
+﻿using Proc.Api.Security;
 using Proc.Application.Printing;
 using Proc.Domain.Organization;
 
@@ -24,6 +24,9 @@ public static class PrintingEndpoints
         app.MapGet("/api/purchase-requests/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseRequestAsync(id, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PrView);
+        app.MapGet("/api/purchase-summaries/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseSummaryAsync(id, ct)))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.SummaryView);
         app.MapGet("/api/inventory-documents/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.InventoryDocumentAsync(id, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Inventory.DocumentView);

@@ -1,4 +1,4 @@
-using PdfSharp.Fonts;
+﻿using PdfSharp.Fonts;
 
 namespace Proc.Infrastructure.Printing;
 
@@ -6,11 +6,24 @@ namespace Proc.Infrastructure.Printing;
 /// Phông chữ cho phiếu in PDF (design.md mục 10.10). PDFsharp bản đa nền tảng không tự tìm phông hệ thống nên phải chỉ file .ttf; phông
 /// phải có đủ dấu tiếng Việt. Tìm lần lượt Arial (Windows), DejaVu Sans, Liberation Sans (Linux: gói fonts-dejavu-core) trong các thư mục
 /// cấu hình <c>Printing:FontDirectories</c> rồi các thư mục phông mặc định. Phông được nhúng vào file PDF nên máy mở file không cần cài.
+/// Mẫu in biểu mẫu CUVT dùng phông có chân <see cref="SerifFamily"/>: Times New Roman (Windows), Liberation Serif, DejaVu Serif (Linux);
+/// không có thì dùng phông không chân ở trên (lát Y10, design.md mục 10.10).
 /// </summary>
 public static class PdfFonts
 {
     /// <summary>Tên họ phông dùng trong mẫu phiếu; bộ chọn phông đổi sang file thật.</summary>
     public const string Family = "Proc Sans";
+
+    /// <summary>Họ phông có chân cho mẫu in biểu mẫu CUVT (biểu mẫu quy định Times New Roman).</summary>
+    public const string SerifFamily = "Proc Serif";
+
+    /// <summary>Phông có chân (thường, đậm) có dấu tiếng Việt, thử lần lượt trên Windows và Linux.</summary>
+    private static readonly (string Regular, string Bold)[] SerifCandidates =
+    [
+        ("times.ttf", "timesbd.ttf"),
+        ("LiberationSerif-Regular.ttf", "LiberationSerif-Bold.ttf"),
+        ("DejaVuSerif.ttf", "DejaVuSerif-Bold.ttf"),
+    ];
 
     /// <summary>Các cặp phông chữ (thường, đậm) có dấu tiếng Việt, thử lần lượt trên Windows và Linux.</summary>
     private static readonly (string Regular, string Bold)[] Candidates =
@@ -47,7 +60,8 @@ public static class PdfFonts
             {
                 var regularPath = Find(directories, regular);
                 if (regularPath is null) continue;
-                GlobalFontSettings.FontResolver = new Resolver(File.ReadAllBytes(regularPath), File.ReadAllBytes(Find(directories, bold) ?? regularPath));
+                var sans = (File.ReadAllBytes(regularPath), File.ReadAllBytes(Find(directories, bold) ?? regularPath));
+                GlobalFontSettings.FontResolver = new Resolver(sans, FindSerif(directories) ?? sans);
                 _installed = true;
                 return;
             }
@@ -58,6 +72,17 @@ public static class PdfFonts
         }
     }
 
+    /// <summary>Phông có chân đầu tiên tìm thấy (thường, đậm); null khi máy không có – mẫu CUVT dùng phông không chân.</summary>
+    private static (byte[] Regular, byte[] Bold)? FindSerif(IReadOnlyList<string> directories)
+    {
+        foreach (var (regular, bold) in SerifCandidates)
+        {
+            var regularPath = Find(directories, regular);
+            if (regularPath is not null) return (File.ReadAllBytes(regularPath), File.ReadAllBytes(Find(directories, bold) ?? regularPath));
+        }
+        return null;
+    }
+
     /// <summary>Tìm file phông trong các thư mục, so tên không phân biệt hoa thường (Linux phân biệt hoa thường).</summary>
     private static string? Find(IEnumerable<string> directories, string fileName) =>
         directories
@@ -66,12 +91,24 @@ public static class PdfFonts
                 .FirstOrDefault(f => string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)))
             .FirstOrDefault(f => f is not null);
 
-    /// <summary>Đổi họ phông của mẫu phiếu sang dữ liệu file .ttf thường / đậm (nghiêng giả lập bằng PDFsharp).</summary>
-    private sealed class Resolver(byte[] regular, byte[] bold) : IFontResolver
+    /// <summary>
+    /// Đổi họ phông của mẫu phiếu sang dữ liệu file .ttf thường / đậm (nghiêng giả lập bằng PDFsharp): <see cref="SerifFamily"/> → phông có
+    /// chân, họ khác → phông không chân.
+    /// </summary>
+    private sealed class Resolver((byte[] Regular, byte[] Bold) sans, (byte[] Regular, byte[] Bold) serif) : IFontResolver
     {
-        public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic) =>
-            new(isBold ? "proc-bold" : "proc-regular", false, isItalic);
+        public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
+        {
+            var prefix = familyName == SerifFamily ? "proc-serif" : "proc";
+            return new(isBold ? prefix + "-bold" : prefix + "-regular", false, isItalic);
+        }
 
-        public byte[]? GetFont(string faceName) => faceName == "proc-bold" ? bold : regular;
+        public byte[]? GetFont(string faceName) => faceName switch
+        {
+            "proc-bold" => sans.Bold,
+            "proc-serif-regular" => serif.Regular,
+            "proc-serif-bold" => serif.Bold,
+            _ => sans.Regular,
+        };
     }
 }

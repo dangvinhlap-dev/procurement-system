@@ -50,6 +50,10 @@ export interface PurchaseSummaryLine {
   purchasingUnitCode: string
   purchasingUnitName: string
   note: string | null
+  /** Ngày lập đề nghị mua – cột "Ngày đề xuất" của mẫu in 2A/2B (lát Y10). */
+  requestDate: string | null
+  /** Mục đích sử dụng của đề nghị mua – cột "Mục đích sử dụng" của mẫu in 2A/2B. */
+  requestPurpose: string | null
 }
 
 /**

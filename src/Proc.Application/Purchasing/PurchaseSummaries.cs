@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Proc.Domain.Purchasing;
 
 namespace Proc.Application.Purchasing;
@@ -41,7 +41,14 @@ public sealed record PurchaseSummaryListItemDto(
 public sealed record PurchaseSummaryLineDto(
     Guid Id, int LineNo, Guid RequestId, string RequestNo, Guid RequestLineId, string RequestCategory, Guid ItemId, string ItemCode,
     string ItemName, Guid UomId, string UomCode, decimal Qty, decimal EstPrice, decimal Amount, DateOnly? NeededDate, Guid PurchasingUnitId,
-    string PurchasingUnitCode, string PurchasingUnitName, string? Note);
+    string PurchasingUnitCode, string PurchasingUnitName, string? Note)
+{
+    /// <summary>Ngày lập đề nghị mua của dòng – cột "Ngày đề xuất" của biểu mẫu 2A/2B (lát Y10).</summary>
+    public DateOnly? RequestDate { get; init; }
+
+    /// <summary>Mục đích sử dụng của đề nghị mua – cột "Mục đích sử dụng" của biểu mẫu 2A/2B (lát Y10).</summary>
+    public string? RequestPurpose { get; init; }
+}
 
 /// <summary>
 /// Khung chi phí trên đầu bảng tổng hợp như biểu mẫu (lát Y5b). 2A: dự toán – lũy kế đã mua (PO đã duyệt của công trình, chưa VAT) – tổng đề

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Proc.Application.Common;
@@ -7,7 +7,9 @@ using Proc.Application.Printing;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Printing;
 
@@ -24,6 +26,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IPurchaseOrderService _orders;
     private readonly IPurchaseRequestService _requests;
     private readonly IInventoryDocumentService _inventory;
+    private readonly IPurchaseSummaryService _summaries;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -31,10 +34,11 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="orders">Dịch vụ đơn mua hàng.</param>
     /// <param name="requests">Dịch vụ đề nghị mua hàng.</param>
     /// <param name="inventory">Dịch vụ chứng từ kho.</param>
+    /// <param name="summaries">Dịch vụ bảng tổng hợp đề xuất mua.</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
-        IOptions<PrintingOptions> options)
+        IPurchaseSummaryService summaries, IOptions<PrintingOptions> options)
     {
         try
         {
@@ -51,6 +55,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _orders = orders;
         _requests = requests;
         _inventory = inventory;
+        _summaries = summaries;
     }
 
     /// <inheritdoc />
@@ -95,54 +100,27 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <inheritdoc />
     public async Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken)
     {
+        // In theo biểu mẫu CUVT 1A/1B (lát Y10, design.md mục 10.10) thay khuôn chung.
         var pr = await _requests.GetAsync(id, cancellationToken);
-        var approver = pr.Approvals.LastOrDefault(a => a.Status == "Approved")?.ActedByName;
-        var warehouse = pr.WarehouseId is { } w ? await WarehouseNameAsync(w, cancellationToken) : null;
-        var doc = new PrintDocument(
-            "PHIẾU ĐỀ NGHỊ MUA HÀNG", pr.No, pr.Date, ApprovalNote(pr.Status),
-            [
-                ("Bộ phận đề nghị", pr.Department),
-                ("Người đề nghị", pr.RequesterName),
-                ("Mục đích sử dụng", pr.Purpose),
-                ("Kho nhận", warehouse),
-                ("Ngày cần hàng", Date(pr.NeededDate)),
-                ("Mức ưu tiên", pr.Priority switch { "Urgent" => "Gấp", "Low" => "Thấp", _ => "Thường" }),
-            ],
-            [
-                new("STT", 8), new("Mã hàng", 27), new("Tên hàng", 53), new("ĐVT", 12), new("SL", 16, true), new("Giá tham khảo", 20, true),
-                new("Thành tiền", 24, true), new("Ngày cần", 20),
-            ],
-            PurchaseRequestRows(pr),
-            [new("Tổng giá trị ước tính", Money(pr.TotalAmount), true)],
-            VietnameseNumberText.ToVndWords(pr.TotalAmount), pr.Note,
-            ["Người đề nghị", "Trưởng bộ phận", "Người duyệt"], [pr.RequesterName ?? pr.CreatedByName, null, approver]);
-        return new PdfFile($"{pr.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
+        var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var specifications = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id, i => i.Specification, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var monthSpent = pr.DepartmentId is { } department && pr.Category != nameof(PurchaseCategory.Construction)
+            ? await DepartmentSpending.MonthAsync(_db, department, pr.Date, cancellationToken)
+            : 0;
+        return new PdfFile($"{pr.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseRequest(pr, company.Name, specifications, monthSpent)));
     }
 
-    /// <summary>
-    /// Dòng in của phiếu đề nghị mua: dòng có mã, rồi hàng mới <b>chưa gắn mã</b> đánh số tiếp, cột mã ghi "Chưa có mã", tên = mô tả
-    /// + quy cách + ghi chú. Hàng mới đã gắn mã không in lại vì đã sinh dòng có mã (design.md mục 18.12) – nên tổng các dòng in khớp
-    /// tổng giá trị ước tính của PR.
-    /// </summary>
-    /// <param name="pr">Phiếu đề nghị mua đã đọc theo phạm vi người dùng.</param>
-    /// <returns>Mỗi dòng: STT, mã, tên, ĐVT, SL, giá tham khảo, thành tiền, ngày cần.</returns>
-    public static IReadOnlyList<string[]> PurchaseRequestRows(PurchaseRequestDto pr)
+    /// <inheritdoc />
+    public async Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken)
     {
-        var rows = pr.Lines.Select(l => new[]
-        {
-            l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (string.IsNullOrWhiteSpace(l.Note) ? "" : $" – {l.Note}"), l.UomCode, Qty(l.Qty),
-            Price(l.EstPrice), Money(l.Amount), Date(l.NeededDate ?? pr.NeededDate) ?? "",
-        }).ToList();
-        var no = pr.Lines.Count;
-        foreach (var n in pr.NewItems.Where(n => n.ItemId is null).OrderBy(n => n.LineNo))
-        {
-            var name = n.Description
-                + (string.IsNullOrWhiteSpace(n.Specification) ? "" : $" – Quy cách: {n.Specification}")
-                + (string.IsNullOrWhiteSpace(n.Note) ? "" : $" – {n.Note}");
-            rows.Add([(++no).ToString(Vi), "Chưa có mã", name, n.UomCode, Qty(n.Qty), Price(n.EstPrice), Money(n.Amount),
-                Date(n.NeededDate ?? pr.NeededDate) ?? ""]);
-        }
-        return rows;
+        var summary = await _summaries.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
+            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, summary.Date, cancellationToken)
+            : 0;
+        return new PdfFile($"{summary.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent)));
     }
 
     /// <inheritdoc />

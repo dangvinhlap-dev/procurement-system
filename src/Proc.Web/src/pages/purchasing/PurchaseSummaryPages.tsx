@@ -362,6 +362,7 @@ export function PurchaseSummaryPage() {
         title="Bảng tổng hợp đề xuất mua"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PurchaseSummary', id: doc?.id }}
+        printPath={doc ? `/api/purchase-summaries/${doc.id}/pdf` : undefined}
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={summary.isLoading}

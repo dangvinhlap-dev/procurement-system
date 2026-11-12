@@ -74,7 +74,11 @@ dòng (danh mục Mua hàng → Đơn vị mua) rồi trình duyệt. Dòng đ�
 6. **Hủy phiếu** dùng hộp hủy dây chuyền: bảng → các PO lấy dòng của bảng → XNH (hủy từ phiếu cuối về bảng). RFQ chưa hủy có dòng của
    bảng thì phải hủy RFQ trước. Hủy xong các dòng đề nghị trở lại chọn được ở bảng khác.
 
-In theo mẫu 2A/2B làm ở lát khung mẫu in (Y10).
+7. **In phiếu** (Ctrl+P): in theo biểu mẫu **2A / 2B** khổ ngang – mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x"; khối ký in
+   người lập và từng cấp duyệt (họ tên, giờ ngày đã duyệt), vẫn chừa chỗ ký tay.
+
+**In đề nghị mua** (nút In phiếu trên form PR): loại A in mẫu **1A**, loại B mẫu **1B**, dịch vụ mẫu 1B không có cột tồn kho. Dòng
+"Lũy kế số tiền đã mua" của 1A là PO đã duyệt của công trình; của 1B là **PO đã duyệt trong tháng** của bộ phận (chưa VAT).
 
 ## 3.4 Đơn mua hàng (PO) – Mua hàng → Đơn mua hàng
 

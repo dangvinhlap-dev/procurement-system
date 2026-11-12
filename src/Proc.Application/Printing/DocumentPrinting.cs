@@ -1,4 +1,4 @@
-namespace Proc.Application.Printing;
+﻿namespace Proc.Application.Printing;
 
 /// <summary>File PDF trả về để xem, in.</summary>
 /// <param name="FileName">Tên file gợi ý, ví dụ PO-BHA-2610-0001.pdf.</param>
@@ -18,12 +18,19 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PurchaseOrderAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>In đề nghị mua hàng.</summary>
+    /// <summary>In đề nghị mua hàng theo biểu mẫu CUVT: loại A → 1A, loại B → 1B, dịch vụ → 1B không cột tồn (lát Y10).</summary>
     /// <param name="id">PR.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>In bảng tổng hợp đề xuất mua theo biểu mẫu CUVT 2A/2B, khổ ngang (lát Y10).</summary>
+    /// <param name="id">Bảng tổng hợp.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>In chứng từ kho (nhập mua, trả NCC, chuyển kho, xuất bán / nhập mua nội bộ).</summary>
     /// <param name="id">Chứng từ kho.</param>
