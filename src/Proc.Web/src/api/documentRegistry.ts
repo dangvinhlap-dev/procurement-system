@@ -89,6 +89,7 @@ export function documentPath(docType: string, id: string): string | null {
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang', KSG: '/gia-ncc/khao-sat-gia', CKB: '/gia-ncc/chiet-khau-san-luong', KHN: '/mua-hang/ke-hoach-nhu-cau',
     HSN: '/gia-ncc/ho-so-ncc-moi', XNH: '/mua-hang/xac-nhan-nhan-hang', DHG: '/mua-hang/dat-hang-gop',
+    BTH: '/mua-hang/bang-tong-hop',
   }
   return pages[docType] ? `${pages[docType]}/${id}` : null
 }

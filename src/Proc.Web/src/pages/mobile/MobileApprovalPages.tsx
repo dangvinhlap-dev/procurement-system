@@ -3,6 +3,7 @@ import { Alert, App, Button, ConfigProvider, Input } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useApprovalDecision, type ApprovalDecision } from '../../api/mobileApprovals'
+import { purchaseSummaryFormLabels, usePurchaseSummary, type PurchaseSummary } from '../../api/purchaseSummaries'
 import {
   priceSourceLabels,
   purchaseTypeLabels,
@@ -105,7 +106,7 @@ export function MobileApprovalListPage() {
 }
 
 /**
- * Trang `/duyet/:docType/:id`: tóm tắt phiếu và nút Duyệt / Từ chối. PR, PO hiện thêm dòng hàng, cảnh báo và lịch sử duyệt lượt hiện tại;
+ * Trang `/duyet/:docType/:id`: tóm tắt phiếu và nút Duyệt / Từ chối. PR, PO, bảng tổng hợp BTH hiện thêm dòng hàng, cảnh báo và lịch sử duyệt lượt hiện tại;
  * loại khác hiện thông tin như Việc cần làm kèm nút mở bản đầy đủ để xem kỹ. Từ chối bắt buộc lý do (design.md mục 18.6). Phiếu không còn
  * chờ người dùng duyệt (đã duyệt, đổi công ty, chưa đến lượt) thì chỉ cho xem – máy chủ vẫn kiểm tra lại khi bấm.
  */
@@ -116,6 +117,7 @@ export function MobileApprovalDetailPage() {
   const pending = usePendingApprovals()
   const request = usePurchaseRequest(docType === 'PR' ? id : null)
   const order = usePurchaseOrder(docType === 'PO' ? id : null)
+  const summary = usePurchaseSummary(docType === 'BTH' ? id : null)
   const decide = useApprovalDecision()
   const [comment, setComment] = useState('')
   const row = pending.data?.find((r) => r.docType === docType && r.documentId === id)
@@ -130,7 +132,7 @@ export function MobileApprovalDetailPage() {
     )
   }
 
-  const no = row?.no ?? request.data?.no ?? order.data?.no ?? ''
+  const no = row?.no ?? request.data?.no ?? order.data?.no ?? summary.data?.no ?? ''
   const run = (decision: ApprovalDecision) => {
     const text = comment.trim()
     if (decision === 'reject' && !text) {
@@ -155,7 +157,7 @@ export function MobileApprovalDetailPage() {
     })
   }
 
-  const loading = pending.isLoading || request.isLoading || order.isLoading
+  const loading = pending.isLoading || request.isLoading || order.isLoading || summary.isLoading
   return (
     <MobileFrame title={no || 'Duyệt phiếu'} onBack={back}>
       {loading && <p className="erp-mobile-empty">Đang tải…</p>}
@@ -165,6 +167,7 @@ export function MobileApprovalDetailPage() {
       {row && <PendingSummary row={row} />}
       {request.data && <RequestDetail doc={request.data} />}
       {order.data && <OrderDetail doc={order.data} />}
+      {summary.data && <SummaryDetail doc={summary.data} />}
       {fullPath && (
         <p>
           <Link to={fullPath}>Xem bản đầy đủ (đính kèm, lịch sử, so sánh giá…)</Link>
@@ -289,6 +292,46 @@ function OrderDetail({ doc }: { doc: PurchaseOrder }) {
               {priceSourceLabels[l.priceSource] && <span className="erp-mobile-muted">Nguồn giá: {priceSourceLabels[l.priceSource]}</span>}
               {l.isOverCeiling && <span className="erp-mobile-warn">Vượt giá trần {l.ceilingPrice !== null ? formatMoney(l.ceilingPrice) : ''}</span>}
               {l.isPriceDeviation && <span className="erp-mobile-warn">Lệch giá đã duyệt{l.priceDeviationReason ? `: ${l.priceDeviationReason}` : ''}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <StepList steps={doc.approvals} />
+    </>
+  )
+}
+
+/**
+ * Chi tiết bảng tổng hợp đề xuất mua 2A/2B (lát Y5c-2): biểu mẫu, bộ phận, khung dự toán / ngân sách (cảnh báo khi vượt), các dòng đề nghị
+ * kèm đơn vị mua, lịch sử duyệt.
+ */
+function SummaryDetail({ doc }: { doc: PurchaseSummary }) {
+  const f = doc.frame
+  const construction = doc.form === 'Construction'
+  return (
+    <>
+      <section className="erp-mobile-section">
+        <h2>Bảng tổng hợp</h2>
+        <Row label="Biểu mẫu">{purchaseSummaryFormLabels[doc.form]}</Row>
+        <Row label="Bộ phận">{doc.departmentName}</Row>
+        <Row label="Công trình">{construction ? `${f.projectCode ?? ''} – ${f.projectName ?? ''}` : null}</Row>
+        <Row label="Ghi chú">{doc.note}</Row>
+        <Row label={construction ? 'Dự toán' : 'Ngân sách tháng'} money>{f.limitAmount !== null ? formatMoney(f.limitAmount) : 'Chưa có'}</Row>
+        <Row label={construction ? 'Lũy kế đã mua' : 'Lũy kế đã dùng'} money>{formatMoney(f.accumulatedAmount)}</Row>
+        <Row label="Tổng đề xuất" money>{formatMoney(doc.totalAmount)}</Row>
+        <Row label="Còn lại" money>{f.remainingAmount !== null ? formatMoney(f.remainingAmount) : null}</Row>
+        {f.exceeded && <p className="erp-mobile-warn">{construction ? 'Vượt dự toán công trình.' : 'Vượt ngân sách tháng của bộ phận.'}</p>}
+      </section>
+      <section className="erp-mobile-section">
+        <h2>Dòng đề nghị ({doc.lines.length})</h2>
+        <ul className="erp-mobile-lines">
+          {doc.lines.map((l) => (
+            <li key={l.id}>
+              <strong>{l.itemCode} – {l.itemName}</strong>
+              <span>
+                {formatQuantity(l.qty)} {l.uomCode} × {formatMoney(l.estPrice)} = <span className="erp-mobile-money">{formatMoney(l.amount)}</span>
+              </span>
+              <span className="erp-mobile-muted">{l.requestNo} · Đơn vị mua: {l.purchasingUnitCode} – {l.purchasingUnitName}</span>
             </li>
           ))}
         </ul>

@@ -47,10 +47,34 @@ duyệt **"Vượt ngân sách" (PRB)**. Công ty không khai ngân sách thì k
 
 ### Sau khi duyệt
 
-- PR đã duyệt được lấy dòng lên PO (tổng SL đặt trên các PO chưa hủy không vượt SL đề nghị) hoặc lên RFQ.
+- PR đã duyệt phải vào **bảng tổng hợp đề xuất mua đã duyệt** (3.3a) – mọi công ty – rồi mới lấy dòng lên PO (tổng SL đặt trên các PO
+  chưa hủy không vượt SL đề nghị) hoặc lên RFQ.
 - **Đóng phần còn lại** (bắt buộc lý do): PR đặt một phần không còn chờ đặt nữa; ngân sách chỉ tính phần đã đặt.
-- **Hủy**: PR đã lên PO (chưa hủy) không hủy được; hủy PR đã duyệt bắt buộc lý do.
+- **Hủy**: PR đã lên PO (chưa hủy) không hủy được; PR đang ở bảng tổng hợp chưa hủy thì hủy bảng trước (hoặc hủy dây chuyền); hủy PR đã
+  duyệt bắt buộc lý do.
 - **In PR** (PDF) có cả hàng mới chưa có mã.
+
+## 3.3a Bảng tổng hợp đề xuất mua (BTH) – Mua hàng → Bảng tổng hợp đề xuất
+
+Phòng CUVT gom các dòng đề nghị mua **đã duyệt còn cần mua** của một bộ phận thành bảng tổng hợp theo biểu mẫu, gán **đơn vị mua** từng
+dòng (danh mục Mua hàng → Đơn vị mua) rồi trình duyệt. Dòng đề nghị chỉ lên RFQ / PO khi thuộc bảng **đã duyệt**.
+
+**Vòng đời**: Nháp → Chờ duyệt → Đã duyệt · Bị từ chối → Nháp · Rút về nháp · Đã hủy.
+
+1. **Tạo mới**. Đầu phiếu: ngày lập, **biểu mẫu** – **2A Công trình** (đề nghị loại A của **một công trình**, phải chọn công trình đang
+   thực hiện) hoặc **2B Hàng hóa, dịch vụ** (đề nghị loại B, DV) –, **bộ phận đề xuất** (bắt buộc), ghi chú. Đổi biểu mẫu / bộ phận /
+   công trình thì các dòng đã chọn bị bỏ, chọn lại.
+2. Bấm **Chọn dòng đề nghị** (hoặc Thêm dòng / F2): hộp chọn liệt kê dòng đề nghị đã duyệt còn cần mua của bộ phận (và công trình), chưa
+   nằm trong bảng tổng hợp nào chưa hủy. Chọn sẵn **Đơn vị mua cho các dòng chọn** (hoặc gán sau trên từng dòng), tích dòng → **Thêm**.
+3. Mỗi dòng bắt buộc **Đơn vị mua**; SL đề xuất mua, đơn giá tham khảo, thành tiền do hệ thống chụp lúc lưu và chụp lại lúc gửi duyệt.
+   Bấm đúp số đề nghị để mở phiếu gốc.
+4. Lưu → **Gửi duyệt** (xem trước chuỗi duyệt). Đầu phiếu hiện khung chi phí: 2A – dự toán, lũy kế đã mua, tổng đề xuất, còn lại;
+   2B – ngân sách tháng của bộ phận, lũy kế đã dùng, còn lại. Vượt thì cảnh báo vàng, không chặn.
+5. Người duyệt duyệt trên form, ở **Việc cần làm**, hoặc trên điện thoại (link trong email mở trang duyệt gọn).
+6. **Hủy phiếu** dùng hộp hủy dây chuyền: bảng → các PO lấy dòng của bảng → XNH (hủy từ phiếu cuối về bảng). RFQ chưa hủy có dòng của
+   bảng thì phải hủy RFQ trước. Hủy xong các dòng đề nghị trở lại chọn được ở bảng khác.
+
+In theo mẫu 2A/2B làm ở lát khung mẫu in (Y10).
 
 ## 3.4 Đơn mua hàng (PO) – Mua hàng → Đơn mua hàng
 

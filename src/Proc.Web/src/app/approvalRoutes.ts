@@ -7,6 +7,7 @@ import type { ApprovalDocType } from '../api/purchasing'
 export const approvalFullPaths: Partial<Record<ApprovalDocType, (id: string) => string>> = {
   PR: (id) => `/mua-hang/pr/${id}`,
   PO: (id) => `/mua-hang/po/${id}`,
+  BTH: (id) => `/mua-hang/bang-tong-hop/${id}`,
   PRL: (id) => `/gia-ncc/bang-gia/${id}`,
   RFQ: (id) => `/dau-thau/rfq/${id}?tab=compare`,
   CTR: (id) => `/mua-hang/hop-dong-khung/${id}`,
@@ -26,6 +27,7 @@ export const approvalFullPaths: Partial<Record<ApprovalDocType, (id: string) => 
 export const approvalApiBase: Partial<Record<ApprovalDocType, string>> = {
   PR: '/api/purchase-requests',
   PO: '/api/purchase-orders',
+  BTH: '/api/purchase-summaries',
   PRL: '/api/price-lists',
   RFQ: '/api/rfqs',
   CTR: '/api/contracts',

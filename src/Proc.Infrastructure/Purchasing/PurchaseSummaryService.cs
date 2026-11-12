@@ -164,7 +164,8 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
         }
 
         // Kiểm tra lại dòng lúc gửi dưới khóa đề nghị: đề nghị có thể đã bị hủy / đã lên PO từ lúc lưu nháp – SL chụp lại theo SL còn cần mua.
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        // Dùng chung giao dịch của bên gọi khi có: xem trước chuỗi duyệt chạy thử lệnh gửi trong giao dịch riêng rồi hủy (lát Y5c-2).
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         var data = summary.Lines.OrderBy(l => l.LineNo)
             .Select(l => new SavePurchaseSummaryLineRequest(l.RequestLineId, l.PurchasingUnitId, l.Note)).ToList();
         summary.SetLines(await ResolveLinesAsync(data, summary.Id, CurrentUnits(summary), cancellationToken));

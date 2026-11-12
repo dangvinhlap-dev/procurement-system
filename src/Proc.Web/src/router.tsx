@@ -19,6 +19,7 @@ import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/master
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { ConstructionProjectListPage } from './pages/purchasing/ConstructionProjectListPage'
 import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPage'
+import { PurchaseSummaryListPage, PurchaseSummaryPage } from './pages/purchasing/PurchaseSummaryPages'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
@@ -107,6 +108,7 @@ const implemented: Record<string, ReactNode> = {
   BUDG: <BudgetListPage />,
   CTDT: <ConstructionProjectListPage />,
   DVM: <PurchasingUnitListPage />,
+  BTH: <PurchaseSummaryListPage />,
   KHN: <DemandPlanListPage />,
   KHNTH: <DemandSummaryPage />,
   DHG: <PooledOrderListPage />,
@@ -200,6 +202,7 @@ const documentPages = [
   { code: 'ICR', element: <IntercompanyReceiptPage /> },
   { code: 'PR', element: <PurchaseRequestPage /> },
   { code: 'PO', element: <PurchaseOrderPage /> },
+  { code: 'BTH', element: <PurchaseSummaryPage /> },
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },

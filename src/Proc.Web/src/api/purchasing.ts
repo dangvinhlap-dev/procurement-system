@@ -570,7 +570,7 @@ export interface DeliveryTracking {
 }
 
 /** Mã loại phiếu có duyệt (design.md mục 18.6). PRL, RFQ, NCC, CTR cấu hình được từ lát A3, gửi duyệt ở lát B1–B4. */
-export type ApprovalDocType = 'PR' | 'PRA' | 'PRS' | 'PRE' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ' | 'GTH' | 'CKB'
+export type ApprovalDocType = 'PR' | 'PRA' | 'PRS' | 'PRE' | 'PO' | 'POX' | 'POK' | 'PRB' | 'POB' | 'PRL' | 'RFQ' | 'NCC' | 'CTR' | 'CTA' | 'NDQ' | 'GTH' | 'CKB' | 'BTH'
 
 /** Một loại phiếu có duyệt. */
 export interface ApprovalType {
@@ -710,10 +710,11 @@ export function useCompletePoDocs() {
 }
 
 /**
- * Lập, sửa, gửi duyệt, duyệt, từ chối, hủy PR hoặc PO. Xong thì tải lại mọi dữ liệu mua hàng (danh sách, chi tiết, việc cần làm).
- * @param kind Loại phiếu.
+ * Lập, sửa, gửi duyệt, duyệt, từ chối, hủy PR, PO hoặc bảng tổng hợp BTH (cùng bộ lệnh `/submit`, `/approve`…). Xong thì tải lại mọi dữ
+ * liệu mua hàng (danh sách, chi tiết, việc cần làm).
+ * @param kind Loại phiếu (đường dẫn API).
  */
-export function usePurchaseMutations<TDoc extends { id: string; no: string }, TInput>(kind: PurchaseKind) {
+export function usePurchaseMutations<TDoc extends { id: string; no: string }, TInput>(kind: PurchaseKind | 'purchase-summaries') {
   const queryClient = useQueryClient()
   const onSuccess = () => {
     void queryClient.invalidateQueries({ queryKey: ['purchasing'] })

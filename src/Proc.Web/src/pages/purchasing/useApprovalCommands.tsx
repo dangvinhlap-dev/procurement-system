@@ -2,6 +2,7 @@ import { CheckOutlined, CloseCircleOutlined, CloseOutlined, MinusCircleOutlined,
 import { App, Button, Input } from 'antd'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
+import type { AttachmentOwnerType } from '../../api/attachments'
 import { MONTHLY_STAGE_LABELS } from '../../api/monthlyApprovals'
 import { PURCHASE_STAGE_LABELS, previewApproval, type ApprovalStep, type PurchaseActions, type PurchaseStatus } from '../../api/purchasing'
 import { renderRequiredMark } from '../../components/RequiredMark/requiredMark'
@@ -54,6 +55,9 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
 }
 
 type AppApi = ReturnType<typeof App.useApp>
+
+/** Loại chủ đính kèm theo loại phiếu dùng hook này – file người duyệt gửi kèm gắn vào chính chứng từ (design.md mục 20). */
+const approvalOwnerTypes: Record<string, AttachmentOwnerType> = { PR: 'PurchaseRequest', PO: 'PurchaseOrder', BTH: 'PurchaseSummary' }
 
 /**
  * Hộp thoại hỏi có ô lý do bắt buộc – dùng cho từ chối và đóng phần còn lại (lát R6).
@@ -238,9 +242,9 @@ export function useApprovalCommands<T extends ApprovableDoc>({ isNew, doc, readO
     })
   }
 
-  // File của người duyệt gắn vào chứng từ (design.md mục 20): PR, PO dùng chung hook này.
+  // File của người duyệt gắn vào chứng từ (design.md mục 20): PR, PO, bảng tổng hợp BTH dùng chung hook này.
   const attach: ApprovalAttachTarget | undefined = doc
-    ? { ownerType: docType === 'PR' ? 'PurchaseRequest' : 'PurchaseOrder', ownerId: doc.id }
+    ? { ownerType: approvalOwnerTypes[docType] ?? 'PurchaseOrder', ownerId: doc.id }
     : undefined
 
   const approve = () =>

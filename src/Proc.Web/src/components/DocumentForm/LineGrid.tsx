@@ -40,6 +40,11 @@ export interface LineGridProps {
    * cho vừa khung như các phiếu hiện có.
    */
   scrollX?: boolean
+  /**
+   * Dòng phải lấy từ phiếu khác (ví dụ bảng tổng hợp lấy dòng đề nghị đã duyệt): "Thêm dòng"/F2 gọi hàm này (mở hộp chọn) thay vì thêm
+   * dòng trống. Xóa dòng vẫn như thường.
+   */
+  addLines?: () => void
 }
 
 /**
@@ -47,7 +52,7 @@ export interface LineGridProps {
  * (hết dòng thì sang dòng dưới), F2 thêm dòng và đặt con trỏ vào ô đầu của dòng mới. Cột STT và nút xóa dòng có sẵn.
  * Kéo mép phải tiêu đề cột để đổi độ rộng, bấm đúp mép để trả về độ rộng gốc (docs/ui-style.md mục 5).
  */
-export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false, auditEntity, scrollX = false }: LineGridProps) {
+export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fixedRows = false, auditEntity, scrollX = false, addLines }: LineGridProps) {
   return (
     <Form.List name={name}>
       {(fields, { add, remove }) => (
@@ -55,12 +60,13 @@ export function LineGrid({ name, columns, newLine, readOnly = false, addRef, fix
           fields={fields}
           columns={columns}
           readOnly={readOnly || fixedRows}
-          onAdd={() => add(newLine())}
+          onAdd={() => (addLines ? addLines() : add(newLine()))}
           onRemove={remove}
           addRef={fixedRows ? undefined : addRef}
           listName={name}
           auditEntity={auditEntity}
           scrollX={scrollX}
+          picksLines={!!addLines}
         />
       )}
     </Form.List>
@@ -78,6 +84,7 @@ function LineGridBody({
   listName,
   auditEntity,
   scrollX,
+  picksLines,
 }: {
   listName: string
   auditEntity?: string
@@ -88,6 +95,8 @@ function LineGridBody({
   onAdd: () => void
   onRemove: (index: number) => void
   addRef?: MutableRefObject<(() => void) | null>
+  /** "Thêm dòng" mở hộp chọn – không đặt con trỏ vào dòng mới (dòng thêm sau khi chọn xong). */
+  picksLines: boolean
 }) {
   const form = Form.useFormInstance()
   // Độ rộng cột người dùng đã kéo (theo key); cột chưa kéo dùng độ rộng khai báo.
@@ -124,13 +133,13 @@ function LineGridBody({
   useEffect(() => {
     if (!addRef) return
     addRef.current = () => {
-      focusNewRow.current = true
+      focusNewRow.current = !picksLines
       onAdd()
     }
     return () => {
       addRef.current = null
     }
-  }, [addRef, onAdd])
+  }, [addRef, onAdd, picksLines])
 
   // Đặt con trỏ ngay khi React vẽ xong dòng mới (trước khi trình duyệt nhận phím tiếp theo). Trước đây chờ setTimeout 50 ms: máy chậm
   // thì con trỏ nhảy về dòng mới giữa lúc người dùng đã gõ sang ô khác – chữ số rơi nhầm ô (lỗi e2e volume-rebate 09/11/2026).

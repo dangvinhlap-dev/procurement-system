@@ -98,6 +98,11 @@ public partial class PurchasingTests
         var (second, secondRole) = await SummaryApproverAsync(f);
         await ReadAsync<ApprovalRuleDto>(await RuleAsync(f, "BTH", 1, firstRole));
         await ReadAsync<ApprovalRuleDto>(await RuleAsync(f, "BTH", 2, secondRole));
+        // Xem trước chuỗi duyệt trước khi gửi (hộp "Gửi duyệt" trên form – lát Y5c-2): chạy thử lệnh gửi trong giao dịch của bên xem trước rồi
+        // hủy – lệnh gửi không được tự mở giao dịch thứ hai (lỗi 500 trước khi sửa); bảng vẫn nháp.
+        var preview = await ReadAsync<ApprovalPreviewDto>(await f.Buyer.PostAsJsonAsync("/api/approvals/preview", new ApprovalPreviewRequest("BTH", summary.Id), Ct));
+        Assert.False(preview.ApprovedImmediately);
+        Assert.Equal("Draft", (await f.Buyer.GetFromJsonAsync<PurchaseSummaryDto>($"/api/purchase-summaries/{summary.Id}", Ct))!.Status);
         summary = await ReadAsync<PurchaseSummaryDto>(await f.Buyer.PostAsync($"/api/purchase-summaries/{summary.Id}/submit", null, Ct));
         Assert.Equal(("Submitted", 2), (summary.Status, summary.Approvals.Count));
         // Gửi duyệt chụp lại SL còn cần mua.
