@@ -20,6 +20,15 @@ public enum SupplierPortalEmailKind
 
     /// <summary>Thông báo làm rõ công khai cho mọi NCC được mời.</summary>
     RfqNotice = 5,
+
+    /// <summary>Đơn đặt hàng mới – PO đặt cho NCC vừa duyệt xong (lát P4a).</summary>
+    PurchaseOrderIssued = 6,
+
+    /// <summary>Đơn đặt hàng đã duyệt bị hủy (lát P4a) – không ghi lý do.</summary>
+    PurchaseOrderCancelled = 7,
+
+    /// <summary>Bên đặt hàng mở lại phản hồi đơn – NCC xác nhận / từ chối lại (kèm lý do mở lại).</summary>
+    PurchaseOrderReopened = 8,
 }
 
 /// <summary>

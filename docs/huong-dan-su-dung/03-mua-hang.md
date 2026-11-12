@@ -152,6 +152,22 @@ Mua hàng của công ty khác trong tập đoàn = lập **PO** cho **NCC nội
   xong). Bấm đúp mở đơn xem đầu đơn, dòng hàng, SL bên mua đã nhận; nhập ghi chú rồi **Xác nhận đơn**, hoặc nhập lý do rồi **Từ chối**. Mỗi đơn
   quyết định **một lần**, không đổi; người lập PO nhận thông báo. PO đã hủy / đã đóng chỉ xem.
 
+### NCC xác nhận đơn trên Portal (từ bản 0.26.0 – lát P4a)
+
+PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
+
+- **PO duyệt xong**: NCC nhận thư "Đơn đặt hàng mới" (tài khoản Portal đang dùng) và thấy đơn ở mục **Đơn đặt hàng** của Portal – đầu đơn, dòng
+  hàng có giá, tổng tiền (không thấy giá đã duyệt nội bộ, nguồn giá, lý do lệch giá, ngân sách). PO nháp / chờ duyệt NCC chưa thấy.
+- **NCC phản hồi** một lần: **Xác nhận đơn** kèm **ngày giao cam kết** (mặc định ngày giao dự kiến, không trước ngày đặt hàng), hoặc **Từ chối
+  đơn** kèm **lý do** (bắt buộc). Trước khi phản hồi NCC tải file kèm được (phiếu xác nhận, lịch giao…, tối đa 2 MB/file); gửi rồi file khóa.
+  Người lập PO nhận thông báo "NCC phản hồi đơn".
+- Trên PO: ô **Xác nhận của NCC** (Chờ NCC xác nhận / NCC đã xác nhận – ngày giao / NCC từ chối – lý do; ghi rõ khi NCC chưa có tài khoản Portal
+  đang dùng – báo NCC theo cách cũ) và tab **XÁC NHẬN NCC**: các lần phản hồi, file NCC gửi (chỉ xem), thư đã báo NCC.
+- **Mở lại phản hồi** (người có quyền lập PO, PO còn Đã duyệt): nhập **lý do – lý do được gửi NCC** qua thư và hiện trên Portal; phản hồi cũ thành
+  lịch sử, NCC xác nhận / từ chối lại. Dùng khi NCC từ chối nhưng hai bên đã thống nhất lại, hoặc cần NCC cam kết ngày giao mới.
+- NCC từ chối **không tự hủy PO**: Phòng CUVT hủy PO (quản trị), **Đóng phần còn lại** hoặc mở lại phản hồi. NCC chưa xác nhận vẫn lập XNH
+  nhận hàng được. **Hủy PO đã duyệt** thì NCC nhận thư hủy (không ghi lý do) và thấy "Bên đặt đã hủy".
+
 ## 3.5 Theo dõi giao hàng (POTRK)
 
 Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn lại, hạn giao (dòng hoặc đầu phiếu), **quá hạn**. Bấm đúp mở PO.

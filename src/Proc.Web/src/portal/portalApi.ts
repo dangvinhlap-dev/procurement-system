@@ -283,6 +283,119 @@ async function portalRaw(path: string, init: { method?: string; body?: BodyInit 
   return response
 }
 
+/**
+ * Lệnh file NCC trên Portal theo loại chứng từ: file báo giá của thư mời (lát P3b-1) hoặc file gửi kèm phản hồi đơn hàng (lát P4a).
+ * @param kind "rfqs" hoặc "orders".
+ * @returns Các lệnh danh sách, tải lên, xóa, tải xuống.
+ */
+export function portalFiles(kind: 'rfqs' | 'orders') {
+  const base = (id: string) => `/api/portal/${kind}/${id}/attachments`
+  return {
+    list: (id: string) => portalFetch<PortalAttachment[]>(base(id)),
+    upload: async (id: string, file: File, note: string | null) => {
+      const form = new FormData()
+      form.append('file', file)
+      if (note) form.append('note', note)
+      return (await (await portalRaw(base(id), { method: 'POST', body: form })).json()) as PortalAttachment
+    },
+    remove: (id: string, attachmentId: string) => portalFetch<void>(`${base(id)}/${attachmentId}`, { method: 'DELETE' }),
+    download: async (id: string, item: PortalAttachment) => {
+      const response = await portalRaw(`${base(id)}/${item.id}/content`)
+      const url = URL.createObjectURL(await response.blob())
+      const a = Object.assign(document.createElement('a'), { href: url, download: item.fileName })
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+  }
+}
+
+/** Trạng thái đơn NCC thấy (lát P4a). */
+export type PortalOrderStatus = 'Pending' | 'Confirmed' | 'Rejected' | 'Received' | 'Cancelled'
+
+/** Nhãn trạng thái đơn. */
+export const portalOrderStatusLabels: Record<PortalOrderStatus, string> = {
+  Pending: 'Chờ xác nhận',
+  Confirmed: 'Đã xác nhận',
+  Rejected: 'Đã từ chối',
+  Received: 'Đã nhận đủ hàng',
+  Cancelled: 'Bên đặt đã hủy',
+}
+
+/** Một dòng danh sách đơn đặt hàng. */
+export interface PortalOrderListItem {
+  id: string
+  no: string
+  companyName: string
+  date: string
+  expectedDate: string | null
+  status: PortalOrderStatus
+  lineCount: number
+  totalPayable: number
+  currencyCode: string
+  promisedDate: string | null
+  respondedAt: string | null
+}
+
+/** Dòng hàng của đơn. */
+export interface PortalOrderLine {
+  lineNo: number
+  itemCode: string
+  itemName: string
+  supplierItemCode: string | null
+  uomCode: string
+  qty: number
+  unitPrice: number
+  discountPct: number
+  vatCode: string | null
+  amount: number
+  vatAmount: number
+  deliveryDate: string | null
+  note: string | null
+}
+
+/** Một lần NCC phản hồi đơn (reopenedAt khác null = bên đặt đã mở lại, phản hồi này là lịch sử). */
+export interface PortalOrderResponse {
+  decision: 'Confirmed' | 'Rejected'
+  promisedDate: string | null
+  note: string | null
+  respondedAt: string
+  respondedByEmail: string
+  reopenedAt: string | null
+  reopenReason: string | null
+}
+
+/** Chi tiết đơn đặt hàng. */
+export interface PortalOrder {
+  id: string
+  no: string
+  companyName: string
+  date: string
+  approvedAt: string | null
+  expectedDate: string | null
+  deliveryPlace: string | null
+  deliveryAddress: string | null
+  paymentTerms: string | null
+  deliveryTerms: string | null
+  note: string | null
+  currencyCode: string
+  status: PortalOrderStatus
+  canRespond: boolean
+  grossAmount: number
+  totalDiscount: number
+  totalAmount: number
+  totalVat: number
+  lines: PortalOrderLine[]
+  responses: PortalOrderResponse[]
+  maxFileSizeMb: number
+}
+
+/** NCC xác nhận (kèm ngày giao cam kết) hoặc từ chối (kèm lý do). */
+export interface PortalOrderRespond {
+  decision: 'Confirmed' | 'Rejected'
+  promisedDate: string | null
+  note: string | null
+}
+
 /** Báo giá NCC gửi; dòng không gửi = không chào dòng đó. */
 export interface PortalSubmitQuote {
   validUntil: string | null
@@ -336,23 +449,18 @@ export const portalApi = {
   ask: (id: string, question: string) =>
     portalFetch<PortalRfq>(`/api/portal/rfqs/${id}/questions`, { method: 'POST', body: { question } }),
   /** File báo giá đã tải lên (lát P3b-1). */
-  attachments: (id: string) => portalFetch<PortalAttachment[]>(`/api/portal/rfqs/${id}/attachments`),
+  attachments: (id: string) => portalFiles('rfqs').list(id),
   /** Tải file báo giá lên. */
-  uploadAttachment: async (id: string, file: File, note: string | null) => {
-    const form = new FormData()
-    form.append('file', file)
-    if (note) form.append('note', note)
-    return (await (await portalRaw(`/api/portal/rfqs/${id}/attachments`, { method: 'POST', body: form })).json()) as PortalAttachment
-  },
+  uploadAttachment: (id: string, file: File, note: string | null) => portalFiles('rfqs').upload(id, file, note),
   /** Xóa file báo giá (còn trong hạn nộp). */
-  deleteAttachment: (id: string, attachmentId: string) =>
-    portalFetch<void>(`/api/portal/rfqs/${id}/attachments/${attachmentId}`, { method: 'DELETE' }),
+  deleteAttachment: (id: string, attachmentId: string) => portalFiles('rfqs').remove(id, attachmentId),
   /** Tải xuống file báo giá của mình. */
-  downloadAttachment: async (id: string, item: PortalAttachment) => {
-    const response = await portalRaw(`/api/portal/rfqs/${id}/attachments/${item.id}/content`)
-    const url = URL.createObjectURL(await response.blob())
-    const a = Object.assign(document.createElement('a'), { href: url, download: item.fileName })
-    a.click()
-    URL.revokeObjectURL(url)
-  },
+  downloadAttachment: (id: string, item: PortalAttachment) => portalFiles('rfqs').download(id, item),
+  /** Đơn đặt hàng của NCC (lát P4a). */
+  orders: () => portalFetch<PortalOrderListItem[]>('/api/portal/orders'),
+  /** Chi tiết đơn. */
+  order: (id: string) => portalFetch<PortalOrder>(`/api/portal/orders/${id}`),
+  /** Xác nhận / từ chối đơn. */
+  respondOrder: (id: string, input: PortalOrderRespond) =>
+    portalFetch<PortalOrder>(`/api/portal/orders/${id}/respond`, { method: 'POST', body: input }),
 }

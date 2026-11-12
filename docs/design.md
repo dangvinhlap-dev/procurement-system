@@ -2442,7 +2442,7 @@ phát hành").**
     VAT = VAT đã mua trước + VAT đơn này); dưới bảng: bằng chữ, hình thức thanh toán, ngày giao dự kiến, địa điểm giao hàng; ghi chú PO.
   - Ngày in = ngày PO; khối ký "Người lập" + các bước duyệt PO của lượt gần nhất; dòng đỏ "BẢN NHÁP", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" như mục 10.10.
 - Form PO hiện ô chỉ đọc **"Loại mua – biểu mẫu"** (ví dụ "A – Công trình CT01 – Nhà xưởng · 4A").
-- Chưa làm: logo công ty; NCC xác nhận đơn trên Portal (lát P4, 0.26.0).
+- Chưa làm: logo công ty. NCC xác nhận đơn trên Portal: xong ở lát P4a (mục 19.5).
 
 **Lát X7 – mua nội bộ qua PO (12/11/2026, bản 0.24.0 – Q17, mục 19.4).** Thay phiếu xuất bán / nhập mua nội bộ ICS/ICR:
 
@@ -2615,6 +2615,25 @@ API Portal: `POST /api/portal/rfqs/{id}/questions` (hỏi đáp trả kèm `GET 
 API nội bộ: `GET /api/rfqs/{id}/portal-emails` (quyền xem RFQ). Migration `V0_25_0_EmailPortalNcc` (bảng `SupplierPortalEmail`; `Down()` xóa bảng –
 mất dấu vết thư đã báo NCC, thư chờ không gửi nữa). Báo NCC kết quả chọn thầu, PO: làm ở P4.
 
+**Lát P4a – NCC xác nhận đơn hàng trên Portal (12/11/2026, bản 0.26.0).** P4 tách: P4a (lát này), P4b báo NCC kết quả chọn thầu. Người dùng yêu
+cầu giữa lát (12/11/2026): **"cho Phòng CUVT mở lại phản hồi"**. Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P4-1 | **Đơn NCC thấy** (mục "Đơn đặt hàng" `/ncc/don-hang`): PO đặt cho chính NCC, **đã duyệt**, đã nhận đủ, hoặc bị hủy **sau khi** duyệt; không thấy PO nháp / chờ duyệt, **PO mua nội bộ** (bên bán xác nhận ở Đơn bán nội bộ – X7). PO khác trả 404 như không tồn tại. NCC thấy số, công ty đặt, ngày đặt, ngày giao dự kiến, nơi nhận (kho + địa chỉ giao), điều khoản, ghi chú, dòng hàng (mã, mã hàng NCC, tên, ĐVT, SL, đơn giá, % CK, thuế suất, thành tiền, ngày giao dòng, ghi chú) và tổng tiền; **không thấy** giá đã duyệt nội bộ, nguồn giá, lý do lệch giá, ngân sách, chặng duyệt. Trạng thái NCC thấy: Chờ xác nhận → Đã xác nhận / Đã từ chối → Đã nhận đủ hàng / Bên đặt đã hủy. |
+| P4-2 | **Phản hồi**: mọi tài khoản Portal đang dùng của NCC **Xác nhận** (bắt buộc **ngày giao cam kết**, không trước ngày đặt hàng; ghi chú tùy chọn) hoặc **Từ chối** (bắt buộc **lý do**), tối đa 1.000 ký tự; chỉ khi PO **Đã duyệt**. Mỗi PO **một phản hồi có hiệu lực, không sửa** (chỉ mục duy nhất có điều kiện – hai người cùng NCC bấm cùng lúc thì người sau báo lỗi). NCC không sửa SL / giá / ngày trên PO (PO đã duyệt là khóa – mục 20 R1); muốn đổi thì từ chối kèm lý do. Từ chối **không tự hủy PO** – Phòng CUVT hủy (quản trị), đóng phần còn lại hoặc mở lại phản hồi. NCC chưa xác nhận **không chặn** nhận hàng (XNH) – NCC ngoài Portal vẫn giao theo cách cũ. |
+| P4-2b | **Mở lại phản hồi** (yêu cầu người dùng 12/11/2026): người có quyền lập PO (`Purchase.PO.Create`) mở lại phản hồi đang có hiệu lực khi PO còn **Đã duyệt**, **bắt buộc lý do – lý do gửi NCC** (thư và trên Portal; khác lý do hủy là ghi chú nội bộ). Phản hồi cũ **giữ làm lịch sử** (người, giờ, lý do mở lại), NCC phản hồi lại. Hai người cùng mở lại thì người sau báo lỗi. |
+| P4-3 | **File gửi kèm** (loại chủ `PoSupplierFile`, chủ = PO): NCC thêm, xóa khi đơn còn chờ phản hồi; file gửi trước một lần phản hồi (kể cả phản hồi đã mở lại) **khóa vĩnh viễn** – là chứng cứ của lần đó. Nội bộ xem, tải theo quyền xem PO, **không thêm, xóa** (403). Giới hạn dung lượng, kiểm nội dung như mọi đính kèm (P1b-3). |
+| P4-4 | **Nội bộ**: PO có ô **"Xác nhận của NCC"** (Chờ NCC xác nhận / NCC đã xác nhận – ngày giao / NCC từ chối – lý do; ghi rõ khi NCC không có tài khoản Portal đang dùng) và tab **"Xác nhận NCC"** (các lần phản hồi, mở lại, file NCC, thư đã báo NCC). NCC phản hồi thì **người lập PO** nhận thông báo "NCC phản hồi đơn" (người lập đã nghỉ / không rõ thì mọi người có quyền lập PO của công ty). |
+| P4-5 | **Thư báo NCC** (hàng chờ `SupplierPortalEmail`, cách gửi như P3-18, link `/ncc/don-hang/{id}`): **đơn đặt hàng mới** khi PO duyệt xong (cả khi không có cấp duyệt – duyệt ngay lúc gửi); **đề nghị phản hồi lại** khi mở lại (kèm lý do); **hủy đơn** khi PO đã duyệt bị hủy, kể cả hủy dây chuyền (**không ghi lý do hủy**). Thư **không có giá** – NCC xem trên Portal. PO mua nội bộ không có thư. |
+| P4-6 | Bảng `PurchaseOrderSupplierResponse` (CompanyId = công ty đặt hàng) không gắn [Auditable]: phản hồi do tài khoản Portal tạo, không sửa; mở lại chỉ ghi thêm người – giờ – lý do mở lại; chính bản ghi là dấu vết (như hỏi đáp P3b-2). |
+
+API Portal: `GET /api/portal/orders`, `GET /api/portal/orders/{id}`, `POST /api/portal/orders/{id}/respond`, `GET/POST /api/portal/orders/{id}/attachments`,
+`GET …/attachments/{fileId}/content`, `DELETE …/attachments/{fileId}` (NCC lấy từ phiên – P1b-4). API nội bộ: `POST /api/purchase-orders/{id}/reopen-supplier-response`
+(quyền lập PO), `GET /api/purchase-orders/{id}/portal-emails` (quyền xem PO); file NCC qua API đính kèm chung (`ownerType=PoSupplierFile`, `ownerId` = PO).
+Migration `V0_26_0_NccXacNhanDonHang` (bảng `PurchaseOrderSupplierResponse`; `Down()` xóa bảng – mất toàn bộ phản hồi của NCC). Chưa làm ở P4a:
+NCC đề xuất sửa từng dòng (SL, giá, ngày) – khi có yêu cầu; báo NCC kết quả chọn thầu (P4b); nhắc NCC chưa xác nhận sau n ngày – khi có yêu cầu.
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2623,7 +2642,7 @@ mất dấu vết thư đã báo NCC, thư chờ không gửi nữa). Báo NCC k
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
-| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn, giao hàng, hóa đơn |
+| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi; P4b báo kết quả chọn thầu), giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 

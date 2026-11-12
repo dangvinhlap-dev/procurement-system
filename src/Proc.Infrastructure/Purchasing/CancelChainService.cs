@@ -39,7 +39,7 @@ internal sealed class CancelChainService : ICancelChainService
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="clock">Đồng hồ.</param>
-    /// <param name="portalEmails">Thư báo NCC khi RFQ đã gửi bị hủy theo dây chuyền (lát P3b-3).</param>
+    /// <param name="portalEmails">Thư báo NCC khi RFQ đã gửi (lát P3b-3) / PO đã duyệt (lát P4a) bị hủy theo dây chuyền.</param>
     public CancelChainService(ProcDbContext db, ICurrentUserScope scope, IClock clock, IPortalEmailService portalEmails)
     {
         _portalEmails = portalEmails;
@@ -90,8 +90,11 @@ internal sealed class CancelChainService : ICancelChainService
         foreach (var receipt in chain.Receipts) receipt.Cancel(reason);
         foreach (var order in chain.Orders)
         {
+            // PO đã duyệt thì NCC đã thấy trên Portal / đã nhận thư đơn hàng – báo hủy, không ghi lý do (lát P4a, P4-5).
+            var wasIssued = order.Status == ApprovalDocumentStatus.Approved;
             order.Cancel(reason, inChain: true);
             await _approvals.SkipPendingAsync(order, cancellationToken);
+            if (wasIssued) await _portalEmails.QueuePurchaseOrderAsync(order, SupplierPortalEmailKind.PurchaseOrderCancelled, null, cancellationToken);
         }
 
         foreach (var contract in chain.Contracts) contract.Cancel(reason);

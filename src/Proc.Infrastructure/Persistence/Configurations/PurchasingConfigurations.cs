@@ -248,6 +248,35 @@ internal sealed class InternalSaleConfirmationConfiguration : IEntityTypeConfigu
     }
 }
 
+/// <summary>
+/// Cấu hình bảng PurchaseOrderSupplierResponse – NCC xác nhận / từ chối PO trên Portal (lát P4a). Mỗi PO tối đa một phản hồi chưa mở lại (chỉ
+/// mục duy nhất có điều kiện – hai người cùng NCC bấm cùng lúc thì người sau bị chặn).
+/// </summary>
+internal sealed class PurchaseOrderSupplierResponseConfiguration : IEntityTypeConfiguration<PurchaseOrderSupplierResponse>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseOrderSupplierResponse> builder)
+    {
+        builder.ToTable("PurchaseOrderSupplierResponse");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Note).HasMaxLength(PurchaseOrderSupplierResponse.NoteMaxLength);
+        builder.Property(x => x.RespondedByEmail).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.ReopenedByName).HasMaxLength(200);
+        builder.Property(x => x.ReopenReason).HasMaxLength(PurchaseOrderSupplierResponse.NoteMaxLength);
+        builder.Ignore(x => x.IsCurrent);
+        // Mỗi PO tối đa một phản hồi đang có hiệu lực; phản hồi đã mở lại là lịch sử, không tính.
+        builder.HasIndex(x => x.PurchaseOrderId).IsUnique().HasFilter("\"ReopenedAt\" IS NULL");
+        // Hai người cùng mở lại một phản hồi: UPDATE kèm điều kiện "chưa mở lại" nên người sau nhận lỗi.
+        builder.Property(x => x.ReopenedAt).IsConcurrencyToken();
+        builder.HasOne<Proc.Infrastructure.Identity.AppUser>().WithMany().HasForeignKey(x => x.ReopenedBy).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.CompanyId);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng PurchaseOrderLine.</summary>
 internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<PurchaseOrderLine>
 {

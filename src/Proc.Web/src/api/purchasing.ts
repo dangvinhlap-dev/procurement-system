@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
 import type { InternalSaleStatusInfo } from './internalSales'
+import type { PortalEmail } from './sourcing'
 
 /*
  * Kiểu dữ liệu và hàm gọi API mua hàng (khớp Proc.Application.Purchasing): quy trình duyệt, PR, PO, theo dõi giao hàng.
@@ -505,6 +506,42 @@ export interface PurchaseOrder extends ClosedRemaining {
   formCode: '4A' | '4B'
   /** PO đặt cho NCC nội bộ (lát X7): công ty bán và trạng thái xác nhận của bên bán; null với NCC ngoài. */
   internalSale: InternalSaleStatusInfo | null
+  /** PO đặt cho NCC ngoài (lát P4a): phản hồi của NCC trên Portal; null với PO mua nội bộ. */
+  supplierResponse: SupplierOrderResponseInfo | null
+}
+
+/** Trạng thái phản hồi của NCC với PO: NotSent (PO chưa duyệt), Pending (chờ NCC / đã mở lại), Confirmed, Rejected. */
+export type SupplierOrderResponseStatus = 'NotSent' | 'Pending' | 'Confirmed' | 'Rejected'
+
+/** Nhãn trạng thái phản hồi NCC. */
+export const supplierOrderResponseLabels: Record<SupplierOrderResponseStatus, string> = {
+  NotSent: 'Chưa gửi NCC (PO chưa duyệt)',
+  Pending: 'Chờ NCC xác nhận',
+  Confirmed: 'NCC đã xác nhận',
+  Rejected: 'NCC từ chối',
+}
+
+/** Một lần NCC phản hồi PO trên Portal (reopenedAt khác null = đã mở lại, là lịch sử). */
+export interface SupplierOrderResponseItem {
+  decision: 'Confirmed' | 'Rejected'
+  promisedDate: string | null
+  note: string | null
+  respondedAt: string
+  respondedByEmail: string
+  respondedByName: string | null
+  reopenedAt: string | null
+  reopenedByName: string | null
+  reopenReason: string | null
+}
+
+/** Phản hồi của NCC với PO (lát P4a – design.md 19.5, P4-4). */
+export interface SupplierOrderResponseInfo {
+  status: SupplierOrderResponseStatus
+  /** Số tài khoản Portal đang dùng của NCC – 0 thì NCC không xác nhận trên Portal được. */
+  activePortalUsers: number
+  canReopen: boolean
+  /** Mới trước. */
+  responses: SupplierOrderResponseItem[]
 }
 
 /** Loại mua của PO: thường hoặc khẩn cấp (duyệt theo cấp POK, bổ sung hồ sơ sau). */
@@ -674,6 +711,29 @@ export function usePurchaseOrder(id: string | null) {
     queryKey: ['purchasing', companyId, 'purchase-orders', id],
     queryFn: () => apiFetch<PurchaseOrder>(`/api/purchase-orders/${id}`),
     enabled: id !== null,
+  })
+}
+
+/**
+ * Thư đã báo NCC về PO qua Portal (lát P4a): đơn hàng mới, mở lại phản hồi, hủy. null thì không tải.
+ * @param id PO.
+ */
+export function usePoPortalEmails(id: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'purchase-orders', id, 'portal-emails'],
+    queryFn: () => apiFetch<PortalEmail[]>(`/api/purchase-orders/${id}/portal-emails`),
+    enabled: id !== null,
+  })
+}
+
+/** Phòng CUVT mở lại phản hồi của NCC (lý do gửi NCC – lát P4a). Xong tải lại dữ liệu mua hàng. */
+export function useReopenSupplierResponse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      apiFetch<PurchaseOrder>(`/api/purchase-orders/${id}/reopen-supplier-response`, { method: 'POST', body: { reason } }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['purchasing'] }),
   })
 }
 

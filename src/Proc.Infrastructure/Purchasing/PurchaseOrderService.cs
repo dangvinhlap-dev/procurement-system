@@ -2,6 +2,7 @@
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Pricing;
+using Proc.Application.Portal;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
@@ -28,11 +29,21 @@ public sealed partial class PurchaseOrderService : IPurchaseOrderService
     private readonly IPriceListService _prices;
     private readonly IRfqAwardPriceReader _awards;
     private readonly BudgetUsage _budgets;
+    private readonly IPortalEmailService _portalEmails;
 
     /// <summary>Tạo dịch vụ.</summary>
+    /// <param name="db">DbContext.</param>
+    /// <param name="scope">Phạm vi người dùng.</param>
+    /// <param name="numbers">Cấp số chứng từ.</param>
+    /// <param name="clock">Đồng hồ.</param>
+    /// <param name="prices">Giá đã duyệt (bảng giá, hợp đồng).</param>
+    /// <param name="awards">Giá trúng thầu RFQ.</param>
+    /// <param name="portalEmails">Thư báo NCC qua Portal khi PO duyệt xong / bị hủy / mở lại phản hồi (lát P4a).</param>
     public PurchaseOrderService(
-        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPriceListService prices, IRfqAwardPriceReader awards)
+        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPriceListService prices, IRfqAwardPriceReader awards,
+        IPortalEmailService portalEmails)
     {
+        _portalEmails = portalEmails;
         _db = db;
         _scope = scope;
         _numbers = numbers;
@@ -177,8 +188,9 @@ public sealed partial class PurchaseOrderService : IPurchaseOrderService
         if ((await MonthlyRefsAsync(order, cancellationToken)).Values.Any(m => m.IsOverCeiling))
             stages.Add((ApprovalTypes.PurchaseOrderOverCeiling, ApprovalTypes.OverCeilingStage));
         await _approvals.SubmitWithStagesAsync(order, stages, cancellationToken, ruleType, [ApprovalTypes.PurchaseOrderOverCeiling]);
-        // Không có cấp duyệt nào thì PO duyệt ngay lúc gửi – báo công ty bán như khi duyệt xong (lát X7).
+        // Không có cấp duyệt nào thì PO duyệt ngay lúc gửi – báo công ty bán (lát X7) / NCC qua Portal (lát P4a) như khi duyệt xong.
         await NotifyInternalSellerAsync(order, cancellationToken);
+        await NotifySupplierIssuedAsync(order, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -201,6 +213,7 @@ public sealed partial class PurchaseOrderService : IPurchaseOrderService
         var order = await LoadAsync(id, cancellationToken);
         await _approvals.ApproveAsync(order, request.Comment, cancellationToken);
         await NotifyInternalSellerAsync(order, cancellationToken);
+        await NotifySupplierIssuedAsync(order, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -226,8 +239,11 @@ public sealed partial class PurchaseOrderService : IPurchaseOrderService
             .Where(c => c.PurchaseOrderId == id && c.Status != ReceiptConfirmationStatus.Cancelled).Select(c => c.No).ToListAsync(cancellationToken);
         if (receipts.Count > 0)
             throw new BusinessRuleException($"Đơn {order.No} đã có phiếu nhận hàng {string.Join(", ", receipts)} – không hủy được (dùng Hoàn thành PO).");
+        // PO đã duyệt thì NCC đã thấy trên Portal / đã nhận thư đơn hàng – báo hủy, không ghi lý do (lát P4a, P4-5).
+        var wasIssued = order.Status == ApprovalDocumentStatus.Approved;
         order.Cancel(reason);
         await _approvals.SkipPendingAsync(order, cancellationToken);
+        if (wasIssued) await _portalEmails.QueuePurchaseOrderAsync(order, SupplierPortalEmailKind.PurchaseOrderCancelled, null, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -816,7 +832,8 @@ public sealed partial class PurchaseOrderService : IPurchaseOrderService
             && order.Status is ApprovalDocumentStatus.Approved or ApprovalDocumentStatus.Closed, BudgetService.ToDto(order), order.IsOffApprovedList,
             order.Lines.Any(IsOverCeiling)) { Version = order.Version, ClosedReason = order.ClosedReason, ClosedAt = order.ClosedAt, CancelReason = order.CancelReason,
             Category = order.Category.ToString(), ConstructionProjectId = order.ConstructionProjectId, ConstructionProjectName = project,
-            InternalSale = await InternalSaleStatusAsync(order, cancellationToken), ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
+            InternalSale = await InternalSaleStatusAsync(order, cancellationToken),
+            SupplierResponse = await SupplierResponseAsync(order, readOnly is null, cancellationToken), ClosedByName = order.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null };
     }
 
     /// <summary>Đổi yêu cầu lưu PO thành dữ liệu header cho Domain.</summary>

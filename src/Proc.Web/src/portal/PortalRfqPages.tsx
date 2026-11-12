@@ -1,8 +1,8 @@
-import { DeleteOutlined, DownloadOutlined, SendOutlined, UploadOutlined } from '@ant-design/icons'
+import { SendOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Form, Input, InputNumber, Spin, Upload } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber, Spin } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { DateInput } from '../classic/DateInput'
 import { QaThread } from '../classic/QaThread'
@@ -14,12 +14,12 @@ import { formatMoney, formatQuantity, vnNumberInput } from '../utils/format'
 import {
   portalApi,
   portalRfqStatusLabels,
-  type PortalAttachment,
   type PortalRfq,
   type PortalRfqListItem,
   type PortalRfqStatus,
   type PortalSubmission,
 } from './portalApi'
+import { PortalFiles, Section } from './PortalParts'
 
 /** Ô số trong lưới nhập: gõ kiểu Việt Nam, không viền. */
 const cellNumber = { ...vnNumberInput, variant: 'borderless', style: { width: '100%' } } as const
@@ -40,16 +40,6 @@ const statusTone: Record<PortalRfqStatus, StatusTone> = {
  */
 function formatLocalDateTime(value: string): string {
   return dayjs(value).format('DD/MM/YYYY HH:mm')
-}
-
-/** Khối có dải tiêu đề (như trang chủ Portal). */
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="erp-portal-section">
-      <h2>{title}</h2>
-      <div className="erp-portal-section-body">{children}</div>
-    </section>
-  )
 }
 
 const listColumns: GridColumn<PortalRfqListItem>[] = [
@@ -352,7 +342,19 @@ export function PortalRfqPage() {
           )}
         </Form>
       </Section>
-      <QuoteFiles rfq={data} />
+      <PortalFiles
+        kind="rfqs"
+        id={data.id}
+        title="File đính kèm báo giá"
+        canEdit={data.canSubmit}
+        maxFileSizeMb={data.maxFileSizeMb}
+        testId="portal-quote-files"
+        hint={
+          data.canSubmit
+            ? `Bảng giá chi tiết, catalogue, hồ sơ năng lực… tối đa ${data.maxFileSizeMb} MB/file. File được niêm phong cùng báo giá; thêm, xóa được đến hết hạn nộp.`
+            : 'Đã hết hạn nộp hoặc bên mời đã mở báo giá – file đã khóa, chỉ tải xuống được.'
+        }
+      />
       <QuoteQuestions rfq={data} />
       {data.submissions.length > 0 && (
         <Section title="Biên nhận các lần nộp">
@@ -452,128 +454,5 @@ function QuoteDateInput({ value, onChange, disabled }: { value?: string | null; 
     <Input value={value ? dayjs(value).format('DD/MM/YYYY') : ''} disabled />
   ) : (
     <DateInput value={value ?? null} onChange={(v) => onChange?.(v)} aria-label="Báo giá hiệu lực đến" />
-  )
-}
-
-const fileColumns: GridColumn<PortalAttachment>[] = [
-  { key: 'fileName', title: 'Tên file', width: 260, value: (r) => r.fileName, auditField: false },
-  { key: 'sizeBytes', title: 'Dung lượng (KB)', width: 110, type: 'quantity', value: (r) => Math.ceil(r.sizeBytes / 1024), auditField: false },
-  { key: 'uploadedByName', title: 'Người tải lên', width: 160, value: (r) => r.uploadedByName, auditField: false },
-  { key: 'uploadedAt', title: 'Thời điểm', width: 140, type: 'datetime', value: (r) => r.uploadedAt, auditField: false },
-  { key: 'note', title: 'Ghi chú', width: 220, value: (r) => r.note, auditField: false },
-]
-
-/**
- * File đính kèm báo giá (lát P3b-1 – mọi form có đính kèm, CLAUDE.md mục 4): file gắn với thư mời của NCC nên tải lên ngay, không cần chờ nộp
- * giá; thêm, xóa đến giờ hạn nộp; niêm phong cùng báo giá – bên mời chỉ xem sau khi mở. Tối đa theo cấu hình máy chủ (mặc định 2 MB/file).
- * @param rfq Thư mời đang xem.
- */
-function QuoteFiles({ rfq }: { rfq: PortalRfq }) {
-  const { message, modal } = App.useApp()
-  const queryClient = useQueryClient()
-  const files = useQuery({ queryKey: ['portal', 'rfq-files', rfq.id], queryFn: () => portalApi.attachments(rfq.id) })
-  const [groupBy, setGroupBy] = useState<string | null>(null)
-  const [selected, setSelected] = useState<PortalAttachment | null>(null)
-  const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const reload = () => queryClient.invalidateQueries({ queryKey: ['portal', 'rfq-files', rfq.id] })
-
-  const upload = async (file: File) => {
-    // Chặn sớm file quá dung lượng; máy chủ vẫn kiểm lại (dung lượng thật, nội dung khớp đuôi).
-    if (file.size > rfq.maxFileSizeMb * 1024 * 1024) {
-      void message.error(`File "${file.name}" quá ${rfq.maxFileSizeMb} MB. Hãy nén hoặc chia nhỏ file.`)
-      return
-    }
-    setBusy(true)
-    try {
-      await portalApi.uploadAttachment(rfq.id, file, note.trim() || null)
-      setNote('')
-      await reload()
-      void message.success(`Đã tải lên "${file.name}".`)
-    } catch (e) {
-      void message.error(e instanceof Error ? e.message : 'Không tải lên được file.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const remove = (item: PortalAttachment) =>
-    modal.confirm({
-      title: 'Xóa file',
-      content: `Xóa file "${item.fileName}" khỏi báo giá?`,
-      okText: 'Xóa',
-      cancelText: 'Không',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await portalApi.deleteAttachment(rfq.id, item.id)
-          setSelected(null)
-          await reload()
-        } catch (e) {
-          void message.error(e instanceof Error ? e.message : 'Không xóa được file.')
-        }
-      },
-    })
-
-  const rows = files.data ?? []
-  return (
-    <Section title={`File đính kèm báo giá (${rows.length})`}>
-      {files.error && <Alert type="error" showIcon title={files.error.message} style={{ marginBottom: 8 }} />}
-      <div style={{ height: 160, display: 'flex', flexDirection: 'column' }} data-testid="portal-quote-files">
-        <DataGrid
-          rows={rows}
-          columns={fileColumns}
-          rowKey={(r) => r.id}
-          groupBy={groupBy}
-          onGroupByChange={setGroupBy}
-          loading={files.isFetching}
-          onSelectRow={setSelected}
-          onOpenRow={(r) => void portalApi.downloadAttachment(rfq.id, r).catch((e: unknown) => void message.error(String(e)))}
-        />
-      </div>
-      <div className="erp-portal-file-bar">
-        {rfq.canSubmit && (
-          <>
-            <Input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={500}
-              placeholder="Ghi chú file (không bắt buộc)"
-              aria-label="Ghi chú file"
-              style={{ width: 240 }}
-            />
-            <Upload
-              showUploadList={false}
-              multiple
-              beforeUpload={(file) => {
-                void upload(file)
-                return false
-              }}
-            >
-              <Button icon={<UploadOutlined />} loading={busy}>
-                Tải file lên…
-              </Button>
-            </Upload>
-          </>
-        )}
-        <Button
-          icon={<DownloadOutlined />}
-          disabled={!selected}
-          onClick={() => selected && void portalApi.downloadAttachment(rfq.id, selected).catch((e: unknown) => void message.error(String(e)))}
-        >
-          Tải xuống
-        </Button>
-        {rfq.canSubmit && (
-          <Button icon={<DeleteOutlined />} disabled={!selected?.canDelete} onClick={() => selected && remove(selected)}>
-            Xóa file
-          </Button>
-        )}
-      </div>
-      <p className="erp-portal-hint">
-        {rfq.canSubmit
-          ? `Bảng giá chi tiết, catalogue, hồ sơ năng lực… tối đa ${rfq.maxFileSizeMb} MB/file. File được niêm phong cùng báo giá; thêm, xóa được đến hết hạn nộp.`
-          : 'Đã hết hạn nộp hoặc bên mời đã mở báo giá – file đã khóa, chỉ tải xuống được.'}
-      </p>
-    </Section>
   )
 }

@@ -37,6 +37,9 @@ public static class NotificationTypes
 
     /// <summary>NCC gửi câu hỏi làm rõ RFQ trên Portal – báo người lập RFQ (lát P3b-2).</summary>
     public const string PortalQuestion = "PortalQuestion";
+
+    /// <summary>NCC xác nhận / từ chối đơn đặt hàng trên Portal – báo người lập PO (lát P4a).</summary>
+    public const string PortalOrderResponse = "PortalOrderResponse";
 }
 
 /// <summary>

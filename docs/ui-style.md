@@ -144,6 +144,9 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Bảng người dùng (cả tab "Tài khoản Portal" của ngăn kéo NCC) dùng chung `PortalUserPanel`: `DataGrid` + nút dưới lưới Mời (icon xanh),
   Gửi lại lời mời (vàng), Khóa (đỏ), Mở khóa (xanh) – thao tác trên dòng đang chọn (`DataGrid` prop `onSelectRow`). Tab ngăn kéo không có ô form (như "Tài khoản Portal") khai báo `lazy`
   (`DetailTab`) – chỉ vẽ khi mở, để tiêu đề cột không trùng nhãn ô form ở tab khác.
+- Khối có dải tiêu đề (`Section`) và khối file NCC (`PortalFiles` – lưới file + Tải lên / Tải xuống / Xóa) dùng chung ở `src/portal/PortalParts.tsx`
+  cho trang Thư mời báo giá và Đơn đặt hàng (lát P4a). Trang đơn hàng: tổng tiền canh phải dưới lưới (`.erp-portal-totals`); khối phản hồi có
+  nút **Từ chối đơn** (icon đỏ) bên trái, **Xác nhận đơn** (icon xanh) bên phải, cả hai hỏi lại.
 
 ## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
 

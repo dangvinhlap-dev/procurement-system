@@ -158,6 +158,13 @@ public static class PurchasingEndpoints
         po.MapPost("/{id:guid}/close-remaining", (Guid id, CloseRemainingRequest request, IPurchaseOrderService s, CancellationToken ct) =>
                 s.CloseRemainingAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
+        // Lát P4a: Phòng CUVT mở lại phản hồi của NCC trên Portal (lý do gửi NCC); thư đã báo NCC về PO – xem theo quyền xem PO.
+        po.MapPost("/{id:guid}/reopen-supplier-response", (Guid id, ReopenSupplierResponseRequest request, IPurchaseOrderService s, CancellationToken ct) =>
+                s.ReopenSupplierResponseAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PoCreate);
+        po.MapGet("/{id:guid}/portal-emails", (Guid id, Proc.Application.Portal.IPortalEmailService s, CancellationToken ct) =>
+                s.ListForPurchaseOrderAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PoView);
         // Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11) – người lập PO.
         po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
                 s.CompleteDocsAsync(id, request, ct))

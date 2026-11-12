@@ -459,6 +459,9 @@ public sealed record PurchaseOrderDto(
     /// <summary>PO đặt cho NCC nội bộ (lát X7): công ty bán và trạng thái xác nhận của bên bán; null với NCC ngoài.</summary>
     public InternalSaleStatusDto? InternalSale { get; init; }
 
+    /// <summary>PO đặt cho NCC ngoài (lát P4a): phản hồi của NCC trên Portal; null với PO mua nội bộ.</summary>
+    public SupplierOrderResponseDto? SupplierResponse { get; init; }
+
     /// <summary>Biểu mẫu bảng theo dõi mua hàng khi in: "4A" (loại A) hoặc "4B".</summary>
     public string FormCode => Category == "Construction" ? "4A" : "4B";
 }
@@ -639,6 +642,17 @@ public interface IPurchaseOrderService
     /// <returns>Phiếu sau khi đóng (Đã đóng).</returns>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu chưa duyệt, chưa đặt/nhận phần nào, thiếu lý do.</exception>
     Task<PurchaseOrderDto> CloseRemainingAsync(Guid id, CloseRemainingRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Mở lại phản hồi của NCC trên Portal (lát P4a – yêu cầu người dùng 12/11/2026): phản hồi đang có hiệu lực thành lịch sử, NCC xác nhận / từ
+    /// chối lại; báo NCC qua thư kèm lý do. Quyền lập PO.
+    /// </summary>
+    /// <param name="id">Id PO.</param>
+    /// <param name="request">Lý do (bắt buộc, gửi NCC).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>PO sau khi mở lại.</returns>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi PO không còn Đã duyệt, NCC chưa phản hồi, thiếu lý do.</exception>
+    Task<PurchaseOrderDto> ReopenSupplierResponseAsync(Guid id, ReopenSupplierResponseRequest request, CancellationToken cancellationToken);
 
     /// <summary>Xác nhận đã bổ sung hồ sơ cho PO khẩn cấp đã duyệt (design.md mục 18.11).</summary>
     Task<PurchaseOrderDto> CompleteDocsAsync(Guid id, CompleteDocsRequest request, CancellationToken cancellationToken);

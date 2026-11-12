@@ -3,6 +3,7 @@ using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Portal;
 using Proc.Domain.Common;
+using Proc.Domain.Documents;
 using Proc.Domain.MasterData;
 using Proc.Domain.Notifications;
 using Proc.Domain.Organization;
@@ -64,7 +65,8 @@ public sealed class PortalRfqService : IPortalRfqService
     public async Task<IReadOnlyList<AttachmentDto>> ListAttachmentsAsync(PortalSession session, Guid id, CancellationToken cancellationToken)
     {
         var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
-        return await _attachments.ListForPortalAsync(invitationId, IsOpen(rfq), cancellationToken);
+        return await _attachments.ListForPortalAsync(AttachmentOwnerTypes.RfqPortalQuote, invitationId,
+            IsOpen(rfq) ? null : "Đã hết hạn nộp hoặc bên mời đã mở báo giá – file đã khóa.", cancellationToken);
     }
 
     /// <inheritdoc />
@@ -73,14 +75,14 @@ public sealed class PortalRfqService : IPortalRfqService
     {
         var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
         RequireOpen(rfq);
-        return await _attachments.UploadForPortalAsync(invitationId, rfq.CompanyId, session.UserId, fileName, sizeBytes, content, note, cancellationToken);
+        return await _attachments.UploadForPortalAsync(AttachmentOwnerTypes.RfqPortalQuote, invitationId, rfq.CompanyId, session.UserId, fileName, sizeBytes, content, note, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<AttachmentContent> OpenAttachmentAsync(PortalSession session, Guid id, Guid attachmentId, CancellationToken cancellationToken)
     {
         var (_, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
-        return await _attachments.OpenForPortalAsync(attachmentId, invitationId, cancellationToken);
+        return await _attachments.OpenForPortalAsync(AttachmentOwnerTypes.RfqPortalQuote, attachmentId, invitationId, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -88,7 +90,7 @@ public sealed class PortalRfqService : IPortalRfqService
     {
         var (rfq, invitationId) = await InvitationAsync(session.SupplierId, id, cancellationToken);
         RequireOpen(rfq);
-        await _attachments.DeleteForPortalAsync(attachmentId, invitationId, session.UserId, cancellationToken);
+        await _attachments.DeleteForPortalAsync(AttachmentOwnerTypes.RfqPortalQuote, attachmentId, invitationId, session.UserId, cancellationToken);
     }
 
     /// <summary>RFQ và dòng NCC được mời của phiên (chủ của file báo giá Portal); RFQ không mời NCC này trả 404.</summary>

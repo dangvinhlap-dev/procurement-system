@@ -121,6 +121,35 @@ public static class PortalEndpoints
                 await s.DeleteAttachmentAsync(Session(http), id, attachmentId, ct);
                 return Results.NoContent();
             });
+
+        // Lát P4a: đơn đặt hàng – NCC xem PO đã duyệt, xác nhận / từ chối, gửi file kèm phản hồi (mọi người dùng Portal của NCC).
+        var orders = portal.MapGroup("/orders");
+        orders.MapGet("/", (HttpContext http, IPortalOrderService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
+        orders.MapGet("/{id:guid}", (Guid id, HttpContext http, IPortalOrderService s, CancellationToken ct) => s.GetAsync(Session(http), id, ct));
+        orders.MapPost("/{id:guid}/respond", (Guid id, PortalOrderRespondRequest request, HttpContext http, IPortalOrderService s, CancellationToken ct) =>
+            s.RespondAsync(Session(http), id, request, ct));
+        orders.MapGet("/{id:guid}/attachments", (Guid id, HttpContext http, IPortalOrderService s, CancellationToken ct) =>
+            s.ListAttachmentsAsync(Session(http), id, ct));
+        orders.MapPost("/{id:guid}/attachments", async (
+                Guid id, [FromForm] string? note, IFormFile file, HttpContext http, IPortalOrderService s, CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.UploadAttachmentAsync(Session(http), id, file.FileName, file.Length, stream, note, ct));
+            })
+            // Token Portal đi trong header, không dùng cookie – không có nguy cơ CSRF.
+            .DisableAntiforgery();
+        orders.MapGet("/{id:guid}/attachments/{attachmentId:guid}/content", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalOrderService s, CancellationToken ct) =>
+            {
+                var file = await s.OpenAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.File(file.Content, file.ContentType, file.FileName);
+            });
+        orders.MapDelete("/{id:guid}/attachments/{attachmentId:guid}", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalOrderService s, CancellationToken ct) =>
+            {
+                await s.DeleteAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.NoContent();
+            });
         return app;
     }
 

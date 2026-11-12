@@ -1,4 +1,4 @@
-namespace Proc.Application.Purchasing;
+﻿namespace Proc.Application.Purchasing;
 
 /// <summary>Lọc danh sách đơn bán nội bộ.</summary>
 /// <param name="From">Từ ngày PO (mặc định 90 ngày trước ngày đến).</param>
@@ -130,3 +130,31 @@ public interface IInternalSaleService
     /// <exception cref="Common.NotFoundException">Khi không có đơn.</exception>
     Task<InternalSaleDto> RejectAsync(Guid orderId, InternalSaleDecisionRequest request, CancellationToken cancellationToken);
 }
+
+/// <summary>Một lần NCC phản hồi PO trên Portal (lát P4a).</summary>
+/// <param name="Decision">Confirmed hoặc Rejected.</param>
+/// <param name="PromisedDate">Ngày giao NCC cam kết (khi xác nhận).</param>
+/// <param name="Note">Ghi chú / lý do từ chối của NCC.</param>
+/// <param name="RespondedAt">Thời điểm phản hồi (UTC).</param>
+/// <param name="RespondedByEmail">Email tài khoản Portal phản hồi.</param>
+/// <param name="RespondedByName">Họ tên tài khoản Portal phản hồi.</param>
+/// <param name="ReopenedAt">Lúc Phòng CUVT mở lại (UTC); null = phản hồi đang có hiệu lực.</param>
+/// <param name="ReopenedByName">Người mở lại.</param>
+/// <param name="ReopenReason">Lý do mở lại (đã gửi NCC).</param>
+public sealed record SupplierOrderResponseItemDto(
+    string Decision, DateOnly? PromisedDate, string? Note, DateTimeOffset RespondedAt, string RespondedByEmail, string? RespondedByName,
+    DateTimeOffset? ReopenedAt, string? ReopenedByName, string? ReopenReason);
+
+/// <summary>
+/// Phản hồi của NCC với PO trên Portal, hiện trên PO của công ty đặt hàng (lát P4a – design.md 19.5 P4-4).
+/// </summary>
+/// <param name="Status">NotSent (PO chưa duyệt), Pending (chờ NCC xác nhận / đã mở lại), Confirmed, Rejected.</param>
+/// <param name="ActivePortalUsers">Số tài khoản Portal đang dùng của NCC – 0 thì NCC không xác nhận trên Portal được, Phòng CUVT báo cách cũ.</param>
+/// <param name="CanReopen">Người dùng mở lại được phản hồi đang có hiệu lực (quyền lập PO, PO Đã duyệt).</param>
+/// <param name="Responses">Các lần phản hồi, mới trước; phần tử đầu chưa mở lại là phản hồi đang có hiệu lực.</param>
+public sealed record SupplierOrderResponseDto(
+    string Status, int ActivePortalUsers, bool CanReopen, IReadOnlyList<SupplierOrderResponseItemDto> Responses);
+
+/// <summary>Phòng CUVT mở lại phản hồi của NCC.</summary>
+/// <param name="Reason">Lý do (bắt buộc, gửi NCC).</param>
+public sealed record ReopenSupplierResponseRequest(string? Reason);

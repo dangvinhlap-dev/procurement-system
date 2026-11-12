@@ -595,8 +595,16 @@ export function useRfqMutations() {
   }
 }
 
-/** Loại thư báo NCC qua Portal (lát P3b-3). */
-export type PortalEmailKind = 'RfqInvitation' | 'RfqDeadlineExtended' | 'RfqCancelled' | 'RfqAnswer' | 'RfqNotice'
+/** Loại thư báo NCC qua Portal (lát P3b-3; thư về PO – lát P4a). */
+export type PortalEmailKind =
+  | 'RfqInvitation'
+  | 'RfqDeadlineExtended'
+  | 'RfqCancelled'
+  | 'RfqAnswer'
+  | 'RfqNotice'
+  | 'PurchaseOrderIssued'
+  | 'PurchaseOrderCancelled'
+  | 'PurchaseOrderReopened'
 
 /** Tên loại thư hiện trên giao diện. */
 export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
@@ -605,6 +613,9 @@ export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
   RfqCancelled: 'Hủy thư mời',
   RfqAnswer: 'Trả lời câu hỏi',
   RfqNotice: 'Thông báo làm rõ',
+  PurchaseOrderIssued: 'Đơn đặt hàng mới',
+  PurchaseOrderCancelled: 'Hủy đơn đặt hàng',
+  PurchaseOrderReopened: 'Đề nghị phản hồi lại',
 }
 
 /** Trạng thái gửi thư: chờ gửi, đã gửi, thôi gửi, lỗi (hết lượt thử). */
@@ -618,7 +629,7 @@ export const portalEmailStateLabels: Record<PortalEmailState, string> = {
   Failed: 'Lỗi',
 }
 
-/** Một thư đã báo NCC về RFQ qua Portal (lát P3b-3): thư mời, gia hạn, hủy, trả lời câu hỏi, thông báo làm rõ. */
+/** Một thư đã báo NCC qua Portal: về RFQ (lát P3b-3) hoặc PO (lát P4a). */
 export interface PortalEmail {
   id: string
   supplierId: string
