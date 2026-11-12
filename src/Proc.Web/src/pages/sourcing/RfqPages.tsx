@@ -124,6 +124,37 @@ interface FormValues {
 /** Lựa chọn chọn thầu đang soạn của một dòng. */
 type AwardDraft = Record<string, { supplierId: string | null; reason: string }>
 
+/**
+ * Biểu mẫu dự kiến theo lựa chọn đang chọn (lát Y6, design.md mục 19.1 Q7): loại B → 3B; loại A → 3A khi giá trị trúng thầu (Σ SL × đơn giá ×
+ * (100 − %CK)/100, chưa VAT) ≥ ngưỡng so sánh của công ty, dưới ngưỡng → 3a. Ví dụ ngưỡng 50.000.000, chọn 100 cây × 300.000 = 30.000.000 → 3a.
+ * @param rfq RFQ đang xem.
+ * @param award Lựa chọn từng dòng.
+ * @returns "3A", "3a" hoặc "3B".
+ */
+function expectedForm(rfq: Rfq, award: AwardDraft): string {
+  if (rfq.category !== 'Construction') return '3B'
+  const amount = rfq.lines.reduce((sum, l) => {
+    const supplierId = award[l.id]?.supplierId
+    const quote = rfq.suppliers.find((s) => s.supplierId === supplierId)?.lines.find((q) => q.rfqLineId === l.id)
+    return quote ? sum + Math.round((l.qty * quote.unitPrice * (100 - quote.discountPct)) / 100 * 100) / 100 : sum
+  }, 0)
+  return amount >= (rfq.comparisonThreshold ?? 0) ? '3A' : '3a'
+}
+
+/**
+ * Chữ ô "Loại mua – biểu mẫu" trên đầu RFQ, ví dụ "A – Công trình CT01 – Nhà xưởng · 3A so sánh chọn NCC".
+ * @param rfq RFQ đang xem.
+ * @returns Chữ hiển thị.
+ */
+function formText(rfq: Rfq): string {
+  const names: Record<string, string> = { '3A': '3A so sánh chọn NCC', '3a': '3a trình giá 1 NCC', '3B': '3B trình giá 1 NCC' }
+  const form = rfq.formCode
+    ? names[rfq.formCode] ?? rfq.formCode
+    : `3A khi trúng thầu từ ${formatMoney(rfq.comparisonThreshold ?? 0)} đ, dưới ngưỡng 3a`
+  const kind = rfq.category === 'Construction' ? `A – Công trình ${rfq.constructionProjectName ?? ''}` : 'B – Hàng hóa, dịch vụ'
+  return `${kind} · ${form}`
+}
+
 /** Chuỗi rỗng hoặc toàn khoảng trắng gửi lên API là null; còn lại bỏ khoảng trắng hai đầu. */
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
@@ -351,6 +382,19 @@ export function RfqPage() {
     const quoted = doc.quotedSupplierCount ?? doc.suppliers.length
     // Ít NCC chào giá hơn tối thiểu (lát R7): hỏi giải trình trước, trừ khi đã giải trình mời thiếu NCC và mọi NCC mời đều chào giá.
     const needsReason = quoted < doc.minSuppliers && !(doc.fewSuppliersReason && quoted >= doc.suppliers.length)
+    // Lát Y6: RFQ công trình có giá trị trúng thầu từ ngưỡng trở lên in mẫu so sánh 3A – bắt buộc lý do chọn (máy chủ kiểm tra lại).
+    const askSelection = async (fewQuotesReason: string | null) => {
+      if (expectedForm(doc, award) !== '3A') return startAward(fewQuotesReason, null)
+      confirmWithReason(modal, message, {
+        title: 'Biểu mẫu so sánh giá và chọn nhà cung cấp (3A)',
+        description: 'Lý do chọn in ở mục 4 của biểu mẫu 3A – hội đồng duyệt thấy lý do này.',
+        label: 'Lý do chọn',
+        placeholder: 'Ví dụ: giá tốt hơn và đã gồm chi phí vận chuyển',
+        okText: 'Tiếp tục',
+        danger: false,
+        onOk: async (reason) => startAward(fewQuotesReason, reason),
+      })
+    }
     if (needsReason) {
       confirmWithReason(modal, message, {
         title: `Chỉ có ${quoted} NCC chào giá (tối thiểu ${doc.minSuppliers})`,
@@ -359,25 +403,25 @@ export function RfqPage() {
         placeholder: 'Ví dụ: hai NCC được mời không phản hồi trong hạn',
         okText: 'Tiếp tục',
         danger: false,
-        onOk: async (reason) => startAward(reason),
+        onOk: async (reason) => askSelection(reason),
       })
       return
     }
-    void startAward(null)
+    void askSelection(null)
   }
 
-  /** Xem trước chuỗi duyệt rồi chọn thầu (kèm giải trình ít báo giá nếu có). */
-  const startAward = async (fewQuotesReason: string | null) => {
+  /** Xem trước chuỗi duyệt rồi chọn thầu (kèm giải trình ít báo giá, lý do chọn 3A nếu có). */
+  const startAward = async (fewQuotesReason: string | null, selectionReason: string | null) => {
     if (!doc) return
     const lines = doc.lines.map((l) => ({ rfqLineId: l.id, supplierId: award[l.id]?.supplierId ?? null, reason: orNull(award[l.id]?.reason) }))
     await confirmSubmitWithPreview(modal, {
       title: `Chọn thầu và gửi duyệt kết quả RFQ ${doc.no}? Trong lúc chờ không nhập thêm báo giá; duyệt xong mới tạo được đơn mua hàng.`,
       docType: 'RFQ',
       okText: 'Chọn thầu, gửi duyệt',
-      prepare: async () => ({ id: doc.id, award: { lines, fewQuotesReason } }),
+      prepare: async () => ({ id: doc.id, award: { lines, fewQuotesReason, selectionReason } }),
       onSubmit: async (id) => {
         try {
-          const result = await mutations.award.mutateAsync({ id, lines, fewQuotesReason })
+          const result = await mutations.award.mutateAsync({ id, lines, fewQuotesReason, selectionReason })
           setAwardEdits({})
           message.success(result.status === 'Awarded' ? `Kết quả RFQ ${doc.no} đã được duyệt ngay.` : `Đã gửi duyệt kết quả chọn thầu RFQ ${doc.no}.`)
         } catch (e) {
@@ -723,6 +767,7 @@ export function RfqPage() {
         title="Yêu cầu báo giá (RFQ)"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'Rfq', id: doc?.id }}
+        printPath={doc && (doc.quotedSupplierCount ?? 0) > 0 ? `/api/rfqs/${doc.id}/pdf` : undefined}
         status={status}
         meta={
           doc && (
@@ -757,6 +802,16 @@ export function RfqPage() {
             <Form.Item label="Hạn nộp báo giá" name="deadline" rules={[{ required: true, message: 'Chọn hạn nộp.' }]}>
               <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
             </Form.Item>
+            {doc && (
+              <Form.Item label="Loại mua – biểu mẫu" tooltip="Theo dòng đề nghị nguồn; lưu nháp thì tính lại (design.md mục 19.1 Q7).">
+                <Input readOnly value={formText(doc)} data-testid="rfq-form-code" />
+              </Form.Item>
+            )}
+            {doc?.selectionReason && (
+              <Form.Item label="Lý do chọn (3A)">
+                <Input readOnly value={doc.selectionReason} />
+              </Form.Item>
+            )}
             {weight('priceWeight', 'Trọng số giá (%)')}
             {weight('qualityWeight', 'Trọng số chất lượng (%)')}
             {weight('deliveryWeight', 'Trọng số giao hàng (%)')}
