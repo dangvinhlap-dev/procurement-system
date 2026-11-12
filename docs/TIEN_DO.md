@@ -283,8 +283,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - **Phát hành 0.23.0 (12/11/2026)**: tag `v0.23.0` – đợt Z (Z1–Z4c quy tắc chung chứng từ) + Y2, Y3a–c, Y5a–c, Y10. 10 migration (78 → 88),
   script `db/scripts/0.23.0.sql` (idempotent) chạy thử 2 lần trên bản sao `procurement_kiemtra_0230` (từ CSDL bản test 5007 0.22.2), không lỗi,
   số dòng PR/PO/AuditLog giữ nguyên. Build 0 cảnh báo, `dotnet test` 689/689. Đóng gói `publish.ps1 -NoInstall` →
-  `artifacts\procurement-0.23.0.zip`; Release https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.23.0. Bản test 5007
-  **chưa nâng** lên 0.23.0 – làm khi người dùng yêu cầu (sao lưu, chạy `0.23.0.sql`, khai bộ cấp BTH, danh mục đơn vị mua, công trình).
+  `artifacts\procurement-0.23.0.zip`; Release https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.23.0.
+  **Bản test 5007 nâng lên 0.23.0 (12/11/2026)**: `app` = 0.23.0, `app-0.22.2` = bản cũ, gói `goi\0.23.0`, sao lưu
+  `D:\project\procurement_kiemtra_0150_truoc_0.23.0.dump`; chạy `0.23.0.sql` (88 migration); PID 18204 trong `pid.txt`; `/health` Healthy 0.23.0
+  (cả qua http://192.168.1.199:5007). Gán quyền mới qua API (script scratchpad `roles_0230.py`): vai trò trùng mã mẫu nhận quyền mới theo
+  `RoleTemplates` (CHUTICH, GDKHOI, TPCUVT, PHOCTUBCL duyệt BTH; NVCUVT lập BTH + đơn vị mua; KHO nhập tồn; các vai trò khác xem), TOANQUYEN
+  đủ 8 quyền, POLAP xem BTH + đơn vị mua. Chưa khai bộ cấp duyệt BTH, đơn vị mua, công trình (chưa cấu hình thì BTH duyệt một cấp) – người test
+  tự khai hoặc dùng "Cấu hình duyệt mẫu…" bộ CUVT.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
