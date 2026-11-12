@@ -326,7 +326,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Bước 2 (e2e + hướng dẫn)**: e2e `internal-purchase.spec.ts` (BHA mua của NMI – NCC nội bộ NMI dùng lại nếu CSDL test đã có; PO gõ tay
     16.000 khác giá gợi ý 15.000; NMI xác nhận ở DBN; PO hiện "Đã xác nhận"); ngăn kéo DBN chỉ khóa khi không được quyết định. Hướng dẫn 03-mua-hang
     mục 3.4 "Mua nội bộ", 06-kho ghi chú thay ICS/ICR. tsc, oxlint, `npm run build` qua; e2e mới qua (API Testing 5000 + Vite 5173 Playwright tự bật).
-    Còn: Playwright đủ bộ, `dotnet test` đủ bộ lần cuối, merge.
+    Kiểm tra cuối: build 0 cảnh báo, `dotnet test` 698/698, Playwright đủ bộ 138/138 (Playwright tự bật API Testing 5000 + Vite 5173).
+    Người dùng giữ mặc định: DBN chỉ ô ghi chú (không tab Đính kèm), PRCW tính mua nội bộ là mua đúng quy định. **Đã merge.**
+    Đợt 0.24.0 (Y6, Y7, X7) hoàn tất – chờ người dùng yêu cầu phát hành 0.24.0; sau đó các lát 0.25.0 (Portal P1, P1b, P3).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
