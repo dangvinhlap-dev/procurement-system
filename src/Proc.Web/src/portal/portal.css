@@ -1,0 +1,154 @@
+/*
+ * Portal nhà cung cấp (lát P1 – docs/ui-style.md mục 5f). Gắn cạnh .erp-classic (ClassicScreen className="erp-portal") nên dùng lại biến
+ * --erp-* của classic.css: chữ 12px, viền 1px, bo tối đa 2px, không bóng, không chuyển động. Không viết màu cứng.
+ */
+.erp-classic.erp-portal {
+  height: auto;
+  min-height: 100vh;
+}
+
+/* Thanh trên dải màu: tên Portal, đường dẫn trang, NCC + người dùng, đăng xuất. */
+.erp-portal-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--erp-gap);
+  min-height: 32px;
+  padding: 0 var(--erp-gap);
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-portal-brand {
+  color: var(--erp-title);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.erp-portal-nav {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+
+.erp-portal-nav a {
+  padding: 2px var(--erp-gap);
+  color: var(--erp-text);
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.erp-portal-nav a:hover {
+  border-color: var(--erp-bar-border);
+}
+
+.erp-portal-nav a.active {
+  color: var(--erp-tab-text-active);
+  background: var(--erp-tab-active);
+}
+
+.erp-portal-user {
+  color: var(--erp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+
+.erp-portal-body {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--erp-gap);
+}
+
+.erp-portal-title {
+  margin: 0 0 var(--erp-gap);
+  color: var(--erp-title);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Khối thông tin có dải tiêu đề như "Thông tin phiếu" của DocumentForm. */
+.erp-portal-section {
+  margin-bottom: var(--erp-gap);
+  background: var(--erp-panel-bg);
+  border: 1px solid var(--erp-grid-line);
+}
+
+.erp-portal-section > h2 {
+  margin: 0;
+  padding: 2px var(--erp-gap);
+  color: var(--erp-title);
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-grid-line);
+}
+
+.erp-portal-section > .erp-portal-section-body {
+  padding: var(--erp-gap);
+}
+
+/* Bảng nhãn – giá trị hai cột. */
+.erp-portal-fields {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 2px var(--erp-gap);
+  margin: 0;
+}
+
+.erp-portal-fields dt {
+  color: var(--erp-text-muted);
+}
+
+.erp-portal-fields dd {
+  margin: 0;
+}
+
+/* Hộp đăng nhập / kích hoạt giữa màn hình: thanh tiêu đề dải màu như hộp thoại cổ điển. */
+.erp-portal-center {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px var(--erp-gap) var(--erp-gap);
+}
+
+.erp-portal-dialog {
+  width: 380px;
+  max-width: 100%;
+  background: var(--erp-panel-bg);
+  border: 1px solid var(--erp-bar-border);
+}
+
+.erp-portal-dialog > h1 {
+  margin: 0;
+  padding: 4px var(--erp-gap);
+  color: var(--erp-title);
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-bar-border);
+}
+
+.erp-portal-dialog-body {
+  padding: var(--erp-gap);
+}
+
+.erp-portal-dialog-body > .ant-alert {
+  margin-bottom: var(--erp-gap);
+}
+
+.erp-portal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--erp-gap);
+}
+
+.erp-portal-footer {
+  padding: 2px var(--erp-gap);
+  color: var(--erp-text-muted);
+  border-top: 1px solid var(--erp-grid-line);
+  text-align: right;
+}

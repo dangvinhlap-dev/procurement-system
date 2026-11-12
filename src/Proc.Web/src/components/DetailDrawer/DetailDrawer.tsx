@@ -13,6 +13,11 @@ export interface DetailTab {
   key: string
   label: string
   children: ReactNode
+  /**
+   * Chỉ vẽ khi mở tab lần đầu. Dùng cho tab không có ô của form (bảng chỉ xem/thao tác riêng): tránh tiêu đề cột trùng nhãn ô form
+   * ở tab khác (ví dụ "Họ tên", "Trạng thái") và đỡ gọi API khi không mở tab.
+   */
+  lazy?: boolean
 }
 
 /** Thuộc tính của DetailDrawer. */
@@ -145,8 +150,8 @@ export function DetailDrawer({
               className="detail-drawer-tabs"
               activeKey={tab}
               onChange={setTab}
-              // Vẽ sẵn mọi tab để trường ở tab chưa mở vẫn thuộc form và được kiểm tra khi Lưu.
-              items={tabs.map((t) => ({ key: t.key, label: t.label, children: t.children, forceRender: true }))}
+              // Vẽ sẵn mọi tab để trường ở tab chưa mở vẫn thuộc form và được kiểm tra khi Lưu (trừ tab `lazy` – không có ô form).
+              items={tabs.map((t) => ({ key: t.key, label: t.label, children: t.children, forceRender: !t.lazy }))}
             />
           </Form>
         </div>

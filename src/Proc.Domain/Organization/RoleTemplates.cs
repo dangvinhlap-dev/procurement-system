@@ -274,6 +274,8 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.MasterData.SupplierManage, Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
             Permissions.Sourcing.RfqManage, Permissions.Sourcing.RfqAward, Permissions.Purchase.PoCreate, Permissions.Report.PurchaseView,
+            // Lát P1: Phòng CUVT mời NCC vào Portal (Q11).
+            Permissions.MasterData.SupplierPortal,
             // Lát Y5a: người lập bảng tổng hợp 2A/2B gán đơn vị mua – tự quản lý danh mục đơn vị mua (Q3).
             Permissions.Purchase.UnitManage,
             // Lát Y5b: lập bảng tổng hợp 2A/2B (chọn dòng đề nghị đã duyệt, gán đơn vị mua); đọc ngân sách, dự toán trên đầu phiếu.

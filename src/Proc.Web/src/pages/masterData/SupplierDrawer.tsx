@@ -25,6 +25,7 @@ import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { auditScopeProps } from '../../components/FieldHelp/auditScope'
 import { SupplierCategoryField } from './SupplierCategoryField'
 import { SupplierCompanyTab, SupplierExtensionTab, SupplierItemsTab } from './SupplierLinkTabs'
+import { SupplierPortalTab } from './SupplierPortalTab'
 import { DocNo } from '../../classic/DocNo'
 
 interface SupplierFormValues {
@@ -480,6 +481,13 @@ export function SupplierDrawer({
                 key: 'attachments',
                 label: 'Hồ sơ đính kèm',
                 children: <AttachmentPanel ownerType="Supplier" ownerId={supplierId} canManage={hasPermission(Permission.SupplierManage)} />,
+              },
+              // Portal NCC (lát P1): Phòng CUVT mời quản trị NCC, khóa / mở khóa tài khoản.
+              {
+                key: 'portal',
+                label: 'Tài khoản Portal',
+                lazy: true,
+                children: <SupplierPortalTab supplierId={supplierId} isInternal={Boolean(supplier.data?.internalCompanyId)} />,
               },
               ...appraisalTabs,
             ]

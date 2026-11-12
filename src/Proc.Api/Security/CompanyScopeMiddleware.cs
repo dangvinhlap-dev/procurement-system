@@ -29,7 +29,10 @@ public sealed class CompanyScopeMiddleware
     /// <returns>Task hoàn tất khi xử lý xong.</returns>
     public async Task InvokeAsync(HttpContext context, UserScopeLoader loader)
     {
-        if (!Guid.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var userId))
+        // Request Portal NCC: UseAuthorization đã thay User bằng người dùng Portal (scheme riêng) – không có công ty, quyền nội bộ;
+        // phiên Portal do endpoint filter của /api/portal kiểm (design.md 19.5, lát P1).
+        if (context.User.HasClaim(c => c.Type == Proc.Infrastructure.Portal.PortalClaims.SupplierId)
+            || !Guid.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var userId))
         {
             await _next(context);
             return;

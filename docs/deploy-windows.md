@@ -77,6 +77,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Serilog:WriteTo` (mục `File`) | `path`: `D:\\ProcurementData\\logs\\proc-.log` |
 | `Printing:FontDirectories` | Để trống – Windows có sẵn Arial có dấu tiếng Việt |
 | `Email:*` | Gửi email bản sao thông báo (chờ duyệt, đã duyệt, bị từ chối…) qua SMTP của công ty: `Enabled` = `true`, `Host`, `Port` (587 STARTTLS / 465 SSL), `UserName`, `Password`, `FromAddress`, `AppBaseUrl` = địa chỉ người dùng mở phần mềm (nút "Mở trên phần mềm" trong thư). Để `false` thì không gửi thư |
+| `Portal:*` | Portal nhà cung cấp (lát P1): `BaseUrl` = địa chỉ NCC mở Portal, ghi vào link mời / đặt lại mật khẩu trong email (ví dụ tên miền Portal mở ra internet; trống thì lấy `Email:AppBaseUrl`, vẫn trống thì lấy địa chỉ trang người mời đang mở – đủ khi thử trong LAN). Đăng nhập Portal cần **email bật** để gửi mã OTP. `Audience` phải khác `Jwt:Audience`. `ExposeCodesForTesting` chỉ có tác dụng ở Development/Testing – server thật luôn tắt. Các thời hạn (`InviteValidHours` 168, `OtpValidMinutes` 10, `LockoutMinutes` 15…) thường không cần sửa |
 | `ApprovalReminder:*` | Nhắc người duyệt khi phiếu chờ quá 1 ngày làm việc (thông báo + email nếu bật email): mặc định `Enabled` = `true`, quét mỗi `PollMinutes` = 15 phút, tối đa `MaxReminders` = 3 lần mỗi cấp. Thường không cần sửa |
 
 Sinh `Jwt:SigningKey` (bộ sinh số ngẫu nhiên dùng cho mật mã):

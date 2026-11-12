@@ -40,6 +40,8 @@ export interface DataGridProps<T> {
    * Mã loại đối tượng của dòng trong nhật ký (ví dụ Supplier) khi rowKey là khóa bản ghi: bấm F1 trên ô xem lịch sử ô đó (design.md mục 9.3a).
    */
   auditEntity?: string
+  /** Báo dòng đang chọn (bấm chuột hoặc mũi tên) – để nút lệnh dưới lưới thao tác trên dòng đó. */
+  onSelectRow?: (row: T | null) => void
 }
 
 /**
@@ -71,6 +73,7 @@ export function DataGrid<T>({
   allColumns,
   loading = false,
   auditEntity,
+  onSelectRow,
 }: DataGridProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
   const [widths, setWidths] = useState<Record<string, number>>({})
@@ -250,6 +253,7 @@ export function DataGrid<T>({
 
   const selectKey = (key: string) => {
     setSelectedKey(key)
+    onSelectRow?.(rowByKey.get(key) ?? null)
     if (virtual) tableRef.current?.scrollTo({ key })
     else containerRef.current?.querySelector(`tr[data-row-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest' })
   }
@@ -340,7 +344,10 @@ export function DataGrid<T>({
             rec.group
               ? {}
               : {
-                  onClick: () => setSelectedKey(rec.key),
+                  onClick: () => {
+                    setSelectedKey(rec.key)
+                    onSelectRow?.(rec.row)
+                  },
                   onDoubleClick: () => onOpenRow?.(rec.row),
                   // Dòng là một bản ghi trong nhật ký – F1 trên ô đọc loại và khóa ở đây (FieldHelp/auditDom.ts).
                   ...(auditEntity ? ({ 'data-audit-entity': auditEntity, 'data-audit-id': rec.key } as HTMLAttributes<HTMLElement>) : {}),

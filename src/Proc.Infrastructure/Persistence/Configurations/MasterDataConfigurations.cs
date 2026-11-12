@@ -345,3 +345,39 @@ internal sealed class SupplierOnboardingConfiguration : IEntityTypeConfiguration
         builder.HasOne<SupplierChangeRequest>().WithMany().HasForeignKey(x => x.ChangeRequestId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>Cấu hình bảng SupplierPortalUser – tài khoản Portal NCC (design.md 19.5, lát P1).</summary>
+internal sealed class SupplierPortalUserConfiguration : IEntityTypeConfiguration<SupplierPortalUser>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierPortalUser> builder)
+    {
+        builder.ToTable("SupplierPortalUser");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Email).HasMaxLength(SupplierPortalUser.EmailMaxLength).IsRequired();
+        // Một email chỉ thuộc một NCC: email là tên đăng nhập Portal.
+        builder.HasIndex(x => x.Email).IsUnique();
+        builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Phone).HasMaxLength(50);
+        builder.Property(x => x.Position).HasMaxLength(100);
+        builder.Property(x => x.PasswordHash).HasMaxLength(500);
+        builder.Property(x => x.SecurityStamp).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => x.SupplierId);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng SupplierPortalCode – mã dùng một lần của Portal NCC (chỉ lưu băm).</summary>
+internal sealed class SupplierPortalCodeConfiguration : IEntityTypeConfiguration<SupplierPortalCode>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierPortalCode> builder)
+    {
+        builder.ToTable("SupplierPortalCode");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => x.CodeHash);
+        builder.HasIndex(x => new { x.PortalUserId, x.Purpose });
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

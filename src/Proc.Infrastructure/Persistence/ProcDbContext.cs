@@ -131,6 +131,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Yêu cầu duyệt NCC (design.md mục 18.6).</summary>
     public DbSet<SupplierChangeRequest> SupplierChangeRequests => Set<SupplierChangeRequest>();
 
+    /// <summary>Tài khoản Portal NCC (design.md 19.5, lát P1).</summary>
+    public DbSet<SupplierPortalUser> SupplierPortalUsers => Set<SupplierPortalUser>();
+
+    /// <summary>Mã dùng một lần của Portal NCC: link mời, đặt lại mật khẩu, OTP (chỉ lưu băm).</summary>
+    public DbSet<SupplierPortalCode> SupplierPortalCodes => Set<SupplierPortalCode>();
+
     /// <summary>Kê khai xung đột lợi ích (dùng chung, không lọc theo công ty – design.md mục 18.8).</summary>
     public DbSet<ConflictDeclaration> ConflictDeclarations => Set<ConflictDeclaration>();
 

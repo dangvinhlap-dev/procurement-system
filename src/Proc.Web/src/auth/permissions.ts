@@ -24,6 +24,8 @@ export const Permission = {
   SupplierView: 'MasterData.Supplier.View',
   SupplierManage: 'MasterData.Supplier.Manage',
   SupplierApprove: 'MasterData.Supplier.Approve',
+  /** Mời, khóa, mở khóa tài khoản Portal NCC (lát P1). */
+  SupplierPortal: 'MasterData.Supplier.Portal',
   ConflictView: 'MasterData.Conflict.View',
   ConflictManage: 'MasterData.Conflict.Manage',
   SoleSourceView: 'MasterData.SoleSource.View',

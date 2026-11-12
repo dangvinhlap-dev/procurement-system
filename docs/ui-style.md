@@ -134,6 +134,17 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Lưới `DataGrid`: khai báo `docRef: (r) => ({ docType, id })` trên cột – bấm đúp ô mở phiếu gốc của ô, không mở dòng.
 - Form: số phiếu đầu `DocumentForm` tự là ô chữ; số phiếu liên quan dùng `<DocNo no docType id />` thay cho link chữ.
 
+## 5f. Portal nhà cung cấp `/ncc` (lát P1, 12/11/2026)
+
+- Trang cho NCC, **đứng ngoài AppShell** (NCC không thấy menu, cây điều hướng nội bộ): `ClassicScreen className="erp-portal"`, CSS ở
+  `src/portal/portal.css`, chỉ dùng biến `--erp-*`; chữ 12px, viền 1px, bo ≤ 2px, không bóng như mọi màn hình.
+- Thanh trên dải màu: "Portal nhà cung cấp", đường dẫn trang (trang đang mở nền `--erp-tab-active` chữ trắng), họ tên – tên NCC, nút
+  Đăng xuất (icon đỏ). Nội dung rộng tối đa 1000px, giữa màn hình; tiêu đề trang 18px đậm `--erp-title`; khối thông tin có dải tiêu đề.
+- Đăng nhập, OTP, kích hoạt, quên / đặt lại mật khẩu: **hộp giữa màn hình** có thanh tiêu đề dải màu, chân ghi phiên bản.
+- Bảng người dùng (cả tab "Tài khoản Portal" của ngăn kéo NCC) dùng chung `PortalUserPanel`: `DataGrid` + nút dưới lưới Mời (icon xanh),
+  Gửi lại lời mời (vàng), Khóa (đỏ), Mở khóa (xanh) – thao tác trên dòng đang chọn (`DataGrid` prop `onSelectRow`). Tab ngăn kéo không có ô form (như "Tài khoản Portal") khai báo `lazy`
+  (`DetailTab`) – chỉ vẽ khi mở, để tiêu đề cột không trùng nhãn ô form ở tab khác.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

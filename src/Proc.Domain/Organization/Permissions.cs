@@ -79,6 +79,8 @@ public static class Permissions
         public const string SupplierManage = "MasterData.Supplier.Manage";
         /// <summary>Quyền "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp" (design.md mục 18.6).</summary>
         public const string SupplierApprove = "MasterData.Supplier.Approve";
+        /// <summary>Quyền "Mời, khóa, mở khóa tài khoản Portal NCC" (design.md 19.5, lát P1).</summary>
+        public const string SupplierPortal = "MasterData.Supplier.Portal";
         /// <summary>
         /// Quyền "Xem mọi kê khai xung đột lợi ích" (KSNB, Trưởng ban – design.md mục 18.8). Không có quyền này thì chỉ xem kê khai của mình.
         /// </summary>
@@ -346,6 +348,7 @@ public static class Permissions
         new(MasterData.SupplierView, "Xem nhà cung cấp"),
         new(MasterData.SupplierManage, "Thêm, sửa nhà cung cấp"),
         new(MasterData.SupplierApprove, "Duyệt hồ sơ, tài khoản ngân hàng nhà cung cấp"),
+        new(MasterData.SupplierPortal, "Mời, khóa, mở khóa tài khoản Portal NCC"),
         new(MasterData.ConflictView, "Xem mọi kê khai xung đột lợi ích"),
         new(MasterData.ConflictManage, "Ghi nhận thay, kết thúc kê khai xung đột lợi ích"),
         new(MasterData.SoleSourceView, "Xem phê duyệt NCC độc quyền"),
