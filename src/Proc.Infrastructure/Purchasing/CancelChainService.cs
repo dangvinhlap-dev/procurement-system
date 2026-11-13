@@ -56,6 +56,9 @@ internal sealed class CancelChainService : ICancelChainService
 
         /// <summary>Đề nghị thanh toán (lát Y8) – cuối chuỗi; chỉ khi chọn hủy chính nó (chuỗi có XNH đã xác nhận đã bị chặn).</summary>
         public PaymentRequest? Payment { get; set; }
+
+        /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a) – phiếu đầu của chuỗi tạp vụ, hủy sau đề nghị 1C đang giữ nó.</summary>
+        public SundryExpenseSheet? Sundry { get; set; }
         public List<PurchaseOrder> Orders { get; } = [];
         public List<PurchaseContract> Contracts { get; } = [];
         public List<SupplierPriceList> PriceLists { get; } = [];
@@ -94,6 +97,12 @@ internal sealed class CancelChainService : ICancelChainService
         {
             payment.Cancel(reason);
             await _approvals.SkipPendingAsync(payment, cancellationToken);
+        }
+
+        if (chain.Sundry is { } sundry)
+        {
+            sundry.Cancel(reason);
+            await _approvals.SkipPendingAsync(sundry, cancellationToken);
         }
 
         foreach (var receipt in chain.Receipts) receipt.Cancel(reason);
@@ -141,6 +150,7 @@ internal sealed class CancelChainService : ICancelChainService
         DocumentTypes.PurchaseOrder => RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken),
         DocumentTypes.PurchaseSummary => RowLocks.LockAsync<PurchaseSummary>(_db, [id], cancellationToken),
         DocumentTypes.PaymentRequest => RowLocks.LockAsync<PaymentRequest>(_db, [id], cancellationToken),
+        DocumentTypes.SundryExpenseSheet => RowLocks.LockAsync<SundryExpenseSheet>(_db, [id], cancellationToken),
         PooledType => RowLocks.LockAsync<PooledOrder>(_db, [id], cancellationToken),
         DocumentTypes.RequestForQuotation => RowLocks.LockAsync<Rfq>(_db, [id], cancellationToken),
         _ => Task.CompletedTask,
@@ -220,6 +230,15 @@ internal sealed class CancelChainService : ICancelChainService
                     ?? throw new NotFoundException("Không tìm thấy đề nghị thanh toán.");
                 if (payment.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {payment.No} đã hủy.");
                 chain.Payment = payment;
+                break;
+            }
+            case DocumentTypes.SundryExpenseSheet:
+            {
+                // Bảng kê tạp vụ 2C (lát Y11a): chuỗi = đề nghị 1C đang giữ bảng kê (lát Y11b) → chính bảng kê.
+                var sheet = await _db.SundryExpenseSheets.SingleOrDefaultAsync(s => s.Id == id, cancellationToken)
+                    ?? throw new NotFoundException("Không tìm thấy bảng kê chi phí tạp vụ.");
+                if (sheet.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {sheet.No} đã hủy.");
+                chain.Sundry = sheet;
                 break;
             }
             case PooledType:
@@ -355,6 +374,9 @@ internal sealed class CancelChainService : ICancelChainService
         if (chain.Payment is { } p0)
             Add(DocumentTypes.PaymentRequest, "Đề nghị thanh toán", p0.Id, p0.No, p0.Status.ToString(), p0.Status == ApprovalDocumentStatus.Draft,
                 p0.CreatedBy, null);
+        if (chain.Sundry is { } sheet)
+            Add(DocumentTypes.SundryExpenseSheet, "Bảng kê chi phí tạp vụ", sheet.Id, sheet.No, sheet.Status.ToString(),
+                sheet.Status == ApprovalDocumentStatus.Draft, sheet.CreatedBy, null);
         foreach (var c in chain.Receipts)
             Add(DocumentTypes.GoodsReceiptConfirmation, "Xác nhận nhận hàng", c.Id, c.No, c.Status.ToString(),
                 c.Status == ReceiptConfirmationStatus.Draft, c.CreatedBy, $"Nhận hàng của {orderNos.GetValueOrDefault(c.PurchaseOrderId, "PO")}");

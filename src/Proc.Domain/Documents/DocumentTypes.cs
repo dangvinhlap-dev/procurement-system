@@ -86,6 +86,9 @@ public static class DocumentTypes
     /// <summary>Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7).</summary>
     public const string PaymentRequest = "DNT";
 
+    /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C).</summary>
+    public const string SundryExpenseSheet = "BKT";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -97,6 +100,7 @@ public static class DocumentTypes
         new(GoodsReceiptConfirmation, "Xác nhận nhận hàng"),
         new(DeliveryNotice, "Báo giao hàng của NCC"),
         new(PaymentRequest, "Đề nghị thanh toán"),
+        new(SundryExpenseSheet, "Bảng kê chi phí tạp vụ"),
         new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
         new(ReturnToVendor, "Phiếu xuất trả NCC"),
         new(Transfer, "Phiếu chuyển kho nội bộ"),

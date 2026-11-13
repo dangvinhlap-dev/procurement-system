@@ -6591,6 +6591,141 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("PurchasingUnit", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.SundryExpenseLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("ExpenseDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReceiptNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SheetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Vendor")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SheetId", "LineNo");
+
+                    b.ToTable("SundryExpenseLine", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.SundryExpenseSheet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalRound")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("BudgetAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<decimal?>("BudgetUsedAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsOverBudget")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Date");
+
+                    b.HasIndex("CompanyId", "No")
+                        .IsUnique();
+
+                    b.HasIndex("DepartmentId", "CompanyId");
+
+                    b.HasIndex("DepartmentId", "Date");
+
+                    b.ToTable("SundryExpenseSheet", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.QuotationLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9340,6 +9475,31 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Proc.Domain.Purchasing.SundryExpenseLine", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.SundryExpenseSheet", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SheetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.SundryExpenseSheet", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Proc.Domain.Sourcing.QuotationLine", b =>
                 {
                     b.HasOne("Proc.Domain.Sourcing.RfqLine", null)
@@ -9651,6 +9811,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseSummary", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.SundryExpenseSheet", b =>
                 {
                     b.Navigation("Lines");
                 });

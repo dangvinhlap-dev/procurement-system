@@ -368,6 +368,41 @@ public static class PurchasingEndpoints
                 s.MarkPaidAsync(id, request, ct))
             .RequirePermission(Permissions.Purchase.PaymentPay);
 
+        // Bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C): bộ phận kê chi phí lặt vặt đã phát sinh, tính định mức tháng, duyệt BKT.
+        var sundries = app.MapGroup("/api/sundry-expense-sheets").WithTags("Bảng kê chi phí tạp vụ");
+        string[] sundryAny = [Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate, Permissions.Purchase.SundryApprove];
+        sundries.MapGet("/", (DateOnly? from, DateOnly? to, ISundryExpenseSheetService s, CancellationToken ct) =>
+                s.ListAsync(new SundryExpenseSheetFilter(from, to), ct))
+            .RequireAnyPermission(sundryAny);
+        sundries.MapGet("/{id:guid}", (Guid id, ISundryExpenseSheetService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(sundryAny);
+        sundries.MapPost("/", async (SaveSundryExpenseSheetRequest request, ISundryExpenseSheetService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/sundry-expense-sheets/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.SundryCreate)
+            .Validate<SaveSundryExpenseSheetRequest>();
+        sundries.MapPut("/{id:guid}", (Guid id, SaveSundryExpenseSheetRequest request, ISundryExpenseSheetService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SundryCreate)
+            .Validate<SaveSundryExpenseSheetRequest>();
+        sundries.MapPost("/{id:guid}/submit", (Guid id, ISundryExpenseSheetService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.SundryCreate);
+        // Rút về nháp – người lập (hoặc quản trị); service kiểm tra người lập.
+        sundries.MapPost("/{id:guid}/recall", (Guid id, ISundryExpenseSheetService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequireAnyPermission(Permissions.Purchase.SundryCreate, Permissions.System.DocumentCancel);
+        sundries.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, ISundryExpenseSheetService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SundryApprove);
+        sundries.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, ISundryExpenseSheetService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.SundryApprove);
+        // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị; đã ở đề nghị 1C thì chặn (service kiểm tra); bắt buộc lý do.
+        sundries.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, ISundryExpenseSheetService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequireAnyPermission(Permissions.Purchase.SundryCreate, Permissions.System.DocumentCancel);
+
         // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
         var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
         plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))

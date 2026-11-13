@@ -14,6 +14,10 @@ namespace Proc.Infrastructure.Purchasing;
 /// nữa – tránh đếm hai lần. PO nháp, bị từ chối (về nháp), đã hủy không tính.
 /// </para>
 /// <para>
+/// + Σ tổng <b>bảng kê chi phí tạp vụ 2C</b> Chờ duyệt / Đã duyệt (theo tháng ngày bảng kê, bộ phận của bảng kê – lát Y11a): chi phí tạp vụ không
+/// qua PR/PO nên chỉ đếm một lần ở bảng kê; khung chi phí loại C là định mức tháng của phòng ban (design.md mục 19.2).
+/// </para>
+/// <para>
 /// Phần PR chưa lên PO của một dòng = thành tiền dòng × (SL cơ sở − SL cơ sở đã lên PO được tính) / SL cơ sở, không âm, làm tròn 2 số.
 /// Ví dụ dòng 10 cái × 1.000.000 = 10.000.000, PO đã đặt 4 cái → còn 6.000.000. Hàng mới chưa có mã (mục 18.12) chưa gắn mã: tính đủ
 /// thành tiền; đã gắn mã thì đã thành dòng PR có mã nên tính theo dòng đó.
@@ -30,7 +34,7 @@ internal sealed class BudgetUsage
     public BudgetUsage(ProcDbContext db) => _db = db;
 
     /// <summary>
-    /// Kiểm tra ngân sách cho một phiếu PR/PO (lúc lưu, gửi duyệt). Phiếu đang xét không tính vào "đã dùng"; với PO, phần PR mà chính
+    /// Kiểm tra ngân sách cho một phiếu PR/PO/bảng kê tạp vụ (lúc lưu, gửi duyệt). Phiếu đang xét không tính vào "đã dùng"; với PO, phần PR mà chính
     /// PO này đặt coi như đã lên PO (không đếm cả ở PR lẫn ở PO).
     /// </summary>
     /// <param name="document">PR hoặc PO đang xét (dòng đã nạp).</param>
@@ -58,7 +62,7 @@ internal sealed class BudgetUsage
     /// </summary>
     /// <param name="year">Năm.</param>
     /// <param name="departmentId">Chỉ một bộ phận; null = mọi bộ phận.</param>
-    /// <param name="excludeDocumentId">Phiếu PR/PO không tính (phiếu đang kiểm tra).</param>
+    /// <param name="excludeDocumentId">Phiếu PR/PO/bảng kê không tính (phiếu đang kiểm tra).</param>
     /// <param name="extraOrdered">SL cơ sở theo dòng PR mà phiếu đang kiểm tra đặt thêm (PO đang xét).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Khóa (bộ phận, tháng) → số tiền đã dùng.</returns>
@@ -133,6 +137,14 @@ internal sealed class BudgetUsage
                 select new { g.Key.DepartmentId, g.Key.Month, Amount = g.Sum(n => n.Amount) })
             .ToListAsync(cancellationToken);
         foreach (var n in newItems) Add(result, (n.DepartmentId, n.Month), n.Amount);
+
+        var sundries = await _db.SundryExpenseSheets.AsNoTracking()
+            .Where(s => s.Date >= from && s.Date <= to && Counted.Contains(s.Status) && s.Id != excludeDocumentId)
+            .Where(s => departmentId == null || s.DepartmentId == departmentId)
+            .GroupBy(s => new { s.DepartmentId, s.Date.Month })
+            .Select(g => new { g.Key.DepartmentId, g.Key.Month, Amount = g.Sum(s => s.TotalAmount) })
+            .ToListAsync(cancellationToken);
+        foreach (var s in sundries) Add(result, (s.DepartmentId, s.Month), s.Amount);
         return result;
     }
 

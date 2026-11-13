@@ -67,7 +67,7 @@ public static class RoleTemplates
         Permissions.Pricing.PriceBankView, Permissions.Purchase.DemandPlanView, Permissions.Pricing.VolumeRebateView,
         Permissions.Purchase.PooledOrderView, Permissions.MasterData.SupplierOnboardingView, Permissions.Purchase.ReceiptView,
         Permissions.Purchase.UnitView, Permissions.Purchase.SummaryView, Permissions.Purchase.InternalSaleView,
-        Permissions.Purchase.PaymentView,
+        Permissions.Purchase.PaymentView, Permissions.Purchase.SundryView,
     ];
 
     /// <summary>Các vai trò mẫu Ban CUVT, theo thứ tự hiển thị.</summary>
@@ -122,6 +122,8 @@ public static class RoleTemplates
             Permissions.Inventory.DocumentView, Permissions.Inventory.ReceiptAccept,
             // Từ 0.22.0: dịch vụ do phòng ban đề xuất lập XNH (biên bản nghiệm thu); đơn vị đặt hàng nghiệm thu XNH (Q8, design.md mục 19.1).
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptAccept,
+            // Lát Y11a: bộ phận lập bảng kê chi phí tạp vụ 2C (tự đặt – người quản trị đổi được).
+            Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate,
         ]),
 
         new("KHO", "Kho", "Nhận hàng, ghi sổ phiếu kho, xem tồn",
@@ -144,7 +146,7 @@ public static class RoleTemplates
             Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.AccountingExport,
             Permissions.Purchase.ReceiptView,
             // Lát Y8: kế toán xem đề nghị thanh toán và ghi Đã chi sau khi duyệt (design.md mục 19.3 bước 7).
-            Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentPay,
+            Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentPay, Permissions.Purchase.SundryView,
             // Lát Y9b: xuất chứng từ mua cho phần mềm kế toán (thay ACCX từ khi bỏ kho – design.md mục 19.3 "Lát Y9").
             Permissions.Report.PurchaseAccountingExport,
         ]),
@@ -187,8 +189,8 @@ public static class RoleTemplates
             Permissions.Sourcing.RfqApproveAward,
             // Phê duyệt ngoại lệ ở bước Hội đồng duyệt NCC & giá tháng (Q6 – chặng GTX, lát H2).
             Permissions.Pricing.MonthlyApprovalApprove,
-            // Cấp cuối đề nghị thanh toán 5A/5B (lát Y8).
-            Permissions.Purchase.PaymentApprove,
+            // Cấp cuối đề nghị thanh toán 5A/5B (lát Y8) và bảng kê tạp vụ 2C (lát Y11a).
+            Permissions.Purchase.PaymentApprove, Permissions.Purchase.SundryApprove,
             Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
             Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.Control.FindingReceive,
@@ -261,6 +263,8 @@ public static class RoleTemplates
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
             Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept, Permissions.Report.PurchaseView,
+            // Cấp đầu bảng kê tạp vụ 2C của bộ phận (lát Y11a).
+            Permissions.Purchase.SundryView, Permissions.Purchase.SundryApprove,
         ]),
         new("GDKHOI", "Giám đốc khối", "Duyệt đề nghị mua 1A/1B/DV của các bộ phận trong khối – người duyệt động theo khối của phiếu (khai GĐ khối ở danh mục khối)",
         [
@@ -270,6 +274,8 @@ public static class RoleTemplates
             Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryApprove,
             // GĐ khối đề nghị – cấp đầu đề nghị thanh toán 5A/5B (lát Y8).
             Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentApprove,
+            // GĐ khối duyệt bảng kê tạp vụ 2C của bộ phận trong khối (lát Y11a).
+            Permissions.Purchase.SundryView, Permissions.Purchase.SundryApprove,
         ]),
         new("TPCUVT", "Trưởng phòng Cung ứng vật tư", "Kiểm tra đề nghị mua (Phòng CUVT), duyệt so sánh/trình giá 3a, 3A, 3B (kết quả chọn thầu), duyệt PO 4A/4B – không lập phiếu",
         [
@@ -299,14 +305,15 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove,
             Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
-            Permissions.Purchase.PaymentApprove,
+            Permissions.Purchase.PaymentApprove, Permissions.Purchase.SundryApprove,
         ]),
         // Lát Y3c: duyệt chặng đề nghị mua loại A vượt dự toán công trình (PRE – Q5, tự đặt) nên có quyền duyệt PR.
         new("GDTCKT", "Giám đốc Tài chính – Nguồn quỹ – Kế toán", "Duyệt so sánh/trình giá 3a, 3A, 3B và PO 4A/4B sau Trưởng phòng TC-NQ-KT; duyệt đề nghị mua công trình vượt dự toán",
         [
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Sourcing.RfqApproveAward, Permissions.Purchase.PoApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView, Permissions.Report.PurchaseView,
-            Permissions.Purchase.PaymentApprove,
+            // Duyệt 5A/5B; bảng kê tạp vụ vượt định mức (chặng TVB – lát Y11a, tự đặt).
+            Permissions.Purchase.PaymentApprove, Permissions.Purchase.SundryApprove,
         ]),
         // Q6: Trưởng phòng HC kiểm định mức nhóm B (và dịch vụ – như B) – có trong bộ cấp PR, PRS của cấu hình mẫu CUVT, không có trong PRA (lát Y3c).
         new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) và dịch vụ",

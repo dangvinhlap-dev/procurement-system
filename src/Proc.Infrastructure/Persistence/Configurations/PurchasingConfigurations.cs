@@ -596,6 +596,59 @@ internal sealed class PaymentRequestLineConfiguration : IEntityTypeConfiguration
     }
 }
 
+/// <summary>
+/// Cấu hình bảng SundryExpenseSheet – bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C). Số BKT duy nhất theo công ty; bộ phận khóa
+/// ngoại kèm công ty như bảng tổng hợp.
+/// </summary>
+internal sealed class SundryExpenseSheetConfiguration : IEntityTypeConfiguration<SundryExpenseSheet>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SundryExpenseSheet> builder)
+    {
+        builder.ToTable("SundryExpenseSheet");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.DocType);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.Date });
+        // Tính định mức đã dùng theo bộ phận × tháng.
+        builder.HasIndex(x => new { x.DepartmentId, x.Date });
+        builder.Property(x => x.Note).HasMaxLength(SundryExpenseSheet.NoteMaxLength);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.ClosedReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
+        builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
+        // Định mức tháng lúc lưu / gửi gần nhất (ApprovableDocument) – bảng kê tính vào ngân sách bộ phận × tháng.
+        builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.SheetId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng SundryExpenseLine – một khoản chi của bảng kê tạp vụ.</summary>
+internal sealed class SundryExpenseLineConfiguration : IEntityTypeConfiguration<SundryExpenseLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SundryExpenseLine> builder)
+    {
+        builder.ToTable("SundryExpenseLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.SheetId, x.LineNo });
+        builder.Property(x => x.Description).HasMaxLength(SundryExpenseSheet.DescriptionMaxLength).IsRequired();
+        builder.Property(x => x.Vendor).HasMaxLength(SundryExpenseSheet.VendorMaxLength);
+        builder.Property(x => x.ReceiptNo).HasMaxLength(SundryExpenseSheet.ReceiptNoMaxLength);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+    }
+}
+
 /// <summary>Cấu hình bảng PurchaseSummaryLine – dòng bảng tổng hợp (một dòng đề nghị mua + đơn vị mua).</summary>
 internal sealed class PurchaseSummaryLineConfiguration : IEntityTypeConfiguration<PurchaseSummaryLine>
 {

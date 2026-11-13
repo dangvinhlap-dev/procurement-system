@@ -132,6 +132,8 @@ export const screens: Screen[] = [
   { code: 'XNH', title: 'Xác nhận nhận hàng (XNH)', navLabel: 'Xác nhận nhận hàng', path: '/mua-hang/xac-nhan-nhan-hang', icon: <InboxOutlined />, group: 'purchasing', anyPermission: [Permission.ReceiptView, Permission.ReceiptManage, Permission.ReceiptAccept] },
   // Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7): lập cho PO đã nhận hàng có hóa đơn, duyệt, kế toán ghi Đã chi.
   { code: 'DNT', title: 'Đề nghị thanh toán (DNT)', navLabel: 'Đề nghị thanh toán', path: '/mua-hang/de-nghi-thanh-toan', icon: <AccountBookOutlined />, group: 'purchasing', anyPermission: [Permission.PaymentView, Permission.PaymentCreate, Permission.PaymentApprove, Permission.PaymentPay] },
+  // Bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C): bộ phận kê chi phí lặt vặt đã phát sinh, tính định mức tháng, trình duyệt.
+  { code: 'BKT', title: 'Bảng kê chi phí tạp vụ (BKT)', navLabel: 'Bảng kê tạp vụ', path: '/mua-hang/bang-ke-tap-vu', icon: <ProfileOutlined />, group: 'purchasing', anyPermission: [Permission.SundryView, Permission.SundryCreate, Permission.SundryApprove] },
   { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing', permission: Permission.PoView },
   { code: 'KHN', title: 'Kế hoạch nhu cầu', navLabel: 'Kế hoạch nhu cầu', path: '/mua-hang/ke-hoach-nhu-cau', icon: <CalendarOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
   { code: 'KHNTH', title: 'Tổng hợp nhu cầu', navLabel: 'Tổng hợp nhu cầu', path: '/mua-hang/tong-hop-nhu-cau', icon: <BarChartOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },

@@ -69,6 +69,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Inventory.DocumentView, InventoryTypes);
         Add(Permissions.Purchase.ReceiptView, DocumentTypes.GoodsReceiptConfirmation);
         Add(Permissions.Purchase.PaymentView, DocumentTypes.PaymentRequest);
+        Add(Permissions.Purchase.SundryView, DocumentTypes.SundryExpenseSheet);
         Add(Permissions.Pricing.PriceListView, DocumentTypes.PriceList);
         Add(Permissions.Sourcing.RfqView, DocumentTypes.Sourcing, DocumentTypes.RequestForQuotation);
         Add(Permissions.Purchase.ContractView, DocumentTypes.Contract, ApprovalTypes.ContractAmendment);
@@ -186,6 +187,23 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PaymentRequest, d.Id, d.No, d.Date, null, null, null,
                 $"{(d.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {d.Supplier}",
                 d.PayableAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.SundryExpenseSheet))
+        {
+            // Bảng kê chi phí tạp vụ 2C (lát Y11a): mô tả = 2C + bộ phận; giá trị = tổng bảng kê.
+            var q = _db.SundryExpenseSheets.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            if (acted) { var actedIds = ActedIds(DocumentTypes.SundryExpenseSheet); q = q.Where(d => actedIds.Contains(d.Id)); }
+            var rows = await q.OrderByDescending(d => d.Date).Take(take)
+                .Select(d => new
+                {
+                    d.Id, d.No, d.Date, d.TotalAmount, d.Status, d.CreatedBy, d.CreatedAt,
+                    Department = _db.Departments.Where(x => x.Id == d.DepartmentId).Select(x => x.Name).FirstOrDefault(),
+                })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.SundryExpenseSheet, d.Id, d.No, d.Date, null, null, null, $"2C – {d.Department}",
+                d.TotalAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
         }
 
         if (wanted.Contains(DocumentTypes.PurchaseOrder))

@@ -84,7 +84,8 @@ public static class ApprovalRuleTemplates
     /// Chuỗi ký của biểu mẫu CUVT (lát O3 – design.md mục 19.3, Q6, Q10, Q18), áp cho từng công ty. Ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch –
     /// Q6), người quản trị chỉnh sau. Đề nghị mua theo loại mua (lát Y3c): 1B (PR) 8 cấp có Thủ kho nơi nhận và Trưởng phòng HC kiểm định mức nhóm
     /// B; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán công trình (PRE) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL); bảng tổng hợp
-    /// 2A/2B (BTH – lát Y5b) 4 cấp; đề nghị thanh toán 5A/5B (DNT – lát Y8) 4 cấp. Chưa có (thêm khi làm lát tương ứng): 1C, bảng kê 2C (Y11).
+    /// 2A/2B (BTH – lát Y5b) 4 cấp; đề nghị thanh toán 5A/5B (DNT – lát Y8) 4 cấp, 1C dùng chung bộ DNT (lát Y11b); bảng kê tạp vụ 2C (BKT – lát Y11a) 4 cấp, vượt định
+    /// mức (TVB) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL).
     /// </summary>
     public static readonly IReadOnlyList<ApprovalRuleTemplate> CuvtForms =
     [
@@ -128,5 +129,10 @@ public static class ApprovalRuleTemplates
         new(DocumentTypes.PaymentRequest, 2, "TPTCKT", false, "5A/5B: Trưởng phòng TC-NQ-KT"),
         new(DocumentTypes.PaymentRequest, 3, "GDTCKT", false, "5A/5B: Giám đốc TC-NQ-KT"),
         new(DocumentTypes.PaymentRequest, 4, "CHUTICH", false, "5A/5B: Chủ tịch duyệt"),
+        new(DocumentTypes.SundryExpenseSheet, 1, null, false, "2C: Trưởng phòng/ban của bộ phận", ApproverKind.DepartmentHead),
+        new(DocumentTypes.SundryExpenseSheet, 2, null, false, "2C: Giám đốc khối của bộ phận", ApproverKind.DivisionDirector),
+        new(DocumentTypes.SundryExpenseSheet, 3, "TPTCKT", false, "2C: Phòng TC-NQ-KT kiểm định mức"),
+        new(DocumentTypes.SundryExpenseSheet, 4, "CHUTICH", false, "2C: Chủ tịch duyệt (ngưỡng 0 như biểu mẫu – Q6)"),
+        new(ApprovalTypes.SundryOverBudget, 1, "GDTCKT", false, "2C vượt định mức tháng (Q5): Giám đốc TC-NQ-KT xem xét (tự đặt)"),
     ];
 }

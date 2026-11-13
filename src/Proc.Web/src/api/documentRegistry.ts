@@ -68,6 +68,7 @@ export const docTypeLabels: Record<string, string> = {
   GTH: 'Duyệt NCC và giá tháng',
   BTH: 'Bảng tổng hợp đề xuất mua',
   DNT: 'Đề nghị thanh toán',
+  BKT: 'Bảng kê chi phí tạp vụ',
   KSG: 'Khảo sát giá thị trường',
   CKB: 'Thỏa thuận chiết khấu sản lượng gộp',
   KHN: 'Kế hoạch nhu cầu',
@@ -90,7 +91,7 @@ export function documentPath(docType: string, id: string): string | null {
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang', KSG: '/gia-ncc/khao-sat-gia', CKB: '/gia-ncc/chiet-khau-san-luong', KHN: '/mua-hang/ke-hoach-nhu-cau',
     HSN: '/gia-ncc/ho-so-ncc-moi', XNH: '/mua-hang/xac-nhan-nhan-hang', DHG: '/mua-hang/dat-hang-gop',
-    BTH: '/mua-hang/bang-tong-hop', DNT: '/mua-hang/de-nghi-thanh-toan',
+    BTH: '/mua-hang/bang-tong-hop', DNT: '/mua-hang/de-nghi-thanh-toan', BKT: '/mua-hang/bang-ke-tap-vu',
   }
   return pages[docType] ? `${pages[docType]}/${id}` : null
 }

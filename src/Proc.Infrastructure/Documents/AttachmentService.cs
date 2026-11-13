@@ -33,6 +33,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.PurchaseSummary] = (Permissions.Purchase.SummaryView, Permissions.Purchase.SummaryManage),
             // Đề nghị thanh toán (lát Y8): người duyệt (GĐ khối, TC-NQ-KT, Chủ tịch) có quyền xem nên đính kèm được vào bước duyệt.
             [AttachmentOwnerTypes.PaymentRequest] = (Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate),
+            // Bảng kê tạp vụ 2C (lát Y11a): bộ phận đính kèm hóa đơn bán lẻ, phiếu chi; người duyệt đính kèm vào bước duyệt.
+            [AttachmentOwnerTypes.SundryExpenseSheet] = (Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate),
             [AttachmentOwnerTypes.InventoryDocument] = (Permissions.Inventory.DocumentView, Permissions.Inventory.DocumentCreate),
             // Phiếu xác nhận nhận hàng XNH (lát K2): thủ kho / phòng ban đề xuất đính kèm phiếu giao, biên bản nghiệm thu, ảnh hàng.
             [AttachmentOwnerTypes.GoodsReceiptConfirmation] = (Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage),
@@ -77,6 +79,7 @@ public sealed class AttachmentService : IAttachmentService
         AttachmentOwnerTypes.PurchaseContract, AttachmentOwnerTypes.SoleSourceApproval, AttachmentOwnerTypes.ContractAmendment,
         AttachmentOwnerTypes.SupplierOnboarding, AttachmentOwnerTypes.MonthlySupplierApproval, AttachmentOwnerTypes.VolumeRebateAgreement,
         AttachmentOwnerTypes.PooledOrder, AttachmentOwnerTypes.PurchaseSummary, AttachmentOwnerTypes.PaymentRequest,
+        AttachmentOwnerTypes.SundryExpenseSheet,
     ];
 
     /// <summary>Người duyệt đính kèm vào bước mình vừa xử lý trong khoảng này (hộp thoại duyệt tải file ngay sau khi duyệt).</summary>
@@ -345,6 +348,8 @@ public sealed class AttachmentService : IAttachmentService
             AttachmentOwnerTypes.PurchaseSummary => await _db.PurchaseSummaries.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.PaymentRequest => await _db.PaymentRequests.Where(x => x.Id == ownerId)
+                .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
+            AttachmentOwnerTypes.SundryExpenseSheet => await _db.SundryExpenseSheets.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),
             AttachmentOwnerTypes.PurchaseContract => await _db.PurchaseContracts.Where(x => x.Id == ownerId)
                 .Select(x => new OwnerRow(x.CompanyId)).FirstOrDefaultAsync(cancellationToken),

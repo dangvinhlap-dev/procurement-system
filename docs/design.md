@@ -2501,6 +2501,20 @@ hành 0.27.0"; chưa có biểu mẫu, người dùng có thể chỉnh):
 | Y9-5 | Chứng từ và **ngày lọc**: **PO** đã duyệt / đã đóng theo **ngày duyệt**; **XNH** đã xác nhận theo **ngày nhận** (kèm số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH; XNH chưa có hóa đơn vẫn xuất, tô màu trên màn hình); **đề nghị thanh toán** đã duyệt (gồm đã chi) theo **ngày duyệt** – nháp / chờ duyệt / hủy không xuất. Lọc loại PO, XNH, DNT (trống = tất cả). |
 | Y9-6 | File Excel: sheet **Tổng hợp** (mỗi chứng từ một dòng: loại, ngày hiệu lực, số, PO, NCC – mã tại công ty – MST, hóa đơn, tiền trước thuế, thuế, tổng, tình trạng; DNT: cột tiền = tổng hóa đơn, tổng = số tiền đề nghị), **Đơn mua hàng** (dòng PO: loại mua A/B/DV, bộ phận, công trình, SL, đơn giá, % CK, thành tiền, thuế), **Nhận hàng – hóa đơn** (dòng XNH: SL thực nhận × đơn giá thực mua, thuế; tiền hóa đơn của phiếu lặp lại mỗi dòng), **Đề nghị thanh toán** (dòng hóa đơn: biểu mẫu, hình thức, tài khoản ngân hàng chụp trên phiếu, XNH, hóa đơn, số tiền dòng; tổng – giảm trừ – số tiền đề nghị của phiếu lặp lại; ngày chi, ghi chú chi), **Hướng dẫn** (ý nghĩa từng cột). Cột chữ kiểu Text (mã, MST giữ số 0 đầu); số, ngày giữ kiểu số. |
 
+**Lát Y11a – bảng kê chi phí tạp vụ 2C (13/11/2026, bản 0.27.0 – mục 19.2 loại C, 19.3, Q17).** Quy tắc tự đặt (người dùng chọn "làm Y8, Y11, Y9
+rồi phát hành 0.27.0"; chưa có biểu mẫu Excel 1C/2C, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| Y11-1 | **Bảng kê chi phí tạp vụ** (bảng `SundryExpenseSheet`, số **BKT**, màn hình BKT – Mua hàng → Bảng kê tạp vụ): bộ phận kê chi phí lặt vặt **đã phát sinh**, không qua PR/RFQ/PO. Đầu phiếu: ngày bảng kê, **bộ phận** (bắt buộc – người duyệt động và định mức), ghi chú; đính kèm loại `SundryExpenseSheet` (chứng từ có phê duyệt – mục 20). |
+| Y11-2 | Dòng: **ngày chi** (không sau ngày bảng kê), **nội dung chi** (bắt buộc, ≤ 500), nơi mua / người bán, số hóa đơn / chứng từ, **số tiền đã chi** (gồm thuế nếu có, > 0, numeric(19,2)); tối đa 200 dòng. Tổng bảng kê = Σ số tiền. |
+| Y11-3 | **Định mức tháng** = ngân sách bộ phận × tháng (mục 18.24) của **tháng ngày bảng kê**: "đã dùng" cộng tổng bảng kê Chờ duyệt / Đã duyệt (cùng PR, PO); tính theo số tiền đã chi (chi phí tạp vụ thường không tách VAT). Kiểm lúc lưu và lúc gửi; vượt thì **không chặn**, thêm chặng **TVB** "Bảng kê tạp vụ vượt định mức" (Q5), cấp cao nhất duyệt sau cùng như đề nghị mua. |
+| Y11-4 | Duyệt bộ cấp **BKT** – "Cấu hình duyệt mẫu" CUVT: **Trưởng phòng ban của phiếu** → **GĐ khối của phiếu** → **TP TC-NQ-KT** (Phòng TC-NQ-KT kiểm định mức) → **Chủ tịch**; TVB: **GĐ TC-NQ-KT**. Chưa cấu hình: một cấp theo quyền duyệt. Áp đủ mục 20: ý kiến + đính kèm từng bước, khóa sau duyệt, ổ khóa vàng, Kiểm tra phê duyệt, rút về nháp (người lập), hủy (nháp – người lập; đã gửi – quản trị; lý do bắt buộc; hủy dây chuyền gồm đề nghị 1C đang giữ bảng kê rồi đến bảng kê). |
+| Y11-5 | Quyền `Purchase.Sundry.View` (xem – mọi vai trò xem nghiệp vụ mua, KETOAN), `.Create` (lập, sửa, gửi – DENGHI), `.Approve` (TRUONGPHONGBAN, GDKHOI, TPTCKT, GDTCKT, CHUTICH). Có trong Tra cứu chứng từ, Việc cần làm, thông báo duyệt, nhắc quá hạn, trang duyệt gọn `/duyet/BKT/{id}`. |
+
+API `/api/sundry-expense-sheets` (+ `/{id}/submit|approve|reject|recall|cancel`). Migration `V0_27_0_BangKeTapVu` (bảng `SundryExpenseSheet`,
+`SundryExpenseLine`; `Down()` xóa hai bảng – mất mọi bảng kê). Bảng kê đã duyệt gộp vào đề nghị thanh toán tổng hợp **1C** ở lát Y11b.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
@@ -2703,7 +2717,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
-| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a – xong 13/11/2026; 1C Y11b), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)

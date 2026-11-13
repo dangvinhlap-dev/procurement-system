@@ -12,6 +12,7 @@ export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'Pu
   | 'MarketPriceSurvey' | 'DemandPlan' | 'VolumeRebateAgreement' | 'VolumeRebateReceipt' | 'PooledOrder' | 'AppraisalOpinion'
   | 'SupplierOnboarding' | 'GoodsReceiptConfirmation' | 'ApprovalDelegation' | 'ConstructionProject' | 'PurchaseSummary' | 'RfqPortalQuote' | 'PoSupplierFile' | 'DeliveryNoticeFile'
   | 'PaymentRequest'
+  | 'SundryExpenseSheet'
 
 /** Một file đính kèm. */
 export interface AttachmentItem {

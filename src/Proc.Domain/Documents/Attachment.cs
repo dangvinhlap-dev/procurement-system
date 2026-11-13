@@ -104,12 +104,15 @@ public static class AttachmentOwnerTypes
     /// <summary>Đề nghị thanh toán 5A/5B (lát Y8) – chứng từ có phê duyệt, áp quy tắc khóa đính kèm mục 20.</summary>
     public const string PaymentRequest = "PaymentRequest";
 
+    /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a) – chứng từ có phê duyệt (hóa đơn bán lẻ, phiếu chi kèm theo), áp quy tắc khóa mục 20.</summary>
+    public const string SundryExpenseSheet = "SundryExpenseSheet";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
         GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile,
-        PaymentRequest];
+        PaymentRequest, SundryExpenseSheet];
 }
 
 /// <summary>
