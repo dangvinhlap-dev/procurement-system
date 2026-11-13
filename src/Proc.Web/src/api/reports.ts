@@ -837,6 +837,45 @@ export function useAccountingDocuments(filter: AccountingExportFilter) {
   })
 }
 
+/** Một chứng từ mua sẽ xuất cho kế toán (lát Y9b, design.md mục 19.3 "Lát Y9"). */
+export interface PurchaseAccountingDocument {
+  documentId: string
+  docType: 'PO' | 'XNH' | 'DNT'
+  no: string
+  date: string
+  /** Ngày lọc: ngày duyệt (PO, DNT), ngày nhận (XNH). */
+  effectiveDate: string
+  purchaseOrderNo: string | null
+  supplierCode: string
+  supplierLocalCode: string | null
+  supplierName: string
+  supplierTaxCode: string | null
+  invoiceNo: string | null
+  invoiceSeries: string | null
+  invoiceDate: string | null
+  lineCount: number
+  /** PO, XNH: trước thuế; DNT: tổng tiền hóa đơn gồm VAT. */
+  amount: number
+  vatAmount: number
+  /** PO, XNH: tiền + thuế; DNT: số tiền đề nghị. */
+  totalAmount: number
+  status: string
+}
+
+/**
+ * Chứng từ mua (PO, XNH, DNT) sẽ xuất cho kế toán – xem trước.
+ * @param filter Khoảng ngày, loại chứng từ (dùng chung chuỗi truy vấn với ACCX).
+ */
+export function usePurchaseAccountingDocuments(filter: AccountingExportFilter) {
+  const companyId = useCompanyId()
+  const query = accountingExportQuery(filter)
+  return useQuery({
+    queryKey: ['reports', companyId, 'purchase-accounting-export', query],
+    queryFn: () => apiFetch<PurchaseAccountingDocument[]>(`/api/purchase-accounting-export/documents?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** Một chỉ số trên bảng KPI cung ứng (design.md mục 18.18). */
 export interface KpiRow {
   code: string

@@ -102,6 +102,18 @@ public static class ReportEndpoints
             })
             .RequirePermission(Permissions.Report.AccountingExport);
 
+        // Xuất chứng từ mua cho kế toán (lát Y9b – thay ACCX từ khi bỏ kho, design.md mục 19.3 "Lát Y9"): docTypes PO, XNH, DNT; trống = tất cả.
+        var purchaseAccounting = app.MapGroup("/api/purchase-accounting-export").WithTags("Xuất cho kế toán");
+        purchaseAccounting.MapGet("/documents", (DateOnly from, DateOnly to, string[]? docTypes, IPurchaseAccountingExportService s, CancellationToken ct) =>
+                s.ListAsync(new PurchaseAccountingQuery(from, to, docTypes ?? []), ct))
+            .RequirePermission(Permissions.Report.PurchaseAccountingExport);
+        purchaseAccounting.MapGet("/file", async (DateOnly from, DateOnly to, string[]? docTypes, IPurchaseAccountingExportService s, CancellationToken ct) =>
+            {
+                var file = await s.ExportAsync(new PurchaseAccountingQuery(from, to, docTypes ?? []), ct);
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Report.PurchaseAccountingExport);
+
         // Trang chủ: ai đăng nhập cũng xem được; từng phần kiểm quyền trong dịch vụ (thiếu quyền thì phần đó là null).
         app.MapGet("/api/dashboard", (IDashboardService s, CancellationToken ct) => s.GetAsync(ct)).WithTags("Trang chủ");
 

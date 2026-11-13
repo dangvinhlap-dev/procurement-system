@@ -314,6 +314,9 @@ public static class Permissions
 
         /// <summary>Xuất chứng từ kho đã ghi sổ ra Excel cho kế toán (design.md mục 11.5).</summary>
         public const string AccountingExport = "Report.Accounting.Export";
+
+        /// <summary>Xuất chứng từ mua (PO, phiếu nhận hàng + hóa đơn, đề nghị thanh toán) ra Excel cho kế toán – lát Y9b, thay ACCX (design.md mục 19.3).</summary>
+        public const string PurchaseAccountingExport = "Report.PurchaseAccounting.Export";
     }
 
     /// <summary>Phân tích dữ liệu mua (design.md mục 18.1–18.3).</summary>
@@ -448,6 +451,7 @@ public static class Permissions
         new(Report.StockViewAllCompanies, "Xem tồn kho toàn tập đoàn"),
         new(Report.PurchaseViewAllCompanies, "Xem báo cáo mua hàng toàn tập đoàn"),
         new(Report.AccountingExport, "Xuất chứng từ cho kế toán"),
+        new(Report.PurchaseAccountingExport, "Xuất chứng từ mua cho kế toán (PO, nhận hàng, đề nghị thanh toán)"),
         new(Analysis.PurchaseHistoryView, "Xem dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryImport, "Nhập, xóa lô dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryViewAllCompanies, "Xem phân tích giá hợp nhất toàn tập đoàn"),

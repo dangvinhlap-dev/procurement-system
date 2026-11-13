@@ -210,6 +210,8 @@ export const screens: Screen[] = [
   { code: 'VIOL', title: 'Sổ vi phạm (KSNB)', navLabel: 'Sổ vi phạm', path: '/bao-cao/so-vi-pham', icon: <SafetyOutlined />, group: 'reports', anyPermission: [Permission.ControlAnomalyView, Permission.ControlFindingReceive] },
   { code: 'PHAN', title: 'Phân tích giá hợp nhất', navLabel: 'Phân tích giá hợp nhất', path: '/bao-cao/phan-tich-gia-hop-nhat', icon: <FundViewOutlined />, group: 'reports', permission: Permission.PurchaseHistoryView },
 
+  // Lát Y9b (design.md mục 19.3 "Lát Y9"): thay ACCX từ khi bỏ kho – PO, phiếu nhận hàng + hóa đơn, đề nghị thanh toán cho kế toán.
+  { code: 'ACCP', title: 'Xuất chứng từ mua cho kế toán', navLabel: 'Xuất chứng từ mua', path: '/bao-cao/xuat-chung-tu-mua', icon: <ExportOutlined />, group: 'reports', permission: Permission.PurchaseAccountingExport },
   { code: 'ACCX', title: 'Xuất chứng từ cho kế toán', navLabel: 'Xuất cho kế toán', path: '/bao-cao/xuat-ke-toan', icon: <ExportOutlined />, group: 'reports', permission: Permission.AccountingExport },
 
   { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },

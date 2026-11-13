@@ -75,4 +75,14 @@ test('đề nghị thanh toán từ PO: nhiều dòng hóa đơn, duyệt, ghi �
   await expect(row).toContainText('550.000')
   await expect(row).toContainText('500.000')
   await page.screenshot({ path: 'e2e/screenshots/payment-tracking.png' })
+
+  // Lát Y9b – Xuất chứng từ mua cho kế toán (ACCP): PO, hai phiếu nhận hàng có hóa đơn, đề nghị đã chi; tải file Excel.
+  await openByCommand(page, 'ACCP')
+  await expect(page.getByRole('heading', { name: 'Xuất chứng từ mua cho kế toán' })).toBeVisible()
+  await expect(page.locator('.data-grid-row', { hasText: no })).toContainText('Đã chi')
+  await expect(page.locator('.data-grid-row', { hasText: second.no })).toContainText('1C26TAA 0000102')
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Tải file Excel cho kế toán' }).click()
+  expect((await download).suggestedFilename()).toMatch(/^chung-tu-mua-ke-toan-bha-\d{8}-\d{8}\.xlsx$/)
+  await page.screenshot({ path: 'e2e/screenshots/purchase-accounting-export.png' })
 })

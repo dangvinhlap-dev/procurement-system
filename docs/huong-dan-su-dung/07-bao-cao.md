@@ -60,3 +60,13 @@ Quyền `Report.Accounting.Export`.
 3. Nhập file vào phần mềm kế toán của công ty. Khi kỳ được mở lại, người có quyền này nhận thông báo để xuất lại.
 
 Công nợ và thanh toán NCC vẫn làm ở phần mềm kế toán.
+
+## 7.6 Xuất chứng từ mua cho kế toán (ACCP – từ bản 0.27.0)
+
+Thay ACCX từ khi bỏ phân hệ kho. Quyền `Report.PurchaseAccounting.Export` (vai trò mẫu Kế toán).
+
+1. Chọn khoảng ngày, loại chứng từ (PO, XNH, DNT – để trống là tất cả) → xem trước: **đơn mua hàng** đã duyệt (theo ngày duyệt),
+   **phiếu xác nhận nhận hàng** kèm hóa đơn (theo ngày nhận; phiếu chưa có hóa đơn tô màu), **đề nghị thanh toán** đã duyệt hoặc đã chi
+   (theo ngày duyệt).
+2. Bấm **Tải file Excel cho kế toán**: sheet Tổng hợp, Đơn mua hàng, Nhận hàng – hóa đơn, Đề nghị thanh toán, Hướng dẫn (ý nghĩa từng cột).
+3. Nhập file vào phần mềm kế toán; định khoản, công nợ làm ở phần mềm kế toán.

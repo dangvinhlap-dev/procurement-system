@@ -2497,6 +2497,9 @@ hành 0.27.0"; chưa có biểu mẫu, người dùng có thể chỉnh):
 | Y9-1 | **Theo dõi thanh toán** (màn hình **TTPO**, Báo cáo → Theo dõi thanh toán, `GET /api/reports/payment-tracking?from=&to=&allCompanies=`, quyền `Report.Purchase.View`; toàn tập đoàn cần `Report.Purchase.ViewAllCompanies`): mỗi dòng một **PO đã duyệt / đã đóng** có ngày PO trong khoảng. Tiền VND gồm VAT. |
 | Y9-2 | Cột: **giá trị PO** (sau CK + VAT); **đã nhận** (giá trị XNH đã xác nhận); **tiền hóa đơn** (Σ tiền hóa đơn nhập trên XNH đã xác nhận – "Cập nhật hóa đơn"); **XNH chưa HĐ** (số phiếu); **HĐ chưa đề nghị** (hóa đơn của XNH chưa ở đề nghị chưa hủy); **đang lập / chờ duyệt** (số tiền đề nghị nháp – kể cả bị từ chối quay về nháp – và chờ duyệt); **đã duyệt chờ chi**; **đã chi** (số tiền đề nghị đã ghi Đã chi); **giảm trừ** (của đề nghị đã chi); **còn phải trả = tiền hóa đơn − đã chi − giảm trừ đã chi** (giảm trừ đã cấn trừ nên coi là xong; hàng nhận chưa có hóa đơn chưa tính); ngày chi cuối. Ví dụ hóa đơn 1.045.000, đã chi 600.000, giảm trừ 27.000 → còn 418.000. |
 | Y9-3 | Đèn **Thanh toán**: Chưa có hóa đơn (xám) / Chưa chi (đỏ) / Đã chi một phần (vàng) / Đã trả đủ HĐ (xanh). Dòng có hóa đơn chưa đề nghị hoặc đề nghị đã duyệt chờ chi được đánh dấu. Xem theo **đơn mua hàng** hoặc **NCC** (cộng các cột, sắp còn phải trả giảm dần); dòng thông tin tổng; xuất Excel lưới. |
+| Y9-4 | **Xuất chứng từ mua cho kế toán** (màn hình **ACCP**, Báo cáo → Xuất chứng từ mua, `GET /api/purchase-accounting-export/documents|file?from=&to=&docTypes=`) – **thay ACCX** từ khi bỏ kho (mục 19.4). Quyền mới `Report.PurchaseAccounting.Export` (vai trò mẫu KETOAN). Chỉ **công ty đang làm việc** (pháp nhân độc lập), qua global query filter; tối đa hai năm, 50.000 dòng mỗi loại. Hệ thống không làm sổ cái – kế toán nhập file, tự định khoản. |
+| Y9-5 | Chứng từ và **ngày lọc**: **PO** đã duyệt / đã đóng theo **ngày duyệt**; **XNH** đã xác nhận theo **ngày nhận** (kèm số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH; XNH chưa có hóa đơn vẫn xuất, tô màu trên màn hình); **đề nghị thanh toán** đã duyệt (gồm đã chi) theo **ngày duyệt** – nháp / chờ duyệt / hủy không xuất. Lọc loại PO, XNH, DNT (trống = tất cả). |
+| Y9-6 | File Excel: sheet **Tổng hợp** (mỗi chứng từ một dòng: loại, ngày hiệu lực, số, PO, NCC – mã tại công ty – MST, hóa đơn, tiền trước thuế, thuế, tổng, tình trạng; DNT: cột tiền = tổng hóa đơn, tổng = số tiền đề nghị), **Đơn mua hàng** (dòng PO: loại mua A/B/DV, bộ phận, công trình, SL, đơn giá, % CK, thành tiền, thuế), **Nhận hàng – hóa đơn** (dòng XNH: SL thực nhận × đơn giá thực mua, thuế; tiền hóa đơn của phiếu lặp lại mỗi dòng), **Đề nghị thanh toán** (dòng hóa đơn: biểu mẫu, hình thức, tài khoản ngân hàng chụp trên phiếu, XNH, hóa đơn, số tiền dòng; tổng – giảm trừ – số tiền đề nghị của phiếu lặp lại; ngày chi, ghi chú chi), **Hướng dẫn** (ý nghĩa từng cột). Cột chữ kiểu Text (mã, MST giữ số 0 đầu); số, ngày giữ kiểu số. |
 
 ### 19.4 Bỏ phân hệ kho
 
@@ -2510,7 +2513,7 @@ Công ty dùng phần mềm kho riêng. Thay thế:
 | Tồn kho, thẻ kho, gợi ý đặt hàng theo tồn | Thủ kho nhập tồn trên đề nghị mua; gợi ý tồn đã xác nhận gần nhất |
 | Kiểm kê, kỳ kho, đóng kỳ, giá vốn | Bỏ hẳn |
 | Báo cáo NXT, SLOW, EXP, GSTK, TRANSIT, ICREC, REORD | Bỏ; thêm báo cáo SL đặt – SL thực nhận, OTIF |
-| ACCX (xuất chứng từ kho) | Xuất PO đã duyệt, XNH, hóa đơn, đề nghị thanh toán (lát Y9) |
+| ACCX (xuất chứng từ kho) | **ACCP** – xuất PO đã duyệt, XNH + hóa đơn, đề nghị thanh toán (lát Y9b – xong 13/11/2026, mục 19.3 Y9-4…Y9-6) |
 
 **Lát K1 – tắt (0.22.0).** Cấu hình `Modules:InventoryEnabled` (appsettings, mặc định **false**). Khi tắt:
 
@@ -2700,7 +2703,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
-| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán (Y9a theo dõi thanh toán TTPO – xong 13/11/2026) |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
