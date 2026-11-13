@@ -981,8 +981,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 0.25.0, 0.26.0 không phát hành riêng. Tag `v0.27.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.27.0 (gói
 `procurement-0.27.0.zip`). 10 migration (92 → 102), script `db/scripts/0.27.0.sql` (idempotent) – chạy qua trên `procurement_test`; **không** chạy
 thử trên bản sao CSDL 5007 vì người dùng xác nhận hệ thống chỉ để test, khi chạy thật sẽ xóa toàn bộ DB làm lại. Kiểm tra trước phát hành: build 0
-cảnh báo, `dotnet test` 785/785, Playwright đủ bộ 147/147 (lần Y11b), tsc, oxlint, `npm run build`. Bản test 5007 **chưa nâng** – nâng khi người
-dùng yêu cầu (cần gán quyền mới: `Sourcing.Rfq.ViewSealed`, `Purchase.Payment.*`, `Report.PurchaseAccounting.Export`, `Purchase.Sundry.*`).
+cảnh báo, `dotnet test` 785/785, Playwright đủ bộ 147/147 (lần Y11b), tsc, oxlint, `npm run build`. **Bản test 5007 nâng tại chỗ lên 0.27.0
+(13/11/2026)**: sao lưu trước `D:\project\procurement_kiemtra_0150_truoc_0.27.0.dump`; dừng PID 19172; chạy `goi .27.0\db-scripts .27.0.sql` (102
+migration); `app` = 0.27.0, `app-0.24.0` = bản cũ, gói `goi .27.0`, giữ `appsettings.Production.json`; PID 4284 trong `pid.txt`; `/health`
+Healthy 0.27.0 (cả qua http://192.168.1.199:5007); API BKT / DNT / TTPO trả 200 ở TCT, APH, BMI, CUV. Gán quyền (script scratchpad
+`roles_0270.py`, chỉ thêm): vai trò trùng mã vai trò mẫu nhận phần quyền mới của mẫu – CHUTICH, GDKHOI, GDTCKT, TPTCKT (xem + duyệt DNT, BKT),
+TRUONGPHONGBAN (xem + duyệt BKT), DENGHI (xem + lập BKT), NVCUVT (xem + lập DNT, xem BKT), KETOAN (xem DNT/BKT, ghi Đã chi, ACCP), DAMPHAN,
+HOIDONG, KSNB, LANHDAO, PHOCTUBCL, TPCUVT, TRUONGBANCUVT, VANHANH (xem DNT, BKT); TOANQUYEN đủ 9 quyền mới (kể cả `Sourcing.Rfq.ViewSealed`).
+Chưa áp lại "Cấu hình duyệt mẫu" CUVT cho DNT / BKT / TVB (chưa cấu hình thì duyệt một cấp) – để người test tự áp.
 
 Còn: P6b (trạng thái thanh toán trên Portal); 0.28.0 (K3 gỡ hẳn kho, P2, P7); mẫu 1C/2C thật khi người dùng gửi.
 
