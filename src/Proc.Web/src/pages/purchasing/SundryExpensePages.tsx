@@ -7,6 +7,8 @@ import type { DateRange } from '../../api/logs'
 import { useDepartments } from '../../api/organization'
 import { PURCHASE_STAGE_LABELS, purchaseStatusLabels, purchaseStatusTone, usePurchaseMutations, withPendingApprovers } from '../../api/purchasing'
 import {
+  SUNDRY_FORMS_SIMULATED,
+  SUNDRY_SIMULATED_NOTICE,
   useSundryExpenseSheet,
   useSundryExpenseSheets,
   type SaveSundryExpenseSheetInput,
@@ -72,7 +74,12 @@ export function SundryExpenseListPage() {
       onCreate={() => navigate(`${SUNDRY_EXPENSE_PATH}/moi`)}
       onOpenRow={(r) => navigate(`${SUNDRY_EXPENSE_PATH}/${r.id}`)}
       isMarked={(r) => r.status === 'Draft' || r.status === 'Submitted' || (r.status === 'Approved' && !r.paymentRequestNo)}
-      filters={<LogDateRangeFilter value={range} onChange={setRange} />}
+      filters={
+        <>
+          <LogDateRangeFilter value={range} onChange={setRange} />
+          {SUNDRY_FORMS_SIMULATED && <Alert type="warning" showIcon title={SUNDRY_SIMULATED_NOTICE} />}
+        </>
+      }
     />
   )
 }
@@ -241,6 +248,7 @@ export function SundryExpensePage() {
       error={error ?? (sheet.error ? sheet.error.message : null)}
       notice={
         <>
+          {SUNDRY_FORMS_SIMULATED && <Alert type="warning" showIcon title={SUNDRY_SIMULATED_NOTICE} />}
           {doc?.rejectReason && doc.status === 'Draft' ? (
             <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
           ) : (

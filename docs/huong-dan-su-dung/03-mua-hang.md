@@ -199,6 +199,9 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 
 ### Bảng kê chi phí tạp vụ 2C (BKT – từ bản 0.27.0, lát Y11a)
 
+> **Lưu ý: chỉ nhập thử.** Biểu mẫu 1C và 2C hiện là **mẫu giả lập** (công ty chưa có mẫu chính thức). Cho đến khi có mẫu thật, chỉ nhập dữ liệu thử
+> trên màn hình Bảng kê tạp vụ và đề nghị thanh toán 1C; không dùng bản in làm chứng từ thanh toán (bản in có dòng đỏ "MẪU GIẢ LẬP – CHỈ DÙNG THỬ").
+
 Chi phí lặt vặt **đã phát sinh** (nhóm C – không qua PR/RFQ/PO), thanh toán gộp qua đề nghị thanh toán tổng hợp 1C.
 
 - **Lập**: Mua hàng → **Bảng kê tạp vụ** → Tạo mới. Đầu phiếu: **ngày bảng kê** (tháng của ngày này là tháng tính định mức), **bộ phận**, ghi chú.

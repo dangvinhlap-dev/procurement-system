@@ -60,6 +60,8 @@ public partial class PurchasingTests
         Assert.Equal(("2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", true, 2, 6), (form.FormNo, form.Title, form.Landscape, form.Rows.Count, form.Columns.Count));
         Assert.Contains(form.Info, i => i.Label.StartsWith("Định mức", StringComparison.Ordinal) && i.Value == "1.000.000 đ");
         Assert.Equal(["550.500"], form.TotalCells);
+        // Mẫu giả lập (lát Y11d): bản in ghi rõ chỉ dùng thử.
+        Assert.Equal(Proc.Infrastructure.Printing.CuvtPrintForms.SimulatedNote, form.StatusNote);
 
         // Bảng kê 2: 500.000 → đã dùng 550.500 + 500.000 > 1.000.000 → vượt, gửi được nhưng thêm chặng TVB.
         var second = await ReadAsync<SundryExpenseSheetDto>(await f.Buyer.PostAsJsonAsync("/api/sundry-expense-sheets",

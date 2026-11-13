@@ -2538,6 +2538,11 @@ tiền; bằng chữ; khối ký), 1C như Y11-9 (phụ đề "CHI PHÍ TẠP V�
 `docs/`, sửa bản in, trường dữ liệu và quy tắc Y11-1…Y11-9 cho khớp; điểm cần xác nhận: định mức tính theo số tiền đã chi gồm thuế, chặng vượt định
 mức do GĐ TC-NQ-KT duyệt, người lập 2C, 1C không in định mức (một đề nghị gộp được bảng kê nhiều tháng).
 
+**Lát Y11d – dặn chỉ nhập thử (người dùng yêu cầu 13/11/2026).** Cho đến khi có mẫu thật, người dùng **chỉ nhập dữ liệu thử** cho 1C/2C: màn hình
+danh sách và phiếu bảng kê 2C, phiếu đề nghị 1C hiện cảnh báo vàng; bản in 1C/2C có dòng đỏ "MẪU GIẢ LẬP – CHỈ DÙNG THỬ, CHƯA CÓ BIỂU MẪU CHÍNH
+THỨC". Không chặn lưu/duyệt (để thử trọn quy trình). Có mẫu thật thì đặt hai cờ `CuvtPrintForms.SundryFormsSimulated` (máy chủ) và
+`SUNDRY_FORMS_SIMULATED` (`src/api/sundryExpenseSheets.ts`) về false, sửa test tương ứng.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:

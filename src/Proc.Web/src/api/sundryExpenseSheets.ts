@@ -65,6 +65,16 @@ export interface SaveSundryExpenseSheetInput {
   lines: { expenseDate: string; description: string | null; vendor: string | null; receiptNo: string | null; amount: number }[]
 }
 
+/**
+ * Biểu mẫu 1C / 2C còn là mẫu giả lập (người dùng dặn 13/11/2026: chỉ nhập thử cho đến khi có mẫu thật – design.md 19.3 "Lát Y11d"). Đổi thành
+ * false khi đã thay bằng mẫu thật (cùng cờ `CuvtPrintForms.SundryFormsSimulated` phía máy chủ).
+ */
+export const SUNDRY_FORMS_SIMULATED = true
+
+/** Lời dặn hiện trên màn hình bảng kê 2C và đề nghị 1C khi còn mẫu giả lập. */
+export const SUNDRY_SIMULATED_NOTICE =
+  'Biểu mẫu 1C/2C đang là mẫu giả lập – chỉ nhập dữ liệu thử cho đến khi công ty có mẫu thật. Không dùng bản in làm chứng từ thanh toán.'
+
 const useCompanyId = () => useAuth().workingCompany?.id ?? ''
 
 /**
