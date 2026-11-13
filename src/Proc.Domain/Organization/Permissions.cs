@@ -193,6 +193,18 @@ public static class Permissions
 
         /// <summary>Quyền "Xác nhận nghiệm thu XNH" của đơn vị đặt hàng (Q8; thay Inventory.Receipt.Accept của kho cũ).</summary>
         public const string ReceiptAccept = "Purchase.Receipt.Accept";
+
+        /// <summary>Quyền "Xem đề nghị thanh toán 5A/5B" (lát Y8, design.md mục 19.3 bước 7).</summary>
+        public const string PaymentView = "Purchase.Payment.View";
+
+        /// <summary>Quyền "Lập, sửa, gửi duyệt đề nghị thanh toán" (lát Y8).</summary>
+        public const string PaymentCreate = "Purchase.Payment.Create";
+
+        /// <summary>Quyền "Duyệt đề nghị thanh toán" – GĐ khối, TP / GĐ TC-NQ-KT, Chủ tịch theo biểu mẫu (lát Y8).</summary>
+        public const string PaymentApprove = "Purchase.Payment.Approve";
+
+        /// <summary>Quyền "Ghi Đã chi đề nghị thanh toán" – kế toán (lát Y8).</summary>
+        public const string PaymentPay = "Purchase.Payment.Pay";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -395,6 +407,10 @@ public static class Permissions
         new(Purchase.ReceiptView, "Xem phiếu xác nhận nhận hàng (XNH)"),
         new(Purchase.ReceiptManage, "Lập, xác nhận, điều chỉnh phiếu xác nhận nhận hàng"),
         new(Purchase.ReceiptAccept, "Xác nhận nghiệm thu hàng nhận (đơn vị đặt hàng)"),
+        new(Purchase.PaymentView, "Xem đề nghị thanh toán"),
+        new(Purchase.PaymentCreate, "Lập, sửa, gửi duyệt đề nghị thanh toán"),
+        new(Purchase.PaymentApprove, "Duyệt đề nghị thanh toán"),
+        new(Purchase.PaymentPay, "Ghi Đã chi đề nghị thanh toán (kế toán)"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),

@@ -322,6 +322,52 @@ public static class PurchasingEndpoints
                 s.CancelAsync(id, request, ct))
             .RequireAnyPermission(Permissions.Purchase.SummaryManage, Permissions.System.DocumentCancel);
 
+        // Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7): lập cho PO đã nhận hàng có hóa đơn, duyệt, kế toán ghi Đã chi.
+        var payments = app.MapGroup("/api/payment-requests").WithTags("Đề nghị thanh toán");
+        string[] paymentAny =
+        [
+            Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate, Permissions.Purchase.PaymentApprove, Permissions.Purchase.PaymentPay,
+        ];
+        payments.MapGet("/", (DateOnly? from, DateOnly? to, IPaymentRequestService s, CancellationToken ct) =>
+                s.ListAsync(new PaymentRequestFilter(from, to), ct))
+            .RequireAnyPermission(paymentAny);
+        payments.MapGet("/orders", (IPaymentRequestService s, CancellationToken ct) => s.OrdersAsync(ct))
+            .RequirePermission(Permissions.Purchase.PaymentCreate);
+        payments.MapGet("/source", (Guid purchaseOrderId, Guid? requestId, IPaymentRequestService s, CancellationToken ct) =>
+                s.SourceAsync(purchaseOrderId, requestId, ct))
+            .RequireAnyPermission(paymentAny);
+        payments.MapGet("/{id:guid}", (Guid id, IPaymentRequestService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAnyPermission(paymentAny);
+        payments.MapPost("/", async (SavePaymentRequestRequest request, IPaymentRequestService s, CancellationToken ct) =>
+            {
+                var created = await s.CreateAsync(request, ct);
+                return Results.Created($"/api/payment-requests/{created.Id}", created);
+            })
+            .RequirePermission(Permissions.Purchase.PaymentCreate)
+            .Validate<SavePaymentRequestRequest>();
+        payments.MapPut("/{id:guid}", (Guid id, SavePaymentRequestRequest request, IPaymentRequestService s, CancellationToken ct) =>
+                s.UpdateAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PaymentCreate)
+            .Validate<SavePaymentRequestRequest>();
+        payments.MapPost("/{id:guid}/submit", (Guid id, IPaymentRequestService s, CancellationToken ct) => s.SubmitAsync(id, ct))
+            .RequirePermission(Permissions.Purchase.PaymentCreate);
+        // Rút về nháp – người lập (hoặc quản trị); service kiểm tra người lập.
+        payments.MapPost("/{id:guid}/recall", (Guid id, IPaymentRequestService s, CancellationToken ct) => s.RecallAsync(id, ct))
+            .RequireAnyPermission(Permissions.Purchase.PaymentCreate, Permissions.System.DocumentCancel);
+        payments.MapPost("/{id:guid}/approve", (Guid id, ApprovalActionRequest request, IPaymentRequestService s, CancellationToken ct) =>
+                s.ApproveAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PaymentApprove);
+        payments.MapPost("/{id:guid}/reject", (Guid id, ApprovalActionRequest request, IPaymentRequestService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PaymentApprove);
+        // Hủy: nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị; đã chi thì không hủy (service kiểm tra); bắt buộc lý do.
+        payments.MapPost("/{id:guid}/cancel", (Guid id, CancelDocumentRequest request, IPaymentRequestService s, CancellationToken ct) =>
+                s.CancelAsync(id, request, ct))
+            .RequireAnyPermission(Permissions.Purchase.PaymentCreate, Permissions.System.DocumentCancel);
+        payments.MapPost("/{id:guid}/pay", (Guid id, MarkPaymentPaidRequest request, IPaymentRequestService s, CancellationToken ct) =>
+                s.MarkPaidAsync(id, request, ct))
+            .RequirePermission(Permissions.Purchase.PaymentPay);
+
         // Phiếu kế hoạch nhu cầu (design.md mục 18.25 – lát G5a): mỗi công ty lập nhu cầu năm × nhóm hàng, chốt, không qua duyệt.
         var plans = app.MapGroup("/api/demand-plans").WithTags("Kế hoạch nhu cầu");
         plans.MapGet("/", (IDemandPlanService s, CancellationToken ct) => s.ListAsync(ct))

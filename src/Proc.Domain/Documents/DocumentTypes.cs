@@ -83,6 +83,9 @@ public static class DocumentTypes
     /// <summary>Phiếu báo giao hàng NCC gửi trên Portal (lát P5, design.md mục 19.5) – nơi nhận lập XNH từ phiếu.</summary>
     public const string DeliveryNotice = "BGH";
 
+    /// <summary>Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7).</summary>
+    public const string PaymentRequest = "DNT";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -93,6 +96,7 @@ public static class DocumentTypes
         new(Contract, "Hợp đồng nguyên tắc"),
         new(GoodsReceiptConfirmation, "Xác nhận nhận hàng"),
         new(DeliveryNotice, "Báo giao hàng của NCC"),
+        new(PaymentRequest, "Đề nghị thanh toán"),
         new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
         new(ReturnToVendor, "Phiếu xuất trả NCC"),
         new(Transfer, "Phiếu chuyển kho nội bộ"),

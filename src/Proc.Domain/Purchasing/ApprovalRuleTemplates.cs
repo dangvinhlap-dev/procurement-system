@@ -84,7 +84,7 @@ public static class ApprovalRuleTemplates
     /// Chuỗi ký của biểu mẫu CUVT (lát O3 – design.md mục 19.3, Q6, Q10, Q18), áp cho từng công ty. Ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch –
     /// Q6), người quản trị chỉnh sau. Đề nghị mua theo loại mua (lát Y3c): 1B (PR) 8 cấp có Thủ kho nơi nhận và Trưởng phòng HC kiểm định mức nhóm
     /// B; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán công trình (PRE) thêm Giám đốc TC-NQ-KT (tự đặt – chỉnh ở APRL); bảng tổng hợp
-    /// 2A/2B (BTH – lát Y5b) 4 cấp. Chưa có (thêm khi làm lát tương ứng): đề nghị thanh toán 5A/5B, 1C, bảng kê 2C (Y8, Y11).
+    /// 2A/2B (BTH – lát Y5b) 4 cấp; đề nghị thanh toán 5A/5B (DNT – lát Y8) 4 cấp. Chưa có (thêm khi làm lát tương ứng): 1C, bảng kê 2C (Y11).
     /// </summary>
     public static readonly IReadOnlyList<ApprovalRuleTemplate> CuvtForms =
     [
@@ -124,5 +124,9 @@ public static class ApprovalRuleTemplates
         new(DocumentTypes.PurchaseOrder, 2, "TPTCKT", false, "4A/4B: Trưởng phòng TC-NQ-KT"),
         new(DocumentTypes.PurchaseOrder, 3, "GDTCKT", false, "4A/4B: Giám đốc TC-NQ-KT"),
         new(DocumentTypes.PurchaseOrder, 4, "CHUTICH", false, "4A/4B: Chủ tịch duyệt"),
+        new(DocumentTypes.PaymentRequest, 1, null, false, "5A/5B: Giám đốc khối đề nghị (khối của bộ phận đặt hàng)", ApproverKind.DivisionDirector),
+        new(DocumentTypes.PaymentRequest, 2, "TPTCKT", false, "5A/5B: Trưởng phòng TC-NQ-KT"),
+        new(DocumentTypes.PaymentRequest, 3, "GDTCKT", false, "5A/5B: Giám đốc TC-NQ-KT"),
+        new(DocumentTypes.PaymentRequest, 4, "CHUTICH", false, "5A/5B: Chủ tịch duyệt"),
     ];
 }

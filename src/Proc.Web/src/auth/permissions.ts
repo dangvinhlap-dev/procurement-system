@@ -69,6 +69,11 @@ export const Permission = {
   ReceiptView: 'Purchase.Receipt.View',
   ReceiptManage: 'Purchase.Receipt.Manage',
   ReceiptAccept: 'Purchase.Receipt.Accept',
+  /** Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7): xem, lập, duyệt, ghi Đã chi (kế toán). */
+  PaymentView: 'Purchase.Payment.View',
+  PaymentCreate: 'Purchase.Payment.Create',
+  PaymentApprove: 'Purchase.Payment.Approve',
+  PaymentPay: 'Purchase.Payment.Pay',
   InventoryDocumentView: 'Inventory.Document.View',
   InventoryDocumentCreate: 'Inventory.Document.Create',
   InventoryDocumentPost: 'Inventory.Document.Post',

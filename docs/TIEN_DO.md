@@ -475,6 +475,33 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   Hóa đơn NCC + e2e chưa chạy) – **chỉ trên nhánh `feature/p6a-hoa-don-ncc`** (đã push), **không merge**; `main` không có code, migration
   của P6a. Nhánh đã xóa (local + GitHub) theo đồng ý của người dùng 13/11/2026. design.md 19.3 bước 6, 19.5, 19.6 đã ghi bỏ. **Đã chốt**:
   đề nghị thanh toán Y8 lấy thông tin hóa đơn từ XNH (số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH).
+- **Lát Y8 – đề nghị thanh toán 5A/5B (13/11/2026, nhánh `feature/y8-de-nghi-thanh-toan`, bản 0.27.0)** – người dùng chọn "B. Làm Y8, Y11, Y9
+  xong rồi mới phát hành 0.27.0". Quy tắc tự đặt Y8-1…Y8-8 (ghi vào design.md ở bước tài liệu): mỗi phiếu một PO đã duyệt / đóng, 5A theo PO
+  loại A, 5B theo B/DV; dòng = XNH đã xác nhận có hóa đơn (chụp số, ký hiệu, ngày, tiền từ XNH); giảm trừ có lý do; chuyển khoản chụp tài khoản
+  NCC; duyệt GĐ khối của phiếu → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch; kế toán ghi Đã chi; in 5A/5B. Các bước:
+  - **Bước 1 (xong)**: Domain `PaymentRequest` + dòng (số **DNT**, `ApprovableDocument`; Create / Update / SetLines / EnsureSubmittable /
+    MarkPaid), quyền `Purchase.Payment.View/Create/Approve/Pay` (vai trò mẫu: xem trong ProcurementView; NVCUVT lập; GDKHOI, TPTCKT, GDTCKT,
+    CHUTICH duyệt; KETOAN xem + ghi Đã chi), loại duyệt DNT + bộ mẫu CUVT 4 cấp, loại đính kèm `PaymentRequest`; EF + migration
+    `V0_27_0_DeNghiThanhToan` (99 → 100). Test domain `PaymentRequestTests` (3), thứ tự loại duyệt thêm DNT; 403/403.
+  - Người dùng xác nhận giữa lát (13/11/2026): phiếu đề nghị thanh toán **có nhiều dòng hóa đơn** – đúng Y8-2 (mỗi dòng một hóa đơn của
+    một XNH, không giới hạn số dòng).
+  - **Bước 2 (xong)**: `PaymentRequestService` (danh sách lọc ngày; PO lập được – còn XNH có hóa đơn chưa đề nghị; dữ liệu chọn – tài khoản NCC,
+    XNH kèm đề nghị đang giữ; lập / sửa / gửi dưới khóa PO, chụp lại hóa đơn từ XNH lúc gửi; duyệt / từ chối / rút / hủy – đã chi thì không hủy;
+    ghi Đã chi), API `/api/payment-requests` (+ `/orders`, `/source`, `/submit`, `/approve`, `/reject`, `/recall`, `/cancel`, `/pay`). Nối vào
+    tra cứu chứng từ, xem trước chuỗi duyệt, nhắc quá hạn, Việc cần làm, đính kèm có phê duyệt (`PaymentRequest`); XNH đã ở đề nghị chưa hủy
+    thì khóa "Cập nhật hóa đơn". Test tích hợp `DeNghiThanhToan_NhieuHoaDonXnh_KhoaHoaDon_Duyet_DaChi`; `dotnet test` 776/776.
+  - **Bước 2b (xong)**: hủy dây chuyền nhận DNT (chuỗi chỉ gồm chính phiếu; đã chi thì chặn).
+  - **Bước 3 (xong)**: web `api/paymentRequests.ts`, màn hình **DNT** (`PaymentRequestPages.tsx` – danh sách lọc ngày; form DocumentForm: đơn mua
+    hàng, hình thức, tài khoản NCC, giảm trừ + lý do, ghi chú, lưới nhiều dòng hóa đơn chọn qua hộp "Chọn phiếu nhận hàng", tổng – giảm trừ – số
+    tiền đề nghị, tab Lịch sử duyệt + Đính kèm, nút **Ghi Đã chi** của kế toán), nút **Lập đề nghị thanh toán** trên PO (điền sẵn đơn, tài khoản
+    mặc định / tiền mặt, mọi XNH có hóa đơn), quyền, loại đính kèm, Việc cần làm / duyệt gọn điện thoại / tra cứu chứng từ. e2e
+    `payment-request.spec.ts`; `document-numbering` 24 → 25 loại, `approval-rule-template` 36 → 40 cấp, `divisions` gõ để lọc loại phiếu.
+  - **Bước 4 (xong)**: in 5A/5B (`CuvtPaymentPrintForms.cs`, `GET /api/payment-requests/{id}/pdf`): khung chi phí PO tách thành `OrderFrameAsync`
+    dùng chung 4A/4B; người in chỉ cần quyền đề nghị thanh toán. Test trong `DeNghiThanhToan_…` (PDF + nội dung mẫu).
+  - **Bước 5 (xong)**: design.md 19.3 "Lát Y8" (Y8-1…Y8-8) + lộ trình 0.27.0; hướng dẫn 03-mua-hang.
+  - Kiểm tra: build 0 cảnh báo, `dotnet test` 776/776, tsc, oxlint, `npm run build`; Playwright đủ bộ 144/146 (2 spec đếm cấp mẫu CUVT / chọn loại
+    phiếu – sửa theo DNT, chạy lại qua cùng payment-request: 5/5). **Đã merge.** Tiếp theo: Y11 (tạp vụ 1C/2C) – chờ người dùng gửi mẫu 1C/2C
+    hoặc "đồng ý" đề xuất (bảng kê 2C theo bộ phận × tháng; 1C gộp nhiều 2C đã duyệt), rồi Y9 (báo cáo thanh toán), rồi phát hành 0.27.0.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

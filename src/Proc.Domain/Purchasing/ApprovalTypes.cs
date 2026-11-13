@@ -131,6 +131,8 @@ public static class ApprovalTypes
         new(PurchaseOrderOverCeiling, "Đơn mua hàng vượt giá trần", Permissions.Purchase.PoApprove, "Tổng thanh toán gồm VAT", HasDepartment: true),
         // Bảng tổng hợp 2A/2B (lát Y5b): có bộ phận đề xuất – cấu hình được GĐ khối của phiếu như biểu mẫu CUVT.
         new(DocumentTypes.PurchaseSummary, "Bảng tổng hợp đề xuất mua", Permissions.Purchase.SummaryApprove, "Tổng đề xuất", HasDepartment: true),
+        // Đề nghị thanh toán 5A/5B (lát Y8): bộ phận đặt hàng của PO – cấp đầu là GĐ khối của phiếu như biểu mẫu CUVT.
+        new(DocumentTypes.PaymentRequest, "Đề nghị thanh toán", Permissions.Purchase.PaymentApprove, "Số tiền đề nghị", HasDepartment: true),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),

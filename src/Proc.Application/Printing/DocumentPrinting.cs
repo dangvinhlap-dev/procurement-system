@@ -37,6 +37,13 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>In đề nghị thanh toán theo biểu mẫu 5A/5B tiền mặt / chuyển khoản (lát Y8); khổ dọc.</summary>
+    /// <param name="id">Đề nghị thanh toán.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>
     /// In kết quả hỏi giá theo biểu mẫu CUVT (lát Y6): 3A so sánh chọn NCC, hoặc 3a/3B bảng trình giá mỗi NCC trúng thầu một trang; khổ ngang.
     /// </summary>

@@ -16,7 +16,7 @@ namespace Proc.Infrastructure.Portal;
 
 /// <summary>
 /// NCC báo giao hàng trên Portal (lát P5 – design.md mục 19.5, P5-1…P5-4). Phiên Portal không có công ty / người dùng nội bộ nên mọi truy vấn bỏ
-/// filter và tự lọc theo NCC của phiên (P1b-4) qua <see cref="PortalOrderService.VisibleOrders"/>.
+/// filter và tự lọc theo NCC của phiên (P1b-4) qua <see cref="PortalOrderService.VisibleOrders(ProcDbContext, Guid)"/>.
 /// </summary>
 public sealed class PortalDeliveryNoticeService : IPortalDeliveryNoticeService
 {

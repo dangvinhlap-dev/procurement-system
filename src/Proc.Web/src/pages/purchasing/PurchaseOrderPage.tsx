@@ -1,5 +1,5 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { DollarOutlined, FileAddOutlined, FileDoneOutlined, FilePdfOutlined, InboxOutlined, WarningFilled } from '@ant-design/icons'
+import { AccountBookOutlined, DollarOutlined, FileAddOutlined, FileDoneOutlined, FilePdfOutlined, InboxOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, DatePicker, Form, Input, InputNumber, Modal, Space, Table, Tooltip } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -730,6 +730,12 @@ export function PurchaseOrderPage() {
             {doc?.status === 'Approved' && hasPermission(Permission.ReceiptManage) && (
               <Button icon={<InboxOutlined />} onClick={() => navigate(`/mua-hang/xac-nhan-nhan-hang/moi?po=${doc.id}`)}>
                 Lập phiếu nhận hàng
+              </Button>
+            )}
+            {/* Đề nghị thanh toán 5A/5B cho các phiếu nhận hàng có hóa đơn của PO (lát Y8). */}
+            {(doc?.status === 'Approved' || doc?.status === 'Closed') && hasPermission(Permission.PaymentCreate) && (
+              <Button icon={<AccountBookOutlined />} onClick={() => navigate(`/mua-hang/de-nghi-thanh-toan/moi?po=${doc.id}`)}>
+                Lập đề nghị thanh toán
               </Button>
             )}
             {actions}

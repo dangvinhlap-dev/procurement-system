@@ -526,6 +526,76 @@ internal sealed class PurchaseSummaryConfiguration : IEntityTypeConfiguration<Pu
     }
 }
 
+/// <summary>
+/// Cấu hình bảng PaymentRequest – đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7). Số DNT duy nhất theo công ty; bộ phận, công trình
+/// khóa ngoại kèm công ty như bảng tổng hợp.
+/// </summary>
+internal sealed class PaymentRequestConfiguration : IEntityTypeConfiguration<PaymentRequest>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PaymentRequest> builder)
+    {
+        builder.ToTable("PaymentRequest");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Ignore(x => x.ApprovalAmount);
+        builder.Ignore(x => x.IsAwaitingApproval);
+        builder.Ignore(x => x.DocType);
+        builder.Ignore(x => x.IsPaid);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.Date });
+        builder.HasIndex(x => x.PurchaseOrderId);
+        builder.HasIndex(x => x.SupplierId);
+        builder.Property(x => x.Note).HasMaxLength(PaymentRequest.NoteMaxLength);
+        builder.Property(x => x.RejectReason).HasMaxLength(500);
+        builder.Property(x => x.ClosedReason).HasMaxLength(500);
+        builder.Property(x => x.CancelReason).HasMaxLength(500);
+        builder.Property(x => x.BankName).HasMaxLength(200);
+        builder.Property(x => x.BankBranch).HasMaxLength(200);
+        builder.Property(x => x.BankAccountNumber).HasMaxLength(50);
+        builder.Property(x => x.BankAccountName).HasMaxLength(200);
+        builder.Property(x => x.TotalAmount).HasPrecision(19, 2);
+        builder.Property(x => x.DeductionAmount).HasPrecision(19, 2);
+        builder.Property(x => x.DeductionReason).HasMaxLength(PaymentRequest.NoteMaxLength);
+        builder.Property(x => x.PayableAmount).HasPrecision(19, 2);
+        builder.Property(x => x.PaymentNote).HasMaxLength(PaymentRequest.NoteMaxLength);
+        // Cột ngân sách của lớp chung ApprovableDocument – đề nghị thanh toán không ghi ngân sách (PO đã tính), luôn trống.
+        builder.Property(x => x.BudgetAmount).HasPrecision(19, 2);
+        builder.Property(x => x.BudgetUsedAmount).HasPrecision(19, 2);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ConstructionProject>().WithMany()
+            .HasForeignKey(x => new { x.ConstructionProjectId, x.CompanyId }).HasPrincipalKey(p => new { p.Id, p.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.RequestId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng PaymentRequestLine – dòng đề nghị thanh toán (một XNH có hóa đơn).</summary>
+internal sealed class PaymentRequestLineConfiguration : IEntityTypeConfiguration<PaymentRequestLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PaymentRequestLine> builder)
+    {
+        builder.ToTable("PaymentRequestLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.RequestId, x.LineNo });
+        // Tìm đề nghị chưa hủy đang giữ một XNH (mỗi XNH một đề nghị – Y8-2).
+        builder.HasIndex(x => x.ReceiptConfirmationId);
+        builder.Property(x => x.InvoiceNo).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.InvoiceSeries).HasMaxLength(50);
+        builder.Property(x => x.Amount).HasPrecision(19, 2);
+        builder.Property(x => x.Description).HasMaxLength(PaymentRequest.DescriptionMaxLength).IsRequired();
+        builder.HasOne<GoodsReceiptConfirmation>().WithMany().HasForeignKey(x => x.ReceiptConfirmationId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng PurchaseSummaryLine – dòng bảng tổng hợp (một dòng đề nghị mua + đơn vị mua).</summary>
 internal sealed class PurchaseSummaryLineConfiguration : IEntityTypeConfiguration<PurchaseSummaryLine>
 {

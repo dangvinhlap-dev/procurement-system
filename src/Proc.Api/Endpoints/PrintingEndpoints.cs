@@ -29,6 +29,11 @@ public static class PrintingEndpoints
         app.MapGet("/api/purchase-summaries/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseSummaryAsync(id, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.SummaryView);
+        // Lát Y8: đề nghị thanh toán 5A/5B (tiền mặt / chuyển khoản theo hình thức của phiếu).
+        app.MapGet("/api/payment-requests/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PaymentRequestAsync(id, ct)))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate, Permissions.Purchase.PaymentApprove,
+                Permissions.Purchase.PaymentPay);
         // Lát Y6: kết quả hỏi giá theo biểu mẫu 3A / 3a / 3B; form=3A in bảng so sánh (RFQ loại A).
         app.MapGet("/api/rfqs/{id:guid}/pdf", async (Guid id, string? form, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.RfqAsync(id, form, ct)))
             .WithTags("In phiếu")

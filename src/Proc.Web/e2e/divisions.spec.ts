@@ -75,7 +75,8 @@ test('quy trình duyệt: cấp do Trưởng phòng ban của phiếu duyệt', 
 
   // Loại không có bộ phận: chỉ theo vai trò.
   await page.getByRole('button', { name: 'Tạo mới' }).click()
-  await drawer.getByLabel('Loại phiếu').click()
+  // Gõ để lọc – danh sách loại phiếu dài (thêm DNT ở lát Y8), mục cần chọn có thể nằm ngoài vùng hiện của ô chọn.
+  await drawer.getByLabel('Loại phiếu').fill('Bảng giá NCC')
   await page.locator('.ant-select-item-option', { hasText: 'Bảng giá NCC (PRL)' }).click()
   await expect(drawer.getByText('Loại phiếu này không có bộ phận – chỉ duyệt theo vai trò.')).toBeVisible()
 })

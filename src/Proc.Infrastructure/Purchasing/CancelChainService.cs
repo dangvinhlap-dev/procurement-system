@@ -53,6 +53,9 @@ internal sealed class CancelChainService : ICancelChainService
     private sealed class Chain
     {
         public List<GoodsReceiptConfirmation> Receipts { get; } = [];
+
+        /// <summary>Đề nghị thanh toán (lát Y8) – cuối chuỗi; chỉ khi chọn hủy chính nó (chuỗi có XNH đã xác nhận đã bị chặn).</summary>
+        public PaymentRequest? Payment { get; set; }
         public List<PurchaseOrder> Orders { get; } = [];
         public List<PurchaseContract> Contracts { get; } = [];
         public List<SupplierPriceList> PriceLists { get; } = [];
@@ -87,6 +90,12 @@ internal sealed class CancelChainService : ICancelChainService
         if (preview.BlockedReason is { } denied) throw new ForbiddenAccessException(denied);
 
         // Chỉ còn XNH nháp, hợp đồng/bảng giá nháp trong chuỗi (phiếu đã xác nhận/duyệt bị chặn ở trên).
+        if (chain.Payment is { } payment)
+        {
+            payment.Cancel(reason);
+            await _approvals.SkipPendingAsync(payment, cancellationToken);
+        }
+
         foreach (var receipt in chain.Receipts) receipt.Cancel(reason);
         foreach (var order in chain.Orders)
         {
@@ -131,6 +140,7 @@ internal sealed class CancelChainService : ICancelChainService
         DocumentTypes.PurchaseRequest => RowLocks.LockAsync<PurchaseRequest>(_db, [id], cancellationToken),
         DocumentTypes.PurchaseOrder => RowLocks.LockAsync<PurchaseOrder>(_db, [id], cancellationToken),
         DocumentTypes.PurchaseSummary => RowLocks.LockAsync<PurchaseSummary>(_db, [id], cancellationToken),
+        DocumentTypes.PaymentRequest => RowLocks.LockAsync<PaymentRequest>(_db, [id], cancellationToken),
         PooledType => RowLocks.LockAsync<PooledOrder>(_db, [id], cancellationToken),
         DocumentTypes.RequestForQuotation => RowLocks.LockAsync<Rfq>(_db, [id], cancellationToken),
         _ => Task.CompletedTask,
@@ -203,6 +213,15 @@ internal sealed class CancelChainService : ICancelChainService
                 chain.Receipts.Add(receipt);
                 break;
             }
+            case DocumentTypes.PaymentRequest:
+            {
+                // Đề nghị thanh toán (lát Y8) là phiếu cuối – chuỗi chỉ có chính nó; đã chi thì chặn (Blocking).
+                var payment = await _db.PaymentRequests.SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
+                    ?? throw new NotFoundException("Không tìm thấy đề nghị thanh toán.");
+                if (payment.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {payment.No} đã hủy.");
+                chain.Payment = payment;
+                break;
+            }
             case PooledType:
             {
                 var pooled = await _db.PooledOrders.Include(p => p.Companies).SingleOrDefaultAsync(p => p.Id == id, cancellationToken)
@@ -225,7 +244,7 @@ internal sealed class CancelChainService : ICancelChainService
             }
             default:
                 throw new BusinessRuleException(
-                    $"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (PR, bảng tổng hợp, PO, phiếu xác nhận nhận hàng, đặt hàng gộp, RFQ).");
+                    $"Loại phiếu {docType} chưa hỗ trợ hủy dây chuyền (PR, bảng tổng hợp, PO, phiếu xác nhận nhận hàng, đề nghị thanh toán, đặt hàng gộp, RFQ).");
         }
 
         return chain;
@@ -333,6 +352,9 @@ internal sealed class CancelChainService : ICancelChainService
             if (!DocumentCancelPolicy.CanCancel(_scope, isDraft, createdBy)) denied.Add(no);
         }
 
+        if (chain.Payment is { } p0)
+            Add(DocumentTypes.PaymentRequest, "Đề nghị thanh toán", p0.Id, p0.No, p0.Status.ToString(), p0.Status == ApprovalDocumentStatus.Draft,
+                p0.CreatedBy, null);
         foreach (var c in chain.Receipts)
             Add(DocumentTypes.GoodsReceiptConfirmation, "Xác nhận nhận hàng", c.Id, c.No, c.Status.ToString(),
                 c.Status == ReceiptConfirmationStatus.Draft, c.CreatedBy, $"Nhận hàng của {orderNos.GetValueOrDefault(c.PurchaseOrderId, "PO")}");
@@ -369,6 +391,9 @@ internal sealed class CancelChainService : ICancelChainService
     /// <returns>Câu báo chặn; null khi không có.</returns>
     private static string? Blocking(Chain chain)
     {
+        // Đã chi là tiền đã ra khỏi công ty – không hủy đề nghị (lát Y8).
+        if (chain.Payment is { IsPaid: true } paid)
+            return $"Đề nghị {paid.No} đã ghi Đã chi ngày {paid.PaidDate:dd/MM/yyyy} – không hủy được.";
         var confirmed = chain.Receipts.Where(c => c.Status == ReceiptConfirmationStatus.Confirmed).Select(c => c.No).ToList();
         if (confirmed.Count > 0)
             return $"Chuỗi đã có phiếu nhận hàng đã xác nhận {string.Join(", ", confirmed)} – không hủy được; dùng \"Điều chỉnh SL thực nhận\" trên " +

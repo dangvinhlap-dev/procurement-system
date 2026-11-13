@@ -155,6 +155,9 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
     public async Task<ReceiptConfirmationDto> UpdateInvoiceAsync(Guid id, UpdateReceiptConfirmationInvoiceRequest request, CancellationToken cancellationToken)
     {
         var confirmation = await LoadAsync(id, cancellationToken);
+        // Hóa đơn đã đưa vào đề nghị thanh toán chưa hủy (lát Y8-2) thì khóa: sửa ở XNH sẽ lệch số tiền đề nghị đang duyệt / đã chi.
+        if (await PaymentRequestService.ActiveRequestNoAsync(_db, confirmation.Id, cancellationToken) is { } requestNo)
+            throw new BusinessRuleException($"Hóa đơn của phiếu {confirmation.No} đã ở đề nghị thanh toán {requestNo} – hủy đề nghị đó (khi chưa chi) rồi mới sửa hóa đơn.");
         confirmation.UpdateInvoice(new ReceiptConfirmationInvoice(request.InvoiceNo, request.InvoiceSeries, request.InvoiceDate, request.InvoiceAmount));
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);

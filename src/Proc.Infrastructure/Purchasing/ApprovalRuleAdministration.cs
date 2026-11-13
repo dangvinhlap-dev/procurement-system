@@ -135,11 +135,14 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
         var orders = await _db.PurchaseOrders.Where(o => o.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
         // Bảng tổng hợp 2A/2B chờ duyệt (lát Y5b): duyệt tại công ty lập – filter công ty giữ nguyên; mô tả = biểu mẫu + bộ phận.
         var summaries = await _db.PurchaseSummaries.Where(s => s.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
+        // Đề nghị thanh toán 5A/5B chờ duyệt (lát Y8): mô tả = biểu mẫu + NCC.
+        var payments = await _db.PaymentRequests.Where(s => s.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
         var departmentIds = requests.Select(r => r.DepartmentId).OfType<Guid>().Concat(summaries.Select(s => s.DepartmentId)).Distinct().ToList();
         var departments = await _db.Departments.AsNoTracking().Where(d => departmentIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
-        var supplierIds = orders.Select(o => o.SupplierId).Distinct().ToList();
+        var supplierIds = orders.Select(o => o.SupplierId).Concat(payments.Select(p => p.SupplierId)).Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
         var creatorIds = requests.Select(r => r.CreatedBy).Concat(orders.Select(o => o.CreatedBy)).Concat(summaries.Select(s => s.CreatedBy))
+            .Concat(payments.Select(p => p.CreatedBy))
             .OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => creatorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
@@ -147,7 +150,9 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
         foreach (var (document, description) in requests.Select(r => ((ApprovableDocument)r, (r.DepartmentId is { } d ? departments.GetValueOrDefault(d) : null) ?? r.LegacyDepartment))
                      .Concat(orders.Select(o => ((ApprovableDocument)o, (string?)suppliers.GetValueOrDefault(o.SupplierId))))
                      .Concat(summaries.Select(s => ((ApprovableDocument)s,
-                         (string?)$"{(s.Form == PurchaseSummaryForm.Construction ? "2A" : "2B")} – {departments.GetValueOrDefault(s.DepartmentId)}"))))
+                         (string?)$"{(s.Form == PurchaseSummaryForm.Construction ? "2A" : "2B")} – {departments.GetValueOrDefault(s.DepartmentId)}")))
+                     .Concat(payments.Select(p => ((ApprovableDocument)p,
+                         (string?)$"{(p.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {suppliers.GetValueOrDefault(p.SupplierId)}"))))
         {
             var step = await _approvals.CurrentStepAsync(document, cancellationToken);
             if (await _approvals.ApproveBlockerAsync(document, step, cancellationToken) is not null) continue;
