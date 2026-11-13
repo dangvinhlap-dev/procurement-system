@@ -81,6 +81,7 @@ public partial class PurchasingTests
         Assert.Equal(("1C", "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN", 2), (form.FormNo, form.Title, form.Rows.Count));
         Assert.Contains(form.Info, i => i.Label == "Người nhận tiền" && i.Value == "Nguyễn Văn An");
         Assert.Equal("700.000", form.ExtraRows![1].Cells[0].Text);
+        Assert.StartsWith(Proc.Infrastructure.Printing.CuvtPrintForms.SimulatedNote, form.StatusNote, StringComparison.Ordinal);
         // Đã chi: hủy dây chuyền từ bảng kê bị chặn.
         Assert.Contains("Đã chi", (await ReadAsync<CancelChainDto>(await f.Buyer.GetAsync($"/api/cancel-chain/BKT/{first.Id}", Ct))).BlockedReason,
             StringComparison.Ordinal);

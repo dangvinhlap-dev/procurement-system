@@ -21,6 +21,8 @@ test('bảng kê chi phí tạp vụ: nhập khoản chi, lưu, gửi duyệt, d
   await expect(page.getByRole('heading', { name: 'Bảng kê chi phí tạp vụ (BKT)' })).toBeVisible()
   await page.getByRole('button', { name: 'Tạo mới' }).click()
   await expect(page).toHaveURL(/bang-ke-tap-vu\/moi/)
+  // Lát Y11d: mẫu 1C/2C còn giả lập – dặn chỉ nhập thử.
+  await expect(page.locator('.document-form')).toContainText('chỉ nhập dữ liệu thử')
 
   await chooseOption(page, 'Bộ phận', code)
   await page.getByLabel('Nội dung chi dòng 1').fill('Nước uống văn phòng')

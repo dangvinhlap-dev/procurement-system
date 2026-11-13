@@ -23,6 +23,7 @@ import {
   type SundryPaymentSheetOption,
 } from '../../api/paymentRequests'
 import { PURCHASE_STAGE_LABELS, purchaseStatusLabels, purchaseStatusTone, usePurchaseMutations, withPendingApprovers } from '../../api/purchasing'
+import { SUNDRY_FORMS_SIMULATED, SUNDRY_SIMULATED_NOTICE } from '../../api/sundryExpenseSheets'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DateInput } from '../../classic/DateInput'
@@ -682,6 +683,7 @@ function SundryPaymentRequestPage() {
         error={error ?? (payment.error ? payment.error.message : null)}
         notice={
           <>
+            {SUNDRY_FORMS_SIMULATED && <Alert type="warning" showIcon title={SUNDRY_SIMULATED_NOTICE} />}
             {doc?.rejectReason && doc.status === 'Draft' ? (
               <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
             ) : (

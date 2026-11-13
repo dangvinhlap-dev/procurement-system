@@ -74,6 +74,25 @@ public static partial class CuvtPrintForms
     private static readonly string[] Subtitles2C = ["CHI PHÍ LẶT VẶT ĐÃ PHÁT SINH – THANH TOÁN GỘP"];
 
     /// <summary>
+    /// Biểu mẫu 1C / 2C còn là mẫu giả lập (người dùng dặn 13/11/2026: chỉ nhập thử cho đến khi có mẫu thật – design.md 19.3 "Lát Y11d"). Đặt
+    /// false khi đã thay bằng mẫu thật; giao diện có cờ tương ứng <c>SUNDRY_FORMS_SIMULATED</c>.
+    /// </summary>
+    public static readonly bool SundryFormsSimulated = true;
+
+    /// <summary>Dòng đỏ trên bản in 1C/2C khi còn mẫu giả lập – giấy in ra không dùng làm chứng từ thật.</summary>
+    public const string SimulatedNote = "MẪU GIẢ LẬP – CHỈ DÙNG THỬ, CHƯA CÓ BIỂU MẪU CHÍNH THỨC";
+
+    /// <summary>Dòng đỏ trạng thái của bản in 1C/2C: thêm cảnh báo mẫu giả lập trước trạng thái phiếu (nếu có).</summary>
+    /// <param name="status">Trạng thái phiếu.</param>
+    /// <returns>Chuỗi in đỏ; null khi không có gì cần cảnh báo.</returns>
+    private static string? SundryStatusNote(string status)
+    {
+        var note = StatusNote(status);
+        if (!SundryFormsSimulated) return note;
+        return note is null ? SimulatedNote : $"{SimulatedNote} · {note}";
+    }
+
+    /// <summary>
     /// Phiếu đề nghị thanh toán tổng hợp chi phí tạp vụ 1C (lát Y11b – <b>mẫu giả lập</b> sheet "1C.DN TT TAP VU", dựng theo khung 5B): đầu phiếu phòng ban đề xuất,
     /// người nhận tiền, ngân hàng – số tài khoản (chuyển khoản); bảng chứng từ là các bảng kê 2C (ngày, số bảng kê, nội dung, số tiền); Tổng cộng,
     /// giảm trừ (tạm ứng đã nhận…), Số tiền còn lại, bằng chữ; khối ký theo chuỗi duyệt. Ví dụ hai bảng kê 550.500 + 195.500, giảm trừ 46.000 → 700.000.
@@ -117,7 +136,7 @@ public static partial class CuvtPrintForms
 
         return new CuvtForm(
             "1C", transfer ? "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN" : "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", Subtitles1C,
-            companyName, payment.No, payment.Date, false, StatusNote(payment.Status), info, columns, rows, 3, [Money(payment.TotalAmount)],
+            companyName, payment.No, payment.Date, false, SundryStatusNote(payment.Status), info, columns, rows, 3, [Money(payment.TotalAmount)],
             (null, null), payment.Note, Signers("Người lập", payment.CreatedByName, payment.Approvals), extra, "Tổng cộng", after);
     }
 
@@ -152,7 +171,7 @@ public static partial class CuvtPrintForms
             .ToList();
         var after = new List<CuvtTextLine> { new("Bằng chữ", VietnameseNumberText.ToVndWords(sheet.TotalAmount) + " ./.") };
         return new CuvtForm(
-            "2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", Subtitles2C, companyName, sheet.No, sheet.Date, true, StatusNote(sheet.Status), info, columns, rows, 5,
+            "2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", Subtitles2C, companyName, sheet.No, sheet.Date, true, SundryStatusNote(sheet.Status), info, columns, rows, 5,
             [Money(sheet.TotalAmount)], (null, null), sheet.Note, Signers("Người lập", sheet.CreatedByName, sheet.Approvals), null, "Tổng cộng", after);
     }
 }
