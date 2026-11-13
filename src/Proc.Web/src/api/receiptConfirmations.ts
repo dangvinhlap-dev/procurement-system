@@ -151,6 +151,10 @@ export interface ReceiptConfirmation {
   adjustments: ReceiptAdjustment[]
   actions: ReceiptConfirmationActions
   version: number
+  /** Phiếu báo giao NCC mà XNH lập theo (lát P5); null = lập thẳng theo PO. */
+  deliveryNoticeId: string | null
+  /** Số phiếu báo giao (BGH). */
+  deliveryNoticeNo: string | null
 }
 
 /** Dòng gửi khi lưu. */
@@ -176,6 +180,8 @@ export interface SaveReceiptConfirmationInput {
   invoiceDate: string | null
   invoiceAmount: number | null
   lines: SaveReceiptConfirmationLineInput[]
+  /** Phiếu báo giao NCC (chỉ khi lập – lát P5). */
+  deliveryNoticeId?: string | null
 }
 
 /** Hóa đơn NCC. */
@@ -259,4 +265,83 @@ export function useReceiptConfirmationMutations() {
       onSuccess,
     }),
   }
+}
+
+/** Trạng thái phiếu báo giao NCC (lát P5): chờ nhận, có XNH nháp, có XNH đã xác nhận, NCC đã hủy. */
+export type DeliveryNoticeStatus = 'Submitted' | 'Receiving' | 'Received' | 'Cancelled'
+
+/** Nhãn trạng thái phiếu báo giao. */
+export const deliveryNoticeStatusLabels: Record<DeliveryNoticeStatus, string> = {
+  Submitted: 'Chờ nhận',
+  Receiving: 'Đang nhận (XNH nháp)',
+  Received: 'Đã nhận',
+  Cancelled: 'NCC đã hủy',
+}
+
+/** Màu đèn trạng thái phiếu báo giao (luôn kèm chữ): vàng – còn chờ / đang nhận, xanh – đã nhận, đỏ – NCC đã hủy. */
+export const deliveryNoticeStatusTone: Record<DeliveryNoticeStatus, 'success' | 'warning' | 'error'> = {
+  Submitted: 'warning',
+  Receiving: 'warning',
+  Received: 'success',
+  Cancelled: 'error',
+}
+
+/** Dòng phiếu báo giao NCC. */
+export interface DeliveryNoticeLine {
+  lineNo: number
+  purchaseOrderLineId: string
+  poLineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  note: string | null
+}
+
+/** Phiếu báo giao NCC gửi trên Portal (lát P5 – design.md 19.5). */
+export interface DeliveryNotice {
+  id: string
+  no: string
+  purchaseOrderId: string
+  purchaseOrderNo: string
+  expectedDate: string
+  deliveryNoteNo: string
+  deliverer: string | null
+  note: string | null
+  status: DeliveryNoticeStatus
+  submittedAt: string
+  submittedByEmail: string
+  cancelledAt: string | null
+  cancelReason: string | null
+  receiptId: string | null
+  receiptNo: string | null
+  /** Người xem lập XNH từ phiếu được (phiếu chờ nhận, PO Đã duyệt, có quyền lập XNH). */
+  canCreateReceipt: boolean
+  lines: DeliveryNoticeLine[]
+}
+
+/**
+ * Các phiếu báo giao NCC của một PO – tab "Giao hàng NCC" (khóa truy vấn đầu "purchasing": lưu XNH thì tải lại).
+ * @param orderId PO; null = không tải.
+ */
+export function useOrderDeliveryNotices(orderId: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'purchase-orders', orderId, 'delivery-notices'],
+    queryFn: () => apiFetch<DeliveryNotice[]>(`/api/purchase-orders/${orderId}/delivery-notices`),
+    enabled: orderId !== null,
+  })
+}
+
+/**
+ * Một phiếu báo giao NCC – điền sẵn XNH khi lập từ phiếu.
+ * @param id Phiếu; null = không tải.
+ */
+export function useDeliveryNotice(id: string | null) {
+  const companyId = useCompanyId()
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'delivery-notices', id],
+    queryFn: () => apiFetch<DeliveryNotice>(`/api/delivery-notices/${id}`),
+    enabled: id !== null,
+  })
 }

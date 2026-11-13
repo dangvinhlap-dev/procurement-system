@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
+import { CarOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Input, Spin } from 'antd'
 import { useState } from 'react'
@@ -16,6 +16,7 @@ import {
   type PortalOrderResponse,
   type PortalOrderStatus,
 } from './portalApi'
+import { DeliveryNoticeForm, DeliveryNoticeList } from './PortalDeliveryParts'
 import { PortalFiles, Section } from './PortalParts'
 
 /** Màu đèn trạng thái đơn (luôn kèm chữ). */
@@ -81,6 +82,8 @@ const lineColumns: GridColumn<PortalOrderLine>[] = [
   { key: 'itemName', title: 'Tên hàng', width: 220, value: (r) => r.itemName, auditField: false },
   { key: 'uomCode', title: 'ĐVT', width: 55, value: (r) => r.uomCode, auditField: false },
   { key: 'qty', title: 'Số lượng', width: 85, type: 'quantity', value: (r) => r.qty, auditField: false },
+  { key: 'receivedQty', title: 'Đã nhận', width: 80, type: 'quantity', value: (r) => r.receivedQty, auditField: false },
+  { key: 'deliverableQty', title: 'Còn giao được', width: 110, type: 'quantity', value: (r) => r.deliverableQty, auditField: false },
   { key: 'unitPrice', title: 'Đơn giá', width: 110, type: 'money', value: (r) => r.unitPrice, auditField: false },
   { key: 'discountPct', title: 'CK %', width: 60, type: 'quantity', value: (r) => r.discountPct, auditField: false },
   { key: 'vatCode', title: 'Thuế suất', width: 70, value: (r) => (r.vatCode && /^\d+$/.test(r.vatCode) ? `${r.vatCode}%` : r.vatCode), auditField: false },
@@ -121,6 +124,7 @@ export function PortalOrderPage() {
   const order = useQuery({ queryKey: ['portal', 'order', id], queryFn: () => portalApi.order(id) })
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [historyGroupBy, setHistoryGroupBy] = useState<string | null>(null)
+  const [notifying, setNotifying] = useState(false)
   const data = order.data
 
   if (!data) {
@@ -196,6 +200,21 @@ export function PortalOrderPage() {
         </dl>
       </Section>
       {data.canRespond && <RespondForm order={data} />}
+      {/* Lát P5: báo giao hàng – NCC báo trước ngày giao, số phiếu giao, SL; nơi nhận lập phiếu nhận hàng từ phiếu. */}
+      {notifying && data.canNotifyDelivery ? (
+        <DeliveryNoticeForm order={data} onClose={() => setNotifying(false)} />
+      ) : (
+        data.status !== 'Cancelled' &&
+        data.status !== 'Received' && (
+          <div className="erp-portal-actions" style={{ marginBottom: 8 }}>
+            <span className="erp-portal-hint">{data.notifyDeliveryBlockedReason ?? 'Báo trước ngày giao, số phiếu giao và SL để nơi nhận chuẩn bị.'}</span>
+            <Button type="primary" icon={<CarOutlined />} disabled={!data.canNotifyDelivery} onClick={() => setNotifying(true)}>
+              Báo giao hàng…
+            </Button>
+          </div>
+        )
+      )}
+      {data.deliveryNotices.length > 0 && <DeliveryNoticeList key={data.id} order={data} />}
       <PortalFiles
         kind="orders"
         id={data.id}

@@ -9,7 +9,7 @@ import { apiFetch } from './client'
 
 /** Loại thông báo. */
 export type NotificationType = 'ApprovalPending' | 'Approved' | 'Rejected' | 'IntercompanyReceipt' | 'PeriodReopened' | 'ControlFinding' | 'DelegatedAction'
-  | 'ApprovalOverdue' | 'PortalQuestion' | 'PortalOrderResponse'
+  | 'ApprovalOverdue' | 'PortalQuestion' | 'PortalOrderResponse' | 'PortalDeliveryNotice'
 
 /** Một thông báo. */
 export interface AppNotification {
@@ -40,6 +40,8 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   /** NCC gửi câu hỏi làm rõ RFQ trên Portal (lát P3b-2). */
   PortalQuestion: 'Câu hỏi NCC',
   PortalOrderResponse: 'NCC phản hồi đơn',
+  /** NCC báo giao hàng / hủy báo giao trên Portal (lát P5). */
+  PortalDeliveryNotice: 'NCC báo giao hàng',
 }
 
 /** Thông báo của tôi, mới nhất trước. */

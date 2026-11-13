@@ -36,6 +36,7 @@ import { formatDate, formatDateTime, formatMoney, formatQuantity, vnNumberInput,
 import { ApprovalHistory } from './ApprovalHistory'
 import { BudgetNotice } from './BudgetNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
+import { DeliveryNoticePanel } from './DeliveryNoticePanel'
 import { SupplierResponsePanel } from './SupplierResponsePanel'
 import { supplierResponseSummary } from './supplierResponseSummary'
 import { useApprovalCommands } from './useApprovalCommands'
@@ -857,6 +858,11 @@ export function PurchaseOrderPage() {
                 key: 'supplier-response',
                 label: 'Xác nhận NCC',
                 children: <SupplierResponsePanel orderId={doc.id} orderNo={doc.no} info={doc.supplierResponse} />,
+              }, {
+                // Lát P5: phiếu NCC báo giao trên Portal – lập XNH từ phiếu.
+                key: 'delivery-notices',
+                label: 'Giao hàng NCC',
+                children: <DeliveryNoticePanel orderId={doc.id} />,
               }]
             : []),
           ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={PURCHASE_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
