@@ -34,6 +34,10 @@ public static class PrintingEndpoints
             .WithTags("In phiếu")
             .RequireAnyPermission(Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate, Permissions.Purchase.PaymentApprove,
                 Permissions.Purchase.PaymentPay);
+        // Lát Y11c: bảng kê chi phí tạp vụ 2C (mẫu giả lập nhóm C – chờ mẫu thật).
+        app.MapGet("/api/sundry-expense-sheets/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.SundryExpenseSheetAsync(id, ct)))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate, Permissions.Purchase.SundryApprove);
         // Lát Y6: kết quả hỏi giá theo biểu mẫu 3A / 3a / 3B; form=3A in bảng so sánh (RFQ loại A).
         app.MapGet("/api/rfqs/{id:guid}/pdf", async (Guid id, string? form, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.RfqAsync(id, form, ct)))
             .WithTags("In phiếu")

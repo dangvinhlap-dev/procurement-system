@@ -52,6 +52,14 @@ public partial class PurchasingTests
             $"/api/sundry-expense-sheets/{first.Id}/approve", new ApprovalActionRequest("Đồng ý"), Ct));
         Assert.Equal("Approved", first.Status);
         Assert.False(first.Actions.CanEdit);
+        // In 2C (lát Y11c – mẫu giả lập): người duyệt chỉ có quyền bảng kê in được; nội dung mẫu.
+        var pdf = await approver.GetAsync($"/api/sundry-expense-sheets/{first.Id}/pdf", Ct);
+        Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+        Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
+        var form = Proc.Infrastructure.Printing.CuvtPrintForms.SundryExpenseSheet(first, "Công ty thử");
+        Assert.Equal(("2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", true, 2, 6), (form.FormNo, form.Title, form.Landscape, form.Rows.Count, form.Columns.Count));
+        Assert.Contains(form.Info, i => i.Label.StartsWith("Định mức", StringComparison.Ordinal) && i.Value == "1.000.000 đ");
+        Assert.Equal(["550.500"], form.TotalCells);
 
         // Bảng kê 2: 500.000 → đã dùng 550.500 + 500.000 > 1.000.000 → vượt, gửi được nhưng thêm chặng TVB.
         var second = await ReadAsync<SundryExpenseSheetDto>(await f.Buyer.PostAsJsonAsync("/api/sundry-expense-sheets",

@@ -44,6 +44,13 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>In bảng kê chi phí tạp vụ 2C (lát Y11c – mẫu giả lập nhóm C, khổ ngang).</summary>
+    /// <param name="id">Bảng kê.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>
     /// In kết quả hỏi giá theo biểu mẫu CUVT (lát Y6): 3A so sánh chọn NCC, hoặc 3a/3B bảng trình giá mỗi NCC trúng thầu một trang; khổ ngang.
     /// </summary>
