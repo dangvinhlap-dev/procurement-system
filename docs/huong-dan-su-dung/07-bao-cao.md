@@ -23,6 +23,7 @@ Mọi báo cáo: lọc trên đầu trang, **Xuất Excel** đúng cột đang h
 | SLA | SLA mua hàng | Số ngày làm việc từ PR đủ duyệt đến PO được duyệt, so SLA theo loại: hàng đã có giá, hàng chưa có NCC, hàng khẩn (tham số SEC) |
 | QCDEV | Sai lệch nhận hàng | Dòng nhập có hàng không đạt, thiếu/thừa; **% đạt chất lượng** |
 | MATCH3 | Đối chiếu PO – nhận – hóa đơn | Mỗi phiếu nhập đã ghi sổ: PO, tiền PO, tiền nhận, hóa đơn, chênh lệch; kết quả Chưa có hóa đơn / Lệch tiền / Khớp (dung sai nhập trên bộ lọc); cảnh báo nhận/hóa đơn trước ngày PO, hóa đơn tính cả hàng thiếu; kết quả nghiệm thu |
+| TTPO | Theo dõi thanh toán | Mỗi PO đã duyệt: giá trị PO, đã nhận, tiền hóa đơn trên phiếu nhận hàng (XNH), hóa đơn chưa đề nghị, đề nghị đang lập / chờ duyệt / đã duyệt chờ chi, đã chi, giảm trừ, **còn phải trả**; xem theo PO hoặc NCC |
 | RPSUP | Mua hàng theo NCC | Giá trị mua theo NCC / nhóm hàng / mặt hàng / công ty |
 | SUPEVAL | Đánh giá NCC | Tỷ lệ trả hàng, tỷ lệ giao đúng hạn, **xếp loại** theo ngưỡng cấu hình ở RATE |
 | SAVE | Tiết kiệm từ đấu thầu | So giá trúng thầu với giá tham chiếu trên các RFQ đã duyệt kết quả |

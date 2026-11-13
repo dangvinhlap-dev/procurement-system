@@ -2489,6 +2489,15 @@ API `/api/payment-requests` (+ `/orders`, `/source?purchaseOrderId=`, `/{id}/sub
 Chưa làm: đề nghị gộp nhiều PO của một NCC; tạm ứng (Q16 "tạm ứng làm sau"); một XNH nhiều hóa đơn / một hóa đơn nhiều XNH (nhập tách tiền
 hóa đơn theo từng XNH) – khi có yêu cầu.
 
+**Lát Y9 – báo cáo thanh toán (13/11/2026, bản 0.27.0 – mục 19.4 "ACCX", Q16).** Quy tắc tự đặt (người dùng chọn "làm Y8, Y11, Y9 rồi phát
+hành 0.27.0"; chưa có biểu mẫu, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| Y9-1 | **Theo dõi thanh toán** (màn hình **TTPO**, Báo cáo → Theo dõi thanh toán, `GET /api/reports/payment-tracking?from=&to=&allCompanies=`, quyền `Report.Purchase.View`; toàn tập đoàn cần `Report.Purchase.ViewAllCompanies`): mỗi dòng một **PO đã duyệt / đã đóng** có ngày PO trong khoảng. Tiền VND gồm VAT. |
+| Y9-2 | Cột: **giá trị PO** (sau CK + VAT); **đã nhận** (giá trị XNH đã xác nhận); **tiền hóa đơn** (Σ tiền hóa đơn nhập trên XNH đã xác nhận – "Cập nhật hóa đơn"); **XNH chưa HĐ** (số phiếu); **HĐ chưa đề nghị** (hóa đơn của XNH chưa ở đề nghị chưa hủy); **đang lập / chờ duyệt** (số tiền đề nghị nháp – kể cả bị từ chối quay về nháp – và chờ duyệt); **đã duyệt chờ chi**; **đã chi** (số tiền đề nghị đã ghi Đã chi); **giảm trừ** (của đề nghị đã chi); **còn phải trả = tiền hóa đơn − đã chi − giảm trừ đã chi** (giảm trừ đã cấn trừ nên coi là xong; hàng nhận chưa có hóa đơn chưa tính); ngày chi cuối. Ví dụ hóa đơn 1.045.000, đã chi 600.000, giảm trừ 27.000 → còn 418.000. |
+| Y9-3 | Đèn **Thanh toán**: Chưa có hóa đơn (xám) / Chưa chi (đỏ) / Đã chi một phần (vàng) / Đã trả đủ HĐ (xanh). Dòng có hóa đơn chưa đề nghị hoặc đề nghị đã duyệt chờ chi được đánh dấu. Xem theo **đơn mua hàng** hoặc **NCC** (cộng các cột, sắp còn phải trả giảm dần); dòng thông tin tổng; xuất Excel lưới. |
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
@@ -2691,7 +2700,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
-| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán (Y9a theo dõi thanh toán TTPO – xong 13/11/2026) |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)

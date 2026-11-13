@@ -502,6 +502,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - Kiểm tra: build 0 cảnh báo, `dotnet test` 776/776, tsc, oxlint, `npm run build`; Playwright đủ bộ 144/146 (2 spec đếm cấp mẫu CUVT / chọn loại
     phiếu – sửa theo DNT, chạy lại qua cùng payment-request: 5/5). **Đã merge.** Tiếp theo: Y11 (tạp vụ 1C/2C) – chờ người dùng gửi mẫu 1C/2C
     hoặc "đồng ý" đề xuất (bảng kê 2C theo bộ phận × tháng; 1C gộp nhiều 2C đã duyệt), rồi Y9 (báo cáo thanh toán), rồi phát hành 0.27.0.
+- **Lát Y9 – báo cáo thanh toán (13/11/2026, nhánh `feature/y9-bao-cao-thanh-toan`, bản 0.27.0)** – làm trước Y11 vì Y11 còn chờ mẫu 1C/2C
+  (không có trong `docs/`, file CUVT nhóm A/B chỉ có sheet 1A–5A, 1B–5B). Quy tắc tự đặt Y9-1…Y9-3 (design.md 19.3 "Lát Y9").
+  - **Y9a bước 1 (xong)**: `GET /api/reports/payment-tracking` (`PurchaseReportService.GetPaymentTrackingAsync`): mỗi PO đã duyệt / đóng theo
+    ngày PO – giá trị PO, đã nhận, hóa đơn XNH, XNH chưa HĐ, HĐ chưa đề nghị, đang lập / chờ duyệt, đã duyệt chờ chi, đã chi, giảm trừ, còn
+    phải trả; tổng hợp NCC + dòng tổng. Test `TheoDoiThanhToan_TheoPo_HoaDon_DeNghi_DaChi_ConPhaiTra`.
+  - **Y9a bước 2 (xong)**: màn hình **TTPO** (Báo cáo → Theo dõi thanh toán, `PaymentTrackingReportPage`): xem theo PO / NCC, đèn tình trạng
+    thanh toán, ô số PO; e2e `payment-request.spec.ts` thêm bước báo cáo (qua). Tài liệu: design.md 19.3 + 19.6, hướng dẫn 07-bao-cao.
+  - **Y9b (đang làm)**: xuất Excel chứng từ mua cho kế toán (PO đã duyệt, XNH + hóa đơn, đề nghị thanh toán) thay ACCX (mục 19.4).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
