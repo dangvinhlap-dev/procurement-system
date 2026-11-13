@@ -514,7 +514,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Excel 5 sheet. **Quyền mới `Report.PurchaseAccounting.Export`** (vai trò mẫu KETOAN – **cần gán cho vai trò Kế toán đang dùng**, vai trò
     mẫu chỉ áp khi tạo/cập nhật bộ vai trò mẫu). Màn hình **ACCP** (Báo cáo → Xuất chứng từ mua). Test `XuatChungTuMuaKeToan_Po_Xnh_DeNghiThanhToan`;
     e2e `payment-request.spec.ts` thêm bước ACCP + tải file. Không migration. Tài liệu: design.md 19.3, 19.4, 19.6; hướng dẫn 07-bao-cao 7.6.
-  - Kiểm tra: build 0 cảnh báo, `dotnet test` 778/778, tsc, oxlint, `npm run build`; e2e payment-request qua.
+  - Kiểm tra: build 0 cảnh báo, `dotnet test` 778/778, tsc, oxlint, `npm run build`; Playwright đủ bộ 146/146. **Đã merge.**
     Tiếp theo: **Y11** (tạp vụ 1C/2C) – người dùng trả lời "đồng ý" 13/11/2026 giữa lát Y9 → làm theo đề xuất (bảng kê 2C theo bộ phận ×
     tháng; 1C gộp nhiều 2C đã duyệt), rồi phát hành 0.27.0 khi người dùng yêu cầu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
