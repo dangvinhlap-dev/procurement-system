@@ -10,6 +10,7 @@ import { hasOpenPopup } from '../../utils/popup'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DocumentForm.css'
 import { DocNo } from '../../classic/DocNo'
+import { useIsActiveTab, useScreenTabLabel } from '../../app/screenTabs'
 
 /** Màu thẻ trạng thái phiếu theo sắc thái (màu lấy từ bảng màu có sẵn của antd, không viết màu cứng). */
 const toneColor: Record<StatusTone, string> = {
@@ -129,8 +130,14 @@ export function DocumentForm({
     }
   }, [printPath, message])
 
+  // Số phiếu hiện trên thẻ màn hình (ví dụ "Đơn mua hàng: PO-2026-0012").
+  useScreenTabLabel(number ?? undefined)
+  const activeTab = useIsActiveTab()
+
   // Phím tắt của phiếu (design.md mục 10.1). F2 chỉ khi không có danh sách thả xuống đang mở, để không chen vào ô đang chọn.
+  // Chỉ nghe khi phiếu nằm ở thẻ màn hình đang xem – không thì Ctrl+S lưu cùng lúc mọi phiếu đang mở ở các thẻ.
   useEffect(() => {
+    if (!activeTab) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && onSave) {
         e.preventDefault()
@@ -147,7 +154,7 @@ export function DocumentForm({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onSave, onAddLine, readOnly, printPath, print])
+  }, [activeTab, onSave, onAddLine, readOnly, printPath, print])
 
   return (
     <div className="document-form" ref={rootRef} {...auditScopeProps(audit)}>

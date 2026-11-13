@@ -10,9 +10,9 @@ import {
 import { App, AutoComplete, Avatar, Badge, Button, Dropdown, Input, Tooltip, type MenuProps } from 'antd'
 import { Select } from '../../classic/Select'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { searchScreens } from '../../app/commands'
 import { moduleGroups, type ModuleGroup, type ModuleKey } from '../../app/screens'
+import { useScreenTabs } from '../../app/screenTabs'
 import { useVisibleScreens } from '../../app/useVisibleScreens'
 import { hasWildcard, normalizeVi } from '../../utils/text'
 
@@ -85,7 +85,7 @@ export function ShellBar({
   onLogout,
   onChangePassword,
 }: ShellBarProps) {
-  const navigate = useNavigate()
+  const { open, back } = useScreenTabs()
   const { message } = App.useApp()
   const screens = useVisibleScreens()
   const [command, setCommand] = useState('')
@@ -119,20 +119,20 @@ export function ShellBar({
   const openScreen = (code: string) => {
     const screen = screens.find((s) => s.code === code)
     setCommand('')
-    if (screen) navigate(screen.path)
+    if (screen) open(screen.path)
   }
 
   return (
     <header className="app-shell-bar" data-testid="shell-bar">
       <div className="app-shell-start">
-        <button type="button" className="app-shell-brand" onClick={() => navigate('/')} title="Trang chủ">
+        <button type="button" className="app-shell-brand" onClick={() => open('/')} title="Trang chủ">
           <span className="app-shell-logo" aria-hidden>
             QM
           </span>
           <span className="app-shell-title">{appName}</span>
         </button>
         <Tooltip title="Quay lại" mouseEnterDelay={0.6}>
-          <Button type="text" aria-label="Quay lại" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+          <Button type="text" aria-label="Quay lại" icon={<ArrowLeftOutlined />} onClick={back} />
         </Tooltip>
         <nav className="app-shell-menu" role="menubar" aria-label="Menu module">
           {groups.map((g) => (
@@ -145,7 +145,7 @@ export function ShellBar({
                 items: menuItemsOf(g.key),
                 onClick: ({ key }) => {
                   setOpenKey(null)
-                  navigate(key)
+                  open(key)
                 },
               }}
             >
@@ -190,6 +190,19 @@ export function ShellBar({
           filterOption={false}
           options={matches.map((s) => ({ value: s.code, label: `${s.code} – ${s.title}` }))}
           onKeyDown={(e) => {
+            // Kiểu SAP: `/o<mã>` mở ở thẻ màn hình mới, `/n<mã>` mở thay ở thẻ đang xem (ví dụ /oPO, /nPR).
+            const session = /^\/([on])\s*(\S+)$/i.exec(command.trim())
+            if (e.key === 'Enter' && session) {
+              e.preventDefault()
+              const screen = screens.find((s) => s.code.toLowerCase() === session[2].toLowerCase())
+              if (!screen) {
+                message.warning(`Không có màn hình "${session[2]}".`)
+                return
+              }
+              setCommand('')
+              open(screen.path, session[1].toLowerCase() === 'n' ? 'current' : 'auto')
+              return
+            }
             if (e.key === 'Enter' && command.trim() && matches.length === 0) {
               message.warning(`Không có màn hình "${command.trim()}".`)
             }
@@ -215,7 +228,7 @@ export function ShellBar({
             aria-label={`Thông báo (${unreadCount} chưa đọc)`}
             title="Thông báo"
             icon={<BellOutlined />}
-            onClick={() => navigate('/hang-ngay/thong-bao')}
+            onClick={() => open('/hang-ngay/thong-bao')}
           />
         </Badge>
         <Dropdown

@@ -1125,6 +1125,11 @@ cách). Bố cục chứng từ: thanh menu chữ → thanh công cụ icon (mà
 Các mục 17.1–17.x dưới đây vẫn đúng về **chức năng** khung (menu module, ô lệnh, cây điều hướng, danh sách, chứng từ); kích thước và hình
 khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32px, không đổ bóng, bo 2px).
 
+**Thẻ màn hình (demo 13/11/2026, chờ duyệt – ui-style.md mục 8a):** trong AppShell mở cùng lúc tối đa **4 màn hình** (danh sách, phiếu, báo
+cáo), chuyển qua lại không mất dữ liệu đang nhập. Quy tắc (người dùng chốt 13/11/2026): **mọi thẻ thuộc công ty đang làm việc** – không mở
+màn hình của công ty khác cùng lúc; đổi công ty khi đang mở nhiều thẻ thì hỏi lại rồi đóng các thẻ, chỉ giữ danh sách đang xem (dữ liệu và
+quyền lọc theo công ty đang làm việc – mục 9.2 – nên thẻ của công ty cũ tải lại theo công ty mới dễ lưu nhầm).
+
 Từ 31/10/2026 đến 01/11/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
 Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica
 nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đổi hai lát – UI-a theme, UI-b bố cục Shellbar + Dynamic Page.

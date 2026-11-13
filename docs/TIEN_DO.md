@@ -150,6 +150,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Demo thẻ màn hình – mở tối đa 4 màn hình (13/11/2026, nhánh `feature/nhieu-man-hinh`, CHƯA merge – chờ người dùng xem và duyệt)**:
+  thanh thẻ trên vùng nội dung AppShell (ui-style.md mục 8a, design.md mục 17), mỗi thẻ vẽ trang theo đường dẫn riêng (`useRoutes`), thẻ ẩn
+  giữ nguyên dữ liệu đang nhập; cây điều hướng/menu/ô lệnh/ô số chứng từ mở thẻ mới hoặc chuyển sang thẻ đã mở, đủ 4 thì báo; Shift+bấm hoặc
+  `/n<mã>` mở thay ở thẻ đang xem, `/o<mã>` thẻ mới; Alt+1…4 chuyển thẻ; Quay lại theo lịch sử từng thẻ; F5 mở lại đủ thẻ. Người dùng chốt
+  giữa lát: **mọi thẻ thuộc công ty đang làm việc** – đổi công ty khi mở nhiều thẻ thì hỏi lại rồi chỉ giữ danh sách đang xem. Phím tắt
+  Ctrl+S/F2/Ctrl+P/Esc chỉ chạy ở thẻ đang xem; ngăn kéo/hộp thoại vẽ trong vùng thẻ. Test `e2e/screen-tabs.spec.ts` (2 test, lặp 5 lần qua);
+  tsc, oxlint qua. Còn lại khi duyệt: chạy đủ Playwright và sửa test cũ bị ảnh hưởng (bấm cây điều hướng giờ mở thẻ mới), merge.
+
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →
   Z3 ô số chứng từ (sao chép, bấm đúp mở phiếu gốc) → Z4 quyền Hủy đặc biệt **chỉ cấp cho admin** (người lập không hủy được, bắt buộc lý
