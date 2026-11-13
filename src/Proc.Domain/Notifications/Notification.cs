@@ -40,6 +40,9 @@ public static class NotificationTypes
 
     /// <summary>NCC xác nhận / từ chối đơn đặt hàng trên Portal – báo người lập PO (lát P4a).</summary>
     public const string PortalOrderResponse = "PortalOrderResponse";
+
+    /// <summary>NCC báo giao hàng trên Portal – báo thủ kho nơi nhận và người lập PO (lát P5).</summary>
+    public const string PortalDeliveryNotice = "PortalDeliveryNotice";
 }
 
 /// <summary>

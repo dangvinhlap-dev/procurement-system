@@ -198,6 +198,8 @@ public static class DependencyInjection
         // Lát P3a: thư mời, báo giá online niêm phong.
         services.AddScoped<Proc.Application.Portal.IPortalRfqService, Proc.Infrastructure.Portal.PortalRfqService>();
         services.AddScoped<Proc.Application.Portal.IPortalOrderService, Proc.Infrastructure.Portal.PortalOrderService>();
+        services.AddScoped<Proc.Application.Portal.IPortalDeliveryNoticeService, Proc.Infrastructure.Portal.PortalDeliveryNoticeService>();
+        services.AddScoped<Proc.Application.Purchasing.IDeliveryNoticeService, Proc.Infrastructure.Purchasing.DeliveryNoticeService>();
         // Lát P3b-3: thư báo NCC (thư mời, gia hạn, hủy, trả lời, thông báo) – hàng chờ gửi qua dịch vụ nền email.
         services.AddScoped<Proc.Application.Portal.IPortalEmailService, Proc.Infrastructure.Portal.PortalEmailService>();
 

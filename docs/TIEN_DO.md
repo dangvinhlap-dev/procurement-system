@@ -452,7 +452,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - **Bước 1 (xong)**: Domain `PurchaseOrderDeliveryNotice` + dòng (số loại **BGH**, `DocumentTypes.DeliveryNotice`; Create / Cancel, không
     [Auditable]), `GoodsReceiptConfirmation.DeliveryNoticeId` + `LinkDeliveryNotice`, loại chủ đính kèm `DeliveryNoticeFile`; cấu hình EF (chỉ mục
     duy nhất XNH chưa hủy theo phiếu báo giao), migration `V0_26_0_NccBaoGiaoHang` (98 → 99). Test domain `PurchaseOrderDeliveryNoticeTests` (4) qua.
-  - Còn: bước 2 dịch vụ Portal + nội bộ + API + test tích hợp; bước 3 giao diện Portal, tab PO, XNH từ báo giao + e2e; bước 4 tài liệu.
+  - **Bước 2 (xong)**: `DeliveryNoticeQueries` (XNH theo phiếu, trạng thái Submitted/Receiving/Received/Cancelled, SL còn báo giao = SL đặt ×
+    (1 + dung sai) − đã nhận − phiếu chưa nhận), `PortalDeliveryNoticeService` (gửi – khóa PO, chặn khi NCC đang từ chối đơn, cấp số BGH theo
+    công ty đặt, báo thủ kho nơi nhận + người lập PO `PortalDeliveryNotice`; hủy – khóa phiếu, chặn khi có XNH; file `DeliveryNoticeFile`),
+    `PortalOrderService` (dòng thêm Id, đã nhận, còn giao; `CanNotifyDelivery`, danh sách phiếu), `DeliveryNoticeService` nội bộ (quyền xem PO
+    hoặc XNH), XNH nhận `DeliveryNoticeId` khi lập (khóa phiếu, một XNH chưa hủy / phiếu), DTO XNH có số BGH. API Portal
+    `/api/portal/orders/{id}/delivery-notices` (+ `/cancel`, file), nội bộ `GET /api/purchase-orders/{id}/delivery-notices`,
+    `GET /api/delivery-notices/{id}`. Test tích hợp `PortalBaoGiao_SlConGiao_HuyCoLyDo_LapXnhTheoPhieu_NccThayThucNhan`; `dotnet test` 772/772.
+  - Còn: bước 3 giao diện Portal (đang làm: `PortalDeliveryParts.tsx`), tab PO "Giao hàng NCC", XNH từ báo giao + e2e; bước 4 tài liệu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
