@@ -2092,7 +2092,8 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 5. **Giao – nhận** – NCC báo giao; nơi nhận lập **XNH** (dịch vụ: biên bản nghiệm thu).
 6. **Hóa đơn** – ~~NCC nộp hóa đơn điện tử (XML) trên Portal; kế toán chấp nhận / trả lại.~~ **Bỏ** (người dùng chốt 13/11/2026): công ty có
    kênh riêng tiếp nhận hóa đơn điện tử – phần mềm không làm bước này (lát P6a dừng, xem mục 19.5).
-7. **Đề nghị thanh toán** 5A/5B – chọn hóa đơn đã chấp nhận, tài khoản NCC đã duyệt; Đã chi do kế toán ghi.
+7. **Đề nghị thanh toán** 5A/5B – chọn XNH đã có hóa đơn (số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH – người dùng chốt 13/11/2026, thay
+   cho "hóa đơn đã chấp nhận" do bỏ bước 6), tài khoản NCC đã duyệt; Đã chi do kế toán ghi.
 
 | Phiếu | Chuỗi duyệt (theo thứ tự) | Cấp |
 | --- | --- | --- |
@@ -2528,8 +2529,8 @@ của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiệ
 
 **Lát P6a – hóa đơn điện tử trên Portal: BỎ (người dùng chốt 13/11/2026).** Công ty có kênh riêng tiếp nhận hóa đơn điện tử, người dùng không
 yêu cầu làm. Phần đã làm dở (domain, bộ đọc XML, dịch vụ, giao diện) chỉ nằm trên nhánh `feature/p6a-hoa-don-ncc`, **không merge** vào `main`,
-không có migration trên `main`. Còn chờ chốt khi làm lát Y8: đề nghị thanh toán 5A/5B (mục 19.3 bước 7) lấy thông tin hóa đơn từ đâu (ví dụ
-số, ký hiệu, ngày, tiền hóa đơn đã nhập trên XNH).
+không có migration trên `main`; nhánh đã xóa theo đồng ý của người dùng (13/11/2026). **Đã chốt (13/11/2026)**: đề nghị thanh toán 5A/5B
+(lát Y8, mục 19.3 bước 7) lấy thông tin hóa đơn từ **XNH** – số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH ("Cập nhật hóa đơn").
 
 **Lát P1 – tài khoản NCC (đã làm 12/11/2026, phát hành trong 0.24.0).** Quy tắc tự đặt (chưa có trong biểu mẫu, người dùng có thể chỉnh):
 
