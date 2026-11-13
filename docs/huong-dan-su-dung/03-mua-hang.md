@@ -208,6 +208,7 @@ Chi phí lặt vặt **đã phát sinh** (nhóm C – không qua PR/RFQ/PO), tha
   chặng **TVB** "Bảng kê tạp vụ vượt định mức" (mẫu CUVT: Giám đốc TC-NQ-KT).
 - **Duyệt**: Trưởng phòng/ban của bộ phận → GĐ khối → Phòng TC-NQ-KT → Chủ tịch (khi đã áp "Cấu hình duyệt mẫu" CUVT). Quyền
   `Purchase.Sundry.View/Create/Approve` (vai trò mẫu: DENGHI lập; TRUONGPHONGBAN, GDKHOI, TPTCKT, GDTCKT, CHUTICH duyệt; KETOAN xem).
+- **In phiếu** (khổ ngang) theo mẫu 2C – hiện là **mẫu giả lập** `docs/CUVT nhóm C 13.11.2026 (giả lập).xlsx`, sẽ sửa khi công ty gửi mẫu thật.
 - Hủy: phiếu nháp người lập tự hủy; đã gửi duyệt trở đi chỉ quản trị, bắt buộc lý do. Bảng kê đã gộp vào đề nghị 1C thì hủy dây chuyền (hủy
   đề nghị trước) – đề nghị đã chi thì không hủy được.
 
@@ -216,7 +217,8 @@ Chi phí lặt vặt **đã phát sinh** (nhóm C – không qua PR/RFQ/PO), tha
 - **Lập**: trên bảng kê tạp vụ đã duyệt bấm **Lập đề nghị thanh toán 1C** (chọn sẵn bộ phận và bảng kê), hoặc Mua hàng → Đề nghị thanh toán →
   **Lập đề nghị 1C (tạp vụ)**, chọn bộ phận rồi **Chọn bảng kê tạp vụ** (F2) – gộp được nhiều bảng kê đã duyệt của cùng bộ phận.
 - Nhập **người nhận tiền** (người đã ứng chi); chuyển khoản thì nhập tay ngân hàng, số tài khoản. Giảm trừ (tạm ứng đã nhận…) ghi lý do.
-- Duyệt, **Ghi Đã chi**, in phiếu như đề nghị 5A/5B (cùng chuỗi duyệt). Mỗi bảng kê chỉ ở một đề nghị chưa hủy.
+- Duyệt, **Ghi Đã chi**, in phiếu như đề nghị 5A/5B (cùng chuỗi duyệt). Mỗi bảng kê chỉ ở một đề nghị chưa hủy. Mẫu in 1C hiện là **mẫu giả lập**
+  (cùng file nhóm C), sẽ sửa khi công ty gửi mẫu thật.
 
 ## 3.5 Theo dõi giao hàng (POTRK)
 

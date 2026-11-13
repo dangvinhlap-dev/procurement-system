@@ -30,6 +30,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IPurchaseSummaryService _summaries;
     private readonly IRfqService _rfqs;
     private readonly IPaymentRequestService _payments;
+    private readonly ISundryExpenseSheetService _sundries;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -40,10 +41,12 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="summaries">Dịch vụ bảng tổng hợp đề xuất mua.</param>
     /// <param name="rfqs">Dịch vụ yêu cầu báo giá.</param>
     /// <param name="payments">Dịch vụ đề nghị thanh toán (lát Y8).</param>
+    /// <param name="sundries">Bảng kê chi phí tạp vụ (in 2C – lát Y11c).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
-        IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, IOptions<PrintingOptions> options)
+        IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, ISundryExpenseSheetService sundries,
+        IOptions<PrintingOptions> options)
     {
         try
         {
@@ -63,6 +66,15 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _summaries = summaries;
         _rfqs = rfqs;
         _payments = payments;
+        _sundries = sundries;
+    }
+
+    /// <inheritdoc />
+    public async Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var sheet = await _sundries.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        return new PdfFile($"{sheet.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.SundryExpenseSheet(sheet, company.Name)));
     }
 
     /// <inheritdoc />

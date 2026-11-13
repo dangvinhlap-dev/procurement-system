@@ -66,7 +66,15 @@ public static partial class CuvtPrintForms
     }
 
     /// <summary>
-    /// Phiếu đề nghị thanh toán tổng hợp chi phí tạp vụ 1C (lát Y11b – chưa có biểu mẫu Excel, dựng theo khung 5B): đầu phiếu phòng ban đề xuất,
+    /// Phụ đề mẫu 1C – theo file giả lập "docs/CUVT nhóm C 13.11.2026 (giả lập).xlsx" (lát Y11c); sửa khi người dùng gửi mẫu thật.
+    /// </summary>
+    private static readonly string[] Subtitles1C = ["CHI PHÍ TẠP VỤ – THANH TOÁN TỔNG HỢP THEO BẢNG KÊ"];
+
+    /// <summary>Phụ đề mẫu 2C – theo file giả lập nhóm C (lát Y11c).</summary>
+    private static readonly string[] Subtitles2C = ["CHI PHÍ LẶT VẶT ĐÃ PHÁT SINH – THANH TOÁN GỘP"];
+
+    /// <summary>
+    /// Phiếu đề nghị thanh toán tổng hợp chi phí tạp vụ 1C (lát Y11b – <b>mẫu giả lập</b> sheet "1C.DN TT TAP VU", dựng theo khung 5B): đầu phiếu phòng ban đề xuất,
     /// người nhận tiền, ngân hàng – số tài khoản (chuyển khoản); bảng chứng từ là các bảng kê 2C (ngày, số bảng kê, nội dung, số tiền); Tổng cộng,
     /// giảm trừ (tạm ứng đã nhận…), Số tiền còn lại, bằng chữ; khối ký theo chuỗi duyệt. Ví dụ hai bảng kê 550.500 + 195.500, giảm trừ 46.000 → 700.000.
     /// </summary>
@@ -108,8 +116,43 @@ public static partial class CuvtPrintForms
             after.Add(new("Đã chi", $"ngày {paid:dd/MM/yyyy}" + (string.IsNullOrWhiteSpace(payment.PaymentNote) ? "" : $" – {payment.PaymentNote.Trim()}")));
 
         return new CuvtForm(
-            "1C", transfer ? "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN" : "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", Subtitles1B,
+            "1C", transfer ? "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN" : "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", Subtitles1C,
             companyName, payment.No, payment.Date, false, StatusNote(payment.Status), info, columns, rows, 3, [Money(payment.TotalAmount)],
             (null, null), payment.Note, Signers("Người lập", payment.CreatedByName, payment.Approvals), extra, "Tổng cộng", after);
+    }
+
+    /// <summary>
+    /// Bảng kê chi phí tạp vụ 2C (lát Y11c – <b>mẫu giả lập</b> sheet "2C.BK CP TAP VU", khổ ngang như 2A/2B): đầu phiếu phòng ban đề xuất, định mức
+    /// tháng, đã dùng trong tháng (không gồm bảng kê này), tổng bảng kê – số liệu định mức lúc lưu / gửi gần nhất; bảng STT, Ngày chi, Nội dung chi,
+    /// Nơi mua / người bán, Số hóa đơn / chứng từ, Số tiền; dòng Tổng cộng, bằng chữ; khối ký theo chuỗi duyệt. Ví dụ ba khoản 300.000 + 250.500
+    /// + 195.500 → tổng 746.000.
+    /// </summary>
+    /// <param name="sheet">Bảng kê đã đọc theo phạm vi.</param>
+    /// <param name="companyName">Tên công ty in đầu phiếu.</param>
+    /// <returns>Nội dung in.</returns>
+    public static CuvtForm SundryExpenseSheet(SundryExpenseSheetDto sheet, string companyName)
+    {
+        var budget = sheet.Budget;
+        var period = $"{sheet.Date.Month:00}/{sheet.Date.Year}";
+        var info = new List<CuvtInfoLine>
+        {
+            new("Phòng ban đề xuất", sheet.DepartmentName),
+            new($"Định mức/dự trù chi phí tháng {period}", budget is null ? "Chưa khai báo" : Vnd(budget.BudgetAmount), budget is not null),
+            new("Đã dùng trong tháng (không gồm bảng kê này)", budget is null ? "Chưa khai báo" : Vnd(budget.UsedAmount)),
+            new("Tổng tiền bảng kê", Vnd(sheet.TotalAmount), true),
+        };
+        // Cột cố định 171 mm; Nội dung chi lấy phần còn lại của khổ ngang.
+        var columns = new List<CuvtColumn>
+        {
+            new("STT", 12, Center: true), new("Ngày chi", 24, Center: true), new("Nội dung chi", CuvtFormLayout.LandscapeWidthMm - 171),
+            new("Nơi mua / người bán", 60), new("Số hóa đơn / chứng từ", 40, Center: true), new("Số tiền", 35, true),
+        };
+        var rows = sheet.Lines.OrderBy(l => l.LineNo)
+            .Select(l => new[] { l.LineNo.ToString(System.Globalization.CultureInfo.InvariantCulture), Date(l.ExpenseDate) ?? "", l.Description, l.Vendor ?? "", l.ReceiptNo ?? "", Money(l.Amount) })
+            .ToList();
+        var after = new List<CuvtTextLine> { new("Bằng chữ", VietnameseNumberText.ToVndWords(sheet.TotalAmount) + " ./.") };
+        return new CuvtForm(
+            "2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", Subtitles2C, companyName, sheet.No, sheet.Date, true, StatusNote(sheet.Status), info, columns, rows, 5,
+            [Money(sheet.TotalAmount)], (null, null), sheet.Note, Signers("Người lập", sheet.CreatedByName, sheet.Approvals), null, "Tổng cộng", after);
     }
 }

@@ -234,6 +234,7 @@ export function SundryExpensePage() {
       title="Bảng kê chi phí tạp vụ"
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'SundryExpenseSheet', id: doc?.id }}
+      printPath={doc ? `/api/sundry-expense-sheets/${doc.id}/pdf` : undefined}
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={sheet.isLoading}

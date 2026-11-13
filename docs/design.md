@@ -2529,6 +2529,15 @@ thêm `SundryExpenseSheetId` (khóa ngoại bảng kê), `ReceiptConfirmationId`
 đưa cột về bắt buộc. API thêm `GET /api/payment-requests/sundry-sheets?departmentId=&requestId=`; lưu 1C gửi `form = "1C"`, `departmentId`,
 `payeeName`, `bankName…`, dòng `sundryExpenseSheetId`.
 
+**Lát Y11c – biểu mẫu 1C / 2C GIẢ LẬP (13/11/2026).** Người dùng chốt: công ty chưa có biểu mẫu 1C, 2C – **phần mềm giả lập trước, ghi nhận lại,
+sau này người dùng cung cấp chi tiết để sửa cho đúng thực tế**. File giả lập `docs/CUVT nhóm C 13.11.2026 (giả lập).xlsx` (sheet "2C.BK CP TAP VU"
+khổ ngang, "1C.DN TT TAP VU" khổ dọc theo khung 5B, "Ghi chu" liệt kê điểm cần xác nhận) – cùng phong cách file nhóm A/B (Times New Roman, tiêu đề
+chữ V, số biểu mẫu góc phải). Bản in trong phần mềm theo đúng file này: 2C `GET /api/sundry-expense-sheets/{id}/pdf` (`CuvtPrintForms.SundryExpenseSheet`
+– phòng ban, định mức tháng, đã dùng trong tháng không gồm bảng kê này, tổng bảng kê; bảng STT – ngày chi – nội dung – nơi mua – số hóa đơn – số
+tiền; bằng chữ; khối ký), 1C như Y11-9 (phụ đề "CHI PHÍ TẠP VỤ – THANH TOÁN TỔNG HỢP THEO BẢNG KÊ"). **Khi người dùng gửi mẫu thật**: đặt file vào
+`docs/`, sửa bản in, trường dữ liệu và quy tắc Y11-1…Y11-9 cho khớp; điểm cần xác nhận: định mức tính theo số tiền đã chi gồm thuế, chặng vượt định
+mức do GĐ TC-NQ-KT duyệt, người lập 2C, 1C không in định mức (một đề nghị gộp được bảng kê nhiều tháng).
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
