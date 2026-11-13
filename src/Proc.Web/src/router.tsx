@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, type RouteObject } from 'react-router'
 import { screens } from './app/screens'
 import { LOGIN_PATH } from './auth/paths'
 import { RequireAuth } from './auth/RequireAuth'
@@ -255,6 +255,33 @@ const drawerPages = [
   { code: 'DBN', path: '/mua-hang/don-ban-noi-bo/:id', element: <InternalSaleListPage /> },
 ]
 
+/** Các trang nằm trong AppShell – dùng chung cho bộ định tuyến và cho từng thẻ màn hình (tối đa 6 thẻ). */
+const shellRoutes: RouteObject[] = [
+  ...screens.map((s) => ({
+    path: s.path,
+    element: <ScreenGuard screen={s}>{implemented[s.code] ?? <PlaceholderPage />}</ScreenGuard>,
+  })),
+  // Trang chứng từ (lập mới: /kho/grn/moi) – cùng quyền với màn hình danh sách của nó.
+  ...documentPages.map((d) => ({
+    path: `${d.screen.path}/:id`,
+    element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
+  })),
+  // Trang đầy đủ của phiếu vốn mở trong ngăn kéo – mở thẳng từ thông báo, Việc cần làm, Tra cứu chứng từ; cùng quyền màn hình
+  // danh sách. Phụ lục hợp đồng chỉ có Id phụ lục nên dùng quyền màn hình CTR.
+  ...drawerPages.map((d) => ({
+    path: d.path,
+    element: <ScreenGuard screen={screens.find((s) => s.code === d.code)!}>{d.element}</ScreenGuard>,
+  })),
+  // Danh sách PO dữ liệu mẫu (30 dòng) giữ cho test giao diện chung AppShell/ListPage/DataGrid so với ảnh mẫu (e2e/po-list.spec.ts).
+  {
+    path: '/mua-hang/po/mau',
+    element: <ScreenGuard screen={screens.find((s) => s.code === 'PO')!}><DemoPurchaseOrderListPage /></ScreenGuard>,
+  },
+  // Nút "Mở trên phần mềm" trong email thông báo (lát O2b): đổi công ty rồi mở phiếu – quyền do trang đích kiểm tra.
+  { path: '/mo/:screen/:id?', element: <OpenLinkPage /> },
+  { path: '*', element: <PlaceholderPage /> },
+]
+
 /**
  * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9) và yêu cầu đăng nhập;
  * riêng màn hình đăng nhập đứng ngoài khung.
@@ -309,33 +336,10 @@ export const router = createBrowserRouter([
   {
     element: (
       <RequireAuth>
-        <AppShell />
+        <AppShell routes={shellRoutes} />
       </RequireAuth>
     ),
-    children: [
-      ...screens.map((s) => ({
-        path: s.path,
-        element: <ScreenGuard screen={s}>{implemented[s.code] ?? <PlaceholderPage />}</ScreenGuard>,
-      })),
-      // Trang chứng từ (lập mới: /kho/grn/moi) – cùng quyền với màn hình danh sách của nó.
-      ...documentPages.map((d) => ({
-        path: `${d.screen.path}/:id`,
-        element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,
-      })),
-      // Trang đầy đủ của phiếu vốn mở trong ngăn kéo – mở thẳng từ thông báo, Việc cần làm, Tra cứu chứng từ; cùng quyền màn hình
-      // danh sách. Phụ lục hợp đồng chỉ có Id phụ lục nên dùng quyền màn hình CTR.
-      ...drawerPages.map((d) => ({
-        path: d.path,
-        element: <ScreenGuard screen={screens.find((s) => s.code === d.code)!}>{d.element}</ScreenGuard>,
-      })),
-      // Danh sách PO dữ liệu mẫu (30 dòng) giữ cho test giao diện chung AppShell/ListPage/DataGrid so với ảnh mẫu (e2e/po-list.spec.ts).
-      {
-        path: '/mua-hang/po/mau',
-        element: <ScreenGuard screen={screens.find((s) => s.code === 'PO')!}><DemoPurchaseOrderListPage /></ScreenGuard>,
-      },
-      // Nút "Mở trên phần mềm" trong email thông báo (lát O2b): đổi công ty rồi mở phiếu – quyền do trang đích kiểm tra.
-      { path: '/mo/:screen/:id?', element: <OpenLinkPage /> },
-      { path: '*', element: <PlaceholderPage /> },
-    ],
+    // Khai báo cho bộ định tuyến nhận đường dẫn; trang thật do từng thẻ màn hình của AppShell vẽ (useRoutes theo đường dẫn của thẻ).
+    children: shellRoutes,
   },
 ])

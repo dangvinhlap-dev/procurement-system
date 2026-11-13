@@ -1,6 +1,6 @@
 import { DoubleRightOutlined, FolderOpenOutlined, FolderOutlined, PushpinOutlined } from '@ant-design/icons'
 import { useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useOpenScreen } from '../../app/screenTabs'
 import { moduleGroups, type Screen } from '../../app/screens'
 import { useVisibleScreens } from '../../app/useVisibleScreens'
 import { layoutTokens } from '../../theme'
@@ -45,7 +45,7 @@ function saveState(state: { width: number; hidden: boolean }) {
  * số đếm (xám, đỏ nếu cần chú ý); mục đang mở nền xanh đậm chữ trắng.
  */
 export function NavTree({ activePath, pinnedCodes, counts }: NavTreeProps) {
-  const navigate = useNavigate()
+  const openScreen = useOpenScreen()
   const screens = useVisibleScreens()
   const [{ width, hidden }, setState] = useState(loadState)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -131,7 +131,8 @@ export function NavTree({ activePath, pinnedCodes, counts }: NavTreeProps) {
                       className={`app-nav-item${active ? ' is-active' : ''}`}
                       aria-current={active ? 'page' : undefined}
                       title={s.title}
-                      onClick={() => navigate(s.path)}
+                      // Bấm: mở ở thẻ mới (đã mở thì chuyển sang); Shift+bấm: mở thay ở thẻ đang xem.
+                      onClick={(e) => openScreen(s.path, e.shiftKey ? 'current' : 'auto')}
                     >
                       <span className="app-nav-item-icon">{s.icon}</span>
                       <span className="app-nav-item-label">{s.navLabel}</span>

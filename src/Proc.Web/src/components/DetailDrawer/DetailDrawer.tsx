@@ -3,6 +3,8 @@ import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ApprovalCheckButton, ApprovalLocks, type ApprovalTrailInfo } from '../../classic/ApprovalTrail'
 import { hasOpenPopup } from '../../utils/popup'
+import { useIsActiveTab, useUnsavedCheck } from '../../app/screenTabs'
+import { isFormDirty, markFormClean, markFormDirty } from '../../utils/formDirty'
 import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
 import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
@@ -88,10 +90,24 @@ export function DetailDrawer({
 }: DetailDrawerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState(tabs[0]?.key)
+  // Ngăn kéo ở thẻ màn hình đang ẩn không nhận Ctrl+S, Esc (thẻ màn hình – docs/ui-style.md mục 8a).
+  const activeTab = useIsActiveTab()
+
+  // Thay đổi chưa lưu (hỏi lại khi rời trang – yêu cầu 13/11/2026): mở ngăn kéo là bắt đầu sạch; lưu xong không lỗi thì sạch lại.
+  const editable = open && !readOnly && !!onSave && !!form
+  useUnsavedCheck(() => !!form && isFormDirty(form), editable)
+  useEffect(() => {
+    if (open && form) markFormClean(form)
+  }, [open, form])
+  const wasSaving = useRef(saving)
+  useEffect(() => {
+    if (wasSaving.current && !saving && !error && form) markFormClean(form)
+    wasSaving.current = saving
+  }, [saving, error, form])
 
   // Ctrl+S lưu khi ngăn kéo đang mở – thao tác bằng bàn phím (CLAUDE.md mục 9).
   useEffect(() => {
-    if (!open || !onSave) return
+    if (!open || !onSave || !activeTab) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
@@ -100,7 +116,7 @@ export function DetailDrawer({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onSave, saving])
+  }, [open, onSave, saving, activeTab])
 
   // Esc đóng ngăn kéo, nghe ở cấp cửa sổ: Drawer của antd chỉ nhận Esc khi tiêu điểm nằm trong ngăn kéo, mà chọn xong một mục
   // trong ô chọn thì tiêu điểm có thể rơi ra ngoài (danh sách thả xuống vẽ ở cuối trang) – khi đó Esc không đóng được.
@@ -112,7 +128,7 @@ export function DetailDrawer({
     onCloseRef.current = onClose
   }, [onClose])
   useEffect(() => {
-    if (!open || asPage) return
+    if (!open || asPage || !activeTab) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       // Đang mở danh sách thả xuống, lịch hay hộp thoại con thì Esc đóng cái đó trước, chưa đóng ngăn kéo.
@@ -121,7 +137,7 @@ export function DetailDrawer({
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [open, asPage])
+  }, [open, asPage, activeTab])
 
   const saveButton = onSave && (
     <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={onSave} disabled={loading}>
@@ -144,6 +160,9 @@ export function DetailDrawer({
             requiredMark={formRequiredMark(!readOnly)}
             initialValues={initialValues}
             disabled={readOnly}
+            onValuesChange={() => {
+              if (form && !readOnly) markFormDirty(form)
+            }}
           >
             <Tabs
               size="small"

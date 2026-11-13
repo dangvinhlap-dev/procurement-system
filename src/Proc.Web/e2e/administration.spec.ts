@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { THUKHO_BHA, loginViaApi } from './helpers.ts'
+import { THUKHO_BHA, loginViaApi, confirmCompanySwitch } from './helpers.ts'
 
 /**
  * Màn hình Người dùng và Vai trò (design.md mục 9.1, 9.2, 9.5, 10.9): danh sách + ngăn kéo chi tiết có tab.
@@ -20,6 +20,7 @@ async function openScreen(page: Page, navLabel: string) {
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 /** Dòng lưới danh sách có chứa chữ cho trước. */
@@ -103,7 +104,7 @@ test.describe('quản trị hệ thống', () => {
     const drawer = page.locator('.detail-drawer')
     await expect(drawer.getByText(/Vai trò hệ thống: luôn có đủ mọi quyền/)).toBeVisible()
     await expect(drawer.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
-    await drawer.getByRole('button', { name: 'Đóng' }).click()
+    await drawer.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
 
     const code = `E2E${unique()}`.toUpperCase().slice(0, 20)
     await page.getByRole('button', { name: 'Tạo mới' }).click()
@@ -133,7 +134,7 @@ test.describe('quản trị hệ thống', () => {
       await create.click()
       await expect(page.locator('.ant-message')).toContainText('Đã tạo')
     } else {
-      await dialog.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+      await dialog.getByRole('button', { name: /(^|\s)Đóng$/ }).last().click()
     }
     // Vai trò LANHDAO cũng nhắc tới KSNB trong mô tả – lọc đúng dòng vai trò KSNB.
     await expect(gridRow(page, 'KSNB').filter({ hasText: 'Kiểm soát nội bộ' })).toHaveCount(1)

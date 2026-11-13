@@ -202,3 +202,30 @@ Mọi màn hình đổi sang phong cách này qua khung dùng chung, không vi�
 | Ô ngày: `DATE_INPUT_FORMATS` (`utils/format.ts`) – gõ dd/MM/yyyy, ddMMyyyy, d/M/yyyy hoặc chọn lịch | các trang |
 
 Không còn hiệu ứng chuyển động (`motion: false`).
+
+## 8a. Thẻ màn hình – mở tối đa 6 màn hình (người dùng duyệt 13/11/2026)
+
+Vùng nội dung của `AppShell` có **thanh thẻ** cao 26px ngay trên trang, giữ được tối đa **6 màn hình** (danh sách, phiếu, báo cáo) mở cùng
+lúc – chuyển qua lại không mất dữ liệu đang nhập, vị trí cuộn, tab đang chọn. Component: `components/AppShell/ScreenTabs.tsx`
+(`ScreenTabBar`, `ScreenTabPanel`) + `useScreenTabsState.ts`; ngữ cảnh dùng chung `app/screenTabs.ts`.
+
+- Thẻ: ô vuông viền 1px `--erp-grid-line`, bo trên 2px, nền `--erp-tab-bg`; thẻ đang xem nền `--erp-tab-active` chữ trắng đậm; chữ in hoa;
+  đầu thẻ có ô số 1–6 (phím **Alt+1…6**), icon màn hình, tên (phiếu: "Tên màn hình: số phiếu"), nút × icon đỏ (bấm nút giữa chuột cũng đóng).
+  Bên phải: "n/6 màn hình · mã công ty".
+- **Mở**: bấm cây điều hướng / menu / ô lệnh / bấm đúp ô số chứng từ → đã có thẻ cùng đường dẫn thì chuyển sang, chưa có thì mở thẻ mới;
+  đủ 6 thẻ thì báo "Đã mở đủ 6 màn hình…", không mở. **Shift+bấm** trên cây điều hướng hoặc ô lệnh `/n<mã>` mở thay ở thẻ đang xem;
+  `/o<mã>` mở ở thẻ mới (kiểu SAP). Trong trang (bấm đúp dòng mở phiếu, nút lập phiếu…) vẫn đi trong cùng thẻ.
+- Đóng thẻ đang xem thì hiện thẻ bên phải (hết thì bên trái); đóng thẻ cuối còn Trang chủ. Nút **Quay lại** dùng lịch sử riêng từng thẻ.
+- **Mọi thẻ thuộc công ty đang làm việc** (người dùng chốt 13/11/2026): đổi công ty khi đang mở hơn một thẻ thì hỏi lại ("Đổi công ty" /
+  "Không đổi"), đồng ý thì đóng các thẻ, chỉ mở lại danh sách đang xem dưới công ty mới. F5 mở lại đủ thẻ trong phiên (thẻ lưu của công ty
+  khác bỏ qua).
+- Thẻ ẩn: `visibility: hidden` + `inert` – không bấm, không Tab tới; ngăn kéo/hộp thoại của trang vẽ trong vùng thẻ nên ẩn theo thẻ.
+  Phím tắt cấp cửa sổ của trang (Ctrl+S, F2, Ctrl+P, Esc ngăn kéo) chỉ chạy ở thẻ đang xem (`useIsActiveTab`); F3 chỉ tìm ô tìm của thẻ đang xem.
+- **Hỏi lại khi còn phiếu chưa lưu** (yêu cầu 13/11/2026): phiếu (`DocumentForm`) hoặc ngăn kéo đang sửa (`DetailDrawer`) mà người dùng đã
+  sửa ô, chưa lưu thì:
+  - rời trang trong thẻ (cây điều hướng Shift+bấm, `/n`, Quay lại, nút Đóng, Back trình duyệt) → hộp thoại "Rời trang khi phiếu chưa lưu":
+    **Rời trang** (nút đỏ) / **Ở lại**;
+  - đóng thẻ, đổi công ty, đăng xuất → "Còn phiếu chưa lưu" nêu tên thẻ: **Bỏ thay đổi** (nút đỏ) / **Ở lại**;
+  - tải lại (F5) hoặc đóng tab trình duyệt → câu hỏi của trình duyệt.
+  Chuyển thẻ, mở màn hình ở thẻ mới không hỏi (phiếu vẫn còn trong thẻ). Dấu "chưa lưu" (`utils/formDirty.ts`) bật khi người dùng sửa ô,
+  tắt khi nạp phiếu từ máy chủ, lưu thành công (`useDocumentFormSync`) hoặc mở lại ngăn kéo; trang khác dùng `useUnsavedCheck`.

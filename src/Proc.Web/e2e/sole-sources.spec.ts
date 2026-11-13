@@ -58,7 +58,7 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
   await expect(drawer.locator('.detail-drawer-title')).toContainText('Chờ duyệt')
   // Người lập không tự duyệt: không có nút Duyệt.
   await expect(drawer.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0)
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+  await drawer.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   const row = page.locator('.data-grid-row', { hasText: no })
   await expect(row).toContainText('Chờ duyệt')
 
@@ -85,7 +85,7 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
   await expect(drawer.locator('.detail-drawer-title')).toContainText('Nháp')
   await expect(drawer.getByRole('button', { name: no })).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/sole-source-drawer.png' })
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+  await drawer.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   await expect(drawer).toHaveCount(0)
   await page.evaluate('getSelection()?.removeAllRanges()')
   await page.waitForLoadState('networkidle')

@@ -37,7 +37,7 @@ test('trả NCC theo phiếu nhập gốc, rồi chuyển phần còn lại sang
   await expect(page.locator('.document-form-title')).toContainText('Đã ghi sổ')
   await page.screenshot({ path: 'e2e/screenshots/goods-return.png' })
   const returnNo = await page.locator('.document-form-number').textContent()
-  await page.getByRole('button', { name: 'Đóng' }).click()
+  await page.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   await expect(page.locator('.data-grid-row', { hasText: returnNo! })).toContainText('Đã ghi sổ')
 
   // Phiếu chuyển kho KT → KP1: tồn kho xuất còn 6; gõ 7 thì cảnh báo vượt tồn, sửa 6 rồi ghi sổ.
@@ -64,7 +64,7 @@ test('trả NCC theo phiếu nhập gốc, rồi chuyển phần còn lại sang
   await expect(page.locator('.document-form-title')).toContainText('Đã ghi sổ')
   await page.screenshot({ path: 'e2e/screenshots/stock-transfer.png' })
   const transferNo = await page.locator('.document-form-number').textContent()
-  await page.getByRole('button', { name: 'Đóng' }).click()
+  await page.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   const listRow = page.locator('.data-grid-row', { hasText: transferNo! })
   await expect(listRow).toContainText('KP1')
   await page.screenshot({ path: 'e2e/screenshots/stock-transfer-list.png' })

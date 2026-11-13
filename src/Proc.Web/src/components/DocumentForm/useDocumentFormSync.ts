@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { FormInstance } from 'antd'
+import { markFormClean } from '../../utils/formDirty'
 
 /** Kết quả của {@link useDocumentFormSync}. */
 export interface DocumentFormSync<TDoc> {
@@ -62,6 +63,8 @@ export function useDocumentFormSync<TDoc extends { id: string }, TValues extends
       if (key === loadedRef.current) return
       loadedRef.current = key
       form.setFieldsValue(values)
+      // Vừa nạp đúng dữ liệu máy chủ: không còn gì chưa lưu (hỏi lại khi rời trang – formDirty.ts).
+      markFormClean(form)
     },
     [form],
   )
@@ -70,8 +73,10 @@ export function useDocumentFormSync<TDoc extends { id: string }, TValues extends
     (saved: TDoc) => {
       savedIdRef.current = saved.id
       apply(saved)
+      // Lưu thành công: sạch kể cả khi nội dung trùng lần nạp trước (apply bỏ qua).
+      markFormClean(form)
     },
-    [apply],
+    [apply, form],
   )
 
   const targetId = useCallback(() => {

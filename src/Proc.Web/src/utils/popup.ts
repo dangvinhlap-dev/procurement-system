@@ -1,3 +1,5 @@
+import { isInHiddenTab } from '../app/screenTabs'
+
 /** Lớp phủ có thể nằm phía trên trang/ngăn kéo: danh sách thả xuống, lịch, hộp thoại. */
 const POPUP_SELECTOR = [
   '.ant-select-dropdown:not(.ant-select-dropdown-hidden)',
@@ -11,5 +13,6 @@ const POPUP_SELECTOR = [
  * @returns true nếu đang có lớp phủ mở.
  */
 export function hasOpenPopup(): boolean {
-  return [...document.querySelectorAll(POPUP_SELECTOR)].some((e) => !/-leave(\s|$)/.test(e.className))
+  // Bỏ qua lớp phủ của thẻ màn hình đang ẩn (hộp thoại để mở ở thẻ khác) – chỉ xét thẻ đang xem.
+  return [...document.querySelectorAll(POPUP_SELECTOR)].some((e) => !/-leave(\s|$)/.test(e.className) && !isInHiddenTab(e))
 }

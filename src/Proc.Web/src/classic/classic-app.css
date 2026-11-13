@@ -722,3 +722,136 @@ body.erp-col-resizing {
   margin: 0;
   color: var(--erp-text-muted);
 }
+
+/* ---------- Thẻ màn hình (tối đa 6 màn hình mở cùng lúc – docs/ui-style.md mục 8a, 13/11/2026) ---------- */
+/* Vùng nội dung không tự cuộn nữa: mỗi thẻ là một vùng cuộn riêng, giữ vị trí cuộn khi chuyển thẻ. */
+.app-content.app-content-tabs {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-screen-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: none;
+  height: 26px;
+  padding: 0 8px 0 4px;
+  background: linear-gradient(var(--erp-bar-bg-top), var(--erp-bar-bg-bottom));
+  border-bottom: 1px solid var(--erp-tab-active);
+}
+.app-screen-tabs-list {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.app-screen-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 220px;
+  min-width: 90px;
+  height: 22px;
+  padding: 0 2px 0 6px;
+  border: 1px solid var(--erp-grid-line);
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+  background: var(--erp-tab-bg);
+  color: var(--erp-title);
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+.app-screen-tab:hover {
+  background: var(--erp-grid-head);
+}
+.app-screen-tab.is-active {
+  background: var(--erp-tab-active);
+  border-color: var(--erp-tab-active);
+  color: #fff;
+  font-weight: 700;
+}
+.app-screen-tab-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.app-screen-tab-main:focus-visible {
+  outline: 1px dotted currentcolor;
+  outline-offset: -2px;
+}
+.app-screen-tab-no {
+  flex: none;
+  min-width: 14px;
+  height: 14px;
+  border: 1px solid currentcolor;
+  border-radius: 2px;
+  font: 10px/12px var(--erp-font-mono);
+  text-align: center;
+  opacity: 0.8;
+}
+.app-screen-tab-icon {
+  flex: none;
+  display: inline-flex;
+  font-size: 12px;
+}
+.app-screen-tab-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.app-screen-tab-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--erp-icon-danger);
+  font-size: 10px;
+  cursor: pointer;
+}
+.app-screen-tab-close:hover {
+  border-color: var(--erp-btn-border);
+  background: var(--erp-btn-bg);
+}
+.app-screen-tabs-count {
+  flex: none;
+  align-self: center;
+  color: var(--erp-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.app-tab-panels {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.app-tab-panel {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+/* Thẻ ẩn giữ nguyên kích thước (lưới không đo lại cột, cuộn còn nguyên) – chỉ không hiện, không bấm được (inert). */
+.app-tab-panel:not(.is-active) {
+  visibility: hidden;
+}

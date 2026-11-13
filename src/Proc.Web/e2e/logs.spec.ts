@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi } from './helpers.ts'
+import { ADMIN, loginViaApi, confirmCompanySwitch } from './helpers.ts'
 
 /**
  * Màn hình Nhật ký thao tác và Nhật ký truy cập (design.md mục 9.3).
@@ -8,6 +8,7 @@ import { ADMIN, loginViaApi } from './helpers.ts'
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 /** Mở màn hình bằng cách bấm mục trên cây điều hướng. */

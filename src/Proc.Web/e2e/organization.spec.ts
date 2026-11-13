@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
 
 /**
  * Danh mục công ty và kho (design.md mục 4, 5.1, 5.6): thêm công ty kèm kho tổng ở tổng công ty, vào làm việc ở công ty mới
@@ -12,15 +12,14 @@ const uniqueCode = () => `E${Date.now().toString(36).slice(-6)}${Math.floor(Math
 
 /** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 /** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 /** Dòng lưới danh sách có chứa chữ cho trước. */

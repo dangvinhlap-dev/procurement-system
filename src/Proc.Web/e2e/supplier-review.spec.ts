@@ -49,7 +49,7 @@ test('đánh giá NCC theo quý: lập phiếu, chấm điểm, hoàn thành', a
   await expect(page.locator('.ant-message')).toContainText(/Đã hoàn thành phiếu đánh giá DGN-BHA-\d{4}-\d{4}/)
   await expect(drawer).toContainText('Hoàn thành')
   const reviewId = new URL(page.url()).searchParams.get('mo')!
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+  await drawer.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   await expect(row).toContainText('Hoàn thành')
   await expect(row).toContainText('Tiếp tục hợp tác')
 

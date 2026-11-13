@@ -87,6 +87,6 @@ test('lập phiếu nhập mua nháp, tính tiền, lưu cấp số, hủy phi�
   await expect(page.locator('.document-form-title')).toContainText('Đã hủy')
   await expect(page.getByRole('button', { name: 'Lưu nháp' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Đóng' }).click()
+  await page.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   await expect(page.locator('.data-grid-row', { hasText: number! })).toContainText('Đã hủy')
 })

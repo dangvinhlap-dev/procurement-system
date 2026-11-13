@@ -49,7 +49,7 @@ test('điều chỉnh kho theo biên bản kiểm kê: dòng giảm, dòng tăng
   await expect(page.locator('.document-form-title')).toContainText('Đã ghi sổ')
   await page.screenshot({ path: 'e2e/screenshots/stock-adjustment.png' })
   const adjustmentNo = (await page.locator('.document-form-number').textContent())!
-  await page.getByRole('button', { name: 'Đóng' }).click()
+  await page.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   const listRow = page.locator('.data-grid-row', { hasText: adjustmentNo })
   await expect(listRow).toContainText('BBKK-E2E-01')
   await expect(listRow).toContainText('Đã ghi sổ')

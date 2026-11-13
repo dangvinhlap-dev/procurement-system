@@ -10,6 +10,8 @@ import { hasOpenPopup } from '../../utils/popup'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
 import './DocumentForm.css'
 import { DocNo } from '../../classic/DocNo'
+import { useIsActiveTab, useScreenTabLabel, useUnsavedCheck } from '../../app/screenTabs'
+import { isFormDirty, markFormClean, markFormDirty } from '../../utils/formDirty'
 
 /** Màu thẻ trạng thái phiếu theo sắc thái (màu lấy từ bảng màu có sẵn của antd, không viết màu cứng). */
 const toneColor: Record<StatusTone, string> = {
@@ -129,8 +131,20 @@ export function DocumentForm({
     }
   }, [printPath, message])
 
-  // Phím tắt của phiếu (design.md mục 10.1). F2 chỉ khi không có danh sách thả xuống đang mở, để không chen vào ô đang chọn.
+  // Số phiếu hiện trên thẻ màn hình (ví dụ "Đơn mua hàng: PO-2026-0012").
+  useScreenTabLabel(number ?? undefined)
+  // Thay đổi chưa lưu (hỏi lại khi rời trang – yêu cầu 13/11/2026): mở phiếu là sạch; người dùng sửa ô thì bẩn; nạp/lưu phiếu
+  // (useDocumentFormSync) thì sạch lại. Phiếu chỉ xem không bao giờ hỏi.
   useEffect(() => {
+    markFormClean(form)
+  }, [form])
+  useUnsavedCheck(() => isFormDirty(form), !readOnly)
+  const activeTab = useIsActiveTab()
+
+  // Phím tắt của phiếu (design.md mục 10.1). F2 chỉ khi không có danh sách thả xuống đang mở, để không chen vào ô đang chọn.
+  // Chỉ nghe khi phiếu nằm ở thẻ màn hình đang xem – không thì Ctrl+S lưu cùng lúc mọi phiếu đang mở ở các thẻ.
+  useEffect(() => {
+    if (!activeTab) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && onSave) {
         e.preventDefault()
@@ -147,7 +161,7 @@ export function DocumentForm({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onSave, onAddLine, readOnly, printPath, print])
+  }, [activeTab, onSave, onAddLine, readOnly, printPath, print])
 
   return (
     <div className="document-form" ref={rootRef} {...auditScopeProps(audit)}>
@@ -175,7 +189,17 @@ export function DocumentForm({
         {error && <Alert type="error" showIcon title={error} className="document-form-alert" />}
         {notice}
         <Spin spinning={loading}>
-          <Form form={form} component={false} layout="vertical" requiredMark={formRequiredMark(!readOnly)} initialValues={initialValues} disabled={readOnly}>
+          <Form
+            form={form}
+            component={false}
+            layout="vertical"
+            requiredMark={formRequiredMark(!readOnly)}
+            initialValues={initialValues}
+            disabled={readOnly}
+            onValuesChange={() => {
+              if (!readOnly) markFormDirty(form)
+            }}
+          >
             <section className={`document-form-header${headerCollapsed ? ' is-collapsed' : ''}`} aria-label="Thông tin phiếu">
               <div className="document-form-header-title">
                 <h3>Thông tin phiếu</h3>
