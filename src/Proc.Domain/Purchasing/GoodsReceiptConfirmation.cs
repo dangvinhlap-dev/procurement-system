@@ -119,6 +119,9 @@ public sealed class GoodsReceiptConfirmation : AuditableEntity, ICompanyOwned, I
     /// <summary>Số phiếu giao hàng của NCC.</summary>
     public string? DeliveryNoteNo { get; private set; }
 
+    /// <summary>Phiếu báo giao NCC gửi trên Portal mà XNH lập theo (lát P5, design.md 19.5 P5-5); null = lập thẳng theo PO.</summary>
+    public Guid? DeliveryNoticeId { get; private set; }
+
     /// <summary>Người giao, phương tiện.</summary>
     public string? Deliverer { get; private set; }
 
@@ -191,6 +194,23 @@ public sealed class GoodsReceiptConfirmation : AuditableEntity, ICompanyOwned, I
         };
         confirmation.Update(header);
         return confirmation;
+    }
+
+    /// <summary>
+    /// Gắn phiếu báo giao NCC cho XNH nháp (P5-5): phiếu báo giao phải cùng PO, chưa bị NCC hủy. Mỗi phiếu báo giao tối đa một XNH chưa hủy –
+    /// tầng Infrastructure kiểm (chỉ mục duy nhất có điều kiện). XNH vẫn sửa SL được: SL thực tế có thể khác SL NCC báo.
+    /// </summary>
+    /// <param name="notice">Phiếu báo giao.</param>
+    /// <exception cref="BusinessRuleException">Khi phiếu không còn nháp, phiếu báo giao khác PO hoặc đã hủy.</exception>
+    public void LinkDeliveryNotice(PurchaseOrderDeliveryNotice notice)
+    {
+        ArgumentNullException.ThrowIfNull(notice);
+        EnsureDraft();
+        if (notice.PurchaseOrderId != PurchaseOrderId)
+            throw new BusinessRuleException($"Phiếu báo giao {notice.No} không thuộc đơn mua hàng của phiếu nhận hàng.");
+        if (notice.Status == DeliveryNoticeStatus.Cancelled)
+            throw new BusinessRuleException($"NCC đã hủy phiếu báo giao {notice.No} – lập phiếu nhận hàng thẳng theo đơn.");
+        DeliveryNoticeId = notice.Id;
     }
 
     /// <summary>

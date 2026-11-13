@@ -4604,6 +4604,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("DeliveryNoticeId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal?>("InvoiceAmount")
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
@@ -4661,6 +4664,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoticeId")
+                        .IsUnique()
+                        .HasFilter("\"DeliveryNoticeId\" IS NOT NULL AND \"Status\" <> 3");
 
                     b.HasIndex("PurchaseOrderId");
 
@@ -5590,6 +5597,112 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasIndex("WarehouseId", "CompanyId");
 
                     b.ToTable("PurchaseOrder", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderDeliveryNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CancelledByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Deliverer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("DeliveryNoteNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly>("ExpectedDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("PortalUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SubmittedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PortalUserId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("CompanyId", "No")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseOrderDeliveryNotice", (string)null);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderDeliveryNoticeLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("NoticeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PurchaseOrderLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Qty")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderLineId");
+
+                    b.HasIndex("NoticeId", "LineNo");
+
+                    b.ToTable("PurchaseOrderDeliveryNoticeLine", (string)null);
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderLine", b =>
@@ -8386,6 +8499,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseOrderDeliveryNotice", null)
+                        .WithMany()
+                        .HasForeignKey("DeliveryNoticeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
                         .WithMany()
                         .HasForeignKey("PurchaseOrderId")
@@ -8681,6 +8799,48 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("WarehouseId", "CompanyId")
                         .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderDeliveryNotice", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.SupplierPortalUser", null)
+                        .WithMany()
+                        .HasForeignKey("PortalUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderDeliveryNoticeLine", b =>
+                {
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseOrderDeliveryNotice", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("NoticeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.PurchaseOrderLine", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderLineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -9217,6 +9377,11 @@ namespace Proc.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Proc.Domain.Purchasing.PurchaseOrderDeliveryNotice", b =>
                 {
                     b.Navigation("Lines");
                 });

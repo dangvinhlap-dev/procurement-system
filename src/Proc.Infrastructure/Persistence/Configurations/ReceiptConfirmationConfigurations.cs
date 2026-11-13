@@ -21,6 +21,9 @@ internal sealed class GoodsReceiptConfirmationConfiguration : IEntityTypeConfigu
         builder.HasIndex(x => x.PurchaseOrderId);
         builder.Property(x => x.DeliveryNoteNo).HasMaxLength(100);
         builder.Property(x => x.Deliverer).HasMaxLength(200);
+        // Mỗi phiếu báo giao NCC tối đa một XNH chưa hủy (lát P5, P5-5) – hai thủ kho cùng lập thì người sau báo lỗi. 3 = Cancelled.
+        builder.HasIndex(x => x.DeliveryNoticeId).IsUnique().HasFilter("\"DeliveryNoticeId\" IS NOT NULL AND \"Status\" <> 3");
+        builder.HasOne<PurchaseOrderDeliveryNotice>().WithMany().HasForeignKey(x => x.DeliveryNoticeId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.InvoiceNo).HasMaxLength(50);
         builder.Property(x => x.InvoiceSeries).HasMaxLength(50);
         builder.Property(x => x.InvoiceAmount).HasPrecision(19, 2);

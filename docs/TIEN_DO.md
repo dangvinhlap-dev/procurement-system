@@ -447,6 +447,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   Hướng dẫn 05-dau-thau. Test: domain `RfqSupplierResultTests` (2), tích hợp `KetQuaChonThau_SauDuyetXong_NccChiThayKetQuaCuaMinh_ThuBaoKetQua`,
   e2e `portal-rfq-quote.spec.ts` (thêm 1). Kiểm tra: build 0 cảnh báo, `dotnet test` 767/767, tsc, oxlint, `npm run build`; Playwright đủ bộ
   144/144. **Đã merge.** Tiếp theo: P5 (NCC báo giao hàng → XNH), P6a (hóa đơn) – hoặc phát hành khi người dùng yêu cầu.
+- **Lát P5 – NCC báo giao hàng trên Portal → XNH (13/11/2026, nhánh `feature/p5-bao-giao-hang`, bản 0.26.0)** – design.md 19.5 "Lát P5"
+  (P5-1…P5-7, quy tắc tự đặt). Người dùng bảo "làm tiếp". Các bước:
+  - **Bước 1 (xong)**: Domain `PurchaseOrderDeliveryNotice` + dòng (số loại **BGH**, `DocumentTypes.DeliveryNotice`; Create / Cancel, không
+    [Auditable]), `GoodsReceiptConfirmation.DeliveryNoticeId` + `LinkDeliveryNotice`, loại chủ đính kèm `DeliveryNoticeFile`; cấu hình EF (chỉ mục
+    duy nhất XNH chưa hủy theo phiếu báo giao), migration `V0_26_0_NccBaoGiaoHang` (98 → 99). Test domain `PurchaseOrderDeliveryNoticeTests` (4) qua.
+  - Còn: bước 2 dịch vụ Portal + nội bộ + API + test tích hợp; bước 3 giao diện Portal, tab PO, XNH từ báo giao + e2e; bước 4 tài liệu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

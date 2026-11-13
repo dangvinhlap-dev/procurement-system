@@ -95,11 +95,17 @@ public static class AttachmentOwnerTypes
     /// </summary>
     public const string PoSupplierFile = "PoSupplierFile";
 
+    /// <summary>
+    /// File NCC gửi kèm phiếu báo giao hàng trên Portal (lát P5, design.md 19.5 P5-3): chủ là phiếu báo giao (<c>PurchaseOrderDeliveryNotice.Id</c>)
+    /// – phiếu giao, CO/CQ, ảnh hàng; khóa khi nơi nhận đã lập XNH hoặc NCC hủy phiếu; nội bộ chỉ xem.
+    /// </summary>
+    public const string DeliveryNoticeFile = "DeliveryNoticeFile";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
-        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile];
+        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile];
 }
 
 /// <summary>

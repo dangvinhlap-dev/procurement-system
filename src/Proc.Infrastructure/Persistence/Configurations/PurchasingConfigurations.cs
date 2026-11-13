@@ -277,6 +277,56 @@ internal sealed class PurchaseOrderSupplierResponseConfiguration : IEntityTypeCo
     }
 }
 
+/// <summary>
+/// Cấu hình bảng PurchaseOrderDeliveryNotice – phiếu báo giao hàng NCC gửi trên Portal (lát P5, design.md 19.5). Số phiếu BGH duy nhất theo
+/// công ty đặt hàng.
+/// </summary>
+internal sealed class PurchaseOrderDeliveryNoticeConfiguration : IEntityTypeConfiguration<PurchaseOrderDeliveryNotice>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseOrderDeliveryNotice> builder)
+    {
+        builder.ToTable("PurchaseOrderDeliveryNotice");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
+        builder.HasIndex(x => x.PurchaseOrderId);
+        builder.HasIndex(x => x.SupplierId);
+        builder.Property(x => x.DeliveryNoteNo).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Deliverer).HasMaxLength(200);
+        builder.Property(x => x.Note).HasMaxLength(PurchaseOrderDeliveryNotice.NoteMaxLength);
+        builder.Property(x => x.SubmittedByEmail).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.CancelledByEmail).HasMaxLength(256);
+        builder.Property(x => x.CancelReason).HasMaxLength(PurchaseOrderDeliveryNotice.NoteMaxLength);
+        // Hai người cùng NCC hủy cùng lúc / nơi nhận lập XNH đúng lúc NCC hủy: UPDATE kèm điều kiện trạng thái cũ nên người sau nhận lỗi.
+        builder.Property(x => x.Status).IsConcurrencyToken();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.NoticeId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Cấu hình bảng PurchaseOrderDeliveryNoticeLine.</summary>
+internal sealed class PurchaseOrderDeliveryNoticeLineConfiguration : IEntityTypeConfiguration<PurchaseOrderDeliveryNoticeLine>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<PurchaseOrderDeliveryNoticeLine> builder)
+    {
+        builder.ToTable("PurchaseOrderDeliveryNoticeLine");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasIndex(x => new { x.NoticeId, x.LineNo });
+        // Cộng SL đang báo giao theo dòng PO khi kiểm SL còn giao được.
+        builder.HasIndex(x => x.PurchaseOrderLineId);
+        builder.Property(x => x.Qty).HasPrecision(18, 4);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasOne<PurchaseOrderLine>().WithMany().HasForeignKey(x => x.PurchaseOrderLineId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng PurchaseOrderLine.</summary>
 internal sealed class PurchaseOrderLineConfiguration : IEntityTypeConfiguration<PurchaseOrderLine>
 {
