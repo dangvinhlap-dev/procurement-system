@@ -122,6 +122,12 @@ public static class PortalEndpoints
                 return Results.NoContent();
             });
 
+        // Lát P6b: trạng thái thanh toán – NCC xem hóa đơn bên đặt đã ghi nhận, đợt thanh toán đã duyệt / đã chi (chỉ đọc).
+        var payments = portal.MapGroup("/payments");
+        payments.MapGet("/", (HttpContext http, IPortalPaymentService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
+        payments.MapGet("/{orderId:guid}", (Guid orderId, HttpContext http, IPortalPaymentService s, CancellationToken ct) =>
+            s.GetAsync(Session(http), orderId, ct));
+
         // Lát P4a: đơn đặt hàng – NCC xem PO đã duyệt, xác nhận / từ chối, gửi file kèm phản hồi (mọi người dùng Portal của NCC).
         var orders = portal.MapGroup("/orders");
         orders.MapGet("/", (HttpContext http, IPortalOrderService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
