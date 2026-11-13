@@ -3,6 +3,75 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.27.0] - 2026-11-13
+
+Gộp ba đợt của lộ trình design.md 19.6 (bản 0.25.0, 0.26.0 không phát hành riêng): **Portal NCC** – báo giá online niêm phong, file báo giá,
+hỏi đáp, email báo NCC (P3); NCC xác nhận đơn hàng, báo kết quả chọn thầu (P4); NCC báo giao hàng → XNH (P5). **Thanh toán** – đề nghị
+thanh toán 5A/5B (Y8), theo dõi thanh toán và xuất chứng từ mua cho kế toán (Y9), chi phí tạp vụ 1C/2C (Y11). Lát hóa đơn điện tử trên Portal
+(P6a) đã bỏ – công ty có kênh riêng.
+
+### Thêm mới
+- **Báo giá online niêm phong trên Portal** (P3a): NCC xem thư mời, nhập báo giá đến **hạn nộp (ngày + giờ)**; giá niêm phong đến giờ mở – Phòng
+  CUVT bấm **Mở báo giá Portal** khi đến hạn; trước giờ mở chỉ người có quyền **Sourcing.Rfq.ViewSealed** xem được (ghi nhật ký truy cập).
+  RFQ có ô giờ hạn nộp, gia hạn kèm giờ, dòng "Nộp qua Portal", **Chấm điểm**; NCC nhận biên nhận có mã băm.
+- **File báo giá Portal** (P3b-1): NCC tải file kèm báo giá đến giờ hạn; nội bộ chỉ xem (niêm phong như giá).
+- **Hỏi đáp làm rõ RFQ** (P3b-2): NCC hỏi trên Portal, Phòng CUVT **trả lời riêng NCC hỏi**; **thông báo làm rõ** công khai cho mọi NCC. Tab
+  "Hỏi đáp NCC" trên RFQ.
+- **Email báo NCC qua Portal** (P3b-3): thư mời, gia hạn, hủy RFQ, trả lời, thông báo làm rõ gửi tài khoản Portal đang dùng của NCC; tab
+  "Email NCC" trên RFQ, PO xem trạng thái thư.
+- **NCC xác nhận / từ chối đơn hàng trên Portal** (P4a): thư đơn mới khi PO duyệt xong, thư hủy; PO có ô "Xác nhận của NCC" + tab
+  **Xác nhận NCC** (Phòng CUVT **mở lại phản hồi**, file NCC gửi).
+- **Báo NCC kết quả chọn thầu** (P4b): nút **Gửi kết quả cho NCC** trên RFQ đã duyệt chọn thầu (Phòng CUVT tự bấm, một lần); NCC chỉ thấy kết
+  quả của mình (trúng có giá của mình; không trúng không giá, không nêu NCC trúng).
+- **NCC báo giao hàng trên Portal** (P5, phiếu **BGH**): NCC lập phiếu báo giao theo SL còn giao được, kèm file; nơi nhận lập **XNH** điền sẵn theo
+  phiếu (tab "Giao hàng NCC" của PO). Báo giao **không bắt buộc** – XNH vẫn lập thẳng từ PO.
+- Màn hình đăng nhập nội bộ có dòng **"Đăng nhập Portal nhà cung cấp"**.
+- **Đề nghị thanh toán 5A / 5B** (Y8, màn hình **DNT**): lập từ PO đã duyệt (nút **Lập đề nghị thanh toán** trên PO), nhiều dòng hóa đơn – mỗi
+  dòng một XNH đã có hóa đơn (nhập ở XNH bằng "Cập nhật hóa đơn"); tiền mặt / chuyển khoản (tài khoản NCC trong danh mục); giảm trừ có lý do;
+  duyệt GĐ khối → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch; **kế toán Ghi Đã chi**; in 5A/5B. Quyền mới `Purchase.Payment.View/Create/Approve/Pay`.
+- **Theo dõi thanh toán** (Y9a, màn hình **TTPO**): theo PO hoặc NCC – giá trị PO, đã nhận, hóa đơn, chưa đề nghị, chờ duyệt, chờ chi, đã chi,
+  còn phải trả, đèn tình trạng; xuất Excel.
+- **Xuất chứng từ mua cho kế toán** (Y9b, màn hình **ACCP**, thay ACCX): PO, XNH (kèm hóa đơn), đề nghị thanh toán đã duyệt → Excel 5 sheet cho
+  phần mềm kế toán. Quyền mới `Report.PurchaseAccounting.Export`.
+- **Bảng kê chi phí tạp vụ 2C** (Y11a, màn hình **BKT**): bộ phận kê chi phí lặt vặt đã phát sinh; tính vào **định mức tháng** (ngân sách bộ
+  phận); vượt thì thêm chặng duyệt **TVB**, không chặn; duyệt Trưởng phòng/ban → GĐ khối → TC-NQ-KT → Chủ tịch; in 2C. Quyền mới
+  `Purchase.Sundry.View/Create/Approve`.
+- **Đề nghị thanh toán tổng hợp tạp vụ 1C** (Y11b): DNT biểu mẫu 1C gộp nhiều bảng kê 2C đã duyệt của một bộ phận, trả **người nhận tiền**
+  (ngân hàng nhập tay khi chuyển khoản); nút **Lập đề nghị 1C (tạp vụ)** ở DNT và **Lập đề nghị thanh toán 1C** trên bảng kê; in 1C.
+- File **`docs/CUVT nhóm C 13.11.2026 (giả lập).xlsx`** – mẫu 1C/2C giả lập, chờ mẫu thật của công ty.
+
+### Thay đổi
+- **Biểu mẫu 1C/2C là mẫu giả lập – chỉ nhập dữ liệu thử** cho đến khi công ty có mẫu thật: màn hình hiện cảnh báo vàng, bản in có dòng đỏ
+  "MẪU GIẢ LẬP – CHỈ DÙNG THỬ".
+- XNH đã đưa vào đề nghị thanh toán chưa hủy thì khóa "Cập nhật hóa đơn".
+- Ngân sách bộ phận × tháng: "đã dùng" cộng thêm bảng kê tạp vụ chờ duyệt / đã duyệt.
+- Cấu hình duyệt mẫu CUVT thêm bộ DNT (4 cấp), BKT (4 cấp), TVB (1 cấp) – 45 cấp. Tra cứu chứng từ, Việc cần làm, duyệt gọn trên điện thoại, hủy
+  dây chuyền có thêm DNT, BKT (hủy bảng kê kéo theo đề nghị 1C đang giữ; đề nghị đã chi thì không hủy).
+- Đánh số chứng từ thêm loại BGH, DNT, BKT (26 loại).
+
+### Thay đổi CSDL
+- 10 migration mới (92 → 102): `V0_25_0_BaoGiaPortalNiemPhong`, `V0_25_0_DinhKemBaoGiaPortal`, `V0_25_0_HoiDapBaoGiaPortal`,
+  `V0_25_0_EmailPortalNcc`, `V0_26_0_NccXacNhanDonHang`, `V0_26_0_GuiKetQuaChonThau`, `V0_26_0_NccBaoGiaoHang`, `V0_27_0_DeNghiThanhToan`,
+  `V0_27_0_BangKeTapVu`, `V0_27_0_DeNghiThanhToanTapVu`. Chủ yếu thêm bảng / cột; `PaymentRequest.PurchaseOrderId`, `SupplierId`,
+  `PaymentRequestLine.ReceiptConfirmationId`, `InvoiceNo` chuyển sang cho phép trống (1C). RFQ cũ có giờ hạn nộp mặc định 23:59.
+  Script: `db/scripts/0.27.0.sql` (idempotent, chạy lại được).
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** (`backup.ps1` / `db/backup.sh`), chạy `db/scripts/0.27.0.sql`, rồi thay gói ứng dụng, giữ `appsettings.Production.json`.
+  Nâng từ bản cũ hơn 0.24.0: chạy các script bản trước theo thứ tự.
+- **Gán quyền mới** cho vai trò đang dùng (hoặc "Bộ vai trò mẫu…"): `Sourcing.Rfq.ViewSealed` (xem báo giá niêm phong trước giờ mở),
+  `Purchase.Payment.View/Create/Approve/Pay` (đề nghị thanh toán – kế toán cần `.Pay`), `Report.PurchaseAccounting.Export` (kế toán – màn hình
+  ACCP), `Purchase.Sundry.View/Create/Approve` (bảng kê tạp vụ).
+- Áp lại **"Cấu hình duyệt mẫu" CUVT** ở Quy trình duyệt nếu muốn chuỗi duyệt DNT / BKT / TVB theo biểu mẫu (chưa cấu hình thì duyệt một cấp).
+- Email cho NCC dùng cấu hình `Email:*` và `Portal:BaseUrl` như 0.24.0; máy chủ thử chưa có email vẫn để `Portal:ExposeCodesForTesting`,
+  `Portal:TestServer` = `true`.
+- Người dùng tải lại trang (Ctrl+F5) để trình duyệt nhận giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.24.0; khôi phục CSDL từ bản sao lưu trước khi nâng (cách an toàn). Hoặc gỡ migration về `20261112060953_V0_25_0_TaiKhoanPortalNcc`
+  – **mất** báo giá / file / hỏi đáp / thư Portal, phản hồi đơn hàng của NCC, phiếu báo giao, đề nghị thanh toán (5A/5B/1C), bảng kê tạp vụ; chỉ làm
+  sau khi đã sao lưu.
+
 ## [0.24.0] - 2026-11-12
 
 Đợt ba của quy trình biểu mẫu CUVT (design.md mục 19.3): so sánh / trình giá theo biểu mẫu 3A / 3a / 3B, đơn mua hàng theo bảng theo dõi
