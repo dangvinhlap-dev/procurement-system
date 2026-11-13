@@ -483,7 +483,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     MarkPaid), quyền `Purchase.Payment.View/Create/Approve/Pay` (vai trò mẫu: xem trong ProcurementView; NVCUVT lập; GDKHOI, TPTCKT, GDTCKT,
     CHUTICH duyệt; KETOAN xem + ghi Đã chi), loại duyệt DNT + bộ mẫu CUVT 4 cấp, loại đính kèm `PaymentRequest`; EF + migration
     `V0_27_0_DeNghiThanhToan` (99 → 100). Test domain `PaymentRequestTests` (3), thứ tự loại duyệt thêm DNT; 403/403.
-  - Còn: bước 2 dịch vụ + duyệt + API + test tích hợp; bước 3 giao diện + e2e; bước 4 in 5A/5B; bước 5 tài liệu.
+  - Người dùng xác nhận giữa lát (13/11/2026): phiếu đề nghị thanh toán **có nhiều dòng hóa đơn** – đúng Y8-2 (mỗi dòng một hóa đơn của
+    một XNH, không giới hạn số dòng).
+  - **Bước 2 (xong)**: `PaymentRequestService` (danh sách lọc ngày; PO lập được – còn XNH có hóa đơn chưa đề nghị; dữ liệu chọn – tài khoản NCC,
+    XNH kèm đề nghị đang giữ; lập / sửa / gửi dưới khóa PO, chụp lại hóa đơn từ XNH lúc gửi; duyệt / từ chối / rút / hủy – đã chi thì không hủy;
+    ghi Đã chi), API `/api/payment-requests` (+ `/orders`, `/source`, `/submit`, `/approve`, `/reject`, `/recall`, `/cancel`, `/pay`). Nối vào
+    tra cứu chứng từ, xem trước chuỗi duyệt, nhắc quá hạn, Việc cần làm, đính kèm có phê duyệt (`PaymentRequest`); XNH đã ở đề nghị chưa hủy
+    thì khóa "Cập nhật hóa đơn". Test tích hợp `DeNghiThanhToan_NhieuHoaDonXnh_KhoaHoaDon_Duyet_DaChi`; `dotnet test` 776/776.
+  - Còn: bước 3 giao diện + e2e; bước 4 in 5A/5B; bước 5 tài liệu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

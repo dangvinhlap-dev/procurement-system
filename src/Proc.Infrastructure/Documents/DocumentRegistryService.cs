@@ -68,6 +68,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Purchase.PoView, DocumentTypes.PurchaseOrder);
         Add(Permissions.Inventory.DocumentView, InventoryTypes);
         Add(Permissions.Purchase.ReceiptView, DocumentTypes.GoodsReceiptConfirmation);
+        Add(Permissions.Purchase.PaymentView, DocumentTypes.PaymentRequest);
         Add(Permissions.Pricing.PriceListView, DocumentTypes.PriceList);
         Add(Permissions.Sourcing.RfqView, DocumentTypes.Sourcing, DocumentTypes.RequestForQuotation);
         Add(Permissions.Purchase.ContractView, DocumentTypes.Contract, ApprovalTypes.ContractAmendment);
@@ -167,6 +168,24 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PurchaseSummary, d.Id, d.No, d.Date, null, null, null,
                 $"{(d.Form == PurchaseSummaryForm.Construction ? "2A" : "2B")} – {d.Department}",
                 d.TotalAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
+        }
+
+        if (wanted.Contains(DocumentTypes.PaymentRequest))
+        {
+            // Đề nghị thanh toán 5A/5B (lát Y8): mô tả = biểu mẫu + NCC; giá trị = số tiền đề nghị.
+            var q = _db.PaymentRequests.AsNoTracking().Where(d => d.Date >= from && d.Date <= to);
+            if (created) q = q.Where(d => d.CreatedBy == userId);
+            if (acted) { var actedIds = ActedIds(DocumentTypes.PaymentRequest); q = q.Where(d => actedIds.Contains(d.Id)); }
+            var rows = await q.OrderByDescending(d => d.Date).Take(take)
+                .Select(d => new
+                {
+                    d.Id, d.No, d.Date, d.Form, d.PayableAmount, d.Status, d.CreatedBy, d.CreatedAt,
+                    Supplier = _db.Suppliers.Where(x => x.Id == d.SupplierId).Select(x => x.Name).FirstOrDefault(),
+                })
+                .ToListAsync(cancellationToken);
+            raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PaymentRequest, d.Id, d.No, d.Date, null, null, null,
+                $"{(d.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {d.Supplier}",
+                d.PayableAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
         }
 
         if (wanted.Contains(DocumentTypes.PurchaseOrder))
