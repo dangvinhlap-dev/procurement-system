@@ -468,6 +468,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   - Kiểm tra: build 0 cảnh báo, `dotnet test` 772/772, tsc, oxlint, `npm run build` qua; Playwright đủ bộ 144/145 (document-numbering đếm loại
     chứng từ – sửa 24, chạy lại qua). **Đã merge.** Tiếp theo: P6a (NCC gửi hóa đơn điện tử trên Portal) – hoặc phát hành 0.25.0/0.26.0 khi người
     dùng yêu cầu (main đã gồm P3–P5).
+  - **Người dùng chốt sau lát (13/11/2026)**: NCC giao theo quy trình đang có, **báo giao trên Portal không bắt buộc** – ghi nhận để xem lại sau
+    (design.md 19.5 P5-8, hướng dẫn 03-mua-hang). Code không đổi: XNH vẫn lập thẳng từ PO, không cần phiếu báo giao.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

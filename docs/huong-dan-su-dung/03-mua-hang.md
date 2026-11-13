@@ -181,7 +181,8 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
   báo giao có **một XNH chưa hủy**; hủy XNH nháp thì lập lại được.
 - **NCC thấy**: trạng thái phiếu, số XNH; XNH đã xác nhận thì SL nhận đạt / không đạt từng dòng, ngày nhận; dòng đơn có cột **Đã nhận**,
   **Còn giao được**. NCC **hủy phiếu báo giao** (bắt buộc lý do – nơi nhận nhận thông báo) khi nơi nhận chưa lập XNH; sau đó phiếu và file khóa.
-- NCC không dùng Portal: nhận hàng theo đơn như cũ (Lập phiếu nhận hàng trên PO).
+- **Báo giao trên Portal không bắt buộc**: NCC giao theo quy trình đang có, báo hoặc không báo trên Portal đều được; nơi nhận vẫn lập XNH thẳng
+  từ PO (**Lập phiếu nhận hàng**) như trước – phiếu báo giao chỉ là thông tin báo trước và giúp điền sẵn XNH.
 
 ## 3.5 Theo dõi giao hàng (POTRK)
 
