@@ -26,9 +26,9 @@ const fileColumns: GridColumn<PortalAttachment>[] = [
 
 /** Thuộc tính khối file NCC. */
 interface PortalFilesProps {
-  /** Loại chứng từ: thư mời báo giá hoặc đơn đặt hàng. */
-  kind: 'rfqs' | 'orders'
-  /** Id chứng từ. */
+  /** Loại chứng từ: thư mời báo giá, đơn đặt hàng hoặc phiếu báo giao (lát P5). */
+  kind: 'rfqs' | 'orders' | 'delivery-notices'
+  /** Id chứng từ (phiếu báo giao: "Id đơn/Id phiếu"). */
   id: string
   /** Tiêu đề khối (thêm số file ở cuối). */
   title: string

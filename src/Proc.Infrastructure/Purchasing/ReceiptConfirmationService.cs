@@ -83,10 +83,21 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
         GoodsReceiptConfirmation.EnsureReceivable(order);
         var no = await _numbers.NextAsync(DocumentTypes.GoodsReceiptConfirmation, request.Date, cancellationToken);
         var confirmation = GoodsReceiptConfirmation.Create(companyId, no, order, ToHeader(request));
+        if (request.DeliveryNoticeId is { } noticeId) await LinkDeliveryNoticeAsync(confirmation, noticeId, cancellationToken);
         Apply(confirmation, order, request);
         await CheckOrderQuantitiesAsync(order, confirmation, null, cancellationToken);
         _db.GoodsReceiptConfirmations.Add(confirmation);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation }
+                                           && request.DeliveryNoticeId is not null)
+        {
+            // Lưới an toàn khi vượt qua khóa dòng: chỉ mục duy nhất (phiếu báo giao, XNH chưa hủy) chặn XNH thứ hai.
+            throw new BusinessRuleException("Đã có phiếu nhận hàng khác lập theo phiếu báo giao này – tải lại đơn để xem.");
+        }
+
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(confirmation.Id, cancellationToken);
     }
@@ -229,6 +240,23 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
         return order;
     }
 
+    /// <summary>
+    /// Gắn phiếu báo giao NCC cho XNH đang lập (lát P5, P5-5): khóa phiếu báo giao tới hết giao dịch (NCC hủy cùng lúc phải chờ), phiếu cùng công ty
+    /// (filter), chưa hủy, chưa có XNH chưa hủy khác.
+    /// </summary>
+    private async Task LinkDeliveryNoticeAsync(GoodsReceiptConfirmation confirmation, Guid noticeId, CancellationToken cancellationToken)
+    {
+        await RowLocks.LockAsync<PurchaseOrderDeliveryNotice>(_db, [noticeId], cancellationToken);
+        var notice = await _db.PurchaseOrderDeliveryNotices.AsNoTracking().SingleOrDefaultAsync(n => n.Id == noticeId, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy phiếu báo giao.");
+        var existing = await _db.GoodsReceiptConfirmations
+            .Where(c => c.DeliveryNoticeId == noticeId && c.Status != ReceiptConfirmationStatus.Cancelled)
+            .Select(c => c.No).FirstOrDefaultAsync(cancellationToken);
+        if (existing is not null)
+            throw new BusinessRuleException($"Phiếu báo giao {notice.No} đã có phiếu nhận hàng {existing} – mở phiếu đó hoặc hủy trước khi lập lại.");
+        confirmation.LinkDeliveryNotice(notice);
+    }
+
     /// <summary>Nơi nhận phải trong phạm vi kho của người dùng (filter kho) – thủ kho chỉ xác nhận hàng về kho mình.</summary>
     private async Task EnsureWarehouseAsync(Guid warehouseId, CancellationToken cancellationToken)
     {
@@ -315,7 +343,10 @@ public sealed class ReceiptConfirmationService : IReceiptConfirmationService
             warehouse?.Code, warehouse?.Name, department, c.DeliveryNoteNo, c.Deliverer, c.InvoiceNo, c.InvoiceSeries, c.InvoiceDate, c.InvoiceAmount,
             c.Note, c.CancelReason, c.TotalAmount, c.TotalVat, c.CreatedAt, Name(c.CreatedBy), c.ConfirmedAt, Name(c.ConfirmedBy),
             c.Acceptance.ToString(), c.AcceptanceNote, c.AcceptedAt, Name(c.AcceptedBy), lines, adjustments,
-            await ActionsAsync(c, cancellationToken), c.Version);
+            await ActionsAsync(c, cancellationToken), c.Version, c.DeliveryNoticeId,
+            c.DeliveryNoticeId is { } noticeId
+                ? await _db.PurchaseOrderDeliveryNotices.Where(n => n.Id == noticeId).Select(n => n.No).FirstOrDefaultAsync(cancellationToken)
+                : null);
     }
 
     /// <summary>Thao tác người xem được làm (giao diện bật nút); máy chủ vẫn kiểm tra lại khi ghi.</summary>

@@ -80,6 +80,9 @@ public static class DocumentTypes
     /// <summary>Phiếu xác nhận nhận hàng theo PO – thay phiếu nhập kho từ bản 0.22.0 (lát K2, design.md mục 19.4).</summary>
     public const string GoodsReceiptConfirmation = "XNH";
 
+    /// <summary>Phiếu báo giao hàng NCC gửi trên Portal (lát P5, design.md mục 19.5) – nơi nhận lập XNH từ phiếu.</summary>
+    public const string DeliveryNotice = "BGH";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [
@@ -89,6 +92,7 @@ public static class DocumentTypes
         new(PurchaseOrder, "Đơn mua hàng"),
         new(Contract, "Hợp đồng nguyên tắc"),
         new(GoodsReceiptConfirmation, "Xác nhận nhận hàng"),
+        new(DeliveryNotice, "Báo giao hàng của NCC"),
         new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
         new(ReturnToVendor, "Phiếu xuất trả NCC"),
         new(Transfer, "Phiếu chuyển kho nội bộ"),

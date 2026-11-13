@@ -147,6 +147,11 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Khối có dải tiêu đề (`Section`) và khối file NCC (`PortalFiles` – lưới file + Tải lên / Tải xuống / Xóa) dùng chung ở `src/portal/PortalParts.tsx`
   cho trang Thư mời báo giá và Đơn đặt hàng (lát P4a). Trang đơn hàng: tổng tiền canh phải dưới lưới (`.erp-portal-totals`); khối phản hồi có
   nút **Từ chối đơn** (icon đỏ) bên trái, **Xác nhận đơn** (icon xanh) bên phải, cả hai hỏi lại.
+- **Báo giao hàng** (lát P5, `src/portal/PortalDeliveryParts.tsx`): nút **Báo giao hàng…** (icon xe, xanh) sát phải dưới khối phản hồi, bên trái là
+  dòng gợi ý / lý do chưa báo giao được. Form "Lập phiếu báo giao hàng" là khối có dải tiêu đề: đầu phiếu bốn ô trên **một hàng**
+  (`.erp-portal-delivery-head`, màn hình hẹp một cột), lưới `LineGrid` cố định dòng (SL giao nhập trong lưới), file chờ là ô viền 1px nền
+  `--erp-readonly-bg` có nút bỏ; **Bỏ qua** (đỏ) trái – **Gửi phiếu báo giao** (xanh) phải, gửi hỏi lại. Danh sách phiếu: lưới phiếu + lưới dòng
+  của phiếu đang chọn, **Hủy phiếu báo giao** (đỏ, hộp thoại lý do bắt buộc), khối file của phiếu (`PortalFiles kind="delivery-notices"`).
 
 ## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
 

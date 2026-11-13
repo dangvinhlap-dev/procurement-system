@@ -10,6 +10,7 @@ using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Notifications;
 using Proc.Infrastructure.Persistence;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Portal;
 
@@ -170,8 +171,14 @@ public sealed class PortalOrderService : IPortalOrderService
     }
 
     /// <summary>PO NCC được thấy: đặt cho NCC này, đã duyệt / đã nhận đủ / hủy sau khi duyệt, không phải mua nội bộ (P4-1).</summary>
-    private IQueryable<PurchaseOrder> VisibleOrders(Guid supplierId) =>
-        _db.PurchaseOrders.AsNoTracking().IgnoreQueryFilters()
+    private IQueryable<PurchaseOrder> VisibleOrders(Guid supplierId) => VisibleOrders(_db, supplierId);
+
+    /// <summary>PO NCC được thấy (P4-1) – dùng chung với báo giao Portal (lát P5).</summary>
+    /// <param name="db">DbContext.</param>
+    /// <param name="supplierId">NCC của phiên.</param>
+    /// <returns>Truy vấn PO (không theo dõi thay đổi, bỏ filter).</returns>
+    internal static IQueryable<PurchaseOrder> VisibleOrders(ProcDbContext db, Guid supplierId) =>
+        db.PurchaseOrders.AsNoTracking().IgnoreQueryFilters()
             .Where(o => o.SupplierId == supplierId && o.InternalSellerCompanyId == null
                         && (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed
                             || (o.Status == ApprovalDocumentStatus.Cancelled && o.ApprovedAt != null)));
@@ -219,10 +226,14 @@ public sealed class PortalOrderService : IPortalOrderService
         var responses = await Responses(supplierId).Where(r => r.PurchaseOrderId == order.Id)
             .OrderByDescending(r => r.RespondedAt).ToListAsync(cancellationToken);
         var current = responses.FirstOrDefault(r => r.IsCurrent);
+        var quantities = await DeliveryNoticeQueries.QuantitiesAsync(_db, order, cancellationToken);
         var lines = order.Lines.OrderBy(l => l.LineNo).Select(l => new PortalOrderLineDto(
                 l.LineNo, items.GetValueOrDefault(l.ItemId)?.Code ?? "", items.GetValueOrDefault(l.ItemId)?.Name ?? "", l.SupplierItemCode,
-                uoms.GetValueOrDefault(l.UomId) ?? "", l.Qty, l.UnitPrice, l.DiscountPct, l.VatCode, l.Amount, l.VatAmount, l.DeliveryDate, l.Note))
+                uoms.GetValueOrDefault(l.UomId) ?? "", l.Qty, l.UnitPrice, l.DiscountPct, l.VatCode, l.Amount, l.VatAmount, l.DeliveryDate, l.Note,
+                l.Id, quantities[l.Id].Received, quantities[l.Id].Deliverable))
             .ToList();
+        var notices = await NoticesAsync(supplierId, order, items.ToDictionary(i => i.Key, i => (i.Value.Code, i.Value.Name)), uoms, cancellationToken);
+        var blocked = DeliveryBlockedReason(order, current, lines);
         return new PortalOrderDto(
             order.Id, order.No, company, order.Date, order.ApprovedAt, order.ExpectedDate, place, order.DeliveryAddress, order.PaymentTerms,
             order.DeliveryTerms, order.Note, order.CurrencyCode, StatusOf(order.Status, current),
@@ -230,6 +241,56 @@ public sealed class PortalOrderService : IPortalOrderService
             order.GrossAmount, order.TotalDiscount, order.TotalAmount, order.TotalVat, lines,
             responses.Select(r => new PortalOrderResponseDto(
                 r.Decision.ToString(), r.PromisedDate, r.Note, r.RespondedAt, r.RespondedByEmail, r.ReopenedAt, r.ReopenReason)).ToList(),
-            _attachments.MaxFileSizeMb);
+            _attachments.MaxFileSizeMb, blocked is null, blocked, notices);
+    }
+
+    /// <summary>
+    /// Lý do NCC chưa báo giao được (P5-1); null = được: đơn Đã duyệt, NCC không đang từ chối đơn, còn dòng chưa báo giao hết.
+    /// </summary>
+    private static string? DeliveryBlockedReason(PurchaseOrder order, PurchaseOrderSupplierResponse? current, IReadOnlyList<PortalOrderLineDto> lines) =>
+        order.Status != ApprovalDocumentStatus.Approved ? "Đơn đã nhận đủ hàng, đã hoàn thành hoặc đã hủy."
+        : current?.Decision == SupplierOrderDecision.Rejected ? "Bạn đã từ chối đơn này – liên hệ Phòng Cung ứng vật tư để mở lại phản hồi nếu vẫn giao."
+        : lines.All(l => l.DeliverableQty <= 0) ? "Mọi dòng đã được báo giao hoặc đã nhận đủ."
+        : null;
+
+    /// <summary>Các phiếu báo giao của đơn (mới trước) kèm XNH và SL bên đặt đã nhận theo từng dòng (P5-6).</summary>
+    private async Task<IReadOnlyList<PortalDeliveryNoticeDto>> NoticesAsync(
+        Guid supplierId, PurchaseOrder order, Dictionary<Guid, (string Code, string Name)> items, Dictionary<Guid, string> uoms,
+        CancellationToken cancellationToken)
+    {
+        var notices = await _db.PurchaseOrderDeliveryNotices.AsNoTracking().IgnoreQueryFilters().Include(n => n.Lines)
+            .Where(n => n.PurchaseOrderId == order.Id && n.SupplierId == supplierId)
+            .OrderByDescending(n => n.SubmittedAt).ToListAsync(cancellationToken);
+        if (notices.Count == 0) return [];
+        var receipts = await DeliveryNoticeQueries.ReceiptsAsync(_db, notices.Select(n => n.Id).ToList(), cancellationToken);
+        // SL đạt / không đạt chỉ lấy từ XNH đã xác nhận (XNH nháp còn sửa được – chưa báo NCC).
+        var confirmedIds = receipts.Values.Where(r => r.Status == ReceiptConfirmationStatus.Confirmed).Select(r => r.ReceiptId).ToList();
+        var receiptLines = await _db.Set<GoodsReceiptConfirmationLine>().AsNoTracking().IgnoreQueryFilters()
+            .Where(l => confirmedIds.Contains(l.ConfirmationId))
+            .Select(l => new { l.ConfirmationId, l.PurchaseOrderLineId, l.ReceivedQty, l.RejectedQty })
+            .ToListAsync(cancellationToken);
+        var poLines = order.Lines.ToDictionary(l => l.Id);
+        return notices.Select(n =>
+            {
+                var receipt = receipts.GetValueOrDefault(n.Id);
+                var confirmed = receipt?.Status == ReceiptConfirmationStatus.Confirmed;
+                var lines = n.Lines.OrderBy(l => l.LineNo).Select(l =>
+                    {
+                        var poLine = poLines[l.PurchaseOrderLineId];
+                        var got = confirmed
+                            ? receiptLines.FirstOrDefault(r => r.ConfirmationId == receipt!.ReceiptId && r.PurchaseOrderLineId == l.PurchaseOrderLineId)
+                            : null;
+                        return new PortalDeliveryNoticeLineDto(
+                            l.LineNo, poLine.LineNo, items.GetValueOrDefault(poLine.ItemId).Code ?? "", items.GetValueOrDefault(poLine.ItemId).Name ?? "",
+                            uoms.GetValueOrDefault(poLine.UomId) ?? "", l.Qty, confirmed ? got?.ReceivedQty ?? 0 : null,
+                            confirmed ? got?.RejectedQty ?? 0 : null, l.Note);
+                    })
+                    .ToList();
+                return new PortalDeliveryNoticeDto(
+                    n.Id, n.No, n.ExpectedDate, n.DeliveryNoteNo, n.Deliverer, n.Note, DeliveryNoticeQueries.StatusOf(n, receipt), n.SubmittedAt,
+                    n.SubmittedByEmail, n.CancelledAt, n.CancelReason, receipt?.No, confirmed ? receipt!.Date : null,
+                    n.Status == DeliveryNoticeStatus.Submitted && receipt is null, lines);
+            })
+            .ToList();
     }
 }

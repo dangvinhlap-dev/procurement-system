@@ -166,8 +166,27 @@
   gap: 0 var(--erp-gap);
 }
 
+/* Đầu phiếu báo giao (lát P5): ngày giao, số phiếu giao, người giao, ghi chú trên một hàng. */
+.erp-portal-delivery-head {
+  display: grid;
+  grid-template-columns: 160px 160px 1fr 1fr;
+  gap: 0 var(--erp-gap);
+}
+
+/* File chờ tải lên khi gửi phiếu báo giao. */
+.erp-portal-pending-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--erp-grid-line);
+  border-radius: 2px;
+  background: var(--erp-readonly-bg);
+}
+
 @media (max-width: 720px) {
-  .erp-portal-quote-head {
+  .erp-portal-quote-head,
+  .erp-portal-delivery-head {
     grid-template-columns: 1fr;
   }
 }

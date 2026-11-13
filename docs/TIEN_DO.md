@@ -447,6 +447,27 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   Hướng dẫn 05-dau-thau. Test: domain `RfqSupplierResultTests` (2), tích hợp `KetQuaChonThau_SauDuyetXong_NccChiThayKetQuaCuaMinh_ThuBaoKetQua`,
   e2e `portal-rfq-quote.spec.ts` (thêm 1). Kiểm tra: build 0 cảnh báo, `dotnet test` 767/767, tsc, oxlint, `npm run build`; Playwright đủ bộ
   144/144. **Đã merge.** Tiếp theo: P5 (NCC báo giao hàng → XNH), P6a (hóa đơn) – hoặc phát hành khi người dùng yêu cầu.
+- **Lát P5 – NCC báo giao hàng trên Portal → XNH (13/11/2026, nhánh `feature/p5-bao-giao-hang`, bản 0.26.0)** – design.md 19.5 "Lát P5"
+  (P5-1…P5-7, quy tắc tự đặt). Người dùng bảo "làm tiếp". Các bước:
+  - **Bước 1 (xong)**: Domain `PurchaseOrderDeliveryNotice` + dòng (số loại **BGH**, `DocumentTypes.DeliveryNotice`; Create / Cancel, không
+    [Auditable]), `GoodsReceiptConfirmation.DeliveryNoticeId` + `LinkDeliveryNotice`, loại chủ đính kèm `DeliveryNoticeFile`; cấu hình EF (chỉ mục
+    duy nhất XNH chưa hủy theo phiếu báo giao), migration `V0_26_0_NccBaoGiaoHang` (98 → 99). Test domain `PurchaseOrderDeliveryNoticeTests` (4) qua.
+  - **Bước 2 (xong)**: `DeliveryNoticeQueries` (XNH theo phiếu, trạng thái Submitted/Receiving/Received/Cancelled, SL còn báo giao = SL đặt ×
+    (1 + dung sai) − đã nhận − phiếu chưa nhận), `PortalDeliveryNoticeService` (gửi – khóa PO, chặn khi NCC đang từ chối đơn, cấp số BGH theo
+    công ty đặt, báo thủ kho nơi nhận + người lập PO `PortalDeliveryNotice`; hủy – khóa phiếu, chặn khi có XNH; file `DeliveryNoticeFile`),
+    `PortalOrderService` (dòng thêm Id, đã nhận, còn giao; `CanNotifyDelivery`, danh sách phiếu), `DeliveryNoticeService` nội bộ (quyền xem PO
+    hoặc XNH), XNH nhận `DeliveryNoticeId` khi lập (khóa phiếu, một XNH chưa hủy / phiếu), DTO XNH có số BGH. API Portal
+    `/api/portal/orders/{id}/delivery-notices` (+ `/cancel`, file), nội bộ `GET /api/purchase-orders/{id}/delivery-notices`,
+    `GET /api/delivery-notices/{id}`. Test tích hợp `PortalBaoGiao_SlConGiao_HuyCoLyDo_LapXnhTheoPhieu_NccThayThucNhan`; `dotnet test` 772/772.
+  - **Bước 3 (xong)**: Portal `PortalDeliveryParts.tsx` (form "Lập phiếu báo giao hàng" – LineGrid SL giao, file chờ tải khi gửi; danh sách phiếu
+    + dòng + Hủy phiếu báo giao + khối file), trang đơn có nút **Báo giao hàng…**, cột Đã nhận / Còn giao được; `PortalFiles kind="delivery-notices"`.
+    Nội bộ: tab **"Giao hàng NCC"** của PO (`DeliveryNoticePanel.tsx`, nút Lập XNH → `/mua-hang/xac-nhan-nhan-hang/moi?po=…&bgh=…`), XNH điền
+    sẵn theo phiếu báo giao + ô "Theo phiếu báo giao NCC"; nhãn thông báo "NCC báo giao hàng". e2e `portal-delivery.spec.ts`, hàm đăng nhập Portal
+    tách ra `e2e/portalHelpers.ts` (portal-order dùng chung); `document-numbering.spec` 23 → 24 loại (thêm BGH).
+  - **Bước 4 (xong)**: design.md 19.5 "Lát P5" (P5-1…P5-7) + lộ trình 0.26.0, ui-style.md 5f, hướng dẫn 03-mua-hang.
+  - Kiểm tra: build 0 cảnh báo, `dotnet test` 772/772, tsc, oxlint, `npm run build` qua; Playwright đủ bộ 144/145 (document-numbering đếm loại
+    chứng từ – sửa 24, chạy lại qua). **Đã merge.** Tiếp theo: P6a (NCC gửi hóa đơn điện tử trên Portal) – hoặc phát hành 0.25.0/0.26.0 khi người
+    dùng yêu cầu (main đã gồm P3–P5).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

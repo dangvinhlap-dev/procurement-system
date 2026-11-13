@@ -35,7 +35,7 @@ public sealed record ReceiptAdjustmentDto(Guid Id, int LineNo, decimal Qty, stri
 public sealed record ReceiptConfirmationActions(
     bool CanEdit, bool CanConfirm, bool CanCancel, bool CanAdjust, bool CanEditInvoice, bool CanAccept, string? ReadOnlyReason);
 
-/// <summary>Chi tiết XNH.</summary>
+/// <summary>Chi tiết XNH. DeliveryNoticeId / DeliveryNoticeNo: phiếu báo giao NCC mà XNH lập theo (lát P5); null = lập thẳng theo PO.</summary>
 public sealed record ReceiptConfirmationDto(
     Guid Id, string No, DateOnly Date, string Status, Guid PurchaseOrderId, string PurchaseOrderNo, DateOnly PurchaseOrderDate,
     Guid SupplierId, string SupplierCode, string SupplierName, Guid WarehouseId, string? WarehouseCode, string? WarehouseName,
@@ -43,16 +43,19 @@ public sealed record ReceiptConfirmationDto(
     decimal? InvoiceAmount, string? Note, string? CancelReason, decimal TotalAmount, decimal TotalVat, DateTimeOffset CreatedAt,
     string? CreatedByName, DateTimeOffset? ConfirmedAt, string? ConfirmedByName, string Acceptance, string? AcceptanceNote,
     DateTimeOffset? AcceptedAt, string? AcceptedByName, IReadOnlyList<ReceiptConfirmationLineDto> Lines,
-    IReadOnlyList<ReceiptAdjustmentDto> Adjustments, ReceiptConfirmationActions Actions, uint Version = 0);
+    IReadOnlyList<ReceiptAdjustmentDto> Adjustments, ReceiptConfirmationActions Actions, uint Version = 0, Guid? DeliveryNoticeId = null,
+    string? DeliveryNoticeNo = null);
 
 /// <summary>Dòng gửi lên khi lưu XNH (SL theo ĐVT dòng PO).</summary>
 public sealed record SaveReceiptConfirmationLineRequest(
     Guid PurchaseOrderLineId, decimal DeliveredQty, decimal AcceptedQty, decimal RejectedQty, string? CheckResult, string? CheckNote, string? Note);
 
-/// <summary>Lập/sửa XNH nháp. PO chỉ chọn khi lập; sửa thì bỏ qua (phiếu gắn cố định với PO).</summary>
+/// <summary>
+/// Lập/sửa XNH nháp. PO và phiếu báo giao NCC (DeliveryNoticeId – lát P5) chỉ chọn khi lập; sửa thì bỏ qua (phiếu gắn cố định với PO, báo giao).
+/// </summary>
 public sealed record SaveReceiptConfirmationRequest(
     Guid PurchaseOrderId, DateOnly Date, string? DeliveryNoteNo, string? Deliverer, string? Note, string? InvoiceNo, string? InvoiceSeries,
-    DateOnly? InvoiceDate, decimal? InvoiceAmount, IReadOnlyList<SaveReceiptConfirmationLineRequest> Lines);
+    DateOnly? InvoiceDate, decimal? InvoiceAmount, IReadOnlyList<SaveReceiptConfirmationLineRequest> Lines, Guid? DeliveryNoticeId = null);
 
 /// <summary>Cập nhật hóa đơn NCC trên XNH (cả khi đã xác nhận).</summary>
 public sealed record UpdateReceiptConfirmationInvoiceRequest(string? InvoiceNo, string? InvoiceSeries, DateOnly? InvoiceDate, decimal? InvoiceAmount);

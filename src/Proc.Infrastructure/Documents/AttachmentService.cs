@@ -61,6 +61,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.RfqPortalQuote] = (string.Empty, string.Empty),
             // File NCC gửi kèm phản hồi PO trên Portal (lát P4a): nội bộ chỉ xem theo quyền xem PO – kiểm tra riêng, xem RequirePoSupplierFileAsync.
             [AttachmentOwnerTypes.PoSupplierFile] = (string.Empty, string.Empty),
+            // File NCC gửi kèm phiếu báo giao (lát P5): nội bộ chỉ xem theo quyền xem PO / XNH – kiểm tra riêng, xem RequireDeliveryNoticeFileAsync.
+            [AttachmentOwnerTypes.DeliveryNoticeFile] = (string.Empty, string.Empty),
         };
 
     /// <summary>
@@ -133,6 +135,7 @@ public sealed class AttachmentService : IAttachmentService
             {
                 // File NCC nộp trên Portal: chứng cứ của NCC – nội bộ chỉ xem, tải xuống (lát P3b-1).
                 var reason = ownerType is AttachmentOwnerTypes.RfqPortalQuote or AttachmentOwnerTypes.PoSupplierFile
+                        or AttachmentOwnerTypes.DeliveryNoticeFile
                     ? "File do NCC nộp trên Portal – chỉ xem, tải xuống."
                     : LockReason(state, r.ApprovalStepId, r.AddedAfterApproval, r.CreatedBy);
                 return new AttachmentDto(
@@ -321,6 +324,7 @@ public sealed class AttachmentService : IAttachmentService
         if (ownerType == AttachmentOwnerTypes.AppraisalOpinion) return await _appraisals.RequireAttachmentAccessAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.RfqPortalQuote) return await RequireRfqPortalQuoteAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.PoSupplierFile) return await RequirePoSupplierFileAsync(ownerId, manage, cancellationToken);
+        if (ownerType == AttachmentOwnerTypes.DeliveryNoticeFile) return await RequireDeliveryNoticeFileAsync(ownerId, manage, cancellationToken);
         if (!adjustmentAware) _scope.EnsurePermission(manage ? permissions.Manage : permissions.View);
 
         // Select CompanyId dạng Guid? để một kiểu chung cho mọi loại chủ; NCC trả null có chủ đích (danh mục dùng chung – mục 5).
@@ -412,6 +416,22 @@ public sealed class AttachmentService : IAttachmentService
         if (manage) throw new ForbiddenAccessException("File do NCC gửi trên Portal – phần mềm nội bộ chỉ xem, không thêm, xóa.");
         _scope.EnsurePermission(Permissions.Purchase.PoView);
         var companyId = await _db.PurchaseOrders.Where(o => o.Id == ownerId).Select(o => (Guid?)o.CompanyId).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
+        _scope.EnsureCompany(companyId);
+        return companyId;
+    }
+
+    /// <summary>
+    /// File NCC gửi kèm phiếu báo giao trên Portal (lát P5, design.md 19.5 P5-3): nội bộ không thêm, xóa; xem cần quyền xem PO hoặc xem XNH (thủ
+    /// kho nơi nhận đối chiếu phiếu giao, CO/CQ). Phiếu báo giao đọc qua filter công ty nên phiếu công ty khác trả 404.
+    /// </summary>
+    private async Task<Guid?> RequireDeliveryNoticeFileAsync(Guid ownerId, bool manage, CancellationToken cancellationToken)
+    {
+        if (manage) throw new ForbiddenAccessException("File do NCC gửi trên Portal – phần mềm nội bộ chỉ xem, không thêm, xóa.");
+        if (!_scope.HasPermission(Permissions.Purchase.PoView) && !_scope.HasPermission(Permissions.Purchase.ReceiptView))
+            throw new ForbiddenAccessException("Bạn không có quyền xem đơn mua hàng hoặc phiếu nhận hàng.");
+        var companyId = await _db.PurchaseOrderDeliveryNotices.Where(n => n.Id == ownerId).Select(n => (Guid?)n.CompanyId)
+                            .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
         _scope.EnsureCompany(companyId);
         return companyId;
@@ -514,10 +534,10 @@ public sealed class AttachmentService : IAttachmentService
             ?? throw new NotFoundException("Không tìm thấy file đính kèm.");
     }
 
-    /// <summary>Chỉ hai loại chủ của NCC thao tác được từ Portal – chặn lỗi lập trình gọi nhầm loại chủ nội bộ từ phiên NCC.</summary>
+    /// <summary>Chỉ ba loại chủ của NCC thao tác được từ Portal – chặn lỗi lập trình gọi nhầm loại chủ nội bộ từ phiên NCC.</summary>
     private static void RequirePortalOwnerType(string ownerType)
     {
-        if (ownerType is not (AttachmentOwnerTypes.RfqPortalQuote or AttachmentOwnerTypes.PoSupplierFile))
+        if (ownerType is not (AttachmentOwnerTypes.RfqPortalQuote or AttachmentOwnerTypes.PoSupplierFile or AttachmentOwnerTypes.DeliveryNoticeFile))
             throw new ArgumentOutOfRangeException(nameof(ownerType), ownerType, "Loại chủ không dùng được trên Portal.");
     }
 

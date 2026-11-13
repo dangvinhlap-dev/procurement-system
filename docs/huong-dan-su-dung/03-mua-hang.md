@@ -168,6 +168,21 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 - NCC từ chối **không tự hủy PO**: Phòng CUVT hủy PO (quản trị), **Đóng phần còn lại** hoặc mở lại phản hồi. NCC chưa xác nhận vẫn lập XNH
   nhận hàng được. **Hủy PO đã duyệt** thì NCC nhận thư hủy (không ghi lý do) và thấy "Bên đặt đã hủy".
 
+### NCC báo giao hàng trên Portal → lập XNH (từ bản 0.26.0 – lát P5)
+
+- **NCC báo giao** (Portal → Đơn đặt hàng → mở đơn → **Báo giao hàng…**): ngày giao dự kiến, **số phiếu giao** (bắt buộc), người giao /
+  phương tiện, ghi chú, SL giao từng dòng (mặc định phần còn giao được) và file kèm (phiếu giao, CO/CQ, ảnh hàng – tối đa 2 MB/file). SL không
+  vượt **SL đặt × (1 + dung sai) − đã nhận − SL trên các phiếu báo giao chưa nhận**; giao nhiều đợt thì báo nhiều phiếu. Đơn phải còn Đã duyệt
+  và NCC không đang từ chối đơn. Mỗi phiếu có số **BGH-…**.
+- **Thông báo**: thủ kho nơi nhận (quyền lập XNH, kho của PO trong phạm vi) và người lập PO nhận "NCC báo giao hàng" – bấm mở PO.
+- **Nơi nhận**: PO → tab **GIAO HÀNG NCC** – các phiếu báo giao (trạng thái Chờ nhận / Đang nhận (XNH nháp) / Đã nhận / NCC đã hủy), bấm **+**
+  đầu dòng xem SL từng dòng và file NCC gửi (chỉ xem). Hàng đến: bấm **Lập XNH** → phiếu xác nhận nhận hàng điền sẵn số phiếu giao, người giao,
+  dòng và SL theo phiếu báo giao (ô "Theo phiếu báo giao NCC") – sửa SL đạt / không đạt theo thực tế rồi lưu, xác nhận như XNH thường. Mỗi phiếu
+  báo giao có **một XNH chưa hủy**; hủy XNH nháp thì lập lại được.
+- **NCC thấy**: trạng thái phiếu, số XNH; XNH đã xác nhận thì SL nhận đạt / không đạt từng dòng, ngày nhận; dòng đơn có cột **Đã nhận**,
+  **Còn giao được**. NCC **hủy phiếu báo giao** (bắt buộc lý do – nơi nhận nhận thông báo) khi nơi nhận chưa lập XNH; sau đó phiếu và file khóa.
+- NCC không dùng Portal: nhận hàng theo đơn như cũ (Lập phiếu nhận hàng trên PO).
+
 ## 3.5 Theo dõi giao hàng (POTRK)
 
 Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn lại, hạn giao (dòng hoặc đầu phiếu), **quá hạn**. Bấm đúp mở PO.

@@ -150,6 +150,39 @@ public static class PortalEndpoints
                 await s.DeleteAttachmentAsync(Session(http), id, attachmentId, ct);
                 return Results.NoContent();
             });
+
+        // Lát P5: NCC báo giao hàng theo đơn – gửi, hủy phiếu báo giao, file kèm (phiếu giao, CO/CQ).
+        orders.MapPost("/{id:guid}/delivery-notices", (
+                Guid id, PortalDeliveryNoticeRequest request, HttpContext http, IPortalDeliveryNoticeService s, CancellationToken ct) =>
+            s.CreateAsync(Session(http), id, request, ct));
+        orders.MapPost("/{id:guid}/delivery-notices/{noticeId:guid}/cancel", (
+                Guid id, Guid noticeId, PortalCancelDeliveryNoticeRequest request, HttpContext http, IPortalDeliveryNoticeService s,
+                CancellationToken ct) =>
+            s.CancelAsync(Session(http), id, noticeId, request, ct));
+        orders.MapGet("/{id:guid}/delivery-notices/{noticeId:guid}/attachments", (
+                Guid id, Guid noticeId, HttpContext http, IPortalDeliveryNoticeService s, CancellationToken ct) =>
+            s.ListAttachmentsAsync(Session(http), id, noticeId, ct));
+        orders.MapPost("/{id:guid}/delivery-notices/{noticeId:guid}/attachments", async (
+                Guid id, Guid noticeId, [FromForm] string? note, IFormFile file, HttpContext http, IPortalDeliveryNoticeService s,
+                CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.UploadAttachmentAsync(Session(http), id, noticeId, file.FileName, file.Length, stream, note, ct));
+            })
+            // Token Portal đi trong header, không dùng cookie – không có nguy cơ CSRF.
+            .DisableAntiforgery();
+        orders.MapGet("/{id:guid}/delivery-notices/{noticeId:guid}/attachments/{attachmentId:guid}/content", async (
+                Guid id, Guid noticeId, Guid attachmentId, HttpContext http, IPortalDeliveryNoticeService s, CancellationToken ct) =>
+            {
+                var file = await s.OpenAttachmentAsync(Session(http), id, noticeId, attachmentId, ct);
+                return Results.File(file.Content, file.ContentType, file.FileName);
+            });
+        orders.MapDelete("/{id:guid}/delivery-notices/{noticeId:guid}/attachments/{attachmentId:guid}", async (
+                Guid id, Guid noticeId, Guid attachmentId, HttpContext http, IPortalDeliveryNoticeService s, CancellationToken ct) =>
+            {
+                await s.DeleteAttachmentAsync(Session(http), id, noticeId, attachmentId, ct);
+                return Results.NoContent();
+            });
         return app;
     }
 

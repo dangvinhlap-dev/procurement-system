@@ -321,8 +321,12 @@ async function portalRaw(path: string, init: { method?: string; body?: BodyInit 
  * @param kind "rfqs" hoặc "orders".
  * @returns Các lệnh danh sách, tải lên, xóa, tải xuống.
  */
-export function portalFiles(kind: 'rfqs' | 'orders') {
-  const base = (id: string) => `/api/portal/${kind}/${id}/attachments`
+export function portalFiles(kind: 'rfqs' | 'orders' | 'delivery-notices') {
+  // Phiếu báo giao (lát P5) nằm dưới đơn: id = "Id đơn/Id phiếu báo giao".
+  const base = (id: string) =>
+    kind === 'delivery-notices'
+      ? `/api/portal/orders/${id.split('/')[0]}/delivery-notices/${id.split('/')[1]}/attachments`
+      : `/api/portal/${kind}/${id}/attachments`
   return {
     list: (id: string) => portalFetch<PortalAttachment[]>(base(id)),
     upload: async (id: string, file: File, note: string | null) => {
@@ -384,6 +388,64 @@ export interface PortalOrderLine {
   vatAmount: number
   deliveryDate: string | null
   note: string | null
+  /** Id dòng đơn – chọn dòng khi báo giao (lát P5). */
+  purchaseOrderLineId: string
+  /** SL bên đặt đã xác nhận nhận. */
+  receivedQty: number
+  /** SL còn báo giao được = SL đặt × (1 + dung sai) − đã nhận − đang báo giao chưa nhận. */
+  deliverableQty: number
+}
+
+/** Trạng thái phiếu báo giao (lát P5): đã gửi – chờ nhận, bên đặt đang kiểm nhận, đã nhận, NCC đã hủy. */
+export type PortalDeliveryNoticeStatus = 'Submitted' | 'Receiving' | 'Received' | 'Cancelled'
+
+/** Nhãn trạng thái phiếu báo giao. */
+export const portalDeliveryNoticeStatusLabels: Record<PortalDeliveryNoticeStatus, string> = {
+  Submitted: 'Đã gửi – chờ nhận',
+  Receiving: 'Bên đặt đang kiểm nhận',
+  Received: 'Bên đặt đã nhận',
+  Cancelled: 'Đã hủy',
+}
+
+/** Dòng phiếu báo giao; receivedQty / rejectedQty có khi bên đặt đã xác nhận nhận hàng. */
+export interface PortalDeliveryNoticeLine {
+  lineNo: number
+  poLineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  receivedQty: number | null
+  rejectedQty: number | null
+  note: string | null
+}
+
+/** Phiếu báo giao hàng NCC gửi (lát P5). */
+export interface PortalDeliveryNotice {
+  id: string
+  no: string
+  expectedDate: string
+  deliveryNoteNo: string
+  deliverer: string | null
+  note: string | null
+  status: PortalDeliveryNoticeStatus
+  submittedAt: string
+  submittedByEmail: string
+  cancelledAt: string | null
+  cancelReason: string | null
+  receiptNo: string | null
+  receivedDate: string | null
+  canCancel: boolean
+  lines: PortalDeliveryNoticeLine[]
+}
+
+/** NCC gửi phiếu báo giao (dòng SL 0 bỏ trước khi gửi). */
+export interface PortalDeliveryNoticeInput {
+  expectedDate: string
+  deliveryNoteNo: string | null
+  deliverer: string | null
+  note: string | null
+  lines: { purchaseOrderLineId: string; qty: number; note: string | null }[]
 }
 
 /** Một lần NCC phản hồi đơn (reopenedAt khác null = bên đặt đã mở lại, phản hồi này là lịch sử). */
@@ -420,6 +482,12 @@ export interface PortalOrder {
   lines: PortalOrderLine[]
   responses: PortalOrderResponse[]
   maxFileSizeMb: number
+  /** Còn báo giao được (lát P5). */
+  canNotifyDelivery: boolean
+  /** Lý do chưa báo giao được. */
+  notifyDeliveryBlockedReason: string | null
+  /** Các phiếu báo giao, mới trước. */
+  deliveryNotices: PortalDeliveryNotice[]
 }
 
 /** NCC xác nhận (kèm ngày giao cam kết) hoặc từ chối (kèm lý do). */
@@ -496,4 +564,10 @@ export const portalApi = {
   /** Xác nhận / từ chối đơn. */
   respondOrder: (id: string, input: PortalOrderRespond) =>
     portalFetch<PortalOrder>(`/api/portal/orders/${id}/respond`, { method: 'POST', body: input }),
+  /** Gửi phiếu báo giao hàng (lát P5) – trả phiếu vừa gửi để tải file kèm. */
+  createDeliveryNotice: (orderId: string, input: PortalDeliveryNoticeInput) =>
+    portalFetch<PortalDeliveryNotice>(`/api/portal/orders/${orderId}/delivery-notices`, { method: 'POST', body: input }),
+  /** Hủy phiếu báo giao (bắt buộc lý do). */
+  cancelDeliveryNotice: (orderId: string, noticeId: string, reason: string) =>
+    portalFetch<PortalOrder>(`/api/portal/orders/${orderId}/delivery-notices/${noticeId}/cancel`, { method: 'POST', body: { reason } }),
 }

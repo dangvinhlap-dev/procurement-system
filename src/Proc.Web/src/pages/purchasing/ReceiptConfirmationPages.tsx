@@ -12,9 +12,11 @@ import {
   receiptCheckResultLabels,
   receiptConfirmationStatusLabels,
   receiptConfirmationStatusTone,
+  useDeliveryNotice,
   useReceiptConfirmation,
   useReceiptConfirmationMutations,
   useReceiptConfirmations,
+  type DeliveryNotice,
   type ReceiptCheckResult,
   type ReceiptConfirmation,
   type ReceiptConfirmationListItem,
@@ -23,6 +25,7 @@ import {
 } from '../../api/receiptConfirmations'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { DocNo } from '../../classic/DocNo'
 import { Select } from '../../classic/Select'
 import { useAttachmentTab } from '../../components/AttachmentPanel/useAttachmentTab'
 import { DataGrid } from '../../components/DataGrid/DataGrid'
@@ -199,26 +202,46 @@ export function ReceiptConfirmationPage() {
     if (isNew && poFromUrl && !form.getFieldValue('purchaseOrderId')) form.setFieldValue('purchaseOrderId', poFromUrl)
   }, [isNew, poFromUrl, form])
 
-  /** Điền mọi dòng PO còn lại: SL phiếu giao = SL đạt = còn lại; kết quả kiểm tra để người nhận chọn. */
+  // Lập từ phiếu báo giao NCC trên Portal (?bgh=Id – lát P5, design.md 19.5 P5-5): chọn sẵn đơn của phiếu, điền số phiếu giao, người giao, SL.
+  const noticeId = isNew ? searchParams.get('bgh') : null
+  const notice = useDeliveryNotice(noticeId)
+  useEffect(() => {
+    if (notice.data && !form.getFieldValue('purchaseOrderId')) form.setFieldValue('purchaseOrderId', notice.data.purchaseOrderId)
+  }, [notice.data, form])
+
+  /** Một dòng XNH từ dòng PO: SL phiếu giao = SL đạt = `qty`; kết quả kiểm tra để người nhận chọn. */
+  const lineFromOrder = (l: NonNullable<typeof order.data>['lines'][number], qty: number): LineValues => ({
+    purchaseOrderLineId: l.id, poLineNo: l.lineNo, itemCode: l.itemCode, itemName: l.itemName, uomCode: l.uomCode, orderedQty: l.qty,
+    otherReceivedQty: l.receivedQty, vatCode: l.vatCode,
+    // Giá thực mua sau chiết khấu (server tính lại khi lưu), ví dụ 100.000 − 5% = 95.000.
+    unitPrice: Math.round(l.unitPrice * (100 - l.discountPct) * 10_000) / 1_000_000,
+    deliveredQty: qty, acceptedQty: qty, rejectedQty: 0, adjustedQty: 0, checkResult: 'NotChecked', checkNote: '', note: '',
+  })
+
+  /** Điền mọi dòng PO còn lại: SL phiếu giao = SL đạt = còn lại. */
   const takeOrderLines = () =>
+    form.setFieldValue('lines', (order.data?.lines ?? []).filter((l) => l.remainingQty > 0).map((l) => lineFromOrder(l, l.remainingQty)))
+
+  /** Điền theo phiếu báo giao: số phiếu giao, người giao, dòng và SL NCC báo (thủ kho sửa theo thực tế). */
+  const takeNoticeLines = (n: DeliveryNotice) => {
+    form.setFieldsValue({ deliveryNoteNo: n.deliveryNoteNo, deliverer: n.deliverer ?? '' })
     form.setFieldValue(
       'lines',
-      (order.data?.lines ?? [])
-        .filter((l) => l.remainingQty > 0)
-        .map((l): LineValues => ({
-          purchaseOrderLineId: l.id, poLineNo: l.lineNo, itemCode: l.itemCode, itemName: l.itemName, uomCode: l.uomCode, orderedQty: l.qty,
-          otherReceivedQty: l.receivedQty, vatCode: l.vatCode,
-          // Giá thực mua sau chiết khấu (server tính lại khi lưu), ví dụ 100.000 − 5% = 95.000.
-          unitPrice: Math.round(l.unitPrice * (100 - l.discountPct) * 10_000) / 1_000_000,
-          deliveredQty: l.remainingQty, acceptedQty: l.remainingQty, rejectedQty: 0, adjustedQty: 0, checkResult: 'NotChecked', checkNote: '', note: '',
-        })),
+      n.lines.flatMap((nl) => {
+        const l = order.data?.lines.find((x) => x.id === nl.purchaseOrderLineId)
+        return l ? [{ ...lineFromOrder(l, nl.qty), note: nl.note ?? '' }] : []
+      }),
     )
+  }
 
-  // PO vừa chọn khi lập mới: tự lấy dòng còn lại (đổi PO thì thay dòng).
+  // PO vừa chọn khi lập mới: tự lấy dòng còn lại, hoặc dòng của phiếu báo giao (đổi PO thì thay dòng).
   useEffect(() => {
-    if (isNew && !readOnly && order.data && order.data.id === purchaseOrderId) takeOrderLines()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi PO tải xong
-  }, [order.data?.id])
+    if (!isNew || readOnly || !order.data || order.data.id !== purchaseOrderId) return
+    if (noticeId && notice.isLoading) return // chờ phiếu báo giao tải xong
+    if (notice.data?.purchaseOrderId === order.data.id) takeNoticeLines(notice.data)
+    else takeOrderLines()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi PO / phiếu báo giao tải xong
+  }, [order.data?.id, notice.data?.id])
 
   const totals = lines.reduce((sum, l) => {
     const m = lineMoney(l)
@@ -247,6 +270,8 @@ export function ReceiptConfirmationPage() {
       invoiceSeries: orNull(values.invoiceSeries),
       invoiceDate: values.invoiceDate ? values.invoiceDate.format('YYYY-MM-DD') : null,
       invoiceAmount: values.invoiceAmount ?? null,
+      // Phiếu báo giao chỉ gắn khi lập và còn đúng đơn của phiếu (đổi sang đơn khác thì lập thẳng theo đơn).
+      deliveryNoticeId: notice.data && notice.data.purchaseOrderId === values.purchaseOrderId ? notice.data.id : null,
       // Dòng không giao gì (cả ba SL = 0) không lưu – NCC giao các dòng đó ở lần sau.
       lines: (values.lines ?? [])
         .filter((l) => (l.deliveredQty ?? 0) > 0 || (l.acceptedQty ?? 0) > 0 || (l.rejectedQty ?? 0) > 0)
@@ -517,6 +542,11 @@ export function ReceiptConfirmationPage() {
             <Form.Item label="Nơi nhận">
               <Input disabled value={doc ? `${doc.warehouseCode ?? ''} – ${doc.warehouseName ?? ''}` : (order.data?.warehouseCode ?? '')} />
             </Form.Item>
+            {(doc?.deliveryNoticeNo ?? notice.data?.no) && (
+              <Form.Item label="Theo phiếu báo giao NCC" extra={isNew ? 'NCC báo giao trên Portal – sửa SL theo thực tế khi kiểm nhận.' : undefined}>
+                <DocNo no={doc?.deliveryNoticeNo ?? notice.data?.no} />
+              </Form.Item>
+            )}
             <Form.Item label="Số phiếu giao NCC" name="deliveryNoteNo" rules={[{ max: 100 }]}>
               <Input autoComplete="off" />
             </Form.Item>

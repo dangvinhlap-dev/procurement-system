@@ -165,6 +165,12 @@ public static class PurchasingEndpoints
         po.MapGet("/{id:guid}/portal-emails", (Guid id, Proc.Application.Portal.IPortalEmailService s, CancellationToken ct) =>
                 s.ListForPurchaseOrderAsync(id, ct))
             .RequirePermission(Permissions.Purchase.PoView);
+        // Lát P5: phiếu báo giao NCC gửi trên Portal – tab "Giao hàng NCC" của PO, điền sẵn XNH. Quyền xem PO hoặc xem XNH (dịch vụ kiểm).
+        po.MapGet("/{id:guid}/delivery-notices", (Guid id, IDeliveryNoticeService s, CancellationToken ct) => s.ListForOrderAsync(id, ct))
+            .RequireAuthorization();
+        app.MapGroup("/api/delivery-notices").WithTags("Báo giao hàng NCC")
+            .MapGet("/{id:guid}", (Guid id, IDeliveryNoticeService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequireAuthorization();
         // Xác nhận đã bổ sung hồ sơ PO khẩn cấp (design.md mục 18.11) – người lập PO.
         po.MapPost("/{id:guid}/complete-docs", (Guid id, CompleteDocsRequest request, IPurchaseOrderService s, CancellationToken ct) =>
                 s.CompleteDocsAsync(id, request, ct))

@@ -1,21 +1,8 @@
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, switchCompany, unique } from './inventoryHelpers.ts'
+import { switchCompany } from './inventoryHelpers.ts'
+import { portalSession } from './portalHelpers.ts'
 import { seedApprovedPo } from './receiptHelpers.ts'
-
-/** Mời một tài khoản Portal cho NCC, kích hoạt, đăng nhập 2 bước qua API; trả dữ liệu phiên Portal. */
-async function portalSession(request: APIRequestContext, supplierId: string) {
-  const head = await api(request)
-  const email = `${unique('dh').toLowerCase()}@ncc-thu.vn`
-  const invite = await head.send<{ inviteUrl: string }>('post', `/api/suppliers/${supplierId}/portal-users`, {
-    email, fullName: 'Lê Bán Hàng', phone: null, position: 'Nhân viên kinh doanh',
-  })
-  const token = new URL(invite.inviteUrl).searchParams.get('token')!
-  expect((await request.post('/api/portal/auth/activate', { data: { token, password: 'ncc12345' } })).status()).toBe(204)
-  const challenge = await (await request.post('/api/portal/auth/login', { data: { email, password: 'ncc12345' } })).json()
-  const session = await (await request.post('/api/portal/auth/verify-otp', { data: { challengeId: challenge.challengeId, code: challenge.devCode } })).json()
-  return session as { accessToken: string }
-}
 
 /**
  * Lát P4a (design.md 19.5, P4-1…P4-5): NCC thấy PO đã duyệt trên Portal, gửi file, từ chối kèm lý do → nội bộ thấy trên ô "Xác nhận của NCC"
