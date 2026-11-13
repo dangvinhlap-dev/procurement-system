@@ -200,6 +200,8 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Portal.IPortalRfqService, Proc.Infrastructure.Portal.PortalRfqService>();
         services.AddScoped<Proc.Application.Portal.IPortalOrderService, Proc.Infrastructure.Portal.PortalOrderService>();
         services.AddScoped<Proc.Application.Portal.IPortalDeliveryNoticeService, Proc.Infrastructure.Portal.PortalDeliveryNoticeService>();
+        // Lát P6b: trạng thái thanh toán trên Portal.
+        services.AddScoped<Proc.Application.Portal.IPortalPaymentService, Proc.Infrastructure.Portal.PortalPaymentService>();
         services.AddScoped<Proc.Application.Purchasing.IDeliveryNoticeService, Proc.Infrastructure.Purchasing.DeliveryNoticeService>();
         services.AddScoped<Proc.Application.Purchasing.IPaymentRequestService, Proc.Infrastructure.Purchasing.PaymentRequestService>();
         services.AddScoped<Proc.Application.Purchasing.ISundryExpenseSheetService, Proc.Infrastructure.Purchasing.SundryExpenseSheetService>();

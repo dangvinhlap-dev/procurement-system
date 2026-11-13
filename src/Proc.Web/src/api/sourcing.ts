@@ -618,6 +618,7 @@ export type PortalEmailKind =
   | 'PurchaseOrderReopened'
   | 'RfqAwarded'
   | 'RfqNotAwarded'
+  | 'PaymentPaid'
 
 /** Tên loại thư hiện trên giao diện. */
 export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
@@ -631,6 +632,7 @@ export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
   PurchaseOrderReopened: 'Đề nghị phản hồi lại',
   RfqAwarded: 'Báo trúng thầu',
   RfqNotAwarded: 'Báo không trúng thầu',
+  PaymentPaid: 'Báo đã thanh toán',
 }
 
 /** Trạng thái gửi thư: chờ gửi, đã gửi, thôi gửi, lỗi (hết lượt thử). */

@@ -90,7 +90,8 @@ public sealed class PortalEmailService : IPortalEmailService
         if (recipients.Count == 0) return 0;
         var company = await _db.Companies.AsNoTracking().IgnoreQueryFilters().Where(c => c.Id == order.CompanyId)
             .Select(c => new { c.Code, c.Name }).SingleAsync(cancellationToken);
-        var link = PortalLink($"don-hang/{order.Id}");
+        // Thư thanh toán mở trang Thanh toán của đơn (lát P6b); thư khác mở trang đơn.
+        var link = PortalLink(kind == SupplierPortalEmailKind.PaymentPaid ? $"thanh-toan/{order.Id}" : $"don-hang/{order.Id}");
         var now = _clock.UtcNow;
         foreach (var r in recipients)
         {
@@ -290,6 +291,12 @@ public sealed class PortalEmailService : IPortalEmailService
                 $"{companyName} đề nghị quý công ty xác nhận hoặc từ chối lại đơn đặt hàng {order.No} ngày {order.Date:dd/MM/yyyy}.",
                 .. extra is null ? Array.Empty<string>() : [$"Lý do: {extra}"],
                 "Quý công ty đăng nhập Portal nhà cung cấp để phản hồi lại đơn.",
+            ]),
+            SupplierPortalEmailKind.PaymentPaid => ($"Thanh toán đơn đặt hàng {order.No}", $"Thanh toán đơn đặt hàng {order.No}",
+            [
+                $"{companyName} đã thanh toán cho {supplierName} theo đơn đặt hàng {order.No} ngày {order.Date:dd/MM/yyyy}.",
+                .. extra is null ? Array.Empty<string>() : extra.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                "Quý công ty đăng nhập Portal nhà cung cấp, mục Thanh toán, để xem hóa đơn, giảm trừ và số tiền còn phải trả của đơn.",
             ]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
         };

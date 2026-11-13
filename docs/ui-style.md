@@ -152,6 +152,10 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   (`.erp-portal-delivery-head`, màn hình hẹp một cột), lưới `LineGrid` cố định dòng (SL giao nhập trong lưới), file chờ là ô viền 1px nền
   `--erp-readonly-bg` có nút bỏ; **Bỏ qua** (đỏ) trái – **Gửi phiếu báo giao** (xanh) phải, gửi hỏi lại. Danh sách phiếu: lưới phiếu + lưới dòng
   của phiếu đang chọn, **Hủy phiếu báo giao** (đỏ, hộp thoại lý do bắt buộc), khối file của phiếu (`PortalFiles kind="delivery-notices"`).
+- **Thanh toán** (lát P6b, `src/portal/PortalPaymentPages.tsx`): trang `/ncc/thanh-toan` là lưới đơn (đèn thanh toán kèm chữ, cột Còn phải trả ngay
+  sau đèn) + tổng còn phải trả canh phải; bấm đúp mở `/ncc/thanh-toan/:id`. Khối `PortalPaymentPanel` (dùng cả trên trang đơn): tổng hợp là lưới
+  nhãn – số **hai cặp trên một hàng** (`.erp-portal-pay-summary`, số canh phải phông đơn cách, "Còn phải trả" đậm; màn hình hẹp một cặp), rồi lưới
+  "Hóa đơn – phiếu nhận hàng" và "Đợt thanh toán"; cột quan trọng (trạng thái, tiền) đặt trước để nằm trong khung 1000px, cột phụ cuộn ngang.
 
 ## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
 

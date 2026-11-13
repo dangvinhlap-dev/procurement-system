@@ -35,6 +35,9 @@ public enum SupplierPortalEmailKind
 
     /// <summary>Báo NCC có báo giá nhưng không trúng thầu – khi kết quả chọn thầu duyệt xong (lát P4b).</summary>
     RfqNotAwarded = 10,
+
+    /// <summary>Bên đặt hàng đã thanh toán một đợt (kế toán ghi Đã chi đề nghị thanh toán của PO – lát P6b, P6b-5).</summary>
+    PaymentPaid = 11,
 }
 
 /// <summary>

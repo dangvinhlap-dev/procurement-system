@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
+using Proc.Application.Portal;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
@@ -26,15 +27,22 @@ public sealed class PaymentRequestService : IPaymentRequestService
     private readonly IDocumentNumberService _numbers;
     private readonly IClock _clock;
     private readonly ApprovalEngine _approvals;
+    private readonly IPortalEmailService _portalEmails;
+
+    /// <summary>Định dạng số kiểu Việt Nam trong thư (1.234.567).</summary>
+    private static readonly System.Globalization.CultureInfo Vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="numbers">Đánh số chứng từ.</param>
     /// <param name="clock">Đồng hồ.</param>
-    public PaymentRequestService(ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock)
+    /// <param name="portalEmails">Thư báo NCC qua Portal (báo đã thanh toán – lát P6b).</param>
+    public PaymentRequestService(
+        ProcDbContext db, ICurrentUserScope scope, IDocumentNumberService numbers, IClock clock, IPortalEmailService portalEmails)
     {
         _db = db;
+        _portalEmails = portalEmails;
         _scope = scope;
         _numbers = numbers;
         _clock = clock;
@@ -307,8 +315,31 @@ public sealed class PaymentRequestService : IPaymentRequestService
         var approved = payment.ApprovedAt is { } at ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, VietnamTime.Zone).DateTime) : payment.Date;
         payment.MarkPaid(request.PaidDate, request.Note, _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập."), approved,
             _clock.TodayInVietnam(), _clock.UtcNow);
+        await QueuePaidEmailAsync(payment, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Báo NCC qua Portal khi ghi Đã chi (lát P6b, P6b-5): thư vào hàng chờ cùng giao dịch, gửi mọi tài khoản Portal đang dùng của NCC của PO.
+    /// Đề nghị 1C tạp vụ (không PO, NCC) và PO mua nội bộ không có thư. Thư không có ghi chú chi của kế toán (số UNC, phiếu chi – nội bộ).
+    /// </summary>
+    private async Task QueuePaidEmailAsync(PaymentRequest payment, CancellationToken cancellationToken)
+    {
+        if (payment.PurchaseOrderId is not { } orderId) return;
+        var order = await _db.PurchaseOrders.SingleAsync(o => o.Id == orderId, cancellationToken);
+        string Money(decimal value) => value.ToString("N0", Vi);
+        var method = payment.Method == PaymentMethod.BankTransfer
+            ? $"chuyển khoản vào tài khoản {payment.BankAccountNumber} – {payment.BankName}"
+            : "tiền mặt";
+        var invoices = string.Join(", ", payment.Lines.OrderBy(l => l.LineNo).Select(l => l.InvoiceNo).Where(n => !string.IsNullOrEmpty(n)));
+        List<string> lines =
+        [
+            $"Số tiền thanh toán: {Money(payment.PayableAmount)} đồng, {method}, ngày {payment.PaidDate:dd/MM/yyyy}.",
+            .. invoices.Length == 0 ? Array.Empty<string>() : [$"Hóa đơn: {invoices} – tổng {Money(payment.TotalAmount)} đồng."],
+            .. payment.DeductionAmount > 0 ? [$"Giảm trừ: {Money(payment.DeductionAmount)} đồng – {payment.DeductionReason}."] : Array.Empty<string>(),
+        ];
+        await _portalEmails.QueuePurchaseOrderAsync(order, SupplierPortalEmailKind.PaymentPaid, string.Join('\n', lines), cancellationToken);
     }
 
     /// <summary>

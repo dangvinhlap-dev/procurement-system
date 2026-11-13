@@ -506,6 +506,90 @@ export interface PortalSubmitQuote {
 }
 
 /** Các lệnh API Portal. */
+/** Trạng thái thanh toán của đơn (lát P6b – design.md 19.5, P6b-4). */
+export type PortalPaymentStatus = 'NoInvoice' | 'Unpaid' | 'PartlyPaid' | 'Paid'
+
+/** Tên trạng thái thanh toán của đơn. */
+export const portalPaymentStatusLabels: Record<PortalPaymentStatus, string> = {
+  NoInvoice: 'Chưa có hóa đơn',
+  Unpaid: 'Chưa thanh toán',
+  PartlyPaid: 'Thanh toán một phần',
+  Paid: 'Đã thanh toán đủ hóa đơn',
+}
+
+/** Trạng thái thanh toán của một hóa đơn / phiếu nhận hàng (P6b-2). */
+export type PortalInvoiceStatus = 'AwaitingInvoice' | 'Invoiced' | 'Processing' | 'Approved' | 'Paid'
+
+/** Tên trạng thái thanh toán của hóa đơn. */
+export const portalInvoiceStatusLabels: Record<PortalInvoiceStatus, string> = {
+  AwaitingInvoice: 'Chờ hóa đơn',
+  Invoiced: 'Đã nhận hóa đơn',
+  Processing: 'Đang xử lý thanh toán',
+  Approved: 'Đã duyệt – chờ chi',
+  Paid: 'Đã thanh toán',
+}
+
+/** Tình hình thanh toán một đơn (P6b-1, P6b-4); tiền VND gồm VAT. */
+export interface PortalPaymentOrder {
+  orderId: string
+  orderNo: string
+  companyName: string
+  orderDate: string
+  orderAmount: number
+  receivedAmount: number
+  receiptCount: number
+  awaitingInvoiceCount: number
+  invoiceAmount: number
+  processingAmount: number
+  approvedUnpaidAmount: number
+  paidAmount: number
+  deductionAmount: number
+  /** Còn phải trả = tiền hóa đơn − đã thanh toán − giảm trừ đã cấn trừ. */
+  outstandingAmount: number
+  lastPaidDate: string | null
+  status: PortalPaymentStatus
+}
+
+/** Phiếu nhận hàng đã xác nhận và hóa đơn của nó (P6b-2). */
+export interface PortalPaymentInvoice {
+  receiptNo: string
+  receivedDate: string
+  receivedAmount: number
+  deliveryNoteNo: string | null
+  invoiceNo: string | null
+  invoiceSeries: string | null
+  invoiceDate: string | null
+  invoiceAmount: number | null
+  status: PortalInvoiceStatus
+  /** Số đợt thanh toán đã duyệt chứa hóa đơn. */
+  paymentNo: string | null
+  paidDate: string | null
+}
+
+/** Đợt thanh toán đã duyệt / đã chi (P6b-3). */
+export interface PortalPaymentRound {
+  no: string
+  approvedDate: string
+  method: 'Cash' | 'BankTransfer'
+  bankName: string | null
+  bankAccountNumber: string | null
+  bankAccountName: string | null
+  invoiceNos: string
+  totalAmount: number
+  deductionAmount: number
+  deductionReason: string | null
+  payableAmount: number
+  status: 'Approved' | 'Paid'
+  paidDate: string | null
+}
+
+/** Chi tiết thanh toán một đơn. */
+export interface PortalPaymentDetail {
+  summary: PortalPaymentOrder
+  invoices: PortalPaymentInvoice[]
+  rounds: PortalPaymentRound[]
+}
+
 export const portalApi = {
   /** Đăng nhập bước 1: email + mật khẩu → gửi OTP. */
   login: (email: string, password: string) =>
@@ -570,4 +654,8 @@ export const portalApi = {
   /** Hủy phiếu báo giao (bắt buộc lý do). */
   cancelDeliveryNotice: (orderId: string, noticeId: string, reason: string) =>
     portalFetch<PortalOrder>(`/api/portal/orders/${orderId}/delivery-notices/${noticeId}/cancel`, { method: 'POST', body: { reason } }),
+  /** Tình hình thanh toán các đơn (lát P6b). */
+  payments: () => portalFetch<PortalPaymentOrder[]>('/api/portal/payments'),
+  /** Chi tiết thanh toán một đơn. */
+  payment: (orderId: string) => portalFetch<PortalPaymentDetail>(`/api/portal/payments/${orderId}`),
 }

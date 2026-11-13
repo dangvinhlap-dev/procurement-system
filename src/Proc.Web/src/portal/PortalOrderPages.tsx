@@ -18,6 +18,7 @@ import {
 } from './portalApi'
 import { DeliveryNoticeForm, DeliveryNoticeList } from './PortalDeliveryParts'
 import { PortalFiles, Section } from './PortalParts'
+import { PortalPaymentPanel } from './PortalPaymentPages'
 
 /** Màu đèn trạng thái đơn (luôn kèm chữ). */
 const statusTone: Record<PortalOrderStatus, StatusTone> = {
@@ -215,6 +216,8 @@ export function PortalOrderPage() {
         )
       )}
       {data.deliveryNotices.length > 0 && <DeliveryNoticeList key={data.id} order={data} />}
+      {/* Lát P6b: hóa đơn bên đặt đã ghi nhận và các đợt thanh toán của đơn (ẩn khi chưa nhận hàng). */}
+      <PortalPaymentPanel orderId={data.id} />
       <PortalFiles
         kind="orders"
         id={data.id}

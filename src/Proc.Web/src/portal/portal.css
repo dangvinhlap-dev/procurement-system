@@ -224,3 +224,19 @@
   max-width: 420px;
   margin: var(--erp-gap) 0 0 auto;
 }
+
+/* Khối tổng hợp thanh toán của đơn (lát P6b): hai cặp nhãn – số trên một hàng, số canh phải; màn hình hẹp về một cặp. */
+.erp-portal-pay-summary {
+  grid-template-columns: 150px 170px 170px 170px;
+  column-gap: 16px;
+}
+
+.erp-portal-pay-summary dd.erp-number {
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .erp-portal-pay-summary {
+    grid-template-columns: 150px 1fr;
+  }
+}
