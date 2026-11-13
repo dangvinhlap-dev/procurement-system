@@ -2090,7 +2090,8 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 3. **Mời thầu / hỏi giá trên Portal** → so sánh 3A hoặc trình giá 3a/3B; báo giá niêm phong đến giờ mở.
 4. **Đặt hàng** – PO kèm bảng theo dõi 4A/4B (giá cũ, tăng / bằng–giảm, lũy kế, còn lại); NCC xác nhận đơn trên Portal.
 5. **Giao – nhận** – NCC báo giao; nơi nhận lập **XNH** (dịch vụ: biên bản nghiệm thu).
-6. **Hóa đơn** – NCC nộp hóa đơn điện tử (XML) trên Portal; kế toán chấp nhận / trả lại.
+6. **Hóa đơn** – ~~NCC nộp hóa đơn điện tử (XML) trên Portal; kế toán chấp nhận / trả lại.~~ **Bỏ** (người dùng chốt 13/11/2026): công ty có
+   kênh riêng tiếp nhận hóa đơn điện tử – phần mềm không làm bước này (lát P6a dừng, xem mục 19.5).
 7. **Đề nghị thanh toán** 5A/5B – chọn hóa đơn đã chấp nhận, tài khoản NCC đã duyệt; Đã chi do kế toán ghi.
 
 | Phiếu | Chuỗi duyệt (theo thứ tự) | Cấp |
@@ -2522,8 +2523,13 @@ Công ty dùng phần mềm kho riêng. Thay thế:
 
 Trang web riêng `/ncc` cho NCC: tài khoản mời qua email, OTP, người dùng con (P1); hạ tầng tên miền riêng, cô lập dữ liệu NCC, giới hạn
 tần suất, kiểm file (P1b); NCC tự cập nhật hồ sơ, đăng ký mới → HSN (P2); thư mời, hỏi đáp, nộp báo giá niêm phong (P3); xác nhận PO (P4);
-báo giao hàng → XNH (P5); hóa đơn điện tử (P6a); trạng thái thanh toán (P6b); bảng giá, tin nhắn, thẻ điểm NCC (P7). NCC chỉ thấy dữ liệu
+báo giao hàng → XNH (P5); ~~hóa đơn điện tử (P6a)~~ bỏ – xem dưới; trạng thái thanh toán (P6b); bảng giá, tin nhắn, thẻ điểm NCC (P7). NCC chỉ thấy dữ liệu
 của mình; mua ngoài Portal thì Phòng CUVT nhập báo giá thay như hiện nay.
+
+**Lát P6a – hóa đơn điện tử trên Portal: BỎ (người dùng chốt 13/11/2026).** Công ty có kênh riêng tiếp nhận hóa đơn điện tử, người dùng không
+yêu cầu làm. Phần đã làm dở (domain, bộ đọc XML, dịch vụ, giao diện) chỉ nằm trên nhánh `feature/p6a-hoa-don-ncc`, **không merge** vào `main`,
+không có migration trên `main`. Còn chờ chốt khi làm lát Y8: đề nghị thanh toán 5A/5B (mục 19.3 bước 7) lấy thông tin hóa đơn từ đâu (ví dụ
+số, ký hiệu, ngày, tiền hóa đơn đã nhập trên XNH).
 
 **Lát P1 – tài khoản NCC (đã làm 12/11/2026, phát hành trong 0.24.0).** Quy tắc tự đặt (chưa có trong biểu mẫu, người dùng có thể chỉnh):
 
@@ -2664,7 +2670,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
-| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026), hóa đơn |
+| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 

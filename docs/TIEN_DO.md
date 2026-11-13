@@ -466,10 +466,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     tách ra `e2e/portalHelpers.ts` (portal-order dùng chung); `document-numbering.spec` 23 → 24 loại (thêm BGH).
   - **Bước 4 (xong)**: design.md 19.5 "Lát P5" (P5-1…P5-7) + lộ trình 0.26.0, ui-style.md 5f, hướng dẫn 03-mua-hang.
   - Kiểm tra: build 0 cảnh báo, `dotnet test` 772/772, tsc, oxlint, `npm run build` qua; Playwright đủ bộ 144/145 (document-numbering đếm loại
-    chứng từ – sửa 24, chạy lại qua). **Đã merge.** Tiếp theo: P6a (NCC gửi hóa đơn điện tử trên Portal) – hoặc phát hành 0.25.0/0.26.0 khi người
+    chứng từ – sửa 24, chạy lại qua). **Đã merge.** Tiếp theo: ~~P6a~~ (bỏ 13/11/2026) – hoặc phát hành 0.25.0/0.26.0 khi người
     dùng yêu cầu (main đã gồm P3–P5).
   - **Người dùng chốt sau lát (13/11/2026)**: NCC giao theo quy trình đang có, **báo giao trên Portal không bắt buộc** – ghi nhận để xem lại sau
     (design.md 19.5 P5-8, hướng dẫn 03-mua-hang). Code không đổi: XNH vẫn lập thẳng từ PO, không cần phiếu báo giao.
+- **Lát P6a – hóa đơn điện tử trên Portal: BỎ (người dùng chốt 13/11/2026)** – "công ty tôi có kênh riêng để tiếp nhận, tôi không yêu cầu bạn
+  làm". Đã làm dở bước 1–3 (domain HDN + đọc XML, migration `V0_26_0_HoaDonNcc`, dịch vụ + API + test tích hợp, giao diện Portal + màn hình
+  Hóa đơn NCC + e2e chưa chạy) – **chỉ trên nhánh `feature/p6a-hoa-don-ncc`** (đã push), **không merge**; `main` không có code, migration
+  của P6a. Nhánh giữ lại để tham khảo – xóa khi người dùng đồng ý. design.md 19.3 bước 6, 19.5, 19.6 đã ghi bỏ. Còn chờ chốt khi làm Y8:
+  đề nghị thanh toán lấy thông tin hóa đơn từ đâu (ví dụ hóa đơn đã nhập trên XNH).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
@@ -901,6 +906,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Quy tắc tự đặt: chỉ PO VND; tính cả dòng NCC ngoài danh sách (có dòng phiếu tháng); tỷ lệ phủ tính trên mọi dòng PO VND đã duyệt cùng nhóm hàng.
 
 ## Việc tiếp theo
+
+**P6a (hóa đơn điện tử Portal) đã bỏ 13/11/2026** – các lát còn lại theo design.md 19.6: P6b (trạng thái thanh toán), 0.27.0 (Y8, Y11, Y9), hoặc
+phát hành 0.25.0/0.26.0 khi người dùng yêu cầu.
 
 **Việc sau của lát P5 (người dùng đồng ý 13/11/2026 – design.md 19.5 P5-8):** phiếu báo giao NCC còn "chờ nhận" (chưa có XNH) tự đóng khi
 PO đã nhận đủ / hoàn thành – trạng thái "Đã đóng (đơn đã nhận đủ)" trên Portal và tab "Giao hàng NCC", NCC không hủy / thêm file; tính từ
