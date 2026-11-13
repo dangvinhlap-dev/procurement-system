@@ -902,6 +902,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Việc sau của lát P5 (người dùng đồng ý 13/11/2026 – design.md 19.5 P5-8):** phiếu báo giao NCC còn "chờ nhận" (chưa có XNH) tự đóng khi
+PO đã nhận đủ / hoàn thành – trạng thái "Đã đóng (đơn đã nhận đủ)" trên Portal và tab "Giao hàng NCC", NCC không hủy / thêm file; tính từ
+trạng thái PO (`DeliveryNoticeQueries.StatusOf`), không migration. Làm khi người dùng bảo làm.
+
 **Các lát chưa làm (ghi nhận 08/11/2026 theo yêu cầu người dùng):**
 - Phân tích sơ đồ phê duyệt (xong 08/11/2026): `docs/PhanTich_SoDoPheDuyet_08112026.docx` (chỉ lưu trên máy). Người dùng chốt Q1–Q6
   (design.md 18.25). Thứ tự làm: **G10 (xong)** → **G7 (xong)** → **H1 (xong)** → **H2 (xong)** → **H3 (xong)** → **H4 (xong)** → **G1b (xong)** → **G8 (xong)** → **G11 (xong)** → **G12 (xong)**; G9 hoãn.
