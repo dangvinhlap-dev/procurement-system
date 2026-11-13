@@ -193,6 +193,8 @@ export const screens: Screen[] = [
   { code: 'SLA', title: 'SLA mua hàng', navLabel: 'SLA mua hàng', path: '/bao-cao/sla-mua-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'QCDEV', title: 'Sai lệch nhận hàng', navLabel: 'Sai lệch nhận hàng', path: '/bao-cao/sai-lech-nhan-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'OTIF', title: 'SL đặt – SL thực nhận (OTIF)', navLabel: 'SL đặt – thực nhận', path: '/bao-cao/sl-dat-thuc-nhan', icon: <DiffOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
+  // Lát Y9a (design.md mục 19.3 "Lát Y9"): hóa đơn XNH – đề nghị thanh toán – đã chi – còn phải trả theo PO.
+  { code: 'TTPO', title: 'Theo dõi thanh toán', navLabel: 'Theo dõi thanh toán', path: '/bao-cao/theo-doi-thanh-toan', icon: <DollarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'MATCH3', title: 'Đối chiếu PO – nhận – hóa đơn', navLabel: 'Đối chiếu PO – nhận – HĐ', path: '/bao-cao/doi-chieu-po-nhan-hoa-don', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'RPSUP', title: 'Mua hàng theo NCC', navLabel: 'Mua hàng theo NCC', path: '/bao-cao/mua-hang-theo-ncc', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SUPEVAL', title: 'Đánh giá nhà cung cấp', navLabel: 'Đánh giá NCC', path: '/bao-cao/danh-gia-ncc', icon: <StarOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },

@@ -377,6 +377,71 @@ export function useOrderFulfillment(period: PurchaseReportPeriod) {
 }
 
 /**
+ * Một PO trên báo cáo theo dõi thanh toán (lát Y9a, design.md mục 19.3 "Lát Y9"). Tiền VND gồm VAT; còn phải trả = hóa đơn − đã chi − giảm trừ
+ * của đề nghị đã chi.
+ */
+export interface PaymentTrackingRow {
+  orderId: string
+  orderNo: string
+  orderDate: string
+  companyCode: string
+  supplierCode: string
+  supplierName: string
+  orderClosed: boolean
+  orderAmount: number
+  receivedAmount: number
+  receiptCount: number
+  invoiceAmount: number
+  noInvoiceReceipts: number
+  unrequestedAmount: number
+  inProgressAmount: number
+  approvedUnpaidAmount: number
+  paidAmount: number
+  paidDeductionAmount: number
+  outstandingAmount: number
+  lastPaidDate: string | null
+}
+
+/** Tổng hợp theo dõi thanh toán theo NCC (hoặc dòng tổng). */
+export interface PaymentTrackingSupplier {
+  supplierCode: string
+  supplierName: string
+  orders: number
+  orderAmount: number
+  receivedAmount: number
+  invoiceAmount: number
+  noInvoiceReceipts: number
+  unrequestedAmount: number
+  inProgressAmount: number
+  approvedUnpaidAmount: number
+  paidAmount: number
+  paidDeductionAmount: number
+  outstandingAmount: number
+}
+
+/** Báo cáo theo dõi thanh toán. */
+export interface PaymentTrackingResult {
+  rows: PaymentTrackingRow[]
+  suppliers: PaymentTrackingSupplier[]
+  total: PaymentTrackingSupplier
+  allCompanies: boolean
+}
+
+/**
+ * Theo dõi thanh toán theo ngày PO.
+ * @param period Khoảng ngày PO, phạm vi.
+ */
+export function usePaymentTracking(period: PurchaseReportPeriod) {
+  const companyId = useCompanyId()
+  const query = periodQuery(period).toString()
+  return useQuery({
+    queryKey: ['reports', companyId, 'payment-tracking', query],
+    queryFn: () => apiFetch<PaymentTrackingResult>(`/api/reports/payment-tracking?${query}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
  * Đánh giá NCC trong khoảng ngày.
  * @param period Khoảng ngày, phạm vi.
  */

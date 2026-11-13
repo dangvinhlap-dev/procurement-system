@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { switchCompany } from './inventoryHelpers.ts'
+import { openByCommand, switchCompany } from './inventoryHelpers.ts'
 import { createBhaAdmin, receiveByApi, seedApprovedPo, todayVn } from './receiptHelpers.ts'
 
 /**
  * Lát Y8 (design.md 19.3 bước 7): đề nghị thanh toán 5B – từ PO bấm "Lập đề nghị thanh toán" → phiếu điền sẵn đơn và các phiếu nhận hàng có hóa
- * đơn (nhiều dòng hóa đơn) → lưu, gửi duyệt → người duyệt khác duyệt (API) → kế toán (quản trị) ghi Đã chi.
+ * đơn (nhiều dòng hóa đơn) → lưu, gửi duyệt → người duyệt khác duyệt (API) → kế toán (quản trị) ghi Đã chi → báo cáo Theo dõi thanh toán (Y9a).
  */
 test('đề nghị thanh toán từ PO: nhiều dòng hóa đơn, duyệt, ghi Đã chi', async ({ page, request }) => {
   test.setTimeout(120_000)
@@ -66,4 +66,13 @@ test('đề nghị thanh toán từ PO: nhiều dòng hóa đơn, duyệt, ghi �
   await page.goto('/mua-hang/de-nghi-thanh-toan')
   await expect(page.getByRole('heading', { name: 'Đề nghị thanh toán (DNT)' })).toBeVisible()
   await expect(page.locator('.data-grid-row', { hasText: no })).toContainText('Đã chi')
+
+  // Lát Y9a – Theo dõi thanh toán (TTPO): hóa đơn 550.000, đã chi 500.000 + giảm trừ 50.000 → đã trả đủ hóa đơn.
+  await openByCommand(page, 'TTPO')
+  await expect(page.getByRole('heading', { name: 'Theo dõi thanh toán' })).toBeVisible()
+  const row = page.locator('.data-grid-row', { hasText: po.no })
+  await expect(row).toContainText('Đã trả đủ HĐ')
+  await expect(row).toContainText('550.000')
+  await expect(row).toContainText('500.000')
+  await page.screenshot({ path: 'e2e/screenshots/payment-tracking.png' })
 })
