@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 
 /** Số màn hình mở cùng lúc tối đa trong khung ứng dụng (yêu cầu người dùng 13/11/2026). */
@@ -80,4 +80,25 @@ export function useScreenTabs(): ScreenTabsApi {
   const api = useContext(ScreenTabsContext)
   const navigate = useNavigate()
   return api ?? { open: (path) => void navigate(path), back: () => void navigate(-1) }
+}
+
+/** Hàm đăng ký kiểm tra "còn thay đổi chưa lưu" cho thẻ chứa trang; trả hàm hủy đăng ký. Ngoài AppShell không làm gì. */
+export const UnsavedContext = createContext<(check: () => boolean) => () => void>(() => () => {})
+
+/**
+ * Báo cho khung biết trang đang có thay đổi chưa lưu – để hỏi lại trước khi rời trang, đóng thẻ, đổi công ty, đăng xuất, tải lại trang
+ * (yêu cầu người dùng 13/11/2026). Hàm kiểm tra gọi lúc cần hỏi, nên luôn đọc trạng thái mới nhất.
+ * @param check Trả true khi còn thay đổi chưa lưu.
+ * @param enabled false thì không đăng ký (ví dụ phiếu chỉ xem, ngăn kéo đang đóng).
+ */
+export function useUnsavedCheck(check: () => boolean, enabled = true): void {
+  const register = useContext(UnsavedContext)
+  const checkRef = useRef(check)
+  useLayoutEffect(() => {
+    checkRef.current = check
+  })
+  useEffect(() => {
+    if (!enabled) return
+    return register(() => checkRef.current())
+  }, [register, enabled])
 }

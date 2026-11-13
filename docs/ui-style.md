@@ -221,3 +221,11 @@ lúc – chuyển qua lại không mất dữ liệu đang nhập, vị trí cu�
   khác bỏ qua).
 - Thẻ ẩn: `visibility: hidden` + `inert` – không bấm, không Tab tới; ngăn kéo/hộp thoại của trang vẽ trong vùng thẻ nên ẩn theo thẻ.
   Phím tắt cấp cửa sổ của trang (Ctrl+S, F2, Ctrl+P, Esc ngăn kéo) chỉ chạy ở thẻ đang xem (`useIsActiveTab`); F3 chỉ tìm ô tìm của thẻ đang xem.
+- **Hỏi lại khi còn phiếu chưa lưu** (yêu cầu 13/11/2026): phiếu (`DocumentForm`) hoặc ngăn kéo đang sửa (`DetailDrawer`) mà người dùng đã
+  sửa ô, chưa lưu thì:
+  - rời trang trong thẻ (cây điều hướng Shift+bấm, `/n`, Quay lại, nút Đóng, Back trình duyệt) → hộp thoại "Rời trang khi phiếu chưa lưu":
+    **Rời trang** (nút đỏ) / **Ở lại**;
+  - đóng thẻ, đổi công ty, đăng xuất → "Còn phiếu chưa lưu" nêu tên thẻ: **Bỏ thay đổi** (nút đỏ) / **Ở lại**;
+  - tải lại (F5) hoặc đóng tab trình duyệt → câu hỏi của trình duyệt.
+  Chuyển thẻ, mở màn hình ở thẻ mới không hỏi (phiếu vẫn còn trong thẻ). Dấu "chưa lưu" (`utils/formDirty.ts`) bật khi người dùng sửa ô,
+  tắt khi nạp phiếu từ máy chủ, lưu thành công (`useDocumentFormSync`) hoặc mở lại ngăn kéo; trang khác dùng `useUnsavedCheck`.

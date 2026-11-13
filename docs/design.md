@@ -1128,7 +1128,9 @@ khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32
 **Thẻ màn hình (demo 13/11/2026, chờ duyệt – ui-style.md mục 8a):** trong AppShell mở cùng lúc tối đa **4 màn hình** (danh sách, phiếu, báo
 cáo), chuyển qua lại không mất dữ liệu đang nhập. Quy tắc (người dùng chốt 13/11/2026): **mọi thẻ thuộc công ty đang làm việc** – không mở
 màn hình của công ty khác cùng lúc; đổi công ty khi đang mở nhiều thẻ thì hỏi lại rồi đóng các thẻ, chỉ giữ danh sách đang xem (dữ liệu và
-quyền lọc theo công ty đang làm việc – mục 9.2 – nên thẻ của công ty cũ tải lại theo công ty mới dễ lưu nhầm).
+quyền lọc theo công ty đang làm việc – mục 9.2 – nên thẻ của công ty cũ tải lại theo công ty mới dễ lưu nhầm). **Hỏi lại khi còn phiếu chưa
+lưu** (người dùng yêu cầu 13/11/2026): rời trang, đóng thẻ, đổi công ty, đăng xuất, tải lại trang khi phiếu/ngăn kéo đang sửa có thay đổi
+chưa lưu thì hỏi "Rời trang / Bỏ thay đổi" hoặc "Ở lại"; chuyển thẻ không hỏi.
 
 Từ 31/10/2026 đến 01/11/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
 Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica

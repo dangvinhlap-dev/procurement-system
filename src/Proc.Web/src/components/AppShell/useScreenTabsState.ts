@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType, type Location } from 'react-router'
+import type { ReactNode } from 'react'
+import { findScreenByPath } from '../../app/screens'
 import { MAX_SCREEN_TABS, type OpenMode, type ScreenTabsApi } from '../../app/screenTabs'
 
 /** Một thẻ màn hình đang mở. */
@@ -19,6 +21,20 @@ interface TabsState {
   activeId: string
   /** Công ty đang làm việc mà các thẻ thuộc về – mọi thẻ cùng một công ty. */
   companyId: string
+}
+
+/**
+ * Tên hiện trên thẻ: tên màn hình; trang con (phiếu) thêm nhãn phụ do trang đặt (số phiếu), chưa có thì "Lập mới"/"Phiếu".
+ * @param tab Thẻ cần đặt tên.
+ * @returns Tên ngắn (trên thẻ) và tên đầy đủ (chú thích khi rê chuột).
+ */
+export function screenTabTitle(tab: ScreenTab): { short: string; full: string; icon?: ReactNode } {
+  const { pathname } = tab.location
+  const screen = findScreenByPath(pathname)
+  if (!screen) return { short: 'Không tìm thấy màn hình', full: pathname }
+  if (screen.path === pathname) return { short: screen.navLabel, full: `${screen.title} (${screen.code})`, icon: screen.icon }
+  const sub = tab.label ?? (pathname.endsWith('/moi') ? 'Lập mới' : 'Phiếu')
+  return { short: `${screen.navLabel}: ${sub}`, full: `${screen.title} – ${sub}`, icon: screen.icon }
 }
 
 /** Lưu danh sách thẻ trong phiên trình duyệt: bấm F5 vẫn mở lại đủ thẻ (trang trong thẻ tải lại dữ liệu). */
@@ -252,5 +268,8 @@ export function useScreenTabsState(onFull: () => void, companyId: string) {
   const api = useMemo<ScreenTabsApi>(() => ({ open, back }), [open, back])
   const activeTab = state.tabs.find((t) => t.id === state.activeId) ?? state.tabs[0]
 
-  return { tabs: state.tabs, activeTab, api, switchTo, close, keepOnly, setLabel }
+  /** Khung đang tự chuyển/mở/đóng thẻ (chờ địa chỉ tới đích) – bộ chặn "phiếu chưa lưu" không chặn lượt này. */
+  const isTabNavigating = useCallback(() => pending.current !== null, [])
+
+  return { tabs: state.tabs, activeTab, api, switchTo, close, keepOnly, setLabel, isTabNavigating }
 }

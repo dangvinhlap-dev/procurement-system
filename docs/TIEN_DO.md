@@ -157,6 +157,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   giữa lát: **mọi thẻ thuộc công ty đang làm việc** – đổi công ty khi mở nhiều thẻ thì hỏi lại rồi chỉ giữ danh sách đang xem. Phím tắt
   Ctrl+S/F2/Ctrl+P/Esc chỉ chạy ở thẻ đang xem; ngăn kéo/hộp thoại vẽ trong vùng thẻ. Test `e2e/screen-tabs.spec.ts` (2 test, lặp 5 lần qua);
   tsc, oxlint qua. Còn lại khi duyệt: chạy đủ Playwright và sửa test cũ bị ảnh hưởng (bấm cây điều hướng giờ mở thẻ mới), merge.
+  - Thêm (người dùng yêu cầu 13/11/2026): **hỏi lại khi rời trang còn phiếu chưa lưu** – `utils/formDirty.ts` (dấu theo
+    `onValuesChange`, xóa khi nạp/lưu ở `useDocumentFormSync`, mở ngăn kéo), `useUnsavedCheck` đăng ký theo thẻ, `useUnsavedGuard` ở AppShell
+    (`useBlocker` khi rời trang trong thẻ, hỏi khi đóng thẻ/đổi công ty/đăng xuất, `beforeunload`). Test thứ 3 trong `screen-tabs.spec.ts`;
+    chạy cùng budget, contract, pooled-order, pr-storekeeper-step, administration, cancel-chain, approval-check, attachments: 22/22 qua.
+    Nhóm 26 test cũ lỗi do thẻ: 4 đã sửa (role tab), còn ~22 chờ duyệt.
 
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →

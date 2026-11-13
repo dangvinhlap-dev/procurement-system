@@ -13,7 +13,8 @@ import { ShellBar } from './ShellBar'
 import { focusListSearch } from '../../app/commands'
 import { MAX_SCREEN_TABS, ScreenTabsContext } from '../../app/screenTabs'
 import { ScreenTabBar, ScreenTabPanel } from './ScreenTabs'
-import { useScreenTabsState } from './useScreenTabsState'
+import { screenTabTitle, useScreenTabsState } from './useScreenTabsState'
+import { useUnsavedGuard } from './useUnsavedGuard'
 import './AppShell.css'
 
 /** Tên ứng dụng ghép vào tiêu đề tab trình duyệt. */
@@ -54,15 +55,22 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
       content: `Đã mở đủ ${MAX_SCREEN_TABS} màn hình – đóng bớt một màn hình (nút × trên thẻ) hoặc Shift+bấm để mở thay ở màn hình đang xem.`,
     })
   }, [message])
-  const { tabs, activeTab, api, switchTo, close, keepOnly, setLabel } = useScreenTabsState(onFull, companyId)
-  // Màn hình theo thẻ đang xem (không theo địa chỉ – địa chỉ có thể chậm một nhịp khi bấm chuyển thẻ liên tiếp).
-  const { pathname } = activeTab.location
-  const screen = findScreenByPath(pathname)
-  const screenTitle = screen?.title ?? 'Không tìm thấy màn hình'
+  const { tabs, activeTab, api, switchTo, close, keepOnly, setLabel, isTabNavigating } = useScreenTabsState(onFull, companyId)
   const tabsRef = useRef(tabs)
   useEffect(() => {
     tabsRef.current = tabs
   }, [tabs])
+  // Hỏi lại khi rời trang còn phiếu chưa lưu (yêu cầu người dùng 13/11/2026).
+  const tabName = useCallback((id: string) => {
+    const tab = tabsRef.current.find((t) => t.id === id)
+    return tab ? screenTabTitle(tab).short : 'màn hình đã đóng'
+  }, [])
+  const { register, confirmDiscard } = useUnsavedGuard({ activeId: activeTab.id, isTabNavigating, tabName })
+  const closeTab = useCallback((id: string) => confirmDiscard([id], () => close(id)), [confirmDiscard, close])
+  // Màn hình theo thẻ đang xem (không theo địa chỉ – địa chỉ có thể chậm một nhịp khi bấm chuyển thẻ liên tiếp).
+  const { pathname } = activeTab.location
+  const screen = findScreenByPath(pathname)
+  const screenTitle = screen?.title ?? 'Không tìm thấy màn hình'
 
   useEffect(() => {
     document.title = `${screenTitle} – ${APP_NAME}`
@@ -107,8 +115,9 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
             if (company) message.success(`Đang làm việc tại ${company.code} – ${company.name}.`)
           }
           // Mọi thẻ thuộc công ty đang làm việc (người dùng chốt 13/11/2026): đổi công ty khi đang mở nhiều màn hình thì hỏi lại rồi đóng bớt.
+          // Một thẻ: trang dựng lại dưới công ty mới – còn phiếu chưa lưu thì hỏi bỏ thay đổi.
           if (tabs.length <= 1) {
-            apply()
+            confirmDiscard([activeTab.id], apply)
             return
           }
           modal.confirm({
@@ -116,7 +125,8 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
             content: `Đang mở ${tabs.length} màn hình của ${workingCompany?.code ?? 'công ty hiện tại'}. Đổi sang ${company?.code ?? 'công ty khác'} sẽ đóng các màn hình này (dữ liệu chưa lưu sẽ mất), chỉ mở lại ${screen?.navLabel ?? 'Trang chủ'}.`,
             okText: 'Đổi công ty',
             cancelText: 'Không đổi',
-            onOk: apply,
+            // Hỏi tiếp nếu còn phiếu chưa lưu ở các thẻ sẽ đóng.
+            onOk: () => confirmDiscard(tabs.map((t) => t.id), apply),
           })
         }}
         // Số thông báo chưa đọc đi cùng số liệu trang chủ (design.md mục 11.6).
@@ -125,7 +135,7 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
         userName={user.userName}
         workingDate={todayInVietnam()}
         version={__APP_VERSION__}
-        onLogout={() => logout()}
+        onLogout={() => confirmDiscard(tabs.map((t) => t.id), () => logout(), true)}
         onChangePassword={() => setChangingPassword(true)}
       />
       <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
@@ -134,10 +144,10 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
         {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
         <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={navCounts} />
         <main className="app-content app-content-tabs">
-          <ScreenTabBar tabs={tabs} activeId={activeTab.id} onSelect={switchTo} onClose={close} companyCode={workingCompany?.code} />
+          <ScreenTabBar tabs={tabs} activeId={activeTab.id} onSelect={switchTo} onClose={closeTab} companyCode={workingCompany?.code} />
           <div className="app-tab-panels">
             {tabs.map((t) => (
-              <ScreenTabPanel key={t.id} tab={t} active={t.id === activeTab.id} routes={routes} onLabel={setLabel} />
+              <ScreenTabPanel key={t.id} tab={t} active={t.id === activeTab.id} routes={routes} onLabel={setLabel} onRegister={register} />
             ))}
           </div>
         </main>

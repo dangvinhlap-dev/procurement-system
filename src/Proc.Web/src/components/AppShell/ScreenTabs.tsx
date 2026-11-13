@@ -1,24 +1,9 @@
 import { CloseOutlined } from '@ant-design/icons'
 import { ConfigProvider } from 'antd'
-import { memo, useCallback, useState, type ReactNode } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { UNSAFE_RouteContext, useRoutes, type Location, type RouteObject } from 'react-router'
-import { findScreenByPath } from '../../app/screens'
-import { MAX_SCREEN_TABS, TabActiveContext, TabLabelContext } from '../../app/screenTabs'
-import type { ScreenTab } from './useScreenTabsState'
-
-/**
- * Tên hiện trên thẻ: tên màn hình; trang con (phiếu) thêm nhãn phụ do trang đặt (số phiếu), chưa có thì "Lập mới"/"Phiếu".
- * @param tab Thẻ cần đặt tên.
- * @returns Tên ngắn (trên thẻ) và tên đầy đủ (chú thích khi rê chuột).
- */
-function screenTabTitle(tab: ScreenTab): { short: string; full: string; icon?: ReactNode } {
-  const { pathname } = tab.location
-  const screen = findScreenByPath(pathname)
-  if (!screen) return { short: 'Không tìm thấy màn hình', full: pathname }
-  if (screen.path === pathname) return { short: screen.navLabel, full: `${screen.title} (${screen.code})`, icon: screen.icon }
-  const sub = tab.label ?? (pathname.endsWith('/moi') ? 'Lập mới' : 'Phiếu')
-  return { short: `${screen.navLabel}: ${sub}`, full: `${screen.title} – ${sub}`, icon: screen.icon }
-}
+import { MAX_SCREEN_TABS, TabActiveContext, TabLabelContext, UnsavedContext } from '../../app/screenTabs'
+import { screenTabTitle, type ScreenTab } from './useScreenTabsState'
 
 interface ScreenTabBarProps {
   tabs: ScreenTab[]
@@ -94,6 +79,8 @@ interface ScreenTabPanelProps {
   active: boolean
   routes: RouteObject[]
   onLabel: (id: string, label: string | undefined) => void
+  /** Đăng ký kiểm tra "còn thay đổi chưa lưu" của trang trong thẻ (useUnsavedGuard). */
+  onRegister: (id: string, check: () => boolean) => () => void
 }
 
 /**
@@ -103,13 +90,14 @@ interface ScreenTabPanelProps {
  * thả xuống, chú thích vẫn vẽ ở cuối trang như cũ (tự đóng khi rời ô).
  * memo: thẻ ẩn không vẽ lại mỗi lần thẻ đang xem điều hướng.
  */
-export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes, onLabel }: ScreenTabPanelProps) {
+export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes, onLabel, onRegister }: ScreenTabPanelProps) {
   const [el, setEl] = useState<HTMLDivElement | null>(null)
   const getPopupContainer = useCallback(
     (node?: HTMLElement) => ((!node || node === document.body) && el ? el : document.body),
     [el],
   )
   const setLabel = useCallback((label: string | undefined) => onLabel(tab.id, label), [onLabel, tab.id])
+  const register = useCallback((check: () => boolean) => onRegister(tab.id, check), [onRegister, tab.id])
   return (
     <div
       ref={setEl}
@@ -120,11 +108,13 @@ export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes
     >
       <TabActiveContext value={active}>
         <TabLabelContext value={setLabel}>
+        <UnsavedContext value={register}>
           <ConfigProvider getPopupContainer={getPopupContainer}>
             <UNSAFE_RouteContext value={ROOT_ROUTE_CONTEXT}>
               <TabRoutes routes={routes} location={tab.location} />
             </UNSAFE_RouteContext>
           </ConfigProvider>
+        </UnsavedContext>
         </TabLabelContext>
       </TabActiveContext>
     </div>

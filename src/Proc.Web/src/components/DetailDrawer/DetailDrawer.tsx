@@ -3,7 +3,8 @@ import { Alert, Button, Drawer, Form, Spin, Tabs, Tag, type FormInstance } from 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ApprovalCheckButton, ApprovalLocks, type ApprovalTrailInfo } from '../../classic/ApprovalTrail'
 import { hasOpenPopup } from '../../utils/popup'
-import { useIsActiveTab } from '../../app/screenTabs'
+import { useIsActiveTab, useUnsavedCheck } from '../../app/screenTabs'
+import { isFormDirty, markFormClean, markFormDirty } from '../../utils/formDirty'
 import { auditScopeProps, type AuditScope } from '../FieldHelp/auditScope'
 import { RecordHistoryButton } from '../FieldHelp/FieldHelpHost'
 import { formRequiredMark } from '../RequiredMark/requiredMark'
@@ -92,6 +93,18 @@ export function DetailDrawer({
   // Ngăn kéo ở thẻ màn hình đang ẩn không nhận Ctrl+S, Esc (thẻ màn hình – docs/ui-style.md mục 8a).
   const activeTab = useIsActiveTab()
 
+  // Thay đổi chưa lưu (hỏi lại khi rời trang – yêu cầu 13/11/2026): mở ngăn kéo là bắt đầu sạch; lưu xong không lỗi thì sạch lại.
+  const editable = open && !readOnly && !!onSave && !!form
+  useUnsavedCheck(() => !!form && isFormDirty(form), editable)
+  useEffect(() => {
+    if (open && form) markFormClean(form)
+  }, [open, form])
+  const wasSaving = useRef(saving)
+  useEffect(() => {
+    if (wasSaving.current && !saving && !error && form) markFormClean(form)
+    wasSaving.current = saving
+  }, [saving, error, form])
+
   // Ctrl+S lưu khi ngăn kéo đang mở – thao tác bằng bàn phím (CLAUDE.md mục 9).
   useEffect(() => {
     if (!open || !onSave || !activeTab) return
@@ -147,6 +160,9 @@ export function DetailDrawer({
             requiredMark={formRequiredMark(!readOnly)}
             initialValues={initialValues}
             disabled={readOnly}
+            onValuesChange={() => {
+              if (form && !readOnly) markFormDirty(form)
+            }}
           >
             <Tabs
               size="small"

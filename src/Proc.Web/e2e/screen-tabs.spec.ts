@@ -95,3 +95,49 @@ test('mọi thẻ thuộc công ty đang làm việc – đổi công ty hỏi l
   await expect(page).toHaveURL(/\/mua-hang\/pr$/)
   await expect(page.getByTestId('screen-tabs').locator('.app-screen-tabs-count')).not.toHaveText(before ?? '')
 })
+
+test('hỏi lại khi rời trang, đóng thẻ còn phiếu chưa lưu; chuyển thẻ không hỏi', async ({ page }) => {
+  await loginViaApi(page)
+  await page.goto('/mua-hang/po/moi')
+  const active = page.locator('.app-tab-panel.is-active')
+  const note = active.getByLabel('Ghi chú', { exact: true })
+
+  // Chưa sửa gì: Shift+bấm (mở thay ở thẻ đang xem) đi luôn, không hỏi.
+  await nav(page, 'Đề nghị mua hàng').click({ modifiers: ['Shift'] })
+  await expect(page).toHaveURL(/\/mua-hang\/pr$/)
+  await page.getByRole('button', { name: 'Quay lại' }).click()
+  await expect(page).toHaveURL(/\/mua-hang\/po\/moi$/)
+
+  // Gõ dở rồi rời trang trong thẻ: hỏi; "Ở lại" giữ nguyên chữ đã gõ.
+  await note.fill('chưa lưu – thử hỏi lại')
+  await nav(page, 'Đề nghị mua hàng').click({ modifiers: ['Shift'] })
+  const leave = page.getByRole('dialog', { name: 'Rời trang khi phiếu chưa lưu' })
+  await expect(leave).toBeVisible()
+  await leave.getByRole('button', { name: 'Ở lại' }).click()
+  await expect(page).toHaveURL(/\/mua-hang\/po\/moi$/)
+  await expect(note).toHaveValue('chưa lưu – thử hỏi lại')
+
+  // Mở màn hình ở thẻ mới / chuyển thẻ: phiếu vẫn còn trong thẻ cũ nên không hỏi.
+  await nav(page, 'Nhà cung cấp').click()
+  await expect(page).toHaveURL(/\/gia-ncc\/nha-cung-cap$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // Đóng thẻ phiếu chưa lưu: hỏi; "Ở lại" giữ thẻ, "Bỏ thay đổi" đóng.
+  const closePo = tabs(page).nth(0).getByRole('button', { name: /Đóng màn hình/ })
+  await closePo.click()
+  const discard = page.getByRole('dialog', { name: 'Còn phiếu chưa lưu' })
+  await expect(discard).toContainText('Đơn mua hàng')
+  await discard.getByRole('button', { name: 'Ở lại' }).click()
+  await expect(tabs(page)).toHaveCount(2)
+  await closePo.click()
+  await page.getByRole('dialog', { name: 'Còn phiếu chưa lưu' }).getByRole('button', { name: 'Bỏ thay đổi' }).click()
+  await expect(tabs(page)).toHaveCount(1)
+
+  // Rời trang trong thẻ và chọn "Rời trang": đi tiếp.
+  await nav(page, 'Đơn mua hàng').click({ modifiers: ['Shift'] })
+  await page.goto('/mua-hang/po/moi')
+  await note.fill('bỏ đi')
+  await nav(page, 'Đề nghị mua hàng').click({ modifiers: ['Shift'] })
+  await page.getByRole('dialog', { name: 'Rời trang khi phiếu chưa lưu' }).getByRole('button', { name: 'Rời trang' }).click()
+  await expect(page).toHaveURL(/\/mua-hang\/pr$/)
+})
