@@ -47,6 +47,10 @@ public static class ReportEndpoints
         reports.MapGet("/order-fulfillment", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetOrderFulfillmentAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Theo dõi thanh toán theo PO: hóa đơn XNH, đề nghị thanh toán, đã chi, còn phải trả (lát Y9a, design.md mục 19.3).
+        reports.MapGet("/payment-tracking", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetPaymentTrackingAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/receipt-quality", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetReceiptQualityAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/three-way-match", (DateOnly from, DateOnly to, decimal? tolerance, bool? onlyIssues, IPurchaseReportService s, CancellationToken ct) =>
