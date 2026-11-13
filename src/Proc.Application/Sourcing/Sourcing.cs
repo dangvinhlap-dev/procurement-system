@@ -141,6 +141,9 @@ public sealed record RfqActions(
     /// <summary>Có quyền xem giá báo giá Portal trước giờ mở (mỗi lần xem ghi nhật ký) và còn bản nộp niêm phong.</summary>
     public bool CanViewSealedQuotes { get; init; }
 
+    /// <summary>Gửi được kết quả chọn thầu cho NCC: quyền lập RFQ, kết quả đã duyệt xong, chưa gửi (lát P4b).</summary>
+    public bool CanSendResult { get; init; }
+
     /// <summary>Chấm điểm được báo giá đã có (cả sau hạn nộp).</summary>
     public bool CanScore { get; init; }
 }
@@ -197,6 +200,12 @@ public sealed record RfqDto(
 
     /// <summary>Người mở báo giá Portal.</summary>
     public string? PortalQuotesOpenedByName { get; init; }
+
+    /// <summary>Thời điểm Phòng CUVT gửi kết quả chọn thầu cho NCC; null = chưa gửi (lát P4b).</summary>
+    public DateTimeOffset? ResultSentAt { get; init; }
+
+    /// <summary>Người gửi kết quả chọn thầu cho NCC.</summary>
+    public string? ResultSentByName { get; init; }
 
     /// <summary>Số NCC đã nộp báo giá trên Portal (đếm cả khi còn niêm phong).</summary>
     public int PortalSubmittedSupplierCount { get; init; }
@@ -317,6 +326,16 @@ public interface IRfqService
     /// <returns>RFQ sau khi mở.</returns>
     /// <exception cref="Domain.Common.BusinessRuleException">Khi chưa đến giờ, đã mở, không có bản nộp.</exception>
     Task<RfqDto> OpenPortalQuotesAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Phòng CUVT gửi kết quả chọn thầu cho NCC (lát P4b – design.md 19.5, P4-8; người dùng yêu cầu 13/11/2026 "để phòng CUVT tự bấm gửi"):
+    /// một lần, sau khi kết quả duyệt xong. NCC thấy kết quả của mình trên Portal; NCC đã có báo giá nhận thư trúng / không trúng thầu.
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ sau khi gửi.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi kết quả chưa duyệt xong hoặc đã gửi.</exception>
+    Task<RfqDto> SendResultAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Chấm điểm báo giá đã có của một NCC (cả sau hạn nộp – lát P3a).</summary>
     /// <param name="id">RFQ.</param>

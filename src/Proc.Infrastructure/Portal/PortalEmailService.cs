@@ -247,6 +247,18 @@ public sealed class PortalEmailService : IPortalEmailService
                 .. extra is null ? Array.Empty<string>() : [extra],
                 $"Hạn nộp báo giá: {deadline}.",
             ]),
+            // Kết quả chọn thầu (lát P4b – P4-8): không giá, không nêu NCC trúng, không lý do chọn; chi tiết dòng trúng NCC xem trên Portal.
+            SupplierPortalEmailKind.RfqAwarded => ($"Thông báo trúng thầu – {subjectRfq}", $"Thông báo kết quả chọn thầu {rfq.No}",
+            [
+                $"{companyName} trân trọng thông báo {supplierName} được chọn cung cấp theo thư mời báo giá {rfq.No} – {rfq.Title}.",
+                .. extra is null ? Array.Empty<string>() : [extra],
+                "Quý công ty đăng nhập Portal nhà cung cấp để xem các dòng trúng thầu. Đơn đặt hàng hoặc hợp đồng sẽ được gửi sau.",
+            ]),
+            SupplierPortalEmailKind.RfqNotAwarded => ($"Thông báo kết quả – {subjectRfq}", $"Thông báo kết quả chọn thầu {rfq.No}",
+            [
+                $"{companyName} cảm ơn {supplierName} đã gửi báo giá theo thư mời {rfq.No} – {rfq.Title}.",
+                "Lần này báo giá của quý công ty chưa được chọn. Rất mong tiếp tục nhận được báo giá của quý công ty trong các lần mời sau.",
+            ]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
         };
     }

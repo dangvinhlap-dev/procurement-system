@@ -121,7 +121,7 @@ public sealed class PortalRfqService : IPortalRfqService
             .OrderByDescending(r => r.Date).ThenByDescending(r => r.No)
             .Select(r => new
             {
-                r.Id, r.No, r.CompanyId, r.Title, r.Date, r.Deadline, r.DeadlineTime, r.Status, r.PortalQuotesOpenedAt, LineCount = r.Lines.Count,
+                r.Id, r.No, r.CompanyId, r.Title, r.Date, r.Deadline, r.DeadlineTime, r.Status, r.PortalQuotesOpenedAt, r.ResultSentAt, LineCount = r.Lines.Count,
             })
             .ToListAsync(cancellationToken);
         var ids = rfqs.Select(r => r.Id).ToList();
@@ -130,13 +130,25 @@ public sealed class PortalRfqService : IPortalRfqService
             .GroupBy(x => x.RfqId)
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Last: g.Max(x => x.SubmittedAt)));
         var companies = await CompanyNamesAsync(rfqs.Select(r => r.CompanyId), cancellationToken);
+        // Kết quả chọn thầu (lát P4b): chỉ RFQ đã duyệt xong và Phòng CUVT đã bấm gửi kết quả – nạp riêng các RFQ này kèm dòng và báo giá để
+        // tính kết quả của chính NCC.
+        var awardedIds = rfqs.Where(r => r.Status == RfqStatus.Awarded && r.ResultSentAt != null).Select(r => r.Id).ToList();
+        var outcomes = awardedIds.Count == 0
+            ? []
+            : (await InvitedRfqs(supplierId).Where(r => awardedIds.Contains(r.Id))
+                    .Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(x => x.QuotationLines).AsSplitQuery()
+                    .ToListAsync(cancellationToken))
+                .ToDictionary(r => r.Id, r => r.ResultFor(supplierId)?.Outcome);
         var now = _clock.NowInVietnam();
         return rfqs.Select(r =>
             {
                 var deadline = r.Deadline.ToDateTime(r.DeadlineTime);
                 var stat = stats.TryGetValue(r.Id, out var s) ? s : (Count: 0, Last: (DateTimeOffset?)null);
                 return new PortalRfqListItemDto(r.Id, r.No, companies.GetValueOrDefault(r.CompanyId) ?? "", r.Title, r.Date, deadline,
-                    StatusOf(r.Status, r.PortalQuotesOpenedAt, deadline, now), r.LineCount, stat.Count, stat.Last);
+                    StatusOf(r.Status, r.PortalQuotesOpenedAt, r.ResultSentAt, deadline, now), r.LineCount, stat.Count, stat.Last)
+                {
+                    Outcome = outcomes.GetValueOrDefault(r.Id)?.ToString(),
+                };
             })
             .ToList();
     }
@@ -185,7 +197,7 @@ public sealed class PortalRfqService : IPortalRfqService
 
     /// <summary>Nạp RFQ kèm dòng và NCC được mời; RFQ không mời NCC này trả 404 như RFQ không tồn tại.</summary>
     private async Task<Rfq> LoadAsync(Guid supplierId, Guid id, CancellationToken cancellationToken) =>
-        await InvitedRfqs(supplierId).Include(r => r.Lines).Include(r => r.Suppliers).AsSplitQuery()
+        await InvitedRfqs(supplierId).Include(r => r.Lines).Include(r => r.Suppliers).ThenInclude(x => x.QuotationLines).AsSplitQuery()
             .SingleOrDefaultAsync(r => r.Id == id, cancellationToken)
         ?? throw new NotFoundException("Không tìm thấy thư mời báo giá.");
 
@@ -231,12 +243,13 @@ public sealed class PortalRfqService : IPortalRfqService
             x.Lines.Sum(Amount))).ToList();
 
         var now = _clock.NowInVietnam();
-        var status = StatusOf(rfq.Status, rfq.PortalQuotesOpenedAt, rfq.DeadlineAt, now);
+        var status = StatusOf(rfq.Status, rfq.PortalQuotesOpenedAt, rfq.ResultSentAt, rfq.DeadlineAt, now);
         var closedReason = status switch
         {
             "Open" => null,
             "Closed" => $"Đã hết hạn nộp báo giá ({rfq.DeadlineText}).",
             "Cancelled" => "Bên mời đã hủy yêu cầu báo giá.",
+            "Awarded" => "Bên mời đã duyệt kết quả chọn thầu – không nộp lại được.",
             _ => "Bên mời đã mở báo giá – không nộp lại được.",
         };
         // Hỏi đáp: câu hỏi – trả lời của chính NCC (riêng, bảo mật với NCC khác) và thông báo làm rõ công khai (người dùng chốt 12/11/2026).
@@ -249,17 +262,23 @@ public sealed class PortalRfqService : IPortalRfqService
             VatRates.All, lines, latest, history)
         {
             MaxFileSizeMb = _attachments.MaxFileSizeMb, CanAsk = status == "Open", Clarifications = clarifications,
+            Result = rfq.ResultSentAt is not null && rfq.ResultFor(supplierId) is { } result
+                ? new PortalRfqResultDto(result.Outcome.ToString(), rfq.ResultSentAt, result.QuotedLineCount, result.WonLines.Sum(l => l.Amount),
+                    result.WonLines.Select(l => new PortalWonLineDto(l.RfqLineId, l.UnitPrice, l.DiscountPct, l.VatCode, l.Amount)).ToList())
+                : null,
         };
     }
 
     /// <summary>
     /// Trạng thái NCC thấy: Open (đang nhận, trước giờ hạn), Closed (hết giờ, chưa mở), Reviewing (đã mở hoặc đang duyệt kết quả),
-    /// Awarded (đã có kết quả), Cancelled (đã hủy). Không nói ai trúng thầu – thuộc lát sau (P4).
+    /// Awarded (đã có kết quả – Phòng CUVT đã gửi kết quả), Cancelled (đã hủy). Kết quả duyệt xong nhưng chưa gửi vẫn là Reviewing: Phòng CUVT tự
+    /// bấm gửi (lát P4b, người dùng yêu cầu 13/11/2026). Kết quả của chính NCC trả riêng (Outcome / Result), không nói NCC khác trúng.
     /// </summary>
-    private static string StatusOf(RfqStatus status, DateTimeOffset? openedAt, DateTime deadline, DateTime now) => status switch
+    private static string StatusOf(RfqStatus status, DateTimeOffset? openedAt, DateTimeOffset? resultSentAt, DateTime deadline, DateTime now) => status switch
     {
         RfqStatus.Cancelled => "Cancelled",
-        RfqStatus.Awarded => "Awarded",
+        RfqStatus.Awarded when resultSentAt is not null => "Awarded",
+        RfqStatus.Awarded => "Reviewing",
         RfqStatus.AwardPending => "Reviewing",
         _ when openedAt is not null => "Reviewing",
         _ when now > deadline => "Closed",

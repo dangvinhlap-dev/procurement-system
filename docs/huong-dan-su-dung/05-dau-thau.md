@@ -56,6 +56,12 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
   thôi gửi (tránh báo hạn nộp muộn).
 - **Sau giờ hạn nộp**: bấm **Mở báo giá Portal** (một lần) → giá các NCC hiện trên bảng so sánh, hệ thống ghi người và giờ mở; kiểm mã biên
   nhận với NCC nếu cần. Sau khi mở không gia hạn được nữa; giá NCC tự nộp không sửa thay – chỉ **Chấm điểm** rồi chọn thầu như thường.
+- **Báo NCC kết quả chọn thầu** (từ bản 0.26.0): hội đồng **duyệt xong** kết quả thì phần mềm **chưa tự báo** – Phòng CUVT bấm **Gửi kết quả
+  cho NCC** trên RFQ (hỏi lại, chỉ gửi một lần; đầu phiếu ghi người và giờ gửi). Từ lúc đó mỗi NCC được mời thấy trên Portal kết quả **của riêng
+  mình** – cột "Kết quả" ở danh sách Thư mời báo giá và khối **Kết quả chọn thầu** (Trúng thầu / Trúng một phần / Không trúng thầu / Không nộp
+  báo giá; dòng trúng kèm đơn giá, thành tiền theo báo giá của chính NCC). NCC không thấy NCC khác, giá khác, điểm, lý do chọn. Lúc đang chờ
+  duyệt hoặc chưa bấm gửi, NCC chỉ thấy "Đang xét chọn". Lúc bấm gửi, phần mềm gửi thư **Báo trúng thầu** / **Báo không trúng thầu** cho NCC **đã có báo giá** (cả báo giá
+  Phòng CUVT nhập thay) – thư không có giá, không nêu NCC trúng; NCC không báo giá không có thư. Xem thư ở tab "Email NCC".
 
 ### So sánh và chấm điểm
 

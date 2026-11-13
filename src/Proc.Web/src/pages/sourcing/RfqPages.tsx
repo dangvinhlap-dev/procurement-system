@@ -435,6 +435,29 @@ export function RfqPage() {
     })
   }
 
+  /**
+   * Gửi kết quả chọn thầu cho NCC (lát P4b, design.md 19.5 – P4-7, P4-8; người dùng yêu cầu 13/11/2026 "để phòng CUVT tự bấm gửi"): một lần,
+   * sau khi duyệt xong. NCC thấy kết quả của mình trên Portal; NCC đã có báo giá nhận thư trúng / không trúng thầu (không có giá).
+   */
+  const sendResult = () => {
+    if (!doc) return
+    modal.confirm({
+      title: `Gửi kết quả chọn thầu RFQ ${doc.no} cho NCC?`,
+      content:
+        'Mỗi NCC được mời thấy kết quả của riêng mình trên Portal (trúng thầu kèm giá của chính NCC, không trúng, không nộp báo giá); NCC đã có báo giá nhận thư báo kết quả. Chỉ gửi được một lần.',
+      okText: 'Gửi kết quả',
+      cancelText: 'Không',
+      onOk: async () => {
+        try {
+          await mutations.sendResult.mutateAsync(doc.id)
+          message.success(`Đã gửi kết quả chọn thầu RFQ ${doc.no} cho NCC.`)
+        } catch (e) {
+          fail(e, 'Không gửi được kết quả chọn thầu.')
+        }
+      },
+    })
+  }
+
   // Xem giá trước giờ mở (quyền riêng – người dùng yêu cầu 12/11/2026): máy chủ ghi nhật ký mỗi lần xem nên hỏi lại trước khi tải.
   const [loadingSealed, setLoadingSealed] = useState(false)
   const viewSealed = () => {
@@ -752,6 +775,11 @@ export function RfqPage() {
           Mở báo giá Portal
         </Button>
       )}
+      {doc?.actions.canSendResult && (
+        <Button icon={<SendOutlined />} onClick={sendResult} loading={mutations.sendResult.isPending}>
+          Gửi kết quả cho NCC
+        </Button>
+      )}
       {doc?.actions.canViewSealedQuotes && (
         <Button icon={<EyeOutlined />} onClick={viewSealed} loading={loadingSealed}>
           Xem báo giá niêm phong
@@ -897,6 +925,7 @@ export function RfqPage() {
               {`Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
               {doc.sourcingNo && <> · Từ phiếu tìm nguồn <DocNo no={doc.sourcingNo} docType="SRC" id={doc.sourcingId} /></>}
               {doc.awardedByName && doc.status !== 'Sent' ? ` · Người chọn thầu: ${doc.awardedByName}` : ''}
+              {doc.resultSentAt ? ` · Đã gửi kết quả cho NCC: ${doc.resultSentByName ?? ''} lúc ${formatDateTime(doc.resultSentAt)}` : ''}
             </>
           )
         }

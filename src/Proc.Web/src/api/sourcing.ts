@@ -343,6 +343,8 @@ export interface Rfq {
     canViewSealedQuotes?: boolean
     /** Chấm điểm báo giá đã có (cả sau hạn nộp). */
     canScore?: boolean
+    /** Gửi kết quả chọn thầu cho NCC: quyền lập RFQ, kết quả đã duyệt xong, chưa gửi (lát P4b). */
+    canSendResult?: boolean
   }
   /** Giải trình khi mời ít hơn số NCC tối thiểu. */
   fewSuppliersReason: string | null
@@ -370,6 +372,10 @@ export interface Rfq {
   portalQuotesOpenedAt?: string | null
   /** Người mở báo giá Portal. */
   portalQuotesOpenedByName?: string | null
+  /** Thời điểm Phòng CUVT gửi kết quả chọn thầu cho NCC; null = chưa gửi (lát P4b). */
+  resultSentAt?: string | null
+  /** Người gửi kết quả chọn thầu cho NCC. */
+  resultSentByName?: string | null
   /** Số NCC đã nộp báo giá trên Portal (kể cả còn niêm phong). */
   portalSubmittedSupplierCount?: number
   /** Giá trị trúng thầu (sau CK, trước VAT) – xét ngưỡng duyệt. */
@@ -544,6 +550,11 @@ export function useRfqMutations() {
       mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/open-portal-quotes`, { method: 'POST' }),
       onSuccess,
     }),
+    // Lát P4b: Phòng CUVT tự bấm gửi kết quả chọn thầu cho NCC (người dùng yêu cầu 13/11/2026) – một lần, sau khi duyệt xong.
+    sendResult: useMutation({
+      mutationFn: (id: string) => apiFetch<Rfq>(`/api/rfqs/${id}/send-result`, { method: 'POST' }),
+      onSuccess,
+    }),
     score: useMutation({
       mutationFn: ({ id, supplierId, scores }: {
         id: string; supplierId: string
@@ -595,7 +606,7 @@ export function useRfqMutations() {
   }
 }
 
-/** Loại thư báo NCC qua Portal (lát P3b-3; thư về PO – lát P4a). */
+/** Loại thư báo NCC qua Portal (lát P3b-3; thư về PO – lát P4a; kết quả chọn thầu – lát P4b). */
 export type PortalEmailKind =
   | 'RfqInvitation'
   | 'RfqDeadlineExtended'
@@ -605,6 +616,8 @@ export type PortalEmailKind =
   | 'PurchaseOrderIssued'
   | 'PurchaseOrderCancelled'
   | 'PurchaseOrderReopened'
+  | 'RfqAwarded'
+  | 'RfqNotAwarded'
 
 /** Tên loại thư hiện trên giao diện. */
 export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
@@ -616,6 +629,8 @@ export const portalEmailKindLabels: Record<PortalEmailKind, string> = {
   PurchaseOrderIssued: 'Đơn đặt hàng mới',
   PurchaseOrderCancelled: 'Hủy đơn đặt hàng',
   PurchaseOrderReopened: 'Đề nghị phản hồi lại',
+  RfqAwarded: 'Báo trúng thầu',
+  RfqNotAwarded: 'Báo không trúng thầu',
 }
 
 /** Trạng thái gửi thư: chờ gửi, đã gửi, thôi gửi, lỗi (hết lượt thử). */

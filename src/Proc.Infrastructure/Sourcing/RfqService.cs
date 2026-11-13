@@ -321,6 +321,46 @@ public sealed class RfqService : IRfqService
     }
 
     /// <inheritdoc />
+    public async Task<RfqDto> SendResultAsync(Guid id, CancellationToken cancellationToken)
+    {
+        _scope.EnsurePermission(Permissions.Sourcing.RfqManage);
+        var rfq = await LoadAsync(id, cancellationToken);
+        var userId = _scope.UserId ?? throw new ForbiddenAccessException("Chưa đăng nhập.");
+        rfq.MarkResultSent(userId, _clock.UtcNow);
+        await NotifySuppliersResultAsync(rfq, cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Hai người cùng bấm gửi: chỉ một lần gửi được ghi, tránh NCC nhận thư trùng.
+            throw new BusinessRuleException($"Kết quả chọn thầu RFQ {rfq.No} vừa được người khác gửi – tải lại phiếu.");
+        }
+
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Soạn thư báo kết quả cho NCC **đã có báo giá** khi Phòng CUVT bấm gửi kết quả (lát P4b – design.md mục 19.5, P4-8). Trúng (toàn bộ / một
+    /// phần) ghi số dòng trúng trên số dòng đã chào; không trúng là thư cảm ơn. NCC không báo giá không có thư (vẫn thấy "Không nộp báo giá" trên
+    /// Portal).
+    /// </summary>
+    private async Task NotifySuppliersResultAsync(Rfq rfq, CancellationToken cancellationToken)
+    {
+        foreach (var invited in rfq.Suppliers)
+        {
+            var result = rfq.ResultFor(invited.SupplierId);
+            if (result is null || result.Outcome == RfqSupplierOutcome.NoQuote) continue;
+            if (result.Outcome == RfqSupplierOutcome.Lost)
+                await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqNotAwarded, invited.SupplierId, null, cancellationToken);
+            else
+                await _portalEmails.QueueRfqAsync(rfq, SupplierPortalEmailKind.RfqAwarded, invited.SupplierId,
+                    $"Số dòng trúng thầu: {result.WonLines.Count}/{result.QuotedLineCount} dòng quý công ty đã chào giá.", cancellationToken);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<RfqDto> RejectAsync(Guid id, ApprovalActionRequest request, CancellationToken cancellationToken)
     {
         var rfq = await LoadAsync(id, cancellationToken);
@@ -633,7 +673,7 @@ public sealed class RfqService : IRfqService
         var project = rfq.ConstructionProjectId is { } pid
             ? await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == pid).Select(p => p.Code + " – " + p.Name).SingleOrDefaultAsync(cancellationToken)
             : null;
-        var userIds = new[] { rfq.CreatedBy, rfq.AwardedBy, rfq.PortalQuotesOpenedBy }.OfType<Guid>().Distinct().ToList();
+        var userIds = new[] { rfq.CreatedBy, rfq.AwardedBy, rfq.PortalQuotesOpenedBy, rfq.ResultSentBy }.OfType<Guid>().Distinct().ToList();
         // Thống kê bản nộp Portal theo NCC: chỉ số lần, giờ nộp, mã băm – không lấy giá (niêm phong – lát P3a).
         var portal = (await _db.RfqPortalSubmissions.AsNoTracking().Where(x => x.RfqId == rfq.Id)
                 .Select(x => new { x.SupplierId, x.Sequence, x.SubmittedAt, x.ContentHash }).ToListAsync(cancellationToken))
@@ -735,6 +775,8 @@ public sealed class RfqService : IRfqService
                 && _clock.NowInVietnam() > rfq.DeadlineAt,
             CanViewSealedQuotes = rfq.PortalQuotesOpenedAt is null && portal.Count > 0 && _scope.HasPermission(Permissions.Sourcing.RfqViewSealed),
             CanScore = rfq.Status == RfqStatus.Sent && readOnly is null && conflict is null && rfq.Suppliers.Any(s => s.HasQuoted),
+            CanSendResult = rfq.Status == RfqStatus.Awarded && rfq.ResultSentAt is null && readOnly is null
+                && _scope.HasPermission(Permissions.Sourcing.RfqManage),
         };
         var approvals = await _approvals.HistoryAsync(rfq.DocType, rfq.Id, cancellationToken, rfq);
         return new RfqDto(
@@ -751,6 +793,7 @@ public sealed class RfqService : IRfqService
             ComparisonThreshold = await _parameters.RfqComparisonThresholdAsync(cancellationToken), SelectionReason = rfq.SelectionReason,
             DeadlineTime = rfq.DeadlineTime, PortalQuotesOpenedAt = rfq.PortalQuotesOpenedAt,
             PortalQuotesOpenedByName = rfq.PortalQuotesOpenedBy is { } ob ? userNames.GetValueOrDefault(ob) : null,
+            ResultSentAt = rfq.ResultSentAt, ResultSentByName = rfq.ResultSentBy is { } rb ? userNames.GetValueOrDefault(rb) : null,
             PortalSubmittedSupplierCount = portal.Count,
         };
     }

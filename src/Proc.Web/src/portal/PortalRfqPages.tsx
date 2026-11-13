@@ -10,12 +10,14 @@ import { Select } from '../classic/Select'
 import { DataGrid } from '../components/DataGrid/DataGrid'
 import type { GridColumn, StatusTone } from '../components/DataGrid/types'
 import { LineGrid, type LineColumn } from '../components/DocumentForm/LineGrid'
-import { formatMoney, formatQuantity, vnNumberInput } from '../utils/format'
+import { formatDateTime, formatMoney, formatQuantity, vnNumberInput } from '../utils/format'
 import {
   portalApi,
+  portalRfqOutcomeLabels,
   portalRfqStatusLabels,
   type PortalRfq,
   type PortalRfqListItem,
+  type PortalRfqOutcome,
   type PortalRfqStatus,
   type PortalSubmission,
 } from './portalApi'
@@ -31,6 +33,14 @@ const statusTone: Record<PortalRfqStatus, StatusTone> = {
   Reviewing: 'neutral',
   Awarded: 'neutral',
   Cancelled: 'error',
+}
+
+/** Màu đèn kết quả chọn thầu (lát P4b) – luôn kèm chữ. */
+const outcomeTone: Record<PortalRfqOutcome, StatusTone> = {
+  Won: 'success',
+  PartlyWon: 'success',
+  Lost: 'neutral',
+  NoQuote: 'neutral',
 }
 
 /**
@@ -54,6 +64,15 @@ const listColumns: GridColumn<PortalRfqListItem>[] = [
     type: 'status',
     value: (r) => portalRfqStatusLabels[r.status],
     tone: (r) => statusTone[r.status],
+    auditField: false,
+  },
+  {
+    key: 'outcome',
+    title: 'Kết quả',
+    width: 140,
+    type: 'status',
+    value: (r) => (r.outcome ? portalRfqOutcomeLabels[r.outcome] : ''),
+    tone: (r) => (r.outcome ? outcomeTone[r.outcome] : 'neutral'),
     auditField: false,
   },
   { key: 'submissionCount', title: 'Số lần nộp', width: 90, type: 'quantity', value: (r) => r.submissionCount, auditField: false },
@@ -300,6 +319,7 @@ export function PortalRfqPage() {
       ) : (
         <Alert type="warning" showIcon title={`${portalRfqStatusLabels[data.status]}. ${data.closedReason ?? ''}`} />
       )}
+      {data.result && <QuoteResult rfq={data} />}
       <Section title="Thông tin yêu cầu báo giá">
         <dl className="erp-portal-fields" data-testid="portal-rfq-info">
           <dt>Số yêu cầu</dt>
@@ -369,6 +389,78 @@ export function PortalRfqPage() {
         </Section>
       )}
     </>
+  )
+}
+
+/** Một dòng trúng thầu hiển thị: dòng RFQ ghép giá của chính NCC. */
+interface WonRow {
+  id: string
+  lineNo: number
+  itemCode: string
+  itemName: string
+  uomCode: string
+  qty: number
+  unitPrice: number
+  discountPct: number
+  vatCode: string | null
+  amount: number
+}
+
+const wonColumns: GridColumn<WonRow>[] = [
+  { key: 'lineNo', title: 'STT', width: 50, type: 'quantity', value: (r) => r.lineNo, auditField: false },
+  { key: 'itemCode', title: 'Mã hàng', width: 110, value: (r) => r.itemCode, auditField: false },
+  { key: 'itemName', title: 'Tên hàng', width: 220, value: (r) => r.itemName, auditField: false },
+  { key: 'uomCode', title: 'ĐVT', width: 60, value: (r) => r.uomCode, auditField: false },
+  { key: 'qty', title: 'Số lượng', width: 90, type: 'quantity', value: (r) => r.qty, auditField: false },
+  { key: 'unitPrice', title: 'Đơn giá', width: 110, type: 'money', value: (r) => r.unitPrice, auditField: false },
+  { key: 'discountPct', title: '% CK', width: 60, type: 'quantity', value: (r) => r.discountPct, auditField: false },
+  { key: 'vatCode', title: 'Thuế suất', width: 70, value: (r) => r.vatCode ?? '', auditField: false },
+  { key: 'amount', title: 'Thành tiền', width: 130, type: 'money', value: (r) => r.amount, auditField: false },
+]
+
+/**
+ * Kết quả chọn thầu của chính NCC (lát P4b – design.md 19.5, P4-7): chỉ hiện khi bên mời đã duyệt xong kết quả. Dòng trúng kèm giá của
+ * chính NCC; không có NCC khác, giá khác, lý do chọn.
+ * @param rfq Thư mời đang xem (đã có `result`).
+ */
+function QuoteResult({ rfq }: { rfq: PortalRfq }) {
+  const [groupBy, setGroupBy] = useState<string | null>(null)
+  const result = rfq.result
+  if (!result) return null
+  const rows: WonRow[] = result.wonLines.flatMap((w) => {
+    const line = rfq.lines.find((l) => l.id === w.rfqLineId)
+    return line ? [{ ...w, id: line.id, lineNo: line.lineNo, itemCode: line.itemCode, itemName: line.itemName, uomCode: line.uomCode, qty: line.qty }] : []
+  })
+  const won = result.outcome === 'Won' || result.outcome === 'PartlyWon'
+  return (
+    <Section title="Kết quả chọn thầu">
+      <dl className="erp-portal-fields" data-testid="portal-rfq-result">
+        <dt>Kết quả</dt>
+        <dd>
+          <strong>{portalRfqOutcomeLabels[result.outcome]}</strong>
+        </dd>
+        <dt>Ngày có kết quả</dt>
+        <dd>{formatDateTime(result.awardedAt) || '–'}</dd>
+        {won && (
+          <>
+            <dt>Số dòng trúng</dt>
+            <dd>
+              {result.wonLines.length}/{result.quotedLineCount} dòng đã chào giá
+            </dd>
+            <dt>Tổng tiền trúng (trước VAT)</dt>
+            <dd>{formatMoney(result.wonAmount)}</dd>
+          </>
+        )}
+      </dl>
+      {won && <DataGrid rows={rows} columns={wonColumns} rowKey={(r) => r.id} groupBy={groupBy} onGroupByChange={setGroupBy} />}
+      <p className="erp-portal-hint">
+        {won
+          ? 'Đơn giá, thành tiền theo báo giá của công ty bạn. Bên mời sẽ gửi đơn đặt hàng hoặc hợp đồng sau – đơn đặt hàng xem ở mục Đơn đặt hàng.'
+          : result.outcome === 'Lost'
+            ? 'Lần này báo giá của công ty bạn chưa được chọn. Cảm ơn công ty bạn đã tham gia báo giá.'
+            : 'Công ty bạn không nộp báo giá cho yêu cầu này.'}
+      </p>
+    </Section>
   )
 }
 

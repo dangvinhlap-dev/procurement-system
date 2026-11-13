@@ -6405,6 +6405,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTimeOffset?>("ResultSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResultSentBy")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SelectionReason")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
