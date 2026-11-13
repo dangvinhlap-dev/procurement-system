@@ -494,7 +494,8 @@ public sealed class PurchaseReportService : IPurchaseReportService
             .Select(c => new { c.Id, c.PurchaseOrderId, Received = c.TotalAmount + c.TotalVat, HasInvoice = c.InvoiceNo != null && c.InvoiceAmount > 0, c.InvoiceAmount })
             .ToListAsync(cancellationToken);
         var payments = await _db.PaymentRequests.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
-            .Where(p => orderIds.Contains(p.PurchaseOrderId) && p.Status != ApprovalDocumentStatus.Cancelled)
+            // Đề nghị 1C tạp vụ (lát Y11b) không có PO nên không vào báo cáo theo PO.
+            .Where(p => p.PurchaseOrderId != null && orderIds.Contains(p.PurchaseOrderId.Value) && p.Status != ApprovalDocumentStatus.Cancelled)
             .Select(p => new { p.Id, p.PurchaseOrderId, p.Status, p.PaidDate, p.PayableAmount, p.DeductionAmount })
             .ToListAsync(cancellationToken);
         var paymentIds = payments.Select(p => p.Id).ToList();

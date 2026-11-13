@@ -2515,6 +2515,20 @@ rồi phát hành 0.27.0"; chưa có biểu mẫu Excel 1C/2C, người dùng c�
 API `/api/sundry-expense-sheets` (+ `/{id}/submit|approve|reject|recall|cancel`). Migration `V0_27_0_BangKeTapVu` (bảng `SundryExpenseSheet`,
 `SundryExpenseLine`; `Down()` xóa hai bảng – mất mọi bảng kê). Bảng kê đã duyệt gộp vào đề nghị thanh toán tổng hợp **1C** ở lát Y11b.
 
+**Lát Y11b – đề nghị thanh toán tổng hợp tạp vụ 1C (13/11/2026, bản 0.27.0).** Quy tắc tự đặt (cùng căn cứ Y11a):
+
+| # | Quy tắc |
+| --- | --- |
+| Y11-6 | 1C là **đề nghị thanh toán DNT biểu mẫu "1C"** (`PaymentRequestForm.Sundry`) – dùng chung số DNT, màn hình DNT (nút **Lập đề nghị 1C (tạp vụ)**; trên bảng kê đã duyệt nút **Lập đề nghị thanh toán 1C** chọn sẵn bộ phận và bảng kê), bộ cấp duyệt DNT (chuỗi 5A/5B/1C giống nhau – mục 19.3), ghi Đã chi, in, Việc cần làm, duyệt gọn điện thoại. **Không gắn PO, NCC** (cột `PurchaseOrderId`, `SupplierId` cho phép trống). |
+| Y11-7 | Đề nghị 1C cho **một bộ phận** (không đổi sau khi lập – GĐ khối của bộ phận duyệt cấp đầu); mỗi dòng là một **bảng kê 2C Đã duyệt** của bộ phận, số tiền = tổng bảng kê (chụp lúc lưu và lúc gửi), nội dung tự ghi "Thanh toán chi phí tạp vụ theo bảng kê … ngày …", sửa được. Mỗi bảng kê chỉ ở **một đề nghị chưa hủy** (kiểm dưới khóa bảng kê); bảng kê đang ở đề nghị thì không hủy riêng – hủy dây chuyền từ bảng kê hủy đề nghị trước (đề nghị gộp bảng kê khác thì các bảng kê đó trở lại chưa đề nghị); đề nghị đã chi thì chặn. |
+| Y11-8 | **Người nhận tiền** (bắt buộc, ≤ 200) – người đã ứng chi; tiền mặt hoặc chuyển khoản – chuyển khoản **nhập tay** tên ngân hàng, số tài khoản (bắt buộc), chi nhánh, chủ tài khoản (người nhận không phải NCC). Giảm trừ (tạm ứng đã nhận…) bắt buộc lý do như 5A/5B. |
+| Y11-9 | In phiếu 1C theo khung 5B (chưa có biểu mẫu Excel): phòng ban đề xuất, người nhận tiền, ngân hàng; bảng Ngày – Số bảng kê – Nội dung – Số tiền; tổng, giảm trừ, còn lại, bằng chữ, khối ký. Báo cáo **TTPO** chỉ theo PO nên không gồm 1C; **ACCP** xuất 1C ở sheet Đề nghị thanh toán (đối tượng = người nhận tiền, cột phiếu nhận hàng ghi số bảng kê). |
+
+Migration `V0_27_0_DeNghiThanhToanTapVu`: `PaymentRequest.PurchaseOrderId`, `SupplierId` cho phép trống, thêm `PayeeName`; `PaymentRequestLine`
+thêm `SundryExpenseSheetId` (khóa ngoại bảng kê), `ReceiptConfirmationId`, `InvoiceNo` cho phép trống. `Down()` **xóa mọi đề nghị 1C** (Form = 3) rồi
+đưa cột về bắt buộc. API thêm `GET /api/payment-requests/sundry-sheets?departmentId=&requestId=`; lưu 1C gửi `form = "1C"`, `departmentId`,
+`payeeName`, `bankName…`, dòng `sundryExpenseSheetId`.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
@@ -2717,7 +2731,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
-| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a – xong 13/11/2026; 1C Y11b), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a, đề nghị tổng hợp 1C Y11b – xong 13/11/2026), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)

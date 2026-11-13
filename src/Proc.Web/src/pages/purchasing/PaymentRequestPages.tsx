@@ -4,6 +4,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import type { DateRange } from '../../api/logs'
+import { useDepartments } from '../../api/organization'
 import {
   paymentMethodLabels,
   paymentRequestFormLabels,
@@ -13,11 +14,13 @@ import {
   usePaymentRequest,
   usePaymentRequests,
   usePaymentSource,
+  useSundryPaymentSheets,
   type PaymentMethod,
   type PaymentReceiptOption,
   type PaymentRequest,
   type PaymentRequestListItem,
   type SavePaymentRequestInput,
+  type SundryPaymentSheetOption,
 } from '../../api/paymentRequests'
 import { PURCHASE_STAGE_LABELS, purchaseStatusLabels, purchaseStatusTone, usePurchaseMutations, withPendingApprovers } from '../../api/purchasing'
 import { Permission } from '../../auth/permissions'
@@ -43,8 +46,16 @@ const listColumns: GridColumn<PaymentRequestListItem>[] = [
   { key: 'no', title: 'Số phiếu', width: 150, value: (r) => r.no, docRef: (r) => ({ docType: 'DNT', id: r.id }) },
   { key: 'date', title: 'Ngày đề nghị', width: 100, type: 'date', value: (r) => r.date },
   { key: 'form', title: 'Biểu mẫu', width: 70, value: (r) => r.form, groupable: true },
-  { key: 'po', title: 'Đơn mua hàng', width: 140, value: (r) => r.purchaseOrderNo, docRef: (r) => ({ docType: 'PO', id: r.purchaseOrderId }) },
-  { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  {
+    key: 'po', title: 'Đơn mua hàng', width: 140, value: (r) => r.purchaseOrderNo,
+    docRef: (r) => (r.purchaseOrderId ? { docType: 'PO', id: r.purchaseOrderId } : null),
+  },
+  // 1C tạp vụ (lát Y11b) không có NCC – hiện người nhận tiền.
+  {
+    key: 'supplier', title: 'NCC / người nhận', width: 220, groupable: true,
+    value: (r) => (r.supplierCode ? `${r.supplierCode} – ${r.supplierName ?? ''}` : `Người nhận: ${r.payeeName ?? ''}`),
+  },
+  { key: 'department', title: 'Bộ phận', width: 160, value: (r) => r.departmentName, groupable: true },
   { key: 'method', title: 'Hình thức', width: 100, value: (r) => paymentMethodLabels[r.method], groupable: true },
   { key: 'total', title: 'Tổng chứng từ', width: 130, type: 'money', value: (r) => r.totalAmount },
   { key: 'deduction', title: 'Giảm trừ', width: 110, type: 'money', value: (r) => r.deductionAmount || null },
@@ -81,6 +92,13 @@ export function PaymentRequestListPage() {
       onOpenRow={(r) => navigate(`${PAYMENT_REQUEST_PATH}/${r.id}`)}
       isMarked={(r) => r.status === 'Draft' || r.status === 'Submitted' || (r.status === 'Approved' && !r.isPaid)}
       filters={<LogDateRangeFilter value={range} onChange={setRange} />}
+      actions={
+        hasPermission(Permission.PaymentCreate) && (
+          <Button icon={<FileAddOutlined />} onClick={() => navigate(`${PAYMENT_REQUEST_PATH}/moi?form=1C`)}>
+            Lập đề nghị 1C (tạp vụ)
+          </Button>
+        )
+      }
     />
   )
 }
@@ -116,12 +134,25 @@ interface LineInfo {
 const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim() : null)
 
 /**
+ * Trang đề nghị thanh toán: chọn khuôn theo biểu mẫu – 1C tổng hợp tạp vụ (`?form=1C` khi lập mới, lát Y11b) hoặc 5A/5B theo PO (lát Y8).
+ * Phiếu đã lưu: đọc biểu mẫu của phiếu (đang tải thì hiện khuôn 5A/5B ở trạng thái đang tải).
+ */
+export function PaymentRequestPage() {
+  const { id = 'moi' } = useParams()
+  const [params] = useSearchParams()
+  const isNew = id === 'moi'
+  const payment = usePaymentRequest(isNew ? null : id)
+  const sundry = isNew ? params.get('form') === '1C' : payment.data?.form === '1C'
+  return sundry ? <SundryPaymentRequestPage /> : <PurchasePaymentRequestPage />
+}
+
+/**
  * Trang phiếu đề nghị thanh toán 5A/5B (lát Y8) trên khuôn DocumentForm. Đầu phiếu: ngày, đơn mua hàng (không đổi sau khi lập), hình thức, tài
  * khoản NCC (chuyển khoản), giảm trừ + lý do, ghi chú. Dòng: nhiều hóa đơn – mỗi dòng một phiếu nhận hàng (XNH) có hóa đơn, chọn qua hộp "Chọn
  * phiếu nhận hàng"; số tiền = tiền hóa đơn trên XNH, nội dung sửa được. Duyệt xong kế toán bấm "Ghi Đã chi".
  * Mở `/mua-hang/de-nghi-thanh-toan/moi?po=…` (nút trên PO) thì chọn sẵn đơn và mọi XNH có hóa đơn chưa đề nghị.
  */
-export function PaymentRequestPage() {
+function PurchasePaymentRequestPage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
   const [params] = useSearchParams()
@@ -165,7 +196,7 @@ export function PaymentRequestPage() {
     if (fresh) return fresh
     const saved = doc?.lines.find((l) => l.receiptConfirmationId === receiptId)
     return saved
-      ? { receiptNo: saved.receiptNo, receiptDate: saved.receiptDate, invoiceNo: saved.invoiceNo, invoiceSeries: saved.invoiceSeries, invoiceDate: saved.invoiceDate, amount: saved.amount }
+      ? { receiptNo: saved.receiptNo ?? '', receiptDate: saved.receiptDate, invoiceNo: saved.invoiceNo ?? '', invoiceSeries: saved.invoiceSeries, invoiceDate: saved.invoiceDate, amount: saved.amount }
       : undefined
   }
 
@@ -334,7 +365,7 @@ export function PaymentRequestPage() {
             )}
             {info && (
               <Alert type="info" showIcon
-                title={`Biểu mẫu ${paymentRequestFormLabels[info.form]} · NCC ${info.supplierCode} – ${info.supplierName} · ` +
+                title={`Biểu mẫu ${paymentRequestFormLabels[info.form]} · NCC ${info.supplierCode ?? ''} – ${info.supplierName ?? ''} · ` +
                   `${info.constructionProjectCode ? `Công trình ${info.constructionProjectCode} · ` : ''}Bộ phận đặt hàng: ${info.departmentName ?? '(chưa có)'}`} />
             )}
           </>
@@ -366,7 +397,9 @@ export function PaymentRequestPage() {
               </Form.Item>
             ) : (
               <Form.Item label="Đơn mua hàng">
-                {doc && <DocNo no={doc.purchaseOrderNo} docType="PO" id={doc.purchaseOrderId} suffix={`ngày ${formatDate(doc.purchaseOrderDate)}`} />}
+                {doc?.purchaseOrderNo && (
+                  <DocNo no={doc.purchaseOrderNo} docType="PO" id={doc.purchaseOrderId ?? undefined} suffix={`ngày ${formatDate(doc.purchaseOrderDate)}`} />
+                )}
               </Form.Item>
             )}
             <Form.Item label="Hình thức" name="method" rules={[{ required: true, message: 'Chọn hình thức.' }]}>
@@ -423,6 +456,384 @@ export function PaymentRequestPage() {
       )}
       {paying && doc && <PayDialog doc={doc} onClose={() => setPaying(false)} />}
     </>
+  )
+}
+
+/** Dòng 1C trên form: bảng kê và nội dung thanh toán; số tiền, ngày lấy từ bảng kê. */
+interface SundryLineValues {
+  id: string | null
+  sundryExpenseSheetId?: string
+  description?: string
+}
+
+interface SundryFormValues {
+  date: Dayjs
+  departmentId?: string
+  payeeName?: string
+  method: PaymentMethod
+  bankName?: string
+  bankBranch?: string
+  bankAccountNumber?: string
+  bankAccountName?: string
+  deductionAmount?: number | null
+  deductionReason?: string
+  note?: string
+  lines: SundryLineValues[]
+}
+
+/** Thông tin một bảng kê trên dòng 1C – từ dòng đã lưu (đã chụp) hoặc bảng kê vừa chọn. */
+interface SheetInfo {
+  no: string
+  date: string | null
+  amount: number
+}
+
+/**
+ * Trang đề nghị thanh toán tổng hợp chi phí tạp vụ 1C (lát Y11b – design.md mục 19.2 loại C) trên khuôn DocumentForm. Đầu phiếu: ngày, bộ phận
+ * (không đổi sau khi lập), người nhận tiền, hình thức – chuyển khoản nhập tay ngân hàng, số tài khoản, chủ tài khoản; giảm trừ (tạm ứng đã nhận…).
+ * Dòng: mỗi dòng một bảng kê 2C đã duyệt của bộ phận, chọn qua hộp "Chọn bảng kê tạp vụ"; số tiền = tổng bảng kê. Duyệt chung chuỗi 5A/5B/1C,
+ * kế toán ghi Đã chi. Mở `…/moi?form=1C&dept=…&sheet=…` (nút trên bảng kê) thì chọn sẵn bộ phận và bảng kê.
+ */
+function SundryPaymentRequestPage() {
+  const { id = 'moi' } = useParams()
+  const isNew = id === 'moi'
+  const [params] = useSearchParams()
+  const { hasPermission } = useAuth()
+  const { message } = App.useApp()
+  const [form] = Form.useForm<SundryFormValues>()
+  const payment = usePaymentRequest(isNew ? null : id)
+  const mutations = usePurchaseMutations<PaymentRequest, SavePaymentRequestInput>('payment-requests')
+  const departments = useDepartments()
+  const [error, setError] = useState<string | null>(null)
+  const [picking, setPicking] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [picked, setPicked] = useState<Map<string, SheetInfo>>(() => new Map())
+  const addRef = useRef<(() => void) | null>(null)
+  const doc = payment.data
+  const readOnly = isNew ? !hasPermission(Permission.PaymentCreate) : !doc?.actions.canEdit
+  const attachmentTab = useAttachmentTab('PaymentRequest', doc?.id, hasPermission(Permission.PaymentCreate))
+
+  const departmentId = (Form.useWatch('departmentId', form) as string | undefined) ?? doc?.departmentId ?? undefined
+  const method = (Form.useWatch('method', form) as PaymentMethod | undefined) ?? doc?.method ?? 'Cash'
+  const deduction = (Form.useWatch('deductionAmount', form) as number | null | undefined) ?? 0
+  const watchedLines = Form.useWatch('lines', form) as SundryLineValues[] | undefined
+  const lines = useMemo(() => watchedLines ?? [], [watchedLines])
+  const sheets = useSundryPaymentSheets(departmentId ?? null, doc?.id ?? null)
+
+  const { loadSaved, targetId } = useDocumentFormSync(form, id, doc, (d) => ({
+    date: dayjs(d.date),
+    departmentId: d.departmentId ?? undefined,
+    payeeName: d.payeeName ?? '',
+    method: d.method,
+    bankName: d.bankName ?? '',
+    bankBranch: d.bankBranch ?? '',
+    bankAccountNumber: d.bankAccountNumber ?? '',
+    bankAccountName: d.bankAccountName ?? '',
+    deductionAmount: d.deductionAmount,
+    deductionReason: d.deductionReason ?? '',
+    note: d.note ?? '',
+    lines: d.lines.map((l) => ({ id: l.id, sundryExpenseSheetId: l.sundryExpenseSheetId ?? undefined, description: l.description })),
+  }))
+
+  /** Thông tin dòng theo Id bảng kê: bảng kê vừa chọn ưu tiên, sau đó dòng đã lưu. */
+  const infoOf = (sheetId: string | undefined): SheetInfo | undefined => {
+    if (!sheetId) return undefined
+    const fresh = picked.get(sheetId)
+    if (fresh) return fresh
+    const saved = doc?.lines.find((l) => l.sundryExpenseSheetId === sheetId)
+    return saved ? { no: saved.sundryExpenseSheetNo ?? '', date: saved.invoiceDate, amount: saved.amount } : undefined
+  }
+
+  const selectable = (exclude: Set<string>) => (sheets.data ?? []).filter((s) => !s.heldBy && !exclude.has(s.id))
+
+  const addSheets = (rows: SundryPaymentSheetOption[]) => {
+    setPicked((prev) => {
+      const next = new Map(prev)
+      for (const s of rows) next.set(s.id, { no: s.no, date: s.date, amount: s.totalAmount })
+      return next
+    })
+    const current = (form.getFieldValue('lines') as SundryLineValues[] | undefined) ?? []
+    form.setFieldValue('lines', [...current, ...rows.map((s) => ({ id: null, sundryExpenseSheetId: s.id, description: '' }))])
+    setPicking(false)
+  }
+
+  // Mở từ bảng kê ("Lập đề nghị thanh toán 1C"): chọn sẵn bộ phận và bảng kê – một lần khi danh sách bảng kê về.
+  const prefilled = useRef(false)
+  const deptParam = params.get('dept')
+  const sheetParam = params.get('sheet')
+  useEffect(() => {
+    if (!isNew || !deptParam || prefilled.current) return
+    if (!form.getFieldValue('departmentId')) form.setFieldValue('departmentId', deptParam)
+    if (!sheets.data) return
+    prefilled.current = true
+    addSheets(selectable(new Set()).filter((s) => s.id === sheetParam))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, deptParam, sheetParam, sheets.data])
+
+  const departmentOptions = useMemo(
+    () => (departments.data ?? []).filter((d) => d.isActive).map((d) => ({ value: d.id, label: `${d.code} – ${d.name}` })),
+    [departments.data],
+  )
+
+  const openPicker = () => {
+    if (!departmentId) {
+      message.warning('Hãy chọn bộ phận trước khi chọn bảng kê tạp vụ.')
+      return
+    }
+    setPicking(true)
+  }
+
+  const persist = async (): Promise<PaymentRequest | null> => {
+    let values: SundryFormValues
+    try {
+      values = await form.validateFields()
+    } catch {
+      setError('Còn ô chưa hợp lệ – xem các ô báo đỏ ở đầu phiếu và dòng.')
+      return null
+    }
+    setError(null)
+    const lineValues = (form.getFieldValue('lines') as SundryLineValues[] | undefined) ?? []
+    const transfer = values.method === 'BankTransfer'
+    const input: SavePaymentRequestInput = {
+      form: '1C',
+      date: values.date.format('YYYY-MM-DD'),
+      purchaseOrderId: null,
+      departmentId: values.departmentId ?? doc?.departmentId ?? null,
+      payeeName: orNull(values.payeeName),
+      method: values.method,
+      bankAccountId: null,
+      bankName: transfer ? orNull(values.bankName) : null,
+      bankBranch: transfer ? orNull(values.bankBranch) : null,
+      bankAccountNumber: transfer ? orNull(values.bankAccountNumber) : null,
+      bankAccountName: transfer ? orNull(values.bankAccountName) : null,
+      deductionAmount: values.deductionAmount ?? 0,
+      deductionReason: orNull(values.deductionReason),
+      note: orNull(values.note),
+      lines: lineValues.map((l) => ({ receiptConfirmationId: null, sundryExpenseSheetId: l.sundryExpenseSheetId!, description: orNull(l.description) })),
+    }
+    try {
+      const target = targetId()
+      const saved = target ? await mutations.update.mutateAsync({ id: target, input }) : await mutations.create.mutateAsync(input)
+      setPicked(new Map())
+      loadSaved(saved)
+      return saved
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Không lưu được phiếu.')
+      return null
+    }
+  }
+
+  const { save, actions } = useApprovalCommands({
+    isNew, doc, readOnly, persist, mutations, listPath: PAYMENT_REQUEST_PATH, noun: 'đề nghị thanh toán', setError, docType: 'DNT',
+  })
+
+  const readonlyCell = (text: string) => <span className="line-grid-readonly">{text}</span>
+  const columns: LineColumn[] = [
+    {
+      key: 'sheet', title: 'Bảng kê tạp vụ', width: 150,
+      render: (field, index) => {
+        const sheetId = lines[index]?.sundryExpenseSheetId
+        const info = infoOf(sheetId)
+        return (
+          <>
+            <Form.Item name={[field.name, 'id']} hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name={[field.name, 'sundryExpenseSheetId']} hidden rules={[{ required: true, message: 'Dòng chưa có bảng kê.' }]}>
+              <Input />
+            </Form.Item>
+            {info ? <DocNo no={info.no} docType="BKT" id={sheetId} /> : null}
+          </>
+        )
+      },
+    },
+    { key: 'sheetDate', title: 'Ngày bảng kê', width: 100, render: (_, i) => readonlyCell(formatDate(infoOf(lines[i]?.sundryExpenseSheetId)?.date ?? null)) },
+    {
+      key: 'description', title: 'Nội dung thanh toán', width: 360,
+      render: (field) => (
+        <Form.Item name={[field.name, 'description']} noStyle rules={[{ max: 500 }]}>
+          <Input variant="borderless" maxLength={500} placeholder="Trống = tự ghi theo bảng kê" aria-label={`Nội dung thanh toán dòng ${field.name + 1}`} />
+        </Form.Item>
+      ),
+    },
+    {
+      key: 'amount', title: 'Số tiền', width: 130, align: 'right',
+      render: (_, i) => { const x = infoOf(lines[i]?.sundryExpenseSheetId); return readonlyCell(x ? formatMoney(x.amount) : '') },
+    },
+  ]
+
+  const total = lines.reduce((sum, l) => sum + (infoOf(l?.sundryExpenseSheetId)?.amount ?? 0), 0)
+  const statusLabel = doc ? (doc.paidDate ? 'Đã chi' : withPendingApprovers(purchaseStatusLabels[doc.status], doc.approvals)) : ''
+  const status = isNew
+    ? { label: 'Nháp (chưa lưu)', tone: 'warning' as const }
+    : { label: statusLabel, tone: doc?.paidDate ? ('success' as const) : doc ? purchaseStatusTone[doc.status] : ('neutral' as const) }
+
+  return (
+    <>
+      <DocumentForm
+        approval={doc ? { steps: doc.approvals, createdByName: doc.createdByName, createdAt: doc.createdAt, stageLabels: PURCHASE_STAGE_LABELS } : undefined}
+        title="Đề nghị thanh toán tổng hợp tạp vụ (1C)"
+        number={isNew ? null : (doc?.no ?? '')}
+        audit={{ entityType: 'PaymentRequest', id: doc?.id }}
+        printPath={doc ? `/api/payment-requests/${doc.id}/pdf` : undefined}
+        status={status}
+        meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
+        loading={payment.isLoading}
+        error={error ?? (payment.error ? payment.error.message : null)}
+        notice={
+          <>
+            {doc?.rejectReason && doc.status === 'Draft' ? (
+              <Alert type="warning" showIcon title={`Bị từ chối: ${doc.rejectReason}`} />
+            ) : (
+              doc?.actions.readOnlyReason && <Alert type="info" showIcon title={doc.actions.readOnlyReason} />
+            )}
+            {doc?.cancelReason && <Alert type="error" showIcon title={`Đã hủy: ${doc.cancelReason}`} />}
+            {doc?.paidDate && (
+              <Alert type="success" showIcon
+                title={`Đã chi ngày ${formatDate(doc.paidDate)} – ${doc.paidByName ?? ''}${doc.paymentNote ? `. ${doc.paymentNote}` : ''}`} />
+            )}
+          </>
+        }
+        form={form}
+        initialValues={{ date: dayjs(), method: 'Cash', deductionAmount: 0, lines: [] }}
+        readOnly={readOnly}
+        onSave={save}
+        onAddLine={() => addRef.current?.()}
+        actions={
+          <>
+            {doc?.canPay && (
+              <Button icon={<DollarOutlined />} onClick={() => setPaying(true)}>
+                Ghi Đã chi
+              </Button>
+            )}
+            {actions}
+          </>
+        }
+        header={
+          <>
+            <Form.Item label="Ngày đề nghị" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}>
+              <DatePicker format={DATE_INPUT_FORMATS} style={{ width: '100%' }} />
+            </Form.Item>
+            {isNew ? (
+              <Form.Item label="Bộ phận" name="departmentId" rules={[{ required: true, message: 'Chọn bộ phận của các bảng kê.' }]}>
+                <Select options={departmentOptions} loading={departments.isLoading} placeholder="Bộ phận của các bảng kê tạp vụ"
+                  onChange={() => form.setFieldValue('lines', [])} />
+              </Form.Item>
+            ) : (
+              <Form.Item label="Bộ phận">
+                <Input value={departments.data?.find((d) => d.id === doc?.departmentId)?.name ?? ''} disabled />
+              </Form.Item>
+            )}
+            <Form.Item label="Người nhận tiền" name="payeeName" rules={[{ required: true, whitespace: true, message: 'Nhập người nhận tiền.' }, { max: 200 }]}>
+              <Input maxLength={200} placeholder="Người đã ứng chi tạp vụ" />
+            </Form.Item>
+            <Form.Item label="Hình thức" name="method" rules={[{ required: true, message: 'Chọn hình thức.' }]}>
+              <Select showSearch={false} options={Object.entries(paymentMethodLabels).map(([value, label]) => ({ value, label }))} />
+            </Form.Item>
+            {method === 'BankTransfer' && (
+              <>
+                <Form.Item label="Ngân hàng" name="bankName" rules={[{ required: true, whitespace: true, message: 'Nhập tên ngân hàng.' }, { max: 200 }]}>
+                  <Input maxLength={200} />
+                </Form.Item>
+                <Form.Item label="Chi nhánh" name="bankBranch" rules={[{ max: 200 }]}>
+                  <Input maxLength={200} />
+                </Form.Item>
+                <Form.Item label="Số tài khoản" name="bankAccountNumber" rules={[{ required: true, whitespace: true, message: 'Nhập số tài khoản.' }, { max: 50 }]}>
+                  <Input maxLength={50} />
+                </Form.Item>
+                <Form.Item label="Chủ tài khoản" name="bankAccountName" rules={[{ max: 200 }]}>
+                  <Input maxLength={200} />
+                </Form.Item>
+              </>
+            )}
+            <Form.Item label="Số tiền giảm trừ" name="deductionAmount">
+              <InputNumber {...vnNumberInput} min={0} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Lý do giảm trừ" name="deductionReason" rules={[{ max: 1000 }]}>
+              <Input placeholder="Tạm ứng đã nhận…" />
+            </Form.Item>
+            <Form.Item label="Ghi chú" name="note" rules={[{ max: 1000 }]} className="document-form-wide">
+              <Input />
+            </Form.Item>
+          </>
+        }
+        lines={
+          <>
+            {!readOnly && (
+              <Button icon={<FileAddOutlined />} onClick={openPicker} style={{ marginBottom: 6 }}>
+                Chọn bảng kê tạp vụ
+              </Button>
+            )}
+            <LineGrid name="lines" auditEntity="PaymentRequestLine" columns={columns} readOnly={readOnly} addRef={addRef}
+              newLine={() => ({ id: null })} addLines={openPicker} />
+          </>
+        }
+        footer={
+          <>
+            <DocumentTotal label="Tổng cộng" value={formatMoney(total)} />
+            <DocumentTotal label="Số tiền giảm trừ" value={formatMoney(deduction ?? 0)} />
+            <DocumentTotal label="Số tiền đề nghị thanh toán" value={formatMoney(total - (deduction ?? 0))} strong />
+          </>
+        }
+        extraTabs={[
+          ...(doc ? [{ key: 'approvals', label: 'Lịch sử duyệt', children: <ApprovalHistory steps={doc.approvals} stageLabels={PURCHASE_STAGE_LABELS} createdByName={doc.createdByName} createdAt={doc.createdAt} /> }] : []),
+          attachmentTab,
+        ]}
+      />
+      {picking && (
+        <SheetPicker
+          rows={sheets.data ?? []}
+          selectable={selectable(new Set(lines.map((l) => l?.sundryExpenseSheetId).filter((x): x is string => !!x)))}
+          loading={sheets.isLoading}
+          onCancel={() => setPicking(false)}
+          onPick={addSheets}
+        />
+      )}
+      {paying && doc && <PayDialog doc={doc} onClose={() => setPaying(false)} />}
+    </>
+  )
+}
+
+/**
+ * Hộp chọn bảng kê tạp vụ 2C đã duyệt của bộ phận cho đề nghị 1C: bảng kê đã ở đề nghị khác hiện mờ kèm lý do.
+ * @param rows Mọi bảng kê đã duyệt của bộ phận.
+ * @param selectable Bảng kê chọn được.
+ * @param loading Đang tải.
+ * @param onPick Thêm các bảng kê đã chọn.
+ * @param onCancel Đóng.
+ */
+function SheetPicker({
+  rows, selectable, loading, onPick, onCancel,
+}: {
+  rows: SundryPaymentSheetOption[]
+  selectable: SundryPaymentSheetOption[]
+  loading: boolean
+  onPick: (rows: SundryPaymentSheetOption[]) => void
+  onCancel: () => void
+}) {
+  const [selected, setSelected] = useState<string[]>([])
+  const ok = new Set(selectable.map((r) => r.id))
+  return (
+    <Modal open title="Chọn bảng kê chi phí tạp vụ đã duyệt" width={820} okText={`Thêm ${selected.length} dòng`} okButtonProps={{ disabled: selected.length === 0 }}
+      cancelText="Đóng" onCancel={onCancel} onOk={() => onPick(selectable.filter((r) => selected.includes(r.id)))}>
+      <Table<SundryPaymentSheetOption>
+        size="small"
+        rowKey="id"
+        loading={loading}
+        pagination={false}
+        scroll={{ y: 360 }}
+        dataSource={rows}
+        rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys as string[]), getCheckboxProps: (r) => ({ disabled: !ok.has(r.id) }) }}
+        locale={{ emptyText: 'Bộ phận chưa có bảng kê tạp vụ đã duyệt.' }}
+        columns={[
+          { title: 'Bảng kê', dataIndex: 'no', width: 150 },
+          { title: 'Ngày', dataIndex: 'date', width: 90, render: (v: string) => formatDate(v) },
+          { title: 'Số khoản chi', dataIndex: 'lineCount', width: 90, align: 'right' },
+          { title: 'Tổng bảng kê', dataIndex: 'totalAmount', width: 120, align: 'right', render: (v: number) => formatMoney(v) },
+          { title: 'Ghi chú', key: 'why', render: (_, r) => (r.heldBy ? `Đã ở đề nghị ${r.heldBy}` : (r.note ?? '')) },
+        ]}
+      />
+    </Modal>
   )
 }
 

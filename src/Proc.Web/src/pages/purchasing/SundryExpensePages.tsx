@@ -1,4 +1,5 @@
-import { Alert, DatePicker, Form, Input, InputNumber } from 'antd'
+import { AccountBookOutlined } from '@ant-design/icons'
+import { Alert, Button, DatePicker, Form, Input, InputNumber } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
@@ -103,6 +104,7 @@ const orNull = (value: string | null | undefined) => (value?.trim() ? value.trim
 export function SundryExpensePage() {
   const { id = 'moi' } = useParams()
   const isNew = id === 'moi'
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const [form] = Form.useForm<FormValues>()
   const sheet = useSundryExpenseSheet(isNew ? null : id)
@@ -256,7 +258,18 @@ export function SundryExpensePage() {
       readOnly={readOnly}
       onSave={save}
       onAddLine={() => addRef.current?.()}
-      actions={actions}
+      actions={
+        <>
+          {/* Bảng kê đã duyệt, chưa đề nghị: lập đề nghị thanh toán tổng hợp 1C chọn sẵn bộ phận và bảng kê (lát Y11b). */}
+          {doc?.status === 'Approved' && !doc.paymentRequestNo && hasPermission(Permission.PaymentCreate) && (
+            <Button icon={<AccountBookOutlined />}
+              onClick={() => navigate(`/mua-hang/de-nghi-thanh-toan/moi?form=1C&dept=${doc.departmentId}&sheet=${doc.id}`)}>
+              Lập đề nghị thanh toán 1C
+            </Button>
+          )}
+          {actions}
+        </>
+      }
       header={
         <>
           <Form.Item label="Ngày bảng kê" name="date" rules={[{ required: true, message: 'Chọn ngày.' }]}

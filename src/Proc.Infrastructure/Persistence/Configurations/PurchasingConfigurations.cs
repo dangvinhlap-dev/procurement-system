@@ -542,7 +542,10 @@ internal sealed class PaymentRequestConfiguration : IEntityTypeConfiguration<Pay
         builder.Ignore(x => x.IsAwaitingApproval);
         builder.Ignore(x => x.DocType);
         builder.Ignore(x => x.IsPaid);
+        builder.Ignore(x => x.IsSundry);
         builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        // Người nhận tiền của đề nghị tổng hợp tạp vụ 1C (lát Y11b) – 1C không có PO, NCC.
+        builder.Property(x => x.PayeeName).HasMaxLength(PaymentRequest.PayeeMaxLength);
         builder.HasIndex(x => new { x.CompanyId, x.No }).IsUnique();
         builder.HasIndex(x => new { x.CompanyId, x.Date });
         builder.HasIndex(x => x.PurchaseOrderId);
@@ -588,11 +591,14 @@ internal sealed class PaymentRequestLineConfiguration : IEntityTypeConfiguration
         builder.HasIndex(x => new { x.RequestId, x.LineNo });
         // Tìm đề nghị chưa hủy đang giữ một XNH (mỗi XNH một đề nghị – Y8-2).
         builder.HasIndex(x => x.ReceiptConfirmationId);
-        builder.Property(x => x.InvoiceNo).HasMaxLength(50).IsRequired();
+        // Dòng 1C (lát Y11b) là một bảng kê tạp vụ 2C – không có XNH, số hóa đơn; mỗi bảng kê chỉ ở một đề nghị chưa hủy (kiểm ở Application).
+        builder.HasIndex(x => x.SundryExpenseSheetId);
+        builder.Property(x => x.InvoiceNo).HasMaxLength(50);
         builder.Property(x => x.InvoiceSeries).HasMaxLength(50);
         builder.Property(x => x.Amount).HasPrecision(19, 2);
         builder.Property(x => x.Description).HasMaxLength(PaymentRequest.DescriptionMaxLength).IsRequired();
         builder.HasOne<GoodsReceiptConfirmation>().WithMany().HasForeignKey(x => x.ReceiptConfirmationId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SundryExpenseSheet>().WithMany().HasForeignKey(x => x.SundryExpenseSheetId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

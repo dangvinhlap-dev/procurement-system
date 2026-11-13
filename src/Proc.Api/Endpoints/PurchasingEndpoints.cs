@@ -333,6 +333,10 @@ public static class PurchasingEndpoints
             .RequireAnyPermission(paymentAny);
         payments.MapGet("/orders", (IPaymentRequestService s, CancellationToken ct) => s.OrdersAsync(ct))
             .RequirePermission(Permissions.Purchase.PaymentCreate);
+        // Bảng kê tạp vụ 2C đã duyệt lập được đề nghị tổng hợp 1C (lát Y11b).
+        payments.MapGet("/sundry-sheets", (Guid? departmentId, Guid? requestId, IPaymentRequestService s, CancellationToken ct) =>
+                s.SundrySheetsAsync(departmentId, requestId, ct))
+            .RequireAnyPermission(paymentAny);
         payments.MapGet("/source", (Guid purchaseOrderId, Guid? requestId, IPaymentRequestService s, CancellationToken ct) =>
                 s.SourceAsync(purchaseOrderId, requestId, ct))
             .RequireAnyPermission(paymentAny);

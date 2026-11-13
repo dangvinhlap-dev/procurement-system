@@ -239,6 +239,16 @@ internal sealed class CancelChainService : ICancelChainService
                     ?? throw new NotFoundException("Không tìm thấy bảng kê chi phí tạp vụ.");
                 if (sheet.Status == ApprovalDocumentStatus.Cancelled) throw new BusinessRuleException($"Phiếu {sheet.No} đã hủy.");
                 chain.Sundry = sheet;
+                // Đề nghị tổng hợp 1C chưa hủy đang giữ bảng kê (lát Y11b) hủy trước; đã chi thì chặn (Blocking).
+                if ((await PaymentRequestService.HeldSheetsAsync(_db, [sheet.Id], null, cancellationToken)).GetValueOrDefault(sheet.Id).Id is { } paymentId)
+                {
+                    var holder = await _db.PaymentRequests.SingleAsync(r => r.Id == paymentId, cancellationToken);
+                    chain.Payment = holder;
+                    var others = await _db.Set<PaymentRequestLine>()
+                        .Where(l => l.RequestId == paymentId && l.SundryExpenseSheetId != null && l.SundryExpenseSheetId != sheet.Id).CountAsync(cancellationToken);
+                    if (others > 0)
+                        chain.Warnings.Add($"Đề nghị {holder.No} còn gộp {others} bảng kê khác – các bảng kê đó không bị hủy, trở lại chưa đề nghị để lập đề nghị khác.");
+                }
                 break;
             }
             case PooledType:
@@ -373,7 +383,7 @@ internal sealed class CancelChainService : ICancelChainService
 
         if (chain.Payment is { } p0)
             Add(DocumentTypes.PaymentRequest, "Đề nghị thanh toán", p0.Id, p0.No, p0.Status.ToString(), p0.Status == ApprovalDocumentStatus.Draft,
-                p0.CreatedBy, null);
+                p0.CreatedBy, chain.Sundry is { } held ? $"Gộp bảng kê {held.No}" : null);
         if (chain.Sundry is { } sheet)
             Add(DocumentTypes.SundryExpenseSheet, "Bảng kê chi phí tạp vụ", sheet.Id, sheet.No, sheet.Status.ToString(),
                 sheet.Status == ApprovalDocumentStatus.Draft, sheet.CreatedBy, null);

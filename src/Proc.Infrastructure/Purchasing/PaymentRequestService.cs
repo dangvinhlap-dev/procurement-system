@@ -49,23 +49,29 @@ public sealed class PaymentRequestService : IPaymentRequestService
         var query = _db.PaymentRequests.AsNoTracking();
         if (filter.From is { } from) query = query.Where(r => r.Date >= from);
         if (filter.To is { } to) query = query.Where(r => r.Date <= to);
+        // 1C (lát Y11b) không có PO, NCC – nối trái.
         var rows = await (
                 from r in query
-                join o in _db.PurchaseOrders on r.PurchaseOrderId equals o.Id
-                join s in _db.Suppliers on r.SupplierId equals s.Id
+                join o in _db.PurchaseOrders on r.PurchaseOrderId equals o.Id into orders
+                from o in orders.DefaultIfEmpty()
+                join s in _db.Suppliers on r.SupplierId equals s.Id into suppliers
+                from s in suppliers.DefaultIfEmpty()
+                join d in _db.Departments on r.DepartmentId equals d.Id into departments
+                from d in departments.DefaultIfEmpty()
                 join u in _db.Users on r.CreatedBy equals u.Id into users
                 from u in users.DefaultIfEmpty()
                 orderby r.Date descending, r.No descending
                 select new
                 {
-                    r.Id, r.No, r.Date, r.Form, r.Status, r.PaidDate, r.PurchaseOrderId, OrderNo = o.No, s.Code, s.Name, r.Method, r.TotalAmount,
-                    r.DeductionAmount, r.PayableAmount, CreatedBy = u == null ? null : u.FullName,
+                    r.Id, r.No, r.Date, r.Form, r.Status, r.PaidDate, r.PurchaseOrderId, OrderNo = o == null ? null : o.No,
+                    Code = s == null ? null : s.Code, Name = s == null ? null : s.Name, r.Method, r.TotalAmount, r.DeductionAmount, r.PayableAmount,
+                    CreatedBy = u == null ? null : u.FullName, r.PayeeName, Department = d == null ? null : d.Name,
                 })
             .Take(ListLimit)
             .ToListAsync(cancellationToken);
         return rows.Select(r => new PaymentRequestListItemDto(
                 r.Id, r.No, r.Date, FormCode(r.Form), r.Status.ToString(), r.PaidDate is not null, r.PaidDate, r.PurchaseOrderId, r.OrderNo, r.Code,
-                r.Name, r.Method.ToString(), r.TotalAmount, r.DeductionAmount, r.PayableAmount, r.CreatedBy))
+                r.Name, r.Method.ToString(), r.TotalAmount, r.DeductionAmount, r.PayableAmount, r.CreatedBy, r.PayeeName, r.Department))
             .ToList();
     }
 
@@ -121,15 +127,56 @@ public sealed class PaymentRequestService : IPaymentRequestService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<SundryPaymentSheetOptionDto>> SundrySheetsAsync(Guid? departmentId, Guid? requestId, CancellationToken cancellationToken)
+    {
+        EnsureCanView();
+        var rows = await (
+                from s in _db.SundryExpenseSheets.AsNoTracking()
+                join d in _db.Departments on s.DepartmentId equals d.Id
+                where s.Status == ApprovalDocumentStatus.Approved && (departmentId == null || s.DepartmentId == departmentId)
+                orderby s.Date descending, s.No descending
+                select new { s.Id, s.No, s.Date, s.DepartmentId, d.Code, d.Name, LineCount = s.Lines.Count, s.TotalAmount, s.Note })
+            .Take(ListLimit)
+            .ToListAsync(cancellationToken);
+        var held = await HeldSheetsAsync(_db, rows.Select(r => r.Id).ToList(), requestId, cancellationToken);
+        return rows.Select(r => new SundryPaymentSheetOptionDto(
+                r.Id, r.No, r.Date, r.DepartmentId, r.Code, r.Name, r.LineCount, r.TotalAmount, r.Note, held.GetValueOrDefault(r.Id).No))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Đề nghị chưa hủy đang giữ từng bảng kê tạp vụ (lát Y11b) – mỗi bảng kê chỉ ở một đề nghị 1C; bảng kê đang ở đề nghị thì không hủy riêng được.
+    /// </summary>
+    /// <param name="db">DbContext (filter công ty giữ nguyên).</param>
+    /// <param name="sheetIds">Bảng kê.</param>
+    /// <param name="exceptRequestId">Đề nghị không tính (đề nghị đang sửa).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Bảng kê → (Id, số) đề nghị.</returns>
+    internal static async Task<Dictionary<Guid, (Guid? Id, string? No)>> HeldSheetsAsync(
+        ProcDbContext db, IReadOnlyCollection<Guid> sheetIds, Guid? exceptRequestId, CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from l in db.Set<PaymentRequestLine>()
+                join r in db.PaymentRequests on l.RequestId equals r.Id
+                where l.SundryExpenseSheetId != null && sheetIds.Contains(l.SundryExpenseSheetId.Value)
+                      && r.Status != ApprovalDocumentStatus.Cancelled && r.Id != exceptRequestId
+                select new { SheetId = l.SundryExpenseSheetId!.Value, r.Id, r.No })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(x => x.SheetId).ToDictionary(g => g.Key, g => ((Guid?)g.First().Id, (string?)g.First().No));
+    }
+
+    /// <inheritdoc />
     public async Task<PaymentRequestDto> CreateAsync(SavePaymentRequestRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var companyId = _scope.RequireCompany();
         _scope.EnsurePermission(Permissions.Purchase.PaymentCreate);
+        if (request.IsSundry) return await CreateSundryAsync(companyId, request, cancellationToken);
         await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         // Khóa PO tới hết giao dịch: hai người cùng lập đề nghị cho một PO phải lần lượt – người sau thấy XNH người trước đã chọn.
-        await RowLocks.LockAsync<PurchaseOrder>(_db, [request.PurchaseOrderId], cancellationToken);
-        var order = await LoadOrderAsync(request.PurchaseOrderId, cancellationToken);
+        var orderId = request.PurchaseOrderId ?? throw new BusinessRuleException("Hãy chọn đơn mua hàng.");
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [orderId], cancellationToken);
+        var order = await LoadOrderAsync(orderId, cancellationToken);
         var bank = await BankAccountAsync(order.SupplierId, request, cancellationToken);
         var lines = await ResolveLinesAsync(order, request.Lines, null, cancellationToken);
         var no = await _numbers.NextAsync(DocumentTypes.PaymentRequest, request.Date, cancellationToken);
@@ -148,10 +195,23 @@ public sealed class PaymentRequestService : IPaymentRequestService
         _scope.EnsurePermission(Permissions.Purchase.PaymentCreate);
         await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         var payment = await LoadAsync(id, cancellationToken);
+        if (payment.IsSundry != request.IsSundry) throw new BusinessRuleException("Không đổi biểu mẫu của đề nghị đã lập.");
+        if (payment.IsSundry)
+        {
+            if (request.DepartmentId != payment.DepartmentId)
+                throw new BusinessRuleException("Không đổi bộ phận của đề nghị 1C đã lập – hủy phiếu và lập đề nghị mới.");
+            var sheets = await ResolveSheetsAsync(request.Lines, payment.Id, cancellationToken);
+            payment.UpdateSundry(ToHeader(request), request.PayeeName, ManualBank(request));
+            payment.SetSundryLines(sheets);
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return await GetAsync(id, cancellationToken);
+        }
+
         if (request.PurchaseOrderId != payment.PurchaseOrderId)
             throw new BusinessRuleException("Không đổi đơn mua hàng của đề nghị đã lập – hủy phiếu và lập đề nghị mới cho đơn khác.");
-        await RowLocks.LockAsync<PurchaseOrder>(_db, [payment.PurchaseOrderId], cancellationToken);
-        var order = await LoadOrderAsync(payment.PurchaseOrderId, cancellationToken);
+        await RowLocks.LockAsync<PurchaseOrder>(_db, [payment.PurchaseOrderId!.Value], cancellationToken);
+        var order = await LoadOrderAsync(payment.PurchaseOrderId.Value, cancellationToken);
         var bank = await BankAccountAsync(order.SupplierId, request, cancellationToken);
         var lines = await ResolveLinesAsync(order, request.Lines, payment.Id, cancellationToken);
         payment.Update(ToHeader(request), bank);
@@ -168,11 +228,21 @@ public sealed class PaymentRequestService : IPaymentRequestService
         // Dùng chung giao dịch của bên gọi khi có: xem trước chuỗi duyệt chạy thử lệnh gửi rồi hủy (như bảng tổng hợp – lát Y5c-2).
         await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
         var payment = await LoadAsync(id, cancellationToken);
-        await RowLocks.LockAsync<PurchaseOrder>(_db, [payment.PurchaseOrderId], cancellationToken);
-        var order = await LoadOrderAsync(payment.PurchaseOrderId, cancellationToken);
-        // Lúc gửi chụp lại hóa đơn từ XNH (người nhận hàng có thể vừa sửa hóa đơn khi phiếu còn nháp) và kiểm lại XNH chưa thuộc đề nghị khác.
-        var data = payment.Lines.OrderBy(l => l.LineNo).Select(l => new SavePaymentRequestLineRequest(l.ReceiptConfirmationId, l.Description)).ToList();
-        payment.SetLines(await ResolveLinesAsync(order, data, payment.Id, cancellationToken));
+        if (payment.IsSundry)
+        {
+            // 1C: kiểm lại bảng kê còn Đã duyệt, chưa ở đề nghị khác; chụp lại tổng bảng kê.
+            var lines = payment.Lines.OrderBy(l => l.LineNo).Select(l => new SavePaymentRequestLineRequest(null, l.Description, l.SundryExpenseSheetId)).ToList();
+            payment.SetSundryLines(await ResolveSheetsAsync(lines, payment.Id, cancellationToken));
+        }
+        else
+        {
+            await RowLocks.LockAsync<PurchaseOrder>(_db, [payment.PurchaseOrderId!.Value], cancellationToken);
+            var order = await LoadOrderAsync(payment.PurchaseOrderId.Value, cancellationToken);
+            // Lúc gửi chụp lại hóa đơn từ XNH (người nhận hàng có thể vừa sửa hóa đơn khi phiếu còn nháp) và kiểm lại XNH chưa thuộc đề nghị khác.
+            var data = payment.Lines.OrderBy(l => l.LineNo).Select(l => new SavePaymentRequestLineRequest(l.ReceiptConfirmationId, l.Description)).ToList();
+            payment.SetLines(await ResolveLinesAsync(order, data, payment.Id, cancellationToken));
+        }
+
         payment.EnsureSubmittable();
         await _approvals.SubmitAsync(payment, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -258,8 +328,8 @@ public sealed class PaymentRequestService : IPaymentRequestService
     private IQueryable<Guid> HeldReceiptIds(Guid? exceptRequestId) =>
         from l in _db.Set<PaymentRequestLine>()
         join r in _db.PaymentRequests on l.RequestId equals r.Id
-        where r.Status != ApprovalDocumentStatus.Cancelled && r.Id != exceptRequestId
-        select l.ReceiptConfirmationId;
+        where r.Status != ApprovalDocumentStatus.Cancelled && r.Id != exceptRequestId && l.ReceiptConfirmationId != null
+        select l.ReceiptConfirmationId!.Value;
 
     /// <summary>XNH của PO → số đề nghị chưa hủy đang giữ (trừ đề nghị đang sửa).</summary>
     private async Task<Dictionary<Guid, string>> HeldByAsync(Guid orderId, Guid? exceptRequestId, CancellationToken cancellationToken) =>
@@ -267,7 +337,8 @@ public sealed class PaymentRequestService : IPaymentRequestService
                 from l in _db.Set<PaymentRequestLine>()
                 join r in _db.PaymentRequests on l.RequestId equals r.Id
                 where r.PurchaseOrderId == orderId && r.Status != ApprovalDocumentStatus.Cancelled && r.Id != exceptRequestId
-                select new { l.ReceiptConfirmationId, r.No })
+                      && l.ReceiptConfirmationId != null
+                select new { ReceiptConfirmationId = l.ReceiptConfirmationId!.Value, r.No })
             .ToDictionaryAsync(x => x.ReceiptConfirmationId, x => x.No, cancellationToken);
 
     /// <summary>
@@ -276,7 +347,8 @@ public sealed class PaymentRequestService : IPaymentRequestService
     private async Task<List<(PaymentRequestLineData, PaymentRequestLineSource)>> ResolveLinesAsync(
         PurchaseOrder order, IReadOnlyList<SavePaymentRequestLineRequest> lines, Guid? requestId, CancellationToken cancellationToken)
     {
-        var ids = lines.Select(l => l.ReceiptConfirmationId).Distinct().ToList();
+        if (lines.Any(l => l.ReceiptConfirmationId is null)) throw new BusinessRuleException("Có dòng chưa chọn phiếu nhận hàng.");
+        var ids = lines.Select(l => l.ReceiptConfirmationId!.Value).Distinct().ToList();
         var sources = await _db.GoodsReceiptConfirmations.AsNoTracking().Where(c => ids.Contains(c.Id))
             .Select(c => new PaymentRequestLineSource(c.Id, c.No, c.PurchaseOrderId, c.Status, c.InvoiceNo, c.InvoiceSeries, c.InvoiceDate, c.InvoiceAmount))
             .ToDictionaryAsync(c => c.ReceiptConfirmationId, cancellationToken);
@@ -285,8 +357,58 @@ public sealed class PaymentRequestService : IPaymentRequestService
         foreach (var id in ids)
             if (heldBy.TryGetValue(id, out var no))
                 throw new BusinessRuleException($"Phiếu nhận hàng {sources[id].ReceiptNo} đã ở đề nghị thanh toán {no} – mỗi phiếu nhận hàng chỉ đề nghị một lần.");
-        return lines.Select(l => (new PaymentRequestLineData(l.ReceiptConfirmationId, l.Description), sources[l.ReceiptConfirmationId])).ToList();
+        return lines.Select(l => (new PaymentRequestLineData(l.ReceiptConfirmationId!.Value, l.Description), sources[l.ReceiptConfirmationId.Value])).ToList();
     }
+
+    /// <summary>
+    /// Lập đề nghị tổng hợp 1C (lát Y11b): khóa các bảng kê tới hết giao dịch để hai người cùng lập không gộp trùng bảng kê.
+    /// </summary>
+    private async Task<PaymentRequestDto> CreateSundryAsync(Guid companyId, SavePaymentRequestRequest request, CancellationToken cancellationToken)
+    {
+        var departmentId = request.DepartmentId ?? throw new BusinessRuleException("Hãy chọn bộ phận của các bảng kê tạp vụ.");
+        if (!await _db.Departments.AnyAsync(d => d.Id == departmentId, cancellationToken))
+            throw new BusinessRuleException("Bộ phận không có hoặc thuộc công ty khác.");
+        await using var transaction = await RowLocks.BeginOrJoinAsync(_db, cancellationToken);
+        var sheets = await ResolveSheetsAsync(request.Lines, null, cancellationToken);
+        var no = await _numbers.NextAsync(DocumentTypes.PaymentRequest, request.Date, cancellationToken);
+        var payment = PaymentRequest.CreateSundry(companyId, no, departmentId, ToHeader(request), request.PayeeName, ManualBank(request));
+        payment.SetSundryLines(sheets);
+        _db.PaymentRequests.Add(payment);
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await GetAsync(payment.Id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Nạp bảng kê cho các dòng 1C (khóa bảng kê trong giao dịch đang mở): bảng kê của công ty, chưa thuộc đề nghị chưa hủy khác. Trạng thái, bộ
+    /// phận kiểm ở Domain.
+    /// </summary>
+    private async Task<List<PaymentRequestSundrySource>> ResolveSheetsAsync(
+        IReadOnlyList<SavePaymentRequestLineRequest> lines, Guid? requestId, CancellationToken cancellationToken)
+    {
+        if (lines.Any(l => l.SundryExpenseSheetId is null)) throw new BusinessRuleException("Có dòng chưa chọn bảng kê tạp vụ.");
+        var ids = lines.Select(l => l.SundryExpenseSheetId!.Value).Distinct().ToList();
+        await RowLocks.LockAsync<SundryExpenseSheet>(_db, ids, cancellationToken);
+        var sheets = await _db.SundryExpenseSheets.AsNoTracking().Where(s => ids.Contains(s.Id))
+            .Select(s => new { s.Id, s.No, s.Date, s.DepartmentId, s.Status, s.TotalAmount })
+            .ToDictionaryAsync(s => s.Id, cancellationToken);
+        if (sheets.Count != ids.Count) throw new BusinessRuleException("Có bảng kê tạp vụ không còn hoặc ngoài phạm vi công ty.");
+        var held = await HeldSheetsAsync(_db, ids, requestId, cancellationToken);
+        foreach (var id in ids)
+            if (held.TryGetValue(id, out var by))
+                throw new BusinessRuleException($"Bảng kê {sheets[id].No} đã ở đề nghị thanh toán {by.No} – mỗi bảng kê chỉ đề nghị một lần.");
+        return lines.Select(l =>
+        {
+            var s = sheets[l.SundryExpenseSheetId!.Value];
+            return new PaymentRequestSundrySource(s.Id, s.No, s.Date, s.DepartmentId, s.Status, s.TotalAmount, l.Description);
+        }).ToList();
+    }
+
+    /// <summary>Tài khoản người nhận nhập tay của 1C (chuyển khoản); null khi tiền mặt hoặc chưa nhập gì.</summary>
+    private static PaymentBankAccount? ManualBank(SavePaymentRequestRequest request) =>
+        ParseMethod(request.Method) != PaymentMethod.BankTransfer || (string.IsNullOrWhiteSpace(request.BankName) && string.IsNullOrWhiteSpace(request.BankAccountNumber))
+            ? null
+            : new PaymentBankAccount(Guid.Empty, request.BankName ?? string.Empty, request.BankBranch, request.BankAccountNumber ?? string.Empty, request.BankAccountName);
 
     /// <summary>Tài khoản NCC khi chuyển khoản: phải thuộc NCC của PO (danh mục hiện hành – đổi tài khoản đã qua duyệt NCC).</summary>
     private async Task<PaymentBankAccount?> BankAccountAsync(Guid supplierId, SavePaymentRequestRequest request, CancellationToken cancellationToken)
@@ -333,23 +455,28 @@ public sealed class PaymentRequestService : IPaymentRequestService
     /// <summary>Dựng DTO chi tiết.</summary>
     private async Task<PaymentRequestDto> ToDtoAsync(PaymentRequest payment, CancellationToken cancellationToken)
     {
+        // 1C (lát Y11b) không có PO, NCC.
         var order = await _db.PurchaseOrders.AsNoTracking().Where(o => o.Id == payment.PurchaseOrderId).Select(o => new { o.No, o.Date })
-            .SingleAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         var supplier = await _db.Suppliers.AsNoTracking().Where(s => s.Id == payment.SupplierId).Select(s => new { s.Code, s.Name, s.Address })
-            .SingleAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         var project = payment.ConstructionProjectId is { } projectId
             ? await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId).Select(p => new { p.Code, p.Name }).SingleOrDefaultAsync(cancellationToken)
             : null;
-        var receiptIds = payment.Lines.Select(l => l.ReceiptConfirmationId).ToList();
+        var receiptIds = payment.Lines.Select(l => l.ReceiptConfirmationId).OfType<Guid>().ToList();
         var receipts = await _db.GoodsReceiptConfirmations.AsNoTracking().Where(c => receiptIds.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, c => new { c.No, c.Date }, cancellationToken);
+        var sheetIds = payment.Lines.Select(l => l.SundryExpenseSheetId).OfType<Guid>().ToList();
+        var sheets = await _db.SundryExpenseSheets.AsNoTracking().Where(s => sheetIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.No, cancellationToken);
         var userIds = new[] { payment.CreatedBy, payment.PaidBy }.OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         var lines = payment.Lines.OrderBy(l => l.LineNo).Select(l =>
         {
-            var receipt = receipts.GetValueOrDefault(l.ReceiptConfirmationId);
-            return new PaymentRequestLineDto(l.Id, l.LineNo, l.ReceiptConfirmationId, receipt?.No ?? "", receipt?.Date, l.InvoiceNo, l.InvoiceSeries,
-                l.InvoiceDate, l.Amount, l.Description);
+            var receipt = l.ReceiptConfirmationId is { } rid ? receipts.GetValueOrDefault(rid) : null;
+            return new PaymentRequestLineDto(l.Id, l.LineNo, l.ReceiptConfirmationId, receipt?.No, receipt?.Date, l.InvoiceNo, l.InvoiceSeries,
+                l.InvoiceDate, l.Amount, l.Description, l.SundryExpenseSheetId,
+                l.SundryExpenseSheetId is { } sid ? sheets.GetValueOrDefault(sid) : null);
         }).ToList();
 
         var step = payment.Status == ApprovalDocumentStatus.Submitted ? await _approvals.CurrentStepAsync(payment, cancellationToken) : null;
@@ -368,14 +495,15 @@ public sealed class PaymentRequestService : IPaymentRequestService
         var canPay = payment.Status == ApprovalDocumentStatus.Approved && !payment.IsPaid && _scope.HasPermission(Permissions.Purchase.PaymentPay);
 
         return new PaymentRequestDto(
-            payment.Id, payment.No, payment.Date, FormCode(payment.Form), payment.Status.ToString(), payment.PurchaseOrderId, order.No, order.Date,
-            payment.SupplierId, supplier.Code, supplier.Name, supplier.Address, await DepartmentNameAsync(payment.DepartmentId, cancellationToken),
+            payment.Id, payment.No, payment.Date, FormCode(payment.Form), payment.Status.ToString(), payment.PurchaseOrderId, order?.No, order?.Date,
+            payment.SupplierId, supplier?.Code, supplier?.Name, supplier?.Address, await DepartmentNameAsync(payment.DepartmentId, cancellationToken),
             project?.Code, project?.Name, payment.Method.ToString(), payment.BankAccountId, payment.BankName, payment.BankBranch,
             payment.BankAccountNumber, payment.BankAccountName, payment.TotalAmount, payment.DeductionAmount, payment.DeductionReason,
             payment.PayableAmount, payment.Note, payment.PaidDate, payment.PaidBy is { } p ? users.GetValueOrDefault(p) : null,
             payment.PaidRecordedAt, payment.PaymentNote, canPay, payment.RejectReason, payment.CancelReason, payment.CreatedAt,
             payment.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, payment.ApprovedAt, lines,
-            await _approvals.HistoryAsync(DocumentTypes.PaymentRequest, payment.Id, cancellationToken, payment), actions, payment.Version);
+            await _approvals.HistoryAsync(DocumentTypes.PaymentRequest, payment.Id, cancellationToken, payment), actions, payment.Version,
+            payment.PayeeName, payment.DepartmentId);
     }
 
     /// <summary>Đổi yêu cầu lưu thành đầu phiếu cho Domain.</summary>
@@ -395,5 +523,10 @@ public sealed class PaymentRequestService : IPaymentRequestService
         order.Category == PurchaseCategory.Construction ? PaymentRequestForm.Construction : PaymentRequestForm.Goods;
 
     /// <summary>Mã biểu mẫu hiển thị.</summary>
-    internal static string FormCode(PaymentRequestForm form) => form == PaymentRequestForm.Construction ? "5A" : "5B";
+    internal static string FormCode(PaymentRequestForm form) => form switch
+    {
+        PaymentRequestForm.Construction => "5A",
+        PaymentRequestForm.Sundry => "1C",
+        _ => "5B",
+    };
 }

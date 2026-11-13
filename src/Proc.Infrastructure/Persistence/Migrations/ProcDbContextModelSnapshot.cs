@@ -4930,11 +4930,15 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 2)
                         .HasColumnType("numeric(19,2)");
 
+                    b.Property<string>("PayeeName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("PaymentNote")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<Guid>("PurchaseOrderId")
+                    b.Property<Guid?>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("RejectReason")
@@ -4944,7 +4948,7 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("SupplierId")
+                    b.Property<Guid?>("SupplierId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalAmount")
@@ -4999,7 +5003,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("InvoiceNo")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -5010,15 +5013,20 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<int>("LineNo")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("ReceiptConfirmationId")
+                    b.Property<Guid?>("ReceiptConfirmationId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SundryExpenseSheetId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ReceiptConfirmationId");
+
+                    b.HasIndex("SundryExpenseSheetId");
 
                     b.HasIndex("RequestId", "LineNo");
 
@@ -8922,14 +8930,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Purchasing.PurchaseOrder", null)
                         .WithMany()
                         .HasForeignKey("PurchaseOrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)
                         .WithMany()
                         .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Purchasing.ConstructionProject", null)
                         .WithMany()
@@ -8949,14 +8955,18 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.HasOne("Proc.Domain.Purchasing.GoodsReceiptConfirmation", null)
                         .WithMany()
                         .HasForeignKey("ReceiptConfirmationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Proc.Domain.Purchasing.PaymentRequest", null)
                         .WithMany("Lines")
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Proc.Domain.Purchasing.SundryExpenseSheet", null)
+                        .WithMany()
+                        .HasForeignKey("SundryExpenseSheetId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Proc.Domain.Purchasing.PooledOrder", b =>

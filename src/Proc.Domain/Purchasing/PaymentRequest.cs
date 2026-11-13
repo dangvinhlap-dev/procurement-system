@@ -11,6 +11,12 @@ public enum PaymentRequestForm
 
     /// <summary>5B – hàng hóa, dịch vụ (PO loại B, DV): đầu phiếu theo ngân sách (định mức/dự trù) bộ phận × tháng.</summary>
     Goods = 2,
+
+    /// <summary>
+    /// 1C – đề nghị thanh toán tổng hợp chi phí tạp vụ (loại C, lát Y11b): không gắn PO, NCC; dòng là bảng kê 2C đã duyệt của một bộ phận; trả cho
+    /// người nhận tiền (người đã ứng chi), tài khoản ngân hàng nhập tay khi chuyển khoản.
+    /// </summary>
+    Sundry = 3,
 }
 
 /// <summary>Hình thức thanh toán – biểu mẫu "Phiếu đề nghị thanh toán tiền mặt" / "… chuyển khoản".</summary>
@@ -44,6 +50,17 @@ public sealed record PaymentBankAccount(Guid Id, string BankName, string? Branch
 /// <param name="Description">Nội dung thanh toán (trống thì hệ thống tự ghi).</param>
 public sealed record PaymentRequestLineData(Guid ReceiptConfirmationId, string? Description);
 
+/// <summary>Bảng kê tạp vụ 2C mà dòng đề nghị 1C lấy về (tầng trên nạp – lát Y11b).</summary>
+/// <param name="SheetId">Bảng kê.</param>
+/// <param name="SheetNo">Số bảng kê.</param>
+/// <param name="SheetDate">Ngày bảng kê.</param>
+/// <param name="DepartmentId">Bộ phận của bảng kê.</param>
+/// <param name="Status">Trạng thái duyệt của bảng kê.</param>
+/// <param name="TotalAmount">Tổng bảng kê.</param>
+/// <param name="Description">Nội dung thanh toán người lập ghi (trống thì hệ thống tự ghi).</param>
+public sealed record PaymentRequestSundrySource(
+    Guid SheetId, string SheetNo, DateOnly SheetDate, Guid DepartmentId, ApprovalDocumentStatus Status, decimal TotalAmount, string? Description);
+
 /// <summary>
 /// Thông tin XNH mà dòng đề nghị thanh toán lấy về (tầng trên nạp): hóa đơn nhập trên XNH (người dùng chốt 13/11/2026 – bỏ bước nhận hóa đơn
 /// điện tử trên Portal, design.md mục 19.5).
@@ -76,17 +93,26 @@ public sealed class PaymentRequest : ApprovableDocument
     /// <summary>Độ dài nội dung thanh toán của dòng tối đa.</summary>
     public const int DescriptionMaxLength = 500;
 
+    /// <summary>Độ dài tên người nhận tiền (1C) tối đa.</summary>
+    public const int PayeeMaxLength = 200;
+
     private readonly List<PaymentRequestLine> _lines = [];
 
     private PaymentRequest()
     {
     }
 
-    /// <summary>Đơn mua hàng.</summary>
-    public Guid PurchaseOrderId { get; private set; }
+    /// <summary>Đơn mua hàng (null với 1C – tạp vụ không qua PO).</summary>
+    public Guid? PurchaseOrderId { get; private set; }
 
-    /// <summary>NCC của PO.</summary>
-    public Guid SupplierId { get; private set; }
+    /// <summary>NCC của PO (null với 1C).</summary>
+    public Guid? SupplierId { get; private set; }
+
+    /// <summary>Người nhận tiền của đề nghị 1C (người đã ứng chi tạp vụ); null với 5A/5B (trả NCC).</summary>
+    public string? PayeeName { get; private set; }
+
+    /// <summary>Đề nghị tổng hợp chi phí tạp vụ 1C.</summary>
+    public bool IsSundry => Form == PaymentRequestForm.Sundry;
 
     /// <summary>Biểu mẫu 5A / 5B (theo loại mua của PO lúc lập).</summary>
     public PaymentRequestForm Form { get; private set; }
@@ -152,7 +178,7 @@ public sealed class PaymentRequest : ApprovableDocument
     public override string DocType => DocumentTypes.PaymentRequest;
 
     /// <inheritdoc />
-    public override IReadOnlyCollection<Guid> RelatedSupplierIds => [SupplierId];
+    public override IReadOnlyCollection<Guid> RelatedSupplierIds => SupplierId is { } supplierId ? [supplierId] : [];
 
     /// <summary>
     /// Bộ phận của phiếu – người duyệt động GĐ khối (lát O1). Đề nghị thanh toán không ghi ngân sách (PO đã tính lúc duyệt – tính lại sẽ đếm hai
@@ -196,6 +222,59 @@ public sealed class PaymentRequest : ApprovableDocument
         };
         request.Update(header, bankAccount);
         return request;
+    }
+
+    /// <summary>
+    /// Lập đề nghị thanh toán tổng hợp 1C nháp (lát Y11b): cho một bộ phận, trả người nhận tiền; dòng là bảng kê 2C đã duyệt (<see cref="SetSundryLines"/>).
+    /// </summary>
+    /// <param name="companyId">Công ty.</param>
+    /// <param name="no">Số phiếu.</param>
+    /// <param name="departmentId">Bộ phận – GĐ khối của bộ phận duyệt cấp đầu.</param>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <param name="payeeName">Người nhận tiền (bắt buộc).</param>
+    /// <param name="bankAccount">Tài khoản người nhận (chuyển khoản – nhập tay, Id bỏ qua).</param>
+    /// <returns>Phiếu nháp chưa có dòng.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu công ty, số, bộ phận hoặc đầu phiếu sai.</exception>
+    public static PaymentRequest CreateSundry(
+        Guid companyId, string no, Guid departmentId, PaymentRequestHeader header, string? payeeName, PaymentBankAccount? bankAccount)
+    {
+        if (companyId == Guid.Empty) throw new BusinessRuleException("Thiếu công ty lập phiếu.");
+        if (string.IsNullOrWhiteSpace(no)) throw new BusinessRuleException("Phiếu phải có số.");
+        if (departmentId == Guid.Empty) throw new BusinessRuleException("Hãy chọn bộ phận của các bảng kê tạp vụ.");
+        var request = new PaymentRequest { CompanyId = companyId, No = no, Form = PaymentRequestForm.Sundry, DepartmentId = departmentId };
+        request.UpdateSundry(header, payeeName, bankAccount);
+        return request;
+    }
+
+    /// <summary>
+    /// Sửa đầu phiếu 1C khi còn nháp: người nhận tiền bắt buộc (tối đa 200 ký tự); chuyển khoản bắt buộc tên ngân hàng và số tài khoản nhập tay
+    /// (người nhận không phải NCC nên không có trong danh mục tài khoản NCC).
+    /// </summary>
+    /// <param name="header">Đầu phiếu.</param>
+    /// <param name="payeeName">Người nhận tiền.</param>
+    /// <param name="bankAccount">Tài khoản người nhận (chuyển khoản).</param>
+    /// <exception cref="BusinessRuleException">Khi không phải 1C, không còn nháp hoặc dữ liệu sai.</exception>
+    public void UpdateSundry(PaymentRequestHeader header, string? payeeName, PaymentBankAccount? bankAccount)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        if (!IsSundry) throw new BusinessRuleException("Chỉ đề nghị tổng hợp tạp vụ 1C mới có người nhận tiền.");
+        var payee = Clean(payeeName) ?? throw new BusinessRuleException("Hãy nhập người nhận tiền.");
+        if (payee.Length > PayeeMaxLength) throw new BusinessRuleException($"Người nhận tiền tối đa {PayeeMaxLength} ký tự.");
+        PaymentBankAccount? bank = null;
+        if (header.Method == PaymentMethod.BankTransfer)
+        {
+            if (bankAccount is null || string.IsNullOrWhiteSpace(bankAccount.BankName) || string.IsNullOrWhiteSpace(bankAccount.AccountNumber))
+                throw new BusinessRuleException("Thanh toán chuyển khoản phải nhập tên ngân hàng và số tài khoản người nhận.");
+            bank = new PaymentBankAccount(Guid.Empty, bankAccount.BankName.Trim(), Clean(bankAccount.Branch), bankAccount.AccountNumber.Trim(),
+                Clean(bankAccount.AccountName));
+            if (bank.BankName.Length > 200 || bank.Branch?.Length > 200 || bank.AccountNumber.Length > 50 || bank.AccountName?.Length > 200)
+                throw new BusinessRuleException("Tên ngân hàng, chi nhánh, chủ tài khoản tối đa 200 ký tự; số tài khoản tối đa 50 ký tự.");
+        }
+
+        Update(header, bank);
+        // Tài khoản nhập tay – không trỏ danh mục tài khoản NCC.
+        BankAccountId = null;
+        PayeeName = payee;
     }
 
     /// <summary>Sửa đầu phiếu khi còn nháp (Y8-3, Y8-4).</summary>
@@ -244,6 +323,7 @@ public sealed class PaymentRequest : ApprovableDocument
     {
         ArgumentNullException.ThrowIfNull(lines);
         EnsureDraft();
+        if (IsSundry) throw new BusinessRuleException("Đề nghị tổng hợp tạp vụ 1C chọn bảng kê tạp vụ, không chọn phiếu nhận hàng.");
         if (lines.GroupBy(l => l.Data.ReceiptConfirmationId).Any(g => g.Count() > 1))
             throw new BusinessRuleException("Mỗi phiếu nhận hàng chỉ chọn một lần trên đề nghị thanh toán.");
         var keep = new List<PaymentRequestLine>();
@@ -269,6 +349,44 @@ public sealed class PaymentRequest : ApprovableDocument
 
             var series = string.IsNullOrWhiteSpace(source.InvoiceSeries) ? string.Empty : $" {source.InvoiceSeries.Trim()}";
             line.Set(++lineNo, source, description ?? $"Thanh toán hóa đơn{series} số {source.InvoiceNo!.Trim()} theo phiếu nhận hàng {source.ReceiptNo}");
+            keep.Add(line);
+        }
+
+        _lines.RemoveAll(l => !keep.Contains(l));
+        Recalculate();
+    }
+
+    /// <summary>
+    /// Thay toàn bộ dòng của đề nghị 1C khi còn nháp (lát Y11b): mỗi bảng kê một lần, cùng bộ phận với phiếu, <b>đã duyệt</b>; số tiền dòng = tổng
+    /// bảng kê (chụp lúc lưu và lúc gửi). Mỗi bảng kê chỉ ở một đề nghị chưa hủy – tầng trên kiểm dưới khóa bảng kê.
+    /// </summary>
+    /// <param name="sheets">Bảng kê theo thứ tự, kèm nội dung người lập ghi.</param>
+    /// <exception cref="BusinessRuleException">Khi không phải 1C, không còn nháp hoặc bảng kê không hợp lệ.</exception>
+    public void SetSundryLines(IReadOnlyList<PaymentRequestSundrySource> sheets)
+    {
+        ArgumentNullException.ThrowIfNull(sheets);
+        EnsureDraft();
+        if (!IsSundry) throw new BusinessRuleException("Chỉ đề nghị tổng hợp tạp vụ 1C mới chọn bảng kê tạp vụ.");
+        if (sheets.GroupBy(s => s.SheetId).Any(g => g.Count() > 1))
+            throw new BusinessRuleException("Mỗi bảng kê tạp vụ chỉ chọn một lần trên đề nghị thanh toán.");
+        var keep = new List<PaymentRequestLine>();
+        var lineNo = 0;
+        foreach (var sheet in sheets)
+        {
+            var where = $"Bảng kê {sheet.SheetNo}";
+            if (sheet.DepartmentId != DepartmentId) throw new BusinessRuleException($"{where} thuộc bộ phận khác với đề nghị.");
+            if (sheet.Status != ApprovalDocumentStatus.Approved) throw new BusinessRuleException($"{where} chưa duyệt xong hoặc đã hủy.");
+            var description = Clean(sheet.Description);
+            if (description?.Length > DescriptionMaxLength)
+                throw new BusinessRuleException($"{where}: nội dung thanh toán tối đa {DescriptionMaxLength} ký tự.");
+            var line = _lines.FirstOrDefault(l => l.SundryExpenseSheetId == sheet.SheetId);
+            if (line is null)
+            {
+                line = new PaymentRequestLine(Id);
+                _lines.Add(line);
+            }
+
+            line.SetSundry(++lineNo, sheet, description ?? $"Thanh toán chi phí tạp vụ theo bảng kê {sheet.SheetNo} ngày {sheet.SheetDate:dd/MM/yyyy}");
             keep.Add(line);
         }
 
@@ -332,11 +450,14 @@ public sealed class PaymentRequestLine : Entity
     /// <summary>Số thứ tự.</summary>
     public int LineNo { get; private set; }
 
-    /// <summary>XNH.</summary>
-    public Guid ReceiptConfirmationId { get; private set; }
+    /// <summary>XNH (5A/5B); null với dòng 1C.</summary>
+    public Guid? ReceiptConfirmationId { get; private set; }
 
-    /// <summary>Số hóa đơn (chụp từ XNH).</summary>
-    public string InvoiceNo { get; private set; } = string.Empty;
+    /// <summary>Bảng kê tạp vụ 2C của dòng 1C (lát Y11b); null với 5A/5B.</summary>
+    public Guid? SundryExpenseSheetId { get; private set; }
+
+    /// <summary>Số hóa đơn (chụp từ XNH); null với dòng 1C (hóa đơn lẻ nằm trên bảng kê).</summary>
+    public string? InvoiceNo { get; private set; }
 
     /// <summary>Ký hiệu hóa đơn (chụp từ XNH).</summary>
     public string? InvoiceSeries { get; private set; }
@@ -359,6 +480,19 @@ public sealed class PaymentRequestLine : Entity
         InvoiceSeries = string.IsNullOrWhiteSpace(source.InvoiceSeries) ? null : source.InvoiceSeries.Trim();
         InvoiceDate = source.InvoiceDate;
         Amount = decimal.Round(source.InvoiceAmount!.Value, 2, MidpointRounding.AwayFromZero);
+        Description = description;
+    }
+
+    /// <summary>Ghi dữ liệu dòng 1C từ bảng kê tạp vụ: ngày = ngày bảng kê, số tiền = tổng bảng kê.</summary>
+    internal void SetSundry(int lineNo, PaymentRequestSundrySource sheet, string description)
+    {
+        LineNo = lineNo;
+        SundryExpenseSheetId = sheet.SheetId;
+        ReceiptConfirmationId = null;
+        InvoiceNo = null;
+        InvoiceSeries = null;
+        InvoiceDate = sheet.SheetDate;
+        Amount = sheet.TotalAmount;
         Description = description;
     }
 }

@@ -61,7 +61,7 @@ public sealed class SundryExpenseSheetService : ISundryExpenseSheetService
                 })
             .Take(ListLimit)
             .ToListAsync(cancellationToken);
-        var held = await HeldByAsync(rows.Select(r => r.Id).ToList(), cancellationToken);
+        var held = await PaymentRequestService.HeldSheetsAsync(_db, rows.Select(r => r.Id).ToList(), null, cancellationToken);
         return rows.Select(r =>
             {
                 var payment = held.GetValueOrDefault(r.Id);
@@ -167,7 +167,7 @@ public sealed class SundryExpenseSheetService : ISundryExpenseSheetService
         ArgumentNullException.ThrowIfNull(request);
         var sheet = await LoadAsync(id, cancellationToken);
         // Bảng kê đã gộp vào đề nghị thanh toán 1C chưa hủy: hủy đề nghị trước (hủy dây chuyền từ phiếu cuối – design.md mục 20.2).
-        var held = (await HeldByAsync([sheet.Id], cancellationToken)).GetValueOrDefault(sheet.Id);
+        var held = (await PaymentRequestService.HeldSheetsAsync(_db, [sheet.Id], null, cancellationToken)).GetValueOrDefault(sheet.Id);
         if (held.No is not null)
             throw new BusinessRuleException($"Bảng kê {sheet.No} đã ở đề nghị thanh toán {held.No} – hủy đề nghị trước (Hủy dây chuyền).");
         // Quyền hủy + lý do bắt buộc (design.md mục 20.2a): nháp – người lập; đã gửi duyệt trở đi – chỉ quản trị.
@@ -177,19 +177,6 @@ public sealed class SundryExpenseSheetService : ISundryExpenseSheetService
         await _approvals.SkipPendingAsync(sheet, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
-    }
-
-    /// <summary>
-    /// Đề nghị thanh toán tổng hợp 1C chưa hủy đang giữ từng bảng kê (lát Y11b). Chưa có liên kết bảng kê – đề nghị thì trả rỗng.
-    /// </summary>
-    /// <param name="sheetIds">Các bảng kê.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Bảng kê → (Id, số) đề nghị.</returns>
-    private static Task<Dictionary<Guid, (Guid? Id, string? No)>> HeldByAsync(IReadOnlyCollection<Guid> sheetIds, CancellationToken cancellationToken)
-    {
-        _ = sheetIds;
-        _ = cancellationToken;
-        return Task.FromResult(new Dictionary<Guid, (Guid? Id, string? No)>());
     }
 
     /// <summary>Bộ phận phải thuộc công ty đang làm việc; chọn bộ phận mới (khác bộ phận đang lưu) thì phải còn dùng.</summary>
@@ -230,7 +217,7 @@ public sealed class SundryExpenseSheetService : ISundryExpenseSheetService
         var createdBy = sheet.CreatedBy is { } c
             ? await _db.Users.AsNoTracking().Where(u => u.Id == c).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken)
             : null;
-        var held = (await HeldByAsync([sheet.Id], cancellationToken)).GetValueOrDefault(sheet.Id);
+        var held = (await PaymentRequestService.HeldSheetsAsync(_db, [sheet.Id], null, cancellationToken)).GetValueOrDefault(sheet.Id);
         var lines = sheet.Lines.OrderBy(l => l.LineNo)
             .Select(l => new SundryExpenseLineDto(l.Id, l.LineNo, l.ExpenseDate, l.Description, l.Vendor, l.ReceiptNo, l.Amount)).ToList();
 

@@ -180,12 +180,13 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
             var rows = await q.OrderByDescending(d => d.Date).Take(take)
                 .Select(d => new
                 {
-                    d.Id, d.No, d.Date, d.Form, d.PayableAmount, d.Status, d.CreatedBy, d.CreatedAt,
+                    d.Id, d.No, d.Date, d.Form, d.PayableAmount, d.Status, d.CreatedBy, d.CreatedAt, d.PayeeName,
                     Supplier = _db.Suppliers.Where(x => x.Id == d.SupplierId).Select(x => x.Name).FirstOrDefault(),
                 })
                 .ToListAsync(cancellationToken);
+            // 1C tạp vụ (lát Y11b): không có NCC – ghi người nhận tiền.
             raws.AddRange(rows.Select(d => new Raw(DocumentTypes.PaymentRequest, d.Id, d.No, d.Date, null, null, null,
-                $"{(d.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {d.Supplier}",
+                $"{Purchasing.PaymentRequestService.FormCode(d.Form)} – {d.Supplier ?? d.PayeeName}",
                 d.PayableAmount, d.Status.ToString(), ApprovalProgress(d.Status), d.CreatedBy, d.CreatedAt)));
         }
 

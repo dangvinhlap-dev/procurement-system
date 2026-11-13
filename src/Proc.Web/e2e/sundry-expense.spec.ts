@@ -5,9 +5,10 @@ import { createBhaAdmin } from './receiptHelpers.ts'
 
 /**
  * Lát Y11a (design.md 19.2 loại C): bảng kê chi phí tạp vụ 2C – mở bằng ô lệnh BKT, chọn bộ phận, nhập hai khoản chi trong lưới (ngày chi, nội
- * dung, nơi mua, số tiền), lưu, gửi duyệt; người duyệt khác duyệt (API) → trạng thái Đã duyệt, phiếu khóa.
+ * dung, nơi mua, số tiền), lưu, gửi duyệt; người duyệt khác duyệt (API) → trạng thái Đã duyệt, phiếu khóa. Lát Y11b: từ bảng kê đã duyệt bấm
+ * "Lập đề nghị thanh toán 1C" → phiếu 1C chọn sẵn bộ phận và bảng kê, nhập người nhận tiền, lưu.
  */
-test('bảng kê chi phí tạp vụ: nhập khoản chi, lưu, gửi duyệt, duyệt', async ({ page, request }) => {
+test('bảng kê chi phí tạp vụ: nhập khoản chi, lưu, gửi duyệt, duyệt, lập đề nghị 1C', async ({ page, request }) => {
   test.setTimeout(120_000)
   const bha = await api(request, 'BHA')
   const code = unique('TV')
@@ -56,9 +57,26 @@ test('bảng kê chi phí tạp vụ: nhập khoản chi, lưu, gửi duyệt, d
   await expect(page.getByLabel('Nội dung chi dòng 1')).toBeDisabled()
   await page.screenshot({ path: 'e2e/screenshots/sundry-expense-approved.png', fullPage: true })
 
+  // Lát Y11b: lập đề nghị thanh toán tổng hợp 1C từ bảng kê.
+  await page.getByRole('button', { name: 'Lập đề nghị thanh toán 1C' }).click()
+  await expect(page).toHaveURL(/de-nghi-thanh-toan\/moi\?form=1C/)
+  await expect(page.getByRole('heading', { name: 'Đề nghị thanh toán tổng hợp tạp vụ (1C)' })).toBeVisible()
+  await expect(page.locator('.line-grid-row')).toHaveCount(1)
+  await expect(page.locator('.document-form-content')).toContainText(no)
+  await page.getByLabel('Người nhận tiền').fill('Nguyễn Văn An')
+  await page.getByLabel('Số tiền giảm trừ').fill('5500')
+  await page.getByLabel('Lý do giảm trừ').fill('Trừ tạm ứng')
+  await expect(page.locator('.document-form-content')).toContainText('190.000')
+  await page.screenshot({ path: 'e2e/screenshots/sundry-payment-1c-new.png', fullPage: true })
+  await page.keyboard.press('Control+s')
+  await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu DNT-BHA-\d{4}-\d{4}\./)
+  await expect(page.locator('.document-form-number')).toHaveText(/^DNT-BHA-\d{4}-\d{4}$/)
+  const dntNo = (await page.locator('.document-form-number').textContent())!
+
   // Danh sách: phiếu đã duyệt, tổng 195.500.
   await page.goto('/mua-hang/bang-ke-tap-vu')
   const row = page.locator('.data-grid-row', { hasText: no })
   await expect(row).toContainText('195.500')
   await expect(row).toContainText('Đã duyệt')
+  await expect(row).toContainText(dntNo)
 })
