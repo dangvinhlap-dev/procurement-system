@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Proc.Application.Common;
 using Proc.Application.Purchasing;
 using Proc.Domain.Organization;
 
@@ -86,6 +87,19 @@ public partial class PurchasingTests
         Assert.Equal((Today, "UNC 0456", false), (dnt.PaidDate, dnt.PaymentNote, dnt.CanPay));
         Assert.Contains("Đã chi", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/payment-requests/{dnt.Id}/cancel",
             new CancelDocumentRequest("Nhầm"), Ct)));
+        var chain = await ReadAsync<CancelChainDto>(await f.Buyer.GetAsync($"/api/cancel-chain/DNT/{dnt.Id}", Ct));
+        Assert.Contains("Đã chi", chain.BlockedReason, StringComparison.Ordinal);
+
+        // Đề nghị nháp khác (sau khi giải phóng): hủy dây chuyền chỉ gồm chính nó, XNH chọn lại được.
+        await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PutAsJsonAsync($"/api/receipt-confirmations/{xnh3.Id}/invoice",
+            new UpdateReceiptConfirmationInvoiceRequest("103", "1C26TAA", Today, 418_000), Ct));
+        var draft = await ReadAsync<PaymentRequestDto>(await f.Buyer.PostAsJsonAsync("/api/payment-requests", Save("Cash", 0, null, xnh3.Id), Ct));
+        chain = await ReadAsync<CancelChainDto>(await f.Buyer.GetAsync($"/api/cancel-chain/DNT/{draft.Id}", Ct));
+        Assert.Equal(draft.No, Assert.Single(chain.Items).No);
+        await ReadAsync<CancelChainDto>(await f.Buyer.PostAsJsonAsync($"/api/cancel-chain/DNT/{draft.Id}", new CancelChainRequest("Lập nhầm"), Ct));
+        Assert.Null((await ReadAsync<PaymentRequestSourceDto>(await f.Buyer.GetAsync($"/api/payment-requests/source?purchaseOrderId={po.Id}", Ct)))
+            .Receipts.Single(r => r.Id == xnh3.Id).HeldBy);
+
         var row = Assert.Single(await ReadAsync<List<PaymentRequestListItemDto>>(await accountant.GetAsync("/api/payment-requests", Ct)), r => r.Id == dnt.Id);
         Assert.True(row.IsPaid);
     }
