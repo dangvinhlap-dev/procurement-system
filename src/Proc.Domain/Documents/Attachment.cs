@@ -101,11 +101,15 @@ public static class AttachmentOwnerTypes
     /// </summary>
     public const string DeliveryNoticeFile = "DeliveryNoticeFile";
 
+    /// <summary>Đề nghị thanh toán 5A/5B (lát Y8) – chứng từ có phê duyệt, áp quy tắc khóa đính kèm mục 20.</summary>
+    public const string PaymentRequest = "PaymentRequest";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
-        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile];
+        GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile,
+        PaymentRequest];
 }
 
 /// <summary>

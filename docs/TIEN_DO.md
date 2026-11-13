@@ -475,6 +475,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   Hóa đơn NCC + e2e chưa chạy) – **chỉ trên nhánh `feature/p6a-hoa-don-ncc`** (đã push), **không merge**; `main` không có code, migration
   của P6a. Nhánh đã xóa (local + GitHub) theo đồng ý của người dùng 13/11/2026. design.md 19.3 bước 6, 19.5, 19.6 đã ghi bỏ. **Đã chốt**:
   đề nghị thanh toán Y8 lấy thông tin hóa đơn từ XNH (số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH).
+- **Lát Y8 – đề nghị thanh toán 5A/5B (13/11/2026, nhánh `feature/y8-de-nghi-thanh-toan`, bản 0.27.0)** – người dùng chọn "B. Làm Y8, Y11, Y9
+  xong rồi mới phát hành 0.27.0". Quy tắc tự đặt Y8-1…Y8-8 (ghi vào design.md ở bước tài liệu): mỗi phiếu một PO đã duyệt / đóng, 5A theo PO
+  loại A, 5B theo B/DV; dòng = XNH đã xác nhận có hóa đơn (chụp số, ký hiệu, ngày, tiền từ XNH); giảm trừ có lý do; chuyển khoản chụp tài khoản
+  NCC; duyệt GĐ khối của phiếu → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch; kế toán ghi Đã chi; in 5A/5B. Các bước:
+  - **Bước 1 (xong)**: Domain `PaymentRequest` + dòng (số **DNT**, `ApprovableDocument`; Create / Update / SetLines / EnsureSubmittable /
+    MarkPaid), quyền `Purchase.Payment.View/Create/Approve/Pay` (vai trò mẫu: xem trong ProcurementView; NVCUVT lập; GDKHOI, TPTCKT, GDTCKT,
+    CHUTICH duyệt; KETOAN xem + ghi Đã chi), loại duyệt DNT + bộ mẫu CUVT 4 cấp, loại đính kèm `PaymentRequest`; EF + migration
+    `V0_27_0_DeNghiThanhToan` (99 → 100). Test domain `PaymentRequestTests` (3), thứ tự loại duyệt thêm DNT; 403/403.
+  - Còn: bước 2 dịch vụ + duyệt + API + test tích hợp; bước 3 giao diện + e2e; bước 4 in 5A/5B; bước 5 tài liệu.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
