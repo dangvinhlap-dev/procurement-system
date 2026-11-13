@@ -3,6 +3,38 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.27.1] - 2026-11-13
+
+Bản bổ sung cho 0.27.0 (yêu cầu khi test): mở nhiều màn hình cùng lúc và hỏi lại khi rời trang còn phiếu chưa lưu. Chỉ đổi giao diện web.
+
+### Thêm mới
+- **Thẻ màn hình – mở tối đa 6 màn hình cùng lúc** (danh sách, phiếu, báo cáo): thanh thẻ ngay trên vùng nội dung; chuyển qua lại **không mất dữ
+  liệu đang nhập**, vị trí cuộn, tab đang chọn. Bấm cây điều hướng / menu / ô lệnh: màn hình đã mở thì chuyển sang thẻ đó, chưa mở thì mở thẻ
+  mới; đủ 6 thẻ thì báo. **Bấm đúp ô số chứng từ** mở phiếu gốc ở thẻ mới (phiếu đang xem vẫn giữ). **Shift+bấm** hoặc ô lệnh `/n<mã>` mở thay
+  ở thẻ đang xem, `/o<mã>` mở ở thẻ mới. **Alt+1…6** chuyển thẻ; nút × (hoặc bấm nút giữa chuột) đóng thẻ; nút Quay lại theo lịch sử riêng từng
+  thẻ; F5 mở lại đủ thẻ. Thanh thẻ ghi "n/6 màn hình · mã công ty".
+- **Mọi thẻ thuộc công ty đang làm việc**: đổi công ty khi đang mở nhiều màn hình thì hỏi lại, đồng ý thì đóng các thẻ, chỉ mở lại danh sách đang
+  xem dưới công ty mới (tránh lưu nhầm công ty).
+- **Hỏi lại khi rời trang còn phiếu chưa lưu**: phiếu hoặc ngăn kéo đang sửa mà chưa lưu thì rời trang (cây điều hướng, Quay lại, nút Đóng, Back
+  trình duyệt) hỏi "Rời trang / Ở lại"; đóng thẻ, đổi công ty, đăng xuất hỏi "Bỏ thay đổi / Ở lại"; F5 hoặc đóng tab trình duyệt có câu hỏi
+  của trình duyệt. Chuyển thẻ không hỏi.
+
+### Thay đổi
+- Phím tắt Ctrl+S, F2, Ctrl+P, Esc chỉ tác động lên thẻ đang xem (không lưu cùng lúc các phiếu ở thẻ khác); F3 tìm trong danh sách của thẻ đang xem.
+
+### Sửa lỗi
+- Không có (ngoài các lỗi phát hiện trong lúc làm tính năng thẻ, đã sửa trước khi phát hành).
+
+### Thay đổi CSDL
+- Không có (không migration, không script `db/scripts`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng, giữ `appsettings.Production.json`. Không cần chạy script CSDL, không có quyền mới. Nên sao lưu CSDL như mọi lần nâng.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.27.0 (`app-0.27.0`) – không có thay đổi CSDL nên không cần gỡ migration hay khôi phục dữ liệu.
+
 ## [0.27.0] - 2026-11-13
 
 Gộp ba đợt của lộ trình design.md 19.6 (bản 0.25.0, 0.26.0 không phát hành riêng): **Portal NCC** – báo giá online niêm phong, file báo giá,
