@@ -137,12 +137,15 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
         var summaries = await _db.PurchaseSummaries.Where(s => s.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
         // Đề nghị thanh toán 5A/5B chờ duyệt (lát Y8): mô tả = biểu mẫu + NCC.
         var payments = await _db.PaymentRequests.Where(s => s.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
-        var departmentIds = requests.Select(r => r.DepartmentId).OfType<Guid>().Concat(summaries.Select(s => s.DepartmentId)).Distinct().ToList();
+        // Bảng kê chi phí tạp vụ 2C chờ duyệt (lát Y11a): mô tả = 2C + bộ phận.
+        var sundries = await _db.SundryExpenseSheets.Where(s => s.Status == ApprovalDocumentStatus.Submitted).ToListAsync(cancellationToken);
+        var departmentIds = requests.Select(r => r.DepartmentId).OfType<Guid>().Concat(summaries.Select(s => s.DepartmentId))
+            .Concat(sundries.Select(s => s.DepartmentId)).Concat(payments.Where(p => p.IsSundry).Select(p => p.DepartmentId).OfType<Guid>()).Distinct().ToList();
         var departments = await _db.Departments.AsNoTracking().Where(d => departmentIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
-        var supplierIds = orders.Select(o => o.SupplierId).Concat(payments.Select(p => p.SupplierId)).Distinct().ToList();
+        var supplierIds = orders.Select(o => o.SupplierId).Concat(payments.Select(p => p.SupplierId).OfType<Guid>()).Distinct().ToList();
         var suppliers = await _db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => $"{s.Code} – {s.Name}", cancellationToken);
         var creatorIds = requests.Select(r => r.CreatedBy).Concat(orders.Select(o => o.CreatedBy)).Concat(summaries.Select(s => s.CreatedBy))
-            .Concat(payments.Select(p => p.CreatedBy))
+            .Concat(payments.Select(p => p.CreatedBy)).Concat(sundries.Select(s => s.CreatedBy))
             .OfType<Guid>().Distinct().ToList();
         var users = await _db.Users.AsNoTracking().Where(u => creatorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
@@ -151,8 +154,11 @@ public sealed class ApprovalRuleAdministration : IApprovalRuleAdministration
                      .Concat(orders.Select(o => ((ApprovableDocument)o, (string?)suppliers.GetValueOrDefault(o.SupplierId))))
                      .Concat(summaries.Select(s => ((ApprovableDocument)s,
                          (string?)$"{(s.Form == PurchaseSummaryForm.Construction ? "2A" : "2B")} – {departments.GetValueOrDefault(s.DepartmentId)}")))
-                     .Concat(payments.Select(p => ((ApprovableDocument)p,
-                         (string?)$"{(p.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {suppliers.GetValueOrDefault(p.SupplierId)}"))))
+                     // 1C (lát Y11b): mô tả = 1C + bộ phận + người nhận tiền.
+                     .Concat(payments.Select(p => ((ApprovableDocument)p, p.IsSundry
+                         ? (string?)$"1C – {(p.DepartmentId is { } pd ? departments.GetValueOrDefault(pd) : null)} – {p.PayeeName}"
+                         : $"{(p.Form == PaymentRequestForm.Construction ? "5A" : "5B")} – {(p.SupplierId is { } ps ? suppliers.GetValueOrDefault(ps) : null)}")))
+                     .Concat(sundries.Select(s => ((ApprovableDocument)s, (string?)$"2C – {departments.GetValueOrDefault(s.DepartmentId)}"))))
         {
             var step = await _approvals.CurrentStepAsync(document, cancellationToken);
             if (await _approvals.ApproveBlockerAsync(document, step, cancellationToken) is not null) continue;

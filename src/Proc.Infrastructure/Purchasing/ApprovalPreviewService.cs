@@ -34,6 +34,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
     private readonly Proc.Application.Pricing.IVolumeRebateService _volumeRebates;
     private readonly IPurchaseSummaryService _summaries;
     private readonly IPaymentRequestService _payments;
+    private readonly ISundryExpenseSheetService _sundries;
 
     /// <summary>Tạo dịch vụ.</summary>
     public ApprovalPreviewService(
@@ -41,8 +42,9 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
         IRfqService rfqs, IContractService contracts, IContractAmendmentService amendments, ISoleSourceService soleSources,
         ISupplierAdministration suppliers, ISupplierChangeRequestService supplierChanges,
         Proc.Application.Pricing.IMonthlySupplierApprovalService monthly, Proc.Application.Pricing.IVolumeRebateService volumeRebates,
-        IPurchaseSummaryService summaries, IPaymentRequestService payments)
+        IPurchaseSummaryService summaries, IPaymentRequestService payments, ISundryExpenseSheetService sundries)
     {
+        _sundries = sundries;
         _summaries = summaries;
         _payments = payments;
         _volumeRebates = volumeRebates;
@@ -78,6 +80,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
             DocumentTypes.VolumeRebate => Permissions.Pricing.VolumeRebateManage,
             DocumentTypes.PurchaseSummary => Permissions.Purchase.SummaryManage,
             DocumentTypes.PaymentRequest => Permissions.Purchase.PaymentCreate,
+            DocumentTypes.SundryExpenseSheet => Permissions.Purchase.SundryCreate,
             _ => throw new BusinessRuleException($"Loại phiếu {docType} không xem trước chuỗi duyệt được."),
         });
 
@@ -97,6 +100,7 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
                 DocumentTypes.VolumeRebate => Result(await _volumeRebates.SubmitAsync(request.DocumentId, cancellationToken) is var vr ? (vr.Status, vr.Approvals) : default),
                 DocumentTypes.PurchaseSummary => Result(await _summaries.SubmitAsync(request.DocumentId, cancellationToken) is var bth ? (bth.Status, bth.Approvals) : default),
                 DocumentTypes.PaymentRequest => Result(await _payments.SubmitAsync(request.DocumentId, cancellationToken) is var dnt ? (dnt.Status, dnt.Approvals) : default),
+                DocumentTypes.SundryExpenseSheet => Result(await _sundries.SubmitAsync(request.DocumentId, cancellationToken) is var bkt ? (bkt.Status, bkt.Approvals) : default),
                 _ => Result(await _soleSources.SubmitAsync(request.DocumentId, cancellationToken) is var ss ? (ss.Status, ss.Approvals) : default),
             };
             // Lượt vừa gửi thử là lượt lớn nhất; không có bước nào ở lượt đó = dưới mọi ngưỡng, gửi là duyệt ngay.

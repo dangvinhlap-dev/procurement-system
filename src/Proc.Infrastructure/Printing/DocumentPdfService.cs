@@ -70,6 +70,13 @@ public sealed class DocumentPdfService : IDocumentPdfService
     {
         // Đọc đề nghị qua dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
         var payment = await _payments.GetAsync(id, cancellationToken);
+        if (payment.PurchaseOrderId is null)
+        {
+            // 1C tạp vụ (lát Y11b): không có PO – in theo bảng kê.
+            var sundry = CuvtPrintForms.SundryPaymentRequest(payment, (await CompanyAsync(cancellationToken)).Name);
+            return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(sundry));
+        }
+
         var po = await _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines).SingleAsync(o => o.Id == payment.PurchaseOrderId, cancellationToken);
         var itemIds = po.Lines.Select(l => l.ItemId).Distinct().ToList();
         var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.Name, cancellationToken);

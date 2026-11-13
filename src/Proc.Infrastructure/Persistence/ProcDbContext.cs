@@ -110,6 +110,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Đề nghị thanh toán 5A/5B (lát Y8, lọc theo công ty).</summary>
     public DbSet<Proc.Domain.Purchasing.PaymentRequest> PaymentRequests => Set<Proc.Domain.Purchasing.PaymentRequest>();
 
+    /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C).</summary>
+    public DbSet<Proc.Domain.Purchasing.SundryExpenseSheet> SundryExpenseSheets => Set<Proc.Domain.Purchasing.SundryExpenseSheet>();
+
     /// <summary>Danh mục đơn vị mua (lọc theo công ty – lát Y5a, design.md mục 19.3).</summary>
     public DbSet<Proc.Domain.Purchasing.PurchasingUnit> PurchasingUnits => Set<Proc.Domain.Purchasing.PurchasingUnit>();
 

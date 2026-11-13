@@ -90,6 +90,12 @@ public static class ApprovalTypes
     /// </summary>
     public const string MonthlyApprovalException = "GTX";
 
+    /// <summary>
+    /// Bảng kê chi phí tạp vụ 2C vượt định mức tháng của phòng ban (lát Y11a – Q5): tổng bảng kê + đã dùng vượt ngân sách bộ phận × tháng thì
+    /// thêm chặng này (luôn ít nhất một cấp), không chặn gửi; cùng quyền duyệt bảng kê. Chỉ là bộ cấp cấu hình ở APRL.
+    /// </summary>
+    public const string SundryOverBudget = "TVB";
+
     /// <summary>Chặng ngoại lệ của phiếu GTH (Chủ tịch/TGĐ – lát H2) trong <c>ApprovalStep.Stage</c>, sau chặng Hội đồng.</summary>
     public const int MonthlyApprovalExceptionStage = 2;
 
@@ -133,6 +139,9 @@ public static class ApprovalTypes
         new(DocumentTypes.PurchaseSummary, "Bảng tổng hợp đề xuất mua", Permissions.Purchase.SummaryApprove, "Tổng đề xuất", HasDepartment: true),
         // Đề nghị thanh toán 5A/5B (lát Y8): bộ phận đặt hàng của PO – cấp đầu là GĐ khối của phiếu như biểu mẫu CUVT.
         new(DocumentTypes.PaymentRequest, "Đề nghị thanh toán", Permissions.Purchase.PaymentApprove, "Số tiền đề nghị", HasDepartment: true),
+        // Bảng kê tạp vụ 2C (lát Y11a): bộ phận phát sinh chi phí – Trưởng phòng ban, GĐ khối của phiếu như biểu mẫu CUVT.
+        new(DocumentTypes.SundryExpenseSheet, "Bảng kê chi phí tạp vụ", Permissions.Purchase.SundryApprove, "Tổng bảng kê", HasDepartment: true),
+        new(SundryOverBudget, "Bảng kê tạp vụ vượt định mức", Permissions.Purchase.SundryApprove, "Tổng bảng kê", HasDepartment: true),
         new(DocumentTypes.PriceList, "Bảng giá NCC", Permissions.Pricing.PriceListApprove, null),
         new(DocumentTypes.RequestForQuotation, "Kết quả chọn thầu", Permissions.Sourcing.RfqApproveAward, "Giá trị trúng thầu"),
         new(Supplier, "Hồ sơ nhà cung cấp", Permissions.MasterData.SupplierApprove, null),
@@ -152,7 +161,7 @@ public static class ApprovalTypes
     {
         PurchaseOrderPriceException, PurchaseOrderEmergency, PurchaseRequestOverBudget, PurchaseRequestConstruction, PurchaseRequestService,
         PurchaseRequestOverEstimate, PurchaseOrderOverBudget, PurchaseOrderOffList,
-        PurchaseOrderOverCeiling, MonthlyApprovalException,
+        PurchaseOrderOverCeiling, MonthlyApprovalException, SundryOverBudget,
     };
 
     /// <summary>Tìm loại theo mã (không phân biệt hoa thường, bỏ khoảng trắng); null nếu không có duyệt.</summary>

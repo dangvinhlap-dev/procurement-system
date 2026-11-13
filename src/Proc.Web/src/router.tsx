@@ -35,6 +35,7 @@ import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPag
 import { InternalSaleListPage } from './pages/purchasing/InternalSalePages'
 import { PurchaseSummaryListPage, PurchaseSummaryPage } from './pages/purchasing/PurchaseSummaryPages'
 import { PaymentRequestListPage, PaymentRequestPage } from './pages/purchasing/PaymentRequestPages'
+import { SundryExpenseListPage, SundryExpensePage } from './pages/purchasing/SundryExpensePages'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
@@ -128,6 +129,7 @@ const implemented: Record<string, ReactNode> = {
   DBN: <InternalSaleListPage />,
   BTH: <PurchaseSummaryListPage />,
   DNT: <PaymentRequestListPage />,
+  BKT: <SundryExpenseListPage />,
   KHN: <DemandPlanListPage />,
   KHNTH: <DemandSummaryPage />,
   DHG: <PooledOrderListPage />,
@@ -225,6 +227,7 @@ const documentPages = [
   { code: 'PO', element: <PurchaseOrderPage /> },
   { code: 'BTH', element: <PurchaseSummaryPage /> },
   { code: 'DNT', element: <PaymentRequestPage /> },
+  { code: 'BKT', element: <SundryExpensePage /> },
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },

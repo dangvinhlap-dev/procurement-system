@@ -8,6 +8,8 @@ using Proc.Domain.Documents;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Persistence;
 
+using Proc.Infrastructure.Purchasing;
+
 namespace Proc.Infrastructure.Reports;
 
 /// <summary>
@@ -182,15 +184,21 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
             var rows = await (
                     from l in _db.Set<PaymentRequestLine>().AsNoTracking()
                     join r in _db.PaymentRequests on l.RequestId equals r.Id
-                    join o in _db.PurchaseOrders on r.PurchaseOrderId equals o.Id
-                    join c in _db.GoodsReceiptConfirmations on l.ReceiptConfirmationId equals c.Id
+                    // 1C tạp vụ (lát Y11b): không có PO, XNH – dòng là bảng kê 2C; đối tượng là người nhận tiền.
+                    join o in _db.PurchaseOrders on r.PurchaseOrderId equals o.Id into orders
+                    from o in orders.DefaultIfEmpty()
+                    join c in _db.GoodsReceiptConfirmations on l.ReceiptConfirmationId equals c.Id into receipts
+                    from c in receipts.DefaultIfEmpty()
+                    join k in _db.SundryExpenseSheets on l.SundryExpenseSheetId equals k.Id into sheets
+                    from k in sheets.DefaultIfEmpty()
                     where r.Status == ApprovalDocumentStatus.Approved && r.ApprovedAt >= fromUtc && r.ApprovedAt < toUtc
                     orderby r.ApprovedAt, r.No, l.LineNo
                     select new
                     {
-                        r.Id, r.No, r.Date, r.ApprovedAt, r.SupplierId, r.Form, r.Method, OrderNo = o.No, r.BankName, r.BankBranch, r.BankAccountNumber,
-                        r.BankAccountName, r.TotalAmount, r.DeductionAmount, r.DeductionReason, r.PayableAmount, r.PaidDate, r.PaymentNote, l.LineNo,
-                        ReceiptNo = c.No, l.InvoiceSeries, l.InvoiceNo, l.InvoiceDate, l.Description, l.Amount,
+                        r.Id, r.No, r.Date, r.ApprovedAt, r.SupplierId, r.Form, r.Method, OrderNo = o == null ? null : o.No, r.BankName, r.BankBranch,
+                        r.BankAccountNumber, r.BankAccountName, r.TotalAmount, r.DeductionAmount, r.DeductionReason, r.PayableAmount, r.PaidDate,
+                        r.PaymentNote, l.LineNo, ReceiptNo = c != null ? c.No : k != null ? k.No : null, l.InvoiceSeries, l.InvoiceNo, l.InvoiceDate,
+                        l.Description, l.Amount, r.PayeeName,
                     })
                 .Take(MaxLines + 1)
                 .ToListAsync(cancellationToken);
@@ -198,15 +206,15 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
             foreach (var g in rows.GroupBy(r => r.Id))
             {
                 var r = g.First();
-                var s = await SupplierAsync(r.SupplierId);
+                var s = r.SupplierId is { } supplierId ? await SupplierAsync(supplierId) : new SupplierInfo(string.Empty, null, r.PayeeName ?? string.Empty, null);
                 var approved = VietnamDate(r.ApprovedAt!.Value);
                 var status = r.PaidDate is { } paid ? $"Đã chi {paid:dd/MM/yyyy}" : "Đã duyệt, chờ chi";
-                var form = r.Form == PaymentRequestForm.Construction ? "5A" : "5B";
+                var form = PaymentRequestService.FormCode(r.Form);
                 var method = r.Method == PaymentMethod.Cash ? "Tiền mặt" : "Chuyển khoản";
                 // Một phiếu nhiều hóa đơn: danh sách xem trước nối số hóa đơn; ngày hóa đơn lấy ngày sớm nhất.
                 documents.Add(new PurchaseAccountingDocumentDto(
                     r.Id, DocumentTypes.PaymentRequest, r.No, r.Date, approved, r.OrderNo, s.Code, s.LocalCode, s.Name, s.TaxCode,
-                    string.Join(", ", g.Select(x => x.InvoiceNo)), g.Select(x => x.InvoiceSeries).FirstOrDefault(x => x != null), g.Min(x => x.InvoiceDate),
+                    string.Join(", ", g.Select(x => x.InvoiceNo).OfType<string>()), g.Select(x => x.InvoiceSeries).FirstOrDefault(x => x != null), g.Min(x => x.InvoiceDate),
                     g.Count(), r.TotalAmount, 0m, r.PayableAmount, status));
                 paymentLines.AddRange(g.Select(l => new object?[]
                 {

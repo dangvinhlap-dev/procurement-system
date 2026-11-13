@@ -7,45 +7,50 @@ namespace Proc.Application.Purchasing;
 /// <param name="Id">Id.</param>
 /// <param name="No">Số DNT.</param>
 /// <param name="Date">Ngày đề nghị.</param>
-/// <param name="Form">5A / 5B.</param>
+/// <param name="Form">5A / 5B / 1C.</param>
 /// <param name="Status">Trạng thái duyệt (Draft, Submitted, Approved, Cancelled).</param>
 /// <param name="IsPaid">Kế toán đã ghi Đã chi.</param>
 /// <param name="PaidDate">Ngày chi.</param>
-/// <param name="PurchaseOrderId">PO.</param>
+/// <param name="PurchaseOrderId">PO (null với 1C).</param>
 /// <param name="PurchaseOrderNo">Số PO.</param>
-/// <param name="SupplierCode">Mã NCC.</param>
+/// <param name="SupplierCode">Mã NCC (null với 1C).</param>
 /// <param name="SupplierName">Tên NCC.</param>
 /// <param name="Method">Cash / BankTransfer.</param>
 /// <param name="TotalAmount">Tổng chứng từ.</param>
 /// <param name="DeductionAmount">Giảm trừ.</param>
 /// <param name="PayableAmount">Số tiền đề nghị.</param>
 /// <param name="CreatedByName">Người lập.</param>
+/// <param name="PayeeName">Người nhận tiền (1C).</param>
+/// <param name="DepartmentName">Bộ phận (bộ phận đặt hàng của PO / bộ phận của bảng kê 1C).</param>
 public sealed record PaymentRequestListItemDto(
-    Guid Id, string No, DateOnly Date, string Form, string Status, bool IsPaid, DateOnly? PaidDate, Guid PurchaseOrderId, string PurchaseOrderNo,
-    string SupplierCode, string SupplierName, string Method, decimal TotalAmount, decimal DeductionAmount, decimal PayableAmount, string? CreatedByName);
+    Guid Id, string No, DateOnly Date, string Form, string Status, bool IsPaid, DateOnly? PaidDate, Guid? PurchaseOrderId, string? PurchaseOrderNo,
+    string? SupplierCode, string? SupplierName, string Method, decimal TotalAmount, decimal DeductionAmount, decimal PayableAmount, string? CreatedByName,
+    string? PayeeName = null, string? DepartmentName = null);
 
-/// <summary>Dòng đề nghị thanh toán – một XNH có hóa đơn.</summary>
+/// <summary>Dòng đề nghị thanh toán – một XNH có hóa đơn (5A/5B) hoặc một bảng kê tạp vụ 2C (1C).</summary>
 /// <param name="Id">Id dòng.</param>
 /// <param name="LineNo">STT.</param>
-/// <param name="ReceiptConfirmationId">XNH.</param>
+/// <param name="ReceiptConfirmationId">XNH (null với 1C).</param>
 /// <param name="ReceiptNo">Số XNH.</param>
 /// <param name="ReceiptDate">Ngày nhận.</param>
-/// <param name="InvoiceNo">Số hóa đơn.</param>
+/// <param name="InvoiceNo">Số hóa đơn (null với 1C).</param>
 /// <param name="InvoiceSeries">Ký hiệu.</param>
-/// <param name="InvoiceDate">Ngày hóa đơn.</param>
-/// <param name="Amount">Số tiền (tiền hóa đơn gồm VAT).</param>
+/// <param name="InvoiceDate">Ngày hóa đơn (1C: ngày bảng kê).</param>
+/// <param name="Amount">Số tiền (tiền hóa đơn gồm VAT / tổng bảng kê).</param>
 /// <param name="Description">Nội dung thanh toán.</param>
+/// <param name="SundryExpenseSheetId">Bảng kê tạp vụ (1C).</param>
+/// <param name="SundryExpenseSheetNo">Số bảng kê.</param>
 public sealed record PaymentRequestLineDto(
-    Guid Id, int LineNo, Guid ReceiptConfirmationId, string ReceiptNo, DateOnly? ReceiptDate, string InvoiceNo, string? InvoiceSeries,
-    DateOnly? InvoiceDate, decimal Amount, string Description);
+    Guid Id, int LineNo, Guid? ReceiptConfirmationId, string? ReceiptNo, DateOnly? ReceiptDate, string? InvoiceNo, string? InvoiceSeries,
+    DateOnly? InvoiceDate, decimal Amount, string Description, Guid? SundryExpenseSheetId = null, string? SundryExpenseSheetNo = null);
 
 /// <summary>Chi tiết đề nghị thanh toán.</summary>
 /// <param name="Id">Id.</param>
 /// <param name="No">Số DNT.</param>
 /// <param name="Date">Ngày đề nghị.</param>
-/// <param name="Form">5A / 5B.</param>
+/// <param name="Form">5A / 5B / 1C.</param>
 /// <param name="Status">Trạng thái duyệt.</param>
-/// <param name="PurchaseOrderId">PO.</param>
+/// <param name="PurchaseOrderId">PO (null với 1C).</param>
 /// <param name="PurchaseOrderNo">Số PO.</param>
 /// <param name="PurchaseOrderDate">Ngày PO.</param>
 /// <param name="SupplierId">NCC.</param>
@@ -80,14 +85,31 @@ public sealed record PaymentRequestLineDto(
 /// <param name="Approvals">Lịch sử duyệt.</param>
 /// <param name="Actions">Lệnh được phép.</param>
 /// <param name="Version">Phiên bản dòng (chống ghi đè).</param>
+/// <param name="PayeeName">Người nhận tiền (1C).</param>
+/// <param name="DepartmentId">Bộ phận của phiếu.</param>
 public sealed record PaymentRequestDto(
-    Guid Id, string No, DateOnly Date, string Form, string Status, Guid PurchaseOrderId, string PurchaseOrderNo, DateOnly PurchaseOrderDate,
-    Guid SupplierId, string SupplierCode, string SupplierName, string? SupplierAddress, string? DepartmentName, string? ConstructionProjectCode,
+    Guid Id, string No, DateOnly Date, string Form, string Status, Guid? PurchaseOrderId, string? PurchaseOrderNo, DateOnly? PurchaseOrderDate,
+    Guid? SupplierId, string? SupplierCode, string? SupplierName, string? SupplierAddress, string? DepartmentName, string? ConstructionProjectCode,
     string? ConstructionProjectName, string Method, Guid? BankAccountId, string? BankName, string? BankBranch, string? BankAccountNumber,
     string? BankAccountName, decimal TotalAmount, decimal DeductionAmount, string? DeductionReason, decimal PayableAmount, string? Note,
     DateOnly? PaidDate, string? PaidByName, DateTimeOffset? PaidRecordedAt, string? PaymentNote, bool CanPay, string? RejectReason,
     string? CancelReason, DateTimeOffset CreatedAt, string? CreatedByName, DateTimeOffset? ApprovedAt, IReadOnlyList<PaymentRequestLineDto> Lines,
-    IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions, uint Version);
+    IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions, uint Version, string? PayeeName = null, Guid? DepartmentId = null);
+
+/// <summary>Bảng kê tạp vụ 2C đã duyệt chọn được vào đề nghị 1C (lát Y11b).</summary>
+/// <param name="Id">Bảng kê.</param>
+/// <param name="No">Số BKT.</param>
+/// <param name="Date">Ngày bảng kê.</param>
+/// <param name="DepartmentId">Bộ phận.</param>
+/// <param name="DepartmentCode">Mã bộ phận.</param>
+/// <param name="DepartmentName">Tên bộ phận.</param>
+/// <param name="LineCount">Số khoản chi.</param>
+/// <param name="TotalAmount">Tổng bảng kê.</param>
+/// <param name="Note">Ghi chú bảng kê.</param>
+/// <param name="HeldBy">Số đề nghị chưa hủy khác đang giữ bảng kê.</param>
+public sealed record SundryPaymentSheetOptionDto(
+    Guid Id, string No, DateOnly Date, Guid DepartmentId, string DepartmentCode, string DepartmentName, int LineCount, decimal TotalAmount, string? Note,
+    string? HeldBy);
 
 /// <summary>PO lập được đề nghị thanh toán: đã duyệt / đã đóng, còn XNH có hóa đơn chưa đề nghị.</summary>
 /// <param name="Id">PO.</param>
@@ -138,22 +160,35 @@ public sealed record PaymentRequestSourceDto(
     string? ConstructionProjectCode, IReadOnlyList<PaymentBankAccountDto> BankAccounts, IReadOnlyList<PaymentReceiptOptionDto> Receipts);
 
 /// <summary>Dòng gửi lên khi lưu.</summary>
-/// <param name="ReceiptConfirmationId">XNH.</param>
+/// <param name="ReceiptConfirmationId">XNH (5A/5B).</param>
 /// <param name="Description">Nội dung thanh toán (trống = tự ghi).</param>
-public sealed record SavePaymentRequestLineRequest(Guid ReceiptConfirmationId, string? Description);
+/// <param name="SundryExpenseSheetId">Bảng kê tạp vụ (1C).</param>
+public sealed record SavePaymentRequestLineRequest(Guid? ReceiptConfirmationId, string? Description, Guid? SundryExpenseSheetId = null);
 
-/// <summary>Lập / sửa đề nghị thanh toán (nháp).</summary>
+/// <summary>Lập / sửa đề nghị thanh toán (nháp). 1C (lát Y11b): <paramref name="Form"/> = "1C", bộ phận, người nhận tiền, tài khoản nhập tay.</summary>
 /// <param name="Date">Ngày đề nghị.</param>
-/// <param name="PurchaseOrderId">PO (không đổi được sau khi lập).</param>
+/// <param name="PurchaseOrderId">PO (5A/5B – không đổi được sau khi lập; trống với 1C).</param>
 /// <param name="Method">Cash / BankTransfer.</param>
 /// <param name="BankAccountId">Tài khoản NCC (chuyển khoản).</param>
 /// <param name="DeductionAmount">Giảm trừ.</param>
 /// <param name="DeductionReason">Lý do giảm trừ.</param>
 /// <param name="Note">Ghi chú.</param>
 /// <param name="Lines">Dòng.</param>
+/// <param name="Form">"1C" = đề nghị tổng hợp tạp vụ; trống = 5A/5B theo PO.</param>
+/// <param name="DepartmentId">Bộ phận của các bảng kê (1C – không đổi sau khi lập).</param>
+/// <param name="PayeeName">Người nhận tiền (1C).</param>
+/// <param name="BankName">Ngân hàng người nhận (1C chuyển khoản).</param>
+/// <param name="BankBranch">Chi nhánh.</param>
+/// <param name="BankAccountNumber">Số tài khoản.</param>
+/// <param name="BankAccountName">Chủ tài khoản.</param>
 public sealed record SavePaymentRequestRequest(
-    DateOnly Date, Guid PurchaseOrderId, string Method, Guid? BankAccountId, decimal DeductionAmount, string? DeductionReason, string? Note,
-    IReadOnlyList<SavePaymentRequestLineRequest> Lines);
+    DateOnly Date, Guid? PurchaseOrderId, string Method, Guid? BankAccountId, decimal DeductionAmount, string? DeductionReason, string? Note,
+    IReadOnlyList<SavePaymentRequestLineRequest> Lines, string? Form = null, Guid? DepartmentId = null, string? PayeeName = null, string? BankName = null,
+    string? BankBranch = null, string? BankAccountNumber = null, string? BankAccountName = null)
+{
+    /// <summary>Phiếu gửi lên là đề nghị tổng hợp tạp vụ 1C.</summary>
+    public bool IsSundry => string.Equals(Form?.Trim(), "1C", StringComparison.OrdinalIgnoreCase);
+}
 
 /// <summary>Kế toán ghi Đã chi.</summary>
 /// <param name="PaidDate">Ngày chi.</param>
@@ -194,6 +229,15 @@ public interface IPaymentRequestService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Dữ liệu chọn.</returns>
     Task<PaymentRequestSourceDto> SourceAsync(Guid purchaseOrderId, Guid? requestId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bảng kê tạp vụ 2C đã duyệt lập được đề nghị 1C (lát Y11b): kèm số đề nghị khác đang giữ (để hiện mờ, có lý do).
+    /// </summary>
+    /// <param name="departmentId">Chỉ bộ phận này; null = mọi bộ phận.</param>
+    /// <param name="requestId">Đề nghị đang sửa (bảng kê của chính nó không tính là đang giữ).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Theo ngày bảng kê giảm dần.</returns>
+    Task<IReadOnlyList<SundryPaymentSheetOptionDto>> SundrySheetsAsync(Guid? departmentId, Guid? requestId, CancellationToken cancellationToken);
 
     /// <summary>Lập đề nghị nháp.</summary>
     /// <param name="request">Dữ liệu.</param>
@@ -255,14 +299,18 @@ public sealed class SavePaymentRequestRequestValidator : AbstractValidator<SaveP
     /// <summary>Khai báo quy tắc.</summary>
     public SavePaymentRequestRequestValidator()
     {
-        RuleFor(x => x.PurchaseOrderId).NotEmpty().WithMessage("Hãy chọn đơn mua hàng.");
+        RuleFor(x => x.PurchaseOrderId).NotEmpty().When(x => !x.IsSundry).WithMessage("Hãy chọn đơn mua hàng.");
+        RuleFor(x => x.DepartmentId).NotEmpty().When(x => x.IsSundry).WithMessage("Hãy chọn bộ phận của các bảng kê tạp vụ.");
+        RuleFor(x => x.PayeeName).NotEmpty().When(x => x.IsSundry).WithMessage("Hãy nhập người nhận tiền.")
+            .MaximumLength(PaymentRequest.PayeeMaxLength);
         RuleFor(x => x.Method).NotEmpty().WithMessage("Hãy chọn hình thức thanh toán.");
         RuleFor(x => x.Note).MaximumLength(PaymentRequest.NoteMaxLength);
         RuleFor(x => x.DeductionReason).MaximumLength(PaymentRequest.NoteMaxLength);
         RuleFor(x => x.Lines).NotNull();
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
-            line.RuleFor(l => l.ReceiptConfirmationId).NotEmpty().WithMessage("Có dòng chưa chọn phiếu nhận hàng.");
+            line.RuleFor(l => l).Must(l => l.ReceiptConfirmationId is { } r && r != Guid.Empty || l.SundryExpenseSheetId is { } s && s != Guid.Empty)
+                .WithMessage("Có dòng chưa chọn phiếu nhận hàng / bảng kê tạp vụ.");
             line.RuleFor(l => l.Description).MaximumLength(PaymentRequest.DescriptionMaxLength);
         });
     }

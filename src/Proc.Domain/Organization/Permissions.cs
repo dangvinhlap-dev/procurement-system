@@ -205,6 +205,15 @@ public static class Permissions
 
         /// <summary>Quyền "Ghi Đã chi đề nghị thanh toán" – kế toán (lát Y8).</summary>
         public const string PaymentPay = "Purchase.Payment.Pay";
+
+        /// <summary>Quyền "Xem bảng kê chi phí tạp vụ 2C" (lát Y11a, design.md mục 19.2 loại C).</summary>
+        public const string SundryView = "Purchase.Sundry.View";
+
+        /// <summary>Quyền "Lập, sửa, gửi duyệt bảng kê chi phí tạp vụ" – bộ phận phát sinh chi phí (lát Y11a).</summary>
+        public const string SundryCreate = "Purchase.Sundry.Create";
+
+        /// <summary>Quyền "Duyệt bảng kê chi phí tạp vụ" – Trưởng phòng ban, GĐ khối, Phòng TC-NQ-KT, Chủ tịch theo biểu mẫu (lát Y11a).</summary>
+        public const string SundryApprove = "Purchase.Sundry.Approve";
     }
 
     /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
@@ -414,6 +423,9 @@ public static class Permissions
         new(Purchase.PaymentCreate, "Lập, sửa, gửi duyệt đề nghị thanh toán"),
         new(Purchase.PaymentApprove, "Duyệt đề nghị thanh toán"),
         new(Purchase.PaymentPay, "Ghi Đã chi đề nghị thanh toán (kế toán)"),
+        new(Purchase.SundryView, "Xem bảng kê chi phí tạp vụ"),
+        new(Purchase.SundryCreate, "Lập, sửa, gửi duyệt bảng kê chi phí tạp vụ"),
+        new(Purchase.SundryApprove, "Duyệt bảng kê chi phí tạp vụ"),
         new(Inventory.DocumentView, "Xem chứng từ kho"),
         new(Inventory.DocumentCreate, "Lập chứng từ kho"),
         new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),

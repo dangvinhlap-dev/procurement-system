@@ -3,13 +3,17 @@ import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
 import type { ApprovalStep, PurchaseActions, PurchaseStatus } from './purchasing'
 
-/** Biểu mẫu đề nghị thanh toán theo loại mua của PO: 5A công trình, 5B hàng hóa – dịch vụ (lát Y8). */
-export type PaymentRequestForm = '5A' | '5B'
+/**
+ * Biểu mẫu đề nghị thanh toán: 5A công trình, 5B hàng hóa – dịch vụ theo loại mua của PO (lát Y8); 1C tổng hợp chi phí tạp vụ từ bảng kê 2C,
+ * không gắn PO (lát Y11b).
+ */
+export type PaymentRequestForm = '5A' | '5B' | '1C'
 
 /** Nhãn biểu mẫu. */
 export const paymentRequestFormLabels: Record<PaymentRequestForm, string> = {
   '5A': '5A – Vật tư công trình',
   '5B': '5B – Hàng hóa, dịch vụ',
+  '1C': '1C – Tổng hợp chi phí tạp vụ',
 }
 
 /** Hình thức thanh toán. */
@@ -37,29 +41,36 @@ export interface PaymentRequestListItem {
   status: PurchaseStatus
   isPaid: boolean
   paidDate: string | null
-  purchaseOrderId: string
-  purchaseOrderNo: string
-  supplierCode: string
-  supplierName: string
+  /** Trống với 1C (tạp vụ không qua PO). */
+  purchaseOrderId: string | null
+  purchaseOrderNo: string | null
+  supplierCode: string | null
+  supplierName: string | null
   method: PaymentMethod
   totalAmount: number
   deductionAmount: number
   payableAmount: number
   createdByName: string | null
+  /** Người nhận tiền (1C). */
+  payeeName: string | null
+  departmentName: string | null
 }
 
-/** Dòng đề nghị – một hóa đơn của một XNH (khớp PaymentRequestLineDto). */
+/** Dòng đề nghị – một hóa đơn của một XNH (5A/5B) hoặc một bảng kê tạp vụ 2C (1C) – khớp PaymentRequestLineDto. */
 export interface PaymentRequestLine {
   id: string
   lineNo: number
-  receiptConfirmationId: string
-  receiptNo: string
+  receiptConfirmationId: string | null
+  receiptNo: string | null
   receiptDate: string | null
-  invoiceNo: string
+  invoiceNo: string | null
   invoiceSeries: string | null
+  /** 5A/5B: ngày hóa đơn; 1C: ngày bảng kê. */
   invoiceDate: string | null
   amount: number
   description: string
+  sundryExpenseSheetId: string | null
+  sundryExpenseSheetNo: string | null
 }
 
 /** Chi tiết – khớp PaymentRequestDto. */
@@ -69,12 +80,12 @@ export interface PaymentRequest {
   date: string
   form: PaymentRequestForm
   status: PurchaseStatus
-  purchaseOrderId: string
-  purchaseOrderNo: string
-  purchaseOrderDate: string
-  supplierId: string
-  supplierCode: string
-  supplierName: string
+  purchaseOrderId: string | null
+  purchaseOrderNo: string | null
+  purchaseOrderDate: string | null
+  supplierId: string | null
+  supplierCode: string | null
+  supplierName: string | null
   supplierAddress: string | null
   departmentName: string | null
   constructionProjectCode: string | null
@@ -104,6 +115,23 @@ export interface PaymentRequest {
   approvals: ApprovalStep[]
   actions: PurchaseActions
   version: number
+  /** Người nhận tiền (1C). */
+  payeeName: string | null
+  departmentId: string | null
+}
+
+/** Bảng kê tạp vụ 2C đã duyệt chọn được vào đề nghị 1C (lát Y11b); heldBy = số đề nghị khác đang giữ. */
+export interface SundryPaymentSheetOption {
+  id: string
+  no: string
+  date: string
+  departmentId: string
+  departmentCode: string
+  departmentName: string
+  lineCount: number
+  totalAmount: number
+  note: string | null
+  heldBy: string | null
 }
 
 /** PO lập được đề nghị (còn XNH có hóa đơn chưa đề nghị). */
@@ -154,16 +182,23 @@ export interface PaymentRequestSource {
   receipts: PaymentReceiptOption[]
 }
 
-/** Dữ liệu lưu nháp – khớp SavePaymentRequestRequest. */
+/** Dữ liệu lưu nháp – khớp SavePaymentRequestRequest. 1C: form = '1C', bộ phận, người nhận tiền, ngân hàng nhập tay, dòng là bảng kê. */
 export interface SavePaymentRequestInput {
   date: string
-  purchaseOrderId: string
+  purchaseOrderId: string | null
   method: PaymentMethod
   bankAccountId: string | null
   deductionAmount: number
   deductionReason: string | null
   note: string | null
-  lines: { receiptConfirmationId: string; description: string | null }[]
+  lines: { receiptConfirmationId: string | null; description: string | null; sundryExpenseSheetId?: string | null }[]
+  form?: '1C' | null
+  departmentId?: string | null
+  payeeName?: string | null
+  bankName?: string | null
+  bankBranch?: string | null
+  bankAccountNumber?: string | null
+  bankAccountName?: string | null
 }
 
 const useCompanyId = () => useAuth().workingCompany?.id ?? ''
@@ -225,6 +260,23 @@ export function usePaymentSource(purchaseOrderId: string | null, requestId: stri
     queryKey: ['purchasing', 'payment-requests', companyId, 'source', query],
     queryFn: () => apiFetch<PaymentRequestSource>(`/api/payment-requests/source?${query}`),
     enabled: !!purchaseOrderId && !!companyId,
+  })
+}
+
+/**
+ * Bảng kê tạp vụ 2C đã duyệt cho đề nghị 1C (`GET /api/payment-requests/sundry-sheets`).
+ * @param departmentId Bộ phận; null = chưa chọn (không tải).
+ * @param requestId Đề nghị đang sửa (bảng kê của chính nó không tính là đang giữ).
+ */
+export function useSundryPaymentSheets(departmentId: string | null, requestId: string | null) {
+  const companyId = useCompanyId()
+  const params = new URLSearchParams({ departmentId: departmentId ?? '' })
+  if (requestId) params.set('requestId', requestId)
+  const query = params.toString()
+  return useQuery({
+    queryKey: ['purchasing', 'payment-requests', companyId, 'sundry-sheets', query],
+    queryFn: () => apiFetch<SundryPaymentSheetOption[]>(`/api/payment-requests/sundry-sheets?${query}`),
+    enabled: !!departmentId && !!companyId,
   })
 }
 

@@ -57,7 +57,7 @@ interface ApprovalCommandOptions<T extends ApprovableDoc> {
 type AppApi = ReturnType<typeof App.useApp>
 
 /** Loại chủ đính kèm theo loại phiếu dùng hook này – file người duyệt gửi kèm gắn vào chính chứng từ (design.md mục 20). */
-const approvalOwnerTypes: Record<string, AttachmentOwnerType> = { PR: 'PurchaseRequest', PO: 'PurchaseOrder', BTH: 'PurchaseSummary', DNT: 'PaymentRequest' }
+const approvalOwnerTypes: Record<string, AttachmentOwnerType> = { PR: 'PurchaseRequest', PO: 'PurchaseOrder', BTH: 'PurchaseSummary', DNT: 'PaymentRequest', BKT: 'SundryExpenseSheet' }
 
 /**
  * Hộp thoại hỏi có ô lý do bắt buộc – dùng cho từ chối và đóng phần còn lại (lát R6).

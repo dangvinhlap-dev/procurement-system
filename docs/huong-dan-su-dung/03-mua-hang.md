@@ -197,6 +197,27 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 - **In phiếu** theo mẫu "Phiếu đề nghị thanh toán tiền mặt / chuyển khoản" 5A/5B: định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B
   của đơn; bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ, khối ký theo chuỗi duyệt.
 
+### Bảng kê chi phí tạp vụ 2C (BKT – từ bản 0.27.0, lát Y11a)
+
+Chi phí lặt vặt **đã phát sinh** (nhóm C – không qua PR/RFQ/PO), thanh toán gộp qua đề nghị thanh toán tổng hợp 1C.
+
+- **Lập**: Mua hàng → **Bảng kê tạp vụ** → Tạo mới. Đầu phiếu: **ngày bảng kê** (tháng của ngày này là tháng tính định mức), **bộ phận**, ghi chú.
+  Lưới: ngày chi (không sau ngày bảng kê), nội dung chi, nơi mua / người bán, số hóa đơn / chứng từ, **số tiền đã chi** (gồm thuế nếu có).
+  Đính kèm hóa đơn bán lẻ, phiếu chi ở tab Đính kèm.
+- **Định mức tháng**: tổng bảng kê tính vào ngân sách bộ phận × tháng (màn hình BUDG). Vượt thì cảnh báo vàng, **không chặn** – phiếu qua thêm
+  chặng **TVB** "Bảng kê tạp vụ vượt định mức" (mẫu CUVT: Giám đốc TC-NQ-KT).
+- **Duyệt**: Trưởng phòng/ban của bộ phận → GĐ khối → Phòng TC-NQ-KT → Chủ tịch (khi đã áp "Cấu hình duyệt mẫu" CUVT). Quyền
+  `Purchase.Sundry.View/Create/Approve` (vai trò mẫu: DENGHI lập; TRUONGPHONGBAN, GDKHOI, TPTCKT, GDTCKT, CHUTICH duyệt; KETOAN xem).
+- Hủy: phiếu nháp người lập tự hủy; đã gửi duyệt trở đi chỉ quản trị, bắt buộc lý do. Bảng kê đã gộp vào đề nghị 1C thì hủy dây chuyền (hủy
+  đề nghị trước) – đề nghị đã chi thì không hủy được.
+
+### Đề nghị thanh toán tổng hợp tạp vụ 1C (DNT biểu mẫu 1C – từ bản 0.27.0, lát Y11b)
+
+- **Lập**: trên bảng kê tạp vụ đã duyệt bấm **Lập đề nghị thanh toán 1C** (chọn sẵn bộ phận và bảng kê), hoặc Mua hàng → Đề nghị thanh toán →
+  **Lập đề nghị 1C (tạp vụ)**, chọn bộ phận rồi **Chọn bảng kê tạp vụ** (F2) – gộp được nhiều bảng kê đã duyệt của cùng bộ phận.
+- Nhập **người nhận tiền** (người đã ứng chi); chuyển khoản thì nhập tay ngân hàng, số tài khoản. Giảm trừ (tạm ứng đã nhận…) ghi lý do.
+- Duyệt, **Ghi Đã chi**, in phiếu như đề nghị 5A/5B (cùng chuỗi duyệt). Mỗi bảng kê chỉ ở một đề nghị chưa hủy.
+
 ## 3.5 Theo dõi giao hàng (POTRK)
 
 Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn lại, hạn giao (dòng hoặc đầu phiếu), **quá hạn**. Bấm đúp mở PO.
@@ -220,7 +241,7 @@ trò tại tổng công ty (không cần vai trò ở công ty thành viên). Ph
 ## 3.7 Ngân sách bộ phận (BUDG) – Mua hàng → Ngân sách bộ phận
 
 - Khai ngân sách **bộ phận × tháng** của năm.
-- **Đã dùng** = giá trị PO + phần PR chưa lên PO. Màn hình hiện ngân sách, đã dùng, còn lại.
+- **Đã dùng** = giá trị PO + phần PR chưa lên PO + bảng kê chi phí tạp vụ 2C chờ duyệt / đã duyệt. Màn hình hiện ngân sách, đã dùng, còn lại.
 - PR/PO vượt ngân sách đi thêm chặng **PRB/POB** (cấu hình ở APRL).
 - Quyền `Purchase.Budget.View/Manage`. Công ty không khai ngân sách thì không ảnh hưởng gì.
 
