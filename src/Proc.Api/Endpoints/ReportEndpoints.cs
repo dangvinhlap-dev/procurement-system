@@ -47,6 +47,10 @@ public static class ReportEndpoints
         reports.MapGet("/order-fulfillment", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetOrderFulfillmentAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
             .RequirePermission(Permissions.Report.PurchaseView);
+        // Theo dõi thanh toán theo PO: hóa đơn XNH, đề nghị thanh toán, đã chi, còn phải trả (lát Y9a, design.md mục 19.3).
+        reports.MapGet("/payment-tracking", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
+                s.GetPaymentTrackingAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))
+            .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/receipt-quality", (DateOnly from, DateOnly to, IPurchaseReportService s, CancellationToken ct) => s.GetReceiptQualityAsync(from, to, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/three-way-match", (DateOnly from, DateOnly to, decimal? tolerance, bool? onlyIssues, IPurchaseReportService s, CancellationToken ct) =>
@@ -97,6 +101,18 @@ public static class ReportEndpoints
                 return Results.File(file.Content, XlsxContentType, file.FileName);
             })
             .RequirePermission(Permissions.Report.AccountingExport);
+
+        // Xuất chứng từ mua cho kế toán (lát Y9b – thay ACCX từ khi bỏ kho, design.md mục 19.3 "Lát Y9"): docTypes PO, XNH, DNT; trống = tất cả.
+        var purchaseAccounting = app.MapGroup("/api/purchase-accounting-export").WithTags("Xuất cho kế toán");
+        purchaseAccounting.MapGet("/documents", (DateOnly from, DateOnly to, string[]? docTypes, IPurchaseAccountingExportService s, CancellationToken ct) =>
+                s.ListAsync(new PurchaseAccountingQuery(from, to, docTypes ?? []), ct))
+            .RequirePermission(Permissions.Report.PurchaseAccountingExport);
+        purchaseAccounting.MapGet("/file", async (DateOnly from, DateOnly to, string[]? docTypes, IPurchaseAccountingExportService s, CancellationToken ct) =>
+            {
+                var file = await s.ExportAsync(new PurchaseAccountingQuery(from, to, docTypes ?? []), ct);
+                return Results.File(file.Content, XlsxContentType, file.FileName);
+            })
+            .RequirePermission(Permissions.Report.PurchaseAccountingExport);
 
         // Trang chủ: ai đăng nhập cũng xem được; từng phần kiểm quyền trong dịch vụ (thiếu quyền thì phần đó là null).
         app.MapGet("/api/dashboard", (IDashboardService s, CancellationToken ct) => s.GetAsync(ct)).WithTags("Trang chủ");

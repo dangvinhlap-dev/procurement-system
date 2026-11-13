@@ -75,6 +75,7 @@ import {
   ReceiptQualityReportPage,
   ThreeWayMatchReportPage,
   OrderFulfillmentReportPage,
+  PaymentTrackingReportPage,
   PurchaseSpendReportPage,
   SourcingSavingsReportPage,
   ContractComplianceReportPage,
@@ -84,6 +85,7 @@ import {
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
 import { AccountingExportPage } from './pages/reports/AccountingExportPage'
+import { PurchaseAccountingExportPage } from './pages/reports/PurchaseAccountingExportPage'
 import { BoardMonthlyReportPage } from './pages/reports/BoardMonthlyReportPage'
 import { PurchaseHistoryMappingPage } from './pages/reports/PurchaseHistoryMappingPage'
 import { PurchaseAnalysisPage } from './pages/reports/PurchaseAnalysisPage'
@@ -161,6 +163,7 @@ const implemented: Record<string, ReactNode> = {
   QCDEV: <ReceiptQualityReportPage />,
   MATCH3: <ThreeWayMatchReportPage />,
   OTIF: <OrderFulfillmentReportPage />,
+  TTPO: <PaymentTrackingReportPage />,
   RPSUP: <PurchaseSpendReportPage />,
   SUPEVAL: <SupplierEvaluationReportPage />,
   SAVE: <SourcingSavingsReportPage />,
@@ -172,6 +175,7 @@ const implemented: Record<string, ReactNode> = {
   ANOM: <AnomalyReportPage />,
   VIOL: <ControlFindingListPage />,
   ACCX: <AccountingExportPage />,
+  ACCP: <PurchaseAccountingExportPage />,
   PHIS: <PurchaseHistoryPage />,
   PHMAP: <PurchaseHistoryMappingPage />,
   PHAN: <PurchaseAnalysisPage />,

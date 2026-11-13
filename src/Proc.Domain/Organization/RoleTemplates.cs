@@ -145,6 +145,8 @@ public static class RoleTemplates
             Permissions.Purchase.ReceiptView,
             // Lát Y8: kế toán xem đề nghị thanh toán và ghi Đã chi sau khi duyệt (design.md mục 19.3 bước 7).
             Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentPay,
+            // Lát Y9b: xuất chứng từ mua cho phần mềm kế toán (thay ACCX từ khi bỏ kho – design.md mục 19.3 "Lát Y9").
+            Permissions.Report.PurchaseAccountingExport,
         ]),
         new("PHAPCHE", "Pháp chế", "Xem hồ sơ NCC, hồ sơ thầu, hợp đồng để rà soát pháp lý",
         [

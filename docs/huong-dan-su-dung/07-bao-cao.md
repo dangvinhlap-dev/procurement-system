@@ -23,6 +23,7 @@ Mọi báo cáo: lọc trên đầu trang, **Xuất Excel** đúng cột đang h
 | SLA | SLA mua hàng | Số ngày làm việc từ PR đủ duyệt đến PO được duyệt, so SLA theo loại: hàng đã có giá, hàng chưa có NCC, hàng khẩn (tham số SEC) |
 | QCDEV | Sai lệch nhận hàng | Dòng nhập có hàng không đạt, thiếu/thừa; **% đạt chất lượng** |
 | MATCH3 | Đối chiếu PO – nhận – hóa đơn | Mỗi phiếu nhập đã ghi sổ: PO, tiền PO, tiền nhận, hóa đơn, chênh lệch; kết quả Chưa có hóa đơn / Lệch tiền / Khớp (dung sai nhập trên bộ lọc); cảnh báo nhận/hóa đơn trước ngày PO, hóa đơn tính cả hàng thiếu; kết quả nghiệm thu |
+| TTPO | Theo dõi thanh toán | Mỗi PO đã duyệt: giá trị PO, đã nhận, tiền hóa đơn trên phiếu nhận hàng (XNH), hóa đơn chưa đề nghị, đề nghị đang lập / chờ duyệt / đã duyệt chờ chi, đã chi, giảm trừ, **còn phải trả**; xem theo PO hoặc NCC |
 | RPSUP | Mua hàng theo NCC | Giá trị mua theo NCC / nhóm hàng / mặt hàng / công ty |
 | SUPEVAL | Đánh giá NCC | Tỷ lệ trả hàng, tỷ lệ giao đúng hạn, **xếp loại** theo ngưỡng cấu hình ở RATE |
 | SAVE | Tiết kiệm từ đấu thầu | So giá trúng thầu với giá tham chiếu trên các RFQ đã duyệt kết quả |
@@ -59,3 +60,13 @@ Quyền `Report.Accounting.Export`.
 3. Nhập file vào phần mềm kế toán của công ty. Khi kỳ được mở lại, người có quyền này nhận thông báo để xuất lại.
 
 Công nợ và thanh toán NCC vẫn làm ở phần mềm kế toán.
+
+## 7.6 Xuất chứng từ mua cho kế toán (ACCP – từ bản 0.27.0)
+
+Thay ACCX từ khi bỏ phân hệ kho. Quyền `Report.PurchaseAccounting.Export` (vai trò mẫu Kế toán).
+
+1. Chọn khoảng ngày, loại chứng từ (PO, XNH, DNT – để trống là tất cả) → xem trước: **đơn mua hàng** đã duyệt (theo ngày duyệt),
+   **phiếu xác nhận nhận hàng** kèm hóa đơn (theo ngày nhận; phiếu chưa có hóa đơn tô màu), **đề nghị thanh toán** đã duyệt hoặc đã chi
+   (theo ngày duyệt).
+2. Bấm **Tải file Excel cho kế toán**: sheet Tổng hợp, Đơn mua hàng, Nhận hàng – hóa đơn, Đề nghị thanh toán, Hướng dẫn (ý nghĩa từng cột).
+3. Nhập file vào phần mềm kế toán; định khoản, công nợ làm ở phần mềm kế toán.

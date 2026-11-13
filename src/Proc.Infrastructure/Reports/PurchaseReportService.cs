@@ -469,6 +469,76 @@ public sealed class PurchaseReportService : IPurchaseReportService
         return new OrderFulfillmentResult(rows, suppliers, Fulfillment(string.Empty, "Tổng cộng", rows), period.AllCompanies);
     }
 
+    /// <inheritdoc />
+    public async Task<PaymentTrackingResult> GetPaymentTrackingAsync(PurchaseReportPeriod period, CancellationToken cancellationToken)
+    {
+        Check(period);
+        // Toàn tập đoàn đã kiểm quyền ở Check. XNH, đề nghị thanh toán lọc theo Id PO đã qua filter nên bỏ filter công ty của hai bảng này.
+        var orders = period.AllCompanies ? _db.PurchaseOrders.IgnoreQueryFilters([ProcDbContext.CompanyFilter]) : _db.PurchaseOrders;
+        var pos = await (
+                from o in orders.AsNoTracking()
+                join c in _db.Companies on o.CompanyId equals c.Id
+                join s in _db.Suppliers on o.SupplierId equals s.Id
+                where (o.Status == ApprovalDocumentStatus.Approved || o.Status == ApprovalDocumentStatus.Closed)
+                      && o.Date >= period.From && o.Date <= period.To
+                orderby o.Date, o.No
+                select new
+                {
+                    o.Id, o.No, o.Date, CompanyCode = c.Code, SupplierCode = s.Code, SupplierName = s.Name,
+                    Closed = o.Status == ApprovalDocumentStatus.Closed, Amount = o.TotalAmount + o.TotalVat,
+                })
+            .ToListAsync(cancellationToken);
+        var orderIds = pos.Select(p => p.Id).ToList();
+        var receipts = await _db.GoodsReceiptConfirmations.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+            .Where(c => orderIds.Contains(c.PurchaseOrderId) && c.Status == ReceiptConfirmationStatus.Confirmed)
+            .Select(c => new { c.Id, c.PurchaseOrderId, Received = c.TotalAmount + c.TotalVat, HasInvoice = c.InvoiceNo != null && c.InvoiceAmount > 0, c.InvoiceAmount })
+            .ToListAsync(cancellationToken);
+        var payments = await _db.PaymentRequests.IgnoreQueryFilters([ProcDbContext.CompanyFilter]).AsNoTracking()
+            .Where(p => orderIds.Contains(p.PurchaseOrderId) && p.Status != ApprovalDocumentStatus.Cancelled)
+            .Select(p => new { p.Id, p.PurchaseOrderId, p.Status, p.PaidDate, p.PayableAmount, p.DeductionAmount })
+            .ToListAsync(cancellationToken);
+        var paymentIds = payments.Select(p => p.Id).ToList();
+        // XNH đã ở đề nghị chưa hủy (Y8-2) – phần hóa đơn còn lại là "chưa đề nghị".
+        var held = (await _db.Set<PaymentRequestLine>().AsNoTracking()
+                .Where(l => paymentIds.Contains(l.RequestId))
+                .Select(l => l.ReceiptConfirmationId)
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+        var receiptsByOrder = receipts.ToLookup(r => r.PurchaseOrderId);
+        var paymentsByOrder = payments.ToLookup(p => p.PurchaseOrderId);
+
+        var rows = pos.Select(o =>
+        {
+            var rs = receiptsByOrder[o.Id].ToList();
+            var ps = paymentsByOrder[o.Id].ToList();
+            var invoiced = rs.Where(r => r.HasInvoice).ToList();
+            var invoice = invoiced.Sum(r => r.InvoiceAmount ?? 0m);
+            var paid = ps.Where(p => p.PaidDate is not null).ToList();
+            var paidAmount = paid.Sum(p => p.PayableAmount);
+            var paidDeduction = paid.Sum(p => p.DeductionAmount);
+            // Đề nghị bị từ chối quay về nháp (mục 20) – vẫn tính "đang lập / chờ duyệt" vì còn giữ XNH.
+            var inProgress = ps.Where(p => p.Status is ApprovalDocumentStatus.Draft or ApprovalDocumentStatus.Submitted).Sum(p => p.PayableAmount);
+            var approvedUnpaid = ps.Where(p => p.Status == ApprovalDocumentStatus.Approved && p.PaidDate is null).Sum(p => p.PayableAmount);
+            // Còn phải trả theo hóa đơn: phần giảm trừ (tạm ứng đã chi, phạt…) đã cấn trừ nên cũng coi là xong.
+            // Ví dụ hóa đơn 1.045.000, đã chi 600.000 với giảm trừ 27.000 → còn 418.000.
+            return new PaymentTrackingRowDto(
+                o.Id, o.No, o.Date, o.CompanyCode, o.SupplierCode, o.SupplierName, o.Closed, o.Amount, rs.Sum(r => r.Received), rs.Count, invoice,
+                rs.Count(r => !r.HasInvoice), invoiced.Where(r => !held.Contains(r.Id)).Sum(r => r.InvoiceAmount ?? 0m), inProgress, approvedUnpaid,
+                paidAmount, paidDeduction, invoice - paidAmount - paidDeduction, paid.Count == 0 ? null : paid.Max(p => p.PaidDate));
+        }).ToList();
+        var suppliers = rows.GroupBy(r => (r.SupplierCode, r.SupplierName))
+            .Select(g => PaymentTotal(g.Key.SupplierCode, g.Key.SupplierName, g.ToList()))
+            .OrderByDescending(s => s.OutstandingAmount).ThenBy(s => s.SupplierCode, StringComparer.Ordinal)
+            .ToList();
+        return new PaymentTrackingResult(rows, suppliers, PaymentTotal(string.Empty, "Tổng cộng", rows), period.AllCompanies);
+    }
+
+    /// <summary>Cộng các cột tiền của một nhóm PO (một NCC hoặc toàn báo cáo).</summary>
+    private static PaymentTrackingSupplierDto PaymentTotal(string code, string name, IReadOnlyList<PaymentTrackingRowDto> rows) =>
+        new(code, name, rows.Count, rows.Sum(r => r.OrderAmount), rows.Sum(r => r.ReceivedAmount), rows.Sum(r => r.InvoiceAmount),
+            rows.Sum(r => r.NoInvoiceReceipts), rows.Sum(r => r.UnrequestedAmount), rows.Sum(r => r.InProgressAmount), rows.Sum(r => r.ApprovedUnpaidAmount),
+            rows.Sum(r => r.PaidAmount), rows.Sum(r => r.PaidDeductionAmount), rows.Sum(r => r.OutstandingAmount));
+
     /// <summary>
     /// Tổng hợp OTIF một nhóm dòng. % đủ = dòng đủ ÷ mọi dòng; % đúng hạn, % OTIF = dòng đạt ÷ dòng có hạn giao; 1 số lẻ.
     /// Ví dụ 4 dòng có hạn, 3 đúng hạn trong đó 2 đủ → đúng hạn 75,0%, OTIF 50,0%.

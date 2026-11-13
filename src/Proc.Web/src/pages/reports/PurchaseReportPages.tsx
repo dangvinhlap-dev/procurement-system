@@ -31,6 +31,9 @@ import {
   useOrderFulfillment,
   type OrderFulfillmentRow,
   type OrderFulfillmentSupplier,
+  usePaymentTracking,
+  type PaymentTrackingRow,
+  type PaymentTrackingSupplier,
   type PendingRequestLine,
   type PurchaseSlaRow,
   type SlaCategory,
@@ -507,6 +510,121 @@ export function SupplierEvaluationReportPage() {
       }
       onClearFilters={() => setPeriod(defaultPeriod())}
       filters={<PeriodFilters value={period} onChange={setPeriod} />}
+    />
+  )
+}
+
+/** Cột tiền dùng chung cho dòng PO và tổng hợp NCC của báo cáo theo dõi thanh toán. */
+const paymentMoneyColumns = <T extends PaymentTrackingRow | PaymentTrackingSupplier>(): GridColumn<T>[] => [
+  { key: 'orderAmount', title: 'Giá trị PO', width: 120, type: 'money', value: (r) => r.orderAmount },
+  { key: 'received', title: 'Đã nhận', width: 120, type: 'money', value: (r) => r.receivedAmount },
+  { key: 'invoice', title: 'Tiền hóa đơn', width: 120, type: 'money', value: (r) => r.invoiceAmount },
+  { key: 'noInvoice', title: 'XNH chưa HĐ', width: 90, type: 'quantity', value: (r) => r.noInvoiceReceipts },
+  { key: 'unrequested', title: 'HĐ chưa đề nghị', width: 120, type: 'money', value: (r) => r.unrequestedAmount },
+  { key: 'inProgress', title: 'Đang lập / chờ duyệt', width: 130, type: 'money', value: (r) => r.inProgressAmount },
+  { key: 'approved', title: 'Đã duyệt chờ chi', width: 120, type: 'money', value: (r) => r.approvedUnpaidAmount },
+  { key: 'paid', title: 'Đã chi', width: 120, type: 'money', value: (r) => r.paidAmount },
+  { key: 'deduction', title: 'Giảm trừ', width: 100, type: 'money', value: (r) => r.paidDeductionAmount },
+  { key: 'outstanding', title: 'Còn phải trả', width: 120, type: 'money', value: (r) => r.outstandingAmount },
+]
+
+const paymentColumns: GridColumn<PaymentTrackingRow>[] = [
+  { key: 'no', title: 'Đơn mua hàng', width: 150, value: (r) => r.orderNo, docRef: (r) => ({ docType: 'PO', id: r.orderId }) },
+  { key: 'date', title: 'Ngày PO', width: 90, type: 'date', value: (r) => r.orderDate },
+  { key: 'company', title: 'Công ty', width: 80, value: (r) => r.companyCode, groupable: true },
+  { key: 'supplier', title: 'Nhà cung cấp', width: 220, value: (r) => `${r.supplierCode} – ${r.supplierName}`, groupable: true },
+  {
+    key: 'state', title: 'Thanh toán', width: 120, type: 'status', groupable: true,
+    value: (r) => paymentState(r), tone: (r) => paymentTone(r),
+  },
+  ...paymentMoneyColumns<PaymentTrackingRow>(),
+  { key: 'lastPaid', title: 'Ngày chi cuối', width: 100, type: 'date', value: (r) => r.lastPaidDate },
+  { key: 'closed', title: 'PO đã đóng', width: 90, value: (r) => (r.orderClosed ? 'Đã đóng' : '') },
+]
+
+/**
+ * Tình trạng thanh toán của PO: chưa có hóa đơn → còn phải trả → đã trả đủ hóa đơn.
+ * @param r Dòng PO.
+ */
+function paymentState(r: PaymentTrackingRow) {
+  if (r.invoiceAmount === 0) return 'Chưa có hóa đơn'
+  if (r.outstandingAmount > 0) return r.paidAmount > 0 ? 'Đã chi một phần' : 'Chưa chi'
+  return 'Đã trả đủ HĐ'
+}
+
+/**
+ * Màu đèn tình trạng thanh toán (chữ đi kèm ở {@link paymentState}).
+ * @param r Dòng PO.
+ */
+function paymentTone(r: PaymentTrackingRow): StatusTone {
+  if (r.invoiceAmount === 0) return 'neutral'
+  if (r.outstandingAmount > 0) return r.paidAmount > 0 ? 'warning' : 'error'
+  return 'success'
+}
+
+const paymentSupplierColumns: GridColumn<PaymentTrackingSupplier>[] = [
+  { key: 'supplier', title: 'Nhà cung cấp', width: 260, value: (r) => `${r.supplierCode} – ${r.supplierName}` },
+  { key: 'orders', title: 'Số PO', width: 70, type: 'quantity', value: (r) => r.orders },
+  ...paymentMoneyColumns<PaymentTrackingSupplier>(),
+]
+
+/**
+ * Báo cáo → Theo dõi thanh toán (lát Y9a, design.md mục 19.3 "Lát Y9"): mọi PO đã duyệt / đã đóng có ngày PO trong khoảng – tiền hóa đơn nhập
+ * trên XNH, hóa đơn chưa đề nghị, đề nghị thanh toán đang lập / chờ duyệt / đã duyệt chờ chi / đã chi, còn phải trả. Xem theo PO hoặc theo NCC.
+ */
+export function PaymentTrackingReportPage() {
+  const navigate = useNavigate()
+  const [period, setPeriod] = useState(defaultPeriod)
+  const [view, setView] = useState<'orders' | 'suppliers'>('orders')
+  const report = usePaymentTracking(period)
+  const total = report.data?.total
+  const notice = report.error ? (
+    <Alert type="error" showIcon title={report.error.message} />
+  ) : total ? (
+    <Alert type="info" showIcon
+      title={`${total.orders} PO: hóa đơn ${formatMoney(total.invoiceAmount)} · đã chi ${formatMoney(total.paidAmount)} · còn phải trả ${formatMoney(total.outstandingAmount)} · hóa đơn chưa đề nghị ${formatMoney(total.unrequestedAmount)} · ${total.noInvoiceReceipts} phiếu nhận hàng chưa có hóa đơn.`} />
+  ) : null
+  const filters = (
+    <>
+      <PeriodFilters value={period} onChange={setPeriod} />
+      <FilterField label="Xem theo" width={130}>
+        {(id) => (
+          <Select id={id} value={view} showSearch={false} onChange={(v) => setView(v as 'orders' | 'suppliers')}
+            options={[{ value: 'orders', label: 'Đơn mua hàng' }, { value: 'suppliers', label: 'Nhà cung cấp' }]} />
+        )}
+      </FilterField>
+    </>
+  )
+  return view === 'orders' ? (
+    <ListPage
+      title="Theo dõi thanh toán"
+      exportFileName="theo-doi-thanh-toan"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={report.data?.rows ?? []}
+      columns={paymentColumns}
+      rowKey={(r) => r.orderId}
+      loading={report.isLoading}
+      isMarked={(r) => r.unrequestedAmount > 0 || r.approvedUnpaidAmount > 0}
+      onOpenRow={(r) => navigate(`/mua-hang/po/${r.orderId}`)}
+      notice={notice}
+      onClearFilters={() => setPeriod(defaultPeriod())}
+      filters={filters}
+    />
+  ) : (
+    <ListPage
+      title="Theo dõi thanh toán"
+      exportFileName="theo-doi-thanh-toan-ncc"
+      exportSubtitle={periodText(period)}
+      canCreate={false}
+      rows={report.data?.suppliers ?? []}
+      columns={paymentSupplierColumns}
+      rowKey={(r) => r.supplierCode}
+      loading={report.isLoading}
+      isMarked={(r) => r.outstandingAmount > 0}
+      notice={notice}
+      onClearFilters={() => setPeriod(defaultPeriod())}
+      filters={filters}
     />
   )
 }

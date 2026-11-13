@@ -413,6 +413,29 @@ public sealed record OrderFulfillmentResult(
     bool AllCompanies);
 
 /// <summary>
+/// Một PO trên báo cáo theo dõi thanh toán (lát Y9a, design.md mục 19.3 "Lát Y9"). Tiền VND gồm VAT, numeric(19,2).
+/// OrderAmount: tiền hàng sau CK + VAT của PO; ReceivedAmount: giá trị XNH đã xác nhận (gồm VAT); ReceiptCount: số XNH đã xác nhận;
+/// InvoiceAmount: Σ tiền hóa đơn nhập trên XNH đã xác nhận; NoInvoiceReceipts: số XNH đã xác nhận chưa có hóa đơn;
+/// UnrequestedAmount: hóa đơn của XNH chưa ở đề nghị thanh toán chưa hủy; InProgressAmount: số tiền đề nghị nháp / chờ duyệt;
+/// ApprovedUnpaidAmount: đề nghị đã duyệt chưa chi; PaidAmount: số tiền đề nghị đã chi; PaidDeductionAmount: giảm trừ của đề nghị đã chi;
+/// OutstandingAmount = InvoiceAmount − PaidAmount − PaidDeductionAmount (hóa đơn còn phải trả); LastPaidDate: ngày chi gần nhất.
+/// </summary>
+public sealed record PaymentTrackingRowDto(
+    Guid OrderId, string OrderNo, DateOnly OrderDate, string CompanyCode, string SupplierCode, string SupplierName, bool OrderClosed, decimal OrderAmount,
+    decimal ReceivedAmount, int ReceiptCount, decimal InvoiceAmount, int NoInvoiceReceipts, decimal UnrequestedAmount, decimal InProgressAmount,
+    decimal ApprovedUnpaidAmount, decimal PaidAmount, decimal PaidDeductionAmount, decimal OutstandingAmount, DateOnly? LastPaidDate);
+
+/// <summary>Tổng hợp theo dõi thanh toán theo NCC (hoặc dòng tổng): cộng các cột tiền của <see cref="PaymentTrackingRowDto"/>; Orders: số PO.</summary>
+public sealed record PaymentTrackingSupplierDto(
+    string SupplierCode, string SupplierName, int Orders, decimal OrderAmount, decimal ReceivedAmount, decimal InvoiceAmount, int NoInvoiceReceipts,
+    decimal UnrequestedAmount, decimal InProgressAmount, decimal ApprovedUnpaidAmount, decimal PaidAmount, decimal PaidDeductionAmount,
+    decimal OutstandingAmount);
+
+/// <summary>Báo cáo theo dõi thanh toán: dòng PO, tổng hợp theo NCC, dòng tổng.</summary>
+public sealed record PaymentTrackingResult(
+    IReadOnlyList<PaymentTrackingRowDto> Rows, IReadOnlyList<PaymentTrackingSupplierDto> Suppliers, PaymentTrackingSupplierDto Total, bool AllCompanies);
+
+/// <summary>
 /// Báo cáo mua hàng, đánh giá NCC, tiết kiệm từ đấu thầu (design.md mục 11, 11.3). Mặc định chỉ công ty đang làm việc; xem toàn tập đoàn cần
 /// quyền <c>Report.Purchase.ViewAllCompanies</c>.
 /// </summary>
@@ -450,6 +473,17 @@ public interface IPurchaseReportService
     /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
     Task<OrderFulfillmentResult> GetOrderFulfillmentAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Theo dõi thanh toán (lát Y9a, design.md mục 19.3 "Lát Y9"): mọi PO đã duyệt / đã đóng có ngày PO trong khoảng – hóa đơn trên XNH, đề nghị
+    /// thanh toán theo trạng thái, đã chi, còn phải trả.
+    /// </summary>
+    /// <param name="period">Khoảng ngày PO, phạm vi.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Báo cáo.</returns>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai.</exception>
+    /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
+    Task<PaymentTrackingResult> GetPaymentTrackingAsync(PurchaseReportPeriod period, CancellationToken cancellationToken);
 
     /// <summary>Tiết kiệm từ đấu thầu: các dòng RFQ chọn thầu trong khoảng ngày.</summary>
     /// <param name="period">Khoảng ngày chọn thầu, phạm vi.</param>
