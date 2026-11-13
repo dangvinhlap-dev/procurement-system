@@ -72,7 +72,8 @@ test('đăng xuất thì về màn hình đăng nhập và không vào lại đ�
   await loginViaApi(page)
   // Mở Trang chủ rồi sang PO bằng cây điều hướng để lịch sử trình duyệt có trang trước đó.
   await page.goto('/')
-  await page.getByTestId('nav-tree').getByRole('button', { name: /Đơn mua hàng/ }).first().click()
+  // Shift+bấm: mở ở thẻ đang xem (lượt chuyển trang ghi vào lịch sử trình duyệt) – bấm thường mở thẻ mới, chuyển thẻ không ghi lịch sử.
+  await page.getByTestId('nav-tree').getByRole('button', { name: /Đơn mua hàng/ }).first().click({ modifiers: ['Shift'] })
   await expect(page).toHaveURL(/\/mua-hang\/po$/)
 
   await page.getByRole('button', { name: `Người dùng: ${ADMIN.fullName}` }).click()

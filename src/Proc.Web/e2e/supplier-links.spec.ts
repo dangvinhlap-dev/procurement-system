@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi } from './helpers.ts'
+import { ADMIN, loginViaApi, openInCurrentTab } from './helpers.ts'
 import { approveSupplier } from './inventoryHelpers.ts'
 
 /**
@@ -26,9 +26,7 @@ async function adminApi(request: APIRequestContext) {
 
 /** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa, dòng PO/PR lấy ĐVT mua', async ({ page, request }) => {
@@ -95,7 +93,7 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   await drawer.getByRole('textbox', { name: 'Mã NCC tại công ty' }).fill(`331${supplierCode}`.slice(0, 20))
   await drawer.getByRole('button', { name: 'Lưu áp dụng' }).click()
   await expect(page.locator('.ant-message')).toContainText('Đã lưu áp dụng tại TCT.')
-  await drawer.getByRole('button', { name: 'Đóng' }).click()
+  await drawer.getByRole('button', { name: /(^|\s)Đóng$/ }).click()
 
   await page.getByLabel('Phạm vi').click()
   await page.locator('.ant-select-dropdown:visible').getByTitle('NCC TCT đang mua').click()

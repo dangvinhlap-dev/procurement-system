@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch } from './helpers.ts'
 
 /**
  * Màn hình Tham số hệ thống (SEC – design.md mục 5.4). Dùng công ty DTV (test đấu thầu chạy ở BHA nên không bị ảnh hưởng);
@@ -10,6 +10,7 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % m
   await page.goto('/')
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: 'DTV' }).click()
+  await confirmCompanySwitch(page)
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Tham số hệ thống' }).click()
 
   await expect(page.getByRole('heading', { name: 'Tham số hệ thống – DTV' })).toBeVisible()

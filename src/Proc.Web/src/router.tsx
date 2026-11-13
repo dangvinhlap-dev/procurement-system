@@ -255,7 +255,7 @@ const drawerPages = [
   { code: 'DBN', path: '/mua-hang/don-ban-noi-bo/:id', element: <InternalSaleListPage /> },
 ]
 
-/** Các trang nằm trong AppShell – dùng chung cho bộ định tuyến và cho từng thẻ màn hình (tối đa 4 thẻ). */
+/** Các trang nằm trong AppShell – dùng chung cho bộ định tuyến và cho từng thẻ màn hình (tối đa 6 thẻ). */
 const shellRoutes: RouteObject[] = [
   ...screens.map((s) => ({
     path: s.path,

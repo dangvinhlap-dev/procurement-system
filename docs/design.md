@@ -1125,7 +1125,7 @@ cách). Bố cục chứng từ: thanh menu chữ → thanh công cụ icon (mà
 Các mục 17.1–17.x dưới đây vẫn đúng về **chức năng** khung (menu module, ô lệnh, cây điều hướng, danh sách, chứng từ); kích thước và hình
 khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32px, không đổ bóng, bo 2px).
 
-**Thẻ màn hình (demo 13/11/2026, chờ duyệt – ui-style.md mục 8a):** trong AppShell mở cùng lúc tối đa **4 màn hình** (danh sách, phiếu, báo
+**Thẻ màn hình (người dùng duyệt 13/11/2026 – ui-style.md mục 8a):** trong AppShell mở cùng lúc tối đa **6 màn hình** (bản demo 4, người dùng nâng lên 6) (danh sách, phiếu, báo
 cáo), chuyển qua lại không mất dữ liệu đang nhập. Quy tắc (người dùng chốt 13/11/2026): **mọi thẻ thuộc công ty đang làm việc** – không mở
 màn hình của công ty khác cùng lúc; đổi công ty khi đang mở nhiều thẻ thì hỏi lại rồi đóng các thẻ, chỉ giữ danh sách đang xem (dữ liệu và
 quyền lọc theo công ty đang làm việc – mục 9.2 – nên thẻ của công ty cũ tải lại theo công ty mới dễ lưu nhầm). **Hỏi lại khi còn phiếu chưa

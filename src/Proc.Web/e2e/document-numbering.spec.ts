@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch } from './helpers.ts'
 
 /**
  * Màn hình Đánh số chứng từ (design.md mục 5.4, 5.5). Dùng công ty DTV và loại RTV để không lẫn với test khác;
@@ -10,6 +10,7 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
   await page.goto('/')
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: 'DTV' }).click()
+  await confirmCompanySwitch(page)
   await page.getByTestId('nav-tree').getByRole('button', { name: 'Đánh số chứng từ' }).click()
 
   await expect(page.getByRole('heading', { name: 'Đánh số chứng từ – DTV' })).toBeVisible()

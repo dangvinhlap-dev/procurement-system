@@ -73,7 +73,7 @@ test('áp cấu hình duyệt mẫu theo biểu mẫu CUVT cho công ty mới', 
     await create.click()
     await expect(page.locator('.ant-message')).toContainText('Đã tạo')
   } else {
-    await roleDialog.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+    await roleDialog.getByRole('button', { name: /(^|\s)Đóng$/ }).last().click()
   }
 
   await page.goto('/he-thong/quy-trinh-duyet')

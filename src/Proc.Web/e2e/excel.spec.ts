@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, openInCurrentTab } from './helpers.ts'
 
 /**
  * Nhập/xuất Excel (design.md mục 5.10): xuất danh mục ra file, nhập lại chính file đó (kiểm tra thử rồi nhập thật);
@@ -8,9 +8,7 @@ import { loginViaApi } from './helpers.ts'
  */
 
 async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 test.beforeEach(async ({ page }) => {
@@ -44,7 +42,7 @@ test('xuất đơn vị tính ra Excel rồi nhập lại: kiểm tra thử, nh�
 
   await dialog.getByRole('button', { name: 'Nhập thật' }).click()
   await expect(dialog.getByText(/Đã nhập xong \d+ dòng/)).toBeVisible()
-  await dialog.locator('.ant-modal-footer').getByRole('button', { name: 'Đóng' }).click()
+  await dialog.locator('.ant-modal-footer').getByRole('button', { name: /(^|\s)Đóng$/ }).click()
   await expect(dialog).toHaveCount(0)
 })
 

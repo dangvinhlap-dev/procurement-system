@@ -1,7 +1,7 @@
 import { CloseOutlined } from '@ant-design/icons'
 import { ConfigProvider } from 'antd'
-import { memo, useCallback, useState } from 'react'
-import { UNSAFE_RouteContext, useRoutes, type Location, type RouteObject } from 'react-router'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { NavigationType, UNSAFE_LocationContext, UNSAFE_RouteContext, useRoutes, type Location, type RouteObject } from 'react-router'
 import { MAX_SCREEN_TABS, TabActiveContext, TabLabelContext, UnsavedContext } from '../../app/screenTabs'
 import { screenTabTitle, type ScreenTab } from './useScreenTabsState'
 
@@ -15,8 +15,8 @@ interface ScreenTabBarProps {
 }
 
 /**
- * Thanh thẻ màn hình trên vùng nội dung (tối đa 4 thẻ – docs/ui-style.md mục 8a): thẻ ô vuông nền `--erp-tab-bg`, thẻ đang xem nền
- * `--erp-tab-active` chữ trắng; nút × (icon đỏ) hoặc bấm nút giữa chuột để đóng; Alt+1…4 chuyển thẻ. Bên phải ghi số thẻ đang mở và
+ * Thanh thẻ màn hình trên vùng nội dung (tối đa 6 thẻ – docs/ui-style.md mục 8a): thẻ ô vuông nền `--erp-tab-bg`, thẻ đang xem nền
+ * `--erp-tab-active` chữ trắng; nút × (icon đỏ) hoặc bấm nút giữa chuột để đóng; Alt+1…6 chuyển thẻ. Bên phải ghi số thẻ đang mở và
  * mã công ty đang làm việc (mọi thẻ thuộc một công ty).
  */
 export function ScreenTabBar({ tabs, activeId, onSelect, onClose, companyCode }: ScreenTabBarProps) {
@@ -98,6 +98,10 @@ export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes
   )
   const setLabel = useCallback((label: string | undefined) => onLabel(tab.id, label), [onLabel, tab.id])
   const register = useCallback((check: () => boolean) => onRegister(tab.id, check), [onRegister, tab.id])
+  // Ngữ cảnh vị trí riêng của thẻ: trang trong thẻ (và useRoutes) đọc vị trí của thẻ, không đăng ký theo địa chỉ chung – thẻ ẩn không vẽ
+  // lại mỗi lần thẻ đang xem đổi trang. Vẽ lại cả 6 trang mỗi lượt làm lượt chuyển trang của react-router (chạy nền) bị chen ngang liên
+  // tục, khung chậm vài giây mới nhận vị trí mới.
+  const locationContext = useMemo(() => ({ location: tab.location, navigationType: NavigationType.Pop }), [tab.location])
   return (
     <div
       ref={setEl}
@@ -110,9 +114,11 @@ export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes
         <TabLabelContext value={setLabel}>
         <UnsavedContext value={register}>
           <ConfigProvider getPopupContainer={getPopupContainer}>
-            <UNSAFE_RouteContext value={ROOT_ROUTE_CONTEXT}>
-              <TabRoutes routes={routes} location={tab.location} />
-            </UNSAFE_RouteContext>
+            <UNSAFE_LocationContext value={locationContext}>
+              <UNSAFE_RouteContext value={ROOT_ROUTE_CONTEXT}>
+                <TabRoutes routes={routes} location={tab.location} />
+              </UNSAFE_RouteContext>
+            </UNSAFE_LocationContext>
           </ConfigProvider>
         </UnsavedContext>
         </TabLabelContext>

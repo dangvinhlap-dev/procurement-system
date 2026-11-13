@@ -90,7 +90,7 @@ function saveState(state: TabsState) {
 }
 
 /**
- * Quản lý tối đa 4 thẻ màn hình trong AppShell.
+ * Quản lý tối đa 6 thẻ màn hình trong AppShell.
  *
  * Cách làm: thanh địa chỉ trình duyệt luôn là đường dẫn của **thẻ đang hiện**; mỗi thẻ tự vẽ trang của mình theo vị trí riêng
  * (`useRoutes(routes, tab.location)`), thẻ ẩn vẫn nằm trong trang nên giữ nguyên dữ liệu đang nhập, vị trí cuộn, tab đang chọn.
@@ -100,7 +100,7 @@ function saveState(state: TabsState) {
  * Các thẻ thuộc **công ty đang làm việc** (người dùng chốt 13/11/2026): mọi dữ liệu lọc theo công ty đang làm việc, thẻ ẩn mở dưới công ty
  * khác mà tải lại theo công ty mới thì dễ lưu nhầm – nên đổi công ty là đóng các thẻ khác, thẻ đang xem dựng lại dưới công ty mới.
  *
- * @param onFull Gọi khi muốn mở thẻ thứ 5 – thông báo cho người dùng.
+ * @param onFull Gọi khi muốn mở thẻ thứ 7 – thông báo cho người dùng.
  * @param companyId Công ty đang làm việc.
  * @returns Danh sách thẻ, thẻ đang hiện, các thao tác mở/chuyển/đóng/quay lại, giữ một thẻ, đặt nhãn.
  */
@@ -121,10 +121,12 @@ export function useScreenTabsState(onFull: () => void, companyId: string) {
   // useLayoutEffect: cập nhật vị trí thẻ trước khi trình duyệt vẽ, không thấy trang cũ nháy lại một khung hình.
   useLayoutEffect(() => {
     const path = pathOf(location)
-    // Vị trí cũ tới muộn (REPLACE) trong lúc chờ thì bỏ qua; điều hướng mới (PUSH) trong thẻ thì không chờ nữa.
-    if (pending.current !== null && (path === pending.current || navType !== 'PUSH')) {
-      if (path !== pending.current) return
-      pending.current = null
+    // Lượt chuyển/mở/đóng thẻ của khung tới nơi: chỉ cập nhật vị trí thẻ đích, không tính là điều hướng trong thẻ (không ghi lịch sử).
+    // Mọi lần địa chỉ đổi đều xóa cờ chờ: người dùng thao tác nhanh (mở thẻ rồi bấm "Tạo mới" ngay) thì react-router gộp hai lượt, lượt
+    // của khung không bao giờ tới riêng – nếu giữ cờ, các lượt thay thế sau đó (phiếu mới → phiếu vừa lưu) bị bỏ qua.
+    const switching = pending.current === path
+    pending.current = null
+    if (switching) {
       setState((s) => ({ ...s, tabs: s.tabs.map((t) => (t.id === s.activeId ? { ...t, location } : t)) }))
       return
     }

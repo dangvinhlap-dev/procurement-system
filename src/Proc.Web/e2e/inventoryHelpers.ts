@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN } from './helpers.ts'
+import { ADMIN, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
 
 /** Hàm dùng chung cho test chứng từ kho (phiếu nhập, trả NCC, chuyển kho). */
 
@@ -107,15 +107,14 @@ export async function approveSupplier(request: APIRequestContext, supplierId: st
 
 /** Mở màn hình bằng ô lệnh. */
 export async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 /** Đổi công ty làm việc trên thanh menu. */
 export async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown:visible .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 /** Chọn mục trong danh sách thả xuống đang mở. */

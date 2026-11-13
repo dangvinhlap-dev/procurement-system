@@ -203,17 +203,17 @@ Mọi màn hình đổi sang phong cách này qua khung dùng chung, không vi�
 
 Không còn hiệu ứng chuyển động (`motion: false`).
 
-## 8a. Thẻ màn hình – mở tối đa 4 màn hình (demo 13/11/2026, chờ người dùng duyệt)
+## 8a. Thẻ màn hình – mở tối đa 6 màn hình (người dùng duyệt 13/11/2026)
 
-Vùng nội dung của `AppShell` có **thanh thẻ** cao 26px ngay trên trang, giữ được tối đa **4 màn hình** (danh sách, phiếu, báo cáo) mở cùng
+Vùng nội dung của `AppShell` có **thanh thẻ** cao 26px ngay trên trang, giữ được tối đa **6 màn hình** (danh sách, phiếu, báo cáo) mở cùng
 lúc – chuyển qua lại không mất dữ liệu đang nhập, vị trí cuộn, tab đang chọn. Component: `components/AppShell/ScreenTabs.tsx`
 (`ScreenTabBar`, `ScreenTabPanel`) + `useScreenTabsState.ts`; ngữ cảnh dùng chung `app/screenTabs.ts`.
 
 - Thẻ: ô vuông viền 1px `--erp-grid-line`, bo trên 2px, nền `--erp-tab-bg`; thẻ đang xem nền `--erp-tab-active` chữ trắng đậm; chữ in hoa;
-  đầu thẻ có ô số 1–4 (phím **Alt+1…4**), icon màn hình, tên (phiếu: "Tên màn hình: số phiếu"), nút × icon đỏ (bấm nút giữa chuột cũng đóng).
-  Bên phải: "n/4 màn hình · mã công ty".
+  đầu thẻ có ô số 1–6 (phím **Alt+1…6**), icon màn hình, tên (phiếu: "Tên màn hình: số phiếu"), nút × icon đỏ (bấm nút giữa chuột cũng đóng).
+  Bên phải: "n/6 màn hình · mã công ty".
 - **Mở**: bấm cây điều hướng / menu / ô lệnh / bấm đúp ô số chứng từ → đã có thẻ cùng đường dẫn thì chuyển sang, chưa có thì mở thẻ mới;
-  đủ 4 thẻ thì báo "Đã mở đủ 4 màn hình…", không mở. **Shift+bấm** trên cây điều hướng hoặc ô lệnh `/n<mã>` mở thay ở thẻ đang xem;
+  đủ 6 thẻ thì báo "Đã mở đủ 6 màn hình…", không mở. **Shift+bấm** trên cây điều hướng hoặc ô lệnh `/n<mã>` mở thay ở thẻ đang xem;
   `/o<mã>` mở ở thẻ mới (kiểu SAP). Trong trang (bấm đúp dòng mở phiếu, nút lập phiếu…) vẫn đi trong cùng thẻ.
 - Đóng thẻ đang xem thì hiện thẻ bên phải (hết thì bên trái); đóng thẻ cuối còn Trang chủ. Nút **Quay lại** dùng lịch sử riêng từng thẻ.
 - **Mọi thẻ thuộc công ty đang làm việc** (người dùng chốt 13/11/2026): đổi công ty khi đang mở hơn một thẻ thì hỏi lại ("Đổi công ty" /

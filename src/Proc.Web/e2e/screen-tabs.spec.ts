@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
 
 /**
- * Thẻ màn hình (tối đa 4 màn hình mở cùng lúc – docs/ui-style.md mục 8a): bấm cây điều hướng mở thẻ mới, đã mở thì chuyển sang, đủ 4 thẻ
+ * Thẻ màn hình (tối đa 6 màn hình mở cùng lúc – docs/ui-style.md mục 8a): bấm cây điều hướng mở thẻ mới, đã mở thì chuyển sang, đủ 6 thẻ
  * thì báo; chuyển thẻ giữ nguyên dữ liệu đang nhập; Alt+số chuyển thẻ; đóng thẻ; ô lệnh /n mở thay ở thẻ đang xem.
  */
 
@@ -13,11 +13,11 @@ const nav = (page: Page, label: string) => page.getByTestId('nav-tree').getByRol
 /** Ô Tìm kiếm của danh sách ở thẻ đang xem (thẻ ẩn có `inert`, nằm ngoài cây trợ năng). */
 const visibleSearch = (page: Page) => page.locator('.app-tab-panel.is-active input[data-list-search]')
 
-test('mở tối đa 4 màn hình, chuyển thẻ giữ nguyên dữ liệu đang nhập', async ({ page }) => {
+test('mở tối đa 6 màn hình, chuyển thẻ giữ nguyên dữ liệu đang nhập', async ({ page }) => {
   await loginViaApi(page)
   await page.goto('/')
   await expect(tabs(page)).toHaveCount(1)
-  await expect(page.getByTestId('screen-tabs')).toContainText('1/4 màn hình')
+  await expect(page.getByTestId('screen-tabs')).toContainText('1/6 màn hình')
 
   await nav(page, 'Đơn mua hàng').click()
   await expect(page).toHaveURL(/\/mua-hang\/po$/)
@@ -27,14 +27,16 @@ test('mở tối đa 4 màn hình, chuyển thẻ giữ nguyên dữ liệu đan
   await nav(page, 'Đề nghị mua hàng').click()
   await expect(page).toHaveURL(/\/mua-hang\/pr$/)
   await nav(page, 'Nhà cung cấp').click()
-  await expect(tabs(page)).toHaveCount(4)
-  await expect(page.getByTestId('screen-tabs')).toContainText('4/4 màn hình')
+  await nav(page, 'Việc cần làm').click()
+  await nav(page, 'Ủy quyền duyệt').click()
+  await expect(tabs(page)).toHaveCount(6)
+  await expect(page.getByTestId('screen-tabs')).toContainText('6/6 màn hình')
 
-  // Thẻ thứ 5: báo, không mở.
+  // Thẻ thứ 7: báo, không mở.
   await nav(page, 'Thông báo').click()
-  await expect(page.getByText('Đã mở đủ 4 màn hình')).toBeVisible()
-  await expect(tabs(page)).toHaveCount(4)
-  await expect(page).toHaveURL(/\/gia-ncc\/nha-cung-cap$/)
+  await expect(page.getByText('Đã mở đủ 6 màn hình')).toBeVisible()
+  await expect(tabs(page)).toHaveCount(6)
+  await expect(page).toHaveURL(/\/hang-ngay\/uy-quyen-duyet$/)
 
   // Bấm lại màn hình đã mở: chuyển sang thẻ đó, chữ đang gõ ở ô tìm vẫn còn.
   await nav(page, 'Đơn mua hàng').click()
@@ -50,7 +52,7 @@ test('mở tối đa 4 màn hình, chuyển thẻ giữ nguyên dữ liệu đan
 
   // Đóng thẻ đang xem: hiện thẻ bên phải.
   await tabs(page).nth(2).getByRole('button', { name: /Đóng màn hình/ }).click()
-  await expect(tabs(page)).toHaveCount(3)
+  await expect(tabs(page)).toHaveCount(5)
   await expect(page).toHaveURL(/\/gia-ncc\/nha-cung-cap$/)
 
   // Ô lệnh /nPR: mở thay ở thẻ đang xem, không thêm thẻ.
@@ -58,7 +60,7 @@ test('mở tối đa 4 màn hình, chuyển thẻ giữ nguyên dữ liệu đan
   await command.fill('/nPR')
   await command.press('Enter')
   await expect(page).toHaveURL(/\/mua-hang\/pr$/)
-  await expect(tabs(page)).toHaveCount(3)
+  await expect(tabs(page)).toHaveCount(5)
   await expect(tabs(page).nth(2)).toContainText(/Đề nghị mua hàng/i)
 
   // Nút Quay lại dùng lịch sử riêng của thẻ: về Nhà cung cấp.
@@ -67,7 +69,7 @@ test('mở tối đa 4 màn hình, chuyển thẻ giữ nguyên dữ liệu đan
 
   // F5: mở lại đủ thẻ.
   await page.reload()
-  await expect(tabs(page)).toHaveCount(3)
+  await expect(tabs(page)).toHaveCount(5)
   await expect(tabs(page).nth(2)).toHaveClass(/is-active/)
 })
 

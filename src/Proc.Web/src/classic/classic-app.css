@@ -723,7 +723,7 @@ body.erp-col-resizing {
   color: var(--erp-text-muted);
 }
 
-/* ---------- Thẻ màn hình (tối đa 4 màn hình mở cùng lúc – docs/ui-style.md mục 8a, 13/11/2026) ---------- */
+/* ---------- Thẻ màn hình (tối đa 6 màn hình mở cùng lúc – docs/ui-style.md mục 8a, 13/11/2026) ---------- */
 /* Vùng nội dung không tự cuộn nữa: mỗi thẻ là một vùng cuộn riêng, giữ vị trí cuộn khi chuyển thẻ. */
 .app-content.app-content-tabs {
   display: flex;

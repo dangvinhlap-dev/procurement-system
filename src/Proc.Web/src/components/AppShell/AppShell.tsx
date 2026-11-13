@@ -38,8 +38,8 @@ function todayInVietnam(): string {
  * Phím tắt chung: F1 xem lịch sử thay đổi của ô (FieldHelpHost), F3 tìm kiếm trong danh sách, Alt + chữ gạch chân mở menu module (trong ShellBar).
  * Người dùng và công ty lấy từ phiên đăng nhập; số đếm và số thông báo chưa đọc theo số liệu trang chủ; ghim còn là dữ liệu giả (src/mocks/session.ts).
  * AppShell luôn nằm trong RequireAuth nên phiên đăng nhập chắc chắn có.
- * Vùng nội dung chia **tối đa 4 thẻ màn hình** (yêu cầu người dùng 13/11/2026, docs/ui-style.md mục 8a): mỗi thẻ giữ nguyên trang đang mở
- * khi chuyển sang thẻ khác; Alt+1…4 chuyển thẻ.
+ * Vùng nội dung chia **tối đa 6 thẻ màn hình** (yêu cầu người dùng 13/11/2026, docs/ui-style.md mục 8a): mỗi thẻ giữ nguyên trang đang mở
+ * khi chuyển sang thẻ khác; Alt+1…6 chuyển thẻ.
  * @param routes Các trang con của khung (cùng mảng khai báo trong router) – mỗi thẻ tự vẽ trang theo đường dẫn riêng.
  */
 export function AppShell({ routes }: { routes: RouteObject[] }) {
@@ -82,7 +82,7 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
         // F3 mặc định của trình duyệt là "tìm trong trang"; ở đây dùng để tìm trong danh sách.
         if (focusListSearch()) e.preventDefault()
       }
-      // Alt+1…4: chuyển thẻ màn hình (Alt + chữ đã dành cho menu module).
+      // Alt+1…6: chuyển thẻ màn hình (Alt + chữ đã dành cho menu module).
       if (e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) {
         const tab = tabsRef.current[Number(e.code.slice(5)) - 1]
         if (tab) {

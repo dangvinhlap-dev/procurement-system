@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, activeTab } from './helpers.ts'
 import { openByCommand, switchCompany } from './inventoryHelpers.ts'
 import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
@@ -35,7 +35,8 @@ test('cập nhật hóa đơn sau khi xác nhận nhận hàng rồi đối chi�
   await expect(dialog).toBeHidden()
 
   await openByCommand(page, 'MATCH3')
-  const updated = page.locator('.data-grid-row', { hasText: xnh.no })
+  // Danh sách XNH còn ở thẻ cũ (bấm đúp ô số mở phiếu ở thẻ mới) – chỉ xét thẻ đang xem.
+  const updated = activeTab(page).locator('.data-grid-row', { hasText: xnh.no })
   await expect(updated).toContainText('Khớp')
   await expect(updated).toContainText('0000777')
   await expect(updated).toContainText('550.000')

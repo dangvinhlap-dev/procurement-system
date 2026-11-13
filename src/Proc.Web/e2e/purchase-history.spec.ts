@@ -28,7 +28,7 @@ test('nhập dữ liệu mua lịch sử từ Excel, xem theo lô, xóa lô', as
   await expect(dialog.getByText(/File hợp lệ: 3 dòng/)).toBeVisible()
   await dialog.getByRole('button', { name: 'Nhập thật' }).click()
   await expect(dialog.getByText(/Đã nhập xong 3 dòng/)).toBeVisible()
-  await dialog.locator('.ant-modal-footer').getByRole('button', { name: 'Đóng' }).click()
+  await dialog.locator('.ant-modal-footer').getByRole('button', { name: /(^|\s)Đóng$/ }).click()
 
   // Lô mới nhất đứng đầu ô "Lô nhập".
   await page.getByRole('combobox', { name: 'Lô nhập', exact: true }).click()

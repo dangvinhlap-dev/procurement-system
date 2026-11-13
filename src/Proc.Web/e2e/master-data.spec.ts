@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
 
 /**
  * Danh mục đơn vị tính, nhóm hàng, hàng hóa (design.md mục 5.2, 5.7): thêm ở tổng công ty, tìm không dấu,
@@ -12,15 +12,14 @@ const uniqueCode = (prefix: string) => `${prefix}${Date.now().toString(36).slice
 
 /** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
 async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 /** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 /** Chọn một mục trong Select/TreeSelect của antd đang mở trong ngăn kéo. */

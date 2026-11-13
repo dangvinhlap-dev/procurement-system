@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 
-/** Số màn hình mở cùng lúc tối đa trong khung ứng dụng (yêu cầu người dùng 13/11/2026). */
-export const MAX_SCREEN_TABS = 4
+/** Số màn hình mở cùng lúc tối đa trong khung ứng dụng (người dùng chốt 13/11/2026: 6 thẻ, bản demo 4 thẻ). */
+export const MAX_SCREEN_TABS = 6
 
 /**
  * Cách mở một màn hình:
- * - `auto`: đã có thẻ cùng đường dẫn thì chuyển sang thẻ đó, chưa có thì mở thẻ mới (đủ 4 thẻ thì báo, không mở);
+ * - `auto`: đã có thẻ cùng đường dẫn thì chuyển sang thẻ đó, chưa có thì mở thẻ mới (đủ 6 thẻ thì báo, không mở);
  * - `current`: mở thay nội dung của thẻ đang xem (như trước khi có thẻ).
  */
 export type OpenMode = 'auto' | 'current'
@@ -87,7 +87,7 @@ export const UnsavedContext = createContext<(check: () => boolean) => () => void
 
 /**
  * Báo cho khung biết trang đang có thay đổi chưa lưu – để hỏi lại trước khi rời trang, đóng thẻ, đổi công ty, đăng xuất, tải lại trang
- * (yêu cầu người dùng 13/11/2026). Hàm kiểm tra gọi lúc cần hỏi, nên luôn đọc trạng thái mới nhất.
+ * (người dùng chốt 13/11/2026: 6 thẻ, bản demo 4 thẻ). Hàm kiểm tra gọi lúc cần hỏi, nên luôn đọc trạng thái mới nhất.
  * @param check Trả true khi còn thay đổi chưa lưu.
  * @param enabled false thì không đăng ký (ví dụ phiếu chỉ xem, ngăn kéo đang đóng).
  */

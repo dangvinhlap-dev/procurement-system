@@ -43,7 +43,7 @@ test('Portal NCC: mời, kích hoạt, đăng nhập OTP, mời người dùng c
   const inviteUrl = await result.getByTestId('portal-invite-url').inputValue()
   expect(inviteUrl).toContain('/ncc/kich-hoat?token=')
   await page.screenshot({ path: 'e2e/screenshots/portal-invite.png' })
-  await result.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await result.getByRole('button', { name: /(^|\s)Đóng$/ }).last().click()
   await expect(drawer.getByTestId('portal-users')).toContainText(email)
   await expect(drawer.getByTestId('portal-users')).toContainText('Đã mời – chưa kích hoạt')
 
@@ -84,7 +84,7 @@ test('Portal NCC: mời, kích hoạt, đăng nhập OTP, mời người dùng c
   await sub.getByRole('button', { name: 'Mời' }).click()
   const subResult = page.getByRole('dialog', { name: 'Đã tạo lời mời' })
   await expect(subResult.getByTestId('portal-invite-url')).toHaveValue(/\/ncc\/kich-hoat\?token=/)
-  await subResult.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await subResult.getByRole('button', { name: /(^|\s)Đóng$/ }).last().click()
   const grid = page.getByTestId('portal-users')
   await expect(grid).toContainText(`con.${email}`)
   await expect(grid).toContainText('Quản trị NCC')

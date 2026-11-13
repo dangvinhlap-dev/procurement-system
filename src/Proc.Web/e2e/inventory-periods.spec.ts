@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi } from './helpers.ts'
+import { ADMIN, loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
 
 /**
  * Kỳ kho (design.md mục 7, 7.6): tạo lịch năm, mở kỳ tuần tự theo tháng. Mỗi lần chạy tạo công ty mới qua API
@@ -7,15 +7,14 @@ import { ADMIN, loginViaApi } from './helpers.ts'
  */
 
 async function openByCommand(page: Page, code: string) {
-  const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(code)
-  await box.press('Enter')
+  await openInCurrentTab(page, code)
 }
 
 /** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {
   await page.getByTestId('shell-bar').locator('.app-company-select').click()
   await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: label }).click()
+  await confirmCompanySwitch(page)
 }
 
 test('tạo lịch kỳ năm rồi mở kỳ tháng theo thứ tự', async ({ page, request }) => {
