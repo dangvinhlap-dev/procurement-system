@@ -473,8 +473,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - **Lát P6a – hóa đơn điện tử trên Portal: BỎ (người dùng chốt 13/11/2026)** – "công ty tôi có kênh riêng để tiếp nhận, tôi không yêu cầu bạn
   làm". Đã làm dở bước 1–3 (domain HDN + đọc XML, migration `V0_26_0_HoaDonNcc`, dịch vụ + API + test tích hợp, giao diện Portal + màn hình
   Hóa đơn NCC + e2e chưa chạy) – **chỉ trên nhánh `feature/p6a-hoa-don-ncc`** (đã push), **không merge**; `main` không có code, migration
-  của P6a. Nhánh giữ lại để tham khảo – xóa khi người dùng đồng ý. design.md 19.3 bước 6, 19.5, 19.6 đã ghi bỏ. Còn chờ chốt khi làm Y8:
-  đề nghị thanh toán lấy thông tin hóa đơn từ đâu (ví dụ hóa đơn đã nhập trên XNH).
+  của P6a. Nhánh đã xóa (local + GitHub) theo đồng ý của người dùng 13/11/2026. design.md 19.3 bước 6, 19.5, 19.6 đã ghi bỏ. **Đã chốt**:
+  đề nghị thanh toán Y8 lấy thông tin hóa đơn từ XNH (số, ký hiệu, ngày, tiền hóa đơn nhập trên XNH).
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.
