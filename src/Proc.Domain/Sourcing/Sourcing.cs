@@ -381,6 +381,36 @@ public sealed record QuotationLineData(Guid RfqLineId, decimal UnitPrice, decima
 /// <param name="Reason">Lý do (bắt buộc khi không chọn giá thấp nhất).</param>
 public sealed record AwardLineData(Guid RfqLineId, Guid? SupplierId, string? Reason);
 
+/// <summary>Kết quả chọn thầu của một NCC được mời (lát P4b – design.md mục 19.5, P4-7).</summary>
+public enum RfqSupplierOutcome
+{
+    /// <summary>NCC không có báo giá (không nộp Portal, Phòng CUVT cũng không nhập thay).</summary>
+    NoQuote = 1,
+
+    /// <summary>Trúng mọi dòng NCC đã chào.</summary>
+    Won = 2,
+
+    /// <summary>Trúng một phần các dòng đã chào.</summary>
+    PartlyWon = 3,
+
+    /// <summary>Có báo giá nhưng không trúng dòng nào.</summary>
+    Lost = 4,
+}
+
+/// <summary>Một dòng NCC trúng thầu, giá theo báo giá của chính NCC đó.</summary>
+/// <param name="RfqLineId">Dòng RFQ.</param>
+/// <param name="UnitPrice">Đơn giá trước VAT NCC chào.</param>
+/// <param name="DiscountPct">% chiết khấu.</param>
+/// <param name="VatCode">Thuế suất.</param>
+/// <param name="Amount">Thành tiền trúng thầu = SL × đơn giá × (100 − %CK)/100, làm tròn 2 số.</param>
+public sealed record RfqWonLine(Guid RfqLineId, decimal UnitPrice, decimal DiscountPct, string? VatCode, decimal Amount);
+
+/// <summary>Kết quả chọn thầu một NCC thấy trên Portal: chỉ của chính NCC, không có NCC khác, giá khác, điểm, lý do chọn.</summary>
+/// <param name="Outcome">Trúng / trúng một phần / không trúng / không báo giá.</param>
+/// <param name="QuotedLineCount">Số dòng NCC đã chào giá.</param>
+/// <param name="WonLines">Các dòng trúng.</param>
+public sealed record RfqSupplierResult(RfqSupplierOutcome Outcome, int QuotedLineCount, IReadOnlyList<RfqWonLine> WonLines);
+
 /// <summary>
 /// Các mục của hồ sơ trình kết quả chọn thầu (lát B3b – design.md mục 8.6; đề xuất Ban CUVT: hồ sơ trình gồm so sánh, biên bản, kỹ thuật,
 /// chi phí, pháp lý, đề xuất, xác nhận ngân sách). Bảng so sánh do hệ thống lập nên tự tính, các mục còn lại người mua đánh dấu.
@@ -471,6 +501,15 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
 
     /// <summary>Người mở báo giá Portal.</summary>
     public Guid? PortalQuotesOpenedBy { get; private set; }
+
+    /// <summary>
+    /// Thời điểm Phòng CUVT bấm gửi kết quả chọn thầu cho NCC (lát P4b – người dùng yêu cầu 13/11/2026 "để phòng CUVT tự bấm gửi"); null = chưa
+    /// gửi – NCC trên Portal vẫn chỉ thấy "Đang xét chọn".
+    /// </summary>
+    public DateTimeOffset? ResultSentAt { get; private set; }
+
+    /// <summary>Người gửi kết quả chọn thầu cho NCC.</summary>
+    public Guid? ResultSentBy { get; private set; }
 
     /// <summary>Phiếu tìm nguồn liên quan.</summary>
     public Guid? SourcingId { get; private set; }
@@ -913,6 +952,44 @@ public sealed class Rfq : AuditableEntity, ICompanyOwned, IHasDocumentNumber, IA
         EnsureAwardPending();
         Status = RfqStatus.Awarded;
         AwardedAt = at;
+    }
+
+    /// <summary>
+    /// Phòng CUVT gửi kết quả chọn thầu cho NCC (lát P4b – người dùng yêu cầu 13/11/2026: không tự gửi khi duyệt xong, Phòng CUVT tự bấm). Chỉ
+    /// khi kết quả đã duyệt xong, **một lần** – gửi lại sẽ báo trùng NCC; từ lúc này NCC thấy kết quả trên Portal.
+    /// </summary>
+    /// <param name="sentBy">Người gửi.</param>
+    /// <param name="at">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Khi kết quả chưa duyệt xong hoặc đã gửi.</exception>
+    public void MarkResultSent(Guid sentBy, DateTimeOffset at)
+    {
+        if (Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {No} chưa được duyệt kết quả chọn thầu – chưa gửi kết quả được.");
+        if (ResultSentAt is not null) throw new BusinessRuleException($"Kết quả chọn thầu RFQ {No} đã gửi cho NCC.");
+        ResultSentAt = at;
+        ResultSentBy = sentBy;
+    }
+
+    /// <summary>
+    /// Kết quả chọn thầu của một NCC để báo NCC (lát P4b – design.md mục 19.5, P4-7). Chỉ có khi kết quả **đã duyệt xong** (Đã chọn thầu): lúc
+    /// chờ duyệt hội đồng còn có thể từ chối, chọn lại; RFQ bị hủy (kể cả hủy dây chuyền sau duyệt) thì kết quả không còn giá trị.
+    /// Ví dụ: NCC chào 2 dòng, trúng 1 dòng 10 thùng × 600.000 × 95% → Trúng một phần, thành tiền 5.700.000.
+    /// </summary>
+    /// <param name="supplierId">NCC.</param>
+    /// <returns>Kết quả; null khi chưa có kết quả hoặc NCC không được mời.</returns>
+    public RfqSupplierResult? ResultFor(Guid supplierId)
+    {
+        if (Status != RfqStatus.Awarded) return null;
+        var invited = _suppliers.FirstOrDefault(s => s.SupplierId == supplierId);
+        if (invited is null) return null;
+        var quoted = invited.QuotationLines.Select(q => q.RfqLineId).Distinct().Count();
+        if (!invited.HasQuoted || quoted == 0) return new(RfqSupplierOutcome.NoQuote, 0, []);
+        var won = _lines.Where(l => l.AwardedSupplierId == supplierId).OrderBy(l => l.LineNo)
+            .Select(l => (Line: l, Quote: invited.QuotationLines.FirstOrDefault(q => q.RfqLineId == l.Id)))
+            .Where(x => x.Quote is not null)
+            .Select(x => new RfqWonLine(x.Line.Id, x.Quote!.UnitPrice, x.Quote.DiscountPct, x.Quote.VatCode, LineAmount(x.Line, supplierId)))
+            .ToList();
+        var outcome = won.Count == 0 ? RfqSupplierOutcome.Lost : won.Count >= quoted ? RfqSupplierOutcome.Won : RfqSupplierOutcome.PartlyWon;
+        return new(outcome, quoted, won);
     }
 
     /// <summary>

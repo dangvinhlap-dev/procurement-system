@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveRfqAward, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
 
 /** Mời một tài khoản Portal cho NCC, kích hoạt, đăng nhập 2 bước qua API; trả dữ liệu phiên Portal (như màn hình đăng nhập lưu). */
 async function portalSession(request: APIRequestContext, supplierId: string) {
@@ -170,4 +170,77 @@ test('Portal: NCC hỏi làm rõ, Phòng CUVT trả lời riêng và đăng thô
   await expect(qa).toContainText('Giao hàng trong giờ hành chính.')
   await qa.scrollIntoViewIfNeeded()
   await page.screenshot({ path: 'e2e/screenshots/portal-rfq-qa.png', fullPage: true })
+})
+
+/**
+ * Lát P4b (design.md 19.5, P4-7…P4-9): kết quả chọn thầu duyệt xong, Phòng CUVT bấm "Gửi kết quả cho NCC" (người dùng yêu cầu 13/11/2026)
+ * → NCC thấy "Trúng thầu" trên danh sách và khối "Kết quả chọn thầu" (dòng trúng kèm giá của chính NCC); tab Email NCC có thư "Báo trúng thầu". NCC không trúng / không báo giá, thư không có giá:
+ * test tích hợp `KetQuaChonThau_SauDuyetXong_NccChiThayKetQuaCuaMinh_ThuBaoKetQua`.
+ */
+test('Portal: NCC xem kết quả chọn thầu sau khi duyệt xong', async ({ page, request }) => {
+  test.setTimeout(90_000)
+  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const bha = await api(request, 'BHA')
+  const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const in3 = new Date(Date.now() + 3 * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const rfq = await bha.send<{ id: string; no: string; lines: { id: string }[] }>('post', '/api/rfqs', {
+    date: today, title: `Kết quả thầu ${unique('Q')}`, deadline: in3, deadlineTime: '16:30', sourcingId: null,
+    weights: { price: 60, quality: 20, delivery: 10, payment: 5, warranty: 5 }, note: null,
+    lines: [{ id: null, itemId, uomId: hop, qty: 20, sourcePrLineId: null, note: null }], supplierIds: [supplierId],
+  })
+  await bha.send('post', `/api/rfqs/${rfq.id}/send`, { reason: 'Chỉ một NCC cung cấp' })
+  // NCC có tài khoản Portal đang dùng trước khi duyệt kết quả → có thư báo trúng thầu.
+  const session = await portalSession(request, supplierId)
+  const lineId = rfq.lines[0].id
+  await bha.send('put', `/api/rfqs/${rfq.id}/quotations/${supplierId}`, {
+    quoteDate: today, validUntil: null, paymentTerms: null, qualityScore: 8, deliveryScore: 8, paymentScore: 8, warrantyScore: 8, note: null,
+    lines: [{ rfqLineId: lineId, unitPrice: 50_000, discountPct: 0, vatCode: '10', leadTimeDays: 5, note: null }],
+  })
+  await bha.send('post', `/api/rfqs/${rfq.id}/award`, {
+    lines: [{ rfqLineId: lineId, supplierId, reason: null }], fewQuotesReason: 'Chỉ một NCC cung cấp', selectionReason: 'Giá phù hợp',
+  })
+
+  await page.goto('/ncc/dang-nhap')
+  await page.evaluate((s) => sessionStorage.setItem('proc.portal.session', JSON.stringify(s)), session)
+  // Đang chờ hội đồng duyệt: chưa có kết quả.
+  await page.goto(`/ncc/bao-gia/${rfq.id}`)
+  await expect(page.getByTestId('portal-rfq-info')).toContainText('Đang xét chọn')
+  await expect(page.getByTestId('portal-rfq-result')).toHaveCount(0)
+
+  // Duyệt xong: chưa tự gửi – NCC vẫn "Đang xét chọn" đến khi Phòng CUVT bấm gửi (người dùng yêu cầu 13/11/2026).
+  await approveRfqAward(request, rfq.id)
+  await page.reload()
+  await expect(page.getByTestId('portal-rfq-info')).toContainText('Đang xét chọn')
+  await expect(page.getByTestId('portal-rfq-result')).toHaveCount(0)
+
+  // Nội bộ: bấm "Gửi kết quả cho NCC" (hỏi lại) → ghi người, giờ gửi; tab Email NCC có thư báo trúng thầu.
+  await loginViaApi(page)
+  await page.goto('/')
+  await switchCompany(page, 'BHA')
+  await page.goto(`/dau-thau/rfq/${rfq.id}`)
+  await page.getByRole('button', { name: /Gửi kết quả cho NCC$/ }).click()
+  const confirm = page.locator('.ant-modal-confirm')
+  await expect(confirm).toContainText('Chỉ gửi được một lần')
+  await confirm.getByRole('button', { name: /Gửi kết quả$/ }).click()
+  await expect(page.locator('.ant-message')).toContainText(`Đã gửi kết quả chọn thầu RFQ ${rfq.no} cho NCC.`)
+  await expect(page.getByText(/Đã gửi kết quả cho NCC: .* lúc/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Gửi kết quả cho NCC$/ })).toHaveCount(0)
+  await page.getByRole('tab', { name: /Email NCC/ }).click()
+  await expect(page.getByRole('row', { name: /Báo trúng thầu/ }).first()).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/rfq-result-emails.png' })
+
+  // NCC: danh sách có cột Kết quả, khối "Kết quả chọn thầu" có dòng trúng với giá của chính NCC.
+  await page.goto('/ncc/dang-nhap')
+  await page.evaluate((s) => sessionStorage.setItem('proc.portal.session', JSON.stringify(s)), session)
+  await page.goto('/ncc/bao-gia')
+  const row = page.locator('.data-grid-row', { hasText: rfq.no })
+  await expect(row).toContainText('Đã có kết quả')
+  await expect(row).toContainText('Trúng thầu')
+  await row.dblclick()
+  const result = page.getByTestId('portal-rfq-result')
+  await expect(result).toContainText('Trúng thầu')
+  await expect(result).toContainText('1/1 dòng đã chào giá')
+  await expect(result).toContainText('1.000.000') // 20 × 50.000.
+  await page.screenshot({ path: 'e2e/screenshots/portal-rfq-result.png', fullPage: true })
 })

@@ -67,6 +67,9 @@ public static class SourcingEndpoints
         // Lát P3a: mở báo giá Portal niêm phong sau giờ hạn nộp; chấm điểm báo giá đã có; xem giá niêm phong (quyền riêng, ghi nhật ký).
         rfq.MapPost("/{id:guid}/open-portal-quotes", (Guid id, IRfqService s, CancellationToken ct) => s.OpenPortalQuotesAsync(id, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);
+        // Lát P4b: Phòng CUVT tự bấm gửi kết quả chọn thầu cho NCC (người dùng yêu cầu 13/11/2026) – không tự gửi khi duyệt xong.
+        rfq.MapPost("/{id:guid}/send-result", (Guid id, IRfqService s, CancellationToken ct) => s.SendResultAsync(id, ct))
+            .RequirePermission(Permissions.Sourcing.RfqManage);
         rfq.MapPut("/{id:guid}/scores/{supplierId:guid}", (Guid id, Guid supplierId, ScoreQuotationRequest request, IRfqService s, CancellationToken ct) =>
                 s.ScoreQuotationAsync(id, supplierId, request, ct))
             .RequirePermission(Permissions.Sourcing.RfqManage);

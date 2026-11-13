@@ -151,6 +151,35 @@ export const portalRfqStatusLabels: Record<PortalRfqStatus, string> = {
   Cancelled: 'Đã hủy',
 }
 
+/** Kết quả chọn thầu của chính NCC (lát P4b): trúng mọi dòng đã chào, trúng một phần, không trúng, không báo giá. */
+export type PortalRfqOutcome = 'Won' | 'PartlyWon' | 'Lost' | 'NoQuote'
+
+/** Nhãn tiếng Việt của kết quả chọn thầu. */
+export const portalRfqOutcomeLabels: Record<PortalRfqOutcome, string> = {
+  Won: 'Trúng thầu',
+  PartlyWon: 'Trúng một phần',
+  Lost: 'Không trúng thầu',
+  NoQuote: 'Không nộp báo giá',
+}
+
+/** Một dòng NCC trúng thầu – giá theo báo giá của chính NCC. */
+export interface PortalWonLine {
+  rfqLineId: string
+  unitPrice: number
+  discountPct: number
+  vatCode: string | null
+  amount: number
+}
+
+/** Kết quả chọn thầu NCC thấy khi kết quả đã duyệt xong (lát P4b) – không có NCC khác, giá khác, lý do chọn. */
+export interface PortalRfqResult {
+  outcome: PortalRfqOutcome
+  awardedAt: string | null
+  quotedLineCount: number
+  wonAmount: number
+  wonLines: PortalWonLine[]
+}
+
 /** Một thư mời báo giá trong danh sách Portal. deadlineAt là giờ Việt Nam (không kèm múi giờ). */
 export interface PortalRfqListItem {
   id: string
@@ -163,6 +192,8 @@ export interface PortalRfqListItem {
   lineCount: number
   submissionCount: number
   lastSubmittedAt: string | null
+  /** Kết quả chọn thầu của chính NCC; null khi chưa có kết quả (lát P4b). */
+  outcome: PortalRfqOutcome | null
 }
 
 /** Dòng hàng của RFQ trên Portal. */
@@ -227,6 +258,8 @@ export interface PortalRfq {
   canAsk: boolean
   /** Câu hỏi – trả lời của chính NCC (riêng) và thông báo làm rõ công khai của bên mời, cũ trước. */
   clarifications: PortalClarification[]
+  /** Kết quả chọn thầu của chính NCC; null khi chưa duyệt xong kết quả hoặc đã hủy (lát P4b). */
+  result: PortalRfqResult | null
 }
 
 /** Một mục hỏi đáp NCC thấy (lát P3b-2): câu hỏi của mình hoặc thông báo làm rõ của bên mời. */

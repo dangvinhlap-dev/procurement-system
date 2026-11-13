@@ -29,6 +29,12 @@ public enum SupplierPortalEmailKind
 
     /// <summary>Bên đặt hàng mở lại phản hồi đơn – NCC xác nhận / từ chối lại (kèm lý do mở lại).</summary>
     PurchaseOrderReopened = 8,
+
+    /// <summary>Báo NCC trúng thầu (toàn bộ hoặc một phần dòng đã chào) – khi kết quả chọn thầu duyệt xong (lát P4b).</summary>
+    RfqAwarded = 9,
+
+    /// <summary>Báo NCC có báo giá nhưng không trúng thầu – khi kết quả chọn thầu duyệt xong (lát P4b).</summary>
+    RfqNotAwarded = 10,
 }
 
 /// <summary>
@@ -67,7 +73,7 @@ public sealed class SupplierPortalEmail : Entity, ICompanyOwned
     /// <summary>Loại thư.</summary>
     public SupplierPortalEmailKind Kind { get; private set; }
 
-    /// <summary>Loại chứng từ liên quan, hiện chỉ "RFQ".</summary>
+    /// <summary>Loại chứng từ liên quan: "RFQ" hoặc "PO".</summary>
     public string DocType { get; private set; } = string.Empty;
 
     /// <summary>Id chứng từ liên quan.</summary>

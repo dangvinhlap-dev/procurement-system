@@ -6,7 +6,8 @@ namespace Proc.Application.Portal;
 
 /// <summary>
 /// Một thư đã báo NCC về RFQ / PO, hiện trên tab "Email NCC" của RFQ (lát P3b-3) và tab "Xác nhận NCC" của PO (lát P4a). Kind: RfqInvitation,
-/// RfqDeadlineExtended, RfqCancelled, RfqAnswer, RfqNotice, PurchaseOrderIssued, PurchaseOrderCancelled, PurchaseOrderReopened. State: Pending (chờ gửi), Sent, Skipped (thôi gửi), Failed (lỗi hết lượt thử).
+/// RfqDeadlineExtended, RfqCancelled, RfqAnswer, RfqNotice, PurchaseOrderIssued, PurchaseOrderCancelled, PurchaseOrderReopened,
+/// RfqAwarded, RfqNotAwarded (kết quả chọn thầu – lát P4b). State: Pending (chờ gửi), Sent, Skipped (thôi gửi), Failed (lỗi hết lượt thử).
 /// </summary>
 /// <param name="Id">Thư.</param>
 /// <param name="SupplierId">NCC nhận.</param>
@@ -39,7 +40,7 @@ public interface IPortalEmailService
     /// <param name="rfq">RFQ (đã ở trạng thái sau thao tác, ví dụ hạn nộp mới).</param>
     /// <param name="kind">Loại thư.</param>
     /// <param name="onlySupplierId">Chỉ gửi NCC này (trả lời câu hỏi); null = mọi NCC được mời.</param>
-    /// <param name="detail">Nội dung thêm (câu hỏi – trả lời, thông báo làm rõ); xuống dòng giữ nguyên.</param>
+    /// <param name="detail">Nội dung thêm (câu hỏi – trả lời, thông báo làm rõ, số dòng trúng thầu); xuống dòng giữ nguyên.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Số thư đã soạn.</returns>
     Task<int> QueueRfqAsync(Rfq rfq, SupplierPortalEmailKind kind, Guid? onlySupplierId, string? detail, CancellationToken cancellationToken);

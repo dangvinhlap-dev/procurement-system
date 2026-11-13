@@ -18,7 +18,32 @@ namespace Proc.Application.Portal;
 /// <param name="LastSubmittedAt">Lần nộp cuối.</param>
 public sealed record PortalRfqListItemDto(
     Guid Id, string No, string CompanyName, string Title, DateOnly Date, DateTime DeadlineAt, string Status, int LineCount, int SubmissionCount,
-    DateTimeOffset? LastSubmittedAt);
+    DateTimeOffset? LastSubmittedAt)
+{
+    /// <summary>
+    /// Kết quả chọn thầu của chính NCC khi kết quả đã duyệt xong và Phòng CUVT đã gửi (lát P4b): "Won", "PartlyWon", "Lost", "NoQuote"; null khi chưa có kết quả.
+    /// </summary>
+    public string? Outcome { get; init; }
+}
+
+/// <summary>Một dòng NCC trúng thầu – giá theo báo giá của chính NCC (lát P4b).</summary>
+/// <param name="RfqLineId">Dòng RFQ.</param>
+/// <param name="UnitPrice">Đơn giá trước VAT.</param>
+/// <param name="DiscountPct">% chiết khấu.</param>
+/// <param name="VatCode">Thuế suất.</param>
+/// <param name="Amount">Thành tiền trúng thầu (sau CK, trước VAT).</param>
+public sealed record PortalWonLineDto(Guid RfqLineId, decimal UnitPrice, decimal DiscountPct, string? VatCode, decimal Amount);
+
+/// <summary>
+/// Kết quả chọn thầu NCC thấy trên Portal (lát P4b – design.md mục 19.5, P4-7): chỉ của chính NCC, không có NCC khác, giá khác, điểm, lý do chọn.
+/// </summary>
+/// <param name="Outcome">"Won" trúng mọi dòng đã chào, "PartlyWon" trúng một phần, "Lost" không trúng, "NoQuote" không có báo giá.</param>
+/// <param name="AwardedAt">Lúc Phòng CUVT gửi kết quả cho NCC (ngày có kết quả NCC thấy).</param>
+/// <param name="QuotedLineCount">Số dòng NCC đã chào.</param>
+/// <param name="WonAmount">Tổng thành tiền các dòng trúng.</param>
+/// <param name="WonLines">Các dòng trúng.</param>
+public sealed record PortalRfqResultDto(
+    string Outcome, DateTimeOffset? AwardedAt, int QuotedLineCount, decimal WonAmount, IReadOnlyList<PortalWonLineDto> WonLines);
 
 /// <summary>Dòng hàng của RFQ trên Portal (không có giá NCC khác).</summary>
 /// <param name="Id">Dòng RFQ.</param>
@@ -91,6 +116,9 @@ public sealed record PortalRfqDto(
 
     /// <summary>Hỏi đáp NCC thấy: câu hỏi – trả lời của chính mình và thông báo làm rõ của bên mời, cũ trước (lát P3b-2).</summary>
     public IReadOnlyList<PortalClarificationDto> Clarifications { get; init; } = [];
+
+    /// <summary>Kết quả chọn thầu của chính NCC (lát P4b); null khi kết quả chưa duyệt xong, Phòng CUVT chưa gửi hoặc RFQ đã hủy.</summary>
+    public PortalRfqResultDto? Result { get; init; }
 }
 
 /// <summary>

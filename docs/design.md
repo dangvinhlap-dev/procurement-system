@@ -2632,7 +2632,16 @@ API Portal: `GET /api/portal/orders`, `GET /api/portal/orders/{id}`, `POST /api/
 `GET …/attachments/{fileId}/content`, `DELETE …/attachments/{fileId}` (NCC lấy từ phiên – P1b-4). API nội bộ: `POST /api/purchase-orders/{id}/reopen-supplier-response`
 (quyền lập PO), `GET /api/purchase-orders/{id}/portal-emails` (quyền xem PO); file NCC qua API đính kèm chung (`ownerType=PoSupplierFile`, `ownerId` = PO).
 Migration `V0_26_0_NccXacNhanDonHang` (bảng `PurchaseOrderSupplierResponse`; `Down()` xóa bảng – mất toàn bộ phản hồi của NCC). Chưa làm ở P4a:
-NCC đề xuất sửa từng dòng (SL, giá, ngày) – khi có yêu cầu; báo NCC kết quả chọn thầu (P4b); nhắc NCC chưa xác nhận sau n ngày – khi có yêu cầu.
+NCC đề xuất sửa từng dòng (SL, giá, ngày) – khi có yêu cầu; báo NCC kết quả chọn thầu (P4b – xong, xem dưới); nhắc NCC chưa xác nhận sau n ngày – khi có yêu cầu.
+
+**Lát P4b – báo NCC kết quả chọn thầu (13/11/2026, bản 0.26.0).** Người dùng yêu cầu giữa lát (13/11/2026): **"để phòng CUVT tự bấm gửi"**.
+Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P4-7 | **Kết quả NCC thấy**: chỉ khi kết quả chọn thầu **duyệt xong** (RFQ Đã chọn thầu) **và Phòng CUVT đã bấm gửi kết quả** (P4-8) – trước đó (đang chờ hội đồng duyệt, hoặc duyệt xong chưa gửi) NCC chỉ thấy "Đang xét chọn"; RFQ bị hủy (kể cả hủy dây chuyền sau duyệt) thì không còn kết quả. Mỗi NCC được mời chỉ thấy **kết quả của mình**: **Trúng thầu** (trúng mọi dòng đã chào), **Trúng một phần**, **Không trúng thầu**, **Không nộp báo giá** – kèm ngày có kết quả, số dòng trúng / số dòng đã chào, tổng tiền trúng và lưới dòng trúng (đơn giá, % CK, thuế suất, thành tiền theo **báo giá của chính NCC**, kể cả báo giá Phòng CUVT nhập thay). **Không thấy** NCC nào trúng dòng khác, giá NCC khác, điểm chấm, lý do chọn. Danh sách Thư mời báo giá có cột "Kết quả". |
+| P4-8 | **Gửi kết quả – Phòng CUVT tự bấm** (người dùng yêu cầu 13/11/2026): duyệt xong **không tự gửi**; RFQ Đã chọn thầu có nút **"Gửi kết quả cho NCC"** (quyền lập RFQ `Sourcing.Rfq.Manage`), hỏi lại, gửi **một lần** (hai người cùng bấm thì người sau báo lỗi), ghi **người và giờ gửi** (`Rfq.ResultSentAt/By`, có AuditLog) – hiện trên đầu phiếu RFQ; giờ gửi là "Ngày có kết quả" NCC thấy. Lúc gửi soạn **thư kết quả** (hàng chờ `SupplierPortalEmail`, cách gửi như P3-18, link `/ncc/bao-gia/{id}`) cho NCC **đã có báo giá**: **Báo trúng thầu** (số dòng trúng / số dòng đã chào, "đơn đặt hàng hoặc hợp đồng gửi sau") hoặc **Báo không trúng thầu** (thư cảm ơn). Thư **không có giá**, không nêu NCC trúng, không lý do chọn. NCC không báo giá không có thư (vẫn thấy "Không nộp báo giá" trên Portal). |
+| P4-9 | Kết quả tính từ dòng RFQ (NCC trúng) và báo giá đã lưu (`Rfq.ResultFor`), không thêm bảng; loại thư mới `RfqAwarded`, `RfqNotAwarded` (cột `Kind` lưu số). Nội bộ xem thư ở tab "Email NCC" của RFQ. API nội bộ `POST /api/rfqs/{id}/send-result`. Migration `V0_26_0_GuiKetQuaChonThau` (cột `Rfq.ResultSentAt`, `ResultSentBy`; `Down()` xóa cột – mất người, giờ gửi kết quả; RFQ đã chọn thầu trước bản này coi như chưa gửi – dữ liệu thử). |
 
 ### 19.6 Lộ trình
 
@@ -2642,7 +2651,7 @@ NCC đề xuất sửa từng dòng (SL, giá, ngày) – khi có yêu cầu; b�
 | 0.23.0 | Y2, Y3, Y5, Y10 | Công trình + dự toán; đề nghị mua 1A/1B/DV + Thủ kho nhập tồn; bảng tổng hợp 2A/2B; khung mẫu in |
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
-| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi; P4b báo kết quả chọn thầu), giao hàng, hóa đơn |
+| 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), giao hàng, hóa đơn |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
