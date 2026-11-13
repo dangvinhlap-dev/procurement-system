@@ -184,6 +184,19 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 - **Báo giao trên Portal không bắt buộc**: NCC giao theo quy trình đang có, báo hoặc không báo trên Portal đều được; nơi nhận vẫn lập XNH thẳng
   từ PO (**Lập phiếu nhận hàng**) như trước – phiếu báo giao chỉ là thông tin báo trước và giúp điền sẵn XNH.
 
+### Đề nghị thanh toán 5A / 5B (DNT – từ bản 0.27.0, lát Y8)
+
+- **Lập**: trên PO đã duyệt (hoặc đã đóng) bấm **Lập đề nghị thanh toán**, hoặc Mua hàng → **Đề nghị thanh toán** → Tạo mới và chọn đơn. Phiếu
+  có **nhiều dòng hóa đơn** – mỗi dòng là một phiếu nhận hàng (XNH) đã xác nhận **có hóa đơn** (nhập số, ký hiệu, ngày, tiền hóa đơn trên XNH
+  bằng **Cập nhật hóa đơn** trước). Mở từ PO thì phiếu điền sẵn mọi XNH có hóa đơn chưa đề nghị; thêm bằng **Chọn phiếu nhận hàng** (F2).
+- **Biểu mẫu** tự theo loại mua của PO: 5A (công trình), 5B (hàng hóa, dịch vụ). **Hình thức**: tiền mặt hoặc chuyển khoản – chuyển khoản chọn
+  tài khoản ngân hàng của NCC (khai ở danh mục NCC). **Giảm trừ** (tạm ứng, phạt…) phải ghi lý do; số tiền đề nghị = tổng − giảm trừ.
+- **Duyệt**: Gửi duyệt → GĐ khối (của bộ phận đặt hàng) → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch (khi đã áp "Cấu hình duyệt mẫu" CUVT ở Quy trình
+  duyệt). Duyệt xong **kế toán** bấm **Ghi Đã chi** (ngày chi, số UNC / phiếu chi) – phiếu chuyển "Đã chi", không hủy được nữa.
+- Mỗi XNH chỉ ở một đề nghị chưa hủy; khi đã ở đề nghị thì không sửa hóa đơn trên XNH được – hủy đề nghị (khi chưa chi) rồi sửa.
+- **In phiếu** theo mẫu "Phiếu đề nghị thanh toán tiền mặt / chuyển khoản" 5A/5B: định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B
+  của đơn; bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ, khối ký theo chuỗi duyệt.
+
 ## 3.5 Theo dõi giao hàng (POTRK)
 
 Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn lại, hạn giao (dòng hoặc đầu phiếu), **quá hạn**. Bấm đúp mở PO.

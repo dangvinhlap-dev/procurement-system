@@ -29,6 +29,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IInventoryDocumentService _inventory;
     private readonly IPurchaseSummaryService _summaries;
     private readonly IRfqService _rfqs;
+    private readonly IPaymentRequestService _payments;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -38,10 +39,11 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="inventory">Dịch vụ chứng từ kho.</param>
     /// <param name="summaries">Dịch vụ bảng tổng hợp đề xuất mua.</param>
     /// <param name="rfqs">Dịch vụ yêu cầu báo giá.</param>
+    /// <param name="payments">Dịch vụ đề nghị thanh toán (lát Y8).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
-        IPurchaseSummaryService summaries, IRfqService rfqs, IOptions<PrintingOptions> options)
+        IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, IOptions<PrintingOptions> options)
     {
         try
         {
@@ -60,6 +62,25 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _inventory = inventory;
         _summaries = summaries;
         _rfqs = rfqs;
+        _payments = payments;
+    }
+
+    /// <inheritdoc />
+    public async Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // Đọc đề nghị qua dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
+        var payment = await _payments.GetAsync(id, cancellationToken);
+        var po = await _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines).SingleAsync(o => o.Id == payment.PurchaseOrderId, cancellationToken);
+        var itemIds = po.Lines.Select(l => l.ItemId).Distinct().ToList();
+        var items = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.Name, cancellationToken);
+        var names = po.Lines.OrderBy(l => l.LineNo).Select(l => items.GetValueOrDefault(l.ItemId) ?? "").Where(n => n.Length > 0).Distinct().ToList();
+        var company = await CompanyAsync(cancellationToken);
+        var frame = await OrderFrameAsync(po.Id, po.Date, po.ConstructionProjectId, po.DepartmentId,
+            po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList(), names, cancellationToken);
+        var context = new PoPrintContext(company.Name, frame.ProjectName, frame.DepartmentName, frame.GoodsTitle, frame.Budget, frame.PastNet,
+            frame.PastVat, null, new Dictionary<Guid, string?>(), new Dictionary<Guid, decimal>());
+        var form = CuvtPrintForms.PaymentRequest(payment, context, po.TotalAmount);
+        return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(form));
     }
 
     /// <inheritdoc />
@@ -95,8 +116,25 @@ public sealed class DocumentPdfService : IDocumentPdfService
         var lastPrices = await LastPricesAsync(
             po.Lines.Select(l => (l.Id, l.ItemId, l.UomFactor)).ToList(), po.Date, [po.Id], cancellationToken);
 
+        var frame = await OrderFrameAsync(po.Id, po.Date, po.ConstructionProjectId, po.DepartmentId,
+            po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList(),
+            po.Lines.OrderBy(l => l.LineNo).Select(l => l.ItemName).Distinct().ToList(), cancellationToken);
+        var context = new PoPrintContext(
+            company.Name, frame.ProjectName, frame.DepartmentName, frame.GoodsTitle, frame.Budget, frame.PastNet, frame.PastVat, phone, specifications,
+            lastPrices);
+        return CuvtPrintForms.PurchaseOrder(po, context);
+    }
+
+    /// <summary>
+    /// Khung chi phí của một PO dùng chung cho bảng theo dõi 4A/4B (lát Y7) và đề nghị thanh toán 5A/5B (lát Y8): 4A/5A tổng dự toán công trình,
+    /// đã mua trước đây = PO đã duyệt khác của công trình; 4B/5B ngân sách tháng của bộ phận (bộ phận các đề nghị nguồn nếu chỉ một, không thì bộ
+    /// phận đặt hàng), đã mua trước đây = PO đã duyệt khác trong tháng của bộ phận; "Tên hàng hóa" = mục đích đề nghị nguồn hoặc tên mặt hàng.
+    /// </summary>
+    private async Task<(string? ProjectName, string? DepartmentName, string? GoodsTitle, decimal? Budget, decimal PastNet, decimal PastVat)> OrderFrameAsync(
+        Guid poId, DateOnly poDate, Guid? constructionProjectId, Guid? orderDepartmentId, IReadOnlyList<Guid> prLineIds, IReadOnlyList<string> itemNames,
+        CancellationToken cancellationToken)
+    {
         // Đề nghị nguồn: bộ phận và mục đích (4B "Tên hàng hóa").
-        var prLineIds = po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList();
         var requests = await (
                 from l in _db.Set<PurchaseRequestLine>().AsNoTracking()
                 join r in _db.PurchaseRequests on l.RequestId equals r.Id
@@ -107,7 +145,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         string? projectName = null, departmentName, goodsTitle = null;
         decimal? budget;
         (decimal Net, decimal Vat) past;
-        if (po.ConstructionProjectId is { } projectId)
+        if (constructionProjectId is { } projectId)
         {
             // 4A: khung chi phí là tổng dự toán công trình; đã mua trước đây = PO đã duyệt khác của công trình (lũy kế 1A, Q4).
             var project = await _db.ConstructionProjects.AsNoTracking().Where(p => p.Id == projectId)
@@ -115,29 +153,27 @@ public sealed class DocumentPdfService : IDocumentPdfService
             projectName = project.Name;
             budget = project.EstimateAmount;
             departmentName = await DepartmentNameAsync(project.DepartmentId, cancellationToken);
-            past = (await ConstructionSpending.ByProjectAsync(_db, [projectId], cancellationToken, po.Id)).GetValueOrDefault(projectId);
+            past = (await ConstructionSpending.ByProjectAsync(_db, [projectId], cancellationToken, poId)).GetValueOrDefault(projectId);
         }
         else
         {
             // 4B: bộ phận của các đề nghị nguồn (một bộ phận), không thì bộ phận đặt hàng của PO; định mức = ngân sách tháng theo ngày PO;
             // đã mua trước đây = PO đã duyệt khác trong tháng của bộ phận (lũy kế 1B – người dùng chốt 12/11/2026).
             var departments = requests.Select(r => r.DepartmentId).OfType<Guid>().Distinct().ToList();
-            Guid? department = departments.Count == 1 ? departments[0] : departments.Count == 0 ? po.DepartmentId : null;
+            Guid? department = departments.Count == 1 ? departments[0] : departments.Count == 0 ? orderDepartmentId : null;
             departmentName = department is { } d ? await DepartmentNameAsync(d, cancellationToken) : null;
             budget = department is { } bd
-                ? await _db.DepartmentBudgets.AsNoTracking().Where(b => b.DepartmentId == bd && b.Year == po.Date.Year && b.Month == po.Date.Month)
+                ? await _db.DepartmentBudgets.AsNoTracking().Where(b => b.DepartmentId == bd && b.Year == poDate.Year && b.Month == poDate.Month)
                     .Select(b => (decimal?)b.Amount).FirstOrDefaultAsync(cancellationToken)
                 : null;
-            past = department is { } sd ? await DepartmentSpending.MonthDetailAsync(_db, sd, po.Date, po.Id, cancellationToken) : (0m, 0m);
+            past = department is { } sd ? await DepartmentSpending.MonthDetailAsync(_db, sd, poDate, poId, cancellationToken) : (0m, 0m);
             var purposes = requests.Select(r => r.Purpose?.Trim()).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
-            var names = po.Lines.OrderBy(l => l.LineNo).Select(l => l.ItemName).Distinct().ToList();
+            var names = itemNames;
             goodsTitle = purposes.Count > 0 ? string.Join("; ", purposes)
                 : names.Count <= 3 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(3))} và {names.Count - 3} mặt hàng khác";
         }
 
-        var context = new PoPrintContext(
-            company.Name, projectName, departmentName, goodsTitle, budget, past.Net, past.Vat, phone, specifications, lastPrices);
-        return CuvtPrintForms.PurchaseOrder(po, context);
+        return (projectName, departmentName, goodsTitle, budget, past.Net, past.Vat);
     }
 
     /// <summary>Đơn đặt hàng gửi NCC theo khuôn chung (mục 10.10) – NCC cần mã hàng, giá, chiết khấu, thuế, điều khoản giao.</summary>

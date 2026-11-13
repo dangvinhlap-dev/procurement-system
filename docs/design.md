@@ -2470,6 +2470,25 @@ phát hành").**
 - Quyền: `Purchase.InternalSale.View` (xem – vai trò mẫu xem nghiệp vụ mua), `Purchase.InternalSale.Manage` (xác nhận, từ chối – vai trò
   mẫu NVCUVT). Migration `V0_24_0_DonBanNoiBo` (điền lại công ty bán cho PO cũ có NCC nội bộ).
 
+**Lát Y8 – đề nghị thanh toán 5A / 5B (13/11/2026, bản 0.27.0 – mục 19.3 bước 7, Q16).** Quy tắc (tự đặt khi người dùng chọn "làm Y8, Y11, Y9
+rồi phát hành 0.27.0"; Y8-2 nhiều dòng hóa đơn người dùng xác nhận 13/11/2026; hóa đơn lấy từ XNH người dùng chốt 13/11/2026):
+
+| # | Quy tắc |
+| --- | --- |
+| Y8-1 | Phiếu **đề nghị thanh toán** (bảng `PaymentRequest`, số **DNT**, màn hình DNT – Mua hàng → Đề nghị thanh toán). Mỗi phiếu cho **một PO** Đã duyệt hoặc đã đóng (nhận đủ / đóng phần còn lại); không đổi PO sau khi lập. Biểu mẫu theo loại mua của PO: A → **5A**, B / DV → **5B**. Hình thức **tiền mặt** / **chuyển khoản**. Nút **Lập đề nghị thanh toán** trên PO mở phiếu điền sẵn đơn, tài khoản mặc định và mọi XNH có hóa đơn chưa đề nghị. |
+| Y8-2 | Phiếu có **nhiều dòng hóa đơn**: mỗi dòng là một **XNH đã xác nhận có hóa đơn** (số và tiền hóa đơn nhập trên XNH bằng "Cập nhật hóa đơn"); số tiền dòng = tiền hóa đơn gồm VAT; nội dung thanh toán tự ghi ("Thanh toán hóa đơn … số … theo phiếu nhận hàng …"), sửa được. Số, ký hiệu, ngày, tiền hóa đơn **chụp vào dòng** lúc lưu và lúc gửi duyệt. Mỗi XNH chỉ ở **một đề nghị chưa hủy** (kiểm dưới khóa PO); XNH đã ở đề nghị chưa hủy thì **khóa "Cập nhật hóa đơn"** trên XNH. Hộp "Chọn phiếu nhận hàng" hiện cả XNH chưa có hóa đơn / đã đề nghị (mờ, kèm lý do). |
+| Y8-3 | **Số tiền giảm trừ** (tạm ứng đã chi, phạt…) không âm, có giảm trừ thì bắt buộc lý do; **số tiền đề nghị = tổng − giảm trừ**, phải > 0 khi gửi duyệt. |
+| Y8-4 | Chuyển khoản bắt buộc chọn **tài khoản ngân hàng của NCC** trong danh mục (đổi tài khoản NCC đã qua duyệt NCC – mục 18.6); phiếu **chụp** tên ngân hàng, chi nhánh, số tài khoản, chủ tài khoản (đổi danh mục sau không làm sai phiếu). NCC chưa có tài khoản thì chỉ chọn được tiền mặt (mở từ PO tự chọn tiền mặt). |
+| Y8-5 | Duyệt theo bộ cấp **DNT** (APRL), "Cấu hình duyệt mẫu" CUVT: **GĐ khối của phiếu** (khối của bộ phận đặt hàng của PO – người duyệt động lát O1) → **TP TC-NQ-KT** → **GĐ TC-NQ-KT** → **Chủ tịch** (mục 19.3). Công ty chưa cấu hình thì một cấp theo quyền duyệt như phiếu khác. Áp đủ mục 20: ý kiến + đính kèm từng bước, khóa sau duyệt, ổ khóa vàng, Kiểm tra phê duyệt, rút về nháp (người lập), hủy (nháp – người lập; đã gửi – quản trị; lý do bắt buộc; hủy dây chuyền chỉ gồm chính phiếu). Không ghi ngân sách (PO đã tính). |
+| Y8-6 | Duyệt xong **kế toán ghi Đã chi** (quyền `Purchase.Payment.Pay`): ngày chi (không sau hôm nay, không trước ngày duyệt), ghi chú (số ủy nhiệm chi, phiếu chi); ghi rồi không đổi; trạng thái hiển thị "Đã chi". **Đã chi thì không hủy** đề nghị (kể cả quản trị, hủy dây chuyền chặn). |
+| Y8-7 | **In** (`GET /api/payment-requests/{id}/pdf`, nút In phiếu) theo biểu mẫu Excel "5A/5B.ĐN TTTM / TTCK", khổ dọc: tiêu đề "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT / CHUYỂN KHOẢN"; kính trình Chủ tịch HĐQT – TGĐ; tên công trình (5A) / tên hàng hóa (5B), phòng ban đề xuất, định mức/dự trù, **lũy kế số tiền đã mua**, **số tiền còn lại** – cùng số liệu bảng theo dõi 4A/4B của PO (lũy kế = đã mua trước đây + đơn này, chưa VAT); tên NCC, địa chỉ; chuyển khoản thêm tên ngân hàng, số tài khoản. Bảng: Chứng từ (Ngày, Số hóa đơn), Nội dung thanh toán, Số tiền; Tổng cộng, Số tiền giảm trừ (kèm lý do), **Số tiền còn lại**; bằng chữ; đã chi thì ghi ngày chi. Khối ký: người lập + các bước duyệt. Người in chỉ cần quyền đề nghị thanh toán (không cần quyền xem PO). |
+| Y8-8 | Quyền `Purchase.Payment.View` (xem – vai trò mẫu xem nghiệp vụ mua, GDKHOI), `.Create` (lập, sửa, gửi – NVCUVT, tự đặt), `.Approve` (GDKHOI, TPTCKT, GDTCKT, CHUTICH), `.Pay` (KETOAN). Đính kèm loại `PaymentRequest` (chứng từ có phê duyệt). Có trong Tra cứu chứng từ, Việc cần làm, thông báo duyệt, nhắc quá hạn, trang duyệt gọn điện thoại `/duyet/DNT/{id}`. |
+
+API `/api/payment-requests` (+ `/orders`, `/source?purchaseOrderId=`, `/{id}/submit|approve|reject|recall|cancel|pay`, `/{id}/pdf`). Migration
+`V0_27_0_DeNghiThanhToan` (bảng `PaymentRequest`, `PaymentRequestLine`; `Down()` xóa hai bảng – mất mọi đề nghị, kết quả duyệt, ghi nhận Đã chi).
+Chưa làm: đề nghị gộp nhiều PO của một NCC; tạm ứng (Q16 "tạm ứng làm sau"); một XNH nhiều hóa đơn / một hóa đơn nhiều XNH (nhập tách tiền
+hóa đơn theo từng XNH) – khi có yêu cầu.
+
 ### 19.4 Bỏ phân hệ kho
 
 Công ty dùng phần mềm kho riêng. Thay thế:
@@ -2672,7 +2691,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.24.0 | Y6, Y7, X7, P1, P1b | So sánh 3A / trình giá 3a, 3B; PO theo 4A/4B; mua nội bộ qua PO; Portal: tài khoản NCC, hạ tầng (người dùng cho phát hành sớm P1, P1b trong 0.24.0 để test – 12/11/2026) |
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
-| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B, tạp vụ 1C/2C, báo cáo thanh toán |
+| 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C, báo cáo thanh toán |
 | 0.28.0 | K3, P2, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)

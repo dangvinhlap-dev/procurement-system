@@ -34,6 +34,7 @@ import { ConstructionProjectListPage } from './pages/purchasing/ConstructionProj
 import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPage'
 import { InternalSaleListPage } from './pages/purchasing/InternalSalePages'
 import { PurchaseSummaryListPage, PurchaseSummaryPage } from './pages/purchasing/PurchaseSummaryPages'
+import { PaymentRequestListPage, PaymentRequestPage } from './pages/purchasing/PaymentRequestPages'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
@@ -124,6 +125,7 @@ const implemented: Record<string, ReactNode> = {
   DVM: <PurchasingUnitListPage />,
   DBN: <InternalSaleListPage />,
   BTH: <PurchaseSummaryListPage />,
+  DNT: <PaymentRequestListPage />,
   KHN: <DemandPlanListPage />,
   KHNTH: <DemandSummaryPage />,
   DHG: <PooledOrderListPage />,
@@ -218,6 +220,7 @@ const documentPages = [
   { code: 'PR', element: <PurchaseRequestPage /> },
   { code: 'PO', element: <PurchaseOrderPage /> },
   { code: 'BTH', element: <PurchaseSummaryPage /> },
+  { code: 'DNT', element: <PaymentRequestPage /> },
   { code: 'PRL', element: <SupplierPriceListPage /> },
   { code: 'GTH', element: <MonthlyApprovalPage /> },
   { code: 'KSG', element: <MarketSurveyPage /> },

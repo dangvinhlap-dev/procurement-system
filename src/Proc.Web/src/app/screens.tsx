@@ -1,4 +1,5 @@
 import {
+  AccountBookOutlined,
   AlertOutlined,
   UserSwitchOutlined,
   ApartmentOutlined,
@@ -129,6 +130,8 @@ export const screens: Screen[] = [
   { code: 'PO', title: 'Danh sách đơn mua hàng (PO)', navLabel: 'Đơn mua hàng', path: '/mua-hang/po', icon: <ShoppingCartOutlined />, group: 'purchasing', permission: Permission.PoView },
   // Phiếu xác nhận nhận hàng thay phiếu nhập kho từ 0.22.0 (lát K2, design.md mục 19.4): thủ kho / phòng ban đề xuất lập, đơn vị đặt hàng nghiệm thu.
   { code: 'XNH', title: 'Xác nhận nhận hàng (XNH)', navLabel: 'Xác nhận nhận hàng', path: '/mua-hang/xac-nhan-nhan-hang', icon: <InboxOutlined />, group: 'purchasing', anyPermission: [Permission.ReceiptView, Permission.ReceiptManage, Permission.ReceiptAccept] },
+  // Đề nghị thanh toán 5A/5B (lát Y8, design.md mục 19.3 bước 7): lập cho PO đã nhận hàng có hóa đơn, duyệt, kế toán ghi Đã chi.
+  { code: 'DNT', title: 'Đề nghị thanh toán (DNT)', navLabel: 'Đề nghị thanh toán', path: '/mua-hang/de-nghi-thanh-toan', icon: <AccountBookOutlined />, group: 'purchasing', anyPermission: [Permission.PaymentView, Permission.PaymentCreate, Permission.PaymentApprove, Permission.PaymentPay] },
   { code: 'POTRK', title: 'Theo dõi giao hàng', navLabel: 'Theo dõi giao hàng', path: '/mua-hang/theo-doi-giao-hang', icon: <ScheduleOutlined />, group: 'purchasing', permission: Permission.PoView },
   { code: 'KHN', title: 'Kế hoạch nhu cầu', navLabel: 'Kế hoạch nhu cầu', path: '/mua-hang/ke-hoach-nhu-cau', icon: <CalendarOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },
   { code: 'KHNTH', title: 'Tổng hợp nhu cầu', navLabel: 'Tổng hợp nhu cầu', path: '/mua-hang/tong-hop-nhu-cau', icon: <BarChartOutlined />, group: 'purchasing', permission: Permission.DemandPlanView },

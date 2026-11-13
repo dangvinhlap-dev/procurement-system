@@ -490,7 +490,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     ghi Đã chi), API `/api/payment-requests` (+ `/orders`, `/source`, `/submit`, `/approve`, `/reject`, `/recall`, `/cancel`, `/pay`). Nối vào
     tra cứu chứng từ, xem trước chuỗi duyệt, nhắc quá hạn, Việc cần làm, đính kèm có phê duyệt (`PaymentRequest`); XNH đã ở đề nghị chưa hủy
     thì khóa "Cập nhật hóa đơn". Test tích hợp `DeNghiThanhToan_NhieuHoaDonXnh_KhoaHoaDon_Duyet_DaChi`; `dotnet test` 776/776.
-  - Còn: bước 3 giao diện + e2e; bước 4 in 5A/5B; bước 5 tài liệu.
+  - **Bước 2b (xong)**: hủy dây chuyền nhận DNT (chuỗi chỉ gồm chính phiếu; đã chi thì chặn).
+  - **Bước 3 (xong)**: web `api/paymentRequests.ts`, màn hình **DNT** (`PaymentRequestPages.tsx` – danh sách lọc ngày; form DocumentForm: đơn mua
+    hàng, hình thức, tài khoản NCC, giảm trừ + lý do, ghi chú, lưới nhiều dòng hóa đơn chọn qua hộp "Chọn phiếu nhận hàng", tổng – giảm trừ – số
+    tiền đề nghị, tab Lịch sử duyệt + Đính kèm, nút **Ghi Đã chi** của kế toán), nút **Lập đề nghị thanh toán** trên PO (điền sẵn đơn, tài khoản
+    mặc định / tiền mặt, mọi XNH có hóa đơn), quyền, loại đính kèm, Việc cần làm / duyệt gọn điện thoại / tra cứu chứng từ. e2e
+    `payment-request.spec.ts`; `document-numbering` 24 → 25 loại, `approval-rule-template` 36 → 40 cấp, `divisions` gõ để lọc loại phiếu.
+  - **Bước 4 (xong)**: in 5A/5B (`CuvtPaymentPrintForms.cs`, `GET /api/payment-requests/{id}/pdf`): khung chi phí PO tách thành `OrderFrameAsync`
+    dùng chung 4A/4B; người in chỉ cần quyền đề nghị thanh toán. Test trong `DeNghiThanhToan_…` (PDF + nội dung mẫu).
+  - **Bước 5 (xong)**: design.md 19.3 "Lát Y8" (Y8-1…Y8-8) + lộ trình 0.27.0; hướng dẫn 03-mua-hang.
+  - Kiểm tra: build 0 cảnh báo, `dotnet test` 776/776, tsc, oxlint, `npm run build`; Playwright đủ bộ 144/146 (2 spec đếm cấp mẫu CUVT / chọn loại
+    phiếu – sửa theo DNT, chạy lại qua cùng payment-request: 5/5). **Đã merge.** Tiếp theo: Y11 (tạp vụ 1C/2C) – chờ người dùng gửi mẫu 1C/2C
+    hoặc "đồng ý" đề xuất (bảng kê 2C theo bộ phận × tháng; 1C gộp nhiều 2C đã duyệt), rồi Y9 (báo cáo thanh toán), rồi phát hành 0.27.0.
 - **Ẩn menu trống + tự điền giá đã duyệt trên PO (11/11/2026)** – người dùng đồng ý sau khi test 0.22.0.
   - `fix/an-menu-trong` (đã merge): thanh menu chữ (`ShellBar.tsx`) chỉ hiện nhóm có màn hình được phép, như cây điều hướng (trước đây nhóm
     trống báo "Không có màn hình được phép"); e2e `permissions.spec.ts` sửa theo.

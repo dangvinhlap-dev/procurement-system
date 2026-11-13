@@ -87,6 +87,22 @@ public partial class PurchasingTests
         Assert.Equal((Today, "UNC 0456", false), (dnt.PaidDate, dnt.PaymentNote, dnt.CanPay));
         Assert.Contains("Đã chi", await TitleAsync(await f.Buyer.PostAsJsonAsync($"/api/payment-requests/{dnt.Id}/cancel",
             new CancelDocumentRequest("Nhầm"), Ct)));
+        // In 5B (lát Y8): kế toán chỉ có quyền đề nghị thanh toán (không xem PO) vẫn in được.
+        var pdf = await accountant.GetAsync($"/api/payment-requests/{dnt.Id}/pdf", Ct);
+        Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+        Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(await pdf.Content.ReadAsByteArrayAsync(Ct), 0, 4), StringComparison.Ordinal);
+
+        // Nội dung mẫu 5B tiền mặt: lũy kế = đã mua trước + đơn (950.000), còn lại = định mức − lũy kế; dòng giảm trừ, số tiền còn lại.
+        var form = Proc.Infrastructure.Printing.CuvtPrintForms.PaymentRequest(dnt,
+            new Proc.Infrastructure.Printing.PoPrintContext("Công ty thử", null, "Xưởng cán", "Dây curoa", 2_000_000m, 50_000m, 5_000m, null,
+                new Dictionary<Guid, string?>(), new Dictionary<Guid, decimal>()), 950_000m);
+        Assert.Equal(("5B", "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", 2), (form.FormNo, form.Title, form.Rows.Count));
+        Assert.Contains(form.Info, i => i.Label == "Lũy kế số tiền đã mua" && i.Value == "1.000.000 đ");
+        Assert.Contains(form.Info, i => i.Label == "Số tiền còn lại" && i.Value == "1.000.000 đ");
+        Assert.Equal(["627.000"], form.TotalCells);
+        Assert.Equal("600.000", form.ExtraRows![1].Cells[0].Text);
+
         var chain = await ReadAsync<CancelChainDto>(await f.Buyer.GetAsync($"/api/cancel-chain/DNT/{dnt.Id}", Ct));
         Assert.Contains("Đã chi", chain.BlockedReason, StringComparison.Ordinal);
 
