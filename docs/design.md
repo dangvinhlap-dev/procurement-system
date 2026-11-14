@@ -10,6 +10,7 @@ Phiên bản tài liệu 1.2 · cập nhật 31/10/2026 · người lập: Đặ
 | 1.2 | 31/10/2026 | Mục 17 và docs/ui-guide.md: chuyển giao diện sang SAP Fiori, theme Horizon (giữ React + Ant Design, phông Arial thay "72", lát UI-a theme rồi UI-b bố cục) |
 | 1.3 | 01/11/2026 | Mục 17 và docs/ui-style.md: chuyển giao diện sang phong cách ERP desktop cổ điển (component `src/Proc.Web/src/classic/`); màn hình cũ chuyển dần theo lát riêng |
 | 1.4 | 10/11/2026 | Mục 19: hệ thống từ 0.22.0 – bỏ kho (tắt 0.22.0, gỡ 0.28.0), Portal NCC, quy trình theo biểu mẫu CUVT A/B/DV/C, đề nghị thanh toán, quyết định Q1–Q18, lộ trình 0.22.0–0.28.0 |
+| 1.5 | 14/11/2026 | Mục 21: module Quản trị vận hành (QT) – ba môi trường DEV/TEST/PROD, trung tâm phát hành, sao lưu Full/Diff/WAL, phục hồi theo thời điểm, nhật ký lỗi, bảo trì CSDL, cấu hình truy cập |
 
 ## 1. Phân tích nghiệp vụ và các quyết định cần chốt
 
@@ -2925,6 +2926,127 @@ phiếu của DHG, RFQ dùng hộp thoại trình tự (`cancelChainDialog.tsx`)
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,
 trường Chức vụ người dùng · Z3 ô số chứng từ dùng chung (sao chép, bấm đúp mở phiếu gốc) · Z4 quyền Hủy riêng từng loại phiếu + hủy dây
 chuyền (hộp thoại trình tự, hủy ngược trong một giao dịch, tính lại SL đã đặt/đã nhận, ngân sách, sản lượng hợp đồng…).
+
+## 21. Quản trị vận hành (QT) – ba môi trường, phát hành, sao lưu, phục hồi (người dùng chốt 14/11/2026)
+
+Module mới trong nhóm "Hệ thống" để quản trị viên vận hành phần mềm: quản lý ba môi trường, đưa bản mới từ DEV qua TEST lên PROD có kiểm
+soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu hình truy cập. **Chưa làm** – mục này là thiết kế đã chốt để chia lát.
+Đến khi lát QT8 xong, quy trình phát hành và cài đặt vẫn theo `docs/phat-hanh.md` và `docs/deploy-windows.md` như hiện nay.
+
+### 21.1 Quyết định đã chốt
+
+| # | Nội dung | Quyết định |
+| --- | --- | --- |
+| E1 | Bố trí môi trường | **Ba máy chủ vật lý**: DEV (lập trình), TEST (mọi người dùng thử), PROD (dùng thật). **Chỉ có PROD** (thiếu DEV, TEST) thì làm theo cách cũ (mục 21.3 "Chế độ một môi trường") |
+| E2 | Trung tâm phát hành | Đặt trong module QT của **PROD** |
+| E3 | Kiểm soát các bước | **Theo phân quyền, không có chuỗi duyệt**: ai có quyền của bước thì làm bước đó (mục 21.6). Phiếu phát hành không áp quy tắc phê duyệt mục 20 |
+| E4 | Thời gian UAT | Không có thời gian tối thiểu |
+| E5 | Email trên TEST | **Chuyển hết về một hộp thư test** (`Email:RedirectAllTo`), không bao giờ gửi tới người dùng, NCC thật |
+| E6 | Dữ liệu TEST | **Làm mới từ PROD trước mỗi đợt UAT** (có làm mờ, mục 21.5). Trước khi chạy thật (PROD chưa có dữ liệu) giữ dữ liệu thử |
+| E7 | Giờ cài PROD | Không giới hạn – người có quyền chọn giờ |
+| Q2 | Lịch sao lưu | Phần mềm chạy lịch (dịch vụ nền); `db/backup.sh`, `deploy/windows/backup.ps1` giữ làm dự phòng, tắt lịch cũ để không sao lưu hai lần (mặc định tự chọn) |
+| Q3 | Nguồn gói cài | GitHub Release của repo hoặc tải file zip lên màn hình (máy chủ không có internet) (mặc định tự chọn) |
+| Q4 | Nền tảng | Windows/IIS trước (theo Q14 mục 19.1); Docker sau (mặc định tự chọn) |
+| Q5 | Tải file sao lưu qua trình duyệt | **Không** – file chứa toàn bộ dữ liệu, chỉ lấy trực tiếp trên máy chủ (mặc định tự chọn) |
+| Q6 | Xác nhận việc nguy hiểm | Phục hồi, cài PROD, quay về bản cũ, ngắt phiên, làm mới TEST: **nhập lại mật khẩu + lý do + gõ chữ xác nhận** (ví dụ "KHÔI PHỤC") (mặc định tự chọn) |
+| Q7 | Cấu hình truy cập | Như màn hình CFG mục 21.4 (mặc định tự chọn) |
+| B1 | Lịch sao lưu | Full chủ nhật 01:00 giữ 4 tuần; Diff thứ 2–7 01:00; WAL liên tục từ bản Full cũ nhất còn giữ; đính kèm chép bổ sung mỗi đêm – sửa được trong tham số (mặc định tự chọn) |
+| B2 | Mất dữ liệu tối đa khi sự cố | 5 phút (`archive_timeout`) (mặc định tự chọn) |
+| B3 | Bản `pg_dump` | Giữ thêm `pg_dump` mỗi đêm: khôi phục sang CSDL riêng, lấy lại một bảng, làm mới TEST, đổi bản PostgreSQL (mặc định tự chọn) |
+| B4 | Nơi lưu | Ổ khác ổ dữ liệu trên máy chủ + chép sang NAS / thư mục mạng (đường dẫn trong cấu hình, NAS không bắt buộc) (mặc định tự chọn) |
+
+### 21.2 Nguyên tắc kỹ thuật
+
+| # | Nguyên tắc | Lý do |
+| --- | --- | --- |
+| N1 | Ứng dụng web **không tự thay chính nó** và không tự dừng PostgreSQL. Cài đặt, khôi phục do **bộ thực thi** (`deploy/windows/qt-agent.ps1` chạy bằng Task Scheduler với tài khoản quyền cao; Docker: `deploy/docker/qt-agent.sh` + systemd timer) làm theo lệnh lấy từ trung tâm phát hành | Site IIS chạy tài khoản ít quyền và đang khóa DLL của chính nó; cho container quyền điều khiển Docker thì chiếm web là chiếm máy chủ |
+| N2 | Khôi phục **không ghi đè thẳng** CSDL đang dùng: khôi phục ra CSDL / máy chủ CSDL tạm → kiểm tra → chế độ bảo trì → hoán đổi, giữ bản cũ | Khôi phục nhầm vẫn quay lại được |
+| N3 | Quyền riêng từng việc, chỉ làm ở tổng công ty, chỉ từ mạng nội bộ (không có trên site Portal); nhật ký vận hành ghi **cả ra file ngoài CSDL** | Khôi phục CSDL thay luôn nhật ký trong CSDL |
+| N4 | **Build một lần, chuyển nguyên gói**: TEST và PROD cài đúng `procurement-x.y.z.zip` build ở DEV; PROD chỉ nhận gói có **SHA256 trùng** gói đã cài và test trên TEST | Thứ đã test đúng là thứ chạy thật |
+| N5 | Code đi một chiều DEV → TEST → PROD; dữ liệu chỉ đi PROD → TEST (làm mờ); không sửa trực tiếp trên TEST/PROD – lỗi quay về DEV ra bản vá | Không có thay đổi chưa qua test trên PROD |
+| N6 | Bí mật (chuỗi kết nối, khóa JWT, mật khẩu CSDL, SMTP) **không sửa qua giao diện**, vẫn ở appsettings / biến môi trường; module dùng chuỗi kết nối riêng `ConnectionStrings:Maintenance` (quyền tạo / đổi tên CSDL, REPLICATION), tài khoản `proc` hằng ngày giữ ít quyền | Chiếm tài khoản admin không lấy được khóa |
+
+### 21.3 Ba môi trường
+
+| | DEV | TEST | PROD |
+| --- | --- | --- | --- |
+| Máy chủ | Máy chủ vật lý 1 – nơi Claude Code lập trình | Máy chủ vật lý 2 | Máy chủ vật lý 3 |
+| Người dùng | Người phát triển | Mọi người dùng (LAN) | Mọi người dùng (LAN/VPN – Q14) |
+| Dữ liệu | Dữ liệu mẫu (seed) | Bản PROD làm mờ, làm mới trước mỗi đợt UAT | Dữ liệu thật |
+| Email | Tắt | Chuyển hết về hộp thư test | Gửi thật |
+| Nhận diện (`App:Environment` = `Dev` / `Test` / `Prod`) | Dải xám "DEV" | Dải cam "MÔI TRƯỜNG TEST" trên mọi màn hình, tiêu đề tab trình duyệt có "[TEST]" | Không dải |
+| Cài bản mới | Claude build, chạy thử | Chỉ qua trung tâm phát hành + bộ thực thi | Chỉ qua trung tâm phát hành + bộ thực thi |
+
+- Mỗi môi trường có PostgreSQL, thư mục đính kèm, khóa JWT, mật khẩu admin **riêng**; cấu hình chỉ khác nhau ở `appsettings.Production.json`.
+- Trung tâm phát hành (PROD) đọc trạng thái DEV, TEST qua API trạng thái chỉ đọc bằng **khóa dịch vụ** riêng từng môi trường; bộ thực thi trên
+  TEST, DEV **chủ động hỏi** PROD lấy lệnh (không mở cổng vào cho DEV, TEST), tải gói từ PROD và kiểm SHA256 trước khi cài.
+- **Chế độ một môi trường** (E1): không khai TEST thì phiếu phát hành bỏ qua bước cài TEST và UAT; cài PROD bằng bộ thực thi hoặc bằng tay
+  theo `docs/deploy-windows.md` mục 5 như hiện nay; mọi bước vẫn ghi vào phiếu. Không khai DEV thì gói lấy từ GitHub Release hoặc tải zip lên.
+
+### 21.4 Màn hình
+
+| Mã | Màn hình | Nội dung |
+| --- | --- | --- |
+| SYS | Tổng quan hệ thống | Bảng ba môi trường: phiên bản, migration đã chạy / đang chờ, tình trạng (`/health`), lần sao lưu cuối (đèn đỏ khi quá 24 giờ), độ trễ lưu WAL, dung lượng CSDL, ổ đĩa, thư mục đính kèm, số kết nối, dịch vụ nền; khác biệt cấu hình (không bí mật) của TEST so với PROD |
+| ERR | Nhật ký lỗi | Lỗi máy chủ (500) và lỗi giao diện (trình duyệt gửi về): giờ, người dùng, công ty, đường dẫn, mã theo dõi, nội dung, chi tiết kỹ thuật, phiên bản, môi trường; lỗi trùng gộp nhóm kèm số lần; trạng thái Mới / Đang xử lý / Đã xử lý; email báo khi có **loại lỗi mới**; tự xóa sau N ngày (tham số) |
+| BAK | Sao lưu | Full / Diff / tình trạng lưu WAL / `pg_dump` / đính kèm: chạy tay hoặc theo lịch, kiểm tra (`pg_verifybackup`, `pg_restore --list`), SHA256, giữ theo B1, dọn WAL cũ, chép nơi thứ hai; lịch sử (giờ, kiểu, dung lượng, kết quả, người chạy); cảnh báo ổ sắp đầy |
+| RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng |
+| DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
+| CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào) |
+| REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
+| TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục → làm mờ → đặt lại email chuyển hướng; lịch sử làm mới |
+
+### 21.5 Sao lưu và phục hồi (PostgreSQL 18, công cụ có sẵn)
+
+| Kiểu (SQL Server) | PostgreSQL | Ghi chú |
+| --- | --- | --- |
+| Full | `pg_basebackup` | Chụp cả máy chủ CSDL (mọi database) |
+| Diff | `pg_basebackup --incremental=<backup_manifest của bản Full>` (luôn lấy bản Full làm gốc), ghép khi khôi phục bằng `pg_combinebackup` | Cần `summarize_wal = on`, `wal_summary_keep_time` dài hơn chu kỳ Full |
+| Log | Lưu WAL liên tục: `archive_mode = on`, `archive_command`, `archive_timeout = 300` | Khôi phục về đúng thời điểm (`recovery_target_time`) |
+| Logic | `pg_dump -Fc` mỗi đêm | Khôi phục một database / một bảng, làm mới TEST, đổi bản PostgreSQL |
+
+- Bật lưu WAL cần sửa `postgresql.conf`, `pg_hba.conf`, cấp `REPLICATION` và **khởi động lại PostgreSQL một lần** – có script cho Windows
+  và Docker; màn hình BAK kiểm tra cấu hình và báo thiếu.
+- pgBackRest không chạy trên Windows nên không dùng; Docker cần thêm `postgresql-client-18` (kho PGDG) vào image.
+- **Làm mờ khi làm mới TEST**: email, điện thoại người dùng, NCC, người liên hệ; số tài khoản ngân hàng NCC; giữ nguyên mật khẩu người dùng
+  (đăng nhập TEST bằng mật khẩu PROD); xóa hàng chờ email, phiên đăng nhập.
+
+### 21.6 Phiếu phát hành và các bước (E3 – theo quyền)
+
+Phiếu phát hành (`ReleaseTicket`, chứng từ của tổng công ty trên PROD): phiên bản, gói zip + SHA256, nguồn (DEV / GitHub Release / tải lên),
+CHANGELOG của bản, thay đổi CSDL, rủi ro, cách quay lại, Ghi chú; tab **Mục kiểm thử** (mỗi mục CHANGELOG một dòng: người test, Đạt /
+Không đạt, ý kiến, đính kèm), **Lỗi phát hiện** (gửi từ nút "Báo lỗi / góp ý" trên TEST, kèm ảnh màn hình), **Lịch sử cài**, **Đính kèm**.
+
+| Bước | Trạng thái sau bước | Quyền | Việc hệ thống làm |
+| --- | --- | --- | --- |
+| 1. Nhận gói | Đã nhận | `Ops.Release.Manage` | Lấy gói từ DEV / GitHub Release / tải lên, tính SHA256, đọc CHANGELOG, tạo mục kiểm thử |
+| 2. Cài TEST | Đang UAT | `Ops.Release.DeployTest` | (Tùy chọn) làm mới TEST từ PROD; bộ thực thi TEST: sao lưu → cài → script CSDL → `/health` → kiểm thử nhanh; lỗi tự quay lại bản cũ |
+| 3. Xác nhận UAT đạt | UAT đạt | `Ops.Release.UatSignOff` | Ghi người, giờ, ý kiến; còn mục Không đạt hoặc lỗi chưa xử lý thì cảnh báo, vẫn cho xác nhận kèm lý do |
+| 4. Cài PROD | Đã cài PROD | `Ops.Release.DeployProd` | Chỉ khi UAT đạt (hoặc chế độ một môi trường); kiểm SHA256 trùng gói đã cài TEST; sao lưu Full + kiểm tra → chế độ bảo trì → cài → script → `/health` + kiểm thử nhanh → mở lại; lỗi tự quay về gói cũ + CSDL vừa sao lưu; giờ cài tự do (E7), thông báo người dùng trước |
+| 5. Đóng phiếu | Đã đóng | `Ops.Release.Manage` | Sau khi theo dõi màn hình ERR |
+| Quay về bản cũ | Đã quay về | `Ops.Release.DeployProd` | Liệt kê thay đổi + rủi ro mất dữ liệu (như `docs/phat-hanh.md`), xác nhận Q6, khôi phục gói cũ + CSDL |
+| Hủy phiếu | Đã hủy | `Ops.Release.Manage` | Bắt buộc lý do; không hủy được phiếu đã cài PROD |
+
+Không có chuỗi duyệt, thời gian UAT tối thiểu, giờ cài cố định (E3, E4, E7). Mỗi bước ghi nhật ký vận hành; các bước 2, 4 và quay về bản
+cũ đòi xác nhận Q6. Phiếu Đã cài PROD trở đi thì khóa, chỉ thêm ghi chú. Đường khẩn cấp không có lối tắt: bản vá vẫn qua bước 1–4.
+
+Quyền khác: `Ops.View` (xem SYS), `Ops.ErrorLog.View/Manage`, `Ops.Backup.Run`, `Ops.Restore.Run`, `Ops.Maintenance.Run`,
+`Ops.TestRefresh.Run`, `Ops.Config.Manage`. Mọi quyền `Ops.*` chỉ dùng được khi đang làm việc ở tổng công ty.
+
+### 21.7 Chia lát (thứ tự làm)
+
+| Lát | Nội dung |
+| --- | --- |
+| QT1 | Nhận diện môi trường (`App:Environment`, dải màu, `Email:RedirectAllTo`), khung module, quyền `Ops.*`, nhật ký vận hành (CSDL + file), màn hình SYS cho môi trường đang chạy |
+| QT2 | Nhật ký lỗi ERR (máy chủ + giao diện, gộp nhóm, email loại lỗi mới, tự xóa) |
+| QT3a | Script bật lưu WAL + kiểm tra cấu hình; BAK hiện tình trạng lưu WAL |
+| QT3b | Full / Diff / `pg_dump` / đính kèm theo lịch + chạy tay, kiểm tra, giữ, dọn, nơi lưu thứ hai, lịch sử |
+| QT4 | Bảo trì CSDL DBM |
+| QT5 | Bộ thực thi (Windows trước) + chế độ bảo trì |
+| QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
+| QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) |
+| QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ, bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
+| QT9 | Làm mới TEST từ PROD (làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
 ## Nguồn tham khảo
 

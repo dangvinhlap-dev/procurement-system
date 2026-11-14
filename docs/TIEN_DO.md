@@ -985,6 +985,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Thiết kế module Quản trị vận hành QT (14/11/2026, chưa code)** – nhánh `feature/qt0-thiet-ke-van-hanh` (chỉ tài liệu): design.md **mục 21**
+ghi quyết định người dùng chốt E1–E7 (ba máy chủ vật lý DEV / TEST / PROD, chỉ có PROD thì làm cách cũ; trung tâm phát hành trong PROD; các
+bước theo **phân quyền, không chuỗi duyệt**; UAT và giờ cài tự do; email TEST chuyển về một hộp thư; làm mới TEST từ PROD trước mỗi đợt UAT) và
+các mặc định tự chọn Q2–Q7, B1–B4 (sao lưu Full / Diff / WAL + `pg_dump`, phục hồi theo thời điểm, không tải sao lưu qua trình duyệt, việc nguy
+hiểm nhập lại mật khẩu + lý do + gõ chữ xác nhận). Lát QT1 → QT9 ở mục 21.7; **làm QT1 sau khi nhánh K3 merge** (K3 sửa `Program.cs`, quyền).
+Đến khi QT8 xong, phát hành / cài đặt vẫn theo `docs/phat-hanh.md`, `docs/deploy-windows.md`.
+
 **N4d xong 14/11/2026 (chưa phát hành)** – nhánh `feature/n4d-bao-cao-gop-theo-cap` (đã merge): báo cáo gộp theo cấp nhóm hàng – mục còn lại
 của đợt N4 ("báo cáo gộp theo cấp để lát sau"). Màn hình Mua hàng theo NCC (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** (nhóm của mặt
 hàng / cấp 1–4), cột Cấp + Đường dẫn; API `GET /api/reports/purchase-spend?categoryLevel=` (design.md N4-10, ui-style.md 5h). Không migration,
