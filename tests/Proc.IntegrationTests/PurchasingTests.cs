@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
 using Proc.Application.Documents;
-using Proc.Application.Inventory;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -51,8 +50,6 @@ public partial class PurchasingTests
         var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("M"), "Công ty thử mua hàng", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var buyer = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
-        var calendar = await ReadAsync<InventoryCalendarDto>(await buyer.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await buyer.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
 
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
@@ -95,11 +92,6 @@ public partial class PurchasingTests
             new SavePurchaseOrderRequest(Today, f.SupplierId, f.Kt, Today.AddDays(5), "30 ngày", null, null, tolerance, null,
                 [new(null, f.ItemId, f.Cai, qty, 100_000, 5, "10", null, null, prLineId)]), Ct);
 
-    private static Task<HttpResponseMessage> ReceiveAsync(Fixture f, PurchaseOrderDto po, decimal qty) =>
-        f.Buyer.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
-                [new(null, f.ItemId, f.Cai, qty, 1, null, null, null, null, po.Lines[0].Id)], po.Id), Ct);
-
     /// <summary>Lập XNH nháp nhận <paramref name="qty"/> (đạt hết) của dòng 1 PO (lát K2).</summary>
     private static Task<HttpResponseMessage> ReceiveXnhAsync(Fixture f, PurchaseOrderDto po, decimal qty) =>
         f.Buyer.PostAsJsonAsync("/api/receipt-confirmations",
@@ -108,8 +100,6 @@ public partial class PurchasingTests
     /// <summary>Xác nhận XNH.</summary>
     private static async Task<ReceiptConfirmationDto> ConfirmXnhAsync(Fixture f, ReceiptConfirmationDto xnh) =>
         await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
-
-    private static Task<HttpResponseMessage> PostDocAsync(Fixture f, Guid id) => f.Buyer.PostAsync($"/api/inventory-documents/{id}/post", null, Ct);
 
     private static Task<HttpResponseMessage> ActAsync(HttpClient client, string kind, Guid id, string action, string? comment = null) =>
         client.PostAsJsonAsync($"/api/{kind}/{id}/{action}", new ApprovalActionRequest(comment), Ct);
@@ -185,34 +175,6 @@ public partial class PurchasingTests
         await ReadAsync<PurchaseOrderDto>(await ActAsync(first, "purchase-orders", po.Id, "approve"));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(second, "purchase-orders", po.Id, "approve"));
         Assert.Equal("Approved", po.Status);
-    }
-
-    /// <summary>
-    /// Lát R4 (design.md mục 18.26): bật "Nhập mua bắt buộc theo đơn mua hàng" thì không lập, không ghi sổ phiếu nhập thẳng (kể cả phiếu nháp
-    /// lập trước khi bật); phiếu nhập theo PO đã duyệt vẫn bình thường. Tắt lại thì nhập thẳng được như cũ.
-    /// </summary>
-    [Fact]
-    public async Task NhapMuaBatBuocTheoPo_ChanPhieuNhapThang()
-    {
-        var f = await ArrangeAsync();
-        var (approver, _) = await ApproverAsync(f);
-        SaveReceiptRequest Direct() => new(Today, f.Kt, f.SupplierId, null, null, null, null, null, null,
-            [new(null, f.ItemId, f.Cai, 1, 50_000, "10", null, null, null)]);
-        var oldDraft = await ReadAsync<InventoryDocumentDto>(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Direct(), Ct));
-
-        var on = await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_PO_REQUIRED", new UpdateSystemParameterRequest("Bật"), Ct));
-        Assert.Equal(("Bật", false), (on.Value, on.IsDefault));
-        Assert.Contains("bắt buộc nhập mua theo đơn mua hàng", await TitleAsync(await f.Buyer.PostAsJsonAsync("/api/goods-receipts", Direct(), Ct)));
-        Assert.Contains("bắt buộc nhập mua theo đơn mua hàng", await TitleAsync(await PostDocAsync(f, oldDraft.Id)));
-
-        var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 5, null));
-        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
-        po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));
-        var grn = await ReadAsync<InventoryDocumentDto>(await ReceiveAsync(f, po, 5));
-        Assert.Equal("Posted", (await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, grn.Id))).Status);
-
-        await ReadAsync<SystemParameterDto>(await f.Buyer.PutAsJsonAsync("/api/system-parameters/RECEIPT_PO_REQUIRED", new UpdateSystemParameterRequest(null), Ct));
-        Assert.Equal("Posted", (await ReadAsync<InventoryDocumentDto>(await PostDocAsync(f, oldDraft.Id))).Status);
     }
 
     /// <summary>

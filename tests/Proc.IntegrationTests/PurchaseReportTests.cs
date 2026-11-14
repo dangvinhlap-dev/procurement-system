@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -51,8 +50,6 @@ public class PurchaseReportTests
         var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("M"), "Công ty thử báo cáo mua hàng", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var buyer = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
-        var calendar = await ReadAsync<InventoryCalendarDto>(await buyer.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await buyer.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
 
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;

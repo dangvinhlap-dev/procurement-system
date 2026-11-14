@@ -76,7 +76,7 @@ public class RoleAdministrationTests
         var code = UniqueCode("KT");
 
         var created = await ReadAsync<RoleDetailDto>(await admin.PostAsJsonAsync("/api/roles",
-            new CreateRoleRequest(code.ToLowerInvariant(), "Kế toán kho", [Permissions.Inventory.StockView]), Ct));
+            new CreateRoleRequest(code.ToLowerInvariant(), "Kế toán kho", [Permissions.Purchase.ReceiptView]), Ct));
         Assert.Equal(code, created.Code);
         Assert.True(created.CanEdit);
 
@@ -85,13 +85,13 @@ public class RoleAdministrationTests
 
         var updated = await ReadAsync<RoleDetailDto>(await admin.PutAsJsonAsync($"/api/roles/{created.Id}",
             new UpdateRoleRequest("Kế toán kho công ty", true,
-                [Permissions.Inventory.StockView, Permissions.Inventory.PeriodView]), Ct));
+                [Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage]), Ct));
 
         Assert.Equal("Kế toán kho công ty", updated.Name);
-        Assert.Equal([Permissions.Inventory.PeriodView, Permissions.Inventory.StockView], updated.PermissionCodes);
+        Assert.Equal([Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptView], updated.PermissionCodes);
         var client = await _factory.CreateAuthenticatedClientAsync(userName, ProcApiFactory.TestPassword);
         var me = await client.GetFromJsonAsync<CurrentUserInfo>("/api/auth/me", Ct);
-        Assert.Contains(Permissions.Inventory.PeriodView, Assert.Single(me!.Companies).Permissions);
+        Assert.Contains(Permissions.Purchase.ReceiptManage, Assert.Single(me!.Companies).Permissions);
     }
 
     [Fact]
@@ -136,20 +136,20 @@ public class RoleAdministrationTests
     public async Task QuanLyVaiTro_KhongCapQuyenMinhKhongCo()
     {
         var managerRole = UniqueCode("QLVT");
-        await _factory.CreateRoleAsync(managerRole, Permissions.System.RoleView, Permissions.System.RoleManage, Permissions.Inventory.StockView);
+        await _factory.CreateRoleAsync(managerRole, Permissions.System.RoleView, Permissions.System.RoleManage, Permissions.Purchase.ReceiptView);
         var userName = $"qlvt{Guid.NewGuid():N}"[..20];
         await _factory.CreateScopedUserAsync(userName, "BHA", managerRole);
         var manager = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
 
         var grantMore = await manager.PostAsJsonAsync("/api/roles",
-            new CreateRoleRequest(UniqueCode("LEO"), "Leo quyền", [Permissions.Inventory.PeriodClose]), Ct);
+            new CreateRoleRequest(UniqueCode("LEO"), "Leo quyền", [Permissions.Purchase.PaymentPay]), Ct);
         var editThukho = await manager.PutAsJsonAsync($"/api/roles/{await _factory.GetRoleIdAsync("THUKHO")}",
-            new UpdateRoleRequest("Thủ kho", true, [Permissions.Inventory.StockView]), Ct);
+            new UpdateRoleRequest("Thủ kho", true, [Permissions.Purchase.ReceiptView]), Ct);
         var allowed = await manager.PostAsJsonAsync("/api/roles",
-            new CreateRoleRequest(UniqueCode("XEM"), "Xem tồn", [Permissions.Inventory.StockView]), Ct);
+            new CreateRoleRequest(UniqueCode("XEM"), "Xem tồn", [Permissions.Purchase.ReceiptView]), Ct);
 
         Assert.Equal(HttpStatusCode.Forbidden, grantMore.StatusCode);
-        Assert.Contains(Permissions.Inventory.PeriodClose, await TitleAsync(grantMore));
+        Assert.Contains(Permissions.Purchase.PaymentPay, await TitleAsync(grantMore));
         Assert.Equal(HttpStatusCode.Forbidden, editThukho.StatusCode);
         Assert.Equal(HttpStatusCode.Created, allowed.StatusCode);
     }

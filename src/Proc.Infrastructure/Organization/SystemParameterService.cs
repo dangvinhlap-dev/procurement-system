@@ -34,17 +34,9 @@ public sealed class SystemParameterService : ISystemParameterService
         _scope.RequireCompany();
         var parameter = await _db.CompanyParameters.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         var rfqMin = parameter?.RfqMinSuppliers ?? CompanyParameter.DefaultRfqMinSuppliers;
-        var markup = parameter?.InternalMarkupPercent ?? CompanyParameter.DefaultInternalMarkupPercent;
         var warn = parameter?.PoHighPriceWarnPercent ?? CompanyParameter.DefaultPoHighPriceWarnPercent;
         var pooledMargin = parameter?.PooledMarginPercent ?? CompanyParameter.DefaultPooledMarginPercent;
         var threshold = parameter?.RfqComparisonThreshold ?? 0m;
-
-        // Chỉ thấy kho trong phạm vi kho được gán (global query filter) – đúng với những gì người dùng sửa được ở màn hình Kho.
-        var negative = await _db.Warehouses.AsNoTracking()
-            .Where(w => w.IsActive && w.AllowNegativeStock)
-            .OrderBy(w => w.Code)
-            .Select(w => w.Code)
-            .ToListAsync(cancellationToken);
 
         var defaultText = CompanyParameter.DefaultRfqMinSuppliers.ToString(CultureInfo.InvariantCulture);
         List<SystemParameterDto> list =
@@ -59,11 +51,6 @@ public sealed class SystemParameterService : ISystemParameterService
                 "Quy tắc mời / chào giá tối thiểu số NCC vẫn áp như cũ."),
             Toggle(SystemParameterCodes.RfqDossierRequired, "Bắt buộc đủ hồ sơ trình khi chọn thầu", parameter?.RequireRfqDossierComplete ?? false,
                 "Bật: hồ sơ trình của RFQ (7 mục) phải đủ mới chọn thầu, gửi hội đồng duyệt được. Tắt: thiếu mục vẫn gửi, hộp thoại duyệt ghi mục còn thiếu.", "Đấu thầu"),
-            new(SystemParameterCodes.InternalMarkupPercent, "Giá", "% markup nội bộ mặc định",
-                FormatPercent(markup), FormatPercent(CompanyParameter.DefaultInternalMarkupPercent),
-                markup == CompanyParameter.DefaultInternalMarkupPercent, true,
-                $"Mặt hàng chưa có trong Bảng giá nội bộ thì gợi ý giá bán = giá vốn kỳ đã đóng gần nhất × (1 + % markup), làm tròn đồng " +
-                $"(0–{CompanyParameter.MaxInternalMarkupPercent:0}%). Chỉ là gợi ý ở Bảng giá nội bộ và phiếu xuất bán nội bộ; giá đã khai báo không bị ảnh hưởng."),
             new(SystemParameterCodes.PoHighPriceWarnPercent, "Giá", "% cảnh báo giá cao trên PO",
                 FormatPercent(warn), FormatPercent(CompanyParameter.DefaultPoHighPriceWarnPercent),
                 warn == CompanyParameter.DefaultPoHighPriceWarnPercent, true,
@@ -79,23 +66,15 @@ public sealed class SystemParameterService : ISystemParameterService
                 "Tắt (mặc định): NCC tạo mới muốn lên Đã duyệt phải qua hồ sơ đánh giá NCC mới – Phòng cung ứng đánh giá, Văn phòng Ban đề xuất, " +
                 "Hội đồng duyệt. Bật: đổi trạng thái trên form NCC như NCC cũ (dùng khi chuyển tiếp). Chỉ tham số của tổng công ty có tác dụng.", "Nhà cung cấp"),
             Toggle(SystemParameterCodes.ReceiptQcRequired, "Bắt buộc kiểm tra chất lượng khi nhận hàng", parameter?.RequireReceiptQc ?? false,
-                "Bật: mọi dòng phiếu nhập mua phải có kết quả kiểm tra (Đạt/Không đạt) mới ghi sổ được."),
-            Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không ghi sổ nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
-                "Bật: người lập đơn mua hàng không ghi sổ được phiếu nhập theo đơn của mình – người khác xác nhận giao nhận (tách nhiệm)."),
-            Toggle(SystemParameterCodes.ReceiptPoRequired, "Nhập mua bắt buộc theo đơn mua hàng", parameter?.RequireReceiptPo ?? false,
-                "Bật: phiếu nhập mua từ NCC phải chọn đơn mua hàng đã duyệt (giá, SL theo PO) – không nhập thẳng với đơn giá gõ tay. Mua gấp dùng PO mua khẩn cấp."),
+                "Bật: mọi dòng phiếu xác nhận nhận hàng (XNH) phải có kết quả kiểm tra (Đạt/Không đạt) mới xác nhận được."),
+            Toggle(SystemParameterCodes.ReceiptSeparatePoCreator, "Người lập PO không xác nhận nhận hàng của PO đó", parameter?.SeparatePoCreatorFromReceipt ?? false,
+                "Bật: người lập đơn mua hàng không xác nhận được phiếu XNH theo đơn của mình – người khác xác nhận giao nhận (tách nhiệm)."),
             Sla(SystemParameterCodes.SlaPricedDays, "SLA – hàng đã có hợp đồng/bảng giá", parameter?.SlaPricedDays, CompanyParameter.DefaultSlaPricedDays,
                 "Số ngày làm việc từ lúc PR đủ duyệt đến lúc PO được duyệt cho hàng đã có bảng giá/hợp đồng hiệu lực."),
             Sla(SystemParameterCodes.SlaSourcingDays, "SLA – hàng chưa có NCC được duyệt", parameter?.SlaSourcingDays, CompanyParameter.DefaultSlaSourcingDays,
                 "Số ngày làm việc để tìm nguồn, so sánh, trình duyệt và phát hành PO cho hàng chưa có bảng giá/hợp đồng (kể cả hàng mới chưa có mã)."),
             Sla(SystemParameterCodes.SlaUrgentDays, "SLA – hàng khẩn", parameter?.SlaUrgentDays, CompanyParameter.DefaultSlaUrgentDays,
                 "PR mức ưu tiên Khẩn: số ngày làm việc tới lúc PO được duyệt (0 = trong ngày)."),
-            new(SystemParameterCodes.CostingMethod, "Kho", "Phương pháp giá vốn",
-                "Bình quân gia quyền cuối kỳ tháng", null, true, false,
-                "Tính theo công ty × mặt hàng khi đóng kỳ; cố định cho mọi công ty (design.md mục 7)."),
-            new(SystemParameterCodes.NegativeStock, "Kho", "Kho cho phép tồn âm",
-                negative.Count == 0 ? "Không kho nào" : string.Join(", ", negative), null, negative.Count == 0, false,
-                "Khai báo trên từng kho ở màn hình Danh mục kho; mặc định không cho tồn âm."),
         ];
         list.AddRange(KpiParameters(parameter));
         // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
@@ -107,14 +86,12 @@ public sealed class SystemParameterService : ISystemParameterService
     {
         [SystemParameterCodes.RfqMinSuppliers] = nameof(CompanyParameter.RfqMinSuppliers),
         [SystemParameterCodes.RfqComparisonThreshold] = nameof(CompanyParameter.RfqComparisonThreshold),
-        [SystemParameterCodes.InternalMarkupPercent] = nameof(CompanyParameter.InternalMarkupPercent),
         [SystemParameterCodes.PoHighPriceWarnPercent] = nameof(CompanyParameter.PoHighPriceWarnPercent),
         [SystemParameterCodes.PooledMarginPercent] = nameof(CompanyParameter.PooledMarginPercent),
         [SystemParameterCodes.RfqDossierRequired] = nameof(CompanyParameter.RequireRfqDossierComplete),
         [SystemParameterCodes.SupplierOnboardingOptional] = nameof(CompanyParameter.AllowSupplierWithoutOnboarding),
         [SystemParameterCodes.ReceiptQcRequired] = nameof(CompanyParameter.RequireReceiptQc),
         [SystemParameterCodes.ReceiptSeparatePoCreator] = nameof(CompanyParameter.SeparatePoCreatorFromReceipt),
-        [SystemParameterCodes.ReceiptPoRequired] = nameof(CompanyParameter.RequireReceiptPo),
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
         [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
         [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
@@ -124,10 +101,8 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.KpiTarget(KpiCode.OnTimeDelivery)] = nameof(CompanyParameter.KpiOnTimeTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.Quality)] = nameof(CompanyParameter.KpiQualityTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.Emergency)] = nameof(CompanyParameter.KpiEmergencyTarget),
-        [SystemParameterCodes.KpiTarget(KpiCode.SlowMoving)] = nameof(CompanyParameter.KpiSlowMovingTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.SupplierReview)] = nameof(CompanyParameter.KpiSupplierReviewTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.Violation)] = nameof(CompanyParameter.KpiViolationTarget),
-        [SystemParameterCodes.KpiSlowMovingDays] = nameof(CompanyParameter.KpiSlowMovingDays),
     };
 
     /// <summary>
@@ -143,11 +118,6 @@ public sealed class SystemParameterService : ISystemParameterService
             yield return new(SystemParameterCodes.KpiTarget(k.Code), "KPI", $"Mục tiêu KPI – {k.Name} ({sign})", FormatPercent(value),
                 FormatPercent(k.DefaultTarget), value == k.DefaultTarget, true, $"Cách đo: {k.Formula}. Đạt khi kết quả {sign} mục tiêu; {range}.");
         }
-
-        var days = parameter?.KpiSlowMovingDays ?? KpiCatalog.DefaultSlowMovingDays;
-        yield return new(SystemParameterCodes.KpiSlowMovingDays, "KPI", "Số ngày không xuất tính tồn chậm luân chuyển",
-            days.ToString(CultureInfo.InvariantCulture), KpiCatalog.DefaultSlowMovingDays.ToString(CultureInfo.InvariantCulture),
-            days == KpiCatalog.DefaultSlowMovingDays, true, $"Mặt hàng còn tồn mà không xuất từ số ngày này trở lên; 1–{KpiCatalog.MaxSlowMovingDays}.");
     }
 
     /// <inheritdoc />
@@ -183,29 +153,25 @@ public sealed class SystemParameterService : ISystemParameterService
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeRfqComparisonThreshold(money);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
-            case SystemParameterCodes.InternalMarkupPercent:
             case SystemParameterCodes.PoHighPriceWarnPercent:
             case SystemParameterCodes.PooledMarginPercent:
                 decimal? percent = null;
-                var isMarkup = key == SystemParameterCodes.InternalMarkupPercent;
                 if (!string.IsNullOrWhiteSpace(request.Value))
                 {
                     // Nhận cả "12,5" (kiểu Việt Nam, CLAUDE.md mục 5) lẫn "12.5" (ô số trên giao diện gửi lên); không nhận dấu nhóm nghìn.
                     var text = request.Value.Trim().Replace(',', '.');
                     if (!decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
-                        throw new BusinessRuleException($"{(isMarkup ? "% markup nội bộ" : key == SystemParameterCodes.PooledMarginPercent ? "% biên độ phân bổ" : "% cảnh báo giá cao")} phải là số, ví dụ 10 hoặc 12,5.");
+                        throw new BusinessRuleException($"{(key == SystemParameterCodes.PooledMarginPercent ? "% biên độ phân bổ" : "% cảnh báo giá cao")} phải là số, ví dụ 10 hoặc 12,5.");
                     percent = parsed;
                 }
 
                 var parameterRow = await GetOrCreateAsync(companyId, cancellationToken);
-                if (isMarkup) parameterRow.ChangeInternalMarkupPercent(percent);
-                else if (key == SystemParameterCodes.PooledMarginPercent) parameterRow.ChangePooledMarginPercent(percent);
+                if (key == SystemParameterCodes.PooledMarginPercent) parameterRow.ChangePooledMarginPercent(percent);
                 else parameterRow.ChangePoHighPriceWarnPercent(percent);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             case SystemParameterCodes.ReceiptQcRequired:
             case SystemParameterCodes.ReceiptSeparatePoCreator:
-            case SystemParameterCodes.ReceiptPoRequired:
             case SystemParameterCodes.RfqDossierRequired:
             case SystemParameterCodes.SupplierOnboardingOptional:
                 var on = ParseToggle(request.Value);
@@ -213,7 +179,6 @@ public sealed class SystemParameterService : ISystemParameterService
                 if (key == SystemParameterCodes.ReceiptQcRequired) row.ChangeRequireReceiptQc(on);
                 else if (key == SystemParameterCodes.SupplierOnboardingOptional) row.ChangeAllowSupplierWithoutOnboarding(on);
                 else if (key == SystemParameterCodes.RfqDossierRequired) row.ChangeRequireRfqDossierComplete(on);
-                else if (key == SystemParameterCodes.ReceiptPoRequired) row.ChangeRequireReceiptPo(on);
                 else row.ChangeSeparatePoCreatorFromReceipt(on);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
@@ -235,21 +200,6 @@ public sealed class SystemParameterService : ISystemParameterService
                     _ => Proc.Domain.Purchasing.SlaCategory.Urgent,
                 };
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeSlaDays(category, days);
-                await _db.SaveChangesAsync(cancellationToken);
-                break;
-            case SystemParameterCodes.CostingMethod:
-            case SystemParameterCodes.NegativeStock:
-                throw new BusinessRuleException("Tham số này chỉ xem, không sửa ở màn hình Tham số hệ thống.");
-            case SystemParameterCodes.KpiSlowMovingDays:
-                int? idleDays = null;
-                if (!string.IsNullOrWhiteSpace(request.Value))
-                {
-                    if (!int.TryParse(request.Value.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsedIdle))
-                        throw new BusinessRuleException("Số ngày phải là số nguyên.");
-                    idleDays = parsedIdle;
-                }
-
-                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeKpiSlowMovingDays(idleDays);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             default:
@@ -281,11 +231,6 @@ public sealed class SystemParameterService : ISystemParameterService
     /// <inheritdoc />
     public async Task<decimal> RfqComparisonThresholdAsync(CancellationToken cancellationToken) =>
         await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.RfqComparisonThreshold).FirstOrDefaultAsync(cancellationToken) ?? 0m;
-
-    /// <inheritdoc />
-    public async Task<decimal> InternalMarkupPercentAsync(CancellationToken cancellationToken) =>
-        await _db.CompanyParameters.AsNoTracking().Select(p => (decimal?)p.InternalMarkupPercent).FirstOrDefaultAsync(cancellationToken)
-        ?? CompanyParameter.DefaultInternalMarkupPercent;
 
     /// <summary>Dòng tham số của công ty đang làm việc; chưa có thì tạo với giá trị mặc định (lần sửa đầu tiên).</summary>
     private async Task<CompanyParameter> GetOrCreateAsync(Guid companyId, CancellationToken cancellationToken)

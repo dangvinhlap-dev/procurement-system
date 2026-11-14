@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { loginViaApi, confirmCompanySwitch } from './helpers.ts'
 
 /**
- * Màn hình Đánh số chứng từ (design.md mục 5.4, 5.5). Dùng công ty DTV và loại RTV để không lẫn với test khác;
+ * Màn hình Đánh số chứng từ (design.md mục 5.4, 5.5). Dùng công ty DTV và loại KSG (khảo sát giá) để không lẫn với test khác;
  * test tự trả về mẫu mặc định ở cuối nên chạy lại được nhiều lần.
  */
 test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về mặc định', async ({ page }) => {
@@ -15,8 +15,8 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
 
   await expect(page.getByRole('heading', { name: 'Đánh số chứng từ – DTV' })).toBeVisible()
   // 26 loại – thêm HSN hồ sơ đánh giá NCC mới (lát G8), XNH xác nhận nhận hàng (lát K2), BTH bảng tổng hợp đề xuất mua (lát Y5b),
-  // BGH báo giao hàng NCC (lát P5), DNT đề nghị thanh toán (lát Y8), BKT bảng kê chi phí tạp vụ (lát Y11a).
-  await expect(page.locator('.data-grid-row')).toHaveCount(26)
+  // BGH báo giao hàng NCC (lát P5), DNT đề nghị thanh toán (lát Y8), BKT bảng kê chi phí tạp vụ (lát Y11a); bỏ 6 loại phiếu kho (lát K3).
+  await expect(page.locator('.data-grid-row')).toHaveCount(20)
   // Năm/tháng theo giờ máy (Việt Nam), giống server tính kỳ theo giờ Việt Nam.
   const now = new Date()
   const yymm = String(now.getFullYear()).slice(2) + String(now.getMonth() + 1).padStart(2, '0')
@@ -24,8 +24,8 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
   await expect(po).toContainText('PO-{CTY}-{YYMM}-{0000}')
   await expect(po).toContainText(`PO-DTV-${yymm}-`)
 
-  const rtv = page.locator('.data-grid-row', { hasText: 'Phiếu xuất trả NCC' })
-  await rtv.dblclick()
+  const ksg = page.locator('.data-grid-row', { hasText: 'Khảo sát giá thị trường' })
+  await ksg.dblclick()
   const drawer = page.locator('.detail-drawer')
   const input = drawer.getByRole('textbox', { name: 'Mẫu số' })
   await input.fill('th/{yyyy}/{000}')
@@ -38,12 +38,12 @@ test('xem mẫu số mặc định, sửa mẫu có xem trước, rồi về m�
 
   await input.fill('th/{yyyy}/{000}')
   await page.keyboard.press('Control+s')
-  await expect(page.locator('.ant-message')).toContainText('Đã lưu mẫu số RTV: TH/{YYYY}/{000}.')
-  await expect(rtv).toContainText('Riêng')
-  await expect(rtv).toContainText(`TH/${new Date().getFullYear()}/`)
+  await expect(page.locator('.ant-message')).toContainText('Đã lưu mẫu số KSG: TH/{YYYY}/{000}.')
+  await expect(ksg).toContainText('Riêng')
+  await expect(ksg).toContainText(`TH/${new Date().getFullYear()}/`)
 
-  await rtv.dblclick()
+  await ksg.dblclick()
   await drawer.getByRole('button', { name: 'Về mẫu mặc định' }).click()
-  await expect(rtv).toContainText('Mặc định')
-  await expect(rtv).toContainText('RTV-{CTY}-{YYMM}-{0000}')
+  await expect(ksg).toContainText('Mặc định')
+  await expect(ksg).toContainText('KSG-{CTY}-{YYMM}-{0000}')
 })

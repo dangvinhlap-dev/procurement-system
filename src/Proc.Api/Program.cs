@@ -38,7 +38,6 @@ builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddOptions<DatabaseOptions>().Bind(builder.Configuration.GetSection("Database"));
 builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection("Seed"));
 // Bật/tắt phân hệ – kho tắt mặc định từ 0.22.0 (design.md mục 19.4).
-builder.Services.AddOptions<Proc.Application.Common.ModuleOptions>().Bind(builder.Configuration.GetSection(Proc.Application.Common.ModuleOptions.Section));
 builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
 // Email bản sao thông báo qua SMTP (lát O2b, design.md mục 19.3) – mặc định tắt; mật khẩu đặt bằng biến môi trường Email__Password.
 builder.Services.AddOptions<Proc.Infrastructure.Notifications.EmailOptions>()
@@ -194,7 +193,6 @@ app.MapReportEndpoints();
 app.MapControlEndpoints();
 app.MapAnalysisEndpoints();
 app.MapPrintingEndpoints();
-app.MapInventoryEndpoints();
 app.MapPricingEndpoints();
 app.MapPurchasingEndpoints();
 app.MapSourcingEndpoints();

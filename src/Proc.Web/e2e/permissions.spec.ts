@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 import { THUKHO_BHA, loginViaApi } from './helpers.ts'
 
 /**
- * Giao diện theo quyền (design.md mục 9.1): thủ kho BHA không có quyền mua hàng nên không thấy màn hình mua hàng,
- * và mở thẳng đường dẫn cũng bị chặn. Đổi mật khẩu báo lỗi tiếng Việt.
+ * Giao diện theo quyền (design.md mục 9.1): thủ kho BHA chỉ có quyền xem PO và lập/xem phiếu xác nhận nhận hàng (từ lát K3 – phân hệ kho
+ * đã gỡ), không có quyền NCC, đấu thầu nên không thấy các màn hình đó, mở thẳng đường dẫn cũng bị chặn. Đổi mật khẩu báo lỗi tiếng Việt.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -14,19 +14,17 @@ test.beforeEach(async ({ page }) => {
 
 test('cây điều hướng chỉ hiện màn hình có quyền', async ({ page }) => {
   const nav = page.getByTestId('nav-tree')
-  await expect(nav.getByRole('button', { name: /Nhập mua NCC/ })).toBeVisible()
-  await expect(nav.getByRole('button', { name: /Nhập – xuất – tồn/ }).first()).toBeVisible()
-  await expect(nav.getByRole('button', { name: /Đơn mua hàng/ })).toHaveCount(0)
+  await expect(nav.getByRole('button', { name: /Xác nhận nhận hàng/ })).toBeVisible()
+  await expect(nav.getByRole('button', { name: /Yêu cầu báo giá/ })).toHaveCount(0)
   await expect(nav.getByRole('button', { name: /Nhà cung cấp/ })).toHaveCount(0)
   // Nhóm không còn màn hình nào thì ẩn hẳn.
-  await expect(nav.getByRole('button', { name: 'Mua hàng', exact: true })).toHaveCount(0)
+  await expect(nav.getByRole('button', { name: 'Đấu thầu', exact: true })).toHaveCount(0)
 })
 
 test('thanh menu ẩn nhóm không có màn hình được phép, chỉ được chọn công ty được gán', async ({ page }) => {
   const menuBar = page.getByTestId('shell-bar')
-  // Thủ kho BHA không có quyền mua hàng, đấu thầu → hai nhóm không hiện trên thanh menu chữ (như cây điều hướng).
-  await expect(menuBar.getByRole('menuitem', { name: 'Hằng ngày', exact: true })).toBeVisible()
-  await expect(menuBar.getByRole('menuitem', { name: 'Mua hàng', exact: true })).toHaveCount(0)
+  // Thủ kho BHA không có quyền đấu thầu → nhóm Đấu thầu không hiện trên thanh menu chữ (như cây điều hướng).
+  await expect(menuBar.getByRole('menuitem', { name: 'Mua hàng', exact: true })).toBeVisible()
   await expect(menuBar.getByRole('menuitem', { name: 'Đấu thầu', exact: true })).toHaveCount(0)
   await expect(page.getByText('Không có màn hình được phép')).toHaveCount(0)
 
@@ -36,16 +34,16 @@ test('thanh menu ẩn nhóm không có màn hình được phép, chỉ được
 })
 
 test('mở thẳng đường dẫn không có quyền thì bị chặn', async ({ page }) => {
-  await page.goto('/mua-hang/po')
+  await page.goto('/dau-thau/rfq')
   await expect(page.getByText('Bạn không có quyền mở màn hình này')).toBeVisible()
   await expect(page.locator('.data-grid')).toHaveCount(0)
 })
 
 test('ô lệnh không mở được màn hình không có quyền', async ({ page }) => {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill('PO')
+  await box.fill('RFQ')
   await box.press('Enter')
-  await expect(page.locator('.ant-message')).toContainText('Không có màn hình "PO"')
+  await expect(page.locator('.ant-message')).toContainText('Không có màn hình "RFQ"')
   await expect(page).toHaveURL(/\/$/)
 })
 

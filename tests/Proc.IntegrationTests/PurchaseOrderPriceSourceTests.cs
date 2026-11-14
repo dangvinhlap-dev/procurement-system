@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
@@ -473,7 +472,7 @@ public class PurchaseOrderPriceSourceTests
         var kpi = await ReadAsync<KpiResult>(await f.Client.GetAsync(url, Ct));
         Assert.Equal((Today.AddDays(-1), Today.AddDays(-1)), (kpi.PreviousFrom, kpi.PreviousTo));
         Assert.Equal(
-            ["Saving", "ContractCompliance", "PurchaseSla", "OnTimeDelivery", "Quality", "Emergency", "SlowMoving", "SupplierReview", "Violation"],
+            ["Saving", "ContractCompliance", "PurchaseSla", "OnTimeDelivery", "Quality", "Emergency", "SupplierReview", "Violation"],
             kpi.Items.Select(i => i.Code));
         var contract = kpi.Items.Single(i => i.Code == "ContractCompliance");
         // 475.000 ÷ 1.269.000 = 37,43% – khớp báo cáo PRCW; kỳ trước chỉ có dòng không có giá đã duyệt → 0%.
@@ -482,8 +481,8 @@ public class PurchaseOrderPriceSourceTests
         var emergency = kpi.Items.Single(i => i.Code == "Emergency");
         // 300.000 ÷ 1.269.000 = 23,64% > trần 5%.
         Assert.Equal((23.64m, (decimal?)0m, 5m, (bool?)false), (emergency.Value, emergency.PreviousValue, emergency.Target, emergency.Met));
-        // Chưa có RFQ, PR, phiếu nhập, tồn kho: chưa có kết quả (đánh giá NCC: chưa NCC nào thuộc diện); chưa có vi phạm KSNB → 0 vụ, đạt.
-        Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SlowMoving" or "SupplierReview"),
+        // Chưa có RFQ, PR, phiếu nhận hàng: chưa có kết quả (đánh giá NCC: chưa NCC nào thuộc diện); chưa có vi phạm KSNB → 0 vụ, đạt.
+        Assert.All(kpi.Items.Where(i => i.Code is "Saving" or "PurchaseSla" or "OnTimeDelivery" or "Quality" or "SupplierReview"),
             i => Assert.Equal((true, (decimal?)null, (bool?)null), (i.Measured, i.Value, i.Met)));
         var violation = kpi.Items.Single(i => i.Code == "Violation");
         Assert.Equal((true, (decimal?)0m, (bool?)true), (violation.Measured, violation.Value, violation.Met));
@@ -501,7 +500,8 @@ public class PurchaseOrderPriceSourceTests
         Assert.Contains("số nguyên", await TitleAsync(await f.Client.PutAsJsonAsync(
             $"/api/system-parameters/{SystemParameterCodes.KpiTarget(KpiCode.Violation)}", new UpdateSystemParameterRequest("1,5"), Ct)));
         var parameters = (await f.Client.GetFromJsonAsync<List<SystemParameterDto>>("/api/system-parameters", Ct))!;
-        Assert.Equal(10, parameters.Count(p => p.Group == "KPI"));
+        // 8 mục tiêu KPI (KPI tồn chậm luân chuyển và số ngày tính tồn chậm bỏ cùng phân hệ kho – lát K3).
+        Assert.Equal(8, parameters.Count(p => p.Group == "KPI"));
         Assert.Contains("trước hoặc bằng", await TitleAsync(await f.Client.GetAsync(
             $"/api/reports/kpi?from={Today:yyyy-MM-dd}&to={Today.AddDays(-1):yyyy-MM-dd}", Ct)));
     }

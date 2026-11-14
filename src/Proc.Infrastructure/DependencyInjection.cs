@@ -7,7 +7,6 @@ using Proc.Application.Auth;
 using Proc.Application.Common;
 using Proc.Application.Documents;
 using Proc.Application.Excel;
-using Proc.Application.Inventory;
 using Proc.Application.Logging;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -15,7 +14,6 @@ using Proc.Infrastructure.Administration;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Excel;
 using Proc.Infrastructure.Identity;
-using Proc.Infrastructure.Inventory;
 using Proc.Infrastructure.Logging;
 using Proc.Infrastructure.MasterData;
 using Proc.Infrastructure.Organization;
@@ -63,9 +61,6 @@ public static class DependencyInjection
         services.AddScoped<IChangeHistoryQueries, ChangeHistoryQueries>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
         services.AddScoped<Proc.Application.Organization.ISystemParameterService, Proc.Infrastructure.Organization.SystemParameterService>();
-        services.AddScoped<IInventoryPeriodService, InventoryPeriodService>();
-        services.AddScoped<IInventoryDocumentService, InventoryDocumentService>();
-        services.AddScoped<IStockQueryService, StockQueryService>();
         services.AddScoped<Proc.Application.Purchasing.IApprovalRuleAdministration, Proc.Infrastructure.Purchasing.ApprovalRuleAdministration>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseRequestService, Proc.Infrastructure.Purchasing.PurchaseRequestService>();
         services.AddScoped<Proc.Application.Purchasing.IPurchaseOrderService, Proc.Infrastructure.Purchasing.PurchaseOrderService>();
@@ -129,7 +124,6 @@ public static class DependencyInjection
         services.AddScoped<ExcelCatalog, SupplierGroupExcelCatalog>();
         services.AddScoped<ExcelCatalog, SupplierExcelCatalog>();
         services.AddScoped<IGridExcelExporter, GridExcelExporter>();
-        services.AddScoped<Proc.Application.Reports.IStockReportService, Proc.Infrastructure.Reports.StockReportService>();
         services.AddScoped<Proc.Application.Reports.IPurchaseReportService, Proc.Infrastructure.Reports.PurchaseReportService>();
         services.AddScoped<Proc.Application.Reports.IKpiService, Proc.Infrastructure.Reports.KpiService>();
         services.AddScoped<Proc.Application.Reports.IBoardMonthlyReportService, Proc.Infrastructure.Reports.BoardMonthlyReportService>();
@@ -140,7 +134,6 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.MasterData.ISupplierOnboardingService, Proc.Infrastructure.MasterData.SupplierOnboardingService>();
         services.AddScoped<Proc.Application.Purchasing.IReceiptConfirmationService, Proc.Infrastructure.Purchasing.ReceiptConfirmationService>();
         services.AddScoped<Proc.Application.Reports.IDashboardService, Proc.Infrastructure.Reports.DashboardService>();
-        services.AddScoped<Proc.Application.Reports.IAccountingExportService, Proc.Infrastructure.Reports.AccountingExportService>();
         services.AddScoped<Proc.Application.Reports.IPurchaseAccountingExportService, Proc.Infrastructure.Reports.PurchaseAccountingExportService>();
         services.AddScoped<Proc.Application.Notifications.INotificationService, Proc.Infrastructure.Notifications.NotificationService>();
         // Email bản sao thông báo (lát O2b): bộ gửi SMTP + dịch vụ quét; dịch vụ nền đăng ký ở Api cùng cấu hình mục Email.

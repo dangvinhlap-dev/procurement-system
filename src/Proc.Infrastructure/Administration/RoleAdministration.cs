@@ -16,20 +16,17 @@ public sealed class RoleAdministration : IRoleAdministration
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly GrantChecker _grants;
-    private readonly ModuleOptions _modules;
 
     /// <summary>
     /// Tạo dịch vụ quản lý vai trò.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    /// <param name="modules">Phân hệ bật/tắt – quyền của phân hệ đang tắt không hiện, không cấp, nhưng giữ nguyên trong vai trò đang có.</param>
-    public RoleAdministration(ProcDbContext db, ICurrentUserScope scope, IOptions<ModuleOptions> modules)
+    public RoleAdministration(ProcDbContext db, ICurrentUserScope scope)
     {
         _db = db;
         _scope = scope;
-        _modules = modules.Value;
-        _grants = new GrantChecker(db, scope, _modules);
+        _grants = new GrantChecker(db, scope);
     }
 
     /// <inheritdoc />
@@ -38,19 +35,16 @@ public sealed class RoleAdministration : IRoleAdministration
             .Select(m => new PermissionGroupDto(
                 m.Module,
                 m.Name,
-                Permissions.All.Where(p => p.Module == m.Module && !_modules.IsDisabled(p.Code)
+                Permissions.All.Where(p => p.Module == m.Module
                     // Quyền Hủy phiếu chỉ vai trò Quản trị có (tự cấp khi khởi động) – không hiện để gán cho vai trò khác (design.md mục 20.2a).
                     && p.Code != Permissions.System.DocumentCancel).Select(p => new PermissionDto(p.Code, p.Name)).ToList()))
-            // Phân hệ kho tắt (0.22.0) thì nhóm Kho không còn quyền nào – bỏ hẳn nhóm khỏi màn hình phân quyền.
             .Where(g => g.Permissions.Count > 0)
             .ToList();
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<RoleListItemDto>> ListAsync(CancellationToken cancellationToken)
     {
-        var disabled = Permissions.InventoryModule.Where(_modules.IsDisabled).ToList();
         var permissionCounts = await _db.RolePermissions.AsNoTracking()
-            .Where(rp => !disabled.Contains(rp.PermissionCode))
             .GroupBy(rp => rp.RoleId)
             .Select(g => new { RoleId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.RoleId, x => x.Count, cancellationToken);
@@ -116,10 +110,8 @@ public sealed class RoleAdministration : IRoleAdministration
         var requested = CheckPermissions(request.PermissionCodes);
         role.Update(request.Name, request.IsActive);
 
-        // Quyền của phân hệ đang tắt không hiện trên màn hình nên không có trong yêu cầu – giữ nguyên, không xóa (design.md mục 19.4).
-        var disabled = Permissions.InventoryModule.Where(_modules.IsDisabled).ToList();
         _db.RolePermissions.RemoveRange(await _db.RolePermissions
-            .Where(rp => rp.RoleId == id && !requested.Contains(rp.PermissionCode) && !disabled.Contains(rp.PermissionCode))
+            .Where(rp => rp.RoleId == id && !requested.Contains(rp.PermissionCode))
             .ToListAsync(cancellationToken));
         foreach (var code in requested.Except(current))
             _db.RolePermissions.Add(RolePermission.Grant(id, code));
@@ -134,7 +126,7 @@ public sealed class RoleAdministration : IRoleAdministration
         var codes = templates.Select(t => t.Code).ToList();
         var existing = await _db.Roles.AsNoTracking().Where(r => codes.Contains(r.Code)).Select(r => r.Code).ToListAsync(cancellationToken);
         return templates
-            .Select(t => new RoleTemplateDto(t.Code, t.Name, t.Description, _modules.Filter(t.Permissions).Distinct().ToList(), existing.Contains(t.Code)))
+            .Select(t => new RoleTemplateDto(t.Code, t.Name, t.Description, t.Permissions.Distinct().ToList(), existing.Contains(t.Code)))
             .ToList();
     }
 

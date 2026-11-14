@@ -17,7 +17,6 @@ public sealed class AuthService : IAuthService
     private readonly ProcDbContext _db;
     private readonly JwtTokenService _tokens;
     private readonly IAccessLog _accessLog;
-    private readonly ModuleOptions _modules;
 
     /// <summary>
     /// Tạo dịch vụ đăng nhập.
@@ -26,11 +25,9 @@ public sealed class AuthService : IAuthService
     /// <param name="db">DbContext.</param>
     /// <param name="tokens">Dịch vụ cấp JWT.</param>
     /// <param name="accessLog">Nhật ký truy cập (design.md mục 9.3).</param>
-    /// <param name="modules">Phân hệ bật/tắt – quyền của phân hệ đang tắt không trả cho giao diện.</param>
     public AuthService(
-        UserManager<AppUser> userManager, ProcDbContext db, JwtTokenService tokens, IAccessLog accessLog, IOptions<ModuleOptions> modules)
+        UserManager<AppUser> userManager, ProcDbContext db, JwtTokenService tokens, IAccessLog accessLog)
     {
-        _modules = modules.Value;
         _userManager = userManager;
         _db = db;
         _tokens = tokens;
@@ -197,7 +194,7 @@ public sealed class AuthService : IAuthService
                 var c = g.First();
                 return new UserCompanyInfo(c.Id, c.Code, c.Name, c.ShortName, c.IsHeadOffice,
                     g.Select(r => r.RoleCode).Distinct().Order().ToList(),
-                    _modules.Filter(g.SelectMany(r => permissionsByRole[r.RoleId])).Distinct().Order(StringComparer.Ordinal).ToList());
+                    g.SelectMany(r => permissionsByRole[r.RoleId]).Distinct().Order(StringComparer.Ordinal).ToList());
             })
             .OrderByDescending(c => c.IsHeadOffice)
             .ThenBy(c => c.Code, StringComparer.Ordinal)

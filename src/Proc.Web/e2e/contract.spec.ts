@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveContract, approveContractAmendment, approvePriceList, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { api, approveContract, approveContractAmendment, approvePriceList, chooseOption, openByCommand, pickOption, seedItemSupplier, switchCompany } from './inventoryHelpers.ts'
 
 /**
  * Hợp đồng nguyên tắc phương án 2 (lát B4a – design.md mục 18.7) ở BHA: gắn bảng giá toàn tập đoàn của NCC, sản lượng dự kiến lấy giá
@@ -9,7 +9,7 @@ import { api, approveContract, approveContractAmendment, approvePriceList, choos
  */
 test('hợp đồng nguyên tắc: lập, sản lượng theo bảng giá, gửi duyệt, hiệu lực', async ({ page, request }) => {
   test.setTimeout(120_000)
-  const { itemCode, itemId, supplierCode } = await seedPostedReceipt(request)
+  const { itemCode, itemId, supplierCode } = await seedItemSupplier(request)
   const head = await api(request)
   const suppliers = await head.get<{ items: { id: string; code: string }[] }>(`/api/suppliers?search=${supplierCode}`)
   const supplierId = suppliers.items.find((s) => s.code === supplierCode)!.id
@@ -74,7 +74,7 @@ test('hợp đồng nguyên tắc: lập, sản lượng theo bảng giá, gửi
  */
 test('phụ lục hợp đồng: gia hạn, đổi điều khoản, duyệt thì áp vào hợp đồng', async ({ page, request }) => {
   test.setTimeout(120_000)
-  const { itemId, supplierCode } = await seedPostedReceipt(request)
+  const { itemId, supplierCode } = await seedItemSupplier(request)
   const head = await api(request)
   const bha = await api(request, 'BHA')
   const suppliers = await head.get<{ items: { id: string; code: string }[] }>(`/api/suppliers?search=${supplierCode}`)
@@ -176,7 +176,7 @@ test('hợp đồng nguyên tắc: hộp thoại nhập Excel hợp đồng hi�
  */
 test('hợp đồng nguyên tắc: cam kết chiết khấu, theo dõi và ghi nhận thực nhận', async ({ page, request }) => {
   test.setTimeout(120_000)
-  const { itemId, supplierCode } = await seedPostedReceipt(request)
+  const { itemId, supplierCode } = await seedItemSupplier(request)
   const head = await api(request)
   const bha = await api(request, 'BHA')
   const suppliers = await head.get<{ items: { id: string; code: string }[] }>(`/api/suppliers?search=${supplierCode}`)

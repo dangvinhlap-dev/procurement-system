@@ -79,8 +79,8 @@ public static class RoleTemplates
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoApprove,
             Permissions.Purchase.ContractApprove, Permissions.Pricing.PriceListApprove,
             Permissions.Sourcing.RfqApproveAward, Permissions.MasterData.SupplierApprove,
-            Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
-            Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
+            Permissions.Report.PurchaseView,
+            Permissions.Report.PriceViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies,
             Permissions.MasterData.ConflictView, Permissions.MasterData.ConflictManage, Permissions.MasterData.SoleSourceApprove,
@@ -103,7 +103,7 @@ public static class RoleTemplates
         new("VANHANH", "Nhóm Vận hành mua hàng", "Lập PO theo giá đã duyệt cho từng pháp nhân, theo dõi giao hàng",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Purchase.PoCreate, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
+            Permissions.Purchase.PoCreate,
             Permissions.Report.PurchaseView, Permissions.MasterData.SupplierReviewManage, Permissions.Purchase.PooledOrderManage,
         ]),
         new("HOIDONG", "Hội đồng xét chọn & duyệt giá", "Duyệt kết quả chọn thầu, bảng giá, hồ sơ NCC, hợp đồng nguyên tắc",
@@ -117,33 +117,26 @@ public static class RoleTemplates
         new("DENGHI", "Người đề nghị mua (bộ phận)", "Lập đề nghị mua hàng cho bộ phận, xác nhận nghiệm thu hàng nhận",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
-            Permissions.Inventory.StockView,
             // Đơn vị đặt hàng xác nhận nghiệm thu trên phiếu nhập (lát H4 – sơ đồ mục 3).
-            Permissions.Inventory.DocumentView, Permissions.Inventory.ReceiptAccept,
             // Từ 0.22.0: dịch vụ do phòng ban đề xuất lập XNH (biên bản nghiệm thu); đơn vị đặt hàng nghiệm thu XNH (Q8, design.md mục 19.1).
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptAccept,
             // Lát Y11a: bộ phận lập bảng kê chi phí tạp vụ 2C (tự đặt – người quản trị đổi được).
             Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate,
         ]),
 
-        new("KHO", "Kho", "Nhận hàng, ghi sổ phiếu kho, xem tồn",
+        new("KHO", "Kho", "Thủ kho nơi nhận: lập phiếu xác nhận nhận hàng (XNH), nhập tồn trên đề nghị mua",
         [
-            .. CatalogView, Permissions.Purchase.PoView, Permissions.Inventory.DocumentView,
-            Permissions.Inventory.DocumentCreate, Permissions.Inventory.DocumentPost, Permissions.Inventory.AdjustmentCreate,
-            Permissions.Inventory.StockView, Permissions.Inventory.PeriodView, Permissions.Report.StockView,
+            .. CatalogView, Permissions.Purchase.PoView,
             // Từ 0.22.0: thủ kho nơi nhận lập XNH (Q8).
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage,
             // Lát Y3b: thủ kho nơi nhận nhập tồn trên đề nghị mua loại A, B (Q2, design.md mục 19.3).
             Permissions.Purchase.PrView, Permissions.Purchase.PrEnterStock,
         ]),
-        new("KETOAN", "Kế toán", "Đối chiếu PO – phiếu nhận, đóng kỳ kho, xuất chứng từ cho phần mềm kế toán",
+        new("KETOAN", "Kế toán", "Đối chiếu PO – phiếu nhận, xuất chứng từ mua cho phần mềm kế toán, ghi đã chi đề nghị thanh toán",
         [
             .. CatalogView, Permissions.Purchase.PoView, Permissions.Purchase.ContractView,
-            Permissions.Pricing.PriceListView, Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
-            Permissions.Inventory.PeriodView, Permissions.Inventory.PeriodClose,
-            // Kho lập phiếu điều chỉnh/kiểm kê, kế toán ghi sổ – tách người kiểm kê và người ghi tăng/giảm tồn (design.md mục 6.1).
-            Permissions.Inventory.AdjustmentPost,
-            Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.AccountingExport,
+            Permissions.Pricing.PriceListView,
+            Permissions.Report.PurchaseView,
             Permissions.Purchase.ReceiptView,
             // Lát Y8: kế toán xem đề nghị thanh toán và ghi Đã chi sau khi duyệt (design.md mục 19.3 bước 7).
             Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentPay, Permissions.Purchase.SundryView,
@@ -158,9 +151,8 @@ public static class RoleTemplates
         new("KSNB", "Kiểm soát nội bộ", "Giám sát độc lập: chỉ xem mọi nghiệp vụ, báo cáo toàn tập đoàn và nhật ký thao tác; rà dấu hiệu bất thường, ghi nhận vi phạm",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Inventory.PeriodView,
-            Permissions.Report.StockView, Permissions.Report.PurchaseView,
-            Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies,
+            Permissions.Report.PurchaseView,
+            Permissions.Report.PriceViewAllCompanies,
             Permissions.Report.PurchaseViewAllCompanies, Permissions.Analysis.PurchaseHistoryView,
             Permissions.Analysis.PurchaseHistoryViewAllCompanies, Permissions.System.LogView, Permissions.MasterData.ConflictView,
             Permissions.Control.AnomalyView, Permissions.Control.FindingManage, Permissions.Purchase.DemandPlanViewAllCompanies,
@@ -169,7 +161,7 @@ public static class RoleTemplates
         new("LANHDAO", "Lãnh đạo (nhận báo cáo KSNB)", "Ban giám đốc/HĐQT: nhận thông báo vi phạm của KSNB, xem sổ vi phạm, báo cáo toàn tập đoàn",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.Report.StockView, Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Control.FindingReceive,
         ]),
 
@@ -191,8 +183,8 @@ public static class RoleTemplates
             Permissions.Pricing.MonthlyApprovalApprove,
             // Cấp cuối đề nghị thanh toán 5A/5B (lát Y8) và bảng kê tạp vụ 2C (lát Y11a).
             Permissions.Purchase.PaymentApprove, Permissions.Purchase.SundryApprove,
-            Permissions.Inventory.StockView, Permissions.Report.StockView, Permissions.Report.PurchaseView,
-            Permissions.Report.PriceViewAllCompanies, Permissions.Report.StockViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
+            Permissions.Report.PurchaseView,
+            Permissions.Report.PriceViewAllCompanies, Permissions.Report.PurchaseViewAllCompanies,
             Permissions.Purchase.DemandPlanViewAllCompanies, Permissions.Control.FindingReceive,
         ]),
         new("PHOBAN", "Phó ban cung ứng (Hội đồng)", "Thành viên Hội đồng đàm phán, duyệt giá: duyệt danh sách NCC, giá tháng, kết quả thầu, hợp đồng; kiểm tra, xác nhận PO; xem xét ngoại lệ",
@@ -207,7 +199,7 @@ public static class RoleTemplates
         new("THAMDINHCL", "Thẩm định chất lượng (thành viên chuyên môn)", "Thẩm định chất lượng hàng, NCC trước khi Hội đồng quyết; đánh giá NCC – không biểu quyết, không duyệt",
         [
             .. CatalogView, .. ProcurementView,
-            Permissions.MasterData.SupplierReviewManage, Permissions.Inventory.DocumentView, Permissions.Report.PurchaseView,
+            Permissions.MasterData.SupplierReviewManage, Permissions.Report.PurchaseView,
             Permissions.Sourcing.AppraisalGive,
         ]),
         new("THAMDINHPL", "Thẩm định pháp lý (thành viên chuyên môn)", "Thẩm định điều khoản pháp lý của hồ sơ NCC, hồ sơ thầu, hợp đồng – không biểu quyết, không duyệt",
@@ -236,7 +228,6 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PrApprove, Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
             Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
-            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Report.PurchaseView, Permissions.Report.PurchaseViewAllCompanies, Permissions.Purchase.DemandPlanViewAllCompanies,
             Permissions.Purchase.PooledOrderManage,
         ]),
@@ -245,14 +236,13 @@ public static class RoleTemplates
             .. CatalogView, .. ProcurementView,
             Permissions.Purchase.PoCreate, Permissions.MasterData.SupplierManage, Permissions.Sourcing.RfqManage,
             Permissions.MasterData.SupplierReviewManage, Permissions.MasterData.SupplierOnboardingManage,
-            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView, Permissions.Report.PurchaseView,
+            Permissions.Report.PurchaseView,
             Permissions.Purchase.PooledOrderManage,
         ]),
         new("DONVIDATHANG", "Đơn vị đặt hàng (nhà hàng, NDAT, F&B…)", "Lập nhu cầu (đề nghị mua, kế hoạch nhu cầu); xem phiếu nhập để xác nhận số lượng, chất lượng",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate,
             Permissions.Purchase.DemandPlanView, Permissions.Purchase.DemandPlanManage, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
-            Permissions.Inventory.DocumentView, Permissions.Inventory.StockView,
             Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptAccept,
         ]),
 

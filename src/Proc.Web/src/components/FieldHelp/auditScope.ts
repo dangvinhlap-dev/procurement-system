@@ -1,6 +1,6 @@
 /** Bản ghi gắn với một vùng màn hình để bấm F1 xem lịch sử (design.md mục 9.3a). */
 export interface AuditScope {
-  /** Mã loại đối tượng trong nhật ký, ví dụ PurchaseOrder, InventoryDocument, Supplier. */
+  /** Mã loại đối tượng trong nhật ký, ví dụ PurchaseOrder, PurchaseRequest, Supplier. */
   entityType: string
   /** Khóa bản ghi; null/undefined = chưa lưu. */
   id?: string | null

@@ -14,17 +14,14 @@ internal sealed class GrantChecker
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
-    private readonly ModuleOptions _modules;
 
     /// <summary>
     /// Tạo bộ kiểm tra.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    /// <param name="modules">Phân hệ bật/tắt.</param>
-    public GrantChecker(ProcDbContext db, ICurrentUserScope scope, ModuleOptions modules)
+    public GrantChecker(ProcDbContext db, ICurrentUserScope scope)
     {
-        _modules = modules;
         _db = db;
         _scope = scope;
     }
@@ -34,8 +31,7 @@ internal sealed class GrantChecker
     /// </summary>
     /// <param name="roleIds">Vai trò cần lấy.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Vai trò → tập mã quyền (vai trò không có quyền nào vẫn có mặt với tập rỗng). Quyền của phân hệ đang tắt (kho từ 0.22.0)
-    /// không tính – người thao tác cũng không còn các quyền đó, nếu tính thì không ai sửa được vai trò có quyền kho cũ.</returns>
+    /// <returns>Vai trò → tập mã quyền (vai trò không có quyền nào vẫn có mặt với tập rỗng).</returns>
     public async Task<Dictionary<Guid, HashSet<string>>> GetRolePermissionsAsync(
         IReadOnlyCollection<Guid> roleIds,
         CancellationToken cancellationToken)
@@ -46,7 +42,7 @@ internal sealed class GrantChecker
             .Select(rp => new { rp.RoleId, rp.PermissionCode })
             .ToListAsync(cancellationToken);
         var lookup = rows.ToLookup(r => r.RoleId, r => r.PermissionCode);
-        return roleIds.Distinct().ToDictionary(id => id, id => _modules.Filter(lookup[id]).ToHashSet(StringComparer.Ordinal));
+        return roleIds.Distinct().ToDictionary(id => id, id => lookup[id].ToHashSet(StringComparer.Ordinal));
     }
 
     /// <summary>

@@ -5,7 +5,7 @@ import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router'
-import { useItemLookup, useSupplierLookup } from '../../api/inventoryDocuments'
+import { useItemLookup, useSupplierLookup } from '../../api/lookups'
 import { supplierItemKey, useFetchSupplierItem, useSupplierItemLookup, useUoms } from '../../api/masterData'
 import { useDepartments, useMyDepartment, useWarehouses } from '../../api/organization'
 import {

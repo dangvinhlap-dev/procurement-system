@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
@@ -67,8 +66,6 @@ public partial class SupplierPricingTests
         var company = await ReadAsync<CompanyDetailDto>(await f.Head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("C"), "Công ty thử so sánh giá", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var client = await _factory.CreateClientInCompanyAsync(f.UserName, ProcApiFactory.TestPassword, company.Code);
-        var calendar = await ReadAsync<InventoryCalendarDto>(await client.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await client.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{f.SupplierId}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         return new Member(client, company.Code, kt);

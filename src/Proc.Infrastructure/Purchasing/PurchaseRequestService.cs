@@ -4,7 +4,6 @@ using Proc.Application.Documents;
 using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;

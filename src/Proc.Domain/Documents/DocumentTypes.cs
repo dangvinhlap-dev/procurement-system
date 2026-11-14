@@ -23,24 +23,6 @@ public static class DocumentTypes
     /// <summary>Hợp đồng nguyên tắc (lát B4a).</summary>
     public const string Contract = "CTR";
 
-    /// <summary>Phiếu nhập mua từ NCC.</summary>
-    public const string GoodsReceipt = "GRN";
-
-    /// <summary>Phiếu xuất trả NCC.</summary>
-    public const string ReturnToVendor = "RTV";
-
-    /// <summary>Phiếu chuyển kho nội bộ.</summary>
-    public const string Transfer = "TRF";
-
-    /// <summary>Phiếu xuất bán nội bộ.</summary>
-    public const string IntercompanySale = "ICS";
-
-    /// <summary>Phiếu nhập mua nội bộ.</summary>
-    public const string IntercompanyReceipt = "ICR";
-
-    /// <summary>Phiếu điều chỉnh / kiểm kê.</summary>
-    public const string Adjustment = "ADJ";
-
     /// <summary>Bảng giá nhà cung cấp (design.md mục 8.1).</summary>
     public const string PriceList = "PRL";
 
@@ -107,12 +89,6 @@ public static class DocumentTypes
         new(DeliveryNotice, "Báo giao hàng của NCC"),
         new(PaymentRequest, "Đề nghị thanh toán"),
         new(SundryExpenseSheet, "Bảng kê chi phí tạp vụ"),
-        new(GoodsReceipt, "Phiếu nhập mua từ NCC"),
-        new(ReturnToVendor, "Phiếu xuất trả NCC"),
-        new(Transfer, "Phiếu chuyển kho nội bộ"),
-        new(IntercompanySale, "Phiếu xuất bán nội bộ"),
-        new(IntercompanyReceipt, "Phiếu nhập mua nội bộ"),
-        new(Adjustment, "Phiếu điều chỉnh, kiểm kê"),
         new(PriceList, "Bảng giá nhà cung cấp"),
         new(Sourcing, "Danh sách tìm nguồn"),
         new(SoleSource, "Phê duyệt NCC độc quyền"),

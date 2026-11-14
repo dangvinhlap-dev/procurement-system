@@ -14,18 +14,6 @@ public sealed record NavCountDto(int Count, bool Attention);
 /// <param name="OpenRfqs">Số RFQ đang nhận báo giá.</param>
 public sealed record DashboardPurchaseDto(int PendingApprovals, int? PendingRequests, int? OverdueRequests, int? OpenOrders, int? LateOrders, int? OpenRfqs);
 
-/// <summary>Số liệu kho trên trang chủ.</summary>
-/// <param name="DraftDocuments">Chứng từ kho còn nháp theo loại (GRN, RTV, TRF, ICS, ICR).</param>
-/// <param name="BelowMinItems">Số mặt hàng có tồn tối thiểu mà tổng tồn của công ty dưới mức (gồm cả hàng chưa có tồn).</param>
-/// <param name="ExpiredLots">Số lô còn tồn đã hết hạn.</param>
-/// <param name="ExpiringLots">Số lô còn tồn sẽ hết hạn trong 30 ngày tới.</param>
-/// <param name="GoodsInTransit">Số phiếu hàng đi đường nội bộ (null khi không có quyền báo cáo kho).</param>
-/// <param name="PeriodLabel">Kỳ kho tháng hiện tại, ví dụ "10/2026" (null khi chưa tạo lịch kỳ).</param>
-/// <param name="PeriodStatus">Trạng thái kỳ: NotOpened, Open, Costing, Closed.</param>
-public sealed record DashboardStockDto(
-    IReadOnlyDictionary<string, int> DraftDocuments, int? BelowMinItems, int? ExpiredLots, int? ExpiringLots, int? GoodsInTransit,
-    string? PeriodLabel, string? PeriodStatus);
-
 /// <summary>Một NCC trong top mua hàng tháng.</summary>
 /// <param name="Code">Mã NCC.</param>
 /// <param name="Name">Tên NCC.</param>
@@ -44,11 +32,10 @@ public sealed record DashboardSpendDto(decimal ThisMonth, decimal LastMonth, IRe
 /// </summary>
 /// <param name="Today">Hôm nay (giờ Việt Nam).</param>
 /// <param name="Purchase">Mua hàng.</param>
-/// <param name="Stock">Kho (null khi không có quyền xem chứng từ kho lẫn tồn kho).</param>
 /// <param name="Spend">Chi tiêu mua hàng (cần quyền báo cáo mua hàng).</param>
 /// <param name="NavCounts">Mã màn hình → số đếm.</param>
 public sealed record DashboardDto(
-    DateOnly Today, DashboardPurchaseDto Purchase, DashboardStockDto? Stock, DashboardSpendDto? Spend, IReadOnlyDictionary<string, NavCountDto> NavCounts);
+    DateOnly Today, DashboardPurchaseDto Purchase, DashboardSpendDto? Spend, IReadOnlyDictionary<string, NavCountDto> NavCounts);
 
 /// <summary>Số liệu trang chủ và số đếm cây điều hướng.</summary>
 public interface IDashboardService

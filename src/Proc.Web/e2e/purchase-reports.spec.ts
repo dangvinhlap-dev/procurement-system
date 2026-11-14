@@ -1,15 +1,18 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { openByCommand, pickOption, seedPostedReceipt } from './inventoryHelpers.ts'
+import { openByCommand, pickOption } from './inventoryHelpers.ts'
+import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 
 /**
- * Báo cáo mua hàng (design.md mục 11.3): mua hàng theo NCC toàn tập đoàn nhóm theo công ty (BHA vừa nhập 10 hộp × 50.000), theo nhóm hàng
+ * Báo cáo mua hàng (design.md mục 11.3): mua hàng theo NCC toàn tập đoàn nhóm theo công ty (BHA vừa nhận 5 hộp × 50.000 bằng XNH), theo nhóm hàng
  * gộp cấp 1 (N4-10), PR chưa xử lý,
  * đánh giá NCC, tiết kiệm từ đấu thầu.
  */
 
 test('mua hàng toàn tập đoàn theo công ty thấy BHA', async ({ page, request }) => {
-  await seedPostedReceipt(request)
+  // Tự tạo XNH ở BHA (5 × 50.000) – không dựa vào dữ liệu spec khác (CSDL test làm mới sau dotnet test).
+  const { bha, po } = await seedApprovedPo(request)
+  await receiveByApi(bha, po.id, po.lines[0].id, 5)
   await loginViaApi(page)
   await page.goto('/')
 

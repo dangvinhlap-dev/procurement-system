@@ -125,10 +125,10 @@ public static class PurchasingEndpoints
             .RequireAnyPermission(Permissions.Purchase.PoCreate, Permissions.Purchase.PoView);
         // Người lập phiếu nhận hàng XNH (thủ kho, phòng ban đề xuất dịch vụ) cần đọc đơn dù không có quyền xem danh sách đơn mua hàng.
         po.MapGet("/{id:guid}", (Guid id, IPurchaseOrderService s, CancellationToken ct) => s.GetAsync(id, ct))
-            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage, Permissions.Inventory.DocumentCreate);
+            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage);
         po.MapGet("/receivable", (IPurchaseOrderService s, CancellationToken ct) =>
                 s.SearchAsync(new PurchaseDocumentQuery(DateOnly.MinValue, DateOnly.MaxValue, "Approved"), ct))
-            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage, Permissions.Inventory.DocumentCreate);
+            .RequireAnyPermission(Permissions.Purchase.PoView, Permissions.Purchase.ReceiptManage);
         po.MapPost("/", async (SavePurchaseOrderRequest request, IPurchaseOrderService s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

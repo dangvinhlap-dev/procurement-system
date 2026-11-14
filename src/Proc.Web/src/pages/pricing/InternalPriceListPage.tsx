@@ -1,16 +1,14 @@
-import { App, Button, DatePicker, Form, Input, InputNumber } from 'antd'
+import { App, DatePicker, Form, Input, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import {
-  describeSuggestion,
   useGroupCompanies,
   useInternalPriceMutations,
   useInternalPrices,
-  useInternalPriceSuggestions,
   type InternalPrice,
 } from '../../api/intercompany'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import { vatOptions } from '../../api/masterData'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
@@ -88,9 +86,6 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
   const lookup = useItemLookup(search, price ? [price.itemId] : [])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const itemId = Form.useWatch('itemId', form) as string | undefined
-  const suggestions = useInternalPriceSuggestions(itemId ? [itemId] : [], canManage)
-  const suggestion = itemId ? suggestions.data?.find((s) => s.itemId === itemId) : undefined
 
   const save = async () => {
     const values = await form.validateFields().catch(() => null)
@@ -161,16 +156,6 @@ function InternalPriceDrawer({ price, canManage, onClose }: { price: InternalPri
                 label="Giá bán nội bộ (theo ĐVT cơ sở, chưa VAT)"
                 name="unitPrice"
                 rules={[{ required: true, type: 'number', min: 0, message: 'Nhập giá ≥ 0.' }]}
-                extra={
-                  canManage && suggestion ? (
-                    <span data-testid="price-suggestion">
-                      Gợi ý – {describeSuggestion(suggestion)}{' '}
-                      <Button type="link" size="small" onClick={() => form.setFieldValue('unitPrice', suggestion.suggestedPrice)}>
-                        Áp dụng
-                      </Button>
-                    </span>
-                  ) : undefined
-                }
               >
                 <InputNumber {...vnNumberInput} style={{ width: '100%' }} min={0} />
               </Form.Item>

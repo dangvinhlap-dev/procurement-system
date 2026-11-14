@@ -161,7 +161,7 @@ public class ScopeTests
         Assert.All(adminInfo!.Companies, c => Assert.Equal(Permissions.All.Count, c.Permissions.Count));
         var bha = Assert.Single(thukhoInfo!.Companies);
         Assert.Equal("BHA", bha.Code);
-        Assert.Contains(Permissions.Inventory.DocumentPost, bha.Permissions);
+        Assert.Contains(Permissions.Purchase.ReceiptManage, bha.Permissions);
         Assert.DoesNotContain(Permissions.Purchase.PoCreate, bha.Permissions);
     }
 

@@ -52,12 +52,6 @@ export interface DocumentRegistryFilter {
 export const docTypeLabels: Record<string, string> = {
   PR: 'Đề nghị mua hàng',
   PO: 'Đơn mua hàng',
-  GRN: 'Nhập mua NCC',
-  RTV: 'Xuất trả NCC',
-  TRF: 'Chuyển kho nội bộ',
-  ICS: 'Xuất bán nội bộ',
-  ICR: 'Nhập mua nội bộ',
-  ADJ: 'Điều chỉnh kho',
   PRL: 'Bảng giá NCC',
   SRC: 'Tìm nguồn',
   RFQ: 'Yêu cầu báo giá',
@@ -86,8 +80,7 @@ export const docTypeLabels: Record<string, string> = {
  */
 export function documentPath(docType: string, id: string): string | null {
   const pages: Record<string, string> = {
-    PR: '/mua-hang/pr', PO: '/mua-hang/po', GRN: '/kho/grn', RTV: '/kho/rtv', TRF: '/kho/trf', ICS: '/kho/ics', ICR: '/kho/icr',
-    ADJ: '/kho/dieu-chinh',
+    PR: '/mua-hang/pr', PO: '/mua-hang/po',
     PRL: '/gia-ncc/bang-gia', SRC: '/dau-thau/tim-nguon', RFQ: '/dau-thau/rfq', CTR: '/mua-hang/hop-dong-khung',
     CTA: '/mua-hang/hop-dong-khung/phu-luc', NCC: '/gia-ncc/duyet-ncc', NDQ: '/gia-ncc/ncc-doc-quyen', VP: '/bao-cao/so-vi-pham',
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang', KSG: '/gia-ncc/khao-sat-gia', CKB: '/gia-ncc/chiet-khau-san-luong', KHN: '/mua-hang/ke-hoach-nhu-cau',

@@ -124,10 +124,11 @@ public class WarehouseAndPermissionTests
         // Các ví dụ quyền nêu ở design.md mục 9.1.
         string[] required =
         [
-            "Purchase.PO.Create", "Purchase.PO.Approve", "Inventory.Period.Close",
-            "Inventory.Period.Reopen", "Report.Stock.View", "Report.Price.ViewAllCompanies",
+            "Purchase.PO.Create", "Purchase.PO.Approve", "Purchase.Receipt.Manage", "Report.Price.ViewAllCompanies",
         ];
         Assert.All(required, r => Assert.Contains(Permissions.All, p => p.Code == r));
+        // Quyền kho gỡ ở lát K3 (design.md mục 19.4).
+        Assert.DoesNotContain(Permissions.All, p => p.Code.StartsWith("Inventory.", StringComparison.Ordinal) || p.Code == "Report.Stock.View");
     }
 
     [Fact]

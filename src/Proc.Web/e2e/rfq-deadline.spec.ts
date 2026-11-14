@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Lát R7 (design.md mục 18.26) – RFQ: gia hạn nhận báo giá phải có lý do (hiện trên phiếu); mời 3 NCC mà chỉ 1 chào giá thì chọn thầu hỏi
@@ -8,7 +8,7 @@ import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelper
  */
 test('RFQ: gia hạn có lý do, chọn thầu khi ít báo giá phải giải trình', async ({ page, request }) => {
   test.setTimeout(60_000)
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const head = await api(request)
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const others: string[] = []

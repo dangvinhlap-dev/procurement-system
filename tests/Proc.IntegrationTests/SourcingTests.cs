@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
@@ -87,12 +86,13 @@ public partial class SourcingTests
         var list = await ReadAsync<List<SystemParameterDto>>(await f.Client.GetAsync("/api/system-parameters", Ct));
         var rfqMin = list.Single(p => p.Code == SystemParameterCodes.RfqMinSuppliers);
         Assert.Equal(("3", true, true), (rfqMin.Value, rfqMin.IsDefault, rfqMin.Editable));
-        Assert.False(list.Single(p => p.Code == SystemParameterCodes.CostingMethod).Editable);
+        // Tham số kho (giá vốn, tồn âm) gỡ cùng phân hệ kho ở lát K3.
+        Assert.DoesNotContain(list, p => p.Code == "COSTING_METHOD");
 
-        // Giá trị sai, tham số chỉ xem, mã lạ đều bị chặn.
+        // Giá trị sai, mã lạ (kể cả tham số kho cũ) đều bị chặn.
         Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest("0"), Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/RFQ_MIN_SUPPLIERS", new UpdateSystemParameterRequest("2,5"), Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await f.Client.PutAsJsonAsync("/api/system-parameters/COSTING_METHOD", new UpdateSystemParameterRequest("FIFO"), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Client.PutAsJsonAsync("/api/system-parameters/COSTING_METHOD", new UpdateSystemParameterRequest("FIFO"), Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await f.Client.PutAsJsonAsync("/api/system-parameters/KHONG_CO", new UpdateSystemParameterRequest("1"), Ct)).StatusCode);
 
         // Hạ xuống 2: RFQ mời 2 NCC gửi được; công ty khác (tổng công ty) vẫn giữ mặc định 3.

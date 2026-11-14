@@ -4,7 +4,6 @@ using Proc.Application.Documents;
 using Proc.Domain.Common;
 using Proc.Domain.Control;
 using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Domain.Pricing;
@@ -26,13 +25,6 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
 
     /// <summary>Khoảng ngày dài nhất (ngày) – tránh quét cả CSDL.</summary>
     public const int MaxDays = 366;
-
-    /// <summary>Loại phiếu kho (một bảng InventoryDocument).</summary>
-    private static readonly string[] InventoryTypes =
-    [
-        DocumentTypes.GoodsReceipt, DocumentTypes.ReturnToVendor, DocumentTypes.Transfer, DocumentTypes.IntercompanySale,
-        DocumentTypes.IntercompanyReceipt, DocumentTypes.Adjustment,
-    ];
 
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
@@ -66,7 +58,6 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
         Add(Permissions.Purchase.PrView, DocumentTypes.PurchaseRequest);
         Add(Permissions.Purchase.SummaryView, DocumentTypes.PurchaseSummary);
         Add(Permissions.Purchase.PoView, DocumentTypes.PurchaseOrder);
-        Add(Permissions.Inventory.DocumentView, InventoryTypes);
         Add(Permissions.Purchase.ReceiptView, DocumentTypes.GoodsReceiptConfirmation);
         Add(Permissions.Purchase.PaymentView, DocumentTypes.PaymentRequest);
         Add(Permissions.Purchase.SundryView, DocumentTypes.SundryExpenseSheet);
@@ -116,30 +107,6 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
 
         var raws = new List<Raw>();
         var take = Limit + 1;
-
-        if (wanted.Any(InventoryTypes.Contains))
-        {
-            var types = wanted.Where(InventoryTypes.Contains).ToList();
-            var q = _db.InventoryDocuments.AsNoTracking().Where(d => types.Contains(d.DocType) && d.Date >= from && d.Date <= to);
-            if (created) q = q.Where(d => d.CreatedBy == userId);
-            // Phiếu kho không có quy trình duyệt: "tôi đã duyệt" hiểu là tôi ghi sổ.
-            if (acted) q = q.Where(d => d.PostedBy == userId);
-            var rows = await q.OrderByDescending(d => d.Date).Take(take)
-                .Select(d => new { d.DocType, d.Id, d.No, d.Date, d.SupplierId, d.FromWarehouseId, d.ToWarehouseId, d.CounterCompanyId, d.Note,
-                    d.TotalAmount, d.TotalVat, d.Status, d.CreatedBy, d.CreatedAt })
-                .ToListAsync(cancellationToken);
-            raws.AddRange(rows.Select(d => new Raw(
-                d.DocType, d.Id, d.No, d.Date, d.SupplierId,
-                // Kho hiện ở cột đối tác khi không có NCC: phiếu xuất lấy kho xuất, phiếu nhập lấy kho nhập.
-                d.FromWarehouseId ?? d.ToWarehouseId, d.CounterCompanyId, d.Note, d.TotalAmount + d.TotalVat, d.Status.ToString(),
-                d.Status switch
-                {
-                    DocumentStatus.Posted => DocumentProgress.Done,
-                    DocumentStatus.Cancelled => DocumentProgress.Cancelled,
-                    _ => DocumentProgress.Open,
-                },
-                d.CreatedBy, d.CreatedAt)));
-        }
 
         if (wanted.Contains(DocumentTypes.PurchaseRequest))
         {

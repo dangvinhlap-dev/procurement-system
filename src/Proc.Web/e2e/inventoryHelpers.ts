@@ -158,8 +158,11 @@ export async function chooseOption(page: Page, label: string, text: string) {
   await pickOption(page, text)
 }
 
-/** Tạo mặt hàng + NCC áp dụng tại BHA, nhập 10 HOP giá 50.000 (VAT 10%) vào kho KT và ghi sổ. */
-export async function seedPostedReceipt(request: APIRequestContext) {
+/**
+ * Tạo mặt hàng (ĐVT HOP, VAT 10%) + NCC đã duyệt áp dụng tại BHA. Trước lát K3 hàm còn nhập và ghi sổ phiếu nhập kho; phân hệ kho đã gỡ
+ * (design.md mục 19.4) nên chỉ còn dựng danh mục.
+ */
+export async function seedItemSupplier(request: APIRequestContext) {
   const head = await api(request)
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
@@ -182,13 +185,24 @@ export async function seedPostedReceipt(request: APIRequestContext) {
   const supplierCode = supplier.code
   const bha = await api(request, 'BHA')
   await bha.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
-  const warehouses = await bha.get<{ id: string; code: string }[]>('/api/warehouses')
-  const receipt = await bha.send<{ id: string; no: string }>('post', '/api/goods-receipts', {
-    date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }),
-    warehouseId: warehouses.find((w) => w.code === 'KT')!.id, supplierId: supplier.id, invoiceNo: null, invoiceSeries: null,
-    invoiceDate: null, deliveryNoteNo: null, deliverer: null, note: null,
-    lines: [{ id: null, itemId: item.id, uomId: hop, qty: 10, unitPrice: 50000, vatCode: '10', lotNo: null, expiryDate: null, note: null }],
+  return { itemCode, itemId: item.id, supplierCode, supplierId: supplier.id }
+}
+
+/**
+ * Đơn mua hàng nháp ở BHA: 10 HOP giá 50.000 (VAT 10%) của mặt hàng + NCC mới (seedItemSupplier), nơi nhận kho KT. Thay cho phiếu nhập kho
+ * cũ trong các test dùng chung (đính kèm, F1, tra cứu chứng từ, in, sửa đồng thời) từ khi gỡ phân hệ kho (lát K3).
+ */
+export async function seedDraftPo(request: APIRequestContext) {
+  const seed = await seedItemSupplier(request)
+  const bha = await api(request, 'BHA')
+  const uoms = await bha.get<{ id: string; code: string }[]>('/api/uoms')
+  const kt = (await bha.get<{ id: string; code: string }[]>('/api/warehouses')).find((w) => w.code === 'KT')!.id
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const po = await bha.send<{ id: string; no: string; lines: { id: string }[] }>('post', '/api/purchase-orders', {
+    date: today, supplierId: seed.supplierId, warehouseId: kt, expectedDate: today, paymentTerms: null, deliveryTerms: null,
+    deliveryAddress: null, receiveTolerancePct: 0, note: null,
+    lines: [{ id: null, itemId: seed.itemId, uomId: uoms.find((u) => u.code === 'HOP')!.id, qty: 10, unitPrice: 50000, discountPct: 0,
+      vatCode: '10', deliveryDate: null, note: null, sourcePrLineId: null }],
   })
-  await bha.send('post', `/api/inventory-documents/${receipt.id}/post`, {})
-  return { itemCode, itemId: item.id, receiptId: receipt.id, receiptNo: receipt.no, supplierCode, supplierId: supplier.id }
+  return { ...seed, bha, kt, poId: po.id, poNo: po.no }
 }

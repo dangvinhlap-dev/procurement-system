@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveRfqAward, approveSupplier, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveRfqAward, approveSupplier, chooseOption, openByCommand, pickOption, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Tìm nguồn → RFQ → báo giá 3 NCC → so sánh → chọn thầu → hội đồng duyệt → PO nháp (design.md mục 8.3, 8.4, 8.6), ở BHA.
- * Mặt hàng và NCC thứ nhất lấy từ seedPostedReceipt; thêm 2 NCC đã duyệt, áp dụng tại BHA qua API.
+ * Mặt hàng và NCC thứ nhất lấy từ seedItemSupplier; thêm 2 NCC đã duyệt, áp dụng tại BHA qua API.
  */
 
 /** Bấm nút lệnh rồi nút cùng tên trong hộp xác nhận, chờ thông báo. */
@@ -27,7 +27,7 @@ async function quote(page: Page, supplierCode: string, price: string) {
 
 test('tìm nguồn → RFQ → báo giá → chọn thầu → tạo PO', async ({ page, request }) => {
   test.setTimeout(120_000)
-  const { itemCode, supplierCode: s1 } = await seedPostedReceipt(request)
+  const { itemCode, supplierCode: s1 } = await seedItemSupplier(request)
   const head = await api(request)
   const bha = await api(request, 'BHA')
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')

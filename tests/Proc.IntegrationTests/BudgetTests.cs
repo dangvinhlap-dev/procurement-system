@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -61,8 +60,6 @@ public class BudgetTests
         await _factory.FinishSupplierApprovalAsync(supplier.Id);
         await ReadAsync<SupplierCompanyDto>(await client.PutAsJsonAsync($"/api/suppliers/{supplier.Id}/company", new SaveSupplierCompanyRequest(null, null, true), Ct));
         var warehouse = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
-        var calendar = await ReadAsync<InventoryCalendarDto>(await client.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await client.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         // Giá tham khảo của PR = giá nhận hàng gần nhất (XNH): 1.000.000/cái. PO nhận không gắn bộ phận nên không tính vào ngân sách.
         await TestReceipts.ReceiveAsync(_factory, client, supplier.Id, warehouse, [new(item.Id, cai, 1, 1_000_000)], Today);
         var px1 = await ReadAsync<DepartmentDto>(await client.PostAsJsonAsync("/api/departments", new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));

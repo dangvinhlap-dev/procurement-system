@@ -1,8 +1,6 @@
 import { supplierStatusLabels, itemTypeLabels } from '../../api/masterData'
 import { conflictRelationLabels } from '../../api/conflicts'
 import { amendmentStatusLabels, contractStatusLabels } from '../../api/contracts'
-import { periodStatusLabels } from '../../api/inventory'
-import { documentStatusLabels, qcResultLabels } from '../../api/inventoryDocuments'
 import { priceListStatusLabels } from '../../api/pricing'
 import { priceSourceLabels, priorityLabels, purchaseStatusLabels, purchaseTypeLabels, stepStatusLabels } from '../../api/purchasing'
 import { candidateStatusLabels, rfqStatusLabels, sourcingStatusLabels } from '../../api/sourcing'
@@ -17,10 +15,8 @@ import { formatDate, formatDateTime } from '../../utils/format'
 const enumLabels: Record<string, Record<string, string>> = {
   'PurchaseRequest.Status': purchaseStatusLabels,
   'PurchaseOrder.Status': purchaseStatusLabels,
-  'InventoryDocument.Status': documentStatusLabels,
   'PurchaseContract.Status': contractStatusLabels,
   'PurchaseContractAmendment.Status': amendmentStatusLabels,
-  'InventoryPeriod.Status': periodStatusLabels,
   'Supplier.Status': supplierStatusLabels,
   'SupplierPriceList.Status': priceListStatusLabels,
   'SourcingRequest.Status': sourcingStatusLabels,
@@ -32,7 +28,6 @@ const enumLabels: Record<string, Record<string, string>> = {
   'Item.Type': itemTypeLabels,
   PurchaseType: purchaseTypeLabels,
   Priority: priorityLabels,
-  QcResult: qcResultLabels,
   PriceSource: priceSourceLabels,
   Relation: conflictRelationLabels,
 }

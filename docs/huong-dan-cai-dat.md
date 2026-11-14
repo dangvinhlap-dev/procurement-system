@@ -447,7 +447,6 @@ Bản không đổi CSDL (ví dụ 0.13.1, 0.14.0, 0.16.0) chỉ cần cài lạ
 | `Seed:DemoCompanies` | Công ty mẫu (chỉ môi trường test) | – |
 | `Attachments:RootPath` | Thư mục lưu file đính kèm (để **ngoài** thư mục ứng dụng) | Docker: `/data/attachments` |
 | `Attachments:MaxFileSizeMb` | Giới hạn mỗi file (1–25 MB) | 2 |
-| `Modules:InventoryEnabled` | Phân hệ kho (từ 0.22.0 ngừng dùng – công ty dùng phần mềm kho riêng; `true` chỉ để xem lại dữ liệu kho cũ trước khi gỡ ở 0.28.0) | false |
 | `Printing:FontDirectories` | Thư mục phông `.ttf` có tiếng Việt cho in PDF (Arial, DejaVu Sans, Liberation Sans) | tự tìm |
 | `Serilog:WriteTo` | Nơi ghi log: Console, File, Seq | Console |
 | `ASPNETCORE_ENVIRONMENT` | `Production` / `Development` / `Testing` | Production |

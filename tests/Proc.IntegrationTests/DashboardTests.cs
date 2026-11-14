@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -41,15 +40,12 @@ public class DashboardTests
         var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("H"), "Công ty thử trang chủ", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var buyer = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
-        var calendar = await ReadAsync<InventoryCalendarDto>(await buyer.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await buyer.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm trang chủ {Guid.NewGuid():N}", null, null), Ct));
-        // Tồn tối thiểu 100, công ty chưa có tồn → dưới mức.
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Dầu thủy lực", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, 100, null, []), Ct));
+            new CreateItemRequest(null, "Dầu thủy lực", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC trang chủ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
@@ -65,8 +61,8 @@ public class DashboardTests
         await _factory.CreateScopedUserAsync(approverName2, company.Code, approverRole);
         var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
 
-        // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); phiếu nhập kho nháp (code kho cũ); nhận 2 × 50.000 theo PO bằng XNH trong tháng
-        // (chi tiêu từ 0.22.0 tính theo XNH – design.md mục 19.4).
+        // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); nhận 2 × 50.000 theo PO bằng XNH trong tháng (chi tiêu tính theo XNH –
+        // design.md mục 19.4).
         var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(buyer), null, Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 5, null, null, null)]), Ct));
         await ReadAsync<PurchaseRequestDto>(await buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
@@ -77,8 +73,6 @@ public class DashboardTests
         await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         // PO không có giá đã duyệt: thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25) – người khác duyệt (lát R3).
         await ReadAsync<PurchaseOrderDto>(await approver2.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
-        await ReadAsync<InventoryDocumentDto>(await buyer.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, kt, supplier.Id, null, null, null, null, null, null, [new(null, item.Id, cai, 1, 50_000, "10", null, null, null)]), Ct));
         var xnh = await ReadAsync<ReceiptConfirmationDto>(await buyer.PostAsJsonAsync("/api/receipt-confirmations",
             new SaveReceiptConfirmationRequest(po.Id, Today, null, null, null, null, null, null, null, [new(po.Lines[0].Id, 2, 2, 0, "Passed", null, null)]), Ct));
         await ReadAsync<ReceiptConfirmationDto>(await buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
@@ -88,33 +82,18 @@ public class DashboardTests
         Assert.Equal(Today, dashboard.Today);
         Assert.Equal((1, 0, 1, 1), (dashboard.Purchase.PendingRequests!.Value, dashboard.Purchase.OverdueRequests!.Value,
             dashboard.Purchase.OpenOrders!.Value, dashboard.Purchase.LateOrders!.Value));
-        Assert.Equal(1, dashboard.Stock!.DraftDocuments["GRN"]);
-        Assert.Equal(("Open", $"{Today.Month:00}/{Today.Year}"), (dashboard.Stock.PeriodStatus, dashboard.Stock.PeriodLabel));
         Assert.Equal(100_000m, dashboard.Spend!.ThisMonth);
         Assert.Equal([(supplier.Code, 100_000m)], dashboard.Spend.TopSuppliers.Select(s => (s.Code, s.NetAmount)));
         Assert.Equal(new NavCountDto(1, true), dashboard.NavCounts["POTRK"]);
-        Assert.Equal(new NavCountDto(1, false), dashboard.NavCounts["GRN"]);
         Assert.Equal(new NavCountDto(1, false), dashboard.NavCounts["PR"]);
-        Assert.False(dashboard.NavCounts.ContainsKey("RTV"));
+        // Phân hệ kho đã gỡ (lát K3): không còn số đếm màn hình kho.
+        Assert.False(dashboard.NavCounts.ContainsKey("GRN"));
 
-        // Người duyệt: có PR chờ mình duyệt; không có quyền kho, báo cáo → các phần đó null.
+        // Người duyệt: có PR chờ mình duyệt; không có quyền báo cáo → phần chi tiêu null.
         var forApprover = await ReadAsync<DashboardDto>(await approver.GetAsync("/api/dashboard", Ct));
         Assert.Equal(1, forApprover.Purchase.PendingApprovals);
         Assert.Equal(new NavCountDto(1, true), forApprover.NavCounts["TODO"]);
-        Assert.Null(forApprover.Stock);
         Assert.Null(forApprover.Spend);
 
-        // Thủ kho chỉ xem tồn, chỉ nhóm hàng mới: đúng 1 mặt hàng dưới mức; không thấy phần mua hàng, chứng từ kho.
-        var keeperRole = UniqueCode("K");
-        await _factory.CreateRoleAsync(keeperRole, Permissions.Inventory.StockView);
-        var keeperName = $"tk.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateScopedUserAsync(keeperName, company.Code, keeperRole, categoryCodes: [category.Code]);
-        var keeper = await _factory.CreateClientInCompanyAsync(keeperName, ProcApiFactory.TestPassword, company.Code);
-        var forKeeper = await ReadAsync<DashboardDto>(await keeper.GetAsync("/api/dashboard", Ct));
-        Assert.Equal((0, (int?)null, (int?)null), (forKeeper.Purchase.PendingApprovals, forKeeper.Purchase.PendingRequests, forKeeper.Purchase.OpenOrders));
-        Assert.Equal(1, forKeeper.Stock!.BelowMinItems);
-        Assert.Empty(forKeeper.Stock.DraftDocuments);
-        Assert.Null(forKeeper.Stock.ExpiredLots);
-        Assert.Equal(new NavCountDto(1, true), forKeeper.NavCounts["STK"]);
     }
 }

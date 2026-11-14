@@ -53,7 +53,7 @@ public class DocumentNumberingTests
         Assert.Equal("PO-BHA-9202-0001", await NextAsync("BHA", "PO", new DateOnly(2092, 2, 1)));
         Assert.Equal("PO-BHA-9201-0002", await NextAsync("BHA", "PO", new DateOnly(2092, 1, 31)));
         // Loại chứng từ khác có bộ đếm riêng.
-        Assert.Equal("GRN-BHA-9201-0001", await NextAsync("BHA", "GRN", new DateOnly(2092, 1, 5)));
+        Assert.Equal("XNH-BHA-9201-0001", await NextAsync("BHA", "XNH", new DateOnly(2092, 1, 5)));
     }
 
     [Fact]
@@ -81,25 +81,25 @@ public class DocumentNumberingTests
     {
         var nmi = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "NMI");
 
-        var response = await nmi.PutAsJsonAsync("/api/document-numbering/grn",
+        var response = await nmi.PutAsJsonAsync("/api/document-numbering/xnh",
             new UpdateDocumentNumberingRequest("nk/{yyyy}/{00000}"), Ct);
         var updated = await response.Content.ReadFromJsonAsync<DocumentNumberingDto>(Ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("NK/{YYYY}/{00000}", updated!.Format);
         Assert.False(updated.IsDefault);
-        Assert.Equal("NK/2094/00001", await NextAsync("NMI", "GRN", new DateOnly(2094, 5, 1)));
-        Assert.Equal("GRN-BHA-9405-0001", await NextAsync("BHA", "GRN", new DateOnly(2094, 5, 1)));
+        Assert.Equal("NK/2094/00001", await NextAsync("NMI", "XNH", new DateOnly(2094, 5, 1)));
+        Assert.Equal("XNH-BHA-9405-0001", await NextAsync("BHA", "XNH", new DateOnly(2094, 5, 1)));
 
         var list = await nmi.GetFromJsonAsync<List<DocumentNumberingDto>>("/api/document-numbering", Ct);
-        Assert.Equal("NK/{YYYY}/{00000}", list!.Single(x => x.DocType == "GRN").Format);
+        Assert.Equal("NK/{YYYY}/{00000}", list!.Single(x => x.DocType == "XNH").Format);
         Assert.True(list!.Single(x => x.DocType == "PO").IsDefault);
 
         // Để trống = quay về mẫu mặc định.
-        var reset = await (await nmi.PutAsJsonAsync("/api/document-numbering/GRN", new UpdateDocumentNumberingRequest(null), Ct))
+        var reset = await (await nmi.PutAsJsonAsync("/api/document-numbering/XNH", new UpdateDocumentNumberingRequest(null), Ct))
             .Content.ReadFromJsonAsync<DocumentNumberingDto>(Ct);
         Assert.True(reset!.IsDefault);
-        Assert.Equal("GRN-{CTY}-{YYMM}-{0000}", reset.Format);
+        Assert.Equal("XNH-{CTY}-{YYMM}-{0000}", reset.Format);
     }
 
     [Fact]
@@ -107,14 +107,14 @@ public class DocumentNumberingTests
     {
         var admin = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "DTV");
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh")));
-        var issued = await NextAsync("DTV", "TRF", today);
+        var issued = await NextAsync("DTV", "DNT", today);
 
         var list = await admin.GetFromJsonAsync<List<DocumentNumberingDto>>("/api/document-numbering", Ct);
 
-        var trf = list!.Single(x => x.DocType == "TRF");
-        Assert.Equal("Phiếu chuyển kho nội bộ", trf.Name);
-        Assert.Equal(issued, trf.LastNumber);
-        Assert.Equal(issued[..^4] + (int.Parse(issued[^4..]) + 1).ToString("0000"), trf.NextNumber);
+        var dnt = list!.Single(x => x.DocType == "DNT");
+        Assert.Equal("Đề nghị thanh toán", dnt.Name);
+        Assert.Equal(issued, dnt.LastNumber);
+        Assert.Equal(issued[..^4] + (int.Parse(issued[^4..]) + 1).ToString("0000"), dnt.NextNumber);
     }
 
     [Fact]

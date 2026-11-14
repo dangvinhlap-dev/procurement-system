@@ -21,7 +21,10 @@ public enum KpiCode
     /// <summary>Tỷ lệ mua khẩn cấp (%) – càng thấp càng tốt.</summary>
     Emergency = 6,
 
-    /// <summary>Tồn kho chậm luân chuyển (%) – càng thấp càng tốt.</summary>
+    /// <summary>
+    /// Tồn kho chậm luân chuyển (%) – <b>ngừng dùng từ 0.31.0</b> (lát K3 gỡ phân hệ kho, design.md mục 19.4): không còn trong
+    /// <see cref="KpiCatalog.All"/>; giữ số 7 để không đổi số của các mã sau và cột mục tiêu cũ của tham số công ty.
+    /// </summary>
     SlowMoving = 7,
 
     /// <summary>Hoàn thành đánh giá NCC (%) – đo từ lát F4.</summary>
@@ -41,21 +44,16 @@ public enum KpiCode
 public sealed record KpiDefinition(KpiCode Code, string Name, string Formula, bool HigherIsBetter, decimal DefaultTarget, bool IsCount);
 
 /// <summary>
-/// Danh mục 9 KPI theo đề xuất Ban CUVT. Mục tiêu mặc định lấy từ cột "Mục tiêu tham khảo" của đề xuất; chỉ số đề xuất ghi "giảm dần" (mua khẩn,
-/// tồn chậm) dùng mức trần 5% / 10% để có ngưỡng đánh giá – công ty tự sửa ở Tham số hệ thống.
+/// Danh mục 8 KPI theo đề xuất Ban CUVT (KPI tồn chậm luân chuyển bỏ cùng phân hệ kho từ 0.31.0). Mục tiêu mặc định lấy từ cột "Mục tiêu
+/// tham khảo" của đề xuất; chỉ số đề xuất ghi "giảm dần" (mua khẩn) dùng mức trần 5% để có ngưỡng đánh giá – công ty tự sửa ở Tham số hệ thống.
 /// </summary>
 public static class KpiCatalog
 {
-    /// <summary>Số ngày không xuất mặc định để tính tồn chậm luân chuyển.</summary>
-    public const int DefaultSlowMovingDays = 90;
-
-    /// <summary>Số ngày không xuất tối đa (10 năm) – như báo cáo hàng chậm luân chuyển.</summary>
-    public const int MaxSlowMovingDays = 3650;
 
     /// <summary>Số vụ vi phạm tối đa nhập được làm mục tiêu – lớn hơn gần như chắc chắn là gõ nhầm.</summary>
     public const int MaxViolationTarget = 1000;
 
-    /// <summary>9 chỉ số theo thứ tự hiển thị.</summary>
+    /// <summary>8 chỉ số theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<KpiDefinition> All =
     [
         new(KpiCode.Saving, "Tiết kiệm mua hàng",
@@ -66,7 +64,6 @@ public static class KpiCatalog
         new(KpiCode.OnTimeDelivery, "NCC giao đúng hạn", "Dòng nhận đúng hoặc trước ngày giao hẹn ÷ dòng nhận có ngày hẹn", true, 95m, false),
         new(KpiCode.Quality, "Hàng đạt chất lượng", "Dòng nhận kết quả Đạt ÷ dòng nhận đã kiểm tra", true, 98m, false),
         new(KpiCode.Emergency, "Tỷ lệ mua khẩn cấp", "Giá trị PO khẩn cấp ÷ tổng giá trị PO", false, 5m, false),
-        new(KpiCode.SlowMoving, "Tồn kho chậm luân chuyển", "Giá trị tồn lâu không xuất ÷ tổng giá trị tồn (tại hôm nay)", false, 10m, false),
         new(KpiCode.SupplierReview, "Hoàn thành đánh giá NCC", "NCC đã đánh giá ÷ NCC phải đánh giá", true, 100m, false),
         new(KpiCode.Violation, "Vi phạm nghiêm trọng", "Số vụ được xác minh", false, 0m, true),
     ];

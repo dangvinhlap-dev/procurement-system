@@ -1,7 +1,7 @@
 import { Alert, Checkbox, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import { useState, type ReactNode } from 'react'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import {
   priceSourceLabels,
   usePriceComparison,

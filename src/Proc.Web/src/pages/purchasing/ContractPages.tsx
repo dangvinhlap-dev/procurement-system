@@ -18,7 +18,7 @@ import {
   type ContractListItem,
   type SaveContractInput,
 } from '../../api/contracts'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import { useSuppliers } from '../../api/masterData'
 import { useDepartments } from '../../api/organization'
 import { usePriceList, usePriceLists } from '../../api/pricing'

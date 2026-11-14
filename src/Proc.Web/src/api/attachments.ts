@@ -7,7 +7,7 @@ import { apiDownload, apiFetch, apiUpload } from './client'
  */
 
 /** Loại đối tượng được đính kèm (khớp AttachmentOwnerTypes). */
-export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'PurchaseRequest' | 'PurchaseOrder' | 'InventoryDocument' | 'PurchaseContract'
+export type AttachmentOwnerType = 'Supplier' | 'SupplierPriceList' | 'Rfq' | 'PurchaseRequest' | 'PurchaseOrder' | 'PurchaseContract'
   | 'SoleSourceApproval' | 'SourcingRequest' | 'ContractAmendment' | 'SupplierReview' | 'ControlFinding' | 'ConflictDeclaration' | 'MonthlySupplierApproval'
   | 'MarketPriceSurvey' | 'DemandPlan' | 'VolumeRebateAgreement' | 'VolumeRebateReceipt' | 'PooledOrder' | 'AppraisalOpinion'
   | 'SupplierOnboarding' | 'GoodsReceiptConfirmation' | 'ApprovalDelegation' | 'ConstructionProject' | 'PurchaseSummary' | 'RfqPortalQuote' | 'PoSupplierFile' | 'DeliveryNoticeFile'
