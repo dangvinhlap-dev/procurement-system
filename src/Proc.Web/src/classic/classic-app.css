@@ -37,7 +37,73 @@
   --erp-readonly-bg: #eef2f6;
   /* Chữ phụ (giá trị trống trong lịch sử thay đổi…) – cùng mã màu với --erp-text-muted của classic.css, dùng được cả trong hộp thoại. */
   --erp-text-muted: #5a6b7d;
+  /* Ô số cấp nhóm hàng (LevelBadge – ui-style.md mục 5h): 4 sắc xanh đậm → nhạt theo cấp 1 → 4; cấp 4 nền nhạt nên chữ tối. */
+  --erp-level-1: #1f3d6b;
+  --erp-level-2: #2a5db0;
+  --erp-level-3: #4f86c6;
+  --erp-level-4: #8fb0d8;
+  --erp-level-text: #ffffff;
+  --erp-level-4-text: #1b2a3a;
 }
+
+/* ===== Ô số cấp nhóm hàng (LevelBadge) và mở/đóng nhánh trong lưới (ui-style.md mục 5h) ===== */
+.erp-level-badge {
+  display: inline-block;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 3px;
+  margin-right: 4px;
+  border-radius: 2px;
+  font: 700 11px/14px var(--erp-font-mono);
+  text-align: center;
+  vertical-align: 1px;
+  color: var(--erp-level-text);
+}
+.erp-level-badge.is-1 { background: var(--erp-level-1); }
+.erp-level-badge.is-2 { background: var(--erp-level-2); }
+.erp-level-badge.is-3 { background: var(--erp-level-3); }
+.erp-level-badge.is-4 { background: var(--erp-level-4); color: var(--erp-level-4-text); }
+.erp-level-badge.is-wide { min-width: 40px; }
+.erp-tree-cell { display: inline-flex; align-items: center; min-width: 0; }
+.erp-tree-toggle {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-right: 4px;
+  border: 0;
+  background: none;
+  color: var(--erp-text-muted);
+  font-size: 10px;
+  line-height: 14px;
+  cursor: pointer;
+  flex: none;
+}
+.erp-tree-toggle:focus-visible { outline: 1px solid var(--erp-input-focus); }
+.erp-tree-toggle-space { display: inline-block; width: 18px; flex: none; }
+.erp-tree-node-hint { margin-left: 6px; color: var(--erp-text-muted); }
+/* Đường dẫn nhóm cha trong ngăn kéo nhóm hàng: chữ xanh gạch chấm như ô số chứng từ mở được. */
+.erp-crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  background: var(--erp-readonly-bg);
+  border: 1px solid var(--erp-grid-line);
+}
+.erp-crumb-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--erp-subtotal);
+  text-decoration: underline dotted;
+  cursor: pointer;
+  font: inherit;
+}
+.erp-crumb-current { font-weight: 700; }
+.erp-crumb-sep { color: var(--erp-text-muted); }
+.erp-hint-line { display: flex; align-items: center; gap: 6px; padding: 2px 0 6px; }
 
 /* Gắn vào body chỉ trong lúc đang kéo đổi độ rộng cột (EntryGrid, LineGrid) – giữ con trỏ kéo ngang, không bôi đen chữ. */
 body.erp-col-resizing {
@@ -570,6 +636,7 @@ body.erp-col-resizing {
 .ant-btn .anticon-plus,
 .ant-btn .anticon-plus-square,
 .ant-btn .anticon-plus-circle,
+.ant-btn .anticon-subnode,
 .ant-btn .anticon-file-add,
 .ant-btn .anticon-check,
 .ant-btn .anticon-check-circle,

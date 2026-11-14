@@ -363,6 +363,7 @@ export function DataGrid<T>({
  * Vẽ nội dung một ô theo kiểu cột. Cột trạng thái: chấm màu + chữ – màu không là thông tin duy nhất (ui-guide.md).
  */
 function renderCell<T>(column: GridColumn<T>, row: T) {
+  if (column.render) return column.render(row)
   const text = cellText(column, row)
   if (column.type === 'status') {
     // Ô trạng thái trống (ví dụ dòng không có cảnh báo) không vẽ chấm: chấm màu luôn phải có chữ đi kèm (docs/ui-style.md mục 2).

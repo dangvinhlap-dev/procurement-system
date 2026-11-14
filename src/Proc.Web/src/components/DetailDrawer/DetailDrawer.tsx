@@ -27,6 +27,8 @@ export interface DetailDrawerProps {
   open: boolean
   /** Tiêu đề, ví dụ "Người dùng: thukho.bha" hoặc "Thêm người dùng". */
   title: string
+  /** Phần tử đặt ngay sau tiêu đề, ví dụ ô "Cấp 3/4" của nhóm hàng (ui-style.md mục 5h). */
+  titleExtra?: ReactNode
   tabs: DetailTab[]
   onClose: () => void
   /** Bấm Lưu hoặc Ctrl+S; không truyền thì chỉ xem (ẩn nút Lưu). */
@@ -73,6 +75,7 @@ export interface DetailDrawerProps {
 export function DetailDrawer({
   open,
   title,
+  titleExtra,
   tabs,
   onClose,
   onSave,
@@ -185,6 +188,7 @@ export function DetailDrawer({
         <div className="document-form-head">
           <div className="document-form-title">
             <h2>{title}</h2>
+            {titleExtra}
             {readOnly && <Tag>Chỉ xem</Tag>}
             {locks}
           </div>
@@ -209,6 +213,7 @@ export function DetailDrawer({
       title={
         <span className="detail-drawer-title">
           {title}
+          {titleExtra}
           {/* Trạng thái luôn có chữ, không chỉ dựa vào ô bị mờ (ui-guide.md mục 2). */}
           {readOnly && <Tag>Chỉ xem</Tag>}
           {locks}

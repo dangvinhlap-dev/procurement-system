@@ -114,7 +114,7 @@ function NewCategoryDialog({
   const parentId = (Form.useWatch('parentId', form) as string | undefined) ?? null
   // Người bị giới hạn nhóm hàng chỉ thêm được nhóm con trong nhánh của mình (design.md mục 5.7).
   const allScopes = catalog.every((c) => c.isInScope)
-  const parents = useMemo(() => buildCategoryTree(catalog.filter((c) => c.isInScope), { activeOnly: true }), [catalog])
+  const parents = useMemo(() => buildCategoryTree(catalog.filter((c) => c.isInScope), { activeOnly: true, parentForDepth: 1 }), [catalog])
 
   const { sameParent, elsewhere } = sameNameCategories(catalog, name, parentId)
 

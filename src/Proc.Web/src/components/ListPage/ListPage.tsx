@@ -43,6 +43,8 @@ export interface ListPageProps<T> {
   notice?: ReactNode
   /** Mở chi tiết dòng (bấm đúp hoặc Enter). */
   onOpenRow?: (row: T) => void
+  /** Dòng đang chọn đổi (bấm một lần, mũi tên) – cho nút lệnh thao tác trên dòng chọn (ví dụ "Thêm nhóm con"). */
+  onSelectRow?: (row: T | null) => void
   isMarked?: (row: T) => boolean
   /** Mã loại đối tượng của dòng trong nhật ký (rowKey là khóa bản ghi): F1 trên ô xem lịch sử – design.md mục 9.3a. */
   auditEntity?: string
@@ -96,6 +98,7 @@ export function ListPage<T>({
   loading = false,
   notice,
   onOpenRow,
+  onSelectRow,
   isMarked,
   auditEntity,
   exportFileName,
@@ -322,6 +325,7 @@ export function ListPage<T>({
               groupBy={groupBy}
               onGroupByChange={setGroupBy}
               onOpenRow={onOpenRow}
+              onSelectRow={onSelectRow}
               isMarked={isMarked}
               loading={loading}
               auditEntity={auditEntity}
