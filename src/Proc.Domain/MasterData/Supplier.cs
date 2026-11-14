@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Proc.Domain.Common;
 
 namespace Proc.Domain.MasterData;
@@ -221,12 +221,7 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
         if (string.IsNullOrWhiteSpace(info.Name)) throw new BusinessRuleException("Tên NCC không được để trống.");
         if (info.Rating is < 1 or > 5) throw new BusinessRuleException("Xếp hạng NCC từ 1 đến 5 sao.");
 
-        var taxCode = Clean(info.TaxCode)?.ToUpperInvariant();
-        // NCC trong nước theo định dạng MST Việt Nam; NCC nước ngoài dùng mã thuế nước sở tại nên chỉ giới hạn ký tự.
-        if (taxCode is not null && !info.IsForeign && !VietnamTaxCodeRegex().IsMatch(taxCode))
-            throw new BusinessRuleException("Mã số thuế gồm 10 chữ số, hoặc 10 chữ số + \"-\" + 3 chữ số (ví dụ 0101234567-001).");
-        if (taxCode is not null && info.IsForeign && !CodeRules.IsExtendedCode(taxCode, 3, 20))
-            throw new BusinessRuleException("Mã thuế NCC nước ngoài gồm 3–20 ký tự chữ không dấu, số hoặc - . _ /.");
+        var taxCode = NormalizeTaxCode(info.TaxCode, info.IsForeign);
 
         Name = info.Name.Trim();
         ShortName = Clean(info.ShortName);
@@ -289,6 +284,63 @@ public sealed partial class Supplier : AuditableEntity, IVersioned
         if (list.Count(c => c.IsPrimary) > 1) throw new BusinessRuleException("Chỉ chọn một người liên hệ chính.");
         Merge(_contacts, list, c => c.Id, d => d.Id, d => new SupplierContact(Id), (row, d) => row.Set(d), "người liên hệ");
     }
+
+    /// <summary>
+    /// Chuẩn hóa và kiểm tra mã số thuế: bỏ khoảng trắng, chữ hoa. NCC trong nước theo định dạng MST Việt Nam; NCC nước ngoài dùng mã thuế
+    /// nước sở tại nên chỉ giới hạn ký tự. Dùng khi lưu NCC và khi NCC đề nghị cập nhật hồ sơ trên Portal (lát P2a).
+    /// </summary>
+    /// <param name="taxCode">Mã số thuế gửi lên.</param>
+    /// <param name="isForeign">NCC nước ngoài.</param>
+    /// <returns>Mã đã chuẩn hóa; null nếu để trống.</returns>
+    /// <exception cref="BusinessRuleException">Khi sai định dạng.</exception>
+    public static string? NormalizeTaxCode(string? taxCode, bool isForeign)
+    {
+        var value = Clean(taxCode)?.ToUpperInvariant();
+        if (value is not null && !isForeign && !VietnamTaxCodeRegex().IsMatch(value))
+            throw new BusinessRuleException("Mã số thuế gồm 10 chữ số, hoặc 10 chữ số + \"-\" + 3 chữ số (ví dụ 0101234567-001).");
+        if (value is not null && isForeign && !CodeRules.IsExtendedCode(value, 3, 20))
+            throw new BusinessRuleException("Mã thuế NCC nước ngoài gồm 3–20 ký tự chữ không dấu, số hoặc - . _ /.");
+        return value;
+    }
+
+    /// <summary>
+    /// Chuẩn hóa và kiểm tra danh sách người liên hệ (cắt khoảng trắng, chuỗi rỗng thành null; bắt buộc họ tên; tối đa một người chính) – dùng
+    /// khi NCC đề nghị cập nhật hồ sơ trên Portal (lát P2a).
+    /// </summary>
+    /// <param name="contacts">Danh sách gửi lên.</param>
+    /// <returns>Danh sách đã chuẩn hóa.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu họ tên, quá dài hoặc hơn một người liên hệ chính.</exception>
+    public static IReadOnlyList<SupplierContactData> NormalizeContacts(IEnumerable<SupplierContactData> contacts)
+    {
+        var list = contacts
+            .Select(c => c with { Name = (c.Name ?? string.Empty).Trim(), Position = Clean(c.Position), Phone = Clean(c.Phone), Email = Clean(c.Email) })
+            .ToList();
+        if (list.Any(c => c.Name.Length == 0)) throw new BusinessRuleException("Người liên hệ phải có họ tên.");
+        if (list.Any(c => c.Name.Length > 200 || c.Position?.Length > 100 || c.Phone?.Length > 50 || c.Email?.Length > 256))
+            throw new BusinessRuleException("Người liên hệ: họ tên tối đa 200, chức vụ 100, điện thoại 50, email 256 ký tự.");
+        if (list.Count(c => c.IsPrimary) > 1) throw new BusinessRuleException("Chỉ chọn một người liên hệ chính.");
+        return list;
+    }
+
+    /// <summary>Danh sách người liên hệ gửi lên có khác hiện tại không (so theo nội dung, không theo thứ tự).</summary>
+    /// <param name="contacts">Danh sách đã chuẩn hóa.</param>
+    /// <returns>true nếu có thêm, bớt hoặc sửa người liên hệ.</returns>
+    public bool ContactsDifferFrom(IReadOnlyList<SupplierContactData> contacts)
+    {
+        static string Key(string name, string? position, string? phone, string? email, bool isPrimary) =>
+            $"{name}|{position}|{phone}|{email}|{isPrimary}";
+        var current = _contacts.Select(c => Key(c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)).Order(StringComparer.Ordinal);
+        var proposed = contacts.Select(c => Key(c.Name, c.Position, c.Phone, c.Email, c.IsPrimary)).Order(StringComparer.Ordinal);
+        return !current.SequenceEqual(proposed);
+    }
+
+    /// <summary>
+    /// Áp danh sách người liên hệ NCC đề nghị trên Portal đã được Phòng CUVT chấp nhận (lát P2a): dòng có Id còn tồn tại thì sửa, Id không còn
+    /// (Phòng CUVT đã bỏ trong lúc chờ) thì thêm mới – không làm hỏng đề nghị.
+    /// </summary>
+    /// <param name="contacts">Danh sách đã chấp nhận.</param>
+    public void ReplaceContacts(IEnumerable<SupplierContactData> contacts) =>
+        SetContacts(contacts.Select(c => c.Id is { } id && _contacts.All(x => x.Id != id) ? c with { Id = null } : c));
 
     /// <summary>
     /// Thay danh sách tài khoản ngân hàng (cùng cách sửa theo Id như người liên hệ).

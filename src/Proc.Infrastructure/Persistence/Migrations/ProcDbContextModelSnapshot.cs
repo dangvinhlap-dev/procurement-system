@@ -2239,6 +2239,96 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("SupplierPortalUser", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierProfileRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BankAccountsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BankChangeRequestNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContactsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FieldChangesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("PortalUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SubmittedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("No")
+                        .IsUnique();
+
+                    b.HasIndex("PortalUserId");
+
+                    b.HasIndex("SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SupplierProfileRequest_SupplierId_Pending")
+                        .HasFilter("\"Status\" = 1");
+
+                    b.HasIndex("SupplierId", "Status");
+
+                    b.ToTable("SupplierProfileRequest", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.MasterData.SupplierRatingRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8188,6 +8278,21 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Proc.Domain.MasterData.SupplierPortalUser", b =>
                 {
+                    b.HasOne("Proc.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proc.Domain.MasterData.SupplierProfileRequest", b =>
+                {
+                    b.HasOne("Proc.Domain.MasterData.SupplierPortalUser", null)
+                        .WithMany()
+                        .HasForeignKey("PortalUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Proc.Domain.MasterData.Supplier", null)
                         .WithMany()
                         .HasForeignKey("SupplierId")

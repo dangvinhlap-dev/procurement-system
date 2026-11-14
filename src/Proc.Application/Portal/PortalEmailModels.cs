@@ -77,4 +77,14 @@ public interface IPortalEmailService
     /// <returns>Danh sách thư.</returns>
     /// <exception cref="Common.NotFoundException">PO không thuộc công ty đang làm việc.</exception>
     Task<IReadOnlyList<SupplierPortalEmailDto>> ListForPurchaseOrderAsync(Guid orderId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Soạn thư báo kết quả đề nghị cập nhật hồ sơ (lát P2a – P2-5) cho mọi tài khoản Portal đang dùng của NCC và thêm vào DbContext – **không
+    /// lưu** (người gọi lưu cùng thao tác). Thư ghi theo tổng công ty (NCC là danh mục dùng chung).
+    /// </summary>
+    /// <param name="request">Đề nghị đã chấp nhận / từ chối.</param>
+    /// <param name="kind">ProfileRequestAccepted hoặc ProfileRequestRejected.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số thư đã soạn.</returns>
+    Task<int> QueueProfileRequestAsync(SupplierProfileRequest request, SupplierPortalEmailKind kind, CancellationToken cancellationToken);
 }

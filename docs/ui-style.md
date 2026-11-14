@@ -157,6 +157,13 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   nhãn – số **hai cặp trên một hàng** (`.erp-portal-pay-summary`, số canh phải phông đơn cách, "Còn phải trả" đậm; màn hình hẹp một cặp), rồi lưới
   "Hóa đơn – phiếu nhận hàng" và "Đợt thanh toán"; cột quan trọng (trạng thái, tiền) đặt trước để nằm trong khung 1000px, cột phụ cuộn ngang.
 
+- **Hồ sơ công ty** (lát P2a, `src/portal/PortalProfilePages.tsx`): khối "Hồ sơ hiện tại" là lưới nhãn – giá trị **hai cặp trên một hàng**
+  (`.erp-portal-profile-fields`, màn hình hẹp một cặp) + lưới người liên hệ, tài khoản; dòng gợi ý trái – nút **Đề nghị cập nhật hồ sơ…** (vàng)
+  phải. Form đề nghị: ô hai cột (`.erp-portal-profile-head`, tên / địa chỉ / phạm vi chiếm cả hàng), mã số thuế ô chỉ đọc, hai `LineGrid` nhập
+  được (người liên hệ, tài khoản), file chờ như phiếu báo giao; **Bỏ qua** (đỏ) trái – **Gửi đề nghị** (xanh) phải, gửi hỏi lại. Đề nghị đang
+  chọn: khối so sánh `SupplierProfileCompare` (`src/components/SupplierProfile/` – dùng chung với ngăn kéo nội bộ HSC, nội bộ thêm cột "Hiện
+  tại"), nút **Rút đề nghị…** (icon đỏ), khối file `PortalFiles kind="profile-requests"`.
+
 ## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
 
 - Component `src/classic/QaThread.tsx`, CSS `.erp-qa*` trong `classic-app.css`; dùng chung cho Portal ("Hỏi đáp với bên mời") và tab

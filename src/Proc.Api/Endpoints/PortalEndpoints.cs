@@ -157,6 +157,37 @@ public static class PortalEndpoints
                 return Results.NoContent();
             });
 
+        // Lát P2a: hồ sơ công ty – xem (mọi người dùng NCC), gửi / rút đề nghị cập nhật và file kèm (quản trị NCC).
+        var profile = portal.MapGroup("/profile");
+        profile.MapGet("/", (HttpContext http, IPortalProfileService s, CancellationToken ct) => s.GetAsync(Session(http), ct));
+        profile.MapPost("/requests", (PortalProfileUpdateRequest request, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            s.SubmitAsync(Session(http), request, ct));
+        profile.MapPost("/requests/{id:guid}/withdraw", (
+                Guid id, SupplierProfileCommentRequest request, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            s.WithdrawAsync(Session(http), id, request, ct));
+        profile.MapGet("/requests/{id:guid}/attachments", (Guid id, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            s.ListAttachmentsAsync(Session(http), id, ct));
+        profile.MapPost("/requests/{id:guid}/attachments", async (
+                Guid id, [FromForm] string? note, IFormFile file, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await s.UploadAttachmentAsync(Session(http), id, file.FileName, file.Length, stream, note, ct));
+            })
+            // Token Portal đi trong header, không dùng cookie – không có nguy cơ CSRF.
+            .DisableAntiforgery();
+        profile.MapGet("/requests/{id:guid}/attachments/{attachmentId:guid}/content", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            {
+                var file = await s.OpenAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.File(file.Content, file.ContentType, file.FileName);
+            });
+        profile.MapDelete("/requests/{id:guid}/attachments/{attachmentId:guid}", async (
+                Guid id, Guid attachmentId, HttpContext http, IPortalProfileService s, CancellationToken ct) =>
+            {
+                await s.DeleteAttachmentAsync(Session(http), id, attachmentId, ct);
+                return Results.NoContent();
+            });
+
         // Lát P5: NCC báo giao hàng theo đơn – gửi, hủy phiếu báo giao, file kèm (phiếu giao, CO/CQ).
         orders.MapPost("/{id:guid}/delivery-notices", (
                 Guid id, PortalDeliveryNoticeRequest request, HttpContext http, IPortalDeliveryNoticeService s, CancellationToken ct) =>

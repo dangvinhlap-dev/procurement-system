@@ -38,6 +38,12 @@ public enum SupplierPortalEmailKind
 
     /// <summary>Bên đặt hàng đã thanh toán một đợt (kế toán ghi Đã chi đề nghị thanh toán của PO – lát P6b, P6b-5).</summary>
     PaymentPaid = 11,
+
+    /// <summary>Phòng CUVT chấp nhận đề nghị cập nhật hồ sơ NCC (lát P2a).</summary>
+    ProfileRequestAccepted = 12,
+
+    /// <summary>Phòng CUVT từ chối đề nghị cập nhật hồ sơ NCC (lát P2a).</summary>
+    ProfileRequestRejected = 13,
 }
 
 /// <summary>

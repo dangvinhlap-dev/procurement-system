@@ -107,12 +107,18 @@ public static class AttachmentOwnerTypes
     /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a) – chứng từ có phê duyệt (hóa đơn bán lẻ, phiếu chi kèm theo), áp quy tắc khóa mục 20.</summary>
     public const string SundryExpenseSheet = "SundryExpenseSheet";
 
+    /// <summary>
+    /// File NCC gửi kèm đề nghị cập nhật hồ sơ trên Portal (lát P2a, design.md 19.5 P2-3): chủ là đề nghị (<c>SupplierProfileRequest.Id</c>) –
+    /// giấy phép, xác nhận tài khoản ngân hàng; khóa khi đề nghị đã xử lý hoặc đã rút; nội bộ chỉ xem.
+    /// </summary>
+    public const string SupplierProfileFile = "SupplierProfileFile";
+
     /// <summary>Mọi loại hợp lệ.</summary>
     public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
         GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile,
-        PaymentRequest, SundryExpenseSheet];
+        PaymentRequest, SundryExpenseSheet, SupplierProfileFile];
 }
 
 /// <summary>

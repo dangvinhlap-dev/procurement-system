@@ -2754,6 +2754,20 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | P6b-5 | **Thư báo NCC khi ghi Đã chi** (loại thư `PaymentPaid` – "Báo đã thanh toán", hiện ở tab thư NCC của PO): cùng giao dịch với ghi Đã chi, gửi mọi tài khoản Portal đang dùng của NCC (như P4-5); nội dung số tiền, hình thức, ngày chi, số hóa đơn, giảm trừ + lý do; link mở trang Thanh toán của đơn. Không có ghi chú chi nội bộ. PO mua nội bộ, đề nghị 1C không có thư. |
 | P6b-6 | API Portal: `GET /api/portal/payments` (tổng hợp các đơn), `GET /api/portal/payments/{orderId}` (chi tiết; đơn NCC khác → 404). NCC lấy từ phiên (P1b-4). |
 
+**Lát P2a – NCC tự cập nhật hồ sơ trên Portal (đã làm 14/11/2026, chưa phát hành, bản 0.28.0).** P2 tách hai lát: **P2a** (lát này – NCC
+đã có tài khoản đề nghị sửa hồ sơ) và **P2b** (đăng ký NCC mới công khai → HSN; Q11: "làm sau nếu cần" – chờ người dùng bảo làm). Quy tắc tự đặt
+(người dùng có thể chỉnh), trừ P2-2 về mã số thuế là người dùng chốt:
+
+| # | Quy tắc |
+| --- | --- |
+| P2-1 | Trang **Hồ sơ công ty** `/ncc/ho-so` (menu Portal): mọi người dùng Portal của NCC xem hồ sơ hiện tại (thông tin chung, người liên hệ, tài khoản ngân hàng, điều khoản thanh toán chỉ xem) và các đề nghị đã gửi; chỉ **quản trị NCC** (người Phòng CUVT mời – P1-2) gửi, rút đề nghị và thêm, xóa file. |
+| P2-2 | NCC đề nghị đổi: tên công ty, tên viết tắt, địa chỉ, điện thoại, email, website, phạm vi cung cấp, danh sách người liên hệ, danh sách tài khoản ngân hàng. **Không đề nghị được mã số thuế** (người dùng chốt 14/11/2026 – chỉ Phòng CUVT sửa trong phần mềm), nhóm NCC, NCC nước ngoài, điều khoản thanh toán, trạng thái, xếp hạng. |
+| P2-3 | Đề nghị `SupplierProfileRequest` (số **mã NCC-HSnn**, ví dụ NCC0012-HS01; mã loại **HSC**) chỉ lưu **phần khác hồ sơ lúc gửi** (không khác gì thì báo lỗi); kèm ghi chú, file (giấy phép, xác nhận tài khoản – 2 MB/file, kiểm nội dung như P1b-3; chọn trước, tải lên ngay sau khi gửi). **Mỗi NCC tối đa một đề nghị đang chờ** (chỉ mục duy nhất có điều kiện); NCC **rút** được khi còn chờ (lý do không bắt buộc). Gửi rồi không sửa – sửa thì rút và gửi lại. Đề nghị đã xử lý / đã rút thì khóa, file chỉ xem (mục 20 R1). |
+| P2-4 | Phòng CUVT xử lý ở màn hình **Đề nghị cập nhật hồ sơ NCC** (HSC, Giá và NCC, `/gia-ncc/de-nghi-cap-nhat-ncc`, mặc định lọc đề nghị đang chờ): xem cần quyền xem NCC; **Chấp nhận / Từ chối** cần sửa được NCC (quyền "Thêm, sửa nhà cung cấp" khi làm việc ở tổng công ty, hoặc quyền sửa danh mục dùng chung) – **không thêm quyền mới**. Ngăn kéo so sánh *lúc gửi – đề nghị – hiện tại* (thấy chỗ Phòng CUVT đã sửa trong lúc chờ), tab Hồ sơ NCC, File NCC gửi (chỉ xem). Từ chối **bắt buộc lý do** (gửi NCC). Đây là việc tiếp nhận một bước, không phải chuỗi duyệt (không ổ khóa, không lượt duyệt). |
+| P2-5 | **Chấp nhận**: chỉ các trường NCC đổi được ghi vào NCC (trường Phòng CUVT tự sửa trong lúc chờ không bị ghi đè); người liên hệ thay theo danh sách đề nghị ngay. **Tài khoản ngân hàng không áp ngay** – tự lập **yêu cầu duyệt NCC** đổi tài khoản (mục 18.6, Q7, duyệt hai chặng), số yêu cầu ghi trên đề nghị; NCC đã có yêu cầu đổi tài khoản đang chờ thì báo lỗi, chờ xong hoặc từ chối. |
+| P2-6 | NCC gửi đề nghị → **thông báo** cho người có quyền "Thêm, sửa nhà cung cấp" ở tổng công ty (mở đề nghị). Chấp nhận / từ chối → **thư** cho mọi tài khoản Portal đang dùng của NCC (loại `ProfileRequestAccepted` / `ProfileRequestRejected`; thư từ chối ghi lý do; chấp nhận có tài khoản thì nói rõ còn chờ duyệt). Rút không có thư. Portal không hiện tên người xử lý nội bộ. |
+| P2-7 | API Portal: `GET /api/portal/profile`, `POST /api/portal/profile/requests`, `POST …/requests/{id}/withdraw`, file `…/requests/{id}/attachments`; nội bộ `GET /api/supplier-profile-requests` (lọc `status`, `supplierId`), `GET …/{id}`, `POST …/{id}/accept`, `POST …/{id}/reject`. Migration `V0_28_0_DeNghiCapNhatHoSoNcc` (bảng mới; `Down()` mất đề nghị). Loại đính kèm `SupplierProfileFile`. |
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2764,7 +2778,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a, đề nghị tổng hợp 1C Y11b – xong 13/11/2026), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
-| 0.28.0 | K3, P2, P6b, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ, đăng ký; trạng thái thanh toán trên Portal (P6b – xong 13/11/2026); bảng giá, tin nhắn, thẻ điểm |
+| 0.28.0 | K3, P2, P6b, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ (P2a – xong 14/11/2026), đăng ký NCC mới (P2b – chờ người dùng); trạng thái thanh toán trên Portal (P6b – xong 13/11/2026); bảng giá, tin nhắn, thẻ điểm |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
 

@@ -141,6 +141,23 @@ public static class MasterDataEndpoints
         changes.MapPost("/{id:guid}/cancel", (Guid id, ISupplierChangeRequestService s, CancellationToken ct) => s.CancelAsync(id, ct))
             .RequirePermission(Permissions.MasterData.SupplierView);
 
+        // Đề nghị cập nhật hồ sơ NCC gửi từ Portal (lát P2a, design.md 19.5): xem theo quyền xem NCC; chấp nhận / từ chối cần sửa được NCC
+        // (dịch vụ kiểm thêm: làm việc ở tổng công ty hoặc có quyền sửa danh mục dùng chung).
+        var profiles = app.MapGroup("/api/supplier-profile-requests").WithTags("Đề nghị cập nhật hồ sơ NCC");
+        profiles.MapGet("/", (string? status, Guid? supplierId, ISupplierProfileRequestService s, CancellationToken ct) =>
+                s.ListAsync(new SupplierProfileRequestQuery(status, supplierId), ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        profiles.MapGet("/{id:guid}", (Guid id, ISupplierProfileRequestService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.MasterData.SupplierView);
+        profiles.MapPost("/{id:guid}/accept", (
+                Guid id, Proc.Application.Portal.SupplierProfileCommentRequest request, ISupplierProfileRequestService s, CancellationToken ct) =>
+                s.AcceptAsync(id, request, ct))
+            .RequireAnyPermission(Permissions.MasterData.SupplierManage, Permissions.MasterData.CatalogEditShared);
+        profiles.MapPost("/{id:guid}/reject", (
+                Guid id, Proc.Application.Portal.SupplierProfileCommentRequest request, ISupplierProfileRequestService s, CancellationToken ct) =>
+                s.RejectAsync(id, request, ct))
+            .RequireAnyPermission(Permissions.MasterData.SupplierManage, Permissions.MasterData.CatalogEditShared);
+
         // Kê khai xung đột lợi ích (design.md mục 18.8): ai đăng nhập cũng tự kê khai, xem kê khai của mình được; dịch vụ tự giới hạn
         // phạm vi xem. Ghi thay, kết thúc kê khai cần quyền quản lý kê khai.
         var conflicts = app.MapGroup("/api/conflict-declarations").WithTags("Kê khai xung đột lợi ích").RequireAuthorization();

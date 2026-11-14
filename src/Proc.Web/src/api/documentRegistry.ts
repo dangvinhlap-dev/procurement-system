@@ -74,6 +74,7 @@ export const docTypeLabels: Record<string, string> = {
   KHN: 'Kế hoạch nhu cầu',
   DGN: 'Đánh giá NCC định kỳ',
   HSN: 'Hồ sơ đánh giá NCC mới',
+  HSC: 'Đề nghị cập nhật hồ sơ NCC',
   VP: 'Vi phạm KSNB',
 }
 
@@ -92,6 +93,7 @@ export function documentPath(docType: string, id: string): string | null {
     DGN: '/gia-ncc/danh-gia-ncc-dinh-ky', GTH: '/gia-ncc/duyet-thang', KSG: '/gia-ncc/khao-sat-gia', CKB: '/gia-ncc/chiet-khau-san-luong', KHN: '/mua-hang/ke-hoach-nhu-cau',
     HSN: '/gia-ncc/ho-so-ncc-moi', XNH: '/mua-hang/xac-nhan-nhan-hang', DHG: '/mua-hang/dat-hang-gop',
     BTH: '/mua-hang/bang-tong-hop', DNT: '/mua-hang/de-nghi-thanh-toan', BKT: '/mua-hang/bang-ke-tap-vu',
+    HSC: '/gia-ncc/de-nghi-cap-nhat-ncc',
   }
   return pages[docType] ? `${pages[docType]}/${id}` : null
 }
