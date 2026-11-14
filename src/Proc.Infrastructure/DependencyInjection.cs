@@ -148,6 +148,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Operations.IOperationLogQueries, Proc.Infrastructure.Operations.OperationLogQueries>();
         services.AddScoped<Proc.Application.Operations.ISystemOverview, Proc.Infrastructure.Operations.SystemOverviewService>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
+        services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         services.AddSingleton<Proc.Application.Operations.IBackgroundHeartbeat, Proc.Infrastructure.Operations.BackgroundHeartbeat>();
         services.AddScoped<Proc.Application.Notifications.INotificationEmailService, Proc.Infrastructure.Notifications.NotificationEmailService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryService, Proc.Infrastructure.Analysis.PurchaseHistoryService>();

@@ -76,14 +76,24 @@ public class OperationsTests
         Assert.Equal(HttpStatusCode.Forbidden, (await noOps.GetAsync("/api/ops/v1/overview", Ct)).StatusCode);
     }
 
-    /// <summary>API môi trường ẩn danh chỉ trả tên môi trường (trang đăng nhập vẽ dải màu); cấu hình Testing đặt Dev.</summary>
+    /// <summary>
+    /// API môi trường ẩn danh chỉ trả tên môi trường + cảnh báo (trang đăng nhập vẽ dải màu); cấu hình Testing đặt Dev nên không cảnh báo.
+    /// Máy chưa khai App:Environment, hoặc máy TEST bật email mà chưa khai hộp thư test thì có cảnh báo (người dùng chốt 14/11/2026).
+    /// </summary>
     [Fact]
-    public async Task MoiTruong_AnDanh_ChiTraTen()
+    public async Task MoiTruong_AnDanh_ChiTraTenVaCanhBao()
     {
         var anonymous = _factory.CreateClient();
-        var body = await ReadAsync<Dictionary<string, string>>(await anonymous.GetAsync("/api/ops/v1/environment", Ct));
-        Assert.Equal(["environment"], body.Keys);
-        Assert.Equal(AppEnvironments.Dev, body["environment"]);
+        var body = await ReadAsync<EnvironmentStatusDto>(await anonymous.GetAsync("/api/ops/v1/environment", Ct));
+        Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Dev, null), body);
+
+        EnvironmentStatusDto Status(string? environment, bool enabled, string? redirect) =>
+            new EnvironmentStatus(Options.Create(new AppEnvironmentOptions { Environment = environment }),
+                new FixedOptions(new EmailOptions { Enabled = enabled, RedirectAllTo = redirect })).Get();
+        Assert.Equal(new EnvironmentStatusDto(AppEnvironments.None, EnvironmentStatus.NotConfiguredWarning), Status(null, false, null));
+        Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Test, EnvironmentStatus.TestWithoutRedirectWarning), Status("test", true, " "));
+        Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Test, null), Status("Test", true, "test@congty.vn"));
+        Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Prod, null), Status("Prod", true, null));
     }
 
     /// <summary>
@@ -161,13 +171,14 @@ public class OperationsTests
 
     /// <summary>
     /// Chuyển hướng email (E5): có RedirectAllTo thì thư đi về hộp thư test, tiêu đề ghi người nhận gốc; máy TEST chưa khai thì không gửi;
-    /// máy PROD không khai thì gửi thật như cũ. Ứng dụng đăng ký bộ gửi qua chốt chuyển hướng.
+    /// máy chưa khai App:Environment thì không gửi (kể cả có RedirectAllTo); máy PROD không khai chuyển hướng thì gửi thật như cũ. Ứng dụng
+    /// đăng ký bộ gửi qua chốt chuyển hướng.
     /// </summary>
     [Fact]
     public async Task Email_MayTest_ChuyenVeHopThuTest_ChuaKhaiThiKhongGui()
     {
         var message = new EmailMessage("an@congty.vn", "Nguyễn An", "Phiếu chờ duyệt", "<p>x</p>", "x");
-        RedirectingEmailSender Sender(FakeSender inner, string? redirect, string environment) =>
+        RedirectingEmailSender Sender(FakeSender inner, string? redirect, string? environment) =>
             new(inner, new FixedOptions(new EmailOptions { RedirectAllTo = redirect }),
                 Options.Create(new AppEnvironmentOptions { Environment = environment }));
 
@@ -180,6 +191,12 @@ public class OperationsTests
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Sender(blocked, null, AppEnvironments.Test).SendAsync(message, Ct));
         Assert.Contains("RedirectAllTo", error.Message);
         Assert.Empty(blocked.Sent);
+
+        var unconfigured = new FakeSender();
+        var notConfigured = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Sender(unconfigured, "test@congty.vn", null).SendAsync(message, Ct));
+        Assert.Contains("App:Environment", notConfigured.Message);
+        Assert.Empty(unconfigured.Sent);
 
         var prod = new FakeSender();
         await Sender(prod, "", AppEnvironments.Prod).SendAsync(message, Ct);

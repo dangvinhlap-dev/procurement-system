@@ -76,8 +76,11 @@ public sealed class SystemOverviewService : ISystemOverview
         var started = new DateTimeOffset(Process.GetCurrentProcess().StartTime).ToUniversalTime();
         List<SystemOverviewRowDto> rows =
         [
-            new(app, "Môi trường", EnvironmentLabel(_environment.Name), _environment.Name == AppEnvironments.Prod ? "Ok" : "Neutral",
-                "Đặt bằng App:Environment trong appsettings.Production.json (Dev / Test / Prod)."),
+            new(app, "Môi trường", EnvironmentLabel(_environment.Name),
+                !_environment.IsConfigured ? "Error" : _environment.Name == AppEnvironments.Prod ? "Ok" : "Neutral",
+                !_environment.IsConfigured
+                    ? EnvironmentStatus.NotConfiguredWarning
+                    : "Đặt bằng App:Environment trong appsettings.Production.json (Dev / Test / Prod)."),
             new(app, "Phiên bản", _version.Version, "Neutral", null),
             new(app, "Khởi động lúc", Stamp(started), "Neutral", $"Đã chạy {Duration(now - started)}."),
             Email(),
@@ -111,6 +114,8 @@ public sealed class SystemOverviewService : ISystemOverview
     {
         var o = _email.CurrentValue;
         var redirect = o.RedirectAllTo?.Trim();
+        if (!_environment.IsConfigured)
+            return new("Ứng dụng", "Gửi email", "Không gửi", o.Enabled ? "Error" : "Neutral", EnvironmentStatus.NotConfiguredWarning);
         if (!o.Enabled) return new("Ứng dụng", "Gửi email", "Tắt", "Neutral", "Email:Enabled = false – thông báo chỉ có trong phần mềm.");
         if (!string.IsNullOrEmpty(redirect))
             return new("Ứng dụng", "Gửi email", $"Chuyển hết về {redirect}", _environment.Name == AppEnvironments.Prod ? "Warning" : "Ok",
@@ -148,7 +153,8 @@ public sealed class SystemOverviewService : ISystemOverview
     {
         AppEnvironments.Dev => "DEV – máy lập trình",
         AppEnvironments.Test => "TEST – máy thử nghiệm",
-        _ => "PROD – máy chạy thật",
+        AppEnvironments.Prod => "PROD – máy chạy thật",
+        _ => "Chưa khai",
     };
 
     /// <summary>Số nguyên kiểu Việt Nam, ví dụ 1.234.</summary>

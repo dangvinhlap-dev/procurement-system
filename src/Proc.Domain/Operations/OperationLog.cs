@@ -16,7 +16,13 @@ public static class AppEnvironments
     /// <summary>Máy chạy thật – không dải.</summary>
     public const string Prod = "Prod";
 
-    /// <summary>Ba giá trị hợp lệ.</summary>
+    /// <summary>
+    /// Máy <b>chưa khai</b> <c>App:Environment</c> (người dùng chốt 14/11/2026): không gửi email nào, dải đỏ cảnh báo trên mọi màn hình, SYS đèn
+    /// đỏ – tránh máy TEST quên cấu hình mà gửi thư thật tới người dùng, NCC. Không phải giá trị khai được trong cấu hình.
+    /// </summary>
+    public const string None = "None";
+
+    /// <summary>Ba giá trị khai được trong cấu hình.</summary>
     public static readonly IReadOnlyList<string> All = [Dev, Test, Prod];
 
     /// <summary>
@@ -67,7 +73,7 @@ public sealed class OperationLog
     /// <summary>Thời điểm (UTC).</summary>
     public DateTimeOffset OccurredAt { get; private init; }
 
-    /// <summary>Môi trường ghi dòng này (Dev / Test / Prod).</summary>
+    /// <summary>Môi trường ghi dòng này (Dev / Test / Prod; None = máy chưa khai).</summary>
     public string Environment { get; private init; } = AppEnvironments.Prod;
 
     /// <summary>Người thao tác; null = hệ thống (khởi động, dịch vụ nền).</summary>
@@ -104,13 +110,13 @@ public sealed class OperationLog
     /// <param name="result">Kết quả.</param>
     /// <param name="detail">Chi tiết.</param>
     /// <returns>Dòng nhật ký.</returns>
-    /// <exception cref="BusinessRuleException">Khi thiếu loại việc hoặc môi trường không phải Dev/Test/Prod.</exception>
+    /// <exception cref="BusinessRuleException">Khi thiếu loại việc hoặc môi trường không phải Dev/Test/Prod/None.</exception>
     public static OperationLog Create(
         DateTimeOffset occurredAt, string environment, Guid? userId, string? userName, string kind, string? target, string? reason,
         OperationResult result, string? detail)
     {
-        var env = AppEnvironments.Normalize(environment)
-            ?? throw new BusinessRuleException($"Môi trường \"{environment}\" không hợp lệ – chỉ Dev, Test hoặc Prod.");
+        var env = (environment == AppEnvironments.None ? AppEnvironments.None : AppEnvironments.Normalize(environment))
+            ?? throw new BusinessRuleException($"Môi trường \"{environment}\" không hợp lệ – chỉ Dev, Test, Prod (hoặc None khi máy chưa khai).");
         if (string.IsNullOrWhiteSpace(kind)) throw new BusinessRuleException("Nhật ký vận hành phải có loại việc.");
         return new OperationLog
         {

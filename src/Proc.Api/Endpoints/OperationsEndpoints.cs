@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Proc.Api.Security;
 using Proc.Application.Operations;
 using Proc.Domain.Organization;
@@ -19,8 +18,9 @@ public static class OperationsEndpoints
     {
         var ops = app.MapGroup("/api/ops/v1").WithTags("Quản trị vận hành");
 
-        // Ẩn danh: chỉ tên môi trường (Dev / Test / Prod) – không lộ phiên bản hay cấu hình trước khi đăng nhập.
-        ops.MapGet("/environment", (IOptions<AppEnvironmentOptions> environment) => new { environment = environment.Value.Name })
+        // Ẩn danh: tên môi trường (Dev / Test / Prod / None) và cảnh báo cấu hình để dải màu hiện cả ở trang đăng nhập – không phiên bản, không
+        // bí mật.
+        ops.MapGet("/environment", (IEnvironmentStatus status) => status.Get())
             .AllowAnonymous();
 
         ops.MapGet("/overview", (ISystemOverview s, CancellationToken ct) => s.GetAsync(ct))

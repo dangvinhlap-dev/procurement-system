@@ -49,7 +49,8 @@ builder.Services.AddHostedService<Proc.Infrastructure.Notifications.EmailBackgro
 // mục ứng dụng trên server – N3); đường dẫn tương đối tính từ ContentRoot như thư mục đính kèm.
 builder.Services.AddOptions<Proc.Application.Operations.AppEnvironmentOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Application.Operations.AppEnvironmentOptions.Section))
-    .Validate(o => Proc.Domain.Operations.AppEnvironments.Normalize(o.Environment) is not null,
+    // Bỏ trống được (máy coi là chưa khai: không gửi email, dải đỏ cảnh báo); khai sai tên thì không cho khởi động.
+    .Validate(o => string.IsNullOrWhiteSpace(o.Environment) || Proc.Domain.Operations.AppEnvironments.Normalize(o.Environment) is not null,
         "App:Environment chỉ nhận Dev, Test hoặc Prod (design.md mục 21.3).")
     .ValidateOnStart();
 builder.Services.AddOptions<Proc.Application.Operations.OperationsOptions>()

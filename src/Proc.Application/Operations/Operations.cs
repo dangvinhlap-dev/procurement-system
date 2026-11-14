@@ -12,13 +12,17 @@ public sealed class AppEnvironmentOptions
     public const string Section = "App";
 
     /// <summary>
-    /// Dev / Test / Prod. Mặc định Prod: máy chủ cũ chưa khai vẫn chạy như trước (không dải màu, gửi email thật); máy TEST bắt buộc khai Test
-    /// (docs/deploy-windows.md). appsettings.Development / Testing đặt Dev.
+    /// Dev / Test / Prod. <b>Bắt buộc khai</b> trên mọi máy chủ (người dùng chốt 14/11/2026): bỏ trống thì máy coi là "chưa khai" – không gửi
+    /// email nào, mọi màn hình hiện dải đỏ cảnh báo (docs/deploy-windows.md). appsettings.Development / Testing đặt Dev. Giá trị khác ba tên trên
+    /// thì ứng dụng không khởi động.
     /// </summary>
-    public string Environment { get; set; } = AppEnvironments.Prod;
+    public string? Environment { get; set; }
 
-    /// <summary>Tên đã chuẩn hóa (Dev / Test / Prod); cấu hình sai thì khởi động báo lỗi nên không bao giờ null khi chạy.</summary>
-    public string Name => AppEnvironments.Normalize(Environment) ?? AppEnvironments.Prod;
+    /// <summary>Đã khai môi trường.</summary>
+    public bool IsConfigured => AppEnvironments.Normalize(Environment) is not null;
+
+    /// <summary>Tên đã chuẩn hóa: Dev / Test / Prod, hoặc None khi chưa khai.</summary>
+    public string Name => AppEnvironments.Normalize(Environment) ?? AppEnvironments.None;
 
     /// <summary>Là máy TEST.</summary>
     public bool IsTest => Name == AppEnvironments.Test;
@@ -165,4 +169,17 @@ public interface IOperationsAccess
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <exception cref="Common.ForbiddenAccessException">Khi đang làm việc ở công ty thành viên hoặc chưa chọn công ty.</exception>
     Task EnsureHeadOfficeAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>Môi trường và cảnh báo cấu hình hiện trên dải màu mọi màn hình (kể cả trang đăng nhập – không chứa bí mật).</summary>
+/// <param name="Environment">Dev / Test / Prod; None = máy chưa khai <c>App:Environment</c>.</param>
+/// <param name="Warning">Cảnh báo cấu hình (chưa khai môi trường, TEST chưa khai hộp thư test…); null = ổn.</param>
+public sealed record EnvironmentStatusDto(string Environment, string? Warning);
+
+/// <summary>Đọc môi trường và cảnh báo cấu hình của máy đang chạy.</summary>
+public interface IEnvironmentStatus
+{
+    /// <summary>Môi trường và cảnh báo (đọc lại cấu hình email mỗi lần).</summary>
+    /// <returns>Tình trạng.</returns>
+    EnvironmentStatusDto Get();
 }

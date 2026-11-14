@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Proc.Application.Notifications;
 using Proc.Application.Operations;
+using Proc.Domain.Operations;
 
 namespace Proc.Infrastructure.Notifications;
 
@@ -8,7 +9,7 @@ namespace Proc.Infrastructure.Notifications;
 /// Bọc bộ gửi thư thật để mọi thư (thông báo nội bộ, thư mời / OTP Portal NCC, nhắc duyệt) đi qua một chốt (design.md mục 21.3, quyết định
 /// E5 – lát QT1): khai <see cref="EmailOptions.RedirectAllTo"/> thì đổi người nhận thành hộp thư đó và thêm "[TEST] gửi cho: …" vào đầu tiêu
 /// đề; máy <c>App:Environment=Test</c> mà chưa khai thì <b>không gửi</b> (báo lỗi để thư nằm ở hàng chờ) – TEST giữ dữ liệu thật nên không bao
-/// giờ được gửi tới người dùng, NCC thật.
+/// giờ được gửi tới người dùng, NCC thật. Máy chưa khai <c>App:Environment</c> cũng không gửi thư nào (người dùng chốt 14/11/2026).
 /// </summary>
 public sealed class RedirectingEmailSender : IEmailSender
 {
@@ -28,9 +29,9 @@ public sealed class RedirectingEmailSender : IEmailSender
     }
 
     /// <inheritdoc />
-    /// <exception cref="InvalidOperationException">Khi máy TEST chưa khai <c>Email:RedirectAllTo</c>.</exception>
+    /// <exception cref="InvalidOperationException">Khi máy chưa khai <c>App:Environment</c>, hoặc máy TEST chưa khai <c>Email:RedirectAllTo</c>.</exception>
     public Task SendAsync(EmailMessage message, CancellationToken cancellationToken) =>
-        _inner.SendAsync(Apply(message, _options.CurrentValue.RedirectAllTo, _environment.IsTest), cancellationToken);
+        _inner.SendAsync(Apply(message, _options.CurrentValue.RedirectAllTo, _environment.Name), cancellationToken);
 
     /// <summary>
     /// Đổi thư theo cấu hình chuyển hướng. Ví dụ thư gửi "an@congty.vn", tiêu đề "Phiếu chờ duyệt" với RedirectAllTo = "test@congty.vn" →
@@ -38,15 +39,18 @@ public sealed class RedirectingEmailSender : IEmailSender
     /// </summary>
     /// <param name="message">Thư gốc.</param>
     /// <param name="redirectAllTo">Hộp thư nhận thay; trống = không chuyển.</param>
-    /// <param name="isTest">Máy TEST.</param>
+    /// <param name="environment">Môi trường đang chạy (Dev / Test / Prod / None).</param>
     /// <returns>Thư sẽ gửi.</returns>
-    /// <exception cref="InvalidOperationException">Khi máy TEST chưa khai hộp thư nhận thay.</exception>
-    public static EmailMessage Apply(EmailMessage message, string? redirectAllTo, bool isTest)
+    /// <exception cref="InvalidOperationException">Khi máy chưa khai môi trường, hoặc máy TEST chưa khai hộp thư nhận thay.</exception>
+    public static EmailMessage Apply(EmailMessage message, string? redirectAllTo, string environment)
     {
+        if (environment == AppEnvironments.None)
+            throw new InvalidOperationException(
+                "Máy chủ chưa khai App:Environment (Dev / Test / Prod) – không gửi email cho tới khi khai (design.md mục 21.3).");
         var redirect = redirectAllTo?.Trim();
         if (string.IsNullOrEmpty(redirect))
         {
-            if (isTest)
+            if (environment == AppEnvironments.Test)
                 throw new InvalidOperationException(
                     "Máy TEST chưa khai Email:RedirectAllTo – không gửi thư tới người dùng thật (design.md mục 21.3, E5).");
             return message;
