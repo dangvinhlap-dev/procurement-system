@@ -5,8 +5,8 @@ namespace Proc.Infrastructure.Excel;
 /// <summary>
 /// Định dạng chung cho mọi file Excel xuất ra (yêu cầu người dùng 14/11/2026, ảnh mẫu <c>docs/diagrams/formatexportExcel.png</c> –
 /// ui-style.md mục 5i): giống lưới danh sách trên màn hình. Chữ Tahoma 9pt (= 12px), dòng tiêu đề cột nền xám xanh chữ thường, kẻ ô 1px
-/// đủ dọc ngang, dòng cao 22px, nền trắng; cột số canh phải phông đơn cách; số chứng từ phông đơn cách chữ xanh đậm; trạng thái có ô vuông
-/// màu ■ + chữ màu theo đèn. Màu lấy đúng mã của biến <c>--erp-*</c> (ui-style.md mục 2) để file và màn hình cùng một kiểu.
+/// đủ dọc ngang, dòng cao 22px, nền trắng; cột số canh phải phông đơn cách; số chứng từ phông đơn cách chữ xanh đậm; trạng thái chỉ tô màu
+/// chữ theo đèn. Màu lấy đúng mã của biến <c>--erp-*</c> (ui-style.md mục 2) để file và màn hình cùng một kiểu.
 /// Chỉ đổi hình thức – không đổi vị trí ô, kiểu ô (số, ngày, chữ), nên file danh mục xuất ra vẫn nhập lại được.
 /// </summary>
 internal static class ExcelGridStyle
@@ -38,9 +38,6 @@ internal static class ExcelGridStyle
     /// <summary>Chữ phụ – dòng điều kiện lọc, giờ xuất (<c>--erp-text-muted</c>).</summary>
     public const string MutedHex = "#5A6B7D";
 
-    /// <summary>Ô vuông của trạng thái.</summary>
-    public const string StatusMark = "■";
-
     private static readonly XLColor HeaderFill = XLColor.FromHtml(HeaderFillHex);
     private static readonly XLColor GridLine = XLColor.FromHtml(GridLineHex);
     private static readonly XLColor TextColor = XLColor.FromHtml(TextHex);
@@ -48,15 +45,15 @@ internal static class ExcelGridStyle
     private static readonly XLColor MutedColor = XLColor.FromHtml(MutedHex);
 
     /// <summary>
-    /// Màu (ô vuông, chữ) của đèn trạng thái – cùng màu đèn của <c>DataGrid</c> (theme.ts: colorSuccess, colorWarningBorder/colorWarning,
-    /// colorError). Đèn trung tính: ô vuông rỗng, chữ màu thường.
+    /// Màu chữ của đèn trạng thái – cùng màu chữ trạng thái của <c>DataGrid</c> (theme.ts: colorSuccess, colorWarning, colorError).
+    /// Đèn trung tính: chữ màu thường.
     /// </summary>
-    private static readonly Dictionary<string, (string Mark, string Text)> ToneColors = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, string> ToneColors = new(StringComparer.Ordinal)
     {
-        ["success"] = ("#1E8F2E", "#1E8F2E"),
-        ["warning"] = ("#E8C860", "#A86F00"),
-        ["error"] = ("#D0281E", "#D0281E"),
-        ["neutral"] = ("#B8C5D6", TextHex),
+        ["success"] = "#1E8F2E",
+        ["warning"] = "#A86F00",
+        ["error"] = "#D0281E",
+        ["neutral"] = TextHex,
     };
 
     /// <summary>
@@ -146,22 +143,16 @@ internal static class ExcelGridStyle
     public static void DocNo(IXLRange range) => range.Style.Font.SetFontName(MonoFontName).Font.SetFontColor(TitleColor);
 
     /// <summary>
-    /// Ô trạng thái: "■ Chữ" – ô vuông và chữ tô màu theo đèn (như cột trạng thái trên lưới). Tông lạ hoặc trống: chữ thường, không ô vuông.
+    /// Ô trạng thái: chỉ tô màu chữ theo đèn, không thêm ký tự nào (người dùng chốt 14/11/2026) – ô giữ đúng chữ như màn hình nên lọc,
+    /// tìm, sao chép trong Excel không vướng ký hiệu. Tông lạ hoặc trống: chữ màu thường.
     /// </summary>
     /// <param name="cell">Ô.</param>
     /// <param name="text">Chữ trạng thái đang hiển thị.</param>
     /// <param name="tone">success / warning / error / neutral; null = không có đèn.</param>
     public static void Status(IXLCell cell, string text, string? tone)
     {
-        if (tone is null || !ToneColors.TryGetValue(tone, out var colors))
-        {
-            cell.Value = text;
-            return;
-        }
-
-        var rich = cell.CreateRichText();
-        rich.AddText($"{StatusMark} ").SetFontName(FontName).SetFontSize(FontSize).SetFontColor(XLColor.FromHtml(colors.Mark));
-        rich.AddText(text).SetFontName(FontName).SetFontSize(FontSize).SetFontColor(XLColor.FromHtml(colors.Text));
+        cell.Value = text;
+        if (tone is not null && ToneColors.TryGetValue(tone, out var color)) cell.Style.Font.SetFontColor(XLColor.FromHtml(color));
     }
 
     /// <summary>Kẻ ô 1px màu <c>--erp-grid-line</c> mọi cạnh trong và ngoài vùng.</summary>

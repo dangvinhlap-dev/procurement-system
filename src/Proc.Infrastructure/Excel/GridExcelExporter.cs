@@ -75,7 +75,7 @@ public sealed class GridExcelExporter : IGridExcelExporter
             for (var c = 0; c < columns.Count; c++)
             {
                 var cell = sheet.Cell(HeaderRow + 1 + r, c + 1);
-                // Cột trạng thái có màu đèn: ô vuông ■ + chữ tô màu như lưới trên màn hình.
+                // Cột trạng thái có màu đèn: tô màu chữ, không thêm ký tự.
                 if (columns[c].Tones is { } tones && columns[c].Type == "status" && !string.IsNullOrEmpty(row[c]))
                     ExcelGridStyle.Status(cell, row[c]!, tones[r]);
                 else

@@ -141,7 +141,7 @@ export function ListPage<T>({
           subtitle: exportSubtitle ?? null,
           fileName: exportFileName,
           // File Excel cùng hình thức với lưới (ui-style.md mục 5i): cột số chứng từ (docRef) gửi kiểu "docno" để in phông đơn cách
-          // chữ xanh đậm; cột trạng thái gửi kèm màu đèn từng dòng để tô ô vuông ■ + chữ như trên màn hình.
+          // chữ xanh đậm; cột trạng thái gửi kèm màu đèn từng dòng để tô màu chữ.
           columns: visibleColumns.map((c) => {
             const tone = c.type === 'status' ? c.tone : undefined
             return {
