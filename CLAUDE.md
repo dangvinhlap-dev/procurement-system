@@ -38,7 +38,7 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 ## 3. Kiến trúc
 - Modular monolith, Clean Architecture: Domain → Application → Infrastructure → Api, cộng Proc.Web.
 - Cấu trúc thư mục theo mục 13.1 của docs/design.md. Module chỉ gọi nhau qua interface của lớp Application.
-- (Code kho cũ, chỉ còn đến khi gỡ ở 0.28.0) Ghi sổ kho là nguyên tử: lưu chứng từ, ghi StockLedger, cập nhật StockOnHand, ghi audit
+- (Code kho cũ, chỉ còn đến khi gỡ ở lát K3 – sau 0.28.0) Ghi sổ kho là nguyên tử: lưu chứng từ, ghi StockLedger, cập nhật StockOnHand, ghi audit
   trong một transaction.
 - Chạy được cả trên Linux container (Docker) và Windows Server (IIS) từ cùng một bản build, không sửa code:
   - Không viết cứng đường dẫn, host, cổng, chuỗi kết nối trong code; lấy từ appsettings/biến môi trường (Options), có giá trị mặc định
@@ -54,7 +54,7 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
   Ngoại lệ đã duyệt 07/11/2026: danh mục tên nhóm hàng ai cũng xem đủ (kèm cờ `IsInScope`) – design.md mục 9.2.
   Lệnh ghi phải kiểm tra lại phạm vi ở tầng Application, không tin dữ liệu từ client.
 - **Từ bản 0.22.0 bỏ phân hệ kho** (người dùng chốt 10/11/2026 – design.md mục 19): công ty dùng phần mềm kho riêng. Phân hệ kho tắt
-  bằng `Modules:InventoryEnabled=false` (lát K1), gỡ hẳn code + bảng ở 0.28.0 (K3, sau khi người dùng xác nhận sao lưu).
+  bằng `Modules:InventoryEnabled=false` (lát K1), gỡ hẳn code + bảng ở lát K3 (sau 0.28.0, sau khi người dùng xác nhận sao lưu).
   **Chức năng mới không đọc/ghi phiếu kho, sổ kho, tồn kho, kỳ kho, giá vốn**; số lượng đã nhận lấy từ phiếu xác nhận nhận hàng XNH
   (lát K2); tồn kho trên đề nghị mua do Thủ kho nhập tay. Danh mục kho chỉ còn là nơi nhận hàng. Mua nội bộ = PO đặt cho NCC nội bộ.
   Các quy tắc kho cũ (kho Main/Sub, ICS/ICR, kỳ kho, giá vốn, tồn âm – design.md mục 4, 6, 7) chỉ còn áp cho code kho cũ đến khi gỡ.

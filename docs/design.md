@@ -114,7 +114,7 @@ Module chỉ gọi nhau qua interface của lớp Application, không truy cập
 
 ## 4. Mô hình tổ chức và quy tắc kho
 
-> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở 0.28.0 – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở bản sau 0.28.0 (lát K3) – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
 
 Tập đoàn gồm nhiều công ty (kể cả tổng công ty), mỗi công ty có **đúng một kho tổng** và nhiều kho con. Luân chuyển hàng chỉ có hai đường hợp lệ.
 
@@ -400,7 +400,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
-> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở 0.28.0 – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở bản sau 0.28.0 (lát K3) – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.
 
@@ -2613,7 +2613,7 @@ Công ty dùng phần mềm kho riêng. Thay thế:
   giá trị thực nhận theo giá PO, thuế GTGT, tổng cộng; kết luận sai lệch như biên bản phiếu nhập cũ (mục 18.14); ký: đại diện bên giao, người
   nhận hàng (người xác nhận), người kiểm tra, người lập phiếu. Nháp in dòng đỏ "BẢN NHÁP", đã hủy in "ĐÃ HỦY – lý do".
 
-**Lát K3 – gỡ (0.28.0).** Xóa code phân hệ kho và bảng kho bằng migration có `Down()`; chỉ làm sau khi người dùng xác nhận đã sao lưu.
+**Lát K3 – gỡ (dời sang sau 0.28.0).** Xóa code phân hệ kho và bảng kho bằng migration có `Down()`; chỉ làm sau khi người dùng xác nhận đã sao lưu.
 
 ### 19.5 Portal nhà cung cấp
 
@@ -2805,7 +2805,8 @@ lệnh. Quy tắc tự đặt (người dùng có thể chỉnh):
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a, đề nghị tổng hợp 1C Y11b – xong 13/11/2026), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
-| 0.28.0 | K3, P2, P6b, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ (P2a – xong 14/11/2026), đăng ký NCC mới (P2b – chờ người dùng); trạng thái thanh toán trên Portal (P6b – xong 13/11/2026); bảng giá (P7a – xong 14/11/2026), tin nhắn (P7b), thẻ điểm (P7c) – P7b, P7c chờ người dùng |
+| 0.28.0 (phát hành 14/11/2026) | P2a, P6b, P7a, K2b, N4a | NCC tự quản lý hồ sơ (P2a); trạng thái thanh toán trên Portal (P6b); bảng giá Portal (P7a); in XNH (K2b); nhóm hàng tối đa 4 cấp – máy chủ, mã gõ tay (N4a) |
+| 0.29.0 trở đi | K3, N4b, N4c, P2b, P7b, P7c | Gỡ hẳn kho (K3 – chờ xác nhận sao lưu); giao diện cây nhóm hàng 4 cấp (N4b), mặt hàng chỉ gắn nhóm cấp 4 (N4c); đăng ký NCC mới (P2b), tin nhắn (P7b), thẻ điểm (P7c) – Portal đang dừng chờ người dùng |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
 
