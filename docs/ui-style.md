@@ -208,7 +208,7 @@ dựng bằng `ExcelGridStyle` (`src/Proc.Infrastructure/Excel/ExcelGridStyle.cs
 | Số lượng, đơn giá, tiền | ô số, Consolas, canh phải (1.234.567) |
 | Ngày | ô ngày dd/MM/yyyy, canh trái như lưới |
 | Số chứng từ | ô chữ, Consolas, chữ `--erp-title` (lưới: cột có `docRef` gửi kiểu `docno`) |
-| Trạng thái | "■ chữ": ô vuông và chữ tô màu theo đèn – xanh lá #1E8F2E; vàng ô #E8C860 chữ #A86F00; đỏ #D0281E; trung tính ô #B8C5D6 chữ thường |
+| Trạng thái | **chỉ tô màu chữ** theo đèn, không thêm ký tự (người dùng chốt 14/11/2026) – xanh lá #1E8F2E; vàng #A86F00; đỏ #D0281E; trung tính chữ thường |
 
 Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nhóm" – đó là thao tác trên màn hình, không đưa vào file.
 

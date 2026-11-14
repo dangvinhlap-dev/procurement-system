@@ -8,7 +8,7 @@ namespace Proc.IntegrationTests;
 /// <summary>
 /// Mọi file Excel xuất ra cùng định dạng lưới trên màn hình (yêu cầu 14/11/2026, ảnh mẫu docs/diagrams/formatexportExcel.png –
 /// ui-style.md mục 5i): Tahoma 9pt, tiêu đề cột nền #D3DDEA chữ thường, kẻ ô #B8C5D6, số phông đơn cách canh phải, số chứng từ chữ xanh
-/// đậm, trạng thái ô vuông ■ + chữ màu theo đèn.
+/// đậm, trạng thái chỉ tô màu chữ theo đèn.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public class ExcelFormatTests
@@ -74,13 +74,13 @@ public class ExcelFormatTests
         Assert.Equal(1_250_000, money.GetDouble());
         Assert.Equal(("Consolas", XLAlignmentHorizontalValues.Right), (money.Style.Font.FontName, money.Style.Alignment.Horizontal));
 
-        // Trạng thái: ô vuông ■ + chữ tô màu theo đèn (vàng: ô #E8C860, chữ #A86F00; xanh lá: #1E8F2E).
-        Assert.Equal("■ Chưa hoàn thành", sheet.Cell(5, 4).GetString());
-        var warning = sheet.Cell(5, 4).GetRichText().ToList();
-        Assert.Equal(("FFE8C860", "FFA86F00"), (Argb(warning[0].FontColor), Argb(warning[1].FontColor)));
-        var success = sheet.Cell(6, 4).GetRichText().ToList();
-        Assert.Equal(("■ ", "Hoàn thành"), (success[0].Text, success[1].Text));
-        Assert.Equal(("FF1E8F2E", "FF1E8F2E"), (Argb(success[0].FontColor), Argb(success[1].FontColor)));
+        // Trạng thái: chỉ tô màu chữ theo đèn, không thêm ký tự (vàng #A86F00, xanh lá #1E8F2E).
+        var warning = sheet.Cell(5, 4);
+        Assert.Equal("Chưa hoàn thành", warning.GetString());
+        Assert.False(warning.HasRichText);
+        Assert.Equal("FFA86F00", Argb(warning.Style.Font.FontColor));
+        var success = sheet.Cell(6, 4);
+        Assert.Equal(("Hoàn thành", "FF1E8F2E"), (success.GetString(), Argb(success.Style.Font.FontColor)));
 
         // Màu đèn lạ hoặc số màu không bằng số dòng → 400.
         var badTone = request with { Columns = [.. request.Columns.Take(3), new("Tình trạng", "status", 130, ["xanh", null]), request.Columns[4]] };
