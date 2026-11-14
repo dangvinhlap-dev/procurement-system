@@ -27,7 +27,7 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   const mainCode = await supplier(`NCC chính tháng ${tag}`)
   const backupCode = await supplier(`NCC dự phòng tháng ${tag}`)
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm duyệt tháng ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm duyệt tháng ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Giấy in A4 ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

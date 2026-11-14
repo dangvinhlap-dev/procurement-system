@@ -49,7 +49,7 @@ public class StockReportTests
         var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm báo cáo kho {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm báo cáo kho {Guid.NewGuid():N}", null, null), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC báo cáo kho", null, false, null, null, null, null, null, null, null, null,

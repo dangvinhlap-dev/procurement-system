@@ -16,7 +16,7 @@ test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp 
   const thung = uoms.find((u) => u.code === 'THUNG')!.id
   const tag = unique('sl')
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm SL kế hoạch ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm SL kế hoạch ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Ốc vít ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,

@@ -127,7 +127,8 @@ internal sealed class ItemCategoryConfiguration : IEntityTypeConfiguration<ItemC
     /// <inheritdoc />
     public void Configure(EntityTypeBuilder<ItemCategory> builder)
     {
-        builder.ToTable("ItemCategory");
+        // Cây nhóm hàng tối đa 4 cấp (design.md mục 5.7, N4-2) – chặn cả ở CSDL, không chỉ ở máy chủ.
+        builder.ToTable("ItemCategory", t => t.HasCheckConstraint("CK_ItemCategory_Level", "\"Level\" BETWEEN 1 AND 4"));
         builder.Property(x => x.Code).HasMaxLength(20).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();

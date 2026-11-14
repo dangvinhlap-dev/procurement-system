@@ -13,7 +13,7 @@ test('Portal: NCC xem bảng giá đã duyệt, giá sau chiết khấu', async 
   const hop = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm bảng giá Portal ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm bảng giá Portal ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Khẩu trang bảng giá', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,

@@ -28,7 +28,12 @@ export interface ItemCategory {
   parentCode: string | null
   /** "VT / VTC / VTCK" – danh sách xếp theo đường dẫn để đọc như cây. */
   path: string
+  /** Cấp 1–4 (tối đa 4 cấp – design.md mục 5.7, N4-1). */
   level: number
+  /** Tên cấp: Ngành hàng, Nhóm hàng, Loại hàng, Chủng loại. */
+  levelName: string
+  /** Số nhóm con trực tiếp. */
+  childCount: number
   inventoryAccount: string | null
   isActive: boolean
   itemCount: number
@@ -212,7 +217,8 @@ export function useItemCategoryMutations() {
   type Input = { name: string; parentId: string | null; inventoryAccount: string | null }
   return {
     create: useMutation({
-      mutationFn: (input: Input & { code: null }) =>
+      // Mã nhóm do người dùng gõ (design.md mục 5.7, N4-7).
+      mutationFn: (input: Input & { code: string }) =>
         apiFetch<ItemCategory>('/api/item-categories', { method: 'POST', body: input }),
       onSuccess,
     }),

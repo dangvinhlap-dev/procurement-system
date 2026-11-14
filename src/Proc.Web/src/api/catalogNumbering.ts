@@ -5,14 +5,13 @@ import { apiFetch } from './client'
  * Dải đánh số danh mục tự động (khớp Proc.Application.MasterData – CatalogNumberingAdministration.cs, design.md mục 5.11).
  */
 
-/** Danh mục đánh số tự động. */
-export type NumberedCatalog = 'supplier' | 'supplier-group' | 'item-category' | 'item'
+/** Danh mục đánh số tự động. Nhóm hàng không còn đánh số từ 14/11/2026 – mã do người dùng gõ (design.md mục 5.7, N4-7). */
+export type NumberedCatalog = 'supplier' | 'supplier-group' | 'item'
 
 /** Tên danh mục đánh số. */
 export const numberedCatalogLabels: Record<NumberedCatalog, string> = {
   supplier: 'Nhà cung cấp',
   'supplier-group': 'Nhóm nhà cung cấp',
-  'item-category': 'Nhóm hàng',
   item: 'Hàng hóa',
 }
 

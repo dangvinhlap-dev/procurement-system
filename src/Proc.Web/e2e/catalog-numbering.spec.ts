@@ -11,7 +11,8 @@ test('màn hình đánh số danh mục: xem dải mặc định, mở chi tiế
   await page.goto('/')
   await openByCommand(page, 'DSDM')
   await expect(page.getByRole('heading', { name: 'Đánh số danh mục' })).toBeVisible()
-  for (const name of ['Nhà cung cấp', 'Nhóm nhà cung cấp', 'Nhóm hàng']) {
+  // Nhóm hàng không còn đánh số – mã do người dùng gõ (design.md mục 5.7, N4-7).
+  for (const name of ['Nhà cung cấp', 'Nhóm nhà cung cấp', 'Hàng hóa']) {
     await expect(page.locator('.data-grid-row', { hasText: name }).first()).toBeVisible()
   }
   const itemRow = page.locator('.data-grid-row', { hasText: 'Mặc định mọi nhóm' })

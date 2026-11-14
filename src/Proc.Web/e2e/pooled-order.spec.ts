@@ -45,7 +45,7 @@ test('lập phiếu đặt hàng gộp, phân bổ theo kế hoạch, tạo PO c
   await approveSupplier(request, supplier.id)
   for (const c of [head, bha]) await c.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm đặt gộp ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm đặt gộp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Nước rửa chén ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

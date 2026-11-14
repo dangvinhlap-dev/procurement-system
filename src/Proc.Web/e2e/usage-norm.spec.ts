@@ -16,7 +16,7 @@ test('PR vượt định mức sử dụng theo kế hoạch nhu cầu: cảnh b
   const tag = unique('dm')
   // Danh mục nhóm hàng, mặt hàng chỉ thêm ở tổng công ty.
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm định mức ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm định mức ${tag}`, parentId: null, inventoryAccount: null,
   })
   const newItem = (name: string) =>
     head.send<{ id: string; code: string }>('post', '/api/items', {

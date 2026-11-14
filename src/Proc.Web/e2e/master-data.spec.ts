@@ -48,14 +48,13 @@ test.describe('danh mục hàng hóa', () => {
     await openByCommand(page, 'CAT')
     await expect(page.getByRole('heading', { name: 'Nhóm hàng' })).toBeVisible()
     await page.getByRole('button', { name: 'Tạo mới' }).click()
-    // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11): ô mã bị khóa, ghi "(tự cấp khi lưu)".
-    await expect(drawer.getByLabel('Mã nhóm')).toBeDisabled()
+    // Mã nhóm do người dùng gõ (design.md mục 5.7, N4-7): gõ chữ thường tự đổi thành chữ hoa.
+    const categoryCode = `ON${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`
+    await drawer.getByLabel('Mã nhóm').fill(categoryCode.toLowerCase())
     await drawer.getByLabel('Tên nhóm hàng').fill(`Ống nhựa thử ${crypto.randomUUID().slice(0, 8)}`)
     await drawer.getByLabel('Tài khoản kho mặc định').fill('152')
     await page.keyboard.press('Control+s')
-    const savedCategory = await page.locator('.ant-message').getByText(/Đã lưu nhóm hàng /).textContent()
-    const categoryCode = /Đã lưu nhóm hàng (\S+)\./.exec(savedCategory ?? '')![1]
-    expect(categoryCode).toMatch(/^NH\d{6}$/)
+    await expect(page.locator('.ant-message')).toContainText(`Đã lưu nhóm hàng ${categoryCode}.`)
 
     await openByCommand(page, 'ITEM')
     await expect(page.getByRole('heading', { name: 'Danh mục hàng hóa' })).toBeVisible()

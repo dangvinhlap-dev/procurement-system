@@ -39,7 +39,7 @@ public class CatalogNumberingTests
         Assert.Equal(("{NHOM}-", "VT-00001", (string?)null), (list["item"].Prefix, list["item"].Sample, list["item"].NextCode));
 
         // Nhóm hàng có dải riêng: mã hàng theo dải đó thay vì dòng mặc định {NHOM}-.
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm dải riêng {Guid.NewGuid():N}", null, null), Ct));
+        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm dải riêng {Guid.NewGuid():N}", null, null), Ct));
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var prefix = "R" + category.Code[2..];
         var own = await ReadAsync<CatalogNumberingDto>(await head.PostAsJsonAsync("/api/catalog-numberings",
@@ -59,7 +59,11 @@ public class CatalogNumberingTests
 
         // Cấu hình sai bị chặn; công ty thành viên không cấu hình được.
         Assert.Contains("chỉ gồm chữ không dấu", await TitleAsync(await head.PostAsJsonAsync("/api/catalog-numberings",
-            new SaveCatalogNumberingRequest("item-category", null, "NH-", 3, 1, 999), Ct)));
+            new SaveCatalogNumberingRequest("supplier-group", null, "GN-", 3, 1, 999), Ct)));
+        // Nhóm hàng không còn đánh số – mã do người dùng gõ (design.md mục 5.7, N4-7); dải cũ không hiện trong danh sách.
+        Assert.Equal("Danh mục không đánh số tự động được.", await TitleAsync(await head.PostAsJsonAsync("/api/catalog-numberings",
+            new SaveCatalogNumberingRequest("item-category", null, "NH", 6, 1, 999999), Ct)));
+        Assert.DoesNotContain(list.Keys, k => k.StartsWith("item-category", StringComparison.Ordinal));
         var bha = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "BHA");
         Assert.Equal(HttpStatusCode.Forbidden, (await bha.PutAsJsonAsync($"/api/catalog-numberings/{own.Id}",
             new SaveCatalogNumberingRequest("item", category.Id, prefix, 3, 1, 999), Ct)).StatusCode);

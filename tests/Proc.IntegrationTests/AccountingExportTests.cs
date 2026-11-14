@@ -55,9 +55,9 @@ public class AccountingExportTests
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         // Nhóm cha khai báo TK 1521; nhóm con không khai báo → dùng TK của nhóm cha.
         var parent = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Vật tư xuất kế toán {Guid.NewGuid():N}", null, "1521"), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Vật tư xuất kế toán {Guid.NewGuid():N}", null, "1521"), Ct));
         var child = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Vật tư con {Guid.NewGuid():N}", parent.Id, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Vật tư con {Guid.NewGuid():N}", parent.Id, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Gioăng cao su", null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;

@@ -58,7 +58,7 @@ public class PurchaseReportTests
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm báo cáo mua hàng {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm báo cáo mua hàng {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dây curoa B52", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, [new(thung, 12)]), Ct));

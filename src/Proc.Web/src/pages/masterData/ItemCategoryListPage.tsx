@@ -127,10 +127,10 @@ function ItemCategoryDrawer({
       inventoryAccount: values.inventoryAccount?.trim() || null,
     }
     try {
-      // Thêm mới: mã do hệ thống cấp theo dải đánh số (design.md mục 5.11).
+      // Thêm mới: mã do người dùng gõ (người dùng chốt 14/11/2026 – design.md mục 5.7, N4-7); máy chủ báo trùng.
       const saved = category
         ? await mutations.update.mutateAsync({ id: category.id, input: { ...input, isActive: values.isActive } })
-        : await mutations.create.mutateAsync({ ...input, code: null })
+        : await mutations.create.mutateAsync({ ...input, code: values.code.trim().toUpperCase() })
       message.success(`Đã lưu nhóm hàng ${saved.code}.`)
       onClose()
     } catch (e) {
@@ -170,9 +170,18 @@ function ItemCategoryDrawer({
                 <Form.Item
                   label="Mã nhóm"
                   name="code"
-                  extra={category ? undefined : 'Mã do hệ thống tự cấp khi lưu, theo dải ở Hệ thống → Đánh số danh mục.'}
+                  extra={category ? undefined : '2–20 chữ không dấu hoặc số, không đổi được sau khi lưu.'}
+                  rules={
+                    category
+                      ? []
+                      : [
+                          { required: true, whitespace: true, message: 'Hãy nhập mã nhóm.' },
+                          { pattern: /^\s*[A-Za-z0-9]{2,20}\s*$/, message: 'Mã gồm 2–20 chữ không dấu hoặc số.' },
+                        ]
+                  }
+                  normalize={(v: string) => v?.toUpperCase()}
                 >
-                  <Input disabled placeholder="(tự cấp khi lưu)" />
+                  <Input disabled={!!category} autoComplete="off" maxLength={20} placeholder="Ví dụ VT, VTD01" />
                 </Form.Item>
                 <Form.Item
                   label="Tài khoản kho mặc định"

@@ -85,6 +85,7 @@ export function SupplierCategoryField({ editable, legacyText }: { editable: bool
 }
 
 interface NewCategoryValues {
+  code: string
   name: string
   parentId: string | undefined
 }
@@ -122,7 +123,10 @@ function NewCategoryDialog({
     if (!values || sameParent) return
     setError(null)
     try {
-      const created = await mutations.create.mutateAsync({ code: null, name: values.name.trim(), parentId: values.parentId ?? null, inventoryAccount: null })
+      // Mã nhóm do người dùng gõ (design.md mục 5.7, N4-7).
+      const created = await mutations.create.mutateAsync({
+        code: values.code.trim().toUpperCase(), name: values.name.trim(), parentId: values.parentId ?? null, inventoryAccount: null,
+      })
       message.success(`Đã thêm nhóm hàng ${created.code} và chọn làm ngành hàng của NCC.`)
       onCreated(created)
     } catch (e) {
@@ -144,7 +148,7 @@ function NewCategoryDialog({
     >
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />}
       {/* Tên form riêng: id ô có tiền tố, không trùng ô "name" của ngăn kéo NCC phía sau (nhãn trỏ đúng ô). */}
-      <Form form={form} name="newItemCategory" layout="vertical" initialValues={{ name: '', parentId: undefined }}>
+      <Form form={form} name="newItemCategory" layout="vertical" initialValues={{ code: '', name: '', parentId: undefined }}>
         <Form.Item
           label="Nhóm cha"
           name="parentId"
@@ -152,6 +156,17 @@ function NewCategoryDialog({
           extra={allScopes ? 'Để trống = nhóm gốc.' : 'Bạn chỉ được làm việc với một số nhóm hàng nên chỉ thêm được nhóm con trong các nhóm đó.'}
         >
           <TreeSelect aria-label="Nhóm cha" treeData={parents} allowClear treeDefaultExpandAll placeholder="(Nhóm gốc)" />
+        </Form.Item>
+        <Form.Item
+          label="Mã nhóm"
+          name="code"
+          normalize={(v: string) => v?.toUpperCase()}
+          rules={[
+            { required: true, whitespace: true, message: 'Hãy nhập mã nhóm.' },
+            { pattern: /^\s*[A-Za-z0-9]{2,20}\s*$/, message: 'Mã gồm 2–20 chữ không dấu hoặc số.' },
+          ]}
+        >
+          <Input autoComplete="off" maxLength={20} placeholder="Ví dụ VT, VTD01" />
         </Form.Item>
         <Form.Item label="Tên nhóm hàng" name="name" rules={[{ required: true, whitespace: true, message: 'Hãy nhập tên nhóm hàng.' }, { max: 200 }]}>
           <Input autoComplete="off" />

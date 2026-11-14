@@ -34,7 +34,7 @@ test('Mua nội bộ: PO cho NCC nội bộ, giá gợi ý, bên bán xác nhậ
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm mua nội bộ ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm mua nội bộ ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
   })
   const itemName = `Bu lông nội bộ ${unique('X')}`
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

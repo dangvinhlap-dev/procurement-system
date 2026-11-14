@@ -65,7 +65,7 @@ public sealed class SeedItemCategory
 /// <summary>Một dải đánh số danh mục mẫu (design.md mục 5.11).</summary>
 public sealed class SeedCatalogNumbering
 {
-    /// <summary>Danh mục: supplier, supplier-group, item-category, item.</summary>
+    /// <summary>Danh mục: supplier, supplier-group, item.</summary>
     public string Catalog { get; set; } = string.Empty;
 
     /// <summary>Tiền tố (hàng hóa dùng được {NHOM}).</summary>
@@ -422,7 +422,8 @@ internal sealed class DataSeeder
     private async Task EnsureCatalogNumberingsAsync(CancellationToken ct)
     {
         var existing = await _db.CatalogNumberings.Where(n => n.CategoryId == null).Select(n => n.Catalog).ToListAsync(ct);
-        foreach (var item in _seed.DemoCatalogNumberings.Where(i => !existing.Contains(i.Catalog)))
+        // Danh mục không còn đánh số (ví dụ nhóm hàng từ 14/11/2026) trong file cấu hình cũ thì bỏ qua, không làm hỏng khởi tạo.
+        foreach (var item in _seed.DemoCatalogNumberings.Where(i => !existing.Contains(i.Catalog) && NumberedCatalogs.All.ContainsKey(i.Catalog)))
             _db.CatalogNumberings.Add(CatalogNumbering.Create(item.Catalog, null, item.Prefix, item.Digits, item.From, item.To));
         await _db.SaveChangesAsync(ct);
     }

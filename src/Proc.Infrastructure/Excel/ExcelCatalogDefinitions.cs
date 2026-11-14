@@ -170,6 +170,8 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     private const string Name = "Tên nhóm";
     private const string Parent = "Mã nhóm cha";
     private const string Account = "TK kho";
+    private const string Level = "Cấp";
+    private const string PathHeader = "Đường dẫn";
 
     /// <inheritdoc />
     public override string Key => ExcelCatalogs.ItemCategories;
@@ -189,24 +191,26 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     /// <inheritdoc />
     public override IReadOnlyList<ExcelColumn> Columns { get; } =
     [
-        new(Code, "Để trống khi thêm mới – hệ thống tự cấp mã theo dải ở Hệ thống → Đánh số danh mục. Có mã thì cập nhật bản ghi đó.", Text: true),
+        new(Code, "Bắt buộc, 2–20 chữ không dấu hoặc số. Mã đã có thì cập nhật nhóm đó, mã chưa có thì thêm nhóm mới với mã này.", Required: true, Text: true),
         new(Name, "Tên nhóm hàng.", Required: true),
-        new(Parent, "Để trống là nhóm gốc. Nhóm cha phải có sẵn hoặc nằm ở dòng phía trên.", Text: true),
+        new(Parent, "Để trống là nhóm cấp 1. Nhóm cha phải có sẵn hoặc nằm ở dòng phía trên; nhóm cha cấp 4 thì báo lỗi (tối đa 4 cấp).", Text: true),
         new(Account, "Tài khoản kho mặc định, 3–10 chữ số, ví dụ 152.", Text: true),
         new(CommonHeaders.Active, CommonHeaders.ActiveNote),
+        new(Level, "Chỉ để xem: cấp 1–4 (Ngành hàng, Nhóm hàng, Loại hàng, Chủng loại) – nhập bỏ qua, cấp tính theo nhóm cha."),
+        new(PathHeader, "Chỉ để xem: mã các nhóm từ cấp 1 xuống – nhập bỏ qua.", Text: true),
     ];
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Guide =>
     [
         "Nhóm cha phải đứng trên nhóm con. File xuất ra đã xếp theo cây nên sửa rồi nhập lại được ngay.",
-        "Nhóm mới (để trống mã) được cấp mã lúc nhập nên chưa làm nhóm cha được cho dòng khác cùng file – nhập nhóm cha trước, rồi xuất file để có mã và nhập nhóm con.",
+        "Nhóm hàng tối đa 4 cấp: 1 Ngành hàng, 2 Nhóm hàng, 3 Loại hàng, 4 Chủng loại. Mã nhóm do người dùng đặt nên nhóm mới làm nhóm cha được cho dòng bên dưới cùng file.",
     ];
 
     /// <inheritdoc />
     public override async Task<IReadOnlyList<IReadOnlyList<object?>>> ExportAsync(CancellationToken cancellationToken) =>
         (await categories.ListAsync(cancellationToken))
-            .Select(c => (IReadOnlyList<object?>)[c.Code, c.Name, c.ParentCode, c.InventoryAccount, ExcelHeaders.YesNo(c.IsActive)])
+            .Select(c => (IReadOnlyList<object?>)[c.Code, c.Name, c.ParentCode, c.InventoryAccount, ExcelHeaders.YesNo(c.IsActive), c.Level, c.Path])
             .ToList();
 
     /// <inheritdoc />
@@ -215,7 +219,8 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
     /// <inheritdoc />
     public override async Task<bool> ImportRowAsync(ExcelRowReader row, CancellationToken cancellationToken)
     {
-        var code = row.Text(Code) is { } c ? CodeRules.Normalize(c) : null;
+        // Mã nhóm do người dùng gõ (N4-7): bắt buộc; mã chưa có thì thêm nhóm với đúng mã đó.
+        var code = CodeRules.Normalize(row.RequiredText(Code));
         var name = row.RequiredText(Name);
         var parentCode = row.Text(Parent) is { } p ? CodeRules.Normalize(p) : null;
         Guid? parentId = null;
@@ -227,10 +232,10 @@ internal sealed class ItemCategoryExcelCatalog(ProcDbContext db, IItemCategoryAd
 
         var account = row.Text(Account);
         var active = Active(row);
-        var id = code is null ? null : await ExistingIdAsync(db.ItemCategories.Where(x => x.Code == code).Select(x => (Guid?)x.Id), code, "nhóm hàng", cancellationToken);
+        var id = await db.ItemCategories.Where(x => x.Code == code).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken);
         if (id is null)
         {
-            var create = new CreateItemCategoryRequest(null, name, parentId, account);
+            var create = new CreateItemCategoryRequest(code, name, parentId, account);
             await ValidateAsync(services, create, cancellationToken);
             var created = await categories.CreateAsync(create, cancellationToken);
             if (!active) await categories.UpdateAsync(created.Id, new UpdateItemCategoryRequest(name, parentId, account, false), cancellationToken);

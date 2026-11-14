@@ -1429,6 +1429,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1450,7 +1453,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.ToTable("ItemCategory", (string)null);
+                    b.ToTable("ItemCategory", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ItemCategory_Level", "\"Level\" BETWEEN 1 AND 4");
+                        });
                 });
 
             modelBuilder.Entity("Proc.Domain.MasterData.SoleSourceApproval", b =>

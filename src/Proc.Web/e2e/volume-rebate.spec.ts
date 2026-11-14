@@ -21,7 +21,7 @@ test('lập thỏa thuận chiết khấu sản lượng gộp, xem lũy kế, g
   })
   await approveSupplier(request, supplier.id)
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm chiết khấu gộp ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm chiết khấu gộp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Xi măng bao ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

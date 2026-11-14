@@ -18,7 +18,7 @@ test('lập hồ sơ đánh giá NCC mới, chấm điểm, hoàn thành đánh 
     rating: null, status: 'Potential', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Rau củ hồ sơ ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Rau củ hồ sơ ${tag}`, parentId: null, inventoryAccount: null,
   })
 
   await loginViaApi(page)

@@ -67,7 +67,7 @@ public class PriceListApprovalTests
     {
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm duyệt bảng giá {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm duyệt bảng giá {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dây curoa B52", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, []), Ct));

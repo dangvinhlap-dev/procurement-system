@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Proc.Application.Excel;
 using Proc.Application.MasterData;
 using Proc.Domain.Organization;
 
@@ -39,7 +40,26 @@ public class ItemCatalogTests
 
     private static async Task<ItemCategoryDetailDto> CreateCategoryAsync(HttpClient client, string code, Guid? parentId = null) =>
         await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync(
-            "/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm {code}", parentId, null), Ct));
+            "/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {code}", parentId, null), Ct));
+
+    /// <summary>Nhập file Excel nhóm hàng (cột Mã nhóm, Tên nhóm, Mã nhóm cha) – <paramref name="commit"/> = false là kiểm tra thử.</summary>
+    private static async Task<ExcelImportResult> ImportCategoriesAsync(HttpClient client, bool commit, params string?[][] rows)
+    {
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var sheet = workbook.AddWorksheet("Nhóm hàng");
+        string[] headers = ["Mã nhóm *", "Tên nhóm *", "Mã nhóm cha"];
+        for (var c = 0; c < headers.Length; c++) sheet.Cell(1, c + 1).Value = headers[c];
+        for (var r = 0; r < rows.Length; r++)
+            for (var c = 0; c < rows[r].Length; c++)
+                if (rows[r][c] is { } value) sheet.Cell(r + 2, c + 1).SetValue(value);
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        using var content = new MultipartFormDataContent();
+        var part = new ByteArrayContent(stream.ToArray());
+        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        content.Add(part, "file", "nhom-hang.xlsx");
+        return await ReadAsync<ExcelImportResult>(await client.PostAsync($"/api/excel/{ExcelCatalogs.ItemCategories}/import?commit={commit.ToString().ToLowerInvariant()}", content, Ct));
+    }
 
     private static async Task<Guid> UomIdAsync(HttpClient client, string code) =>
         (await client.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == code).Id;
@@ -106,6 +126,67 @@ public class ItemCatalogTests
         Assert.Equal(("Bu lông inox", root.Id, "1521", 2), (account.Name, account.ParentId, account.InventoryAccount, account.Level));
     }
 
+    /// <summary>
+    /// Nhóm hàng tối đa 4 cấp, mã do người dùng gõ (người dùng chốt 14/11/2026 – design.md mục 5.7, N4-1…N4-8): cấp + tên cấp + số nhóm con
+    /// trên danh mục; nhóm cấp 4 không có con; chuyển nhánh vượt cấp bị chặn, chuyển hợp lệ thì cấp cả nhánh tính lại; mã trống / trùng /
+    /// sai quy tắc báo lỗi; nhập Excel theo mã gõ tay, nhóm mới làm nhóm cha được cho dòng bên dưới.
+    /// </summary>
+    [Fact]
+    public async Task NhomHang_ToiDa4Cap_MaGoTay_ChuyenNhanhTinhLaiCap()
+    {
+        var head = await HeadOfficeAdminAsync();
+        async Task<ItemCategoryDetailDto> AddAsync(string code, string name, Guid? parentId) =>
+            await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(code, name, parentId, null), Ct));
+
+        var c1 = TestCodes.Category();
+        var l1 = await AddAsync(c1.ToLowerInvariant(), "Vật tư thử 4 cấp", null);
+        Assert.Equal((c1, 1, "Ngành hàng"), (l1.Code, l1.Level, l1.LevelName));
+        var l2 = await AddAsync(TestCodes.Category(), "Vật tư điện", l1.Id);
+        var l3 = await AddAsync(TestCodes.Category(), "Dây cáp điện", l2.Id);
+        var l4 = await AddAsync(TestCodes.Category(), "Cáp đồng bọc PVC", l3.Id);
+        Assert.Equal((4, "Chủng loại"), (l4.Level, l4.LevelName));
+
+        // N4-3: nhóm cấp 4 không thêm nhóm con.
+        Assert.Contains("đã ở cấp 4 (cấp cuối)", await TitleAsync(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(TestCodes.Category(), "Cấp năm", l4.Id, null), Ct)));
+        // N4-7: mã bắt buộc, không trùng (kể cả khác hoa thường), đúng quy tắc.
+        Assert.Equal("Hãy nhập mã nhóm hàng.", await TitleAsync(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(null, "Không mã", null, null), Ct)));
+        Assert.Equal($"Mã nhóm hàng {c1} đã có (Vật tư thử 4 cấp) – chọn mã khác.", await TitleAsync(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(c1.ToLowerInvariant(), "Trùng mã", null, null), Ct)));
+        Assert.Contains("2–20 ký tự", await TitleAsync(await head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest("VT-01", "Sai mã", null, null), Ct)));
+
+        // N4-4: chuyển l2 (nhánh sâu 2) vào một nhóm cấp 3 khác → nhóm cuối nhánh cấp 6, chặn; cấp không đổi.
+        var o1 = await AddAsync(TestCodes.Category(), "Hóa chất thử", null);
+        var o2 = await AddAsync(TestCodes.Category(), "Hóa chất công nghiệp", o1.Id);
+        var o3 = await AddAsync(TestCodes.Category(), "Axit", o2.Id);
+        var tooDeep = await head.PutAsJsonAsync($"/api/item-categories/{l2.Id}", new UpdateItemCategoryRequest(l2.Name, o3.Id, null, true), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, tooDeep.StatusCode);
+        Assert.Contains("cấp 6", await TitleAsync(tooDeep));
+
+        // Chuyển l3 (có con) sang o1 (cấp 1): l3 thành cấp 2, l4 thành cấp 3; số nhóm con cập nhật.
+        await ReadAsync<ItemCategoryDetailDto>(await head.PutAsJsonAsync($"/api/item-categories/{l3.Id}", new UpdateItemCategoryRequest(l3.Name, o1.Id, null, true), Ct));
+        var list = (await head.GetFromJsonAsync<List<ItemCategoryDetailDto>>("/api/item-categories", Ct))!.ToDictionary(c => c.Id);
+        Assert.Equal((2, 3, "Loại hàng"), (list[l3.Id].Level, list[l4.Id].Level, list[l4.Id].LevelName));
+        Assert.Equal((0, 2), (list[l2.Id].ChildCount, list[o1.Id].ChildCount));
+        Assert.Equal($"{o1.Code} / {l3.Code} / {l4.Code}", list[l4.Id].Path);
+
+        // Nhập Excel: mã gõ tay bắt buộc; nhóm mới (mã chưa có) làm nhóm cha được cho dòng dưới; nhóm cha cấp 4 → lỗi dòng.
+        var o4 = await AddAsync(TestCodes.Category(), "Axit sunfuric", o3.Id);
+        var newRoot = TestCodes.Category();
+        var newChild = TestCodes.Category();
+        var bad = await ImportCategoriesAsync(head, false,
+            [newRoot, "Ngành nhập Excel", null], [TestCodes.Category(), "Vượt cấp", o4.Code], [null, "Thiếu mã", null]);
+        Assert.Equal([3, 4], bad.Errors.Select(e => e.Row).Order());
+        Assert.Contains(bad.Errors, e => e.Row == 3 && e.Message.Contains("đã ở cấp 4", StringComparison.Ordinal));
+        var good = await ImportCategoriesAsync(head, true, [newRoot, "Ngành nhập Excel", null], [newChild, "Nhóm con nhập Excel", newRoot]);
+        Assert.Equal((2, 0, true), (good.Created, good.Updated, good.Committed));
+        list = (await head.GetFromJsonAsync<List<ItemCategoryDetailDto>>("/api/item-categories", Ct))!.ToDictionary(c => c.Id);
+        var imported = list.Values.Single(c => c.Code == newChild);
+        Assert.Equal((newRoot, 2), (imported.ParentCode, imported.Level));
+    }
+
     [Fact]
     public async Task NhomHang_NguoiBiGioiHan_ChiThemNhomConTrongNhanhDuocPhep()
     {
@@ -117,7 +198,7 @@ public class ItemCatalogTests
         await _factory.CreateScopedUserAsync(userName, "TCT", roleCode, categoryCodes: [allowed.Code]);
         var limited = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
 
-        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Gốc mới {Guid.NewGuid():N}", null, null), Ct);
+        var root = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Gốc mới {Guid.NewGuid():N}", null, null), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, root.StatusCode);
 
         var child = await CreateCategoryAsync(limited, UniqueCode("C"), allowed.Id);
@@ -132,7 +213,7 @@ public class ItemCatalogTests
         Assert.False(visible[outside.Id].IsInScope);
         var edit = await limited.PutAsJsonAsync($"/api/item-categories/{outside.Id}", new UpdateItemCategoryRequest("Đổi tên", null, null, true), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, edit.StatusCode);
-        var under = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "Con ngoài phạm vi", outside.Id, null), Ct);
+        var under = await limited.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), "Con ngoài phạm vi", outside.Id, null), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, under.StatusCode);
     }
 
@@ -142,17 +223,17 @@ public class ItemCatalogTests
         var head = await HeadOfficeAdminAsync();
         var root = await CreateCategoryAsync(head, UniqueCode("R"));
         var first = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Vật tư điện", root.Id, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), "Vật tư điện", root.Id, null), Ct));
 
         // Trùng tên không phân biệt dấu, hoa thường, khoảng trắng thừa → chặn, báo nhóm đã có.
-        var duplicate = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, "  vat tu  DIEN ", root.Id, null), Ct);
+        var duplicate = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), "  vat tu  DIEN ", root.Id, null), Ct);
         Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
         Assert.Contains(first.Code, await TitleAsync(duplicate));
 
         // Cùng tên ở nhóm cha khác thì được; đổi tên/chuyển nhóm cha thành trùng thì chặn; sửa thông tin khác không đổi tên thì được.
         var other = await CreateCategoryAsync(head, UniqueCode("R"));
         var elsewhere = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, "Vật tư điện", other.Id, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), "Vật tư điện", other.Id, null), Ct));
         var move = await head.PutAsJsonAsync($"/api/item-categories/{elsewhere.Id}", new UpdateItemCategoryRequest("Vật tư điện", root.Id, null, true), Ct);
         Assert.Equal(HttpStatusCode.BadRequest, move.StatusCode);
         Assert.Equal("1521", (await ReadAsync<ItemCategoryDetailDto>(await head.PutAsJsonAsync($"/api/item-categories/{elsewhere.Id}",

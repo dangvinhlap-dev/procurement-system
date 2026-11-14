@@ -108,19 +108,16 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
 {
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
-    private readonly CatalogNumberAllocator _numbers;
 
     /// <summary>
     /// Tạo dịch vụ.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của người thao tác.</param>
-    /// <param name="numbers">Bộ cấp mã theo dải đánh số (design.md mục 5.11).</param>
-    public ItemCategoryAdministration(ProcDbContext db, ICurrentUserScope scope, CatalogNumberAllocator numbers)
+    public ItemCategoryAdministration(ProcDbContext db, ICurrentUserScope scope)
     {
         _db = db;
         _scope = scope;
-        _numbers = numbers;
     }
 
     /// <inheritdoc />
@@ -136,9 +133,10 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
             .ToDictionaryAsync(x => x.CategoryId, x => x.Count, cancellationToken);
         var byId = categories.ToDictionary(c => c.Id);
         var allowed = _scope.AllItemCategories ? null : _scope.ItemCategoryIds.ToHashSet();
+        var childCounts = categories.Where(c => c.ParentId is not null).GroupBy(c => c.ParentId!.Value).ToDictionary(g => g.Key, g => g.Count());
 
         return categories
-            .Select(c => ToDto(c, byId, counts.GetValueOrDefault(c.Id), allowed))
+            .Select(c => ToDto(c, byId, counts.GetValueOrDefault(c.Id), allowed, childCounts.GetValueOrDefault(c.Id)))
             .OrderBy(d => d.Path, StringComparer.Ordinal)
             .ToList();
     }
@@ -153,15 +151,17 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
 
         var parent = request.ParentId is { } parentId ? await FindParentAsync(parentId, cancellationToken) : null;
         await EnsureUniqueNameAsync(parent?.Id, request.Name, null, cancellationToken);
-        // Mã do hệ thống cấp theo dải đánh số (design.md mục 5.11) – người dùng không tự đặt.
-        CatalogNumberAllocator.RejectManualCode(NumberedCatalogs.ItemCategory, request.Code);
-        await using var transaction = await _numbers.BeginAsync(cancellationToken);
-        var category = ItemCategory.Create(await _numbers.NextAsync(NumberedCatalogs.ItemCategory, null, cancellationToken), request.Name, parent);
+        // Mã nhóm do người dùng tự gõ (người dùng chốt 14/11/2026 – design.md mục 5.7, N4-7), không còn cấp theo dải đánh số.
+        if (string.IsNullOrWhiteSpace(request.Code)) throw new BusinessRuleException("Hãy nhập mã nhóm hàng.");
+        var category = ItemCategory.Create(request.Code, request.Name, parent);
         category.Update(request.Name, request.InventoryAccount);
+        // Xét cả nhóm ngoài phạm vi để báo trùng rõ ràng thay vì lỗi chỉ mục duy nhất của CSDL.
+        var duplicate = await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking()
+            .Where(c => c.Code == category.Code).Select(c => c.Name).FirstOrDefaultAsync(cancellationToken);
+        if (duplicate is not null) throw new BusinessRuleException($"Mã nhóm hàng {category.Code} đã có ({duplicate}) – chọn mã khác.");
 
         _db.ItemCategories.Add(category);
         await _db.SaveChangesAsync(cancellationToken);
-        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         // Danh mục đọc đủ cây nên đọc lại được ngay; cờ phạm vi tính theo nhóm cha (nhóm con mới dưới nhóm được phép là trong phạm vi).
         return await GetAsync(category.Id, cancellationToken);
@@ -186,7 +186,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
                 throw new ForbiddenAccessException("Bạn chỉ được làm việc với một số nhóm hàng nên không đổi được nhóm cha.");
             var parent = request.ParentId is { } parentId ? await FindParentAsync(parentId, cancellationToken) : null;
             if (parent is not null) await EnsureNoCycleAsync(category, parent, cancellationToken);
-            category.MoveTo(parent);
+            await MoveBranchAsync(category, parent, cancellationToken);
         }
 
         if (request.IsActive) category.Activate();
@@ -206,6 +206,30 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
         if (items > 0)
             throw new BusinessRuleException($"Nhóm {category.Code} còn {items} mặt hàng đang dùng. Chuyển hoặc ngừng dùng các mặt hàng đó trước.");
         category.Deactivate();
+    }
+
+    /// <summary>
+    /// Chuyển nhóm sang nhóm cha mới cùng cả nhánh con (N4-4): đếm độ sâu nhánh để chặn vượt 4 cấp, rồi tính lại cấp từng nhóm con, cháu từ
+    /// trên xuống – lưu cùng một lần SaveChanges với nhóm được chuyển. Chỉ người được mọi nhóm hàng mới đổi nhóm cha nên filter nhóm hàng không
+    /// che mất nhóm con nào.
+    /// </summary>
+    private async Task MoveBranchAsync(ItemCategory category, ItemCategory? parent, CancellationToken cancellationToken)
+    {
+        var all = await _db.ItemCategories.ToListAsync(cancellationToken);
+        var children = all.Where(c => c.ParentId is not null).ToLookup(c => c.ParentId!.Value);
+        // Thứ tự duyệt theo chiều rộng: cha luôn được tính cấp trước con.
+        var branch = new List<(ItemCategory Node, int Depth)>();
+        var queue = new Queue<(ItemCategory Node, int Depth)>(children[category.Id].Select(c => (c, 1)));
+        while (queue.Count > 0)
+        {
+            var (node, depth) = queue.Dequeue();
+            branch.Add((node, depth));
+            foreach (var child in children[node.Id]) queue.Enqueue((child, depth + 1));
+        }
+
+        category.MoveTo(parent, branch.Count == 0 ? 0 : branch.Max(b => b.Depth));
+        var byId = all.ToDictionary(c => c.Id);
+        foreach (var (node, _) in branch) node.FollowParent(byId[node.ParentId!.Value]);
     }
 
     /// <summary>Đi ngược từ nhóm cha mới lên gốc; gặp lại nhóm đang sửa là cây thành vòng.</summary>
@@ -269,7 +293,9 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
     /// <param name="byId">Cả cây theo Id.</param>
     /// <param name="itemCount">Số mặt hàng trong nhóm người xem thấy.</param>
     /// <param name="allowed">Nhóm được phép; null = mọi nhóm.</param>
-    private static ItemCategoryDetailDto ToDto(ItemCategory c, Dictionary<Guid, ItemCategory> byId, int itemCount, HashSet<Guid>? allowed)
+    /// <param name="childCount">Số nhóm con trực tiếp.</param>
+    private static ItemCategoryDetailDto ToDto(
+        ItemCategory c, Dictionary<Guid, ItemCategory> byId, int itemCount, HashSet<Guid>? allowed, int childCount)
     {
         var codes = new List<string>();
         var visited = new HashSet<Guid>();
@@ -283,7 +309,7 @@ public sealed class ItemCategoryAdministration : IItemCategoryAdministration
 
         var parentCode = c.ParentId is { } parentId ? byId.GetValueOrDefault(parentId)?.Code : null;
         return new ItemCategoryDetailDto(
-            c.Id, c.Code, c.Name, c.ParentId, parentCode, string.Join(" / ", codes), codes.Count, c.InventoryAccount, c.IsActive, itemCount,
-            inScope);
+            c.Id, c.Code, c.Name, c.ParentId, parentCode, string.Join(" / ", codes), c.Level, c.InventoryAccount, c.IsActive, itemCount,
+            inScope, ItemCategory.LevelName(c.Level), childCount);
     }
 }

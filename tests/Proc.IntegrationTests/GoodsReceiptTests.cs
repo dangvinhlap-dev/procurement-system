@@ -46,7 +46,7 @@ public class GoodsReceiptTests
 
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm phiếu nhập {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm phiếu nhập {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Bu lông lục giác M8", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, "10", null, false, false, null, null, [new(uoms["THUNG"], 24m)]), Ct));
