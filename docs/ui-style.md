@@ -163,6 +163,9 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   được (người liên hệ, tài khoản), file chờ như phiếu báo giao; **Bỏ qua** (đỏ) trái – **Gửi đề nghị** (xanh) phải, gửi hỏi lại. Đề nghị đang
   chọn: khối so sánh `SupplierProfileCompare` (`src/components/SupplierProfile/` – dùng chung với ngăn kéo nội bộ HSC, nội bộ thêm cột "Hiện
   tại"), nút **Rút đề nghị…** (icon đỏ), khối file `PortalFiles kind="profile-requests"`.
+- **Bảng giá** (lát P7a, `src/portal/PortalPriceListPages.tsx`): trang `/ncc/bang-gia` là lưới bảng giá (đèn tình trạng kèm chữ đặt sau tên),
+  bấm đúp mở `/ncc/bang-gia/:id`: khối "Thông tin bảng giá" là lưới nhãn – giá trị hai cặp trên một hàng (dùng lại `.erp-portal-pay-summary`),
+  khối "Dòng giá" là `DataGrid` (đơn giá, giá sau CK canh phải phông đơn cách, cột Tiền tệ riêng ngay sau đơn giá) + dòng gợi ý dưới lưới.
 
 ## 5g. Luồng hỏi đáp `QaThread` (lát P3b-2, 12/11/2026)
 

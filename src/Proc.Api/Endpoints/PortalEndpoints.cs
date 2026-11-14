@@ -128,6 +128,12 @@ public static class PortalEndpoints
         payments.MapGet("/{orderId:guid}", (Guid orderId, HttpContext http, IPortalPaymentService s, CancellationToken ct) =>
             s.GetAsync(Session(http), orderId, ct));
 
+        // Lát P7a: bảng giá – NCC xem bảng giá đã duyệt của mình (chỉ đọc).
+        var priceLists = portal.MapGroup("/price-lists");
+        priceLists.MapGet("/", (HttpContext http, IPortalPriceListService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
+        priceLists.MapGet("/{id:guid}", (Guid id, HttpContext http, IPortalPriceListService s, CancellationToken ct) =>
+            s.GetAsync(Session(http), id, ct));
+
         // Lát P4a: đơn đặt hàng – NCC xem PO đã duyệt, xác nhận / từ chối, gửi file kèm phản hồi (mọi người dùng Portal của NCC).
         var orders = portal.MapGroup("/orders");
         orders.MapGet("/", (HttpContext http, IPortalOrderService s, CancellationToken ct) => s.ListAsync(Session(http), ct));
