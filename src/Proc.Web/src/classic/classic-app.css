@@ -64,7 +64,8 @@
 .erp-level-badge.is-3 { background: var(--erp-level-3); }
 .erp-level-badge.is-4 { background: var(--erp-level-4); color: var(--erp-level-4-text); }
 .erp-level-badge.is-wide { min-width: 40px; }
-.erp-tree-cell { display: inline-flex; align-items: center; min-width: 0; }
+/* Căn giữa dọc: không có thì dòng không có nút mở/đóng (ô trống đứng đầu) lấy đường chân chữ của ô trống, tên lệch xuống. */
+.erp-tree-cell { display: inline-flex; align-items: center; min-width: 0; vertical-align: middle; }
 .erp-tree-toggle {
   width: 14px;
   height: 14px;
@@ -73,13 +74,13 @@
   border: 0;
   background: none;
   color: var(--erp-text-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   cursor: pointer;
   flex: none;
 }
 .erp-tree-toggle:focus-visible { outline: 1px solid var(--erp-input-focus); }
-.erp-tree-toggle-space { display: inline-block; width: 18px; flex: none; }
+.erp-tree-toggle-space { display: inline-block; width: 18px; height: 14px; flex: none; }
 .erp-tree-node-hint { margin-left: 6px; color: var(--erp-text-muted); }
 /* Đường dẫn nhóm cha trong ngăn kéo nhóm hàng: chữ xanh gạch chấm như ô số chứng từ mở được. */
 .erp-crumb {
