@@ -1003,6 +1003,13 @@ bước theo **phân quyền, không chuỗi duyệt**; UAT và giờ cài tự 
 các mặc định tự chọn Q2–Q7, B1–B4 (sao lưu Full / Diff / WAL + `pg_dump`, phục hồi theo thời điểm, không tải sao lưu qua trình duyệt, việc nguy
 hiểm nhập lại mật khẩu + lý do + gõ chữ xác nhận). Lát QT1 → QT9 ở mục 21.7; **làm QT1 sau khi nhánh K3 merge** (K3 sửa `Program.cs`, quyền) – K3 đã merge 14/11/2026, QT1 làm được khi người dùng ra lệnh.
 Đến khi QT8 xong, phát hành / cài đặt vẫn theo `docs/phat-hanh.md`, `docs/deploy-windows.md`.
+Bổ sung cùng ngày: mục **21.8** đưa chính module QT vào vận hành (GĐ1 QT1–QT4 cài tay → GĐ2 QT5–QT8 cài tay lần cuối + bộ thực thi → GĐ3 bản
+vá đầu qua trung tâm → GĐ4), tình huống T1–T4; mục **21.6a** quay về bản cũ **ba mức – mặc định chỉ trả code** (người dùng hỏi 14/11/2026),
+gói ghi `rollback.json` + `db-scripts\down\`. **Kế hoạch chi tiết từng lát** (cấu hình, backend, API, quyền, giao diện, migration, test, tiêu
+chí xong, lộ trình 0.32.0 → 0.37.0, việc làm một lần mỗi máy, diễn tập D1–D4): `D:\project\PhanTich_KeHoach_QuanTriVanHanh_14-11-2026.pdf`
+(ngoài repo). Lưu ý khi làm: mã quyền theo quy ước có sẵn `System.Ops.*` (design.md 21.6 ghi tắt `Ops.*` – sửa ở QT1); QT7 dùng lại bộ giới
+hạn tần suất `PortalRateLimiting` cho đăng nhập nội bộ. **Lát kế tiếp: QT1** (nhận diện môi trường `App:Environment` + dải màu, `Email:RedirectAllTo`,
+khung module, quyền `System.Ops.View`, nhật ký vận hành CSDL + file, màn hình SYS) – trình kế hoạch ngắn rồi mới code (CLAUDE.md mục 1).
 
 **N4d xong 14/11/2026 (chưa phát hành)** – nhánh `feature/n4d-bao-cao-gop-theo-cap` (đã merge): báo cáo gộp theo cấp nhóm hàng – mục còn lại
 của đợt N4 ("báo cáo gộp theo cấp để lát sau"). Màn hình Mua hàng theo NCC (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** (nhóm của mặt
