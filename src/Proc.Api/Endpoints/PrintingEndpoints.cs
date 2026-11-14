@@ -49,6 +49,11 @@ public static class PrintingEndpoints
                 async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.GoodsReceiptRecordAsync(id, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Inventory.DocumentView);
+        // Lát K2b: biên bản giao nhận và kiểm tra hàng hóa từ XNH – cùng quyền với xem XNH (xem, lập, nghiệm thu).
+        app.MapGet("/api/receipt-confirmations/{id:guid}/pdf",
+                async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.ReceiptConfirmationAsync(id, ct)))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage, Permissions.Purchase.ReceiptAccept);
         return app;
     }
 

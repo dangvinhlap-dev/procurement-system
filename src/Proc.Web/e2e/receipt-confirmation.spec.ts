@@ -47,6 +47,15 @@ test('xác nhận nhận hàng theo PO, điều chỉnh SL, nghiệm thu, báo c
   await page.getByRole('tab', { name: /Lịch sử điều chỉnh/i }).click()
   await expect(page.getByRole('tabpanel')).toContainText('Trả NCC 1 hộp sai quy cách')
 
+  // Lát K2b: "In phiếu" mở biên bản giao nhận và kiểm tra hàng hóa (PDF) ở tab mới.
+  const pdfResponse = page.waitForResponse((r) => r.url().endsWith('/pdf'))
+  const popup = page.waitForEvent('popup')
+  await page.getByRole('button', { name: 'In phiếu' }).click()
+  const pdf = await pdfResponse
+  expect(pdf.status()).toBe(200)
+  expect(pdf.headers()['content-type']).toContain('application/pdf')
+  await (await popup).close()
+
   // PO: SL thực nhận 7, còn 3.
   await page.goto(`/mua-hang/po/${po.id}`)
   await expect(page.locator('.document-form-number')).toHaveText(po.no)

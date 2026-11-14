@@ -79,4 +79,15 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu không phải phiếu nhập mua NCC.</exception>
     Task<PdfFile> GoodsReceiptRecordAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// In phiếu xác nhận nhận hàng XNH thành biên bản giao nhận và kiểm tra hàng hóa (lát K2b, design.md mục 10.10, 19.4): SL theo phiếu
+    /// giao, SL đạt, không đạt, thiếu so với phiếu giao, kết quả và ghi chú kiểm tra từng dòng; SL thực nhận sau điều chỉnh (nếu có), hóa
+    /// đơn, nghiệm thu của đơn vị đặt hàng, giá trị thực nhận theo giá PO.
+    /// </summary>
+    /// <param name="id">Phiếu XNH.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi công ty.</exception>
+    Task<PdfFile> ReceiptConfirmationAsync(Guid id, CancellationToken cancellationToken);
 }
