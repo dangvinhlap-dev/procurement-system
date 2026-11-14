@@ -3,6 +3,35 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.30.0] - 2026-11-14
+
+**Mọi file Excel xuất ra cùng định dạng lưới trên màn hình** (theo ảnh mẫu `docs/diagrams/formatexportExcel.png`).
+
+### Thêm mới
+- Không có chức năng mới.
+
+### Thay đổi
+- File Excel của mọi nơi xuất: nút **Xuất Excel** ở mọi danh sách, báo cáo; xuất danh mục và các file mẫu nhập (danh mục, bảng giá, hợp đồng
+  nguyên tắc, dữ liệu mua lịch sử); xuất chứng từ mua / chứng từ kho cho kế toán; báo cáo tháng cho Ban cung ứng.
+- Hình thức: chữ Tahoma 9pt; tiêu đề báo cáo đậm xanh đậm, dòng điều kiện lọc – giờ xuất nghiêng; dòng tiêu đề cột nền xám xanh chữ thường;
+  kẻ ô mảnh đủ dọc ngang, nền trắng, dòng cao như lưới, tắt lưới mờ của Excel (file mẫu nhập danh mục giữ lưới để gõ thêm dòng).
+- Số lượng, tiền: phông đơn cách, canh phải; ngày dd/MM/yyyy canh trái; **số chứng từ** phông đơn cách chữ xanh đậm; cột **trạng thái** tô màu
+  chữ theo đèn (xanh lá hoàn thành, vàng đang chờ, đỏ lỗi/quá hạn) – không thêm ký tự.
+- Chỉ đổi hình thức: vị trí ô, kiểu ô (số, ngày, chữ) giữ nguyên – file danh mục xuất ra vẫn nhập lại được, file kế toán vẫn ghép cột như cũ.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (không migration, không script `db/scripts`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng, giữ `appsettings.Production.json`. Không cần chạy script CSDL, không có quyền mới. Nên sao lưu CSDL như mọi lần nâng.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.29.0 (`app-0.29.0`) – không có thay đổi CSDL nên không cần gỡ migration hay khôi phục dữ liệu.
+
 ## [0.29.0] - 2026-11-14
 
 Hoàn tất **danh mục nhóm hàng 4 cấp**: giao diện cây nhóm hàng (lát N4b) và mặt hàng chỉ gắn nhóm cấp 4 – Chủng loại (lát N4c).
