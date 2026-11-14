@@ -56,7 +56,7 @@ export function PortalLayout() {
   return (
     <PortalSessionContext.Provider value={value}>
       <ClassicScreen className="erp-portal">
-        <EnvironmentBanner endpoint="/api/portal/environment" />
+        <EnvironmentBanner endpoint="/api/portal/auth/environment" />
         {session && (
           <header className="erp-portal-bar">
             <span className="erp-portal-brand">Portal nhà cung cấp</span>

@@ -20,7 +20,7 @@ export interface EnvironmentStatus {
 /**
  * Môi trường của máy chủ – gọi một lần mỗi phiên trình duyệt (cấu hình chỉ đổi khi khởi động lại máy chủ). Lỗi mạng thì coi như không biết
  * (không vẽ dải) – trang vẫn dùng được.
- * @param endpoint API: nội bộ `/api/ops/v1/environment`, Portal NCC `/api/portal/environment` (site Portal chỉ mở /api/portal).
+ * @param endpoint API: nội bộ `/api/ops/v1/environment`, Portal NCC `/api/portal/auth/environment` (site Portal chỉ mở /api/portal).
  */
 export function useEnvironmentStatus(endpoint = '/api/ops/v1/environment') {
   return useQuery({

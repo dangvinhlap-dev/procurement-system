@@ -52,7 +52,7 @@ test('máy chưa khai môi trường: trang đăng nhập hiện dải đỏ c�
 })
 
 test('Portal NCC của máy TEST cũng hiện dải cam (API môi trường của site Portal)', async ({ page }) => {
-  await page.route('**/api/portal/environment', (route) => route.fulfill({ json: { environment: 'Test', warning: null } }))
+  await page.route('**/api/portal/auth/environment', (route) => route.fulfill({ json: { environment: 'Test', warning: null } }))
   await page.goto('/ncc/dang-nhap')
   await expect(page.getByTestId('environment-banner')).toContainText('MÔI TRƯỜNG TEST')
 })

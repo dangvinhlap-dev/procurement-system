@@ -40,7 +40,7 @@ function useTestTitle(active: boolean) {
  * Dải nhận diện môi trường (design.md mục 21.3, lát QT1 – ui-style.md mục 5j): xám "DEV", cam "MÔI TRƯỜNG TEST", PROD không dải. Máy thiếu
  * cấu hình (chưa khai App:Environment, TEST chưa khai hộp thư test – người dùng chốt 14/11/2026) thì dải đỏ kèm cảnh báo, email không gửi.
  * Đặt đầu AppShell, trang đăng nhập, trang điện thoại `/duyet`, Portal NCC.
- * @param endpoint API môi trường – Portal NCC dùng `/api/portal/environment`.
+ * @param endpoint API môi trường – Portal NCC dùng `/api/portal/auth/environment`.
  * @param floating Dải nổi trên đầu trang (trang đăng nhập canh giữa màn hình).
  */
 export function EnvironmentBanner({ endpoint, floating = false }: { endpoint?: string; floating?: boolean }) {

@@ -23,8 +23,8 @@ public static class OperationsEndpoints
         ops.MapGet("/environment", (IEnvironmentStatus status) => status.Get())
             .AllowAnonymous();
         // Site Portal NCC chỉ mở /api/portal (PortalHostMiddleware – N3: không có chức năng QT trên Portal): cùng nội dung để dải TEST hiện cả
-        // trên Portal của máy TEST.
-        app.MapGet("/api/portal/environment", (IEnvironmentStatus status) => status.Get())
+        // trên Portal của máy TEST; nằm dưới /api/portal/auth vì API Portal ẩn danh chỉ được ở nhóm đó (PortalInfrastructureTests).
+        app.MapGet("/api/portal/auth/environment", (IEnvironmentStatus status) => status.Get())
             .WithTags("Portal NCC")
             .AllowAnonymous();
 

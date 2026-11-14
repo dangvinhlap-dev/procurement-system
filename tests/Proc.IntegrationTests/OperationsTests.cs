@@ -86,6 +86,7 @@ public class OperationsTests
         var anonymous = _factory.CreateClient();
         var body = await ReadAsync<EnvironmentStatusDto>(await anonymous.GetAsync("/api/ops/v1/environment", Ct));
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Dev, null), body);
+        Assert.Equal(body, await ReadAsync<EnvironmentStatusDto>(await anonymous.GetAsync("/api/portal/auth/environment", Ct)));
 
         EnvironmentStatusDto Status(string? environment, bool enabled, string? redirect) =>
             new EnvironmentStatus(Options.Create(new AppEnvironmentOptions { Environment = environment }),

@@ -70,6 +70,8 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 
 | Mục | Đặt |
 | --- | --- |
+| `App:Environment` | **Bắt buộc** (lát QT1): `Prod` trên máy chạy thật, `Test` trên máy thử nghiệm. Bỏ trống thì máy coi là "chưa khai": **không gửi email nào**, mọi màn hình hiện dải đỏ cảnh báo; khai sai tên thì ứng dụng không khởi động |
+| `Operations:LogDirectory` | Thư mục file nhật ký vận hành, ngoài thư mục ứng dụng: `D:\ProcurementData\operations-log` |
 | `ConnectionStrings:Procurement` | Mật khẩu CSDL của tài khoản `proc` |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
@@ -78,6 +80,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Printing:FontDirectories` | Để trống – Windows có sẵn Arial có dấu tiếng Việt |
 | `Email:*` | Gửi email bản sao thông báo (chờ duyệt, đã duyệt, bị từ chối…) qua SMTP của công ty: `Enabled` = `true`, `Host`, `Port` (587 STARTTLS / 465 SSL), `UserName`, `Password`, `FromAddress`, `AppBaseUrl` = địa chỉ người dùng mở phần mềm (nút "Mở trên phần mềm" trong thư). Để `false` thì không gửi thư |
 | `Portal:*` | Portal nhà cung cấp (lát P1): `BaseUrl` = địa chỉ NCC mở Portal, ghi vào link mời / đặt lại mật khẩu trong email (ví dụ tên miền Portal mở ra internet; trống thì lấy `Email:AppBaseUrl`, vẫn trống thì lấy địa chỉ trang người mời đang mở – đủ khi thử trong LAN). Đăng nhập Portal cần **email bật** để gửi mã OTP. `Audience` phải khác `Jwt:Audience`. `ExposeCodesForTesting` chỉ có tác dụng ở Development/Testing – server thật luôn tắt; máy chủ **thử nghiệm trong LAN** chưa có email đặt thêm `TestServer` = `true` để mã OTP / link đặt lại mật khẩu hiện trên màn hình Portal (ghi cảnh báo vào log; không khởi động nếu đồng thời đặt `Hosts`). Các thời hạn (`InviteValidHours` 168, `OtpValidMinutes` 10, `LockoutMinutes` 15…) thường không cần sửa. Lát P1b: `Hosts` = tên miền Portal mở ra internet (nhiều tên cách dấu phẩy, ví dụ `ncc.tapdoan.vn`) – vào bằng tên này chỉ mở được trang `/ncc` và API Portal (xem 3.5b); `RateLimit:AuthPermitPerMinute` (20) / `RateLimit:ApiPermitPerMinute` (300) = số yêu cầu tối đa mỗi phút mỗi IP vào đăng nhập Portal / API Portal khác, vượt thì báo 429 "Quá nhiều yêu cầu" |
+| `Email:RedirectAllTo` | Chỉ máy **TEST**: hộp thư nhận thay mọi thư (tiêu đề có "[TEST] gửi cho: người nhận gốc"). Máy TEST bật email mà để trống thì không gửi thư nào. Máy PROD để trống |
 | `ApprovalReminder:*` | Nhắc người duyệt khi phiếu chờ quá 1 ngày làm việc (thông báo + email nếu bật email): mặc định `Enabled` = `true`, quét mỗi `PollMinutes` = 15 phút, tối đa `MaxReminders` = 3 lần mỗi cấp. Thường không cần sửa |
 
 Sinh `Jwt:SigningKey` (bộ sinh số ngẫu nhiên dùng cho mật mã):
@@ -164,6 +167,11 @@ Chép `E:\ProcurementBackup` ra máy khác định kỳ. Tác vụ báo "Last Ru
 4. Chép đè nội dung thư mục `app` của gói mới vào `D:\Procurement\app`. **Giữ nguyên** `appsettings.Production.json` (gói không chứa
    file này nên chép đè không mất); file đính kèm nằm ở `D:\ProcurementData` nên không bị ảnh hưởng.
 5. Xóa `app_offline.htm`, mở `/health` kiểm tra phiên bản mới.
+
+**Từ bản 0.32.0** (lát QT1): trước khi chép bản mới, thêm `App:Environment` (`Prod` / `Test`) và `Operations:LogDirectory` vào
+`appsettings.Production.json`; máy TEST thêm `Email:RedirectAllTo`. Quên khai `App:Environment` thì phần mềm vẫn chạy nhưng không gửi email và
+hiện dải đỏ cảnh báo cho tới khi khai rồi khởi động lại App Pool. Sau khi nâng, màn hình **Hệ thống → Tổng quan hệ thống** (SYS) phải không còn
+migration chờ, dòng môi trường đúng.
 
 ## 6. Khôi phục
 
