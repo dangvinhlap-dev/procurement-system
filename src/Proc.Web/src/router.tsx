@@ -90,6 +90,8 @@ import { DemandPlanListPage, DemandPlanPage } from './pages/purchasing/DemandPla
 import { DemandSummaryPage } from './pages/purchasing/DemandSummaryPage'
 import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
+import { OperationLogListPage } from './pages/system/OperationLogListPage'
+import { SystemOverviewPage } from './pages/system/SystemOverviewPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { CompanyListPage } from './pages/system/CompanyListPage'
 import { DocumentNumberingPage } from './pages/system/DocumentNumberingPage'
@@ -177,6 +179,8 @@ const implemented: Record<string, ReactNode> = {
   ROLE: <RoleListPage />,
   LOG: <AuditLogListPage />,
   ACC: <AccessLogListPage />,
+  SYS: <SystemOverviewPage />,
+  OPLOG: <OperationLogListPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,

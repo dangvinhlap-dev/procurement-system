@@ -22,6 +22,11 @@ public static class OperationsEndpoints
         // bí mật.
         ops.MapGet("/environment", (IEnvironmentStatus status) => status.Get())
             .AllowAnonymous();
+        // Site Portal NCC chỉ mở /api/portal (PortalHostMiddleware – N3: không có chức năng QT trên Portal): cùng nội dung để dải TEST hiện cả
+        // trên Portal của máy TEST.
+        app.MapGet("/api/portal/environment", (IEnvironmentStatus status) => status.Get())
+            .WithTags("Portal NCC")
+            .AllowAnonymous();
 
         ops.MapGet("/overview", (ISystemOverview s, CancellationToken ct) => s.GetAsync(ct))
             .RequirePermission(Permissions.System.OpsView)
