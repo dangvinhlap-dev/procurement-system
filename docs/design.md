@@ -3048,6 +3048,29 @@ Quyền khác: `Ops.View` (xem SYS), `Ops.ErrorLog.View/Manage`, `Ops.Backup.Run
 | QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ, bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
 | QT9 | Làm mới TEST từ PROD (làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
+### 21.8 Đưa chính module QT vào vận hành (14/11/2026)
+
+Module QT là công cụ chuyển bản nhưng chính nó cũng phải được chuyển lên, nên các bản đầu tiên chứa QT vẫn cài theo cách cũ:
+
+| Giai đoạn | Bản chứa | Cách cài DEV → TEST → PROD | Việc làm một lần trên mỗi máy chủ |
+| --- | --- | --- | --- |
+| GĐ1 | QT1–QT4 | Bằng tay theo `docs/phat-hanh.md`, `docs/deploy-windows.md`: TEST trước (mọi người dùng thử), PROD sau | TEST rồi PROD: script bật lưu WAL + khởi động lại PostgreSQL một lần; tạo tài khoản `Maintenance`; đặt `App:Environment`, `Email:RedirectAllTo` (TEST). Từ đây PROD có sao lưu Full / Diff / WAL trước các giai đoạn sau |
+| GĐ2 | QT5–QT8 | **Lần cài bằng tay cuối cùng**: TEST trước, PROD sau | `qt-agent-install.ps1` trên TEST, PROD (tác vụ Task Scheduler); trên PROD màn hình REL khai địa chỉ TEST (DEV nếu có), tạo khóa dịch vụ, dán vào cấu hình từng máy; bấm **"Lệnh thử"** (bộ thực thi nhận lệnh, báo phiên bản, không cài); SYS hiện đủ các môi trường |
+| GĐ3 | Bản vá đầu tiên sau GĐ2 | **Lần đầu qua trung tâm phát hành** (bước 1–4 mục 21.6), có người theo dõi từng bước | Giữ sẵn gói cũ và cách cài tay; hỏng ở bước nào thì cài tay bản đó, ghi lỗi, sửa trong DEV |
+| GĐ4 | Mọi bản sau, kể cả QT9 và bản sửa module QT | Chỉ qua trung tâm phát hành; cài tay chỉ là đường dự phòng khi sự cố | – |
+
+Tình huống thiết kế phải xử lý:
+
+| # | Tình huống | Cách xử lý |
+| --- | --- | --- |
+| T1 | Bộ thực thi tự nâng cấp | Script bộ thực thi nằm trong gói (`tools\qt-agent.ps1`); cài xong ứng dụng, `/health` đạt thì **mới** chép bản bộ thực thi mới cho lần chạy sau, không thay chính mình giữa chừng; hỏng thì chạy lại `qt-agent-install.ps1` |
+| T2 | Bản mới làm hỏng trung tâm phát hành trên PROD | Bộ thực thi chạy độc lập với web (site tắt bằng `app_offline.htm`, kết quả ghi file trước rồi báo về CSDL khi web chạy lại); kiểm thử nhanh sau cài có bước "trung tâm phát hành mở được" – không đạt thì tự quay về gói cũ + CSDL vừa sao lưu; vẫn hỏng thì làm tay theo `docs/deploy-windows.md` mục 6 |
+| T3 | TEST chạy bản mới hơn PROD trong lúc UAT | API giữa bộ thực thi / API trạng thái và trung tâm có số phiên bản (`/api/ops/v1/...`), chỉ **thêm**, không sửa / bỏ trường; đổi giao thức thì giữ song song bản cũ ít nhất một lần phát hành |
+| T4 | Làm mới TEST từ PROD chép đè dữ liệu QT của TEST | REL chỉ hoạt động trên PROD (`App:Environment=Prod`), TEST chỉ xem; nhật ký vận hành TEST ghi thêm ra file; sau khi làm mới, bộ thực thi đặt lại cấu hình TEST (môi trường, email chuyển hướng, khóa dịch vụ) |
+
+DEV không bắt buộc có bộ thực thi: gói từ DEV đưa lên GitHub Release (bước G1 – `docs/phat-hanh.md`), trung tâm PROD nhận gói từ đó; DEV có
+chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
