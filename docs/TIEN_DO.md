@@ -995,8 +995,18 @@ TRUONGPHONGBAN (xem + duyệt BKT), DENGHI (xem + lập BKT), NVCUVT (xem + lậ
 HOIDONG, KSNB, LANHDAO, PHOCTUBCL, TPCUVT, TRUONGBANCUVT, VANHANH (xem DNT, BKT); TOANQUYEN đủ 9 quyền mới (kể cả `Sourcing.Rfq.ViewSealed`).
 Chưa áp lại "Cấu hình duyệt mẫu" CUVT cho DNT / BKT / TVB (chưa cấu hình thì duyệt một cấp) – để người test tự áp.
 
+**⛔ TẠM DỪNG MỌI VIỆC PORTAL (người dùng yêu cầu 14/11/2026)**: "tất cả mục liên quan đến portal hãy dừng lại và ghi nhận để tôi phân
+tích và ra lệnh trước khi bạn làm". Không làm P2b, P7 (bảng giá, tin nhắn, thẻ điểm), việc sau P5 (P5-8) hay sửa gì thuộc Portal cho đến khi
+người dùng ra lệnh. **Ngoại lệ**: cùng ngày người dùng ra lệnh "tiếp tục thực hiện nhánh P7a" → P7a làm xong (dưới); P7b tin nhắn, P7c thẻ điểm,
+P2b, P5-8 vẫn dừng.
+
+**P7a xong 14/11/2026 (chưa phát hành)** – nhánh `feature/p7a-ncc-xem-bang-gia`, NCC xem bảng giá đã duyệt trên Portal (design.md 19.5 P7-1…P7-5):
+`PortalPriceListModels.cs`, `PortalPriceListService.cs`, API `GET /api/portal/price-lists`, `…/{id}`; giao diện `portal/PortalPriceListPages.tsx`
+(menu "Bảng giá", `/ncc/bang-gia`, `/ncc/bang-gia/:id`), ui-style 5f. Không migration, không quyền mới. Test: tích hợp
+`PortalBangGia_ChiBangDaDuyet_TinhTrangTheoNgay_GiaSauChietKhau_CoLapNcc`, e2e `portal-price-list.spec.ts`.
+
 **P2a xong 14/11/2026, P6b xong 13/11/2026 (chưa phát hành).** Còn: 0.28.0 (K3 gỡ hẳn kho – cần người dùng xác nhận sao lưu; P2b đăng ký NCC
-mới công khai – chờ người dùng bảo làm (Q11); P7 bảng giá, tin nhắn, thẻ điểm NCC trên Portal); mẫu 1C/2C thật khi người dùng gửi.
+mới công khai – chờ người dùng bảo làm (Q11); P7b tin nhắn, P7c thẻ điểm NCC trên Portal – đang dừng chờ lệnh); mẫu 1C/2C thật khi người dùng gửi.
 
 **Việc sau của lát P5 (người dùng đồng ý 13/11/2026 – design.md 19.5 P5-8):** phiếu báo giao NCC còn "chờ nhận" (chưa có XNH) tự đóng khi
 PO đã nhận đủ / hoàn thành – trạng thái "Đã đóng (đơn đã nhận đủ)" trên Portal và tab "Giao hàng NCC", NCC không hủy / thêm file; tính từ

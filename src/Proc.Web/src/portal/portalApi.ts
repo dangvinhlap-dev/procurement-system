@@ -698,6 +698,52 @@ export interface PortalPaymentDetail {
   rounds: PortalPaymentRound[]
 }
 
+/** Tình trạng bảng giá trên Portal theo ngày hôm nay (lát P7a – design.md 19.5, P7-3). */
+export type PortalPriceListStatus = 'Current' | 'Upcoming' | 'Expired' | 'Inactive'
+
+/** Tên tình trạng bảng giá. */
+export const portalPriceListStatusLabels: Record<PortalPriceListStatus, string> = {
+  Current: 'Đang áp dụng',
+  Upcoming: 'Chưa đến ngày hiệu lực',
+  Expired: 'Hết hạn',
+  Inactive: 'Ngừng áp dụng',
+}
+
+/** Một bảng giá đã duyệt của NCC (P7-2). */
+export interface PortalPriceList {
+  id: string
+  no: string
+  title: string
+  companyName: string
+  isGroupWide: boolean
+  validFrom: string
+  validTo: string | null
+  deliveryTerms: string | null
+  approvedDate: string | null
+  lineCount: number
+  status: PortalPriceListStatus
+}
+
+/** Một dòng giá (P7-4) – VND, chưa VAT. */
+export interface PortalPriceListLine {
+  lineNo: number
+  itemCode: string
+  supplierItemCode: string | null
+  itemName: string
+  uomCode: string
+  minQty: number
+  unitPrice: number
+  discountPct: number
+  netPrice: number
+  vatCode: string | null
+}
+
+/** Chi tiết bảng giá. */
+export interface PortalPriceListDetail {
+  header: PortalPriceList
+  lines: PortalPriceListLine[]
+}
+
 export const portalApi = {
   /** Đăng nhập bước 1: email + mật khẩu → gửi OTP. */
   login: (email: string, password: string) =>
@@ -766,6 +812,10 @@ export const portalApi = {
   payments: () => portalFetch<PortalPaymentOrder[]>('/api/portal/payments'),
   /** Chi tiết thanh toán một đơn. */
   payment: (orderId: string) => portalFetch<PortalPaymentDetail>(`/api/portal/payments/${orderId}`),
+  /** Bảng giá đã duyệt của NCC (lát P7a). */
+  priceLists: () => portalFetch<PortalPriceList[]>('/api/portal/price-lists'),
+  /** Chi tiết một bảng giá. */
+  priceList: (id: string) => portalFetch<PortalPriceListDetail>(`/api/portal/price-lists/${id}`),
   /** Hồ sơ công ty kèm các đề nghị cập nhật đã gửi (lát P2a). */
   profile: () => portalFetch<PortalProfile>('/api/portal/profile'),
   /** Quản trị NCC gửi đề nghị cập nhật hồ sơ. */

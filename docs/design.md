@@ -2768,6 +2768,18 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | P2-6 | NCC gửi đề nghị → **thông báo** cho người có quyền "Thêm, sửa nhà cung cấp" ở tổng công ty (mở đề nghị). Chấp nhận / từ chối → **thư** cho mọi tài khoản Portal đang dùng của NCC (loại `ProfileRequestAccepted` / `ProfileRequestRejected`; thư từ chối ghi lý do; chấp nhận có tài khoản thì nói rõ còn chờ duyệt). Rút không có thư. Portal không hiện tên người xử lý nội bộ. |
 | P2-7 | API Portal: `GET /api/portal/profile`, `POST /api/portal/profile/requests`, `POST …/requests/{id}/withdraw`, file `…/requests/{id}/attachments`; nội bộ `GET /api/supplier-profile-requests` (lọc `status`, `supplierId`), `GET …/{id}`, `POST …/{id}/accept`, `POST …/{id}/reject`. Migration `V0_28_0_DeNghiCapNhatHoSoNcc` (bảng mới; `Down()` mất đề nghị). Loại đính kèm `SupplierProfileFile`. |
 
+**Lát P7a – NCC xem bảng giá trên Portal (đã làm 14/11/2026, chưa phát hành, bản 0.28.0).** P7 tách ba lát: **P7a** bảng giá (lát này), **P7b**
+tin nhắn, **P7c** thẻ điểm NCC. Ngày 14/11/2026 người dùng **dừng mọi việc Portal** để phân tích, sau đó cho làm tiếp riêng P7a; P7b, P7c chờ
+lệnh. Quy tắc tự đặt (người dùng có thể chỉnh):
+
+| # | Quy tắc |
+| --- | --- |
+| P7-1 | Trang **Bảng giá** `/ncc/bang-gia` (menu Portal, mọi người dùng Portal của NCC) và trang chi tiết `/ncc/bang-gia/:id`. **Chỉ đọc** – NCC không lập, không đề nghị đổi giá trên Portal (muốn đổi giá liên hệ Phòng CUVT). Số liệu đọc thẳng bảng giá NCC (mục 8.1) – **không migration, không quyền mới**. |
+| P7-2 | NCC chỉ thấy bảng giá **của chính mình** đã duyệt: **Hiệu lực** và **Ngừng**; không thấy bảng Nháp, Chờ duyệt, Đã hủy (giá còn đổi / không dùng). Bảng khác, của NCC khác → 404 như không tồn tại. Gồm cả bảng toàn tập đoàn và bảng riêng từng công ty. |
+| P7-3 | **Tình trạng** theo ngày hôm nay (giờ Việt Nam), luôn có chữ kèm đèn: **Đang áp dụng** (xanh), **Chưa đến ngày hiệu lực** (vàng – hôm nay trước ngày bắt đầu), **Hết hạn** (xám – sau ngày hết hiệu lực), **Ngừng áp dụng** (đỏ – bên mua đã ngừng). Danh sách xếp đang áp dụng → chưa đến ngày → hết hạn → ngừng; trong nhóm hiệu lực mới trước. |
+| P7-4 | NCC thấy: số, tên bảng giá, áp dụng tại (công ty lập, hoặc "Toàn tập đoàn (lập: …)"), hiệu lực từ – đến, điều kiện giao hàng, ngày duyệt, số dòng; dòng: STT, mã hàng, mã hàng NCC (danh mục NCC – mặt hàng), tên hàng, ĐVT, SL từ (bậc số lượng), đơn giá, tiền tệ VND, % CK, **giá sau CK** = đơn giá × (100 − %CK) / 100 (ví dụ 50.000 CK 4% → 48.000), thuế suất (dòng trống thì theo mặt hàng). **Không hiện**: ghi chú bảng giá và ghi chú dòng (nội bộ), người lập / duyệt, ý kiến duyệt, file đính kèm, lý do từ chối / ngừng, giá theo ĐVT cơ sở. |
+| P7-5 | API Portal: `GET /api/portal/price-lists`, `GET /api/portal/price-lists/{id}` (NCC lấy từ phiên – P1b-4). |
+
 ### 19.6 Lộ trình
 
 | Bản | Lát | Nội dung |
@@ -2778,7 +2790,7 @@ Quy tắc (còn lại tự đặt, người dùng có thể chỉnh):
 | 0.25.0 | P3a, P3b | Portal: báo giá online niêm phong, hạn nộp kèm giờ, xem trước giờ mở theo quyền (P3a – xong 12/11/2026); file báo giá (P3b-1 – xong 12/11/2026), hỏi đáp (P3b-2 – xong 12/11/2026), email báo NCC (P3b-3 – xong 12/11/2026) |
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a, đề nghị tổng hợp 1C Y11b – xong 13/11/2026), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
-| 0.28.0 | K3, P2, P6b, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ (P2a – xong 14/11/2026), đăng ký NCC mới (P2b – chờ người dùng); trạng thái thanh toán trên Portal (P6b – xong 13/11/2026); bảng giá, tin nhắn, thẻ điểm |
+| 0.28.0 | K3, P2, P6b, P7 | Gỡ hẳn kho; NCC tự quản lý hồ sơ (P2a – xong 14/11/2026), đăng ký NCC mới (P2b – chờ người dùng); trạng thái thanh toán trên Portal (P6b – xong 13/11/2026); bảng giá (P7a – xong 14/11/2026), tin nhắn (P7b), thẻ điểm (P7c) – P7b, P7c chờ người dùng |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
 

@@ -204,6 +204,7 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Portal.IPortalDeliveryNoticeService, Proc.Infrastructure.Portal.PortalDeliveryNoticeService>();
         // Lát P6b: trạng thái thanh toán trên Portal.
         services.AddScoped<Proc.Application.Portal.IPortalPaymentService, Proc.Infrastructure.Portal.PortalPaymentService>();
+        services.AddScoped<Proc.Application.Portal.IPortalPriceListService, Proc.Infrastructure.Portal.PortalPriceListService>();
         // Lát P2a: hồ sơ NCC trên Portal – đề nghị cập nhật.
         services.AddScoped<Proc.Application.Portal.IPortalProfileService, Proc.Infrastructure.Portal.PortalProfileService>();
         services.AddScoped<Proc.Application.Purchasing.IDeliveryNoticeService, Proc.Infrastructure.Purchasing.DeliveryNoticeService>();

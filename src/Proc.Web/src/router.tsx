@@ -24,6 +24,7 @@ import {
 } from './portal/PortalPages'
 import { PortalOrderListPage, PortalOrderPage } from './portal/PortalOrderPages'
 import { PortalPaymentListPage, PortalPaymentPage } from './portal/PortalPaymentPages'
+import { PortalPriceListListPage, PortalPriceListPage } from './portal/PortalPriceListPages'
 import { PortalProfilePage } from './portal/PortalProfilePages'
 import { PortalRfqListPage, PortalRfqPage } from './portal/PortalRfqPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
@@ -320,6 +321,8 @@ export const router = createBrowserRouter([
       { path: 'don-hang/:id', element: <RequirePortal><PortalOrderPage /></RequirePortal> },
       { path: 'thanh-toan', element: <RequirePortal><PortalPaymentListPage /></RequirePortal> },
       { path: 'thanh-toan/:id', element: <RequirePortal><PortalPaymentPage /></RequirePortal> },
+      { path: 'bang-gia', element: <RequirePortal><PortalPriceListListPage /></RequirePortal> },
+      { path: 'bang-gia/:id', element: <RequirePortal><PortalPriceListPage /></RequirePortal> },
       { path: 'ho-so', element: <RequirePortal><PortalProfilePage /></RequirePortal> },
     ],
   },
