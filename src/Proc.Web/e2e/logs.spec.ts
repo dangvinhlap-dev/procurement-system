@@ -24,7 +24,7 @@ async function createRoleAtBha(page: Page): Promise<string> {
   const code = `NK${Date.now().toString(36)}`.toUpperCase()
   const response = await page.request.post('/api/roles', {
     headers: { Authorization: `Bearer ${accessToken}`, 'X-Company-Id': bha.id },
-    data: { code, name: 'Vai trò xem nhật ký', permissionCodes: ['Inventory.Stock.View'] },
+    data: { code, name: 'Vai trò xem nhật ký', permissionCodes: ['Purchase.Receipt.View'] },
   })
   expect(response.status()).toBe(201)
   return code

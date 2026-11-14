@@ -1,198 +1,13 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { apiFetch } from './client'
-import type { ReceiptAcceptance } from './inventoryDocuments'
+import type { ReceiptAcceptance } from './receiptConfirmations'
 
 /*
- * Kiểu dữ liệu và hàm gọi API báo cáo kho (khớp Proc.Application.Reports – StockReports.cs, design.md mục 11.2).
+ * Kiểu dữ liệu và hàm gọi API báo cáo (khớp Proc.Application.Reports, design.md mục 11). Báo cáo kho gỡ ở lát K3 (design.md mục 19.4).
  */
 
 const useCompanyId = () => useAuth().workingCompany?.id ?? ''
-
-/** Một dòng hàng chậm luân chuyển: kho × mặt hàng còn tồn, lâu không xuất. */
-export interface SlowMovingRow {
-  warehouseId: string
-  warehouseCode: string
-  warehouseName: string
-  itemId: string
-  itemCode: string
-  itemName: string
-  categoryCode: string
-  categoryName: string
-  uomCode: string
-  qty: number
-  amount: number
-  firstInDate: string | null
-  lastInDate: string | null
-  lastOutDate: string | null
-  idleDays: number
-}
-
-/** Báo cáo hàng chậm luân chuyển. */
-export interface SlowMovingResult {
-  asOf: string
-  days: number
-  items: SlowMovingRow[]
-}
-
-/** Một lô còn tồn sắp (hoặc đã) hết hạn. */
-export interface ExpiringRow {
-  warehouseId: string
-  warehouseCode: string
-  warehouseName: string
-  itemId: string
-  itemCode: string
-  itemName: string
-  categoryCode: string
-  uomCode: string
-  lotNo: string
-  expiryDate: string
-  daysLeft: number
-  qty: number
-  amount: number
-}
-
-/** Báo cáo hàng sắp hết hạn. */
-export interface ExpiringResult {
-  asOf: string
-  days: number
-  items: ExpiringRow[]
-}
-
-/** Tồn một mặt hàng tại một công ty – chỉ số lượng. */
-export interface GroupStockRow {
-  companyId: string
-  companyCode: string
-  companyName: string
-  isCurrent: boolean
-  mainQty: number
-  mainAvailable: number
-  subQty: number
-  totalQty: number
-}
-
-/** Tồn tập đoàn của một mặt hàng. */
-export interface GroupStockResult {
-  itemId: string
-  itemCode: string
-  itemName: string
-  uomCode: string
-  minStock: number | null
-  items: GroupStockRow[]
-}
-
-/** Điều kiện chung của báo cáo kho: kho, nhóm hàng (gồm nhóm con), số ngày. */
-export interface StockReportFilter {
-  warehouseId?: string
-  categoryId?: string
-  days: number
-}
-
-/** Chuỗi tham số URL của báo cáo kho (số ngày, kho, nhóm hàng…), bỏ tham số trống. */
-function toQuery(filter: StockReportFilter) {
-  const params = new URLSearchParams({ days: String(filter.days) })
-  if (filter.warehouseId) params.set('warehouseId', filter.warehouseId)
-  if (filter.categoryId) params.set('categoryId', filter.categoryId)
-  return params.toString()
-}
-
-/**
- * Hàng chậm luân chuyển: còn tồn mà không xuất từ filter.days ngày.
- * @param filter Kho, nhóm hàng, số ngày không xuất.
- */
-export function useSlowMoving(filter: StockReportFilter) {
-  const companyId = useCompanyId()
-  const query = toQuery(filter)
-  return useQuery({
-    queryKey: ['reports', companyId, 'slow-moving', query],
-    queryFn: () => apiFetch<SlowMovingResult>(`/api/reports/slow-moving?${query}`),
-    placeholderData: keepPreviousData,
-  })
-}
-
-/**
- * Lô sắp hết hạn trong filter.days ngày tới (gồm lô đã hết hạn).
- * @param filter Kho, nhóm hàng, số ngày tới.
- */
-export function useExpiring(filter: StockReportFilter) {
-  const companyId = useCompanyId()
-  const query = toQuery(filter)
-  return useQuery({
-    queryKey: ['reports', companyId, 'expiring', query],
-    queryFn: () => apiFetch<ExpiringResult>(`/api/reports/expiring?${query}`),
-    placeholderData: keepPreviousData,
-  })
-}
-
-/**
- * Tồn một mặt hàng ở mọi công ty (cần quyền xem toàn tập đoàn).
- * @param itemId Mặt hàng; trống thì không tải.
- */
-export function useGroupStock(itemId: string | undefined) {
-  const companyId = useCompanyId()
-  return useQuery({
-    queryKey: ['reports', companyId, 'group-stock', itemId],
-    queryFn: () => apiFetch<GroupStockResult>(`/api/reports/group-stock?itemId=${itemId}`),
-    enabled: !!itemId,
-  })
-}
-
-/** Mức của dòng gợi ý đặt hàng: Urgent – tồn dưới tồn an toàn; Reorder – khả dụng dưới ngưỡng; Ok – còn đủ. */
-export type ReorderLevel = 'Urgent' | 'Reorder' | 'Ok'
-
-/** Một mặt hàng trong báo cáo gợi ý đặt hàng (design.md mục 18.16) – số lượng theo ĐVT cơ sở, cộng mọi kho của công ty. */
-export interface ReorderSuggestionRow {
-  itemId: string
-  itemCode: string
-  itemName: string
-  categoryCode: string
-  categoryName: string
-  baseUomId: string
-  uomCode: string
-  isCritical: boolean
-  safetyStock: number | null
-  /** Ngưỡng đang áp dụng: điểm đặt hàng lại, chưa có thì tồn tối thiểu. */
-  reorderPoint: number
-  maxStock: number | null
-  onHandQty: number
-  onOrderQty: number
-  openRequestQty: number
-  availableQty: number
-  suggestedQty: number
-  level: ReorderLevel
-  preferredSupplierId: string | null
-  preferredSupplierCode: string | null
-}
-
-/** Kết quả báo cáo gợi ý đặt hàng. */
-export interface ReorderSuggestionResult {
-  items: ReorderSuggestionRow[]
-  truncated: boolean
-  limit: number
-}
-
-/** Điều kiện báo cáo gợi ý đặt hàng. */
-export interface ReorderSuggestionFilter {
-  categoryId?: string
-  criticalOnly: boolean
-  includeAll: boolean
-}
-
-/**
- * Gợi ý đặt hàng: mặt hàng có khả dụng (tồn + đang đặt + đề nghị còn mở) dưới điểm đặt hàng lại, kèm SL gợi ý.
- * @param filter Nhóm hàng, chỉ trọng yếu, gồm cả hàng còn đủ.
- */
-export function useReorderSuggestions(filter: ReorderSuggestionFilter) {
-  const companyId = useCompanyId()
-  const params = new URLSearchParams({ criticalOnly: String(filter.criticalOnly), includeAll: String(filter.includeAll) })
-  if (filter.categoryId) params.set('categoryId', filter.categoryId)
-  const query = params.toString()
-  return useQuery({
-    queryKey: ['reports', companyId, 'reorder-suggestions', query],
-    queryFn: () => apiFetch<ReorderSuggestionResult>(`/api/reports/reorder-suggestions?${query}`),
-    placeholderData: keepPreviousData,
-  })
-}
 
 /** Một dòng PR chưa xử lý: chờ duyệt, hoặc đã duyệt chưa đặt đủ. */
 export interface PendingRequestLine {
@@ -795,26 +610,6 @@ export function usePurchaseSla(range: { from: string; to: string }) {
   })
 }
 
-/** Một chứng từ đã ghi sổ sẽ xuất cho kế toán. */
-export interface AccountingDocument {
-  documentId: string
-  docType: 'GRN' | 'RTV' | 'TRF' | 'ICS' | 'ICR' | 'ADJ'
-  no: string
-  date: string
-  partnerCode: string | null
-  partnerLocalCode: string | null
-  partnerName: string | null
-  partnerTaxCode: string | null
-  invoiceNo: string | null
-  invoiceSeries: string | null
-  invoiceDate: string | null
-  lineCount: number
-  amount: number
-  vatAmount: number
-  costAmount: number
-  isCostFinal: boolean
-}
-
 /** Điều kiện xuất cho kế toán. */
 export interface AccountingExportFilter {
   from: string
@@ -827,20 +622,6 @@ export function accountingExportQuery(filter: AccountingExportFilter) {
   const params = new URLSearchParams({ from: filter.from, to: filter.to })
   for (const t of filter.docTypes) params.append('docTypes', t)
   return params.toString()
-}
-
-/**
- * Chứng từ đã ghi sổ sẽ xuất cho kế toán (xem trước).
- * @param filter Khoảng ngày, loại chứng từ.
- */
-export function useAccountingDocuments(filter: AccountingExportFilter) {
-  const companyId = useCompanyId()
-  const query = accountingExportQuery(filter)
-  return useQuery({
-    queryKey: ['reports', companyId, 'accounting-export', query],
-    queryFn: () => apiFetch<AccountingDocument[]>(`/api/accounting-export/documents?${query}`),
-    placeholderData: keepPreviousData,
-  })
 }
 
 /** Một chứng từ mua sẽ xuất cho kế toán (lát Y9b, design.md mục 19.3 "Lát Y9"). */

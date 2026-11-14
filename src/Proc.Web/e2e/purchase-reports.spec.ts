@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { openByCommand, pickOption, seedPostedReceipt } from './inventoryHelpers.ts'
+import { openByCommand, pickOption, seedItemSupplier } from './inventoryHelpers.ts'
 
 /**
  * Báo cáo mua hàng (design.md mục 11.3): mua hàng theo NCC toàn tập đoàn nhóm theo công ty (BHA vừa nhập 10 hộp × 50.000), theo nhóm hàng
@@ -9,7 +9,7 @@ import { openByCommand, pickOption, seedPostedReceipt } from './inventoryHelpers
  */
 
 test('mua hàng toàn tập đoàn theo công ty thấy BHA', async ({ page, request }) => {
-  await seedPostedReceipt(request)
+  await seedItemSupplier(request)
   await loginViaApi(page)
   await page.goto('/')
 

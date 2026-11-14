@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveRfqAward, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, approveRfqAward, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 
 /** Mời một tài khoản Portal cho NCC, kích hoạt, đăng nhập 2 bước qua API; trả dữ liệu phiên Portal (như màn hình đăng nhập lưu). */
 async function portalSession(request: APIRequestContext, supplierId: string) {
@@ -23,7 +23,7 @@ async function portalSession(request: APIRequestContext, supplierId: string) {
  */
 test('Portal: NCC nộp báo giá niêm phong, nội bộ xem trước giờ mở có ghi nhật ký', async ({ page, request }) => {
   test.setTimeout(90_000)
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
@@ -107,7 +107,7 @@ test('Portal: NCC nộp báo giá niêm phong, nội bộ xem trước giờ m�
  */
 test('Portal: NCC hỏi làm rõ, Phòng CUVT trả lời riêng và đăng thông báo', async ({ page, request }) => {
   test.setTimeout(90_000)
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
@@ -179,7 +179,7 @@ test('Portal: NCC hỏi làm rõ, Phòng CUVT trả lời riêng và đăng thô
  */
 test('Portal: NCC xem kết quả chọn thầu sau khi duyệt xong', async ({ page, request }) => {
   test.setTimeout(90_000)
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })

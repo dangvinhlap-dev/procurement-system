@@ -141,7 +141,7 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
       <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
       <FieldHelpHost />
       <div className="app-body">
-        {/* Trang con (phiếu /kho/grn/123) đánh dấu màn hình cha trên cây điều hướng. */}
+        {/* Trang con (phiếu /mua-hang/po/123) đánh dấu màn hình cha trên cây điều hướng. */}
         <NavTree activePath={screen?.path ?? pathname} pinnedCodes={demoPinnedScreens} counts={navCounts} />
         <main className="app-content app-content-tabs">
           <ScreenTabBar tabs={tabs} activeId={activeTab.id} onSelect={switchTo} onClose={closeTab} companyCode={workingCompany?.code} />

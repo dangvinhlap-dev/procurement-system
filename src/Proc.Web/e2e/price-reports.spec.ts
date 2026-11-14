@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, openByCommand, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Báo cáo tuần giá mua & mua ngoài hợp đồng, biến động giá (lát F1, design.md mục 18.17): PO đã duyệt ngày thứ Hai tuần trước của NCC
@@ -8,7 +8,7 @@ import { api, openByCommand, seedPostedReceipt, switchCompany, unique } from './
  */
 test('giá mua & mua ngoài hợp đồng: PO tuần trước không có giá đã duyệt', async ({ page, request }) => {
   // NCC của phiếu nhập mẫu chưa có bảng giá, hợp đồng → dòng PO không có giá đã duyệt.
-  const { itemCode, itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemCode, itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id

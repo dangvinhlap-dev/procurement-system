@@ -4,7 +4,6 @@ import {
   UserSwitchOutlined,
   ApartmentOutlined,
   AuditOutlined,
-  CalculatorOutlined,
   DashboardOutlined,
   BarChartOutlined,
   BankOutlined,
@@ -20,28 +19,21 @@ import {
   NodeIndexOutlined,
   FundViewOutlined,
   StarOutlined,
-  ClockCircleOutlined,
-  GlobalOutlined,
-  HourglassOutlined,
   ColumnWidthOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
   ContainerOutlined,
-  DatabaseOutlined,
   DiffOutlined,
   FileAddOutlined,
-  FileDoneOutlined,
   FileSearchOutlined,
   FileTextOutlined,
   GroupOutlined,
   HomeOutlined,
-  ImportOutlined,
   InboxOutlined,
   LineChartOutlined,
   LoginOutlined,
   NumberOutlined,
   ProfileOutlined,
-  RollbackOutlined,
   SafetyOutlined,
   SafetyCertificateOutlined,
   ScheduleOutlined,
@@ -50,7 +42,6 @@ import {
   SolutionOutlined,
   SwapOutlined,
   TableOutlined,
-  CarOutlined,
   ReconciliationOutlined,
   DollarOutlined,
   TagsOutlined,
@@ -61,7 +52,7 @@ import type { ReactNode } from 'react'
 import { Permission } from '../auth/permissions'
 
 /** Nhóm chức năng theo module – dùng cho menu module trên Shellbar và cây điều hướng (design.md mục 1.2, 17.1). */
-export type ModuleKey = 'daily' | 'purchasing' | 'inventory' | 'pricing' | 'sourcing' | 'reports' | 'system'
+export type ModuleKey = 'daily' | 'purchasing' | 'pricing' | 'sourcing' | 'reports' | 'system'
 
 /** Một nhóm module trên Shellbar. */
 export interface ModuleGroup {
@@ -101,12 +92,11 @@ export function canOpenScreen(screen: Screen, hasPermission: (code: string) => b
 
 /**
  * Các nhóm menu theo thứ tự hiển thị. Chữ gạch chân chọn sao cho không trùng nhau:
- * Hằng _n_gày, _M_ua hàng, _K_ho, _G_iá và NCC, Đấu _t_hầu, _B_áo cáo, _H_ệ thống.
+ * Hằng _n_gày, _M_ua hàng, _G_iá và NCC, Đấu _t_hầu, _B_áo cáo, _H_ệ thống.
  */
 export const moduleGroups: ModuleGroup[] = [
   { key: 'daily', label: 'Hằng ngày', hotkeyIndex: 5 },
   { key: 'purchasing', label: 'Mua hàng', hotkeyIndex: 0 },
-  { key: 'inventory', label: 'Kho', hotkeyIndex: 0 },
   { key: 'pricing', label: 'Giá và NCC', hotkeyIndex: 0 },
   { key: 'sourcing', label: 'Đấu thầu', hotkeyIndex: 4 },
   { key: 'reports', label: 'Báo cáo', hotkeyIndex: 0 },
@@ -147,16 +137,6 @@ export const screens: Screen[] = [
   { code: 'BUDG', title: 'Ngân sách bộ phận', navLabel: 'Ngân sách bộ phận', path: '/mua-hang/ngan-sach', icon: <FundOutlined />, group: 'purchasing', anyPermission: [Permission.BudgetView, Permission.BudgetManage] },
   { code: 'CTR', title: 'Hợp đồng nguyên tắc', navLabel: 'Hợp đồng nguyên tắc', path: '/mua-hang/hop-dong-khung', icon: <SolutionOutlined />, group: 'purchasing', permission: Permission.ContractView },
 
-  { code: 'GRN', title: 'Phiếu nhập mua từ NCC (GRN)', navLabel: 'Nhập mua NCC', path: '/kho/grn', icon: <ImportOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  { code: 'RTV', title: 'Phiếu xuất trả hàng NCC (RTV)', navLabel: 'Xuất trả NCC', path: '/kho/rtv', icon: <RollbackOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  { code: 'TRF', title: 'Phiếu chuyển kho nội bộ (TRF)', navLabel: 'Chuyển kho nội bộ', path: '/kho/trf', icon: <SwapOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  { code: 'ICS', title: 'Phiếu xuất bán nội bộ (ICS)', navLabel: 'Xuất bán nội bộ', path: '/kho/ics', icon: <FileDoneOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  { code: 'ICR', title: 'Phiếu nhập mua nội bộ (ICR)', navLabel: 'Nhập mua nội bộ', path: '/kho/icr', icon: <InboxOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  // Phiếu điều chỉnh / kiểm kê (design.md mục 18.23): xem theo quyền xem chứng từ kho, lập và ghi sổ theo quyền riêng.
-  { code: 'ADJ', title: 'Phiếu điều chỉnh, kiểm kê kho (ADJ)', navLabel: 'Điều chỉnh, kiểm kê', path: '/kho/dieu-chinh', icon: <CalculatorOutlined />, group: 'inventory', permission: Permission.InventoryDocumentView },
-  { code: 'STK', title: 'Tồn kho hiện tại', navLabel: 'Tồn kho hiện tại', path: '/kho/ton-kho', icon: <DatabaseOutlined />, group: 'inventory', permission: Permission.StockView },
-  { code: 'CARD', title: 'Thẻ kho', navLabel: 'Thẻ kho', path: '/kho/the-kho', icon: <ProfileOutlined />, group: 'inventory', permission: Permission.StockView },
-
   { code: 'SUP', title: 'Danh mục nhà cung cấp', navLabel: 'Nhà cung cấp', path: '/gia-ncc/nha-cung-cap', icon: <ShopOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'SUPAPR', title: 'Yêu cầu duyệt nhà cung cấp', navLabel: 'Duyệt NCC', path: '/gia-ncc/duyet-ncc', icon: <AuditOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'COI', title: 'Kê khai xung đột lợi ích', navLabel: 'Xung đột lợi ích', path: '/gia-ncc/xung-dot-loi-ich', icon: <AlertOutlined />, group: 'pricing' },
@@ -186,13 +166,6 @@ export const screens: Screen[] = [
   { code: 'RFQ', title: 'Yêu cầu báo giá (RFQ)', navLabel: 'Yêu cầu báo giá', path: '/dau-thau/rfq', icon: <ContainerOutlined />, group: 'sourcing', permission: Permission.RfqView },
   { code: 'QCMP', title: 'So sánh báo giá', navLabel: 'So sánh báo giá', path: '/dau-thau/so-sanh-bao-gia', icon: <DiffOutlined />, group: 'sourcing', permission: Permission.RfqView },
 
-  { code: 'NXT', title: 'Báo cáo nhập – xuất – tồn', navLabel: 'Nhập – xuất – tồn', path: '/bao-cao/nxt', icon: <BarChartOutlined />, group: 'reports', permission: Permission.ReportStockView },
-  { code: 'SLOW', title: 'Hàng chậm luân chuyển', navLabel: 'Chậm luân chuyển', path: '/bao-cao/cham-luan-chuyen', icon: <HourglassOutlined />, group: 'reports', permission: Permission.ReportStockView },
-  { code: 'EXP', title: 'Hàng sắp hết hạn', navLabel: 'Sắp hết hạn', path: '/bao-cao/sap-het-han', icon: <ClockCircleOutlined />, group: 'reports', permission: Permission.ReportStockView },
-  { code: 'REORD', title: 'Gợi ý đặt hàng', navLabel: 'Gợi ý đặt hàng', path: '/bao-cao/goi-y-dat-hang', icon: <ShoppingCartOutlined />, group: 'reports', permission: Permission.ReportStockView },
-  { code: 'GSTK', title: 'Tồn tập đoàn', navLabel: 'Tồn tập đoàn', path: '/bao-cao/ton-tap-doan', icon: <GlobalOutlined />, group: 'reports', permission: Permission.StockViewAllCompanies },
-  { code: 'TRANSIT', title: 'Hàng đi đường nội bộ', navLabel: 'Hàng đi đường', path: '/bao-cao/hang-di-duong', icon: <CarOutlined />, group: 'reports', permission: Permission.ReportStockView },
-  { code: 'ICREC', title: 'Đối chiếu mua bán nội bộ', navLabel: 'Đối chiếu nội bộ', path: '/bao-cao/doi-chieu-noi-bo', icon: <ReconciliationOutlined />, group: 'reports', permission: Permission.ReportStockView },
   { code: 'PRPEND', title: 'PR chưa xử lý', navLabel: 'PR chưa xử lý', path: '/bao-cao/pr-chua-xu-ly', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'SLA', title: 'SLA mua hàng', navLabel: 'SLA mua hàng', path: '/bao-cao/sla-mua-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
   { code: 'QCDEV', title: 'Sai lệch nhận hàng', navLabel: 'Sai lệch nhận hàng', path: '/bao-cao/sai-lech-nhan-hang', icon: <FieldTimeOutlined />, group: 'reports', permission: Permission.ReportPurchaseView },
@@ -216,7 +189,6 @@ export const screens: Screen[] = [
 
   // Lát Y9b (design.md mục 19.3 "Lát Y9"): thay ACCX từ khi bỏ kho – PO, phiếu nhận hàng + hóa đơn, đề nghị thanh toán cho kế toán.
   { code: 'ACCP', title: 'Xuất chứng từ mua cho kế toán', navLabel: 'Xuất chứng từ mua', path: '/bao-cao/xuat-chung-tu-mua', icon: <ExportOutlined />, group: 'reports', permission: Permission.PurchaseAccountingExport },
-  { code: 'ACCX', title: 'Xuất chứng từ cho kế toán', navLabel: 'Xuất cho kế toán', path: '/bao-cao/xuat-ke-toan', icon: <ExportOutlined />, group: 'reports', permission: Permission.AccountingExport },
 
   { code: 'COMP', title: 'Danh mục công ty', navLabel: 'Công ty', path: '/he-thong/cong-ty', icon: <BankOutlined />, group: 'system', permission: Permission.CompanyView },
   { code: 'WH', title: 'Danh mục kho', navLabel: 'Kho', path: '/he-thong/kho', icon: <ApartmentOutlined />, group: 'system', permission: Permission.WarehouseView },
@@ -225,7 +197,6 @@ export const screens: Screen[] = [
   { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system', permission: Permission.UserView },
   { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
   { code: 'APRL', title: 'Quy trình duyệt', navLabel: 'Quy trình duyệt', path: '/he-thong/quy-trinh-duyet', icon: <CheckSquareOutlined />, group: 'system', permission: Permission.ParameterView },
-  { code: 'PER', title: 'Kỳ kho', navLabel: 'Kỳ kho', path: '/he-thong/ky-kho', icon: <CalendarOutlined />, group: 'system', permission: Permission.PeriodView },
   { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'RATE', title: 'Xếp loại nhà cung cấp', navLabel: 'Xếp loại NCC', path: '/he-thong/xep-loai-ncc', icon: <TrophyOutlined />, group: 'system', permission: Permission.ParameterView },
@@ -240,6 +211,6 @@ export const screens: Screen[] = [
  * @returns Màn hình tương ứng, hoặc undefined nếu không có.
  */
 export function findScreenByPath(pathname: string): Screen | undefined {
-  // Trang con của màn hình (phiếu /kho/grn/123) thuộc màn hình cha /kho/grn: cùng quyền, cùng mục trên cây điều hướng.
+  // Trang con của màn hình (phiếu /mua-hang/po/123) thuộc màn hình cha /mua-hang/po: cùng quyền, cùng mục trên cây điều hướng.
   return screens.find((s) => s.path === pathname) ?? screens.find((s) => s.path !== '/' && pathname.startsWith(`${s.path}/`))
 }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, chooseOption, openByCommand, pickOption, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 import { receiveByApi, seedApprovedPo } from './receiptHelpers.ts'
 import { approveSummaryForPr } from './summaryHelpers.ts'
 
@@ -201,7 +201,7 @@ test('PO: chưa có NCC chọn được thì báo rõ lý do và chỗ xử lý'
 
 test('PR hàng mới chưa có mã → tìm nguồn → gắn mã → lên PO được', async ({ page, request }) => {
   test.setTimeout(60_000)
-  const { itemCode, itemId } = await seedPostedReceipt(request)
+  const { itemCode, itemId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
   const departmentCode = unique('BP')

@@ -10,7 +10,6 @@ import { formatDate, formatMoney } from '../utils/format'
 import './HomePage.css'
 
 /** Nhãn trạng thái kỳ kho. */
-const periodLabels: Record<string, string> = { NotOpened: 'Chưa mở', Open: 'Đang mở', Costing: 'Đang tính giá', Closed: 'Đã đóng' }
 
 /** Một ô số liệu trên trang chủ. */
 interface Tile {
@@ -36,31 +35,7 @@ function buildTiles(d: Dashboard): Tile[] {
   if (p.openOrders != null)
     tiles.push({ code: 'POTRK', title: 'PO đang chờ giao', value: p.openOrders, note: `${p.lateOrders} PO trễ hạn`, attention: (p.lateOrders ?? 0) > 0 })
   if (p.openRfqs != null) tiles.push({ code: 'RFQ', title: 'RFQ đang nhận báo giá', value: p.openRfqs })
-  const s = d.stock
-  if (s) {
-    const drafts = Object.values(s.draftDocuments).reduce((sum, n) => sum + n, 0)
-    if (Object.keys(s.draftDocuments).length > 0 || drafts === 0)
-      tiles.push({ code: 'GRN', title: 'Chứng từ kho nháp', value: drafts, note: draftNote(s.draftDocuments) })
-    if (s.belowMinItems != null) tiles.push({ code: 'STK', title: 'Hàng dưới tồn tối thiểu', value: s.belowMinItems, attention: s.belowMinItems > 0 })
-    if (s.expiredLots != null)
-      tiles.push({
-        code: 'EXP',
-        title: 'Lô hết hạn / sắp hết hạn',
-        value: `${s.expiredLots} / ${s.expiringLots}`,
-        note: 'Đã hết hạn / trong 30 ngày tới',
-        attention: s.expiredLots > 0,
-      })
-    if (s.goodsInTransit != null) tiles.push({ code: 'TRANSIT', title: 'Hàng đi đường nội bộ', value: s.goodsInTransit })
-    if (s.periodStatus)
-      tiles.push({ code: 'PER', title: `Kỳ kho ${s.periodLabel}`, value: periodLabels[s.periodStatus] ?? s.periodStatus, attention: s.periodStatus !== 'Open' })
-  }
   return tiles
-}
-
-/** Dòng phụ "GRN 2 · TRF 1" của ô chứng từ nháp. */
-function draftNote(drafts: Record<string, number>) {
-  const parts = Object.entries(drafts).map(([type, n]) => `${type} ${n}`)
-  return parts.length > 0 ? parts.join(' · ') : 'Không có phiếu nháp'
 }
 
 /**

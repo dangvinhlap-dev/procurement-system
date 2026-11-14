@@ -4,7 +4,7 @@ import { Alert, App, Button, Flex, Form, Input, InputNumber } from 'antd'
 import { Select } from '../../classic/Select'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import {
   demandPlanStatusLabels,
   demandPlanStatusTone,

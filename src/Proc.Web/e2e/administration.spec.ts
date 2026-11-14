@@ -109,17 +109,17 @@ test.describe('quản trị hệ thống', () => {
     const code = `E2E${unique()}`.toUpperCase().slice(0, 20)
     await page.getByRole('button', { name: 'Tạo mới' }).click()
     await drawer.getByLabel('Mã vai trò').fill(code)
-    await drawer.getByLabel('Tên vai trò').fill('Kế toán kho thử')
+    await drawer.getByLabel('Tên vai trò').fill('Kiểm soát nội bộ thử')
     await drawer.getByRole('tab', { name: 'Quyền' }).click()
-    // Tick cả nhóm Kho (12 quyền, gồm 2 quyền riêng của phiếu điều chỉnh và quyền xác nhận nghiệm thu – H4) rồi bỏ một quyền.
-    await drawer.getByRole('group', { name: 'Kho' }).getByRole('checkbox', { name: 'Kho', exact: true }).check()
-    await drawer.getByRole('checkbox', { name: 'Bỏ ghi sổ chứng từ kho' }).uncheck()
-    await expect(drawer.getByText('Đã chọn 11/')).toBeVisible()
+    // Tick cả nhóm Kiểm soát nội bộ (3 quyền) rồi bỏ một quyền (nhóm Kho gỡ ở lát K3).
+    await drawer.getByRole('group', { name: 'Kiểm soát nội bộ' }).getByRole('checkbox', { name: 'Kiểm soát nội bộ', exact: true }).check()
+    await drawer.getByRole('checkbox', { name: 'Ghi nhận, kết luận vi phạm (KSNB)' }).uncheck()
+    await expect(drawer.getByText('Đã chọn 2/')).toBeVisible()
     await drawer.getByRole('button', { name: 'Lưu' }).click()
 
     await expect(page.locator('.ant-message')).toContainText(`Đã tạo vai trò ${code}.`)
-    await expect(gridRow(page, code)).toContainText('Kế toán kho thử')
-    await expect(gridRow(page, code)).toContainText('10')
+    await expect(gridRow(page, code)).toContainText('Kiểm soát nội bộ thử')
+    await expect(gridRow(page, code)).toContainText('2')
   })
 
   test('bộ vai trò mẫu Ban Cung ứng: tạo vai trò còn thiếu, mở lại thì đã đủ', async ({ page }) => {

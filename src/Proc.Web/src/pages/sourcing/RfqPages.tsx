@@ -24,7 +24,7 @@ import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import { supplierItemKey, useSupplierItemLookup, useSuppliers, vatOptions } from '../../api/masterData'
 import { withPendingApprovers, type OpenRequestLine } from '../../api/purchasing'
 import {

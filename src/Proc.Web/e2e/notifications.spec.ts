@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
  * Thông báo (design.md mục 11.6): nhân viên mới ở BHA gửi duyệt PR → quản trị thấy số trên chuông Shellbar, bấm chuông mở màn hình
@@ -8,7 +8,7 @@ import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelper
  */
 test('PR gửi duyệt → chuông có số → mở thông báo vào phiếu → đã đọc', async ({ page, request }) => {
   test.setTimeout(60_000)
-  const { itemId } = await seedPostedReceipt(request)
+  const { itemId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const roles = await bha.get<{ id: string; code: string }[]>('/api/roles')
   const uoms = await bha.get<{ id: string; code: string }[]>('/api/uoms')

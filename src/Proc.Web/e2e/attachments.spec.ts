@@ -1,22 +1,24 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { seedDraftPo, switchCompany } from './inventoryHelpers.ts'
 
 /**
- * File đính kèm dùng chung (design.md mục 18.4) trên phiếu nhập đã ghi sổ: tải lên kèm ghi chú, tab hiện số file, tải xuống đúng tên,
+ * File đính kèm dùng chung (design.md mục 18.4) trên đơn mua hàng nháp (phiếu kho cũ gỡ ở lát K3): tải lên kèm ghi chú, tab hiện số file, tải xuống đúng tên,
  * xóa sau khi xác nhận. Đuôi bị chặn báo lỗi ngay trên trình duyệt.
  */
-test('đính kèm file vào phiếu nhập đã ghi sổ: tải lên, tải xuống, xóa', async ({ page, request }) => {
-  const { receiptId, receiptNo } = await seedPostedReceipt(request)
+test('đính kèm file vào đơn mua hàng: tải lên, tải xuống, xóa', async ({ page, request }) => {
+  const { poId, poNo } = await seedDraftPo(request)
 
   await loginViaApi(page)
   await page.goto('/')
   await switchCompany(page, 'BHA')
-  await page.goto(`/kho/grn/${receiptId}`)
-  await expect(page.getByText(receiptNo).first()).toBeVisible()
+  await page.goto(`/mua-hang/po/${poId}`)
+  await expect(page.getByText(poNo).first()).toBeVisible()
 
   await page.getByRole('tab', { name: 'Đính kèm' }).click()
-  await expect(page.getByText('Chưa có file đính kèm.')).toBeVisible()
+  // Form PO còn bảng file khác ở tab ẩn (file NCC) – chỉ xét ô đang hiện.
+  const empty = page.getByText('Chưa có file đính kèm.').locator('visible=true')
+  await expect(empty).toBeVisible()
 
   await page.getByLabel('Ghi chú cho file tải lên').fill('Hóa đơn GTGT bản scan')
   const chooser = page.locator('.ant-upload input[type="file"]')
@@ -37,7 +39,7 @@ test('đính kèm file vào phiếu nhập đã ghi sổ: tải lên, tải xu�
 
   await row.getByRole('button', { name: 'Xóa' }).click()
   await page.getByRole('button', { name: 'Xóa', exact: true }).last().click()
-  await expect(page.getByText('Chưa có file đính kèm.')).toBeVisible()
+  await expect(empty).toBeVisible()
 })
 
 /**

@@ -26,9 +26,11 @@ test('khung ERP cổ điển (thanh menu + thanh công cụ) đúng kích thư�
   await expect(page.getByTestId('toolbar')).toHaveCount(0)
   await expect(page.getByTestId('status-bar')).toHaveCount(0)
 
-  for (const name of ['Hằng ngày', 'Mua hàng', 'Kho', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống']) {
+  for (const name of ['Hằng ngày', 'Mua hàng', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống']) {
     await expect(shellBar.getByRole('menuitem', { name, exact: true })).toBeVisible()
   }
+  // Menu Kho gỡ cùng phân hệ kho (lát K3).
+  await expect(shellBar.getByRole('menuitem', { name: 'Kho', exact: true })).toHaveCount(0)
   await expect(shellBar.getByPlaceholder('Ô lệnh – tên màn hình')).toBeVisible()
 
   // Mục đang mở trên cây điều hướng được đánh dấu. Số đếm là số thật từ /api/dashboard – kiểm tra ở dashboard.spec.ts.

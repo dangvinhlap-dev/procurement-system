@@ -22,17 +22,6 @@ export interface DashboardPurchase {
   openRfqs: number | null
 }
 
-/** Số liệu kho (null = không có quyền xem). */
-export interface DashboardStock {
-  draftDocuments: Record<string, number>
-  belowMinItems: number | null
-  expiredLots: number | null
-  expiringLots: number | null
-  goodsInTransit: number | null
-  periodLabel: string | null
-  periodStatus: 'NotOpened' | 'Open' | 'Costing' | 'Closed' | null
-}
-
 /** Mua hàng thuần tháng này, tháng trước, top NCC. */
 export interface DashboardSpend {
   thisMonth: number
@@ -44,7 +33,6 @@ export interface DashboardSpend {
 export interface Dashboard {
   today: string
   purchase: DashboardPurchase
-  stock: DashboardStock | null
   spend: DashboardSpend | null
   navCounts: Record<string, NavCount>
 }

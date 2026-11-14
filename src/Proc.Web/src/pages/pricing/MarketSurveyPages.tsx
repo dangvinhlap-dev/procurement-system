@@ -5,7 +5,7 @@ import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useItemLookup } from '../../api/inventoryDocuments'
+import { useItemLookup } from '../../api/lookups'
 import {
   marketSurveyStatusLabels,
   marketSurveyStatusTone,

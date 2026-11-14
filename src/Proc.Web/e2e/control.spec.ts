@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, seedPostedReceipt, switchCompany } from './inventoryHelpers.ts'
+import { api, openByCommand, seedItemSupplier, switchCompany } from './inventoryHelpers.ts'
 
 /**
  * Kiểm soát nội bộ (lát F3, design.md mục 18.19): PO gửi duyệt của NCC mà người lập có kê khai quan hệ lợi ích → dấu hiệu "Xung đột lợi
  * ích" trên màn hình ANOM; bấm đúp, "Ghi nhận vi phạm" mở sổ vi phạm với phiếu điền sẵn; lưu, kết luận thì phiếu khóa.
  */
 test('dấu hiệu bất thường → ghi nhận vi phạm → kết luận', async ({ page, request }) => {
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const warehouses = await bha.get<{ id: string; code: string }[]>('/api/warehouses')

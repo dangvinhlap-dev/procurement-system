@@ -48,17 +48,6 @@ import { SupplierReviewPage } from './pages/pricing/SupplierReviewPage'
 import { SupplierCoveragePage } from './pages/pricing/SupplierCoveragePage'
 import { SupplierListPage } from './pages/masterData/SupplierListPage'
 import { UomListPage } from './pages/masterData/UomListPage'
-import { GoodsReceiptPage } from './pages/inventory/GoodsReceiptPage'
-import { GoodsReturnPage } from './pages/inventory/GoodsReturnPage'
-import { IntercompanyReceiptPage } from './pages/inventory/IntercompanyReceiptPage'
-import { IntercompanySalePage } from './pages/inventory/IntercompanySalePage'
-import { InventoryDocumentListPage } from './pages/inventory/InventoryDocumentListPage'
-import { StockCardPage } from './pages/inventory/StockCardPage'
-import { StockOnHandPage } from './pages/inventory/StockOnHandPage'
-import { StockTransferPage } from './pages/inventory/StockTransferPage'
-import { StockAdjustmentPage } from './pages/inventory/StockAdjustmentPage'
-import { Permission } from './auth/permissions'
-import { InventoryPeriodPage } from './pages/inventory/InventoryPeriodPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ContractAmendmentPage } from './pages/purchasing/ContractAmendmentDrawer'
 import { ContractListPage, ContractPage } from './pages/purchasing/ContractPages'
@@ -73,7 +62,6 @@ import { PooledOrderListPage, PooledOrderPage } from './pages/purchasing/PooledO
 import { VolumeRebateListPage, VolumeRebatePage, VolumeRebateTrackingPage } from './pages/pricing/VolumeRebatePages'
 import { RfqListPage, RfqPage } from './pages/sourcing/RfqPages'
 import { SourcingListPage, SourcingPage } from './pages/sourcing/SourcingPages'
-import { GoodsInTransitPage, IntercompanyReconciliationPage } from './pages/reports/IntercompanyReportPages'
 import {
   PendingRequestsReportPage,
   PurchaseSlaReportPage,
@@ -89,14 +77,11 @@ import {
   KpiReportPage,
   SupplierEvaluationReportPage,
 } from './pages/reports/PurchaseReportPages'
-import { AccountingExportPage } from './pages/reports/AccountingExportPage'
 import { PurchaseAccountingExportPage } from './pages/reports/PurchaseAccountingExportPage'
 import { BoardMonthlyReportPage } from './pages/reports/BoardMonthlyReportPage'
 import { PurchaseHistoryMappingPage } from './pages/reports/PurchaseHistoryMappingPage'
 import { PurchaseAnalysisPage } from './pages/reports/PurchaseAnalysisPage'
 import { PurchaseHistoryPage } from './pages/reports/PurchaseHistoryPage'
-import { StockMovementReportPage } from './pages/reports/StockMovementReportPage'
-import { ExpiringReportPage, GroupStockReportPage, ReorderSuggestionReportPage, SlowMovingReportPage } from './pages/reports/StockReportPages'
 import { PurchaseOrderListPage as DemoPurchaseOrderListPage } from './pages/purchasing/PurchaseOrderListPage'
 import { PurchaseOrderPage } from './pages/purchasing/PurchaseOrderPage'
 import { PurchaseRequestPage } from './pages/purchasing/PurchaseRequestPage'
@@ -154,17 +139,6 @@ const implemented: Record<string, ReactNode> = {
   CAT: <ItemCategoryListPage />,
   UOM: <UomListPage />,
   COMP: <CompanyListPage />,
-  PER: <InventoryPeriodPage />,
-  GRN: <InventoryDocumentListPage docType="GRN" title="Phiếu nhập mua từ NCC (GRN)" path="/kho/grn" exportFileName="phieu-nhap-mua" />,
-  RTV: <InventoryDocumentListPage docType="RTV" title="Phiếu xuất trả hàng NCC (RTV)" path="/kho/rtv" exportFileName="phieu-tra-ncc" />,
-  TRF: <InventoryDocumentListPage docType="TRF" title="Phiếu chuyển kho nội bộ (TRF)" path="/kho/trf" exportFileName="phieu-chuyen-kho" />,
-  STK: <StockOnHandPage />,
-  CARD: <StockCardPage />,
-  NXT: <StockMovementReportPage />,
-  SLOW: <SlowMovingReportPage />,
-  REORD: <ReorderSuggestionReportPage />,
-  EXP: <ExpiringReportPage />,
-  GSTK: <GroupStockReportPage />,
   PRPEND: <PendingRequestsReportPage />,
   SLA: <PurchaseSlaReportPage />,
   QCDEV: <ReceiptQualityReportPage />,
@@ -181,19 +155,10 @@ const implemented: Record<string, ReactNode> = {
   BCBAN: <BoardMonthlyReportPage />,
   ANOM: <AnomalyReportPage />,
   VIOL: <ControlFindingListPage />,
-  ACCX: <AccountingExportPage />,
   ACCP: <PurchaseAccountingExportPage />,
   PHIS: <PurchaseHistoryPage />,
   PHMAP: <PurchaseHistoryMappingPage />,
   PHAN: <PurchaseAnalysisPage />,
-  ICS: <InventoryDocumentListPage docType="ICS" title="Phiếu xuất bán nội bộ (ICS)" path="/kho/ics" exportFileName="phieu-xuat-ban-noi-bo" />,
-  ICR: <InventoryDocumentListPage docType="ICR" title="Phiếu nhập mua nội bộ (ICR)" path="/kho/icr" exportFileName="phieu-nhap-mua-noi-bo" canCreate={false} />,
-  ADJ: (
-    <InventoryDocumentListPage
-      docType="ADJ" title="Phiếu điều chỉnh, kiểm kê kho (ADJ)" path="/kho/dieu-chinh" exportFileName="phieu-dieu-chinh-kho"
-      createPermission={Permission.InventoryAdjustmentCreate}
-    />
-  ),
   IPR: <InternalPriceListPage />,
   PRL: <PriceListListPage />,
   GTH: <MonthlyApprovalListPage />,
@@ -205,8 +170,6 @@ const implemented: Record<string, ReactNode> = {
   RFQ: <RfqListPage />,
   CTR: <ContractListPage />,
   QCMP: <RfqListPage compare />,
-  TRANSIT: <GoodsInTransitPage />,
-  ICREC: <IntercompanyReconciliationPage />,
   WH: <WarehouseListPage />,
   DEPT: <DepartmentListPage />,
   DIV: <DivisionListPage />,
@@ -222,12 +185,6 @@ const implemented: Record<string, ReactNode> = {
 
 /** Trang chứng từ mở từ màn hình danh sách: mã màn hình → trang phiếu. */
 const documentPages = [
-  { code: 'GRN', element: <GoodsReceiptPage /> },
-  { code: 'RTV', element: <GoodsReturnPage /> },
-  { code: 'TRF', element: <StockTransferPage /> },
-  { code: 'ADJ', element: <StockAdjustmentPage /> },
-  { code: 'ICS', element: <IntercompanySalePage /> },
-  { code: 'ICR', element: <IntercompanyReceiptPage /> },
   { code: 'PR', element: <PurchaseRequestPage /> },
   { code: 'PO', element: <PurchaseOrderPage /> },
   { code: 'BTH', element: <PurchaseSummaryPage /> },
@@ -267,7 +224,7 @@ const shellRoutes: RouteObject[] = [
     path: s.path,
     element: <ScreenGuard screen={s}>{implemented[s.code] ?? <PlaceholderPage />}</ScreenGuard>,
   })),
-  // Trang chứng từ (lập mới: /kho/grn/moi) – cùng quyền với màn hình danh sách của nó.
+  // Trang chứng từ (lập mới: đường dẫn danh sách + /moi) – cùng quyền với màn hình danh sách của nó.
   ...documentPages.map((d) => ({
     path: `${d.screen.path}/:id`,
     element: <ScreenGuard screen={d.screen}>{d.element}</ScreenGuard>,

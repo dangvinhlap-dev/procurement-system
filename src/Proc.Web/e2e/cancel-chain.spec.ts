@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, seedPostedReceipt, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, seedItemSupplier, switchCompany, unique } from './inventoryHelpers.ts'
 import { seedApprovedPo, todayVn } from './receiptHelpers.ts'
 
 /**
@@ -46,7 +46,7 @@ test('hủy dây chuyền PO có phiếu nhận hàng nháp: hộp thoại trìn
  */
 test('hủy RFQ đã gửi NCC: hộp thoại trình tự, lý do bắt buộc', async ({ page, request }) => {
   test.setTimeout(60_000)
-  const { itemId, supplierId } = await seedPostedReceipt(request)
+  const { itemId, supplierId } = await seedItemSupplier(request)
   const bha = await api(request, 'BHA')
   const hop = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const in3 = new Date(Date.now() + 3 * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
