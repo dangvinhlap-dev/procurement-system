@@ -228,6 +228,10 @@ export interface PurchaseSpendRow {
   returnAmount: number
   netAmount: number
   sharePct: number
+  /** Cấp nhóm hàng 1–4 – chỉ khi nhóm theo nhóm hàng (design.md mục 5.7, N4-10). */
+  level: number | null
+  /** Đường dẫn mã từ nhóm gốc, ví dụ "VT / VTC / VTCK" – chỉ khi nhóm theo nhóm hàng. */
+  path: string | null
 }
 
 /** Báo cáo mua hàng theo nhóm. */
@@ -303,11 +307,13 @@ export function usePendingRequests() {
  * Mua hàng thuần theo nhóm.
  * @param period Khoảng ngày, phạm vi.
  * @param groupBy Cách nhóm.
+ * @param categoryLevel Khi nhóm theo nhóm hàng: gộp lên cấp 1–4 (N4-10); null = nhóm trực tiếp của mặt hàng.
  */
-export function usePurchaseSpend(period: PurchaseReportPeriod, groupBy: PurchaseSpendGroup) {
+export function usePurchaseSpend(period: PurchaseReportPeriod, groupBy: PurchaseSpendGroup, categoryLevel: number | null = null) {
   const companyId = useCompanyId()
   const params = periodQuery(period)
   params.set('groupBy', groupBy)
+  if (groupBy === 'category' && categoryLevel != null) params.set('categoryLevel', String(categoryLevel))
   const query = params.toString()
   return useQuery({
     queryKey: ['reports', companyId, 'purchase-spend', query],

@@ -3,7 +3,8 @@ import { loginViaApi } from './helpers.ts'
 import { openByCommand, pickOption, seedPostedReceipt } from './inventoryHelpers.ts'
 
 /**
- * Báo cáo mua hàng (design.md mục 11.3): mua hàng theo NCC toàn tập đoàn nhóm theo công ty (BHA vừa nhập 10 hộp × 50.000), PR chưa xử lý,
+ * Báo cáo mua hàng (design.md mục 11.3): mua hàng theo NCC toàn tập đoàn nhóm theo công ty (BHA vừa nhập 10 hộp × 50.000), theo nhóm hàng
+ * gộp cấp 1 (N4-10), PR chưa xử lý,
  * đánh giá NCC, tiết kiệm từ đấu thầu.
  */
 
@@ -25,6 +26,18 @@ test('mua hàng toàn tập đoàn theo công ty thấy BHA', async ({ page, req
   await page.getByRole('heading', { name: 'Mua hàng theo NCC' }).click()
   await expect(page.locator('.ant-spin-spinning')).toHaveCount(0)
   await page.screenshot({ path: 'e2e/screenshots/purchase-spend.png' })
+
+  // Nhóm hàng gộp theo cấp (design.md mục 5.7, N4-10): chọn cấp 1 thì mọi dòng là ngành hàng, có cột Cấp và Đường dẫn.
+  await page.getByRole('combobox', { name: 'Tổng hợp theo', exact: true }).click()
+  await pickOption(page, 'Nhóm hàng')
+  await expect(page.getByRole('columnheader', { name: 'Đường dẫn' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Cấp nhóm', exact: true }).click()
+  await pickOption(page, '1 – Ngành hàng')
+  await expect(page.locator('.ant-spin-spinning')).toHaveCount(0)
+  const rows = page.locator('.data-grid-row')
+  await expect(rows.first()).toContainText('Ngành hàng')
+  await expect(rows.filter({ hasText: /Chủng loại|Loại hàng/ })).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/screenshots/purchase-spend-category-level.png' })
 })
 
 test('PR chưa xử lý, đánh giá NCC, tiết kiệm đấu thầu: mở được', async ({ page }) => {
