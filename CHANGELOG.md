@@ -3,6 +3,46 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.28.0] - 2026-11-14
+
+Bản test **danh mục nhóm hàng tối đa 4 cấp** (lát N4a – phần máy chủ + giao diện tối thiểu), kèm các lát đã xong sau 0.27.1: in phiếu XNH,
+NCC tự cập nhật hồ sơ, xem bảng giá, trạng thái thanh toán trên Portal. Gỡ hẳn phân hệ kho (K3) dời sang bản sau (chờ xác nhận sao lưu).
+
+### Thêm mới
+- **Nhóm hàng tối đa 4 cấp**: Ngành hàng (cấp 1) → Nhóm hàng (cấp 2) → Loại hàng (cấp 3) → Chủng loại (cấp 4). Nhóm cấp 4 không thêm nhóm con
+  được; chuyển nhóm sang cha khác mà cả nhánh vượt cấp 4 thì bị chặn, có gợi ý chỗ chuyển được; chuyển nhánh thì cấp các nhóm con tự tính lại.
+- **Mã nhóm hàng do người dùng gõ** (không còn tự đánh số): bắt buộc, 2–20 chữ/số, báo trùng rõ ràng (kể cả nhóm mình không được xem).
+  Ô Mã nhóm nhập ở ngăn kéo Nhóm hàng (CAT) và hộp thoại "Thêm nhóm hàng" của NCC.
+- Excel nhóm hàng: cột mã bắt buộc, mã chưa có thì thêm mới (nhóm vừa thêm làm nhóm cha được cho các dòng dưới); file xuất thêm cột Cấp,
+  Đường dẫn.
+- **In phiếu xác nhận nhận hàng XNH ra PDF** (biên bản giao nhận và kiểm tra hàng hóa A4) – nút "In phiếu" (Ctrl+P) trên form XNH.
+- Portal NCC: **Hồ sơ công ty** – NCC gửi đề nghị cập nhật hồ sơ (thông tin chung, người liên hệ, tài khoản, file); nội bộ duyệt ở màn hình
+  **HSC** (Giá và NCC → Đề nghị cập nhật NCC), so sánh lúc gửi – đề nghị – hiện tại, Chấp nhận / Từ chối. Mã số thuế không đề nghị được.
+- Portal NCC: **Bảng giá** – NCC xem bảng giá đã duyệt của mình (tình trạng theo ngày, giá sau chiết khấu).
+- Portal NCC: **Thanh toán** – trạng thái hóa đơn, đợt thanh toán, còn phải trả theo đơn; thư "Báo đã thanh toán" khi kế toán ghi Đã chi.
+
+### Thay đổi
+- Màn hình Đánh số danh mục bỏ mục "Nhóm hàng" (dải số cũ giữ trong CSDL nhưng ẩn).
+- **Chưa có trong bản này** (lát sau): giao diện cây nhóm hàng đầy đủ theo bản vẽ – thêm nhóm con từ cây, ô chọn hiện số cấp (N4b); mặt hàng
+  chỉ gắn nhóm cấp 4 (N4c); báo cáo gộp theo cấp.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 2 migration: `V0_28_0_DeNghiCapNhatHoSoNcc` (bảng đề nghị cập nhật hồ sơ NCC), `V0_28_0_NhomHangToiDa4Cap` (cột `Level` của nhóm hàng tính
+  từ cây có sẵn, ràng buộc cấp 1–4). Script `db/scripts/0.28.0.sql` (idempotent).
+- Migration nhóm hàng **dừng với thông báo** nếu CSDL có nhánh sâu hơn 4 cấp – phải chuyển bớt nhóm trước khi nâng.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước khi nâng.** Chạy `db-scripts\0.28.0.sql`, thay gói ứng dụng, giữ `appsettings.Production.json`. Không có quyền mới.
+- Nhóm hàng đã có giữ nguyên mã cũ; nhóm thêm mới từ bản này phải gõ mã.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.27.1 và gỡ 2 migration bằng `dotnet ef database update V0_27_0_DeNghiThanhToanTapVu` (hoặc khôi phục bản sao lưu).
+  `Down()` nhóm hàng không mất dữ liệu (chỉ bỏ cột `Level`); `Down()` hồ sơ NCC **mất các đề nghị cập nhật hồ sơ** đã gửi.
+
 ## [0.27.1] - 2026-11-13
 
 Bản bổ sung cho 0.27.0 (yêu cầu khi test): mở nhiều màn hình cùng lúc và hỏi lại khi rời trang còn phiếu chưa lưu. Chỉ đổi giao diện web.
