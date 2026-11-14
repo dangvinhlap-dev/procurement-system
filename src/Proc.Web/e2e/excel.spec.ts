@@ -55,3 +55,27 @@ test('nhập file không phải Excel thì báo lỗi', async ({ page }) => {
   await expect(dialog.getByText(/Có 1 lỗi – chưa lưu dòng nào/)).toBeVisible()
   await expect(dialog.locator('.data-grid-row', { hasText: 'Không đọc được file' })).toBeVisible()
 })
+
+test('xuất lưới ra Excel: cột số chứng từ và màu đèn trạng thái gửi kèm để file giống lưới (ui-style.md mục 5i)', async ({ page }) => {
+  await openByCommand(page, 'DOCS')
+  await expect(page.getByRole('columnheader', { name: 'Số chứng từ' })).toBeVisible()
+  const exporting = page.waitForRequest((r) => r.url().includes('/api/excel/grid') && r.method() === 'POST')
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Xuất Excel' }).click()
+  const body = (await exporting).postDataJSON() as {
+    columns: { title: string; type: string; tones: (string | null)[] | null }[]
+    rows: unknown[]
+  }
+  const column = (title: string) => body.columns.find((c) => c.title === title)!
+  expect(column('Số chứng từ').type).toBe('docno')
+  expect(column('Giá trị').type).toBe('money')
+  expect(column('Loại chứng từ').tones).toBeNull()
+  // Cột trạng thái: mỗi dòng một màu đèn, cùng số dòng với dữ liệu.
+  const tones = column('Tình trạng').tones!
+  expect(column('Tình trạng').type).toBe('status')
+  expect(tones).toHaveLength(body.rows.length)
+  for (const tone of tones) expect(['success', 'warning', 'error', 'neutral', null]).toContain(tone)
+  const download = await downloading
+  expect(download.suggestedFilename()).toBe('tra-cuu-chung-tu.xlsx')
+  expect(readFileSync(await download.path()).subarray(0, 2).toString()).toBe('PK')
+})

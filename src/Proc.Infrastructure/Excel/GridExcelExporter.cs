@@ -8,6 +8,7 @@ namespace Proc.Infrastructure.Excel;
 /// <summary>
 /// Dựng file Excel từ lưới đang xem (design.md mục 11.2): dòng 1 tiêu đề, dòng 2 điều kiện lọc và giờ xuất, rồi dòng tiêu đề cột
 /// (cố định khi cuộn, có lọc) và dữ liệu. Ô số giữ kiểu số để Excel cộng được; ô ngày giữ kiểu ngày định dạng dd/MM/yyyy.
+/// Hình thức giống lưới trên màn hình (<see cref="ExcelGridStyle"/>, ui-style.md mục 5i).
 /// </summary>
 public sealed class GridExcelExporter : IGridExcelExporter
 {
@@ -23,45 +24,65 @@ public sealed class GridExcelExporter : IGridExcelExporter
     /// <inheritdoc />
     public ExcelFile Build(GridExportRequest request)
     {
-        using var workbook = new XLWorkbook();
-        var sheet = workbook.AddWorksheet("Dữ liệu");
+        using var workbook = ExcelGridStyle.CreateWorkbook();
+        var sheet = ExcelGridStyle.AddSheet(workbook, "Dữ liệu");
         var columns = request.Columns;
 
-        sheet.Cell(1, 1).Value = request.Title;
-        sheet.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(14);
+        ExcelGridStyle.Title(sheet.Cell(1, 1), request.Title);
         var exportedAt = TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone);
         var subtitle = string.IsNullOrWhiteSpace(request.Subtitle) ? "" : $"{request.Subtitle} – ";
-        sheet.Cell(2, 1).Value =
-            $"{subtitle}Xuất lúc {exportedAt:dd/MM/yyyy HH:mm} – {request.Rows.Count.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"))} dòng";
-        sheet.Cell(2, 1).Style.Font.SetItalic();
+        ExcelGridStyle.Note(sheet.Cell(2, 1),
+            $"{subtitle}Xuất lúc {exportedAt:dd/MM/yyyy HH:mm} – {request.Rows.Count.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"))} dòng");
 
+        // Không có dòng nào vẫn kẻ một dòng trống để bảng có khung như lưới rỗng trên màn hình.
+        var lastRow = HeaderRow + Math.Max(request.Rows.Count, 1);
         for (var c = 0; c < columns.Count; c++)
         {
-            var cell = sheet.Cell(HeaderRow, c + 1);
-            cell.Value = columns[c].Title;
-            cell.Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#DCE6F4"))
-                .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            sheet.Cell(HeaderRow, c + 1).Value = columns[c].Title;
             // Độ rộng Excel tính theo số ký tự; ~7 px một ký tự ở cỡ chữ mặc định.
             sheet.Column(c + 1).Width = Math.Clamp((columns[c].Width ?? 100) / 7.0, 6, 80);
-            var format = columns[c].Type switch
+            var data = sheet.Range(HeaderRow + 1, c + 1, lastRow, c + 1);
+            switch (columns[c].Type)
             {
-                "money" => "#,##0",
-                "quantity" => "#,##0.####",
-                "date" => "dd/mm/yyyy",
-                "datetime" => "dd/mm/yyyy hh:mm",
-                _ => null,
-            };
-            if (format is not null) sheet.Column(c + 1).Style.NumberFormat.Format = format;
+                case "money":
+                    data.Style.NumberFormat.Format = "#,##0";
+                    ExcelGridStyle.Number(data);
+                    break;
+                case "quantity":
+                    data.Style.NumberFormat.Format = "#,##0.####";
+                    ExcelGridStyle.Number(data);
+                    break;
+                case "date":
+                    data.Style.NumberFormat.Format = "dd/mm/yyyy";
+                    ExcelGridStyle.Date(data);
+                    break;
+                case "datetime":
+                    data.Style.NumberFormat.Format = "dd/mm/yyyy hh:mm";
+                    ExcelGridStyle.Date(data);
+                    break;
+                case "docno":
+                    ExcelGridStyle.DocNo(data);
+                    break;
+            }
         }
+
+        ExcelGridStyle.Header(sheet.Range(HeaderRow, 1, HeaderRow, columns.Count));
+        ExcelGridStyle.Body(sheet.Range(HeaderRow, 1, lastRow, columns.Count));
 
         for (var r = 0; r < request.Rows.Count; r++)
         {
             var row = request.Rows[r];
             for (var c = 0; c < columns.Count; c++)
-                sheet.Cell(HeaderRow + 1 + r, c + 1).Value = ToCellValue(columns[c].Type, row[c]);
+            {
+                var cell = sheet.Cell(HeaderRow + 1 + r, c + 1);
+                // Cột trạng thái có màu đèn: ô vuông ■ + chữ tô màu như lưới trên màn hình.
+                if (columns[c].Tones is { } tones && columns[c].Type == "status" && !string.IsNullOrEmpty(row[c]))
+                    ExcelGridStyle.Status(cell, row[c]!, tones[r]);
+                else
+                    cell.Value = ToCellValue(columns[c].Type, row[c]);
+            }
         }
 
-        var lastRow = HeaderRow + Math.Max(request.Rows.Count, 1);
         sheet.Range(HeaderRow, 1, lastRow, columns.Count).SetAutoFilter();
         sheet.SheetView.FreezeRows(HeaderRow);
 

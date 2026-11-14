@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using Proc.Application.Common;
 using Proc.Application.Excel;
 using Proc.Application.Reports;
+using Proc.Infrastructure.Excel;
 
 namespace Proc.Infrastructure.Reports;
 
@@ -15,6 +16,9 @@ public static class BoardMonthlyReportExcel
     private const string Quantity = "#,##0.####";
     private const string Percent = "#,##0.00";
     private const string Date = "dd/mm/yyyy";
+
+    /// <summary>Cột số chứng từ: ô chữ, phông đơn cách chữ xanh đậm (ExcelGridStyle.DocNo).</summary>
+    private const string DocNo = "@";
 
     /// <summary>Tên nguồn giá – cùng nhãn báo cáo PRCW trên giao diện.</summary>
     private static readonly Dictionary<string, string> SourceLabels = new()
@@ -52,16 +56,14 @@ public static class BoardMonthlyReportExcel
     /// <returns>File Excel, tên <c>BaoCaoThangBan_{yyyy-MM}_{công ty hoặc TapDoan}.xlsx</c>.</returns>
     public static ExcelFile Build(BoardMonthlyReportDto report, DateTimeOffset exportedAtUtc)
     {
-        using var workbook = new XLWorkbook();
+        using var workbook = ExcelGridStyle.CreateWorkbook();
         var scope = report.AllCompanies ? "Toàn tập đoàn" : $"Công ty {report.CompanyCode}";
         var exportedAt = TimeZoneInfo.ConvertTime(exportedAtUtc, VietnamTime.Zone);
 
-        var overview = workbook.AddWorksheet("Tổng quan");
-        overview.Cell(1, 1).Value = $"Báo cáo tháng {report.Month:00}/{report.Year} cho Ban cung ứng";
-        overview.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(14);
-        overview.Cell(2, 1).Value = $"{scope} – từ {report.From:dd/MM/yyyy} đến {report.To:dd/MM/yyyy}, so tháng trước {report.PreviousFrom:dd/MM/yyyy}–" +
-                                    $"{report.PreviousTo:dd/MM/yyyy} – xuất lúc {exportedAt:dd/MM/yyyy HH:mm}";
-        overview.Cell(2, 1).Style.Font.SetItalic();
+        var overview = ExcelGridStyle.AddSheet(workbook, "Tổng quan");
+        ExcelGridStyle.Title(overview.Cell(1, 1), $"Báo cáo tháng {report.Month:00}/{report.Year} cho Ban cung ứng");
+        ExcelGridStyle.Note(overview.Cell(2, 1), $"{scope} – từ {report.From:dd/MM/yyyy} đến {report.To:dd/MM/yyyy}, so tháng trước {report.PreviousFrom:dd/MM/yyyy}–" +
+                                    $"{report.PreviousTo:dd/MM/yyyy} – xuất lúc {exportedAt:dd/MM/yyyy HH:mm}");
         var row = 4;
         if (report.Purchase is { } p)
         {
@@ -95,7 +97,7 @@ public static class BoardMonthlyReportExcel
 
         if (report.Kpi is { } kpi)
         {
-            var sheet = workbook.AddWorksheet("KPI");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "KPI");
             Table(sheet, 1, $"KPI cung ứng – đạt {kpi.MetCount}/{kpi.MeasuredCount} chỉ số có kết quả",
                 ["Chỉ số", "Mục tiêu", "Tháng này", "Tháng trước", "Đạt", "Cách đo"], [null, Percent, Percent, Percent, null, null],
                 kpi.Items.Select(k => new object?[]
@@ -107,10 +109,10 @@ public static class BoardMonthlyReportExcel
 
         if (report.OutOfContract is { } lines)
         {
-            var sheet = workbook.AddWorksheet("Mua ngoài giá duyệt");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "Mua ngoài giá duyệt");
             Table(sheet, 1, $"Mua ngoài giá đã duyệt – {lines.Count}/{report.OutOfContractCount} dòng tiền chênh lớn nhất",
                 ["Số PO", "Ngày", "Công ty", "NCC", "Mặt hàng", "SL", "ĐVT", "Giá thực", "Giá đã duyệt", "% lệch", "Tiền chênh", "Loại", "Lý do"],
-                [null, Date, null, null, null, Quantity, null, Money, Money, Percent, Money, null, null],
+                [DocNo, Date, null, null, null, Quantity, null, Money, Money, Percent, Money, null, null],
                 lines.Select(l => new object?[]
                 {
                     l.OrderNo, l.Date, l.CompanyCode, $"{l.SupplierCode} – {l.SupplierName}", $"{l.ItemCode} – {l.ItemName}", l.Qty, l.UomCode,
@@ -121,7 +123,7 @@ public static class BoardMonthlyReportExcel
 
         if (report.PriceVariance is { } v)
         {
-            var sheet = workbook.AddWorksheet("Biến động giá");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "Biến động giá");
             Table(sheet, 1, $"Biến động giá – tổng ảnh hưởng {v.ImpactAmount:N0}; {v.IncreasedCount} mặt hàng tăng, {v.DecreasedCount} mặt hàng giảm",
                 ["Mặt hàng", "ĐVT", "Giá BQ tháng trước", "Giá BQ tháng này", "% thay đổi", "SL tháng này", "Ảnh hưởng", "Số PO", "Số NCC"],
                 [null, null, Money, Money, Percent, Quantity, Money, Money, Money],
@@ -135,7 +137,7 @@ public static class BoardMonthlyReportExcel
 
         if (report.VolumeRebates is { } rebates)
         {
-            var sheet = workbook.AddWorksheet("Chiết khấu gộp");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "Chiết khấu gộp");
             Table(sheet, 1, "Chiết khấu sản lượng gộp – kỳ tính bậc đang chạy",
                 ["Thỏa thuận", "NCC", "Kỳ từ", "Kỳ đến", "Lũy kế", "Bậc đạt", "% CK", "CK phải nhận", "Bậc kế", "Còn thiếu", "So bậc mục tiêu", "Còn thiếu thực nhận"],
                 [null, null, Date, Date, Quantity, null, Percent, Money, null, Quantity, null, Money],
@@ -150,7 +152,7 @@ public static class BoardMonthlyReportExcel
 
         if (report.SupplierCoverage is { } coverage)
         {
-            var sheet = workbook.AddWorksheet("NCC đủ điều kiện");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "NCC đủ điều kiện");
             Table(sheet, 1, $"Nhóm hàng chưa đủ {coverage.MinSuppliers} NCC đã duyệt – {coverage.ShortCount}/{coverage.CategoryCount} nhóm",
                 ["Nhóm hàng", "Số mặt hàng", "NCC đã duyệt", "Còn thiếu", "NCC tiềm năng", "NCC đã duyệt (danh sách)"],
                 [null, Money, Money, Money, Money, null],
@@ -163,9 +165,9 @@ public static class BoardMonthlyReportExcel
 
         if (report.Onboarding is { } o)
         {
-            var sheet = workbook.AddWorksheet("Hồ sơ NCC mới");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "Hồ sơ NCC mới");
             Table(sheet, 1, $"Hồ sơ đánh giá NCC mới – {o.Count} hồ sơ: {o.ApprovedCount} đã duyệt, {o.InProgressCount} đang xử lý, {o.ClosedCount} không đạt",
-                ["Số", "Ngày", "NCC", "Nhóm hàng", "Điểm", "Kết quả", "Trạng thái"], [null, Date, null, null, Percent, null, null],
+                ["Số", "Ngày", "NCC", "Nhóm hàng", "Điểm", "Kết quả", "Trạng thái"], [DocNo, Date, null, null, Percent, null, null],
                 o.Items.Select(i => new object?[]
                 {
                     i.No, i.Date, $"{i.SupplierCode} – {i.SupplierName}", i.CategoryName, i.Score, i.Result, Label(OnboardingLabels, i.Status),
@@ -175,12 +177,12 @@ public static class BoardMonthlyReportExcel
 
         if (report.Control is { } c2)
         {
-            var sheet = workbook.AddWorksheet("Kiểm soát nội bộ");
+            var sheet = ExcelGridStyle.AddSheet(workbook, "Kiểm soát nội bộ");
             var next = Table(sheet, 1, $"Dấu hiệu bất thường – Cao {c2.HighCount?.ToString() ?? "–"}, Trung bình {c2.MediumCount?.ToString() ?? "–"}",
                 ["Loại dấu hiệu", "Số dấu hiệu", "Ghi chú"], [null, Money, null],
                 c2.Summary.Select(a => new object?[] { Label(AnomalyLabels, a.Code), a.Count, a.Note }).ToList());
             Table(sheet, next + 1, $"Sổ vi phạm – {c2.FindingCount} vụ, {c2.SeriousConcludedCount} vụ nghiêm trọng đã kết luận",
-                ["Số", "Ngày phát hiện", "Mức", "Trạng thái", "Tiêu đề", "NCC"], [null, Date, null, null, null, null],
+                ["Số", "Ngày phát hiện", "Mức", "Trạng thái", "Tiêu đề", "NCC"], [DocNo, Date, null, null, null, null],
                 c2.Findings.Select(f => new object?[]
                 {
                     f.No, f.Date, f.Severity == "Serious" ? "Nghiêm trọng" : "Thường", f.Status == "Concluded" ? "Đã kết luận" : "Đang mở", f.Title,
@@ -195,7 +197,10 @@ public static class BoardMonthlyReportExcel
         return new ExcelFile($"BaoCaoThangBan_{report.Year}-{report.Month:00}_{suffix}.xlsx", stream.ToArray());
     }
 
-    /// <summary>Ghi một bảng: dòng tiêu đề đậm, dòng tên cột có nền, rồi dữ liệu theo định dạng từng cột.</summary>
+    /// <summary>
+    /// Ghi một bảng theo định dạng lưới chung (ExcelGridStyle, ui-style.md mục 5i): dòng tiêu đề bảng (bảng đầu sheet = tiêu đề báo cáo),
+    /// dòng tên cột nền xám xanh, dữ liệu kẻ ô; cột số canh phải phông đơn cách, cột số chứng từ chữ xanh đậm.
+    /// </summary>
     /// <param name="sheet">Sheet.</param>
     /// <param name="startRow">Dòng bắt đầu.</param>
     /// <param name="title">Tiêu đề bảng.</param>
@@ -205,14 +210,10 @@ public static class BoardMonthlyReportExcel
     /// <returns>Dòng kế tiếp sau bảng (để ghi bảng tiếp theo cách một dòng).</returns>
     private static int Table(IXLWorksheet sheet, int startRow, string title, string[] headers, string?[] formats, IReadOnlyList<object?[]> rows)
     {
-        sheet.Cell(startRow, 1).Value = title;
-        sheet.Cell(startRow, 1).Style.Font.SetBold();
-        for (var c = 0; c < headers.Length; c++)
-        {
-            var cell = sheet.Cell(startRow + 1, c + 1);
-            cell.Value = headers[c];
-            cell.Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#DCE6F4")).Border.SetOutsideBorder(XLBorderStyleValues.Thin);
-        }
+        if (startRow == 1) ExcelGridStyle.Title(sheet.Cell(startRow, 1), title);
+        else ExcelGridStyle.SectionTitle(sheet.Cell(startRow, 1), title);
+        for (var c = 0; c < headers.Length; c++) sheet.Cell(startRow + 1, c + 1).Value = headers[c];
+        ExcelGridStyle.Header(sheet.Range(startRow + 1, 1, startRow + 1, headers.Length));
 
         for (var r = 0; r < rows.Count; r++)
         {
@@ -232,13 +233,31 @@ public static class BoardMonthlyReportExcel
             }
         }
 
+        for (var c = 0; c < headers.Length && rows.Count > 0; c++)
+        {
+            var data = sheet.Range(startRow + 2, c + 1, startRow + 1 + rows.Count, c + 1);
+            switch (formats[c])
+            {
+                case DocNo:
+                    ExcelGridStyle.DocNo(data);
+                    break;
+                case Date:
+                    ExcelGridStyle.Date(data);
+                    break;
+                case not null:
+                    ExcelGridStyle.Number(data);
+                    break;
+            }
+        }
+
         if (rows.Count == 0)
         {
-            sheet.Cell(startRow + 2, 1).Value = "Không có dữ liệu.";
-            sheet.Cell(startRow + 2, 1).Style.Font.SetItalic();
+            ExcelGridStyle.Note(sheet.Cell(startRow + 2, 1), "Không có dữ liệu.");
+            ExcelGridStyle.Body(sheet.Range(startRow + 1, 1, startRow + 1, headers.Length));
             return startRow + 4;
         }
 
+        ExcelGridStyle.Body(sheet.Range(startRow + 1, 1, startRow + 1 + rows.Count, headers.Length));
         return startRow + 3 + rows.Count;
     }
 

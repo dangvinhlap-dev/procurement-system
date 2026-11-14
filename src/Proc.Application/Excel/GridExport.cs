@@ -4,9 +4,12 @@ namespace Proc.Application.Excel;
 
 /// <summary>Một cột của lưới cần xuất Excel.</summary>
 /// <param name="Title">Tiêu đề cột.</param>
-/// <param name="Type">Kiểu cột của DataGrid: text, status, date, datetime, money, quantity – quyết định kiểu ô và định dạng số.</param>
+/// <param name="Type">Kiểu cột của DataGrid: text, status, date, datetime, money, quantity, docno (cột số chứng từ) – quyết định kiểu ô,
+/// định dạng số và hình thức ô (ui-style.md mục 5i).</param>
 /// <param name="Width">Độ rộng trên màn hình (px), để đặt độ rộng cột Excel tương ứng.</param>
-public sealed record GridExportColumn(string Title, string? Type, int? Width);
+/// <param name="Tones">Cột trạng thái: màu đèn từng dòng (success, warning, error, neutral; null = không đèn), cùng số phần tử với số dòng;
+/// null = không tô màu.</param>
+public sealed record GridExportColumn(string Title, string? Type, int? Width, IReadOnlyList<string?>? Tones = null);
 
 /// <summary>
 /// Xuất một danh sách hoặc báo cáo đang xem ra Excel (design.md mục 11: mọi báo cáo xuất được Excel). Giao diện gửi đúng các cột đang hiện
@@ -38,7 +41,9 @@ public sealed class GridExportRequestValidator : AbstractValidator<GridExportReq
     /// <summary>Số dòng tối đa – bằng giới hạn dòng lớn nhất của các màn hình (tồn kho 5.000) nhân 10 cho dư.</summary>
     public const int MaxRows = 50_000;
 
-    private static readonly HashSet<string> Types = ["text", "status", "date", "datetime", "money", "quantity"];
+    private static readonly HashSet<string> Types = ["text", "status", "date", "datetime", "money", "quantity", "docno"];
+
+    private static readonly HashSet<string> Tones = ["success", "warning", "error", "neutral"];
 
     /// <summary>Khai báo quy tắc.</summary>
     public GridExportRequestValidator()
@@ -53,7 +58,10 @@ public sealed class GridExportRequestValidator : AbstractValidator<GridExportReq
         {
             c.RuleFor(x => x.Title).NotNull().MaximumLength(200);
             c.RuleFor(x => x.Type).Must(t => t is null || Types.Contains(t)).WithMessage("Kiểu cột không hợp lệ.");
+            c.RuleFor(x => x.Tones).Must(t => t is null || t.All(v => v is null || Tones.Contains(v))).WithMessage("Màu đèn trạng thái không hợp lệ.");
         });
+        RuleFor(x => x).Must(x => x.Columns.All(c => c.Tones is null || c.Tones.Count == x.Rows.Count))
+            .WithMessage("Số màu đèn của cột trạng thái phải bằng số dòng.").When(x => x.Columns is { Count: > 0 });
         RuleFor(x => x.Rows).Must(r => r.Count <= MaxRows).WithMessage("Xuất tối đa 50.000 dòng mỗi lần – hãy lọc hẹp hơn.");
         RuleFor(x => x).Must(x => x.Rows.All(r => r.Count == x.Columns.Count))
             .WithMessage("Số ô của mỗi dòng phải bằng số cột.").When(x => x.Columns is { Count: > 0 });

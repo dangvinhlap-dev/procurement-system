@@ -194,6 +194,24 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   nhóm đang mở đậm. Ô **Cấp** chỉ đọc cạnh Mã nhóm, tự đổi theo nhóm cha. Tab **NHÓM CON (n)** (`lazy`): dòng gợi ý + nút Thêm nhóm con, lưới
   nhóm con (bấm đúp mở); nhóm cấp 4 thay nút bằng đèn vàng + lý do.
 
+## 5i. File Excel xuất ra (yêu cầu 14/11/2026 – design.md mục 11.2)
+
+Ảnh mẫu: `docs/diagrams/formatexportExcel.png` (lưới Tra cứu chứng từ). **Mọi file .xlsx** của phần mềm có cùng hình thức lưới trên màn hình,
+dựng bằng `ExcelGridStyle` (`src/Proc.Infrastructure/Excel/ExcelGridStyle.cs`) – không tự tô màu riêng trong từng chỗ xuất:
+
+| Phần | Định dạng |
+| --- | --- |
+| Chữ chung | Tahoma 9pt (= 12px), màu `--erp-text` #1B2A3A |
+| Tiêu đề báo cáo (dòng 1) | 13,5pt (= 18px) đậm, `--erp-title` #1F3D6B; dòng 2 (lọc, giờ xuất) nghiêng `--erp-text-muted` #5A6B7D |
+| Dòng tiêu đề cột | nền `--erp-grid-head` #D3DDEA, chữ **thường** (không đậm), canh trái; cố định khi cuộn, có lọc |
+| Kẻ ô | 1px `--erp-grid-line` #B8C5D6 đủ dọc ngang cả bảng; nền trắng; dòng cao 22px (16,5pt); tắt lưới mờ của Excel (trừ file mẫu nhập danh mục – giữ lưới để gõ thêm dòng) |
+| Số lượng, đơn giá, tiền | ô số, Consolas, canh phải (1.234.567) |
+| Ngày | ô ngày dd/MM/yyyy, canh trái như lưới |
+| Số chứng từ | ô chữ, Consolas, chữ `--erp-title` (lưới: cột có `docRef` gửi kiểu `docno`) |
+| Trạng thái | "■ chữ": ô vuông và chữ tô màu theo đèn – xanh lá #1E8F2E; vàng ô #E8C860 chữ #A86F00; đỏ #D0281E; trung tính ô #B8C5D6 chữ thường |
+
+Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nhóm" – đó là thao tác trên màn hình, không đưa vào file.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

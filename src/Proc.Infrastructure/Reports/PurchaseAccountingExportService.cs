@@ -6,6 +6,7 @@ using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Purchasing;
+using Proc.Infrastructure.Excel;
 using Proc.Infrastructure.Persistence;
 
 using Proc.Infrastructure.Purchasing;
@@ -57,13 +58,13 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
     {
         var data = await LoadAsync(query, cancellationToken);
         var company = await _db.Companies.AsNoTracking().Where(c => c.Id == _scope.RequireCompany()).Select(c => c.Code).SingleAsync(cancellationToken);
-        using var workbook = new XLWorkbook();
+        using var workbook = ExcelGridStyle.CreateWorkbook();
         var title = $"Chứng từ mua {company} từ {query.From:dd/MM/yyyy} đến {query.To:dd/MM/yyyy}";
-        WriteSheet(workbook.AddWorksheet("Tổng hợp"), title, DocumentColumns, data.Documents.Select(DocumentValues));
-        WriteSheet(workbook.AddWorksheet("Đơn mua hàng"), title, OrderColumns, data.OrderLines);
-        WriteSheet(workbook.AddWorksheet("Nhận hàng – hóa đơn"), title, ReceiptColumns, data.ReceiptLines);
-        WriteSheet(workbook.AddWorksheet("Đề nghị thanh toán"), title, PaymentColumns, data.PaymentLines);
-        WriteGuide(workbook.AddWorksheet("Hướng dẫn"));
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Tổng hợp"), title, DocumentColumns, data.Documents.Select(DocumentValues));
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Đơn mua hàng"), title, OrderColumns, data.OrderLines);
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Nhận hàng – hóa đơn"), title, ReceiptColumns, data.ReceiptLines);
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Đề nghị thanh toán"), title, PaymentColumns, data.PaymentLines);
+        WriteGuide(ExcelGridStyle.AddSheet(workbook, "Hướng dẫn"));
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return new ExcelFile($"chung-tu-mua-ke-toan-{company.ToLowerInvariant()}-{query.From:yyyyMMdd}-{query.To:yyyyMMdd}.xlsx", stream.ToArray());
@@ -244,8 +245,8 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
 
     private static readonly Column[] DocumentColumns =
     [
-        new("Loại CT", "text", 8), new("Tên loại CT", "text", 18), new("Ngày hiệu lực", "date", 11), new("Số CT", "text", 20), new("Ngày CT", "date", 11),
-        new("Số PO", "text", 20), new("Mã NCC", "text", 14), new("Mã NCC tại công ty", "text", 14), new("Tên NCC", "text", 30), new("MST NCC", "text", 14),
+        new("Loại CT", "text", 8), new("Tên loại CT", "text", 18), new("Ngày hiệu lực", "date", 11), new("Số CT", "docno", 20), new("Ngày CT", "date", 11),
+        new("Số PO", "docno", 20), new("Mã NCC", "text", 14), new("Mã NCC tại công ty", "text", 14), new("Tên NCC", "text", 30), new("MST NCC", "text", 14),
         new("Số HĐ", "text", 14), new("Ký hiệu HĐ", "text", 10), new("Ngày HĐ", "date", 11), new("Số dòng", "qty", 8), new("Tiền trước thuế", "money", 15),
         new("Tiền thuế", "money", 13), new("Tổng tiền", "money", 15), new("Tình trạng", "text", 20),
     ];
@@ -260,7 +261,7 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
     private static readonly Column[] OrderColumns =
     [
         new("Ngày duyệt", "date", 11, "Ngày PO được duyệt (ngày lọc)."),
-        new("Số PO", "text", 20, "Số đơn mua hàng."),
+        new("Số PO", "docno", 20, "Số đơn mua hàng."),
         new("Ngày PO", "date", 11, "Ngày đơn mua hàng."),
         new("Loại mua", "text", 14, "A – Công trình, B – Hàng hóa, DV – Dịch vụ (biểu mẫu CUVT)."),
         new("Mã NCC", "text", 14, "Mã NCC trong hệ thống."),
@@ -287,8 +288,8 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
     private static readonly Column[] ReceiptColumns =
     [
         new("Ngày nhận", "date", 11, "Ngày nhận hàng của phiếu xác nhận nhận hàng (ngày lọc)."),
-        new("Số XNH", "text", 20, "Số phiếu xác nhận nhận hàng."),
-        new("Số PO", "text", 20, "Đơn mua hàng của phiếu."),
+        new("Số XNH", "docno", 20, "Số phiếu xác nhận nhận hàng."),
+        new("Số PO", "docno", 20, "Đơn mua hàng của phiếu."),
         new("Mã NCC", "text", 14, "Mã NCC trong hệ thống."),
         new("Mã NCC tại công ty", "text", 14, "Mã đối tượng NCC trong phần mềm kế toán."),
         new("Tên NCC", "text", 30, "Tên NCC."),
@@ -314,11 +315,11 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
     private static readonly Column[] PaymentColumns =
     [
         new("Ngày duyệt", "date", 11, "Ngày đề nghị thanh toán được duyệt (ngày lọc)."),
-        new("Số DNT", "text", 20, "Số đề nghị thanh toán."),
+        new("Số DNT", "docno", 20, "Số đề nghị thanh toán."),
         new("Ngày DNT", "date", 11, "Ngày lập đề nghị."),
         new("Biểu mẫu", "text", 7, "5A (công trình) / 5B (hàng hóa, dịch vụ)."),
         new("Hình thức", "text", 12, "Tiền mặt / Chuyển khoản."),
-        new("Số PO", "text", 20, "Đơn mua hàng được thanh toán."),
+        new("Số PO", "docno", 20, "Đơn mua hàng được thanh toán."),
         new("Mã NCC", "text", 14, "Mã NCC trong hệ thống."),
         new("Mã NCC tại công ty", "text", 14, "Mã đối tượng NCC trong phần mềm kế toán."),
         new("Tên NCC", "text", 30, "Tên NCC."),
@@ -328,7 +329,7 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
         new("Số tài khoản", "text", 18, "Số tài khoản nhận."),
         new("Chủ tài khoản", "text", 24, "Chủ tài khoản."),
         new("STT dòng", "qty", 7, "Số thứ tự dòng hóa đơn."),
-        new("Số XNH", "text", 20, "Phiếu xác nhận nhận hàng của hóa đơn."),
+        new("Số XNH", "docno", 20, "Phiếu xác nhận nhận hàng của hóa đơn."),
         new("Ký hiệu HĐ", "text", 10, "Ký hiệu hóa đơn."),
         new("Số HĐ", "text", 14, "Số hóa đơn."),
         new("Ngày HĐ", "date", 11, "Ngày hóa đơn."),
@@ -348,16 +349,12 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
     /// </summary>
     private void WriteSheet(IXLWorksheet sheet, string title, Column[] columns, IEnumerable<object?[]> rows)
     {
-        sheet.Cell(1, 1).Value = title;
-        sheet.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(13);
-        sheet.Cell(2, 1).Value = $"Xuất lúc {TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone):dd/MM/yyyy HH:mm}. PO, đề nghị thanh toán theo ngày duyệt; phiếu nhận hàng theo ngày nhận.";
-        sheet.Cell(2, 1).Style.Font.SetItalic();
+        ExcelGridStyle.Title(sheet.Cell(1, 1), title);
+        ExcelGridStyle.Note(sheet.Cell(2, 1), $"Xuất lúc {TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone):dd/MM/yyyy HH:mm}. PO, đề nghị thanh toán theo ngày duyệt; phiếu nhận hàng theo ngày nhận.");
         const int header = 4;
         for (var c = 0; c < columns.Length; c++)
         {
-            var cell = sheet.Cell(header, c + 1);
-            cell.Value = columns[c].Title;
-            cell.Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#DCE6F4")).Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            sheet.Cell(header, c + 1).Value = columns[c].Title;
             var column = sheet.Column(c + 1);
             column.Width = columns[c].Width;
             column.Style.NumberFormat.Format = columns[c].Type switch
@@ -366,6 +363,7 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
                 "money" => "#,##0",
                 "qty" => "#,##0.####",
                 "price" => "#,##0.######",
+                // Số chứng từ, mã, MST: kiểu Text để Excel không đổi chuỗi toàn chữ số thành số.
                 _ => "@",
             };
         }
@@ -387,15 +385,34 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
             }
         }
 
-        sheet.Range(header, 1, Math.Max(r, header + 1), columns.Length).SetAutoFilter();
+        var last = Math.Max(r, header + 1);
+        for (var c = 0; c < columns.Length; c++)
+        {
+            var data = sheet.Range(header + 1, c + 1, last, c + 1);
+            switch (columns[c].Type)
+            {
+                case "money" or "qty" or "price":
+                    ExcelGridStyle.Number(data);
+                    break;
+                case "date":
+                    ExcelGridStyle.Date(data);
+                    break;
+                case "docno":
+                    ExcelGridStyle.DocNo(data);
+                    break;
+            }
+        }
+
+        ExcelGridStyle.Header(sheet.Range(header, 1, header, columns.Length));
+        ExcelGridStyle.Body(sheet.Range(header, 1, last, columns.Length));
+        sheet.Range(header, 1, last, columns.Length).SetAutoFilter();
         sheet.SheetView.FreezeRows(header);
     }
 
     /// <summary>Ghi sheet hướng dẫn dùng file cho phần mềm kế toán: ghi chú chung và ý nghĩa cột của ba sheet chi tiết.</summary>
     private static void WriteGuide(IXLWorksheet sheet)
     {
-        sheet.Cell(1, 1).Value = "Hướng dẫn dùng file cho phần mềm kế toán";
-        sheet.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(13);
+        ExcelGridStyle.Title(sheet.Cell(1, 1), "Hướng dẫn dùng file cho phần mềm kế toán");
         string[] notes =
         [
             "Sheet \"Tổng hợp\": mỗi chứng từ một dòng; các sheet còn lại: mỗi dòng hàng / dòng hóa đơn một dòng.",
@@ -407,8 +424,11 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
         var row = notes.Length + 4;
         foreach (var (name, columns) in new[] { ("Đơn mua hàng", OrderColumns), ("Nhận hàng – hóa đơn", ReceiptColumns), ("Đề nghị thanh toán", PaymentColumns) })
         {
-            sheet.Cell(row, 1).Value = $"Sheet \"{name}\"";
-            sheet.Range(row, 1, row, 2).Style.Font.SetBold();
+            ExcelGridStyle.SectionTitle(sheet.Cell(row, 1), $"Sheet \"{name}\"");
+            row++;
+            var tableStart = row;
+            sheet.Cell(row, 1).Value = "Cột";
+            sheet.Cell(row, 2).Value = "Ý nghĩa";
             row++;
             foreach (var column in columns)
             {
@@ -417,6 +437,8 @@ public sealed class PurchaseAccountingExportService : IPurchaseAccountingExportS
                 row++;
             }
 
+            ExcelGridStyle.Header(sheet.Range(tableStart, 1, tableStart, 2));
+            ExcelGridStyle.Body(sheet.Range(tableStart, 1, row - 1, 2));
             row++;
         }
 
