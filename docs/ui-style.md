@@ -193,6 +193,9 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - **Ngăn kéo nhóm hàng**: dải **Đường dẫn** (nền `--erp-readonly-bg`, viền 1px) – nhóm tổ tiên chữ `--erp-subtotal` gạch chấm, bấm mở nhóm đó;
   nhóm đang mở đậm. Ô **Cấp** chỉ đọc cạnh Mã nhóm, tự đổi theo nhóm cha. Tab **NHÓM CON (n)** (`lazy`): dòng gợi ý + nút Thêm nhóm con, lưới
   nhóm con (bấm đúp mở); nhóm cấp 4 thay nút bằng đèn vàng + lý do.
+- **Báo cáo gộp theo cấp** (lát N4d, N4-10): ô lọc **Cấp nhóm** ("Nhóm của mặt hàng", "1 – Ngành hàng" … "4 – Chủng loại") chỉ hiện khi
+  "Tổng hợp theo" là Nhóm hàng; lưới thêm cột đầu **Cấp** (ô số cấp + tên cấp như màn hình CAT) và cột **Đường dẫn** sau tên nhóm; dòng phụ
+  đề file Excel ghi cấp đã chọn.
 
 ## 5i. File Excel xuất ra (yêu cầu 14/11/2026 – design.md mục 11.2)
 

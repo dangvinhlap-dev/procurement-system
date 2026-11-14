@@ -163,9 +163,9 @@ public sealed class DashboardService : IDashboardService
     {
         var firstOfMonth = new DateOnly(today.Year, today.Month, 1);
         var thisMonth = await _purchaseReports.GetPurchaseSpendAsync(
-            new PurchaseReportPeriod(firstOfMonth, today, false), PurchaseSpendGroups.Supplier, cancellationToken);
+            new PurchaseReportPeriod(firstOfMonth, today, false), PurchaseSpendGroups.Supplier, null, cancellationToken);
         var lastMonth = await _purchaseReports.GetPurchaseSpendAsync(
-            new PurchaseReportPeriod(firstOfMonth.AddMonths(-1), firstOfMonth.AddDays(-1), false), PurchaseSpendGroups.Supplier, cancellationToken);
+            new PurchaseReportPeriod(firstOfMonth.AddMonths(-1), firstOfMonth.AddDays(-1), false), PurchaseSpendGroups.Supplier, null, cancellationToken);
         var top = thisMonth.Items.Where(r => r.NetAmount > 0).Take(5).Select(r => new DashboardSupplierDto(r.Code, r.Name, r.NetAmount)).ToList();
         return new DashboardSpendDto(thisMonth.TotalNet, lastMonth.TotalNet, top);
     }

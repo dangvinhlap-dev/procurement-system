@@ -329,15 +329,23 @@ public sealed class PurchaseReportService : IPurchaseReportService
     }
 
     /// <inheritdoc />
-    public async Task<PurchaseSpendResult> GetPurchaseSpendAsync(PurchaseReportPeriod period, string groupBy, CancellationToken cancellationToken)
+    public async Task<PurchaseSpendResult> GetPurchaseSpendAsync(
+        PurchaseReportPeriod period, string groupBy, int? categoryLevel, CancellationToken cancellationToken)
     {
         if (!PurchaseSpendGroups.All.Contains(groupBy)) throw new BusinessRuleException("Cách nhóm không hợp lệ.");
+        if (categoryLevel is < 1 or > ItemCategory.MaxLevel)
+            throw new BusinessRuleException($"Cấp nhóm hàng phải từ 1 đến {ItemCategory.MaxLevel}.");
         Check(period);
         var lines = await SupplierLinesAsync(period, cancellationToken);
 
+        // Cả cây nhóm hàng, bỏ filter phạm vi nhóm hàng: tên nhóm ai cũng xem đủ (ngoại lệ design.md mục 9.2) – người được nhóm cấp 3 gộp lên
+        // cấp 1 vẫn thấy tên ngành hàng. Số tiền vẫn chỉ gồm mặt hàng trong phạm vi (SupplierLinesAsync đi qua filter).
+        var tree = groupBy == PurchaseSpendGroups.Category
+            ? await _db.ItemCategories.IgnoreQueryFilters([ProcDbContext.ItemCategoryFilter]).AsNoTracking().ToDictionaryAsync(c => c.Id, cancellationToken)
+            : [];
         Func<SupplierLine, Guid> key = groupBy switch
         {
-            PurchaseSpendGroups.Category => l => l.CategoryId,
+            PurchaseSpendGroups.Category => l => RollUpCategory(l.CategoryId, categoryLevel, tree),
             PurchaseSpendGroups.Item => l => l.ItemId,
             PurchaseSpendGroups.Company => l => l.CompanyId,
             _ => l => l.SupplierId,
@@ -359,7 +367,9 @@ public sealed class PurchaseReportService : IPurchaseReportService
                 // Tỷ trọng, ví dụ 25.000.000 / 100.000.000 = 25,00%.
                 var share = total == 0 ? 0 : Math.Round(net / total * 100, 2, MidpointRounding.AwayFromZero);
                 var (code, name) = names.GetValueOrDefault(g.Key, ("?", "?"));
-                return new PurchaseSpendRowDto(g.Key, code, name, g.ReceiptCount, g.Receipt, g.Return, net, share);
+                var category = tree.GetValueOrDefault(g.Key);
+                return new PurchaseSpendRowDto(g.Key, code, name, g.ReceiptCount, g.Receipt, g.Return, net, share,
+                    category?.Level, category is null ? null : CategoryPath(category, tree));
             })
             .OrderByDescending(r => r.NetAmount).ThenBy(r => r.Code)
             .ToList();
@@ -950,6 +960,38 @@ public sealed class PurchaseReportService : IPurchaseReportService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Nhóm tổ tiên ở cấp <paramref name="level"/> của nhóm hàng (design.md mục 5.7, N4-10). Ví dụ nhóm VTCK cấp 4 nằm dưới VT (1) / VTC (2) /
+    /// VTCA (3): cấp 2 → VTC. Nhóm đang ở cấp thấp hơn cấp chọn (mặt hàng cũ gắn nhóm cấp 2, chọn cấp 3) giữ nguyên nhóm của nó.
+    /// </summary>
+    /// <param name="categoryId">Nhóm trực tiếp của mặt hàng.</param>
+    /// <param name="level">Cấp cần gộp; null = giữ nhóm trực tiếp.</param>
+    /// <param name="tree">Cả cây theo Id.</param>
+    /// <returns>Id nhóm để gộp.</returns>
+    private static Guid RollUpCategory(Guid categoryId, int? level, Dictionary<Guid, ItemCategory> tree)
+    {
+        if (level is not { } target) return categoryId;
+        var current = tree.GetValueOrDefault(categoryId);
+        // Đếm bước để không lặp vô hạn nếu dữ liệu cây hỏng (vòng cha – con).
+        for (var guard = 0; current is { ParentId: { } parentId } && current.Level > target && guard < ItemCategory.MaxLevel; guard++)
+            current = tree.GetValueOrDefault(parentId) ?? current;
+        return current?.Id ?? categoryId;
+    }
+
+    /// <summary>Đường dẫn mã từ nhóm gốc đến nhóm, ví dụ "VT / VTC / VTCK" – cùng cách hiện ở màn hình nhóm hàng.</summary>
+    /// <param name="category">Nhóm.</param>
+    /// <param name="tree">Cả cây theo Id.</param>
+    /// <returns>Đường dẫn.</returns>
+    private static string CategoryPath(ItemCategory category, Dictionary<Guid, ItemCategory> tree)
+    {
+        var codes = new List<string>();
+        var visited = new HashSet<Guid>();
+        for (var current = category; current is not null && visited.Add(current.Id);
+             current = current.ParentId is { } p ? tree.GetValueOrDefault(p) : null)
+            codes.Insert(0, current.Code);
+        return string.Join(" / ", codes);
     }
 
     /// <summary>Mã, tên theo cách nhóm.</summary>

@@ -48,6 +48,8 @@ import { receiptAcceptanceLabels, type ReceiptAcceptance } from '../../api/recei
 import { screens } from '../../app/screens'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { CATEGORY_LEVEL_NAMES, CATEGORY_MAX_LEVEL } from '../../classic/categoryLevels'
+import { LevelBadge } from '../../classic/LevelBadge'
 import { DataGrid } from '../../components/DataGrid/DataGrid'
 import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
@@ -395,10 +397,36 @@ const groupLabels: Record<PurchaseSpendGroup, string> = {
   company: 'Công ty',
 }
 
-/** Cột của báo cáo mua hàng; cột đầu đổi tiêu đề theo cách nhóm. */
+/** Ô "Cấp nhóm" khi tổng hợp theo nhóm hàng (N4-10): rỗng = nhóm của mặt hàng, 1–4 = gộp lên cấp đó. */
+const categoryLevelOptions = [
+  { value: 0, label: 'Nhóm của mặt hàng' },
+  ...Array.from({ length: CATEGORY_MAX_LEVEL }, (_, i) => ({ value: i + 1, label: `${i + 1} – ${CATEGORY_LEVEL_NAMES[i + 1]}` })),
+]
+
+/** Cột cấp và đường dẫn – chỉ khi tổng hợp theo nhóm hàng (design.md mục 5.7, N4-10; ui-style.md mục 5h). */
+const categoryColumns: GridColumn<PurchaseSpendRow>[] = [
+  {
+    key: 'level',
+    title: 'Cấp',
+    width: 120,
+    value: (r) => (r.level == null ? null : `${r.level} – ${CATEGORY_LEVEL_NAMES[r.level] ?? ''}`),
+    render: (r) =>
+      r.level == null ? null : (
+        <>
+          <LevelBadge level={r.level} />
+          {CATEGORY_LEVEL_NAMES[r.level]}
+        </>
+      ),
+    groupable: true,
+  },
+]
+
+/** Cột của báo cáo mua hàng; cột đầu đổi tiêu đề theo cách nhóm, nhóm hàng thêm cột Cấp và Đường dẫn. */
 const spendColumns = (groupBy: PurchaseSpendGroup): GridColumn<PurchaseSpendRow>[] => [
+  ...(groupBy === 'category' ? categoryColumns : []),
   { key: 'code', title: `Mã ${groupLabels[groupBy].toLowerCase()}`, width: 130, value: (r) => r.code },
   { key: 'name', title: groupLabels[groupBy], width: 280, value: (r) => r.name },
+  ...(groupBy === 'category' ? [{ key: 'path', title: 'Đường dẫn', width: 200, value: (r: PurchaseSpendRow) => r.path }] : []),
   { key: 'count', title: 'Số phiếu nhận', width: 100, type: 'quantity', value: (r) => r.receiptCount },
   { key: 'receipt', title: 'Giá trị nhập', width: 140, type: 'money', value: (r) => r.receiptAmount },
   { key: 'return', title: 'Giá trị trả', width: 130, type: 'money', value: (r) => r.returnAmount },
@@ -408,18 +436,22 @@ const spendColumns = (groupBy: PurchaseSpendGroup): GridColumn<PurchaseSpendRow>
 
 /**
  * Báo cáo → Mua hàng theo NCC (design.md mục 11, 11.3): giá trị trước VAT của hàng thực nhận (phiếu XNH đã xác nhận – mục 19.4) và phần
- * trả NCC (điều chỉnh giảm) trong khoảng ngày, nhóm theo NCC, nhóm hàng, mặt hàng hoặc công ty; mua thuần = nhận − trả.
+ * trả NCC (điều chỉnh giảm) trong khoảng ngày, nhóm theo NCC, nhóm hàng, mặt hàng hoặc công ty; mua thuần = nhận − trả. Nhóm hàng gộp được
+ * lên cấp 1–4 của cây (Ngành hàng … Chủng loại – design.md mục 5.7, N4-10).
  */
 export function PurchaseSpendReportPage() {
   const [period, setPeriod] = useState(defaultPeriod)
   const [groupBy, setGroupBy] = useState<PurchaseSpendGroup>('supplier')
-  const report = usePurchaseSpend(period, groupBy)
+  // 0 = nhóm của mặt hàng (không gộp); Select cổ điển cần giá trị khác null để hiện nhãn.
+  const [categoryLevel, setCategoryLevel] = useState(0)
+  const report = usePurchaseSpend(period, groupBy, categoryLevel || null)
+  const levelSubtitle = groupBy === 'category' && categoryLevel ? ` cấp ${categoryLevel} – ${CATEGORY_LEVEL_NAMES[categoryLevel]}` : ''
   return (
     <ListPage
       key={groupBy}
       title="Mua hàng theo NCC"
       exportFileName="mua-hang-theo-nhom"
-      exportSubtitle={`${periodText(period)} – theo ${groupLabels[groupBy].toLowerCase()}`}
+      exportSubtitle={`${periodText(period)} – theo ${groupLabels[groupBy].toLowerCase()}${levelSubtitle}`}
       canCreate={false}
       rows={report.data?.items ?? []}
       columns={spendColumns(groupBy)}
@@ -439,17 +471,25 @@ export function PurchaseSpendReportPage() {
       onClearFilters={() => {
         setPeriod(defaultPeriod())
         setGroupBy('supplier')
+        setCategoryLevel(0)
       }}
       filters={
         <PeriodFilters
           value={period}
           onChange={setPeriod}
           extra={
-            <FilterField label="Tổng hợp theo" width={150}>
-              {(id) => (
-                <Select id={id} value={groupBy} onChange={setGroupBy} options={Object.entries(groupLabels).map(([value, label]) => ({ value, label }))} />
+            <>
+              <FilterField label="Tổng hợp theo" width={150}>
+                {(id) => (
+                  <Select id={id} value={groupBy} onChange={setGroupBy} options={Object.entries(groupLabels).map(([value, label]) => ({ value, label }))} />
+                )}
+              </FilterField>
+              {groupBy === 'category' && (
+                <FilterField label="Cấp nhóm" width={170}>
+                  {(id) => <Select id={id} value={categoryLevel} onChange={setCategoryLevel} options={categoryLevelOptions} />}
+                </FilterField>
               )}
-            </FilterField>
+            </>
           }
         />
       }

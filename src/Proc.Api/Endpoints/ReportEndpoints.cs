@@ -37,8 +37,9 @@ public static class ReportEndpoints
 
         reports.MapGet("/pending-requests", (IPurchaseReportService s, CancellationToken ct) => s.GetPendingRequestsAsync(ct))
             .RequirePermission(Permissions.Report.PurchaseView);
-        reports.MapGet("/purchase-spend", (DateOnly from, DateOnly to, string? groupBy, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
-                s.GetPurchaseSpendAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), groupBy ?? PurchaseSpendGroups.Supplier, ct))
+        reports.MapGet("/purchase-spend", (DateOnly from, DateOnly to, string? groupBy, bool? allCompanies, int? categoryLevel, IPurchaseReportService s,
+                    CancellationToken ct) =>
+                s.GetPurchaseSpendAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), groupBy ?? PurchaseSpendGroups.Supplier, categoryLevel, ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/supplier-evaluation", (DateOnly from, DateOnly to, bool? allCompanies, IPurchaseReportService s, CancellationToken ct) =>
                 s.GetSupplierEvaluationAsync(new PurchaseReportPeriod(from, to, allCompanies ?? false), ct))

@@ -37,7 +37,7 @@ public class PurchaseReportTests
 
     private sealed record Fixture(
         HttpClient Buyer, HttpClient Approver, string CompanyCode, Guid Kt, Guid ItemId, Guid Cai, Guid Thung, Guid[] Suppliers, string[] SupplierCodes,
-        HttpClient Approver2);
+        HttpClient Approver2, HttpClient Head, ItemCategoryDetailDto Category);
 
     /// <summary>
     /// Công ty mới (kỳ tháng hiện tại mở), mặt hàng (cái, thùng = 12 cái), 3 NCC đã duyệt áp dụng tại công ty. Người lập: quản trị;
@@ -82,7 +82,8 @@ public class PurchaseReportTests
         var approverName2 = $"dy.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(approverName2, company.Code, roleCode);
         var approver2 = await _factory.CreateClientInCompanyAsync(approverName2, ProcApiFactory.TestPassword, company.Code);
-        return new Fixture(buyer, approver, company.Code, kt, item.Id, cai, thung, [.. suppliers.Select(s => s.Id)], [.. suppliers.Select(s => s.Code)], approver2);
+        return new Fixture(buyer, approver, company.Code, kt, item.Id, cai, thung, [.. suppliers.Select(s => s.Id)], [.. suppliers.Select(s => s.Code)], approver2,
+            head, category);
     }
 
     private async Task<PurchaseRequestDto> SubmitPrAsync(Fixture f, decimal qty, bool approve)
@@ -101,10 +102,12 @@ public class PurchaseReportTests
     }
 
     /// <summary>PO đã duyệt một dòng (giá trước CK, CK 0%).</summary>
-    private static async Task<PurchaseOrderDto> ApprovedPoAsync(Fixture f, Guid supplierId, DateOnly date, DateOnly? expected, decimal qty, decimal price)
+    private static async Task<PurchaseOrderDto> ApprovedPoAsync(
+        Fixture f, Guid supplierId, DateOnly date, DateOnly? expected, decimal qty, decimal price, Guid? itemId = null)
     {
         var po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-orders",
-            new SavePurchaseOrderRequest(date, supplierId, f.Kt, expected, null, null, null, 0, null, [new(null, f.ItemId, f.Cai, qty, price, 0, "10", null, null, null)]), Ct));
+            new SavePurchaseOrderRequest(date, supplierId, f.Kt, expected, null, null, null, 0, null,
+                [new(null, itemId ?? f.ItemId, f.Cai, qty, price, 0, "10", null, null, null)]), Ct));
         po = await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         // Duyệt hết các chặng: PO không có giá đã duyệt qua thêm chặng POL (design.md mục 18.25).
         for (var i = 0; i < 5 && po.Status == "Submitted"; i++)
@@ -118,6 +121,43 @@ public class PurchaseReportTests
         var xnh = await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsJsonAsync("/api/receipt-confirmations",
             new SaveReceiptConfirmationRequest(po.Id, Today, null, null, null, null, null, null, null, [new(po.Lines[0].Id, qty, qty, 0, "Passed", null, null)]), Ct));
         return await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
+    }
+
+    /// <summary>
+    /// Mua hàng theo nhóm hàng gộp theo cấp (design.md mục 5.7, N4-10): hai nhóm cấp 4 cùng nhóm cha cấp 3, mỗi nhóm một mặt hàng nhận
+    /// 1.000.000 và 500.000 → không chọn cấp ra 2 dòng cấp 4; cấp 3 gộp còn 1 dòng 1.500.000 (2 phiếu); cấp 1 là ngành hàng, đường dẫn một mã.
+    /// </summary>
+    [Fact]
+    public async Task MuaHangTheoNhomHang_GopTheoCap()
+    {
+        var f = await ArrangeAsync();
+        var sibling = await ReadAsync<ItemCategoryDetailDto>(await f.Head.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm cùng cha {Guid.NewGuid():N}", f.Category.ParentId, null), Ct));
+        var item2 = await ReadAsync<ItemDetailDto>(await f.Head.PostAsJsonAsync("/api/items",
+            new CreateItemRequest(null, "Dây curoa B60", null, "Inventory", sibling.Id, f.Cai, null, null, null, null, "10", null, false, false,
+                null, null, []), Ct));
+        await ReceiveAsync(f, await ApprovedPoAsync(f, f.Suppliers[0], Today.AddDays(-3), null, 10, 100_000), 10);
+        await ReceiveAsync(f, await ApprovedPoAsync(f, f.Suppliers[1], Today.AddDays(-3), null, 5, 100_000, item2.Id), 5);
+        var range = $"from={Today.AddDays(-30):yyyy-MM-dd}&to={Today:yyyy-MM-dd}&groupBy=category";
+
+        var leaves = await ReadAsync<PurchaseSpendResult>(await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}", Ct));
+        Assert.Equal([(f.Category.Code, 4, 1_000_000m), (sibling.Code, 4, 500_000m)], leaves.Items.Select(r => (r.Code, r.Level!.Value, r.NetAmount)));
+        Assert.Equal(f.Category.Path, leaves.Items[0].Path);
+
+        var level3 = await ReadAsync<PurchaseSpendResult>(await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}&categoryLevel=3", Ct));
+        var parent = level3.Items.Single();
+        Assert.Equal((f.Category.ParentId!.Value, 3, 2, 1_500_000m, 100m), (parent.Key, parent.Level!.Value, parent.ReceiptCount, parent.NetAmount, parent.SharePct));
+        Assert.Equal(f.Category.ParentCode, parent.Code);
+
+        var level1 = (await ReadAsync<PurchaseSpendResult>(await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}&categoryLevel=1", Ct))).Items.Single();
+        Assert.Equal((1, f.Category.Path.Split(" / ")[0], 1_500_000m), (level1.Level!.Value, level1.Path, level1.NetAmount));
+
+        // Cách nhóm khác không có cấp; cấp ngoài 1–4 báo lỗi.
+        var bySupplier = await ReadAsync<PurchaseSpendResult>(await f.Buyer.GetAsync(
+            $"/api/reports/purchase-spend?from={Today.AddDays(-30):yyyy-MM-dd}&to={Today:yyyy-MM-dd}&groupBy=supplier&categoryLevel=2", Ct));
+        Assert.All(bySupplier.Items, r => Assert.Null(r.Level));
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}&categoryLevel=5", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Buyer.GetAsync($"/api/reports/purchase-spend?{range}&categoryLevel=0", Ct)).StatusCode);
     }
 
     [Fact]

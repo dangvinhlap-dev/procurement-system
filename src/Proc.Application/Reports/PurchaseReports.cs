@@ -185,8 +185,11 @@ public sealed record PurchaseReportPeriod(DateOnly From, DateOnly To, bool AllCo
 /// <param name="ReturnAmount">Giá trị trả NCC.</param>
 /// <param name="NetAmount">Mua thuần = nhập − trả.</param>
 /// <param name="SharePct">Tỷ trọng trong tổng mua thuần (%), 2 số lẻ.</param>
+/// <param name="Level">Cấp nhóm hàng 1–4 (chỉ khi nhóm theo nhóm hàng, null với cách nhóm khác) – design.md mục 5.7, N4-10.</param>
+/// <param name="Path">Đường dẫn mã từ nhóm gốc, ví dụ "VT / VTC / VTCK" (chỉ khi nhóm theo nhóm hàng).</param>
 public sealed record PurchaseSpendRowDto(
-    Guid Key, string Code, string Name, int ReceiptCount, decimal ReceiptAmount, decimal ReturnAmount, decimal NetAmount, decimal SharePct);
+    Guid Key, string Code, string Name, int ReceiptCount, decimal ReceiptAmount, decimal ReturnAmount, decimal NetAmount, decimal SharePct,
+    int? Level = null, string? Path = null);
 
 /// <summary>Báo cáo mua hàng theo nhóm.</summary>
 /// <param name="GroupBy">Cách nhóm đã dùng.</param>
@@ -449,11 +452,16 @@ public interface IPurchaseReportService
     /// <summary>Mua hàng thuần theo NCC, nhóm hàng, mặt hàng hoặc công ty.</summary>
     /// <param name="period">Khoảng ngày, phạm vi.</param>
     /// <param name="groupBy">Cách nhóm, xem <see cref="PurchaseSpendGroups"/>.</param>
+    /// <param name="categoryLevel">
+    /// Khi nhóm theo nhóm hàng: gộp lên nhóm tổ tiên ở cấp này (1 Ngành hàng … 4 Chủng loại – design.md mục 5.7, N4-10); null = nhóm trực
+    /// tiếp của mặt hàng. Bỏ qua với cách nhóm khác.
+    /// </param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Báo cáo.</returns>
-    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai hoặc cách nhóm không hợp lệ.</exception>
+    /// <exception cref="Domain.Common.BusinessRuleException">Khi khoảng ngày sai, cách nhóm không hợp lệ hoặc cấp ngoài 1–4.</exception>
     /// <exception cref="Common.ForbiddenAccessException">Khi xem toàn tập đoàn mà thiếu quyền.</exception>
-    Task<PurchaseSpendResult> GetPurchaseSpendAsync(PurchaseReportPeriod period, string groupBy, CancellationToken cancellationToken);
+    Task<PurchaseSpendResult> GetPurchaseSpendAsync(
+        PurchaseReportPeriod period, string groupBy, int? categoryLevel, CancellationToken cancellationToken);
 
     /// <summary>Đánh giá NCC: đúng hạn, trả hàng.</summary>
     /// <param name="period">Khoảng ngày, phạm vi.</param>
