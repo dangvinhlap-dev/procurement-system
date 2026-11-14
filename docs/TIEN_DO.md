@@ -996,6 +996,11 @@ TRUONGPHONGBAN (xem + duyệt BKT), DENGHI (xem + lập BKT), NVCUVT (xem + lậ
 HOIDONG, KSNB, LANHDAO, PHOCTUBCL, TPCUVT, TRUONGBANCUVT, VANHANH (xem DNT, BKT); TOANQUYEN đủ 9 quyền mới (kể cả `Sourcing.Rfq.ViewSealed`).
 Chưa áp lại "Cấu hình duyệt mẫu" CUVT cho DNT / BKT / TVB (chưa cấu hình thì duyệt một cấp) – để người test tự áp.
 
+**⛔ DỪNG TOÀN BỘ – CHỜ LỆNH (người dùng yêu cầu 14/11/2026, sau lát K2b)**: "bạn dừng lại và ghi nhận". Không tự làm lát mới nào (kể cả khi
+được bảo "làm tiếp") cho đến khi người dùng giao việc cụ thể. Trạng thái lúc dừng: `main` sạch, đã push (lát K2b merge xong, nhánh đã xóa);
+không còn API / Vite thử chạy nền; chưa phát hành các lát sau 0.27.1 (P6b, P2a, P7a, K2b). Việc chờ người dùng quyết: K3 gỡ hẳn kho (xác nhận
+sao lưu), Portal (P2b, P7b, P7c, P5-8 – đang dừng), mẫu 1C/2C thật, phát hành bản mới, thư mục `Lưu ý/` chưa đưa vào git (để nguyên).
+
 **⛔ TẠM DỪNG MỌI VIỆC PORTAL (người dùng yêu cầu 14/11/2026)**: "tất cả mục liên quan đến portal hãy dừng lại và ghi nhận để tôi phân
 tích và ra lệnh trước khi bạn làm". Không làm P2b, P7 (bảng giá, tin nhắn, thẻ điểm), việc sau P5 (P5-8) hay sửa gì thuộc Portal cho đến khi
 người dùng ra lệnh. **Ngoại lệ**: cùng ngày người dùng ra lệnh "tiếp tục thực hiện nhánh P7a" → P7a làm xong (dưới); P7b tin nhắn, P7c thẻ điểm,
