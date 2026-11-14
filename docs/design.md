@@ -3024,7 +3024,7 @@ Không đạt, ý kiến, đính kèm), **Lỗi phát hiện** (gửi từ nút 
 | 3. Xác nhận UAT đạt | UAT đạt | `Ops.Release.UatSignOff` | Ghi người, giờ, ý kiến; còn mục Không đạt hoặc lỗi chưa xử lý thì cảnh báo, vẫn cho xác nhận kèm lý do |
 | 4. Cài PROD | Đã cài PROD | `Ops.Release.DeployProd` | Chỉ khi UAT đạt (hoặc chế độ một môi trường); kiểm SHA256 trùng gói đã cài TEST; sao lưu Full + kiểm tra → chế độ bảo trì → cài → script → `/health` + kiểm thử nhanh → mở lại; lỗi tự quay về gói cũ + CSDL vừa sao lưu; giờ cài tự do (E7), thông báo người dùng trước |
 | 5. Đóng phiếu | Đã đóng | `Ops.Release.Manage` | Sau khi theo dõi màn hình ERR |
-| Quay về bản cũ | Đã quay về | `Ops.Release.DeployProd` | Liệt kê thay đổi + rủi ro mất dữ liệu (như `docs/phat-hanh.md`), xác nhận Q6, khôi phục gói cũ + CSDL |
+| Quay về bản cũ | Đã quay về | `Ops.Release.DeployProd` | Liệt kê thay đổi + rủi ro mất dữ liệu (như `docs/phat-hanh.md`), xác nhận Q6, quay về theo **mức** ở mục 21.6a (mặc định chỉ trả code) |
 | Hủy phiếu | Đã hủy | `Ops.Release.Manage` | Bắt buộc lý do; không hủy được phiếu đã cài PROD |
 
 Không có chuỗi duyệt, thời gian UAT tối thiểu, giờ cài cố định (E3, E4, E7). Mỗi bước ghi nhật ký vận hành; các bước 2, 4 và quay về bản
@@ -3032,6 +3032,25 @@ cũ đòi xác nhận Q6. Phiếu Đã cài PROD trở đi thì khóa, chỉ th�
 
 Quyền khác: `Ops.View` (xem SYS), `Ops.ErrorLog.View/Manage`, `Ops.Backup.Run`, `Ops.Restore.Run`, `Ops.Maintenance.Run`,
 `Ops.TestRefresh.Run`, `Ops.Config.Manage`. Mọi quyền `Ops.*` chỉ dùng được khi đang làm việc ở tổng công ty.
+
+### 21.6a Quay về bản cũ – ba mức (14/11/2026)
+
+Quay về bản cũ **mặc định chỉ trả code**, giữ nguyên dữ liệu người dùng đã nhập sau khi nâng cấp. Chỉ khi code cũ không chạy được trên cấu
+trúc CSDL mới mới phải đụng tới CSDL:
+
+| Mức | Khi nào | Làm gì | Dữ liệu |
+| --- | --- | --- | --- |
+| **1. Chỉ trả code** (mặc định) | Bản mới **không đổi CSDL**, hoặc chỉ **thêm** (bảng mới, cột mới cho phép trống hoặc có giá trị mặc định) | Bộ thực thi cài lại gói cũ đã cất trong `releases\<bản cũ>`; không chạy script CSDL | Giữ toàn bộ; dữ liệu ở bảng / cột mới nằm im, cài lại bản mới thì dùng tiếp |
+| **2. Trả code + gỡ cấu trúc** | Bản mới đổi CSDL kiểu **không tương thích** (đổi tên / kiểu cột, cột mới bắt buộc, xóa cột / bảng) | Chạy **script gỡ** sinh từ `Down()` của các migration của bản mới, rồi cài gói cũ | Giữ dữ liệu cũ; **mất dữ liệu ở cột / bảng bị gỡ** – liệt kê trước khi xác nhận |
+| **3. Trả code + khôi phục CSDL** | Bản mới **làm hỏng dữ liệu**; hoặc tự quay về khi cài lỗi (bước 4 – đang chế độ bảo trì, chưa ai nhập liệu) | Khôi phục bản sao lưu ngay trước lần cài (hoặc về một mốc thời gian – RST) + cài gói cũ | Mất mọi dữ liệu nhập sau mốc khôi phục (trường hợp cài lỗi thì không mất gì) |
+
+- Mỗi gói ghi sẵn **mức quay về tối thiểu** so với bản trước (`rollback.json` trong gói: danh sách migration của bản, có / không tương
+  thích, script gỡ `db-scripts\down\<bản>.sql`); CHANGELOG mục "Cách quay lại bản trước" ghi cùng mức (docs/phat-hanh.md). Màn hình REL
+  đề xuất mức thấp nhất dùng được; người có quyền chọn mức cao hơn khi cần, không chọn được mức thấp hơn.
+- Để bản phát hành nào cũng quay về được ở **mức 1**, thay đổi CSDL theo kiểu "thêm trước – bỏ sau": cột mới cho phép trống hoặc có mặc
+  định; đổi tên = thêm cột mới, chép dữ liệu, bản sau mới bỏ cột cũ; xóa cột / bảng làm ở bản sau khi đã ngừng dùng (đã là quy tắc CLAUDE.md
+  mục 8). Bản nào buộc phải không tương thích (ví dụ 0.31.0 gỡ bảng kho) thì ghi rõ "chỉ quay về được mức 2 hoặc 3".
+- Quay về **nhiều bản** (ví dụ 0.36.0 → 0.33.0): đi lần lượt từng bản theo thứ tự ngược, mức của cả chuỗi là mức cao nhất trong chuỗi.
 
 ### 21.7 Chia lát (thứ tự làm)
 
@@ -3045,7 +3064,7 @@ Quyền khác: `Ops.View` (xem SYS), `Ops.ErrorLog.View/Manage`, `Ops.Backup.Run
 | QT5 | Bộ thực thi (Windows trước) + chế độ bảo trì |
 | QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
 | QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) |
-| QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ, bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
+| QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
 | QT9 | Làm mới TEST từ PROD (làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
 ### 21.8 Đưa chính module QT vào vận hành (14/11/2026)
