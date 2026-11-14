@@ -991,7 +991,8 @@ in phiếu kho, menu Kho), cờ `Modules:InventoryEnabled`, nhóm quyền Kho + 
 tham số kho / markup / nhập theo PO, KPI tồn chậm (còn 8 KPI), ô số liệu kho trang chủ, seed kỳ kho. Migration `V0_31_0_GoPhanHeKho` (xóa quyền
 kho trong vai trò, đính kèm phiếu kho, đánh số phiếu kho, 7 bảng kho; Down tạo lại bảng rỗng). `useItemLookup`/`useSupplierLookup` chuyển sang
 `api/lookups.ts`; e2e `seedPostedReceipt` → `seedItemSupplier` + `seedDraftPo`. design.md 19.4 "Lát K3", CLAUDE.md mục 3–4, hướng dẫn cài đặt.
-Kiểm tra: build 0 cảnh báo, `dotnet test` 711/711, tsc, oxlint, `npm run build`, Playwright đủ bộ (xem dòng dưới). **Phát hành 0.31.0 cần**: script
+Kiểm tra: build 0 cảnh báo, `dotnet test` 711/711, tsc, oxlint, `npm run build`, Playwright đủ bộ 142/142 (`purchase-reports` tự tạo XNH,
+không dựa dữ liệu spec khác; `lookup-wildcard` lỗi một lần khi chạy đủ bộ, ép tải 6 luồng qua – theo dõi). **Phát hành 0.31.0 cần**: script
 `db/scripts/0.31.0.sql`; bản test 5007 chạy migration sẽ xóa dữ liệu kho cũ (người dùng đã đồng ý không sao lưu). **Còn giữ chờ quyết định**: cột
 tham số ngừng dùng (KpiSlowMoving*, InternalMarkupPercent, RequireReceiptPo – xóa ở bản sau), danh mục kho Main/Sub + cờ tồn âm, tab Tồn kho của
 mặt hàng (lô, hạn dùng, tồn min/max, vật tư trọng yếu).
