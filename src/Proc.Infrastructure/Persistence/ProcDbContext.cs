@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
-using Proc.Domain.Inventory;
 using Proc.Domain.MasterData;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
@@ -181,27 +180,6 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// </summary>
     public DbSet<SupplierCategory> SupplierCategories => Set<SupplierCategory>();
 
-    /// <summary>Kỳ kho (lọc theo công ty).</summary>
-    public DbSet<InventoryPeriod> InventoryPeriods => Set<InventoryPeriod>();
-
-    /// <summary>Chứng từ kho (lọc theo công ty và kho được phép).</summary>
-    public DbSet<InventoryDocument> InventoryDocuments => Set<InventoryDocument>();
-
-    /// <summary>Dòng chứng từ kho (theo chứng từ thấy được).</summary>
-    public DbSet<InventoryDocumentLine> InventoryDocumentLines => Set<InventoryDocumentLine>();
-
-    /// <summary>Sổ kho (lọc theo công ty, kho, nhóm hàng).</summary>
-    public DbSet<StockLedgerEntry> StockLedger => Set<StockLedgerEntry>();
-
-    /// <summary>Tồn tức thời (lọc theo công ty, kho, nhóm hàng).</summary>
-    public DbSet<StockOnHand> StockOnHand => Set<StockOnHand>();
-
-    /// <summary>Số dư kỳ đã đóng (lọc theo công ty, kho, nhóm hàng).</summary>
-    public DbSet<StockPeriodBalance> StockPeriodBalances => Set<StockPeriodBalance>();
-
-    /// <summary>Giá vốn kỳ theo mặt hàng (lọc theo công ty, nhóm hàng).</summary>
-    public DbSet<ItemPeriodCost> ItemPeriodCosts => Set<ItemPeriodCost>();
-
     /// <summary>Quy trình duyệt (lọc theo công ty).</summary>
     public DbSet<Proc.Domain.Purchasing.ApprovalRule> ApprovalRules => Set<Proc.Domain.Purchasing.ApprovalRule>();
 
@@ -376,30 +354,6 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
         // Hàng hóa theo nhóm hàng của nó: người chỉ được nhóm Vật tư không thấy mã hàng nhóm khác (design.md mục 9.2).
         modelBuilder.Entity<Item>().HasQueryFilter(
             ItemCategoryFilter, i => ScopeAllItemCategories || ScopeItemCategoryIds.Contains(i.CategoryId));
-        // Chứng từ kho theo kho được phép: thủ kho chỉ được kho KP1 thì chỉ thấy phiếu nhập/xuất của KP1 (design.md mục 9.2).
-        modelBuilder.Entity<InventoryDocument>().HasQueryFilter(
-            WarehouseFilter,
-            d => ScopeAllWarehouses
-                 || (d.ToWarehouseId != null && ScopeWarehouseIds.Contains(d.ToWarehouseId.Value))
-                 || (d.FromWarehouseId != null && ScopeWarehouseIds.Contains(d.FromWarehouseId.Value)));
-        // Dòng đi theo chứng từ: chỉ thấy dòng của chứng từ thấy được (công ty, kho).
-        modelBuilder.Entity<InventoryDocumentLine>().HasQueryFilter(
-            CompanyFilter, l => InventoryDocuments.Any(d => d.Id == l.DocumentId));
-        // Sổ kho và tồn kho: chỉ thấy kho được phép và mặt hàng thuộc nhóm được phép (design.md mục 9.2).
-        modelBuilder.Entity<StockLedgerEntry>().HasQueryFilter(
-            WarehouseFilter, x => ScopeAllWarehouses || ScopeWarehouseIds.Contains(x.WarehouseId));
-        modelBuilder.Entity<StockLedgerEntry>().HasQueryFilter(
-            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
-        modelBuilder.Entity<StockOnHand>().HasQueryFilter(
-            WarehouseFilter, x => ScopeAllWarehouses || ScopeWarehouseIds.Contains(x.WarehouseId));
-        modelBuilder.Entity<StockOnHand>().HasQueryFilter(
-            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
-        modelBuilder.Entity<StockPeriodBalance>().HasQueryFilter(
-            WarehouseFilter, x => ScopeAllWarehouses || ScopeWarehouseIds.Contains(x.WarehouseId));
-        modelBuilder.Entity<StockPeriodBalance>().HasQueryFilter(
-            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
-        modelBuilder.Entity<ItemPeriodCost>().HasQueryFilter(
-            ItemCategoryFilter, x => ScopeAllItemCategories || Items.Any(i => i.Id == x.ItemId));
         // NCC – sản phẩm theo phạm vi của mặt hàng: Items đã có filter nhóm hàng, nên chỉ thấy dòng của hàng mình được xem.
         modelBuilder.Entity<SupplierItem>().HasQueryFilter(
             ItemCategoryFilter, si => ScopeAllItemCategories || Items.Any(i => i.Id == si.ItemId));

@@ -34,18 +34,10 @@ public static class PricingEndpoints
                 s.UpdateAsync(id, request, ct))
             .RequirePermission(Permissions.Pricing.PriceListManage)
             .Validate<SaveInternalPriceRequest>();
-        // Gợi ý để lộ giá vốn nên chỉ cho người xem được bảng giá (người định giá bán nội bộ).
-        prices.MapGet("/suggest", (Guid[]? itemIds, IInternalPriceAdministration s, CancellationToken ct) =>
-                s.SuggestAsync(itemIds ?? [], ct))
-            .RequirePermission(Permissions.Pricing.PriceListView);
-        // Người lập phiếu xuất bán nội bộ cần giá và danh sách công ty mua dù không có quyền xem bảng giá.
-        prices.MapGet("/resolve", (Guid buyerCompanyId, DateOnly date, Guid[]? itemIds, IInternalPriceAdministration s, CancellationToken ct) =>
-                s.ResolveAsync(buyerCompanyId, date, itemIds ?? [], ct))
-            .RequirePermission(Permissions.Inventory.DocumentView);
-        // Bảng giá nội bộ (IPR, quyền xem bảng giá) cũng cần danh sách công ty – vẫn dùng khi phân hệ kho tắt từ 0.22.0 (design.md mục 19.4).
+        // Bảng giá nội bộ (IPR) chọn công ty mua trong danh sách công ty của tập đoàn.
         app.MapGet("/api/group-companies", (IInternalPriceAdministration s, CancellationToken ct) => s.OtherCompaniesAsync(ct))
             .WithTags("Giá nội bộ")
-            .RequireAnyPermission(Permissions.Pricing.PriceListView, Permissions.Inventory.DocumentView);
+            .RequirePermission(Permissions.Pricing.PriceListView);
 
         var lists = app.MapGroup("/api/price-lists").WithTags("Bảng giá NCC");
         // Người lập hợp đồng nguyên tắc cần danh sách bảng giá để gắn bảng giá dùng chung (lát B4a).

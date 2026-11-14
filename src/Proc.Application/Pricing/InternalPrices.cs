@@ -23,22 +23,6 @@ public sealed record InternalPriceDto(
 public sealed record SaveInternalPriceRequest(
     Guid? BuyerCompanyId, Guid ItemId, decimal UnitPrice, string? VatCode, DateOnly ValidFrom, DateOnly? ValidTo, string? Note);
 
-/// <summary>Giá nội bộ áp cho một mặt hàng tại một ngày.</summary>
-/// <param name="ItemId">Mặt hàng.</param>
-/// <param name="UnitPrice">Giá chưa VAT theo ĐVT cơ sở.</param>
-/// <param name="VatCode">Thuế suất đã quy về (giá trống thì lấy của mặt hàng).</param>
-public sealed record ResolvedInternalPriceDto(Guid ItemId, decimal UnitPrice, string? VatCode);
-
-/// <summary>Giá bán nội bộ gợi ý cho một mặt hàng (design.md mục 1 câu hỏi 2).</summary>
-/// <param name="ItemId">Mặt hàng.</param>
-/// <param name="UnitCost">Giá vốn đơn vị kỳ đã đóng gần nhất theo ĐVT cơ sở.</param>
-/// <param name="PeriodYear">Năm của kỳ lấy giá vốn.</param>
-/// <param name="PeriodMonth">Tháng của kỳ lấy giá vốn.</param>
-/// <param name="MarkupPercent">% markup nội bộ mặc định của công ty bán.</param>
-/// <param name="SuggestedPrice">Giá gợi ý chưa VAT theo ĐVT cơ sở = giá vốn × (1 + % markup), làm tròn đồng.</param>
-public sealed record InternalPriceSuggestionDto(
-    Guid ItemId, decimal UnitCost, int PeriodYear, int PeriodMonth, decimal MarkupPercent, decimal SuggestedPrice);
-
 /// <summary>Một công ty trong tập đoàn (để chọn công ty mua/bán nội bộ).</summary>
 public sealed record GroupCompanyDto(Guid Id, string Code, string Name);
 
@@ -68,27 +52,6 @@ public interface IInternalPriceAdministration
     /// <exception cref="Domain.Common.BusinessRuleException">Khi trùng hiệu lực hoặc sai quy tắc.</exception>
     /// <exception cref="Common.NotFoundException">Khi không có.</exception>
     Task<InternalPriceDto> UpdateAsync(Guid id, SaveInternalPriceRequest request, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Giá áp dụng khi công ty đang làm việc bán cho <paramref name="buyerCompanyId"/> vào ngày <paramref name="date"/>: giá riêng
-    /// cho công ty mua được ưu tiên hơn giá chung. Mặt hàng chưa có giá thì không có trong kết quả.
-    /// </summary>
-    /// <param name="buyerCompanyId">Công ty mua.</param>
-    /// <param name="date">Ngày phiếu.</param>
-    /// <param name="itemIds">Mặt hàng.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Giá theo mặt hàng.</returns>
-    Task<IReadOnlyList<ResolvedInternalPriceDto>> ResolveAsync(Guid buyerCompanyId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Giá bán nội bộ gợi ý tại công ty đang làm việc (công ty bán): giá vốn kỳ tháng đã đóng gần nhất có giá vốn của mặt hàng
-    /// × (1 + % markup nội bộ mặc định). Chỉ là gợi ý – người dùng tự quyết có áp dụng (thêm vào bảng giá) hay không.
-    /// Mặt hàng chưa có giá vốn kỳ đã đóng thì không có trong kết quả.
-    /// </summary>
-    /// <param name="itemIds">Mặt hàng.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Gợi ý theo mặt hàng.</returns>
-    Task<IReadOnlyList<InternalPriceSuggestionDto>> SuggestAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken);
 
     /// <summary>Các công ty đang hoạt động trong tập đoàn, trừ công ty đang làm việc.</summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>

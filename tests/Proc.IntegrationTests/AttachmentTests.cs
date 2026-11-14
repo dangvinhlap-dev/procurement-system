@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Proc.Application.Documents;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
+using Proc.Application.Purchasing;
 using Proc.Domain.Documents;
 using Proc.Infrastructure.Documents;
 using Proc.Infrastructure.Persistence;
@@ -83,13 +83,13 @@ public class AttachmentTests
         return new Fixture(head, bha, supplier, item, uoms["HOP"]);
     }
 
-    /// <summary>Phiếu nhập nháp ở kho <paramref name="warehouseCode"/> của BHA.</summary>
-    private static async Task<InventoryDocumentDto> ReceiptAsync(Fixture f, string warehouseCode)
+    /// <summary>Đơn mua hàng nháp của BHA, nơi nhận kho tổng KT (phiếu kho cũ đã gỡ ở lát K3 – dùng PO làm chủ đính kèm).</summary>
+    private static async Task<PurchaseOrderDto> OrderAsync(Fixture f)
     {
-        var warehouseId = (await f.Bha.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single(w => w.Code == warehouseCode).Id;
-        return await ReadAsync<InventoryDocumentDto>(await f.Bha.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, warehouseId, f.Supplier.Id, null, null, null, null, null, null,
-                [new(null, f.Item.Id, f.Hop, 1, 10_000, "10", null, null, null)]), Ct));
+        var warehouseId = (await f.Bha.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single(w => w.Code == "KT").Id;
+        return await ReadAsync<PurchaseOrderDto>(await f.Bha.PostAsJsonAsync("/api/purchase-orders",
+            new SavePurchaseOrderRequest(Today, f.Supplier.Id, warehouseId, null, null, null, null, 0, null,
+                [new(null, f.Item.Id, f.Hop, 1, 10_000, 0, "10", null, null, null)]), Ct));
     }
 
     private string FullPath(string storagePath) =>
@@ -99,16 +99,16 @@ public class AttachmentTests
     public async Task TaiLenTaiXuongXoaMem_GiuFileVaGhiNhatKy()
     {
         var f = await ArrangeAsync();
-        var receipt = await ReceiptAsync(f, "KT");
+        var order = await OrderAsync(f);
         var content = "%PDF-1.4 hóa đơn"u8.ToArray();
 
         var uploaded = await ReadAsync<AttachmentDto>(
-            await UploadAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, receipt.Id, "Hóa đơn 0001.pdf", content, "Hóa đơn GTGT"));
+            await UploadAsync(f.Bha, AttachmentOwnerTypes.PurchaseOrder, order.Id, "Hóa đơn 0001.pdf", content, "Hóa đơn GTGT"));
 
         Assert.Equal(("Hóa đơn 0001.pdf", "application/pdf", content.LongLength, "Hóa đơn GTGT"),
             (uploaded.FileName, uploaded.ContentType, uploaded.SizeBytes, uploaded.Note));
         Assert.NotNull(uploaded.UploadedByName);
-        var list = await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, receipt.Id));
+        var list = await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Bha, AttachmentOwnerTypes.PurchaseOrder, order.Id));
         Assert.Equal([uploaded.Id], list.Select(a => a.Id));
 
         var download = await f.Bha.GetAsync($"/api/attachments/{uploaded.Id}/content", Ct);
@@ -125,7 +125,7 @@ public class AttachmentTests
         Assert.True(File.Exists(FullPath(row.StoragePath)));
 
         Assert.Equal(HttpStatusCode.NoContent, (await f.Bha.DeleteAsync($"/api/attachments/{uploaded.Id}", Ct)).StatusCode);
-        Assert.Empty(await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, receipt.Id)));
+        Assert.Empty(await ReadAsync<List<AttachmentDto>>(await ListAsync(f.Bha, AttachmentOwnerTypes.PurchaseOrder, order.Id)));
         Assert.Equal(HttpStatusCode.NotFound, (await f.Bha.GetAsync($"/api/attachments/{uploaded.Id}/content", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await f.Bha.DeleteAsync($"/api/attachments/{uploaded.Id}", Ct)).StatusCode);
         // Xóa mềm: file vẫn trên đĩa để đối chiếu/khôi phục.
@@ -182,32 +182,25 @@ public class AttachmentTests
         Assert.Equal(HttpStatusCode.OK, (await nmi.GetAsync($"/api/attachments/{uploaded.Id}/content", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await UploadAsync(nmi, AttachmentOwnerTypes.Supplier, f.Supplier.Id, "b.pdf", [1])).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await nmi.DeleteAsync($"/api/attachments/{uploaded.Id}", Ct)).StatusCode);
-        // Không có quyền xem phiếu kho: 403 trước khi biết phiếu có tồn tại hay không.
-        Assert.Equal(HttpStatusCode.Forbidden, (await ListAsync(nmi, AttachmentOwnerTypes.InventoryDocument, Guid.NewGuid())).StatusCode);
+        // Không có quyền xem vi phạm KSNB: 403 trước khi biết phiếu có tồn tại hay không.
+        Assert.Equal(HttpStatusCode.Forbidden, (await ListAsync(nmi, AttachmentOwnerTypes.ControlFinding, Guid.NewGuid())).StatusCode);
     }
 
     [Fact]
-    public async Task PhieuCongTyKhac_Va_KhoNgoaiPhamVi_NhuKhongTonTai()
+    public async Task PhieuCongTyKhac_NhuKhongTonTai()
     {
         var f = await ArrangeAsync();
-        var atKp2 = await ReceiptAsync(f, "KP2");
+        var order = await OrderAsync(f);
         var uploaded = await ReadAsync<AttachmentDto>(
-            await UploadAsync(f.Bha, AttachmentOwnerTypes.InventoryDocument, atKp2.Id, "bien-ban.docx", [80, 75, 3, 4]));
+            await UploadAsync(f.Bha, AttachmentOwnerTypes.PurchaseOrder, order.Id, "bien-ban.docx", [80, 75, 3, 4]));
 
         // Quản trị NMI (cùng quyền) nhưng phiếu thuộc BHA.
         var nmiAdmin = $"dk.{Guid.NewGuid():N}"[..16];
         await _factory.CreateUserAsync(nmiAdmin, ProcApiFactory.TestPassword, ["NMI"]);
         var nmi = await _factory.CreateClientInCompanyAsync(nmiAdmin, ProcApiFactory.TestPassword, "NMI");
-        Assert.Equal(HttpStatusCode.NotFound, (await ListAsync(nmi, AttachmentOwnerTypes.InventoryDocument, atKp2.Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ListAsync(nmi, AttachmentOwnerTypes.PurchaseOrder, order.Id)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await nmi.GetAsync($"/api/attachments/{uploaded.Id}/content", Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await UploadAsync(nmi, AttachmentOwnerTypes.InventoryDocument, atKp2.Id, "x.pdf", [1])).StatusCode);
-
-        // Thủ kho BHA chỉ được kho KP1: phiếu ở KP2 ngoài phạm vi.
-        var keeper = $"dk.{Guid.NewGuid():N}"[..16];
-        await _factory.CreateScopedUserAsync(keeper, "BHA", "THUKHO", warehouseCodes: ["KP1"]);
-        var bhaKeeper = await _factory.CreateClientInCompanyAsync(keeper, ProcApiFactory.TestPassword, "BHA");
-        Assert.Equal(HttpStatusCode.NotFound, (await ListAsync(bhaKeeper, AttachmentOwnerTypes.InventoryDocument, atKp2.Id)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await bhaKeeper.DeleteAsync($"/api/attachments/{uploaded.Id}", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await UploadAsync(nmi, AttachmentOwnerTypes.PurchaseOrder, order.Id, "x.pdf", [1])).StatusCode);
     }
     [Fact]
     public async Task LoaiChuMoi_DuocNhan_KhongCoChuThi404()

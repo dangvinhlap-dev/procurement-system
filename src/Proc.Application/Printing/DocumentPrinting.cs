@@ -62,24 +62,6 @@ public interface IDocumentPdfService
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi chưa có báo giá, hoặc in 3A cho RFQ không phải loại A.</exception>
     Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken);
 
-    /// <summary>In chứng từ kho (nhập mua, trả NCC, chuyển kho, xuất bán / nhập mua nội bộ).</summary>
-    /// <param name="id">Chứng từ kho.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>File PDF.</returns>
-    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
-    Task<PdfFile> InventoryDocumentAsync(Guid id, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// In biên bản giao nhận và kiểm tra hàng hóa của phiếu nhập mua NCC (design.md mục 18.14): SL theo chứng từ giao, SL đạt nhập kho,
-    /// SL không đạt, thiếu/thừa, kết quả và ghi chú kiểm tra từng dòng; dùng làm biên bản sai lệch gửi NCC khi có dòng lệch/không đạt.
-    /// </summary>
-    /// <param name="id">Phiếu nhập mua.</param>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>File PDF.</returns>
-    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
-    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi phiếu không phải phiếu nhập mua NCC.</exception>
-    Task<PdfFile> GoodsReceiptRecordAsync(Guid id, CancellationToken cancellationToken);
-
     /// <summary>
     /// In phiếu xác nhận nhận hàng XNH thành biên bản giao nhận và kiểm tra hàng hóa (lát K2b, design.md mục 10.10, 19.4): SL theo phiếu
     /// giao, SL đạt, không đạt, thiếu so với phiếu giao, kết quả và ghi chú kiểm tra từng dòng; SL thực nhận sau điều chỉnh (nếu có), hóa

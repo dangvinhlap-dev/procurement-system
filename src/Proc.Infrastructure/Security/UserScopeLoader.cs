@@ -26,19 +26,16 @@ public sealed class UserScopeLoader
 {
     private readonly ProcDbContext _db;
     private readonly CurrentUserScope _scope;
-    private readonly ModuleOptions _modules;
 
     /// <summary>
     /// Tạo bộ nạp phạm vi.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của request hiện tại.</param>
-    /// <param name="modules">Phân hệ bật/tắt – quyền của phân hệ đang tắt bị bỏ.</param>
-    public UserScopeLoader(ProcDbContext db, CurrentUserScope scope, IOptions<ModuleOptions> modules)
+    public UserScopeLoader(ProcDbContext db, CurrentUserScope scope)
     {
         _db = db;
         _scope = scope;
-        _modules = modules.Value;
     }
 
     /// <summary>
@@ -89,8 +86,7 @@ public sealed class UserScopeLoader
         _scope.Initialize(
             userId,
             company,
-            // Phân hệ kho tắt từ 0.22.0: bỏ quyền kho ở đây là đủ để mọi API, menu, trang chủ coi như không có – design.md mục 19.4.
-            _modules.Filter(permissions),
+            permissions,
             allWarehouses: warehouseIds.Count == 0,
             warehouseIds,
             allItemCategories: categoryRoots.Length == 0,

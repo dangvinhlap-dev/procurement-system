@@ -23,18 +23,6 @@ public static class ReportEndpoints
     public static IEndpointRouteBuilder MapReportEndpoints(this IEndpointRouteBuilder app)
     {
         var reports = app.MapGroup("/api/reports").WithTags("Báo cáo");
-        reports.MapGet("/slow-moving", (Guid? warehouseId, Guid? categoryId, int? days, IStockReportService s, CancellationToken ct) =>
-                s.GetSlowMovingAsync(new SlowMovingQuery(warehouseId, categoryId, days ?? 90), ct))
-            .RequirePermission(Permissions.Report.StockView);
-        reports.MapGet("/expiring", (Guid? warehouseId, Guid? categoryId, int? days, IStockReportService s, CancellationToken ct) =>
-                s.GetExpiringAsync(new ExpiringQuery(warehouseId, categoryId, days ?? 30), ct))
-            .RequirePermission(Permissions.Report.StockView);
-        reports.MapGet("/group-stock", (Guid itemId, IStockReportService s, CancellationToken ct) => s.GetGroupStockAsync(itemId, ct))
-            .RequirePermission(Permissions.Report.StockView);
-        reports.MapGet("/reorder-suggestions", (Guid? categoryId, bool? criticalOnly, bool? includeAll, IStockReportService s, CancellationToken ct) =>
-                s.GetReorderSuggestionsAsync(new ReorderSuggestionQuery(categoryId, criticalOnly ?? false, includeAll ?? false), ct))
-            .RequirePermission(Permissions.Report.StockView);
-
         reports.MapGet("/pending-requests", (IPurchaseReportService s, CancellationToken ct) => s.GetPendingRequestsAsync(ct))
             .RequirePermission(Permissions.Report.PurchaseView);
         reports.MapGet("/purchase-spend", (DateOnly from, DateOnly to, string? groupBy, bool? allCompanies, int? categoryLevel, IPurchaseReportService s,
@@ -90,18 +78,6 @@ public static class ReportEndpoints
                 return Results.File(file.Content, XlsxContentType, file.FileName);
             })
             .RequirePermission(Permissions.Report.PurchaseView);
-
-        // Xuất chứng từ cho kế toán (mục 11.5): docTypes nhiều giá trị (?docTypes=GRN&docTypes=RTV), trống = tất cả.
-        var accounting = app.MapGroup("/api/accounting-export").WithTags("Xuất cho kế toán");
-        accounting.MapGet("/documents", (DateOnly from, DateOnly to, string[]? docTypes, IAccountingExportService s, CancellationToken ct) =>
-                s.ListAsync(new AccountingExportQuery(from, to, docTypes ?? []), ct))
-            .RequirePermission(Permissions.Report.AccountingExport);
-        accounting.MapGet("/file", async (DateOnly from, DateOnly to, string[]? docTypes, IAccountingExportService s, CancellationToken ct) =>
-            {
-                var file = await s.ExportAsync(new AccountingExportQuery(from, to, docTypes ?? []), ct);
-                return Results.File(file.Content, XlsxContentType, file.FileName);
-            })
-            .RequirePermission(Permissions.Report.AccountingExport);
 
         // Xuất chứng từ mua cho kế toán (lát Y9b – thay ACCX từ khi bỏ kho, design.md mục 19.3 "Lát Y9"): docTypes PO, XNH, DNT; trống = tất cả.
         var purchaseAccounting = app.MapGroup("/api/purchase-accounting-export").WithTags("Xuất cho kế toán");

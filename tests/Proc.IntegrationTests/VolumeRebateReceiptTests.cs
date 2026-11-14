@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Proc.Application.Common;
 using Proc.Application.Control;
 using Proc.Application.Documents;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;

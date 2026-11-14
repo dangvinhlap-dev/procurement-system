@@ -251,8 +251,8 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>Mức trần KPI tỷ lệ mua khẩn cấp (%).</summary>
     public decimal KpiEmergencyTarget { get; private set; } = KpiCatalog.Get(KpiCode.Emergency).DefaultTarget;
 
-    /// <summary>Mức trần KPI tồn kho chậm luân chuyển (%).</summary>
-    public decimal KpiSlowMovingTarget { get; private set; } = KpiCatalog.Get(KpiCode.SlowMoving).DefaultTarget;
+    /// <summary>Mức trần KPI tồn kho chậm luân chuyển (%) – <b>ngừng dùng từ 0.31.0</b> (lát K3), giữ cột, xóa ở bản sau (CLAUDE.md mục 8).</summary>
+    public decimal KpiSlowMovingTarget { get; private set; } = 10m;
 
     /// <summary>Mục tiêu KPI hoàn thành đánh giá NCC (%).</summary>
     public decimal KpiSupplierReviewTarget { get; private set; } = KpiCatalog.Get(KpiCode.SupplierReview).DefaultTarget;
@@ -260,8 +260,8 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>Mức trần KPI vi phạm nghiêm trọng (số vụ).</summary>
     public int KpiViolationTarget { get; private set; }
 
-    /// <summary>Số ngày không xuất để coi là tồn chậm luân chuyển khi tính KPI.</summary>
-    public int KpiSlowMovingDays { get; private set; } = KpiCatalog.DefaultSlowMovingDays;
+    /// <summary>Số ngày không xuất tính KPI tồn chậm luân chuyển – <b>ngừng dùng từ 0.31.0</b> (lát K3), giữ cột, xóa ở bản sau.</summary>
+    public int KpiSlowMovingDays { get; private set; } = 90;
 
     /// <summary>Mục tiêu đang dùng của một KPI.</summary>
     /// <param name="code">Mã chỉ số.</param>
@@ -274,7 +274,6 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         KpiCode.OnTimeDelivery => KpiOnTimeTarget,
         KpiCode.Quality => KpiQualityTarget,
         KpiCode.Emergency => KpiEmergencyTarget,
-        KpiCode.SlowMoving => KpiSlowMovingTarget,
         KpiCode.SupplierReview => KpiSupplierReviewTarget,
         _ => KpiViolationTarget,
     };
@@ -304,19 +303,8 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
             case KpiCode.OnTimeDelivery: KpiOnTimeTarget = v; break;
             case KpiCode.Quality: KpiQualityTarget = v; break;
             case KpiCode.Emergency: KpiEmergencyTarget = v; break;
-            case KpiCode.SlowMoving: KpiSlowMovingTarget = v; break;
             default: KpiSupplierReviewTarget = v; break;
         }
     }
 
-    /// <summary>Đổi số ngày không xuất để tính KPI tồn chậm luân chuyển.</summary>
-    /// <param name="days">Số ngày; null = về mặc định <see cref="KpiCatalog.DefaultSlowMovingDays"/>.</param>
-    /// <exception cref="BusinessRuleException">Khi ngoài 1–<see cref="KpiCatalog.MaxSlowMovingDays"/>.</exception>
-    public void ChangeKpiSlowMovingDays(int? days)
-    {
-        var v = days ?? KpiCatalog.DefaultSlowMovingDays;
-        if (v < 1 || v > KpiCatalog.MaxSlowMovingDays)
-            throw new BusinessRuleException($"Số ngày tồn chậm luân chuyển phải từ 1 đến {KpiCatalog.MaxSlowMovingDays}.");
-        KpiSlowMovingDays = v;
-    }
 }

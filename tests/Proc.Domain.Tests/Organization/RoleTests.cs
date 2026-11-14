@@ -40,7 +40,9 @@ public class RoleTests
     [Fact]
     public void KiemTraMaQuyen_TuChoiMaKhongCoTrongDanhMuc()
     {
-        Assert.Empty(Permissions.FindUnknown([Permissions.Purchase.PoView, Permissions.Inventory.StockView]));
+        Assert.Empty(Permissions.FindUnknown([Permissions.Purchase.PoView, Permissions.Purchase.ReceiptView]));
+        // Quyền kho cũ đã gỡ (lát K3) – không còn trong danh mục.
+        Assert.Equal(["Inventory.Stock.View"], Permissions.FindUnknown([Permissions.Purchase.PoView, "Inventory.Stock.View"]));
         Assert.Equal(["Purchase.PO.Delete"], Permissions.FindUnknown([Permissions.Purchase.PoView, "Purchase.PO.Delete"]));
     }
 }

@@ -23,9 +23,6 @@ public static class AttachmentOwnerTypes
     /// <summary>Đơn mua hàng (hợp đồng, xác nhận đặt hàng).</summary>
     public const string PurchaseOrder = "PurchaseOrder";
 
-    /// <summary>Phiếu kho mọi loại: nhập mua, trả NCC, chuyển kho, ICS, ICR (hóa đơn, biên bản giao nhận).</summary>
-    public const string InventoryDocument = "InventoryDocument";
-
     /// <summary>Hợp đồng nguyên tắc (bản scan hợp đồng, phụ lục – lát B4a).</summary>
     public const string PurchaseContract = "PurchaseContract";
 
@@ -114,7 +111,7 @@ public static class AttachmentOwnerTypes
     public const string SupplierProfileFile = "SupplierProfileFile";
 
     /// <summary>Mọi loại hợp lệ.</summary>
-    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, InventoryDocument, PurchaseContract,
+    public static readonly IReadOnlyList<string> All = [Supplier, SupplierPriceList, Rfq, PurchaseRequest, PurchaseOrder, PurchaseContract,
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
         GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile,

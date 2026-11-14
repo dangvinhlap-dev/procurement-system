@@ -48,7 +48,7 @@ public class LoggingTests
 
     private static async Task<RoleDetailDto> CreateRoleAsync(HttpClient admin, string code) =>
         (await (await admin.PostAsJsonAsync("/api/roles",
-            new CreateRoleRequest(code, "Vai trò ghi log", [Permissions.Inventory.StockView]), Ct)).Content
+            new CreateRoleRequest(code, "Vai trò ghi log", [Permissions.Purchase.ReceiptView]), Ct)).Content
             .ReadFromJsonAsync<RoleDetailDto>(Ct))!;
 
     [Fact]
@@ -75,7 +75,7 @@ public class LoggingTests
 
         // Quyền của vai trò là bảng riêng, cũng được ghi.
         Assert.Contains(await AuditAsync(admin, "&entityType=RolePermission"),
-            r => r.EntityId.StartsWith(role.Id.ToString()) && r.EntityLabel == Permissions.Inventory.StockView);
+            r => r.EntityId.StartsWith(role.Id.ToString()) && r.EntityLabel == Permissions.Purchase.ReceiptView);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class LoggingTests
         var role = await CreateRoleAsync(admin, code);
 
         await admin.PutAsJsonAsync($"/api/roles/{role.Id}",
-            new UpdateRoleRequest("Tên mới", true, [Permissions.Inventory.StockView]), Ct);
+            new UpdateRoleRequest("Tên mới", true, [Permissions.Purchase.ReceiptView]), Ct);
 
         var row = Assert.Single(await AuditAsync(admin, "&entityType=Role&action=Update"), r => r.EntityLabel == code);
         Assert.Equal(["Name"], row.ChangedFields);

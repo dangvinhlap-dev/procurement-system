@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.Printing;
 using Proc.Application.Purchasing;
 using Proc.Application.Sourcing;
@@ -26,7 +25,6 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly ICurrentUserScope _scope;
     private readonly IPurchaseOrderService _orders;
     private readonly IPurchaseRequestService _requests;
-    private readonly IInventoryDocumentService _inventory;
     private readonly IPurchaseSummaryService _summaries;
     private readonly IRfqService _rfqs;
     private readonly IPaymentRequestService _payments;
@@ -38,7 +36,6 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="orders">Dịch vụ đơn mua hàng.</param>
     /// <param name="requests">Dịch vụ đề nghị mua hàng.</param>
-    /// <param name="inventory">Dịch vụ chứng từ kho.</param>
     /// <param name="summaries">Dịch vụ bảng tổng hợp đề xuất mua.</param>
     /// <param name="rfqs">Dịch vụ yêu cầu báo giá.</param>
     /// <param name="payments">Dịch vụ đề nghị thanh toán (lát Y8).</param>
@@ -46,7 +43,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="receipts">Phiếu xác nhận nhận hàng XNH (lát K2b).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
-        ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
+        ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests,
         IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, ISundryExpenseSheetService sundries,
         IReceiptConfirmationService receipts, IOptions<PrintingOptions> options)
     {
@@ -64,7 +61,6 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _scope = scope;
         _orders = orders;
         _requests = requests;
-        _inventory = inventory;
         _summaries = summaries;
         _rfqs = rfqs;
         _payments = payments;
@@ -360,154 +356,6 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <summary>Tên bộ phận (trong phạm vi công ty đang làm việc).</summary>
     private Task<string?> DepartmentNameAsync(Guid departmentId, CancellationToken cancellationToken) =>
         _db.Departments.AsNoTracking().Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken);
-
-    /// <inheritdoc />
-    public async Task<PdfFile> InventoryDocumentAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var d = await _inventory.GetAsync(id, cancellationToken);
-        if (d.DocType == DocumentTypes.Adjustment) return await AdjustmentAsync(d, cancellationToken);
-        var from = d.FromWarehouseId is { } f ? await WarehouseNameAsync(f, cancellationToken) : null;
-        var to = d.ToWarehouseId is { } t ? await WarehouseNameAsync(t, cancellationToken) : null;
-        var supplier = d.SupplierCode is null ? null : $"{d.SupplierCode} – {d.SupplierName}";
-        var counter = d.CounterCompanyCode is null ? null : $"{d.CounterCompanyCode} – {d.CounterCompanyName}";
-        var invoice = d.InvoiceNo is null ? null : $"{d.InvoiceSeries} {d.InvoiceNo}".Trim() + (d.InvoiceDate is { } at ? $" ngày {at:dd/MM/yyyy}" : "");
-        var (title, signers, info) = d.DocType switch
-        {
-            DocumentTypes.GoodsReceipt => ("PHIẾU NHẬP KHO",
-                new[] { "Người lập phiếu", "Người giao hàng", "Thủ kho", "Kế toán trưởng" },
-                new (string, string?)[] { ("Nhà cung cấp", supplier), ("Nhập vào kho", to), ("Hóa đơn", invoice), ("Phiếu giao hàng", d.DeliveryNoteNo),
-                    ("Theo đơn mua hàng", d.PurchaseOrderNo), ("Người giao hàng", d.Deliverer) }),
-            DocumentTypes.ReturnToVendor => ("PHIẾU XUẤT TRẢ HÀNG NHÀ CUNG CẤP",
-                new[] { "Người lập phiếu", "Người nhận hàng", "Thủ kho", "Kế toán trưởng" },
-                new (string, string?)[] { ("Nhà cung cấp", supplier), ("Xuất từ kho", from), ("Theo phiếu nhập", d.LinkedDocumentNo),
-                    ("Hóa đơn điều chỉnh", invoice) }),
-            DocumentTypes.Transfer => ("PHIẾU CHUYỂN KHO NỘI BỘ",
-                new[] { "Người lập phiếu", "Người giao", "Người nhận", "Thủ kho" },
-                new (string, string?)[] { ("Xuất từ kho", from), ("Nhập vào kho", to), ("Người giao", d.Deliverer), ("Người nhận", d.Receiver) }),
-            DocumentTypes.IntercompanySale => ("PHIẾU XUẤT BÁN NỘI BỘ",
-                new[] { "Người lập phiếu", "Người giao hàng", "Thủ kho", "Kế toán trưởng" },
-                new (string, string?)[] { ("Bán cho công ty", counter), ("Xuất từ kho", from), ("Hóa đơn", invoice), ("Người giao hàng", d.Deliverer) }),
-            _ => ("PHIẾU NHẬP MUA NỘI BỘ",
-                new[] { "Người lập phiếu", "Người giao hàng", "Thủ kho", "Kế toán trưởng" },
-                new (string, string?)[] { ("Mua của công ty", counter), ("Nhập vào kho", to), ("Theo phiếu xuất bán", d.LinkedDocumentNo),
-                    ("Hóa đơn", invoice), ("Người giao hàng", d.Deliverer) }),
-        };
-
-        // Phiếu chuyển kho không có đơn giá (giá vốn tính khi ghi sổ – design.md mục 10.6) nên không in cột tiền.
-        var priced = d.DocType != DocumentTypes.Transfer;
-        PrintColumn[] columns = priced
-            ? [new("STT", 8), new("Mã hàng", 27), new("Tên hàng", 45), new("ĐVT", 12), new("Số lô", 16), new("Hạn dùng", 16), new("SL", 16, true),
-                new("Đơn giá", 18, true), new("Thành tiền", 22, true)]
-            : [new("STT", 8), new("Mã hàng", 27), new("Tên hàng", 69), new("ĐVT", 14), new("Số lô", 22), new("Hạn dùng", 20), new("SL", 20, true)];
-        var rows = d.Lines.Select(l =>
-        {
-            string[] common = [l.LineNo.ToString(Vi), l.ItemCode, l.ItemName, l.UomCode, l.LotNo ?? "", Date(l.ExpiryDate) ?? "", Qty(l.Qty)];
-            return priced ? [.. common, Price(l.UnitPrice), Money(l.Amount)] : common;
-        }).ToList();
-        PrintTotal[] totals = priced
-            ? [new("Tiền hàng", Money(d.TotalAmount)), new("Thuế GTGT", Money(d.TotalVat)), new("Tổng cộng", Money(d.TotalAmount + d.TotalVat), true)]
-            : [];
-        var note = d.Status switch
-        {
-            "Draft" => "BẢN NHÁP – chưa ghi sổ",
-            "Cancelled" => "ĐÃ HỦY",
-            _ => null,
-        };
-        var doc = new PrintDocument(
-            title, d.No, d.Date, note, info, columns, rows, totals,
-            priced ? VietnameseNumberText.ToVndWords(d.TotalAmount + d.TotalVat) : null, d.Note, signers,
-            [d.CreatedByName, .. Enumerable.Repeat<string?>(null, signers.Length - 1)]);
-        return new PdfFile($"{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
-    }
-
-    /// <summary>
-    /// Biên bản kiểm kê, điều chỉnh kho (phiếu ADJ – design.md mục 18.23): mỗi dòng ghi tồn sổ, thực đếm (dòng lập theo kiểm kê) và SL tăng
-    /// hoặc giảm. Dòng tăng in giá nhập tay; dòng giảm xuất theo giá vốn chốt khi đóng kỳ nên không in tiền – tổng chỉ là giá trị tăng.
-    /// </summary>
-    private async Task<PdfFile> AdjustmentAsync(InventoryDocumentDto d, CancellationToken cancellationToken)
-    {
-        var warehouse = d.ToWarehouseId is { } w ? await WarehouseNameAsync(w, cancellationToken) : null;
-        PrintColumn[] columns =
-        [
-            new("STT", 8), new("Mã hàng", 22), new("Tên hàng", 42), new("ĐVT", 10), new("Số lô", 14), new("Tồn sổ", 16, true),
-            new("Thực đếm", 16, true), new("Tăng", 15, true), new("Giảm", 15, true), new("Giá trị tăng", 22, true),
-        ];
-        var rows = d.Lines.Select(l => (string[])
-        [
-            l.LineNo.ToString(Vi), l.ItemCode, l.ItemName, l.UomCode, l.LotNo ?? "",
-            l.BookQty is { } book ? Qty(book) : "", l.CountedQty is { } counted ? Qty(counted) : "",
-            l.Direction == 1 ? Qty(l.Qty) : "", l.Direction == -1 ? Qty(l.Qty) : "", l.Direction == 1 ? Money(l.Amount) : "",
-        ]).ToList();
-        var note = d.Status switch
-        {
-            "Draft" => "BẢN NHÁP – chưa ghi sổ",
-            "Cancelled" => "ĐÃ HỦY",
-            _ => null,
-        };
-        string[] signers = ["Người lập phiếu", "Thủ kho", "Kế toán", "Trưởng ban kiểm kê"];
-        var doc = new PrintDocument(
-            "BIÊN BẢN KIỂM KÊ, ĐIỀU CHỈNH KHO", d.No, d.Date, note,
-            [("Kho", warehouse), ("Số biên bản kiểm kê", d.CountReportNo), ("Lý do điều chỉnh", d.Reason)],
-            columns, rows, [new("Giá trị tăng", Money(d.TotalAmount), true)], null, d.Note, signers,
-            [d.CreatedByName, null, null, null]);
-        return new PdfFile($"{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
-    }
-
-    /// <inheritdoc />
-    public async Task<PdfFile> GoodsReceiptRecordAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var d = await _inventory.GetAsync(id, cancellationToken);
-        // Chỉ phiếu nhập mua NCC có kiểm đếm, kiểm tra chất lượng – design.md mục 18.14.
-        if (d.DocType != DocumentTypes.GoodsReceipt)
-            throw new BusinessRuleException("Chỉ in biên bản giao nhận cho phiếu nhập mua từ nhà cung cấp.");
-
-        var to = d.ToWarehouseId is { } t ? await WarehouseNameAsync(t, cancellationToken) : null;
-        var invoice = d.InvoiceNo is null ? null : $"{d.InvoiceSeries} {d.InvoiceNo}".Trim() + (d.InvoiceDate is { } at ? $" ngày {at:dd/MM/yyyy}" : "");
-        // Dòng sai lệch: có hàng không đạt, thiếu/thừa so với chứng từ giao, hoặc kết quả Không đạt (cùng điều kiện báo cáo QCDEV).
-        var deviations = d.Lines.Count(l => l.RejectedQty > 0 || l.DiscrepancyQty != 0 || l.QcResult == "Failed");
-        // Chưa ghi SL chứng từ / chưa kiểm tra thì không kết luận "đúng, đạt" – chỉ nêu phần còn thiếu.
-        var pending = new List<string>();
-        var noDelivered = d.Lines.Count(l => l.DeliveredQty is null);
-        if (noDelivered > 0) pending.Add($"{noDelivered} dòng chưa ghi SL theo chứng từ giao");
-        var notChecked = d.Lines.Count(l => l.QcResult == "NotChecked");
-        if (notChecked > 0) pending.Add($"{notChecked} dòng chưa kiểm tra chất lượng");
-        var conclusion = deviations == 0
-            ? pending.Count == 0 ? "Hàng giao đúng số lượng theo chứng từ, đạt chất lượng." : $"Không ghi nhận sai lệch; còn {string.Join(", ", pending)}."
-            : $"Có {deviations}/{d.Lines.Count} dòng sai lệch hoặc không đạt (xem cột Thiếu/thừa, Không đạt, Ghi chú). "
-              + "Hàng không đạt không nhập kho; đề nghị nhà cung cấp xử lý theo hợp đồng.";
-        var doc = new PrintDocument(
-            "BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA", d.No, d.Date, d.Status switch
-            {
-                "Draft" => "BẢN NHÁP – phiếu nhập chưa ghi sổ",
-                "Cancelled" => "ĐÃ HỦY",
-                _ => null,
-            },
-            [
-                ("Bên giao (nhà cung cấp)", d.SupplierCode is null ? null : $"{d.SupplierCode} – {d.SupplierName}"),
-                ("Người giao hàng", d.Deliverer),
-                ("Bên nhận (kho)", to),
-                ("Theo đơn mua hàng", d.PurchaseOrderNo),
-                ("Phiếu giao hàng", d.DeliveryNoteNo),
-                ("Hóa đơn", invoice),
-            ],
-            [
-                new("STT", 8), new("Mã hàng", 22), new("Tên hàng", 36), new("ĐVT", 10), new("SL chứng từ", 15, true), new("SL đạt nhập kho", 15, true),
-                new("SL không đạt", 15, true), new("Thiếu/ thừa", 15, true), new("Kết quả", 16), new("Ghi chú kiểm tra", 28),
-            ],
-            d.Lines.Select(l => new[]
-            {
-                l.LineNo.ToString(Vi), l.ItemCode, l.ItemName + (l.LotNo is null ? "" : $" (lô {l.LotNo})"), l.UomCode,
-                l.DeliveredQty is { } q ? Qty(q) : "", Qty(l.Qty), l.RejectedQty > 0 ? Qty(l.RejectedQty) : "",
-                // Dấu + là thừa, − là thiếu so với chứng từ giao.
-                l.DiscrepancyQty == 0 ? "" : (l.DiscrepancyQty > 0 ? "+" : "") + Qty(l.DiscrepancyQty),
-                l.QcResult switch { "Passed" => "Đạt", "Failed" => "Không đạt", _ => "Chưa kiểm tra" }, l.QcNote ?? "",
-            }).ToList(),
-            [],
-            null, d.Note,
-            // Người lập PO không một mình xác nhận giao nhận (G4) – biên bản có đủ bên giao, thủ kho và người kiểm tra.
-            ["Đại diện bên giao", "Thủ kho", "Người kiểm tra", "Người lập biên bản"], [d.Deliverer, null, null, d.CreatedByName], conclusion);
-        return new PdfFile($"BB-{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
-    }
 
     /// <inheritdoc />
     public async Task<PdfFile> ReceiptConfirmationAsync(Guid id, CancellationToken cancellationToken)

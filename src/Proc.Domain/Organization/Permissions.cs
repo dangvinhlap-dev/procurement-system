@@ -216,42 +216,6 @@ public static class Permissions
         public const string SundryApprove = "Purchase.Sundry.Approve";
     }
 
-    /// <summary>Kho: chứng từ kho, tồn kho, kỳ kho.</summary>
-    public static class Inventory
-    {
-        /// <summary>Quyền "Xem chứng từ kho".</summary>
-        public const string DocumentView = "Inventory.Document.View";
-        /// <summary>Quyền "Lập chứng từ kho".</summary>
-        public const string DocumentCreate = "Inventory.Document.Create";
-        /// <summary>Quyền "Ghi sổ chứng từ kho".</summary>
-        public const string DocumentPost = "Inventory.Document.Post";
-        /// <summary>Quyền "Bỏ ghi sổ chứng từ kho".</summary>
-        public const string DocumentUnpost = "Inventory.Document.Unpost";
-        /// <summary>
-        /// Quyền "Lập phiếu điều chỉnh, kiểm kê kho" – quyền riêng của phiếu ADJ (design.md mục 6.1): lập, sửa, hủy phiếu nháp.
-        /// </summary>
-        public const string AdjustmentCreate = "Inventory.Adjustment.Create";
-        /// <summary>
-        /// Quyền "Ghi sổ phiếu điều chỉnh, kiểm kê kho" – ghi sổ và bỏ ghi sổ phiếu ADJ; tách khỏi quyền ghi sổ chứng từ kho thường để người
-        /// kiểm kê không tự ghi tăng/giảm tồn (design.md mục 6.1).
-        /// </summary>
-        public const string AdjustmentPost = "Inventory.Adjustment.Post";
-        /// <summary>
-        /// Quyền "Xác nhận nghiệm thu phiếu nhập mua" – đơn vị đặt hàng xác nhận đạt/không đạt trên phiếu nhập đã ghi sổ (lát H4, design.md mục 18.25).
-        /// </summary>
-        public const string ReceiptAccept = "Inventory.Receipt.Accept";
-        /// <summary>Quyền "Xem tồn kho, thẻ kho".</summary>
-        public const string StockView = "Inventory.Stock.View";
-        /// <summary>Quyền "Xem kỳ kho".</summary>
-        public const string PeriodView = "Inventory.Period.View";
-        /// <summary>Quyền "Tạo lịch và mở kỳ kho".</summary>
-        public const string PeriodOpen = "Inventory.Period.Open";
-        /// <summary>Quyền "Đóng kỳ kho".</summary>
-        public const string PeriodClose = "Inventory.Period.Close";
-        /// <summary>Quyền "Mở lại kỳ kho".</summary>
-        public const string PeriodReopen = "Inventory.Period.Reopen";
-    }
-
     /// <summary>Giá và nhà cung cấp.</summary>
     public static class Pricing
     {
@@ -307,22 +271,14 @@ public static class Permissions
     /// <summary>Báo cáo.</summary>
     public static class Report
     {
-        /// <summary>Quyền "Xem báo cáo nhập – xuất – tồn".</summary>
-        public const string StockView = "Report.Stock.View";
         /// <summary>Quyền "Xem báo cáo mua hàng".</summary>
         public const string PurchaseView = "Report.Purchase.View";
 
         /// <summary>Xem báo cáo giá hợp nhất toàn tập đoàn (design.md mục 9.2: quyền *.ViewAllCompanies).</summary>
         public const string PriceViewAllCompanies = "Report.Price.ViewAllCompanies";
 
-        /// <summary>Xem tồn kho một mặt hàng ở mọi công ty – chỉ số lượng (design.md mục 11.2).</summary>
-        public const string StockViewAllCompanies = "Report.Stock.ViewAllCompanies";
-
         /// <summary>Xem báo cáo mua hàng, đánh giá NCC, tiết kiệm đấu thầu toàn tập đoàn (design.md mục 11.3).</summary>
         public const string PurchaseViewAllCompanies = "Report.Purchase.ViewAllCompanies";
-
-        /// <summary>Xuất chứng từ kho đã ghi sổ ra Excel cho kế toán (design.md mục 11.5).</summary>
-        public const string AccountingExport = "Report.Accounting.Export";
 
         /// <summary>Xuất chứng từ mua (PO, phiếu nhận hàng + hóa đơn, đề nghị thanh toán) ra Excel cho kế toán – lát Y9b, thay ACCX (design.md mục 19.3).</summary>
         public const string PurchaseAccountingExport = "Report.PurchaseAccounting.Export";
@@ -426,19 +382,7 @@ public static class Permissions
         new(Purchase.SundryView, "Xem bảng kê chi phí tạp vụ"),
         new(Purchase.SundryCreate, "Lập, sửa, gửi duyệt bảng kê chi phí tạp vụ"),
         new(Purchase.SundryApprove, "Duyệt bảng kê chi phí tạp vụ"),
-        new(Inventory.DocumentView, "Xem chứng từ kho"),
-        new(Inventory.DocumentCreate, "Lập chứng từ kho"),
-        new(Inventory.DocumentPost, "Ghi sổ chứng từ kho"),
-        new(Inventory.DocumentUnpost, "Bỏ ghi sổ chứng từ kho"),
-        new(Inventory.ReceiptAccept, "Xác nhận nghiệm thu phiếu nhập mua (đơn vị đặt hàng)"),
-        new(Inventory.AdjustmentCreate, "Lập phiếu điều chỉnh, kiểm kê kho"),
 
-        new(Inventory.AdjustmentPost, "Ghi sổ phiếu điều chỉnh, kiểm kê kho"),
-        new(Inventory.StockView, "Xem tồn kho, thẻ kho"),
-        new(Inventory.PeriodView, "Xem kỳ kho"),
-        new(Inventory.PeriodOpen, "Tạo lịch và mở kỳ kho"),
-        new(Inventory.PeriodClose, "Đóng kỳ kho"),
-        new(Inventory.PeriodReopen, "Mở lại kỳ kho"),
         new(Pricing.PriceListView, "Xem bảng giá nhà cung cấp"),
         new(Pricing.PriceListManage, "Thêm, sửa bảng giá"),
         new(Pricing.PriceListApprove, "Duyệt bảng giá nhà cung cấp"),
@@ -457,12 +401,9 @@ public static class Permissions
         new(Sourcing.RfqAward, "Chọn nhà cung cấp trúng thầu"),
         new(Sourcing.RfqApproveAward, "Duyệt kết quả chọn thầu"),
         new(Sourcing.AppraisalGive, "Ghi ý kiến thẩm định (GTH, RFQ, hợp đồng, hồ sơ NCC)"),
-        new(Report.StockView, "Xem báo cáo nhập – xuất – tồn"),
         new(Report.PurchaseView, "Xem báo cáo mua hàng"),
         new(Report.PriceViewAllCompanies, "Xem so sánh giá toàn tập đoàn"),
-        new(Report.StockViewAllCompanies, "Xem tồn kho toàn tập đoàn"),
         new(Report.PurchaseViewAllCompanies, "Xem báo cáo mua hàng toàn tập đoàn"),
-        new(Report.AccountingExport, "Xuất chứng từ cho kế toán"),
         new(Report.PurchaseAccountingExport, "Xuất chứng từ mua cho kế toán (PO, nhận hàng, đề nghị thanh toán)"),
         new(Analysis.PurchaseHistoryView, "Xem dữ liệu mua lịch sử"),
         new(Analysis.PurchaseHistoryImport, "Nhập, xóa lô dữ liệu mua lịch sử"),
@@ -487,7 +428,6 @@ public static class Permissions
         ("Organization", "Tổ chức"),
         ("MasterData", "Danh mục"),
         ("Purchase", "Mua hàng"),
-        ("Inventory", "Kho"),
         ("Pricing", "Giá và nhà cung cấp"),
         ("Sourcing", "Tìm nguồn và đấu thầu"),
         ("Report", "Báo cáo"),
@@ -496,14 +436,4 @@ public static class Permissions
     ];
 
     private static readonly HashSet<string> KnownCodes = [.. All.Select(p => p.Code)];
-
-    /// <summary>
-    /// Quyền của phân hệ kho: mọi quyền module <c>Inventory</c> cùng báo cáo tồn kho và xuất chứng từ kho cho kế toán (ACCX chỉ xuất phiếu kho).
-    /// Từ bản 0.22.0 phân hệ kho tắt (<c>Modules:InventoryEnabled=false</c>) thì các quyền này bị bỏ khi nạp phạm vi, khi trả quyền cho giao diện,
-    /// khi hiện danh mục quyền và vai trò mẫu – design.md mục 19.4 (lát K1). Gỡ hẳn cùng code kho ở 0.28.0 (lát K3).
-    /// </summary>
-    public static readonly IReadOnlySet<string> InventoryModule = new HashSet<string>(
-        All.Where(p => p.Module == "Inventory").Select(p => p.Code)
-            .Concat([Report.StockView, Report.StockViewAllCompanies, Report.AccountingExport]),
-        StringComparer.Ordinal);
 }

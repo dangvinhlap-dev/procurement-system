@@ -71,9 +71,10 @@ public class DocumentNumberFormatTests
     [Fact]
     public void LoaiChungTu_CoDuCacLoaiTrongThietKe()
     {
-        // design.md mục 6.1, 6.2: PR, RFQ, PO và các phiếu kho.
-        string[] required = ["PR", "RFQ", "PO", "GRN", "RTV", "TRF", "ICS", "ICR", "ADJ"];
+        // design.md mục 6.2, 19.4: PR, RFQ, PO, phiếu xác nhận nhận hàng; phiếu kho cũ đã gỡ ở lát K3.
+        string[] required = ["PR", "RFQ", "PO", "XNH"];
         Assert.All(required, code => Assert.True(DocumentTypes.IsKnown(code), code));
+        Assert.All(["GRN", "RTV", "TRF", "ICS", "ICR", "ADJ"], code => Assert.False(DocumentTypes.IsKnown(code), code));
         Assert.False(DocumentTypes.IsKnown("XYZ"));
         Assert.Equal("Đơn mua hàng", DocumentTypes.All.Single(t => t.Code == "PO").Name);
     }

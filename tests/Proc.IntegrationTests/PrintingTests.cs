@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using Proc.Application.Common;
-using Proc.Application.Inventory;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -53,8 +52,6 @@ public class PrintingTests
         var company = await ReadAsync<CompanyDetailDto>(await head.PostAsJsonAsync("/api/companies",
             new CreateCompanyRequest(UniqueCode("I"), "Công ty thử in phiếu", null, "0101234567", "12 Lê Lợi, Hà Nội", null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var client = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
-        var calendar = await ReadAsync<InventoryCalendarDto>(await client.PostAsJsonAsync("/api/inventory-periods/years", new CreateInventoryYearRequest(Today.Year), Ct));
-        await ReadAsync<InventoryPeriodDto>(await client.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var kp = (await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", kt, null, null, false), Ct))).Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
@@ -91,36 +88,16 @@ public class PrintingTests
         Assert.Equal(2, prRows.Count);
         Assert.Equal(["2", "Van bi inox DN50 (chưa có mã)", "Áp lực PN16", "CAI", "2", "", "2", "450.000", "900.000", "Mẫu như van cũ"], prRows[1]);
 
-        var grn = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, kt, supplier.Id, "0001234", "1C26TBL", Today, null, "Anh Bình", null, [new(null, item.Id, cai, 10, 12_500, "10", null, null, null)]), Ct));
-        await ReadAsync<InventoryDocumentDto>(await client.PostAsync($"/api/inventory-documents/{grn.Id}/post", null, Ct));
-        Assert.Equal($"PHIẾU NHẬP KHO {grn.No}", (await PdfAsync(await client.GetAsync($"/api/inventory-documents/{grn.Id}/pdf", Ct))).Info.Title);
-        var trf = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/stock-transfers",
-            new SaveTransferRequest(Today, kt, kp, "Anh Bình", "Chị Lan", null, [new(null, item.Id, cai, 4, null, null)]), Ct));
-        Assert.Equal($"PHIẾU CHUYỂN KHO NỘI BỘ {trf.No}", (await PdfAsync(await client.GetAsync($"/api/inventory-documents/{trf.Id}/pdf", Ct))).Info.Title);
-
-        // Biên bản giao nhận / sai lệch (design.md mục 18.14): phiếu nhập mua có dòng thiếu + không đạt; phiếu loại khác bị từ chối.
-        var deviated = await ReadAsync<InventoryDocumentDto>(await client.PostAsJsonAsync("/api/goods-receipts",
-            new SaveReceiptRequest(Today, kt, supplier.Id, "0001235", "1C26TBL", Today, null, "Anh Bình", null,
-                [new(null, item.Id, cai, 8, 12_500, "10", null, null, null, DeliveredQty: 10, RejectedQty: 1, QcResult: "Failed", QcNote: "Thiếu 1, vỡ 1")]), Ct));
-        var record = await PdfAsync(await client.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct));
-        Assert.Equal($"BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA {deviated.No}", record.Info.Title);
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"/api/goods-receipts/{trf.Id}/record-pdf", Ct)).StatusCode);
-
         // Phiếu của công ty khác: không thấy (404) – như khi mở phiếu.
         var other = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/inventory-documents/{grn.Id}/pdf", Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct)).StatusCode);
 
-        // Chỉ có quyền xem chứng từ kho: in được phiếu kho, không in được PO.
+        // Chỉ có quyền xem phiếu nhận hàng XNH: không in được PO.
         var roleCode = UniqueCode("K");
-        await _factory.CreateRoleAsync(roleCode, Permissions.Inventory.DocumentView);
+        await _factory.CreateRoleAsync(roleCode, Permissions.Purchase.ReceiptView);
         var keeperName = $"tk.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(keeperName, company.Code, roleCode);
         var keeper = await _factory.CreateClientInCompanyAsync(keeperName, ProcApiFactory.TestPassword, company.Code);
         Assert.Equal(HttpStatusCode.Forbidden, (await keeper.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct)).StatusCode);
-        await PdfAsync(await keeper.GetAsync($"/api/inventory-documents/{grn.Id}/pdf", Ct));
-        await PdfAsync(await keeper.GetAsync($"/api/goods-receipts/{deviated.Id}/record-pdf", Ct));
     }
 }

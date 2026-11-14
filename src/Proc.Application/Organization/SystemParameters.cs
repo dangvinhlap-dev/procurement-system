@@ -15,9 +15,6 @@ public static class SystemParameterCodes
     /// <summary>Cho NCC mới lên Đã duyệt không qua hồ sơ đánh giá NCC mới (HSN – lát G8); chỉ tham số của tổng công ty có tác dụng.</summary>
     public const string SupplierOnboardingOptional = "SUPPLIER_ONBOARDING_OPTIONAL";
 
-    /// <summary>% markup nội bộ mặc định – sửa được; dùng gợi ý giá bán nội bộ khi chưa có bảng giá.</summary>
-    public const string InternalMarkupPercent = "INTERNAL_MARKUP_PERCENT";
-
     /// <summary>% cảnh báo giá cao trên PO so với giá thấp nhất tập đoàn – sửa được (design.md mục 8.5).</summary>
     public const string PoHighPriceWarnPercent = "PO_HIGH_PRICE_WARN_PERCENT";
 
@@ -29,9 +26,6 @@ public static class SystemParameterCodes
 
     /// <summary>Người lập PO không ghi sổ phiếu nhập của PO đó – bật/tắt (design.md mục 18.14).</summary>
     public const string ReceiptSeparatePoCreator = "RECEIPT_SEPARATE_PO_CREATOR";
-
-    /// <summary>Phiếu nhập mua bắt buộc theo đơn mua hàng đã duyệt – bật/tắt (lát R4, design.md mục 18.26).</summary>
-    public const string ReceiptPoRequired = "RECEIPT_PO_REQUIRED";
 
     /// <summary>SLA hàng đã có hợp đồng/bảng giá (ngày làm việc) – sửa được (design.md mục 18.13).</summary>
     public const string SlaPricedDays = "SLA_PRICED_DAYS";
@@ -46,19 +40,11 @@ public static class SystemParameterCodes
     /// KPI_TARGET_CONTRACTCOMPLIANCE (design.md mục 18.18).</summary>
     public const string KpiTargetPrefix = "KPI_TARGET_";
 
-    /// <summary>Số ngày không xuất để tính KPI tồn chậm luân chuyển – sửa được.</summary>
-    public const string KpiSlowMovingDays = "KPI_SLOW_MOVING_DAYS";
-
     /// <summary>Mã tham số mục tiêu của một KPI.</summary>
     /// <param name="code">Mã chỉ số.</param>
     /// <returns>Ví dụ KPI_TARGET_SAVING.</returns>
     public static string KpiTarget(Proc.Domain.Organization.KpiCode code) => KpiTargetPrefix + code.ToString().ToUpperInvariant();
 
-    /// <summary>Phương pháp giá vốn – chỉ xem (cố định bình quân gia quyền tháng, design.md mục 7).</summary>
-    public const string CostingMethod = "COSTING_METHOD";
-
-    /// <summary>Kho cho phép tồn âm – chỉ xem, khai báo trên từng kho.</summary>
-    public const string NegativeStock = "NEGATIVE_STOCK";
 }
 
 /// <summary>Một tham số tại công ty đang làm việc.</summary>
@@ -116,10 +102,4 @@ public interface ISystemParameterService
     /// <returns>Ngưỡng.</returns>
     Task<decimal> RfqComparisonThresholdAsync(CancellationToken cancellationToken);
 
-    /// <summary>
-    /// % markup nội bộ mặc định của công ty đang làm việc (dùng gợi ý giá bán nội bộ).
-    /// </summary>
-    /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Giá trị tham số, hoặc mặc định nếu công ty chưa khai báo.</returns>
-    Task<decimal> InternalMarkupPercentAsync(CancellationToken cancellationToken);
 }

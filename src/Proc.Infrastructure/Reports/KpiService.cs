@@ -20,7 +20,6 @@ public sealed class KpiService : IKpiService
     private readonly ProcDbContext _db;
     private readonly ICurrentUserScope _scope;
     private readonly IPurchaseReportService _purchase;
-    private readonly IStockReportService _stock;
     private readonly ISupplierReviewService _reviews;
 
     /// <summary>
@@ -29,15 +28,13 @@ public sealed class KpiService : IKpiService
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi người dùng.</param>
     /// <param name="purchase">Báo cáo mua hàng.</param>
-    /// <param name="stock">Báo cáo kho.</param>
     /// <param name="reviews">Đánh giá NCC định kỳ.</param>
     public KpiService(
-        ProcDbContext db, ICurrentUserScope scope, IPurchaseReportService purchase, IStockReportService stock, ISupplierReviewService reviews)
+        ProcDbContext db, ICurrentUserScope scope, IPurchaseReportService purchase, ISupplierReviewService reviews)
     {
         _db = db;
         _scope = scope;
         _purchase = purchase;
-        _stock = stock;
         _reviews = reviews;
     }
 
@@ -50,13 +47,10 @@ public sealed class KpiService : IKpiService
 
         var parameter = await _db.CompanyParameters.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         decimal Target(KpiCode code) => parameter?.KpiTarget(code) ?? KpiCatalog.Get(code).DefaultTarget;
-        var slowDays = parameter?.KpiSlowMovingDays ?? KpiCatalog.DefaultSlowMovingDays;
 
         var (prevFrom, prevTo) = PurchaseReportService.PreviousPeriod(from, to);
         var current = await PeriodAsync(from, to, cancellationToken);
         var previous = await PeriodAsync(prevFrom, prevTo, cancellationToken);
-        var slow = await _stock.GetSlowMovingAsync(new(null, null, slowDays), cancellationToken);
-        var slowAmount = slow.Items.Sum(i => i.Amount);
         // Hoàn thành đánh giá NCC tính theo quý kết thúc trong kỳ (design.md mục 18.20) – kỳ không chứa ngày cuối quý thì "Chưa có dữ liệu".
         var review = await _reviews.CompletionAsync(from, to, cancellationToken);
         var reviewBefore = await _reviews.CompletionAsync(prevFrom, prevTo, cancellationToken);
@@ -79,8 +73,6 @@ public sealed class KpiService : IKpiService
             Row(KpiCode.OnTimeDelivery, current.OnTime, previous.OnTime, "Count", "Dòng phiếu nhập mua đã ghi sổ trong kỳ có ngày giao hẹn.", "SUPEVAL"),
             Row(KpiCode.Quality, current.Quality, previous.Quality, "Count", "Dòng phiếu nhập mua đã ghi sổ trong kỳ có kết quả kiểm tra.", "QCDEV"),
             Row(KpiCode.Emergency, current.Emergency, previous.Emergency, "Money", "PO Đã duyệt/Đã đóng theo ngày PO, trước VAT.", "PO"),
-            Row(KpiCode.SlowMoving, Ratio.Of(slowAmount, slow.StockAmount), null, "Money",
-                $"Tính tại hôm nay {slow.AsOf:dd/MM/yyyy}, hàng không xuất từ {slowDays} ngày trở lên (không theo kỳ).", "SLOW"),
             Row(KpiCode.SupplierReview, Ratio.Of(review.CompletedCount, review.DueCount), Ratio.Of(reviewBefore.CompletedCount, reviewBefore.DueCount),
                 "Count",
                 review.Quarters.Count == 0

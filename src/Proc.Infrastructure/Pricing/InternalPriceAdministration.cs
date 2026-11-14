@@ -3,7 +3,6 @@ using Proc.Application.Common;
 using Proc.Application.Organization;
 using Proc.Application.Pricing;
 using Proc.Domain.Common;
-using Proc.Domain.Inventory;
 using Proc.Domain.Pricing;
 using Proc.Infrastructure.Persistence;
 
@@ -65,41 +64,6 @@ public sealed class InternalPriceAdministration : IInternalPriceAdministration
         await EnsureNoOverlapAsync(price, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await Query(id).SingleAsync(cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<ResolvedInternalPriceDto>> ResolveAsync(
-        Guid buyerCompanyId, DateOnly date, IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
-    {
-        var sellerCompanyId = _scope.RequireCompany();
-        // Công ty đang làm việc là công ty bán – cùng cách tra với PO mua nội bộ (lát X7).
-        return (await InternalPriceLookup.ResolveAsync(_db, sellerCompanyId, buyerCompanyId, date, itemIds, cancellationToken))
-            .Select(kv => new ResolvedInternalPriceDto(kv.Key, kv.Value.UnitPrice, kv.Value.VatCode))
-            .ToList();
-    }
-
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<InternalPriceSuggestionDto>> SuggestAsync(IReadOnlyList<Guid> itemIds, CancellationToken cancellationToken)
-    {
-        _scope.RequireCompany();
-        if (itemIds.Count == 0) return [];
-        // Chỉ kỳ tháng đã đóng (Closed/Locked) mới có giá vốn chính thức (design.md mục 7.4). Lấy theo từng mặt hàng: kỳ đóng gần
-        // nhất có giá vốn của mặt hàng đó – mặt hàng không phát sinh ở tháng vừa đóng vẫn có gợi ý từ tháng trước.
-        var costs = await (
-                from c in _db.ItemPeriodCosts.AsNoTracking()
-                join p in _db.InventoryPeriods.AsNoTracking() on c.PeriodId equals p.Id
-                join i in _db.Items on c.ItemId equals i.Id
-                where itemIds.Contains(c.ItemId) && p.Month > 0 && (p.Status == PeriodStatus.Closed || p.Status == PeriodStatus.Locked)
-                select new { c.ItemId, c.UnitCost, p.Year, p.Month })
-            .ToListAsync(cancellationToken);
-        if (costs.Count == 0) return [];
-
-        var markup = await _parameters.InternalMarkupPercentAsync(cancellationToken);
-        return costs
-            .GroupBy(c => c.ItemId)
-            .Select(g => g.OrderByDescending(c => c.Year).ThenByDescending(c => c.Month).First())
-            .Select(c => new InternalPriceSuggestionDto(c.ItemId, c.UnitCost, c.Year, c.Month, markup, InternalPrice.Suggest(c.UnitCost, markup)))
-            .ToList();
     }
 
     /// <inheritdoc />
