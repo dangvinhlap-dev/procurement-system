@@ -140,7 +140,17 @@ export function ListPage<T>({
           title,
           subtitle: exportSubtitle ?? null,
           fileName: exportFileName,
-          columns: visibleColumns.map((c) => ({ title: c.title, type: c.type ?? 'text', width: c.width })),
+          // File Excel cùng hình thức với lưới (ui-style.md mục 5i): cột số chứng từ (docRef) gửi kiểu "docno" để in phông đơn cách
+          // chữ xanh đậm; cột trạng thái gửi kèm màu đèn từng dòng để tô ô vuông ■ + chữ như trên màn hình.
+          columns: visibleColumns.map((c) => {
+            const tone = c.type === 'status' ? c.tone : undefined
+            return {
+              title: c.title,
+              type: c.docRef ? 'docno' : (c.type ?? 'text'),
+              width: c.width,
+              tones: tone ? filteredRows.map((row) => tone(row)) : null,
+            }
+          }),
           rows: filteredRows.map((row) =>
             visibleColumns.map((c) => {
               // Cột chữ, trạng thái gửi đúng chuỗi đang hiển thị; cột số, ngày gửi giá trị thô.

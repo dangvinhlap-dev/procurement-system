@@ -188,16 +188,17 @@ internal static class ExcelWriter
     /// <returns>Nội dung .xlsx.</returns>
     public static byte[] Write(string sheetName, IReadOnlyList<ExcelColumn> columns, IEnumerable<IReadOnlyList<object?>> rows, IReadOnlyList<string> guide)
     {
-        using var workbook = new XLWorkbook();
-        var sheet = workbook.Worksheets.Add(sheetName);
+        using var workbook = ExcelGridStyle.CreateWorkbook();
+        // Giữ lưới mờ của Excel: đây cũng là file mẫu để gõ thêm dòng rồi nhập lại.
+        var sheet = ExcelGridStyle.AddSheet(workbook, sheetName, showGridLines: true);
         for (var c = 0; c < columns.Count; c++)
         {
             var header = sheet.Cell(1, c + 1);
             header.Value = columns[c].Required ? $"{columns[c].Header} *" : columns[c].Header;
-            header.Style.Font.Bold = true;
-            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#DCE6F1");
             if (columns[c].Text) sheet.Column(c + 1).Style.NumberFormat.Format = "@";
         }
+
+        ExcelGridStyle.Header(sheet.Range(1, 1, 1, columns.Count));
 
         var r = 2;
         foreach (var row in rows)
@@ -211,13 +212,16 @@ internal static class ExcelWriter
                         break;
                     case decimal d:
                         cell.Value = d;
+                        ExcelGridStyle.Number(cell.AsRange());
                         break;
                     case int i:
                         cell.Value = i;
+                        ExcelGridStyle.Number(cell.AsRange());
                         break;
                     case DateOnly date:
                         cell.Value = date.ToDateTime(TimeOnly.MinValue);
                         cell.Style.DateFormat.Format = "dd/MM/yyyy";
+                        ExcelGridStyle.Date(cell.AsRange());
                         break;
                     default:
                         // Gán chữ cho mọi ô còn lại – kể cả cột Text, để mã có số 0 đầu giữ nguyên.
@@ -229,17 +233,19 @@ internal static class ExcelWriter
             r++;
         }
 
+        // Kẻ ô cả vùng dữ liệu như lưới trên màn hình; file mẫu (không dòng) chỉ có dòng tiêu đề.
+        if (r > 2) ExcelGridStyle.Body(sheet.Range(1, 1, r - 1, columns.Count));
         sheet.SheetView.FreezeRows(1);
         sheet.Columns(1, columns.Count).AdjustToContents(1, Math.Min(r, 200), 10, 60);
 
-        var help = workbook.Worksheets.Add("Hướng dẫn");
+        var help = ExcelGridStyle.AddSheet(workbook, "Hướng dẫn");
         var line = 1;
         foreach (var text in guide) help.Cell(line++, 1).Value = text;
         line++;
+        var tableStart = line;
         help.Cell(line, 1).Value = "Cột";
         help.Cell(line, 2).Value = "Bắt buộc";
         help.Cell(line, 3).Value = "Ghi chú";
-        help.Range(line, 1, line, 3).Style.Font.Bold = true;
         foreach (var column in columns)
         {
             line++;
@@ -247,6 +253,9 @@ internal static class ExcelWriter
             help.Cell(line, 2).Value = column.Required ? "Có" : string.Empty;
             help.Cell(line, 3).Value = column.Note;
         }
+
+        ExcelGridStyle.Header(help.Range(tableStart, 1, tableStart, 3));
+        ExcelGridStyle.Body(help.Range(tableStart, 1, line, 3));
 
         help.Column(1).Width = 28;
         help.Column(2).Width = 10;

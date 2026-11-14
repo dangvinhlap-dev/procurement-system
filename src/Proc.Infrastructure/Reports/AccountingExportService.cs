@@ -6,6 +6,7 @@ using Proc.Application.Reports;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Inventory;
+using Proc.Infrastructure.Excel;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Reports;
@@ -59,11 +60,11 @@ public sealed class AccountingExportService : IAccountingExportService
         var documents = Summarize(lines);
         var company = await _db.Companies.AsNoTracking().Where(c => c.Id == _scope.RequireCompany()).Select(c => c.Code).SingleAsync(cancellationToken);
 
-        using var workbook = new XLWorkbook();
+        using var workbook = ExcelGridStyle.CreateWorkbook();
         var title = $"Chứng từ kho đã ghi sổ {company} từ {query.From:dd/MM/yyyy} đến {query.To:dd/MM/yyyy}";
-        WriteSheet(workbook.AddWorksheet("Chứng từ"), title, LineColumns, lines.Select(LineValues));
-        WriteSheet(workbook.AddWorksheet("Tổng hợp"), title, DocumentColumns, documents.Select(DocumentValues));
-        WriteGuide(workbook.AddWorksheet("Hướng dẫn"));
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Chứng từ"), title, LineColumns, lines.Select(LineValues));
+        WriteSheet(ExcelGridStyle.AddSheet(workbook, "Tổng hợp"), title, DocumentColumns, documents.Select(DocumentValues));
+        WriteGuide(ExcelGridStyle.AddSheet(workbook, "Hướng dẫn"));
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return new ExcelFile($"chung-tu-ke-toan-{company.ToLowerInvariant()}-{query.From:yyyyMMdd}-{query.To:yyyyMMdd}.xlsx", stream.ToArray());
@@ -186,7 +187,7 @@ public sealed class AccountingExportService : IAccountingExportService
     private static readonly Column[] LineColumns =
     [
         new("Ngày CT", "date", 11, "Ngày chứng từ (ngày hạch toán)."),
-        new("Số CT", "text", 20, "Số chứng từ trong hệ thống mua hàng – kho."),
+        new("Số CT", "docno", 20, "Số chứng từ trong hệ thống mua hàng – kho."),
         new("Loại CT", "text", 8, "GRN nhập mua NCC, RTV xuất trả NCC, TRF chuyển kho, ICS xuất bán nội bộ, ICR nhập mua nội bộ."),
         new("Tên loại CT", "text", 18, "Tên loại chứng từ."),
         new("Ngày ghi sổ", "date", 11, "Ngày ghi sổ kho."),
@@ -233,7 +234,7 @@ public sealed class AccountingExportService : IAccountingExportService
 
     private static readonly Column[] DocumentColumns =
     [
-        new("Ngày CT", "date", 11, ""), new("Số CT", "text", 20, ""), new("Loại CT", "text", 8, ""), new("Tên loại CT", "text", 18, ""),
+        new("Ngày CT", "date", 11, ""), new("Số CT", "docno", 20, ""), new("Loại CT", "text", 8, ""), new("Tên loại CT", "text", 18, ""),
         new("Mã đối tượng", "text", 14, ""), new("Mã NCC tại công ty", "text", 14, ""), new("Tên đối tượng", "text", 30, ""), new("MST đối tượng", "text", 14, ""),
         new("Số HĐ", "text", 12, ""), new("Ký hiệu HĐ", "text", 10, ""), new("Ngày HĐ", "date", 11, ""), new("Số dòng", "qty", 8, ""),
         new("Tiền hàng", "money", 15, ""), new("Tiền thuế", "money", 13, ""), new("Tổng thanh toán", "money", 15, ""), new("Tiền vốn", "money", 15, ""),
@@ -253,16 +254,12 @@ public sealed class AccountingExportService : IAccountingExportService
     /// </summary>
     private void WriteSheet(IXLWorksheet sheet, string title, Column[] columns, IEnumerable<object?[]> rows)
     {
-        sheet.Cell(1, 1).Value = title;
-        sheet.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(13);
-        sheet.Cell(2, 1).Value = $"Xuất lúc {TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone):dd/MM/yyyy HH:mm}. Chỉ gồm chứng từ đã ghi sổ.";
-        sheet.Cell(2, 1).Style.Font.SetItalic();
+        ExcelGridStyle.Title(sheet.Cell(1, 1), title);
+        ExcelGridStyle.Note(sheet.Cell(2, 1), $"Xuất lúc {TimeZoneInfo.ConvertTime(_clock.UtcNow, VietnamTime.Zone):dd/MM/yyyy HH:mm}. Chỉ gồm chứng từ đã ghi sổ.");
         const int header = 4;
         for (var c = 0; c < columns.Length; c++)
         {
-            var cell = sheet.Cell(header, c + 1);
-            cell.Value = columns[c].Title;
-            cell.Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#DCE6F4")).Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            sheet.Cell(header, c + 1).Value = columns[c].Title;
             var column = sheet.Column(c + 1);
             column.Width = columns[c].Width;
             column.Style.NumberFormat.Format = columns[c].Type switch
@@ -271,6 +268,7 @@ public sealed class AccountingExportService : IAccountingExportService
                 "money" => "#,##0",
                 "qty" => "#,##0.####",
                 "price" => "#,##0.######",
+                // Số chứng từ, mã, MST: kiểu Text để Excel không đổi chuỗi toàn chữ số thành số.
                 _ => "@",
             };
         }
@@ -292,15 +290,34 @@ public sealed class AccountingExportService : IAccountingExportService
             }
         }
 
-        sheet.Range(header, 1, Math.Max(r, header + 1), columns.Length).SetAutoFilter();
+        var last = Math.Max(r, header + 1);
+        for (var c = 0; c < columns.Length; c++)
+        {
+            var data = sheet.Range(header + 1, c + 1, last, c + 1);
+            switch (columns[c].Type)
+            {
+                case "money" or "qty" or "price":
+                    ExcelGridStyle.Number(data);
+                    break;
+                case "date":
+                    ExcelGridStyle.Date(data);
+                    break;
+                case "docno":
+                    ExcelGridStyle.DocNo(data);
+                    break;
+            }
+        }
+
+        ExcelGridStyle.Header(sheet.Range(header, 1, header, columns.Length));
+        ExcelGridStyle.Body(sheet.Range(header, 1, last, columns.Length));
+        sheet.Range(header, 1, last, columns.Length).SetAutoFilter();
         sheet.SheetView.FreezeRows(header);
     }
 
     /// <summary>Ghi sheet hướng dẫn dùng file cho phần mềm kế toán.</summary>
     private static void WriteGuide(IXLWorksheet sheet)
     {
-        sheet.Cell(1, 1).Value = "Hướng dẫn dùng file cho phần mềm kế toán";
-        sheet.Cell(1, 1).Style.Font.SetBold().Font.SetFontSize(13);
+        ExcelGridStyle.Title(sheet.Cell(1, 1), "Hướng dẫn dùng file cho phần mềm kế toán");
         string[] notes =
         [
             "Sheet \"Chứng từ\": mỗi dòng hàng một dòng; sheet \"Tổng hợp\": mỗi chứng từ một dòng.",
@@ -312,12 +329,14 @@ public sealed class AccountingExportService : IAccountingExportService
         var start = notes.Length + 4;
         sheet.Cell(start, 1).Value = "Cột";
         sheet.Cell(start, 2).Value = "Ý nghĩa";
-        sheet.Range(start, 1, start, 2).Style.Font.SetBold();
         for (var i = 0; i < LineColumns.Length; i++)
         {
             sheet.Cell(start + 1 + i, 1).Value = LineColumns[i].Title;
             sheet.Cell(start + 1 + i, 2).Value = LineColumns[i].Guide;
         }
+
+        ExcelGridStyle.Header(sheet.Range(start, 1, start, 2));
+        ExcelGridStyle.Body(sheet.Range(start, 1, start + LineColumns.Length, 2));
 
         sheet.Column(1).Width = 22;
         sheet.Column(2).Width = 110;
