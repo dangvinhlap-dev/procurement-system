@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Duyệt phiếu GTH bằng một quản trị mới ở tổng công ty (người lập không tự duyệt; mỗi cấp một người – lát R3).
@@ -47,7 +47,7 @@ test('PO vượt giá trần: cảnh báo và chặng duyệt "Vượt giá tr�
   }
   const main = await supplier('NCC chính vượt trần')
   const outsider = await supplier('NCC ngoài danh sách vượt trần')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vượt trần ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {

@@ -13,7 +13,7 @@ public class PurchaseOrderPriceTests
 
     private static Item NewItem()
     {
-        var item = Item.Create("VB02", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB02", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         item.SetConversions([(Thung, 12m)]);
         return item;

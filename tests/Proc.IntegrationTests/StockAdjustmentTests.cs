@@ -54,7 +54,7 @@ public class StockAdjustmentTests
         var jan = calendar.Periods.Single(p => p.Month == 1).Id;
         await ReadAsync<InventoryPeriodDto>(await client.PostAsync($"/api/inventory-periods/{jan}/open", null, Ct));
         var uom = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm điều chỉnh {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Bu lông kiểm kê", null, "Inventory", category.Id, uom, null, null, null,

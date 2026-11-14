@@ -14,7 +14,7 @@ public sealed class GoodsReceiptConfirmationTests
 
     private static PurchaseOrder ApprovedOrder()
     {
-        var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         item.SetConversions([(Thung, 12m)]);
         var order = PurchaseOrder.Create(Company, "PO-1",

@@ -58,4 +58,25 @@ public class ItemCategoryLevelTests
         Assert.Equal((null, 1), (l2.ParentId, l2.Level));
         Assert.Throws<BusinessRuleException>(() => l4.FollowParent(l1));
     }
+
+    [Fact]
+    public void MatHang_ChiGanNhomCapBon_HangCuOCapThapVanSuaDuoc()
+    {
+        var (l1, _, l3, l4) = Chain();
+        var cai = Uom.Create("CAI", "Cái");
+        var describe = new ItemDescription("Cáp đồng 2x1,5", null, null, null, null, null, "10", null);
+
+        // N4-5: tạo mặt hàng ở nhóm cấp 3 → chặn, nêu cấp hiện tại và cách sửa.
+        var error = Assert.Throws<BusinessRuleException>(() => Item.Create("CAP01", ItemType.Inventory, l3, cai, describe));
+        Assert.Contains("chỉ gắn vào nhóm cấp 4 (Chủng loại)", error.Message);
+        Assert.Contains("DCD – Dây cáp điện đang ở cấp 3 (Loại hàng)", error.Message);
+
+        var item = Item.Create("CAP01", ItemType.Inventory, l4, cai, describe);
+        Assert.Equal(l4.Id, item.CategoryId);
+        Assert.Throws<BusinessRuleException>(() => item.ChangeCategory(l1));
+
+        // Giữ nguyên nhóm (kể cả nhóm cũ cấp thấp hơn của hàng có từ trước) thì không xét lại.
+        item.ChangeCategory(l4);
+        Assert.Equal(l4.Id, item.CategoryId);
+    }
 }

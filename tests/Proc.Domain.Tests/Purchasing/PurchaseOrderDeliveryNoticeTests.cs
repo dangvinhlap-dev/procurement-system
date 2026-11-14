@@ -13,7 +13,7 @@ public class PurchaseOrderDeliveryNoticeTests
 
     private static PurchaseOrder Order(Guid supplierId, bool approve = true)
     {
-        var category = ItemCategory.Create("VT", "Vật tư");
+        var category = TestCategories.Leaf("VT", "Vật tư");
         var bearing = Item.Create("VB01", ItemType.Inventory, category, Cai, new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var bolt = Item.Create("BL01", ItemType.Inventory, category, Cai, new ItemDescription("Bu lông", null, null, null, null, null, "10", null));
         var order = PurchaseOrder.Create(Guid.CreateVersion7(), "PO-1",

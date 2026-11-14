@@ -181,15 +181,24 @@ public sealed class Item : AuditableEntity, IVersioned
     }
 
     /// <summary>
-    /// Đổi nhóm hàng.
+    /// Đổi nhóm hàng (cả khi tạo mặt hàng).
+    /// Mặt hàng chỉ gắn vào nhóm cấp cuối – cấp <see cref="ItemCategory.MaxLevel"/> (Chủng loại) – để báo cáo gộp theo cấp không lẫn
+    /// (người dùng chốt 14/11/2026 – design.md mục 5.7, N4-5). Chỉ xét khi đổi sang nhóm khác: mặt hàng có từ trước 0.29.0 đang ở nhóm cấp
+    /// thấp hơn vẫn sửa được thông tin khác, đến khi chuyển sang nhóm cấp 4.
     /// </summary>
-    /// <param name="category">Nhóm mới, đang dùng.</param>
-    /// <exception cref="BusinessRuleException">Khi nhóm đã ngừng dùng.</exception>
+    /// <param name="category">Nhóm mới: đang dùng, cấp 4.</param>
+    /// <exception cref="BusinessRuleException">Khi nhóm đã ngừng dùng hoặc chưa phải nhóm cấp 4.</exception>
     public void ChangeCategory(ItemCategory category)
     {
         ArgumentNullException.ThrowIfNull(category);
-        if (!category.IsActive && category.Id != CategoryId)
+        if (category.Id == CategoryId) return;
+        if (!category.IsActive)
             throw new BusinessRuleException($"Nhóm hàng {category.Code} đã ngừng dùng.");
+        if (category.Level != ItemCategory.MaxLevel)
+            throw new BusinessRuleException(
+                $"Mặt hàng chỉ gắn vào nhóm cấp {ItemCategory.MaxLevel} ({ItemCategory.LevelName(ItemCategory.MaxLevel)}) – nhóm {category.Code} – " +
+                $"{category.Name} đang ở cấp {category.Level} ({ItemCategory.LevelName(category.Level)}). Chọn hoặc thêm nhóm cấp " +
+                $"{ItemCategory.MaxLevel} trong nhánh này.");
         CategoryId = category.Id;
     }
 

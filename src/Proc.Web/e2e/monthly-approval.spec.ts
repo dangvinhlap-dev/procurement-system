@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, chooseOption, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, chooseOption, openByCommand, pickOption, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Duyệt NCC và giá tháng (GTH – design.md mục 18.25, lát G2): quản trị ở tổng công ty lập phiếu tháng sau × nhóm hàng cho TCT và BHA, dòng
@@ -26,7 +26,7 @@ test('lập phiếu duyệt NCC và giá tháng, gửi duyệt, chụp màn hìn
   }
   const mainCode = await supplier(`NCC chính tháng ${tag}`)
   const backupCode = await supplier(`NCC dự phòng tháng ${tag}`)
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm duyệt tháng ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

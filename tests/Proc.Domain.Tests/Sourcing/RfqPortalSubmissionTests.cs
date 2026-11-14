@@ -17,7 +17,7 @@ public class RfqPortalSubmissionTests
     /// <summary>RFQ một dòng 100 cái, hạn nộp hôm nay 17:00, mời hai NCC.</summary>
     private static (Rfq Rfq, Guid A, Guid B) SentRfq()
     {
-        var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var rfq = Rfq.Create(Company, "RFQ-P3", new RfqHeader(Today, "Vòng bi", Today, null, RfqWeights.Default, null, new TimeOnly(17, 0, 45)));
         rfq.SetLines([(new RfqLineData(null, item.Id, Cai.Id, 100, null, null), item)]);

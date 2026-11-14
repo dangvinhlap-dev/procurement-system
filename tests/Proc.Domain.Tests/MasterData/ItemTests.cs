@@ -8,7 +8,7 @@ namespace Proc.Domain.Tests.MasterData;
 /// </summary>
 public class ItemTests
 {
-    private static readonly ItemCategory Category = ItemCategory.Create("VT", "Vật tư");
+    private static readonly ItemCategory Category = TestCategories.Leaf("VT", "Vật tư");
     private static readonly Uom Hop = Uom.Create("hop", "Hộp");
     private static readonly Uom Thung = Uom.Create("THUNG", "Thùng");
 
@@ -126,7 +126,7 @@ public class ItemTests
         old.Deactivate();
         Assert.Throws<BusinessRuleException>(() => Item.Create("VT02", ItemType.Inventory, Category, old, Describe()));
 
-        var closed = ItemCategory.Create("CU", "Nhóm cũ");
+        var closed = TestCategories.Leaf("CU", "Nhóm cũ");
         closed.Deactivate();
         Assert.Throws<BusinessRuleException>(() => Item.Create("VT02", ItemType.Inventory, closed, Hop, Describe()));
     }

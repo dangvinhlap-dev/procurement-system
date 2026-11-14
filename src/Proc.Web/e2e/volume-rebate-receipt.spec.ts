@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 type Api = Awaited<ReturnType<typeof api>>
 
@@ -49,7 +49,7 @@ test('ghi thực nhận chiết khấu sản lượng gộp cho kỳ đã kết 
   })
   await approveSupplier(request, supplier.id)
   await tct.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
-  const category = await tct.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(tct, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thực nhận gộp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await tct.send<{ id: string }>('post', '/api/items', {

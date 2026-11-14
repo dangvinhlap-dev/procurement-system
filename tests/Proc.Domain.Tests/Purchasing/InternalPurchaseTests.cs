@@ -13,7 +13,7 @@ public class InternalPurchaseTests
 
     private static (PurchaseOrder Order, Item Item) NewOrder()
     {
-        var item = Item.Create("VB09", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB09", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var order = PurchaseOrder.Create(Buyer, "PO-1",
             new PurchaseOrderHeader(new DateOnly(2026, 11, 12), Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, null, 0, null));

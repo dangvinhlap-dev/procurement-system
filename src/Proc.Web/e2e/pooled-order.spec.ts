@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, chooseOption, openByCommand, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, chooseOption, openByCommand, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Duyệt phiếu GTH bằng một quản trị mới ở tổng công ty (người lập không tự duyệt).
@@ -44,7 +44,7 @@ test('lập phiếu đặt hàng gộp, phân bổ theo kế hoạch, tạo PO c
   })
   await approveSupplier(request, supplier.id)
   for (const c of [head, bha]) await c.send('put', `/api/suppliers/${supplier.id}/company`, { localCode: null, startDate: null, isActive: true })
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm đặt gộp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

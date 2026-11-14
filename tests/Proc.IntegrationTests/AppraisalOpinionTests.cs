@@ -79,7 +79,7 @@ public class AppraisalOpinionTests
     private async Task<RfqDto> RfqAsync(HttpClient client, IReadOnlyList<Guid> supplierIds)
     {
         var cai = (await client.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(client,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thẩm định {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await client.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Van an toàn H1", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,

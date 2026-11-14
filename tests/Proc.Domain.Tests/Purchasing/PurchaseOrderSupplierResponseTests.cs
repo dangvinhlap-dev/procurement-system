@@ -13,7 +13,7 @@ public class PurchaseOrderSupplierResponseTests
 
     private static PurchaseOrder Order(Guid supplierId, bool approve = true)
     {
-        var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var order = PurchaseOrder.Create(Guid.CreateVersion7(), "PO-1",
             new PurchaseOrderHeader(OrderDate, supplierId, Guid.CreateVersion7(), null, null, null, null, 0, null));

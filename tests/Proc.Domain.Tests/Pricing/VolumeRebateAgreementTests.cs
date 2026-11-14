@@ -19,7 +19,7 @@ public class VolumeRebateAgreementTests
 
     private static Item NewItem(string code)
     {
-        var item = Item.Create(code, ItemType.Inventory, ItemCategory.Create("XM", "Xi măng"), Bao,
+        var item = Item.Create(code, ItemType.Inventory, TestCategories.Leaf("XM", "Xi măng"), Bao,
             new ItemDescription("Xi măng " + code, null, null, null, null, null, null, null));
         item.SetConversions([(Tan, 20m)]);
         return item;

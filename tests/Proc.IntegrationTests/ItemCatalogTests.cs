@@ -38,9 +38,17 @@ public class ItemCatalogTests
         return await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
     }
 
-    private static async Task<ItemCategoryDetailDto> CreateCategoryAsync(HttpClient client, string code, Guid? parentId = null) =>
-        await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync(
-            "/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {code}", parentId, null), Ct));
+    /// <summary>
+    /// Tạo nhóm hàng tên "Nhóm {code}". Không có nhóm cha thì <paramref name="level"/> cho biết cấp cần tạo (tự dựng nhóm phía trên) – mặt hàng
+    /// chỉ gắn nhóm cấp 4 (design.md mục 5.7, N4-5).
+    /// </summary>
+    private static async Task<ItemCategoryDetailDto> CreateCategoryAsync(HttpClient client, string code, Guid? parentId = null, int level = 1)
+    {
+        var request = new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {code}", parentId, null);
+        return await ReadAsync<ItemCategoryDetailDto>(parentId is null && level > 1
+            ? await TestCategories.PostAtLevelAsync(client, request, level, Ct)
+            : await client.PostAsJsonAsync("/api/item-categories", request, Ct));
+    }
 
     /// <summary>Nhập file Excel nhóm hàng (cột Mã nhóm, Tên nhóm, Mã nhóm cha) – <paramref name="commit"/> = false là kiểm tra thử.</summary>
     private static async Task<ExcelImportResult> ImportCategoriesAsync(HttpClient client, bool commit, params string?[][] rows)
@@ -187,6 +195,33 @@ public class ItemCatalogTests
         Assert.Equal((newRoot, 2), (imported.ParentCode, imported.Level));
     }
 
+    /// <summary>
+    /// Mặt hàng chỉ gắn vào nhóm cấp 4 – Chủng loại (người dùng chốt 14/11/2026 – design.md mục 5.7, N4-5): thêm hàng hoặc chuyển hàng
+    /// sang nhóm cấp 1–3 báo lỗi nêu cấp của nhóm; nhóm cấp 4 thì được.
+    /// </summary>
+    [Fact]
+    public async Task HangHoa_ChiGanNhomCapBon()
+    {
+        var head = await HeadOfficeAdminAsync();
+        var hop = await UomIdAsync(head, "HOP");
+        var l1 = await CreateCategoryAsync(head, UniqueCode("R"));
+        var l2 = await CreateCategoryAsync(head, UniqueCode("C"), l1.Id);
+        var l3 = await CreateCategoryAsync(head, UniqueCode("L"), l2.Id);
+        var l4 = await CreateCategoryAsync(head, UniqueCode("CL"), l3.Id);
+
+        var atLevel3 = await head.PostAsJsonAsync("/api/items", NewItem(l3.Id, hop), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, atLevel3.StatusCode);
+        var title = await TitleAsync(atLevel3);
+        Assert.Contains("chỉ gắn vào nhóm cấp 4 (Chủng loại)", title);
+        Assert.Contains($"{l3.Code} – {l3.Name} đang ở cấp 3 (Loại hàng)", title);
+
+        var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(l4.Id, hop), Ct));
+        Assert.Equal(l4.Id, item.CategoryId);
+        var moveUp = await head.PutAsJsonAsync($"/api/items/{item.Id}", Edit(item) with { CategoryId = l1.Id }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, moveUp.StatusCode);
+        Assert.Contains("đang ở cấp 1 (Ngành hàng)", await TitleAsync(moveUp));
+    }
+
     [Fact]
     public async Task NhomHang_NguoiBiGioiHan_ChiThemNhomConTrongNhanhDuocPhep()
     {
@@ -244,7 +279,7 @@ public class ItemCatalogTests
     public async Task HangHoa_ThemCoQuyDoi_TimKhongDauVaTheoNhomCha()
     {
         var head = await HeadOfficeAdminAsync();
-        var root = await CreateCategoryAsync(head, UniqueCode("R"));
+        var root = await CreateCategoryAsync(head, UniqueCode("R"), level: 3);
         var child = await CreateCategoryAsync(head, UniqueCode("C"), root.Id);
         var hop = await UomIdAsync(head, "HOP");
         var thung = await UomIdAsync(head, "THUNG");
@@ -274,7 +309,7 @@ public class ItemCatalogTests
     public async Task HangHoa_SuaQuyDoiVaDoiDvtCoSo()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await CreateCategoryAsync(head, UniqueCode("R"));
+        var category = await CreateCategoryAsync(head, UniqueCode("R"), level: 4);
         var (hop, thung, cai) = (await UomIdAsync(head, "HOP"), await UomIdAsync(head, "THUNG"), await UomIdAsync(head, "CAI"));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             NewItem(category.Id, hop, conversions: [new(thung, 24m)]), Ct));
@@ -297,8 +332,8 @@ public class ItemCatalogTests
     public async Task HangHoa_PhamViNhomHang_KhongThayHangNhomKhac()
     {
         var head = await HeadOfficeAdminAsync();
-        var allowed = await CreateCategoryAsync(head, UniqueCode("R"));
-        var hidden = await CreateCategoryAsync(head, UniqueCode("H"));
+        var allowed = await CreateCategoryAsync(head, UniqueCode("R"), level: 4);
+        var hidden = await CreateCategoryAsync(head, UniqueCode("H"), level: 4);
         var hop = await UomIdAsync(head, "HOP");
         var first = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(allowed.Id, hop), Ct));
         var secret = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(hidden.Id, hop), Ct));
@@ -326,7 +361,7 @@ public class ItemCatalogTests
     public async Task HangHoa_CongTyThanhVienSuaTheoQuyenSuaDanhMucDungChung()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await CreateCategoryAsync(head, UniqueCode("R"));
+        var category = await CreateCategoryAsync(head, UniqueCode("R"), level: 4);
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             NewItem(category.Id, await UomIdAsync(head, "HOP")), Ct));
 

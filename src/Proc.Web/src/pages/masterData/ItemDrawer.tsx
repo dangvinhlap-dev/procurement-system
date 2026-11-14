@@ -105,7 +105,8 @@ export function ItemDrawer({
   const type = Form.useWatch('type', form)
   const baseUomId = Form.useWatch('baseUomId', form)
   const isInventory = (type ?? 'Inventory') === 'Inventory'
-  const tree = useMemo(() => buildCategoryTree(categories, { activeOnly: true }), [categories])
+  // Mặt hàng chỉ gắn nhóm cấp 4 – Chủng loại (design.md mục 5.7, N4-5); máy chủ chặn lại lần nữa.
+  const tree = useMemo(() => buildCategoryTree(categories, { activeOnly: true, itemLevelOnly: true }), [categories])
   // ĐVT đã ngừng chỉ còn hiện nếu mặt hàng đang dùng nó, để không chọn mới được.
   const uomOptions = (uoms.data ?? [])
     .filter((u) => u.isActive || u.id === detail?.baseUomId || detail?.conversions.some((c) => c.uomId === u.id))
@@ -233,7 +234,12 @@ export function ItemDrawer({
                 <Input />
               </Form.Item>
               <div className="detail-grid">
-                <Form.Item label="Nhóm hàng" name="categoryId" rules={[{ required: true, message: 'Hãy chọn nhóm hàng.' }]}>
+                <Form.Item
+                  label="Nhóm hàng"
+                  name="categoryId"
+                  extra="Chỉ chọn nhóm cấp 4 – Chủng loại."
+                  rules={[{ required: true, message: 'Hãy chọn nhóm hàng.' }]}
+                >
                   <TreeSelect treeData={tree} showSearch treeDefaultExpandAll />
                 </Form.Item>
                 <Form.Item

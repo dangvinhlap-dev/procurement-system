@@ -14,7 +14,7 @@ public sealed class PaymentRequestTests
 
     private static PurchaseOrder Order(bool approve = true)
     {
-        var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var order = PurchaseOrder.Create(Guid.CreateVersion7(), "PO-1",
             new PurchaseOrderHeader(new DateOnly(2026, 11, 2), Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, null, 0, null));

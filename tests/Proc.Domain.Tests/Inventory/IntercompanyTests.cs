@@ -13,7 +13,7 @@ public class IntercompanyTests
     private static readonly Uom Cai = Uom.Create("CAI", "Cái");
 
     private static Item NewItem() =>
-        Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
 
     private static (InventoryDocument Sale, Item Item) PostedSale()

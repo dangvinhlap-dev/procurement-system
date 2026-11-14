@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { api, approvePriceList, approveSupplier, unique } from './inventoryHelpers.ts'
+import { api, approvePriceList, approveSupplier, unique, createLeafCategory } from './inventoryHelpers.ts'
 import { portalSession } from './portalHelpers.ts'
 import { todayVn } from './receiptHelpers.ts'
 
@@ -12,7 +12,7 @@ test('Portal: NCC xem bảng giá đã duyệt, giá sau chiết khấu', async 
   const head = await api(request)
   const hop = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm bảng giá Portal ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

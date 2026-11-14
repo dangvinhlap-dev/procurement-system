@@ -20,7 +20,7 @@ public class VolumeRebateReceiptTests
     private static VolumeRebateAgreement NewAgreement(bool active = true)
     {
         var tan = Uom.Create("TAN", "Tấn");
-        var item = Item.Create("PCB30", ItemType.Inventory, ItemCategory.Create("XM", "Xi măng"), tan,
+        var item = Item.Create("PCB30", ItemType.Inventory, TestCategories.Leaf("XM", "Xi măng"), tan,
             new ItemDescription("Xi măng PCB30", null, null, null, null, null, null, null));
         var agreement = VolumeRebateAgreement.Create(Head, "CKB-1", new VolumeRebateHeader(
             "Chiết khấu xi măng", Guid.CreateVersion7(), Guid.CreateVersion7(), new DateOnly(2026, 2, 15), new DateOnly(2026, 8, 10),

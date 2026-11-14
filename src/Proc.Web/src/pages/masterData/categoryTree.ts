@@ -36,13 +36,15 @@ export function branchDepth(categories: ItemCategory[], id: string): number {
  * @param categories Danh sách nhóm (API đã lọc theo phạm vi).
  * @param options.activeOnly Chỉ nhóm đang dùng (chọn nhóm cho hàng mới, nhóm cha).
  * @param options.exclude Nhóm không được chọn cùng mọi nhóm con của nó (chọn nhóm cha: không chọn chính nó hay con cháu).
+ * @param options.itemLevelOnly Ô chọn nhóm của mặt hàng: chỉ chọn được nhóm cấp 4 – Chủng loại; nhóm cấp 1–3 vẫn hiện để mở nhánh
+ *   nhưng bị khóa (design.md mục 5.7, N4-5). Nhóm đang gắn của mặt hàng cũ (cấp thấp hơn) vẫn hiện được trong ô.
  * @param options.parentForDepth Ô chọn nhóm cha của một nhánh sâu n cấp (thêm mới: 1): khóa nhóm mà cấp + n > 4 – nhóm cấp 4 là cấp
  *   cuối, nhóm làm nhánh vượt 4 cấp (design.md mục 5.7, N4-3, N4-4, N4-9).
  * @returns Các nút gốc.
  */
 export function buildCategoryTree(
   categories: ItemCategory[],
-  options: { activeOnly?: boolean; exclude?: string; parentForDepth?: number } = {},
+  options: { activeOnly?: boolean; exclude?: string; parentForDepth?: number; itemLevelOnly?: boolean } = {},
 ): CategoryNode[] {
   const visible = categories.filter((c) => !options.activeOnly || c.isActive)
   const ids = new Set(visible.map((c) => c.id))
@@ -61,6 +63,13 @@ export function buildCategoryTree(
       if (node.level + depth <= CATEGORY_MAX_LEVEL) continue
       node.disabled = true
       node.hint = node.level >= CATEGORY_MAX_LEVEL ? 'cấp cuối' : `nhánh sẽ vượt ${CATEGORY_MAX_LEVEL} cấp`
+    }
+  }
+  if (options.itemLevelOnly) {
+    for (const node of nodes.values()) {
+      if (node.level >= CATEGORY_MAX_LEVEL) continue
+      node.disabled = true
+      node.hint = `chọn nhóm cấp ${CATEGORY_MAX_LEVEL}`
     }
   }
   if (options.exclude) {

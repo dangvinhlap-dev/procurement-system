@@ -15,7 +15,7 @@ public class ReturnTransferTests
 
     private static Item NewItem()
     {
-        var item = Item.Create("VT01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Hop,
+        var item = Item.Create("VT01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Hop,
             new ItemDescription("Bu lông", null, null, null, null, null, "10", null));
         item.SetConversions([(Thung, 24m)]);
         return item;
