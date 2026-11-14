@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
+import { api, chooseOption, openByCommand, pickOption, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Kế hoạch nhu cầu (KHN – design.md mục 18.25, lát G5a): lập phiếu năm sau theo nhóm hàng, nhập SL vài tháng – tổng quý, cả năm tự tính;
@@ -11,7 +11,7 @@ test('lập kế hoạch nhu cầu 12 tháng, chốt, điều chỉnh, chụp m�
   const head = await api(request)
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const tag = unique('kh')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm kế hoạch ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

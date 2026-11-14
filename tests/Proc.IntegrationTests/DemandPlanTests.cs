@@ -53,9 +53,9 @@ public class DemandPlanTests
         var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
         var tct = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var cai = (await bha.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm kế hoạch {Guid.NewGuid():N}", null, null), Ct));
-        var other = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+        var other = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm khác kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name) => (await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
@@ -139,15 +139,18 @@ public class DemandPlanTests
         var nmi = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "NMI");
         var uoms = (await tct.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
-        var category = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm tổng hợp {Guid.NewGuid():N}", null, null), Ct));
+        // Kế hoạch lập theo nhóm cấp 3; mặt hàng ở hai nhóm con cấp 4 (mặt hàng chỉ gắn nhóm cấp 4 – design.md mục 5.7, N4-5).
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostAtLevelAsync(tct,
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm tổng hợp {Guid.NewGuid():N}", null, null), 3, Ct));
         var child = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con tổng hợp {Guid.NewGuid():N}", category.Id, null), Ct));
+        var sibling = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con nháp {Guid.NewGuid():N}", category.Id, null), Ct));
         async Task<ItemDetailDto> ItemAsync(Guid categoryId, string name) => await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null,
                 [new(thung, 12)]), Ct));
         var item = await ItemAsync(child.Id, "Bóng đèn tổng hợp");
-        var draftOnly = await ItemAsync(category.Id, "Dây điện tổng hợp");
+        var draftOnly = await ItemAsync(sibling.Id, "Dây điện tổng hợp");
 
         SaveDemandPlanRequest Request(params SaveDemandPlanLineRequest[] lines) => new(Year, category.Id, null, lines);
         SaveDemandPlanLineRequest Line(Guid itemId, Guid uomId, params decimal[] months) => new(null, itemId, uomId, Months(months), null);
@@ -228,7 +231,7 @@ public class DemandPlanTests
         var bha = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "BHA");
         var uoms = (await tct.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung, hop) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id, uoms.Single(u => u.Code == "HOP").Id);
-        var category = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm SL kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Ốc vít SL kế hoạch", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
@@ -298,7 +301,7 @@ public class DemandPlanTests
         var client = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
         var uoms = (await client.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var (cai, thung) = (uoms.Single(u => u.Code == "CAI").Id, uoms.Single(u => u.Code == "THUNG").Id);
-        var category = await ReadAsync<ItemCategoryDetailDto>(await client.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(client,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm chia ngày {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await client.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Ốc vít chia ngày", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,

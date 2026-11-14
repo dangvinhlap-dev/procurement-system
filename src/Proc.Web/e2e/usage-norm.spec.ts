@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, switchCompany, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Định mức sử dụng trên PR (lát G11, design.md mục 18.25): kế hoạch nhu cầu đã chốt của BHA năm sau 10 / 10 cái tháng 1–2; PR 25 cái
@@ -15,7 +15,7 @@ test('PR vượt định mức sử dụng theo kế hoạch nhu cầu: cảnh b
   const cai = uoms.find((u) => u.code === 'CAI')!.id
   const tag = unique('dm')
   // Danh mục nhóm hàng, mặt hàng chỉ thêm ở tổng công ty.
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm định mức ${tag}`, parentId: null, inventoryAccount: null,
   })
   const newItem = (name: string) =>

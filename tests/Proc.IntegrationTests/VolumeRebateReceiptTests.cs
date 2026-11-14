@@ -61,7 +61,7 @@ public class VolumeRebateReceiptTests
         var a = await CompanyAsync("Công ty A thực nhận gộp");
         var b = await CompanyAsync("Công ty B thực nhận gộp");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thực nhận gộp {Guid.NewGuid():N}", null, null), Ct));
         var item = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Gạch lát G6b", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;

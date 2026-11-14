@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type APIRequestContext } from '@playwright/test'
 import { ADMIN, loginViaApi } from './helpers.ts'
-import { api, openByCommand, unique } from './inventoryHelpers.ts'
+import { api, openByCommand, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /** Header gọi API của tài khoản quản trị tại một công ty (cần cho tải file và xóa – helper api chỉ có get/post/put). */
 async function headersFor(request: APIRequestContext, companyCode: string) {
@@ -31,7 +31,7 @@ test('phân tích giá hợp nhất hai pháp nhân và tiết kiệm dự kiế
   const head = await api(request)
   const tag = unique('BOM')
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thử phân tích giá ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
+  const category = await createLeafCategory<{ id: string }>(head, { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thử phân tích giá ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Bơm ly tâm 2HP ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'HOP')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',

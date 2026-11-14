@@ -184,7 +184,7 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   Luôn có chú thích "Cấp n – tên cấp" (Ngành hàng / Nhóm hàng / Loại hàng / Chủng loại). Biến thể chữ rộng "Cấp n/4" đặt sau tiêu đề ngăn kéo
   (`DetailDrawer` prop `titleExtra`).
 - **Ô chọn nhóm hàng** (`TreeSelect` cổ điển, cây dựng bằng `buildCategoryTree`): mỗi nút có ô số cấp trước "mã – tên"; nút bị khóa ghi lý do mờ
-  sau tên (`· cấp cuối`, `· nhánh sẽ vượt 4 cấp`). Ô chọn **nhóm cha** khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (`parentForDepth`).
+  sau tên (`· cấp cuối`, `· nhánh sẽ vượt 4 cấp`). Ô chọn **nhóm cha** khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (`parentForDepth`). Ô **Nhóm hàng của mặt hàng** chỉ chọn được nhóm cấp 4 (`itemLevelOnly`): nhóm cấp 1–3 vẫn hiện để mở nhánh, khóa kèm `· chọn nhóm cấp 4`; dưới ô ghi "Chỉ chọn nhóm cấp 4 – Chủng loại." (N4-5, lát N4c).
 - **Màn hình CAT** (`ListPage` + `DataGrid`): cột đầu "Cấp" (ô số + tên cấp), cột tên thụt 16px mỗi cấp, nút tam giác ▾/▸ mở/thu nhánh ngay
   trong ô (`GridColumn.render`; dòng không có nhóm con chừa ô trống cùng rộng để tên thẳng hàng); cột "Số nhóm con". Ô lọc **Cấp** (lọc thì lưới
   thành danh sách phẳng, không mở/thu nhánh). Nút lệnh sau "Tạo mới": **Thêm nhóm con** (icon xanh, thao tác trên dòng đang chọn – `ListPage`

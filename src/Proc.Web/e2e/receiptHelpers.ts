@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext } from '@playwright/test'
-import { api, approveSupplier, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /** Hàm dùng chung cho test nhận hàng bằng phiếu xác nhận nhận hàng XNH (lát K2, design.md mục 19.4). */
 
@@ -51,7 +51,7 @@ export async function seedApprovedPo(request: APIRequestContext, qty = 10, appro
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm nhận hàng ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

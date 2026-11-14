@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
+import { api, chooseOption, openByCommand, pickOption, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Khảo sát giá thị trường (KSG – design.md mục 18.25, lát G4a): quản trị ở tổng công ty lập phiếu theo nhóm hàng, một mặt hàng hai nguồn giá
@@ -17,7 +17,7 @@ test('lập phiếu khảo sát giá thị trường, chốt, chụp màn hình'
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Potential', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm khảo sát ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, openByCommand, unique } from './inventoryHelpers.ts'
+import { api, openByCommand, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Tổng hợp nhu cầu (KHNTH – design.md mục 18.25, lát G5b): kế hoạch đã chốt của TCT (theo thùng) và BHA gộp toàn tập đoàn, một cột mỗi
@@ -14,7 +14,7 @@ test('tổng hợp nhu cầu toàn tập đoàn theo công ty, đổi kỳ, xem 
   const cai = uoms.find((u) => u.code === 'CAI')!.id
   const thung = uoms.find((u) => u.code === 'THUNG')!.id
   const tag = unique('th')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm tổng hợp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

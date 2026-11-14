@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, switchCompany, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Thủ kho nhập tồn trên đề nghị mua (lát Y3b, design.md mục 19.3): PR loại B của BHA (nơi nhận KT) lập và gửi duyệt qua API; trên form bấm
@@ -14,7 +14,7 @@ test('thủ kho nhập tồn trên đề nghị mua chờ duyệt, tính cần m
   const cai = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
   const kt = (await bha.get<{ id: string; code: string }[]>('/api/warehouses')).find((w) => w.code === 'KT')!.id
   const tag = unique('NT')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vật tư nhập tồn ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

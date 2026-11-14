@@ -46,7 +46,7 @@ public class ReorderSuggestionTests
         await ReadAsync<InventoryPeriodDto>(await buyer.PostAsync($"/api/inventory-periods/{calendar.Periods.Single(p => p.Month == Today.Month).Id}/open", null, Ct));
         var kt = (await buyer.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm đặt hàng lại {Guid.NewGuid():N}", null, null), Ct));
 
         CreateItemRequest NewItem(string name, decimal? min, decimal? max, decimal? safety, decimal? reorder, bool critical) =>
@@ -103,7 +103,7 @@ public class ReorderSuggestionTests
         Assert.Equal((c.Code, 10m, 0m, "Ok"), all.Items.Where(r => r.ItemCode == c.Code).Select(r => (r.ItemCode, r.OpenRequestQty, r.SuggestedQty, r.Level)).Single());
 
         // Người chỉ được nhóm hàng khác không thấy các mặt hàng này; thiếu quyền báo cáo kho thì bị chặn.
-        var otherCategory = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var otherCategory = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm khác đặt hàng lại {Guid.NewGuid():N}", null, null), Ct));
         var viewerRole = UniqueCode("V");
         await _factory.CreateRoleAsync(viewerRole, Permissions.Report.StockView);

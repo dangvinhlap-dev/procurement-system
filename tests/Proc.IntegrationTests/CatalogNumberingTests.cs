@@ -39,7 +39,7 @@ public class CatalogNumberingTests
         Assert.Equal(("{NHOM}-", "VT-00001", (string?)null), (list["item"].Prefix, list["item"].Sample, list["item"].NextCode));
 
         // Nhóm hàng có dải riêng: mã hàng theo dải đó thay vì dòng mặc định {NHOM}-.
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm dải riêng {Guid.NewGuid():N}", null, null), Ct));
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head, new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm dải riêng {Guid.NewGuid():N}", null, null), Ct));
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var prefix = "R" + category.Code[2..];
         var own = await ReadAsync<CatalogNumberingDto>(await head.PostAsJsonAsync("/api/catalog-numberings",

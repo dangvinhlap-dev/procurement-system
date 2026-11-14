@@ -85,7 +85,7 @@ public class PurchaseHistoryTests
     internal static async Task<ItemDetailDto> NewItemAsync(HttpClient head, string name = "Bu lông M8")
     {
         var uoms = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.ToDictionary(u => u.Code, u => u.Id);
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử mua lịch sử {Guid.NewGuid():N}", null, null), Ct));
         return await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", category.Id, uoms["HOP"], null, null, null,

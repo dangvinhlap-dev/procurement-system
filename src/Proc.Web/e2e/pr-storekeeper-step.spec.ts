@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, switchCompany, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Lát Y3c (design.md mục 19.3): cấp "Thủ kho nơi nhận" trong chuỗi duyệt đề nghị mua. Công ty mới (không đụng cấu hình duyệt công ty mẫu): quản trị
@@ -29,7 +29,7 @@ test('bước Thủ kho nơi nhận: nhập tồn rồi mới duyệt đề ngh�
 
   const cai = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
   const tag = unique('TK')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vật tư thủ kho ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {

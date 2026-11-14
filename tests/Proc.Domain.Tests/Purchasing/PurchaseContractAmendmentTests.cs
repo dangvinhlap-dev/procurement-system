@@ -13,7 +13,7 @@ public class PurchaseContractAmendmentTests
 
     private static (PurchaseContract Contract, Item Item) ActiveContract()
     {
-        var item = Item.Create("VB01", ItemType.Inventory, ItemCategory.Create("VT", "Vật tư"), Cai,
+        var item = Item.Create("VB01", ItemType.Inventory, TestCategories.Leaf("VT", "Vật tư"), Cai,
             new ItemDescription("Vòng bi", null, null, null, null, null, "10", null));
         var contract = PurchaseContract.Create(Company, "CTR-1", new ContractHeader(
             Guid.CreateVersion7(), Guid.CreateVersion7(), "HĐ 01", "Hợp đồng vòng bi", Today, Today, new DateOnly(2026, 12, 31),

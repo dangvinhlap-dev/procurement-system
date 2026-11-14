@@ -69,7 +69,7 @@ public class SoleSourceTests
     private async Task<(Guid ItemId, Guid UomId)> ItemAsync(HttpClient head, string name)
     {
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
-        var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
+        var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {name}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,

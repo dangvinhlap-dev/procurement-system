@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
+import { api } from './inventoryHelpers.ts'
 
 /**
  * Danh mục đơn vị tính, nhóm hàng, hàng hóa (design.md mục 5.2, 5.7): thêm ở tổng công ty, tìm không dấu,
@@ -43,8 +44,22 @@ test.describe('danh mục hàng hóa', () => {
     await page.goto('/')
   })
 
-  test('thêm nhóm hàng và hàng hóa có quy đổi ĐVT, tìm không dấu', async ({ page }) => {
+  test('thêm nhóm hàng và hàng hóa có quy đổi ĐVT, tìm không dấu', async ({ page, request }) => {
     const drawer = page.locator('.detail-drawer')
+    // Mặt hàng chỉ gắn nhóm cấp 4 (design.md mục 5.7, N4-5): dựng sẵn nhóm cấp 1–3, nhóm thêm trên giao diện là cấp 4.
+    const head = await api(request)
+    let parentId: string | null = null
+    let parentCode = ''
+    for (const level of [1, 2, 3]) {
+      const parent: { id: string; code: string } = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+        code: `OP${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+        name: `Nhánh ống nhựa cấp ${level} ${crypto.randomUUID().slice(0, 8)}`,
+        parentId,
+        inventoryAccount: null,
+      })
+      parentId = parent.id
+      parentCode = parent.code
+    }
     await openByCommand(page, 'CAT')
     await expect(page.getByRole('heading', { name: 'Nhóm hàng' })).toBeVisible()
     await page.getByRole('button', { name: 'Tạo mới' }).click()
@@ -53,6 +68,7 @@ test.describe('danh mục hàng hóa', () => {
     await drawer.getByLabel('Mã nhóm').fill(categoryCode.toLowerCase())
     await drawer.getByLabel('Tên nhóm hàng').fill(`Ống nhựa thử ${crypto.randomUUID().slice(0, 8)}`)
     await drawer.getByLabel('Tài khoản kho mặc định').fill('152')
+    await pick(page, 'Nhóm cha', parentCode)
     await page.keyboard.press('Control+s')
     await expect(page.locator('.ant-message')).toContainText(`Đã lưu nhóm hàng ${categoryCode}.`)
 

@@ -10,7 +10,7 @@ namespace Proc.Domain.Tests.Inventory;
 public class InventoryDocumentTests
 {
     private static readonly Guid Company = Guid.CreateVersion7();
-    private static readonly ItemCategory Category = ItemCategory.Create("VT", "Vật tư");
+    private static readonly ItemCategory Category = TestCategories.Leaf("VT", "Vật tư");
     private static readonly Uom Hop = Uom.Create("HOP", "Hộp");
     private static readonly Uom Thung = Uom.Create("THUNG", "Thùng");
 

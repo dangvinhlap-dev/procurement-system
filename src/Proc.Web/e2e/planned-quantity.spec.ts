@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, unique } from './inventoryHelpers.ts'
+import { api, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Lấy SL kế hoạch (design.md mục 18.25, lát G5c): RFQ nháp ở tổng công ty, dòng tính theo thùng; kế hoạch đã chốt của TCT (30 cái) và BHA
@@ -15,7 +15,7 @@ test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp 
   const cai = uoms.find((u) => u.code === 'CAI')!.id
   const thung = uoms.find((u) => u.code === 'THUNG')!.id
   const tag = unique('sl')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm SL kế hoạch ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

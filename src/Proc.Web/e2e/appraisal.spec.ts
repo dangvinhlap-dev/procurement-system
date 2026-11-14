@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, unique } from './inventoryHelpers.ts'
+import { api, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Ý kiến thẩm định của thành viên chuyên môn (lát H1 – design.md mục 18.25): quản trị lập RFQ ở tổng công ty; một người khác (không phải người
@@ -12,7 +12,7 @@ test('ghi ý kiến thẩm định Không đạt kèm file trên RFQ, rút ý ki
   const head = await api(request)
   const tag = unique('td')
   const cai = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thẩm định ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {

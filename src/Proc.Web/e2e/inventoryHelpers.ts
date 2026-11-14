@@ -28,6 +28,30 @@ export async function api(request: APIRequestContext, companyCode?: string) {
   }
 }
 
+/**
+ * Tạo nhóm hàng cấp 4 (kèm ba nhóm cấp 1–3 phía trên) để gắn mặt hàng – mặt hàng chỉ gắn vào nhóm cấp 4 – Chủng loại (người dùng chốt
+ * 14/11/2026 – design.md mục 5.7, N4-5).
+ * @param head Client API ở tổng công ty (`api(request)`).
+ * @param body Nhóm cấp 4: mã, tên, tài khoản kho; `parentId` bỏ qua.
+ * @returns Nhóm cấp 4 máy chủ trả về.
+ */
+export async function createLeafCategory<T>(
+  head: Awaited<ReturnType<typeof api>>,
+  body: { code: string; name: string; parentId?: string | null; inventoryAccount: string | null },
+): Promise<T> {
+  let parentId: string | null = null
+  for (const level of ['ngành', 'nhóm', 'loại']) {
+    const parent: { id: string } = await head.send<{ id: string }>('post', '/api/item-categories', {
+      code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`,
+      name: `${body.name} – ${level}`,
+      parentId,
+      inventoryAccount: null,
+    })
+    parentId = parent.id
+  }
+  return head.send<T>('post', '/api/item-categories', { ...body, parentId })
+}
+
 /** Người duyệt bảng giá NCC tại Tổng công ty (dữ liệu mẫu môi trường Testing). */
 const PRICE_LIST_APPROVER = { userName: 'duyetgia.tct', password: 'Demo@2026' }
 
@@ -140,7 +164,7 @@ export async function seedPostedReceipt(request: APIRequestContext) {
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm trả/chuyển ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
+  const category = await createLeafCategory<{ id: string; code: string }>(head, { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm trả/chuyển ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,

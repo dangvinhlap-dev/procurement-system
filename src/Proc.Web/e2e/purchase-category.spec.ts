@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, chooseOption, switchCompany, unique } from './inventoryHelpers.ts'
+import { api, chooseOption, switchCompany, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Loại mua trên đề nghị mua (lát Y3a, design.md mục 19.3): PR của BHA lập loại B qua API; trên form đổi sang "A – Công trình", chọn công
@@ -13,7 +13,7 @@ test('đề nghị mua loại A chọn công trình, hiện dự toán – lũy 
   const bha = await api(request, 'BHA')
   const cai = (await bha.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
   const tag = unique('LM')
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vật tư công trình ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

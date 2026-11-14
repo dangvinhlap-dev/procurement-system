@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginViaApi } from './helpers.ts'
-import { api, approveSupplier, chooseOption, openByCommand, pickOption, unique } from './inventoryHelpers.ts'
+import { api, approveSupplier, chooseOption, openByCommand, pickOption, unique, createLeafCategory } from './inventoryHelpers.ts'
 
 /**
  * Chiết khấu sản lượng gộp (CKB – design.md mục 18.25, lát G6a): quản trị ở tổng công ty lập thỏa thuận cho NCC × nhóm hàng, áp cho TCT và
@@ -20,7 +20,7 @@ test('lập thỏa thuận chiết khấu sản lượng gộp, xem lũy kế, g
     rating: null, status: 'Approved', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
   await approveSupplier(request, supplier.id)
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
+  const category = await createLeafCategory<{ id: string; code: string }>(head, {
     code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm chiết khấu gộp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {

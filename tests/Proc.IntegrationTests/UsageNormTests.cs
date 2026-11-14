@@ -39,11 +39,12 @@ public class UsageNormTests
         var uoms = (await bha.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!;
         var cai = uoms.Single(u => u.Code == "CAI").Id;
         var thung = uoms.Single(u => u.Code == "THUNG").Id;
-        var parent = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm định mức {Guid.NewGuid():N}", null, null), Ct));
+        // Kế hoạch theo nhóm cấp 3, mặt hàng ở nhóm con cấp 4 (design.md mục 5.7, N4-5).
+        var parent = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostAtLevelAsync(tct,
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm định mức {Guid.NewGuid():N}", null, null), 3, Ct));
         var child = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con định mức {Guid.NewGuid():N}", parent.Id, null), Ct));
-        var noPlan = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
+        var noPlan = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm chưa kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name, params ItemUomConversionInput[] conversions) => (await ReadAsync<ItemDetailDto>(
             await tct.PostAsJsonAsync("/api/items", new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10",

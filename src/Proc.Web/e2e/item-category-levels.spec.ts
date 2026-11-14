@@ -80,3 +80,28 @@ test('CAT: thêm nhóm con đến cấp 4, cấp 4 khóa thêm nhóm con, đư�
   await page.getByRole('button', { name: `Mở nhánh ${l1.code}` }).click()
   await expect(row(l4Code)).toBeVisible()
 })
+
+test('Hàng hóa: ô Nhóm hàng chỉ chọn được nhóm cấp 4 (N4-5)', async ({ page, request }) => {
+  const tag = crypto.randomUUID().slice(0, 8)
+  const l1 = await createCategory(request, { code: newCode('HA'), name: `Ngành chọn ${tag}`, parentId: null })
+  const l2 = await createCategory(request, { code: newCode('HB'), name: `Nhóm chọn ${tag}`, parentId: l1.id })
+  const l3 = await createCategory(request, { code: newCode('HC'), name: `Loại chọn ${tag}`, parentId: l2.id })
+  const l4 = await createCategory(request, { code: newCode('HD'), name: `Chủng loại chọn ${tag}`, parentId: l3.id })
+
+  await loginViaApi(page)
+  await page.goto('/')
+  await openInCurrentTab(page, 'ITEM')
+  await page.getByRole('button', { name: 'Tạo mới' }).click()
+  const drawer = page.locator('.detail-drawer')
+  await expect(drawer).toContainText('Chỉ chọn nhóm cấp 4 – Chủng loại.')
+  const box = drawer.getByLabel('Nhóm hàng', { exact: true })
+  await box.click()
+  await box.pressSequentially(tag)
+  const node = (code: string) => page.locator('.ant-select-dropdown:visible .ant-select-tree-treenode', { hasText: code })
+  // Nhóm cấp 3 hiện để mở nhánh nhưng bị khóa, ghi lý do; nhóm cấp 4 chọn được.
+  await expect(node(l3.code)).toHaveClass(/ant-select-tree-treenode-disabled/)
+  await expect(node(l3.code)).toContainText('chọn nhóm cấp 4')
+  await expect(node(l4.code)).not.toHaveClass(/ant-select-tree-treenode-disabled/)
+  await node(l4.code).locator('.ant-select-tree-title').click()
+  await expect(drawer.locator('.ant-form-item', { has: page.getByLabel('Nhóm hàng', { exact: true }) })).toContainText(l4.code)
+})
