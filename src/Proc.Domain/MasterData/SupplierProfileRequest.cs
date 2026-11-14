@@ -20,19 +20,18 @@ public enum SupplierProfileRequestStatus
 }
 
 /// <summary>
-/// Thông tin chung NCC đề nghị trên Portal – chỉ các trường NCC tự khai (lát P2a P2-2). Nhóm NCC, điều khoản thanh toán, trạng thái, xếp hạng,
-/// NCC nước ngoài do Phòng CUVT quản lý nên không có ở đây.
+/// Thông tin chung NCC đề nghị trên Portal – chỉ các trường NCC tự khai (lát P2a P2-2). **Mã số thuế** (người dùng chốt 14/11/2026 – chỉ
+/// Phòng CUVT sửa trong phần mềm), nhóm NCC, điều khoản thanh toán, trạng thái, xếp hạng, NCC nước ngoài do Phòng CUVT quản lý nên không có ở đây.
 /// </summary>
 /// <param name="Name">Tên NCC.</param>
 /// <param name="ShortName">Tên viết tắt.</param>
-/// <param name="TaxCode">Mã số thuế.</param>
 /// <param name="Address">Địa chỉ.</param>
 /// <param name="Phone">Điện thoại.</param>
 /// <param name="Email">Email.</param>
 /// <param name="Website">Website.</param>
 /// <param name="SupplyScope">Phạm vi cung cấp.</param>
 public sealed record SupplierProfileData(
-    string Name, string? ShortName, string? TaxCode, string? Address, string? Phone, string? Email, string? Website, string? SupplyScope);
+    string Name, string? ShortName, string? Address, string? Phone, string? Email, string? Website, string? SupplyScope);
 
 /// <summary>Một trường thông tin chung NCC đề nghị đổi: giá trị lúc gửi và giá trị đề nghị.</summary>
 /// <param name="Field">Tên trường (tên thuộc tính của <see cref="Supplier"/>, ví dụ "Address").</param>
@@ -144,7 +143,6 @@ public sealed class SupplierProfileRequest : AuditableEntity, IVersioned, IHasDo
         {
             (nameof(Supplier.Name), "Tên công ty", supplier.Name, name),
             (nameof(Supplier.ShortName), "Tên viết tắt", supplier.ShortName, Limit(data.ShortName, 100, "Tên viết tắt")),
-            (nameof(Supplier.TaxCode), "Mã số thuế", supplier.TaxCode, Supplier.NormalizeTaxCode(data.TaxCode, supplier.IsForeign)),
             (nameof(Supplier.Address), "Địa chỉ", supplier.Address, Limit(data.Address, 500, "Địa chỉ")),
             (nameof(Supplier.Phone), "Điện thoại", supplier.Phone, Limit(data.Phone, 50, "Điện thoại")),
             (nameof(Supplier.Email), "Email", supplier.Email, Limit(data.Email, 256, "Email")),
@@ -194,7 +192,7 @@ public sealed class SupplierProfileRequest : AuditableEntity, IVersioned, IHasDo
         {
             supplier.Update(new SupplierInfo(
                 Pick(nameof(Supplier.Name), supplier.Name) ?? supplier.Name, Pick(nameof(Supplier.ShortName), supplier.ShortName), supplier.IsForeign,
-                Pick(nameof(Supplier.TaxCode), supplier.TaxCode), Pick(nameof(Supplier.Address), supplier.Address),
+                supplier.TaxCode, Pick(nameof(Supplier.Address), supplier.Address),
                 Pick(nameof(Supplier.Phone), supplier.Phone), Pick(nameof(Supplier.Email), supplier.Email),
                 Pick(nameof(Supplier.Website), supplier.Website), supplier.PaymentTerms, Pick(nameof(Supplier.SupplyScope), supplier.SupplyScope),
                 supplier.Rating));

@@ -110,6 +110,8 @@ public static class DependencyInjection
         services.AddScoped<ISupplierGroupAdministration, SupplierGroupAdministration>();
         services.AddScoped<ISupplierAdministration, SupplierAdministration>();
         services.AddScoped<ISupplierChangeRequestService, SupplierChangeRequestService>();
+        // Lát P2a: đề nghị cập nhật hồ sơ NCC gửi từ Portal – phía nội bộ.
+        services.AddScoped<ISupplierProfileRequestService, SupplierProfileRequestService>();
         services.AddScoped<IConflictDeclarationService, ConflictDeclarationService>();
         services.AddScoped<ISoleSourceService, SoleSourceService>();
         services.AddScoped<Proc.Application.Pricing.IMonthlySupplierApprovalService, Proc.Infrastructure.Pricing.MonthlySupplierApprovalService>();
@@ -202,6 +204,8 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Portal.IPortalDeliveryNoticeService, Proc.Infrastructure.Portal.PortalDeliveryNoticeService>();
         // Lát P6b: trạng thái thanh toán trên Portal.
         services.AddScoped<Proc.Application.Portal.IPortalPaymentService, Proc.Infrastructure.Portal.PortalPaymentService>();
+        // Lát P2a: hồ sơ NCC trên Portal – đề nghị cập nhật.
+        services.AddScoped<Proc.Application.Portal.IPortalProfileService, Proc.Infrastructure.Portal.PortalProfileService>();
         services.AddScoped<Proc.Application.Purchasing.IDeliveryNoticeService, Proc.Infrastructure.Purchasing.DeliveryNoticeService>();
         services.AddScoped<Proc.Application.Purchasing.IPaymentRequestService, Proc.Infrastructure.Purchasing.PaymentRequestService>();
         services.AddScoped<Proc.Application.Purchasing.ISundryExpenseSheetService, Proc.Infrastructure.Purchasing.SundryExpenseSheetService>();

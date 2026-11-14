@@ -89,6 +89,12 @@ public static class DocumentTypes
     /// <summary>Bảng kê chi phí tạp vụ 2C (lát Y11a, design.md mục 19.2 loại C).</summary>
     public const string SundryExpenseSheet = "BKT";
 
+    /// <summary>
+    /// Đề nghị cập nhật hồ sơ NCC gửi từ Portal (lát P2a, design.md mục 19.5) – số theo mã NCC (NCC0012-HS01), không cấp số theo công ty nên
+    /// không có trong <see cref="All"/>; mã dùng cho thông báo, ô số chứng từ mở phiếu.
+    /// </summary>
+    public const string SupplierProfileRequest = "HSC";
+
     /// <summary>Mọi loại chứng từ, theo thứ tự hiển thị.</summary>
     public static readonly IReadOnlyList<DocumentTypeInfo> All =
     [

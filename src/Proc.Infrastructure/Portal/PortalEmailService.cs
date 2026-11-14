@@ -28,6 +28,9 @@ public sealed class PortalEmailService : IPortalEmailService
     /// <summary>Loại chứng từ của thư về PO (lát P4a).</summary>
     public const string PurchaseOrderDocType = "PO";
 
+    /// <summary>Loại chứng từ ghi trên thư đề nghị cập nhật hồ sơ NCC (lát P2a).</summary>
+    public const string ProfileRequestDocType = "HSC";
+
     private readonly ProcDbContext _db;
     private readonly IClock _clock;
     private readonly IEmailSender _sender;
@@ -103,6 +106,53 @@ public sealed class PortalEmailService : IPortalEmailService
 
         return recipients.Count;
     }
+
+    /// <inheritdoc />
+    public async Task<int> QueueProfileRequestAsync(
+        SupplierProfileRequest request, SupplierPortalEmailKind kind, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var recipients = await RecipientsAsync([request.SupplierId], cancellationToken);
+        if (recipients.Count == 0) return 0;
+        var company = await _db.Companies.AsNoTracking().IgnoreQueryFilters().Where(c => c.IsHeadOffice)
+            .Select(c => new { c.Id, c.Code, c.Name }).FirstAsync(cancellationToken);
+        var link = PortalLink("ho-so");
+        var now = _clock.UtcNow;
+        foreach (var r in recipients)
+        {
+            var (subject, title, lines) = ProfileContent(request, kind, company.Name);
+            _db.SupplierPortalEmails.Add(SupplierPortalEmail.Queue(
+                company.Id, r.SupplierId, r.Id, r.Email, r.FullName, kind, ProfileRequestDocType, request.Id, $"[{company.Code}] {subject}",
+                Html(r.FullName, title, lines, link), Text(r.FullName, title, lines, link), now));
+        }
+
+        return recipients.Count;
+    }
+
+    /// <summary>
+    /// Tiêu đề và các đoạn thư kết quả đề nghị cập nhật hồ sơ (lát P2a – P2-5). Lý do từ chối do Phòng CUVT viết để gửi NCC nên ghi trong thư;
+    /// chấp nhận có phần tài khoản ngân hàng thì nói rõ tài khoản còn chờ duyệt (quy tắc Q7).
+    /// </summary>
+    internal static (string Subject, string Title, IReadOnlyList<string> Lines) ProfileContent(
+        SupplierProfileRequest request, SupplierPortalEmailKind kind, string companyName) => kind switch
+    {
+        SupplierPortalEmailKind.ProfileRequestAccepted => ($"Chấp nhận đề nghị cập nhật hồ sơ {request.No}", $"Đề nghị {request.No} đã được chấp nhận",
+        [
+            $"{companyName} đã chấp nhận đề nghị cập nhật hồ sơ {request.No} gửi ngày "
+            + $"{TimeZoneInfo.ConvertTime(request.SubmittedAt, VietnamTime.Zone):dd/MM/yyyy}.",
+            .. request.BankChangeRequestNo is null ? Array.Empty<string>()
+                : ["Thay đổi tài khoản ngân hàng cần được duyệt thêm – hồ sơ trên Portal cập nhật tài khoản khi duyệt xong."],
+            .. string.IsNullOrWhiteSpace(request.ReviewComment) ? Array.Empty<string>() : [$"Ý kiến: {request.ReviewComment}"],
+            "Quý công ty đăng nhập Portal nhà cung cấp, mục Hồ sơ công ty, để xem hồ sơ đã cập nhật.",
+        ]),
+        SupplierPortalEmailKind.ProfileRequestRejected => ($"Từ chối đề nghị cập nhật hồ sơ {request.No}", $"Đề nghị {request.No} chưa được chấp nhận",
+        [
+            $"{companyName} chưa chấp nhận đề nghị cập nhật hồ sơ {request.No}.",
+            $"Lý do: {request.ReviewComment}",
+            "Quý công ty đăng nhập Portal nhà cung cấp, mục Hồ sơ công ty, để bổ sung và gửi lại đề nghị.",
+        ]),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
 
     /// <summary>
     /// Người nhận: tài khoản Portal đang dùng (đã kích hoạt, chưa khóa) của các NCC không ở danh sách đen – người chưa kích hoạt chưa đăng nhập

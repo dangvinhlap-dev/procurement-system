@@ -243,6 +243,35 @@ internal sealed class SupplierChangeRequestConfiguration : IEntityTypeConfigurat
     }
 }
 
+/// <summary>Cấu hình bảng SupplierProfileRequest – đề nghị cập nhật hồ sơ NCC gửi từ Portal (design.md 19.5, lát P2a).</summary>
+internal sealed class SupplierProfileRequestConfiguration : IEntityTypeConfiguration<SupplierProfileRequest>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<SupplierProfileRequest> builder)
+    {
+        builder.ToTable("SupplierProfileRequest");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Ignore(x => x.DocumentNumber);
+        builder.Ignore(x => x.FieldChanges);
+        builder.Ignore(x => x.ProposedContacts);
+        builder.Ignore(x => x.ProposedBankAccounts);
+        builder.Property(x => x.No).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.No).IsUnique();
+        builder.Property(x => x.FieldChangesJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.ContactsJson).HasColumnType("jsonb");
+        builder.Property(x => x.BankAccountsJson).HasColumnType("jsonb");
+        builder.Property(x => x.Note).HasMaxLength(SupplierProfileRequest.NoteMaxLength);
+        builder.Property(x => x.SubmittedByEmail).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.ReviewComment).HasMaxLength(SupplierProfileRequest.NoteMaxLength);
+        builder.Property(x => x.BankChangeRequestNo).HasMaxLength(50);
+        builder.HasIndex(x => new { x.SupplierId, x.Status });
+        // Mỗi NCC tối đa một đề nghị đang chờ (P2-3) – chỉ mục duy nhất có điều kiện chặn cả khi hai người cùng NCC gửi cùng lúc.
+        builder.HasIndex(x => x.SupplierId).IsUnique().HasFilter("\"Status\" = 1").HasDatabaseName("IX_SupplierProfileRequest_SupplierId_Pending");
+        builder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<SupplierPortalUser>().WithMany().HasForeignKey(x => x.PortalUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng ConflictDeclaration – kê khai xung đột lợi ích (design.md mục 18.8).</summary>
 internal sealed class ConflictDeclarationConfiguration : IEntityTypeConfiguration<ConflictDeclaration>
 {

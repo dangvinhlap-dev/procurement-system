@@ -19,7 +19,7 @@ public class SupplierProfileRequestTests
     }
 
     private static SupplierProfileData Same(Supplier s) =>
-        new(s.Name, s.ShortName, s.TaxCode, s.Address, s.Phone, s.Email, s.Website, s.SupplyScope);
+        new(s.Name, s.ShortName, s.Address, s.Phone, s.Email, s.Website, s.SupplyScope);
 
     private static IEnumerable<SupplierContactData> ContactsOf(Supplier s) =>
         s.Contacts.Select(c => new SupplierContactData(c.Id, c.Name, c.Position, c.Phone, c.Email, c.IsPrimary));
@@ -97,13 +97,17 @@ public class SupplierProfileRequestTests
     }
 
     [Fact]
-    public void Gui_MaSoThueSai_BaoLoi_TenTrong_BaoLoi()
+    public void Gui_TenTrong_BaoLoi_ChapNhanKhongDoiMaSoThue()
     {
         var supplier = NewSupplier();
         Assert.Throws<BusinessRuleException>(() => SupplierProfileRequest.Create(supplier, "NCC01-HS01", Guid.NewGuid(), "a@ncc.vn",
-            Same(supplier) with { TaxCode = "123" }, ContactsOf(supplier), BanksOf(supplier), null, At));
-        Assert.Throws<BusinessRuleException>(() => SupplierProfileRequest.Create(supplier, "NCC01-HS01", Guid.NewGuid(), "a@ncc.vn",
             Same(supplier) with { Name = " " }, ContactsOf(supplier), BanksOf(supplier), null, At));
+
+        // Mã số thuế không có trên đề nghị – chỉ Phòng CUVT sửa trong phần mềm (người dùng chốt 14/11/2026).
+        var request = SupplierProfileRequest.Create(supplier, "NCC01-HS01", Guid.NewGuid(), "a@ncc.vn",
+            Same(supplier) with { Name = "Thép Việt Nam" }, ContactsOf(supplier), BanksOf(supplier), null, At);
+        request.Accept(supplier, Guid.NewGuid(), null, At);
+        Assert.Equal(("Thép Việt Nam", "0101234567"), (supplier.Name, supplier.TaxCode));
     }
 
     [Fact]
