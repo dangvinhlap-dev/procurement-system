@@ -985,6 +985,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**N4d xong 14/11/2026 (chưa phát hành)** – nhánh `feature/n4d-bao-cao-gop-theo-cap` (đã merge): báo cáo gộp theo cấp nhóm hàng – mục còn lại
+của đợt N4 ("báo cáo gộp theo cấp để lát sau"). Màn hình Mua hàng theo NCC (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** (nhóm của mặt
+hàng / cấp 1–4), cột Cấp + Đường dẫn; API `GET /api/reports/purchase-spend?categoryLevel=` (design.md N4-10, ui-style.md 5h). Không migration,
+không quyền mới. Test: tích hợp `MuaHangTheoNhomHang_GopTheoCap`, e2e `purchase-reports.spec.ts` thêm bước chọn cấp 1. Build 0 cảnh báo,
+`dotnet test` 805/805, Playwright đủ bộ 156/156, tsc, oxlint, `npm run build`. Ghi chú: chạy riêng `purchase-reports.spec` ngay sau
+`dotnet test` thì bước "thấy BHA" lỗi vì CSDL test vừa làm mới chưa có XNH của BHA (các spec khác tạo) – chạy đủ bộ thì qua. Chưa gộp theo cấp
+ở báo cáo khác (SUPCOV đếm NCC theo nhóm trực tiếp, BCBAN) – làm khi người dùng yêu cầu.
+
 **Phát hành 0.30.0 (14/11/2026)** – người dùng "phát hành". Nội dung: mọi file Excel xuất ra cùng định dạng lưới trên màn hình (trạng thái chỉ tô màu chữ) – **không migration, không quyền mới**. Tag `v0.30.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.30.0 (gói `procurement-0.30.0.zip`, `npm install` + `publish.ps1 -NoInstall`). Kiểm tra trước phát hành: build 0 cảnh báo, `dotnet test` 804/804, Playwright 156/156, tsc, oxlint, `npm run build`. **Bản test 5007 nâng tại chỗ lên 0.30.0**: sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.30.0.dump`; dừng PID 24208; `app` = 0.30.0, `app-0.29.0` = bản cũ, gói `goi\0.30.0`, giữ `appsettings.Production.json`; PID 17248 trong `pid.txt`; `/health` Healthy 0.30.0 (cả qua http://192.168.1.199:5007); đăng nhập admin, web 200, `POST /api/excel/grid` 200. Lộ trình design.md 19.6: K3, P2b, P7b, P7c dời sang 0.31.0 trở đi.
 
 **Phát hành 0.29.0 (14/11/2026)** – người dùng "phát hành bản 0.29.0 để tôi test". Nội dung: N4b (giao diện cây nhóm hàng 4 cấp) + N4c (mặt hàng chỉ gắn nhóm cấp 4) – **không migration, không quyền mới**. Tag `v0.29.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.29.0 (gói `procurement-0.29.0.zip`, `npm install` + `publish.ps1 -NoInstall`). Kiểm tra trước phát hành (cùng commit với lần merge N4c): build 0 cảnh báo, `dotnet test` 802/802, Playwright 155/155, tsc, oxlint, `npm run build`. **Bản test 5007 nâng tại chỗ lên 0.29.0 (14/11/2026)**: sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.29.0.dump`; dừng PID 25028; `app` = 0.29.0, `app-0.28.0` = bản cũ, gói `goi\0.29.0`, giữ `appsettings.Production.json`; PID 24208 trong `pid.txt`; `/health` Healthy 0.29.0 (cả qua http://192.168.1.199:5007); đăng nhập admin, API nhóm hàng 200. Không chạy script CSDL, không gán quyền. Lộ trình design.md 19.6: K3, P2b, P7b, P7c dời sang 0.30.0 trở đi.
@@ -1010,7 +1018,7 @@ Chưa áp lại "Cấu hình duyệt mẫu" CUVT cho DNT / BKT / TVB (chưa cấ
 https://claude.ai/artifact/4wieRMWGE1Twp41xTu8QH8; người dùng chốt: (1) mặt hàng gắn ở **cấp cuối cùng** (hiểu là cấp 4 – báo người dùng, làm ở
 N4c), (2) tên cấp Ngành hàng / Nhóm hàng / Loại hàng / Chủng loại, (3) **mã nhóm người dùng tự gõ**, (4) báo cáo gộp theo cấp để lát sau.
 Thứ tự: **N4a** máy chủ (xong – bảng Đã xong) → **N4b** (xong 14/11/2026) giao diện CAT, ngăn kéo, hộp thoại thêm nhóm con, ô chọn có số cấp, ui-style → **N4c** (xong 14/11/2026) (xong 14/11/2026)
-mặt hàng chỉ gắn nhóm cấp 4. Việc khác vẫn chờ người dùng: K3 (xác nhận sao lưu), Portal (P2b, P7b, P7c, P5-8 – đang dừng), mẫu 1C/2C thật,
+mặt hàng chỉ gắn nhóm cấp 4 → **N4d** (xong 14/11/2026) báo cáo gộp theo cấp. Việc khác vẫn chờ người dùng: K3 (xác nhận sao lưu), Portal (P2b, P7b, P7c, P5-8 – đang dừng), mẫu 1C/2C thật,
 phát hành bản mới, thư mục `Lưu ý/` chưa đưa vào git (để nguyên).
 
 **⛔ TẠM DỪNG MỌI VIỆC PORTAL (người dùng yêu cầu 14/11/2026)**: "tất cả mục liên quan đến portal hãy dừng lại và ghi nhận để tôi phân
