@@ -34,7 +34,8 @@ public sealed class CatalogNumberingAdministration : ICatalogNumberingAdministra
     /// <inheritdoc />
     public async Task<IReadOnlyList<CatalogNumberingDto>> ListAsync(CancellationToken cancellationToken)
     {
-        var rows = await _db.CatalogNumberings.AsNoTracking().ToListAsync(cancellationToken);
+        // Bỏ dòng của danh mục không còn đánh số (dải nhóm hàng cũ – mã nhóm hàng do người dùng gõ từ 14/11/2026, N4-7); dòng vẫn giữ trong CSDL.
+        var rows = (await _db.CatalogNumberings.AsNoTracking().ToListAsync(cancellationToken)).Where(r => NumberedCatalogs.All.ContainsKey(r.Catalog)).ToList();
         var categoryIds = rows.Where(r => r.CategoryId != null).Select(r => r.CategoryId!.Value).ToList();
         var categories = await _db.ItemCategories.IgnoreQueryFilters().AsNoTracking().Where(c => categoryIds.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, cancellationToken);

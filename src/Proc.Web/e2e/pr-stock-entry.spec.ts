@@ -15,7 +15,7 @@ test('thủ kho nhập tồn trên đề nghị mua chờ duyệt, tính cần m
   const kt = (await bha.get<{ id: string; code: string }[]>('/api/warehouses')).find((w) => w.code === 'KT')!.id
   const tag = unique('NT')
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm vật tư nhập tồn ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vật tư nhập tồn ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Găng tay ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,

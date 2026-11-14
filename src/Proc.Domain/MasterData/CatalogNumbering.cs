@@ -3,7 +3,10 @@ using Proc.Domain.Common;
 
 namespace Proc.Domain.MasterData;
 
-/// <summary>Danh mục được đánh số tự động và quy tắc mã của từng danh mục (design.md mục 5.11).</summary>
+/// <summary>
+/// Danh mục được đánh số tự động và quy tắc mã của từng danh mục (design.md mục 5.11). Nhóm hàng không còn đánh số từ 14/11/2026 – mã do người
+/// dùng gõ (N4-7); dòng cấu hình "item-category" cũ trong CSDL được giữ nhưng bỏ qua.
+/// </summary>
 public static class NumberedCatalogs
 {
     /// <summary>Nhà cung cấp.</summary>
@@ -11,9 +14,6 @@ public static class NumberedCatalogs
 
     /// <summary>Nhóm nhà cung cấp.</summary>
     public const string SupplierGroup = "supplier-group";
-
-    /// <summary>Nhóm hàng.</summary>
-    public const string ItemCategory = "item-category";
 
     /// <summary>Hàng hóa (dải theo từng nhóm hàng, hoặc dòng mặc định cho mọi nhóm).</summary>
     public const string Item = "item";
@@ -32,7 +32,6 @@ public static class NumberedCatalogs
     {
         [Supplier] = new("Nhà cung cấp", false, MasterData.Supplier.CodeMaxLength),
         [SupplierGroup] = new("Nhóm nhà cung cấp", true, 20),
-        [ItemCategory] = new("Nhóm hàng", true, 20),
         [Item] = new("Hàng hóa", false, MasterData.Item.CodeMaxLength),
     };
 }

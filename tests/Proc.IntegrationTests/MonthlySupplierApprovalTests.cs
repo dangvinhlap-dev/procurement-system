@@ -78,7 +78,7 @@ public class MonthlySupplierApprovalTests
     {
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm {name}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {name}", null, null), Ct));
         async Task<Guid> ItemAsync(string itemName) => (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, itemName, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, []), Ct))).Id;
@@ -208,7 +208,7 @@ public class MonthlySupplierApprovalTests
         await LinkAsync(head, third, item1, cai);
         // Đếm theo nhóm hàng (G1b): mặt hàng dòng 2 ở nhóm con – NCC thứ ba có dòng NCC – sản phẩm ở nhóm cha không tính cho nhóm con.
         var child = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm con ngoại lệ {UniqueCode("")}", categoryId, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con ngoại lệ {UniqueCode("")}", categoryId, null), Ct));
         var item2 = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Phụ tùng nhóm con", null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false,
                 null, null, []), Ct))).Id;

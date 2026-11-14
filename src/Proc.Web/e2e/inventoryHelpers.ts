@@ -140,7 +140,7 @@ export async function seedPostedReceipt(request: APIRequestContext) {
   const uoms = await head.get<{ id: string; code: string }[]>('/api/uoms')
   const hop = uoms.find((u) => u.code === 'HOP')!.id
   const groups = await head.get<{ id: string; code: string }[]>('/api/supplier-groups')
-  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: null, name: `Nhóm trả/chuyển ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
+  const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm trả/chuyển ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,

@@ -36,16 +36,18 @@ public class CatalogNumberingTests
     [Fact]
     public void CauHinhSai_BiChan()
     {
-        // Nhóm hàng chỉ chữ số; {NHOM} chỉ cho hàng hóa; nhóm hàng chỉ cho hàng hóa.
-        Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.ItemCategory, null, "NH-", 3, 1, 999));
+        // Nhóm NCC chỉ chữ số; {NHOM} chỉ cho hàng hóa; nhóm hàng chỉ cho hàng hóa.
+        Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.SupplierGroup, null, "GN-", 3, 1, 999));
+        // Nhóm hàng không còn đánh số tự động – mã do người dùng gõ (design.md mục 5.7, N4-7).
+        Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create("item-category", null, "NH", 6, 1, 999999));
         Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.Supplier, null, "{NHOM}", 3, 1, 999));
         Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.Supplier, Guid.CreateVersion7(), "NCC", 3, 1, 999));
         // Dải vượt số chữ số; đến số nhỏ hơn từ số.
         Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.Supplier, null, "NCC", 3, 1, 1000));
         Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create(NumberedCatalogs.Supplier, null, "NCC", 3, 50, 10));
-        // Mã có thể vượt độ dài: nhóm hàng tối đa 20 ký tự = tiền tố + số.
+        // Mã có thể vượt độ dài: nhóm NCC tối đa 20 ký tự = tiền tố + số.
         Assert.Contains("vượt độ dài", Assert.Throws<BusinessRuleException>(() =>
-            CatalogNumbering.Create(NumberedCatalogs.ItemCategory, null, "NHOMHANGRATDAI", 8, 1, 99)).Message);
+            CatalogNumbering.Create(NumberedCatalogs.SupplierGroup, null, "NHOMNCCRATDAIX", 8, 1, 99)).Message);
         Assert.Throws<BusinessRuleException>(() => CatalogNumbering.Create("uom", null, "DV", 3, 1, 999));
     }
 }

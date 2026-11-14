@@ -51,7 +51,7 @@ public class SharedCatalogEditTests
             new CreateCompanyRequest(UniqueCode("S"), "Công ty thử sửa danh mục", null, null, null, null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var uom = await ReadAsync<UomDto>(await head.PostAsJsonAsync("/api/uoms", new CreateUomRequest(UniqueCode("U")[..8], "Cuộn"), Ct));
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm sửa tên {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm sửa tên {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm NCC sửa tên"), Ct));

@@ -48,7 +48,7 @@ test('PO vượt giá trần: cảnh báo và chặng duyệt "Vượt giá tr�
   const main = await supplier('NCC chính vượt trần')
   const outsider = await supplier('NCC ngoài danh sách vượt trần')
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm vượt trần ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vượt trần ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Van khóa ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

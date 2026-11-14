@@ -30,7 +30,7 @@ test('bước Thủ kho nơi nhận: nhập tồn rồi mới duyệt đề ngh�
   const cai = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
   const tag = unique('TK')
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm vật tư thủ kho ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm vật tư thủ kho ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Ủng bảo hộ ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,

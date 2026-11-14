@@ -33,10 +33,10 @@ test('ngành hàng NCC: chọn nhóm hàng, thêm nhóm thiếu (chặn trùng),
   const api = await adminApi(request)
   const t = tag()
   const root = await api.post<{ id: string; code: string; name: string }>('/api/item-categories', {
-    code: null, name: `Ngành cơ khí ${t}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Ngành cơ khí ${t}`, parentId: null, inventoryAccount: null,
   })
   const child = await api.post<{ id: string; code: string; name: string }>('/api/item-categories', {
-    code: null, name: `Bu lông ${t}`, parentId: root.id, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Bu lông ${t}`, parentId: root.id, inventoryAccount: null,
   })
   const groups = await api.get<{ id: string; code: string }[]>('/api/supplier-groups')
   const supplier = await api.post<{ id: string; code: string }>('/api/suppliers', {
@@ -69,6 +69,8 @@ test('ngành hàng NCC: chọn nhóm hàng, thêm nhóm thiếu (chặn trùng),
   await parent.click()
   await parent.fill(root.code)
   await page.locator('.ant-select-dropdown:visible .ant-select-tree-title', { hasText: root.code }).click()
+  // Mã nhóm do người dùng gõ (design.md mục 5.7, N4-7).
+  await dialog.getByLabel('Mã nhóm').fill(`DO${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`)
   await dialog.getByLabel('Tên nhóm hàng').fill(`BU LONG ${t}`)
   await expect(dialog.getByRole('alert')).toContainText(`Đã có nhóm ${child.code}`)
   await expect(dialog.getByRole('button', { name: 'Lưu' })).toBeDisabled()

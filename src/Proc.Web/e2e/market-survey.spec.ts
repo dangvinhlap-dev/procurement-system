@@ -18,7 +18,7 @@ test('lập phiếu khảo sát giá thị trường, chốt, chụp màn hình'
     rating: null, status: 'Potential', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm khảo sát ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm khảo sát ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Que hàn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

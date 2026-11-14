@@ -34,7 +34,7 @@ public class SupplierCategoryTests
         var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         async Task<ItemCategoryDetailDto> CategoryAsync(string name, Guid? parentId = null) =>
             await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-                new CreateItemCategoryRequest(null, $"{name} {Guid.NewGuid():N}", parentId, null), Ct));
+                new CreateItemCategoryRequest(TestCodes.Category(), $"{name} {Guid.NewGuid():N}", parentId, null), Ct));
         var root = await CategoryAsync("Ngành cơ khí");
         var child = await CategoryAsync("Bu lông", root.Id);
         var other = await CategoryAsync("Ngành điện");

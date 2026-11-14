@@ -76,7 +76,6 @@ public sealed class CatalogNumberAllocator
         {
             NumberedCatalogs.Supplier => _db.ChangeTracker.Entries<Supplier>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Code),
             NumberedCatalogs.SupplierGroup => _db.ChangeTracker.Entries<SupplierGroup>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Code),
-            NumberedCatalogs.ItemCategory => _db.ChangeTracker.Entries<ItemCategory>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Code),
             _ => _db.ChangeTracker.Entries<Item>().Where(e => e.State == EntityState.Added).Select(e => e.Entity.Code),
         };
         return [.. stored, .. pending];
@@ -97,8 +96,6 @@ public sealed class CatalogNumberAllocator
             NumberedCatalogs.Supplier => await _db.Suppliers.IgnoreQueryFilters().Where(x => EF.Functions.Like(x.Code, pattern, LikePatterns.Escape))
                 .Select(x => x.Code).ToListAsync(cancellationToken),
             NumberedCatalogs.SupplierGroup => await _db.SupplierGroups.IgnoreQueryFilters().Where(x => EF.Functions.Like(x.Code, pattern, LikePatterns.Escape))
-                .Select(x => x.Code).ToListAsync(cancellationToken),
-            NumberedCatalogs.ItemCategory => await _db.ItemCategories.IgnoreQueryFilters().Where(x => EF.Functions.Like(x.Code, pattern, LikePatterns.Escape))
                 .Select(x => x.Code).ToListAsync(cancellationToken),
             _ => await _db.Items.IgnoreQueryFilters().Where(x => EF.Functions.Like(x.Code, pattern, LikePatterns.Escape))
                 .Select(x => x.Code).ToListAsync(cancellationToken),

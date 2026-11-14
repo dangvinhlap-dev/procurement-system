@@ -147,7 +147,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
-| Nhóm hàng (`ItemCategory`) | Mã, tên, `ParentId` (cây nhiều cấp), tài khoản kho mặc định | Dùng để phân quyền theo nhóm hàng |
+| Nhóm hàng (`ItemCategory`) | Mã (người dùng gõ), tên, `ParentId`, `Level` – cây **tối đa 4 cấp** (1 Ngành hàng, 2 Nhóm hàng, 3 Loại hàng, 4 Chủng loại – mục 5.7, N4), tài khoản kho mặc định | Dùng để phân quyền theo nhóm hàng |
 | Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, quản lý lô (Y/N), quản lý hạn dùng (Y/N), tồn tối thiểu/tối đa, tồn an toàn, điểm đặt hàng lại, vật tư trọng yếu (mục 18.16), ảnh, thông số kỹ thuật | Chỉ `ItemType = Hàng tồn kho` mới đi qua kho |
 | Đơn vị tính (`Uom`) | Mã, tên | Cái, hộp, thùng, kg… |
 | Quy đổi ĐVT (`ItemUomConversion`) | `ItemId`, ĐVT, hệ số về ĐVT cơ sở | 1 thùng = 24 hộp; tồn kho luôn lưu theo ĐVT cơ sở |
@@ -230,6 +230,15 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Trùng mã với bản ghi ngoài phạm vi: chỉ mục duy nhất trong CSDL chặn, API trả 409 kèm thông báo tiếng Việt | Kiểm tra trùng trước khi lưu đi qua filter nên không thấy bản ghi ngoài phạm vi |
 | Thêm nhóm gốc, đổi nhóm cha, sửa đơn vị tính cần phạm vi **mọi nhóm hàng** | Người bị giới hạn chỉ thấy một phần cây/một phần hàng nên không kiểm tra được vòng lặp hay "còn hàng đang dùng" |
 | Nhóm cha đang dùng, không tạo vòng; ngừng nhóm thì nhóm con và hàng trong nhóm phải ngừng/chuyển trước | Cây nhóm hàng không có nhánh treo |
+| **N4-1** Cây nhóm hàng **tối đa 4 cấp** (người dùng chốt 14/11/2026): cấp 1 **Ngành hàng** (nhóm gốc), 2 **Nhóm hàng**, 3 **Loại hàng**, 4 **Chủng loại**; nhóm con = cấp nhóm cha + 1 | Danh mục gọn, báo cáo gộp theo cấp được |
+| **N4-2** Cột `Level` (1–4) lưu trên nhóm, CSDL ràng buộc `CK_ItemCategory_Level`; migration `V0_28_0_NhomHangToiDa4Cap` tính cấp từ cây có sẵn (dừng với thông báo nếu có nhánh sâu hơn 4 cấp). Đổi nhóm cha thì tính lại cấp cả nhánh con trong cùng lần lưu | Chặn cả ở máy chủ và CSDL; lọc theo cấp không phải dựng cây |
+| **N4-3** Nhóm cấp 4 là cấp cuối, không thêm nhóm con: "Nhóm X – tên đã ở cấp 4 (cấp cuối), không thêm nhóm con được – nhóm hàng tối đa 4 cấp." | |
+| **N4-4** Đổi nhóm cha: cấp mới + số cấp nhánh con bên dưới ≤ 4; vượt thì báo cấp nhóm cuối nhánh sẽ thành và chỗ chuyển được (ví dụ nhánh sâu 2 chỉ làm cấp 1 hoặc vào nhóm cấp 1) | Chuyển cả nhánh không đẩy nhóm cháu xuống cấp 5 |
+| **N4-5** Mặt hàng chỉ gắn vào nhóm **cấp cuối cùng** (người dùng chốt 14/11/2026 – hiểu là cấp 4, Chủng loại) – làm ở lát N4c | Báo cáo theo cấp không lẫn |
+| **N4-6** Phân quyền theo nhóm hàng giữ nguyên: được nhóm nào thì được cả nhánh dưới (mục 9.2) | |
+| **N4-7** **Mã nhóm do người dùng gõ** khi thêm (người dùng chốt 14/11/2026, thay cách cấp theo dải của mục 5.11): bắt buộc, 2–20 chữ không dấu hoặc số, tự đổi chữ hoa, không trùng toàn tập đoàn (xét cả nhóm ngoài phạm vi: "Mã nhóm hàng X đã có (tên) – chọn mã khác."), không đổi sau khi tạo. Dải đánh số nhóm hàng cũ trong CSDL được giữ nhưng bỏ qua, không hiện ở màn hình Đánh số danh mục | Người dùng muốn mã có nghĩa (VT, VTD…) |
+| **N4-8** Excel nhóm hàng: cột Mã nhóm bắt buộc – mã đã có thì cập nhật, mã chưa có thì thêm nhóm với mã đó (nhóm mới làm nhóm cha được cho dòng bên dưới cùng file); file xuất thêm cột Cấp, Đường dẫn (chỉ xem, nhập bỏ qua); nhóm cha cấp 4 báo lỗi theo dòng | Như mục 5.10 |
+| **N4-9** Ô chọn nhóm hàng hiện số cấp; ô chọn nhóm cha khóa nhóm cấp 4 (giao diện – lát N4b). Danh mục trả thêm tên cấp, số nhóm con | |
 | Ngừng ĐVT khi không còn hàng đang dùng nó làm ĐVT cơ sở hay ĐVT quy đổi | Hàng đang dùng phải lập được chứng từ |
 | Chỉ hàng tồn kho mới bật lô, hạn dùng, tồn tối thiểu/tối đa (số lượng numeric(18,4), tối thiểu ≤ tối đa) | Chỉ hàng tồn kho đi qua kho (mục 5.2) |
 | Quy đổi ĐVT: 1 ĐVT quy đổi = hệ số × ĐVT cơ sở, hệ số > 0, numeric(18,6); không trùng ĐVT cơ sở, mỗi ĐVT một dòng | Tồn kho luôn lưu theo ĐVT cơ sở; 6 chữ số thập phân để quy đổi g → kg |
@@ -288,15 +297,15 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 
 | Quy tắc | Lý do |
 | --- | --- |
-| Mã **nhà cung cấp, nhóm NCC, nhóm hàng, hàng hóa** do hệ thống cấp khi thêm mới theo **dải đánh số** cấu hình ở Hệ thống → Đánh số danh mục (bảng `CatalogNumbering`); người dùng **không tự đặt mã** (API báo lỗi nếu gửi mã). Mã không đổi sau khi tạo | Thống nhất mã toàn tập đoàn, tránh trùng và mã tùy tiện |
+| Mã **nhà cung cấp, nhóm NCC, hàng hóa** do hệ thống cấp khi thêm mới (nhóm hàng cũng vậy đến 14/11/2026 – nay mã nhóm hàng do người dùng gõ, mục 5.7 N4-7) theo **dải đánh số** cấu hình ở Hệ thống → Đánh số danh mục (bảng `CatalogNumbering`); người dùng **không tự đặt mã** (API báo lỗi nếu gửi mã). Mã không đổi sau khi tạo | Thống nhất mã toàn tập đoàn, tránh trùng và mã tùy tiện |
 | Dải = tiền tố + số thứ tự đủ N chữ số, trong khoảng "từ số – đến số". Ví dụ NCC, 6 chữ số, 1–999.999 → NCC000001. Tiền tố theo quy tắc mã của danh mục (nhóm hàng, nhóm NCC chỉ chữ không dấu và số; NCC, hàng hóa thêm `- . _ /`); mã sinh ra dài nhất không vượt độ dài mã của danh mục | Mã sinh ra luôn hợp lệ |
 | Hàng hóa: dải riêng cho từng nhóm hàng, hoặc **một dòng mặc định** cho mọi nhóm chưa có dải riêng, tiền tố dùng ký hiệu `{NHOM}` thay bằng mã nhóm của mặt hàng (ví dụ `{NHOM}-`, 5 chữ số → VT-00001) – mỗi nhóm một bộ đếm | Mã hàng gợi được nhóm hàng |
 | Mã kế tiếp = số lớn nhất **đang có** trong dải (mã khớp đúng tiền tố + N chữ số) + 1; chưa có thì là số đầu dải; vượt "đến số" thì báo hết dải, quản trị mở rộng dải. Không lưu bộ đếm riêng nên mã cũ, mã nhập trước khi cấu hình đều được tính, không bao giờ cấp trùng. Hai người thêm cùng lúc: khóa tư vấn (advisory lock) theo danh mục + tiền tố trong giao dịch thêm mới | Không trùng mã kể cả khi thêm đồng thời |
 | **Chưa cấu hình dải** cho danh mục (nhóm hàng không có dải riêng lẫn dòng mặc định) thì **không thêm mới được**, báo hướng dẫn vào màn hình Đánh số danh mục. Xóa dải không đổi mã đã cấp | Không có mã "tạm" phải sửa sau |
 | Cấu hình dùng chung toàn tập đoàn: xem cần `System.Parameter.View`; thêm/sửa/xóa cần `System.Parameter.Manage` và làm việc ở tổng công ty; mọi thay đổi ghi nhật ký. Mỗi danh mục một dải (hàng hóa thêm mỗi nhóm một dải) | Mục 9 |
-| Nhập Excel (mục 5.10): dòng **để trống mã** = thêm mới, hệ thống cấp mã; dòng có mã phải là mã đã có (cập nhật), mã chưa có báo lỗi dòng. Nhóm hàng mới trong file chưa làm nhóm cha được cho dòng khác cùng file | Cùng quy tắc với nhập tay |
+| Nhập Excel (mục 5.10): dòng **để trống mã** = thêm mới, hệ thống cấp mã; dòng có mã phải là mã đã có (cập nhật), mã chưa có báo lỗi dòng. Nhóm hàng: mã bắt buộc, mã chưa có thì thêm mới (N4-8) | Cùng quy tắc với nhập tay |
 | Không áp dụng cho đơn vị tính (CAI, HOP, KG là ký hiệu quen thuộc), công ty và kho (mã ngắn nằm trong số chứng từ, ví dụ PO-**BHA**-…), tên đăng nhập, mã vai trò – các mã này vẫn nhập tay và khóa sau khi tạo | Quyết định của người dùng 31/10/2026 |
-| Dải mặc định: NCC + 6 số, GN + 4 số (nhóm NCC), NH + 6 số (nhóm hàng), `{NHOM}-` + 5 số (hàng hóa). Có sẵn trong dữ liệu mẫu dev/test; máy chạy thật được migration `V0_9_0_DaiMaMacDinh` tạo một lần khi nâng cấp, chỉ cho danh mục chưa có dải mặc định (không ghi đè dải đã cấu hình; dải xóa sau đó không bị tạo lại). Quản trị sửa tiền tố/dải cho đúng quy ước công ty trước khi nhập liệu | Nâng cấp xong vẫn thêm được danh mục, không bị chặn vì bảng dải trống |
+| Dải mặc định: NCC + 6 số, GN + 4 số (nhóm NCC), `{NHOM}-` + 5 số (hàng hóa) – dải NH + 6 số của nhóm hàng không còn dùng từ 14/11/2026. Có sẵn trong dữ liệu mẫu dev/test; máy chạy thật được migration `V0_9_0_DaiMaMacDinh` tạo một lần khi nâng cấp, chỉ cho danh mục chưa có dải mặc định (không ghi đè dải đã cấu hình; dải xóa sau đó không bị tạo lại). Quản trị sửa tiền tố/dải cho đúng quy ước công ty trước khi nhập liệu | Nâng cấp xong vẫn thêm được danh mục, không bị chặn vì bảng dải trống |
 
 ## 6. Chứng từ nghiệp vụ và luồng xử lý
 

@@ -40,11 +40,11 @@ public class UsageNormTests
         var cai = uoms.Single(u => u.Code == "CAI").Id;
         var thung = uoms.Single(u => u.Code == "THUNG").Id;
         var parent = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm định mức {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm định mức {Guid.NewGuid():N}", null, null), Ct));
         var child = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm con định mức {Guid.NewGuid():N}", parent.Id, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con định mức {Guid.NewGuid():N}", parent.Id, null), Ct));
         var noPlan = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm chưa kế hoạch {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm chưa kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name, params ItemUomConversionInput[] conversions) => (await ReadAsync<ItemDetailDto>(
             await tct.PostAsJsonAsync("/api/items", new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10",
                 null, false, false, null, null, conversions), Ct))).Id;

@@ -107,7 +107,7 @@ public class ExcelTransferTests
     public async Task CoLoi_BaoTheoDong_KhongLuuDongNaoKeCaDongDung()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
         // Dòng mới để trống mã; dòng có mã phải là mã đã có (mã do hệ thống cấp – design.md mục 5.11).
         var missing = $"{category!.Code}-99999";
@@ -135,7 +135,7 @@ public class ExcelTransferTests
     public async Task XuatSuaNhapLai_CapNhatHangVaGiuQuyDoi()
     {
         var head = await HeadOfficeAdminAsync();
-        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
+        var category = await (await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm Excel {Guid.NewGuid():N}", null, null), Ct))
             .Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct);
         // Thêm mới để trống mã: nhóm mới nên mã hàng đầu tiên là {NHOM}-00001 (dữ liệu mẫu).
         var code = $"{category!.Code}-00001";
@@ -217,7 +217,7 @@ public class ExcelTransferTests
 
     private async Task<ItemCategoryDetailDto> ReadCategoryAsync(HttpClient head, string name)
     {
-        var response = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(null, $"{name} {Guid.NewGuid():N}", null, null), Ct);
+        var response = await head.PostAsJsonAsync("/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"{name} {Guid.NewGuid():N}", null, null), Ct);
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(Ct));
         return (await response.Content.ReadFromJsonAsync<ItemCategoryDetailDto>(Ct))!;
     }

@@ -75,7 +75,7 @@ public class SupplierOnboardingTests
             var approver = await UserAsync(Permissions.MasterData.SupplierApprove);
             var viewer = await UserAsync(Permissions.MasterData.SupplierOnboardingView);
             var category = await ReadAsync<ItemCategoryDetailDto>(await admin.PostAsJsonAsync("/api/item-categories",
-                new CreateItemCategoryRequest(null, $"Rau củ {Guid.NewGuid():N}", null, null), Ct));
+                new CreateItemCategoryRequest(TestCodes.Category(), $"Rau củ {Guid.NewGuid():N}", null, null), Ct));
             var supplier = await NewSupplierAsync(evaluator);
 
             // NCC mới không lên Đã duyệt trên form NCC (kể cả khi tạo) – phải qua hồ sơ HSN.
@@ -155,7 +155,7 @@ public class SupplierOnboardingTests
         var proposer = await UserAsync(Permissions.MasterData.SupplierOnboardingPropose);
         var approver = await UserAsync(Permissions.MasterData.SupplierApprove);
         var category = await ReadAsync<ItemCategoryDetailDto>(await admin.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Gia vị {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Gia vị {Guid.NewGuid():N}", null, null), Ct));
 
         // Kết luận Không đạt: Văn phòng Ban chỉ ghi được "Không đề xuất" (bắt buộc lý do) – hồ sơ kết thúc, lập hồ sơ mới được.
         var weak = await NewSupplierAsync(evaluator);

@@ -15,7 +15,7 @@ test('tổng hợp nhu cầu toàn tập đoàn theo công ty, đổi kỳ, xem 
   const thung = uoms.find((u) => u.code === 'THUNG')!.id
   const tag = unique('th')
   const category = await head.send<{ id: string; code: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm tổng hợp ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm tổng hợp ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Bóng đèn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,

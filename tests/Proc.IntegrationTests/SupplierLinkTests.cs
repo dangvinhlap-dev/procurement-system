@@ -57,7 +57,7 @@ public class SupplierLinkTests
     {
         var uoms = await UomsAsync(head);
         var category = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
-            new CreateItemCategoryRequest(null, $"Nhóm thử {Guid.NewGuid():N}", null, null), Ct));
+            new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Bu lông thử", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
                 null, null, null, false, false, null, null, [new(uoms["THUNG"], 24m)]), Ct));

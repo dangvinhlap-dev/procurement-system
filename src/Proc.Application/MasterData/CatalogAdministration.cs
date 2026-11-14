@@ -25,7 +25,7 @@ public sealed record UpdateUomRequest(string Name, bool IsActive);
 /// <param name="ParentId">Nhóm cha.</param>
 /// <param name="ParentCode">Mã nhóm cha (null nếu là nhóm gốc).</param>
 /// <param name="Path">Đường dẫn từ nhóm gốc, ví dụ "VT / VTC / VTCK" – để danh sách đọc như cây.</param>
-/// <param name="Level">Cấp trong cây, nhóm gốc = 1.</param>
+/// <param name="Level">Cấp trong cây 1–4, nhóm gốc = 1 (lưu sẵn trên nhóm – N4-2).</param>
 /// <param name="InventoryAccount">Tài khoản kho mặc định.</param>
 /// <param name="IsActive">Còn sử dụng.</param>
 /// <param name="ItemCount">Số mặt hàng trực tiếp trong nhóm (chỉ đếm hàng người xem thấy).</param>
@@ -33,14 +33,16 @@ public sealed record UpdateUomRequest(string Name, bool IsActive);
 /// Nhóm (hoặc nhóm cha của nó) thuộc phạm vi nhóm hàng của người xem. Danh mục nhóm hàng ai cũng xem đủ (người dùng chốt 07/11/2026 –
 /// design.md mục 9.2); nhóm ngoài phạm vi chỉ xem, không sửa, không gán cho mặt hàng.
 /// </param>
+/// <param name="LevelName">Tên cấp: Ngành hàng, Nhóm hàng, Loại hàng, Chủng loại (N4, design.md mục 5.7).</param>
+/// <param name="ChildCount">Số nhóm con trực tiếp (kể cả ngừng dùng, ngoài phạm vi).</param>
 public sealed record ItemCategoryDetailDto(
     Guid Id, string Code, string Name, Guid? ParentId, string? ParentCode, string Path, int Level,
-    string? InventoryAccount, bool IsActive, int ItemCount, bool IsInScope = true);
+    string? InventoryAccount, bool IsActive, int ItemCount, bool IsInScope = true, string LevelName = "", int ChildCount = 0);
 
 /// <summary>Thêm nhóm hàng.</summary>
-/// <param name="Code">Mã (2–20 chữ không dấu hoặc số), duy nhất toàn tập đoàn.</param>
+/// <param name="Code">Mã do người dùng gõ (bắt buộc, 2–20 chữ không dấu hoặc số), duy nhất toàn tập đoàn – N4-7.</param>
 /// <param name="Name">Tên.</param>
-/// <param name="ParentId">Nhóm cha; null = nhóm gốc.</param>
+/// <param name="ParentId">Nhóm cha; null = nhóm gốc (cấp 1). Nhóm cha cấp 4 thì báo lỗi – tối đa 4 cấp.</param>
 /// <param name="InventoryAccount">Tài khoản kho mặc định.</param>
 public sealed record CreateItemCategoryRequest(string? Code, string Name, Guid? ParentId, string? InventoryAccount);
 

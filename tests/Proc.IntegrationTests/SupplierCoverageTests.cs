@@ -63,7 +63,7 @@ public class SupplierCoverageTests
         var head = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, "TCT");
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         async Task<ItemCategoryDetailDto> Category(string name, Guid? parentId) => await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync(
-            "/api/item-categories", new CreateItemCategoryRequest(null, $"{name} {UniqueCode("")}", parentId, null), Ct));
+            "/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"{name} {UniqueCode("")}", parentId, null), Ct));
         async Task<ItemDetailDto> Item(string name, Guid categoryId) => await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
         // Nhóm cha (không có mặt hàng) và ba nhóm con: đủ, thiếu, độc quyền.

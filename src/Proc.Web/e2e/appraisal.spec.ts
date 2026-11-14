@@ -13,7 +13,7 @@ test('ghi ý kiến thẩm định Không đạt kèm file trên RFQ, rút ý ki
   const tag = unique('td')
   const cai = (await head.get<{ id: string; code: string }[]>('/api/uoms')).find((u) => u.code === 'CAI')!.id
   const category = await head.send<{ id: string }>('post', '/api/item-categories', {
-    code: null, name: `Nhóm thẩm định ${tag}`, parentId: null, inventoryAccount: null,
+    code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thẩm định ${tag}`, parentId: null, inventoryAccount: null,
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Van an toàn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,

@@ -44,7 +44,7 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   })
   await approveSupplier(request, supplier.id)
   const supplierCode = supplier.code
-  const category = await api.post<{ id: string; code: string }>('/api/item-categories', { code: null, name: `Nhóm thử liên kết ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
+  const category = await api.post<{ id: string; code: string }>('/api/item-categories', { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm thử liên kết ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
   const item = await api.post<{ id: string; code: string }>('/api/items', {
     code: null, name: 'Dây cáp điện thử', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: uom('M'),

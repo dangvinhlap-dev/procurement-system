@@ -19,7 +19,7 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
     isForeign: false, taxCode: null, address: null, phone: null, email: null, website: null, paymentTerms: null, supplyScope: null,
     rating: null, status: 'Potential', statusNote: null, internalCompanyId: null, contacts: [], bankAccounts: [],
   })
-  const category = await head.send<{ id: string }>('post', '/api/item-categories', { code: null, name: `Nhóm độc quyền ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
+  const category = await head.send<{ id: string }>('post', '/api/item-categories', { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm độc quyền ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Phụ tùng máy nén ${unique('pt')}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'CAI')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
