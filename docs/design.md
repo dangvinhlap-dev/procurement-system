@@ -2959,7 +2959,9 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | E3 | Kiểm soát các bước | **Theo phân quyền, không có chuỗi duyệt**: ai có quyền của bước thì làm bước đó (mục 21.6). Phiếu phát hành không áp quy tắc phê duyệt mục 20 |
 | E4 | Thời gian UAT | Không có thời gian tối thiểu |
 | E5 | Email trên TEST | **Chuyển hết về một hộp thư test** (`Email:RedirectAllTo`), không bao giờ gửi tới người dùng, NCC thật |
-| E6 | Dữ liệu TEST | **Làm mới từ PROD trước mỗi đợt UAT** (có làm mờ, mục 21.5). Trước khi chạy thật (PROD chưa có dữ liệu) giữ dữ liệu thử |
+| E6 | Dữ liệu TEST | **Làm mới từ PROD trước mỗi đợt UAT**, **giữ nguyên dữ liệu, không làm mờ** (người dùng chốt lại 14/11/2026, thay cho "có làm mờ"). Trước khi chạy thật (PROD chưa có dữ liệu) giữ dữ liệu thử |
+| E8 | Quyền trên TEST | **Như PROD**: người dùng, vai trò, phạm vi đi theo bản làm mới; cần thử chức năng ngoài quyền thì **admin cấp thêm trên TEST** (quyền cấp thêm mất ở lần làm mới sau) (người dùng chốt 14/11/2026) |
+| E9 | Bảo vệ máy TEST | **Như PROD** – TEST chứa dữ liệu thật nên cùng mức bảo vệ (mục 21.3a) (người dùng chốt 14/11/2026) |
 | E7 | Giờ cài PROD | Không giới hạn – người có quyền chọn giờ |
 | Q2 | Lịch sao lưu | Phần mềm chạy lịch (dịch vụ nền); `db/backup.sh`, `deploy/windows/backup.ps1` giữ làm dự phòng, tắt lịch cũ để không sao lưu hai lần (mặc định tự chọn) |
 | Q3 | Nguồn gói cài | GitHub Release của repo hoặc tải file zip lên màn hình (máy chủ không có internet) (mặc định tự chọn) |
@@ -2980,7 +2982,7 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | N2 | Khôi phục **không ghi đè thẳng** CSDL đang dùng: khôi phục ra CSDL / máy chủ CSDL tạm → kiểm tra → chế độ bảo trì → hoán đổi, giữ bản cũ | Khôi phục nhầm vẫn quay lại được |
 | N3 | Quyền riêng từng việc, chỉ làm ở tổng công ty, chỉ từ mạng nội bộ (không có trên site Portal); nhật ký vận hành ghi **cả ra file ngoài CSDL** | Khôi phục CSDL thay luôn nhật ký trong CSDL |
 | N4 | **Build một lần, chuyển nguyên gói**: TEST và PROD cài đúng `procurement-x.y.z.zip` build ở DEV; PROD chỉ nhận gói có **SHA256 trùng** gói đã cài và test trên TEST | Thứ đã test đúng là thứ chạy thật |
-| N5 | Code đi một chiều DEV → TEST → PROD; dữ liệu chỉ đi PROD → TEST (làm mờ); không sửa trực tiếp trên TEST/PROD – lỗi quay về DEV ra bản vá | Không có thay đổi chưa qua test trên PROD |
+| N5 | Code đi một chiều DEV → TEST → PROD; dữ liệu chỉ đi PROD → TEST (nguyên trạng, E6); không sửa trực tiếp trên TEST/PROD – lỗi quay về DEV ra bản vá | Không có thay đổi chưa qua test trên PROD |
 | N6 | Bí mật (chuỗi kết nối, khóa JWT, mật khẩu CSDL, SMTP) **không sửa qua giao diện**, vẫn ở appsettings / biến môi trường; module dùng chuỗi kết nối riêng `ConnectionStrings:Maintenance` (quyền tạo / đổi tên CSDL, REPLICATION), tài khoản `proc` hằng ngày giữ ít quyền | Chiếm tài khoản admin không lấy được khóa |
 
 ### 21.3 Ba môi trường
@@ -2989,7 +2991,9 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | --- | --- | --- | --- |
 | Máy chủ | Máy chủ vật lý 1 – nơi Claude Code lập trình | Máy chủ vật lý 2 | Máy chủ vật lý 3 |
 | Người dùng | Người phát triển | Mọi người dùng (LAN) | Mọi người dùng (LAN/VPN – Q14) |
-| Dữ liệu | Dữ liệu mẫu (seed) | Bản PROD làm mờ, làm mới trước mỗi đợt UAT | Dữ liệu thật |
+| Dữ liệu | Dữ liệu mẫu (seed) | Bản sao nguyên trạng của PROD, làm mới trước mỗi đợt UAT | Dữ liệu thật |
+| Quyền | Tài khoản mẫu | Như PROD; admin cấp thêm khi cần thử (E8) | Theo phân quyền |
+| Bảo vệ | Máy lập trình | **Như PROD** (mục 21.3a) | Mục 21.3a |
 | Email | Tắt | Chuyển hết về hộp thư test | Gửi thật |
 | Nhận diện (`App:Environment` = `Dev` / `Test` / `Prod`) | Dải xám "DEV" | Dải cam "MÔI TRƯỜNG TEST" trên mọi màn hình, tiêu đề tab trình duyệt có "[TEST]" | Không dải |
 | Cài bản mới | Claude build, chạy thử | Chỉ qua trung tâm phát hành + bộ thực thi | Chỉ qua trung tâm phát hành + bộ thực thi |
@@ -2999,6 +3003,24 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
   TEST, DEV **chủ động hỏi** PROD lấy lệnh (không mở cổng vào cho DEV, TEST), tải gói từ PROD và kiểm SHA256 trước khi cài.
 - **Chế độ một môi trường** (E1): không khai TEST thì phiếu phát hành bỏ qua bước cài TEST và UAT; cài PROD bằng bộ thực thi hoặc bằng tay
   theo `docs/deploy-windows.md` mục 5 như hiện nay; mọi bước vẫn ghi vào phiếu. Không khai DEV thì gói lấy từ GitHub Release hoặc tải zip lên.
+
+### 21.3a Bảo vệ máy TEST như PROD (E9)
+
+TEST giữ bản sao nguyên trạng dữ liệu thật (giá, NCC, hợp đồng, tài khoản ngân hàng, đính kèm), nên mọi biện pháp bảo vệ của PROD áp đúng
+như vậy cho TEST:
+
+| Nhóm | Áp cho cả TEST và PROD |
+| --- | --- |
+| Mạng | Chỉ LAN / VPN (Q14), không mở ra internet; HTTPS; tường lửa chỉ mở 443 (và cổng VPN); không mở 5432, 3389, 5341 ra ngoài |
+| Đăng nhập, phiên | Cùng cấu hình truy cập CFG (chính sách mật khẩu, khóa, hạn phiên, giới hạn tần suất, header bảo mật, IP được dùng chức năng QT) |
+| Bí mật | Khóa JWT, mật khẩu CSDL, khóa bộ thực thi **riêng** của TEST (không dùng chung với PROD); không lưu trong repo |
+| Máy chủ | Cập nhật Windows, phần mềm diệt virus, mã hóa ổ dữ liệu và ổ sao lưu (BitLocker), tài khoản quản trị máy riêng |
+| Nhật ký | Nhật ký thao tác, truy cập, vận hành, lỗi bật như PROD |
+| Sao lưu | Bản `pg_dump` lấy từ PROD để làm mới và bản sao lưu của TEST (nếu bật) bảo vệ như sao lưu PROD (Q5: không tải qua trình duyệt) |
+| Email | Vẫn chuyển hết về hộp thư test (E5) – dữ liệu thật nhưng không gửi ra ngoài |
+
+Màn hình SYS so sánh **cấu hình bảo mật** của TEST với PROD (HTTPS, chính sách CFG, `App:Environment`, email chuyển hướng, giới hạn tần suất)
+và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 
 ### 21.4 Màn hình
 
@@ -3011,7 +3033,7 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
 | CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào) |
 | REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
-| TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục → làm mờ → đặt lại email chuyển hướng; lịch sử làm mới |
+| TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới |
 
 ### 21.5 Sao lưu và phục hồi (PostgreSQL 18, công cụ có sẵn)
 
@@ -3025,8 +3047,10 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 - Bật lưu WAL cần sửa `postgresql.conf`, `pg_hba.conf`, cấp `REPLICATION` và **khởi động lại PostgreSQL một lần** – có script cho Windows
   và Docker; màn hình BAK kiểm tra cấu hình và báo thiếu.
 - pgBackRest không chạy trên Windows nên không dùng; Docker cần thêm `postgresql-client-18` (kho PGDG) vào image.
-- **Làm mờ khi làm mới TEST**: email, điện thoại người dùng, NCC, người liên hệ; số tài khoản ngân hàng NCC; giữ nguyên mật khẩu người dùng
-  (đăng nhập TEST bằng mật khẩu PROD); xóa hàng chờ email, phiên đăng nhập.
+- **Làm mới TEST** (E6, E8): khôi phục nguyên trạng, **không làm mờ** – người dùng, vai trò, phạm vi, mật khẩu như PROD (đăng nhập TEST bằng
+  mật khẩu PROD); chép bổ sung file đính kèm (mặc định tự chọn – dữ liệu nguyên trạng thì file đính kèm phải mở được); sau khôi phục chỉ đặt lại
+  phần riêng của TEST: xóa hàng chờ email chưa gửi và phiên đăng nhập, giữ `App:Environment=Test`, email chuyển hướng, khóa bộ thực thi của TEST.
+  Quyền admin cấp thêm trên TEST mất ở lần làm mới sau.
 
 ### 21.6 Phiếu phát hành và các bước (E3 – theo quyền)
 
@@ -3082,7 +3106,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
 | QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) |
 | QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
-| QT9 | Làm mới TEST từ PROD (làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
+| QT9 | Làm mới TEST từ PROD (nguyên trạng + đính kèm, không làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
 ### 21.8 Đưa chính module QT vào vận hành (14/11/2026)
 

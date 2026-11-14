@@ -1010,6 +1010,9 @@ chí xong, lộ trình 0.32.0 → 0.37.0, việc làm một lần mỗi máy, di
 (ngoài repo). Lưu ý khi làm: mã quyền theo quy ước có sẵn `System.Ops.*` (design.md 21.6 ghi tắt `Ops.*` – sửa ở QT1); QT7 dùng lại bộ giới
 hạn tần suất `PortalRateLimiting` cho đăng nhập nội bộ. **Lát kế tiếp: QT1** (nhận diện môi trường `App:Environment` + dải màu, `Email:RedirectAllTo`,
 khung module, quyền `System.Ops.View`, nhật ký vận hành CSDL + file, màn hình SYS) – trình kế hoạch ngắn rồi mới code (CLAUDE.md mục 1).
+Người dùng chốt thêm 14/11/2026 (design.md 21.1 E6, E8, E9 + mục mới **21.3a**): làm mới TEST **không làm mờ dữ liệu** (thay quyết định cũ),
+quyền trên TEST **như PROD** (admin cấp thêm khi cần thử), **máy TEST bảo vệ như PROD**; SYS báo đèn đỏ khi cấu hình bảo mật TEST lỏng hơn PROD.
+PDF kế hoạch đã cập nhật theo.
 
 **N4d xong 14/11/2026 (chưa phát hành)** – nhánh `feature/n4d-bao-cao-gop-theo-cap` (đã merge): báo cáo gộp theo cấp nhóm hàng – mục còn lại
 của đợt N4 ("báo cáo gộp theo cấp để lát sau"). Màn hình Mua hàng theo NCC (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** (nhóm của mặt
