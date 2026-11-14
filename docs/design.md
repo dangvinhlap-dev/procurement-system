@@ -114,7 +114,7 @@ Module chỉ gọi nhau qua interface của lớp Application, không truy cập
 
 ## 4. Mô hình tổ chức và quy tắc kho
 
-> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở bản sau 0.28.0 (lát K3) – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, **đã gỡ hẳn code + bảng ở lát K3 (14/11/2026, bản 0.31.0)** – xem mục 19.4. Phần dưới chỉ còn là lịch sử thiết kế.
 
 Tập đoàn gồm nhiều công ty (kể cả tổng công ty), mỗi công ty có **đúng một kho tổng** và nhiều kho con. Luân chuyển hàng chỉ có hai đường hợp lệ.
 
@@ -401,7 +401,7 @@ PR, RFQ, PO là chứng từ **mua hàng** (không đổi tồn); các phiếu n
 
 ## 7. Kỳ kho, đóng/mở kỳ và giá vốn
 
-> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, gỡ hẳn ở bản sau 0.28.0 (lát K3) – xem mục 19.4. Phần dưới chỉ còn mô tả code cũ.
+> **Ngừng dùng từ bản 0.22.0** (quyết định 10/11/2026): phân hệ kho tắt, **đã gỡ hẳn code + bảng ở lát K3 (14/11/2026, bản 0.31.0)** – xem mục 19.4. Phần dưới chỉ còn là lịch sử thiết kế.
 
 Mỗi công ty có lịch kỳ riêng: **kỳ năm** chứa 12 **kỳ tháng**. Chứng từ kho chỉ được ghi sổ khi ngày chứng từ rơi vào kỳ tháng đang mở của công ty đó. Đóng kỳ tháng = tính giá vốn thực tế + chốt số dư; đóng kỳ năm = đã đóng đủ 12 tháng + chuyển số dư sang năm mới.
 
@@ -2073,7 +2073,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 
 | # | Câu hỏi | Quyết định |
 | --- | --- | --- |
-| Q1 | Bỏ kho thế nào | **Tắt ở 0.22.0** (lát K1), **gỡ hẳn code + bảng ở 0.28.0** (lát K3) sau khi người dùng xác nhận đã sao lưu và làm sạch dữ liệu thử |
+| Q1 | Bỏ kho thế nào | **Tắt ở 0.22.0** (lát K1), **gỡ hẳn code + bảng ở 0.31.0** (lát K3, 14/11/2026 – người dùng: hệ thống đang dev, không cần sao lưu) |
 | Q2 | Ai nhập tồn trên đề nghị mua | Thủ kho của nơi nhận; mỗi đề nghị một nơi nhận |
 | Q3 | Bảng tổng hợp 2A/2B | Giữ. **Mọi công ty bắt buộc qua bảng tổng hợp, bật sẵn khi phát hành – không có tham số tắt** (người dùng chốt 12/11/2026, thay cho "bật/tắt bằng tham số"). **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
 | Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
@@ -2615,7 +2615,24 @@ Công ty dùng phần mềm kho riêng. Thay thế:
   giá trị thực nhận theo giá PO, thuế GTGT, tổng cộng; kết luận sai lệch như biên bản phiếu nhập cũ (mục 18.14); ký: đại diện bên giao, người
   nhận hàng (người xác nhận), người kiểm tra, người lập phiếu. Nháp in dòng đỏ "BẢN NHÁP", đã hủy in "ĐÃ HỦY – lý do".
 
-**Lát K3 – gỡ (dời sang sau 0.28.0).** Xóa code phân hệ kho và bảng kho bằng migration có `Down()`; chỉ làm sau khi người dùng xác nhận đã sao lưu.
+**Lát K3 – gỡ hẳn (14/11/2026, bản 0.31.0).** Người dùng chốt: "K3 gỡ hẳn phân hệ kho, không cần sao lưu vì đây là hệ thống đang dev".
+
+- Code: bỏ Domain/Application/Infrastructure `Inventory`, API kho (phiếu kho, kỳ kho, tồn kho, thẻ kho, NXT), báo cáo kho (SLOW, EXP, GSTK,
+  TRANSIT, ICREC, REORD), ACCX (thay bằng ACCP), in phiếu kho / biên bản phiếu nhập (thay bằng in XNH), cờ `Modules:InventoryEnabled` và mọi
+  lọc quyền theo phân hệ, nhóm quyền **Kho** (12 quyền `Inventory.*`) cùng `Report.Stock.View`, `Report.Stock.ViewAllCompanies`,
+  `Report.Accounting.Export`, loại phiếu GRN, RTV, TRF, ICS, ICR, ADJ (đánh số, tra cứu chứng từ, đính kèm `InventoryDocument`), ô số liệu kho
+  trên trang chủ, seed mở kỳ kho (`Seed:DemoOpenCurrentPeriod`). Giao diện: menu Kho, các trang kho, báo cáo kho, màn hình Kỳ kho (PER).
+- Gỡ theo: **gợi ý giá nội bộ theo giá vốn** (Bảng giá nội bộ – không còn giá vốn kỳ) và tham số % markup nội bộ; tham số kho trên màn hình
+  Tham số hệ thống (phương pháp giá vốn, kho cho phép tồn âm) và "Nhập mua bắt buộc theo PO" (XNH luôn theo PO); **KPI tồn kho chậm luân
+  chuyển** cùng tham số số ngày (danh mục KPI còn 8 chỉ số); API giá nội bộ cho phiếu xuất bán nội bộ cũ (`/api/internal-prices/resolve`).
+  Tham số "Bắt buộc kiểm tra chất lượng" và "Người lập PO không xác nhận nhận hàng" giữ – áp cho XNH.
+- CSDL (migration `V0_31_0_GoPhanHeKho`): xóa dòng quyền kho trong vai trò, đính kèm của phiếu kho (dòng CSDL – file trên máy chủ để lại, xóa tay
+  nếu cần), cấu hình + bộ đếm số của 6 loại phiếu kho, rồi xóa 7 bảng `InventoryPeriod`, `InventoryDocument`, `InventoryDocumentLine`,
+  `StockLedger`, `StockOnHand`, `StockPeriodBalance`, `ItemPeriodCost`. AuditLog giữ nguyên. `Down()` tạo lại các bảng **rỗng** (mất dữ liệu kho).
+- **Còn giữ, ngừng dùng – xóa ở bản sau** (CLAUDE.md mục 8 – không xóa cột đang có dữ liệu cùng bản): cột tham số công ty `KpiSlowMovingTarget`,
+  `KpiSlowMovingDays`, `InternalMarkupPercent`, `RequireReceiptPo`; giá trị `KpiCode.SlowMoving = 7` (giữ số). Danh mục kho (`Warehouse` – nơi
+  nhận hàng) giữ nguyên, kể cả cờ kho Main/Sub, cho phép tồn âm; trường mặt hàng lô / hạn dùng / tồn tối thiểu – tối đa (tab Tồn kho của mặt hàng)
+  giữ chờ người dùng quyết định có bỏ không.
 
 ### 19.5 Portal nhà cung cấp
 
@@ -2810,7 +2827,7 @@ lệnh. Quy tắc tự đặt (người dùng có thể chỉnh):
 | 0.28.0 (phát hành 14/11/2026) | P2a, P6b, P7a, K2b, N4a | NCC tự quản lý hồ sơ (P2a); trạng thái thanh toán trên Portal (P6b); bảng giá Portal (P7a); in XNH (K2b); nhóm hàng tối đa 4 cấp – máy chủ, mã gõ tay (N4a) |
 | 0.29.0 (phát hành 14/11/2026) | N4b, N4c | Giao diện cây nhóm hàng 4 cấp (N4b), mặt hàng chỉ gắn nhóm cấp 4 (N4c) |
 | 0.30.0 (phát hành 14/11/2026) | Excel định dạng lưới | Mọi file Excel xuất ra cùng hình thức lưới trên màn hình (mục 11.2, ui-style.md mục 5i); trạng thái chỉ tô màu chữ |
-| 0.31.0 trở đi | K3, P2b, P7b, P7c | Gỡ hẳn kho (K3 – chờ xác nhận sao lưu); đăng ký NCC mới (P2b), tin nhắn (P7b), thẻ điểm (P7c) – Portal đang dừng chờ người dùng |
+| 0.31.0 trở đi | K3 (xong 14/11/2026), P2b, P7b, P7c | Gỡ hẳn kho (K3 – xong); đăng ký NCC mới (P2b), tin nhắn (P7b), thẻ điểm (P7c) – Portal đang dừng chờ người dùng |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
 

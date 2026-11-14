@@ -985,6 +985,17 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**K3 xong 14/11/2026 (chưa phát hành – dự kiến 0.31.0)** – người dùng "K3 gỡ hẳn phân hệ kho, không cần sao lưu vì đây là hệ thống đang
+dev". Nhánh `feature/k3-go-phan-he-kho` (đã merge): gỡ hẳn code kho máy chủ + giao diện (phiếu kho, kỳ kho, tồn, thẻ kho, báo cáo kho, ACCX,
+in phiếu kho, menu Kho), cờ `Modules:InventoryEnabled`, nhóm quyền Kho + 3 quyền báo cáo kho, 6 loại phiếu kho, gợi ý giá nội bộ theo giá vốn,
+tham số kho / markup / nhập theo PO, KPI tồn chậm (còn 8 KPI), ô số liệu kho trang chủ, seed kỳ kho. Migration `V0_31_0_GoPhanHeKho` (xóa quyền
+kho trong vai trò, đính kèm phiếu kho, đánh số phiếu kho, 7 bảng kho; Down tạo lại bảng rỗng). `useItemLookup`/`useSupplierLookup` chuyển sang
+`api/lookups.ts`; e2e `seedPostedReceipt` → `seedItemSupplier` + `seedDraftPo`. design.md 19.4 "Lát K3", CLAUDE.md mục 3–4, hướng dẫn cài đặt.
+Kiểm tra: build 0 cảnh báo, `dotnet test` 711/711, tsc, oxlint, `npm run build`, Playwright đủ bộ (xem dòng dưới). **Phát hành 0.31.0 cần**: script
+`db/scripts/0.31.0.sql`; bản test 5007 chạy migration sẽ xóa dữ liệu kho cũ (người dùng đã đồng ý không sao lưu). **Còn giữ chờ quyết định**: cột
+tham số ngừng dùng (KpiSlowMoving*, InternalMarkupPercent, RequireReceiptPo – xóa ở bản sau), danh mục kho Main/Sub + cờ tồn âm, tab Tồn kho của
+mặt hàng (lô, hạn dùng, tồn min/max, vật tư trọng yếu).
+
 **N4d xong 14/11/2026 (chưa phát hành)** – nhánh `feature/n4d-bao-cao-gop-theo-cap` (đã merge): báo cáo gộp theo cấp nhóm hàng – mục còn lại
 của đợt N4 ("báo cáo gộp theo cấp để lát sau"). Màn hình Mua hàng theo NCC (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** (nhóm của mặt
 hàng / cấp 1–4), cột Cấp + Đường dẫn; API `GET /api/reports/purchase-spend?categoryLevel=` (design.md N4-10, ui-style.md 5h). Không migration,
@@ -1018,7 +1029,7 @@ Chưa áp lại "Cấu hình duyệt mẫu" CUVT cho DNT / BKT / TVB (chưa cấ
 https://claude.ai/artifact/4wieRMWGE1Twp41xTu8QH8; người dùng chốt: (1) mặt hàng gắn ở **cấp cuối cùng** (hiểu là cấp 4 – báo người dùng, làm ở
 N4c), (2) tên cấp Ngành hàng / Nhóm hàng / Loại hàng / Chủng loại, (3) **mã nhóm người dùng tự gõ**, (4) báo cáo gộp theo cấp để lát sau.
 Thứ tự: **N4a** máy chủ (xong – bảng Đã xong) → **N4b** (xong 14/11/2026) giao diện CAT, ngăn kéo, hộp thoại thêm nhóm con, ô chọn có số cấp, ui-style → **N4c** (xong 14/11/2026) (xong 14/11/2026)
-mặt hàng chỉ gắn nhóm cấp 4 → **N4d** (xong 14/11/2026) báo cáo gộp theo cấp. Việc khác vẫn chờ người dùng: K3 (xác nhận sao lưu), Portal (P2b, P7b, P7c, P5-8 – đang dừng), mẫu 1C/2C thật,
+mặt hàng chỉ gắn nhóm cấp 4 → **N4d** (xong 14/11/2026) báo cáo gộp theo cấp. Việc khác vẫn chờ người dùng: Portal (P2b, P7b, P7c, P5-8 – đang dừng), mẫu 1C/2C thật,
 phát hành bản mới, thư mục `Lưu ý/` chưa đưa vào git (để nguyên).
 
 **⛔ TẠM DỪNG MỌI VIỆC PORTAL (người dùng yêu cầu 14/11/2026)**: "tất cả mục liên quan đến portal hãy dừng lại và ghi nhận để tôi phân

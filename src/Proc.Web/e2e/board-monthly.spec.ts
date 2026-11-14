@@ -43,11 +43,11 @@ test('báo cáo tháng cho Ban: chọn tháng, xem chi tiết mục, xuất gói
   ])
     await expect(rows.filter({ hasText: label })).toHaveCount(1)
 
-  // Bấm đúp mục KPI: ngăn kéo có 9 chỉ số, nút mở báo cáo KPI.
+  // Bấm đúp mục KPI: ngăn kéo có 8 chỉ số (KPI tồn chậm bỏ ở lát K3), nút mở báo cáo KPI.
   await rows.filter({ hasText: 'Số KPI đạt mục tiêu' }).dblclick()
   const drawer = page.locator('.detail-drawer')
   await expect(drawer.locator('.detail-drawer-title')).toContainText(`KPI cung ứng – tháng ${month}`)
-  await expect(drawer.locator('.data-grid-row')).toHaveCount(9)
+  await expect(drawer.locator('.data-grid-row')).toHaveCount(8)
   await expect(drawer.getByRole('button', { name: 'Mở báo cáo KPI' })).toBeVisible()
   await page.waitForFunction("document.getAnimations().every((a) => a.playState !== 'running')")
   await page.screenshot({ path: 'e2e/screenshots/board-monthly-kpi.png' })
