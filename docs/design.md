@@ -238,7 +238,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | **N4-6** Phân quyền theo nhóm hàng giữ nguyên: được nhóm nào thì được cả nhánh dưới (mục 9.2) | |
 | **N4-7** **Mã nhóm do người dùng gõ** khi thêm (người dùng chốt 14/11/2026, thay cách cấp theo dải của mục 5.11): bắt buộc, 2–20 chữ không dấu hoặc số, tự đổi chữ hoa, không trùng toàn tập đoàn (xét cả nhóm ngoài phạm vi: "Mã nhóm hàng X đã có (tên) – chọn mã khác."), không đổi sau khi tạo. Dải đánh số nhóm hàng cũ trong CSDL được giữ nhưng bỏ qua, không hiện ở màn hình Đánh số danh mục | Người dùng muốn mã có nghĩa (VT, VTD…) |
 | **N4-8** Excel nhóm hàng: cột Mã nhóm bắt buộc – mã đã có thì cập nhật, mã chưa có thì thêm nhóm với mã đó (nhóm mới làm nhóm cha được cho dòng bên dưới cùng file); file xuất thêm cột Cấp, Đường dẫn (chỉ xem, nhập bỏ qua); nhóm cha cấp 4 báo lỗi theo dòng | Như mục 5.10 |
-| **N4-9** Ô chọn nhóm hàng hiện số cấp; ô chọn nhóm cha khóa nhóm cấp 4 (giao diện – lát N4b). Danh mục trả thêm tên cấp, số nhóm con | |
+| **N4-9** Ô chọn nhóm hàng hiện số cấp; ô chọn nhóm cha khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (giao diện – lát N4b, xong 14/11/2026: màn hình CAT có cột Cấp, mở/thu nhánh, nút Thêm nhóm con, ngăn kéo có đường dẫn + tab Nhóm con – ui-style.md mục 5h). Danh mục trả thêm tên cấp, số nhóm con | |
 | Ngừng ĐVT khi không còn hàng đang dùng nó làm ĐVT cơ sở hay ĐVT quy đổi | Hàng đang dùng phải lập được chứng từ |
 | Chỉ hàng tồn kho mới bật lô, hạn dùng, tồn tối thiểu/tối đa (số lượng numeric(18,4), tối thiểu ≤ tối đa) | Chỉ hàng tồn kho đi qua kho (mục 5.2) |
 | Quy đổi ĐVT: 1 ĐVT quy đổi = hệ số × ĐVT cơ sở, hệ số > 0, numeric(18,6); không trùng ĐVT cơ sở, mỗi ĐVT một dòng | Tồn kho luôn lưu theo ĐVT cơ sở; 6 chữ số thập phân để quy đổi g → kg |
@@ -2806,7 +2806,7 @@ lệnh. Quy tắc tự đặt (người dùng có thể chỉnh):
 | 0.26.0 | P4, P5, P6a | Portal: xác nhận đơn (P4a – xong 12/11/2026, kèm Phòng CUVT mở lại phản hồi), báo kết quả chọn thầu (P4b – xong 13/11/2026), báo giao hàng → XNH (P5 – xong 13/11/2026); ~~hóa đơn (P6a)~~ bỏ 13/11/2026 – công ty có kênh riêng |
 | 0.27.0 | Y8, Y11, Y9 | Đề nghị thanh toán 5A/5B (Y8 – xong 13/11/2026), tạp vụ 1C/2C (bảng kê 2C Y11a, đề nghị tổng hợp 1C Y11b – xong 13/11/2026), báo cáo thanh toán (Y9a theo dõi thanh toán TTPO, Y9b xuất chứng từ mua cho kế toán ACCP – xong 13/11/2026) |
 | 0.28.0 (phát hành 14/11/2026) | P2a, P6b, P7a, K2b, N4a | NCC tự quản lý hồ sơ (P2a); trạng thái thanh toán trên Portal (P6b); bảng giá Portal (P7a); in XNH (K2b); nhóm hàng tối đa 4 cấp – máy chủ, mã gõ tay (N4a) |
-| 0.29.0 trở đi | K3, N4b, N4c, P2b, P7b, P7c | Gỡ hẳn kho (K3 – chờ xác nhận sao lưu); giao diện cây nhóm hàng 4 cấp (N4b), mặt hàng chỉ gắn nhóm cấp 4 (N4c); đăng ký NCC mới (P2b), tin nhắn (P7b), thẻ điểm (P7c) – Portal đang dừng chờ người dùng |
+| 0.29.0 trở đi | K3, N4b, N4c, P2b, P7b, P7c | Gỡ hẳn kho (K3 – chờ xác nhận sao lưu); giao diện cây nhóm hàng 4 cấp (N4b – xong 14/11/2026), mặt hàng chỉ gắn nhóm cấp 4 (N4c); đăng ký NCC mới (P2b), tin nhắn (P7b), thẻ điểm (P7c) – Portal đang dừng chờ người dùng |
 
 ## 20. Quy tắc chung mọi chứng từ: phê duyệt, khóa sau duyệt, hủy dây chuyền, số chứng từ (người dùng chốt 11/11/2026)
 

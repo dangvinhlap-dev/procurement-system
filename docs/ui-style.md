@@ -177,6 +177,23 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
 - Câu trả lời thụt 24px, vạch trái 3px `--erp-subtotal`, nền `--erp-panel-bg`, dòng đầu "Trả lời – người – giờ" chữ `--erp-subtotal` đậm.
 - Khoảng cách viết thẳng 2/4/8px (biến `--erp-gap*` chỉ có trong `ClassicScreen`, không có trong `AppShell`).
 
+## 5h. Ô số cấp và cây nhóm hàng 4 cấp (lát N4b, 14/11/2026 – design.md mục 5.7, N4-1…N4-9)
+
+- **Ô số cấp** `LevelBadge` (`src/classic/LevelBadge.tsx`, hằng số cấp ở `classic/categoryLevels.ts`): ô bo 2px cao 14px, chữ số đậm phông đơn cách
+  11px; nền theo cấp `--erp-level-1…4` (xanh đậm → nhạt: #1f3d6b, #2a5db0, #4f86c6, #8fb0d8), chữ trắng, riêng cấp 4 chữ `--erp-level-4-text`.
+  Luôn có chú thích "Cấp n – tên cấp" (Ngành hàng / Nhóm hàng / Loại hàng / Chủng loại). Biến thể chữ rộng "Cấp n/4" đặt sau tiêu đề ngăn kéo
+  (`DetailDrawer` prop `titleExtra`).
+- **Ô chọn nhóm hàng** (`TreeSelect` cổ điển, cây dựng bằng `buildCategoryTree`): mỗi nút có ô số cấp trước "mã – tên"; nút bị khóa ghi lý do mờ
+  sau tên (`· cấp cuối`, `· nhánh sẽ vượt 4 cấp`). Ô chọn **nhóm cha** khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (`parentForDepth`).
+- **Màn hình CAT** (`ListPage` + `DataGrid`): cột đầu "Cấp" (ô số + tên cấp), cột tên thụt 16px mỗi cấp, nút tam giác ▾/▸ mở/thu nhánh ngay
+  trong ô (`GridColumn.render`; dòng không có nhóm con chừa ô trống cùng rộng để tên thẳng hàng); cột "Số nhóm con". Ô lọc **Cấp** (lọc thì lưới
+  thành danh sách phẳng, không mở/thu nhánh). Nút lệnh sau "Tạo mới": **Thêm nhóm con** (icon xanh, thao tác trên dòng đang chọn – `ListPage`
+  prop `onSelectRow`), **Mở hết nhánh**, **Thu gọn nhánh** (vàng). Dòng gợi ý trên lưới: đèn xanh + cấp của nhóm con sẽ tạo, hoặc đèn vàng + lý do
+  không thêm được (nhóm cấp 4, ngoài phạm vi, ngừng dùng); nút tự khóa, chú thích nêu lý do.
+- **Ngăn kéo nhóm hàng**: dải **Đường dẫn** (nền `--erp-readonly-bg`, viền 1px) – nhóm tổ tiên chữ `--erp-subtotal` gạch chấm, bấm mở nhóm đó;
+  nhóm đang mở đậm. Ô **Cấp** chỉ đọc cạnh Mã nhóm, tự đổi theo nhóm cha. Tab **NHÓM CON (n)** (`lazy`): dòng gợi ý + nút Thêm nhóm con, lưới
+  nhóm con (bấm đúp mở); nhóm cấp 4 thay nút bằng đèn vàng + lý do.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

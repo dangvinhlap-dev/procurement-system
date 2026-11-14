@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '../../utils/format'
 
 /** Tông màu của cột trạng thái (ui-guide.md): xanh lá hoàn tất, cam chờ duyệt, đỏ quá hạn/lỗi, xám trung tính. */
@@ -29,6 +30,11 @@ export interface GridColumn<T> {
    * bấm đúp mở phiếu gốc (không mở dòng của danh sách). null/không khai báo thì ô là chữ thường.
    */
   docRef?: (row: T) => { docType: string; id: string | null | undefined } | null
+  /**
+   * Vẽ ô theo cách riêng (ví dụ ô số cấp màu, nút mở/đóng nhánh của nhóm hàng – ui-style.md mục 5h). Sắp xếp, tìm, nhóm và xuất file vẫn
+   * dùng `value`; không khai báo thì ô hiện chuỗi định dạng như thường.
+   */
+  render?: (row: T) => ReactNode
 }
 
 /**
