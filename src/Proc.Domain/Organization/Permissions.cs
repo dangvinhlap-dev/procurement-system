@@ -42,6 +42,11 @@ public static class Permissions
         /// Chỉ cấp cho vai trò Quản trị hệ thống – không gán được cho vai trò khác. Phiếu Nháp thì người lập tự hủy, không cần quyền này.
         /// </summary>
         public const string DocumentCancel = "System.Document.Cancel";
+        /// <summary>
+        /// Quyền "Xem tổng quan vận hành" (module Quản trị vận hành QT – design.md mục 21, lát QT1): màn hình SYS và nhật ký vận hành. Mọi quyền
+        /// <c>System.Ops.*</c> chỉ dùng được khi đang làm việc ở tổng công ty (N3).
+        /// </summary>
+        public const string OpsView = "System.Ops.View";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -321,6 +326,7 @@ public static class Permissions
         new(System.ParameterView, "Xem tham số hệ thống"),
         new(System.ParameterManage, "Sửa tham số hệ thống"),
         new(System.DocumentCancel, "Hủy phiếu đã gửi duyệt (quyền đặc biệt – chỉ quản trị)"),
+        new(System.OpsView, "Xem tổng quan vận hành, nhật ký vận hành (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

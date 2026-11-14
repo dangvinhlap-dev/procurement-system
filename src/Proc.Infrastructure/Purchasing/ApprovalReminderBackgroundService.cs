@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Proc.Application.Operations;
 using Proc.Application.Purchasing;
 
 namespace Proc.Infrastructure.Purchasing;
@@ -16,14 +17,18 @@ public sealed class ApprovalReminderBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _scopes;
     private readonly IOptionsMonitor<ApprovalReminderOptions> _options;
     private readonly ILogger<ApprovalReminderBackgroundService> _logger;
+    private readonly IBackgroundHeartbeat _heartbeat;
 
     /// <summary>Tạo dịch vụ nền.</summary>
     /// <param name="scopes">Tạo scope DI cho mỗi lần quét (DbContext theo scope).</param>
     /// <param name="options">Cấu hình nhắc.</param>
     /// <param name="logger">Nhật ký.</param>
+    /// <param name="heartbeat">Báo nhịp cho màn hình SYS (lát QT1).</param>
     public ApprovalReminderBackgroundService(
-        IServiceScopeFactory scopes, IOptionsMonitor<ApprovalReminderOptions> options, ILogger<ApprovalReminderBackgroundService> logger)
+        IServiceScopeFactory scopes, IOptionsMonitor<ApprovalReminderOptions> options, ILogger<ApprovalReminderBackgroundService> logger,
+        IBackgroundHeartbeat heartbeat)
     {
+        _heartbeat = heartbeat;
         _scopes = scopes;
         _options = options;
         _logger = logger;
@@ -34,6 +39,7 @@ public sealed class ApprovalReminderBackgroundService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            string? note = null;
             if (_options.CurrentValue.Enabled)
             {
                 try
@@ -46,12 +52,20 @@ public sealed class ApprovalReminderBackgroundService : BackgroundService
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogError(ex, "Lần quét nhắc quá hạn duyệt bị lỗi.");
+                    note = $"Lần quét lỗi: {ex.Message}";
                 }
             }
+            else
+            {
+                note = "Đang tắt (ApprovalReminder:Enabled = false).";
+            }
+
+            var minutes = Math.Clamp(_options.CurrentValue.PollMinutes, 1, 1440);
+            _heartbeat.Beat("Nhắc quá hạn duyệt", minutes * 60, note);
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(Math.Clamp(_options.CurrentValue.PollMinutes, 1, 1440)), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(minutes), stoppingToken);
             }
             catch (OperationCanceledException)
             {

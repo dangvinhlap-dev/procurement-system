@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Options;
 using Proc.Application.Common;
+using Proc.Application.Operations;
 
 namespace Proc.Api.Security;
 
@@ -73,4 +73,22 @@ public static class PermissionEndpointExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Chỉ cho dùng khi đang làm việc ở tổng công ty – mọi chức năng quản trị vận hành (design.md mục 21.2, N3). Đặt sau
+    /// <see cref="RequirePermission{TBuilder}"/> để thiếu quyền báo trước. Công ty thành viên nhận 403.
+    /// </summary>
+    /// <typeparam name="TBuilder">RouteHandlerBuilder hoặc RouteGroupBuilder.</typeparam>
+    /// <param name="builder">Endpoint cần bảo vệ.</param>
+    /// <returns>Chính builder để gọi nối tiếp.</returns>
+    public static TBuilder RequireHeadOffice<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        builder.AddEndpointFilter(async (context, next) =>
+        {
+            var access = context.HttpContext.RequestServices.GetRequiredService<IOperationsAccess>();
+            await access.EnsureHeadOfficeAsync(context.HttpContext.RequestAborted);
+            return await next(context);
+        });
+        return builder;
+    }
 }

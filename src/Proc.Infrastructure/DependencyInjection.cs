@@ -137,7 +137,18 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Reports.IPurchaseAccountingExportService, Proc.Infrastructure.Reports.PurchaseAccountingExportService>();
         services.AddScoped<Proc.Application.Notifications.INotificationService, Proc.Infrastructure.Notifications.NotificationService>();
         // Email bản sao thông báo (lát O2b): bộ gửi SMTP + dịch vụ quét; dịch vụ nền đăng ký ở Api cùng cấu hình mục Email.
-        services.AddSingleton<Proc.Application.Notifications.IEmailSender, Proc.Infrastructure.Notifications.SmtpEmailSender>();
+        // Mọi thư đi qua chốt chuyển hướng (máy TEST gửi về hộp thư test – lát QT1, design.md mục 21.3 E5).
+        services.AddSingleton<Proc.Infrastructure.Notifications.SmtpEmailSender>();
+        services.AddSingleton<Proc.Application.Notifications.IEmailSender>(sp => new Proc.Infrastructure.Notifications.RedirectingEmailSender(
+            sp.GetRequiredService<Proc.Infrastructure.Notifications.SmtpEmailSender>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<Proc.Infrastructure.Notifications.EmailOptions>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Proc.Application.Operations.AppEnvironmentOptions>>()));
+        // Module Quản trị vận hành (lát QT1, design.md mục 21).
+        services.AddScoped<Proc.Application.Operations.IOperationLog, Proc.Infrastructure.Operations.OperationLogWriter>();
+        services.AddScoped<Proc.Application.Operations.IOperationLogQueries, Proc.Infrastructure.Operations.OperationLogQueries>();
+        services.AddScoped<Proc.Application.Operations.ISystemOverview, Proc.Infrastructure.Operations.SystemOverviewService>();
+        services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
+        services.AddSingleton<Proc.Application.Operations.IBackgroundHeartbeat, Proc.Infrastructure.Operations.BackgroundHeartbeat>();
         services.AddScoped<Proc.Application.Notifications.INotificationEmailService, Proc.Infrastructure.Notifications.NotificationEmailService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryService, Proc.Infrastructure.Analysis.PurchaseHistoryService>();
         services.AddScoped<Proc.Application.Analysis.IPurchaseHistoryMappingService, Proc.Infrastructure.Analysis.PurchaseHistoryMappingService>();
