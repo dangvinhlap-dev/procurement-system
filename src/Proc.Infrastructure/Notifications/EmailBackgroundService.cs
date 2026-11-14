@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Proc.Application.Notifications;
+using Proc.Application.Operations;
 using Proc.Application.Portal;
 
 namespace Proc.Infrastructure.Notifications;
@@ -18,13 +19,17 @@ public sealed class EmailBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _scopes;
     private readonly IOptionsMonitor<EmailOptions> _options;
     private readonly ILogger<EmailBackgroundService> _logger;
+    private readonly IBackgroundHeartbeat _heartbeat;
 
     /// <summary>Tạo dịch vụ nền.</summary>
     /// <param name="scopes">Tạo scope DI cho mỗi lần quét (DbContext theo scope).</param>
     /// <param name="options">Cấu hình email.</param>
     /// <param name="logger">Nhật ký.</param>
-    public EmailBackgroundService(IServiceScopeFactory scopes, IOptionsMonitor<EmailOptions> options, ILogger<EmailBackgroundService> logger)
+    /// <param name="heartbeat">Báo nhịp cho màn hình SYS (lát QT1).</param>
+    public EmailBackgroundService(
+        IServiceScopeFactory scopes, IOptionsMonitor<EmailOptions> options, ILogger<EmailBackgroundService> logger, IBackgroundHeartbeat heartbeat)
     {
+        _heartbeat = heartbeat;
         _scopes = scopes;
         _options = options;
         _logger = logger;
@@ -35,6 +40,7 @@ public sealed class EmailBackgroundService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            string? note = null;
             if (_options.CurrentValue.Enabled)
             {
                 try
@@ -51,12 +57,20 @@ public sealed class EmailBackgroundService : BackgroundService
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogError(ex, "Lần quét gửi email thông báo bị lỗi.");
+                    note = $"Lần quét lỗi: {ex.Message}";
                 }
             }
+            else
+            {
+                note = "Đang tắt (Email:Enabled = false).";
+            }
+
+            var seconds = Math.Clamp(_options.CurrentValue.PollSeconds, 5, 3600);
+            _heartbeat.Beat("Gửi email", seconds, note);
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(_options.CurrentValue.PollSeconds, 5, 3600)), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(seconds), stoppingToken);
             }
             catch (OperationCanceledException)
             {

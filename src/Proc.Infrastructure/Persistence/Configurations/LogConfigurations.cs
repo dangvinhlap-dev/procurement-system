@@ -33,6 +33,27 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     }
 }
 
+/// <summary>Bảng OperationLog – nhật ký vận hành (module QT, design.md mục 21).</summary>
+public sealed class OperationLogConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.OperationLog>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.OperationLog> builder)
+    {
+        // Bảng chỉ thêm: trigger "TR_OperationLog_ChiThem" (migration V0_32_0_NhatKyVanHanh) chặn UPDATE / DELETE như AuditLog.
+        builder.ToTable("OperationLog");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Environment).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.UserName).HasMaxLength(256);
+        builder.Property(x => x.Kind).HasMaxLength(Proc.Domain.Operations.OperationLog.KindMaxLength).IsRequired();
+        builder.Property(x => x.Target).HasMaxLength(Proc.Domain.Operations.OperationLog.TextMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.OperationLog.TextMaxLength);
+        builder.Property(x => x.Result).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Detail).HasMaxLength(Proc.Domain.Operations.OperationLog.DetailMaxLength);
+        builder.HasIndex(x => x.OccurredAt);
+        builder.HasIndex(x => new { x.Kind, x.OccurredAt });
+    }
+}
+
 /// <summary>Bảng AccessLog (chỉ thêm – trigger trong migration).</summary>
 public sealed class AccessLogConfiguration : IEntityTypeConfiguration<AccessLog>
 {

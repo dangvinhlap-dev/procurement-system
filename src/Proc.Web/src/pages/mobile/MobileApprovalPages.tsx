@@ -22,6 +22,7 @@ import { Select } from '../../classic/Select'
 import { classicMobileTheme } from '../../classic/classicTheme'
 import '../../classic/classic-mobile.css'
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '../../utils/format'
+import { EnvironmentBanner } from '../../classic/EnvironmentBanner'
 
 /**
  * Khung trang duyệt gọn trên điện thoại (lát O2d, design.md mục 19.3, docs/ui-style.md mục 5c): một cột, thanh tiêu đề dải màu cổ điển,
@@ -36,6 +37,7 @@ function MobileFrame({ title, onBack, children }: { title: string; onBack?: () =
   const companies = session?.user.companies ?? []
   return (
     <ClassicScreen className="erp-mobile">
+      <EnvironmentBanner />
       <ConfigProvider theme={classicMobileTheme}>
         <header className="erp-mobile-bar">
           {onBack && <Button type="text" icon={<LeftOutlined />} onClick={onBack} aria-label="Quay lại" title="Quay lại" />}

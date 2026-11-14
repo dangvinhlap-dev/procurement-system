@@ -198,6 +198,9 @@ export const screens: Screen[] = [
   { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
   { code: 'APRL', title: 'Quy trình duyệt', navLabel: 'Quy trình duyệt', path: '/he-thong/quy-trinh-duyet', icon: <CheckSquareOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
+  // Module Quản trị vận hành (lát QT1, design.md mục 21): chỉ ở tổng công ty – máy chủ chặn công ty thành viên (403).
+  { code: 'SYS', title: 'Tổng quan hệ thống', navLabel: 'Tổng quan hệ thống', path: '/he-thong/van-hanh', icon: <DashboardOutlined />, group: 'system', permission: Permission.OpsView },
+  { code: 'OPLOG', title: 'Nhật ký vận hành', navLabel: 'Nhật ký vận hành', path: '/he-thong/nhat-ky-van-hanh', icon: <HistoryOutlined />, group: 'system', permission: Permission.OpsView },
   { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'RATE', title: 'Xếp loại nhà cung cấp', navLabel: 'Xếp loại NCC', path: '/he-thong/xep-loai-ncc', icon: <TrophyOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'DSDM', title: 'Đánh số danh mục', navLabel: 'Đánh số danh mục', path: '/he-thong/danh-so-danh-muc', icon: <FieldNumberOutlined />, group: 'system', permission: Permission.ParameterView },

@@ -18,6 +18,7 @@ import {
 } from './portalApi'
 import { PortalSessionContext, usePortalSession } from './portalSession'
 import './portal.css'
+import { EnvironmentBanner } from '../classic/EnvironmentBanner'
 
 /** Đường dẫn trang đăng nhập Portal. */
 const PORTAL_LOGIN = '/ncc/dang-nhap'
@@ -55,6 +56,7 @@ export function PortalLayout() {
   return (
     <PortalSessionContext.Provider value={value}>
       <ClassicScreen className="erp-portal">
+        <EnvironmentBanner endpoint="/api/portal/auth/environment" />
         {session && (
           <header className="erp-portal-bar">
             <span className="erp-portal-brand">Portal nhà cung cấp</span>

@@ -37,7 +37,6 @@ builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddOptions<DatabaseOptions>().Bind(builder.Configuration.GetSection("Database"));
 builder.Services.AddOptions<SeedOptions>().Bind(builder.Configuration.GetSection("Seed"));
-// Bật/tắt phân hệ – kho tắt mặc định từ 0.22.0 (design.md mục 19.4).
 builder.Services.AddOptions<Proc.Infrastructure.Printing.PrintingOptions>().Bind(builder.Configuration.GetSection("Printing"));
 // Email bản sao thông báo qua SMTP (lát O2b, design.md mục 19.3) – mặc định tắt; mật khẩu đặt bằng biến môi trường Email__Password.
 builder.Services.AddOptions<Proc.Infrastructure.Notifications.EmailOptions>()
@@ -46,6 +45,21 @@ builder.Services.AddOptions<Proc.Infrastructure.Notifications.EmailOptions>()
         "Email:Enabled = true thì phải khai Email:Host và Email:FromAddress.")
     .ValidateOnStart();
 builder.Services.AddHostedService<Proc.Infrastructure.Notifications.EmailBackgroundService>();
+// Module Quản trị vận hành (lát QT1, design.md mục 21): môi trường Dev / Test / Prod của máy chủ và thư mục file nhật ký vận hành (ngoài thư
+// mục ứng dụng trên server – N3); đường dẫn tương đối tính từ ContentRoot như thư mục đính kèm.
+builder.Services.AddOptions<Proc.Application.Operations.AppEnvironmentOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.AppEnvironmentOptions.Section))
+    // Bỏ trống được (máy coi là chưa khai: không gửi email, dải đỏ cảnh báo); khai sai tên thì không cho khởi động.
+    .Validate(o => string.IsNullOrWhiteSpace(o.Environment) || Proc.Domain.Operations.AppEnvironments.Normalize(o.Environment) is not null,
+        "App:Environment chỉ nhận Dev, Test hoặc Prod (design.md mục 21.3).")
+    .ValidateOnStart();
+builder.Services.AddOptions<Proc.Application.Operations.OperationsOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.OperationsOptions.Section))
+    .PostConfigure(o => o.LogDirectory = Path.GetFullPath(o.LogDirectory, builder.Environment.ContentRootPath));
+// Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
+var version = (typeof(Program).Assembly
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
+builder.Services.AddSingleton(new Proc.Application.Operations.AppVersion(version));
 // Nhắc quá hạn duyệt sau 1 ngày làm việc (lát O2c, design.md mục 19.3) – mặc định bật, môi trường Testing tắt.
 builder.Services.AddOptions<Proc.Infrastructure.Purchasing.ApprovalReminderOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Purchasing.ApprovalReminderOptions.Section));
@@ -141,6 +155,22 @@ if (!isDevelopmentOrTesting && app.Services.GetRequiredService<IOptions<Proc.Inf
 
 await DatabaseInitializer.InitializeAsync(app.Services);
 
+// Mỗi lần khởi động ghi một dòng nhật ký vận hành (CSDL + file): phiên bản, môi trường – để lần theo các lần cài bản mới (lát QT1).
+await using (var startupScope = app.Services.CreateAsyncScope())
+{
+    try
+    {
+        await startupScope.ServiceProvider.GetRequiredService<Proc.Application.Operations.IOperationLog>().WriteAsync(
+            new Proc.Application.Operations.OperationLogEntry(Proc.Application.Operations.OperationKinds.AppStarted, version, null,
+                Proc.Domain.Operations.OperationResult.Info, $"Phiên bản {version}, môi trường {app.Environment.EnvironmentName}."),
+            CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Không ghi được nhật ký vận hành lúc khởi động.");
+    }
+}
+
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -173,12 +203,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi().AllowAnonymous();
 }
 
-var version = typeof(Program).Assembly
-    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-
-// Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
-version = version.Split('+')[0];
-
 // Health check: 200 khi CSDL kết nối được, 503 khi không; trả JSON để giao diện và giám sát đọc được.
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
@@ -199,6 +223,7 @@ app.MapSourcingEndpoints();
 app.MapContractEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
+app.MapOperationsEndpoints();
 app.MapDocumentNumberingEndpoints();
 app.MapSystemParameterEndpoints();
 app.MapNotificationEndpoints();

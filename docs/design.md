@@ -2959,6 +2959,7 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | E3 | Kiểm soát các bước | **Theo phân quyền, không có chuỗi duyệt**: ai có quyền của bước thì làm bước đó (mục 21.6). Phiếu phát hành không áp quy tắc phê duyệt mục 20 |
 | E4 | Thời gian UAT | Không có thời gian tối thiểu |
 | E5 | Email trên TEST | **Chuyển hết về một hộp thư test** (`Email:RedirectAllTo`), không bao giờ gửi tới người dùng, NCC thật |
+| E5a | Máy thiếu cấu hình (người dùng chốt 14/11/2026, lát QT1) | **Không gửi email và hiện cảnh báo**: máy chưa khai `App:Environment` (coi là `None`) hoặc máy TEST bật email mà chưa khai `Email:RedirectAllTo` – chốt gửi thư chặn mọi thư (thư nằm lại hàng chờ, báo lỗi), dải **đỏ** cảnh báo trên mọi màn hình kể cả trang đăng nhập, Portal; SYS đèn đỏ |
 | E6 | Dữ liệu TEST | **Làm mới từ PROD trước mỗi đợt UAT**, **giữ nguyên dữ liệu, không làm mờ** (người dùng chốt lại 14/11/2026, thay cho "có làm mờ"). Trước khi chạy thật (PROD chưa có dữ liệu) giữ dữ liệu thử |
 | E8 | Quyền trên TEST | **Như PROD**: người dùng, vai trò, phạm vi đi theo bản làm mới; cần thử chức năng ngoài quyền thì **admin cấp thêm trên TEST** (quyền cấp thêm mất ở lần làm mới sau) (người dùng chốt 14/11/2026) |
 | E9 | Bảo vệ máy TEST | **Như PROD** – TEST chứa dữ liệu thật nên cùng mức bảo vệ (mục 21.3a) (người dùng chốt 14/11/2026) |
@@ -3060,19 +3061,19 @@ Không đạt, ý kiến, đính kèm), **Lỗi phát hiện** (gửi từ nút 
 
 | Bước | Trạng thái sau bước | Quyền | Việc hệ thống làm |
 | --- | --- | --- | --- |
-| 1. Nhận gói | Đã nhận | `Ops.Release.Manage` | Lấy gói từ DEV / GitHub Release / tải lên, tính SHA256, đọc CHANGELOG, tạo mục kiểm thử |
-| 2. Cài TEST | Đang UAT | `Ops.Release.DeployTest` | (Tùy chọn) làm mới TEST từ PROD; bộ thực thi TEST: sao lưu → cài → script CSDL → `/health` → kiểm thử nhanh; lỗi tự quay lại bản cũ |
-| 3. Xác nhận UAT đạt | UAT đạt | `Ops.Release.UatSignOff` | Ghi người, giờ, ý kiến; còn mục Không đạt hoặc lỗi chưa xử lý thì cảnh báo, vẫn cho xác nhận kèm lý do |
-| 4. Cài PROD | Đã cài PROD | `Ops.Release.DeployProd` | Chỉ khi UAT đạt (hoặc chế độ một môi trường); kiểm SHA256 trùng gói đã cài TEST; sao lưu Full + kiểm tra → chế độ bảo trì → cài → script → `/health` + kiểm thử nhanh → mở lại; lỗi tự quay về gói cũ + CSDL vừa sao lưu; giờ cài tự do (E7), thông báo người dùng trước |
-| 5. Đóng phiếu | Đã đóng | `Ops.Release.Manage` | Sau khi theo dõi màn hình ERR |
-| Quay về bản cũ | Đã quay về | `Ops.Release.DeployProd` | Liệt kê thay đổi + rủi ro mất dữ liệu (như `docs/phat-hanh.md`), xác nhận Q6, quay về theo **mức** ở mục 21.6a (mặc định chỉ trả code) |
-| Hủy phiếu | Đã hủy | `Ops.Release.Manage` | Bắt buộc lý do; không hủy được phiếu đã cài PROD |
+| 1. Nhận gói | Đã nhận | `System.Ops.Release.Manage` | Lấy gói từ DEV / GitHub Release / tải lên, tính SHA256, đọc CHANGELOG, tạo mục kiểm thử |
+| 2. Cài TEST | Đang UAT | `System.Ops.Release.DeployTest` | (Tùy chọn) làm mới TEST từ PROD; bộ thực thi TEST: sao lưu → cài → script CSDL → `/health` → kiểm thử nhanh; lỗi tự quay lại bản cũ |
+| 3. Xác nhận UAT đạt | UAT đạt | `System.Ops.Release.UatSignOff` | Ghi người, giờ, ý kiến; còn mục Không đạt hoặc lỗi chưa xử lý thì cảnh báo, vẫn cho xác nhận kèm lý do |
+| 4. Cài PROD | Đã cài PROD | `System.Ops.Release.DeployProd` | Chỉ khi UAT đạt (hoặc chế độ một môi trường); kiểm SHA256 trùng gói đã cài TEST; sao lưu Full + kiểm tra → chế độ bảo trì → cài → script → `/health` + kiểm thử nhanh → mở lại; lỗi tự quay về gói cũ + CSDL vừa sao lưu; giờ cài tự do (E7), thông báo người dùng trước |
+| 5. Đóng phiếu | Đã đóng | `System.Ops.Release.Manage` | Sau khi theo dõi màn hình ERR |
+| Quay về bản cũ | Đã quay về | `System.Ops.Release.DeployProd` | Liệt kê thay đổi + rủi ro mất dữ liệu (như `docs/phat-hanh.md`), xác nhận Q6, quay về theo **mức** ở mục 21.6a (mặc định chỉ trả code) |
+| Hủy phiếu | Đã hủy | `System.Ops.Release.Manage` | Bắt buộc lý do; không hủy được phiếu đã cài PROD |
 
 Không có chuỗi duyệt, thời gian UAT tối thiểu, giờ cài cố định (E3, E4, E7). Mỗi bước ghi nhật ký vận hành; các bước 2, 4 và quay về bản
 cũ đòi xác nhận Q6. Phiếu Đã cài PROD trở đi thì khóa, chỉ thêm ghi chú. Đường khẩn cấp không có lối tắt: bản vá vẫn qua bước 1–4.
 
-Quyền khác: `Ops.View` (xem SYS), `Ops.ErrorLog.View/Manage`, `Ops.Backup.Run`, `Ops.Restore.Run`, `Ops.Maintenance.Run`,
-`Ops.TestRefresh.Run`, `Ops.Config.Manage`. Mọi quyền `Ops.*` chỉ dùng được khi đang làm việc ở tổng công ty.
+Quyền khác: `System.Ops.View` (xem SYS, nhật ký vận hành – có từ QT1), `System.Ops.ErrorLog.View/Manage`, `System.Ops.Backup.Run`, `System.Ops.Restore.Run`, `System.Ops.Maintenance.Run`,
+`System.Ops.TestRefresh.Run`, `System.Ops.Config.Manage`. Mọi quyền `System.Ops.*` (mã theo quy ước sẵn có `System.*` – sửa ở lát QT1) chỉ dùng được khi đang làm việc ở tổng công ty.
 
 ### 21.6a Quay về bản cũ – ba mức (14/11/2026)
 
@@ -3097,7 +3098,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 
 | Lát | Nội dung |
 | --- | --- |
-| QT1 | Nhận diện môi trường (`App:Environment`, dải màu, `Email:RedirectAllTo`), khung module, quyền `Ops.*`, nhật ký vận hành (CSDL + file), màn hình SYS cho môi trường đang chạy |
+| QT1 | Nhận diện môi trường (`App:Environment`, dải màu, `Email:RedirectAllTo`), khung module, quyền `System.Ops.*`, nhật ký vận hành (CSDL + file), màn hình SYS cho môi trường đang chạy – **xong 14/11/2026** (mục 21.9) |
 | QT2 | Nhật ký lỗi ERR (máy chủ + giao diện, gộp nhóm, email loại lỗi mới, tự xóa) |
 | QT3a | Script bật lưu WAL + kiểm tra cấu hình; BAK hiện tình trạng lưu WAL |
 | QT3b | Full / Diff / `pg_dump` / đính kèm theo lịch + chạy tay, kiểm tra, giữ, dọn, nơi lưu thứ hai, lịch sử |
@@ -3131,6 +3132,25 @@ Tình huống thiết kế phải xử lý:
 DEV không bắt buộc có bộ thực thi: gói từ DEV đưa lên GitHub Release (bước G1 – `docs/phat-hanh.md`), trung tâm PROD nhận gói từ đó; DEV có
 chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 
+### 21.9 Lát QT1 – đã làm (14/11/2026)
+
+- **Cấu hình**: `App:Environment` = `Dev` / `Test` / `Prod`; khai sai tên thì ứng dụng không khởi động; **bỏ trống = `None` (chưa khai)** – không
+  gửi email, dải đỏ (E5a). `Email:RedirectAllTo` (TEST). `Operations:LogDirectory` (ngoài thư mục ứng dụng, mặc định máy dev
+  `data/operations-log` tính từ ContentRoot).
+- **Chốt gửi thư** `RedirectingEmailSender` bọc bộ gửi SMTP – mọi thư (thông báo, Portal NCC, nhắc duyệt) đi qua: có `RedirectAllTo` thì người nhận
+  đổi thành hộp thư test, tiêu đề "[TEST] gửi cho: người nhận gốc – tiêu đề"; `None` hoặc TEST chưa khai hộp thư thì không gửi.
+- **Nhật ký vận hành** `OperationLog` (giờ, môi trường, người, loại việc, đối tượng, lý do, kết quả, chi tiết) – chỉ thêm (trigger
+  `TR_OperationLog_ChiThem`), ghi file `operations-yyyyMMdd.log` (JSON mỗi dòng) trước rồi CSDL bằng DbContext riêng; mỗi lần khởi động ghi
+  một dòng `AppStarted` (phiên bản, môi trường). Migration `V0_32_0_NhatKyVanHanh`.
+- **API** `/api/ops/v1`: `overview`, `operation-logs` (quyền `System.Ops.View`, chỉ tổng công ty – bộ lọc `RequireHeadOffice`, công ty thành viên
+  403); `environment` ẩn danh trả `{ environment, warning }`; site Portal dùng `/api/portal/auth/environment` (cùng nội dung – site Portal chỉ mở
+  `/api/portal`).
+- **SYS** (`/he-thong/van-hanh`): môi trường, phiên bản, giờ khởi động, cách gửi email, máy chủ PostgreSQL, migration đã chạy / đang chờ (đỏ khi
+  còn chờ), dung lượng CSDL, số kết nối, chỗ trống ổ chứa đính kèm / nhật ký (vàng < 15 %, đỏ < 5 %), nhịp dịch vụ nền Gửi email, Nhắc quá hạn
+  duyệt (đỏ khi quá 3 chu kỳ không chạy). **Nhật ký vận hành** (`/he-thong/nhat-ky-van-hanh`). Bảng ba môi trường, so cấu hình bảo mật TEST –
+  PROD (21.3a) làm ở QT8.
+- **Dải môi trường** (`EnvironmentBanner`, ui-style.md mục 5j) trên AppShell, trang đăng nhập, `/duyet`, Portal; tiêu đề tab "[TEST]".
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core
@@ -3141,4 +3161,3 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - AWS Free Tier credits: https://aws.amazon.com/about-aws/whats-new/2025/07/aws-free-tier-credits-month-free-plan/
 - Render free tier: https://justinmckelvey.com/blog/is-render-free
 - Claude Code – cài đặt: https://code.claude.com/docs/en/setup.md
-

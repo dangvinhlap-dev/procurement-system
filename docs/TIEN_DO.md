@@ -985,6 +985,17 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT1 xong 14/11/2026 (chưa phát hành – bản 0.32.0)** – người dùng "Làm lát QT1 theo docs/ke-hoach-qt.md và design.md mục 21". Nhánh
+`feature/qt1-moi-truong-van-hanh` (đã merge): `App:Environment` (Dev/Test/Prod), nhật ký vận hành `OperationLog` (chỉ thêm, CSDL + file ngày,
+dòng `AppStarted` mỗi lần khởi động), tổng quan SYS (`/he-thong/van-hanh`), Nhật ký vận hành (`/he-thong/nhat-ky-van-hanh`), quyền
+`System.Ops.View` (chỉ tổng công ty), chốt gửi thư `RedirectingEmailSender` (`Email:RedirectAllTo`), dải môi trường trên AppShell / đăng nhập /
+`/duyet` / Portal. Người dùng chốt thêm giữa lát (E5a): **máy thiếu cấu hình thì không gửi email và hiện cảnh báo** – `App:Environment` trống =
+`None` (dải đỏ, chặn thư), TEST chưa khai `RedirectAllTo` cũng chặn. Migration `V0_32_0_NhatKyVanHanh`. design.md 21.1 (E5a), 21.6 (`System.Ops.*`),
+21.9; ui-style 5j; deploy-windows (cấu hình + lưu ý nâng cấp 0.32.0); docker-compose + .env.example; ke-hoach-qt.md. Kiểm tra: build 0 cảnh báo,
+`dotnet test` 716/716, tsc, oxlint, `npm run build`, Playwright đủ bộ 146/146 (trước khi dời API Portal sang `/api/portal/auth/environment`;
+sau khi dời chạy lại `ops-overview.spec` 4/4). **Khi phát hành 0.32.0**: bản test 5007 phải thêm `App:Environment` vào
+`appsettings.Production.json`, không thì không gửi email + dải đỏ; cần anh cho địa chỉ hộp thư test cho máy TEST. Lát kế tiếp: QT2 (nhật ký lỗi ERR).
+
 **K3 xong 14/11/2026 (chưa phát hành – dự kiến 0.31.0)** – người dùng "K3 gỡ hẳn phân hệ kho, không cần sao lưu vì đây là hệ thống đang
 dev". Nhánh `feature/k3-go-phan-he-kho` (đã merge): gỡ hẳn code kho máy chủ + giao diện (phiếu kho, kỳ kho, tồn, thẻ kho, báo cáo kho, ACCX,
 in phiếu kho, menu Kho), cờ `Modules:InventoryEnabled`, nhóm quyền Kho + 3 quyền báo cáo kho, 6 loại phiếu kho, gợi ý giá nội bộ theo giá vốn,

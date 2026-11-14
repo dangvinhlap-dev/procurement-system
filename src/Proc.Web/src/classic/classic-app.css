@@ -929,3 +929,46 @@ body.erp-col-resizing {
   margin: 4px 0 2px;
   color: var(--erp-title);
 }
+
+/* ---------- Dải nhận diện môi trường (lát QT1 – ui-style.md mục 5j, design.md mục 21.3) ---------- */
+:root {
+  --erp-env-dev: #6b7785;
+  --erp-env-test: #d9730d;
+  --erp-env-warning: var(--erp-light-red);
+}
+
+.erp-env-banner {
+  flex: none;
+  height: 20px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: #fff;
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-env-banner.is-dev {
+  background: var(--erp-env-dev);
+}
+
+.erp-env-banner.is-test {
+  background: var(--erp-env-test);
+}
+
+.erp-env-banner.is-warning,
+.erp-env-banner.is-none {
+  background: var(--erp-env-warning);
+}
+
+.erp-env-banner.is-floating {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1000;
+}

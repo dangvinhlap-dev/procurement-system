@@ -42,6 +42,11 @@ Bản 0.32.0 · khối lượng Vừa · GĐ1 (cài tay).
 | Tài liệu | design.md 21 (mã quyền `System.Ops.*`), ui-style.md, deploy-windows.md (cấu hình mới), `appsettings.Production.example.json` |
 | Xong khi | Máy cấu hình Test hiện dải cam ở mọi màn hình và mọi email đi về hộp thư test; SYS đúng số liệu; mọi thao tác QT có dòng nhật ký ở CSDL và file |
 
+**QT1 xong 14/11/2026** – chi tiết design.md mục 21.9. Khác kế hoạch (đã ghi design.md): (1) chuyển hướng email đặt ở chốt gửi thư
+`RedirectingEmailSender` (mọi nơi gửi thư đều qua) thay vì trong `EmailBackgroundService`; (2) người dùng chốt thêm **E5a – máy thiếu cấu hình
+thì không gửi email và hiện cảnh báo** (`App:Environment` bỏ trống = `None`, dải đỏ; TEST chưa khai `RedirectAllTo` cũng chặn); (3) thêm
+`/api/portal/auth/environment` cho dải trên site Portal; (4) test gộp trong `OperationsTests` (5 test), e2e `ops-overview.spec.ts` (4 test).
+
 ### QT2 – Nhật ký lỗi (ERR)
 Bản 0.32.0 · Vừa · GĐ1.
 

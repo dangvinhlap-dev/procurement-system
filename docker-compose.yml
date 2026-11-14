@@ -38,6 +38,12 @@ services:
       Email__Password: ${EMAIL_PASSWORD:-}
       Email__FromAddress: ${EMAIL_FROM:-}
       Email__AppBaseUrl: ${EMAIL_APP_URL:-}
+      # Máy TEST: mọi thư về một hộp thư test (lát QT1, design.md mục 21.3 E5); máy PROD để trống.
+      Email__RedirectAllTo: ${EMAIL_REDIRECT_ALL_TO:-}
+      # Môi trường máy chủ Dev / Test / Prod (lát QT1) – bắt buộc khai; trống thì không gửi email, dải đỏ cảnh báo (E5a).
+      App__Environment: ${APP_ENVIRONMENT:-}
+      # Nhật ký vận hành ghi thêm ra file ngoài CSDL (N3) – volume riêng, giữ qua các lần nâng cấp image.
+      Operations__LogDirectory: /data/operations-log
       # Portal NCC (lát P1): địa chỉ NCC mở Portal ghi vào link mời; trống thì dùng EMAIL_APP_URL.
       Portal__BaseUrl: ${PORTAL_BASE_URL:-}
       # Tên miền Portal (lát P1b): vào bằng tên này chỉ mở trang /ncc + API Portal. Trống = không giới hạn (chạy thử LAN).
@@ -58,6 +64,7 @@ services:
       - app_keys:/home/app/.aspnet/DataProtection-Keys
       # File đính kèm (design.md mục 18.4): giữ qua các lần nâng cấp image; container backup chép sang ./backups/attachments mỗi đêm.
       - attachments:/data/attachments
+      - operations_log:/data/operations-log
     depends_on:
       db:
         condition: service_healthy
@@ -119,3 +126,4 @@ volumes:
   seq_data: {}
   app_keys: {}
   attachments: {}
+  operations_log: {}

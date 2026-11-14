@@ -16,6 +16,7 @@ import { ScreenTabBar, ScreenTabPanel } from './ScreenTabs'
 import { screenTabTitle, useScreenTabsState } from './useScreenTabsState'
 import { useUnsavedGuard } from './useUnsavedGuard'
 import './AppShell.css'
+import { EnvironmentBanner } from '../../classic/EnvironmentBanner'
 
 /** Tên ứng dụng ghép vào tiêu đề tab trình duyệt. */
 const APP_NAME = 'Quản lý mua hàng và kho'
@@ -101,6 +102,7 @@ export function AppShell({ routes }: { routes: RouteObject[] }) {
   return (
     <ScreenTabsContext value={api}>
     <div className="app-shell" style={layoutCssVars()}>
+      <EnvironmentBanner />
       <ShellBar
         appName={APP_NAME}
         activeGroup={screen?.group}

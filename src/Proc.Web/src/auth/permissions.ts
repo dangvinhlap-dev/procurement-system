@@ -10,6 +10,8 @@ export const Permission = {
   RoleView: 'System.Role.View',
   RoleManage: 'System.Role.Manage',
   LogView: 'System.Log.View',
+  /** Xem tổng quan vận hành SYS, nhật ký vận hành – chỉ ở tổng công ty (design.md mục 21, lát QT1). */
+  OpsView: 'System.Ops.View',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

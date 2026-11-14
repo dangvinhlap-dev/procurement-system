@@ -215,6 +215,19 @@ dựng bằng `ExcelGridStyle` (`src/Proc.Infrastructure/Excel/ExcelGridStyle.cs
 
 Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nhóm" – đó là thao tác trên màn hình, không đưa vào file.
 
+## 5j. Dải nhận diện môi trường (lát QT1, 14/11/2026 – design.md mục 21.3)
+
+- Component `src/classic/EnvironmentBanner.tsx`, CSS `.erp-env-banner` trong `classic-app.css`; màu biến `--erp-env-dev` (xám #6b7785),
+  `--erp-env-test` (cam #d9730d), `--erp-env-warning` (= `--erp-light-red`). Dải cao 20px, chữ trắng 12px đậm, canh giữa, một dòng (dài thì
+  "…", rê chuột xem đủ), không bóng, bo 0.
+- Đặt **trên cùng** AppShell (trên thanh menu chữ), trang điện thoại `/duyet`, Portal NCC; trang đăng nhập dùng dải nổi (`floating`) trên đầu
+  trang. Nội dung: DEV "DEV – máy lập trình, dữ liệu mẫu"; TEST "MÔI TRƯỜNG TEST – dữ liệu thử nghiệm, email chuyển về hộp thư test" + tiêu
+  đề tab trình duyệt bắt đầu "[TEST] "; PROD không có dải.
+- **Thiếu cấu hình** (chưa khai `App:Environment`, TEST chưa khai hộp thư test – người dùng chốt 14/11/2026): dải **đỏ** ghi cảnh báo "email
+  không được gửi", vai trò `alert`.
+- Màn hình **SYS** (Tổng quan hệ thống) và **Nhật ký vận hành** theo khuôn `ListPage` + `DataGrid` (cột Tình trạng / Kết quả là đèn kèm chữ),
+  nút "Làm mới" icon vàng.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

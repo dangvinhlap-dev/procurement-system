@@ -278,6 +278,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Nhật ký truy cập (chỉ thêm).</summary>
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
 
+    /// <summary>Nhật ký vận hành (chỉ thêm – module QT, design.md mục 21).</summary>
+    public DbSet<Proc.Domain.Operations.OperationLog> OperationLogs => Set<Proc.Domain.Operations.OperationLog>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import './LoginPage.css'
+import { EnvironmentBanner } from '../classic/EnvironmentBanner'
 
 /** Tên ứng dụng hiển thị trên màn hình đăng nhập. */
 const APP_NAME = 'Quản lý mua hàng và kho'
@@ -38,6 +39,7 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
+      <EnvironmentBanner floating />
       <div className="login-dialog" role="dialog" aria-labelledby="login-title">
         <div className="login-title-bar" id="login-title">
           Đăng nhập – {APP_NAME}

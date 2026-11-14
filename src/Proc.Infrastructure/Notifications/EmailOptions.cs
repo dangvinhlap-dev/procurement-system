@@ -53,4 +53,10 @@ public sealed class EmailOptions
 
     /// <summary>Số lần thử gửi tối đa một thư (mỗi lần quét thử một lần).</summary>
     public int MaxAttempts { get; set; } = 5;
+
+    /// <summary>
+    /// Hộp thư nhận thay mọi thư (máy TEST – design.md mục 21.3, E5): khai thì mọi thư gửi về đây, tiêu đề có "[TEST] gửi cho: người nhận gốc".
+    /// Máy <c>App:Environment=Test</c> bắt buộc khai, không thì không gửi thư nào. Máy PROD để trống.
+    /// </summary>
+    public string? RedirectAllTo { get; set; }
 }
