@@ -144,6 +144,56 @@ public partial class PurchasingTests
         Assert.Contains(registry!.Rows, d => d.Id == xnh.Id && d.Progress == DocumentProgress.Done && d.StatusName == "Đã xác nhận");
     }
 
+    /// <summary>
+    /// In XNH ra PDF (lát K2b, design.md mục 10.10, 19.4): biên bản giao nhận và kiểm tra hàng hóa, in được cả nháp và sau điều chỉnh; quyền
+    /// như xem XNH (cả người chỉ có quyền nghiệm thu); XNH công ty khác → 404; không có quyền XNH → 403.
+    /// </summary>
+    [Fact]
+    public async Task InXnh_BienBanGiaoNhan_PhamViVaQuyen()
+    {
+        var f = await ArrangeAsync();
+        var po = await ApprovedPoAsync(f, 10);
+        var xnh = await ReadAsync<ReceiptConfirmationDto>(
+            await f.Buyer.PostAsJsonAsync("/api/receipt-confirmations", Xnh(po, 8, 6, 1, "Failed", "Vỡ 1, thiếu 1 so phiếu giao"), Ct));
+
+        static async Task<PdfSharp.Pdf.PdfDocument> PdfAsync(HttpResponseMessage response)
+        {
+            Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(Ct)}");
+            Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+            var bytes = await response.Content.ReadAsByteArrayAsync(Ct);
+            return PdfSharp.Pdf.IO.PdfReader.Open(new MemoryStream(bytes), PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import);
+        }
+
+        // Nháp in được (dòng đỏ "BẢN NHÁP"); tên file theo số phiếu.
+        var draftResponse = await f.Buyer.GetAsync($"/api/receipt-confirmations/{xnh.Id}/pdf", Ct);
+        Assert.Contains(xnh.No, draftResponse.Content.Headers.ContentDisposition?.ToString() ?? "");
+        Assert.Equal($"BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA {xnh.No}", (await PdfAsync(draftResponse)).Info.Title);
+
+        // Đã xác nhận + điều chỉnh giảm: vẫn in được (cột SL thực nhận sau điều chỉnh).
+        xnh = await ReadAsync<ReceiptConfirmationDto>(await f.Buyer.PostAsync($"/api/receipt-confirmations/{xnh.Id}/confirm", null, Ct));
+        xnh = await TestReceipts.AdjustAsync(f.Buyer, xnh, -2);
+        Assert.Equal(4m, xnh.Lines[0].ReceivedQty);
+        await PdfAsync(await f.Buyer.GetAsync($"/api/receipt-confirmations/{xnh.Id}/pdf", Ct));
+
+        // Người chỉ có quyền nghiệm thu in được; người không có quyền XNH → 403.
+        var unitRole = UniqueCode("U");
+        await _factory.CreateRoleAsync(unitRole, Permissions.Purchase.ReceiptAccept);
+        var unitName = $"dv.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(unitName, f.CompanyCode, unitRole);
+        var unit = await _factory.CreateClientInCompanyAsync(unitName, ProcApiFactory.TestPassword, f.CompanyCode);
+        await PdfAsync(await unit.GetAsync($"/api/receipt-confirmations/{xnh.Id}/pdf", Ct));
+        var poRole = UniqueCode("P");
+        await _factory.CreateRoleAsync(poRole, Permissions.Purchase.PoView);
+        var poName = $"po.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(poName, f.CompanyCode, poRole);
+        var poOnly = await _factory.CreateClientInCompanyAsync(poName, ProcApiFactory.TestPassword, f.CompanyCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await poOnly.GetAsync($"/api/receipt-confirmations/{xnh.Id}/pdf", Ct)).StatusCode);
+
+        // XNH của công ty khác: không thấy (404) – như khi mở phiếu.
+        var head = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "TCT");
+        Assert.Equal(HttpStatusCode.NotFound, (await head.GetAsync($"/api/receipt-confirmations/{xnh.Id}/pdf", Ct)).StatusCode);
+    }
+
     /// <summary>Báo cáo SL đặt – SL thực nhận / OTIF (design.md mục 19.4): đủ, thiếu, trễ hạn; tổng hợp theo NCC.</summary>
     [Fact]
     public async Task BaoCaoOtif_SlDatSlThucNhan_DungHanVaDu()

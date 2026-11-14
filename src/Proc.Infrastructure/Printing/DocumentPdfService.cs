@@ -31,6 +31,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IRfqService _rfqs;
     private readonly IPaymentRequestService _payments;
     private readonly ISundryExpenseSheetService _sundries;
+    private readonly IReceiptConfirmationService _receipts;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -42,11 +43,12 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="rfqs">Dịch vụ yêu cầu báo giá.</param>
     /// <param name="payments">Dịch vụ đề nghị thanh toán (lát Y8).</param>
     /// <param name="sundries">Bảng kê chi phí tạp vụ (in 2C – lát Y11c).</param>
+    /// <param name="receipts">Phiếu xác nhận nhận hàng XNH (lát K2b).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests, IInventoryDocumentService inventory,
         IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, ISundryExpenseSheetService sundries,
-        IOptions<PrintingOptions> options)
+        IReceiptConfirmationService receipts, IOptions<PrintingOptions> options)
     {
         try
         {
@@ -67,6 +69,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _rfqs = rfqs;
         _payments = payments;
         _sundries = sundries;
+        _receipts = receipts;
     }
 
     /// <inheritdoc />
@@ -505,6 +508,101 @@ public sealed class DocumentPdfService : IDocumentPdfService
             ["Đại diện bên giao", "Thủ kho", "Người kiểm tra", "Người lập biên bản"], [d.Deliverer, null, null, d.CreatedByName], conclusion);
         return new PdfFile($"BB-{d.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
     }
+
+    /// <inheritdoc />
+    public async Task<PdfFile> ReceiptConfirmationAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // Đọc qua dịch vụ xem XNH: phiếu ngoài công ty đang làm việc báo không tìm thấy như khi mở trên màn hình.
+        var x = await _receipts.GetAsync(id, cancellationToken);
+        var invoice = x.InvoiceNo is null ? null
+            : $"{x.InvoiceSeries} {x.InvoiceNo}".Trim() + (x.InvoiceDate is { } at ? $" ngày {at:dd/MM/yyyy}" : "")
+              + (x.InvoiceAmount is { } amount ? $" – {Money(amount)} VND" : "");
+        var acceptance = x.Acceptance switch
+        {
+            "Accepted" => "Đạt",
+            "Disputed" => "Không đồng ý nghiệm thu",
+            _ => null,
+        };
+        if (acceptance is not null)
+            acceptance += (x.AcceptedByName is null ? "" : $" – {x.AcceptedByName}") + (x.AcceptedAt is { } accepted ? $" {Stamp(accepted)}" : "")
+                + (string.IsNullOrWhiteSpace(x.AcceptanceNote) ? "" : $"; ý kiến: {x.AcceptanceNote}");
+
+        // Thiếu so với phiếu giao = đạt + không đạt − SL phiếu giao (XNH chỉ cho đạt + không đạt ≤ phiếu giao, nên chỉ có thiếu – design.md 19.4).
+        // Ví dụ phiếu giao 8, đạt 6, không đạt 1 → thiếu 1 (in "−1").
+        static decimal Shortage(ReceiptConfirmationLineDto l) => l.AcceptedQty + l.RejectedQty - l.DeliveredQty;
+        var adjusted = x.Lines.Any(l => l.AdjustedQty != 0);
+        // Có điều chỉnh thì thêm cột SL thực nhận (đạt ± điều chỉnh) và thu hẹp cột ghi chú để tổng độ rộng vẫn 180 mm (A4 dọc).
+        List<PrintColumn> columns =
+        [
+            new("STT", 8), new("Mã hàng", 18), new("Tên hàng", 32), new("ĐVT", 9), new("SL phiếu giao", 14, true), new("SL đạt", 14, true),
+            new("SL không đạt", 14, true), new("Thiếu", 13, true),
+        ];
+        if (adjusted) columns.Add(new("SL thực nhận", 14, true));
+        columns.Add(new("Kết quả", 14));
+        columns.Add(new("Ghi chú kiểm tra", adjusted ? 30 : 44));
+        var rows = x.Lines.Select(l =>
+        {
+            List<string> cells =
+            [
+                l.LineNo.ToString(Vi), l.ItemCode, l.ItemName, l.UomCode, Qty(l.DeliveredQty), Qty(l.AcceptedQty),
+                l.RejectedQty > 0 ? Qty(l.RejectedQty) : "", Shortage(l) == 0 ? "" : Qty(Shortage(l)),
+            ];
+            if (adjusted) cells.Add(Qty(l.ReceivedQty));
+            cells.Add(l.CheckResult switch { "Passed" => "Đạt", "Failed" => "Không đạt", _ => "Chưa kiểm tra" });
+            cells.Add(l.CheckNote ?? "");
+            return cells.ToArray();
+        }).ToList();
+
+        // Kết luận cùng điều kiện với biên bản phiếu nhập cũ: dòng có hàng không đạt, thiếu so phiếu giao hoặc kết quả Không đạt là sai lệch.
+        var deviations = x.Lines.Count(l => l.RejectedQty > 0 || Shortage(l) != 0 || l.CheckResult == "Failed");
+        var notChecked = x.Lines.Count(l => l.CheckResult == "NotChecked");
+        var conclusion = deviations == 0
+            ? notChecked == 0 ? "Hàng giao đúng số lượng theo phiếu giao, đạt chất lượng."
+                : $"Không ghi nhận sai lệch; còn {notChecked} dòng chưa kiểm tra chất lượng."
+            : $"Có {deviations}/{x.Lines.Count} dòng thiếu hoặc không đạt (xem cột Thiếu, SL không đạt, Ghi chú). "
+              + "Hàng không đạt không tính vào SL thực nhận; đề nghị nhà cung cấp xử lý theo hợp đồng.";
+        if (x.Adjustments.Count > 0)
+        {
+            // Điều chỉnh SL thực nhận thay cho trả NCC (design.md 19.4) – in đủ lịch sử để biên bản khớp với SL đã nhận của PO.
+            conclusion += " Điều chỉnh SL thực nhận: " + string.Join("; ", x.Adjustments.OrderBy(a => a.AdjustedAt).Select(a =>
+                $"dòng {a.LineNo}: {(a.Qty > 0 ? "+" : "")}{Qty(a.Qty)} ({Stamp(a.AdjustedAt)}" + (a.AdjustedByName is null ? "" : $", {a.AdjustedByName}")
+                + $") – {a.Reason}")) + ".";
+        }
+
+        var doc = new PrintDocument(
+            "BIÊN BẢN GIAO NHẬN VÀ KIỂM TRA HÀNG HÓA", x.No, x.Date, x.Status switch
+            {
+                "Draft" => "BẢN NHÁP – phiếu nhận hàng chưa xác nhận",
+                "Cancelled" => "ĐÃ HỦY" + (string.IsNullOrWhiteSpace(x.CancelReason) ? "" : $" – {x.CancelReason}"),
+                _ => null,
+            },
+            [
+                ("Bên giao (nhà cung cấp)", $"{x.SupplierCode} – {x.SupplierName}"),
+                ("Người giao hàng", x.Deliverer),
+                ("Bên nhận (nơi nhận)", x.WarehouseCode is null ? null : $"{x.WarehouseCode} – {x.WarehouseName}"),
+                ("Đơn vị đặt hàng", x.DepartmentName),
+                ("Theo đơn mua hàng", $"{x.PurchaseOrderNo} ngày {x.PurchaseOrderDate:dd/MM/yyyy}"),
+                ("Phiếu giao hàng", x.DeliveryNoteNo),
+                ("Phiếu báo giao NCC", x.DeliveryNoticeNo),
+                ("Hóa đơn", invoice),
+                ("Xác nhận nhận hàng", x.ConfirmedAt is { } confirmed ? $"{x.ConfirmedByName} {Stamp(confirmed)}".Trim() : null),
+                ("Nghiệm thu (đơn vị đặt hàng)", acceptance),
+            ],
+            columns, rows,
+            // Giá trị theo giá thực mua của dòng PO × SL thực nhận – căn cứ đối chiếu hóa đơn, đề nghị thanh toán (lát Y8).
+            [
+                new("Giá trị thực nhận (giá PO, trước thuế)", Money(x.TotalAmount)), new("Thuế GTGT", Money(x.TotalVat)),
+                new("Tổng cộng", Money(x.TotalAmount + x.TotalVat), true),
+            ],
+            null, x.Note,
+            ["Đại diện bên giao", "Người nhận hàng", "Người kiểm tra", "Người lập phiếu"],
+            [x.Deliverer, x.ConfirmedByName, null, x.CreatedByName], conclusion);
+        return new PdfFile($"{x.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
+    }
+
+    /// <summary>Giờ ngày theo múi giờ Việt Nam, dạng dd/MM/yyyy HH:mm (CLAUDE.md mục 5).</summary>
+    private static string Stamp(DateTimeOffset value) =>
+        TimeZoneInfo.ConvertTime(value, VietnamTime.Zone).ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 
     /// <summary>Ghi chú trạng thái của PR/PO chưa có hiệu lực.</summary>
     private static string? ApprovalNote(string status) => status switch

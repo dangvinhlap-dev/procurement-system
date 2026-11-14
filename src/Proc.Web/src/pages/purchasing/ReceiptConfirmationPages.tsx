@@ -520,6 +520,8 @@ export function ReceiptConfirmationPage() {
         readOnly={readOnly}
         onSave={() => void save()}
         actions={actions}
+        // In biên bản giao nhận và kiểm tra hàng hóa (lát K2b – design.md mục 10.10); phiếu chưa lưu thì chưa in.
+        printPath={doc ? `/api/receipt-confirmations/${doc.id}/pdf` : undefined}
         extraTabs={[...(doc ? [adjustmentTab] : []), attachmentTab]}
         header={
           <>
