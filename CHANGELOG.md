@@ -3,6 +3,38 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.29.0] - 2026-11-14
+
+Hoàn tất **danh mục nhóm hàng 4 cấp**: giao diện cây nhóm hàng (lát N4b) và mặt hàng chỉ gắn nhóm cấp 4 – Chủng loại (lát N4c).
+
+### Thêm mới
+- Màn hình **Nhóm hàng (CAT)** dạng cây: cột **Cấp** có ô số màu kèm tên cấp (Ngành hàng / Nhóm hàng / Loại hàng / Chủng loại), tên nhóm thụt
+  theo cấp với nút ▾/▸ **thu/mở nhánh**, cột Số nhóm con, ô lọc theo Cấp, nút **Mở hết nhánh / Thu gọn nhánh**.
+- Nút **Thêm nhóm con** cho dòng đang chọn: nhóm cha điền sẵn, ghi rõ cấp của nhóm sẽ tạo; tự khóa khi nhóm đã ở cấp 4, ngoài phạm vi của bạn
+  hoặc đã ngừng dùng – dòng gợi ý trên lưới nêu lý do.
+- Ngăn kéo nhóm hàng: ô **"Cấp n/4"** cạnh tiêu đề, dải **Đường dẫn** bấm được để mở nhóm cha/ông, ô **Cấp** chỉ đọc tự đổi theo nhóm cha,
+  tab **NHÓM CON** (danh sách nhóm con, bấm đúp để mở, nút Thêm nhóm con).
+- Mọi ô chọn nhóm hàng hiện **số cấp** trước tên. Ô chọn nhóm cha khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (ghi lý do sau tên).
+
+### Thay đổi
+- **Mặt hàng chỉ gắn vào nhóm cấp 4 – Chủng loại**: thêm mặt hàng, chuyển mặt hàng sang nhóm khác, nhập Excel hàng hóa vào nhóm cấp 1–3 đều báo
+  lỗi nêu cấp của nhóm. Ô Nhóm hàng của mặt hàng chỉ chọn được nhóm cấp 4 (nhóm cấp 1–3 vẫn hiện để mở nhánh).
+- Mặt hàng có từ trước đang ở nhóm cấp thấp hơn **giữ nguyên nhóm** và vẫn sửa được thông tin khác; chỉ khi đổi nhóm mới phải chọn nhóm cấp 4.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (không migration, không script `db/scripts`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng, giữ `appsettings.Production.json`. Không cần chạy script CSDL, không có quyền mới. Nên sao lưu CSDL như mọi lần nâng.
+- Muốn thêm mặt hàng mới thì nhánh nhóm hàng phải đủ 4 cấp – dựng thêm nhóm con ở màn hình CAT (nút Thêm nhóm con).
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.28.0 (`app-0.28.0`) – không có thay đổi CSDL nên không cần gỡ migration hay khôi phục dữ liệu.
+
 ## [0.28.0] - 2026-11-14
 
 Bản test **danh mục nhóm hàng tối đa 4 cấp** (lát N4a – phần máy chủ + giao diện tối thiểu), kèm các lát đã xong sau 0.27.1: in phiếu XNH,
