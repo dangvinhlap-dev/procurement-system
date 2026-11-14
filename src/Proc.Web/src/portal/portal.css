@@ -240,3 +240,35 @@
     grid-template-columns: 150px 1fr;
   }
 }
+
+/* Hồ sơ công ty (lát P2a): thông tin hiện tại hai cặp nhãn – giá trị trên một hàng; màn hình hẹp về một cặp. */
+.erp-portal-profile-fields {
+  grid-template-columns: 130px 1fr 130px 1fr;
+}
+
+/* Form đề nghị cập nhật hồ sơ: hai ô một hàng (tên công ty, địa chỉ, phạm vi cung cấp chiếm cả hàng). */
+.erp-portal-profile-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--erp-gap);
+}
+
+.erp-portal-profile-head .is-wide {
+  grid-column: 1 / -1;
+}
+
+/* Ô so sánh: giá trị đề nghị khác giá trị lúc gửi in đậm màu tiêu đề; giá trị Phòng CUVT đã sửa trong lúc chờ có chữ cảnh báo đỏ. */
+.erp-portal-profile-new {
+  font-weight: 700;
+  color: var(--erp-title);
+}
+
+@media (max-width: 720px) {
+  .erp-portal-profile-fields {
+    grid-template-columns: 130px 1fr;
+  }
+
+  .erp-portal-profile-head {
+    grid-template-columns: 1fr;
+  }
+}

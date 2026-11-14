@@ -52,7 +52,8 @@ public sealed class PortalProfileService : IPortalProfileService
         return new PortalProfileDto(
             supplier.Code, supplier.Name, supplier.ShortName, supplier.TaxCode, supplier.IsForeign, supplier.Address, supplier.Phone, supplier.Email,
             supplier.Website, supplier.SupplyScope, supplier.PaymentTerms, supplier.Status.ToString(), SupplierProfileRequestMapper.ContactsOf(supplier),
-            SupplierProfileRequestMapper.BanksOf(supplier), session.IsSupplierAdmin && pending is null, pending?.No, dtos);
+            SupplierProfileRequestMapper.BanksOf(supplier), session.IsSupplierAdmin && pending is null, pending?.No, dtos,
+            _attachments.MaxFileSizeMb);
     }
 
     /// <inheritdoc />

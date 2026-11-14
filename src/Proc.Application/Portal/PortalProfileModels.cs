@@ -81,10 +81,12 @@ public sealed record SupplierProfileRequestDto(
 /// <param name="CanSubmit">Người xem gửi được đề nghị (quản trị NCC, chưa có đề nghị đang chờ).</param>
 /// <param name="PendingRequestNo">Số đề nghị đang chờ (nếu có).</param>
 /// <param name="Requests">Các đề nghị đã gửi, mới nhất trước.</param>
+/// <param name="MaxFileSizeMb">Dung lượng tối đa một file kèm (MB, cấu hình máy chủ).</param>
 public sealed record PortalProfileDto(
     string Code, string Name, string? ShortName, string? TaxCode, bool IsForeign, string? Address, string? Phone, string? Email, string? Website,
     string? SupplyScope, string? PaymentTerms, string Status, IReadOnlyList<SupplierProfileContactDto> Contacts,
-    IReadOnlyList<SupplierProfileBankDto> BankAccounts, bool CanSubmit, string? PendingRequestNo, IReadOnlyList<SupplierProfileRequestDto> Requests);
+    IReadOnlyList<SupplierProfileBankDto> BankAccounts, bool CanSubmit, string? PendingRequestNo, IReadOnlyList<SupplierProfileRequestDto> Requests,
+    int MaxFileSizeMb);
 
 /// <summary>
 /// NCC gửi đề nghị cập nhật hồ sơ: đủ thông tin chung, đủ danh sách người liên hệ, tài khoản (hệ thống tự tìm phần đổi). Không có mã số thuế –

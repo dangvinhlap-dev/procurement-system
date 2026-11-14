@@ -171,6 +171,8 @@ export const screens: Screen[] = [
   { code: 'SUPCOV', title: 'NCC đủ điều kiện theo nhóm hàng', navLabel: 'NCC đủ điều kiện', path: '/gia-ncc/ncc-du-dieu-kien', icon: <SafetyCertificateOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'SUPREV', title: 'Đánh giá NCC định kỳ', navLabel: 'Đánh giá NCC định kỳ', path: '/gia-ncc/danh-gia-ncc-dinh-ky', icon: <StarOutlined />, group: 'pricing', anyPermission: [Permission.SupplierReviewView, Permission.SupplierReviewManage] },
   // Hồ sơ đánh giá NCC mới (lát G8, design.md mục 18.25): Phòng cung ứng đánh giá, Văn phòng Ban đề xuất, Hội đồng duyệt ở SUPAPR.
+  // Đề nghị cập nhật hồ sơ NCC gửi từ Portal (lát P2a, design.md 19.5): Phòng CUVT tổng công ty chấp nhận / từ chối.
+  { code: 'HSC', title: 'Đề nghị cập nhật hồ sơ NCC', navLabel: 'Đề nghị cập nhật NCC', path: '/gia-ncc/de-nghi-cap-nhat-ncc', icon: <AuditOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'HSN', title: 'Hồ sơ đánh giá NCC mới', navLabel: 'Hồ sơ NCC mới', path: '/gia-ncc/ho-so-ncc-moi', icon: <AuditOutlined />, group: 'pricing', anyPermission: [Permission.SupplierOnboardingView, Permission.SupplierOnboardingManage, Permission.SupplierOnboardingPropose] },
   { code: 'SGRP', title: 'Nhóm nhà cung cấp', navLabel: 'Nhóm NCC', path: '/gia-ncc/nhom-ncc', icon: <GroupOutlined />, group: 'pricing', permission: Permission.SupplierView },
   { code: 'ITEM', title: 'Danh mục hàng hóa', navLabel: 'Hàng hóa', path: '/gia-ncc/hang-hoa', icon: <TagsOutlined />, group: 'pricing', permission: Permission.ItemView },

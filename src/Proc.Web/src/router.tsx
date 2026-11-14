@@ -24,12 +24,14 @@ import {
 } from './portal/PortalPages'
 import { PortalOrderListPage, PortalOrderPage } from './portal/PortalOrderPages'
 import { PortalPaymentListPage, PortalPaymentPage } from './portal/PortalPaymentPages'
+import { PortalProfilePage } from './portal/PortalProfilePages'
 import { PortalRfqListPage, PortalRfqPage } from './portal/PortalRfqPages'
 import { DocumentRegistryPage } from './pages/DocumentRegistryPage'
 import { ItemCategoryListPage } from './pages/masterData/ItemCategoryListPage'
 import { ItemListPage } from './pages/masterData/ItemListPage'
 import { SupplierGroupListPage } from './pages/masterData/SupplierGroupListPage'
 import { SupplierApprovalDetailPage, SupplierApprovalPage } from './pages/masterData/SupplierApprovalPage'
+import { SupplierProfileRequestDetailPage, SupplierProfileRequestPage } from './pages/masterData/SupplierProfileRequestPage'
 import { ConflictListPage } from './pages/pricing/ConflictListPage'
 import { ConstructionProjectListPage } from './pages/purchasing/ConstructionProjectListPage'
 import { PurchasingUnitListPage } from './pages/purchasing/PurchasingUnitListPage'
@@ -139,6 +141,7 @@ const implemented: Record<string, ReactNode> = {
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
   SUPAPR: <SupplierApprovalPage />,
+  HSC: <SupplierProfileRequestPage />,
   COI: <ConflictListPage />,
   NDQ: <SoleSourceListPage />,
   SUPREV: <SupplierReviewPage />,
@@ -249,6 +252,7 @@ const documentPages = [
 const drawerPages = [
   { code: 'CTR', path: '/mua-hang/hop-dong-khung/phu-luc/:id', element: <ContractAmendmentPage /> },
   { code: 'SUPAPR', path: '/gia-ncc/duyet-ncc/:id', element: <SupplierApprovalDetailPage /> },
+  { code: 'HSC', path: '/gia-ncc/de-nghi-cap-nhat-ncc/:id', element: <SupplierProfileRequestDetailPage /> },
   { code: 'NDQ', path: '/gia-ncc/ncc-doc-quyen/:id', element: <SoleSourceDetailPage /> },
   { code: 'SUPREV', path: '/gia-ncc/danh-gia-ncc-dinh-ky/:id', element: <SupplierReviewDetailPage /> },
   { code: 'VIOL', path: '/bao-cao/so-vi-pham/:id', element: <ControlFindingDetailPage /> },
@@ -316,6 +320,7 @@ export const router = createBrowserRouter([
       { path: 'don-hang/:id', element: <RequirePortal><PortalOrderPage /></RequirePortal> },
       { path: 'thanh-toan', element: <RequirePortal><PortalPaymentListPage /></RequirePortal> },
       { path: 'thanh-toan/:id', element: <RequirePortal><PortalPaymentPage /></RequirePortal> },
+      { path: 'ho-so', element: <RequirePortal><PortalProfilePage /></RequirePortal> },
     ],
   },
   // Trang duyệt gọn trên điện thoại (lát O2d): khung một cột riêng nên đứng ngoài AppShell. Không gắn quyền màn hình – chỉ hiện phiếu máy chủ

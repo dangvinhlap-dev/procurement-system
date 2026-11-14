@@ -855,3 +855,9 @@ body.erp-col-resizing {
 .app-tab-panel:not(.is-active) {
   visibility: hidden;
 }
+
+/* Khối so sánh đề nghị cập nhật hồ sơ NCC (lát P2a) – dòng tiêu đề nhỏ trước mỗi lưới; dùng cả trong ngăn kéo nội bộ và Portal. */
+.erp-profile-compare-title {
+  margin: 4px 0 2px;
+  color: var(--erp-title);
+}

@@ -321,12 +321,14 @@ async function portalRaw(path: string, init: { method?: string; body?: BodyInit 
  * @param kind "rfqs" hoặc "orders".
  * @returns Các lệnh danh sách, tải lên, xóa, tải xuống.
  */
-export function portalFiles(kind: 'rfqs' | 'orders' | 'delivery-notices') {
-  // Phiếu báo giao (lát P5) nằm dưới đơn: id = "Id đơn/Id phiếu báo giao".
+export function portalFiles(kind: PortalFileKind) {
+  // Phiếu báo giao (lát P5) nằm dưới đơn: id = "Id đơn/Id phiếu báo giao"; đề nghị cập nhật hồ sơ (lát P2a) nằm dưới /profile.
   const base = (id: string) =>
     kind === 'delivery-notices'
       ? `/api/portal/orders/${id.split('/')[0]}/delivery-notices/${id.split('/')[1]}/attachments`
-      : `/api/portal/${kind}/${id}/attachments`
+      : kind === 'profile-requests'
+        ? `/api/portal/profile/requests/${id}/attachments`
+        : `/api/portal/${kind}/${id}/attachments`
   return {
     list: (id: string) => portalFetch<PortalAttachment[]>(base(id)),
     upload: async (id: string, file: File, note: string | null) => {
@@ -398,6 +400,112 @@ export interface PortalOrderLine {
 
 /** Trạng thái phiếu báo giao (lát P5): đã gửi – chờ nhận, bên đặt đang kiểm nhận, đã nhận, NCC đã hủy. */
 export type PortalDeliveryNoticeStatus = 'Submitted' | 'Receiving' | 'Received' | 'Cancelled'
+
+/** Loại chứng từ có file NCC trên Portal: thư mời, đơn hàng, phiếu báo giao (P5), đề nghị cập nhật hồ sơ (P2a). */
+export type PortalFileKind = 'rfqs' | 'orders' | 'delivery-notices' | 'profile-requests'
+
+/** Người liên hệ NCC (hiện tại hoặc đề nghị) – lát P2a. */
+export interface SupplierProfileContact {
+  id: string | null
+  name: string
+  position: string | null
+  phone: string | null
+  email: string | null
+  isPrimary: boolean
+}
+
+/** Tài khoản ngân hàng NCC (hiện tại hoặc đề nghị) – lát P2a. */
+export interface SupplierProfileBank {
+  id: string | null
+  bankName: string
+  branch: string | null
+  accountNumber: string
+  accountName: string | null
+  isDefault: boolean
+}
+
+/** Một trường thông tin chung NCC đề nghị đổi: lúc gửi → đề nghị; hiện tại (khác lúc gửi khi Phòng CUVT đã sửa trong lúc chờ). */
+export interface SupplierProfileField {
+  field: string
+  label: string
+  old: string | null
+  new: string | null
+  current: string | null
+}
+
+/** Trạng thái đề nghị cập nhật hồ sơ NCC. */
+export type SupplierProfileRequestStatus = 'Submitted' | 'Accepted' | 'Rejected' | 'Withdrawn'
+
+/** Nhãn trạng thái đề nghị cập nhật hồ sơ NCC (dùng cả Portal và màn hình nội bộ). */
+export const supplierProfileRequestStatusLabels: Record<SupplierProfileRequestStatus, string> = {
+  Submitted: 'Chờ Phòng CUVT xử lý',
+  Accepted: 'Đã chấp nhận',
+  Rejected: 'Bị từ chối',
+  Withdrawn: 'NCC đã rút',
+}
+
+/** Đề nghị cập nhật hồ sơ NCC (lát P2a, design.md 19.5) – Portal và màn hình nội bộ dùng chung. */
+export interface SupplierProfileRequest {
+  id: string
+  no: string
+  supplierId: string
+  supplierCode: string
+  supplierName: string
+  status: SupplierProfileRequestStatus
+  submittedAt: string
+  submittedByEmail: string
+  submittedByName: string | null
+  note: string | null
+  summary: string
+  fields: SupplierProfileField[]
+  proposedContacts: SupplierProfileContact[] | null
+  currentContacts: SupplierProfileContact[]
+  proposedBankAccounts: SupplierProfileBank[] | null
+  currentBankAccounts: SupplierProfileBank[]
+  reviewedByName: string | null
+  closedAt: string | null
+  reviewComment: string | null
+  bankChangeRequestNo: string | null
+  bankChangeRequestId: string | null
+  canProcess: boolean
+  canWithdraw: boolean
+}
+
+/** Hồ sơ NCC trên Portal (trang "Hồ sơ công ty"). */
+export interface PortalProfile {
+  code: string
+  name: string
+  shortName: string | null
+  taxCode: string | null
+  isForeign: boolean
+  address: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  supplyScope: string | null
+  paymentTerms: string | null
+  status: string
+  contacts: SupplierProfileContact[]
+  bankAccounts: SupplierProfileBank[]
+  canSubmit: boolean
+  pendingRequestNo: string | null
+  requests: SupplierProfileRequest[]
+  maxFileSizeMb: number
+}
+
+/** Đề nghị cập nhật hồ sơ NCC gửi lên (không có mã số thuế – chỉ Phòng CUVT sửa trong phần mềm). */
+export interface PortalProfileUpdateInput {
+  name: string
+  shortName: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  supplyScope: string | null
+  contacts: SupplierProfileContact[]
+  bankAccounts: SupplierProfileBank[]
+  note: string | null
+}
 
 /** Nhãn trạng thái phiếu báo giao. */
 export const portalDeliveryNoticeStatusLabels: Record<PortalDeliveryNoticeStatus, string> = {
@@ -658,4 +766,12 @@ export const portalApi = {
   payments: () => portalFetch<PortalPaymentOrder[]>('/api/portal/payments'),
   /** Chi tiết thanh toán một đơn. */
   payment: (orderId: string) => portalFetch<PortalPaymentDetail>(`/api/portal/payments/${orderId}`),
+  /** Hồ sơ công ty kèm các đề nghị cập nhật đã gửi (lát P2a). */
+  profile: () => portalFetch<PortalProfile>('/api/portal/profile'),
+  /** Quản trị NCC gửi đề nghị cập nhật hồ sơ. */
+  submitProfile: (input: PortalProfileUpdateInput) =>
+    portalFetch<SupplierProfileRequest>('/api/portal/profile/requests', { method: 'POST', body: input }),
+  /** Quản trị NCC rút đề nghị còn chờ. */
+  withdrawProfile: (id: string, comment: string | null) =>
+    portalFetch<SupplierProfileRequest>(`/api/portal/profile/requests/${id}/withdraw`, { method: 'POST', body: { comment } }),
 }

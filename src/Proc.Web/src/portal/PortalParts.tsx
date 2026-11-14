@@ -4,7 +4,7 @@ import { Alert, App, Button, Input, Upload } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { DataGrid } from '../components/DataGrid/DataGrid'
 import type { GridColumn } from '../components/DataGrid/types'
-import { portalFiles, type PortalAttachment } from './portalApi'
+import { portalFiles, type PortalAttachment, type PortalFileKind } from './portalApi'
 
 /** Khối có dải tiêu đề của trang Portal (ui-style.md mục 5f). */
 export function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -26,8 +26,8 @@ const fileColumns: GridColumn<PortalAttachment>[] = [
 
 /** Thuộc tính khối file NCC. */
 interface PortalFilesProps {
-  /** Loại chứng từ: thư mời báo giá, đơn đặt hàng hoặc phiếu báo giao (lát P5). */
-  kind: 'rfqs' | 'orders' | 'delivery-notices'
+  /** Loại chứng từ: thư mời báo giá, đơn đặt hàng, phiếu báo giao (lát P5) hoặc đề nghị cập nhật hồ sơ (lát P2a). */
+  kind: PortalFileKind
   /** Id chứng từ (phiếu báo giao: "Id đơn/Id phiếu"). */
   id: string
   /** Tiêu đề khối (thêm số file ở cuối). */

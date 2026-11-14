@@ -65,6 +65,7 @@ export function PortalLayout() {
               <NavLink to="/ncc/bao-gia">Thư mời báo giá</NavLink>
               <NavLink to="/ncc/don-hang">Đơn đặt hàng</NavLink>
               <NavLink to="/ncc/thanh-toan">Thanh toán</NavLink>
+              <NavLink to="/ncc/ho-so">Hồ sơ công ty</NavLink>
               {session.me.isSupplierAdmin && <NavLink to="/ncc/nguoi-dung">Người dùng</NavLink>}
               <NavLink to="/ncc/doi-mat-khau">Đổi mật khẩu</NavLink>
             </nav>
@@ -446,7 +447,7 @@ export function PortalHomePage() {
       <Alert
         type="info"
         showIcon
-        title="Thư mời báo giá: mở mục Thư mời báo giá để xem và nộp báo giá. Xác nhận đơn hàng, báo giao hàng và hóa đơn sẽ có trên Portal ở các bản cập nhật tới. Thông tin NCC cần sửa, xin báo Phòng Cung ứng vật tư."
+        title="Thư mời báo giá, đơn đặt hàng (xác nhận, báo giao hàng), thanh toán: mở mục tương ứng trên thanh trên. Thông tin công ty cần sửa (địa chỉ, người liên hệ, tài khoản ngân hàng…): quản trị NCC gửi đề nghị ở mục Hồ sơ công ty; mã số thuế xin báo Phòng Cung ứng vật tư."
       />
     </>
   )
