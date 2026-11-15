@@ -44,6 +44,9 @@ param(
     [string]$HealthUrl,
     [string]$PgServiceName,
     [string]$PgDataPath,
+    # Lát QT8 (bộ thực thi 1.2.0 – cài bản phát hành): CSDL của phần mềm, nơi cất thư mục ứng dụng các bản đã cài.
+    [string]$DatabaseName,
+    [string]$ReleasesPath,
     [string]$TaskName = 'Procurement QT agent',
     [switch]$Uninstall,
     [switch]$DryRun
@@ -106,6 +109,8 @@ if ($AppPoolName) { $config.AppPoolName = $AppPoolName }
 if ($HealthUrl) { $config.HealthUrl = $HealthUrl }
 if ($PgServiceName) { $config.PgServiceName = $PgServiceName }
 if ($PgDataPath) { $config.PgDataPath = $PgDataPath }
+if ($DatabaseName) { $config.DatabaseName = $DatabaseName }
+if ($ReleasesPath) { $config.ReleasesPath = $ReleasesPath }
 [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 # File có khóa: bỏ kế thừa, chỉ quản trị máy, SYSTEM, tài khoản bộ thực thi.
 & icacls $configPath /inheritance:r /grant:r '*S-1-5-32-544:(F)' '*S-1-5-18:(F)' "${TaskUser}:(R)" | Out-Null

@@ -1004,8 +1004,14 @@ cài TEST).
   hạn / hủy cập nhật khi mở phiếu; bản trước lấy theo phiên bản bộ thực thi báo. API `/api/ops/v1/releases…` (`ReleaseEndpoints`). `publish.ps1`:
   thêm `rollback.json` (từ `db\scripts\rollback\<bản>.json`; có script CSDL mà chưa khai thì dừng), `CHANGELOG.md`, `tools\qt-agent*.ps1`, file
   `.sha256`. Test tích hợp `ReleaseTests` 4 (gói giả, GitHub giả `FakeGitHubHandler`, bộ thực thi giả); `dotnet test` 802/802.
-- **Còn**: QT8-3 bộ thực thi 1.2.0 (`DeployRelease`, `RollbackRelease` trên Windows/IIS), QT8-4 giao diện REL + e2e, QT8-5 tài liệu (trình người
-  dùng bản viết lại phat-hanh.md, CLAUDE.md 8).
+- **QT8-3 xong (script, commit)**: `qt-agent.ps1` **1.2.0** – `DeployRelease` (tải gói theo khóa, kiểm SHA256, `pg_dump` + `pg_restore --list`
+  vào `<StatePath>\predeploy\<bản>-from-<bản cũ>.dump`, `app_offline.htm`, cất bản đang chạy vào `<ReleasesPath>\<bản cũ>`, robocopy /MIR giữ
+  `appsettings.Production.json`, chạy `db-scripts\<bản>.sql` > bản đang chạy và ≤ bản mới, chờ `/health` Healthy đúng phiên bản + `agent/smoke`;
+  lỗi → trả bản cũ + khôi phục CSDL nếu đã chạy script; đạt → chép `tools\qt-agent.ps1` của gói đè chính nó cho lần sau – T1), `RollbackRelease`
+  (mức 1 / 2 `db-scripts\down\<bản>.sql` / 3 khôi phục bản sao lưu trước cài); kết quả gửi `installedSha256`. `qt-agent-install.ps1` thêm
+  `-DatabaseName -ReleasesPath`. Kiểm tra: cú pháp hai script, bộ lọc phiên bản script CSDL. **Chưa chạy thật trên IIS** (máy dev không có site IIS)
+  – diễn tập D3, D4 trên TEST.
+- **Còn**: QT8-4 giao diện REL + e2e, QT8-5 tài liệu (trình người dùng bản viết lại phat-hanh.md, CLAUDE.md 8).
 
 **Hoãn phát hành (15/11/2026)** – người dùng yêu cầu "phát hành bản 0.36.0" rồi đổi ý: "chờ có trung tâm phát hành". Chưa tạo tag, chưa đổi
 `Directory.Build.props` (vẫn 0.33.1). Phần chưa phát hành QT5 + QT6 (dự kiến 0.34.0) và QT7 (dự kiến 0.35.0) sẽ phát hành **cùng QT8 – REL** thành
