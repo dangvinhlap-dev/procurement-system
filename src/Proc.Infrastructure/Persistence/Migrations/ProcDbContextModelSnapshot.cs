@@ -2064,6 +2064,64 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Notification", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Operations.AccessPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApiPerMinutePerUser")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("BlockCommonPasswords")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExtraBlockedPasswords")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("HeavyConcurrentPerUser")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LockoutMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LoginPerMinutePerIp")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxFailedLogins")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinPasswordLength")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OpsAllowedIpRanges")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("SessionMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SessionsRevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AccessPolicy", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Operations.AgentCommand", b =>
                 {
                     b.Property<Guid>("Id")

@@ -92,6 +92,19 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsMaintenanceModeManage)
             .RequireHeadOffice();
 
+        // Cấu hình truy cập – màn hình CFG (lát QT7): xem – quyền xem vận hành hoặc quản lý CFG; sửa, đăng xuất tất cả (Q6) – quyền quản lý CFG.
+        var cfg = ops.MapGroup("/access-config");
+        cfg.MapGet("", (HttpContext http, IAccessConfigService s, CancellationToken ct) => s.GetAsync(http.Request.IsHttps, ct))
+            .RequireAnyPermission(Permissions.System.OpsView, Permissions.System.OpsConfigManage)
+            .RequireHeadOffice();
+        cfg.MapPut("", (SaveAccessConfigRequest request, HttpContext http, IAccessConfigService s, CancellationToken ct) =>
+                s.SaveAsync(request, http.Request.IsHttps, ct))
+            .RequirePermission(Permissions.System.OpsConfigManage)
+            .RequireHeadOffice();
+        cfg.MapPost("/sign-out-all", (SignOutAllRequest request, IAccessConfigService s, CancellationToken ct) => s.SignOutAllAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsConfigManage)
+            .RequireHeadOffice();
+
         // Quản trị bộ thực thi – màn hình AGT (lát QT5).
         var agt = ops.MapGroup("/agent-admin");
         agt.MapGet("/environments", (IAgentAdminService s, CancellationToken ct) => s.GetEnvironmentsAsync(ct))
@@ -168,7 +181,7 @@ public static class OperationsEndpoints
         });
 
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
-        // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
+        // tần suất ở ApiRateLimiting; xem và xử lý chỉ ở tổng công ty.
         ops.MapPost("/client-errors", ReportClientErrorAsync);
 
         ops.MapGet("/error-groups", (DateOnly from, DateOnly to, ErrorGroupStatus? status, string? trackingCode, IErrorLogService s,

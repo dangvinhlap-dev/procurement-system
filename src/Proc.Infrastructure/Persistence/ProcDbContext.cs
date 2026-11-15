@@ -293,6 +293,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lịch sử bảo trì CSDL – VACUUM, REINDEX, ngắt phiên (lát QT4, màn hình DBM).</summary>
     public DbSet<Proc.Domain.Operations.MaintenanceRun> MaintenanceRuns => Set<Proc.Domain.Operations.MaintenanceRun>();
 
+    /// <summary>Cấu hình truy cập CFG – một dòng (lát QT7).</summary>
+    public DbSet<Proc.Domain.Operations.AccessPolicy> AccessPolicies => Set<Proc.Domain.Operations.AccessPolicy>();
+
     /// <summary>Chế độ bảo trì – một dòng (lát QT5).</summary>
     public DbSet<Proc.Domain.Operations.MaintenanceModeState> MaintenanceModes => Set<Proc.Domain.Operations.MaintenanceModeState>();
 

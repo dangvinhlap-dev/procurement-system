@@ -121,6 +121,15 @@ public static class OperationKinds
 
     /// <summary>Hoán đổi xong / lỗi (lát QT6).</summary>
     public const string RestoreSwapFinished = "RestoreSwapFinished";
+
+    /// <summary>Lưu cấu hình truy cập CFG (lát QT7).</summary>
+    public const string AccessConfigChanged = "AccessConfigChanged";
+
+    /// <summary>Đăng xuất tất cả phiên (lát QT7 – Q6).</summary>
+    public const string SessionsRevoked = "SessionsRevoked";
+
+    /// <summary>Gọi chức năng vận hành từ IP ngoài dải cho phép (lát QT7).</summary>
+    public const string OpsIpDenied = "OpsIpDenied";
 }
 
 /// <summary>

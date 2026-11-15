@@ -22,13 +22,14 @@ public interface IAuthService
     Task<CurrentUserInfo?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Đổi mật khẩu của chính người dùng.
+    /// Đổi mật khẩu của chính người dùng. Đổi xong mọi phiên khác của người này hết hiệu lực (mã bảo mật đổi – lát QT7); phiên đang dùng nhận
+    /// token mới.
     /// </summary>
     /// <param name="userId">Người đang đăng nhập.</param>
     /// <param name="request">Mật khẩu hiện tại và mật khẩu mới (đã qua ChangePasswordRequestValidator).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
-    /// <returns>Danh sách lỗi tiếng Việt; rỗng khi đổi thành công.</returns>
-    Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
+    /// <returns>Lỗi tiếng Việt (rỗng khi đổi thành công) và phiên mới khi thành công.</returns>
+    Task<ChangePasswordOutcome> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Ghi nhận đổi công ty làm việc (nhật ký truy cập) sau khi kiểm tra người dùng được làm việc ở công ty đó.

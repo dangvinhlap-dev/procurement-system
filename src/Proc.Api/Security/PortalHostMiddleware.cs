@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Proc.Application.Operations;
 using Proc.Infrastructure.Portal;
 
 namespace Proc.Api.Security;
@@ -56,17 +57,29 @@ public sealed class PortalHostMiddleware
 }
 
 /// <summary>
-/// Thêm tiêu đề bảo mật cho mọi phản hồi (lát P1b): trình duyệt không đoán loại nội dung (<c>nosniff</c> – file đính kèm không bị chạy như
-/// HTML/script), không cho trang ngoài nhúng ứng dụng vào khung (chống bấm lừa), không gửi đường dẫn đầy đủ (có thể chứa mã mời) sang trang
-/// khác. <c>SAMEORIGIN</c> thay vì <c>DENY</c> để vẫn nhúng được trang / file của chính ứng dụng nếu cần.
+/// Thêm tiêu đề bảo mật cho mọi phản hồi (lát P1b; lát QT7 thêm CSP, Permissions-Policy, HSTS – giá trị ở <see cref="SecurityHeaderValues"/>, tab
+/// "Bảo mật" của CFG hiện cùng giá trị): trình duyệt không đoán loại nội dung (<c>nosniff</c> – file đính kèm không bị chạy như HTML/script),
+/// không cho trang ngoài nhúng ứng dụng vào khung (chống bấm lừa), không gửi đường dẫn đầy đủ (có thể chứa mã mời) sang trang khác.
+/// <c>SAMEORIGIN</c> thay vì <c>DENY</c> để vẫn nhúng được trang / file của chính ứng dụng (xem trước PDF). HSTS chỉ gửi khi request là HTTPS
+/// (trình duyệt bỏ qua HSTS trên HTTP) và không gửi ở máy dev (localhost dùng chung nhiều dự án).
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly string? _hsts;
 
     /// <summary>Tạo middleware.</summary>
     /// <param name="next">Middleware kế tiếp.</param>
-    public SecurityHeadersMiddleware(RequestDelegate next) => _next = next;
+    /// <param name="security">Cấu hình bảo mật theo máy (số ngày HSTS).</param>
+    /// <param name="environment">Môi trường chạy – máy dev không gửi HSTS.</param>
+    public SecurityHeadersMiddleware(RequestDelegate next, IOptions<SecurityOptions> security, IWebHostEnvironment environment)
+    {
+        _next = next;
+        var days = security.Value.HstsMaxAgeDays;
+        _hsts = days > 0 && !environment.IsDevelopment()
+            ? $"max-age={(long)TimeSpan.FromDays(days).TotalSeconds}"
+            : null;
+    }
 
     /// <summary>Gắn tiêu đề trước khi phản hồi bắt đầu gửi.</summary>
     /// <param name="context">Request hiện tại.</param>
@@ -78,7 +91,10 @@ public sealed class SecurityHeadersMiddleware
             var headers = context.Response.Headers;
             headers.XContentTypeOptions = "nosniff";
             headers.XFrameOptions = "SAMEORIGIN";
-            headers["Referrer-Policy"] = "same-origin";
+            headers["Referrer-Policy"] = SecurityHeaderValues.ReferrerPolicy;
+            headers.ContentSecurityPolicy = SecurityHeaderValues.ContentSecurityPolicy;
+            headers["Permissions-Policy"] = SecurityHeaderValues.PermissionsPolicy;
+            if (_hsts is not null && context.Request.IsHttps) headers.StrictTransportSecurity = _hsts;
             return Task.CompletedTask;
         });
         return _next(context);

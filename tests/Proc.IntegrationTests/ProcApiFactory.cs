@@ -41,6 +41,8 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        // Lát QT7: test giả lập IP người gọi qua header X-Test-Client-Ip (giới hạn tần suất, dải IP quản trị).
+        builder.ConfigureServices(s => s.AddTransient<IStartupFilter, TestClientIpStartupFilter>());
         // File đính kèm của test ghi vào thư mục tạm, không lẫn vào thư mục ứng dụng (design.md mục 18.4).
         builder.UseSetting("Attachments:RootPath", Path.Combine(Path.GetTempPath(), "proc-test-attachments"));
         // Sao lưu (lát QT3b): thư mục tạm có dấu cách + dấu tiếng Việt (thử truyền tham số lệnh); test tự gọi bộ chạy, không để dịch vụ nền chạy đua.

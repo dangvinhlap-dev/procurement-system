@@ -134,8 +134,27 @@ builder.Services.AddOptions<Proc.Infrastructure.Portal.PortalOptions>()
         "Portal:Audience không được trống và phải khác Jwt:Audience (token NCC không được dùng cho API nội bộ).")
     .ValidateOnStart();
 
-// Giới hạn tần suất API Portal theo IP (lát P1b, design.md 19.5 P1b-1).
-builder.Services.AddPortalRateLimiting();
+// Giới hạn tần suất: API Portal theo IP (lát P1b, design.md 19.5 P1b-1); đăng nhập, API nội bộ, việc nặng theo cấu hình truy cập CFG (lát QT7).
+builder.Services.AddApiRateLimiting();
+// Cấu hình bảo mật theo máy (lát QT7): proxy được tin để đọc IP thật, HSTS.
+builder.Services.AddOptions<Proc.Application.Operations.SecurityOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.SecurityOptions.Section))
+    .Validate(o => o.KnownProxies.All(p => string.IsNullOrWhiteSpace(p) || System.Net.IPNetwork.TryParse(p.Contains('/') ? p : p + (p.Contains(':') ? "/128" : "/32"), out _)),
+        "Security:KnownProxies chỉ nhận địa chỉ IP hoặc dải CIDR (ví dụ 172.16.0.0/12).")
+    .Validate(o => o.HstsMaxAgeDays is >= 0 and <= 730, "Security:HstsMaxAgeDays phải từ 0 đến 730.")
+    .ValidateOnStart();
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
+{
+    // Chỉ tin header X-Forwarded-* từ proxy đã khai (lát QT7): mặc định của ASP.NET tin loopback – bỏ đi để danh sách khai là danh sách duy nhất.
+    o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    o.KnownProxies.Clear();
+    o.KnownIPNetworks.Clear();
+    foreach (var proxy in builder.Configuration.GetSection("Security:KnownProxies").Get<string[]>() ?? [])
+    {
+        if (string.IsNullOrWhiteSpace(proxy)) continue;
+        o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(proxy.Contains('/') ? proxy : proxy + (proxy.Contains(':') ? "/128" : "/32")));
+    }
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer()
@@ -210,6 +229,9 @@ await using (var startupScope = app.Services.CreateAsyncScope())
     }
 }
 
+// Đọc IP thật sau reverse proxy – chỉ khi đã khai Security:KnownProxies (lát QT7); IIS in-process đã đưa sẵn IP thật.
+if (builder.Configuration.GetSection("Security:KnownProxies").Get<string[]>()?.Any(p => !string.IsNullOrWhiteSpace(p)) == true)
+    app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -230,6 +252,13 @@ if (hostsWebApp)
     });
 }
 
+// Làm mới bản đệm cấu hình truy cập CFG trước bộ giới hạn tần suất (bộ giới hạn chỉ đọc được bản đệm, không chờ CSDL) – lát QT7.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+        await context.RequestServices.GetRequiredService<Proc.Application.Operations.IAccessPolicyProvider>().GetAsync(context.RequestAborted);
+    await next(context);
+});
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -245,9 +274,12 @@ if (app.Environment.IsDevelopment())
 }
 
 // Health check: 200 khi CSDL kết nối được, 503 khi không; trả JSON để giao diện và giám sát đọc được.
+// Lát QT7: ẩn danh chỉ trạng thái + phiên bản; từng mục kiểm tra cho người có quyền xem vận hành.
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
-    ResponseWriter = (context, report) => HealthResponseWriter.WriteAsync(context, report, version),
+    ResponseWriter = (context, report) => HealthResponseWriter.WriteAsync(context, report, version,
+        context.User.Identity?.IsAuthenticated == true
+        && context.RequestServices.GetRequiredService<ICurrentUserScope>().HasPermission(Proc.Domain.Organization.Permissions.System.OpsView)),
 }).AllowAnonymous();
 
 app.MapAuthEndpoints();

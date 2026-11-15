@@ -25,9 +25,6 @@ public sealed class JwtOptions
     /// <summary>Khóa bí mật ký token, tối thiểu 32 ký tự.</summary>
     public string SigningKey { get; set; } = string.Empty;
 
-    /// <summary>Thời hạn token (phút). Mặc định 480 = 8 giờ, đủ một ngày làm việc.</summary>
-    public int LifetimeMinutes { get; set; } = 480;
-
     /// <summary>Khóa ký dạng đối tượng của thư viện IdentityModel.</summary>
     public SymmetricSecurityKey CreateSecurityKey() => new(Encoding.UTF8.GetBytes(SigningKey));
 }
@@ -51,16 +48,22 @@ public sealed class JwtTokenService
         _clock = clock;
     }
 
+    /// <summary>Tên claim mang mã bảo mật (SecurityStamp) của tài khoản lúc cấp token (lát QT7).</summary>
+    public const string SecurityStampClaim = "sstamp";
+
     /// <summary>
     /// Tạo token cho người dùng. Token chỉ chứa định danh; công ty và vai trò không đưa vào token
     /// để khi quản trị đổi quyền thì có hiệu lực ngay, không phải chờ token hết hạn.
+    /// Lát QT7: kèm mã bảo mật của tài khoản – đổi / đặt lại mật khẩu thì mã đổi, token cũ bị từ chối ở <c>UserScopeLoader</c>.
     /// </summary>
     /// <param name="user">Tài khoản.</param>
+    /// <param name="lifetimeMinutes">Hạn phiên (phút) – từ cấu hình truy cập CFG.</param>
     /// <returns>Chuỗi token và thời điểm hết hạn (UTC).</returns>
-    public (string Token, DateTimeOffset ExpiresAt) CreateToken(AppUser user)
+    public (string Token, DateTimeOffset ExpiresAt) CreateToken(AppUser user, int lifetimeMinutes)
     {
+        ArgumentNullException.ThrowIfNull(user);
         var now = _clock.UtcNow;
-        var expires = now.AddMinutes(_options.LifetimeMinutes);
+        var expires = now.AddMinutes(lifetimeMinutes);
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = _options.Issuer,
@@ -73,6 +76,7 @@ public sealed class JwtTokenService
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(SecurityStampClaim, user.SecurityStamp ?? string.Empty),
             ]),
             SigningCredentials = new SigningCredentials(_options.CreateSecurityKey(), SecurityAlgorithms.HmacSha256),
         };

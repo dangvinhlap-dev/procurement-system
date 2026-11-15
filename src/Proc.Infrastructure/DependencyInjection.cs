@@ -30,15 +30,6 @@ public static class DependencyInjection
     /// <summary>Tên health check kiểm tra kết nối PostgreSQL.</summary>
     public const string DatabaseHealthCheckName = "database";
 
-    /// <summary>Số lần nhập sai mật khẩu liên tiếp thì tạm ngưng đăng nhập (người dùng chốt 15/11/2026 – design.md mục 9.4).</summary>
-    public const int MaxFailedLoginAttempts = 5;
-
-    /// <summary>
-    /// Thời gian phải chờ mới đăng nhập lại được sau khi sai đủ số lần (người dùng chốt 15/11/2026: 10 phút, <b>không khóa hẳn tài khoản</b> – hết
-    /// thời gian tự đăng nhập được, không cần quản trị mở).
-    /// </summary>
-    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(10);
-
     /// <summary>
     /// Đăng ký DbContext (PostgreSQL), Identity, dịch vụ đăng nhập, đồng hồ và health check CSDL.
     /// Cấu hình JwtOptions, DatabaseOptions, SeedOptions do lớp Api bind từ appsettings.
@@ -173,6 +164,9 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Operations.IAgentAdminService, Proc.Infrastructure.Operations.AgentAdminService>();
         services.AddScoped<Proc.Application.Operations.IAgentGateway, Proc.Infrastructure.Operations.AgentGateway>();
         services.AddSingleton<Proc.Application.Operations.IMaintenanceMode, Proc.Infrastructure.Operations.MaintenanceModeService>();
+        // Cấu hình truy cập CFG (lát QT7): bản đệm dùng chung mọi request + dịch vụ màn hình.
+        services.AddSingleton<Proc.Application.Operations.IAccessPolicyProvider, Proc.Infrastructure.Operations.AccessPolicyProvider>();
+        services.AddScoped<Proc.Application.Operations.IAccessConfigService, Proc.Infrastructure.Operations.AccessConfigService>();
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.
         services.AddSingleton<Proc.Application.Operations.IErrorRecorder, Proc.Infrastructure.Operations.ErrorRecorder>();
@@ -201,23 +195,24 @@ public static class DependencyInjection
 
         services.AddIdentityCore<AppUser>(options =>
             {
-                // Quy tắc mật khẩu: tối thiểu 8 ký tự, có chữ thường và chữ số; không bắt buộc chữ hoa/ký tự đặc biệt
-                // để người dùng dễ nhớ mà vẫn đủ mạnh khi kết hợp khóa tạm.
-                options.Password.RequiredLength = 8;
+                // Quy tắc mật khẩu: có chữ thường và chữ số; không bắt buộc chữ hoa/ký tự đặc biệt để người dùng dễ nhớ mà vẫn đủ mạnh khi kết hợp
+                // khóa tạm. Độ dài tối thiểu (≥ 8) và mật khẩu phổ biến do PolicyPasswordValidator kiểm theo cấu hình truy cập CFG (lát QT7) – đặt 1
+                // ở đây để không báo hai câu độ dài khác số.
+                options.Password.RequiredLength = 1;
                 options.Password.RequireDigit = true;
                 options.Password.RequireLowercase = true;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireNonAlphanumeric = false;
 
-                // Khóa tạm khi đăng nhập sai nhiều lần (design.md mục 2.2: "khóa tài khoản").
+                // Khóa tạm khi đăng nhập sai nhiều lần (design.md mục 2.2: "khóa tài khoản"; người dùng chốt 15/11/2026: hết thời gian tự đăng nhập
+                // được). Số lần, số phút theo cấu hình truy cập CFG – AuthService tự đếm (lát QT7), không dùng AccessFailedAsync của Identity.
                 options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = MaxFailedLoginAttempts;
-                options.Lockout.DefaultLockoutTimeSpan = LockoutDuration;
 
                 options.User.RequireUniqueEmail = false;
             })
             .AddEntityFrameworkStores<ProcDbContext>()
-            .AddErrorDescriber<VietnameseIdentityErrorDescriber>();
+            .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
+            .AddPasswordValidator<PolicyPasswordValidator>();
 
         services.AddScoped<JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
