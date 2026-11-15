@@ -21,7 +21,7 @@ namespace Proc.Infrastructure.Operations;
 /// <list type="number">
 /// <item>Tính dấu vết (<see cref="ErrorFingerprint"/>); chưa có nhóm thì tạo nhóm Mới (hai request cùng tạo – trùng khóa – thì quay về bước 2).</item>
 /// <item>Đã có nhóm: tăng số lần, lần cuối bằng một lệnh UPDATE nguyên tử; nhóm Đã xử lý thì chuyển về Mới, tăng số lần mở lại.</item>
-/// <item>Nhóm mới hoặc mở lại: thông báo trong phần mềm cho người có quyền <c>System.Ops.ErrorLog.Manage</c> ở tổng công ty – <b>không gửi
+/// <item>Nhóm mới hoặc mở lại: thông báo trong phần mềm cho người có quyền <c>System.OpsErrorLog.Manage</c> ở tổng công ty – <b>không gửi
 /// email</b> (người dùng chốt 15/11/2026).</item>
 /// </list>
 /// Không bao giờ ném lỗi: hỏng thì ghi log kỹ thuật kèm mã theo dõi, vẫn trả mã cho người dùng.

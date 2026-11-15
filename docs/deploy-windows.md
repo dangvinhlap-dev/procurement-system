@@ -72,6 +72,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | --- | --- |
 | `App:Environment` | **Bắt buộc** (lát QT1): `Prod` trên máy chạy thật, `Test` trên máy thử nghiệm. Bỏ trống thì máy coi là "chưa khai": **không gửi email nào**, mọi màn hình hiện dải đỏ cảnh báo; khai sai tên thì ứng dụng không khởi động |
 | `Operations:LogDirectory` | Thư mục file nhật ký vận hành, ngoài thư mục ứng dụng: `D:\ProcurementData\operations-log` |
+| `Operations:ClientErrorPermitPerMinute` | Không bắt buộc (mặc định 30): số lỗi giao diện một phiên đăng nhập được gửi về nhật ký lỗi mỗi phút (lát QT2) |
 | `ConnectionStrings:Procurement` | Mật khẩu CSDL của tài khoản `proc` |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
@@ -171,7 +172,9 @@ Chép `E:\ProcurementBackup` ra máy khác định kỳ. Tác vụ báo "Last Ru
 **Từ bản 0.32.0** (lát QT1): trước khi chép bản mới, thêm `App:Environment` (`Prod` / `Test`) và `Operations:LogDirectory` vào
 `appsettings.Production.json`; máy TEST thêm `Email:RedirectAllTo`. Quên khai `App:Environment` thì phần mềm vẫn chạy nhưng không gửi email và
 hiện dải đỏ cảnh báo cho tới khi khai rồi khởi động lại App Pool. Sau khi nâng, màn hình **Hệ thống → Tổng quan hệ thống** (SYS) phải không còn
-migration chờ, dòng môi trường đúng.
+migration chờ, dòng môi trường đúng. Kiểm tra nhật ký lỗi (lát QT2): màn hình **Hệ thống → Nhật ký lỗi** (ERR) bấm **Thử lỗi máy chủ** và **Thử lỗi
+giao diện** – cả hai hiện dòng mới; sau đó đánh dấu Đã xử lý. Số ngày giữ nhật ký lỗi chỉnh ở Tham số hệ thống của tổng công ty
+(`ERRLOG_KEEP_DAYS`, mặc định 90).
 
 ## 6. Khôi phục
 

@@ -76,7 +76,7 @@ const occurrenceColumns: GridColumn<ErrorOccurrence>[] = [
 /**
  * Màn hình ERR – Nhật ký lỗi (design.md mục 21.4, lát QT2): lỗi máy chủ (500) và lỗi giao diện gộp theo nhóm, kèm số lần, lần đầu / lần cuối,
  * trạng thái Mới / Đang xử lý / Đã xử lý (đã xử lý mà lặp lại thì tự về Mới). Ô "Mã theo dõi" tìm đúng lỗi người dùng báo (mã trên câu báo
- * lỗi). Chỉ ở tổng công ty; quyền xem System.Ops.ErrorLog.View, đổi trạng thái / gây lỗi thử System.Ops.ErrorLog.Manage. Đường dẫn
+ * lỗi). Chỉ ở tổng công ty; quyền xem System.OpsErrorLog.View, đổi trạng thái / gây lỗi thử System.OpsErrorLog.Manage. Đường dẫn
  * `/he-thong/nhat-ky-loi/:id` (từ thông báo) mở sẵn nhóm lỗi đó.
  */
 export function ErrorLogListPage() {

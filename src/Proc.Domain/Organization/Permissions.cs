@@ -48,12 +48,12 @@ public static class Permissions
         /// </summary>
         public const string OpsView = "System.Ops.View";
         /// <summary>Quyền "Xem nhật ký lỗi" (màn hình ERR – lát QT2): nhóm lỗi máy chủ và giao diện, chi tiết kỹ thuật. Chỉ ở tổng công ty.</summary>
-        public const string OpsErrorLogView = "System.Ops.ErrorLog.View";
+        public const string OpsErrorLogView = "System.OpsErrorLog.View";
         /// <summary>
         /// Quyền "Xử lý nhật ký lỗi" (lát QT2): đổi trạng thái / ghi chú nhóm lỗi, gây lỗi thử; người có quyền này ở tổng công ty nhận thông báo
         /// trong phần mềm (không email) khi có nhóm lỗi mới.
         /// </summary>
-        public const string OpsErrorLogManage = "System.Ops.ErrorLog.Manage";
+        public const string OpsErrorLogManage = "System.OpsErrorLog.Manage";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>

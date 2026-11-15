@@ -17,8 +17,8 @@ test('xem tham số công ty, sửa số NCC tối thiểu khi gửi RFQ và % c
   // 2 tham số sửa được (số NCC tối thiểu, % cảnh báo giá cao – mục 8.5) + 1 bật/tắt hồ sơ trình (mục 8.6) + 2 bật/tắt nhận hàng (mục 18.14)
   // + 3 SLA mua hàng (mục 18.13) + 8 mục tiêu KPI (mục 18.18) + 1 % biên độ phân bổ đặt hàng gộp (lát G7 – mục 18.25) + 1 bật/tắt duyệt NCC
   // mới không qua hồ sơ HSN (lát G8) + 1 ngưỡng so sánh 3 NCC loại A (lát Y6, mặc định 0). Lát K3 bỏ % markup nội bộ, nhập mua theo PO,
-  // 2 tham số kho chỉ xem, 2 tham số KPI tồn chậm.
-  await expect(page.locator('.data-grid-row')).toHaveCount(19)
+  // 2 tham số kho chỉ xem, 2 tham số KPI tồn chậm. Lát QT2 thêm số ngày giữ nhật ký lỗi (ERRLOG_KEEP_DAYS).
+  await expect(page.locator('.data-grid-row')).toHaveCount(20)
   await expect(page.locator('.data-grid-row', { hasText: 'Ngưỡng so sánh 3 NCC' })).toContainText('0')
   await expect(page.locator('.data-grid-row', { hasText: '% biên độ phân bổ đặt hàng gộp' })).toContainText('10')
   await expect(page.locator('.data-grid-row', { hasText: 'Nhập mua bắt buộc theo đơn mua hàng' })).toHaveCount(0)

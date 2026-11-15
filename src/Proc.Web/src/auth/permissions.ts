@@ -13,9 +13,9 @@ export const Permission = {
   /** Xem tổng quan vận hành SYS, nhật ký vận hành – chỉ ở tổng công ty (design.md mục 21, lát QT1). */
   OpsView: 'System.Ops.View',
   /** Xem nhật ký lỗi ERR – chỉ ở tổng công ty (lát QT2). */
-  ErrorLogView: 'System.Ops.ErrorLog.View',
+  ErrorLogView: 'System.OpsErrorLog.View',
   /** Đổi trạng thái nhóm lỗi, gây lỗi thử; nhận thông báo lỗi mới (lát QT2). */
-  ErrorLogManage: 'System.Ops.ErrorLog.Manage',
+  ErrorLogManage: 'System.OpsErrorLog.Manage',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',
