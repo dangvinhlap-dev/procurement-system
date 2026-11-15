@@ -23,7 +23,7 @@ public enum ScopeLoadResult
 }
 
 /// <summary>Thông tin phiên lấy từ token để kiểm tra thu hồi (lát QT7).</summary>
-/// <param name="SecurityStamp">Mã bảo mật của tài khoản lúc cấp token (claim <c>sstamp</c>); null = token cấp trước bản 0.35.0.</param>
+/// <param name="SecurityStamp">Mã bảo mật của tài khoản lúc cấp token (claim <c>sstamp</c>); null = token cấp trước bản 0.36.0.</param>
 /// <param name="IssuedAt">Giờ cấp token (claim <c>iat</c>, UTC).</param>
 public sealed record SessionClaims(string? SecurityStamp, DateTimeOffset? IssuedAt);
 
@@ -69,7 +69,7 @@ public sealed class UserScopeLoader
 
         if (session is not null)
         {
-            // Token cấp trước bản 0.35.0 không có mã bảo mật → đăng nhập lại một lần sau khi nâng cấp.
+            // Token cấp trước bản 0.36.0 không có mã bảo mật → đăng nhập lại một lần sau khi nâng cấp.
             if (session.SecurityStamp is null || !string.Equals(session.SecurityStamp, user.SecurityStamp, StringComparison.Ordinal))
                 return ScopeLoadResult.SessionRevoked;
             var revokedAt = (await _policy.GetAsync(cancellationToken)).SessionsRevokedAt;

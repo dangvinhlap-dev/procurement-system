@@ -913,3 +913,23 @@ body.erp-col-resizing {
     grid-template-columns: 1fr;
   }
 }
+
+/* Màn hình REL – trung tâm phát hành (lát QT8, ui-style.md mục 5q): lưới trong tab phiếu có chiều cao cố định, nút dưới lưới, SHA256 phông đơn cách. */
+.erp-rel-grid {
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+.erp-rel-grid-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.erp-rel-hint {
+  color: var(--erp-text-muted);
+}
+.erp-mono {
+  font-family: var(--erp-font-mono);
+}

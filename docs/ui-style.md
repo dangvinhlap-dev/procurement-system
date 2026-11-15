@@ -322,6 +322,27 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - Hộp thoại **Đăng xuất tất cả** theo bố cục việc nguy hiểm mục 5m: cảnh báo vàng (mọi người phải đăng nhập lại, phiếu nhập dở mất; phiên của bạn
   giữ lại), ô **Lý do**, **Mật khẩu của bạn**, **Gõ "ĐĂNG XUẤT TẤT CẢ" để xác nhận**; nút **Đăng xuất tất cả** đỏ (icon) phải, **Không đăng xuất** trái.
 
+## 5q. Màn hình REL – Trung tâm phát hành (lát QT8, 15/11/2026 – design.md mục 21.17)
+
+- Danh sách: khuôn `ListPage` + `DataGrid` – Phiên bản, Trạng thái (đèn kèm chữ: Đã nhận / Đã đóng / Đã hủy trung tính, Đang UAT vàng, UAT đạt / Đã
+  cài PROD xanh, Đã quay về đỏ), Kiểm thử "đã / tổng", Lỗi chưa xử lý, Nguồn, Dung lượng, Nhận lúc, Người nhận, Cài PROD lúc. Thông báo đầu trang:
+  "Máy này: <môi trường> – phiên bản …" + bộ thực thi từng môi trường (đang liên lạc / mất liên lạc), "Chế độ một môi trường" khi chưa khai TEST; máy
+  TEST thông báo vàng chỉ xem. Nút **Nhận gói tải lên…** (icon tải lên xanh), **Nhận từ GitHub…** (icon tải về xanh, khi đã khai kho), **Làm mới**.
+  Bấm đúp mở phiếu.
+- Hộp thoại nhận gói: thông báo xanh dương cách đóng gói, nút **Chọn file…** (dòng dưới ghi tên file – dung lượng), ô SHA256 (64 ký tự hex), Ghi chú;
+  **Bỏ qua** trái – **Nhận gói** phải.
+- Phiếu: khuôn `DocumentForm`, số phiếu là **phiên bản** trong ô chữ; đầu phiếu ba cột (Gói, Mức quay về tối thiểu, UAT) rồi các ô rộng: SHA256
+  (phông đơn cách `.erp-mono`), Thay đổi CSDL (chỉ đọc), Rủi ro, Cách quay lại, Ghi chú (sửa được tới khi khóa). Tab: **MỤC KIỂM THỬ** (lưới + nút
+  dưới lưới Đạt xanh, Không đạt… đỏ, Chưa kiểm thử vàng – thao tác trên dòng đang chọn), **LỖI PHÁT HIỆN (n)** (Thêm lỗi… xanh, Xử lý lỗi… vàng),
+  **LỊCH SỬ CÀI (n)** (Kết quả đèn kèm chữ: Đang chờ bộ thực thi trung tính, Xong xanh, Lỗi đỏ), **CHANGELOG** (khung `.erp-error-detail`), **ĐÍNH KÈM**.
+  Lưới trong tab cao 280px (`.erp-rel-grid`), nút dưới lưới `.erp-rel-grid-buttons`.
+- Nút bước ở thanh chân theo trạng thái và quyền: **Lưu** (xanh), **Cài TEST…** / **Cài PROD…** (icon tải lên xanh), **Xác nhận UAT đạt…** (dấu tích
+  xanh), **Quay về bản cũ…** (icon quay lại **đỏ**), **Đóng phiếu**, **Thêm ghi chú…** (vàng), **Hủy phiếu…** (đỏ). Còn lần cài chờ thì nút bước
+  khóa, thông báo xanh dương "Đang chờ bộ thực thi…" và trang tự làm mới 5 giây.
+- Hộp thoại **Cài bản … lên TEST / PROD** và **Quay về** theo bố cục việc nguy hiểm mục 5m: cảnh báo vàng việc bộ thực thi sẽ làm, ô **Lý do**, **Mật
+  khẩu của bạn**, **Gõ "CÀI x.y.z"** / **"QUAY VỀ"**; nút Cài PROD / Quay về **đỏ**, Cài TEST thường; quay về có ô chọn mức (chỉ mức ≥ tối thiểu, kèm hậu
+  quả dữ liệu). Xác nhận UAT: cảnh báo vàng điều còn vướng, ô Ý kiến bắt buộc khi còn vướng.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

@@ -96,6 +96,7 @@ import { DbMaintenancePage } from './pages/system/DbMaintenancePage'
 import { AgentPage } from './pages/system/AgentPage'
 import { RestorePage } from './pages/system/RestorePage'
 import { AccessConfigPage } from './pages/system/AccessConfigPage'
+import { ReleaseListPage, ReleasePage } from './pages/system/ReleasePages'
 import { ErrorLogListPage } from './pages/system/ErrorLogListPage'
 import { RouteErrorFallback } from './classic/ErrorBoundary'
 import { SystemOverviewPage } from './pages/system/SystemOverviewPage'
@@ -194,6 +195,7 @@ const implemented: Record<string, ReactNode> = {
   AGT: <AgentPage />,
   RST: <RestorePage />,
   CFG: <AccessConfigPage />,
+  REL: <ReleaseListPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,
@@ -218,6 +220,8 @@ const documentPages = [
   { code: 'SRC', element: <SourcingPage /> },
   { code: 'RFQ', element: <RfqPage /> },
   { code: 'CTR', element: <ContractPage /> },
+  // Phiếu phát hành (lát QT8).
+  { code: 'REL', element: <ReleasePage /> },
 ].map((d) => ({
   screen: screens.find((s) => s.code === d.code)!,
   element: d.element,

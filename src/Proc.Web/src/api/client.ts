@@ -229,3 +229,28 @@ export async function apiUpload<T>(path: string, file: File, fields: Record<stri
   }
   return (await response.json()) as T
 }
+
+/**
+ * Gửi nguyên nội dung file làm thân request (không multipart) – dùng cho gói phát hành tới 200 MB (lát QT8): máy chủ đọc thẳng luồng, không đệm
+ * cả file vào bộ nhớ, không vướng giới hạn form.
+ * @param path Đường dẫn API (tham số đi trên query string).
+ * @param file File người dùng chọn.
+ * @param contentType Loại nội dung, ví dụ "application/zip".
+ * @returns Dữ liệu JSON server trả về.
+ * @throws ApiError khi server trả lỗi hoặc không kết nối được.
+ */
+export async function apiPostFile<T>(path: string, file: File, contentType: string): Promise<T> {
+  const headers = authHeaders()
+  headers.set('Content-Type', contentType)
+  let response: Response
+  try {
+    response = await fetch(path, { method: 'POST', headers, body: file })
+  } catch {
+    throw new ApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng hoặc báo quản trị hệ thống.')
+  }
+  if (!response.ok) {
+    if (response.status === 401) bridge.onUnauthorized()
+    throw new ApiError(response.status, await readErrorMessage(response))
+  }
+  return (await response.json()) as T
+}

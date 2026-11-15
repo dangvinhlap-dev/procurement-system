@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Proc.Domain.Operations;
 
 namespace Proc.Application.Operations;
@@ -39,7 +40,7 @@ public sealed class ReleaseOptions
 /// <param name="OpenDefects">Lỗi chưa xử lý.</param>
 /// <param name="ProdInstalledAt">Lúc cài PROD (UTC).</param>
 public sealed record ReleaseListItemDto(
-    Guid Id, string Version, ReleaseStatus Status, string StatusLabel, string Tone, string Source, long PackageSize, DateTimeOffset ReceivedAt,
+    Guid Id, string Version, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseStatus Status, string StatusLabel, string Tone, string Source, long PackageSize, DateTimeOffset ReceivedAt,
     string? ReceivedByName, int TestedItems, int TotalItems, int OpenDefects, DateTimeOffset? ProdInstalledAt);
 
 /// <summary>Mục kiểm thử trên form phiếu.</summary>
@@ -52,7 +53,7 @@ public sealed record ReleaseListItemDto(
 /// <param name="TestedAt">Lúc kiểm thử (UTC).</param>
 /// <param name="Comment">Ý kiến.</param>
 public sealed record ReleaseTestItemDto(
-    Guid Id, int Seq, string Section, string Content, ReleaseTestResult Result, string? TesterName, DateTimeOffset? TestedAt, string? Comment);
+    Guid Id, int Seq, string Section, string Content, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseTestResult Result, string? TesterName, DateTimeOffset? TestedAt, string? Comment);
 
 /// <summary>Lỗi phát hiện trên form phiếu.</summary>
 /// <param name="Id">Id.</param>
@@ -66,7 +67,7 @@ public sealed record ReleaseTestItemDto(
 /// <param name="ResolvedByName">Người xử lý.</param>
 /// <param name="ResolvedAt">Lúc xử lý (UTC).</param>
 public sealed record ReleaseDefectDto(
-    Guid Id, string Title, string? Description, string? Screen, string? ReporterName, DateTimeOffset ReportedAt, ReleaseDefectStatus Status,
+    Guid Id, string Title, string? Description, string? Screen, string? ReporterName, DateTimeOffset ReportedAt, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseDefectStatus Status,
     string? Resolution, string? ResolvedByName, DateTimeOffset? ResolvedAt);
 
 /// <summary>Một lần cài / quay về.</summary>
@@ -85,8 +86,8 @@ public sealed record ReleaseDefectDto(
 /// <param name="Message">Kết quả.</param>
 /// <param name="AgentCommandId">Lệnh bộ thực thi (mở nhật ký ở AGT).</param>
 public sealed record ReleaseInstallDto(
-    Guid Id, string Environment, ReleaseInstallKind Kind, ReleaseInstallStatus Status, string? PreviousVersion, string? TargetVersion,
-    RollbackLevel? Level, string? InstalledSha256, string? Reason, string? ByName, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt,
+    Guid Id, string Environment, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseInstallKind Kind, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseInstallStatus Status, string? PreviousVersion, string? TargetVersion,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel? Level, string? InstalledSha256, string? Reason, string? ByName, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt,
     string? Message, Guid AgentCommandId);
 
 /// <summary>Phiếu phát hành đầy đủ (form REL).</summary>
@@ -122,8 +123,8 @@ public sealed record ReleaseInstallDto(
 /// <param name="Defects">Lỗi phát hiện.</param>
 /// <param name="Installs">Lịch sử cài.</param>
 public sealed record ReleaseTicketDto(
-    Guid Id, string Version, ReleaseStatus Status, string StatusLabel, string Tone, string Source, string? SourceUrl, string PackageFileName,
-    long PackageSize, string Sha256, string? Changelog, string? DatabaseChanges, RollbackLevel MinRollbackLevel, string? Risks, string? RollbackPlan,
+    Guid Id, string Version, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseStatus Status, string StatusLabel, string Tone, string Source, string? SourceUrl, string PackageFileName,
+    long PackageSize, string Sha256, string? Changelog, string? DatabaseChanges, [property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel MinRollbackLevel, string? Risks, string? RollbackPlan,
     string? Note, DateTimeOffset ReceivedAt, string? ReceivedByName, DateTimeOffset? UatSignedAt, string? UatSignedByName, string? UatComment,
     bool UatWithoutTest, DateTimeOffset? ProdInstalledAt, DateTimeOffset? EndedAt, string? EndedByName, string? EndReason, bool IsLocked,
     IReadOnlyList<string> OpenIssues, IReadOnlyList<ReleaseTestItemDto> Items, IReadOnlyList<ReleaseDefectDto> Defects,
@@ -168,7 +169,7 @@ public sealed record AppendReleaseNoteRequest(string? Text);
 /// <summary>Ghi kết quả một mục kiểm thử.</summary>
 /// <param name="Result">Kết quả.</param>
 /// <param name="Comment">Ý kiến.</param>
-public sealed record RecordReleaseTestRequest(ReleaseTestResult Result, string? Comment);
+public sealed record RecordReleaseTestRequest([property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseTestResult Result, string? Comment);
 
 /// <summary>Thêm lỗi phát hiện.</summary>
 /// <param name="Title">Tiêu đề.</param>
@@ -179,7 +180,7 @@ public sealed record AddReleaseDefectRequest(string? Title, string? Description,
 /// <summary>Đổi trạng thái lỗi.</summary>
 /// <param name="Status">Trạng thái.</param>
 /// <param name="Resolution">Cách xử lý.</param>
-public sealed record ResolveReleaseDefectRequest(ReleaseDefectStatus Status, string? Resolution);
+public sealed record ResolveReleaseDefectRequest([property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseDefectStatus Status, string? Resolution);
 
 /// <summary>Xác nhận UAT đạt.</summary>
 /// <param name="Comment">Ý kiến (bắt buộc khi còn vướng).</param>
@@ -201,7 +202,7 @@ public sealed record DeployReleaseRequest(string? Environment, string? Reason, s
 /// <param name="Reason">Lý do.</param>
 /// <param name="Password">Mật khẩu.</param>
 /// <param name="Confirmation">Chữ xác nhận "QUAY VỀ".</param>
-public sealed record RollbackReleaseRequest(RollbackLevel Level, string? Reason, string? Password, string? Confirmation);
+public sealed record RollbackReleaseRequest([property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel Level, string? Reason, string? Password, string? Confirmation);
 
 /// <summary>Trung tâm phát hành – màn hình REL (lát QT8, design.md mục 21.6). Chỉ tổng công ty; ghi chỉ trên PROD / DEV (TEST chỉ xem – T4).</summary>
 public interface IReleaseService

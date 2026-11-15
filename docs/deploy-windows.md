@@ -81,10 +81,11 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Backup:SecondaryPath` | Không bắt buộc: NAS / thư mục mạng, ví dụ `\\\\nas01\\procurement-backup` – chép sau mỗi lần sao lưu; tài khoản App Pool phải ghi được |
 | `Backup:PgBinPath` | Thư mục `bin` của PostgreSQL 18 trên máy app, ví dụ `C:\\Program Files\\PostgreSQL\\18\\bin`. Bỏ trống thì tự tìm (PATH, Program Files) |
 | `Backup:ScheduleEnabled` | `true` (mặc định) – sao lưu tự động theo lịch B1; tắt lịch `backup.ps1` cũ (mục 4b) để không sao lưu hai lần |
-| `Agent:RunningTimeoutHours` | Từ 0.34.0 (QT5): 6 – lệnh bộ thực thi chạy quá số giờ này không báo kết quả thì ghi Lỗi. `Agent:OnlineMinutes` (3) = liên lạc trong số phút này thì AGT đèn xanh |
+| `Agent:RunningTimeoutHours` | Từ 0.36.0 (QT5): 6 – lệnh bộ thực thi chạy quá số giờ này không báo kết quả thì ghi Lỗi. `Agent:OnlineMinutes` (3) = liên lạc trong số phút này thì AGT đèn xanh |
 | `DbMaintenance:ScheduleEnabled` | Từ 0.33.0 (QT4): `true` (mặc định) – VACUUM ANALYZE cả CSDL hằng tuần (tham số DB_MAINT_DAY / DB_MAINT_TIME, mặc định Chủ nhật 03:00). `DbMaintenance:CommandTimeoutMinutes` (240) = thời gian tối đa một lệnh VACUUM / REINDEX |
-| `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng. Hạn phiên đặt trên màn hình CFG từ 0.35.0 (`Jwt:LifetimeMinutes` không còn dùng) |
-| `Security:*` | Từ 0.35.0 (QT7): `KnownProxies` = IP / dải của reverse proxy được tin để đọc IP thật (IIS in-process để trống); `HstsMaxAgeDays` (365; 0 = tắt HSTS); `IgnoreOpsIpRanges` = `false` – chỉ đặt `true` khi lỡ khai sai dải IP quản trị trên CFG (mục 4f) |
+| `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng. Hạn phiên đặt trên màn hình CFG từ 0.36.0 (`Jwt:LifetimeMinutes` không còn dùng) |
+| `Release:*` | Từ 0.36.0 (QT8) – chỉ máy **PROD** (TEST chỉ xem REL): `PackageRoot` = thư mục cất gói nhận được, ngoài thư mục ứng dụng, ví dụ `D:\\ProcurementData\\packages`; `GitHubRepository` = `chủ/tên` kho GitHub có bản phát hành (trống thì chỉ nhận gói tải lên); `MaxPackageSizeMb` (200) |
+| `Security:*` | Từ 0.36.0 (QT7): `KnownProxies` = IP / dải của reverse proxy được tin để đọc IP thật (IIS in-process để trống); `HstsMaxAgeDays` (365; 0 = tắt HSTS); `IgnoreOpsIpRanges` = `false` – chỉ đặt `true` khi lỡ khai sai dải IP quản trị trên CFG (mục 4f) |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
 | `Serilog:WriteTo` (mục `File`) | `path`: `D:\\ProcurementData\\logs\\proc-.log` |
@@ -248,10 +249,10 @@ Kiểm tra trên máy TEST:
   psql đèn vàng "Đang chặn …"; **Ngắt phiên…** nhập lý do, mật khẩu, "NGẮT PHIÊN" → Xong, phiếu mở được; Nhật ký vận hành có "Ngắt phiên CSDL".
 - [ ] Tab **Lịch sử**: "Lịch hằng tuần: VACUUM ANALYZE cả CSDL Chủ nhật 03:00 · lượt kế tiếp …"; sáng thứ Hai có lần "Theo lịch".
 
-## 4d. Bộ thực thi và chế độ bảo trì (từ 0.34.0 – lát QT5)
+## 4d. Bộ thực thi và chế độ bảo trì (từ 0.36.0 – lát QT5)
 
 Bộ thực thi là script PowerShell chạy **mỗi phút** bằng Task Scheduler với tài khoản Windows riêng, tự hỏi máy chủ phần mềm có lệnh không (cài bản,
-khôi phục… ở các bản sau; 0.34.0 chỉ có **Lệnh thử**). Web không tự cài / tự dừng PostgreSQL (design.md 21.2 N1). Bộ thực thi trên TEST hỏi máy
+khôi phục… ở các bản sau; 0.36.0 chỉ có **Lệnh thử**). Web không tự cài / tự dừng PostgreSQL (design.md 21.2 N1). Bộ thực thi trên TEST hỏi máy
 **PROD** (nơi có màn hình AGT); chỉ có một máy thì hỏi chính máy đó. Không mở cổng nào vào máy chạy bộ thực thi.
 
 1. Trên máy có màn hình AGT: **Quản trị hệ thống → Bộ thực thi** → **Khai môi trường…** (Test / Prod, tên, địa chỉ web) → chọn dòng → **Tạo
@@ -272,7 +273,7 @@ khôi phục… ở các bản sau; 0.34.0 chỉ có **Lệnh thử**). Web khô
 Nhật ký trên máy: `<StatePath>\agent-journal.log` (chỉ ghi khi có lệnh / lỗi); kết quả chưa gửi được nằm ở `<StatePath>\pending` và tự gửi lại lần
 sau. Máy chủ từ chối khóa (401) → tạo khóa mới, chạy lại `qt-agent-install.ps1`.
 
-**Chế độ bảo trì**: CFG → tab **Bảo trì** → **Bật chế độ bảo trì…** (trước 0.35.0 ở SYS) (câu thông báo + lý do) – mọi người dùng thường (kể cả NCC trên Portal) nhận câu thông báo, dải
+**Chế độ bảo trì**: CFG → tab **Bảo trì** → **Bật chế độ bảo trì…** (trước 0.36.0 ở SYS) (câu thông báo + lý do) – mọi người dùng thường (kể cả NCC trên Portal) nhận câu thông báo, dải
 đỏ "ĐANG BẢO TRÌ"; người có quyền quản trị vận hành (`System.Ops*`) vẫn làm việc được. Dùng khi cài bản / khôi phục bằng tay; tắt bằng **Tắt chế
 độ bảo trì…**. Lỡ không vào được giao diện: `psql -U postgres -d procurement -c "UPDATE \"MaintenanceModeState\" SET \"IsOn\" = false"` (tối đa
 5 giây sau có hiệu lực).
@@ -283,7 +284,7 @@ Kiểm tra trên máy TEST:
 - [ ] Tắt tác vụ, ra Lệnh thử, chờ hơn 1 giờ → "Hết hạn"; bật lại tác vụ – lệnh cũ không chạy.
 - [ ] Bật chế độ bảo trì: người dùng thường thấy dải đỏ, thao tác báo câu thông báo; admin làm việc bình thường; tắt → vào lại.
 
-## 4e. Phục hồi – màn hình RST (từ 0.34.0 – lát QT6)
+## 4e. Phục hồi – màn hình RST (từ 0.36.0 – lát QT6)
 
 Phục hồi **không ghi đè** CSDL đang chạy (design.md 21.2 N2): khôi phục ra bản riêng → so sánh số dòng → **hoán đổi** (bộ thực thi) hoặc bỏ.
 
@@ -295,7 +296,7 @@ Phục hồi **không ghi đè** CSDL đang chạy (design.md 21.2 N2): khôi ph
   tách máy chủ CSDL riêng cho phần mềm.
 
 Chuẩn bị một lần mỗi máy (TEST trước):
-1. Chạy lại `qt-enable-wal.ps1` (bản 0.34.0) – cấp thêm `GRANT proc TO proc_maint` (tạo / đổi tên / xóa CSDL thay mặt `proc`).
+1. Chạy lại `qt-enable-wal.ps1` (bản 0.36.0) – cấp thêm `GRANT proc TO proc_maint` (tạo / đổi tên / xóa CSDL thay mặt `proc`).
 2. Tài khoản bộ thực thi (`proc-agent`, mục 4d) cần: quyền **Sửa** thư mục sao lưu (`Backup:RootPath`), thư mục WAL, thư mục dữ liệu PostgreSQL và
    thư mục cha của nó (cất thư mục cũ); quyền **dừng / chạy** dịch vụ PostgreSQL và app pool IIS (đơn giản nhất: thành viên nhóm Administrators
    của máy – bộ thực thi là "cánh tay" quyền cao theo N1).
@@ -315,7 +316,7 @@ Cấu hình (`appsettings.Production.json`): `Restore:TempPort` (5434 – không
 Hoán đổi (Q6 – nhập lại mật khẩu, lý do, gõ "KHÔI PHỤC"): bộ thực thi xin máy chủ **bật chế độ bảo trì** và chép bảng vận hành sang bản khôi
 phục → dừng app pool → pg_dump: đổi tên `procurement` → `procurement_old_<giờ>`, bản khôi phục → `procurement`; mốc thời gian: dừng PostgreSQL, đổi
 tên thư mục dữ liệu thành `<thư mục>_old_<giờ>`, chuyển thư mục khôi phục vào, chạy lại, chép file `.history` vào thư mục WAL → chạy app pool →
-kiểm tra `/health`. Lỗi giữa chừng thì trả lại như cũ. **Chế độ bảo trì vẫn bật sau khi hoán đổi** – kiểm tra dữ liệu rồi tắt ở CFG (tab Bảo trì; trước 0.35.0 ở SYS). Bản cũ giữ
+kiểm tra `/health`. Lỗi giữa chừng thì trả lại như cũ. **Chế độ bảo trì vẫn bật sau khi hoán đổi** – kiểm tra dữ liệu rồi tắt ở CFG (tab Bảo trì; trước 0.36.0 ở SYS). Bản cũ giữ
 tới khi xóa tay: `psql -U postgres -c "DROP DATABASE procurement_old_<giờ>"` hoặc xóa thư mục `<thư mục dữ liệu>_old_<giờ>` (khi chắc chắn).
 
 Kiểm tra trên máy TEST (diễn tập D2):
@@ -325,9 +326,9 @@ Kiểm tra trên máy TEST (diễn tập D2):
 - [ ] **Về mốc thời gian…** chọn mốc giữa hai lần sao lưu → kế hoạch đủ chuỗi → máy chủ tạm cổng 5434 lên, so sánh được → **Bỏ bản khôi phục**
       (thư mục `restore\<giờ>` bị xóa). Khi được phép thử hoán đổi máy chủ CSDL: hoán đổi → kiểm tra → quay lại bằng thư mục `_old_…` nếu cần.
 
-## 4f. Cấu hình truy cập – màn hình CFG (từ 0.35.0 – lát QT7)
+## 4f. Cấu hình truy cập – màn hình CFG (từ 0.36.0 – lát QT7)
 
-Sau khi cài 0.35.0, mọi người phải **đăng nhập lại một lần** (token cũ không có mã bảo mật). Trên **từng máy** (TEST trước, PROD sau – TEST đặt giống
+Sau khi cài 0.36.0, mọi người phải **đăng nhập lại một lần** (token cũ không có mã bảo mật). Trên **từng máy** (TEST trước, PROD sau – TEST đặt giống
 PROD, design.md 21.3a), đăng nhập ở tổng công ty, **Quản trị hệ thống → Cấu hình truy cập**:
 
 1. Gán quyền `System.OpsConfig.Manage` cho vai trò quản trị vận hành (vai trò ADMIN có sẵn mọi quyền).
@@ -349,6 +350,36 @@ Kiểm tra trên máy TEST:
 - [ ] Từ máy ngoài dải IP: mở SYS báo "Máy của bạn (…) không nằm trong dải IP…"; màn hình nghiệp vụ vẫn dùng bình thường.
 - [ ] Đăng nhập sai liên tục từ một máy: lần thứ 21 trong một phút báo "Đăng nhập quá nhiều lần".
 - [ ] Thử cách gỡ `IgnoreOpsIpRanges` rồi trả về `false`.
+
+## 4g. Trung tâm phát hành – màn hình REL (từ 0.36.0 – lát QT8)
+
+0.36.0 là **lần cài tay cuối** (design.md 21.8 GĐ2): cài theo mục 5 như mọi lần, rồi chuẩn bị để từ bản sau cài qua REL.
+
+1. Trên **PROD**: khai `Release:PackageRoot` (thư mục ngoài website, tài khoản App Pool ghi được) và `Release:GitHubRepository` nếu lấy gói từ GitHub;
+   gán quyền `System.OpsRelease.Manage`, `.DeployTest`, `.UatSignOff`, `.DeployProd` cho người phụ trách (ADMIN có sẵn).
+2. Trên **TEST và PROD**: cài lại bộ thực thi **1.2.0** (thư mục `tools` của gói 0.36.0) kèm cấu hình cài bản:
+   ```powershell
+   .\qt-agent-install.ps1 -ServerUrl https://procurement.congty.local -TaskUser .\proc-agent -AppPath C:\inetpub\procurement `
+       -StatePath D:\ProcurementData\agent -AppPoolName Procurement -PgUser proc_maint -DatabaseName procurement `
+       -ReleasesPath D:\ProcurementData\releases
+   ```
+   Tài khoản `proc-agent` cần quyền sửa thư mục website, `ReleasesPath`, `StatePath`; `proc_maint` cần quyền `pg_dump` / `pg_restore` CSDL phần mềm
+   (đã cấp ở 4a, 4e). Bộ thực thi TEST hỏi máy **PROD** (`-ServerUrl` là địa chỉ PROD).
+3. AGT (trên PROD): khai môi trường **Test**, **Prod**, tạo khóa từng máy, **Lệnh thử** → cả hai "Xong". Đầu REL hiện hai môi trường "đang liên lạc".
+4. Bản vá kế tiếp (0.36.1 – GĐ3) là **lần đầu qua REL**, có người theo dõi: Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → theo dõi ERR
+   → Đóng phiếu. Hỏng ở bước nào thì cài tay bản đó (mục 5), ghi lỗi vào phiếu.
+
+Gói và quay về:
+- Mỗi bản có script CSDL phải khai mức quay về ở `db\scripts\rollback\<bản>.json` (`{"version":"x.y.z","minLevel":1,"migrations":[…]}` – mức 1 khi
+  chỉ thêm bảng / cột cho phép trống; 2 khi không tương thích và có `db\scripts\down\<bản>.sql`; 3 khi chỉ khôi phục được) – thiếu thì
+  `publish.ps1` dừng. Gói có thêm `procurement-x.y.z.zip.sha256` – tải lên GitHub Release cùng file zip.
+- Bộ thực thi giữ bản cũ ở `ReleasesPath\<bản>` và bản sao lưu trước cài ở `StatePath\predeploy` – dọn tay khi đã chắc không cần quay về (nên giữ
+  ít nhất hai bản gần nhất).
+
+Kiểm tra trên máy TEST (diễn tập D3, D4 – ke-hoach-qt.md mục 5):
+- [ ] D3: nhận một gói cố ý hỏng (`/health` không lên) → Cài TEST → bộ thực thi tự trả bản cũ, phiếu ghi lỗi, site chạy bản cũ.
+- [ ] D4 mức 1: cài bản mới, nhập vài phiếu, Quay về mức 1 → bản cũ chạy, phiếu vừa nhập còn nguyên.
+- [ ] D4 mức 2 / 3: với bản có script CSDL – đúng dữ liệu bị gỡ / khôi phục như hộp thoại liệt kê.
 
 ## 5. Nâng cấp lên bản mới
 
