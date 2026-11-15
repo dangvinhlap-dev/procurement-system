@@ -1137,12 +1137,10 @@ cách). Bố cục chứng từ: thanh menu chữ → thanh công cụ icon (mà
 Các mục 17.1–17.x dưới đây vẫn đúng về **chức năng** khung (menu module, ô lệnh, cây điều hướng, danh sách, chứng từ); kích thước và hình
 khối theo ui-style.md (thanh trên 54px thay Shellbar 48px, dòng 22px thay 32px, không đổ bóng, bo 2px).
 
-**Thẻ màn hình (người dùng duyệt 13/11/2026 – ui-style.md mục 8a):** trong AppShell mở cùng lúc tối đa **6 màn hình** (bản demo 4, người dùng nâng lên 6) (danh sách, phiếu, báo
-cáo), chuyển qua lại không mất dữ liệu đang nhập. Quy tắc (người dùng chốt 13/11/2026): **mọi thẻ thuộc công ty đang làm việc** – không mở
-màn hình của công ty khác cùng lúc; đổi công ty khi đang mở nhiều thẻ thì hỏi lại rồi đóng các thẻ, chỉ giữ danh sách đang xem (dữ liệu và
-quyền lọc theo công ty đang làm việc – mục 9.2 – nên thẻ của công ty cũ tải lại theo công ty mới dễ lưu nhầm). **Hỏi lại khi còn phiếu chưa
-lưu** (người dùng yêu cầu 13/11/2026): rời trang, đóng thẻ, đổi công ty, đăng xuất, tải lại trang khi phiếu/ngăn kéo đang sửa có thay đổi
-chưa lưu thì hỏi "Rời trang / Bỏ thay đổi" hoặc "Ở lại"; chuyển thẻ không hỏi.
+**Một màn hình trong vùng nội dung (ui-style.md mục 8a):** thẻ màn hình (mở cùng lúc tối đa 6 màn hình – làm 13/11/2026) **đã bỏ theo yêu
+cầu người dùng 15/11/2026**, trả lại như trước: mở màn hình mới thì thay màn hình đang xem. **Hỏi lại khi còn phiếu chưa lưu** (người dùng yêu
+cầu 13/11/2026, giữ lại): rời trang, đổi công ty, đăng xuất, tải lại trang khi phiếu/ngăn kéo đang sửa có thay đổi chưa lưu thì hỏi "Rời trang /
+Bỏ thay đổi" hoặc "Ở lại".
 
 Từ 31/10/2026 đến 01/11/2026 giao diện theo **quy chuẩn SAP Fiori, theme Horizon** (thay phong cách Windows XP); toàn văn ở `docs/ui-guide.md`.
 Quyết định: giữ React + Ant Design, dựng phong cách Fiori bằng theme token (không dùng SAPUI5); phông khai báo "72", Arial, Helvetica
@@ -3171,7 +3169,7 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - **Lỗi máy chủ**: `ProblemExceptionHandler` gọi `ErrorRecorder` cho lỗi 500 – scope CSDL riêng, không bao giờ ném lỗi tiếp (hỏng thì Serilog ghi
   kèm mã); câu báo lỗi "Có lỗi hệ thống (mã theo dõi ERR-…). Hãy thử lại hoặc báo quản trị hệ thống kèm mã này." + trường `trackingCode`.
 - **Lỗi giao diện**: `POST /api/ops/v1/client-errors` (đã đăng nhập, mọi công ty; ≤ 8 KB – 413; 30 lần/phút/phiên – 429,
-  `Operations:ClientErrorPermitPerMinute`); công ty lấy từ phạm vi request. Trình duyệt: `ErrorBoundary` từng thẻ màn hình (lỗi chỉ hỏng thẻ đó,
+  `Operations:ClientErrorPermitPerMinute`); công ty lấy từ phạm vi request. Trình duyệt: `ErrorBoundary` bọc vùng nội dung của AppShell (lỗi chỉ hỏng màn hình đó,
   hiện khối báo lỗi kèm mã, nút Thử lại / Tải lại trang – ui-style.md mục 5k), `errorElement` của router, `window.onerror` /
   `unhandledrejection`; chống gửi trùng (cùng lỗi trong 60 giây gửi một lần, tối đa 20 lỗi mỗi lần mở trang); không gửi lỗi API (máy chủ đã ghi
   hoặc là lỗi nghiệp vụ).

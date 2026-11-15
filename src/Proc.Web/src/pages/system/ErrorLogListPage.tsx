@@ -13,7 +13,6 @@ import {
   type ErrorSource,
 } from '../../api/errorLog'
 import { defaultLogRange } from '../../api/logs'
-import { useScreenTabLabel } from '../../app/screenTabs'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { Select } from '../../classic/Select'
@@ -203,8 +202,6 @@ function ErrorGroupDrawer({ groupId, canManage, onClose }: { groupId: string; ca
   const group = detail.data?.group
   const occurrences = detail.data?.occurrences ?? []
   const shown = selected ?? occurrences[0] ?? null
-  // Thẻ màn hình ghi mã theo dõi gần nhất thay cho chữ "Phiếu".
-  useScreenTabLabel(group?.lastTrackingCode ?? undefined)
   // Dữ liệu tải sau khi ngăn kéo mở: đặt lại ô Trạng thái / Ghi chú theo nhóm vừa tải.
   useEffect(() => {
     if (group) form.setFieldsValue({ status: group.status, note: group.note ?? '' })

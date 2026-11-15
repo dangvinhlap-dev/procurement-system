@@ -231,10 +231,10 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 ## 5k. Khối báo lỗi giao diện và màn hình ERR (lát QT2, 15/11/2026 – design.md mục 21.10)
 
 - Component `src/classic/ErrorBoundary.tsx` (`ErrorBoundary`, `ErrorFallback`, `RouteErrorFallback`), CSS `.erp-error-fallback*` trong
-  `classic-app.css`. Màn hình lỗi khi vẽ thì **chỉ thẻ đó** thay bằng khối báo lỗi: khung viền 1px `--erp-grid-line`, vạch trái 3px
+  `classic-app.css`. Màn hình lỗi khi vẽ thì **chỉ vùng nội dung** thay bằng khối báo lỗi: khung viền 1px `--erp-grid-line`, vạch trái 3px
   `--erp-light-red`, nền `--erp-panel-bg`, rộng tối đa 640px; dòng tiêu đề 14px đậm `--erp-title` có tam giác đỏ "Màn hình gặp lỗi giao diện";
   **mã theo dõi** trong ô chữ phông đơn cách nền `--erp-readonly-bg` (bấm chọn cả mã để sao chép); nút **Thử lại**, **Tải lại trang** (icon vàng).
-  Lỗi ngoài thẻ (đăng nhập, Portal, `/duyet`) dùng cùng khối trên nền `--erp-bar-bg-top`.
+  Lỗi ngoài vùng nội dung của AppShell (đăng nhập, Portal, `/duyet`) dùng cùng khối trên nền `--erp-bar-bg-top`.
 - Câu báo lỗi 500 của máy chủ hiện như mọi lỗi (thông báo / thanh trạng thái), có sẵn "mã theo dõi ERR-…".
 - Màn hình **ERR** theo khuôn `ListPage` + `DataGrid` (cột Trạng thái là đèn kèm chữ: Mới đỏ, Đang xử lý vàng, Đã xử lý xanh; dòng Mới tô dấu),
   ô lọc Mã theo dõi; ngăn kéo `DetailDrawer` ba tab, chi tiết kỹ thuật trong khung `.erp-error-detail` (phông đơn cách 11px, cuộn). Nút "Thử lỗi
@@ -327,29 +327,16 @@ Mọi màn hình đổi sang phong cách này qua khung dùng chung, không vi�
 
 Không còn hiệu ứng chuyển động (`motion: false`).
 
-## 8a. Thẻ màn hình – mở tối đa 6 màn hình (người dùng duyệt 13/11/2026)
+## 8a. Một màn hình trong vùng nội dung, hỏi lại khi còn phiếu chưa lưu
 
-Vùng nội dung của `AppShell` có **thanh thẻ** cao 26px ngay trên trang, giữ được tối đa **6 màn hình** (danh sách, phiếu, báo cáo) mở cùng
-lúc – chuyển qua lại không mất dữ liệu đang nhập, vị trí cuộn, tab đang chọn. Component: `components/AppShell/ScreenTabs.tsx`
-(`ScreenTabBar`, `ScreenTabPanel`) + `useScreenTabsState.ts`; ngữ cảnh dùng chung `app/screenTabs.ts`.
-
-- Thẻ: ô vuông viền 1px `--erp-grid-line`, bo trên 2px, nền `--erp-tab-bg`; thẻ đang xem nền `--erp-tab-active` chữ trắng đậm; chữ in hoa;
-  đầu thẻ có ô số 1–6 (phím **Alt+1…6**), icon màn hình, tên (phiếu: "Tên màn hình: số phiếu"), nút × icon đỏ (bấm nút giữa chuột cũng đóng).
-  Bên phải: "n/6 màn hình · mã công ty".
-- **Mở**: bấm cây điều hướng / menu / ô lệnh / bấm đúp ô số chứng từ → đã có thẻ cùng đường dẫn thì chuyển sang, chưa có thì mở thẻ mới;
-  đủ 6 thẻ thì báo "Đã mở đủ 6 màn hình…", không mở. **Shift+bấm** trên cây điều hướng hoặc ô lệnh `/n<mã>` mở thay ở thẻ đang xem;
-  `/o<mã>` mở ở thẻ mới (kiểu SAP). Trong trang (bấm đúp dòng mở phiếu, nút lập phiếu…) vẫn đi trong cùng thẻ.
-- Đóng thẻ đang xem thì hiện thẻ bên phải (hết thì bên trái); đóng thẻ cuối còn Trang chủ. Nút **Quay lại** dùng lịch sử riêng từng thẻ.
-- **Mọi thẻ thuộc công ty đang làm việc** (người dùng chốt 13/11/2026): đổi công ty khi đang mở hơn một thẻ thì hỏi lại ("Đổi công ty" /
-  "Không đổi"), đồng ý thì đóng các thẻ, chỉ mở lại danh sách đang xem dưới công ty mới. F5 mở lại đủ thẻ trong phiên (thẻ lưu của công ty
-  khác bỏ qua).
-- Thẻ ẩn: `visibility: hidden` + `inert` – không bấm, không Tab tới; ngăn kéo/hộp thoại của trang vẽ trong vùng thẻ nên ẩn theo thẻ.
-  Phím tắt cấp cửa sổ của trang (Ctrl+S, F2, Ctrl+P, Esc ngăn kéo) chỉ chạy ở thẻ đang xem (`useIsActiveTab`); F3 chỉ tìm ô tìm của thẻ đang xem.
-- **Hỏi lại khi còn phiếu chưa lưu** (yêu cầu 13/11/2026): phiếu (`DocumentForm`) hoặc ngăn kéo đang sửa (`DetailDrawer`) mà người dùng đã
-  sửa ô, chưa lưu thì:
-  - rời trang trong thẻ (cây điều hướng Shift+bấm, `/n`, Quay lại, nút Đóng, Back trình duyệt) → hộp thoại "Rời trang khi phiếu chưa lưu":
-    **Rời trang** (nút đỏ) / **Ở lại**;
-  - đóng thẻ, đổi công ty, đăng xuất → "Còn phiếu chưa lưu" nêu tên thẻ: **Bỏ thay đổi** (nút đỏ) / **Ở lại**;
+- **Bỏ thẻ màn hình** (người dùng yêu cầu 15/11/2026 – trả lại như trước 13/11/2026): vùng nội dung của `AppShell` chỉ hiện **một màn hình**;
+  bấm cây điều hướng, menu, ô lệnh, bấm đúp ô số chứng từ thì mở thay màn hình đang xem; nút **Quay lại** dùng lịch sử trình duyệt. Không còn
+  thanh thẻ, Alt+1…6, Shift+bấm, ô lệnh `/n<mã>` / `/o<mã>`. Lỗi giao diện chỉ làm hỏng vùng nội dung (`ErrorBoundary` bọc `Outlet` – mục 5k).
+- **Hỏi lại khi còn phiếu chưa lưu** (yêu cầu 13/11/2026, giữ lại): phiếu (`DocumentForm`) hoặc ngăn kéo đang sửa (`DetailDrawer`) mà người dùng
+  đã sửa ô, chưa lưu thì:
+  - rời trang (cây điều hướng, menu, ô lệnh, Quay lại, nút Đóng, Back trình duyệt) → hộp thoại "Rời trang khi phiếu chưa lưu": **Rời trang**
+    (nút đỏ) / **Ở lại**;
+  - đổi công ty, đăng xuất → "Còn phiếu chưa lưu": **Bỏ thay đổi** (nút đỏ) / **Ở lại**;
   - tải lại (F5) hoặc đóng tab trình duyệt → câu hỏi của trình duyệt.
-  Chuyển thẻ, mở màn hình ở thẻ mới không hỏi (phiếu vẫn còn trong thẻ). Dấu "chưa lưu" (`utils/formDirty.ts`) bật khi người dùng sửa ô,
-  tắt khi nạp phiếu từ máy chủ, lưu thành công (`useDocumentFormSync`) hoặc mở lại ngăn kéo; trang khác dùng `useUnsavedCheck`.
+  Dấu "chưa lưu" (`utils/formDirty.ts`) bật khi người dùng sửa ô, tắt khi nạp phiếu từ máy chủ, lưu thành công (`useDocumentFormSync`) hoặc mở
+  lại ngăn kéo; trang khác dùng `useUnsavedCheck` (`app/unsaved.ts`); khung hỏi ở `components/AppShell/useUnsavedGuard.ts`.

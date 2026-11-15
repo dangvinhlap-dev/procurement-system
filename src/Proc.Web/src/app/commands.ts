@@ -1,6 +1,5 @@
 import { hasWildcard, matchesKeyword, normalizeVi } from '../utils/text'
 import type { Screen } from './screens'
-import { isInHiddenTab } from './screenTabs'
 
 /**
  * Đưa con trỏ vào ô Tìm kiếm của màn hình danh sách đang mở (nếu có).
@@ -8,8 +7,7 @@ import { isInHiddenTab } from './screenTabs'
  * @returns true nếu tìm thấy ô tìm kiếm.
  */
 export function focusListSearch(): boolean {
-  // Mỗi thẻ màn hình có thể có một danh sách – chỉ lấy ô tìm của thẻ đang xem.
-  const input = [...document.querySelectorAll<HTMLInputElement>('input[data-list-search]')].find((e) => !isInHiddenTab(e))
+  const input = document.querySelector<HTMLInputElement>('input[data-list-search]')
   input?.focus()
   input?.select()
   return Boolean(input)

@@ -1,15 +1,11 @@
 import { readFileSync } from 'node:fs'
-import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi, openInCurrentTab } from './helpers.ts'
+import { expect, test } from '@playwright/test'
+import { loginViaApi, openByCommand } from './helpers.ts'
 
 /**
  * Nhập/xuất Excel (design.md mục 5.10): xuất danh mục ra file, nhập lại chính file đó (kiểm tra thử rồi nhập thật);
  * file không phải Excel thì báo lỗi tiếng Việt.
  */
-
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
-}
 
 test.beforeEach(async ({ page }) => {
   await loginViaApi(page)

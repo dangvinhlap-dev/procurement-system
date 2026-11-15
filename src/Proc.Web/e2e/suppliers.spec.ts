@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi, openInCurrentTab, activeTab } from './helpers.ts'
+import { loginViaApi, openByCommand, mainContent } from './helpers.ts'
 
 /**
  * Danh mục nhà cung cấp (design.md mục 5.3, 5.8): thêm NCC kèm người liên hệ và tài khoản ngân hàng, tìm không dấu,
@@ -8,11 +8,6 @@ import { loginViaApi, openInCurrentTab, activeTab } from './helpers.ts'
  */
 
 const uniqueTaxCode = () => String(1_000_000_000 + Math.floor(Math.random() * 8_999_999_999))
-
-/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
-}
 
 /** Chọn một giá trị trong ô chọn của ngăn kéo chi tiết theo nhãn ô. */
 async function pick(page: Page, label: string, option: string) {
@@ -103,8 +98,8 @@ test.describe('danh mục nhà cung cấp', () => {
     // Trang đầy đủ (mở từ thông báo, Việc cần làm – TC-3): có hồ sơ NCC chỉ xem để người duyệt xem đủ trước khi duyệt.
     const full = approval
     await expect(full.locator('.document-form-title')).toContainText('Chờ duyệt')
-    // Ngăn kéo NCC còn mở ở thẻ danh sách (bấm đúp ô số mở yêu cầu duyệt ở thẻ mới) – thẻ đang xem không có ngăn kéo.
-    await expect(activeTab(page).locator('.detail-drawer')).toHaveCount(0)
+    // Bấm đúp ô số đã rời danh sách NCC – trang yêu cầu duyệt không còn ngăn kéo NCC.
+    await expect(mainContent(page).locator('.detail-drawer')).toHaveCount(0)
     await full.getByRole('tab', { name: 'Hồ sơ NCC' }).click()
     const profile = full.getByTestId('supplier-profile')
     await expect(profile).toContainText('Công ty TNHH Điện Quang Minh')

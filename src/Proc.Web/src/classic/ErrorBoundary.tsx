@@ -47,7 +47,7 @@ interface ErrorBoundaryState {
 
 /**
  * Bắt lỗi khi vẽ component con (lát QT2): gửi về nhật ký lỗi (kèm cây component), thay phần hỏng bằng {@link ErrorFallback} – các phần khác
- * của trang (thanh menu, thẻ màn hình khác) vẫn dùng được.
+ * của trang (thanh menu, cây điều hướng) vẫn dùng được.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { failed: false, code: undefined, resetKey: this.props.resetKey }
@@ -74,7 +74,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 }
 
 /**
- * Trang lỗi của bộ định tuyến (`errorElement`): lỗi khi vẽ trang ngoài thẻ màn hình (đăng nhập, khung AppShell, Portal, trang điện thoại) –
+ * Trang lỗi của bộ định tuyến (`errorElement`): lỗi khi vẽ trang ngoài vùng nội dung của AppShell (đăng nhập, khung AppShell, Portal, trang điện thoại) –
  * gửi về nhật ký lỗi như {@link ErrorBoundary}.
  */
 export function RouteErrorFallback() {

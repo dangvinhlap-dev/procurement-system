@@ -50,15 +50,11 @@ export function appVersion(): string {
 }
 
 /**
- * Sau khi chọn công ty ở ô công ty: đang mở nhiều thẻ màn hình thì phần mềm hỏi "Đổi công ty đang làm việc" (docs/ui-style.md mục 8a),
- * còn phiếu chưa lưu thì hỏi "Còn phiếu chưa lưu" – bấm đồng ý nếu có. Không có hộp thoại thì đi tiếp (chờ tối đa 1 giây).
+ * Sau khi chọn công ty ở ô công ty: còn phiếu chưa lưu thì phần mềm hỏi "Còn phiếu chưa lưu" – bấm "Bỏ thay đổi" nếu có. Không có hộp thoại
+ * thì đi tiếp (chờ tối đa 0,5 giây).
  * @param page Trang đang test.
  */
 export async function confirmCompanySwitch(page: Page): Promise<void> {
-  const ask = page.getByRole('dialog', { name: 'Đổi công ty đang làm việc' })
-  if (await ask.waitFor({ state: 'visible', timeout: 1000 }).then(() => true, () => false)) {
-    await ask.getByRole('button', { name: 'Đổi công ty' }).click()
-  }
   const unsaved = page.getByRole('dialog', { name: 'Còn phiếu chưa lưu' })
   if (await unsaved.waitFor({ state: 'visible', timeout: 500 }).then(() => true, () => false)) {
     await unsaved.getByRole('button', { name: 'Bỏ thay đổi' }).click()
@@ -66,15 +62,15 @@ export async function confirmCompanySwitch(page: Page): Promise<void> {
 }
 
 /**
- * Mở màn hình ở **thẻ đang xem** bằng ô lệnh `/n<mã>` (docs/ui-style.md mục 8a) – giữ cách các test viết trước khi có thẻ màn hình: mỗi lúc
- * chỉ một màn hình, bộ chọn trên cả trang không gặp bản sao ở thẻ ẩn. Phiếu đang sửa dở thì phần mềm hỏi "Rời trang" – test đồng ý.
+ * Mở màn hình bằng ô lệnh: gõ mã rồi chọn đúng dòng "<mã> – <tên>" (không lấy dòng đầu – mã ngắn như "PO" khớp nhiều màn hình). Phiếu đang
+ * sửa dở thì phần mềm hỏi "Rời trang" – test đồng ý.
  * @param page Trang đang test.
  * @param code Mã màn hình, ví dụ "PO".
  */
-export async function openInCurrentTab(page: Page, code: string): Promise<void> {
+export async function openByCommand(page: Page, code: string): Promise<void> {
   const box = page.getByPlaceholder('Ô lệnh – tên màn hình')
-  await box.fill(`/n${code}`)
-  await box.press('Enter')
+  await box.fill(code)
+  await page.locator('.ant-select-item-option').filter({ hasText: new RegExp(`^${code} – `) }).first().click()
   const leave = page.getByRole('dialog', { name: 'Rời trang khi phiếu chưa lưu' })
   if (await leave.waitFor({ state: 'visible', timeout: 500 }).then(() => true, () => false)) {
     await leave.getByRole('button', { name: 'Rời trang' }).click()
@@ -82,10 +78,9 @@ export async function openInCurrentTab(page: Page, code: string): Promise<void> 
 }
 
 /**
- * Vùng của thẻ màn hình đang xem – dùng khi thẻ ẩn có cùng nội dung (ví dụ bấm đúp ô số chứng từ mở phiếu gốc ở thẻ mới, danh sách vẫn
- * nằm trong thẻ cũ).
+ * Vùng nội dung của khung (trang đang mở) – để bộ chọn không gặp chữ trùng trên cây điều hướng, thanh menu.
  * @param page Trang đang test.
  */
-export function activeTab(page: Page) {
-  return page.locator('.app-tab-panel.is-active')
+export function mainContent(page: Page) {
+  return page.locator('main.app-content')
 }
