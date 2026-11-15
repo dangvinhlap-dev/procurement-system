@@ -73,6 +73,9 @@ public static class OperationKinds
 
     /// <summary>Một lần sao lưu kết thúc – xong hoặc lỗi (lát QT3b).</summary>
     public const string BackupFinished = "BackupFinished";
+
+    /// <summary>Dọn bản sao lưu quá hạn giữ, dọn WAL cũ, cảnh báo ổ sao lưu sắp đầy (lát QT3b-2).</summary>
+    public const string BackupCleanup = "BackupCleanup";
 }
 
 /// <summary>

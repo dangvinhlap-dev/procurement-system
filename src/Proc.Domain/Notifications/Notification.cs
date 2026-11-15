@@ -52,6 +52,12 @@ public static class NotificationTypes
     /// mềm, không gửi email (người dùng chốt 15/11/2026).
     /// </summary>
     public const string ErrorLogNew = "ErrorLogNew";
+
+    /// <summary>
+    /// Sao lưu lỗi / không đạt kiểm tra / chưa chép được nơi thứ hai, hoặc ổ sao lưu còn dưới 15 % – báo người có quyền chạy sao lưu ở tổng công ty
+    /// (lát QT3b, màn hình BAK). Chỉ trong phần mềm như thông báo nhật ký lỗi (E10).
+    /// </summary>
+    public const string BackupProblem = "BackupProblem";
 }
 
 /// <summary>

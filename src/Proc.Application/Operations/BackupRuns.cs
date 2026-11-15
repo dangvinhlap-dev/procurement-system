@@ -143,3 +143,29 @@ public interface IBackupQueueSignal
     /// <returns>Task xong khi có tín hiệu / hết giờ.</returns>
     Task WaitAsync(TimeSpan timeout, CancellationToken cancellationToken);
 }
+
+/// <summary>Kết quả một lần dọn bản sao lưu quá hạn giữ (lát QT3b-2).</summary>
+/// <param name="PurgedRuns">Số lần sao lưu đã dọn file.</param>
+/// <param name="OldestNeededWal">File WAL cũ nhất còn giữ (WAL cũ hơn đã dọn); null = không dọn WAL.</param>
+/// <param name="Messages">Ghi chú / lỗi từng bước (xóa file, pg_archivecleanup, chỗ trống ổ).</param>
+public sealed record BackupCleanupResult(int PurgedRuns, string? OldestNeededWal, IReadOnlyList<string> Messages);
+
+/// <summary>
+/// Lịch sao lưu và dọn bản cũ (lát QT3b-2, design.md mục 21.5, B1): dịch vụ nền gọi mỗi phút. Chỉ chạy khi máy có khai thư mục sao lưu và bật
+/// <c>Backup:ScheduleEnabled</c>.
+/// </summary>
+public interface IBackupScheduler
+{
+    /// <summary>Đặt các lần sao lưu của lượt lịch hôm nay khi đã tới giờ và chưa đặt (nhiều tiến trình cùng đặt thì chỉ một lần thành công).</summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Số lần vừa đặt.</returns>
+    Task<int> PlanAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Dọn file các bản quá hạn giữ (nơi chính và nơi thứ hai), dọn WAL cũ hơn bản Full cũ nhất còn giữ, kiểm tra chỗ trống ổ sao lưu (dưới 15 %
+    /// thì thông báo, mỗi ngày một lần).
+    /// </summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Kết quả.</returns>
+    Task<BackupCleanupResult> CleanupAsync(CancellationToken cancellationToken);
+}

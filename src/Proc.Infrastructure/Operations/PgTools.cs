@@ -95,6 +95,12 @@ public static class PgToolArgs
     /// <returns>Tham số.</returns>
     public static IReadOnlyList<string> RestoreList(string file) => ["--list", file];
 
+    /// <summary><c>pg_archivecleanup</c>: xóa file WAL cũ hơn <paramref name="oldestKeptWal"/> trong thư mục WAL.</summary>
+    /// <param name="archiveDir">Thư mục WAL (tương đối so với thư mục làm việc, thường là ".").</param>
+    /// <param name="oldestKeptWal">File WAL cũ nhất còn giữ.</param>
+    /// <returns>Tham số.</returns>
+    public static IReadOnlyList<string> ArchiveCleanup(string archiveDir, string oldestKeptWal) => [archiveDir, oldestKeptWal];
+
     private static List<string> Connection(PgConnectionInfo conn)
     {
         var args = new List<string>();

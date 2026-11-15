@@ -195,6 +195,7 @@ public sealed class BackupExecutor : IBackupExecutor
 
             await db.SaveChangesAsync(CancellationToken.None);
             await WriteLogAsync(scope.ServiceProvider.GetRequiredService<IOperationLog>(), run);
+            await NotifyProblemAsync(db, run);
             count++;
         }
 
@@ -416,6 +417,27 @@ public sealed class BackupExecutor : IBackupExecutor
         return candidate;
     }
 
+    /// <summary>
+    /// Lần sao lưu lỗi, không đạt kiểm tra hoặc chưa chép được nơi thứ hai thì thông báo người có quyền chạy sao lưu (lát QT3b-2). Lỗi gửi thông
+    /// báo không làm hỏng kết quả sao lưu.
+    /// </summary>
+    private async Task NotifyProblemAsync(ProcDbContext db, BackupRun run)
+    {
+        var (label, light) = BackupLabels.Status(run);
+        if (light is not ("Error" or "Warning")) return;
+        try
+        {
+            var detail = run.ErrorMessage ?? (run.Verified == false ? run.VerifyMessage : run.SecondaryMessage);
+            await BackupNotifier.NotifyAsync(db, $"Sao lưu {BackupLabels.Kind(run.Kind)}: {label}", $"{detail} – màn hình BAK.", run.Id,
+                _clock.UtcNow, CancellationToken.None);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException or NpgsqlException)
+        {
+            _logger.LogWarning(ex, "Không gửi được thông báo cho lần sao lưu {Id}.", run.Id);
+        }
+    }
+
     private async Task WriteLogAsync(IOperationLog log, BackupRun run)
     {
         try
@@ -460,7 +482,7 @@ public sealed class BackupQueueSignal : IBackupQueueSignal
 
 /// <summary>
 /// Dịch vụ nền chạy hàng chờ sao lưu (lát QT3b): khởi động thì ghi lỗi các lần "Đang chạy" của tiến trình cũ, rồi thức khi có lần mới (tín hiệu)
-/// hoặc mỗi phút (lần do tiến trình khác đặt). Lát QT3b-2 thêm phần đặt lịch và dọn bản cũ.
+/// hoặc mỗi phút; mỗi vòng: đặt lượt lịch khi tới giờ (QT3b-2) → chạy hàng chờ → có lần vừa chạy thì dọn bản quá hạn, WAL cũ, kiểm tra ổ.
 /// </summary>
 public sealed class BackupBackgroundService : BackgroundService
 {
@@ -470,6 +492,7 @@ public sealed class BackupBackgroundService : BackgroundService
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
     private readonly IBackupExecutor _executor;
+    private readonly IServiceScopeFactory _scopes;
     private readonly IBackupQueueSignal _signal;
     private readonly IBackgroundHeartbeat _heartbeat;
     private readonly BackupOptions _options;
@@ -477,15 +500,18 @@ public sealed class BackupBackgroundService : BackgroundService
 
     /// <summary>Tạo dịch vụ nền.</summary>
     /// <param name="executor">Bộ chạy.</param>
+    /// <param name="scopes">Tạo scope DI cho lịch / dọn.</param>
     /// <param name="signal">Tín hiệu có việc mới.</param>
     /// <param name="heartbeat">Báo nhịp cho SYS.</param>
     /// <param name="options">Cấu hình sao lưu.</param>
     /// <param name="logger">Log kỹ thuật.</param>
     public BackupBackgroundService(
-        IBackupExecutor executor, IBackupQueueSignal signal, IBackgroundHeartbeat heartbeat, IOptions<BackupOptions> options,
+        IBackupExecutor executor, IServiceScopeFactory scopes, IBackupQueueSignal signal, IBackgroundHeartbeat heartbeat,
+        IOptions<BackupOptions> options,
         ILogger<BackupBackgroundService> logger)
     {
         _executor = executor;
+        _scopes = scopes;
         _signal = signal;
         _heartbeat = heartbeat;
         _options = options.Value;
@@ -514,8 +540,15 @@ public sealed class BackupBackgroundService : BackgroundService
             string? note = null;
             try
             {
+                await using (var scope = _scopes.CreateAsyncScope())
+                    await scope.ServiceProvider.GetRequiredService<IBackupScheduler>().PlanAsync(stoppingToken);
                 var done = await _executor.ProcessQueueAsync(stoppingToken);
-                if (done > 0) note = $"Vừa chạy {done.ToString(CultureInfo.InvariantCulture)} lần sao lưu.";
+                if (done > 0)
+                {
+                    note = $"Vừa chạy {done.ToString(CultureInfo.InvariantCulture)} lần sao lưu.";
+                    await using var scope = _scopes.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<IBackupScheduler>().CleanupAsync(stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

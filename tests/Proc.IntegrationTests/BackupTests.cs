@@ -1,10 +1,13 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using Microsoft.Extensions.Logging.Abstractions;
+using Proc.Application.Common;
 using Proc.Application.Operations;
+using Proc.Application.Organization;
 using Proc.Domain.Operations;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Documents;
@@ -273,5 +276,184 @@ public class BackupTests
         var queued = await QueueAsync(runner, BackupKind.Dump);
         Assert.Equal(runnerName, queued.RequestedByName);
         await ClearRunsAsync();
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : IClock
+    {
+        public DateTimeOffset UtcNow => now.ToUniversalTime();
+    }
+
+    /// <summary>Bộ lập lịch dựng tay: bật lịch, đồng hồ cố định, thư mục WAL tùy chọn.</summary>
+    private static BackupScheduler Scheduler(IServiceScope scope, DateTimeOffset now, string? walPath = null) => new(
+        scope.ServiceProvider.GetRequiredService<ProcDbContext>(), new FixedClock(now),
+        scope.ServiceProvider.GetRequiredService<IBackupQueueSignal>(), scope.ServiceProvider.GetRequiredService<PgToolRunner>(),
+        scope.ServiceProvider.GetRequiredService<IOperationLog>(),
+        Options.Create(new BackupOptions
+        {
+            RootPath = ProcApiFactory.BackupRoot, SecondaryPath = ProcApiFactory.BackupSecondary, ScheduleEnabled = true, WalArchivePath = walPath,
+        }),
+        NullLogger<BackupScheduler>.Instance);
+
+    /// <summary>
+    /// Lịch (giờ mặc định 01:00, Full Chủ nhật): Thứ hai 16/11 00:30 chưa tới giờ; 01:30 chưa có Full dùng được → đặt Full + dump + đính kèm theo
+    /// đúng thứ tự, gọi lại không đặt trùng; Thứ ba có bản Full dùng được → Diff. Lịch tắt (máy test) thì không đặt.
+    /// </summary>
+    [Fact]
+    public async Task Lich_DatLuotDungGio_KhongTrung_DiffKhiCoFull()
+    {
+        await ClearRunsAsync();
+        var mon0030 = new DateTimeOffset(2026, 11, 16, 0, 30, 0, TimeSpan.FromHours(7));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            Assert.Equal(0, await Scheduler(scope, mon0030).PlanAsync(Ct));
+            Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<IBackupScheduler>().PlanAsync(Ct));
+            Assert.Equal(3, await Scheduler(scope, mon0030.AddHours(1)).PlanAsync(Ct));
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            Assert.Equal(0, await Scheduler(scope, mon0030.AddHours(5)).PlanAsync(Ct));
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            var runs = await db.BackupRuns.OrderBy(r => r.QueuedAt).ToListAsync(Ct);
+            Assert.Equal([BackupKind.Full, BackupKind.Dump, BackupKind.Attachments], runs.Select(r => r.Kind));
+            Assert.All(runs, r => Assert.Equal((BackupTrigger.Schedule, new DateOnly(2026, 11, 16)), (r.Trigger, r.ScheduledDate!.Value)));
+
+            // Giả lập bản Full đạt rồi sang Thứ ba.
+            var full = runs[0];
+            full.Start(mon0030.ToUniversalTime());
+            full.Complete(Path.Combine("full", "gia-lap"), 1, 1, null, "000000010000000000000003", null, mon0030.ToUniversalTime());
+            await db.SaveChangesAsync(Ct);
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            Assert.Equal(3, await Scheduler(scope, mon0030.AddDays(1).AddHours(1)).PlanAsync(Ct));
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            Assert.True(await db.BackupRuns.AnyAsync(r => r.Kind == BackupKind.Diff && r.ScheduledDate == new DateOnly(2026, 11, 17), Ct));
+        }
+
+        await ClearRunsAsync();
+    }
+
+    /// <summary>
+    /// Dọn: bản dump quá 14 ngày bị xóa ở cả nơi chính và nơi thứ hai, ghi lúc dọn; bản mới nhất giữ; bản Full giả lập có file WAL đầu …03 →
+    /// pg_archivecleanup xóa WAL …01, …02, giữ từ …03 (khi máy có công cụ PostgreSQL); nhật ký vận hành có dòng dọn.
+    /// </summary>
+    [Fact]
+    public async Task Don_BanQuaHan_VaWalCu()
+    {
+        await ClearRunsAsync();
+        var now = DateTimeOffset.UtcNow;
+        var walDir = Path.Combine(Path.GetTempPath(), "proc test sao lưu", "wal", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(walDir);
+        for (var i = 1; i <= 4; i++) await File.WriteAllTextAsync(Path.Combine(walDir, $"00000001000000000000000{i}"), "wal", Ct);
+
+        Guid oldId, newId;
+        string oldRel;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            BackupRun Make(BackupKind kind, double daysAgo, string rel, string? wal = null)
+            {
+                foreach (var root in new[] { ProcApiFactory.BackupRoot, ProcApiFactory.BackupSecondary })
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(root, rel))!);
+                    File.WriteAllText(Path.Combine(root, rel), "x");
+                }
+
+                var r = BackupRun.Queue(kind, BackupTrigger.Manual, null, null, now.AddDays(-daysAgo));
+                r.Start(now.AddDays(-daysAgo));
+                r.Complete(rel, 1, 1, null, wal, null, now.AddDays(-daysAgo));
+                r.SetVerification(true, null);
+                db.BackupRuns.Add(r);
+                return r;
+            }
+
+            oldRel = Path.Combine("dump", $"cu-{Guid.NewGuid():N}.dump");
+            oldId = Make(BackupKind.Dump, 20, oldRel).Id;
+            newId = Make(BackupKind.Dump, 1, Path.Combine("dump", $"moi-{Guid.NewGuid():N}.dump")).Id;
+            Make(BackupKind.Full, 2, Path.Combine("full", $"gia-lap-{Guid.NewGuid():N}"), "000000010000000000000003");
+            await db.SaveChangesAsync(Ct);
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var result = await Scheduler(scope, now, walDir).CleanupAsync(Ct);
+            Assert.Equal(1, result.PurgedRuns);
+            Assert.False(File.Exists(Path.Combine(ProcApiFactory.BackupRoot, oldRel)));
+            Assert.False(File.Exists(Path.Combine(ProcApiFactory.BackupSecondary, oldRel)));
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            Assert.NotNull((await db.BackupRuns.SingleAsync(r => r.Id == oldId, Ct)).PurgedAt);
+            Assert.Null((await db.BackupRuns.SingleAsync(r => r.Id == newId, Ct)).PurgedAt);
+
+            if (File.Exists(scope.ServiceProvider.GetRequiredService<PgToolRunner>().Resolve("pg_archivecleanup")))
+            {
+                Assert.Equal("000000010000000000000003", result.OldestNeededWal);
+                Assert.Equal(["000000010000000000000003", "000000010000000000000004"],
+                    Directory.GetFiles(walDir).Select(f => Path.GetFileName(f)).Order());
+            }
+
+            Assert.True(await db.OperationLogs.AnyAsync(l => l.Kind == OperationKinds.BackupCleanup, Ct));
+        }
+
+        Directory.Delete(walDir, recursive: true);
+        await ClearRunsAsync();
+    }
+
+    /// <summary>Sao lưu lỗi thì người có quyền chạy sao lưu ở tổng công ty (admin) nhận thông báo trong phần mềm; SYS có dòng sao lưu và ổ sao lưu.</summary>
+    [Fact]
+    public async Task SaoLuuLoi_ThongBao_SysCoDong()
+    {
+        await ClearRunsAsync();
+        var head = await HeadAsync();
+        var options = _factory.Services.GetRequiredService<IOptions<BackupOptions>>().Value;
+        if (!string.IsNullOrWhiteSpace(options.MaintenanceConnectionString))
+            Assert.Skip("Máy test có khai ConnectionStrings:Maintenance – không dựng được lần sao lưu Full lỗi.");
+        var full = await QueueAsync(head, BackupKind.Full);
+        await ProcessAsync();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+            var notes = await db.Notifications.IgnoreQueryFilters()
+                .Where(n => n.Type == Proc.Domain.Notifications.NotificationTypes.BackupProblem && n.TargetId == full.Id)
+                .ToListAsync(Ct);
+            Assert.NotEmpty(notes);
+            Assert.All(notes, n => Assert.Equal("BAK", n.ScreenCode));
+            Assert.Contains("Sao lưu Full: Lỗi", notes[0].Title, StringComparison.Ordinal);
+        }
+
+        var overview = await ReadAsync<SystemOverviewDto>(await head.GetAsync("/api/ops/v1/overview", Ct));
+        Assert.Equal("Chưa có", Assert.Single(overview.Rows, r => r.Item == "Sao lưu gần nhất").Value);
+        Assert.Contains(overview.Rows, r => r.Item == "Ổ sao lưu");
+        await ClearRunsAsync();
+    }
+
+    /// <summary>Bốn tham số lịch sao lưu trên màn hình tham số: mặc định, sửa (ngày gõ số, giờ HH:mm), sai thì 400, bỏ trống về mặc định.</summary>
+    [Fact]
+    public async Task ThamSoLichSaoLuu_SuaVaKiemTra()
+    {
+        var head = await HeadAsync();
+        var list = await ReadAsync<List<SystemParameterDto>>(await head.GetAsync("/api/system-parameters", Ct));
+        Assert.Equal("7 – Chủ nhật", Assert.Single(list, p => p.Code == SystemParameterCodes.BackupFullDay).Value);
+        Assert.Equal("01:00", Assert.Single(list, p => p.Code == SystemParameterCodes.BackupTime).Value);
+        Assert.Equal("4", Assert.Single(list, p => p.Code == SystemParameterCodes.BackupKeepWeeks).Value);
+        Assert.Equal("14", Assert.Single(list, p => p.Code == SystemParameterCodes.DumpKeepDays).Value);
+
+        async Task<SystemParameterDto> Put(string code, string value) =>
+            await ReadAsync<SystemParameterDto>(await head.PutAsJsonAsync($"/api/system-parameters/{code}", new UpdateSystemParameterRequest(value), Ct));
+        async Task<HttpStatusCode> Bad(string code, string value) =>
+            (await head.PutAsJsonAsync($"/api/system-parameters/{code}", new UpdateSystemParameterRequest(value), Ct)).StatusCode;
+
+        Assert.Equal("6 – Thứ bảy", (await Put(SystemParameterCodes.BackupFullDay, "6 – Thứ bảy")).Value);
+        Assert.Equal("23:30", (await Put(SystemParameterCodes.BackupTime, "23:30")).Value);
+        Assert.Equal("02:00", (await Put(SystemParameterCodes.BackupTime, "2")).Value);
+        Assert.Equal("8", (await Put(SystemParameterCodes.BackupKeepWeeks, "8")).Value);
+        Assert.Equal(HttpStatusCode.BadRequest, await Bad(SystemParameterCodes.BackupFullDay, "8"));
+        Assert.Equal(HttpStatusCode.BadRequest, await Bad(SystemParameterCodes.BackupTime, "25:00"));
+        Assert.Equal(HttpStatusCode.BadRequest, await Bad(SystemParameterCodes.DumpKeepDays, "0"));
+
+        foreach (var code in new[] { SystemParameterCodes.BackupFullDay, SystemParameterCodes.BackupTime, SystemParameterCodes.BackupKeepWeeks })
+            Assert.True((await Put(code, "")).IsDefault);
     }
 }

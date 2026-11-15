@@ -37,6 +37,7 @@ public sealed class SystemOverviewService : ISystemOverview
     private readonly OperationsOptions _operations;
     private readonly IOptionsMonitor<EmailOptions> _email;
     private readonly IWalArchiveStatus _walArchive;
+    private readonly BackupOptions _backup;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -48,12 +49,14 @@ public sealed class SystemOverviewService : ISystemOverview
     /// <param name="operations">Thư mục nhật ký vận hành.</param>
     /// <param name="email">Cấu hình email.</param>
     /// <param name="walArchive">Tình trạng lưu WAL (lát QT3a).</param>
+    /// <param name="backup">Cấu hình sao lưu (lát QT3b – ổ sao lưu).</param>
     public SystemOverviewService(
         ProcDbContext db, IClock clock, AppVersion version, IOptions<AppEnvironmentOptions> environment, IBackgroundHeartbeat heartbeat,
         IOptions<AttachmentOptions> attachments, IOptions<OperationsOptions> operations, IOptionsMonitor<EmailOptions> email,
-        IWalArchiveStatus walArchive)
+        IWalArchiveStatus walArchive, IOptions<BackupOptions> backup)
     {
         _walArchive = walArchive;
+        _backup = backup.Value;
         _db = db;
         _clock = clock;
         _version = version;
@@ -95,8 +98,13 @@ public sealed class SystemOverviewService : ISystemOverview
             new(database, "Dung lượng CSDL", Bytes(size), "Neutral", null),
             new(database, "Số kết nối đang mở", Number(connections), "Neutral", "Đếm trong pg_stat_activity của CSDL này."),
             await WalArchiveAsync(database, cancellationToken),
+            await LastBackupAsync(database, now, cancellationToken),
             Disk(disk, "Ổ chứa file đính kèm", _attachments.RootPath),
             Disk(disk, "Ổ chứa nhật ký vận hành", _operations.LogDirectory),
+            string.IsNullOrWhiteSpace(_backup.RootPath)
+                ? new(disk, "Ổ sao lưu", "Chưa khai", _environment.Name == AppEnvironments.Dev ? "Neutral" : "Error",
+                    "Khai Backup:RootPath (ổ khác ổ dữ liệu CSDL) – docs/deploy-windows.md mục 4b.")
+                : Disk(disk, "Ổ sao lưu", _backup.RootPath),
         ];
 
         var beats = _heartbeat.Snapshot();
@@ -130,6 +138,28 @@ public sealed class SystemOverviewService : ISystemOverview
         return _environment.IsTest
             ? new("Ứng dụng", "Gửi email", "Không gửi", "Error", "Máy TEST chưa khai Email:RedirectAllTo – thư bị chặn, không gửi tới người dùng thật.")
             : new("Ứng dụng", "Gửi email", $"Gửi thật qua {o.Host}", "Ok", null);
+    }
+
+    /// <summary>
+    /// Dòng "Sao lưu gần nhất" (lát QT3b, design.md 21.4 SYS): bản Full / Diff dùng được gần nhất – quá 24 giờ hoặc chưa có thì đèn đỏ trên TEST /
+    /// PROD (DEV trung tính – máy lập trình không bắt buộc sao lưu); ghi chú kèm bản pg_dump gần nhất.
+    /// </summary>
+    private async Task<SystemOverviewRowDto> LastBackupAsync(string group, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var usable = _db.BackupRuns.AsNoTracking()
+            .Where(r => r.Status == Proc.Domain.Operations.BackupRunStatus.Succeeded && r.Verified != false && r.PurgedAt == null);
+        var last = await usable.Where(r => r.Kind == Proc.Domain.Operations.BackupKind.Full || r.Kind == Proc.Domain.Operations.BackupKind.Diff)
+            .OrderByDescending(r => r.FinishedAt).Select(r => new { r.Kind, r.FinishedAt }).FirstOrDefaultAsync(cancellationToken);
+        var dump = await usable.Where(r => r.Kind == Proc.Domain.Operations.BackupKind.Dump)
+            .OrderByDescending(r => r.FinishedAt).Select(r => r.FinishedAt).FirstOrDefaultAsync(cancellationToken);
+        var strict = _environment.Name != AppEnvironments.Dev;
+        var dumpNote = dump is { } d ? $"pg_dump gần nhất {Stamp(d)}." : "Chưa có bản pg_dump.";
+        if (last?.FinishedAt is not { } at)
+            return new(group, "Sao lưu gần nhất", "Chưa có", strict ? "Error" : "Neutral", $"Chưa có bản Full / Diff dùng được. {dumpNote} Chi tiết: màn hình BAK.");
+        var late = now - at > TimeSpan.FromHours(24);
+        return new(group, "Sao lưu gần nhất", $"{Proc.Application.Operations.BackupLabels.Kind(last.Kind)} {Stamp(at)}",
+            late && strict ? "Error" : late ? "Warning" : "Ok",
+            $"{(late ? "Quá 24 giờ chưa có bản sao lưu mới – xem lịch sử ở màn hình BAK. " : string.Empty)}{dumpNote}");
     }
 
     /// <summary>

@@ -999,7 +999,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   làm việc = thư mục sao lưu, tham số chỉ là tên tương đối không dấu (chặn tham số ngoài ASCII). Test: domain `BackupRunTests` 4, tích hợp
   `BackupTests` 6 (pg_dump thật vào thư mục "proc test sao lưu"; Full thiếu `ConnectionStrings:Maintenance` báo lỗi rõ – máy dev `proc` không có
   REPLICATION nên Full / Diff thật chưa chạy thử). `dotnet test` 745/745.
-- QT3b-2 (chưa): lịch B1 + tham số trên màn hình tham số, dọn bản quá hạn + WAL cũ (`pg_archivecleanup`), cảnh báo ổ < 15%, thông báo khi lỗi.
+- **QT3b-2 xong (lịch và dọn)**: `BackupPlanner` (domain, hàm thuần): lượt lịch mỗi ngày lúc BACKUP_TIME giờ VN, chạy bù trong cùng ngày; Full
+  ngày BACKUP_FULL_DAY hoặc khi chưa có Full dùng được, còn lại Diff; dọn Full quá BACKUP_KEEP_WEEKS tuần kèm Diff, dump quá DUMP_KEEP_DAYS,
+  luôn giữ Full / dump dùng được mới nhất; WAL giữ từ file đầu của Full cũ nhất còn giữ. `BackupScheduler`: `PlanAsync` (khóa duy nhất Kind +
+  ScheduledDate chống đặt trùng), `CleanupAsync` (xóa nơi chính + nơi thứ hai, `pg_archivecleanup` chạy trong thư mục WAL, ổ sao lưu < 15 %
+  thông báo mỗi ngày một lần); dịch vụ nền: đặt lịch → chạy hàng chờ → có lần vừa chạy thì dọn. `Backup:ScheduleEnabled` (Dev, Testing tắt).
+  Thông báo `BackupProblem` (chỉ trong phần mềm, người có `System.OpsBackup.Run` ở TCT) khi lỗi / không đạt / chưa chép nơi thứ hai. Màn hình
+  tham số nhóm "Sao lưu" 4 dòng (ngày Full hiện "7 – Chủ nhật", gõ số; giờ HH:mm). SYS thêm "Sao lưu gần nhất" (quá 24 giờ / chưa có: đỏ trên
+  TEST/PROD) và "Ổ sao lưu". Nhật ký vận hành `BackupCleanup`. Test: `BackupPlannerTests` 4, `BackupTests` +4 (10). `dotnet test` 753/753.
 - QT3b-3 (chưa): giao diện BAK (tab Lịch sử / Lưu WAL / Lịch và thời hạn giữ / Nơi lưu, nút "Sao lưu ngay"), e2e, tài liệu.
 
 **QT3a xong 15/11/2026 (chưa phát hành – bản 0.33.0)** – người dùng "làm tiếp" sau QT2. Nhánh `feature/qt3a-luu-wal` (đã merge): lưu WAL liên tục.

@@ -153,6 +153,7 @@ public static class DependencyInjection
         services.AddSingleton<Proc.Application.Operations.IBackupQueueSignal, Proc.Infrastructure.Operations.BackupQueueSignal>();
         services.AddSingleton<Proc.Application.Operations.IBackupExecutor, Proc.Infrastructure.Operations.BackupExecutor>();
         services.AddScoped<Proc.Application.Operations.IBackupService, Proc.Infrastructure.Operations.BackupService>();
+        services.AddScoped<Proc.Application.Operations.IBackupScheduler, Proc.Infrastructure.Operations.BackupScheduler>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.

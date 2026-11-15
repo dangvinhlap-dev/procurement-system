@@ -48,6 +48,12 @@ public sealed class BackupOptions
     /// đua với dịch vụ nền).
     /// </summary>
     public bool WorkerEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Bật lịch sao lưu tự động (B1) – máy TEST / PROD bật (mặc định); máy DEV và Testing tắt để không tự sao lưu dữ liệu mẫu. Bật lịch trong
+    /// phần mềm thì tắt lịch <c>backup.ps1</c> / <c>backup.sh</c> cũ để không sao lưu hai lần (Q2).
+    /// </summary>
+    public bool ScheduleEnabled { get; set; } = true;
 }
 
 /// <summary>Trạng thái lưu WAL (mã tiếng Anh dùng chung giữa máy chủ và giao diện).</summary>

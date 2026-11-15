@@ -39,6 +39,18 @@ public static class SystemParameterCodes
     /// <summary>Số ngày giữ nhật ký lỗi (màn hình ERR, lát QT2) – sửa được; chỉ tham số của tổng công ty có tác dụng.</summary>
     public const string ErrorLogKeepDays = "ERRLOG_KEEP_DAYS";
 
+    /// <summary>Ngày chạy sao lưu Full (1 = Thứ hai … 7 = Chủ nhật – lát QT3b); chỉ tham số của tổng công ty có tác dụng.</summary>
+    public const string BackupFullDay = "BACKUP_FULL_DAY";
+
+    /// <summary>Giờ chạy sao lưu hằng ngày (HH:mm giờ Việt Nam – lát QT3b).</summary>
+    public const string BackupTime = "BACKUP_TIME";
+
+    /// <summary>Số tuần giữ bản Full và Diff của nó (lát QT3b).</summary>
+    public const string BackupKeepWeeks = "BACKUP_KEEP_WEEKS";
+
+    /// <summary>Số ngày giữ bản pg_dump (lát QT3b).</summary>
+    public const string DumpKeepDays = "DUMP_KEEP_DAYS";
+
     /// <summary>Tiền tố mã tham số mục tiêu KPI: KPI_TARGET_ + tên <see cref="Proc.Domain.Organization.KpiCode"/> in hoa, ví dụ
     /// KPI_TARGET_CONTRACTCOMPLIANCE (design.md mục 18.18).</summary>
     public const string KpiTargetPrefix = "KPI_TARGET_";
