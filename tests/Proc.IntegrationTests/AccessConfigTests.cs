@@ -330,6 +330,9 @@ public class AccessConfigTests
 
             var full = await ReadAsync<AccessConfigDto>(await head.GetAsync(ConfigPath, Ct));
             Assert.Equal("MatKhauNoiBo1", full.ExtraBlockedPasswords);
+            await ReadAsync<AccessConfigDto>(await head.PutAsJsonAsync(ConfigPath, Defaults(), Ct));
+            // Không có mục nào: người quản lý nhận chuỗi rỗng (khác null = không được xem).
+            Assert.Equal(string.Empty, (await ReadAsync<AccessConfigDto>(await head.GetAsync(ConfigPath, Ct))).ExtraBlockedPasswords);
             Assert.Equal(ProcApiFactory.AdminUserName, full.UpdatedByName);
         }
         finally

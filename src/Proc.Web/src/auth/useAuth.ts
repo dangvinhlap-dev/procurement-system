@@ -17,6 +17,11 @@ export interface AuthContextValue {
   refreshUser: () => Promise<void>
   /** Đổi công ty đang làm việc. */
   setWorkingCompany: (companyId: string) => void
+  /**
+   * Thay token của phiên đang dùng bằng token mới máy chủ cấp (lát QT7: đổi mật khẩu, "Đăng xuất tất cả" làm token cũ hết hiệu lực nhưng người
+   * thao tác vẫn ở lại phiên của mình).
+   */
+  renewToken: (accessToken: string, expiresAt: string) => void
   /** Thông báo lý do đăng xuất gần nhất, hiện trên màn hình đăng nhập. */
   logoutReason: string | null
   /** Người dùng có quyền tại công ty đang làm việc không (dùng để ẩn menu, nút). */

@@ -640,11 +640,11 @@ dùng nhập thì thấy ai tạo, ai sửa, ai xóa giá trị, lúc nào, giá
 | Quy tắc | Giá trị |
 | --- | --- |
 | Cách đăng nhập | ASP.NET Core Identity (bảng `User`, `UserClaim`, `UserLogin`, `UserToken`) + JWT; chưa bật 2FA, có sẵn chỗ bật sau |
-| Mật khẩu | Tối thiểu 8 ký tự, có chữ thường và chữ số |
-| Sai mật khẩu nhiều lần | Sai mật khẩu 5 lần liên tiếp thì **chờ 10 phút** mới đăng nhập lại được; trong 10 phút đó mật khẩu đúng cũng không vào được. **Không khóa hẳn tài khoản** – hết 10 phút tự đăng nhập được, không cần quản trị mở (quản trị đặt lại mật khẩu thì vào được ngay). Người dùng chốt 15/11/2026 (trước đó 15 phút). Ô nhập lại mật khẩu xác nhận việc nguy hiểm Q6 (mục 21.1) cùng quy tắc: sai 5 lần trong 10 phút thì chờ 10 phút, nhưng không ảnh hưởng đăng nhập. Portal NCC giữ cấu hình riêng `Portal:LockoutMinutes` |
+| Mật khẩu | Có chữ thường và chữ số; độ dài tối thiểu, chặn mật khẩu phổ biến và danh sách cấm thêm theo **cấu hình truy cập CFG** (từ 0.35.0, mặc định 8 ký tự – TEST, PROD đặt 10; mục 21.16) |
+| Sai mật khẩu nhiều lần | Sai mật khẩu 5 lần liên tiếp thì **chờ 10 phút** mới đăng nhập lại được; trong 10 phút đó mật khẩu đúng cũng không vào được. **Không khóa hẳn tài khoản** – hết 10 phút tự đăng nhập được, không cần quản trị mở (quản trị đặt lại mật khẩu thì vào được ngay). Người dùng chốt 15/11/2026 (trước đó 15 phút). Ô nhập lại mật khẩu xác nhận việc nguy hiểm Q6 (mục 21.1) cùng quy tắc: sai 5 lần trong 10 phút thì chờ 10 phút, nhưng không ảnh hưởng đăng nhập. Portal NCC giữ cấu hình riêng `Portal:LockoutMinutes`. Từ 0.35.0 số lần, số phút đổi được trên CFG (mặc định vẫn 5 lần, 10 phút – mục 21.16) |
 | Thông báo khi sai | Sai tên hay sai mật khẩu đều báo cùng một câu, để không dò được tài khoản nào tồn tại |
-| Thời hạn phiên | Token 8 giờ (một ngày làm việc); phiên lưu trong tab trình duyệt, đóng trình duyệt là phải đăng nhập lại |
-| Nội dung token | Chỉ chứa định danh người dùng; công ty và vai trò đọc từ CSDL mỗi lần, nên quản trị gỡ quyền hay ngừng tài khoản là có hiệu lực ngay |
+| Thời hạn phiên | Token 8 giờ (một ngày làm việc – đổi trên CFG từ 0.35.0); phiên lưu trong tab trình duyệt, đóng trình duyệt là phải đăng nhập lại. Đổi / đặt lại mật khẩu, "Đăng xuất tất cả" làm token cũ hết hiệu lực ngay (mục 21.16) |
+| Nội dung token | Chỉ chứa định danh người dùng (từ 0.35.0 kèm mã bảo mật của tài khoản để thu hồi phiên); công ty và vai trò đọc từ CSDL mỗi lần, nên quản trị gỡ quyền hay ngừng tài khoản là có hiệu lực ngay |
 | Công ty làm việc | Chỉ chọn được công ty có ít nhất một dòng `UserCompanyRole` với công ty và vai trò đang hoạt động; tổng công ty đứng đầu danh sách |
 | Tài khoản đầu tiên | Tạo từ cấu hình `Seed` khi khởi động: dev/test tạo sẵn `admin` và 4 công ty mẫu; server thật đặt mật khẩu qua biến môi trường rồi đổi ngay sau lần đăng nhập đầu |
 
@@ -3036,7 +3036,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | BAK | Sao lưu | Full / Diff / tình trạng lưu WAL / `pg_dump` / đính kèm: chạy tay hoặc theo lịch, kiểm tra (`pg_verifybackup`, `pg_restore --list`), SHA256, giữ theo B1, dọn WAL cũ, chép nơi thứ hai; lịch sử (giờ, kiểu, dung lượng, kết quả, người chạy); cảnh báo ổ sắp đầy |
 | RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng; đã làm lát QT6 – mục 21.15 |
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
-| CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào) |
+| CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào); đã làm lát QT7 – mục 21.16 |
 | REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
 | AGT | Bộ thực thi (lát QT5) | Môi trường DEV / TEST / PROD có bộ thực thi: tình trạng liên lạc, phiên bản, khóa (tạo khóa xác nhận Q6); lịch sử lệnh, "Lệnh thử"; QT8 dùng bảng môi trường này cho REL – mục 21.14 |
 | TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới |
@@ -3113,7 +3113,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | QT4 | Bảo trì CSDL DBM |
 | QT5 | Bộ thực thi (Windows trước) + chế độ bảo trì |
 | QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
-| QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) |
+| QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) – **xong 15/11/2026** (mục 21.16) |
 | QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
 | QT9 | Làm mới TEST từ PROD (nguyên trạng + đính kèm, không làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
@@ -3277,7 +3277,7 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   `/api/auth` (đăng nhập, đổi công ty), API môi trường ẩn danh, API bộ thực thi; file giao diện và `/health` không chặn. Trạng thái đọc qua dịch
   vụ singleton đệm 5 giây (nhiều tiến trình IIS thấy nhau sau tối đa 5 giây); đọc CSDL lỗi thì coi như tắt (không khóa người dùng vì lỗi đọc).
   Bật / tắt bắt buộc lý do ≥ 5 ký tự (tự chọn – chặn mọi người dùng nên phải ghi vì sao), không đòi mật khẩu (không mất dữ liệu, tắt lại được
-  ngay). Quyền riêng `System.OpsMaintenanceMode.Manage`; nút "Bật / Tắt chế độ bảo trì…" tạm đặt trên **SYS** – lát QT7 chuyển vào CFG.
+  ngay). Quyền riêng `System.OpsMaintenanceMode.Manage`; nút "Bật / Tắt chế độ bảo trì…" tạm đặt trên **SYS** – lát QT7 đã chuyển vào tab Bảo trì của CFG (mục 21.16).
   API môi trường (`/api/ops/v1/environment`, `/api/portal/auth/environment`) thêm trường `maintenance` (câu thông báo, giờ bật – không lý do,
   không người bật) → dải **đỏ** "ĐANG BẢO TRÌ: …" trên mọi màn hình kể cả đăng nhập, Portal; giao diện lấy lại mỗi phút và ngay khi API trả 503.
   NCC trên Portal cũng bị chặn (người dùng thường).
@@ -3339,7 +3339,7 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   bản khôi phục → `<CSDL>` (lỗi giữa chừng đổi ngược); mốc: dừng máy chủ tạm và dịch vụ PostgreSQL, bỏ dòng phục hồi trong `postgresql.auto.conf`,
   đổi tên thư mục dữ liệu thành `<thư mục>_old_<giờ>`, chuyển bản khôi phục vào (robocopy /MOVE, chép ACL thư mục cũ), chạy lại, chép file
   `.history` vào thư mục WAL → chạy app pool → `/health`; không lên thì trả về như cũ. Kết quả báo về **CSDL mới** (lệnh, lần phục hồi đã được chép
-  sang). **Chế độ bảo trì vẫn bật sau hoán đổi** – người quản trị kiểm tra rồi tắt ở SYS. Bản cũ giữ tới khi xóa tay.
+  sang). **Chế độ bảo trì vẫn bật sau hoán đổi** – người quản trị kiểm tra rồi tắt ở CFG (tab Bảo trì – từ QT7). Bản cũ giữ tới khi xóa tay.
 - **Bỏ**: pg_dump – ứng dụng `DROP DATABASE … WITH (FORCE)` (không bao giờ CSDL đang chạy); mốc – lệnh `DiscardPointInTime` (dừng máy chủ tạm, xóa
   thư mục). Lệnh hết hạn / bị hủy / lỗi mà bộ thực thi không báo thì lần phục hồi tự cập nhật khi mở RST. Màn hình AGT chỉ ra được Lệnh thử.
 - **API, quyền**: `/api/ops/v1/restore/overview|plan?target|runs?from&to|runs/{id}` (`System.OpsRestore.View`), `POST runs`, `runs/{id}/compare`,
@@ -3351,6 +3351,55 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   chạy – chỉ cần lý do); thêm bảng vận hành giữ theo hiện tại, chặn hoán đổi khi khác phiên bản CSDL, cảnh báo CSDL khác cùng máy chủ. Khôi phục
   theo mốc và hoán đổi máy chủ CSDL chưa chạy thật trên máy dev (không có bản Full) – diễn tập D2 trên máy TEST; hoán đổi CSDL đã chạy thật trên CSDL
   nháp.
+
+### 21.16 Lát QT7 – cấu hình truy cập (CFG), đã làm (15/11/2026)
+
+- **Bảng một dòng `AccessPolicy`** (migration `V0_35_0_CauHinhTruyCap`, [Auditable] – mọi lần sửa vào AuditLog, lý do vào nhật ký vận hành
+  `AccessConfigChanged`). Mỗi máy (TEST, PROD) đặt riêng; TEST đặt giống PROD (21.3a). Chưa có dòng thì dùng mặc định. Đọc qua
+  `IAccessPolicyProvider` (singleton đệm 5 giây; lưu thì cập nhật ngay).
+
+| Tham số | Mặc định | Khoảng | Ghi chú |
+| --- | --- | --- | --- |
+| Độ dài mật khẩu tối thiểu | **8** | 8–64 | Tự chọn 8 (kế hoạch ghi 10) để mật khẩu mẫu, test hiện có (`Demo@2026`) không bị chặn; TEST, PROD đặt 10 khi cài (CFG báo vàng khi < 10). Áp khi đặt mật khẩu mới, không bắt đổi mật khẩu đang dùng |
+| Chặn mật khẩu phổ biến | Bật | – | Danh sách nhúng `Identity/CommonPasswords.txt` (~160 mục ≥ 8 ký tự), so không phân biệt hoa thường, đúng cả chuỗi |
+| Mật khẩu cấm thêm | trống | ≤ 4.000 ký tự | Mỗi dòng một mật khẩu; luôn chặn (kể cả khi tắt công tắc trên); người chỉ có quyền xem không thấy danh sách |
+| Sai mật khẩu liên tiếp / phút khóa | 5 / 10 | 3–20 / 1–1.440 | Như quy tắc 9.4; `AuthService` tự đếm theo CFG (không dùng số cố định của Identity); áp cả mật khẩu xác nhận Q6 |
+| Hạn phiên | 480 phút | 15–1.440 | Thay `Jwt:LifetimeMinutes` (bỏ khỏi appsettings); áp cho lần đăng nhập sau khi lưu |
+| Dải IP quản trị | trống = mọi IP | ≤ 2.000 ký tự | CIDR hoặc địa chỉ lẻ, mỗi dòng / dấu phẩy một mục; dải có bit sau tiền tố khác 0 (10.1.2.3/8) báo sai |
+| Đăng nhập / phút / IP | 20 | 5–1.000 | `POST /api/auth/login`; theo tên đăng nhập đã có khóa tạm |
+| API / phút / phiên | 600 | 60–10.000 | Mọi API nội bộ có token, đếm theo phiên (băm chuỗi Authorization) |
+| Việc nặng cùng lúc / phiên | 3 | 1–20 | `/api/excel`, `/api/reports`, `/api/purchase-accounting-export`, `…/pdf`; vượt thì 429 ngay, không xếp hàng |
+
+- **Thu hồi phiên**: JWT thêm claim `sstamp` = SecurityStamp của tài khoản; `UserScopeLoader` so mã (đọc cùng truy vấn IsActive – không thêm lượt
+  đọc CSDL) và so `iat` với mốc **"Đăng xuất tất cả"** (`SessionsRevokedAt`, tròn giây). Sai thì 401 "Phiên đăng nhập đã hết hiệu lực…" → giao diện
+  về màn hình đăng nhập. Đổi mật khẩu (Identity tự đổi mã), quản trị đặt lại mật khẩu → mọi phiên của người đó hết hiệu lực; người tự đổi nhận token
+  mới (`POST /api/auth/change-password` trả `LoginResult` – 200 thay 204). Ngừng dùng tài khoản đã chặn từ trước (IsActive). Token cấp trước 0.35.0
+  không có `sstamp` → đăng nhập lại một lần sau khi nâng cấp.
+- **Đăng xuất tất cả** (việc nguy hiểm Q6: lý do + mật khẩu + gõ "ĐĂNG XUẤT TẤT CẢ"): mọi token cấp trước lúc bấm bị từ chối, kể cả phiên khác của
+  người bấm; phiên đang dùng nhận token mới. Nhật ký vận hành `SessionsRevoked`.
+- **Dải IP quản trị**: chốt ở `OperationsAccess` (bộ lọc `RequireHeadOffice` của mọi API QT, kể cả CFG): ngoài dải → 403 kèm IP, nhật ký
+  `OpsIpDenied`. Người dùng chốt 15/11/2026: **để trống = mọi IP**; **không cho lưu dải không gồm IP máy đang thao tác**; **có cách gỡ khi bị khóa**:
+  (1) đăng nhập ngay trên máy chủ – loopback luôn được; (2) đặt `Security:IgnoreOpsIpRanges = true` trong file cấu hình máy chủ (hoặc biến môi
+  trường `Security__IgnoreOpsIpRanges`) – có hiệu lực ngay không cần khởi động lại, tab Bảo mật của CFG báo **đỏ** tới khi đặt lại `false`.
+- **Giới hạn tần suất** (`Proc.Api/Security/ApiRateLimiting.cs`, đổi tên từ `PortalRateLimiting`): chuỗi hai bộ – số lần (cửa sổ 1 phút: Portal theo
+  IP như cũ, đăng nhập nội bộ theo IP, API nội bộ theo phiên, gửi lỗi giao diện theo phiên) + việc nặng chạy cùng lúc theo phiên. Request từ chính máy
+  chủ (loopback – bộ thực thi, Vite dev proxy, test tự động) hoặc không rõ IP **không giới hạn phần nội bộ** (tự chọn – không phải người dò mật khẩu từ
+  mạng). 429 kèm `Retry-After` và câu tiếng Việt ("Đăng nhập quá nhiều lần…", "Quá nhiều yêu cầu…", "Bạn đang chạy nhiều việc nặng cùng lúc…").
+- **Header bảo mật** (`SecurityHeadersMiddleware`, giá trị ở `SecurityHeaderValues`): CSP `default-src 'self'` (script, kết nối chỉ từ máy chủ;
+  `style-src 'unsafe-inline'` cho Ant Design; ảnh, font `data:` `blob:`; khung `blob:` cho xem trước PDF; `frame-ancestors 'self'`), `X-Content-Type-
+  Options`, `X-Frame-Options SAMEORIGIN`, `Referrer-Policy same-origin`, `Permissions-Policy` (tắt camera, micro, vị trí, thanh toán, USB), **HSTS**
+  chỉ khi request HTTPS và không phải máy dev (`Security:HstsMaxAgeDays`, mặc định 365; 0 = tắt).
+- **`/health`**: chưa đăng nhập chỉ trả trạng thái + phiên bản (`checks` rỗng – bộ thực thi, giám sát vẫn dùng được); người có quyền
+  `System.Ops.View` thấy từng mục kiểm tra.
+- **Proxy tin cậy**: `Security:KnownProxies` (IP / CIDR); có khai mới bật `UseForwardedHeaders` và chỉ tin danh sách này (bỏ mặc định tin loopback).
+  IIS in-process không cần; Docker + Caddy khai dải mạng Docker.
+- **API, quyền**: `GET /api/ops/v1/access-config` (`System.Ops.View` hoặc `System.OpsConfig.Manage`), `PUT` (lý do ≥ 5 ký tự), `POST
+  …/sign-out-all` (`System.OpsConfig.Manage`); chỉ tổng công ty, chỉ dải IP cho phép. Bật / tắt bảo trì vẫn quyền `System.OpsMaintenanceMode.Manage`.
+- **Giao diện CFG** `/he-thong/cau-hinh-truy-cap` (menu Quản trị hệ thống; ui-style.md mục 5p): tab Chính sách, Bảo mật, Bảo trì. Nút bảo trì
+  chuyển từ SYS sang tab Bảo trì (SYS vẫn hiện thông báo đỏ khi đang bảo trì).
+- Khác kế hoạch: quyền `System.OpsConfig.Manage` (mẫu 3 đoạn như các quyền QT khác); mặc định độ dài mật khẩu 8 (không phải 10); giới hạn theo tên
+  đăng nhập dùng khóa tạm sẵn có thay cho bộ đếm riêng; thêm cách gỡ khóa IP bằng file cấu hình (người dùng yêu cầu); SYS so cấu hình bảo mật TEST –
+  PROD làm ở QT8 (cần bảng ba môi trường).
 
 ## Nguồn tham khảo
 

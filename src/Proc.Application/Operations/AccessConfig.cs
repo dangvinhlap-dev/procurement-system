@@ -84,7 +84,8 @@ public sealed record AccessSecurityRowDto(string Group, string Item, string Valu
 /// <summary>Cấu hình truy cập hiện CFG.</summary>
 /// <param name="MinPasswordLength">Độ dài mật khẩu tối thiểu.</param>
 /// <param name="BlockCommonPasswords">Chặn mật khẩu phổ biến.</param>
-/// <param name="ExtraBlockedPasswords">Mật khẩu cấm thêm, mỗi dòng một mật khẩu (người có quyền quản lý mới xem được).</param>
+/// <param name="ExtraBlockedPasswords">Mật khẩu cấm thêm, mỗi dòng một mật khẩu; chuỗi rỗng = không có; null = người xem không có quyền quản lý
+/// CFG (không được xem danh sách).</param>
 /// <param name="MaxFailedLogins">Số lần sai liên tiếp thì tạm khóa.</param>
 /// <param name="LockoutMinutes">Số phút tạm khóa.</param>
 /// <param name="SessionMinutes">Hạn phiên (phút).</param>

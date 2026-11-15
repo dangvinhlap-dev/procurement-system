@@ -263,7 +263,7 @@ function AccountTab({ isNew, detail, disabled }: { isNew: boolean; detail?: User
         <Form.Item
           label="Mật khẩu ban đầu"
           name="password"
-          extra="Tối thiểu 8 ký tự, có chữ thường và chữ số. Báo người dùng đổi ngay sau lần đăng nhập đầu."
+          extra="Có chữ thường và chữ số, đủ độ dài theo cấu hình truy cập CFG (tối thiểu 8), không quá phổ biến. Báo người dùng đổi ngay sau lần đăng nhập đầu."
           rules={[
             { required: true, message: 'Hãy nhập mật khẩu ban đầu.' },
             { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự.' },
@@ -512,7 +512,7 @@ function ResetPasswordDialog({
         <Form.Item
           label="Mật khẩu mới"
           name="newPassword"
-          extra="Tối thiểu 8 ký tự, có chữ thường và chữ số. Người dùng đang tạm ngưng đăng nhập (sai mật khẩu) đăng nhập được ngay."
+          extra="Có chữ thường và chữ số, đủ độ dài theo cấu hình truy cập CFG (tối thiểu 8). Người dùng đang tạm ngưng đăng nhập (sai mật khẩu) đăng nhập được ngay; phiên đang mở của người đó bị đăng xuất."
           rules={[{ required: true, message: 'Hãy nhập mật khẩu mới.' }]}
         >
           <Input.Password autoFocus autoComplete="new-password" />

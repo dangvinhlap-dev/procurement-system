@@ -145,6 +145,7 @@ Bản 0.35.0 · Vừa · GĐ2.
 | Khác | `/health` ẩn danh chỉ trả trạng thái, chi tiết cho người có quyền; `ForwardedHeaders` chỉ tin proxy khai trong cấu hình |
 | CSDL, quyền | Migration `V0_35_0_CauHinhTruyCap` · `System.Ops.Config.Manage` |
 | Test | Tích hợp: 429, đủ header, token cũ bị từ chối sau đổi mật khẩu, IP ngoài danh sách bị chặn QT, mật khẩu yếu bị từ chối · e2e `access-config.spec.ts` |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.16): quyền `System.OpsConfig.Manage`; độ dài mật khẩu mặc định 8 (TEST, PROD đặt 10 khi cài); theo tên đăng nhập dùng khóa tạm sẵn có; loopback không giới hạn phần nội bộ; `PortalRateLimiting` đổi tên `ApiRateLimiting`; thêm cách gỡ khi lỡ khóa IP: `Security:IgnoreOpsIpRanges` trong file cấu hình máy chủ (người dùng yêu cầu); "Đăng xuất tất cả" theo mốc `iat` (không đổi mã từng tài khoản); SYS so cấu hình TEST – PROD để QT8. Test domain 5, tích hợp 6, e2e 2 |
 
 ### QT8 – Trung tâm phát hành (REL)
 Bản 0.36.0 · Lớn · GĐ2 (lần cài tay cuối).

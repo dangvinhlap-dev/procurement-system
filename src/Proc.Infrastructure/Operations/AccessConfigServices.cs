@@ -140,7 +140,7 @@ public sealed class AccessConfigService : IAccessConfigService
         return new AccessConfigDto(
             policy.MinPasswordLength, policy.BlockCommonPasswords,
             // Mật khẩu cấm thêm thường là mẫu mật khẩu nội bộ hay dùng – người chỉ có quyền xem vận hành không cần thấy.
-            _scope.HasPermission(Proc.Domain.Organization.Permissions.System.OpsConfigManage) ? policy.ExtraBlockedPasswords : null,
+            _scope.HasPermission(Proc.Domain.Organization.Permissions.System.OpsConfigManage) ? policy.ExtraBlockedPasswords ?? string.Empty : null,
             policy.MaxFailedLogins, policy.LockoutMinutes,
             policy.SessionMinutes, policy.OpsAllowedIpRanges, policy.LoginPerMinutePerIp, policy.ApiPerMinutePerUser, policy.HeavyConcurrentPerUser,
             policy.SessionsRevokedAt, row?.UpdatedAt ?? row?.CreatedAt, updatedByName, PolicyPasswordValidator.CommonPasswords.Count,

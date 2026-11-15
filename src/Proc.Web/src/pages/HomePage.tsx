@@ -84,7 +84,8 @@ export function HomePage() {
         {health.data && (
           <Typography.Text type="secondary">
             Hệ thống: {health.data.status === 'Healthy' ? 'hoạt động bình thường' : 'có lỗi'} · Cơ sở dữ liệu:{' '}
-            {health.data.checks.every((c) => c.status === 'Healthy') ? 'kết nối được' : 'lỗi'} · Phiên bản API {health.data.version}
+            {/* Lát QT7: /health ẩn danh không trả từng mục – CSDL là mục kiểm tra duy nhất nên đọc theo trạng thái chung. */}
+            {health.data.status === 'Healthy' ? 'kết nối được' : 'lỗi'} · Phiên bản API {health.data.version}
           </Typography.Text>
         )}
       </div>

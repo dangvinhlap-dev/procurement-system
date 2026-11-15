@@ -178,7 +178,7 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
   khôi phục – mục 8.9b). Màn hình **Bộ thực thi**: tab **Môi trường** (đèn xanh "Đang liên lạc", vàng "Mất liên lạc"), **Khai môi trường…**,
   **Tạo khóa…** (nhập lại mật khẩu, gõ "TẠO KHÓA"; khóa chỉ hiện một lần – đưa cho người cài trên máy đó), **Lệnh thử** (kiểm tra bộ thực thi chạy
   được); tab **Lệnh**: lịch sử lệnh, bấm đúp xem nhật ký, **Hủy lệnh** còn chờ. Cách cài: docs/deploy-windows.md mục 4d.
-- **Chế độ bảo trì** (màn hình Tổng quan hệ thống – nút **Bật chế độ bảo trì…**): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
+- **Chế độ bảo trì** (màn hình **Cấu hình truy cập**, tab **Bảo trì** – nút **Bật chế độ bảo trì…**; trước bản 0.35.0 ở Tổng quan hệ thống): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
   Portal) thấy dải đỏ "ĐANG BẢO TRÌ" và câu thông báo, không thao tác được; người có quyền quản trị vận hành vẫn làm việc. Bắt buộc ghi lý do;
   xong việc bấm **Tắt chế độ bảo trì…**.
 
@@ -190,9 +190,22 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
 - **Về mốc thời gian…** (chọn ngày, giờ → **Lập kế hoạch**): phần mềm tìm bản Full, Diff, WAL; đủ chuỗi thì bộ thực thi dựng máy chủ CSDL tạm. Lưu
   ý: cách này đưa **mọi CSDL trên cùng máy chủ PostgreSQL** về mốc – màn hình liệt kê các CSDL đó.
 - **Hoán đổi…** nhập lại mật khẩu, lý do, gõ "KHÔI PHỤC". Bộ thực thi bật chế độ bảo trì, dừng phần mềm vài phút, hoán đổi, chạy lại; bản cũ giữ
-  lại. Lịch sử sao lưu, bộ thực thi, nhật ký vận hành giữ như hiện tại. Xong việc **kiểm tra dữ liệu rồi tắt chế độ bảo trì** ở Tổng quan hệ thống.
+  lại. Lịch sử sao lưu, bộ thực thi, nhật ký vận hành giữ như hiện tại. Xong việc **kiểm tra dữ liệu rồi tắt chế độ bảo trì** ở Cấu hình truy cập (tab Bảo trì).
 - Bản khôi phục khác phiên bản CSDL (bản sao lưu của phiên bản phần mềm cũ) chỉ dùng để tra cứu, không hoán đổi được. Cách chuẩn bị máy chủ:
   docs/deploy-windows.md mục 4e.
+
+## 8.9c Cấu hình truy cập (CFG)
+
+- Màn hình **Quản trị hệ thống → Cấu hình truy cập** (chỉ ở tổng công ty). Tab **Chính sách**: độ dài mật khẩu tối thiểu, chặn mật khẩu phổ biến,
+  mật khẩu cấm thêm, số lần sai mật khẩu và số phút tạm khóa, hạn phiên đăng nhập, **dải IP** được dùng các màn hình quản trị vận hành, giới hạn số
+  lần đăng nhập / gọi hệ thống mỗi phút. Dòng đèn vàng là chưa đạt mức khuyên dùng cho máy TEST / PROD. **Sửa cấu hình…** (ghi lý do) để đổi.
+- **Dải IP**: để trống thì mọi máy dùng được; khai dải thì máy ngoài dải mở SYS, Sao lưu, Phục hồi… bị báo "Máy của bạn (…) không nằm trong dải IP…"
+  (các màn hình nghiệp vụ không ảnh hưởng). Phần mềm không cho lưu dải không có máy bạn đang dùng. Lỡ khóa mình: đăng nhập ngay trên máy chủ, hoặc
+  nhờ người quản trị máy chủ bật `Security:IgnoreOpsIpRanges` trong file cấu hình (docs/deploy-windows.md mục 4f).
+- **Đăng xuất tất cả…** (nhập lại mật khẩu, lý do, gõ "ĐĂNG XUẤT TẤT CẢ"): mọi người đang đăng nhập phải đăng nhập lại – dùng khi nghi lộ mật khẩu.
+  Phiên của bạn được giữ.
+- Đổi mật khẩu (menu người dùng) hoặc quản trị đặt lại mật khẩu: các phiên khác của người đó tự đăng xuất.
+- Tab **Bảo mật**: các lớp bảo vệ của máy chủ (chỉ xem). Tab **Bảo trì**: bật / tắt chế độ bảo trì (mục 8.9a).
 
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 

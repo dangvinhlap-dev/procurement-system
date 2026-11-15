@@ -277,7 +277,7 @@ function Invoke-SwapDatabase($Command) {
     }
 
     Start-Site
-    if (Test-Health) { return New-Result $true "Đã hoán đổi: $restore thành $live, CSDL cũ giữ tên $old. Chế độ bảo trì còn bật – kiểm tra rồi tắt ở SYS." }
+    if (Test-Health) { return New-Result $true "Đã hoán đổi: $restore thành $live, CSDL cũ giữ tên $old. Chế độ bảo trì còn bật – kiểm tra rồi tắt ở CFG (Cấu hình truy cập, tab Bảo trì)." }
 
     # Site không lên với CSDL mới: trả lại như cũ (dữ liệu không mất – đang bảo trì, chưa ai nhập).
     Stop-Site
@@ -408,7 +408,7 @@ function Invoke-SwapCluster($Command) {
     Start-Site
     if (Test-Health) {
         Remove-Item -LiteralPath $l.Work -Recurse -Force -ErrorAction SilentlyContinue
-        return New-Result $true "Đã hoán đổi máy chủ CSDL về mốc; thư mục dữ liệu cũ giữ ở $oldPath. Chế độ bảo trì còn bật – kiểm tra rồi tắt ở SYS."
+        return New-Result $true "Đã hoán đổi máy chủ CSDL về mốc; thư mục dữ liệu cũ giữ ở $oldPath. Chế độ bảo trì còn bật – kiểm tra rồi tắt ở CFG (Cấu hình truy cập, tab Bảo trì)."
     }
     return New-Result $false "Đã đưa bản khôi phục vào nhưng site không trả /health – xem log PostgreSQL; thư mục dữ liệu cũ ở $oldPath (đổi tên lại để quay về)."
 }
