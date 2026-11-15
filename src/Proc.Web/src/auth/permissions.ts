@@ -18,6 +18,8 @@ export const Permission = {
   ErrorLogManage: 'System.OpsErrorLog.Manage',
   /** Xem sao lưu BAK, tình trạng lưu WAL – chỉ ở tổng công ty (lát QT3a). */
   BackupView: 'System.OpsBackup.View',
+  /** Chạy sao lưu ngay (lát QT3b). */
+  BackupRun: 'System.OpsBackup.Run',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

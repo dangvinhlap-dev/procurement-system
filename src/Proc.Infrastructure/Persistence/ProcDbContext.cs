@@ -287,6 +287,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lần xảy ra lỗi (lát QT2).</summary>
     public DbSet<Proc.Domain.Operations.ErrorOccurrence> ErrorOccurrences => Set<Proc.Domain.Operations.ErrorOccurrence>();
 
+    /// <summary>Lịch sử sao lưu (màn hình BAK – lát QT3b).</summary>
+    public DbSet<Proc.Domain.Operations.BackupRun> BackupRuns => Set<Proc.Domain.Operations.BackupRun>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 

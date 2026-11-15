@@ -76,7 +76,11 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Operations:ClientErrorPermitPerMinute` | Không bắt buộc (mặc định 30): số lỗi giao diện một phiên đăng nhập được gửi về nhật ký lỗi mỗi phút (lát QT2) |
 | `ConnectionStrings:Procurement` | Mật khẩu CSDL của tài khoản `proc` |
 | `ConnectionStrings:Maintenance` | Từ 0.33.0, sau khi chạy `qt-enable-wal.ps1` (mục 4a): `Host=localhost;Port=5432;Database=procurement;Username=proc_maint;Password=<mật khẩu đặt khi chạy script>`. Bỏ trống thì màn hình BAK đọc bằng tài khoản `proc` (không xem được `archive_command`) |
-| `Backup:WalArchivePath` | Từ 0.33.0: đúng thư mục WAL đã truyền cho `qt-enable-wal.ps1`, ví dụ `E:\\ProcurementBackup\\wal` (trong JSON viết `\\`) – để BAK, SYS báo chỗ trống ổ |
+| `Backup:WalArchivePath` | Từ 0.33.0: đúng thư mục WAL đã truyền cho `qt-enable-wal.ps1`, ví dụ `E:\\ProcurementBackup\\wal` (trong JSON viết `\\`) – để BAK, SYS báo chỗ trống ổ và dọn WAL cũ (QT3b) |
+| `Backup:RootPath` | Từ 0.33.0 (QT3b): thư mục sao lưu **trên ổ khác ổ dữ liệu CSDL**, ví dụ `E:\\ProcurementBackup\\data` – phần mềm tạo `full`, `diff`, `dump`, `attachments` bên trong. Bỏ trống = không sao lưu được (BAK, SYS đỏ) |
+| `Backup:SecondaryPath` | Không bắt buộc: NAS / thư mục mạng, ví dụ `\\\\nas01\\procurement-backup` – chép sau mỗi lần sao lưu; tài khoản App Pool phải ghi được |
+| `Backup:PgBinPath` | Thư mục `bin` của PostgreSQL 18 trên máy app, ví dụ `C:\\Program Files\\PostgreSQL\\18\\bin`. Bỏ trống thì tự tìm (PATH, Program Files) |
+| `Backup:ScheduleEnabled` | `true` (mặc định) – sao lưu tự động theo lịch B1; tắt lịch `backup.ps1` cũ (mục 4b) để không sao lưu hai lần |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
@@ -183,10 +187,45 @@ phục theo thời điểm ở các lát sau (design.md mục 21.5, 21.11). Làm
    - [ ] Sau 5–10 phút có người nhập liệu: "Lần chép thành công cuối" mới hơn, "File WAL chờ chép" 0.
    - [ ] Thử lỗi: tạm bỏ quyền ghi thư mục WAL của tài khoản dịch vụ → trong 1–2 phút BAK báo **Có lỗi**; trả quyền → về Đang chạy.
    - [ ] Màn hình SYS có dòng "Lưu WAL" cùng trạng thái.
-5. Từ đây **thư mục WAL lớn dần** (mỗi file 16 MB) cho tới khi lát QT3b dọn WAL cũ theo bản Full: theo dõi dòng chỗ trống ổ trên BAK / SYS
-   (vàng dưới 15 %, đỏ dưới 5 %). Tác vụ `backup.ps1` (mục 4) giữ nguyên tới QT3b.
+5. Thư mục WAL lớn dần (mỗi file 16 MB) cho tới khi có bản Full đầu tiên (mục 4b): từ đó phần mềm dọn WAL cũ hơn bản Full cũ nhất còn giữ.
+   Theo dõi dòng chỗ trống ổ trên BAK / SYS (vàng dưới 15 %, đỏ dưới 5 %).
 
 Gỡ lưu WAL khi cần: `psql -U postgres -c "ALTER SYSTEM RESET archive_mode"` (và `archive_command`) rồi khởi động lại PostgreSQL.
+
+## 4b. Sao lưu trong phần mềm – Full / Diff / pg_dump / đính kèm (từ 0.33.0 – lát QT3b)
+
+Phần mềm tự sao lưu theo lịch B1 (design.md mục 21.1, 21.12): **Full** Chủ nhật 01:00 (`pg_basebackup`, cả máy chủ CSDL), **Diff** các ngày
+khác (`pg_basebackup --incremental` lấy bản Full gần nhất làm gốc), rồi **pg_dump** CSDL ứng dụng và **chép bổ sung đính kèm**; mỗi bản được
+kiểm tra (`pg_verifybackup`, `pg_restore --list`, đối chiếu file), tính SHA256, chép sang nơi thứ hai. Giữ Full 4 tuần (kèm Diff), dump 14 ngày,
+WAL từ bản Full cũ nhất còn giữ – sửa ở **Tham số hệ thống** nhóm "Sao lưu" của tổng công ty. Lịch sử, lịch, nơi lưu xem ở màn hình **BAK**;
+không tải file sao lưu qua trình duyệt (Q5) – lấy trực tiếp trên máy chủ.
+
+Làm một lần (sau mục 4a – Full / Diff cần tài khoản `proc_maint` có REPLICATION và `summarize_wal = on`):
+
+1. Cài **PostgreSQL 18 client** trên máy app nếu app và CSDL khác máy (cùng máy thì đã có sẵn); khai `Backup:PgBinPath` nếu không ở chỗ mặc định.
+2. Tạo thư mục sao lưu trên ổ khác ổ dữ liệu, ví dụ `E:\ProcurementBackup\data`; cấp quyền **Modify** cho tài khoản App Pool trên thư mục này,
+   thư mục nơi thứ hai (nếu có) và **thư mục WAL** (để dọn WAL cũ bằng `pg_archivecleanup`):
+   ```powershell
+   icacls E:\ProcurementBackup\data /grant "IIS AppPool\Procurement:(OI)(CI)M"
+   icacls E:\ProcurementBackup\wal /grant "IIS AppPool\Procurement:(OI)(CI)M"
+   ```
+   NAS: App Pool phải chạy bằng tài khoản miền có quyền ghi thư mục mạng (tài khoản ảo `IIS AppPool\…` không vào được máy khác).
+3. Khai `Backup:RootPath` (và `Backup:SecondaryPath`, `Backup:PgBinPath` nếu cần) vào `appsettings.Production.json` (bảng mục 3.4), khởi động
+   lại App Pool.
+4. **Tắt lịch cũ** để không sao lưu hai lần (Q2): `Disable-ScheduledTask -TaskName 'Procurement backup'`. Giữ `backup.ps1` làm dự phòng – chạy
+   tay khi phần mềm không chạy được.
+5. Kiểm tra (đánh dấu từng dòng khi làm trên máy TEST):
+   - [ ] BAK → tab **Nơi lưu**: thư mục sao lưu, ổ còn trống, 5 công cụ PostgreSQL "Ổn", tài khoản bảo trì `proc_maint`.
+   - [ ] BAK → **Sao lưu ngay → Full**: tab Lịch sử có dòng "Xong", Kiểm tra "Đạt", Nơi thứ hai "Đã chép" (nếu khai); thư mục
+     `full\<ngày-giờ>` có `backup_manifest`, `backup_label`.
+   - [ ] **Sao lưu ngay → Diff** (sau Full): "Xong", thư mục `diff\<ngày-giờ>` nhỏ hơn nhiều so với bản Full.
+   - [ ] **Sao lưu ngay → pg_dump**, **Đính kèm**: "Xong", "Đạt".
+   - [ ] Tab **Lịch và thời hạn giữ**: "Lịch tự động" Bật, lượt kế tiếp đúng ngày giờ; sáng hôm sau tab Lịch sử có lần "Theo lịch".
+   - [ ] Thử lỗi: đổi tạm `Backup:PgBinPath` sai → Sao lưu ngay pg_dump báo **Lỗi** kèm câu hướng dẫn, chuông thông báo có "Sao lưu pg_dump: Lỗi".
+   - [ ] SYS: dòng "Sao lưu gần nhất" xanh, "Ổ sao lưu" có chỗ trống.
+
+**Đường dẫn có dấu tiếng Việt**: công cụ PostgreSQL trên Windows đọc tham số theo bảng mã ANSI, nên phần mềm chạy công cụ ngay trong thư mục sao
+lưu và chỉ truyền tên tương đối không dấu – thư mục đặt tên có dấu vẫn chạy, nhưng nên đặt không dấu cho dễ gõ lệnh khôi phục bằng tay.
 
 ## 5. Nâng cấp lên bản mới
 

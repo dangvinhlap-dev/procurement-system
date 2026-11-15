@@ -83,6 +83,7 @@ public sealed class SystemParameterService : ISystemParameterService
             keepDays == CompanyParameter.DefaultErrorLogKeepDays, true,
             "Lần xảy ra lỗi trên màn hình Nhật ký lỗi (ERR) cũ hơn số ngày này được tự xóa; nhóm lỗi không còn lần xảy ra nào cũng xóa theo " +
             $"({CompanyParameter.MinErrorLogKeepDays}–{CompanyParameter.MaxErrorLogKeepDays}). Chỉ tham số của tổng công ty có tác dụng."));
+        list.AddRange(BackupParameters(parameter));
         // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
         return list.Select(p => AuditFields.TryGetValue(p.Code, out var field) ? p with { AuditId = parameter?.Id, AuditField = field } : p).ToList();
     }
@@ -102,6 +103,10 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
         [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
         [SystemParameterCodes.ErrorLogKeepDays] = nameof(CompanyParameter.ErrorLogKeepDays),
+        [SystemParameterCodes.BackupFullDay] = nameof(CompanyParameter.BackupFullDay),
+        [SystemParameterCodes.BackupTime] = nameof(CompanyParameter.BackupTime),
+        [SystemParameterCodes.BackupKeepWeeks] = nameof(CompanyParameter.BackupKeepWeeks),
+        [SystemParameterCodes.DumpKeepDays] = nameof(CompanyParameter.DumpKeepDays),
         [SystemParameterCodes.KpiTarget(KpiCode.Saving)] = nameof(CompanyParameter.KpiSavingTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance)] = nameof(CompanyParameter.KpiContractTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.PurchaseSla)] = nameof(CompanyParameter.KpiSlaTarget),
@@ -115,6 +120,63 @@ public sealed class SystemParameterService : ISystemParameterService
     /// <summary>
     /// Tham số nhóm "KPI": mục tiêu 9 chỉ số và số ngày tính tồn chậm (design.md mục 18.18). Chỉ số cao là tốt ghi "≥", thấp là tốt ghi "≤".
     /// </summary>
+    /// <summary>Tên thứ theo ISO (1 = Thứ hai … 7 = Chủ nhật).</summary>
+    private static readonly string[] IsoDayNames = ["", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy", "Chủ nhật"];
+
+    /// <summary>
+    /// Bốn tham số lịch sao lưu (lát QT3b, B1 – design.md mục 21.1): sao lưu là của cả hệ thống nên chỉ tham số của tổng công ty có tác dụng.
+    /// Ngày Full hiện "7 – Chủ nhật", sửa thì gõ số (phần chữ sau số bỏ qua).
+    /// </summary>
+    private static IEnumerable<SystemParameterDto> BackupParameters(CompanyParameter? parameter)
+    {
+        const string group = "Sao lưu";
+        const string headOnly = " Chỉ tham số của tổng công ty có tác dụng.";
+        var day = parameter?.BackupFullDay ?? CompanyParameter.DefaultBackupFullDay;
+        var time = parameter?.BackupTime ?? CompanyParameter.DefaultBackupTime;
+        var weeks = parameter?.BackupKeepWeeks ?? CompanyParameter.DefaultBackupKeepWeeks;
+        var dumpDays = parameter?.DumpKeepDays ?? CompanyParameter.DefaultDumpKeepDays;
+        static string Day(int d) => $"{d.ToString(CultureInfo.InvariantCulture)} – {IsoDayNames[d]}";
+        static string Hm(TimeOnly t) => t.ToString("HH:mm", CultureInfo.InvariantCulture);
+        static string Int(int v) => v.ToString(CultureInfo.InvariantCulture);
+        return
+        [
+            new(SystemParameterCodes.BackupFullDay, group, "Ngày chạy sao lưu Full", Day(day), Day(CompanyParameter.DefaultBackupFullDay),
+                day == CompanyParameter.DefaultBackupFullDay, true,
+                "Gõ số 1 (Thứ hai) … 7 (Chủ nhật): ngày này chạy Full, các ngày khác chạy Diff (lấy bản Full gần nhất làm gốc); chưa có bản Full dùng " +
+                "được thì chạy Full ngay lượt kế tiếp." + headOnly),
+            new(SystemParameterCodes.BackupTime, group, "Giờ chạy sao lưu", Hm(time), Hm(CompanyParameter.DefaultBackupTime),
+                time == CompanyParameter.DefaultBackupTime, true,
+                "Giờ Việt Nam (HH:mm) chạy Full / Diff rồi pg_dump, đính kèm mỗi ngày; ứng dụng tắt đúng giờ thì chạy bù khi bật lại trong cùng ngày." +
+                headOnly),
+            new(SystemParameterCodes.BackupKeepWeeks, group, "Số tuần giữ bản sao lưu Full", Int(weeks), Int(CompanyParameter.DefaultBackupKeepWeeks),
+                weeks == CompanyParameter.DefaultBackupKeepWeeks, true,
+                "Bản Full cũ hơn số tuần này được dọn cùng các bản Diff của nó, WAL cũ hơn bản Full còn giữ cũng dọn; luôn giữ bản Full dùng được mới " +
+                $"nhất (1–{CompanyParameter.MaxBackupKeepWeeks})." + headOnly),
+            new(SystemParameterCodes.DumpKeepDays, group, "Số ngày giữ bản pg_dump", Int(dumpDays), Int(CompanyParameter.DefaultDumpKeepDays),
+                dumpDays == CompanyParameter.DefaultDumpKeepDays, true,
+                $"Bản pg_dump cũ hơn số ngày này được dọn; luôn giữ bản mới nhất dùng được (1–{CompanyParameter.MaxDumpKeepDays})." + headOnly),
+        ];
+    }
+
+    /// <summary>Đọc số nguyên ở đầu chữ ("7 – Chủ nhật" → 7); bỏ trống = về mặc định (null).</summary>
+    private static int? ParseLeadingInt(string? value, string error)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var digits = new string(value.Trim().TakeWhile(char.IsAsciiDigit).ToArray());
+        return int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var v) ? v : throw new BusinessRuleException(error);
+    }
+
+    /// <summary>Đọc giờ HH:mm (nhận "1:00", "01:00", "1" = 01:00); bỏ trống = về mặc định (null).</summary>
+    private static TimeOnly? ParseTime(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var text = value.Trim();
+        if (int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var hour) && hour is >= 0 and < 24) return new TimeOnly(hour, 0);
+        return TimeOnly.TryParseExact(text, ["H:mm", "HH:mm"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var t)
+            ? t
+            : throw new BusinessRuleException("Giờ chạy sao lưu phải dạng HH:mm, ví dụ 01:00 hoặc 23:30.");
+    }
+
     private static IEnumerable<SystemParameterDto> KpiParameters(CompanyParameter? parameter)
     {
         foreach (var k in KpiCatalog.All)
@@ -219,6 +281,25 @@ public sealed class SystemParameterService : ISystemParameterService
                 }
 
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeErrorLogKeepDays(keep);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.BackupFullDay:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeBackupFullDay(
+                    ParseLeadingInt(request.Value, "Ngày chạy sao lưu Full phải là số 1 (Thứ hai) … 7 (Chủ nhật)."));
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.BackupTime:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeBackupTime(ParseTime(request.Value));
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.BackupKeepWeeks:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeBackupKeepWeeks(
+                    ParseLeadingInt(request.Value, "Số tuần giữ bản sao lưu Full phải là số nguyên."));
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.DumpKeepDays:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeDumpKeepDays(
+                    ParseLeadingInt(request.Value, "Số ngày giữ bản pg_dump phải là số nguyên."));
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             default:

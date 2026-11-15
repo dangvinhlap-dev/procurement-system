@@ -18,6 +18,16 @@ import { ExcelImportDialog } from './ExcelImportDialog'
 import { catalogImportSource, type ExcelImportSource, type ImportOutcome } from './excelImport'
 import './ListPage.css'
 
+/** Tab riêng của màn hình danh sách (thay bộ tab mặc định). */
+export interface ListPageViewTabs {
+  /** Các tab: khóa và nhãn (chữ in hoa do CSS). */
+  items: { key: string; label: string }[]
+  /** Tab đang chọn. */
+  activeKey: string
+  /** Chọn tab khác. */
+  onChange: (key: string) => void
+}
+
 /** Thuộc tính của ListPage. */
 export interface ListPageProps<T> {
   /** Tiêu đề màn hình, ví dụ "Danh sách đơn mua hàng (PO)". */
@@ -62,6 +72,11 @@ export interface ListPageProps<T> {
    * với nguồn nhập riêng; "Xuất Excel" vẫn xuất đúng lưới đang xem. Không dùng cùng `excel`.
    */
   excelImport?: { source: ExcelImportSource<ImportOutcome>; title: string; canImport: boolean }
+  /**
+   * Tab riêng của màn hình thay cho bộ tab mặc định (Danh sách / Tổng hợp / Phân tích) – mỗi tab vẫn là lưới của ListPage, trang tự đổi dòng /
+   * cột theo tab đang chọn (ví dụ BAK: Lịch sử, Lưu WAL, Lịch và thời hạn giữ, Nơi lưu – ui-style.md mục 5l).
+   */
+  viewTabs?: ListPageViewTabs
 }
 
 /**
@@ -105,6 +120,7 @@ export function ListPage<T>({
   exportSubtitle,
   excel,
   excelImport,
+  viewTabs,
 }: ListPageProps<T>) {
   const { message } = App.useApp()
   const [importing, setImporting] = useState(false)
@@ -113,7 +129,9 @@ export function ListPage<T>({
   const [keyword, setKeyword] = useState('')
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [tab, setTab] = useState('list')
+  const [ownTab, setOwnTab] = useState('list')
+  // Có tab riêng thì nội dung luôn là lưới (trang tự đổi dòng theo tab), thanh tab hiện tab của trang.
+  const tab = viewTabs ? 'list' : ownTab
   // Phần đầu trang thu gọn: ẩn khu bộ lọc, bảng được nhiều chỗ hơn (Dynamic Page của Fiori).
   const [headerCollapsed, setHeaderCollapsed] = useState(false)
 
@@ -304,13 +322,15 @@ export function ListPage<T>({
         <Tabs
           size="small"
           className="list-page-tabs"
-          activeKey={tab}
-          onChange={setTab}
-          items={[
-            { key: 'list', label: 'Danh sách' },
-            { key: 'summary', label: 'Tổng hợp' },
-            { key: 'analysis', label: 'Phân tích' },
-          ]}
+          activeKey={viewTabs ? viewTabs.activeKey : tab}
+          onChange={viewTabs ? viewTabs.onChange : setOwnTab}
+          items={
+            viewTabs?.items ?? [
+              { key: 'list', label: 'Danh sách' },
+              { key: 'summary', label: 'Tổng hợp' },
+              { key: 'analysis', label: 'Phân tích' },
+            ]
+          }
         />
         <Button
           size="small"

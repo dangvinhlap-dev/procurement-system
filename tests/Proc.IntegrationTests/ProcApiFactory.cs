@@ -31,12 +31,22 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     /// <summary>Mật khẩu quản trị tạo sẵn.</summary>
     public const string AdminPassword = "Admin@2026";
 
+    /// <summary>Thư mục sao lưu của test (lát QT3b).</summary>
+    public static readonly string BackupRoot = Path.Combine(Path.GetTempPath(), "proc test sao lưu", "chính");
+
+    /// <summary>Nơi lưu thứ hai của test (lát QT3b).</summary>
+    public static readonly string BackupSecondary = Path.Combine(Path.GetTempPath(), "proc test sao lưu", "nơi thứ hai");
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         // File đính kèm của test ghi vào thư mục tạm, không lẫn vào thư mục ứng dụng (design.md mục 18.4).
         builder.UseSetting("Attachments:RootPath", Path.Combine(Path.GetTempPath(), "proc-test-attachments"));
+        // Sao lưu (lát QT3b): thư mục tạm có dấu cách + dấu tiếng Việt (thử truyền tham số lệnh); test tự gọi bộ chạy, không để dịch vụ nền chạy đua.
+        builder.UseSetting("Backup:RootPath", BackupRoot);
+        builder.UseSetting("Backup:SecondaryPath", BackupSecondary);
+        builder.UseSetting("Backup:WorkerEnabled", "false");
     }
 
     /// <summary>Khởi động host (migration + seed) rồi đưa dữ liệu về trạng thái sạch.</summary>

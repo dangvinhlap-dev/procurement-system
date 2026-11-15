@@ -17,5 +17,6 @@ export function notificationTargetPath(screenCode: string, targetId: string | nu
   if (drawerPath) return targetId ? `${drawerPath}/${targetId}` : screenCode === 'CTA' ? '/mua-hang/hop-dong-khung' : drawerPath
   const screen = screens.find((s) => s.code === screenCode)
   if (!screen) return '/'
-  return targetId && screenCode !== 'PER' ? `${screen.path}/${targetId}` : screen.path
+  // PER, BAK (thông báo sao lưu lỗi – lát QT3b) không có trang theo Id: mở màn hình, xem ở tab Lịch sử.
+  return targetId && screenCode !== 'PER' && screenCode !== 'BAK' ? `${screen.path}/${targetId}` : screen.path
 }

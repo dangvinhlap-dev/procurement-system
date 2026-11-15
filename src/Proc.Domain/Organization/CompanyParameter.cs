@@ -129,6 +129,78 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         ErrorLogKeepDays = v;
     }
 
+    /// <summary>Ngày chạy Full mặc định: 7 = Chủ nhật (thứ theo ISO: 1 = Thứ hai … 7 = Chủ nhật – B1, design.md mục 21.1).</summary>
+    public const int DefaultBackupFullDay = 7;
+
+    /// <summary>Giờ sao lưu mặc định 01:00 giờ Việt Nam (B1).</summary>
+    public static readonly TimeOnly DefaultBackupTime = new(1, 0);
+
+    /// <summary>Số tuần giữ bản Full (kèm các bản Diff của nó) mặc định (B1).</summary>
+    public const int DefaultBackupKeepWeeks = 4;
+
+    /// <summary>Số tuần giữ tối đa (một năm).</summary>
+    public const int MaxBackupKeepWeeks = 52;
+
+    /// <summary>Số ngày giữ bản pg_dump mặc định (B3 – tự chọn: 14 ngày đủ lấy lại dữ liệu xóa nhầm phát hiện muộn trong hai tuần).</summary>
+    public const int DefaultDumpKeepDays = 14;
+
+    /// <summary>Số ngày giữ bản pg_dump tối đa.</summary>
+    public const int MaxDumpKeepDays = 365;
+
+    /// <summary>
+    /// Ngày trong tuần chạy sao lưu Full (1 = Thứ hai … 7 = Chủ nhật); các ngày khác chạy Diff (lát QT3b, tham số BACKUP_FULL_DAY). Sao lưu là của
+    /// cả hệ thống nên <b>chỉ tham số của tổng công ty có tác dụng</b>.
+    /// </summary>
+    public int BackupFullDay { get; private set; } = DefaultBackupFullDay;
+
+    /// <summary>Giờ chạy sao lưu hằng đêm (giờ Việt Nam) – Full / Diff rồi pg_dump, đính kèm (tham số BACKUP_TIME).</summary>
+    public TimeOnly BackupTime { get; private set; } = DefaultBackupTime;
+
+    /// <summary>Số tuần giữ bản Full và các Diff của nó (tham số BACKUP_KEEP_WEEKS).</summary>
+    public int BackupKeepWeeks { get; private set; } = DefaultBackupKeepWeeks;
+
+    /// <summary>Số ngày giữ bản pg_dump (tham số DUMP_KEEP_DAYS).</summary>
+    public int DumpKeepDays { get; private set; } = DefaultDumpKeepDays;
+
+    /// <summary>Đổi ngày chạy Full; null = về mặc định Chủ nhật.</summary>
+    /// <param name="day">1 = Thứ hai … 7 = Chủ nhật.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài 1–7.</exception>
+    public void ChangeBackupFullDay(int? day)
+    {
+        var v = day ?? DefaultBackupFullDay;
+        if (v is < 1 or > 7) throw new BusinessRuleException("Ngày chạy sao lưu Full phải từ 1 (Thứ hai) đến 7 (Chủ nhật).");
+        BackupFullDay = v;
+    }
+
+    /// <summary>Đổi giờ sao lưu; null = về mặc định 01:00.</summary>
+    /// <param name="time">Giờ (phút chẵn, giây bỏ).</param>
+    public void ChangeBackupTime(TimeOnly? time)
+    {
+        var v = time ?? DefaultBackupTime;
+        BackupTime = new TimeOnly(v.Hour, v.Minute);
+    }
+
+    /// <summary>Đổi số tuần giữ bản Full; null = về mặc định 4.</summary>
+    /// <param name="weeks">Số tuần.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài 1–52.</exception>
+    public void ChangeBackupKeepWeeks(int? weeks)
+    {
+        var v = weeks ?? DefaultBackupKeepWeeks;
+        if (v < 1 || v > MaxBackupKeepWeeks)
+            throw new BusinessRuleException($"Số tuần giữ bản sao lưu Full phải từ 1 đến {MaxBackupKeepWeeks}.");
+        BackupKeepWeeks = v;
+    }
+
+    /// <summary>Đổi số ngày giữ bản pg_dump; null = về mặc định 14.</summary>
+    /// <param name="days">Số ngày.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài 1–365.</exception>
+    public void ChangeDumpKeepDays(int? days)
+    {
+        var v = days ?? DefaultDumpKeepDays;
+        if (v < 1 || v > MaxDumpKeepDays) throw new BusinessRuleException($"Số ngày giữ bản pg_dump phải từ 1 đến {MaxDumpKeepDays}.");
+        DumpKeepDays = v;
+    }
+
     /// <summary>% cảnh báo giá cao trên PO mặc định – cùng mức tô màu mặc định của màn hình So sánh giá (design.md mục 8.2).</summary>
     public const decimal DefaultPoHighPriceWarnPercent = 10m;
 

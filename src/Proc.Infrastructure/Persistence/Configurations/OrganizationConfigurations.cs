@@ -28,6 +28,11 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.SlaSourcingDays).HasDefaultValue(CompanyParameter.DefaultSlaSourcingDays);
         builder.Property(x => x.SlaUrgentDays).HasDefaultValue(CompanyParameter.DefaultSlaUrgentDays);
         builder.Property(x => x.ErrorLogKeepDays).HasDefaultValue(CompanyParameter.DefaultErrorLogKeepDays);
+        // Tham số sao lưu (lát QT3b) – chỉ tham số của tổng công ty có tác dụng.
+        builder.Property(x => x.BackupFullDay).HasDefaultValue(CompanyParameter.DefaultBackupFullDay);
+        builder.Property(x => x.BackupTime).HasDefaultValue(CompanyParameter.DefaultBackupTime);
+        builder.Property(x => x.BackupKeepWeeks).HasDefaultValue(CompanyParameter.DefaultBackupKeepWeeks);
+        builder.Property(x => x.DumpKeepDays).HasDefaultValue(CompanyParameter.DefaultDumpKeepDays);
         // Mục tiêu KPI (design.md mục 18.18): mặc định cột = mục tiêu mặc định của danh mục để dòng tham số cũ có ngay giá trị đúng.
         builder.Property(x => x.KpiSavingTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Saving).DefaultTarget);
         builder.Property(x => x.KpiContractTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.ContractCompliance).DefaultTarget);

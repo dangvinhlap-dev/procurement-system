@@ -59,6 +59,11 @@ public static class Permissions
         /// quyền riêng <c>System.OpsBackup.Run</c> (QT3b).
         /// </summary>
         public const string OpsBackupView = "System.OpsBackup.View";
+        /// <summary>
+        /// Quyền "Chạy sao lưu" (lát QT3b): bấm "Sao lưu ngay" (Full / Diff / pg_dump / đính kèm) trên màn hình BAK. Chỉ ở tổng công ty. Không có API
+        /// tải file sao lưu (Q5 – design.md mục 21.1).
+        /// </summary>
+        public const string OpsBackupRun = "System.OpsBackup.Run";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -342,6 +347,7 @@ public static class Permissions
         new(System.OpsErrorLogView, "Xem nhật ký lỗi (chỉ ở tổng công ty)"),
         new(System.OpsErrorLogManage, "Xử lý nhật ký lỗi, nhận thông báo khi có lỗi mới (chỉ ở tổng công ty)"),
         new(System.OpsBackupView, "Xem sao lưu, tình trạng lưu WAL (chỉ ở tổng công ty)"),
+        new(System.OpsBackupRun, "Chạy sao lưu ngay (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),
