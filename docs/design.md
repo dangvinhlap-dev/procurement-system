@@ -1156,6 +1156,11 @@ nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đ
 | Điều hướng trái (240px) | Nhóm Ghim, nhóm theo module, dòng 32px, mục đang mở nền xanh nhạt + vạch nhấn trái, số đếm (đỏ khi cần chú ý), thu gọn/ẩn, kéo rộng được |
 | Dynamic Page | Header đóng/mở (tiêu đề H1, tổng số bản ghi, nút lệnh bên phải, khu bộ lọc, tab) + Content (bảng hoặc form trên khối trắng bo góc 8px) |
 
+**Menu module** (thứ tự): Hằng ngày, Mua hàng, Giá và NCC, Đấu thầu, Báo cáo, Hệ thống, **Quản trị hệ thống** (người dùng yêu cầu 15/11/2026 –
+không để lẫn việc quản trị trong Hệ thống). Hệ thống: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt, Xếp loại NCC, Đánh số danh mục / chứng từ,
+Tham số hệ thống. Quản trị hệ thống (Alt+Q): Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy cập và module Quản trị vận hành (SYS, Nhật ký
+vận hành, ERR, BAK, DBM; các màn hình QT sau – RST, CFG, REL, TST – cũng vào đây). Đường dẫn giữ `/he-thong/…` để liên kết cũ vẫn mở được.
+
 Bỏ thanh công cụ và thanh trạng thái kiểu Windows (lát UI-b): Lưu/In nằm trên chứng từ, phiên bản và ngày làm việc nằm trong menu người dùng;
 bỏ chế độ INS/OVR (phím Insert) vì ô nhập web luôn ở chế độ chèn.
 
@@ -1934,7 +1939,7 @@ toàn (người dùng "làm tiếp" 08/11/2026):
 Migration `V0_20_0_DatHangGop` (bảng `PooledOrder`, `PooledOrderCompany`, `PooledOrderLine`, `PooledOrderAllocation`, cột
 `CompanyParameter.PooledMarginPercent` – `Down()` xóa, mất phiếu đặt gộp; PO đã sinh vẫn còn).
 
-**G10 – Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ** (08/11/2026; Hệ thống → Vai trò → "Bộ vai trò mẫu…", Hệ thống → Quy trình duyệt →
+**G10 – Vai trò mẫu và cấu hình duyệt mẫu theo sơ đồ** (08/11/2026; Quản trị hệ thống → Vai trò → "Bộ vai trò mẫu…", Hệ thống → Quy trình duyệt →
 "Cấu hình duyệt mẫu theo sơ đồ…", `GET/POST /api/approval-rules/template`):
 
 | Quy tắc | Lý do |
@@ -2217,7 +2222,7 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
 
 - Thêm vào cơ chế mẫu của lát G10 (mục 18.25), không đổi cơ chế: chỉ tạo vai trò còn thiếu / loại phiếu chưa có cấp nào, không sửa cái đã có,
   mọi cấp **ngưỡng 0** (như biểu mẫu – mọi phiếu lên Chủ tịch, Q6), áp cho **công ty đang làm việc** (mỗi công ty tự áp – Q18). Không migration.
-- **Bộ vai trò mẫu** (Hệ thống → Vai trò → "Bộ vai trò mẫu…", ô chọn bộ; `GET/POST /api/roles/templates?set=BAN|CUVT`, trống = mọi vai trò mẫu):
+- **Bộ vai trò mẫu** (Quản trị hệ thống → Vai trò → "Bộ vai trò mẫu…", ô chọn bộ; `GET/POST /api/roles/templates?set=BAN|CUVT`, trống = mọi vai trò mẫu):
   bộ **Ban cung ứng** (các vai trò cũ) và bộ **Vị trí ký biểu mẫu CUVT**: TRUONGPHONGBAN Trưởng phòng/ban, GDKHOI Giám đốc khối (hai vai trò chỉ
   cho quyền duyệt – người duyệt là người duyệt động của lát O1), TPCUVT Trưởng phòng CUVT, NVCUVT nhân viên Phòng CUVT (tìm/đánh giá NCC, RFQ, đề
   xuất chọn thầu, lập PO – **không duyệt**), TPTCKT / GDTCKT Trưởng phòng / Giám đốc TC-NQ-KT, TPHC Trưởng phòng Hành chính, PHOCTUBCL Phó CT
@@ -2864,7 +2869,7 @@ tháng, đặt hàng gộp, chiết khấu sản lượng, hồ sơ NCC mới, X
 | D2 (C3) | **Giữ** các thao tác sau duyệt hiện có (PO đóng phần còn lại; XNH cập nhật hóa đơn, điều chỉnh SL thực nhận, nghiệm thu; hợp đồng chấm dứt, phụ lục; phiếu tháng điều chỉnh) – không sửa dữ liệu gốc, ghi bản ghi riêng có lịch sử. |
 | D3 (C4) | Hủy phiếu đã duyệt **không cần duyệt lại**, **bắt buộc lý do**; người hủy phải có **quyền Hủy của từng loại phiếu** trong chuỗi; hủy cả chuỗi **trong một giao dịch** (một phiếu lỗi thì không hủy phiếu nào). PO gộp dòng từ nhiều PR: hủy một PR thì **hủy cả PO**, hộp thoại nêu các PR khác bị ảnh hưởng (SL của chúng trở về "còn lại chưa đặt"). |
 | D4 (C4) | Mỗi loại phiếu có **quyền Hủy riêng**, quản trị gán cho vai trò bất kỳ. **Sửa 11/11/2026 (người dùng xem lại):** **người lập không được hủy phiếu** của mình; hủy **bắt buộc lý do**; **phiếu đã duyệt** chỉ hủy được bởi **cấp quản lý** (quyền hủy phiếu đã duyệt chỉ gán cho cấp quản lý) **hoặc** việc hủy phải **qua một bước duyệt** – chờ chốt cách nào (20.2a). Bỏ ý "khi nâng cấp tự gán cho vai trò có quyền lập". |
-| D5 (C5) | Thêm trường **Chức vụ** cho người dùng (Hệ thống → Người dùng); trống thì hiện tên vai trò. |
+| D5 (C5) | Thêm trường **Chức vụ** cho người dùng (Quản trị hệ thống → Người dùng); trống thì hiện tên vai trò. |
 | D6 | Làm **Z1–Z4 ngay**, trước các lát Y của 0.23.0. |
 
 **20.2a Đã chốt (11/11/2026):** **Hủy phiếu là quyền đặc biệt, chỉ cấp cho admin** (quản trị) – không gán cho người lập hay vai trò
@@ -2880,7 +2885,7 @@ kèm có cột "Bước duyệt" (Duyệt cấp n / Bổ sung sau duyệt), file
 cho lát sau: hộp thoại từ chối riêng của NCC độc quyền, yêu cầu duyệt NCC; đặt hàng gộp, hồ sơ NCC mới (duyệt theo màn hình riêng);
 trang duyệt điện thoại chưa có đính kèm.
 
-**Lát Z2 – đã làm (11/11/2026):** người dùng có trường **Chức vụ** (`User.Position`, tối đa 100 ký tự, Hệ thống → Người dùng; danh sách
+**Lát Z2 – đã làm (11/11/2026):** người dùng có trường **Chức vụ** (`User.Position`, tối đa 100 ký tự, Quản trị hệ thống → Người dùng; danh sách
 có cột Chức vụ). Lịch sử duyệt (`ApprovalStepDto`) trả thêm tên đăng nhập + chức vụ của người duyệt và người gửi; chức vụ trống thì là tên
 các vai trò của người đó **tại công ty của bước** (D5). Form chứng từ (`DocumentForm`, `DetailDrawer` – prop `approval`) hiện **dải ổ khóa
 vàng** cạnh trạng thái: mỗi bước của **lượt gửi gần nhất** một ổ khóa, đóng = đã duyệt, mở = chưa duyệt (chờ, từ chối, bỏ qua); rê chuột

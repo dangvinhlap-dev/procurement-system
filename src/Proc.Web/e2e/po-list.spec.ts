@@ -26,7 +26,7 @@ test('khung ERP cổ điển (thanh menu + thanh công cụ) đúng kích thư�
   await expect(page.getByTestId('toolbar')).toHaveCount(0)
   await expect(page.getByTestId('status-bar')).toHaveCount(0)
 
-  for (const name of ['Hằng ngày', 'Mua hàng', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống']) {
+  for (const name of ['Hằng ngày', 'Mua hàng', 'Giá và NCC', 'Đấu thầu', 'Báo cáo', 'Hệ thống', 'Quản trị hệ thống']) {
     await expect(shellBar.getByRole('menuitem', { name, exact: true })).toBeVisible()
   }
   // Menu Kho gỡ cùng phân hệ kho (lát K3).

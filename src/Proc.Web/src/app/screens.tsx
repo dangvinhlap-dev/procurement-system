@@ -55,7 +55,7 @@ import type { ReactNode } from 'react'
 import { Permission } from '../auth/permissions'
 
 /** Nhóm chức năng theo module – dùng cho menu module trên Shellbar và cây điều hướng (design.md mục 1.2, 17.1). */
-export type ModuleKey = 'daily' | 'purchasing' | 'pricing' | 'sourcing' | 'reports' | 'system'
+export type ModuleKey = 'daily' | 'purchasing' | 'pricing' | 'sourcing' | 'reports' | 'system' | 'admin'
 
 /** Một nhóm module trên Shellbar. */
 export interface ModuleGroup {
@@ -95,7 +95,9 @@ export function canOpenScreen(screen: Screen, hasPermission: (code: string) => b
 
 /**
  * Các nhóm menu theo thứ tự hiển thị. Chữ gạch chân chọn sao cho không trùng nhau:
- * Hằng _n_gày, _M_ua hàng, _G_iá và NCC, Đấu _t_hầu, _B_áo cáo, _H_ệ thống.
+ * Hằng _n_gày, _M_ua hàng, _G_iá và NCC, Đấu _t_hầu, _B_áo cáo, _H_ệ thống, _Q_uản trị hệ thống.
+ * "Hệ thống" giữ cấu hình tổ chức và nghiệp vụ (công ty, kho, bộ phận, quy trình duyệt, đánh số, tham số); "Quản trị hệ thống" gom việc của
+ * người quản trị: người dùng, vai trò, nhật ký, module Quản trị vận hành (người dùng yêu cầu 15/11/2026 – không để lẫn trong tab Hệ thống).
  */
 export const moduleGroups: ModuleGroup[] = [
   { key: 'daily', label: 'Hằng ngày', hotkeyIndex: 5 },
@@ -104,6 +106,7 @@ export const moduleGroups: ModuleGroup[] = [
   { key: 'sourcing', label: 'Đấu thầu', hotkeyIndex: 4 },
   { key: 'reports', label: 'Báo cáo', hotkeyIndex: 0 },
   { key: 'system', label: 'Hệ thống', hotkeyIndex: 0 },
+  { key: 'admin', label: 'Quản trị hệ thống', hotkeyIndex: 0 },
 ]
 
 /**
@@ -197,21 +200,22 @@ export const screens: Screen[] = [
   { code: 'WH', title: 'Danh mục kho', navLabel: 'Kho', path: '/he-thong/kho', icon: <ApartmentOutlined />, group: 'system', permission: Permission.WarehouseView },
   { code: 'DEPT', title: 'Danh mục bộ phận', navLabel: 'Bộ phận', path: '/he-thong/bo-phan', icon: <ClusterOutlined />, group: 'system', permission: Permission.DepartmentView },
   { code: 'DIV', title: 'Danh mục khối', navLabel: 'Khối', path: '/he-thong/khoi', icon: <ClusterOutlined />, group: 'system', permission: Permission.DepartmentView },
-  { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'system', permission: Permission.UserView },
-  { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'system', permission: Permission.RoleView },
   { code: 'APRL', title: 'Quy trình duyệt', navLabel: 'Quy trình duyệt', path: '/he-thong/quy-trinh-duyet', icon: <CheckSquareOutlined />, group: 'system', permission: Permission.ParameterView },
-  { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'system', permission: Permission.LogView },
-  // Module Quản trị vận hành (lát QT1, design.md mục 21): chỉ ở tổng công ty – máy chủ chặn công ty thành viên (403).
-  { code: 'SYS', title: 'Tổng quan hệ thống', navLabel: 'Tổng quan hệ thống', path: '/he-thong/van-hanh', icon: <DashboardOutlined />, group: 'system', permission: Permission.OpsView },
-  { code: 'OPLOG', title: 'Nhật ký vận hành', navLabel: 'Nhật ký vận hành', path: '/he-thong/nhat-ky-van-hanh', icon: <HistoryOutlined />, group: 'system', permission: Permission.OpsView },
-  { code: 'ERR', title: 'Nhật ký lỗi', navLabel: 'Nhật ký lỗi', path: '/he-thong/nhat-ky-loi', icon: <BugOutlined />, group: 'system', permission: Permission.ErrorLogView },
-  { code: 'BAK', title: 'Sao lưu', navLabel: 'Sao lưu', path: '/he-thong/sao-luu', icon: <CloudServerOutlined />, group: 'system', permission: Permission.BackupView },
-  { code: 'DBM', title: 'Bảo trì CSDL', navLabel: 'Bảo trì CSDL', path: '/he-thong/bao-tri-csdl', icon: <DatabaseOutlined />, group: 'system', permission: Permission.MaintenanceView },
-  { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'system', permission: Permission.LogView },
   { code: 'RATE', title: 'Xếp loại nhà cung cấp', navLabel: 'Xếp loại NCC', path: '/he-thong/xep-loai-ncc', icon: <TrophyOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'DSDM', title: 'Đánh số danh mục', navLabel: 'Đánh số danh mục', path: '/he-thong/danh-so-danh-muc', icon: <FieldNumberOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'DSCT', title: 'Đánh số chứng từ', navLabel: 'Đánh số chứng từ', path: '/he-thong/danh-so-chung-tu', icon: <NumberOutlined />, group: 'system', permission: Permission.ParameterView },
   { code: 'SEC', title: 'Tham số hệ thống', navLabel: 'Tham số hệ thống', path: '/he-thong/tham-so', icon: <SafetyOutlined />, group: 'system', permission: Permission.ParameterView },
+  // Quản trị hệ thống (yêu cầu 15/11/2026): người dùng, vai trò, nhật ký; module Quản trị vận hành (design.md mục 21) chỉ ở tổng công ty –
+  // máy chủ chặn công ty thành viên (403). Đường dẫn giữ /he-thong/… để liên kết cũ (thông báo, email, dấu trang) vẫn mở được.
+  { code: 'USER', title: 'Người dùng', navLabel: 'Người dùng', path: '/he-thong/nguoi-dung', icon: <UserOutlined />, group: 'admin', permission: Permission.UserView },
+  { code: 'ROLE', title: 'Vai trò và phân quyền', navLabel: 'Vai trò', path: '/he-thong/vai-tro', icon: <TeamOutlined />, group: 'admin', permission: Permission.RoleView },
+  { code: 'LOG', title: 'Nhật ký thao tác', navLabel: 'Nhật ký thao tác', path: '/he-thong/nhat-ky', icon: <AuditOutlined />, group: 'admin', permission: Permission.LogView },
+  { code: 'ACC', title: 'Nhật ký truy cập', navLabel: 'Nhật ký truy cập', path: '/he-thong/nhat-ky-truy-cap', icon: <LoginOutlined />, group: 'admin', permission: Permission.LogView },
+  { code: 'SYS', title: 'Tổng quan hệ thống', navLabel: 'Tổng quan hệ thống', path: '/he-thong/van-hanh', icon: <DashboardOutlined />, group: 'admin', permission: Permission.OpsView },
+  { code: 'OPLOG', title: 'Nhật ký vận hành', navLabel: 'Nhật ký vận hành', path: '/he-thong/nhat-ky-van-hanh', icon: <HistoryOutlined />, group: 'admin', permission: Permission.OpsView },
+  { code: 'ERR', title: 'Nhật ký lỗi', navLabel: 'Nhật ký lỗi', path: '/he-thong/nhat-ky-loi', icon: <BugOutlined />, group: 'admin', permission: Permission.ErrorLogView },
+  { code: 'BAK', title: 'Sao lưu', navLabel: 'Sao lưu', path: '/he-thong/sao-luu', icon: <CloudServerOutlined />, group: 'admin', permission: Permission.BackupView },
+  { code: 'DBM', title: 'Bảo trì CSDL', navLabel: 'Bảo trì CSDL', path: '/he-thong/bao-tri-csdl', icon: <DatabaseOutlined />, group: 'admin', permission: Permission.MaintenanceView },
 ]
 
 /**

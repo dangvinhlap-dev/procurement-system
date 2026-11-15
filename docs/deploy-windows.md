@@ -182,7 +182,7 @@ phục theo thời điểm ở các lát sau (design.md mục 21.5, 21.11). Làm
    tự khởi động lại dịch vụ vào giờ vắng. Chạy lại script nhiều lần không sao.
 3. Khai `ConnectionStrings:Maintenance` và `Backup:WalArchivePath` vào `appsettings.Production.json` (bảng mục 3.4), khởi động lại App Pool.
 4. Kiểm tra (đánh dấu từng dòng khi làm trên máy TEST):
-   - [ ] Màn hình **Hệ thống → Sao lưu** (BAK): Lưu WAL **Đang chạy**; `wal_level` replica, `archive_mode` on, `archive_command` hiện lệnh
+   - [ ] Màn hình **Quản trị hệ thống → Sao lưu** (BAK): Lưu WAL **Đang chạy**; `wal_level` replica, `archive_mode` on, `archive_command` hiện lệnh
      (không phải "không xem được"), `archive_timeout` 300 giây, `summarize_wal` on, giữ tóm tắt WAL 35 ngày, tài khoản bảo trì "Đã khai".
    - [ ] Thư mục WAL có file tên 24 ký tự (ví dụ `000000010000000000000005`), không còn file `.tmp` sót lại.
    - [ ] Sau 5–10 phút có người nhập liệu: "Lần chép thành công cuối" mới hơn, "File WAL chờ chép" 0.
@@ -230,7 +230,7 @@ lưu và chỉ truyền tên tương đối không dấu – thư mục đặt t
 
 ## 4c. Bảo trì CSDL – màn hình DBM (từ 0.33.0 – lát QT4)
 
-Màn hình **Hệ thống → Bảo trì CSDL** (DBM, design.md mục 21.13): dung lượng từng bảng, dòng chết, lần VACUUM / ANALYZE gần nhất; phiên đang kết
+Màn hình **Quản trị hệ thống → Bảo trì CSDL** (DBM, design.md mục 21.13): dung lượng từng bảng, dòng chết, lần VACUUM / ANALYZE gần nhất; phiên đang kết
 nối, phiên chờ khóa; chạy **VACUUM ANALYZE** (một bảng / cả CSDL), **REINDEX CONCURRENTLY** (một bảng) qua hàng chờ; **ngắt phiên treo** (nhập lại
 mật khẩu + lý do + gõ "NGẮT PHIÊN"). Phần mềm tự VACUUM ANALYZE cả CSDL hằng tuần (Chủ nhật 03:00 – sửa ở Tham số hệ thống nhóm "Bảo trì CSDL"),
 ngoài autovacuum của PostgreSQL. VACUUM / REINDEX chạy bằng tài khoản `proc` (chủ các bảng) – không cần cấu hình thêm.
@@ -260,8 +260,8 @@ Kiểm tra trên máy TEST:
 
 **Từ bản 0.32.0** (lát QT1): trước khi chép bản mới, thêm `App:Environment` (`Prod` / `Test`) và `Operations:LogDirectory` vào
 `appsettings.Production.json`; máy TEST thêm `Email:RedirectAllTo`. Quên khai `App:Environment` thì phần mềm vẫn chạy nhưng không gửi email và
-hiện dải đỏ cảnh báo cho tới khi khai rồi khởi động lại App Pool. Sau khi nâng, màn hình **Hệ thống → Tổng quan hệ thống** (SYS) phải không còn
-migration chờ, dòng môi trường đúng. Kiểm tra nhật ký lỗi (lát QT2): màn hình **Hệ thống → Nhật ký lỗi** (ERR) bấm **Thử lỗi máy chủ** và **Thử lỗi
+hiện dải đỏ cảnh báo cho tới khi khai rồi khởi động lại App Pool. Sau khi nâng, màn hình **Quản trị hệ thống → Tổng quan hệ thống** (SYS) phải không còn
+migration chờ, dòng môi trường đúng. Kiểm tra nhật ký lỗi (lát QT2): màn hình **Quản trị hệ thống → Nhật ký lỗi** (ERR) bấm **Thử lỗi máy chủ** và **Thử lỗi
 giao diện** – cả hai hiện dòng mới; sau đó đánh dấu Đã xử lý. Số ngày giữ nhật ký lỗi chỉnh ở Tham số hệ thống của tổng công ty
 (`ERRLOG_KEEP_DAYS`, mặc định 90).
 

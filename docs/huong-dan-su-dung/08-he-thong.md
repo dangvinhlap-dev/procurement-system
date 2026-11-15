@@ -1,6 +1,11 @@
 # 8. Hệ thống và phân quyền
 
-Dành cho người quản trị. Các màn hình nằm ở phân hệ **Hệ thống**.
+Dành cho người quản trị. Từ 15/11/2026 các màn hình chia hai menu:
+
+- **Hệ thống** – cấu hình tổ chức và nghiệp vụ: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt, Xếp loại NCC, Đánh số danh mục, Đánh số
+  chứng từ, Tham số hệ thống.
+- **Quản trị hệ thống** (Alt+Q) – việc của người quản trị: Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy cập, Tổng quan hệ thống,
+  Nhật ký vận hành, Nhật ký lỗi, Sao lưu, Bảo trì CSDL (năm màn hình sau chỉ dùng ở tổng công ty).
 
 ## 8.1 Mô hình phân quyền
 

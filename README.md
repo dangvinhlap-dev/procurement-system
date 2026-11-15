@@ -26,8 +26,8 @@ Tài khoản mẫu để thử phân quyền (mật khẩu **Demo@2026**):
 | `thukho.bha` | Thủ kho | BHA | Chỉ kho KP1, chỉ nhóm hàng Vật tư (VT) và nhóm con |
 | `muahang.nmi` | Nhân viên mua hàng | NMI | Mọi kho, mọi nhóm hàng |
 
-Thêm tài khoản, gán vai trò, kho, nhóm hàng ở **Hệ thống → Người dùng** (gán tại công ty đang chọn trên thanh menu);
-sửa quyền của vai trò ở **Hệ thống → Vai trò**.
+Thêm tài khoản, gán vai trò, kho, nhóm hàng ở **Quản trị hệ thống → Người dùng** (gán tại công ty đang chọn trên thanh menu);
+sửa quyền của vai trò ở **Quản trị hệ thống → Vai trò**.
 
 ## Lệnh thường dùng (PowerShell, tại thư mục gốc)
 | Việc | Lệnh |
@@ -82,7 +82,7 @@ Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md
   (đã có thì đổi `CREATE` thành `ALTER`) và
   `docker compose exec db psql -U proc -d procurement -c "GRANT pg_monitor, pg_read_all_settings, pg_read_all_data TO proc_maint"`;
   đặt `MAINTENANCE_CONNECTION_STRING=Host=db;Port=5432;Database=procurement;Username=proc_maint;Password=<mật khẩu>` rồi `docker compose up -d app`.
-  Màn hình **Hệ thống → Sao lưu** (BAK) phải báo Lưu WAL "Đang chạy"; thử ngay: `docker compose exec db psql -U proc -d procurement -c "SELECT pg_switch_wal()"`.
+  Màn hình **Quản trị hệ thống → Sao lưu** (BAK) phải báo Lưu WAL "Đang chạy"; thử ngay: `docker compose exec db psql -U proc -d procurement -c "SELECT pg_switch_wal()"`.
 
 **Xem log kỹ thuật (Seq)**: `ssh -L 5341:localhost:5341 <server>` rồi mở http://localhost:5341
 (tài khoản `admin`, mật khẩu `SEQ_ADMIN_PASSWORD`).
