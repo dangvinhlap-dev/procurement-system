@@ -4,7 +4,7 @@ import { openByCommand } from './inventoryHelpers.ts'
 
 /**
  * Lát QT2 – Nhật ký lỗi ERR (design.md mục 21.4): gây lỗi thử ở máy chủ và giao diện đều thấy trong ERR; mã theo dõi trên câu báo lỗi người dùng
- * thấy tìm ra đúng nhóm lỗi; lỗi khi vẽ một màn hình chỉ làm hỏng thẻ đó, hiện khối báo lỗi kèm mã theo dõi.
+ * thấy tìm ra đúng nhóm lỗi; lỗi khi vẽ một màn hình chỉ làm hỏng vùng nội dung, hiện khối báo lỗi kèm mã theo dõi.
  */
 test('lỗi máy chủ thử: câu báo lỗi có mã theo dõi, tìm theo mã ra nhóm lỗi, xem chi tiết kỹ thuật', async ({ page }) => {
   await loginViaApi(page)
@@ -45,7 +45,7 @@ test('lỗi giao diện thử (window.onerror) vào nhật ký lỗi, nguồn Gi
   await expect(row).toContainText('Giao diện')
 })
 
-test('màn hình vẽ lỗi: thẻ hiện khối báo lỗi kèm mã theo dõi, thẻ khác vẫn dùng được', async ({ page }) => {
+test('màn hình vẽ lỗi: vùng nội dung hiện khối báo lỗi kèm mã theo dõi, màn hình khác vẫn mở được', async ({ page }) => {
   // Dữ liệu tổng quan hỏng (thiếu danh sách dòng) làm màn hình SYS lỗi khi vẽ.
   await page.route('**/api/ops/v1/overview', (route) =>
     route.fulfill({ json: { environment: 'Dev', version: '0.0.0', checkedAt: new Date().toISOString(), appliedMigrations: 0, pendingMigrations: [], rows: null } }),

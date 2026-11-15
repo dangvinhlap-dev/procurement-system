@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
+import { ADMIN, confirmCompanySwitch, openByCommand } from './helpers.ts'
 
 /** Hàm dùng chung cho test chứng từ kho (phiếu nhập, trả NCC, chuyển kho). */
 
@@ -129,10 +129,7 @@ export async function approveSupplier(request: APIRequestContext, supplierId: st
   }
 }
 
-/** Mở màn hình bằng ô lệnh. */
-export async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
-}
+export { openByCommand }
 
 /** Đổi công ty làm việc trên thanh menu. */
 export async function switchCompany(page: Page, label: string) {

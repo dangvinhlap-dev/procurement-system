@@ -1,7 +1,7 @@
 import { App } from 'antd'
 import type { KeyboardEvent, MouseEvent } from 'react'
+import { useNavigate } from 'react-router'
 import { documentPath } from '../api/documentRegistry'
-import { useOpenScreen } from '../app/screenTabs'
 import { copyText } from '../utils/clipboard'
 
 /** Thuộc tính ô số chứng từ. */
@@ -25,8 +25,7 @@ interface DocNoProps {
  */
 export function DocNo({ no, docType, id, className, suffix }: DocNoProps) {
   const { message } = App.useApp()
-  // Bấm đúp mở phiếu gốc ở thẻ màn hình mới (đã mở thì chuyển sang) – giữ nguyên phiếu đang xem.
-  const openScreen = useOpenScreen()
+  const navigate = useNavigate()
   if (!no) return null
   const path = docType && id ? documentPath(docType, id) : null
 
@@ -39,7 +38,7 @@ export function DocNo({ no, docType, id, className, suffix }: DocNoProps) {
     if (!path) return
     // Ô nằm trong dòng lưới có bấm đúp mở dòng: chỉ mở phiếu gốc của ô, không để sự kiện lan lên dòng.
     e?.stopPropagation()
-    openScreen(path)
+    void navigate(path)
   }
   const onKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
     if (e.key === 'Enter' && path) {

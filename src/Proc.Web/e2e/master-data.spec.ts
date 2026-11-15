@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch, openByCommand } from './helpers.ts'
 import { api } from './inventoryHelpers.ts'
 
 /**
@@ -10,11 +10,6 @@ import { api } from './inventoryHelpers.ts'
 
 /** Mã mới: chữ hoa + số, 8 ký tự. */
 const uniqueCode = (prefix: string) => `${prefix}${Date.now().toString(36).slice(-5)}${Math.floor(Math.random() * 100)}`.toUpperCase()
-
-/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
-}
 
 /** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {

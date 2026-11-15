@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.ts'
+import { loginViaApi, confirmCompanySwitch, openByCommand } from './helpers.ts'
 
 /**
  * Danh mục công ty và kho (design.md mục 4, 5.1, 5.6): thêm công ty kèm kho tổng ở tổng công ty, vào làm việc ở công ty mới
@@ -9,11 +9,6 @@ import { loginViaApi, confirmCompanySwitch, openInCurrentTab } from './helpers.t
 
 /** Mã công ty mới: chữ hoa + số, tối đa 10 ký tự. */
 const uniqueCode = () => `E${Date.now().toString(36).slice(-6)}${Math.floor(Math.random() * 100)}`.toUpperCase()
-
-/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
-}
 
 /** Đổi công ty đang làm việc bằng ô chọn công ty trên thanh trên cùng. */
 async function switchCompany(page: Page, label: string) {

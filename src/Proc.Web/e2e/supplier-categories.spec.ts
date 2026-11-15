@@ -1,5 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi, openInCurrentTab } from './helpers.ts'
+import { expect, test, type APIRequestContext } from '@playwright/test'
+import { ADMIN, loginViaApi, openByCommand } from './helpers.ts'
 
 /**
  * Ngành hàng NCC chọn từ danh mục Nhóm hàng (design.md mục 5.3, 5.8; người dùng chốt 07/11/2026): chọn nhiều nhóm, thiếu thì thêm ngay
@@ -21,11 +21,6 @@ async function adminApi(request: APIRequestContext) {
       return (await response.json()) as T
     },
   }
-}
-
-/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
 }
 
 test('ngành hàng NCC: chọn nhóm hàng, thêm nhóm thiếu (chặn trùng), lưu, lọc danh sách', async ({ page, request }) => {
