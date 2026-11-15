@@ -985,6 +985,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Hoãn phát hành (15/11/2026)** – người dùng yêu cầu "phát hành bản 0.36.0" rồi đổi ý: "chờ có trung tâm phát hành". Chưa tạo tag, chưa đổi
+`Directory.Build.props` (vẫn 0.33.1). Phần chưa phát hành QT5 + QT6 (dự kiến 0.34.0) và QT7 (dự kiến 0.35.0) sẽ phát hành **cùng QT8 – REL** thành
+**0.36.0** (đúng lộ trình ke-hoach-qt). Khi phát hành: script `dotnet ef migrations script V0_33_0_BaoTriCsdl <migration cuối của QT8> --idempotent`
+→ `db/scripts/0.36.0.sql` (bỏ BOM); đổi các mốc "từ 0.34.0 / 0.35.0" trong deploy-windows, design.md, hướng dẫn thành "từ 0.36.0".
+
 **QT7 – Cấu hình truy cập (CFG) xong 15/11/2026 (chưa phát hành – bản 0.35.0) – nhánh `feature/qt7-cau-hinh-truy-cap` (đã merge)** (người dùng "làm tiếp"). Chia 3 bước:
 - **QT7-1 xong (máy chủ, commit)**: bảng một dòng `AccessPolicy` (migration `V0_35_0_CauHinhTruyCap`, [Auditable]): độ dài mật khẩu tối thiểu
   (mặc định 8 = quy tắc cũ – mật khẩu mẫu / e2e `Demo@2026` 9 ký tự; TEST, PROD nâng lên 10 khi cài), chặn mật khẩu phổ biến (`Identity/
