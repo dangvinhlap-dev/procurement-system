@@ -179,3 +179,64 @@ public sealed class MaintenanceRunConfiguration : IEntityTypeConfiguration<Proc.
         builder.HasIndex(x => new { x.Kind, x.ScheduledDate }).IsUnique().HasFilter("\"ScheduledDate\" IS NOT NULL");
     }
 }
+
+/// <summary>Bảng MaintenanceModeState – chế độ bảo trì (lát QT5): một dòng duy nhất, lịch sử bật / tắt ở nhật ký vận hành.</summary>
+public sealed class MaintenanceModeStateConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.MaintenanceModeState>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.MaintenanceModeState> builder)
+    {
+        builder.ToTable("MaintenanceModeState");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Message).HasMaxLength(Proc.Domain.Operations.MaintenanceModeState.MessageMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.MaintenanceModeState.ReasonMaxLength);
+        builder.Property(x => x.ChangedByName).HasMaxLength(256);
+    }
+}
+
+/// <summary>Bảng AgentEnvironment – môi trường có bộ thực thi (lát QT5): mỗi mã Dev / Test / Prod một dòng; chỉ lưu băm khóa.</summary>
+public sealed class AgentEnvironmentConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.AgentEnvironment>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.AgentEnvironment> builder)
+    {
+        builder.ToTable("AgentEnvironment");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.NameMaxLength).IsRequired();
+        builder.Property(x => x.Address).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.AddressMaxLength);
+        builder.Property(x => x.AgentKeyHash).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.KeyHashLength).IsFixedLength();
+        builder.Property(x => x.AgentKeyHint).HasMaxLength(8);
+        builder.Property(x => x.KeyCreatedByName).HasMaxLength(256);
+        builder.Property(x => x.AgentVersion).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
+        builder.Property(x => x.AppVersion).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
+        builder.Property(x => x.HostName).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
+        builder.HasIndex(x => x.Code).IsUnique();
+        // Xác thực bộ thực thi tìm theo băm khóa; hai môi trường không bao giờ trùng khóa.
+        builder.HasIndex(x => x.AgentKeyHash).IsUnique().HasFilter("\"AgentKeyHash\" IS NOT NULL");
+    }
+}
+
+/// <summary>Bảng AgentCommand – lệnh giao bộ thực thi (lát QT5); dòng không xóa.</summary>
+public sealed class AgentCommandConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.AgentCommand>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.AgentCommand> builder)
+    {
+        builder.ToTable("AgentCommand");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Parameters).HasMaxLength(Proc.Domain.Operations.AgentCommand.ParametersMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.AgentCommand.ReasonMaxLength).IsRequired();
+        builder.Property(x => x.CreatedByName).HasMaxLength(256);
+        builder.Property(x => x.CancelledByName).HasMaxLength(256);
+        builder.Property(x => x.ResultMessage).HasMaxLength(Proc.Domain.Operations.AgentCommand.MessageMaxLength);
+        builder.Property(x => x.Journal).HasMaxLength(Proc.Domain.Operations.AgentCommand.JournalMaxLength);
+        builder.HasOne<Proc.Domain.Operations.AgentEnvironment>().WithMany().HasForeignKey(x => x.EnvironmentId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.EnvironmentId, x.Status, x.CreatedAt });
+        // Mỗi môi trường chỉ một lệnh Đang chạy (ke-hoach-qt.md QT5) – chặn ở CSDL, ngoài khóa dòng khi giao lệnh.
+        builder.HasIndex(x => x.EnvironmentId).IsUnique().HasFilter("\"Status\" = 'Running'").HasDatabaseName("IX_AgentCommand_OneRunning");
+    }
+}

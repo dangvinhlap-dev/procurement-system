@@ -23,11 +23,11 @@ public static class OperationsEndpoints
 
         // Ẩn danh: tên môi trường (Dev / Test / Prod / None) và cảnh báo cấu hình để dải màu hiện cả ở trang đăng nhập – không phiên bản, không
         // bí mật.
-        ops.MapGet("/environment", (IEnvironmentStatus status) => status.Get())
+        ops.MapGet("/environment", GetEnvironmentAsync)
             .AllowAnonymous();
         // Site Portal NCC chỉ mở /api/portal (PortalHostMiddleware – N3: không có chức năng QT trên Portal): cùng nội dung để dải TEST hiện cả
         // trên Portal của máy TEST; nằm dưới /api/portal/auth vì API Portal ẩn danh chỉ được ở nhóm đó (PortalInfrastructureTests).
-        app.MapGet("/api/portal/auth/environment", (IEnvironmentStatus status) => status.Get())
+        app.MapGet("/api/portal/auth/environment", GetEnvironmentAsync)
             .WithTags("Portal NCC")
             .AllowAnonymous();
 
@@ -83,6 +83,56 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsMaintenanceRun)
             .RequireHeadOffice();
 
+        // Chế độ bảo trì (lát QT5): xem – mọi quyền xem vận hành; bật / tắt – quyền riêng.
+        ops.MapGet("/maintenance-mode", (IMaintenanceMode m, CancellationToken ct) => m.GetAsync(ct))
+            .RequireAnyPermission(Permissions.System.OpsView, Permissions.System.OpsMaintenanceModeManage)
+            .RequireHeadOffice();
+        ops.MapPut("/maintenance-mode", (SetMaintenanceModeRequest request, IMaintenanceMode m, ICurrentUser user, CancellationToken ct) =>
+                m.SetAsync(request, user.UserName, ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceModeManage)
+            .RequireHeadOffice();
+
+        // Quản trị bộ thực thi – màn hình AGT (lát QT5).
+        var agt = ops.MapGroup("/agent-admin");
+        agt.MapGet("/environments", (IAgentAdminService s, CancellationToken ct) => s.GetEnvironmentsAsync(ct))
+            .RequirePermission(Permissions.System.OpsAgentView)
+            .RequireHeadOffice();
+        agt.MapPost("/environments", (SaveAgentEnvironmentRequest request, IAgentAdminService s, CancellationToken ct) =>
+                s.CreateEnvironmentAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
+        agt.MapPut("/environments/{id:guid}", (Guid id, SaveAgentEnvironmentRequest request, IAgentAdminService s, CancellationToken ct) =>
+                s.UpdateEnvironmentAsync(id, request, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
+        agt.MapPost("/environments/{id:guid}/key", (Guid id, CreateAgentKeyRequest request, IAgentAdminService s, CancellationToken ct) =>
+                s.CreateKeyAsync(id, request, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
+        agt.MapGet("/commands", (DateOnly from, DateOnly to, Guid? environmentId, IAgentAdminService s, CancellationToken ct) =>
+                s.SearchCommandsAsync(from, to, environmentId, ct))
+            .RequirePermission(Permissions.System.OpsAgentView)
+            .RequireHeadOffice();
+        agt.MapGet("/commands/{id:guid}", (Guid id, IAgentAdminService s, CancellationToken ct) => s.GetCommandAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsAgentView)
+            .RequireHeadOffice();
+        agt.MapPost("/commands", (QueueAgentCommandRequest request, IAgentAdminService s, CancellationToken ct) => s.QueueAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
+        agt.MapPost("/commands/{id:guid}/cancel", (Guid id, IAgentAdminService s, CancellationToken ct) => s.CancelAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
+
+        // Cổng cho bộ thực thi (lát QT5): không JWT – xác thực bằng khóa X-Ops-Agent-Key (băm lưu CSDL); không có phiên người dùng, công ty.
+        var agent = ops.MapGroup("/agent").AllowAnonymous().AddEndpointFilter(AuthenticateAgentAsync);
+        agent.MapGet("/commands", PollAgentAsync);
+        agent.MapPost("/commands/{id:guid}/result", async (Guid id, AgentResultRequest result, HttpContext http, IAgentGateway gateway,
+            CancellationToken ct) =>
+        {
+            await gateway.ReportAsync(AgentEnvironmentId(http), id, result, ct);
+            return Results.NoContent();
+        });
+
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
         ops.MapPost("/client-errors", ReportClientErrorAsync);
@@ -107,6 +157,37 @@ public static class OperationsEndpoints
             .RequireHeadOffice();
 
         return app;
+    }
+
+    /// <summary>Môi trường + chế độ bảo trì cho dải màu (ẩn danh – chỉ câu thông báo, giờ bật).</summary>
+    private static async Task<EnvironmentStatusDto> GetEnvironmentAsync(IEnvironmentStatus status, IMaintenanceMode mode, CancellationToken ct)
+    {
+        var m = await mode.GetAsync(ct);
+        return status.Get() with { Maintenance = m.IsOn ? new MaintenanceNoticeDto(m.Message ?? "", m.StartedAt) : null };
+    }
+
+    private const string AgentEnvironmentItem = "ops.agent.environment";
+
+    /// <summary>Bộ lọc nhóm /agent: khóa sai / thiếu / môi trường ngừng dùng → 401 (không nói rõ lý do – không giúp dò khóa).</summary>
+    private static async ValueTask<object?> AuthenticateAgentAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var http = context.HttpContext;
+        var gateway = http.RequestServices.GetRequiredService<IAgentGateway>();
+        var envId = await gateway.AuthenticateAsync(http.Request.Headers[AgentHeaders.Key].ToString(), http.RequestAborted);
+        if (envId is null)
+            return Results.Problem(title: "Khóa bộ thực thi không hợp lệ.", statusCode: StatusCodes.Status401Unauthorized);
+        http.Items[AgentEnvironmentItem] = envId.Value;
+        return await next(context);
+    }
+
+    private static Guid AgentEnvironmentId(HttpContext http) => (Guid)http.Items[AgentEnvironmentItem]!;
+
+    /// <summary>Bộ thực thi hỏi lệnh: có lệnh trả 200, không có việc trả 204.</summary>
+    private static async Task<IResult> PollAgentAsync(
+        HttpContext http, IAgentGateway gateway, string? agentVersion, string? appVersion, string? host, bool? peek, CancellationToken ct)
+    {
+        var work = await gateway.PollAsync(AgentEnvironmentId(http), new AgentPollInfo(agentVersion, appVersion, host, peek == true), ct);
+        return work is null ? Results.NoContent() : Results.Ok(work);
     }
 
     /// <summary>Ném lỗi thử (luôn thành lỗi 500, vào nhật ký lỗi như lỗi thật).</summary>

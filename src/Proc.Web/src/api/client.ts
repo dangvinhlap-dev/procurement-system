@@ -30,6 +30,12 @@ export function setAuthBridge(value: AuthBridge): void {
 }
 
 /**
+ * Sự kiện cửa sổ khi API trả 503 (chế độ bảo trì – lát QT5): dải môi trường lấy lại trạng thái ngay để hiện "ĐANG BẢO TRÌ", không chờ chu kỳ
+ * 1 phút. Câu báo lỗi của request là câu thông báo bảo trì máy chủ gửi (title).
+ */
+export const MAINTENANCE_EVENT = 'erp-maintenance'
+
+/**
  * Đọc thông điệp lỗi từ ProblemDetails (title) hoặc ValidationProblemDetails (errors).
  */
 async function readErrorMessage(response: Response): Promise<string> {
@@ -104,6 +110,7 @@ export async function apiFetch<T>(path: string, init: Omit<RequestInit, 'body'> 
   if (!response.ok) {
     const message = await readErrorMessage(response)
     if (response.status === 401 && token) bridge.onUnauthorized()
+    if (response.status === 503) window.dispatchEvent(new Event(MAINTENANCE_EVENT))
     throw new ApiError(response.status, message)
   }
   const data = response.status === 204 ? undefined : ((await response.json()) as unknown)

@@ -164,6 +164,10 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Operations.IDbMaintenanceScheduler, Proc.Infrastructure.Operations.DbMaintenanceScheduler>();
         services.AddScoped<Proc.Application.Operations.IDangerousActionGuard, Proc.Infrastructure.Operations.DangerousActionGuard>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
+        // Bộ thực thi + chế độ bảo trì (lát QT5): chế độ bảo trì singleton có đệm – middleware hỏi ở mọi request.
+        services.AddScoped<Proc.Application.Operations.IAgentAdminService, Proc.Infrastructure.Operations.AgentAdminService>();
+        services.AddScoped<Proc.Application.Operations.IAgentGateway, Proc.Infrastructure.Operations.AgentGateway>();
+        services.AddSingleton<Proc.Application.Operations.IMaintenanceMode, Proc.Infrastructure.Operations.MaintenanceModeService>();
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.
         services.AddSingleton<Proc.Application.Operations.IErrorRecorder, Proc.Infrastructure.Operations.ErrorRecorder>();

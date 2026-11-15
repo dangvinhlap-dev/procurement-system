@@ -93,6 +93,7 @@ import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { OperationLogListPage } from './pages/system/OperationLogListPage'
 import { BackupPage } from './pages/system/BackupPage'
 import { DbMaintenancePage } from './pages/system/DbMaintenancePage'
+import { AgentPage } from './pages/system/AgentPage'
 import { ErrorLogListPage } from './pages/system/ErrorLogListPage'
 import { RouteErrorFallback } from './classic/ErrorBoundary'
 import { SystemOverviewPage } from './pages/system/SystemOverviewPage'
@@ -188,6 +189,7 @@ const implemented: Record<string, ReactNode> = {
   ERR: <ErrorLogListPage />,
   BAK: <BackupPage />,
   DBM: <DbMaintenancePage />,
+  AGT: <AgentPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,

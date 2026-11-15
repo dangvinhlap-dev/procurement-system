@@ -81,6 +81,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Backup:SecondaryPath` | Không bắt buộc: NAS / thư mục mạng, ví dụ `\\\\nas01\\procurement-backup` – chép sau mỗi lần sao lưu; tài khoản App Pool phải ghi được |
 | `Backup:PgBinPath` | Thư mục `bin` của PostgreSQL 18 trên máy app, ví dụ `C:\\Program Files\\PostgreSQL\\18\\bin`. Bỏ trống thì tự tìm (PATH, Program Files) |
 | `Backup:ScheduleEnabled` | `true` (mặc định) – sao lưu tự động theo lịch B1; tắt lịch `backup.ps1` cũ (mục 4b) để không sao lưu hai lần |
+| `Agent:RunningTimeoutHours` | Từ 0.34.0 (QT5): 6 – lệnh bộ thực thi chạy quá số giờ này không báo kết quả thì ghi Lỗi. `Agent:OnlineMinutes` (3) = liên lạc trong số phút này thì AGT đèn xanh |
 | `DbMaintenance:ScheduleEnabled` | Từ 0.33.0 (QT4): `true` (mặc định) – VACUUM ANALYZE cả CSDL hằng tuần (tham số DB_MAINT_DAY / DB_MAINT_TIME, mặc định Chủ nhật 03:00). `DbMaintenance:CommandTimeoutMinutes` (240) = thời gian tối đa một lệnh VACUUM / REINDEX |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
@@ -245,6 +246,41 @@ Kiểm tra trên máy TEST:
 - [ ] Tab **Phiên và khóa**: thấy phiên của App Pool; mở psql `BEGIN; LOCK TABLE "Item";` ở cửa sổ khác rồi mở một phiếu có mặt hàng → phiên
   psql đèn vàng "Đang chặn …"; **Ngắt phiên…** nhập lý do, mật khẩu, "NGẮT PHIÊN" → Xong, phiếu mở được; Nhật ký vận hành có "Ngắt phiên CSDL".
 - [ ] Tab **Lịch sử**: "Lịch hằng tuần: VACUUM ANALYZE cả CSDL Chủ nhật 03:00 · lượt kế tiếp …"; sáng thứ Hai có lần "Theo lịch".
+
+## 4d. Bộ thực thi và chế độ bảo trì (từ 0.34.0 – lát QT5)
+
+Bộ thực thi là script PowerShell chạy **mỗi phút** bằng Task Scheduler với tài khoản Windows riêng, tự hỏi máy chủ phần mềm có lệnh không (cài bản,
+khôi phục… ở các bản sau; 0.34.0 chỉ có **Lệnh thử**). Web không tự cài / tự dừng PostgreSQL (design.md 21.2 N1). Bộ thực thi trên TEST hỏi máy
+**PROD** (nơi có màn hình AGT); chỉ có một máy thì hỏi chính máy đó. Không mở cổng nào vào máy chạy bộ thực thi.
+
+1. Trên máy có màn hình AGT: **Quản trị hệ thống → Bộ thực thi** → **Khai môi trường…** (Test / Prod, tên, địa chỉ web) → chọn dòng → **Tạo
+   khóa…** (nhập lại mật khẩu, gõ "TẠO KHÓA") → chép khóa `qta_…` (chỉ hiện một lần; tạo lại thì khóa cũ hết hiệu lực).
+2. Trên máy đích tạo tài khoản Windows riêng, ví dụ `proc-agent` (mật khẩu mạnh, không đăng nhập tương tác): `net user proc-agent * /add`.
+   Lệnh thử chỉ cần tài khoản thường; các bản sau (khôi phục, cài bản) cần thêm quyền sửa thư mục website / sao lưu (`-GrantModify`) và điều khiển
+   dịch vụ – hướng dẫn kèm bản đó.
+3. Chép thư mục `deploy\windows` của gói cài lên máy, PowerShell **Run as Administrator**:
+   ```powershell
+   .\qt-agent-install.ps1 -ServerUrl https://procurement.congty.local -TaskUser .\proc-agent `
+       -AppPath C:\inetpub\procurement -StatePath D:\ProcurementData\agent
+   ```
+   Script hỏi khóa và mật khẩu tài khoản (gõ không hiện chữ), chép `qt-agent.ps1` vào `C:\ProcurementAgent`, ghi `qt-agent.json` (chỉ
+   Administrators, SYSTEM, `proc-agent` đọc được – file có khóa), đăng ký tác vụ **Procurement QT agent**, chạy thử `-DryRun` ("Kết nối được, khóa
+   đúng"). Chạy lại script khi đổi khóa / địa chỉ; `-Uninstall` gỡ tác vụ; `-DryRun` chỉ in các việc sẽ làm.
+4. AGT: dòng môi trường **Đang liên lạc** (xanh) sau 1–2 phút → **Lệnh thử** → tab Lệnh "Xong", bấm đúp xem nhật ký (máy, tài khoản, phiên bản).
+
+Nhật ký trên máy: `<StatePath>\agent-journal.log` (chỉ ghi khi có lệnh / lỗi); kết quả chưa gửi được nằm ở `<StatePath>\pending` và tự gửi lại lần
+sau. Máy chủ từ chối khóa (401) → tạo khóa mới, chạy lại `qt-agent-install.ps1`.
+
+**Chế độ bảo trì**: SYS → **Bật chế độ bảo trì…** (câu thông báo + lý do) – mọi người dùng thường (kể cả NCC trên Portal) nhận câu thông báo, dải
+đỏ "ĐANG BẢO TRÌ"; người có quyền quản trị vận hành (`System.Ops*`) vẫn làm việc được. Dùng khi cài bản / khôi phục bằng tay; tắt bằng **Tắt chế
+độ bảo trì…**. Lỡ không vào được giao diện: `psql -U postgres -d procurement -c "UPDATE \"MaintenanceModeState\" SET \"IsOn\" = false"` (tối đa
+5 giây sau có hiệu lực).
+
+Kiểm tra trên máy TEST:
+- [ ] AGT khai Test, tạo khóa; cài bộ thực thi; dòng Test "Đang liên lạc", cột Máy / Bộ thực thi / Phần mềm đúng.
+- [ ] **Lệnh thử** → "Xong" trong 1–2 phút; nhật ký có "Tài khoản chạy: …\proc-agent".
+- [ ] Tắt tác vụ, ra Lệnh thử, chờ hơn 1 giờ → "Hết hạn"; bật lại tác vụ – lệnh cũ không chạy.
+- [ ] Bật chế độ bảo trì: người dùng thường thấy dải đỏ, thao tác báo câu thông báo; admin làm việc bình thường; tắt → vào lại.
 
 ## 5. Nâng cấp lên bản mới
 

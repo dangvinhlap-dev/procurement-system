@@ -269,6 +269,24 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   trong ô chỉ đọc, lỗi máy chủ là khối đỏ trong hộp thoại (không đóng); ô **Lý do**, **Mật khẩu của bạn**, **Gõ "NGẮT PHIÊN" để xác nhận**; nút
   **Ngắt phiên** đỏ (icon dừng) bên phải, **Không ngắt** bên trái. Các việc nguy hiểm QT sau dùng cùng bố cục, đổi chữ xác nhận.
 
+## 5n. Màn hình AGT – Bộ thực thi, chế độ bảo trì (lát QT5, 15/11/2026 – design.md mục 21.14)
+
+- AGT theo khuôn `ListPage` + `DataGrid`, thanh tab `viewTabs`: **Môi trường** (mặc định), **Lệnh**. Cột Tình trạng là đèn ô vuông kèm chữ: môi
+  trường Đang liên lạc xanh, Mất liên lạc vàng, Ngừng dùng / Chưa có khóa đỏ, Chưa liên lạc trung tính; lệnh Đang chờ / Đang chạy trung tính,
+  Xong xanh, Lỗi đỏ, Hết hạn / Đã hủy vàng. Dòng đèn vàng / đỏ tô dấu. Môi trường của chính máy đang mở ghi "(máy này)" sau tên; khóa chỉ hiện
+  "…4 ký tự cuối".
+- Nút (quyền quản lý, thao tác trên dòng đang chọn, chưa chọn thì khóa kèm chú thích): **Khai môi trường…** (icon cộng xanh), **Sửa…** (vàng),
+  **Tạo khóa…** (icon chìa khóa vàng), **Lệnh thử** (icon gửi xanh); tab Lệnh **Hủy lệnh** (icon dừng đỏ, chỉ lệnh đang chờ, hỏi lại). Mọi tab có
+  **Làm mới**. Còn lệnh chờ / chạy thì lưới tự làm mới 5 giây.
+- Hộp thoại **Tạo khóa** theo bố cục việc nguy hiểm 5m: khối cảnh báo vàng (khóa cũ hết hiệu lực), lỗi máy chủ khối đỏ trong hộp thoại, ô **Mật
+  khẩu của bạn**, **Gõ "TẠO KHÓA" để xác nhận**. Tạo xong hộp thoại đổi sang **khóa hiện một lần**: cảnh báo vàng "chỉ hiện một lần", khóa trong
+  ô chỉ đọc phông đơn cách, nút **Sao chép khóa**, nút đóng "Đã chép khóa – đóng".
+- Bấm đúp dòng lệnh mở `DetailDrawer` chỉ xem: tab Thông tin, **Nhật ký bộ thực thi** (khung `.erp-error-detail`, phông đơn cách, cuộn).
+- **Chế độ bảo trì**: dải môi trường (mục 5j) **đỏ** "ĐANG BẢO TRÌ: <câu thông báo>" (đứng sau "DEV" / "MÔI TRƯỜNG TEST", trước cảnh báo cấu hình)
+  ở mọi màn hình kể cả đăng nhập, Portal, `/duyet`. SYS: thông báo đỏ đầu trang (giờ bật, người bật, câu thông báo, lý do) + nút **Bật chế độ bảo
+  trì…** (icon cờ lê vàng; nút OK hộp thoại đỏ "Bật bảo trì") / **Tắt chế độ bảo trì…** (icon dấu tích xanh); hộp thoại có ô câu thông báo (khi
+  bật) và **Lý do** bắt buộc. Lát QT7 chuyển nút sang CFG.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

@@ -5,7 +5,7 @@ Dành cho người quản trị. Từ 15/11/2026 các màn hình chia hai menu:
 - **Hệ thống** – cấu hình tổ chức và nghiệp vụ: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt, Xếp loại NCC, Đánh số danh mục, Đánh số
   chứng từ, Tham số hệ thống.
 - **Quản trị hệ thống** (Alt+Q) – việc của người quản trị: Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy cập, Tổng quan hệ thống,
-  Nhật ký vận hành, Nhật ký lỗi, Sao lưu, Bảo trì CSDL (năm màn hình sau chỉ dùng ở tổng công ty).
+  Nhật ký vận hành, Nhật ký lỗi, Sao lưu, Bảo trì CSDL, Bộ thực thi (sáu màn hình sau chỉ dùng ở tổng công ty).
 
 ## 8.1 Mô hình phân quyền
 
@@ -171,6 +171,16 @@ tổng công ty.
 | **Nhật ký truy cập (ACC)** | Đăng nhập, đăng nhập sai, bị khóa tạm, đăng xuất, đổi mật khẩu, đổi công ty làm việc |
 
 Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (01 – mục 1.6).
+
+## 8.9a Bộ thực thi (AGT) và chế độ bảo trì
+
+- **Bộ thực thi** là chương trình nhỏ trên từng máy chủ (TEST, PROD) tự hỏi phần mềm lấy lệnh mỗi phút để làm các việc cần quyền cao (cài bản mới,
+  khôi phục – các bản sau). Màn hình **Bộ thực thi**: tab **Môi trường** (đèn xanh "Đang liên lạc", vàng "Mất liên lạc"), **Khai môi trường…**,
+  **Tạo khóa…** (nhập lại mật khẩu, gõ "TẠO KHÓA"; khóa chỉ hiện một lần – đưa cho người cài trên máy đó), **Lệnh thử** (kiểm tra bộ thực thi chạy
+  được); tab **Lệnh**: lịch sử lệnh, bấm đúp xem nhật ký, **Hủy lệnh** còn chờ. Cách cài: docs/deploy-windows.md mục 4d.
+- **Chế độ bảo trì** (màn hình Tổng quan hệ thống – nút **Bật chế độ bảo trì…**): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
+  Portal) thấy dải đỏ "ĐANG BẢO TRÌ" và câu thông báo, không thao tác được; người có quyền quản trị vận hành vẫn làm việc. Bắt buộc ghi lý do;
+  xong việc bấm **Tắt chế độ bảo trì…**.
 
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 

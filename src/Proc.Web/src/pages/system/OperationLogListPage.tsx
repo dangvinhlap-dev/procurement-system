@@ -16,6 +16,12 @@ const kindLabels: Record<string, string> = {
   MaintenanceQueued: 'Đặt bảo trì CSDL',
   MaintenanceFinished: 'Bảo trì CSDL xong',
   SessionTerminated: 'Ngắt phiên CSDL',
+  MaintenanceModeChanged: 'Bật / tắt chế độ bảo trì',
+  AgentEnvironmentSaved: 'Khai môi trường bộ thực thi',
+  AgentKeyCreated: 'Tạo khóa bộ thực thi',
+  AgentCommandQueued: 'Ra lệnh bộ thực thi',
+  AgentCommandFinished: 'Lệnh bộ thực thi kết thúc',
+  AgentCommandCancelled: 'Hủy lệnh bộ thực thi',
   DangerConfirmFailed: 'Xác nhận việc nguy hiểm sai',
 }
 

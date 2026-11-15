@@ -73,6 +73,18 @@ public static class Permissions
         /// lý do + gõ "NGẮT PHIÊN"). Chỉ ở tổng công ty.
         /// </summary>
         public const string OpsMaintenanceRun = "System.OpsMaintenance.Run";
+        /// <summary>
+        /// Quyền "Bật / tắt chế độ bảo trì" (lát QT5): khi bật, mọi người dùng thường nhận thông báo bảo trì (503), chỉ người có quyền
+        /// <c>System.Ops*</c> vào được. Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsMaintenanceModeManage = "System.OpsMaintenanceMode.Manage";
+        /// <summary>Quyền "Xem bộ thực thi" (màn hình AGT – lát QT5): môi trường, tình trạng liên lạc, lịch sử lệnh. Chỉ ở tổng công ty.</summary>
+        public const string OpsAgentView = "System.OpsAgent.View";
+        /// <summary>
+        /// Quyền "Quản lý bộ thực thi" (lát QT5): khai môi trường, tạo khóa (xác nhận Q6 – "TẠO KHÓA"), ra "Lệnh thử", hủy lệnh chờ. Chỉ ở tổng
+        /// công ty.
+        /// </summary>
+        public const string OpsAgentManage = "System.OpsAgent.Manage";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -359,6 +371,9 @@ public static class Permissions
         new(System.OpsBackupRun, "Chạy sao lưu ngay (chỉ ở tổng công ty)"),
         new(System.OpsMaintenanceView, "Xem bảo trì CSDL: dung lượng bảng, phiên và khóa (chỉ ở tổng công ty)"),
         new(System.OpsMaintenanceRun, "Chạy VACUUM, REINDEX, ngắt phiên CSDL (chỉ ở tổng công ty)"),
+        new(System.OpsMaintenanceModeManage, "Bật / tắt chế độ bảo trì (chỉ ở tổng công ty)"),
+        new(System.OpsAgentView, "Xem bộ thực thi: môi trường, lịch sử lệnh (chỉ ở tổng công ty)"),
+        new(System.OpsAgentManage, "Quản lý bộ thực thi: khai môi trường, tạo khóa, ra lệnh (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

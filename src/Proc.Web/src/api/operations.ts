@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { apiFetch } from './client'
+import { apiFetch, MAINTENANCE_EVENT } from './client'
 import type { DateRange } from './logs'
 
 /*
@@ -15,20 +16,30 @@ export interface EnvironmentStatus {
   environment: AppEnvironment
   /** Cảnh báo cấu hình (chưa khai môi trường, TEST chưa khai hộp thư test…); null = ổn. */
   warning: string | null
+  /** Chế độ bảo trì đang bật (lát QT5) – dải đỏ "ĐANG BẢO TRÌ"; null / thiếu = tắt. */
+  maintenance?: { message: string; startedAt: string | null } | null
 }
 
 /**
- * Môi trường của máy chủ – gọi một lần mỗi phiên trình duyệt (cấu hình chỉ đổi khi khởi động lại máy chủ). Lỗi mạng thì coi như không biết
- * (không vẽ dải) – trang vẫn dùng được.
+ * Môi trường của máy chủ. Môi trường chỉ đổi khi khởi động lại máy chủ, nhưng chế độ bảo trì (lát QT5) bật / tắt bất kỳ lúc nào nên lấy lại mỗi
+ * phút và ngay khi API trả 503 bảo trì. Lỗi mạng thì giữ số liệu cũ / không vẽ dải – trang vẫn dùng được.
  * @param endpoint API: nội bộ `/api/ops/v1/environment`, Portal NCC `/api/portal/auth/environment` (site Portal chỉ mở /api/portal).
  */
 export function useEnvironmentStatus(endpoint = '/api/ops/v1/environment') {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['environment-status', endpoint],
     queryFn: () => apiFetch<EnvironmentStatus>(endpoint),
-    staleTime: Infinity,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
     retry: false,
   })
+  const { refetch } = query
+  useEffect(() => {
+    const onMaintenance = () => void refetch()
+    window.addEventListener(MAINTENANCE_EVENT, onMaintenance)
+    return () => window.removeEventListener(MAINTENANCE_EVENT, onMaintenance)
+  }, [refetch])
+  return query
 }
 
 /** Đèn của một dòng tổng quan. */
