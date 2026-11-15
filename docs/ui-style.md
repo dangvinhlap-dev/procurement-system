@@ -247,7 +247,13 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   (`wal_level`, `archive_mode`…) vì là tên kỹ thuật người quản trị gõ lại.
 - Thông báo đầu trang (`notice`): "Lưu WAL: <trạng thái> · số liệu lúc dd/MM/yyyy HH:mm" + câu tóm tắt; màu theo đèn (đỏ lỗi / trễ, vàng chờ
   khởi động lại, xanh đang chạy, xanh dương thông tin – máy DEV chưa bật).
-- Nút "Làm mới" icon vàng. Lát QT3b thêm tab (Lịch sử, Lưu WAL, Lịch và thời hạn giữ, Nơi lưu) và nút "Sao lưu ngay" icon xanh.
+- Nút "Làm mới" icon vàng (lấy lại số liệu tab đang xem).
+- **Lát QT3b**: thanh tab của `ListPage` (prop `viewTabs` – thay bộ tab mặc định Danh sách / Tổng hợp / Phân tích): **Lịch sử** (mặc định), **Lưu
+  WAL**, **Lịch và thời hạn giữ**, **Nơi lưu**; mỗi tab vẫn là `DataGrid`. Lịch sử: ô lọc Từ ngày – Đến ngày, cột Tình trạng là đèn kèm chữ (Đang
+  chờ / Đang chạy trung tính, Xong xanh, Xong – chưa chép nơi thứ hai vàng, Lỗi / kiểm tra không đạt đỏ, Đã dọn trung tính), dòng lỗi tô dấu,
+  Dung lượng / Số file canh phải phông đơn cách; còn lần đang chờ / đang chạy thì lưới tự làm mới 5 giây. Hai tab sau dùng `overviewColumns`.
+- Nút **Sao lưu ngay** (icon `CloudUploadOutlined` xanh, mũi tên mở menu) đặt trước "Làm mới", chỉ hiện khi có quyền chạy: menu chọn Full / Diff /
+  pg_dump / Đính kèm (mỗi mục một câu giải thích), đặt xong báo "Đã đặt … vào hàng chờ" và chuyển sang tab Lịch sử. Không có nút tải file sao lưu.
 
 ## 5a. Tab
 

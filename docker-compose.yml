@@ -82,7 +82,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Chưa đặt POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-procurement}
       TZ: Asia/Ho_Chi_Minh
-    # Lưu WAL liên tục (lát QT3a, design.md mục 21.5). Mặc định TẮT (WAL_ARCHIVE_MODE=off) cho đến khi lát QT3b có phần dọn WAL cũ;
+    # Lưu WAL liên tục (lát QT3a, design.md mục 21.5). Mặc định TẮT (WAL_ARCHIVE_MODE=off): sao lưu Full / Diff, dọn WAL cũ (lát QT3b) mới làm cho Windows;
     # bật: tạo WAL_ARCHIVE_DIR trên ổ khác ổ dữ liệu, chown 999:999 (người dùng postgres trong image), WAL_ARCHIVE_MODE=on rồi
     # docker compose up -d db (khởi động lại PostgreSQL một lần). archive_command không ghi đè file đã có, chép ra .tmp rồi đổi tên.
     command:

@@ -8,6 +8,11 @@ import { LogDateRangeFilter, TruncatedNotice } from './logFilters'
 /** Tên tiếng Việt của loại việc vận hành; loại chưa có tên hiện nguyên mã. */
 const kindLabels: Record<string, string> = {
   AppStarted: 'Khởi động ứng dụng',
+  ErrorGroupStatusChanged: 'Đổi trạng thái nhóm lỗi',
+  ErrorLogPurged: 'Dọn nhật ký lỗi',
+  BackupQueued: 'Sao lưu ngay',
+  BackupFinished: 'Sao lưu xong',
+  BackupCleanup: 'Dọn bản sao lưu cũ',
 }
 
 const resultLabels: Record<OperationResult, { label: string; tone: StatusTone }> = {

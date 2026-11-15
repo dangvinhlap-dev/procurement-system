@@ -95,6 +95,7 @@ Bản 0.33.0 · Lớn · GĐ1.
 | CSDL | Migration `V0_33_0_SaoLuu` |
 | Test | Đơn vị: tính lịch, chọn bản cần xóa, tạo tham số lệnh (đường dẫn có dấu cách, có dấu tiếng Việt) · tích hợp: pg_dump + kiểm tra trên CSDL test (bỏ qua có ghi chú khi máy không có công cụ PostgreSQL) · diễn tập D1 |
 | Tài liệu | deploy-windows.md mục 4: tắt lịch `backup.ps1` cũ khi bật lịch trong phần mềm; Dockerfile thêm `postgresql-client-18` (kho PGDG) khi làm phần Docker |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.12): migration tên `V0_33_0_SaoLuu` gồm cả 4 cột tham số; quyền `System.OpsBackup.Run` (mẫu 3 đoạn); công cụ chạy trong thư mục sao lưu, tham số tên tương đối không dấu (Windows đọc tham số theo bảng mã ANSI); khóa advisory trên kết nối không pool; thêm `DUMP_KEEP_DAYS` mặc định 14, `Backup:ScheduleEnabled`, `Backup:ToolTimeoutMinutes`, `Backup:WorkerEnabled`; API `GET /backup/overview`; thông báo `BackupProblem` (không email); SYS "Sao lưu gần nhất", "Ổ sao lưu"; deploy-windows.md **mục 4b** (không phải 4). Chưa làm phần Docker (`postgresql-client-18`, WAL bật mặc định, pg_hba replication) – theo Q4; diễn tập D1 làm trên máy TEST |
 
 ### QT4 – Bảo trì CSDL (DBM)
 Bản 0.33.0 · Vừa · GĐ1.

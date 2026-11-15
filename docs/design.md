@@ -3205,6 +3205,40 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   Lưu WAL / Tham số PostgreSQL / Thống kê chép / Nơi lưu, mỗi dòng đỏ / vàng ghi cách xử lý. Các tab Lịch sử, Lịch và thời hạn giữ, Nơi lưu thêm
   ở QT3b. Không migration.
 
+### 21.12 Lát QT3b – sao lưu Full / Diff / pg_dump / đính kèm, đã làm (15/11/2026)
+
+- **Bảng `BackupRun`** (migration `V0_33_0_SaoLuu`): kiểu (Full / Diff / Dump / Attachments), nguồn (Sao lưu ngay / theo lịch – ngày lượt lịch,
+  khóa duy nhất kiểu + ngày chống đặt trùng khi nhiều tiến trình), trạng thái Đang chờ → Đang chạy → Xong / Lỗi, đường dẫn **tương đối** so với
+  `Backup:RootPath`, dung lượng, số file, SHA256, bản Full gốc (Diff), file WAL đầu (đọc `backup_label`), kết quả kiểm tra, chép nơi thứ hai, lúc
+  dọn. Dòng không xóa khi dọn file (giữ lịch sử). Không thuộc công ty; chỉ tổng công ty.
+- **Chạy**: hàng chờ chạy lần lượt bằng dịch vụ nền, khóa `pg_try_advisory_lock` trên kết nối **không dùng pool** (kết nối nằm trong pool vẫn giữ
+  khóa phiên); ứng dụng khởi động lại giữa chừng thì lần "Đang chạy" ghi lỗi. Bấm "Sao lưu ngay" khi đã có lần cùng kiểu đang chờ / chạy thì
+  báo lỗi. Full: `pg_basebackup -Fp -X stream -c fast` (thư mục plain cho `pg_combinebackup`); Diff: thêm `--incremental` = `backup_manifest` của
+  bản Full dùng được gần nhất (chưa có thì báo lỗi; lịch tự chạy Full); kiểm tra `pg_verifybackup`; SHA256 của `backup_manifest`. Dump: `pg_dump
+  -Fc` ra `.partial` rồi đổi tên, kiểm tra `pg_restore --list`, SHA256 cả file; tài khoản `proc_maint` nếu có, không thì tài khoản ứng dụng. Đính
+  kèm: chép bổ sung (file chưa có / khác dung lượng / mới sửa hơn), không xóa file đã xóa ở nguồn, đối chiếu sau khi chép; chép thẳng từ nguồn sang
+  nơi thứ hai. Bản khác: chép nguyên sang nơi thứ hai, đối chiếu dung lượng + số file (dump thêm SHA256); lỗi nơi thứ hai chỉ đèn vàng.
+- **Công cụ PostgreSQL trên Windows đọc tham số theo bảng mã ANSI** (thử thật: "sao lưu" thành "sao luu", pg_dump không mở được file) → chạy công
+  cụ với **thư mục làm việc** là thư mục sao lưu, tham số chỉ là tên tương đối không dấu do phần mềm đặt; tham số có ký tự ngoài ASCII bị chặn.
+  `ProcessStartInfo.ArgumentList` (không qua shell), mật khẩu qua `PGPASSWORD`, quá `Backup:ToolTimeoutMinutes` (mặc định 360) thì dừng.
+- **Lịch** (`BackupPlanner`, B1): mỗi ngày một lượt lúc `BACKUP_TIME` (01:00) giờ Việt Nam; ứng dụng tắt đúng giờ thì chạy bù khi bật lại trong
+  cùng ngày (không bù ngày trước); Full ngày `BACKUP_FULL_DAY` (7 = Chủ nhật, ISO 1–7) hoặc khi chưa có Full dùng được, các ngày khác Diff; rồi
+  dump, đính kèm. `Backup:ScheduleEnabled` (mặc định bật; DEV, Testing tắt).
+- **Giữ**: Full cũ hơn `BACKUP_KEEP_WEEKS` tuần (4) dọn cùng các Diff của nó; Diff mất gốc dọn; dump cũ hơn `DUMP_KEEP_DAYS` (14 – tự chọn); **luôn
+  giữ bản Full và dump dùng được mới nhất** (sao lưu lỗi nhiều ngày không dọn mất bản cuối). WAL: `pg_archivecleanup` giữ từ file WAL đầu của bản
+  Full cũ nhất còn giữ (chưa có Full ghi file WAL thì không dọn). Dọn chạy sau mỗi đợt sao lưu, xóa cả nơi chính và nơi thứ hai. Bốn tham số
+  là tham số công ty, chỉ tham số của tổng công ty có tác dụng (nhóm "Sao lưu" màn hình tham số).
+- **Cảnh báo**: lần sao lưu lỗi / không đạt kiểm tra / chưa chép được nơi thứ hai → thông báo `BackupProblem` trong phần mềm (không email, như
+  E10) cho người có `System.OpsBackup.Run` ở tổng công ty; ổ sao lưu (nơi chính, nơi thứ hai) còn dưới 15 % → thông báo mỗi ngày tối đa một lần.
+  SYS thêm "Sao lưu gần nhất" (Full / Diff dùng được; quá 24 giờ hoặc chưa có: đỏ trên TEST / PROD, DEV trung tính) và "Ổ sao lưu".
+- **API, quyền**: `GET /api/ops/v1/backup/runs?from&to`, `GET …/runs/{id}`, `POST …/runs` (Sao lưu ngay – `System.OpsBackup.Run`),
+  `GET …/backup/overview` (tab Lịch và thời hạn giữ, Nơi lưu); chỉ tổng công ty; **không có API tải file sao lưu** (Q5). Nhật ký vận hành:
+  `BackupQueued`, `BackupFinished`, `BackupCleanup`.
+- **Giao diện BAK** (ui-style.md mục 5l): tab Lịch sử (mặc định), Lưu WAL, Lịch và thời hạn giữ, Nơi lưu; nút "Sao lưu ngay" chọn kiểu.
+- **Chưa làm** (theo Q4 – Windows trước): Docker image chưa có `postgresql-client-18` (BAK tab Nơi lưu báo công cụ "Không thấy"), `WAL_ARCHIVE_MODE`
+  Docker vẫn mặc định off, dòng `pg_hba` replication cho mạng Docker. Full / Diff thật chưa chạy trên máy dev (tài khoản `proc` không có
+  REPLICATION) – kiểm tra tay trên máy TEST theo deploy-windows.md mục 4b.
+
 ## Nguồn tham khảo
 
 - .NET and .NET Core Support Policy – Microsoft: https://dotnet.microsoft.com/en-US/platform/support/policy/dotnet-core

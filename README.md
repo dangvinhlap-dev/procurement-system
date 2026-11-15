@@ -75,7 +75,7 @@ Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md
   Khôi phục: chép lại vào volume, ví dụ `docker compose cp backups/attachments/. app:/data/attachments`.
 - Khôi phục vào CSDL trống: dừng app (`docker compose stop app`), rồi
   `docker compose exec backup pg_restore --clean --if-exists -d procurement /backups/<file>.dump`, sau đó `docker compose up -d`.
-- **Lưu WAL liên tục** (lát QT3a, từ 0.33.0 – mặc định tắt đến khi có phần dọn WAL cũ của lát QT3b): tạo thư mục WAL trên ổ khác ổ dữ liệu,
+- **Lưu WAL liên tục** (lát QT3a, từ 0.33.0 – trên Docker mặc định tắt: phần sao lưu Full / Diff / dọn WAL của lát QT3b mới làm cho Windows, image app chưa có công cụ PostgreSQL): tạo thư mục WAL trên ổ khác ổ dữ liệu,
   `sudo chown 999:999 <thư mục>` (người dùng postgres trong image), đặt `WAL_ARCHIVE_MODE=on`, `WAL_ARCHIVE_DIR=<thư mục>` trong `.env`, rồi
   `docker compose up -d db app` (PostgreSQL khởi động lại một lần). Tạo tài khoản bảo trì (chạy lại được):
   `docker compose exec db psql -U proc -d procurement -c "CREATE ROLE proc_maint LOGIN REPLICATION CREATEDB PASSWORD '<mật khẩu>'"`
