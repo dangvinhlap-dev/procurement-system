@@ -3,6 +3,32 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.33.1] - 2026-11-15
+
+**Menu "Quản trị hệ thống" riêng** – các chức năng quản trị không còn lẫn trong menu Hệ thống.
+
+### Thêm mới
+- Menu **Quản trị hệ thống** (Alt+Q), sau menu Hệ thống, trên thanh menu và cây điều hướng: Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy
+  cập, Tổng quan hệ thống, Nhật ký vận hành, Nhật ký lỗi, Sao lưu, Bảo trì CSDL.
+
+### Thay đổi
+- Menu **Hệ thống** chỉ còn cấu hình tổ chức và nghiệp vụ: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt, Xếp loại NCC, Đánh số danh mục, Đánh
+  số chứng từ, Tham số hệ thống.
+- Địa chỉ các màn hình giữ nguyên (`/he-thong/…`) – link trong thông báo, email, trang đã lưu vẫn mở được.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (không migration, không script `db/scripts`).
+
+### Lưu ý khi nâng cấp
+- Chỉ thay gói ứng dụng, giữ `appsettings.Production.json`. Không chạy script CSDL, không có quyền mới. Nên sao lưu CSDL như mọi lần nâng.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.33.0 (`app-0.33.0`) – không có thay đổi CSDL.
+
 ## [0.33.0] - 2026-11-15
 
 Gộp các phần chưa phát hành từ sau 0.30.0 (dự kiến 0.31.0, 0.32.0, 0.33.0): **gỡ hẳn phân hệ kho**, mở đầu **module Quản trị vận hành (QT)** –
