@@ -30,6 +30,8 @@ param(
     [string]$SuperUser = 'postgres',
     [string]$Database = 'postgres',
     [string]$MaintUser = 'proc_maint',
+    # Tài khoản ứng dụng (chủ CSDL procurement) – proc_maint được làm thành viên để khôi phục / đổi tên CSDL thay mặt (lát QT6).
+    [string]$AppUser = 'proc',
     [SecureString]$MaintPassword,
     # Giữ tóm tắt WAL: phải dài hơn chu kỳ Full (7 ngày) – mặc định 35 ngày cho dư.
     [string]$SummaryKeepTime = '35d',
@@ -93,7 +95,7 @@ if ($DryRun) {
     Write-Host '== Chạy thử (-DryRun): không đổi gì ==' -ForegroundColor Yellow
     Write-Host "Tạo thư mục $WalArchivePath, cấp quyền sửa cho tài khoản dịch vụ PostgreSQL."
     foreach ($k in $settings.Keys) { Write-Host "ALTER SYSTEM SET $k = $(Quote-Sql $settings[$k]);" }
-    Write-Host "Tạo / cập nhật vai trò $MaintUser LOGIN REPLICATION CREATEDB; GRANT pg_monitor, pg_read_all_settings, pg_read_all_data, pg_signal_backend."
+    Write-Host "Tạo / cập nhật vai trò $MaintUser LOGIN REPLICATION CREATEDB; GRANT pg_monitor, pg_read_all_settings, pg_read_all_data, pg_signal_backend, $AppUser."
     Write-Host 'Thêm vào pg_hba.conf (đường dẫn lấy bằng SHOW hba_file) các dòng còn thiếu:'
     $hbaLines | ForEach-Object { Write-Host "  $_" }
     Write-Host 'SELECT pg_reload_conf(); rồi khởi động lại PostgreSQL (-Restart) để wal_level, archive_mode có hiệu lực.'
@@ -151,6 +153,9 @@ try {
     [void]$sql.AppendLine("SELECT 'CREATE ROLE $MaintUser LOGIN' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$MaintUser') \gexec")
     [void]$sql.AppendLine("ALTER ROLE $MaintUser WITH LOGIN REPLICATION CREATEDB PASSWORD $(Quote-Sql $maintPlain);")
     [void]$sql.AppendLine("GRANT pg_monitor, pg_read_all_settings, pg_read_all_data, pg_signal_backend TO $MaintUser;")
+    # Lát QT6 (phục hồi): proc_maint là thành viên tài khoản ứng dụng – tạo CSDL khôi phục OWNER <tài khoản ứng dụng>, pg_restore --role, đổi tên /
+    # xóa CSDL khi hoán đổi. Tài khoản ứng dụng chưa có (chạy script trước khi cài phần mềm) thì bỏ qua – chạy lại script sau.
+    [void]$sql.AppendLine("SELECT 'GRANT $AppUser TO $MaintUser' WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$AppUser') \gexec")
     Invoke-Psql $sql.ToString() | Out-Null
     Write-Host 'Đã đặt tham số lưu WAL (postgresql.auto.conf) và vai trò bảo trì.'
 

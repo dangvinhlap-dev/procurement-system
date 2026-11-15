@@ -282,6 +282,48 @@ Kiểm tra trên máy TEST:
 - [ ] Tắt tác vụ, ra Lệnh thử, chờ hơn 1 giờ → "Hết hạn"; bật lại tác vụ – lệnh cũ không chạy.
 - [ ] Bật chế độ bảo trì: người dùng thường thấy dải đỏ, thao tác báo câu thông báo; admin làm việc bình thường; tắt → vào lại.
 
+## 4e. Phục hồi – màn hình RST (từ 0.34.0 – lát QT6)
+
+Phục hồi **không ghi đè** CSDL đang chạy (design.md 21.2 N2): khôi phục ra bản riêng → so sánh số dòng → **hoán đổi** (bộ thực thi) hoặc bỏ.
+
+- **Từ pg_dump** (lấy lại dữ liệu phần mềm này): ứng dụng tự khôi phục vào CSDL mới `procurement_restore_yyyyMMdd_HHmm` trên cùng máy chủ
+  PostgreSQL (tài khoản `proc_maint`, chủ CSDL là `proc`). Không cần bộ thực thi để khôi phục; hoán đổi thì cần.
+- **Về mốc thời gian** (bản Full + Diff + WAL): bộ thực thi ghép bản sao lưu ra `<Backup:RootPath>\restore\<giờ>\data`, chạy **máy chủ CSDL tạm**
+  cổng `Restore:TempPort` (mặc định 5434, chỉ nghe localhost) tới mốc. **Bản Full là cả thư mục dữ liệu PostgreSQL** – hoán đổi đưa **mọi CSDL**
+  trên máy chủ đó về mốc (màn hình RST liệt kê các CSDL khác). Máy chủ PostgreSQL dùng chung với phần mềm khác thì chỉ dùng cách pg_dump, hoặc
+  tách máy chủ CSDL riêng cho phần mềm.
+
+Chuẩn bị một lần mỗi máy (TEST trước):
+1. Chạy lại `qt-enable-wal.ps1` (bản 0.34.0) – cấp thêm `GRANT proc TO proc_maint` (tạo / đổi tên / xóa CSDL thay mặt `proc`).
+2. Tài khoản bộ thực thi (`proc-agent`, mục 4d) cần: quyền **Sửa** thư mục sao lưu (`Backup:RootPath`), thư mục WAL, thư mục dữ liệu PostgreSQL và
+   thư mục cha của nó (cất thư mục cũ); quyền **dừng / chạy** dịch vụ PostgreSQL và app pool IIS (đơn giản nhất: thành viên nhóm Administrators
+   của máy – bộ thực thi là "cánh tay" quyền cao theo N1).
+3. Cài lại bộ thực thi bản 1.1.0 kèm cấu hình phục hồi (PowerShell **Run as Administrator**):
+   ```powershell
+   .\qt-agent-install.ps1 -ServerUrl https://procurement.congty.local -TaskUser .\proc-agent `
+       -AppPath C:\inetpub\procurement -StatePath D:\ProcurementData\agent `
+       -GrantModify E:\ProcurementBackup `
+       -PgBinPath "C:\Program Files\PostgreSQL\18\bin" -PgUser proc_maint -AppPoolName Procurement `
+       -PgServiceName postgresql-x64-18 -PgDataPath "D:\PostgreSQL\18\data"
+   ```
+   Script hỏi thêm mật khẩu `proc_maint` (ghi vào `qt-agent.json` – chỉ Administrators, SYSTEM, `proc-agent` đọc được).
+4. Gán quyền **Xem phục hồi** / **Chạy phục hồi** (`System.OpsRestore.View` / `.Run`) cho vai trò cần (Quản trị hệ thống tự có).
+
+Cấu hình (`appsettings.Production.json`): `Restore:TempPort` (5434 – không trùng cổng khác), `Restore:WorkerEnabled` (mặc định bật).
+
+Hoán đổi (Q6 – nhập lại mật khẩu, lý do, gõ "KHÔI PHỤC"): bộ thực thi xin máy chủ **bật chế độ bảo trì** và chép bảng vận hành sang bản khôi
+phục → dừng app pool → pg_dump: đổi tên `procurement` → `procurement_old_<giờ>`, bản khôi phục → `procurement`; mốc thời gian: dừng PostgreSQL, đổi
+tên thư mục dữ liệu thành `<thư mục>_old_<giờ>`, chuyển thư mục khôi phục vào, chạy lại, chép file `.history` vào thư mục WAL → chạy app pool →
+kiểm tra `/health`. Lỗi giữa chừng thì trả lại như cũ. **Chế độ bảo trì vẫn bật sau khi hoán đổi** – kiểm tra dữ liệu rồi tắt ở SYS. Bản cũ giữ
+tới khi xóa tay: `psql -U postgres -c "DROP DATABASE procurement_old_<giờ>"` hoặc xóa thư mục `<thư mục dữ liệu>_old_<giờ>` (khi chắc chắn).
+
+Kiểm tra trên máy TEST (diễn tập D2):
+- [ ] RST → tab **Bản pg_dump** → Khôi phục từ bản đêm qua → "Chờ kiểm tra"; bấm đúp xem **So sánh số dòng** (cùng phiên bản CSDL).
+- [ ] **Hoán đổi…** (sai chữ xác nhận bị chặn) → bộ thực thi xong trong 1–2 phút; dải đỏ bảo trì; dữ liệu về bản dump; RST còn đủ lịch sử, AGT
+      còn khóa; tắt bảo trì; CSDL `procurement_old_…` còn.
+- [ ] **Về mốc thời gian…** chọn mốc giữa hai lần sao lưu → kế hoạch đủ chuỗi → máy chủ tạm cổng 5434 lên, so sánh được → **Bỏ bản khôi phục**
+      (thư mục `restore\<giờ>` bị xóa). Khi được phép thử hoán đổi máy chủ CSDL: hoán đổi → kiểm tra → quay lại bằng thư mục `_old_…` nếu cần.
+
 ## 5. Nâng cấp lên bản mới
 
 Đọc CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó trước.

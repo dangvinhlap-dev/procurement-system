@@ -997,7 +997,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   Cảnh báo CSDL khác cùng máy chủ (khôi phục theo mốc quay lùi cả chúng – lưu ý người dùng 15/11/2026). API `/api/ops/v1/restore/overview|plan|
   runs|runs/{id}|compare|discard|swap`. Test: domain `RestoreTests` 8, tích hợp `RestoreTests` 3 (pg_restore thật, hoán đổi qua bộ thực thi giả).
   Build 0 cảnh báo, `dotnet test` 781/781.
-- Còn: **QT6-3** script `qt-agent.ps1` 1.1.0 (4 lệnh mới, `qt-enable-wal.ps1` cấp `GRANT proc TO proc_maint`), **QT6-4** màn hình RST + tài liệu
+- **QT6-3 xong (script)**: `qt-agent.ps1` 1.1.0 – `RestorePointInTime` (pg_combinebackup / robocopy Full, `recovery.signal` + `restore_command`
+  + `recovery_target_time`, `pg_ctl start -o "-p <cổng> -c archive_mode=off"`, chờ hết `pg_is_in_recovery`), `DiscardPointInTime`, `SwapDatabase`
+  (prepare-swap → dừng app pool → ngắt phiên → đổi tên hai CSDL, lỗi thì đổi ngược; /health không lên thì trả về như cũ), `SwapCluster` (dừng
+  site, máy chủ tạm, dịch vụ PostgreSQL; cất thư mục dữ liệu `_old_<giờ>`, robocopy /MOVE, chép ACL, chép `.history` vào thư mục WAL); sửa lỗi
+  PowerShell 5.1 coi stderr psql (NOTICE) là lỗi dừng. `qt-agent-install.ps1` thêm `-PgBinPath -PgUser -PgPassword -AppPoolName -HealthUrl
+  -PgServiceName -PgDataPath`; `qt-enable-wal.ps1` thêm `-AppUser`, `GRANT proc TO proc_maint`. Thử thật `SwapDatabase` trên 2 CSDL nháp (đổi tên
+  đúng, chặn tên lạ, chặn khi CSDL cũ đã có). PITR / SwapCluster chưa chạy thật được trên máy dev (không có bản Full) – diễn tập D2 trên TEST.
+  deploy-windows.md mục **4e**.
+- Còn: **QT6-4** màn hình RST + tài liệu
   (design.md 21.15, ui-style, deploy-windows, ke-hoach-qt).
 
 **Bỏ thẻ màn hình 15/11/2026 – nhánh `fix/bo-the-man-hinh`** (người dùng: "các lát trước tôi có yêu cầu bạn cho mở tối đa 6 tab trong một màn
