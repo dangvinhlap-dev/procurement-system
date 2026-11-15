@@ -75,6 +75,14 @@ Cài trên **Windows Server (IIS)** thay cho Docker: xem `docs/deploy-windows.md
   Khôi phục: chép lại vào volume, ví dụ `docker compose cp backups/attachments/. app:/data/attachments`.
 - Khôi phục vào CSDL trống: dừng app (`docker compose stop app`), rồi
   `docker compose exec backup pg_restore --clean --if-exists -d procurement /backups/<file>.dump`, sau đó `docker compose up -d`.
+- **Lưu WAL liên tục** (lát QT3a, từ 0.33.0 – mặc định tắt đến khi có phần dọn WAL cũ của lát QT3b): tạo thư mục WAL trên ổ khác ổ dữ liệu,
+  `sudo chown 999:999 <thư mục>` (người dùng postgres trong image), đặt `WAL_ARCHIVE_MODE=on`, `WAL_ARCHIVE_DIR=<thư mục>` trong `.env`, rồi
+  `docker compose up -d db app` (PostgreSQL khởi động lại một lần). Tạo tài khoản bảo trì (chạy lại được):
+  `docker compose exec db psql -U proc -d procurement -c "CREATE ROLE proc_maint LOGIN REPLICATION CREATEDB PASSWORD '<mật khẩu>'"`
+  (đã có thì đổi `CREATE` thành `ALTER`) và
+  `docker compose exec db psql -U proc -d procurement -c "GRANT pg_monitor, pg_read_all_settings, pg_read_all_data TO proc_maint"`;
+  đặt `MAINTENANCE_CONNECTION_STRING=Host=db;Port=5432;Database=procurement;Username=proc_maint;Password=<mật khẩu>` rồi `docker compose up -d app`.
+  Màn hình **Hệ thống → Sao lưu** (BAK) phải báo Lưu WAL "Đang chạy"; thử ngay: `docker compose exec db psql -U proc -d procurement -c "SELECT pg_switch_wal()"`.
 
 **Xem log kỹ thuật (Seq)**: `ssh -L 5341:localhost:5341 <server>` rồi mở http://localhost:5341
 (tài khoản `admin`, mật khẩu `SEQ_ADMIN_PASSWORD`).

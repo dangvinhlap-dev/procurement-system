@@ -33,6 +33,7 @@ cd <thư mục repo>
 ```
 
 Kết quả: `artifacts\procurement-<phiên bản>.zip`, giải nén gồm `app\` (website), `db-scripts\` (script CSDL), `tools\backup.ps1`,
+`tools\qt-enable-wal.ps1` (bật lưu WAL – mục 4a),
 `appsettings.Production.example.json`. Gói không chứa cấu hình dev/test.
 
 ## 3. Cài lần đầu
@@ -74,6 +75,8 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Operations:LogDirectory` | Thư mục file nhật ký vận hành, ngoài thư mục ứng dụng: `D:\ProcurementData\operations-log` |
 | `Operations:ClientErrorPermitPerMinute` | Không bắt buộc (mặc định 30): số lỗi giao diện một phiên đăng nhập được gửi về nhật ký lỗi mỗi phút (lát QT2) |
 | `ConnectionStrings:Procurement` | Mật khẩu CSDL của tài khoản `proc` |
+| `ConnectionStrings:Maintenance` | Từ 0.33.0, sau khi chạy `qt-enable-wal.ps1` (mục 4a): `Host=localhost;Port=5432;Database=procurement;Username=proc_maint;Password=<mật khẩu đặt khi chạy script>`. Bỏ trống thì màn hình BAK đọc bằng tài khoản `proc` (không xem được `archive_command`) |
+| `Backup:WalArchivePath` | Từ 0.33.0: đúng thư mục WAL đã truyền cho `qt-enable-wal.ps1`, ví dụ `E:\\ProcurementBackup\\wal` (trong JSON viết `\\`) – để BAK, SYS báo chỗ trống ổ |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
@@ -157,6 +160,34 @@ Register-ScheduledTask -TaskName 'Procurement backup' -Action $action -Trigger $
 
 Chép `E:\ProcurementBackup` ra máy khác định kỳ. Tác vụ báo "Last Run Result" khác 0 khi sao lưu lỗi.
 
+## 4a. Lưu WAL liên tục (từ 0.33.0 – lát QT3a)
+
+Mục tiêu: CSDL hỏng thì mất tối đa **5 phút** dữ liệu (không phải cả ngày như khi chỉ có `pg_dump` mỗi đêm); là nền cho sao lưu Diff và khôi
+phục theo thời điểm ở các lát sau (design.md mục 21.5, 21.11). Làm **một lần** trên máy chủ CSDL, máy TEST trước, PROD sau:
+
+1. Chọn thư mục WAL **trên ổ khác ổ dữ liệu PostgreSQL**, ví dụ `E:\ProcurementBackup\wal` (đường dẫn không có `"` hay `%`).
+2. Mở PowerShell **Run as Administrator** trên máy CSDL, chạy thử xem các việc sẽ làm rồi chạy thật:
+   ```powershell
+   D:\Procurement\tools\qt-enable-wal.ps1 -WalArchivePath E:\ProcurementBackup\wal -DryRun
+   D:\Procurement\tools\qt-enable-wal.ps1 -WalArchivePath E:\ProcurementBackup\wal -Restart
+   ```
+   Script hỏi mật khẩu `postgres` và đặt mật khẩu mới cho tài khoản bảo trì `proc_maint` (≥ 12 ký tự – ghi lại để khai ở bước 3). Nó đặt tham số
+   bằng `ALTER SYSTEM` (file `postgresql.auto.conf`), thêm dòng `pg_hba.conf` (bản cũ lưu `pg_hba.conf.<giờ>.bak`), cấp quyền thư mục WAL cho
+   tài khoản chạy dịch vụ PostgreSQL. `-Restart` khởi động lại dịch vụ PostgreSQL **ngay** (người đang dùng bị ngắt vài giây) – không truyền thì
+   tự khởi động lại dịch vụ vào giờ vắng. Chạy lại script nhiều lần không sao.
+3. Khai `ConnectionStrings:Maintenance` và `Backup:WalArchivePath` vào `appsettings.Production.json` (bảng mục 3.4), khởi động lại App Pool.
+4. Kiểm tra (đánh dấu từng dòng khi làm trên máy TEST):
+   - [ ] Màn hình **Hệ thống → Sao lưu** (BAK): Lưu WAL **Đang chạy**; `wal_level` replica, `archive_mode` on, `archive_command` hiện lệnh
+     (không phải "không xem được"), `archive_timeout` 300 giây, `summarize_wal` on, giữ tóm tắt WAL 35 ngày, tài khoản bảo trì "Đã khai".
+   - [ ] Thư mục WAL có file tên 24 ký tự (ví dụ `000000010000000000000005`), không còn file `.tmp` sót lại.
+   - [ ] Sau 5–10 phút có người nhập liệu: "Lần chép thành công cuối" mới hơn, "File WAL chờ chép" 0.
+   - [ ] Thử lỗi: tạm bỏ quyền ghi thư mục WAL của tài khoản dịch vụ → trong 1–2 phút BAK báo **Có lỗi**; trả quyền → về Đang chạy.
+   - [ ] Màn hình SYS có dòng "Lưu WAL" cùng trạng thái.
+5. Từ đây **thư mục WAL lớn dần** (mỗi file 16 MB) cho tới khi lát QT3b dọn WAL cũ theo bản Full: theo dõi dòng chỗ trống ổ trên BAK / SYS
+   (vàng dưới 15 %, đỏ dưới 5 %). Tác vụ `backup.ps1` (mục 4) giữ nguyên tới QT3b.
+
+Gỡ lưu WAL khi cần: `psql -U postgres -c "ALTER SYSTEM RESET archive_mode"` (và `archive_command`) rồi khởi động lại PostgreSQL.
+
 ## 5. Nâng cấp lên bản mới
 
 Đọc CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó trước.
@@ -175,6 +206,9 @@ hiện dải đỏ cảnh báo cho tới khi khai rồi khởi động lại App
 migration chờ, dòng môi trường đúng. Kiểm tra nhật ký lỗi (lát QT2): màn hình **Hệ thống → Nhật ký lỗi** (ERR) bấm **Thử lỗi máy chủ** và **Thử lỗi
 giao diện** – cả hai hiện dòng mới; sau đó đánh dấu Đã xử lý. Số ngày giữ nhật ký lỗi chỉnh ở Tham số hệ thống của tổng công ty
 (`ERRLOG_KEEP_DAYS`, mặc định 90).
+
+**Từ bản 0.33.0** (lát QT3a): sau khi nâng, bật lưu WAL theo mục 4a (một lần mỗi máy CSDL, cần khởi động lại PostgreSQL); gán quyền
+**Xem sao lưu** (`System.OpsBackup.View`) cho vai trò cần xem màn hình BAK (vai trò Quản trị hệ thống tự có mọi quyền).
 
 ## 6. Khôi phục
 

@@ -240,6 +240,15 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   ô lọc Mã theo dõi; ngăn kéo `DetailDrawer` ba tab, chi tiết kỹ thuật trong khung `.erp-error-detail` (phông đơn cách 11px, cuộn). Nút "Thử lỗi
   máy chủ", "Thử lỗi giao diện" icon vàng.
 
+## 5l. Màn hình BAK – Sao lưu (lát QT3a, 15/11/2026 – design.md mục 21.11)
+
+- Khuôn `ListPage` + `DataGrid` như SYS, dùng chung cột `overviewColumns` (`pages/system/overviewColumns.ts`): Nhóm, Hạng mục, Giá trị, Tình trạng
+  (đèn ô vuông kèm chữ Ổn / Cần xem / Lỗi / Thông tin), Ghi chú (lý do đèn vàng / đỏ và cách xử lý). Tên tham số PostgreSQL giữ nguyên tiếng Anh
+  (`wal_level`, `archive_mode`…) vì là tên kỹ thuật người quản trị gõ lại.
+- Thông báo đầu trang (`notice`): "Lưu WAL: <trạng thái> · số liệu lúc dd/MM/yyyy HH:mm" + câu tóm tắt; màu theo đèn (đỏ lỗi / trễ, vàng chờ
+  khởi động lại, xanh đang chạy, xanh dương thông tin – máy DEV chưa bật).
+- Nút "Làm mới" icon vàng. Lát QT3b thêm tab (Lịch sử, Lưu WAL, Lịch và thời hạn giữ, Nơi lưu) và nút "Sao lưu ngay" icon xanh.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).
