@@ -79,6 +79,7 @@ Bản 0.33.0 · Nhỏ · GĐ1.
 | Cấu hình | `ConnectionStrings:Maintenance` (tài khoản `proc_maint`), `Backup:WalArchivePath` |
 | Giao diện | **BAK** `/he-thong/sao-luu` – tab "Lưu WAL" (đèn kèm chữ); SYS thêm cột độ trễ WAL |
 | Test | Tích hợp đọc trạng thái khi chưa bật · kiểm tra tay script trên máy TEST theo danh sách trong deploy-windows.md |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.11): `archive_command` chép ra `.tmp` rồi đổi tên, file đã có báo thành công cả trên Linux (`test -f … \|\| (cp … && mv …)`); `proc_maint` thêm `pg_monitor`, `pg_read_all_settings`, `pg_read_all_data`; Docker `WAL_ARCHIVE_MODE` mặc định off đến QT3b; trạng thái thêm "Chờ khởi động lại"; quyền xem `System.OpsBackup.View`; SYS là **dòng** "Lưu WAL" (không phải cột); BAK chưa có tab (chỉ nội dung Lưu WAL) – tab Lịch sử, Lưu WAL, Lịch, Nơi lưu dựng ở QT3b; deploy-windows.md mục 4a có danh sách kiểm tra tay |
 
 ### QT3b – Sao lưu Full / Diff / pg_dump / đính kèm (BAK)
 Bản 0.33.0 · Lớn · GĐ1.

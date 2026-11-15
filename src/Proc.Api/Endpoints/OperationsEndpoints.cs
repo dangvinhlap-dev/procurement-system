@@ -39,6 +39,11 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsView)
             .RequireHeadOffice();
 
+        // Tình trạng lưu WAL (màn hình BAK – lát QT3a).
+        ops.MapGet("/backup/wal-status", (IWalArchiveStatus s, CancellationToken ct) => s.GetAsync(ct))
+            .RequirePermission(Permissions.System.OpsBackupView)
+            .RequireHeadOffice();
+
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
         ops.MapPost("/client-errors", ReportClientErrorAsync);

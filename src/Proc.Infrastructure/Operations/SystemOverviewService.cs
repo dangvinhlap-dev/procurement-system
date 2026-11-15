@@ -36,6 +36,7 @@ public sealed class SystemOverviewService : ISystemOverview
     private readonly AttachmentOptions _attachments;
     private readonly OperationsOptions _operations;
     private readonly IOptionsMonitor<EmailOptions> _email;
+    private readonly IWalArchiveStatus _walArchive;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -46,10 +47,13 @@ public sealed class SystemOverviewService : ISystemOverview
     /// <param name="attachments">Thư mục đính kèm.</param>
     /// <param name="operations">Thư mục nhật ký vận hành.</param>
     /// <param name="email">Cấu hình email.</param>
+    /// <param name="walArchive">Tình trạng lưu WAL (lát QT3a).</param>
     public SystemOverviewService(
         ProcDbContext db, IClock clock, AppVersion version, IOptions<AppEnvironmentOptions> environment, IBackgroundHeartbeat heartbeat,
-        IOptions<AttachmentOptions> attachments, IOptions<OperationsOptions> operations, IOptionsMonitor<EmailOptions> email)
+        IOptions<AttachmentOptions> attachments, IOptions<OperationsOptions> operations, IOptionsMonitor<EmailOptions> email,
+        IWalArchiveStatus walArchive)
     {
+        _walArchive = walArchive;
         _db = db;
         _clock = clock;
         _version = version;
@@ -90,6 +94,7 @@ public sealed class SystemOverviewService : ISystemOverview
                 pending.Count == 0 ? "CSDL khớp bản cài." : $"Chưa chạy: {string.Join(", ", pending)} – chạy script CSDL của bản cài (docs/phat-hanh.md)."),
             new(database, "Dung lượng CSDL", Bytes(size), "Neutral", null),
             new(database, "Số kết nối đang mở", Number(connections), "Neutral", "Đếm trong pg_stat_activity của CSDL này."),
+            await WalArchiveAsync(database, cancellationToken),
             Disk(disk, "Ổ chứa file đính kèm", _attachments.RootPath),
             Disk(disk, "Ổ chứa nhật ký vận hành", _operations.LogDirectory),
         ];
@@ -127,8 +132,25 @@ public sealed class SystemOverviewService : ISystemOverview
             : new("Ứng dụng", "Gửi email", $"Gửi thật qua {o.Host}", "Ok", null);
     }
 
+    /// <summary>
+    /// Dòng "Lưu WAL" (lát QT3a): trạng thái + độ trễ, chi tiết ở màn hình BAK. Lỗi khi đọc chỉ làm đỏ dòng này, không hỏng cả bảng SYS.
+    /// </summary>
+    private async Task<SystemOverviewRowDto> WalArchiveAsync(string group, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var wal = await _walArchive.GetAsync(cancellationToken);
+            var value = wal.LagSeconds is > 0 ? $"{wal.StateLabel} · trễ {Duration(TimeSpan.FromSeconds(wal.LagSeconds.Value))}" : wal.StateLabel;
+            return new(group, "Lưu WAL", value, wal.Status, $"{wal.Summary} Chi tiết: màn hình BAK.");
+        }
+        catch (Exception ex) when (ex is Npgsql.NpgsqlException or InvalidOperationException)
+        {
+            return new(group, "Lưu WAL", "Không đọc được", "Error", ex.Message);
+        }
+    }
+
     /// <summary>Dòng chỗ trống của ổ chứa một thư mục.</summary>
-    private static SystemOverviewRowDto Disk(string group, string item, string directory)
+    internal static SystemOverviewRowDto Disk(string group, string item, string directory)
     {
         try
         {
@@ -176,10 +198,10 @@ public sealed class SystemOverviewService : ISystemOverview
     }
 
     /// <summary>Giờ ngày theo giờ Việt Nam, dd/MM/yyyy HH:mm.</summary>
-    private static string Stamp(DateTimeOffset utc) => TimeZoneInfo.ConvertTime(utc, VietnamTime.Zone).ToString("dd/MM/yyyy HH:mm", Vi);
+    internal static string Stamp(DateTimeOffset utc) => TimeZoneInfo.ConvertTime(utc, VietnamTime.Zone).ToString("dd/MM/yyyy HH:mm", Vi);
 
     /// <summary>Khoảng thời gian dễ đọc, ví dụ "2 ngày 3 giờ", "15 phút".</summary>
-    private static string Duration(TimeSpan span) =>
+    internal static string Duration(TimeSpan span) =>
         span.TotalDays >= 1 ? $"{(int)span.TotalDays} ngày {span.Hours} giờ"
         : span.TotalHours >= 1 ? $"{(int)span.TotalHours} giờ {span.Minutes} phút"
         : span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} phút"

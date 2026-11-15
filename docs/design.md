@@ -3047,7 +3047,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | Logic | `pg_dump -Fc` mỗi đêm | Khôi phục một database / một bảng, làm mới TEST, đổi bản PostgreSQL |
 
 - Bật lưu WAL cần sửa `postgresql.conf`, `pg_hba.conf`, cấp `REPLICATION` và **khởi động lại PostgreSQL một lần** – có script cho Windows
-  và Docker; màn hình BAK kiểm tra cấu hình và báo thiếu.
+  và Docker; màn hình BAK kiểm tra cấu hình và báo thiếu (đã làm ở lát QT3a – mục 21.11).
 - pgBackRest không chạy trên Windows nên không dùng; Docker cần thêm `postgresql-client-18` (kho PGDG) vào image.
 - **Làm mới TEST** (E6, E8): khôi phục nguyên trạng, **không làm mờ** – người dùng, vai trò, phạm vi, mật khẩu như PROD (đăng nhập TEST bằng
   mật khẩu PROD); chép bổ sung file đính kèm (mặc định tự chọn – dữ liệu nguyên trạng thì file đính kèm phải mở được); sau khôi phục chỉ đặt lại
@@ -3076,7 +3076,8 @@ cũ đòi xác nhận Q6. Phiếu Đã cài PROD trở đi thì khóa, chỉ th�
 Quyền khác: `System.Ops.View` (xem SYS, nhật ký vận hành – có từ QT1), `System.OpsErrorLog.View/Manage`, `System.Ops.Backup.Run`, `System.Ops.Restore.Run`, `System.Ops.Maintenance.Run`,
 `System.Ops.TestRefresh.Run`, `System.Ops.Config.Manage`. Mọi quyền `System.Ops.*` (mã theo quy ước sẵn có `System.*` – sửa ở lát QT1) chỉ dùng được khi đang làm việc ở tổng công ty.
 **Mã thật phải đúng 3 đoạn** `Module.ĐốiTượng.HànhĐộng` (mục 9.1, có test kiểm tra) nên tên dạng `System.Ops.Release.Manage` ở bảng trên được
-đặt thành `System.Ops<ĐốiTượng>.<HànhĐộng>` khi làm từng lát – ví dụ `System.OpsRelease.Manage`, `System.OpsBackup.Run`; lát QT2 đặt `System.OpsErrorLog.View/Manage` (15/11/2026).
+đặt thành `System.Ops<ĐốiTượng>.<HànhĐộng>` khi làm từng lát – ví dụ `System.OpsRelease.Manage`, `System.OpsBackup.Run`; lát QT2 đặt `System.OpsErrorLog.View/Manage` (15/11/2026); lát QT3a thêm
+`System.OpsBackup.View` (xem màn hình BAK – tự chọn, vì chạy sao lưu ở QT3b là quyền riêng `System.OpsBackup.Run`).
 
 ### 21.6a Quay về bản cũ – ba mức (14/11/2026)
 
@@ -3103,7 +3104,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | --- | --- |
 | QT1 | Nhận diện môi trường (`App:Environment`, dải màu, `Email:RedirectAllTo`), khung module, quyền `System.Ops.*`, nhật ký vận hành (CSDL + file), màn hình SYS cho môi trường đang chạy – **xong 14/11/2026** (mục 21.9) |
 | QT2 | Nhật ký lỗi ERR (máy chủ + giao diện, gộp nhóm, thông báo loại lỗi mới – không email, tự xóa) – **xong 15/11/2026** (mục 21.10) |
-| QT3a | Script bật lưu WAL + kiểm tra cấu hình; BAK hiện tình trạng lưu WAL |
+| QT3a | Script bật lưu WAL + kiểm tra cấu hình; BAK hiện tình trạng lưu WAL – **xong 15/11/2026** (mục 21.11) |
 | QT3b | Full / Diff / `pg_dump` / đính kèm theo lịch + chạy tay, kiểm tra, giữ, dọn, nơi lưu thứ hai, lịch sử |
 | QT4 | Bảo trì CSDL DBM |
 | QT5 | Bộ thực thi (Windows trước) + chế độ bảo trì |
@@ -3175,6 +3176,34 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - **Màn hình ERR** `/he-thong/nhat-ky-loi` (quyền `System.OpsErrorLog.View`, chỉ tổng công ty): lọc ngày lần cuối, trạng thái, **mã theo dõi**
   (tìm mọi ngày, nhận cả "err-…" hoặc thiếu "ERR-"); ngăn kéo Thông tin (Trạng thái, Ghi chú xử lý – quyền `.Manage`, ghi nhật ký vận hành) / Lần
   xảy ra (200 lần gần nhất) / Chi tiết kỹ thuật; nút **Thử lỗi máy chủ**, **Thử lỗi giao diện** (quyền `.Manage`) để kiểm tra sau khi cài.
+
+### 21.11 Lát QT3a – lưu WAL liên tục, đã làm (15/11/2026)
+
+- **Script Windows** `deploy/windows/qt-enable-wal.ps1` (có trong gói cài `tools\`; chạy một lần trên máy CSDL, Run as Administrator; `-DryRun`
+  in việc sẽ làm, `-Restart` khởi động lại dịch vụ PostgreSQL): `ALTER SYSTEM` đặt `wal_level = replica`, `archive_mode = on`,
+  `archive_timeout = 300`, `summarize_wal = on`, `wal_summary_keep_time = 35d`, `archive_command`; vai trò bảo trì `proc_maint` (LOGIN, REPLICATION,
+  CREATEDB + `pg_monitor`, `pg_read_all_settings`, `pg_read_all_data` – cho `pg_basebackup`, `pg_dump` ở QT3b, khôi phục CSDL tạm ở QT6); thêm dòng
+  `pg_hba.conf` cho `proc_maint` từ 127.0.0.1 / ::1 (sao lưu file trước); cấp quyền sửa thư mục WAL cho tài khoản dịch vụ PostgreSQL; lệnh có
+  mật khẩu đi qua stdin và tắt `log_statement` trong phiên để mật khẩu không vào log.
+- **`archive_command` không ghi đè file đã có** và **chép ra `<file>.tmp` rồi đổi tên** (tự chọn – bổ sung so với kế hoạch: file dở dang khi mất
+  điện không bị coi là đủ, lần chép lại sẽ chép đè file .tmp). Windows `if not exist "<thư mục>\%f" (copy /y "%p" "….tmp" && move /y …)`;
+  Linux `test -f /wal-archive/%f || (cp %p /wal-archive/%f.tmp && mv …)`. File đã có thì báo thành công (không kẹt hàng chờ chép sau khi máy
+  sập giữa lúc chép xong và lúc ghi nhận).
+- **Docker**: tham số `command` của dịch vụ `db` + thư mục `WAL_ARCHIVE_DIR`; `WAL_ARCHIVE_MODE` **mặc định off** (tự chọn) cho đến khi QT3b có
+  phần dọn WAL cũ – bật lưu WAL mà không dọn thì thư mục WAL lớn mãi. App gắn thư mục WAL chỉ đọc để báo chỗ trống ổ. Tạo `proc_maint` trên
+  Docker theo README "Triển khai server"; dòng `pg_hba` replication cho mạng Docker làm ở QT3b (khi `pg_basebackup` chạy từ container app).
+- **Cấu hình**: `ConnectionStrings:Maintenance` (tài khoản `proc_maint`; bỏ trống thì đọc bằng tài khoản ứng dụng – không thấy
+  `archive_command`), `Backup:WalArchivePath` (chỉ để báo chỗ trống ổ).
+- **Đánh giá** (`IWalArchiveStatus`, hàm thuần `WalArchiveEvaluator`): đọc `pg_settings`, `pg_stat_archiver`, file WAL đang ghi
+  (`pg_walfile_name(pg_current_wal_lsn())`). Trạng thái: **Chưa bật** (`archive_mode` tắt hoặc `wal_level = minimal`; đèn đỏ trên TEST / PROD,
+  trung tính trên DEV) · **Chờ khởi động lại** (`pending_restart`) · **Có lỗi** (bật mà lệnh trống; lần lỗi cuối sau lần chép thành công cuối) ·
+  **Trễ > 15 phút** (còn file WAL đầy chưa chép và lần chép thành công cuối quá 15 phút) · **Đang chạy**. "File chờ chép" = số thứ tự file đang
+  ghi − số thứ tự file chép cuối − 1 (bỏ timeline; ít ghi dữ liệu thì không có file chờ nên không báo trễ dù lần chép cuối đã lâu). Tham số phụ
+  báo vàng: `archive_timeout` 0 hoặc > 300 giây, `summarize_wal` tắt, `wal_summary_keep_time` dưới 8 ngày.
+- **API** `GET /api/ops/v1/backup/wal-status`, quyền `System.OpsBackup.View`, chỉ tổng công ty. **SYS** thêm dòng "Lưu WAL" (trạng thái + độ trễ).
+- **Màn hình BAK** `/he-thong/sao-luu` (ui-style.md mục 5l): `ListPage` + `DataGrid` – thông báo đầu trang (trạng thái + câu tóm tắt), bảng nhóm
+  Lưu WAL / Tham số PostgreSQL / Thống kê chép / Nơi lưu, mỗi dòng đỏ / vàng ghi cách xử lý. Các tab Lịch sử, Lịch và thời hạn giữ, Nơi lưu thêm
+  ở QT3b. Không migration.
 
 ## Nguồn tham khảo
 

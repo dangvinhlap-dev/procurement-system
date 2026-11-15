@@ -44,6 +44,10 @@ services:
       App__Environment: ${APP_ENVIRONMENT:-}
       # Nhật ký vận hành ghi thêm ra file ngoài CSDL (N3) – volume riêng, giữ qua các lần nâng cấp image.
       Operations__LogDirectory: /data/operations-log
+      # Lưu WAL (lát QT3a): thư mục WAL của dịch vụ db gắn chỉ đọc để màn hình BAK báo chỗ trống ổ; tài khoản bảo trì proc_maint
+      # (README "Triển khai server" – Lưu WAL) để trống thì BAK đọc bằng tài khoản ứng dụng.
+      Backup__WalArchivePath: /wal-archive
+      ConnectionStrings__Maintenance: ${MAINTENANCE_CONNECTION_STRING:-}
       # Portal NCC (lát P1): địa chỉ NCC mở Portal ghi vào link mời; trống thì dùng EMAIL_APP_URL.
       Portal__BaseUrl: ${PORTAL_BASE_URL:-}
       # Tên miền Portal (lát P1b): vào bằng tên này chỉ mở trang /ncc + API Portal. Trống = không giới hạn (chạy thử LAN).
@@ -60,6 +64,7 @@ services:
       Serilog__WriteTo__1__Name: Seq
       Serilog__WriteTo__1__Args__serverUrl: http://seq:5341
     volumes:
+      - ${WAL_ARCHIVE_DIR:-./wal-archive}:/wal-archive:ro
       # Khóa mã hóa của ASP.NET Core (Data Protection) phải giữ qua các lần nâng cấp image.
       - app_keys:/home/app/.aspnet/DataProtection-Keys
       # File đính kèm (design.md mục 18.4): giữ qua các lần nâng cấp image; container backup chép sang ./backups/attachments mỗi đêm.
@@ -77,8 +82,26 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Chưa đặt POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-procurement}
       TZ: Asia/Ho_Chi_Minh
+    # Lưu WAL liên tục (lát QT3a, design.md mục 21.5). Mặc định TẮT (WAL_ARCHIVE_MODE=off) cho đến khi lát QT3b có phần dọn WAL cũ;
+    # bật: tạo WAL_ARCHIVE_DIR trên ổ khác ổ dữ liệu, chown 999:999 (người dùng postgres trong image), WAL_ARCHIVE_MODE=on rồi
+    # docker compose up -d db (khởi động lại PostgreSQL một lần). archive_command không ghi đè file đã có, chép ra .tmp rồi đổi tên.
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=${WAL_ARCHIVE_MODE:-off}
+      - -c
+      - archive_command=test -f /wal-archive/%f || (cp %p /wal-archive/%f.tmp && mv /wal-archive/%f.tmp /wal-archive/%f)
+      - -c
+      - archive_timeout=300
+      - -c
+      - summarize_wal=on
+      - -c
+      - wal_summary_keep_time=35d
     volumes:
       - pg_data:/var/lib/postgresql
+      - ${WAL_ARCHIVE_DIR:-./wal-archive}:/wal-archive
       - ./db/scripts:/db/scripts:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

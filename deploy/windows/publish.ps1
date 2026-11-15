@@ -8,6 +8,7 @@
     app\                    – chép vào thư mục website IIS (Proc.Api.dll, web.config, wwwroot\ chứa giao diện)
     db-scripts\             – script nâng cấp CSDL theo phiên bản (db/scripts)
     tools\backup.ps1        – sao lưu CSDL + file đính kèm
+    tools\qt-enable-wal.ps1 – bật lưu WAL liên tục cho PostgreSQL (chạy một lần trên máy CSDL – lát QT3a)
     tools\du-lieu-thu\      – công cụ tạo dữ liệu thử cho môi trường test (Node.js 22; không chạy trên CSDL thật)
     appsettings.Production.example.json – mẫu cấu hình, đổi tên thành app\appsettings.Production.json khi cài lần đầu
   và file procurement-<phiên bản>.zip cùng nội dung.
@@ -70,6 +71,7 @@ Get-ChildItem $app -Filter 'appsettings.*.json' | Where-Object { $_.Name -ne 'ap
 Copy-Item -Recurse (Join-Path $repo 'db\scripts') (Join-Path $package 'db-scripts')
 New-Item -ItemType Directory -Force (Join-Path $package 'tools') | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'backup.ps1') (Join-Path $package 'tools')
+Copy-Item (Join-Path $PSScriptRoot 'qt-enable-wal.ps1') (Join-Path $package 'tools')
 Copy-Item -Recurse (Join-Path $repo 'tools\du-lieu-thu') (Join-Path $package 'tools\du-lieu-thu')
 Copy-Item (Join-Path $PSScriptRoot 'appsettings.Production.example.json') $package
 
