@@ -68,7 +68,8 @@ test('đính kèm khi tạo phiếu tìm nguồn: chọn file trước khi lưu,
   await expect(page.getByRole('tab', { name: 'Đính kèm (1)' })).toBeVisible()
   await expect(page.locator('.ant-table-row', { hasText: 'catalogue.pdf' })).toContainText('Catalogue NCC')
 
-  await page.getByRole('button', { name: 'Lưu' }).first().click()
+  // /Lưu$/ phân biệt hoa thường: không khớp mục "Sao lưu" (BAK) trên cây điều hướng.
+  await page.getByRole('button', { name: /Lưu$/ }).first().click()
   await expect(page.getByText('Đã tải lên 1 file đính kèm.')).toBeVisible()
   await expect(page).toHaveURL(/\/dau-thau\/tim-nguon\/[0-9a-f-]{36}$/)
 
