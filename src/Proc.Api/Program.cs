@@ -56,6 +56,16 @@ builder.Services.AddOptions<Proc.Application.Operations.AppEnvironmentOptions>()
 builder.Services.AddOptions<Proc.Application.Operations.OperationsOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Application.Operations.OperationsOptions.Section))
     .PostConfigure(o => o.LogDirectory = Path.GetFullPath(o.LogDirectory, builder.Environment.ContentRootPath));
+// Sao lưu (lát QT3a): thư mục WAL nằm trên máy CSDL nên chỉ chuẩn hóa khi khai; chuỗi kết nối bảo trì lấy từ ConnectionStrings:Maintenance
+// (cùng chỗ với chuỗi chính – biến môi trường ConnectionStrings__Maintenance trên Docker).
+builder.Services.AddOptions<Proc.Application.Operations.BackupOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.BackupOptions.Section))
+    .PostConfigure(o =>
+    {
+        if (!string.IsNullOrWhiteSpace(o.WalArchivePath))
+            o.WalArchivePath = Path.GetFullPath(o.WalArchivePath, builder.Environment.ContentRootPath);
+        o.MaintenanceConnectionString = builder.Configuration.GetConnectionString("Maintenance");
+    });
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];

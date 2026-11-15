@@ -54,6 +54,11 @@ public static class Permissions
         /// trong phần mềm (không email) khi có nhóm lỗi mới.
         /// </summary>
         public const string OpsErrorLogManage = "System.OpsErrorLog.Manage";
+        /// <summary>
+        /// Quyền "Xem sao lưu" (màn hình BAK – lát QT3a): tình trạng lưu WAL; lát QT3b thêm lịch sử sao lưu. Chỉ ở tổng công ty. Chạy sao lưu là
+        /// quyền riêng <c>System.OpsBackup.Run</c> (QT3b).
+        /// </summary>
+        public const string OpsBackupView = "System.OpsBackup.View";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -336,6 +341,7 @@ public static class Permissions
         new(System.OpsView, "Xem tổng quan vận hành, nhật ký vận hành (chỉ ở tổng công ty)"),
         new(System.OpsErrorLogView, "Xem nhật ký lỗi (chỉ ở tổng công ty)"),
         new(System.OpsErrorLogManage, "Xử lý nhật ký lỗi, nhận thông báo khi có lỗi mới (chỉ ở tổng công ty)"),
+        new(System.OpsBackupView, "Xem sao lưu, tình trạng lưu WAL (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),
