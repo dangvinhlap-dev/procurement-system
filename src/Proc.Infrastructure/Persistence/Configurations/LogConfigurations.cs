@@ -180,6 +180,100 @@ public sealed class MaintenanceRunConfiguration : IEntityTypeConfiguration<Proc.
     }
 }
 
+/// <summary>
+/// Bảng ReleaseTicket – phiếu phát hành (lát QT8) và ba bảng con: mục kiểm thử, lỗi phát hiện, lịch sử cài. Phiên bản không trùng giữa các phiếu
+/// chưa hủy (nhận lại gói sau khi hủy phiếu cũ được).
+/// </summary>
+public sealed class ReleaseTicketConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ReleaseTicket>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ReleaseTicket> builder)
+    {
+        builder.ToTable("ReleaseTicket");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Version).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.VersionMaxLength).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.MinRollbackLevel).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.SourceUrl).HasMaxLength(500);
+        builder.Property(x => x.PackageFileName).HasMaxLength(260).IsRequired();
+        builder.Property(x => x.Sha256).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.Sha256Length).IsRequired();
+        builder.Property(x => x.Changelog).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.ChangelogMaxLength);
+        builder.Property(x => x.DatabaseChanges).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.Risks).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.RollbackPlan).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.UatComment).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.EndReason).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.ReceivedByName).HasMaxLength(256);
+        builder.Property(x => x.UatSignedByName).HasMaxLength(256);
+        builder.Property(x => x.EndedByName).HasMaxLength(256);
+        builder.HasIndex(x => x.Version).IsUnique().HasFilter("\"Status\" <> 'Cancelled'");
+        builder.HasMany(x => x.Items).WithOne().HasForeignKey(i => i.TicketId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Items).HasField("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Defects).WithOne().HasForeignKey(d => d.TicketId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Defects).HasField("_defects").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.Installs).WithOne().HasForeignKey(i => i.TicketId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Installs).HasField("_installs").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+/// <summary>Bảng ReleaseTestItem – mục kiểm thử UAT của phiếu phát hành.</summary>
+public sealed class ReleaseTestItemConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ReleaseTestItem>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ReleaseTestItem> builder)
+    {
+        builder.ToTable("ReleaseTestItem");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Section).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Content).HasMaxLength(Proc.Domain.Operations.ReleaseTestItem.ContentMaxLength).IsRequired();
+        builder.Property(x => x.Result).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.TesterName).HasMaxLength(256);
+        builder.Property(x => x.Comment).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+    }
+}
+
+/// <summary>Bảng ReleaseDefect – lỗi phát hiện trong UAT.</summary>
+public sealed class ReleaseDefectConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ReleaseDefect>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ReleaseDefect> builder)
+    {
+        builder.ToTable("ReleaseDefect");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Title).HasMaxLength(Proc.Domain.Operations.ReleaseDefect.TitleMaxLength).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.Screen).HasMaxLength(200);
+        builder.Property(x => x.ReporterName).HasMaxLength(256);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Resolution).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.ResolvedByName).HasMaxLength(256);
+    }
+}
+
+/// <summary>Bảng ReleaseInstall – lịch sử cài / quay về, gắn lệnh bộ thực thi.</summary>
+public sealed class ReleaseInstallConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ReleaseInstall>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ReleaseInstall> builder)
+    {
+        builder.ToTable("ReleaseInstall");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Environment).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Level).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.PreviousVersion).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.VersionMaxLength);
+        builder.Property(x => x.TargetVersion).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.VersionMaxLength);
+        builder.Property(x => x.InstalledSha256).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.Sha256Length);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.Message).HasMaxLength(Proc.Domain.Operations.ReleaseTicket.TextMaxLength);
+        builder.Property(x => x.ByName).HasMaxLength(256);
+        builder.HasIndex(x => x.AgentCommandId).IsUnique();
+    }
+}
+
 /// <summary>Bảng AccessPolicy – cấu hình truy cập CFG (lát QT7): một dòng duy nhất; thay đổi vào AuditLog, lý do vào nhật ký vận hành.</summary>
 public sealed class AccessPolicyConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.AccessPolicy>
 {

@@ -985,6 +985,18 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT8 – Trung tâm phát hành (REL) – đang làm 15/11/2026 (bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh`** (người dùng
+"làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –
+T4), sao lưu trước cài do bộ thực thi `pg_dump` + `pg_restore --list`, chưa khai môi trường Test = chế độ một môi trường (xác nhận UAT không cần
+cài TEST).
+- **QT8-1 xong (commit)**: domain `ReleaseTicket` + `ReleaseTestItem`, `ReleaseDefect`, `ReleaseInstall` (Đã nhận → Đang UAT → UAT đạt → Đã cài PROD
+  → Đã đóng, cộng Đã hủy, Đã quay về; khóa từ Đã cài PROD – chỉ thêm ghi chú / lỗi; PROD đạt mà SHA256 khác phiếu → ghi lỗi; quay về không thấp
+  hơn mức tối thiểu của gói); lệnh bộ thực thi `DeployRelease`, `RollbackRelease`; quyền `System.OpsRelease.Manage/.DeployTest/.UatSignOff/
+  .DeployProd`; loại chủ đính kèm `ReleaseTicket` (khóa khi đã cài PROD, chỉ tổng công ty); migration `V0_36_0_TrungTamPhatHanh`. Test domain
+  `ReleaseTicketTests` 6; `dotnet test` 798/798.
+- **Còn**: QT8-2 nhận gói (tải lên ≤ 200 MB, GitHub Release; SHA256; CHANGELOG → mục kiểm thử; `rollback.json`; `publish.ps1`), QT8-3 cài / quay
+  về qua bộ thực thi 1.2.0 + `/api/ops/v1/smoke`, QT8-4 giao diện REL + e2e, QT8-5 tài liệu (trình người dùng bản viết lại phat-hanh.md, CLAUDE.md 8).
+
 **Hoãn phát hành (15/11/2026)** – người dùng yêu cầu "phát hành bản 0.36.0" rồi đổi ý: "chờ có trung tâm phát hành". Chưa tạo tag, chưa đổi
 `Directory.Build.props` (vẫn 0.33.1). Phần chưa phát hành QT5 + QT6 (dự kiến 0.34.0) và QT7 (dự kiến 0.35.0) sẽ phát hành **cùng QT8 – REL** thành
 **0.36.0** (đúng lộ trình ke-hoach-qt). Khi phát hành: script `dotnet ef migrations script V0_33_0_BaoTriCsdl <migration cuối của QT8> --idempotent`

@@ -6,6 +6,7 @@ using Proc.Application.Documents;
 using Proc.Application.Logging;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
+using Proc.Domain.Operations;
 using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 using Proc.Domain.Sourcing;
@@ -68,6 +69,8 @@ public sealed class AttachmentService : IAttachmentService
             [AttachmentOwnerTypes.DeliveryNoticeFile] = (string.Empty, string.Empty),
             // File NCC gửi kèm đề nghị cập nhật hồ sơ (lát P2a): nội bộ chỉ xem theo quyền xem NCC – xem RequireSupplierProfileFileAsync.
             [AttachmentOwnerTypes.SupplierProfileFile] = (string.Empty, string.Empty),
+            // Phiếu phát hành (lát QT8): quyền phát hành + chỉ ở tổng công ty, khóa khi phiếu đã cài PROD – xem RequireReleaseTicketAsync.
+            [AttachmentOwnerTypes.ReleaseTicket] = (string.Empty, string.Empty),
         };
 
     /// <summary>
@@ -323,6 +326,7 @@ public sealed class AttachmentService : IAttachmentService
             throw new BusinessRuleException($"Loại đối tượng đính kèm '{ownerType}' không hợp lệ.");
         _scope.RequireCompany();
         if (ownerType == AttachmentOwnerTypes.ConflictDeclaration) return await RequireConflictDeclarationAsync(ownerId, manage, cancellationToken);
+        if (ownerType == AttachmentOwnerTypes.ReleaseTicket) return await RequireReleaseTicketAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.ApprovalDelegation) return await RequireApprovalDelegationAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.AppraisalOpinion) return await _appraisals.RequireAttachmentAccessAsync(ownerId, manage, cancellationToken);
         if (ownerType == AttachmentOwnerTypes.RfqPortalQuote) return await RequireRfqPortalQuoteAsync(ownerId, manage, cancellationToken);
@@ -390,6 +394,27 @@ public sealed class AttachmentService : IAttachmentService
         if (owner is null) throw new NotFoundException("Không tìm thấy đối tượng cần đính kèm hoặc ngoài phạm vi được xem.");
         if (owner.CompanyId is { } companyId) _scope.EnsureCompany(companyId);
         return owner.CompanyId;
+    }
+
+    /// <summary>
+    /// Phiếu phát hành (lát QT8, design.md 21.6): xem cần quyền xem vận hành hoặc quyền phát hành, thêm / xóa cần quyền quản lý phiếu phát hành; chỉ
+    /// ở tổng công ty (như mọi chức năng vận hành – N3). Phiếu đã cài PROD / kết thúc thì khóa: không thêm, xóa file (chỉ thêm ghi chú).
+    /// </summary>
+    /// <returns>null – phiếu phát hành không thuộc công ty thành viên.</returns>
+    private async Task<Guid?> RequireReleaseTicketAsync(Guid ownerId, bool manage, CancellationToken cancellationToken)
+    {
+        if (manage) _scope.EnsurePermission(Permissions.System.OpsReleaseManage);
+        else if (!_scope.HasPermission(Permissions.System.OpsView) && !_scope.HasPermission(Permissions.System.OpsReleaseManage))
+            throw new ForbiddenAccessException("Bạn không có quyền xem phiếu phát hành.");
+        var companyId = _scope.RequireCompany();
+        if (!await _db.Companies.AsNoTracking().AnyAsync(c => c.Id == companyId && c.IsHeadOffice, cancellationToken))
+            throw new ForbiddenAccessException("Phiếu phát hành chỉ dùng khi làm việc ở tổng công ty.");
+        var status = await _db.ReleaseTickets.AsNoTracking().Where(t => t.Id == ownerId).Select(t => (ReleaseStatus?)t.Status)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy phiếu phát hành.");
+        if (manage && status is not (ReleaseStatus.Received or ReleaseStatus.UatInProgress or ReleaseStatus.UatPassed))
+            throw new BusinessRuleException("Phiếu phát hành đã cài PROD hoặc đã kết thúc – không thêm, xóa file (chỉ thêm ghi chú).");
+        return null;
     }
 
     /// <summary>

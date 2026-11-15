@@ -97,6 +97,17 @@ public static class Permissions
         /// "Đăng xuất tất cả" (xác nhận Q6), bật / tắt chế độ bảo trì cùng quyền riêng. Xem CFG cần <see cref="OpsView"/>. Chỉ ở tổng công ty.
         /// </summary>
         public const string OpsConfigManage = "System.OpsConfig.Manage";
+        /// <summary>
+        /// Quyền "Quản lý phiếu phát hành" (màn hình REL – lát QT8, design.md 21.6): xem, nhận gói, ghi mục kiểm thử / lỗi, ghi chú, đóng, hủy phiếu.
+        /// Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsReleaseManage = "System.OpsRelease.Manage";
+        /// <summary>Quyền "Cài bản lên TEST" (bước 2 – xác nhận Q6). Chỉ ở tổng công ty.</summary>
+        public const string OpsReleaseDeployTest = "System.OpsRelease.DeployTest";
+        /// <summary>Quyền "Xác nhận UAT đạt" (bước 3). Chỉ ở tổng công ty.</summary>
+        public const string OpsReleaseUatSignOff = "System.OpsRelease.UatSignOff";
+        /// <summary>Quyền "Cài bản lên PROD, quay về bản cũ" (bước 4 – xác nhận Q6). Chỉ ở tổng công ty.</summary>
+        public const string OpsReleaseDeployProd = "System.OpsRelease.DeployProd";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -388,6 +399,10 @@ public static class Permissions
         new(System.OpsAgentManage, "Quản lý bộ thực thi: khai môi trường, tạo khóa, ra lệnh (chỉ ở tổng công ty)"),
         new(System.OpsRestoreView, "Xem phục hồi CSDL: lịch sử, kế hoạch khôi phục (chỉ ở tổng công ty)"),
         new(System.OpsRestoreRun, "Phục hồi CSDL: khôi phục, bỏ bản khôi phục, hoán đổi (chỉ ở tổng công ty)"),
+        new(System.OpsReleaseManage, "Phiếu phát hành: xem, nhận gói, kiểm thử, ghi lỗi, đóng, hủy (chỉ ở tổng công ty)"),
+        new(System.OpsReleaseDeployTest, "Cài bản phát hành lên máy TEST (chỉ ở tổng công ty)"),
+        new(System.OpsReleaseUatSignOff, "Xác nhận UAT đạt cho bản phát hành (chỉ ở tổng công ty)"),
+        new(System.OpsReleaseDeployProd, "Cài bản phát hành lên PROD, quay về bản cũ (chỉ ở tổng công ty)"),
         new(System.OpsConfigManage, "Sửa cấu hình truy cập: mật khẩu, khóa, hạn phiên, dải IP quản trị, đăng xuất tất cả (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
