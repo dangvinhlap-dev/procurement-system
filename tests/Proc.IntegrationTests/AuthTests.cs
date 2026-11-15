@@ -72,8 +72,12 @@ public class AuthTests
         Assert.Equal("Tên đăng nhập hoặc mật khẩu không đúng.", problem?.Title);
     }
 
+    /// <summary>
+    /// Sai 5 lần liên tiếp → chờ 10 phút mới đăng nhập lại được, kể cả nhập đúng mật khẩu (người dùng chốt 15/11/2026); không khóa hẳn tài khoản:
+    /// hết 10 phút tự đăng nhập được, không cần quản trị mở.
+    /// </summary>
     [Fact]
-    public async Task Login_Sai5Lan_KhoaTamCaKhiNhapDungMatKhau()
+    public async Task Login_Sai5Lan_ChoMuoiPhut_KhongKhoaTaiKhoan()
     {
         var userName = UniqueName("khoa");
         await _factory.CreateUserAsync(userName, Password, ["BHA"]);
@@ -84,9 +88,21 @@ public class AuthTests
         var fifth = await LoginAsync(userName, "sai-mat-khau");
         Assert.Equal(HttpStatusCode.Locked, fifth.StatusCode);
         var problem = await fifth.Content.ReadFromJsonAsync<ProblemDetails>(Ct);
-        Assert.StartsWith("Tài khoản tạm khóa", problem?.Title);
+        Assert.StartsWith("Nhập sai mật khẩu 5 lần liên tiếp – chờ 10 phút", problem?.Title);
+        Assert.Equal(TimeSpan.FromMinutes(10), DependencyInjection.LockoutDuration);
 
         Assert.Equal(HttpStatusCode.Locked, (await LoginAsync(userName, Password)).StatusCode);
+
+        // Giả lập đã qua 10 phút: hết thời gian chờ thì đăng nhập đúng mật khẩu vào được ngay.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Proc.Infrastructure.Identity.AppUser>>();
+            var user = await users.FindByNameAsync(userName);
+            Assert.True(user!.LockoutEnd > DateTimeOffset.UtcNow.AddMinutes(9) && user.LockoutEnd <= DateTimeOffset.UtcNow.AddMinutes(10));
+            await users.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddSeconds(-1));
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(userName, Password)).StatusCode);
     }
 
     [Fact]

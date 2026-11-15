@@ -30,11 +30,14 @@ public static class DependencyInjection
     /// <summary>Tên health check kiểm tra kết nối PostgreSQL.</summary>
     public const string DatabaseHealthCheckName = "database";
 
-    /// <summary>Số lần nhập sai mật khẩu liên tiếp trước khi khóa tạm tài khoản.</summary>
+    /// <summary>Số lần nhập sai mật khẩu liên tiếp thì tạm ngưng đăng nhập (người dùng chốt 15/11/2026 – design.md mục 9.4).</summary>
     public const int MaxFailedLoginAttempts = 5;
 
-    /// <summary>Thời gian khóa tạm sau khi nhập sai quá số lần cho phép.</summary>
-    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// Thời gian phải chờ mới đăng nhập lại được sau khi sai đủ số lần (người dùng chốt 15/11/2026: 10 phút, <b>không khóa hẳn tài khoản</b> – hết
+    /// thời gian tự đăng nhập được, không cần quản trị mở).
+    /// </summary>
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(10);
 
     /// <summary>
     /// Đăng ký DbContext (PostgreSQL), Identity, dịch vụ đăng nhập, đồng hồ và health check CSDL.

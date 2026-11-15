@@ -288,6 +288,33 @@ public class DbMaintenanceTests
         await ClearRunsAsync();
     }
 
+    /// <summary>
+    /// Xác nhận Q6 sai mật khẩu 5 lần trong 10 phút → chờ 10 phút, mật khẩu đúng cũng bị từ chối (người dùng chốt 15/11/2026); không khóa tài
+    /// khoản – đăng nhập vẫn được.
+    /// </summary>
+    [Fact]
+    public async Task XacNhanQ6_Sai5Lan_ChoMuoiPhut_KhongKhoaDangNhap()
+    {
+        var role = $"Q{Guid.NewGuid():N}"[..10].ToUpperInvariant();
+        await _factory.CreateRoleAsync(role, Permissions.System.OpsMaintenanceView, Permissions.System.OpsMaintenanceRun);
+        var name = $"mq.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(name, "TCT", role);
+        var client = await _factory.CreateClientInCompanyAsync(name, ProcApiFactory.TestPassword, "TCT");
+
+        async Task<string> Terminate(string password)
+        {
+            var response = await client.PostAsJsonAsync($"{BasePath}/sessions/terminate",
+                new TerminateSessionRequest(int.MaxValue, password, "Thử chặn nhập sai", "NGẮT PHIÊN"), Ct);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            return await response.Content.ReadAsStringAsync(Ct);
+        }
+
+        for (var i = 0; i < 5; i++) Assert.Contains("Mật khẩu xác nhận không đúng", await Terminate("sai-mat-khau"), StringComparison.Ordinal);
+        // Lần 6 nhập đúng vẫn bị chặn (pid không có – nếu qua được chốt sẽ báo "Không còn phiên").
+        Assert.Contains("chờ 10 phút", await Terminate(ProcApiFactory.TestPassword), StringComparison.Ordinal);
+        await _factory.CreateClientInCompanyAsync(name, ProcApiFactory.TestPassword, "TCT");
+    }
+
     private sealed class FixedClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow => now.ToUniversalTime();
