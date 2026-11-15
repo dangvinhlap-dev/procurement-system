@@ -46,6 +46,9 @@ public static class NotificationTypes
 
     /// <summary>NCC gửi đề nghị cập nhật hồ sơ trên Portal – báo người sửa được NCC ở tổng công ty (lát P2a).</summary>
     public const string PortalProfileRequest = "PortalProfileRequest";
+
+    /// <summary>Nhóm lỗi hệ thống mới hoặc lặp lại sau khi đã xử lý – báo người xử lý nhật ký lỗi ở tổng công ty (lát QT2, màn hình ERR).</summary>
+    public const string ErrorLogNew = "ErrorLogNew";
 }
 
 /// <summary>

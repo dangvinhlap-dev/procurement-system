@@ -104,6 +104,31 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>SLA hàng khẩn (ngày làm việc; 0 = trong ngày PR được duyệt).</summary>
     public int SlaUrgentDays { get; private set; } = DefaultSlaUrgentDays;
 
+    /// <summary>Số ngày giữ nhật ký lỗi mặc định (tham số ERRLOG_KEEP_DAYS – lát QT2, design.md mục 21.4 ERR).</summary>
+    public const int DefaultErrorLogKeepDays = 90;
+
+    /// <summary>Số ngày giữ nhật ký lỗi tối thiểu – ít hơn thì lỗi cuối tuần chưa kịp xem đã bị dọn.</summary>
+    public const int MinErrorLogKeepDays = 7;
+
+    /// <summary>Số ngày giữ nhật ký lỗi tối đa (10 năm).</summary>
+    public const int MaxErrorLogKeepDays = 3650;
+
+    /// <summary>
+    /// Số ngày giữ lần xảy ra lỗi trên màn hình ERR (lát QT2). Lỗi là của cả hệ thống nên <b>chỉ tham số của tổng công ty có tác dụng</b>.
+    /// </summary>
+    public int ErrorLogKeepDays { get; private set; } = DefaultErrorLogKeepDays;
+
+    /// <summary>Đổi số ngày giữ nhật ký lỗi; null = về mặc định 90.</summary>
+    /// <param name="days">Số ngày.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài khoảng 7–3650.</exception>
+    public void ChangeErrorLogKeepDays(int? days)
+    {
+        var v = days ?? DefaultErrorLogKeepDays;
+        if (v < MinErrorLogKeepDays || v > MaxErrorLogKeepDays)
+            throw new BusinessRuleException($"Số ngày giữ nhật ký lỗi phải từ {MinErrorLogKeepDays} đến {MaxErrorLogKeepDays}.");
+        ErrorLogKeepDays = v;
+    }
+
     /// <summary>% cảnh báo giá cao trên PO mặc định – cùng mức tô màu mặc định của màn hình So sánh giá (design.md mục 8.2).</summary>
     public const decimal DefaultPoHighPriceWarnPercent = 10m;
 

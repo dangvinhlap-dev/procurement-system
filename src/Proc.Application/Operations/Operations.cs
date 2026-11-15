@@ -40,6 +40,12 @@ public sealed class OperationsOptions
     /// thay luôn nhật ký trong CSDL nên phải có bản ngoài CSDL).
     /// </summary>
     public string LogDirectory { get; set; } = "data/operations-log";
+
+    /// <summary>
+    /// Số lần trình duyệt của một người được gửi lỗi giao diện mỗi phút (<c>POST /api/ops/v1/client-errors</c>, lát QT2) – chặn trang lỗi lặp
+    /// vô hạn làm đầy nhật ký. Mặc định 30.
+    /// </summary>
+    public int ClientErrorPermitPerMinute { get; set; } = 30;
 }
 
 /// <summary>Một thao tác vận hành cần ghi nhật ký.</summary>
@@ -55,6 +61,12 @@ public static class OperationKinds
 {
     /// <summary>Ứng dụng khởi động (ghi mỗi lần chạy: phiên bản, môi trường, migration).</summary>
     public const string AppStarted = "AppStarted";
+
+    /// <summary>Đổi trạng thái nhóm lỗi trên màn hình ERR (lát QT2).</summary>
+    public const string ErrorGroupStatusChanged = "ErrorGroupStatusChanged";
+
+    /// <summary>Dọn nhật ký lỗi quá hạn giữ (tham số ERRLOG_KEEP_DAYS, lát QT2).</summary>
+    public const string ErrorLogPurged = "ErrorLogPurged";
 }
 
 /// <summary>

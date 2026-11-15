@@ -64,6 +64,8 @@ builder.Services.AddSingleton(new Proc.Application.Operations.AppVersion(version
 builder.Services.AddOptions<Proc.Infrastructure.Purchasing.ApprovalReminderOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Infrastructure.Purchasing.ApprovalReminderOptions.Section));
 builder.Services.AddHostedService<Proc.Infrastructure.Purchasing.ApprovalReminderBackgroundService>();
+// Dọn nhật ký lỗi quá hạn giữ (tham số ERRLOG_KEEP_DAYS – lát QT2).
+builder.Services.AddHostedService<Proc.Infrastructure.Operations.ErrorLogCleanupBackgroundService>();
 // Đường dẫn tương đối tính từ thư mục ứng dụng (ContentRoot), không phụ thuộc thư mục đang đứng khi chạy lệnh (design.md mục 18.4).
 builder.Services.AddOptions<Proc.Infrastructure.Documents.AttachmentOptions>()
     .Bind(builder.Configuration.GetSection("Attachments"))

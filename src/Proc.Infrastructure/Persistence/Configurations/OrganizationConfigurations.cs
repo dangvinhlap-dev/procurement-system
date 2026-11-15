@@ -27,6 +27,7 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.AllowSupplierWithoutOnboarding).HasDefaultValue(false);
         builder.Property(x => x.SlaSourcingDays).HasDefaultValue(CompanyParameter.DefaultSlaSourcingDays);
         builder.Property(x => x.SlaUrgentDays).HasDefaultValue(CompanyParameter.DefaultSlaUrgentDays);
+        builder.Property(x => x.ErrorLogKeepDays).HasDefaultValue(CompanyParameter.DefaultErrorLogKeepDays);
         // Mục tiêu KPI (design.md mục 18.18): mặc định cột = mục tiêu mặc định của danh mục để dòng tham số cũ có ngay giá trị đúng.
         builder.Property(x => x.KpiSavingTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Saving).DefaultTarget);
         builder.Property(x => x.KpiContractTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.ContractCompliance).DefaultTarget);

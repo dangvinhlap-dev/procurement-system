@@ -54,6 +54,57 @@ public sealed class OperationLogConfiguration : IEntityTypeConfiguration<Proc.Do
     }
 }
 
+/// <summary>
+/// Bảng ErrorGroup – nhóm lỗi (lát QT2). Không chỉ thêm như các bảng log khác: người xử lý đổi trạng thái, máy chủ tăng số lần, dịch vụ nền
+/// xóa nhóm hết hạn giữ.
+/// </summary>
+public sealed class ErrorGroupConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ErrorGroup>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ErrorGroup> builder)
+    {
+        builder.ToTable("ErrorGroup");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Fingerprint).HasMaxLength(Proc.Domain.Operations.ErrorGroup.FingerprintLength).IsRequired();
+        builder.HasIndex(x => x.Fingerprint).IsUnique();
+        builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(10);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.ErrorType).HasMaxLength(Proc.Domain.Operations.ErrorGroup.TypeMaxLength).IsRequired();
+        builder.Property(x => x.Message).HasMaxLength(Proc.Domain.Operations.ErrorGroup.TextMaxLength).IsRequired();
+        builder.Property(x => x.Location).HasMaxLength(Proc.Domain.Operations.ErrorGroup.TextMaxLength);
+        builder.Property(x => x.Path).HasMaxLength(Proc.Domain.Operations.ErrorGroup.PathMaxLength);
+        builder.Property(x => x.HandledByName).HasMaxLength(256);
+        builder.Property(x => x.Note).HasMaxLength(Proc.Domain.Operations.ErrorGroup.NoteMaxLength);
+        builder.HasIndex(x => x.LastSeenAt);
+    }
+}
+
+/// <summary>Bảng ErrorOccurrence – từng lần xảy ra lỗi (lát QT2); xóa theo nhóm (cascade) và theo hạn giữ.</summary>
+public sealed class ErrorOccurrenceConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.ErrorOccurrence>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.ErrorOccurrence> builder)
+    {
+        builder.ToTable("ErrorOccurrence");
+        builder.HasKey(x => x.Id);
+        builder.HasOne<Proc.Domain.Operations.ErrorGroup>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(x => x.TrackingCode).HasMaxLength(Proc.Domain.Operations.ErrorOccurrence.TrackingCodeMaxLength).IsRequired();
+        builder.HasIndex(x => x.TrackingCode);
+        builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(10);
+        builder.Property(x => x.UserName).HasMaxLength(256);
+        builder.Property(x => x.CompanyCode).HasMaxLength(50);
+        builder.Property(x => x.Path).HasMaxLength(Proc.Domain.Operations.ErrorGroup.PathMaxLength);
+        builder.Property(x => x.Method).HasMaxLength(10);
+        builder.Property(x => x.Message).HasMaxLength(Proc.Domain.Operations.ErrorGroup.TextMaxLength).IsRequired();
+        builder.Property(x => x.Detail).HasMaxLength(Proc.Domain.Operations.ErrorOccurrence.DetailMaxLength);
+        builder.Property(x => x.Version).HasMaxLength(50);
+        builder.Property(x => x.Environment).HasMaxLength(10);
+        builder.Property(x => x.UserAgent).HasMaxLength(500);
+        builder.HasIndex(x => new { x.GroupId, x.OccurredAt });
+        builder.HasIndex(x => x.OccurredAt);
+    }
+}
+
 /// <summary>Bảng AccessLog (chỉ thêm – trigger trong migration).</summary>
 public sealed class AccessLogConfiguration : IEntityTypeConfiguration<AccessLog>
 {

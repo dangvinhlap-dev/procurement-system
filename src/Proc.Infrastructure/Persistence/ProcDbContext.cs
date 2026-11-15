@@ -281,6 +281,12 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Nhật ký vận hành (chỉ thêm – module QT, design.md mục 21).</summary>
     public DbSet<Proc.Domain.Operations.OperationLog> OperationLogs => Set<Proc.Domain.Operations.OperationLog>();
 
+    /// <summary>Nhóm lỗi (màn hình ERR – lát QT2).</summary>
+    public DbSet<Proc.Domain.Operations.ErrorGroup> ErrorGroups => Set<Proc.Domain.Operations.ErrorGroup>();
+
+    /// <summary>Lần xảy ra lỗi (lát QT2).</summary>
+    public DbSet<Proc.Domain.Operations.ErrorOccurrence> ErrorOccurrences => Set<Proc.Domain.Operations.ErrorOccurrence>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 
