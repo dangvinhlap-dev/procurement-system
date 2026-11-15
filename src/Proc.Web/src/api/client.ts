@@ -112,6 +112,25 @@ export async function apiFetch<T>(path: string, init: Omit<RequestInit, 'body'> 
 }
 
 /**
+ * Gửi POST JSON "lặng lẽ" – dùng cho báo lỗi giao diện (lát QT2): chưa đăng nhập thì không gửi; lỗi mạng, 401, 429… trả null, không ném lỗi,
+ * không đăng xuất (báo lỗi hỏng không được gây thêm lỗi cho người dùng).
+ * @param path Đường dẫn API.
+ * @param body Dữ liệu gửi.
+ * @returns Dữ liệu JSON server trả về, hoặc null.
+ */
+export async function apiPostQuiet<T>(path: string, body: unknown): Promise<T | null> {
+  if (!bridge.getAccessToken()) return null
+  try {
+    const headers = authHeaders()
+    headers.set('Content-Type', 'application/json')
+    const response = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) })
+    return response.ok ? ((await response.json()) as T) : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Gắn token và công ty làm việc vào header, giống apiFetch.
  */
 function authHeaders(): Headers {

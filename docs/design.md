@@ -2963,6 +2963,7 @@ soát, sao lưu và phục hồi CSDL, ghi nhận lỗi, bảo trì CSDL, cấu 
 | E6 | Dữ liệu TEST | **Làm mới từ PROD trước mỗi đợt UAT**, **giữ nguyên dữ liệu, không làm mờ** (người dùng chốt lại 14/11/2026, thay cho "có làm mờ"). Trước khi chạy thật (PROD chưa có dữ liệu) giữ dữ liệu thử |
 | E8 | Quyền trên TEST | **Như PROD**: người dùng, vai trò, phạm vi đi theo bản làm mới; cần thử chức năng ngoài quyền thì **admin cấp thêm trên TEST** (quyền cấp thêm mất ở lần làm mới sau) (người dùng chốt 14/11/2026) |
 | E9 | Bảo vệ máy TEST | **Như PROD** – TEST chứa dữ liệu thật nên cùng mức bảo vệ (mục 21.3a) (người dùng chốt 14/11/2026) |
+| E10 | Báo lỗi hệ thống mới (lát QT2) | **Không gửi email** – chỉ thông báo trong phần mềm (chuông thông báo) cho người có quyền xử lý nhật ký lỗi ở tổng công ty (người dùng chốt 15/11/2026) |
 | E7 | Giờ cài PROD | Không giới hạn – người có quyền chọn giờ |
 | Q2 | Lịch sao lưu | Phần mềm chạy lịch (dịch vụ nền); `db/backup.sh`, `deploy/windows/backup.ps1` giữ làm dự phòng, tắt lịch cũ để không sao lưu hai lần (mặc định tự chọn) |
 | Q3 | Nguồn gói cài | GitHub Release của repo hoặc tải file zip lên màn hình (máy chủ không có internet) (mặc định tự chọn) |
@@ -3028,7 +3029,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | Mã | Màn hình | Nội dung |
 | --- | --- | --- |
 | SYS | Tổng quan hệ thống | Bảng ba môi trường: phiên bản, migration đã chạy / đang chờ, tình trạng (`/health`), lần sao lưu cuối (đèn đỏ khi quá 24 giờ), độ trễ lưu WAL, dung lượng CSDL, ổ đĩa, thư mục đính kèm, số kết nối, dịch vụ nền; khác biệt cấu hình (không bí mật) của TEST so với PROD |
-| ERR | Nhật ký lỗi | Lỗi máy chủ (500) và lỗi giao diện (trình duyệt gửi về): giờ, người dùng, công ty, đường dẫn, mã theo dõi, nội dung, chi tiết kỹ thuật, phiên bản, môi trường; lỗi trùng gộp nhóm kèm số lần; trạng thái Mới / Đang xử lý / Đã xử lý; email báo khi có **loại lỗi mới**; tự xóa sau N ngày (tham số) |
+| ERR | Nhật ký lỗi | Lỗi máy chủ (500) và lỗi giao diện (trình duyệt gửi về): giờ, người dùng, công ty, đường dẫn, mã theo dõi, nội dung, chi tiết kỹ thuật, phiên bản, môi trường; lỗi trùng gộp nhóm kèm số lần; trạng thái Mới / Đang xử lý / Đã xử lý; **thông báo trong phần mềm** (không email – E10) khi có **loại lỗi mới**; tự xóa sau N ngày (tham số `ERRLOG_KEEP_DAYS`) |
 | BAK | Sao lưu | Full / Diff / tình trạng lưu WAL / `pg_dump` / đính kèm: chạy tay hoặc theo lịch, kiểm tra (`pg_verifybackup`, `pg_restore --list`), SHA256, giữ theo B1, dọn WAL cũ, chép nơi thứ hai; lịch sử (giờ, kiểu, dung lượng, kết quả, người chạy); cảnh báo ổ sắp đầy |
 | RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng |
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
@@ -3072,8 +3073,10 @@ Không đạt, ý kiến, đính kèm), **Lỗi phát hiện** (gửi từ nút 
 Không có chuỗi duyệt, thời gian UAT tối thiểu, giờ cài cố định (E3, E4, E7). Mỗi bước ghi nhật ký vận hành; các bước 2, 4 và quay về bản
 cũ đòi xác nhận Q6. Phiếu Đã cài PROD trở đi thì khóa, chỉ thêm ghi chú. Đường khẩn cấp không có lối tắt: bản vá vẫn qua bước 1–4.
 
-Quyền khác: `System.Ops.View` (xem SYS, nhật ký vận hành – có từ QT1), `System.Ops.ErrorLog.View/Manage`, `System.Ops.Backup.Run`, `System.Ops.Restore.Run`, `System.Ops.Maintenance.Run`,
+Quyền khác: `System.Ops.View` (xem SYS, nhật ký vận hành – có từ QT1), `System.OpsErrorLog.View/Manage`, `System.Ops.Backup.Run`, `System.Ops.Restore.Run`, `System.Ops.Maintenance.Run`,
 `System.Ops.TestRefresh.Run`, `System.Ops.Config.Manage`. Mọi quyền `System.Ops.*` (mã theo quy ước sẵn có `System.*` – sửa ở lát QT1) chỉ dùng được khi đang làm việc ở tổng công ty.
+**Mã thật phải đúng 3 đoạn** `Module.ĐốiTượng.HànhĐộng` (mục 9.1, có test kiểm tra) nên tên dạng `System.Ops.Release.Manage` ở bảng trên được
+đặt thành `System.Ops<ĐốiTượng>.<HànhĐộng>` khi làm từng lát – ví dụ `System.OpsRelease.Manage`, `System.OpsBackup.Run`; lát QT2 đặt `System.OpsErrorLog.View/Manage` (15/11/2026).
 
 ### 21.6a Quay về bản cũ – ba mức (14/11/2026)
 
@@ -3099,7 +3102,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | Lát | Nội dung |
 | --- | --- |
 | QT1 | Nhận diện môi trường (`App:Environment`, dải màu, `Email:RedirectAllTo`), khung module, quyền `System.Ops.*`, nhật ký vận hành (CSDL + file), màn hình SYS cho môi trường đang chạy – **xong 14/11/2026** (mục 21.9) |
-| QT2 | Nhật ký lỗi ERR (máy chủ + giao diện, gộp nhóm, email loại lỗi mới, tự xóa) |
+| QT2 | Nhật ký lỗi ERR (máy chủ + giao diện, gộp nhóm, thông báo loại lỗi mới – không email, tự xóa) – **xong 15/11/2026** (mục 21.10) |
 | QT3a | Script bật lưu WAL + kiểm tra cấu hình; BAK hiện tình trạng lưu WAL |
 | QT3b | Full / Diff / `pg_dump` / đính kèm theo lịch + chạy tay, kiểm tra, giữ, dọn, nơi lưu thứ hai, lịch sử |
 | QT4 | Bảo trì CSDL DBM |
@@ -3150,6 +3153,28 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   duyệt (đỏ khi quá 3 chu kỳ không chạy). **Nhật ký vận hành** (`/he-thong/nhat-ky-van-hanh`). Bảng ba môi trường, so cấu hình bảo mật TEST –
   PROD (21.3a) làm ở QT8.
 - **Dải môi trường** (`EnvironmentBanner`, ui-style.md mục 5j) trên AppShell, trang đăng nhập, `/duyet`, Portal; tiêu đề tab "[TEST]".
+
+### 21.10 Lát QT2 – đã làm (15/11/2026)
+
+- **Nhóm lỗi** `ErrorGroup`: dấu vết = SHA-256 của "nguồn | loại lỗi | vị trí đầu ngăn xếp | đường dẫn chuẩn hóa" (Id → `{id}`, số → `{n}`; vị trí
+  bỏ số dòng, máy chủ, mã băm tên file bản build – sửa code chỗ khác hay build lại vẫn cùng nhóm); số lần, lần đầu / lần cuối, trạng thái Mới /
+  Đang xử lý / Đã xử lý, người xử lý, ghi chú (bỏ trống giữ ghi chú cũ). **Đã xử lý mà lặp lại thì tự về Mới**, tăng số lần mở lại.
+- **Lần xảy ra** `ErrorOccurrence`: giờ, **mã theo dõi** `ERR-` + 8 ký tự (không I, L, O, U), người, công ty, đường dẫn, phương thức, nội dung, chi
+  tiết kỹ thuật cắt 16 KB, phiên bản, môi trường, trình duyệt. Migration `V0_32_0_NhatKyLoi` (thêm cột `CompanyParameter.ErrorLogKeepDays`).
+- **Lỗi máy chủ**: `ProblemExceptionHandler` gọi `ErrorRecorder` cho lỗi 500 – scope CSDL riêng, không bao giờ ném lỗi tiếp (hỏng thì Serilog ghi
+  kèm mã); câu báo lỗi "Có lỗi hệ thống (mã theo dõi ERR-…). Hãy thử lại hoặc báo quản trị hệ thống kèm mã này." + trường `trackingCode`.
+- **Lỗi giao diện**: `POST /api/ops/v1/client-errors` (đã đăng nhập, mọi công ty; ≤ 8 KB – 413; 30 lần/phút/phiên – 429,
+  `Operations:ClientErrorPermitPerMinute`); công ty lấy từ phạm vi request. Trình duyệt: `ErrorBoundary` từng thẻ màn hình (lỗi chỉ hỏng thẻ đó,
+  hiện khối báo lỗi kèm mã, nút Thử lại / Tải lại trang – ui-style.md mục 5k), `errorElement` của router, `window.onerror` /
+  `unhandledrejection`; chống gửi trùng (cùng lỗi trong 60 giây gửi một lần, tối đa 20 lỗi mỗi lần mở trang); không gửi lỗi API (máy chủ đã ghi
+  hoặc là lỗi nghiệp vụ).
+- **Thông báo**: nhóm mới / mở lại → thông báo loại `ErrorLogNew` cho người có quyền `System.OpsErrorLog.Manage` ở tổng công ty, **không email**
+  (E10 – đánh dấu bỏ qua email ngay khi tạo); bấm thông báo mở `/he-thong/nhat-ky-loi/:id`.
+- **Dọn**: tham số `ERRLOG_KEEP_DAYS` (Tham số hệ thống nhóm "Hệ thống", 7–3650, mặc định 90, **chỉ tham số tổng công ty có tác dụng**); dịch vụ
+  nền "Dọn nhật ký lỗi" (5 phút sau khởi động rồi mỗi 6 giờ, hiện trên SYS) xóa lần xảy ra quá hạn và nhóm không còn lần nào, ghi nhật ký vận hành.
+- **Màn hình ERR** `/he-thong/nhat-ky-loi` (quyền `System.OpsErrorLog.View`, chỉ tổng công ty): lọc ngày lần cuối, trạng thái, **mã theo dõi**
+  (tìm mọi ngày, nhận cả "err-…" hoặc thiếu "ERR-"); ngăn kéo Thông tin (Trạng thái, Ghi chú xử lý – quyền `.Manage`, ghi nhật ký vận hành) / Lần
+  xảy ra (200 lần gần nhất) / Chi tiết kỹ thuật; nút **Thử lỗi máy chủ**, **Thử lỗi giao diện** (quyền `.Manage`) để kiểm tra sau khi cài.
 
 ## Nguồn tham khảo
 

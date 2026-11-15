@@ -137,7 +137,7 @@ public sealed class OperationLogQueries : IOperationLogQueries
     }
 
     /// <summary>Đầu ngày giờ Việt Nam đổi sang UTC, ví dụ 14/11/2026 → 13/11/2026 17:00 UTC.</summary>
-    private static DateTimeOffset StartOfDay(DateOnly day)
+    internal static DateTimeOffset StartOfDay(DateOnly day)
     {
         var local = day.ToDateTime(TimeOnly.MinValue);
         return new DateTimeOffset(local, VietnamTime.Zone.GetUtcOffset(local)).ToUniversalTime();

@@ -46,6 +46,12 @@ public static class NotificationTypes
 
     /// <summary>NCC gửi đề nghị cập nhật hồ sơ trên Portal – báo người sửa được NCC ở tổng công ty (lát P2a).</summary>
     public const string PortalProfileRequest = "PortalProfileRequest";
+
+    /// <summary>
+    /// Nhóm lỗi hệ thống mới hoặc lặp lại sau khi đã xử lý – báo người xử lý nhật ký lỗi ở tổng công ty (lát QT2, màn hình ERR). Chỉ hiện trong phần
+    /// mềm, không gửi email (người dùng chốt 15/11/2026).
+    /// </summary>
+    public const string ErrorLogNew = "ErrorLogNew";
 }
 
 /// <summary>
@@ -188,7 +194,10 @@ public enum NotificationEmailState
     /// <summary>Đã gửi.</summary>
     Sent = 1,
 
-    /// <summary>Không gửi: người nhận chưa khai email / ngừng dùng, thông báo quá cũ, hoặc thông báo có trước bản 0.22.0.</summary>
+    /// <summary>
+    /// Không gửi: người nhận chưa khai email / ngừng dùng, thông báo quá cũ, thông báo có trước bản 0.22.0, hoặc loại chỉ hiện trong phần mềm
+    /// (nhật ký lỗi – lát QT2).
+    /// </summary>
     Skipped = 2,
 
     /// <summary>Gửi lỗi quá số lần cho phép.</summary>

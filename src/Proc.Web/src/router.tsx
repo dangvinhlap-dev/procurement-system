@@ -91,6 +91,8 @@ import { DemandSummaryPage } from './pages/purchasing/DemandSummaryPage'
 import { ApprovalRuleListPage, DeliveryTrackingPage, PendingApprovalsPage, PurchaseListPage } from './pages/purchasing/PurchasingListPages'
 import { AccessLogListPage } from './pages/system/AccessLogListPage'
 import { OperationLogListPage } from './pages/system/OperationLogListPage'
+import { ErrorLogListPage } from './pages/system/ErrorLogListPage'
+import { RouteErrorFallback } from './classic/ErrorBoundary'
 import { SystemOverviewPage } from './pages/system/SystemOverviewPage'
 import { AuditLogListPage } from './pages/system/AuditLogListPage'
 import { CompanyListPage } from './pages/system/CompanyListPage'
@@ -181,6 +183,7 @@ const implemented: Record<string, ReactNode> = {
   ACC: <AccessLogListPage />,
   SYS: <SystemOverviewPage />,
   OPLOG: <OperationLogListPage />,
+  ERR: <ErrorLogListPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,
@@ -220,6 +223,8 @@ const drawerPages = [
   { code: 'VIOL', path: '/bao-cao/so-vi-pham/:id', element: <ControlFindingDetailPage /> },
   // Đơn bán nội bộ (lát X7): mở từ thông báo – danh sách kèm ngăn kéo đơn.
   { code: 'DBN', path: '/mua-hang/don-ban-noi-bo/:id', element: <InternalSaleListPage /> },
+  // Nhóm lỗi (lát QT2): mở từ thông báo "lỗi mới" – danh sách kèm ngăn kéo nhóm lỗi.
+  { code: 'ERR', path: '/he-thong/nhat-ky-loi/:id', element: <ErrorLogListPage /> },
 ]
 
 /** Các trang nằm trong AppShell – dùng chung cho bộ định tuyến và cho từng thẻ màn hình (tối đa 6 thẻ). */
@@ -250,10 +255,20 @@ const shellRoutes: RouteObject[] = [
 ]
 
 /**
+ * Gắn trang lỗi cho mỗi tuyến gốc (lát QT2): lỗi khi vẽ trang ngoài thẻ màn hình được gửi về nhật ký lỗi, hiện mã theo dõi thay cho trang lỗi
+ * mặc định tiếng Anh của react-router. Trang trong thẻ màn hình đã có ErrorBoundary riêng từng thẻ (ScreenTabs).
+ * @param routes Tuyến gốc.
+ * @returns Tuyến gốc có errorElement.
+ */
+function withErrorElement(routes: RouteObject[]): RouteObject[] {
+  return routes.map((r) => ({ ...r, errorElement: <RouteErrorFallback /> }))
+}
+
+/**
  * Bộ định tuyến: mọi trang nằm trong AppShell (CLAUDE.md mục 9) và yêu cầu đăng nhập;
  * riêng màn hình đăng nhập đứng ngoài khung.
  */
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(withErrorElement([
   { path: LOGIN_PATH, element: <LoginPage /> },
   // Màn hình mẫu chuẩn của giao diện ERP desktop cổ điển (docs/ui-style.md): có khung riêng nên đứng ngoài AppShell.
   {
@@ -314,4 +329,4 @@ export const router = createBrowserRouter([
     // Khai báo cho bộ định tuyến nhận đường dẫn; trang thật do từng thẻ màn hình của AppShell vẽ (useRoutes theo đường dẫn của thẻ).
     children: shellRoutes,
   },
-])
+]))

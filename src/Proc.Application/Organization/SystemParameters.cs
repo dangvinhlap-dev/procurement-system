@@ -36,6 +36,9 @@ public static class SystemParameterCodes
     /// <summary>SLA hàng khẩn (ngày làm việc) – sửa được.</summary>
     public const string SlaUrgentDays = "SLA_URGENT_DAYS";
 
+    /// <summary>Số ngày giữ nhật ký lỗi (màn hình ERR, lát QT2) – sửa được; chỉ tham số của tổng công ty có tác dụng.</summary>
+    public const string ErrorLogKeepDays = "ERRLOG_KEEP_DAYS";
+
     /// <summary>Tiền tố mã tham số mục tiêu KPI: KPI_TARGET_ + tên <see cref="Proc.Domain.Organization.KpiCode"/> in hoa, ví dụ
     /// KPI_TARGET_CONTRACTCOMPLIANCE (design.md mục 18.18).</summary>
     public const string KpiTargetPrefix = "KPI_TARGET_";

@@ -77,6 +77,12 @@ public sealed class SystemParameterService : ISystemParameterService
                 "PR mức ưu tiên Khẩn: số ngày làm việc tới lúc PO được duyệt (0 = trong ngày)."),
         ];
         list.AddRange(KpiParameters(parameter));
+        var keepDays = parameter?.ErrorLogKeepDays ?? CompanyParameter.DefaultErrorLogKeepDays;
+        list.Add(new(SystemParameterCodes.ErrorLogKeepDays, "Hệ thống", "Số ngày giữ nhật ký lỗi",
+            keepDays.ToString(CultureInfo.InvariantCulture), CompanyParameter.DefaultErrorLogKeepDays.ToString(CultureInfo.InvariantCulture),
+            keepDays == CompanyParameter.DefaultErrorLogKeepDays, true,
+            "Lần xảy ra lỗi trên màn hình Nhật ký lỗi (ERR) cũ hơn số ngày này được tự xóa; nhóm lỗi không còn lần xảy ra nào cũng xóa theo " +
+            $"({CompanyParameter.MinErrorLogKeepDays}–{CompanyParameter.MaxErrorLogKeepDays}). Chỉ tham số của tổng công ty có tác dụng."));
         // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
         return list.Select(p => AuditFields.TryGetValue(p.Code, out var field) ? p with { AuditId = parameter?.Id, AuditField = field } : p).ToList();
     }
@@ -95,6 +101,7 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.SlaPricedDays] = nameof(CompanyParameter.SlaPricedDays),
         [SystemParameterCodes.SlaSourcingDays] = nameof(CompanyParameter.SlaSourcingDays),
         [SystemParameterCodes.SlaUrgentDays] = nameof(CompanyParameter.SlaUrgentDays),
+        [SystemParameterCodes.ErrorLogKeepDays] = nameof(CompanyParameter.ErrorLogKeepDays),
         [SystemParameterCodes.KpiTarget(KpiCode.Saving)] = nameof(CompanyParameter.KpiSavingTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance)] = nameof(CompanyParameter.KpiContractTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.PurchaseSla)] = nameof(CompanyParameter.KpiSlaTarget),
@@ -200,6 +207,18 @@ public sealed class SystemParameterService : ISystemParameterService
                     _ => Proc.Domain.Purchasing.SlaCategory.Urgent,
                 };
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeSlaDays(category, days);
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.ErrorLogKeepDays:
+                int? keep = null;
+                if (!string.IsNullOrWhiteSpace(request.Value))
+                {
+                    if (!int.TryParse(request.Value.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsedKeep))
+                        throw new BusinessRuleException("Số ngày giữ nhật ký lỗi phải là số nguyên.");
+                    keep = parsedKeep;
+                }
+
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeErrorLogKeepDays(keep);
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             default:

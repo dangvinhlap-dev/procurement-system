@@ -1,5 +1,8 @@
+using System.Text.Json;
 using Proc.Api.Security;
+using Proc.Application.Common;
 using Proc.Application.Operations;
+using Proc.Domain.Operations;
 using Proc.Domain.Organization;
 
 namespace Proc.Api.Endpoints;
@@ -36,6 +39,71 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsView)
             .RequireHeadOffice();
 
+        // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
+        // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
+        ops.MapPost("/client-errors", ReportClientErrorAsync);
+
+        ops.MapGet("/error-groups", (DateOnly from, DateOnly to, ErrorGroupStatus? status, string? trackingCode, IErrorLogService s,
+                CancellationToken ct) => s.SearchAsync(from, to, status, trackingCode, ct))
+            .RequirePermission(Permissions.System.OpsErrorLogView)
+            .RequireHeadOffice();
+
+        ops.MapGet("/error-groups/{id:guid}", (Guid id, IErrorLogService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsErrorLogView)
+            .RequireHeadOffice();
+
+        ops.MapPut("/error-groups/{id:guid}/status", (Guid id, ChangeErrorGroupStatusRequest request, IErrorLogService s, CancellationToken ct) =>
+                s.ChangeStatusAsync(id, request, ct))
+            .RequirePermission(Permissions.System.OpsErrorLogManage)
+            .RequireHeadOffice();
+
+        // Gây lỗi máy chủ thử (nút trên ERR): kiểm tra sau khi cài đặt / nâng cấp rằng lỗi 500 vào được nhật ký và email báo lỗi mới đi được.
+        ops.MapPost("/error-groups/test-server-error", ThrowTestServerError)
+            .RequirePermission(Permissions.System.OpsErrorLogManage)
+            .RequireHeadOffice();
+
         return app;
+    }
+
+    /// <summary>Ném lỗi thử (luôn thành lỗi 500, vào nhật ký lỗi như lỗi thật).</summary>
+    private static IResult ThrowTestServerError(ICurrentUser user) =>
+        throw new InvalidOperationException($"Lỗi thử do {user.UserName} gây ra từ màn hình Nhật ký lỗi để kiểm tra việc ghi lỗi máy chủ.");
+
+    /// <summary>Kích thước tối đa của một báo lỗi giao diện (byte).</summary>
+    public const int ClientErrorMaxBytes = 8 * 1024;
+
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Nhận lỗi giao diện. Tự đọc thân request có giới hạn (không để bộ gắn tham số đọc trước cả khối lớn): quá 8 KB trả 413, JSON hỏng trả 400.
+    /// Công ty lấy từ phạm vi request đã kiểm tra (X-Company-Id), không tin dữ liệu client.
+    /// </summary>
+    private static async Task<IResult> ReportClientErrorAsync(
+        HttpRequest request, IErrorRecorder recorder, ICurrentUserScope scope, CancellationToken ct)
+    {
+        if (request.ContentLength > ClientErrorMaxBytes) return TooLarge();
+        var buffer = new byte[ClientErrorMaxBytes + 1];
+        var read = 0;
+        int n;
+        while (read < buffer.Length && (n = await request.Body.ReadAsync(buffer.AsMemory(read), ct)) > 0) read += n;
+        if (read > ClientErrorMaxBytes) return TooLarge();
+
+        ClientErrorRequest? body;
+        try
+        {
+            body = JsonSerializer.Deserialize<ClientErrorRequest>(buffer.AsSpan(0, read), WebJson);
+        }
+        catch (JsonException)
+        {
+            body = null;
+        }
+
+        if (body is null || string.IsNullOrWhiteSpace(body.Message))
+            return Results.Problem(title: "Báo lỗi giao diện không đúng định dạng.", statusCode: StatusCodes.Status400BadRequest);
+        var code = await recorder.RecordClientAsync(body, request.Headers.UserAgent.ToString(), scope.CompanyId, CancellationToken.None);
+        return Results.Ok(new ErrorTrackingDto(code));
+
+        static IResult TooLarge() => Results.Problem(
+            title: $"Báo lỗi giao diện vượt {ClientErrorMaxBytes / 1024} KB.", statusCode: StatusCodes.Status413PayloadTooLarge);
     }
 }

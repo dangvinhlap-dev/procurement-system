@@ -228,6 +228,18 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - Màn hình **SYS** (Tổng quan hệ thống) và **Nhật ký vận hành** theo khuôn `ListPage` + `DataGrid` (cột Tình trạng / Kết quả là đèn kèm chữ),
   nút "Làm mới" icon vàng.
 
+## 5k. Khối báo lỗi giao diện và màn hình ERR (lát QT2, 15/11/2026 – design.md mục 21.10)
+
+- Component `src/classic/ErrorBoundary.tsx` (`ErrorBoundary`, `ErrorFallback`, `RouteErrorFallback`), CSS `.erp-error-fallback*` trong
+  `classic-app.css`. Màn hình lỗi khi vẽ thì **chỉ thẻ đó** thay bằng khối báo lỗi: khung viền 1px `--erp-grid-line`, vạch trái 3px
+  `--erp-light-red`, nền `--erp-panel-bg`, rộng tối đa 640px; dòng tiêu đề 14px đậm `--erp-title` có tam giác đỏ "Màn hình gặp lỗi giao diện";
+  **mã theo dõi** trong ô chữ phông đơn cách nền `--erp-readonly-bg` (bấm chọn cả mã để sao chép); nút **Thử lại**, **Tải lại trang** (icon vàng).
+  Lỗi ngoài thẻ (đăng nhập, Portal, `/duyet`) dùng cùng khối trên nền `--erp-bar-bg-top`.
+- Câu báo lỗi 500 của máy chủ hiện như mọi lỗi (thông báo / thanh trạng thái), có sẵn "mã theo dõi ERR-…".
+- Màn hình **ERR** theo khuôn `ListPage` + `DataGrid` (cột Trạng thái là đèn kèm chữ: Mới đỏ, Đang xử lý vàng, Đã xử lý xanh; dòng Mới tô dấu),
+  ô lọc Mã theo dõi; ngăn kéo `DetailDrawer` ba tab, chi tiết kỹ thuật trong khung `.erp-error-detail` (phông đơn cách 11px, cuộn). Nút "Thử lỗi
+  máy chủ", "Thử lỗi giao diện" icon vàng.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

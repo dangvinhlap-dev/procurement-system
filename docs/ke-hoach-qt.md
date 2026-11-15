@@ -55,11 +55,18 @@ Bản 0.32.0 · Vừa · GĐ1.
 | Mục tiêu | Mọi lỗi hệ thống (máy chủ và giao diện) được ghi, gộp nhóm, báo người phụ trách, theo dõi tới khi xử lý xong |
 | Backend | Domain `ErrorGroup` (dấu vết = băm loại lỗi + vị trí đầu ngăn xếp + đường dẫn chuẩn hóa; lần đầu / lần cuối, số lần, trạng thái Mới / Đang xử lý / Đã xử lý, người xử lý, ghi chú; Đã xử lý mà lặp lại thì tự mở lại Mới) + `ErrorOccurrence` (giờ, người, công ty, đường dẫn, phương thức, mã theo dõi, nội dung, chi tiết kỹ thuật cắt 16 KB, phiên bản, môi trường, nguồn Server/Client, trình duyệt) · `ErrorRecorder` gọi từ `ProblemExceptionHandler` cho lỗi 500 – phạm vi CSDL riêng, không bao giờ ném lỗi tiếp · email người có quyền quản lý khi có **nhóm lỗi mới** (qua hàng chờ email sẵn có) · dịch vụ nền xóa lỗi cũ (tham số `ERRLOG_KEEP_DAYS`, mặc định 90) |
 | API | `POST /api/ops/v1/client-errors` (đã đăng nhập, ≤ 8 KB, 30 lần/phút/người) · danh sách nhóm, chi tiết, lần xảy ra, đổi trạng thái |
-| Quyền | `System.Ops.ErrorLog.View`, `System.Ops.ErrorLog.Manage` |
+| Quyền | `System.OpsErrorLog.View`, `System.OpsErrorLog.Manage` |
 | Giao diện | `ErrorBoundary` React + bắt `window.onerror`, `unhandledrejection` (chống gửi trùng) · **ERR** `/he-thong/nhat-ky-loi`: ListPage + DetailDrawer (tab Lần xảy ra, Chi tiết kỹ thuật, Ghi chú) · thanh trạng thái hiện mã theo dõi khi lỗi |
 | CSDL | Migration `V0_32_0_NhatKyLoi`; tham số `ERRLOG_KEEP_DAYS` |
 | Test | Tích hợp: lỗi 500 tạo nhóm, gộp lỗi trùng, mở lại khi lặp, quyền, 429 ở client-errors, xóa theo hạn, email nhóm mới · e2e `error-log.spec.ts` |
 | Xong khi | Gây lỗi thử ở máy chủ và giao diện đều thấy trong ERR, mã theo dõi trùng với câu báo lỗi người dùng thấy |
+
+**QT2 xong 15/11/2026** – chi tiết design.md mục 21.10. Khác kế hoạch: (1) người dùng chốt **E10 – không gửi lỗi qua email**: nhóm lỗi mới / mở
+lại chỉ thông báo trong phần mềm; (2) quyền xử lý còn có nút **Thử lỗi máy chủ / Thử lỗi giao diện** để kiểm tra sau khi cài; (3) tham số
+`ERRLOG_KEEP_DAYS` là cột của tham số công ty, chỉ giá trị của tổng công ty có tác dụng; (4) giới hạn tần suất theo phiên đăng nhập (bộ giới hạn
+chạy trước xác thực); (5) mã quyền phải đúng 3 đoạn `Module.ĐốiTượng.HànhĐộng` (design.md 9.1, test `DanhMucQuyen_MaDuyNhatVaDungDinhDang`) nên dùng
+`System.OpsErrorLog.View` / `.Manage` thay cho `System.Ops.ErrorLog.*` – các lát sau đặt theo cùng mẫu `System.Ops<ĐốiTượng>.<HànhĐộng>`
+(ví dụ `System.OpsRelease.Manage`); (6) test: miền `ErrorLogTests` (8), tích hợp `ErrorLogTests` (4), e2e `error-log.spec.ts` (3).
 
 ### QT3a – Bật lưu WAL và theo dõi
 Bản 0.33.0 · Nhỏ · GĐ1.

@@ -972,3 +972,62 @@ body.erp-col-resizing {
   left: 0;
   z-index: 1000;
 }
+
+/* Khối báo lỗi giao diện (lát QT2 – ui-style.md mục 5k): khung viền 1px, vạch trái đỏ, mã theo dõi phông đơn cách. */
+.erp-error-fallback {
+  max-width: 640px;
+  margin: 8px;
+  padding: 8px;
+  border: 1px solid var(--erp-grid-line);
+  border-left: 3px solid var(--erp-light-red);
+  background: var(--erp-panel-bg);
+  color: var(--ant-color-text);
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+}
+
+.erp-error-fallback-title {
+  margin-bottom: 4px;
+  color: var(--erp-title);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.erp-error-fallback-title .anticon {
+  color: var(--erp-light-red);
+}
+
+.erp-error-fallback-code {
+  padding: 0 4px;
+  border: 1px solid var(--erp-input-border);
+  border-radius: 2px;
+  background: var(--erp-readonly-bg);
+  font-family: Consolas, 'Courier New', monospace;
+  user-select: all;
+}
+
+.erp-error-fallback-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* Chi tiết kỹ thuật trên ngăn kéo nhóm lỗi (ERR): ngăn xếp phông đơn cách, cuộn trong khung. */
+.erp-error-detail {
+  max-height: 420px;
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-readonly-bg);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.erp-error-page {
+  min-height: 100vh;
+  padding: 16px;
+  background: var(--erp-bar-bg-top);
+}
