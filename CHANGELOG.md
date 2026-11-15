@@ -3,6 +3,53 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.33.0] - 2026-11-15
+
+Gộp các phần chưa phát hành từ sau 0.30.0 (dự kiến 0.31.0, 0.32.0, 0.33.0): **gỡ hẳn phân hệ kho**, mở đầu **module Quản trị vận hành (QT)** –
+nhận diện môi trường, nhật ký vận hành, nhật ký lỗi, lưu WAL, sao lưu, bảo trì CSDL; đăng nhập sai 5 lần chờ 10 phút.
+
+### Thêm mới
+- **Nhận diện môi trường** (QT1): `App:Environment` = Dev / Test / Prod; dải màu trên mọi màn hình (xám DEV, cam TEST, PROD không dải); máy TEST
+  chuyển mọi email về một hộp thư test (`Email:RedirectAllTo`); máy chưa khai môi trường hiện dải đỏ và **không gửi email**.
+- Màn hình **SYS – Tổng quan hệ thống** (phiên bản, migration, CSDL, ổ đĩa, dịch vụ nền, sao lưu gần nhất…) và **Nhật ký vận hành** (chỉ thêm,
+  ghi cả ra file ngoài CSDL).
+- **ERR – Nhật ký lỗi** (QT2): lỗi máy chủ và lỗi giao diện gộp nhóm, **mã theo dõi ERR-…** trên câu báo lỗi, trạng thái Mới / Đang xử lý / Đã xử
+  lý, thông báo trong phần mềm khi có loại lỗi mới (không email); màn hình lỗi chỉ thay một thẻ bằng khối báo lỗi có nút Thử lại.
+- **BAK – Sao lưu** (QT3a, QT3b): theo dõi lưu WAL liên tục; sao lưu **Full / Diff / pg_dump / đính kèm** theo lịch (Full Chủ nhật 01:00, Diff các
+  ngày khác) hoặc bấm "Sao lưu ngay"; kiểm tra từng bản, SHA256, chép nơi thứ hai (NAS), tự dọn bản quá hạn và WAL cũ, cảnh báo ổ sắp đầy. Không
+  tải file sao lưu qua trình duyệt. Script `tools\qt-enable-wal.ps1` bật lưu WAL trên máy CSDL.
+- **DBM – Bảo trì CSDL** (QT4): dung lượng, dòng chết từng bảng; VACUUM ANALYZE (một bảng / cả CSDL), REINDEX CONCURRENTLY (từng bảng) qua hàng
+  chờ; phiên kết nối, phiên chờ khóa; **ngắt phiên treo** phải nhập lý do + mật khẩu + gõ "NGẮT PHIÊN"; tự VACUUM ANALYZE cả CSDL hằng tuần.
+- Tham số hệ thống: số ngày giữ nhật ký lỗi, nhóm "Sao lưu" (4 tham số), nhóm "Bảo trì CSDL" (2 tham số).
+- Quyền mới (chỉ dùng ở tổng công ty): `System.Ops.View`, `System.OpsErrorLog.View/.Manage`, `System.OpsBackup.View/.Run`,
+  `System.OpsMaintenance.View/.Run` – vai trò ADMIN tự có đủ.
+
+### Thay đổi
+- **Gỡ hẳn phân hệ kho** (K3): phiếu kho, kỳ kho, tồn kho, thẻ kho, giá vốn, báo cáo kho, menu Kho không còn (công ty dùng phần mềm kho riêng;
+  số lượng đã nhận lấy từ phiếu xác nhận nhận hàng XNH). Danh mục kho chỉ còn là nơi nhận hàng.
+- **Đăng nhập sai mật khẩu 5 lần liên tiếp thì chờ 10 phút** (trước 15 phút) mới đăng nhập lại được; không khóa hẳn tài khoản – hết 10 phút tự
+  vào được. Danh sách người dùng ghi "Tạm ngưng đăng nhập" thay "Tạm khóa".
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 5 migration (104 → 109), script `db/scripts/0.33.0.sql` (idempotent): `V0_31_0_GoPhanHeKho` (**xóa 7 bảng kho** cùng dữ liệu phiếu kho, đính
+  kèm và đánh số phiếu kho, quyền kho trong vai trò), `V0_32_0_NhatKyVanHanh`, `V0_32_0_NhatKyLoi`, `V0_33_0_SaoLuu`, `V0_33_0_BaoTriCsdl`.
+
+### Lưu ý khi nâng cấp
+- **Sao lưu CSDL trước** – script xóa bảng kho, không lấy lại được bằng gỡ migration.
+- Thêm vào `appsettings.Production.json`: `App:Environment` (`Prod` / `Test`, máy thử trên máy lập trình đặt `Dev`), `Operations:LogDirectory`
+  (ngoài thư mục ứng dụng); máy `Test` thêm `Email:RedirectAllTo`. Quên khai `App:Environment` thì không gửi email, dải đỏ.
+- Sao lưu trong phần mềm và lưu WAL **không tự bật**: làm theo `docs/deploy-windows.md` mục 4a (chạy `qt-enable-wal.ps1`, khởi động lại
+  PostgreSQL), 4b (khai `Backup:RootPath`, tắt tác vụ `backup.ps1` cũ), 4c (bảo trì CSDL). Chưa làm thì BAK, SYS báo "chưa khai", các chức năng
+  khác chạy bình thường.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- Thay lại gói 0.30.0 (`app-0.30.0`). Bảng mới của QT không ảnh hưởng bản cũ; nhưng **bản 0.30.0 cần bảng kho** đã bị xóa – muốn chạy lại 0.30.0
+  phải **khôi phục bản sao lưu CSDL trước khi nâng** (dữ liệu nhập sau khi nâng sẽ mất).
+
 ## [0.30.0] - 2026-11-14
 
 **Mọi file Excel xuất ra cùng định dạng lưới trên màn hình** (theo ảnh mẫu `docs/diagrams/formatexportExcel.png`).
