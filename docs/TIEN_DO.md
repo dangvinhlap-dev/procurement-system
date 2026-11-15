@@ -1013,7 +1013,8 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   menu 4 kiểu, quyền `System.OpsBackup.Run`). Thông báo BAK mở thẳng màn hình (`notificationTarget`). Nhật ký vận hành có tên tiếng Việt các việc
   QT2 / QT3b. e2e `backup-wal.spec` 3 (thêm "Sao lưu ngay" pg_dump chạy thật trên API Testing → "Xong", "Đạt"; 2 test cũ bấm tab Lưu WAL),
   `system-parameters.spec` 20 → 24 dòng. Tài liệu: design.md 21.12, ui-style 5l, deploy-windows **4b** + bảng cấu hình, ke-hoach-qt, README /
-  docker-compose (Docker chưa làm – Q4).
+  docker-compose (Docker chưa làm – Q4). Kiểm tra cuối: `dotnet test` 753/753, tsc, oxlint, `npm run build`, Playwright đủ bộ 151/152 –
+  `lookup-wildcard.spec` lỗi một lần, chạy lại riêng qua 2/2 (chập chờn, không liên quan). **Đã merge.**
 - **Phát hành 0.33.0 cần** (khi anh yêu cầu): trên máy TEST chạy `qt-enable-wal.ps1` (mục 4a), khai `Backup:RootPath` (+ NAS nếu có), cấp quyền
   App Pool thư mục sao lưu + WAL, tắt tác vụ `Procurement backup` cũ, làm danh sách kiểm tra mục 4b (Full / Diff thật chạy lần đầu ở đây).
 
