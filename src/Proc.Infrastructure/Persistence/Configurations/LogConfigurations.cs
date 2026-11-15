@@ -154,3 +154,28 @@ public sealed class BackupRunConfiguration : IEntityTypeConfiguration<Proc.Domai
         builder.HasIndex(x => new { x.Kind, x.ScheduledDate }).IsUnique().HasFilter("\"ScheduledDate\" IS NOT NULL");
     }
 }
+
+/// <summary>
+/// Bảng MaintenanceRun – lịch sử bảo trì CSDL (lát QT4): VACUUM, REINDEX, ngắt phiên. Bộ chạy cập nhật trạng thái; dòng không xóa.
+/// </summary>
+public sealed class MaintenanceRunConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.MaintenanceRun>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.MaintenanceRun> builder)
+    {
+        builder.ToTable("MaintenanceRun");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Trigger).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Target).HasMaxLength(Proc.Domain.Operations.MaintenanceRun.TargetMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.MaintenanceRun.ReasonMaxLength);
+        builder.Property(x => x.RequestedByName).HasMaxLength(256);
+        builder.Property(x => x.Note).HasMaxLength(Proc.Domain.Operations.MaintenanceRun.MessageMaxLength);
+        builder.Property(x => x.ErrorMessage).HasMaxLength(Proc.Domain.Operations.MaintenanceRun.MessageMaxLength);
+        builder.HasIndex(x => x.QueuedAt);
+        builder.HasIndex(x => new { x.Status, x.QueuedAt });
+        // Một lượt lịch tuần chỉ sinh một lần (nhiều tiến trình cùng đặt lịch thì lần sau vi phạm khóa).
+        builder.HasIndex(x => new { x.Kind, x.ScheduledDate }).IsUnique().HasFilter("\"ScheduledDate\" IS NOT NULL");
+    }
+}

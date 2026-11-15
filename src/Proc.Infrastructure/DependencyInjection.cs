@@ -154,6 +154,12 @@ public static class DependencyInjection
         services.AddSingleton<Proc.Application.Operations.IBackupExecutor, Proc.Infrastructure.Operations.BackupExecutor>();
         services.AddScoped<Proc.Application.Operations.IBackupService, Proc.Infrastructure.Operations.BackupService>();
         services.AddScoped<Proc.Application.Operations.IBackupScheduler, Proc.Infrastructure.Operations.BackupScheduler>();
+        // Bảo trì CSDL (lát QT4): cùng khuôn với sao lưu – bộ chạy singleton, tín hiệu riêng; xác nhận việc nguy hiểm Q6 dùng chung các lát QT sau.
+        services.AddSingleton<Proc.Application.Operations.IDbMaintenanceQueueSignal, Proc.Infrastructure.Operations.DbMaintenanceQueueSignal>();
+        services.AddSingleton<Proc.Application.Operations.IDbMaintenanceExecutor, Proc.Infrastructure.Operations.DbMaintenanceExecutor>();
+        services.AddScoped<Proc.Application.Operations.IDbMaintenanceService, Proc.Infrastructure.Operations.DbMaintenanceService>();
+        services.AddScoped<Proc.Application.Operations.IDbMaintenanceScheduler, Proc.Infrastructure.Operations.DbMaintenanceScheduler>();
+        services.AddScoped<Proc.Application.Operations.IDangerousActionGuard, Proc.Infrastructure.Operations.DangerousActionGuard>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.

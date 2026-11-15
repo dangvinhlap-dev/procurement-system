@@ -84,6 +84,7 @@ public sealed class SystemParameterService : ISystemParameterService
             "Lần xảy ra lỗi trên màn hình Nhật ký lỗi (ERR) cũ hơn số ngày này được tự xóa; nhóm lỗi không còn lần xảy ra nào cũng xóa theo " +
             $"({CompanyParameter.MinErrorLogKeepDays}–{CompanyParameter.MaxErrorLogKeepDays}). Chỉ tham số của tổng công ty có tác dụng."));
         list.AddRange(BackupParameters(parameter));
+        list.AddRange(MaintenanceParameters(parameter));
         // F1 trên ô giá trị: tham số lưu ở cột nào của dòng tham số công ty (design.md mục 9.3a).
         return list.Select(p => AuditFields.TryGetValue(p.Code, out var field) ? p with { AuditId = parameter?.Id, AuditField = field } : p).ToList();
     }
@@ -107,6 +108,8 @@ public sealed class SystemParameterService : ISystemParameterService
         [SystemParameterCodes.BackupTime] = nameof(CompanyParameter.BackupTime),
         [SystemParameterCodes.BackupKeepWeeks] = nameof(CompanyParameter.BackupKeepWeeks),
         [SystemParameterCodes.DumpKeepDays] = nameof(CompanyParameter.DumpKeepDays),
+        [SystemParameterCodes.DbMaintenanceDay] = nameof(CompanyParameter.DbMaintenanceDay),
+        [SystemParameterCodes.DbMaintenanceTime] = nameof(CompanyParameter.DbMaintenanceTime),
         [SystemParameterCodes.KpiTarget(KpiCode.Saving)] = nameof(CompanyParameter.KpiSavingTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.ContractCompliance)] = nameof(CompanyParameter.KpiContractTarget),
         [SystemParameterCodes.KpiTarget(KpiCode.PurchaseSla)] = nameof(CompanyParameter.KpiSlaTarget),
@@ -155,6 +158,30 @@ public sealed class SystemParameterService : ISystemParameterService
             new(SystemParameterCodes.DumpKeepDays, group, "Số ngày giữ bản pg_dump", Int(dumpDays), Int(CompanyParameter.DefaultDumpKeepDays),
                 dumpDays == CompanyParameter.DefaultDumpKeepDays, true,
                 $"Bản pg_dump cũ hơn số ngày này được dọn; luôn giữ bản mới nhất dùng được (1–{CompanyParameter.MaxDumpKeepDays})." + headOnly),
+        ];
+    }
+
+    /// <summary>
+    /// Hai tham số lịch bảo trì CSDL hằng tuần (lát QT4): VACUUM (ANALYZE) cả CSDL; như sao lưu, chỉ tham số của tổng công ty có tác dụng.
+    /// </summary>
+    private static IEnumerable<SystemParameterDto> MaintenanceParameters(CompanyParameter? parameter)
+    {
+        const string group = "Bảo trì CSDL";
+        const string headOnly = " Chỉ tham số của tổng công ty có tác dụng.";
+        var day = parameter?.DbMaintenanceDay ?? CompanyParameter.DefaultDbMaintenanceDay;
+        var time = parameter?.DbMaintenanceTime ?? CompanyParameter.DefaultDbMaintenanceTime;
+        static string Day(int d) => $"{d.ToString(CultureInfo.InvariantCulture)} – {IsoDayNames[d]}";
+        static string Hm(TimeOnly t) => t.ToString("HH:mm", CultureInfo.InvariantCulture);
+        return
+        [
+            new(SystemParameterCodes.DbMaintenanceDay, group, "Ngày bảo trì CSDL hằng tuần", Day(day), Day(CompanyParameter.DefaultDbMaintenanceDay),
+                day == CompanyParameter.DefaultDbMaintenanceDay, true,
+                "Gõ số 1 (Thứ hai) … 7 (Chủ nhật): ngày này chạy VACUUM (ANALYZE) cả CSDL – dọn dòng chết, cập nhật thống kê (màn hình DBM)." +
+                headOnly),
+            new(SystemParameterCodes.DbMaintenanceTime, group, "Giờ bảo trì CSDL", Hm(time), Hm(CompanyParameter.DefaultDbMaintenanceTime),
+                time == CompanyParameter.DefaultDbMaintenanceTime, true,
+                "Giờ Việt Nam (HH:mm); nên sau giờ sao lưu để không chạy chồng lúc chụp bản Full; ứng dụng tắt đúng giờ thì chạy bù khi bật lại " +
+                "trong cùng ngày." + headOnly),
         ];
     }
 
@@ -300,6 +327,15 @@ public sealed class SystemParameterService : ISystemParameterService
             case SystemParameterCodes.DumpKeepDays:
                 (await GetOrCreateAsync(companyId, cancellationToken)).ChangeDumpKeepDays(
                     ParseLeadingInt(request.Value, "Số ngày giữ bản pg_dump phải là số nguyên."));
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.DbMaintenanceDay:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeDbMaintenanceDay(
+                    ParseLeadingInt(request.Value, "Ngày bảo trì CSDL phải là số 1 (Thứ hai) … 7 (Chủ nhật)."));
+                await _db.SaveChangesAsync(cancellationToken);
+                break;
+            case SystemParameterCodes.DbMaintenanceTime:
+                (await GetOrCreateAsync(companyId, cancellationToken)).ChangeDbMaintenanceTime(ParseTime(request.Value));
                 await _db.SaveChangesAsync(cancellationToken);
                 break;
             default:

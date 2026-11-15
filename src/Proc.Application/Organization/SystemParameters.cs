@@ -51,6 +51,12 @@ public static class SystemParameterCodes
     /// <summary>Số ngày giữ bản pg_dump (lát QT3b).</summary>
     public const string DumpKeepDays = "DUMP_KEEP_DAYS";
 
+    /// <summary>Ngày bảo trì CSDL hằng tuần (1 = Thứ hai … 7 = Chủ nhật – lát QT4); chỉ tham số của tổng công ty có tác dụng.</summary>
+    public const string DbMaintenanceDay = "DB_MAINT_DAY";
+
+    /// <summary>Giờ bảo trì CSDL hằng tuần (HH:mm giờ Việt Nam – lát QT4).</summary>
+    public const string DbMaintenanceTime = "DB_MAINT_TIME";
+
     /// <summary>Tiền tố mã tham số mục tiêu KPI: KPI_TARGET_ + tên <see cref="Proc.Domain.Organization.KpiCode"/> in hoa, ví dụ
     /// KPI_TARGET_CONTRACTCOMPLIANCE (design.md mục 18.18).</summary>
     public const string KpiTargetPrefix = "KPI_TARGET_";

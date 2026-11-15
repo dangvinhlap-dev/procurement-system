@@ -76,6 +76,18 @@ public static class OperationKinds
 
     /// <summary>Dọn bản sao lưu quá hạn giữ, dọn WAL cũ, cảnh báo ổ sao lưu sắp đầy (lát QT3b-2).</summary>
     public const string BackupCleanup = "BackupCleanup";
+
+    /// <summary>Người dùng đặt VACUUM ANALYZE / REINDEX trên màn hình DBM (lát QT4).</summary>
+    public const string MaintenanceQueued = "MaintenanceQueued";
+
+    /// <summary>Một lần VACUUM ANALYZE / REINDEX kết thúc – xong hoặc lỗi (lát QT4).</summary>
+    public const string MaintenanceFinished = "MaintenanceFinished";
+
+    /// <summary>Ngắt một phiên CSDL (lát QT4 – việc nguy hiểm Q6, ghi cả khi lỗi).</summary>
+    public const string SessionTerminated = "SessionTerminated";
+
+    /// <summary>Xác nhận việc nguy hiểm không đạt – sai mật khẩu nhập lại (Q6).</summary>
+    public const string DangerConfirmFailed = "DangerConfirmFailed";
 }
 
 /// <summary>

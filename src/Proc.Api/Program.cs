@@ -75,6 +75,12 @@ builder.Services.AddOptions<Proc.Application.Operations.BackupOptions>()
     .ValidateOnStart();
 // Bộ chạy hàng chờ sao lưu (lát QT3b) – Testing tắt bằng Backup:WorkerEnabled = false.
 builder.Services.AddHostedService<Proc.Infrastructure.Operations.BackupBackgroundService>();
+// Bảo trì CSDL (lát QT4): hàng chờ VACUUM / REINDEX và lịch hằng tuần – Testing tắt bằng DbMaintenance:WorkerEnabled = false.
+builder.Services.AddOptions<Proc.Application.Operations.DbMaintenanceOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.DbMaintenanceOptions.Section))
+    .Validate(o => o.CommandTimeoutMinutes is >= 1 and <= 24 * 60, "DbMaintenance:CommandTimeoutMinutes phải từ 1 đến 1440 phút.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<Proc.Infrastructure.Operations.DbMaintenanceBackgroundService>();
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];

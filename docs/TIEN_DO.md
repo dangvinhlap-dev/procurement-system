@@ -985,6 +985,23 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT4 đang làm 15/11/2026 – nhánh `feature/qt4-bao-tri-csdl`** (người dùng "làm tiếp" sau QT3b): bảo trì CSDL, màn hình DBM. Chia 2 bước:
+- **QT4-1 xong (máy chủ + lịch tuần)**: bảng `MaintenanceRun` (VACUUM ANALYZE / REINDEX CONCURRENTLY / ngắt phiên, chờ → chạy → xong / lỗi, lý do,
+  dung lượng trước / sau) + 2 cột tham số `CompanyParameter` (DB_MAINT_DAY 7, DB_MAINT_TIME 03:00 – nhóm "Bảo trì CSDL" màn hình tham số) –
+  migration `V0_33_0_BaoTriCsdl`. `DbMaintenanceService`: bảng (`pg_stat_user_tables`, dung lượng, dòng chết, đèn vàng ≥ 1.000 dòng chết và ≥ 20 %
+  hoặc > 1.000 dòng chưa ANALYZE), phiên (`pg_stat_activity` + `pg_blocking_pids`, chỉ CSDL ứng dụng; đèn vàng chờ khóa / đang chặn / chạy > 5
+  phút / mở giao dịch rảnh > 10 phút; đọc bằng `proc_maint` nếu khai, lỗi thì tài khoản ứng dụng), đặt hàng chờ (bảng phải có trong danh mục,
+  tên lệnh lấy từ `quote_ident`; REINDEX bắt buộc bảng; trùng đang chờ thì 400), ngắt phiên ngay `pg_terminate_backend(pid, 5000)` sau xác nhận Q6
+  (`IDangerousActionGuard` dùng chung các lát QT sau: chữ "NGẮT PHIÊN" không phân biệt hoa thường, NFC; mật khẩu `CheckPasswordAsync` không tăng
+  đếm khóa, sai thì nhật ký `DangerConfirmFailed`; lý do ≥ 5 ký tự). `DbMaintenanceExecutor` (khóa advisory "PROCDBM" trên kết nối không pool,
+  tài khoản ứng dụng – chủ bảng), `DbMaintenanceScheduler` (VACUUM cả CSDL hằng tuần, khóa duy nhất Kind + ScheduledDate), dịch vụ nền "Bảo trì
+  CSDL" (`DbMaintenance:WorkerEnabled`, `ScheduleEnabled` – Dev / Testing tắt, `CommandTimeoutMinutes` 240). Quyền `System.OpsMaintenance.View` /
+  `.Run`; API `/api/ops/v1/db-maintenance/tables|sessions|runs|runs/{id}|sessions/terminate`; nhật ký `MaintenanceQueued` / `MaintenanceFinished` /
+  `SessionTerminated`. `qt-enable-wal.ps1` cấp thêm `pg_signal_backend` cho `proc_maint`. Test: domain `MaintenanceRunTests` 4, tích hợp
+  `DbMaintenanceTests` 4 (VACUUM / REINDEX / VACUUM cả CSDL thật, phiên A giữ khóa – B chờ, ngắt A từ chối thiếu lý do / sai chữ / sai mật khẩu rồi
+  ngắt thật, lịch tuần, tham số, quyền). `dotnet test` 761/761.
+- **QT4-2 (giao diện + tài liệu)**: màn hình DBM 3 tab, hộp thoại ngắt phiên Q6, e2e `db-maintenance.spec.ts`, design.md 21.13, ui-style, ke-hoach-qt.
+
 **QT3b đang làm 15/11/2026 – nhánh `feature/qt3b-sao-luu`** (người dùng "làm tiếp" sau QT3a; đường dẫn ổ sao lưu / NAS là cấu hình
 `Backup:RootPath` / `Backup:SecondaryPath`, khai lúc cài). Chia 3 bước:
 - **QT3b-1 xong (lõi máy chủ)**: bảng `BackupRun` + 4 cột tham số `CompanyParameter` (BackupFullDay 7, BackupTime 01:00, BackupKeepWeeks 4,
