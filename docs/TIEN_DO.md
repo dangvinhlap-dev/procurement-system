@@ -998,8 +998,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
   `POST …/commands/{id}/result`, xác thực header `X-Ops-Agent-Key` (sai / cũ / ngừng dùng → 401); nhật ký vận hành 6 việc mới. Migration
   `V0_34_0_BoThucThi`. Test: domain `AgentCommandTests` 4, tích hợp `AgentTests` 3, `MaintenanceModeTests` 1. Build 0 cảnh báo, `dotnet test`
   770/770.
-- Còn: **QT5-3** script `qt-agent.ps1` + `qt-agent-install.ps1` (chạy thử với API dev), **QT5-4** giao diện AGT + nút bảo trì trên SYS + dải đỏ +
-  câu báo 503, tài liệu (design.md 21.14, ui-style, deploy-windows 4d, ke-hoach-qt).
+- **QT5-3 xong (script)**: `deploy/windows/qt-agent.ps1` (bản 1.0.0, PowerShell 5.1: khóa file `qt-agent.lock` chống chạy chồng, gửi lại kết
+  quả treo trong `pending\` (400/404 thì cất `.rejected`), hỏi lệnh, chạy `Ping`, **ghi kết quả ra file trước rồi mới gửi** (T2), nhật ký
+  `agent-journal.log` UTF-8 quá 5 MB đổi tên `.1`, lệnh lạ báo lỗi "chưa biết lệnh", `-DryRun` chỉ xem lệnh kế tiếp; gửi JSON bằng byte UTF-8),
+  `qt-agent-install.ps1` (Run as Administrator: chép script, file cấu hình có khóa chỉ Administrators / SYSTEM / tài khoản bộ thực thi đọc,
+  quyền Sửa StatePath + `-GrantModify`, tác vụ "Procurement QT agent" mỗi phút IgnoreNew 12 giờ, chạy thử `-DryRun`; `-Uninstall`). Đã chạy
+  thật với API dev cổng 5000: `-DryRun` → không có lệnh; "Lệnh thử" → Xong, nhật ký đủ dòng, AGT báo "Đang liên lạc" 1.0.0 / 0.33.1; kết quả
+  treo lệnh lạ → 404 → `.rejected`. Trình cài chạy `-DryRun` (không đăng ký tác vụ thật trên máy dev). Ghi chú: API nhận enum dạng số
+  (`kind: 0` = Ping) như các API khác.
+- Còn: **QT5-4** giao diện AGT + nút bảo trì trên SYS + dải đỏ + câu báo 503, tài liệu (design.md 21.14, ui-style, deploy-windows 4d,
+  ke-hoach-qt).
 
 **Menu "Quản trị hệ thống" xong 15/11/2026 (chưa phát hành – sau 0.33.0)** – người dùng: "tạo một tab riêng tên là: Quản trị hệ thống, các chức
 năng quản trị hệ thống bạn phải đặt vào tab đó, không để lộn xộn trong tab hệ thống". Nhánh `feature/menu-quan-tri-he-thong` (đã merge): module
