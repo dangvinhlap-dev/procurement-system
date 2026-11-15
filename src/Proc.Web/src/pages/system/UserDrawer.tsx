@@ -231,7 +231,7 @@ function AccountTab({ isNew, detail, disabled }: { isNew: boolean; detail?: User
           type="warning"
           showIcon
           className="detail-section"
-          title={`Tài khoản đang tạm khóa đến ${formatDateTime(detail.lockoutEnd)} do nhập sai mật khẩu nhiều lần. Đặt lại mật khẩu để mở khóa ngay.`}
+          title={`Đang tạm ngưng đăng nhập đến ${formatDateTime(detail.lockoutEnd)} do nhập sai mật khẩu 5 lần liên tiếp – hết giờ này tự đăng nhập lại được. Đặt lại mật khẩu để cho đăng nhập ngay.`}
         />
       )}
       <Form.Item
@@ -512,7 +512,7 @@ function ResetPasswordDialog({
         <Form.Item
           label="Mật khẩu mới"
           name="newPassword"
-          extra="Tối thiểu 8 ký tự, có chữ thường và chữ số. Tài khoản đang tạm khóa sẽ được mở khóa."
+          extra="Tối thiểu 8 ký tự, có chữ thường và chữ số. Người dùng đang tạm ngưng đăng nhập (sai mật khẩu) đăng nhập được ngay."
           rules={[{ required: true, message: 'Hãy nhập mật khẩu mới.' }]}
         >
           <Input.Password autoFocus autoComplete="new-password" />

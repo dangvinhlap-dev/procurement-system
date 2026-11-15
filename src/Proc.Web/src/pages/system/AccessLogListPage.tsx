@@ -9,7 +9,7 @@ import { LogDateRangeFilter, TruncatedNotice } from './logFilters'
 const eventLabels: Record<AccessEvent, { label: string; tone: StatusTone }> = {
   Login: { label: 'Đăng nhập', tone: 'success' },
   LoginFailed: { label: 'Đăng nhập sai', tone: 'error' },
-  LockedOut: { label: 'Bị khóa tạm', tone: 'error' },
+  LockedOut: { label: 'Tạm ngưng đăng nhập', tone: 'error' },
   Logout: { label: 'Đăng xuất', tone: 'neutral' },
   PasswordChanged: { label: 'Đổi mật khẩu', tone: 'success' },
   PasswordChangeFailed: { label: 'Đổi mật khẩu lỗi', tone: 'warning' },

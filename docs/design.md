@@ -641,7 +641,7 @@ dùng nhập thì thấy ai tạo, ai sửa, ai xóa giá trị, lúc nào, giá
 | --- | --- |
 | Cách đăng nhập | ASP.NET Core Identity (bảng `User`, `UserClaim`, `UserLogin`, `UserToken`) + JWT; chưa bật 2FA, có sẵn chỗ bật sau |
 | Mật khẩu | Tối thiểu 8 ký tự, có chữ thường và chữ số |
-| Khóa tạm | Sai mật khẩu 5 lần liên tiếp thì khóa 15 phút; đang khóa thì mật khẩu đúng cũng không vào được |
+| Sai mật khẩu nhiều lần | Sai mật khẩu 5 lần liên tiếp thì **chờ 10 phút** mới đăng nhập lại được; trong 10 phút đó mật khẩu đúng cũng không vào được. **Không khóa hẳn tài khoản** – hết 10 phút tự đăng nhập được, không cần quản trị mở (quản trị đặt lại mật khẩu thì vào được ngay). Người dùng chốt 15/11/2026 (trước đó 15 phút). Ô nhập lại mật khẩu xác nhận việc nguy hiểm Q6 (mục 21.1) cùng quy tắc: sai 5 lần trong 10 phút thì chờ 10 phút, nhưng không ảnh hưởng đăng nhập. Portal NCC giữ cấu hình riêng `Portal:LockoutMinutes` |
 | Thông báo khi sai | Sai tên hay sai mật khẩu đều báo cùng một câu, để không dò được tài khoản nào tồn tại |
 | Thời hạn phiên | Token 8 giờ (một ngày làm việc); phiên lưu trong tab trình duyệt, đóng trình duyệt là phải đăng nhập lại |
 | Nội dung token | Chỉ chứa định danh người dùng; công ty và vai trò đọc từ CSDL mỗi lần, nên quản trị gỡ quyền hay ngừng tài khoản là có hiệu lực ngay |
@@ -3238,6 +3238,32 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - **Chưa làm** (theo Q4 – Windows trước): Docker image chưa có `postgresql-client-18` (BAK tab Nơi lưu báo công cụ "Không thấy"), `WAL_ARCHIVE_MODE`
   Docker vẫn mặc định off, dòng `pg_hba` replication cho mạng Docker. Full / Diff thật chưa chạy trên máy dev (tài khoản `proc` không có
   REPLICATION) – kiểm tra tay trên máy TEST theo deploy-windows.md mục 4b.
+
+### 21.13 Lát QT4 – bảo trì CSDL (DBM), đã làm (15/11/2026)
+
+- **Bảng `MaintenanceRun`** (migration `V0_33_0_BaoTriCsdl`): việc (VACUUM ANALYZE / REINDEX / ngắt phiên), nguồn (chạy tay / theo lịch – ngày
+  lượt lịch, khóa duy nhất việc + ngày), trạng thái Đang chờ → Đang chạy → Xong / Lỗi, đối tượng (`schema.bảng`, trống = cả CSDL; mô tả phiên),
+  pid, lý do, người bấm, giờ, dung lượng trước / sau, ghi chú, lỗi. Không thuộc công ty, chỉ tổng công ty; dòng không xóa.
+- **Số liệu**: tab Bảng đọc `pg_stat_user_tables` (dung lượng cả bảng / dữ liệu / chỉ mục, dòng sống, dòng chết, % chết, lần VACUUM / ANALYZE
+  tay và tự động); đèn vàng khi dòng chết ≥ 1.000 **và** ≥ 20 %, hoặc bảng > 1.000 dòng chưa ANALYZE lần nào (tự chọn). Tab Phiên và khóa đọc
+  `pg_stat_activity` + `pg_blocking_pids`, chỉ phiên "client backend" của CSDL ứng dụng; đèn vàng khi chờ khóa, đang chặn phiên khác, câu lệnh
+  chạy > 5 phút, mở giao dịch mà rảnh > 10 phút (tự chọn). Đọc bằng tài khoản bảo trì nếu khai (thấy câu lệnh mọi tài khoản), lỗi thì tài
+  khoản ứng dụng.
+- **VACUUM / REINDEX**: đặt vào hàng chờ, dịch vụ nền chạy lần lượt (khóa advisory riêng, khác khóa sao lưu – hai việc chạy song song được) bằng
+  **tài khoản ứng dụng** (chủ các bảng). Bảng phải có trong danh mục PostgreSQL; tên trong lệnh lấy từ `quote_ident`, không ghép chữ client.
+  REINDEX chỉ từng bảng (`REINDEX TABLE CONCURRENTLY` – không khóa ghi); không REINDEX cả CSDL. Lần cùng việc cùng bảng đang chờ / chạy thì báo
+  lỗi. `DbMaintenance:CommandTimeoutMinutes` (240) giới hạn một lệnh.
+- **Lịch**: VACUUM ANALYZE cả CSDL hằng tuần, tham số tổng công ty `DB_MAINT_DAY` (7 – Chủ nhật) / `DB_MAINT_TIME` (03:00 – sau giờ sao lưu),
+  nhóm "Bảo trì CSDL" màn hình tham số; chạy bù trong cùng ngày như lịch sao lưu. `DbMaintenance:ScheduleEnabled` (Dev, Testing tắt).
+- **Ngắt phiên** (việc nguy hiểm Q6): chạy ngay `pg_terminate_backend(pid, 5000)`, không qua hàng chờ; bắt buộc lý do ≥ 5 ký tự, nhập lại mật
+  khẩu, gõ "NGẮT PHIÊN" (không phân biệt hoa thường). Chốt `IDangerousActionGuard` dùng chung cho các lát QT sau (phục hồi, cài PROD…): sai mật
+  khẩu ghi nhật ký `DangerConfirmFailed`; **sai 5 lần trong 10 phút thì chờ 10 phút** (người dùng chốt 15/11/2026, như đăng nhập mục 9.4) nhưng
+  không khóa tài khoản. Ngắt phiên tài khoản khác cần `proc_maint` có `pg_signal_backend` (`qt-enable-wal.ps1` cấp); không khai thì chỉ ngắt
+  được phiên tài khoản ứng dụng. Ghi lịch sử + nhật ký vận hành kể cả khi lỗi.
+- **API, quyền**: `/api/ops/v1/db-maintenance/tables`, `sessions`, `runs?from&to`, `runs/{id}` (`System.OpsMaintenance.View`); `POST runs`,
+  `POST sessions/terminate` (`System.OpsMaintenance.Run`); chỉ tổng công ty. Nhật ký vận hành `MaintenanceQueued`, `MaintenanceFinished`,
+  `SessionTerminated`, `DangerConfirmFailed`. SYS có dịch vụ nền "Bảo trì CSDL".
+- **Giao diện DBM** (ui-style.md mục 5m): tab Bảng, Phiên và khóa, Lịch sử.
 
 ## Nguồn tham khảo
 

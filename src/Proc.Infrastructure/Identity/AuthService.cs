@@ -60,7 +60,8 @@ public sealed class AuthService : IAuthService
             if (await _userManager.IsLockedOutAsync(user))
             {
                 await LogAsync(AccessEvent.LockedOut, user.Id, user.UserName,
-                    $"Nhập sai mật khẩu {DependencyInjection.MaxFailedLoginAttempts} lần liên tiếp, khóa tạm.", cancellationToken);
+                    $"Nhập sai mật khẩu {DependencyInjection.MaxFailedLoginAttempts} lần liên tiếp, tạm ngưng đăng nhập " +
+                    $"{DependencyInjection.LockoutDuration.TotalMinutes:0} phút.", cancellationToken);
                 return new LoginOutcome(null, LoginFailure.LockedOut, user.LockoutEnd);
             }
 

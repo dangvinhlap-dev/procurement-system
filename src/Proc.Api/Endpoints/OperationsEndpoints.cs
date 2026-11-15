@@ -61,6 +61,28 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsBackupRun)
             .RequireHeadOffice();
 
+        // Bảo trì CSDL – màn hình DBM (lát QT4). Ngắt phiên còn phải xác nhận Q6 (mật khẩu + lý do + gõ "NGẮT PHIÊN") ở tầng Application.
+        var dbm = ops.MapGroup("/db-maintenance");
+        dbm.MapGet("/tables", (IDbMaintenanceService s, CancellationToken ct) => s.GetTablesAsync(ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceView)
+            .RequireHeadOffice();
+        dbm.MapGet("/sessions", (IDbMaintenanceService s, CancellationToken ct) => s.GetSessionsAsync(ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceView)
+            .RequireHeadOffice();
+        dbm.MapGet("/runs", (DateOnly from, DateOnly to, IDbMaintenanceService s, CancellationToken ct) => s.SearchRunsAsync(from, to, ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceView)
+            .RequireHeadOffice();
+        dbm.MapGet("/runs/{id:guid}", (Guid id, IDbMaintenanceService s, CancellationToken ct) => s.GetRunAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceView)
+            .RequireHeadOffice();
+        dbm.MapPost("/runs", (QueueMaintenanceRequest request, IDbMaintenanceService s, CancellationToken ct) => s.QueueAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceRun)
+            .RequireHeadOffice();
+        dbm.MapPost("/sessions/terminate", (TerminateSessionRequest request, IDbMaintenanceService s, CancellationToken ct) =>
+                s.TerminateAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsMaintenanceRun)
+            .RequireHeadOffice();
+
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
         ops.MapPost("/client-errors", ReportClientErrorAsync);

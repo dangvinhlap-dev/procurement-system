@@ -201,6 +201,41 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         DumpKeepDays = v;
     }
 
+    /// <summary>Ngày bảo trì CSDL hằng tuần mặc định: 7 = Chủ nhật (lát QT4 – tự chọn, ngày ít người dùng nhất).</summary>
+    public const int DefaultDbMaintenanceDay = 7;
+
+    /// <summary>
+    /// Giờ bảo trì CSDL mặc định 03:00 giờ Việt Nam (lát QT4 – tự chọn): sau lượt sao lưu 01:00 để VACUUM không chạy chồng lúc chụp bản Full.
+    /// </summary>
+    public static readonly TimeOnly DefaultDbMaintenanceTime = new(3, 0);
+
+    /// <summary>
+    /// Ngày trong tuần chạy <c>VACUUM (ANALYZE)</c> cả CSDL (1 = Thứ hai … 7 = Chủ nhật – tham số DB_MAINT_DAY, lát QT4). Bảo trì là của cả hệ
+    /// thống nên <b>chỉ tham số của tổng công ty có tác dụng</b>.
+    /// </summary>
+    public int DbMaintenanceDay { get; private set; } = DefaultDbMaintenanceDay;
+
+    /// <summary>Giờ chạy bảo trì CSDL hằng tuần (giờ Việt Nam – tham số DB_MAINT_TIME).</summary>
+    public TimeOnly DbMaintenanceTime { get; private set; } = DefaultDbMaintenanceTime;
+
+    /// <summary>Đổi ngày bảo trì CSDL; null = về mặc định Chủ nhật.</summary>
+    /// <param name="day">1 = Thứ hai … 7 = Chủ nhật.</param>
+    /// <exception cref="BusinessRuleException">Khi ngoài 1–7.</exception>
+    public void ChangeDbMaintenanceDay(int? day)
+    {
+        var v = day ?? DefaultDbMaintenanceDay;
+        if (v is < 1 or > 7) throw new BusinessRuleException("Ngày bảo trì CSDL phải từ 1 (Thứ hai) đến 7 (Chủ nhật).");
+        DbMaintenanceDay = v;
+    }
+
+    /// <summary>Đổi giờ bảo trì CSDL; null = về mặc định 03:00.</summary>
+    /// <param name="time">Giờ (phút chẵn, giây bỏ).</param>
+    public void ChangeDbMaintenanceTime(TimeOnly? time)
+    {
+        var v = time ?? DefaultDbMaintenanceTime;
+        DbMaintenanceTime = new TimeOnly(v.Hour, v.Minute);
+    }
+
     /// <summary>% cảnh báo giá cao trên PO mặc định – cùng mức tô màu mặc định của màn hình So sánh giá (design.md mục 8.2).</summary>
     public const decimal DefaultPoHighPriceWarnPercent = 10m;
 

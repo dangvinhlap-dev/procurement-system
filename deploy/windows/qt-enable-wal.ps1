@@ -9,8 +9,8 @@
        wal_level = replica, archive_mode = on, archive_timeout = 300 (mất tối đa 5 phút dữ liệu),
        summarize_wal = on, wal_summary_keep_time = 35d (sao lưu Diff của lát QT3b cần tóm tắt WAL từ bản Full gốc – Full mỗi tuần),
        archive_command: KHÔNG ghi đè file đã có; chép ra <file>.tmp rồi đổi tên để file dở dang (mất điện giữa chừng) không bị coi là đủ.
-  3. Tạo / cập nhật vai trò bảo trì proc_maint: LOGIN REPLICATION CREATEDB + pg_monitor, pg_read_all_settings, pg_read_all_data
-     (pg_basebackup, pg_dump, khôi phục ra CSDL tạm ở các lát sau). Mật khẩu hỏi khi chạy, không ghi ra file / log.
+  3. Tạo / cập nhật vai trò bảo trì proc_maint: LOGIN REPLICATION CREATEDB + pg_monitor, pg_read_all_settings, pg_read_all_data,
+     pg_signal_backend (pg_basebackup, pg_dump, khôi phục ra CSDL tạm ở các lát sau; ngắt phiên treo trên màn hình DBM – lát QT4). Mật khẩu hỏi khi chạy, không ghi ra file / log.
   4. Thêm dòng pg_hba.conf cho proc_maint từ 127.0.0.1 / ::1 (kết nối replication của pg_basebackup) – sao lưu file trước khi sửa.
   5. Nạp lại cấu hình. wal_level, archive_mode chỉ có hiệu lực sau khi KHỞI ĐỘNG LẠI PostgreSQL MỘT LẦN: truyền -Restart hoặc tự khởi động
      lại dịch vụ vào giờ vắng.
@@ -93,7 +93,7 @@ if ($DryRun) {
     Write-Host '== Chạy thử (-DryRun): không đổi gì ==' -ForegroundColor Yellow
     Write-Host "Tạo thư mục $WalArchivePath, cấp quyền sửa cho tài khoản dịch vụ PostgreSQL."
     foreach ($k in $settings.Keys) { Write-Host "ALTER SYSTEM SET $k = $(Quote-Sql $settings[$k]);" }
-    Write-Host "Tạo / cập nhật vai trò $MaintUser LOGIN REPLICATION CREATEDB; GRANT pg_monitor, pg_read_all_settings, pg_read_all_data."
+    Write-Host "Tạo / cập nhật vai trò $MaintUser LOGIN REPLICATION CREATEDB; GRANT pg_monitor, pg_read_all_settings, pg_read_all_data, pg_signal_backend."
     Write-Host 'Thêm vào pg_hba.conf (đường dẫn lấy bằng SHOW hba_file) các dòng còn thiếu:'
     $hbaLines | ForEach-Object { Write-Host "  $_" }
     Write-Host 'SELECT pg_reload_conf(); rồi khởi động lại PostgreSQL (-Restart) để wal_level, archive_mode có hiệu lực.'
@@ -150,7 +150,7 @@ try {
     foreach ($k in $settings.Keys) { [void]$sql.AppendLine("ALTER SYSTEM SET $k = $(Quote-Sql $settings[$k]);") }
     [void]$sql.AppendLine("SELECT 'CREATE ROLE $MaintUser LOGIN' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$MaintUser') \gexec")
     [void]$sql.AppendLine("ALTER ROLE $MaintUser WITH LOGIN REPLICATION CREATEDB PASSWORD $(Quote-Sql $maintPlain);")
-    [void]$sql.AppendLine("GRANT pg_monitor, pg_read_all_settings, pg_read_all_data TO $MaintUser;")
+    [void]$sql.AppendLine("GRANT pg_monitor, pg_read_all_settings, pg_read_all_data, pg_signal_backend TO $MaintUser;")
     Invoke-Psql $sql.ToString() | Out-Null
     Write-Host 'Đã đặt tham số lưu WAL (postgresql.auto.conf) và vai trò bảo trì.'
 

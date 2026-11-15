@@ -64,6 +64,15 @@ public static class Permissions
         /// tải file sao lưu (Q5 – design.md mục 21.1).
         /// </summary>
         public const string OpsBackupRun = "System.OpsBackup.Run";
+        /// <summary>
+        /// Quyền "Xem bảo trì CSDL" (màn hình DBM – lát QT4): dung lượng bảng, dòng chết, phiên và khóa, lịch sử bảo trì. Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsMaintenanceView = "System.OpsMaintenance.View";
+        /// <summary>
+        /// Quyền "Chạy bảo trì CSDL" (lát QT4): VACUUM ANALYZE, REINDEX CONCURRENTLY, ngắt phiên treo (ngắt phiên còn phải xác nhận Q6: mật khẩu +
+        /// lý do + gõ "NGẮT PHIÊN"). Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsMaintenanceRun = "System.OpsMaintenance.Run";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -348,6 +357,8 @@ public static class Permissions
         new(System.OpsErrorLogManage, "Xử lý nhật ký lỗi, nhận thông báo khi có lỗi mới (chỉ ở tổng công ty)"),
         new(System.OpsBackupView, "Xem sao lưu, tình trạng lưu WAL (chỉ ở tổng công ty)"),
         new(System.OpsBackupRun, "Chạy sao lưu ngay (chỉ ở tổng công ty)"),
+        new(System.OpsMaintenanceView, "Xem bảo trì CSDL: dung lượng bảng, phiên và khóa (chỉ ở tổng công ty)"),
+        new(System.OpsMaintenanceRun, "Chạy VACUUM, REINDEX, ngắt phiên CSDL (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

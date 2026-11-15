@@ -106,6 +106,7 @@ Bản 0.33.0 · Vừa · GĐ1.
 | Quyền, giao diện | `System.Ops.Maintenance.Run` · **DBM** `/he-thong/bao-tri-csdl`: tab Bảng, Phiên và khóa, Lịch sử |
 | CSDL | Migration `V0_33_0_BaoTriCsdl` |
 | Test | Tích hợp: VACUUM bảng thử, ngắt kết nối thử, từ chối khi thiếu mật khẩu xác nhận / lý do, quyền · e2e `db-maintenance.spec.ts` |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.13): quyền `System.OpsMaintenance.View` / `.Run` (mẫu 3 đoạn, thêm quyền xem); migration gồm 2 cột tham số `DB_MAINT_DAY` / `DB_MAINT_TIME` (Chủ nhật 03:00); lịch tuần chỉ VACUUM ANALYZE cả CSDL; REINDEX chỉ từng bảng; ngắt phiên chạy ngay (không qua hàng chờ) với chốt Q6 dùng chung `IDangerousActionGuard` (sai mật khẩu 5 lần / 10 phút thì chờ 10 phút – người dùng chốt); `qt-enable-wal.ps1` cấp thêm `pg_signal_backend`; deploy-windows.md mục 4c. Cùng lát: đăng nhập sai 5 lần chờ 10 phút (trước 15), không khóa hẳn tài khoản (design.md 9.4) |
 
 ### QT5 – Bộ thực thi và chế độ bảo trì
 Bản 0.34.0 · Lớn · GĐ2.

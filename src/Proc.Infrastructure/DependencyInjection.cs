@@ -30,11 +30,14 @@ public static class DependencyInjection
     /// <summary>Tên health check kiểm tra kết nối PostgreSQL.</summary>
     public const string DatabaseHealthCheckName = "database";
 
-    /// <summary>Số lần nhập sai mật khẩu liên tiếp trước khi khóa tạm tài khoản.</summary>
+    /// <summary>Số lần nhập sai mật khẩu liên tiếp thì tạm ngưng đăng nhập (người dùng chốt 15/11/2026 – design.md mục 9.4).</summary>
     public const int MaxFailedLoginAttempts = 5;
 
-    /// <summary>Thời gian khóa tạm sau khi nhập sai quá số lần cho phép.</summary>
-    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// Thời gian phải chờ mới đăng nhập lại được sau khi sai đủ số lần (người dùng chốt 15/11/2026: 10 phút, <b>không khóa hẳn tài khoản</b> – hết
+    /// thời gian tự đăng nhập được, không cần quản trị mở).
+    /// </summary>
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(10);
 
     /// <summary>
     /// Đăng ký DbContext (PostgreSQL), Identity, dịch vụ đăng nhập, đồng hồ và health check CSDL.
@@ -154,6 +157,12 @@ public static class DependencyInjection
         services.AddSingleton<Proc.Application.Operations.IBackupExecutor, Proc.Infrastructure.Operations.BackupExecutor>();
         services.AddScoped<Proc.Application.Operations.IBackupService, Proc.Infrastructure.Operations.BackupService>();
         services.AddScoped<Proc.Application.Operations.IBackupScheduler, Proc.Infrastructure.Operations.BackupScheduler>();
+        // Bảo trì CSDL (lát QT4): cùng khuôn với sao lưu – bộ chạy singleton, tín hiệu riêng; xác nhận việc nguy hiểm Q6 dùng chung các lát QT sau.
+        services.AddSingleton<Proc.Application.Operations.IDbMaintenanceQueueSignal, Proc.Infrastructure.Operations.DbMaintenanceQueueSignal>();
+        services.AddSingleton<Proc.Application.Operations.IDbMaintenanceExecutor, Proc.Infrastructure.Operations.DbMaintenanceExecutor>();
+        services.AddScoped<Proc.Application.Operations.IDbMaintenanceService, Proc.Infrastructure.Operations.DbMaintenanceService>();
+        services.AddScoped<Proc.Application.Operations.IDbMaintenanceScheduler, Proc.Infrastructure.Operations.DbMaintenanceScheduler>();
+        services.AddScoped<Proc.Application.Operations.IDangerousActionGuard, Proc.Infrastructure.Operations.DangerousActionGuard>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.

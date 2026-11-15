@@ -2308,6 +2308,81 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("ErrorOccurrence", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Operations.MaintenanceRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset>("QueuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RequestedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateOnly?>("ScheduledDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("SessionPid")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("SizeAfterBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("SizeBeforeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Target")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QueuedAt");
+
+                    b.HasIndex("Kind", "ScheduledDate")
+                        .IsUnique()
+                        .HasFilter("\"ScheduledDate\" IS NOT NULL");
+
+                    b.HasIndex("Status", "QueuedAt");
+
+                    b.ToTable("MaintenanceRun", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Operations.OperationLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2469,6 +2544,12 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("DbMaintenanceDay")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("DbMaintenanceTime")
+                        .HasColumnType("time without time zone");
 
                     b.Property<int>("DumpKeepDays")
                         .ValueGeneratedOnAdd()

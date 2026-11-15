@@ -290,6 +290,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lịch sử sao lưu (màn hình BAK – lát QT3b).</summary>
     public DbSet<Proc.Domain.Operations.BackupRun> BackupRuns => Set<Proc.Domain.Operations.BackupRun>();
 
+    /// <summary>Lịch sử bảo trì CSDL – VACUUM, REINDEX, ngắt phiên (lát QT4, màn hình DBM).</summary>
+    public DbSet<Proc.Domain.Operations.MaintenanceRun> MaintenanceRuns => Set<Proc.Domain.Operations.MaintenanceRun>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 

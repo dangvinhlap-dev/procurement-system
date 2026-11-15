@@ -255,6 +255,20 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - Nút **Sao lưu ngay** (icon `CloudUploadOutlined` xanh, mũi tên mở menu) đặt trước "Làm mới", chỉ hiện khi có quyền chạy: menu chọn Full / Diff /
   pg_dump / Đính kèm (mỗi mục một câu giải thích), đặt xong báo "Đã đặt … vào hàng chờ" và chuyển sang tab Lịch sử. Không có nút tải file sao lưu.
 
+## 5m. Màn hình DBM – Bảo trì CSDL (lát QT4, 15/11/2026 – design.md mục 21.13)
+
+- Khuôn `ListPage` + `DataGrid`, thanh tab `viewTabs` như BAK: **Bảng** (mặc định), **Phiên và khóa**, **Lịch sử**. Cột Tình trạng là đèn ô vuông
+  kèm chữ (Ổn / Cần xem; lịch sử Đang chờ / Đang chạy trung tính, Xong xanh, Lỗi đỏ), dòng đèn vàng / đỏ tô dấu; dung lượng, số dòng, pid canh
+  phải phông đơn cách (`formatBytes` dùng chung `pages/system/opsFormat.ts`).
+- Thông báo đầu trang: tab Bảng "CSDL <tên>: <dung lượng> · n bảng · số liệu lúc …" (vàng khi có bảng cần xem); tab Phiên "n phiên · n phiên chờ
+  khóa" + tài khoản đang đọc; tab Lịch sử lịch hằng tuần và lượt kế tiếp (hoặc "Lịch hằng tuần đang tắt trên máy này").
+- Nút lệnh (quyền chạy): tab Bảng **VACUUM ANALYZE**, **VACUUM cả CSDL** (icon `ClearOutlined` vàng), **REINDEX** (`ToolOutlined` vàng) – thao tác
+  trên dòng đang chọn, chưa chọn thì khóa kèm chú thích; mỗi nút hỏi lại ("Chạy" / "Không chạy") rồi chuyển sang tab Lịch sử. Tab Phiên **Ngắt
+  phiên…** (`StopOutlined` đỏ), khóa khi chưa chọn hoặc là phiên đang đọc. Mọi tab có **Làm mới** (vàng).
+- Hộp thoại **Ngắt phiên n** (việc nguy hiểm Q6): khối cảnh báo vàng (tài khoản · ứng dụng · máy · trạng thái + hậu quả), câu lệnh của phiên
+  trong ô chỉ đọc, lỗi máy chủ là khối đỏ trong hộp thoại (không đóng); ô **Lý do**, **Mật khẩu của bạn**, **Gõ "NGẮT PHIÊN" để xác nhận**; nút
+  **Ngắt phiên** đỏ (icon dừng) bên phải, **Không ngắt** bên trái. Các việc nguy hiểm QT sau dùng cùng bố cục, đổi chữ xác nhận.
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

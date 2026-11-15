@@ -45,7 +45,8 @@ public static class AuthEndpoints
         {
             LoginFailure.LockedOut => Problem(
                 StatusCodes.Status423Locked,
-                $"Tài khoản tạm khóa do nhập sai mật khẩu nhiều lần. Thử lại sau {FormatVietnamTime(outcome.LockoutEnd)}."),
+                $"Nhập sai mật khẩu {Proc.Infrastructure.DependencyInjection.MaxFailedLoginAttempts} lần liên tiếp – chờ " +
+                $"{Proc.Infrastructure.DependencyInjection.LockoutDuration.TotalMinutes:0} phút, đăng nhập lại sau {FormatVietnamTime(outcome.LockoutEnd)}."),
             LoginFailure.Inactive => Problem(
                 StatusCodes.Status403Forbidden, "Tài khoản đã ngừng sử dụng. Liên hệ quản trị hệ thống."),
             LoginFailure.NoCompany => Problem(

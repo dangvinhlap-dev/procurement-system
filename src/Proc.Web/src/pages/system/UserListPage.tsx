@@ -7,17 +7,17 @@ import type { GridColumn, StatusTone } from '../../components/DataGrid/types'
 import { FilterField, ListPage } from '../../components/ListPage/ListPage'
 import { UserDrawer } from './UserDrawer'
 
-type UserStatus = 'Đang dùng' | 'Tạm khóa' | 'Ngừng dùng'
+type UserStatus = 'Đang dùng' | 'Tạm ngưng đăng nhập' | 'Ngừng dùng'
 
-/** Trạng thái hiển thị: ngừng dùng được ưu tiên vì tạm khóa không còn ý nghĩa khi tài khoản đã ngừng. */
+/** Trạng thái hiển thị: ngừng dùng được ưu tiên vì tạm ngưng đăng nhập không còn ý nghĩa khi tài khoản đã ngừng. */
 function statusOf(u: UserListItem): UserStatus {
   if (!u.isActive) return 'Ngừng dùng'
-  return u.isLockedOut ? 'Tạm khóa' : 'Đang dùng'
+  return u.isLockedOut ? 'Tạm ngưng đăng nhập' : 'Đang dùng'
 }
 
 const statusTone: Record<UserStatus, StatusTone> = {
   'Đang dùng': 'success',
-  'Tạm khóa': 'warning',
+  'Tạm ngưng đăng nhập': 'warning',
   'Ngừng dùng': 'neutral',
 }
 
