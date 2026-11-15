@@ -985,6 +985,21 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT6 – Phục hồi (RST) đang làm 15/11/2026 – nhánh `feature/qt6-phuc-hoi`** (người dùng "làm tiếp"; bản 0.34.0). Chia 4 bước:
+- **QT6-1 + phần máy chủ QT6-2 xong (commit)**: domain `RestoreRun` (Dump / PointInTime; Chờ → Đang khôi phục → Chờ kiểm tra → Đang hoán đổi →
+  Đã hoán đổi, cộng Lỗi, Đã bỏ; hoán đổi lỗi về Chờ kiểm tra), `RestorePlanner` (Full mới nhất trước mốc → Diff của Full đó → WAL liên tục, đứt
+  WAL, mốc sau WAL cuối, đổi timeline), `RestoreNames`; migration `V0_34_0_PhucHoi`; quyền `System.OpsRestore.View` / `.Run`; Q6 "KHÔI PHỤC" khi
+  hoán đổi. pg_dump: bộ chạy nền tạo `<CSDL>_restore_yyyyMMdd_HHmm` (cùng bảng mã / locale, chủ là tài khoản ứng dụng), `pg_restore --no-owner
+  --exit-on-error [--role]`, so sánh `count(*)` mọi bảng + migration cuối (khác phiên bản thì không hoán đổi). Mốc thời gian / bỏ bản theo mốc /
+  hoán đổi: lệnh bộ thực thi mới `RestorePointInTime`, `DiscardPointInTime`, `SwapDatabase`, `SwapCluster` (AGT chỉ ra được Ping); cổng bộ
+  thực thi `POST …/agent/commands/{id}/prepare-swap` – bật bảo trì + chép bảng vận hành (`RestoreCarryOver`: AgentEnvironment, AgentCommand,
+  BackupRun, MaintenanceRun, MaintenanceModeState, OperationLog chỉ thêm, RestoreRun) sang bản khôi phục; kết quả lệnh cập nhật lần phục hồi.
+  Cảnh báo CSDL khác cùng máy chủ (khôi phục theo mốc quay lùi cả chúng – lưu ý người dùng 15/11/2026). API `/api/ops/v1/restore/overview|plan|
+  runs|runs/{id}|compare|discard|swap`. Test: domain `RestoreTests` 8, tích hợp `RestoreTests` 3 (pg_restore thật, hoán đổi qua bộ thực thi giả).
+  Build 0 cảnh báo, `dotnet test` 781/781.
+- Còn: **QT6-3** script `qt-agent.ps1` 1.1.0 (4 lệnh mới, `qt-enable-wal.ps1` cấp `GRANT proc TO proc_maint`), **QT6-4** màn hình RST + tài liệu
+  (design.md 21.15, ui-style, deploy-windows, ke-hoach-qt).
+
 **QT5 xong 15/11/2026 (chưa phát hành – bản 0.34.0) – nhánh `feature/qt5-bo-thuc-thi`** (người dùng "làm tiếp" sau menu Quản trị hệ thống; bản 0.34.0). Chia 4 bước:
 - **QT5-1 + QT5-2 xong (máy chủ)**: chế độ bảo trì – bảng một dòng `MaintenanceModeState`, `IMaintenanceMode` singleton đệm 5 giây,
   `MaintenanceModeMiddleware` (sau CompanyScope): bật thì mọi `/api` trả 503 (`code: maintenance`, câu thông báo, Retry-After 60) trừ người có

@@ -106,6 +106,21 @@ public static class OperationKinds
 
     /// <summary>Hủy lệnh bộ thực thi còn chờ (lát QT5).</summary>
     public const string AgentCommandCancelled = "AgentCommandCancelled";
+
+    /// <summary>Đặt lần phục hồi (lát QT6).</summary>
+    public const string RestoreQueued = "RestoreQueued";
+
+    /// <summary>Khôi phục xong (chờ kiểm tra) hoặc lỗi (lát QT6).</summary>
+    public const string RestoreFinished = "RestoreFinished";
+
+    /// <summary>Bỏ bản khôi phục (lát QT6).</summary>
+    public const string RestoreDiscarded = "RestoreDiscarded";
+
+    /// <summary>Bấm hoán đổi bản khôi phục (lát QT6 – Q6).</summary>
+    public const string RestoreSwapRequested = "RestoreSwapRequested";
+
+    /// <summary>Hoán đổi xong / lỗi (lát QT6).</summary>
+    public const string RestoreSwapFinished = "RestoreSwapFinished";
 }
 
 /// <summary>

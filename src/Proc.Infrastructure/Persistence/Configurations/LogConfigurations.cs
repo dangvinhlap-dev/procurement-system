@@ -240,3 +240,35 @@ public sealed class AgentCommandConfiguration : IEntityTypeConfiguration<Proc.Do
         builder.HasIndex(x => x.EnvironmentId).IsUnique().HasFilter("\"Status\" = 'Running'").HasDatabaseName("IX_AgentCommand_OneRunning");
     }
 }
+
+/// <summary>
+/// Bảng RestoreRun – lịch sử phục hồi (lát QT6). Dòng không xóa. Không khóa ngoại tới BackupRun / AgentCommand: khi hoán đổi, bảng được chép sang
+/// bản khôi phục cùng các bảng vận hành khác (<c>RestoreCarryOver</c>) – không phụ thuộc thứ tự chép.
+/// </summary>
+public sealed class RestoreRunConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.RestoreRun>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.RestoreRun> builder)
+    {
+        builder.ToTable("RestoreRun");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.LiveDatabase).HasMaxLength(Proc.Domain.Operations.RestoreRun.DatabaseNameMaxLength).IsRequired();
+        builder.Property(x => x.RestoreDatabase).HasMaxLength(Proc.Domain.Operations.RestoreRun.DatabaseNameMaxLength).IsRequired();
+        builder.Property(x => x.OldDatabase).HasMaxLength(Proc.Domain.Operations.RestoreRun.TextMaxLength);
+        builder.Property(x => x.RelativePath).HasMaxLength(Proc.Domain.Operations.RestoreRun.TextMaxLength);
+        builder.Property(x => x.Reason).HasMaxLength(Proc.Domain.Operations.RestoreRun.TextMaxLength).IsRequired();
+        builder.Property(x => x.SwapReason).HasMaxLength(Proc.Domain.Operations.RestoreRun.TextMaxLength);
+        builder.Property(x => x.RequestedByName).HasMaxLength(256);
+        builder.Property(x => x.SwapRequestedByName).HasMaxLength(256);
+        builder.Property(x => x.DiscardedByName).HasMaxLength(256);
+        builder.Property(x => x.PlanJson).HasMaxLength(Proc.Domain.Operations.RestoreRun.JsonMaxLength);
+        builder.Property(x => x.ComparisonJson).HasMaxLength(Proc.Domain.Operations.RestoreRun.JsonMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(Proc.Domain.Operations.RestoreRun.MessageMaxLength);
+        builder.Property(x => x.ErrorMessage).HasMaxLength(Proc.Domain.Operations.RestoreRun.MessageMaxLength);
+        builder.HasIndex(x => x.QueuedAt);
+        builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.AgentCommandId);
+    }
+}

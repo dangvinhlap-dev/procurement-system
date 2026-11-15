@@ -221,6 +221,27 @@ public enum AgentCommandKind
 {
     /// <summary>"Lệnh thử": bộ thực thi báo phiên bản, tên máy, tài khoản chạy – không thay đổi gì trên máy (design.md 21.8 GĐ2).</summary>
     Ping = 0,
+
+    /// <summary>
+    /// Khôi phục về mốc thời gian (lát QT6): ghép Full + Diff (<c>pg_combinebackup</c>) ra thư mục tạm, đặt <c>restore_command</c> +
+    /// <c>recovery_target_time</c>, chạy máy chủ CSDL tạm (cổng <c>Restore:TempPort</c>) tới mốc rồi để chạy cho người dùng kiểm tra.
+    /// </summary>
+    RestorePointInTime = 1,
+
+    /// <summary>Bỏ bản khôi phục theo mốc (lát QT6): dừng máy chủ CSDL tạm, xóa thư mục tạm.</summary>
+    DiscardPointInTime = 2,
+
+    /// <summary>
+    /// Hoán đổi CSDL (lát QT6, bản pg_dump): xin máy chủ chuẩn bị (bật bảo trì, chép bảng vận hành sang bản khôi phục), dừng site, đổi tên CSDL
+    /// đang chạy thành bản cũ, bản khôi phục thành CSDL đang chạy, chạy lại site, kiểm tra <c>/health</c>; lỗi giữa chừng thì đổi tên ngược lại.
+    /// </summary>
+    SwapDatabase = 3,
+
+    /// <summary>
+    /// Hoán đổi máy chủ CSDL (lát QT6, mốc thời gian): chuẩn bị như <see cref="SwapDatabase"/>, dừng site và PostgreSQL chính, cất thư mục dữ liệu
+    /// cũ, đưa thư mục khôi phục vào chỗ đó, chạy lại PostgreSQL và site, kiểm tra.
+    /// </summary>
+    SwapCluster = 4,
 }
 
 /// <summary>Trạng thái lệnh bộ thực thi.</summary>

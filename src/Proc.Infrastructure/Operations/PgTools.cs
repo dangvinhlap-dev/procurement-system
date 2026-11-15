@@ -95,6 +95,26 @@ public static class PgToolArgs
     /// <returns>Tham số.</returns>
     public static IReadOnlyList<string> RestoreList(string file) => ["--list", file];
 
+    /// <summary>
+    /// <c>pg_restore</c> file dump vào một CSDL đã tạo sẵn (lát QT6): <c>--no-owner</c> – đối tượng thuộc về tài khoản đang chạy hoặc
+    /// <paramref name="role"/> (tài khoản ứng dụng, để sau khi hoán đổi ứng dụng là chủ các bảng như trước); <c>--exit-on-error</c> – lỗi đầu tiên
+    /// là dừng (bản khôi phục thiếu một phần thì không dùng được, xóa đi làm lại).
+    /// </summary>
+    /// <param name="conn">Kết nối (tài khoản bảo trì hoặc tài khoản ứng dụng).</param>
+    /// <param name="database">CSDL đích.</param>
+    /// <param name="file">File dump (tương đối, không dấu).</param>
+    /// <param name="role">Tài khoản <c>SET ROLE</c> sau khi kết nối (tài khoản bảo trì phải là thành viên); null = không đổi.</param>
+    /// <returns>Tham số.</returns>
+    public static IReadOnlyList<string> Restore(PgConnectionInfo conn, string database, string file, string? role)
+    {
+        ArgumentNullException.ThrowIfNull(conn);
+        var args = Connection(conn);
+        args.AddRange(["-d", database, "--no-owner", "--exit-on-error", "-w"]);
+        if (!string.IsNullOrWhiteSpace(role)) args.Add("--role=" + role);
+        args.Add(file);
+        return args;
+    }
+
     /// <summary><c>pg_archivecleanup</c>: xóa file WAL cũ hơn <paramref name="oldestKeptWal"/> trong thư mục WAL.</summary>
     /// <param name="archiveDir">Thư mục WAL (tương đối so với thư mục làm việc, thường là ".").</param>
     /// <param name="oldestKeptWal">File WAL cũ nhất còn giữ.</param>

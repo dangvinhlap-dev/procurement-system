@@ -85,6 +85,13 @@ public static class Permissions
         /// công ty.
         /// </summary>
         public const string OpsAgentManage = "System.OpsAgent.Manage";
+        /// <summary>Quyền "Xem phục hồi" (màn hình RST – lát QT6): lịch sử phục hồi, kế hoạch chuỗi Full → Diff → WAL, bảng so sánh. Chỉ ở tổng công ty.</summary>
+        public const string OpsRestoreView = "System.OpsRestore.View";
+        /// <summary>
+        /// Quyền "Chạy phục hồi" (lát QT6): khôi phục pg_dump sang CSDL mới / về mốc thời gian ra máy chủ CSDL tạm, bỏ bản khôi phục, hoán đổi (xác
+        /// nhận Q6 – gõ "KHÔI PHỤC"). Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsRestoreRun = "System.OpsRestore.Run";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -374,6 +381,8 @@ public static class Permissions
         new(System.OpsMaintenanceModeManage, "Bật / tắt chế độ bảo trì (chỉ ở tổng công ty)"),
         new(System.OpsAgentView, "Xem bộ thực thi: môi trường, lịch sử lệnh (chỉ ở tổng công ty)"),
         new(System.OpsAgentManage, "Quản lý bộ thực thi: khai môi trường, tạo khóa, ra lệnh (chỉ ở tổng công ty)"),
+        new(System.OpsRestoreView, "Xem phục hồi CSDL: lịch sử, kế hoạch khôi phục (chỉ ở tổng công ty)"),
+        new(System.OpsRestoreRun, "Phục hồi CSDL: khôi phục, bỏ bản khôi phục, hoán đổi (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

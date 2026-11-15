@@ -302,6 +302,9 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lệnh bộ thực thi (lát QT5).</summary>
     public DbSet<Proc.Domain.Operations.AgentCommand> AgentCommands => Set<Proc.Domain.Operations.AgentCommand>();
 
+    /// <summary>Lần phục hồi (lát QT6).</summary>
+    public DbSet<Proc.Domain.Operations.RestoreRun> RestoreRuns => Set<Proc.Domain.Operations.RestoreRun>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 
