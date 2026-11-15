@@ -285,7 +285,7 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - **Chế độ bảo trì**: dải môi trường (mục 5j) **đỏ** "ĐANG BẢO TRÌ: <câu thông báo>" (đứng sau "DEV" / "MÔI TRƯỜNG TEST", trước cảnh báo cấu hình)
   ở mọi màn hình kể cả đăng nhập, Portal, `/duyet`. SYS: thông báo đỏ đầu trang (giờ bật, người bật, câu thông báo, lý do) + nút **Bật chế độ bảo
   trì…** (icon cờ lê vàng; nút OK hộp thoại đỏ "Bật bảo trì") / **Tắt chế độ bảo trì…** (icon dấu tích xanh); hộp thoại có ô câu thông báo (khi
-  bật) và **Lý do** bắt buộc. Lát QT7 chuyển nút sang CFG.
+  bật) và **Lý do** bắt buộc. Lát QT7 đã chuyển nút sang tab Bảo trì của CFG (mục 5p).
 
 ## 5o. Màn hình RST – Phục hồi (lát QT6, 15/11/2026 – design.md mục 21.15)
 
@@ -305,6 +305,22 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   **Lý do**, **Mật khẩu của bạn**, **Gõ "KHÔI PHỤC" để xác nhận**; nút **Hoán đổi** đỏ (icon) bên phải, **Không hoán đổi** bên trái.
 - Bấm đúp dòng mở `DetailDrawer` chỉ xem: tab Thông tin, **So sánh số dòng** (`lazy` – dải thông báo giờ so sánh + phiên bản CSDL hai bên, lưới Bảng
   / So sánh (đèn: Bằng nhau, Khác, Bảng vận hành) / Đang chạy / Bản khôi phục / Chênh lệch, số canh phải phông đơn cách), **Kế hoạch** (mốc thời gian).
+
+## 5p. Màn hình CFG – Cấu hình truy cập (lát QT7, 15/11/2026 – design.md mục 21.16)
+
+- Khuôn `ListPage` + `DataGrid`, thanh tab `viewTabs`: **Chính sách** (mặc định), **Bảo mật**, **Bảo trì**; mọi tab dùng chung cột `overviewColumns`
+  (Nhóm, Hạng mục, Giá trị, Tình trạng – đèn ô vuông kèm chữ, Ghi chú) như SYS. Chính sách: đèn vàng khi lỏng hơn mức khuyên dùng cho TEST / PROD
+  (mật khẩu < 10 ký tự, tắt chặn mật khẩu phổ biến, chưa khai dải IP); Bảo mật: header, HTTPS (vàng khi HTTP), proxy, giới hạn tần suất – đỏ khi đang
+  bỏ kiểm tra dải IP bằng file cấu hình; Bảo trì: trạng thái (đỏ khi đang bật), câu thông báo, lần bật / tắt gần nhất.
+- Thông báo đầu trang: "Lưu lần cuối dd/MM/yyyy HH:mm – người lưu" (hoặc "Đang dùng giá trị mặc định") + số hạng mục cần xem (vàng / xanh dương);
+  tab Bảo trì khi đang bật: thông báo đỏ "Đang bảo trì: …".
+- Nút: tab Chính sách **Sửa cấu hình…** (icon bút, vàng), **Đăng xuất tất cả…** (icon đăng xuất, **đỏ**) – quyền quản lý CFG; tab Bảo trì **Bật / Tắt
+  chế độ bảo trì…** (như mục 5n); mọi tab **Làm mới** (vàng).
+- Hộp thoại **Sửa cấu hình truy cập** (rộng 640px): ô số hai cột (`.erp-cfg-form-grid`, màn hình hẹp một cột), dưới mỗi ô ghi khoảng cho phép; ô
+  đánh dấu "Chặn mật khẩu phổ biến (n mật khẩu nhúng sẵn)"; ô nhiều dòng Mật khẩu cấm thêm, Dải IP (gợi ý ghi "IP của bạn: …"); **Lý do** bắt buộc;
+  lỗi máy chủ là khối đỏ đầu hộp thoại, không đóng; **Bỏ qua** trái – **Lưu** (icon dấu tích xanh) phải.
+- Hộp thoại **Đăng xuất tất cả** theo bố cục việc nguy hiểm mục 5m: cảnh báo vàng (mọi người phải đăng nhập lại, phiếu nhập dở mất; phiên của bạn
+  giữ lại), ô **Lý do**, **Mật khẩu của bạn**, **Gõ "ĐĂNG XUẤT TẤT CẢ" để xác nhận**; nút **Đăng xuất tất cả** đỏ (icon) phải, **Không đăng xuất** trái.
 
 ## 5a. Tab
 

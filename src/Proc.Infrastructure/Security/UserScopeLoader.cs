@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Proc.Application.Common;
+using Proc.Application.Operations;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Security;
@@ -16,7 +17,15 @@ public enum ScopeLoadResult
 
     /// <summary>Người dùng không có vai trò nào đang dùng tại công ty yêu cầu.</summary>
     CompanyNotAllowed,
+
+    /// <summary>Token đã bị thu hồi: mật khẩu đã đổi / đặt lại (mã bảo mật khác) hoặc quản trị bấm "Đăng xuất tất cả" sau giờ cấp token (lát QT7).</summary>
+    SessionRevoked,
 }
+
+/// <summary>Thông tin phiên lấy từ token để kiểm tra thu hồi (lát QT7).</summary>
+/// <param name="SecurityStamp">Mã bảo mật của tài khoản lúc cấp token (claim <c>sstamp</c>); null = token cấp trước bản 0.35.0.</param>
+/// <param name="IssuedAt">Giờ cấp token (claim <c>iat</c>, UTC).</param>
+public sealed record SessionClaims(string? SecurityStamp, DateTimeOffset? IssuedAt);
 
 /// <summary>
 /// Nạp phạm vi của người dùng tại công ty đang làm việc vào <see cref="CurrentUserScope"/> (design.md mục 9.2).
@@ -26,16 +35,19 @@ public sealed class UserScopeLoader
 {
     private readonly ProcDbContext _db;
     private readonly CurrentUserScope _scope;
+    private readonly IAccessPolicyProvider _policy;
 
     /// <summary>
     /// Tạo bộ nạp phạm vi.
     /// </summary>
     /// <param name="db">DbContext.</param>
     /// <param name="scope">Phạm vi của request hiện tại.</param>
-    public UserScopeLoader(ProcDbContext db, CurrentUserScope scope)
+    /// <param name="policy">Cấu hình truy cập – mốc "Đăng xuất tất cả".</param>
+    public UserScopeLoader(ProcDbContext db, CurrentUserScope scope, IAccessPolicyProvider policy)
     {
         _db = db;
         _scope = scope;
+        _policy = policy;
     }
 
     /// <summary>
@@ -44,14 +56,25 @@ public sealed class UserScopeLoader
     /// <param name="userId">Người dùng trong token.</param>
     /// <param name="companyId">Công ty từ header X-Company-Id; null nếu không gửi.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="session">Thông tin phiên trong token – có thì kiểm tra thu hồi (request thật luôn có; test gọi thẳng bỏ qua được).</param>
     /// <returns>Kết quả nạp.</returns>
-    public async Task<ScopeLoadResult> LoadAsync(Guid userId, Guid? companyId, CancellationToken cancellationToken)
+    public async Task<ScopeLoadResult> LoadAsync(Guid userId, Guid? companyId, CancellationToken cancellationToken, SessionClaims? session = null)
     {
-        var isActive = await _db.Users
+        // Mã bảo mật đọc cùng truy vấn IsActive đã có – thu hồi phiên không tốn thêm lượt đọc CSDL (lát QT7).
+        var user = await _db.Users
             .Where(u => u.Id == userId)
-            .Select(u => (bool?)u.IsActive)
+            .Select(u => new { u.IsActive, u.SecurityStamp })
             .SingleOrDefaultAsync(cancellationToken);
-        if (isActive != true) return ScopeLoadResult.UserInactive;
+        if (user?.IsActive != true) return ScopeLoadResult.UserInactive;
+
+        if (session is not null)
+        {
+            // Token cấp trước bản 0.35.0 không có mã bảo mật → đăng nhập lại một lần sau khi nâng cấp.
+            if (session.SecurityStamp is null || !string.Equals(session.SecurityStamp, user.SecurityStamp, StringComparison.Ordinal))
+                return ScopeLoadResult.SessionRevoked;
+            var revokedAt = (await _policy.GetAsync(cancellationToken)).SessionsRevokedAt;
+            if (revokedAt is { } mark && (session.IssuedAt is not { } issued || issued < mark)) return ScopeLoadResult.SessionRevoked;
+        }
 
         if (companyId is not { } company)
         {

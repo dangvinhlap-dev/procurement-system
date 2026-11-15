@@ -35,7 +35,8 @@ public class ChangePasswordTests
         var response = await client.PostAsJsonAsync(
             "/api/auth/change-password", new ChangePasswordRequest(ProcApiFactory.TestPassword, "moimoi2026"), Ct);
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        // Lát QT7: thành công trả phiên mới (token cũ hết hiệu lực – AccessConfigTests).
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var login = _factory.CreateClient();
         Assert.Equal(HttpStatusCode.OK,
             (await login.PostAsJsonAsync("/api/auth/login", new LoginRequest(userName, "moimoi2026"), Ct)).StatusCode);

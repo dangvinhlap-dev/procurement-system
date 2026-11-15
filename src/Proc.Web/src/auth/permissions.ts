@@ -34,6 +34,8 @@ export const Permission = {
   RestoreView: 'System.OpsRestore.View',
   /** Khôi phục, bỏ bản khôi phục, hoán đổi (xác nhận Q6 "KHÔI PHỤC") (lát QT6). */
   RestoreRun: 'System.OpsRestore.Run',
+  /** Sửa cấu hình truy cập CFG, "Đăng xuất tất cả" (xác nhận Q6) – lát QT7; xem CFG cần OpsView. */
+  ConfigManage: 'System.OpsConfig.Manage',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

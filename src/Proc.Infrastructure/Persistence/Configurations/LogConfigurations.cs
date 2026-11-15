@@ -180,6 +180,19 @@ public sealed class MaintenanceRunConfiguration : IEntityTypeConfiguration<Proc.
     }
 }
 
+/// <summary>Bảng AccessPolicy – cấu hình truy cập CFG (lát QT7): một dòng duy nhất; thay đổi vào AuditLog, lý do vào nhật ký vận hành.</summary>
+public sealed class AccessPolicyConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.AccessPolicy>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.AccessPolicy> builder)
+    {
+        builder.ToTable("AccessPolicy");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.ExtraBlockedPasswords).HasMaxLength(Proc.Domain.Operations.AccessPolicy.ExtraBlockedPasswordsMaxLength);
+        builder.Property(x => x.OpsAllowedIpRanges).HasMaxLength(Proc.Domain.Operations.AccessPolicy.OpsAllowedIpRangesMaxLength);
+    }
+}
+
 /// <summary>Bảng MaintenanceModeState – chế độ bảo trì (lát QT5): một dòng duy nhất, lịch sử bật / tắt ở nhật ký vận hành.</summary>
 public sealed class MaintenanceModeStateConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.MaintenanceModeState>
 {

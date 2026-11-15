@@ -1,6 +1,8 @@
 import { Alert, App, Form, Input, Modal } from 'antd'
 import { useState } from 'react'
 import { apiFetch } from '../../api/client'
+import type { LoginResult } from '../../auth/types'
+import { useAuth } from '../../auth/useAuth'
 
 interface FormValues {
   currentPassword: string
@@ -16,6 +18,7 @@ interface FormValues {
 export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = Form.useForm<FormValues>()
   const { message } = App.useApp()
+  const { renewToken } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -29,11 +32,13 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
     setSaving(true)
     setError(null)
     try {
-      await apiFetch<void>('/api/auth/change-password', {
+      // Đổi xong mọi phiên khác của mình hết hiệu lực; máy chủ trả token mới cho phiên này (lát QT7).
+      const result = await apiFetch<LoginResult | null>('/api/auth/change-password', {
         method: 'POST',
         body: { currentPassword: values.currentPassword, newPassword: values.newPassword },
       })
-      message.success('Đã đổi mật khẩu.')
+      if (result) renewToken(result.accessToken, result.expiresAt)
+      message.success('Đã đổi mật khẩu. Các phiên đăng nhập khác của bạn đã bị đăng xuất.')
       close()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không đổi được mật khẩu.')
@@ -62,7 +67,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
         <Form.Item
           label="Mật khẩu mới"
           name="newPassword"
-          extra="Tối thiểu 8 ký tự, có chữ thường và chữ số."
+          extra="Có chữ thường và chữ số, đủ độ dài theo cấu hình truy cập (mặc định 8 ký tự), không dùng mật khẩu quá phổ biến."
           rules={[{ required: true, message: 'Hãy nhập mật khẩu mới.' }]}
         >
           <Input.Password autoComplete="new-password" />

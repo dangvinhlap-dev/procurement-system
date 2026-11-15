@@ -82,14 +82,14 @@ public class AuthTests
         var userName = UniqueName("khoa");
         await _factory.CreateUserAsync(userName, Password, ["BHA"]);
 
-        for (var i = 1; i < DependencyInjection.MaxFailedLoginAttempts; i++)
+        for (var i = 1; i < Proc.Domain.Operations.AccessPolicy.DefaultMaxFailedLogins; i++)
             Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(userName, "sai-mat-khau")).StatusCode);
 
         var fifth = await LoginAsync(userName, "sai-mat-khau");
         Assert.Equal(HttpStatusCode.Locked, fifth.StatusCode);
         var problem = await fifth.Content.ReadFromJsonAsync<ProblemDetails>(Ct);
         Assert.StartsWith("Nhập sai mật khẩu 5 lần liên tiếp – chờ 10 phút", problem?.Title);
-        Assert.Equal(TimeSpan.FromMinutes(10), DependencyInjection.LockoutDuration);
+        Assert.Equal(10, Proc.Domain.Operations.AccessPolicy.DefaultLockoutMinutes);
 
         Assert.Equal(HttpStatusCode.Locked, (await LoginAsync(userName, Password)).StatusCode);
 
@@ -111,7 +111,7 @@ public class AuthTests
         var userName = UniqueName("datlai");
         await _factory.CreateUserAsync(userName, Password, ["BHA"]);
 
-        for (var i = 1; i < DependencyInjection.MaxFailedLoginAttempts; i++)
+        for (var i = 1; i < Proc.Domain.Operations.AccessPolicy.DefaultMaxFailedLogins; i++)
             await LoginAsync(userName, "sai-mat-khau");
         Assert.Equal(HttpStatusCode.OK, (await LoginAsync(userName, Password)).StatusCode);
 

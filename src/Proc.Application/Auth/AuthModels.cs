@@ -68,6 +68,11 @@ public sealed record LoginOutcome(LoginResult? Result, LoginFailure? Failure, Da
     public bool Succeeded => Result is not null;
 }
 
+/// <summary>Kết quả đổi mật khẩu (lát QT7).</summary>
+/// <param name="Errors">Lỗi tiếng Việt; rỗng khi đổi thành công.</param>
+/// <param name="Session">Token mới cho phiên đang dùng khi thành công (token cũ hết hiệu lực vì mã bảo mật đã đổi).</param>
+public sealed record ChangePasswordOutcome(IReadOnlyList<string> Errors, LoginResult? Session);
+
 /// <summary>Đổi công ty làm việc trên thanh menu – để ghi nhật ký truy cập (design.md mục 9.3).</summary>
 /// <param name="CompanyId">Công ty chọn.</param>
 public sealed record SwitchCompanyRequest(Guid CompanyId);

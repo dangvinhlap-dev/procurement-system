@@ -51,8 +51,17 @@ public sealed class CompanyScopeMiddleware
             companyId = parsed;
         }
 
-        switch (await loader.LoadAsync(userId, companyId, context.RequestAborted))
+        var issuedAt = long.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Iat)?.Value, out var iat)
+            ? DateTimeOffset.FromUnixTimeSeconds(iat)
+            : (DateTimeOffset?)null;
+        var session = new SessionClaims(context.User.FindFirst(Proc.Infrastructure.Identity.JwtTokenService.SecurityStampClaim)?.Value, issuedAt);
+        switch (await loader.LoadAsync(userId, companyId, context.RequestAborted, session))
         {
+            case ScopeLoadResult.SessionRevoked:
+                // Lát QT7: đổi / đặt lại mật khẩu, "Đăng xuất tất cả" – giao diện nhận 401 thì quay về màn hình đăng nhập.
+                await WriteProblemAsync(context, StatusCodes.Status401Unauthorized,
+                    "Phiên đăng nhập đã hết hiệu lực (mật khẩu đã đổi hoặc quản trị đã đăng xuất mọi phiên). Hãy đăng nhập lại.");
+                return;
             case ScopeLoadResult.UserInactive:
                 await WriteProblemAsync(context, StatusCodes.Status401Unauthorized, "Phiên đăng nhập không còn hiệu lực. Hãy đăng nhập lại.");
                 return;

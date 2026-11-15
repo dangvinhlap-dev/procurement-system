@@ -4,6 +4,10 @@
     <ProjectReference Include="..\Proc.Application\Proc.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Danh sách mật khẩu phổ biến bị chặn (lát QT7) – nhúng vào dll, không phụ thuộc thư mục chạy. -->
+    <EmbeddedResource Include="Identity\CommonPasswords.txt" LogicalName="Proc.Infrastructure.Identity.CommonPasswords.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="ClosedXML" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="PDFsharp-MigraDoc" />

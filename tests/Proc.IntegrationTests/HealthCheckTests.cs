@@ -46,7 +46,8 @@ public class HealthCheckTests
         // Phiên bản lấy từ Directory.Build.props, không ghi cứng để test không phải sửa mỗi lần phát hành.
         var v = typeof(Program).Assembly.GetName().Version!;
         Assert.Equal($"{v.Major}.{v.Minor}.{v.Build}", body.Version);
-        Assert.Contains(body.Checks, c => c.Name == "database" && c.Status == "Healthy");
+        // Lát QT7: chưa đăng nhập chỉ có trạng thái + phiên bản; người có quyền xem vận hành mới thấy từng mục (AccessConfigTests).
+        Assert.Empty(body.Checks);
     }
 
     private sealed record HealthBody(string Status, string Version, List<HealthCheckBody> Checks);

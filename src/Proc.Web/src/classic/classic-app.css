@@ -901,3 +901,15 @@ body.erp-col-resizing {
   padding: 16px;
   background: var(--erp-bar-bg-top);
 }
+
+/* Hộp thoại sửa cấu hình truy cập CFG (lát QT7): ô số hai cột, màn hình hẹp một cột. */
+.erp-cfg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
+}
+@media (max-width: 600px) {
+  .erp-cfg-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

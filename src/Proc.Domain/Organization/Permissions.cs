@@ -92,6 +92,11 @@ public static class Permissions
         /// nhận Q6 – gõ "KHÔI PHỤC"). Chỉ ở tổng công ty.
         /// </summary>
         public const string OpsRestoreRun = "System.OpsRestore.Run";
+        /// <summary>
+        /// Quyền "Quản lý cấu hình truy cập" (màn hình CFG – lát QT7): chính sách mật khẩu, khóa, hạn phiên, dải IP quản trị, giới hạn tần suất,
+        /// "Đăng xuất tất cả" (xác nhận Q6), bật / tắt chế độ bảo trì cùng quyền riêng. Xem CFG cần <see cref="OpsView"/>. Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsConfigManage = "System.OpsConfig.Manage";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -383,6 +388,7 @@ public static class Permissions
         new(System.OpsAgentManage, "Quản lý bộ thực thi: khai môi trường, tạo khóa, ra lệnh (chỉ ở tổng công ty)"),
         new(System.OpsRestoreView, "Xem phục hồi CSDL: lịch sử, kế hoạch khôi phục (chỉ ở tổng công ty)"),
         new(System.OpsRestoreRun, "Phục hồi CSDL: khôi phục, bỏ bản khôi phục, hoán đổi (chỉ ở tổng công ty)"),
+        new(System.OpsConfigManage, "Sửa cấu hình truy cập: mật khẩu, khóa, hạn phiên, dải IP quản trị, đăng xuất tất cả (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),

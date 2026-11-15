@@ -32,6 +32,7 @@ public static class AuthEndpoints
         LoginRequest request,
         IValidator<LoginRequest> validator,
         IAuthService auth,
+        Proc.Application.Operations.IAccessPolicyProvider policy,
         CancellationToken cancellationToken)
     {
         var validation = await validator.ValidateAsync(request, cancellationToken);
@@ -43,10 +44,11 @@ public static class AuthEndpoints
 
         return outcome.Failure switch
         {
+            // Số lần, số phút theo cấu hình truy cập CFG (lát QT7).
             LoginFailure.LockedOut => Problem(
                 StatusCodes.Status423Locked,
-                $"Nhập sai mật khẩu {Proc.Infrastructure.DependencyInjection.MaxFailedLoginAttempts} lần liên tiếp – chờ " +
-                $"{Proc.Infrastructure.DependencyInjection.LockoutDuration.TotalMinutes:0} phút, đăng nhập lại sau {FormatVietnamTime(outcome.LockoutEnd)}."),
+                $"Nhập sai mật khẩu {policy.Current.MaxFailedLogins} lần liên tiếp – chờ {policy.Current.LockoutMinutes} phút, " +
+                $"đăng nhập lại sau {FormatVietnamTime(outcome.LockoutEnd)}."),
             LoginFailure.Inactive => Problem(
                 StatusCodes.Status403Forbidden, "Tài khoản đã ngừng sử dụng. Liên hệ quản trị hệ thống."),
             LoginFailure.NoCompany => Problem(
@@ -83,9 +85,11 @@ public static class AuthEndpoints
         if (!validation.IsValid)
             return Results.ValidationProblem(validation.ToDictionary(), title: "Dữ liệu đổi mật khẩu không hợp lệ.");
 
-        var errors = await auth.ChangePasswordAsync(userId, request, cancellationToken);
+        // Thành công trả phiên mới (token cũ hết hiệu lực vì mã bảo mật đổi – lát QT7); giao diện thay token đang giữ.
+        var outcome = await auth.ChangePasswordAsync(userId, request, cancellationToken);
+        var errors = outcome.Errors;
         return errors.Count == 0
-            ? Results.NoContent()
+            ? Results.Ok(outcome.Session)
             : Results.ValidationProblem(
                 new Dictionary<string, string[]> { [nameof(ChangePasswordRequest.NewPassword)] = [.. errors] },
                 title: errors[0]);

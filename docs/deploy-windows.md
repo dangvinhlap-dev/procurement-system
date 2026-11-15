@@ -83,7 +83,8 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Backup:ScheduleEnabled` | `true` (mặc định) – sao lưu tự động theo lịch B1; tắt lịch `backup.ps1` cũ (mục 4b) để không sao lưu hai lần |
 | `Agent:RunningTimeoutHours` | Từ 0.34.0 (QT5): 6 – lệnh bộ thực thi chạy quá số giờ này không báo kết quả thì ghi Lỗi. `Agent:OnlineMinutes` (3) = liên lạc trong số phút này thì AGT đèn xanh |
 | `DbMaintenance:ScheduleEnabled` | Từ 0.33.0 (QT4): `true` (mặc định) – VACUUM ANALYZE cả CSDL hằng tuần (tham số DB_MAINT_DAY / DB_MAINT_TIME, mặc định Chủ nhật 03:00). `DbMaintenance:CommandTimeoutMinutes` (240) = thời gian tối đa một lệnh VACUUM / REINDEX |
-| `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
+| `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng. Hạn phiên đặt trên màn hình CFG từ 0.35.0 (`Jwt:LifetimeMinutes` không còn dùng) |
+| `Security:*` | Từ 0.35.0 (QT7): `KnownProxies` = IP / dải của reverse proxy được tin để đọc IP thật (IIS in-process để trống); `HstsMaxAgeDays` (365; 0 = tắt HSTS); `IgnoreOpsIpRanges` = `false` – chỉ đặt `true` khi lỡ khai sai dải IP quản trị trên CFG (mục 4f) |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
 | `Serilog:WriteTo` (mục `File`) | `path`: `D:\\ProcurementData\\logs\\proc-.log` |
@@ -271,7 +272,7 @@ khôi phục… ở các bản sau; 0.34.0 chỉ có **Lệnh thử**). Web khô
 Nhật ký trên máy: `<StatePath>\agent-journal.log` (chỉ ghi khi có lệnh / lỗi); kết quả chưa gửi được nằm ở `<StatePath>\pending` và tự gửi lại lần
 sau. Máy chủ từ chối khóa (401) → tạo khóa mới, chạy lại `qt-agent-install.ps1`.
 
-**Chế độ bảo trì**: SYS → **Bật chế độ bảo trì…** (câu thông báo + lý do) – mọi người dùng thường (kể cả NCC trên Portal) nhận câu thông báo, dải
+**Chế độ bảo trì**: CFG → tab **Bảo trì** → **Bật chế độ bảo trì…** (trước 0.35.0 ở SYS) (câu thông báo + lý do) – mọi người dùng thường (kể cả NCC trên Portal) nhận câu thông báo, dải
 đỏ "ĐANG BẢO TRÌ"; người có quyền quản trị vận hành (`System.Ops*`) vẫn làm việc được. Dùng khi cài bản / khôi phục bằng tay; tắt bằng **Tắt chế
 độ bảo trì…**. Lỡ không vào được giao diện: `psql -U postgres -d procurement -c "UPDATE \"MaintenanceModeState\" SET \"IsOn\" = false"` (tối đa
 5 giây sau có hiệu lực).
@@ -314,7 +315,7 @@ Cấu hình (`appsettings.Production.json`): `Restore:TempPort` (5434 – không
 Hoán đổi (Q6 – nhập lại mật khẩu, lý do, gõ "KHÔI PHỤC"): bộ thực thi xin máy chủ **bật chế độ bảo trì** và chép bảng vận hành sang bản khôi
 phục → dừng app pool → pg_dump: đổi tên `procurement` → `procurement_old_<giờ>`, bản khôi phục → `procurement`; mốc thời gian: dừng PostgreSQL, đổi
 tên thư mục dữ liệu thành `<thư mục>_old_<giờ>`, chuyển thư mục khôi phục vào, chạy lại, chép file `.history` vào thư mục WAL → chạy app pool →
-kiểm tra `/health`. Lỗi giữa chừng thì trả lại như cũ. **Chế độ bảo trì vẫn bật sau khi hoán đổi** – kiểm tra dữ liệu rồi tắt ở SYS. Bản cũ giữ
+kiểm tra `/health`. Lỗi giữa chừng thì trả lại như cũ. **Chế độ bảo trì vẫn bật sau khi hoán đổi** – kiểm tra dữ liệu rồi tắt ở CFG (tab Bảo trì; trước 0.35.0 ở SYS). Bản cũ giữ
 tới khi xóa tay: `psql -U postgres -c "DROP DATABASE procurement_old_<giờ>"` hoặc xóa thư mục `<thư mục dữ liệu>_old_<giờ>` (khi chắc chắn).
 
 Kiểm tra trên máy TEST (diễn tập D2):
@@ -323,6 +324,31 @@ Kiểm tra trên máy TEST (diễn tập D2):
       còn khóa; tắt bảo trì; CSDL `procurement_old_…` còn.
 - [ ] **Về mốc thời gian…** chọn mốc giữa hai lần sao lưu → kế hoạch đủ chuỗi → máy chủ tạm cổng 5434 lên, so sánh được → **Bỏ bản khôi phục**
       (thư mục `restore\<giờ>` bị xóa). Khi được phép thử hoán đổi máy chủ CSDL: hoán đổi → kiểm tra → quay lại bằng thư mục `_old_…` nếu cần.
+
+## 4f. Cấu hình truy cập – màn hình CFG (từ 0.35.0 – lát QT7)
+
+Sau khi cài 0.35.0, mọi người phải **đăng nhập lại một lần** (token cũ không có mã bảo mật). Trên **từng máy** (TEST trước, PROD sau – TEST đặt giống
+PROD, design.md 21.3a), đăng nhập ở tổng công ty, **Quản trị hệ thống → Cấu hình truy cập**:
+
+1. Gán quyền `System.OpsConfig.Manage` cho vai trò quản trị vận hành (vai trò ADMIN có sẵn mọi quyền).
+2. **Sửa cấu hình…**: độ dài mật khẩu tối thiểu **10**, bật chặn mật khẩu phổ biến, thêm mật khẩu cấm riêng của công ty (tên công ty + năm…), giữ 5
+   lần / 10 phút, hạn phiên 480 phút; **Dải IP** = các máy quản trị (ví dụ `10.10.5.0/24`). Phần mềm không cho lưu dải không gồm IP máy đang thao
+   tác. Ghi lý do → **Lưu**.
+3. Tab **Bảo mật**: HSTS phải "Ổn" (đang mở bằng HTTPS); Docker + Caddy thì khai `Security:KnownProxies` trong cấu hình rồi kiểm tra "IP của bạn" ở
+   tab Chính sách là IP máy thật, không phải IP proxy.
+
+**Lỡ khóa mình khỏi chức năng quản trị vận hành** (đổi máy, đổi dải mạng…), một trong hai cách:
+- Mở trình duyệt **ngay trên máy chủ** (`https://localhost/…` – địa chỉ 127.0.0.1 luôn được) và sửa dải IP trên CFG.
+- Mở `appsettings.Production.json` trên máy chủ, thêm `"Security": { "IgnoreOpsIpRanges": true }` (hoặc đặt biến môi trường
+  `Security__IgnoreOpsIpRanges=true` cho App Pool) → có hiệu lực ngay, không cần khởi động lại (biến môi trường thì recycle App Pool) → sửa dải IP
+  trên CFG → **đặt lại `false`**. Trong lúc bật, tab Bảo mật của CFG báo đỏ.
+
+Kiểm tra trên máy TEST:
+- [ ] Đổi mật khẩu thử: phiên khác của cùng người (trình duyệt khác) bị đưa về màn hình đăng nhập.
+- [ ] Mật khẩu `password123`, mật khẩu ngắn hơn 10 ký tự bị từ chối kèm câu tiếng Việt.
+- [ ] Từ máy ngoài dải IP: mở SYS báo "Máy của bạn (…) không nằm trong dải IP…"; màn hình nghiệp vụ vẫn dùng bình thường.
+- [ ] Đăng nhập sai liên tục từ một máy: lần thứ 21 trong một phút báo "Đăng nhập quá nhiều lần".
+- [ ] Thử cách gỡ `IgnoreOpsIpRanges` rồi trả về `false`.
 
 ## 5. Nâng cấp lên bản mới
 

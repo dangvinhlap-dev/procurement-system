@@ -95,6 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       logout,
       refreshUser,
+      renewToken: (accessToken, expiresAt) => {
+        const current = sessionRef.current
+        if (current) update({ ...current, accessToken, expiresAt })
+      },
       setWorkingCompany: (companyId) => {
         const current = sessionRef.current
         if (!current || !current.user.companies.some((c) => c.id === companyId)) return

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Proc.Application.Common;
 using Proc.Application.Auth;
 using Proc.Application.Logging;
+using Proc.Application.Operations;
 using Proc.Infrastructure.Persistence;
 
 namespace Proc.Infrastructure.Identity;
@@ -17,6 +18,8 @@ public sealed class AuthService : IAuthService
     private readonly ProcDbContext _db;
     private readonly JwtTokenService _tokens;
     private readonly IAccessLog _accessLog;
+    private readonly IAccessPolicyProvider _policy;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Tạo dịch vụ đăng nhập.
@@ -25,13 +28,18 @@ public sealed class AuthService : IAuthService
     /// <param name="db">DbContext.</param>
     /// <param name="tokens">Dịch vụ cấp JWT.</param>
     /// <param name="accessLog">Nhật ký truy cập (design.md mục 9.3).</param>
+    /// <param name="policy">Cấu hình truy cập CFG: số lần sai, phút khóa, hạn phiên (lát QT7).</param>
+    /// <param name="clock">Đồng hồ.</param>
     public AuthService(
-        UserManager<AppUser> userManager, ProcDbContext db, JwtTokenService tokens, IAccessLog accessLog)
+        UserManager<AppUser> userManager, ProcDbContext db, JwtTokenService tokens, IAccessLog accessLog, IAccessPolicyProvider policy,
+        IClock clock)
     {
         _userManager = userManager;
         _db = db;
         _tokens = tokens;
         _accessLog = accessLog;
+        _policy = policy;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -53,15 +61,17 @@ public sealed class AuthService : IAuthService
             return new LoginOutcome(null, LoginFailure.LockedOut, user.LockoutEnd);
         }
 
+        var policy = await _policy.GetAsync(cancellationToken);
         if (!await _userManager.CheckPasswordAsync(user, request.Password))
         {
-            // Tăng số lần sai; đủ MaxFailedAccessAttempts (5) thì Identity tự khóa tạm (cấu hình ở DependencyInjection).
-            await WithConcurrencyRetryAsync(user, () => _userManager.AccessFailedAsync(user));
+            // Tăng số lần sai; đủ số lần của cấu hình truy cập CFG (mặc định 5) thì khóa tạm số phút của CFG (lát QT7 – thay số cố định của
+            // Identity để đổi được trên màn hình).
+            await WithConcurrencyRetryAsync(user, () => RegisterFailedAsync(user, policy));
             if (await _userManager.IsLockedOutAsync(user))
             {
                 await LogAsync(AccessEvent.LockedOut, user.Id, user.UserName,
-                    $"Nhập sai mật khẩu {DependencyInjection.MaxFailedLoginAttempts} lần liên tiếp, tạm ngưng đăng nhập " +
-                    $"{DependencyInjection.LockoutDuration.TotalMinutes:0} phút.", cancellationToken);
+                    $"Nhập sai mật khẩu {policy.MaxFailedLogins} lần liên tiếp, tạm ngưng đăng nhập {policy.LockoutMinutes} phút.",
+                    cancellationToken);
                 return new LoginOutcome(null, LoginFailure.LockedOut, user.LockoutEnd);
             }
 
@@ -85,7 +95,7 @@ public sealed class AuthService : IAuthService
             return new LoginOutcome(null, LoginFailure.NoCompany);
         }
 
-        var (token, expiresAt) = _tokens.CreateToken(user);
+        var (token, expiresAt) = _tokens.CreateToken(user, policy.SessionMinutes);
         await LogAsync(AccessEvent.Login, user.Id, user.UserName, null, cancellationToken);
         return new LoginOutcome(new LoginResult(token, expiresAt, info), null);
     }
@@ -99,21 +109,28 @@ public sealed class AuthService : IAuthService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<string>> ChangePasswordAsync(
+    public async Task<ChangePasswordOutcome> ChangePasswordAsync(
         Guid userId,
         ChangePasswordRequest request,
         CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
-        if (user is null || !user.IsActive) return ["Tài khoản không còn hiệu lực."];
+        if (user is null || !user.IsActive) return new ChangePasswordOutcome(["Tài khoản không còn hiệu lực."], null);
 
-        // Identity kiểm tra mật khẩu hiện tại và quy tắc mật khẩu mới; thông báo lỗi đã dịch ở VietnameseIdentityErrorDescriber.
+        // Identity kiểm tra mật khẩu hiện tại và quy tắc mật khẩu mới (gồm PolicyPasswordValidator – lát QT7); thông báo lỗi đã dịch ở
+        // VietnameseIdentityErrorDescriber. Đổi thành công thì Identity đổi luôn mã bảo mật → mọi token cũ của người này bị từ chối.
         var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
         List<string> errors = result.Succeeded ? [] : result.Errors.Select(e => e.Description).ToList();
         await LogAsync(
             errors.Count == 0 ? AccessEvent.PasswordChanged : AccessEvent.PasswordChangeFailed,
             user.Id, user.UserName, errors.Count == 0 ? null : string.Join(" ", errors), cancellationToken);
-        return errors;
+        if (errors.Count > 0) return new ChangePasswordOutcome(errors, null);
+
+        var info = await BuildUserInfoAsync(user, cancellationToken);
+        if (info is null) return new ChangePasswordOutcome([], null);
+        var policy = await _policy.GetAsync(cancellationToken);
+        var (token, expiresAt) = _tokens.CreateToken(user, policy.SessionMinutes);
+        return new ChangePasswordOutcome([], new LoginResult(token, expiresAt, info));
     }
 
     /// <inheritdoc />
@@ -151,6 +168,23 @@ public sealed class AuthService : IAuthService
             // Đọc lại để có ConcurrencyStamp mới và bỏ trạng thái "đã sửa" còn treo trên DbContext.
             await _db.Entry(user).ReloadAsync();
         }
+    }
+
+    /// <summary>
+    /// Ghi một lần sai mật khẩu theo cấu hình truy cập: đủ <see cref="AccessPolicySnapshot.MaxFailedLogins"/> lần liên tiếp thì khóa tới
+    /// bây giờ + <see cref="AccessPolicySnapshot.LockoutMinutes"/> phút và đếm lại từ 0 (như Identity làm với số cố định). Ví dụ 5 lần, 10 phút:
+    /// sai lần thứ 5 lúc 09:00 → khóa tới 09:10.
+    /// </summary>
+    private async Task<IdentityResult> RegisterFailedAsync(AppUser user, AccessPolicySnapshot policy)
+    {
+        user.AccessFailedCount++;
+        if (user.AccessFailedCount >= policy.MaxFailedLogins)
+        {
+            user.LockoutEnd = _clock.UtcNow.AddMinutes(policy.LockoutMinutes);
+            user.AccessFailedCount = 0;
+        }
+
+        return await _userManager.UpdateAsync(user);
     }
 
     /// <summary>Ghi nhật ký truy cập (đăng nhập, đăng xuất, sai mật khẩu…).</summary>

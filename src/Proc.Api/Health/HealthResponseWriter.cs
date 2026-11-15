@@ -4,7 +4,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Proc.Api.Health;
 
 /// <summary>
-/// Ghi kết quả health check dưới dạng JSON gọn: trạng thái chung, phiên bản và từng mục kiểm tra.
+/// Ghi kết quả health check dưới dạng JSON gọn: trạng thái chung, phiên bản và từng mục kiểm tra. Lát QT7: người chưa đăng nhập (giám sát, bộ
+/// thực thi, trang chủ) chỉ nhận trạng thái + phiên bản; từng mục kiểm tra chỉ trả cho người có quyền xem vận hành.
 /// </summary>
 public static class HealthResponseWriter
 {
@@ -16,15 +17,16 @@ public static class HealthResponseWriter
     /// <param name="context">HTTP context của request.</param>
     /// <param name="report">Kết quả các health check.</param>
     /// <param name="version">Số phiên bản ứng dụng (từ Directory.Build.props).</param>
+    /// <param name="detailed">true khi người gọi được xem từng mục kiểm tra; false thì <c>checks</c> rỗng.</param>
     /// <returns>Task hoàn tất khi đã ghi xong.</returns>
-    public static Task WriteAsync(HttpContext context, HealthReport report, string version)
+    public static Task WriteAsync(HttpContext context, HealthReport report, string version, bool detailed)
     {
         context.Response.ContentType = "application/json; charset=utf-8";
 
         var body = new HealthResponse(
             report.Status.ToString(),
             version,
-            report.Entries.Select(e => new HealthEntryResponse(
+            !detailed ? [] : report.Entries.Select(e => new HealthEntryResponse(
                 e.Key,
                 e.Value.Status.ToString(),
                 Math.Round(e.Value.Duration.TotalMilliseconds, 1),
