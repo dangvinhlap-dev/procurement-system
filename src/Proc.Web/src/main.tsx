@@ -11,12 +11,16 @@ import { AuthProvider } from './auth/AuthProvider'
 import { renderRequiredMark } from './components/RequiredMark/requiredMark'
 import './index.css'
 import { router } from './router'
+import { installClientErrorReporting } from './app/clientErrorReporter'
 // Phong cách ERP desktop cổ điển cho toàn ứng dụng – nạp sau CSS của các component dùng chung (đi theo router) để ghi đè được.
 import './classic/classic-app.css'
 import { appTheme } from './theme'
 
 // Ngày giờ hiển thị tiếng Việt (dd/MM/yyyy) – CLAUDE.md mục 5.
 dayjs.locale('vi')
+
+// Lỗi JavaScript không ai bắt gửi về nhật ký lỗi của máy chủ (màn hình ERR – lát QT2).
+installClientErrorReporting()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

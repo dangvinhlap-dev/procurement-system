@@ -3,6 +3,7 @@ import { ConfigProvider } from 'antd'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { NavigationType, UNSAFE_LocationContext, UNSAFE_RouteContext, useRoutes, type Location, type RouteObject } from 'react-router'
 import { MAX_SCREEN_TABS, TabActiveContext, TabLabelContext, UnsavedContext } from '../../app/screenTabs'
+import { ErrorBoundary } from '../../classic/ErrorBoundary'
 import { screenTabTitle, type ScreenTab } from './useScreenTabsState'
 
 interface ScreenTabBarProps {
@@ -116,7 +117,10 @@ export const ScreenTabPanel = memo(function ScreenTabPanel({ tab, active, routes
           <ConfigProvider getPopupContainer={getPopupContainer}>
             <UNSAFE_LocationContext value={locationContext}>
               <UNSAFE_RouteContext value={ROOT_ROUTE_CONTEXT}>
-                <TabRoutes routes={routes} location={tab.location} />
+                {/* Lỗi giao diện của một thẻ chỉ làm hỏng thẻ đó (báo về nhật ký lỗi ERR – lát QT2); đổi trang trong thẻ thì thử vẽ lại. */}
+                <ErrorBoundary resetKey={tab.location.pathname}>
+                  <TabRoutes routes={routes} location={tab.location} />
+                </ErrorBoundary>
               </UNSAFE_RouteContext>
             </UNSAFE_LocationContext>
           </ConfigProvider>
