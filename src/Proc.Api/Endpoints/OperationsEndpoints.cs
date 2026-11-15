@@ -44,6 +44,19 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsBackupView)
             .RequireHeadOffice();
 
+        // Lịch sử sao lưu, "Sao lưu ngay" (lát QT3b). Không có API tải file sao lưu (Q5 – file chứa toàn bộ dữ liệu, chỉ lấy trên máy chủ).
+        ops.MapGet("/backup/runs", (DateOnly from, DateOnly to, IBackupService s, CancellationToken ct) => s.SearchAsync(from, to, ct))
+            .RequirePermission(Permissions.System.OpsBackupView)
+            .RequireHeadOffice();
+
+        ops.MapGet("/backup/runs/{id:guid}", (Guid id, IBackupService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsBackupView)
+            .RequireHeadOffice();
+
+        ops.MapPost("/backup/runs", (QueueBackupRequest request, IBackupService s, CancellationToken ct) => s.QueueAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsBackupRun)
+            .RequireHeadOffice();
+
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở PortalRateLimiting; xem và xử lý chỉ ở tổng công ty.
         ops.MapPost("/client-errors", ReportClientErrorAsync);

@@ -22,6 +22,32 @@ public sealed class BackupOptions
     /// được <c>archive_command</c>); lát QT3b cần tài khoản này để chạy <c>pg_basebackup</c>, <c>pg_dump</c>.
     /// </summary>
     public string? MaintenanceConnectionString { get; set; }
+
+    /// <summary>
+    /// Thư mục gốc chứa bản sao lưu (lát QT3b): các thư mục con <c>full</c>, <c>diff</c>, <c>dump</c>, <c>attachments</c> – nên ở ổ khác ổ dữ liệu
+    /// CSDL (B4). Đường dẫn tương đối tính từ ContentRoot (Program.cs). Bỏ trống = chưa khai: không chạy được sao lưu, màn hình BAK báo.
+    /// </summary>
+    public string? RootPath { get; set; }
+
+    /// <summary>
+    /// Nơi lưu thứ hai (NAS / thư mục mạng) – sau mỗi lần sao lưu xong, chép nguyên bản sang đây cùng đường dẫn tương đối. Không bắt buộc (B4).
+    /// </summary>
+    public string? SecondaryPath { get; set; }
+
+    /// <summary>
+    /// Thư mục công cụ PostgreSQL (<c>pg_basebackup</c>, <c>pg_dump</c>…), ví dụ thư mục <c>bin</c> của PostgreSQL 18. Bỏ trống thì tìm theo PATH,
+    /// rồi (Windows) thư mục PostgreSQL bản cao nhất trong Program Files.
+    /// </summary>
+    public string? PgBinPath { get; set; }
+
+    /// <summary>Thời gian tối đa một lệnh công cụ PostgreSQL được chạy (phút) – quá thì dừng lệnh, ghi lỗi.</summary>
+    public int ToolTimeoutMinutes { get; set; } = 360;
+
+    /// <summary>
+    /// Bật bộ chạy nền xử lý hàng chờ sao lưu. Môi trường Testing tắt để test tự gọi <see cref="IBackupExecutor.ProcessQueueAsync"/> (không chạy
+    /// đua với dịch vụ nền).
+    /// </summary>
+    public bool WorkerEnabled { get; set; } = true;
 }
 
 /// <summary>Trạng thái lưu WAL (mã tiếng Anh dùng chung giữa máy chủ và giao diện).</summary>

@@ -124,3 +124,33 @@ public sealed class AccessLogConfiguration : IEntityTypeConfiguration<AccessLog>
         builder.HasIndex(x => new { x.CompanyId, x.OccurredAt });
     }
 }
+
+/// <summary>
+/// Bảng BackupRun – lịch sử sao lưu (lát QT3b). Không chỉ thêm: bộ chạy cập nhật trạng thái, dọn theo hạn giữ ghi lúc dọn; dòng không xóa
+/// (giữ lịch sử đã từng có bản nào).
+/// </summary>
+public sealed class BackupRunConfiguration : IEntityTypeConfiguration<Proc.Domain.Operations.BackupRun>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<Proc.Domain.Operations.BackupRun> builder)
+    {
+        builder.ToTable("BackupRun");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Trigger).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.RequestedByName).HasMaxLength(256);
+        builder.Property(x => x.RelativePath).HasMaxLength(Proc.Domain.Operations.BackupRun.PathMaxLength);
+        builder.Property(x => x.Sha256).HasMaxLength(64);
+        builder.Property(x => x.StartWalFile).HasMaxLength(Proc.Domain.Operations.BackupRun.WalFileLength);
+        builder.Property(x => x.VerifyMessage).HasMaxLength(Proc.Domain.Operations.BackupRun.MessageMaxLength);
+        builder.Property(x => x.SecondaryMessage).HasMaxLength(Proc.Domain.Operations.BackupRun.MessageMaxLength);
+        builder.Property(x => x.ErrorMessage).HasMaxLength(Proc.Domain.Operations.BackupRun.MessageMaxLength);
+        builder.Property(x => x.Note).HasMaxLength(Proc.Domain.Operations.BackupRun.MessageMaxLength);
+        builder.Ignore(x => x.IsUsable);
+        builder.HasIndex(x => x.QueuedAt);
+        builder.HasIndex(x => new { x.Status, x.QueuedAt });
+        // Một lượt lịch chỉ sinh một lần mỗi kiểu (lát QT3b-2) – nhiều tiến trình cùng đặt lịch thì lần sau vi phạm khóa, không sao lưu trùng.
+        builder.HasIndex(x => new { x.Kind, x.ScheduledDate }).IsUnique().HasFilter("\"ScheduledDate\" IS NOT NULL");
+    }
+}

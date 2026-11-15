@@ -985,6 +985,23 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT3b đang làm 15/11/2026 – nhánh `feature/qt3b-sao-luu`** (người dùng "làm tiếp" sau QT3a; đường dẫn ổ sao lưu / NAS là cấu hình
+`Backup:RootPath` / `Backup:SecondaryPath`, khai lúc cài). Chia 3 bước:
+- **QT3b-1 xong (lõi máy chủ)**: bảng `BackupRun` + 4 cột tham số `CompanyParameter` (BackupFullDay 7, BackupTime 01:00, BackupKeepWeeks 4,
+  DumpKeepDays 14) – migration `V0_33_0_SaoLuu`; `PgToolRunner` / `PgToolArgs` (ArgumentList, PGPASSWORD, quá giờ `Backup:ToolTimeoutMinutes`,
+  tìm công cụ: `Backup:PgBinPath` → PATH → Program Files\PostgreSQL\<bản cao nhất>\bin); `BackupExecutor` Full / Diff (`pg_basebackup -Fp -X
+  stream`, Diff `--incremental` gốc Full gần nhất, `pg_verifybackup`, SHA256 của backup_manifest, file WAL đầu từ backup_label), Dump (`pg_dump
+  -Fc` → `.partial` rồi đổi tên, `pg_restore --list`, SHA256), Đính kèm (chép bổ sung + đối chiếu, chép thẳng sang nơi thứ hai), chép nơi thứ hai
+  có đối chiếu; khóa `pg_try_advisory_lock` trên kết nối **không pool** (kết nối trong pool giữ khóa phiên – lỗi gặp khi test); dịch vụ nền
+  `BackupBackgroundService` (Testing tắt qua `Backup:WorkerEnabled` ở ProcApiFactory), lần "Đang chạy" của tiến trình cũ ghi lỗi khi khởi động;
+  API `GET/POST /api/ops/v1/backup/runs`, `GET …/runs/{id}`; quyền `System.OpsBackup.Run`; nhật ký vận hành `BackupQueued` / `BackupFinished`.
+  **Phát hiện**: công cụ PostgreSQL trên Windows đọc tham số theo bảng mã ANSI – đường dẫn có dấu tiếng Việt bị hỏng → chạy công cụ với thư mục
+  làm việc = thư mục sao lưu, tham số chỉ là tên tương đối không dấu (chặn tham số ngoài ASCII). Test: domain `BackupRunTests` 4, tích hợp
+  `BackupTests` 6 (pg_dump thật vào thư mục "proc test sao lưu"; Full thiếu `ConnectionStrings:Maintenance` báo lỗi rõ – máy dev `proc` không có
+  REPLICATION nên Full / Diff thật chưa chạy thử). `dotnet test` 745/745.
+- QT3b-2 (chưa): lịch B1 + tham số trên màn hình tham số, dọn bản quá hạn + WAL cũ (`pg_archivecleanup`), cảnh báo ổ < 15%, thông báo khi lỗi.
+- QT3b-3 (chưa): giao diện BAK (tab Lịch sử / Lưu WAL / Lịch và thời hạn giữ / Nơi lưu, nút "Sao lưu ngay"), e2e, tài liệu.
+
 **QT3a xong 15/11/2026 (chưa phát hành – bản 0.33.0)** – người dùng "làm tiếp" sau QT2. Nhánh `feature/qt3a-luu-wal` (đã merge): lưu WAL liên tục.
 Script `deploy/windows/qt-enable-wal.ps1` (có trong gói `tools\`; `-DryRun`, `-Restart`): `ALTER SYSTEM` wal_level / archive_mode /
 archive_timeout 300 / summarize_wal / wal_summary_keep_time 35d / archive_command (không ghi đè, chép `.tmp` rồi đổi tên – đã thử lệnh cmd trên thư

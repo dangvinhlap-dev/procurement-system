@@ -64,8 +64,17 @@ builder.Services.AddOptions<Proc.Application.Operations.BackupOptions>()
     {
         if (!string.IsNullOrWhiteSpace(o.WalArchivePath))
             o.WalArchivePath = Path.GetFullPath(o.WalArchivePath, builder.Environment.ContentRootPath);
+        // Lát QT3b: thư mục sao lưu và nơi thứ hai – tương đối thì tính từ ContentRoot như thư mục đính kèm.
+        if (!string.IsNullOrWhiteSpace(o.RootPath))
+            o.RootPath = Path.GetFullPath(o.RootPath, builder.Environment.ContentRootPath);
+        if (!string.IsNullOrWhiteSpace(o.SecondaryPath))
+            o.SecondaryPath = Path.GetFullPath(o.SecondaryPath, builder.Environment.ContentRootPath);
         o.MaintenanceConnectionString = builder.Configuration.GetConnectionString("Maintenance");
-    });
+    })
+    .Validate(o => o.ToolTimeoutMinutes is >= 1 and <= 24 * 60, "Backup:ToolTimeoutMinutes phải từ 1 đến 1440 phút.")
+    .ValidateOnStart();
+// Bộ chạy hàng chờ sao lưu (lát QT3b) – Testing tắt bằng Backup:WorkerEnabled = false.
+builder.Services.AddHostedService<Proc.Infrastructure.Operations.BackupBackgroundService>();
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
