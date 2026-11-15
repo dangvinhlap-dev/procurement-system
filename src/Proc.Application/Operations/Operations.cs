@@ -88,6 +88,24 @@ public static class OperationKinds
 
     /// <summary>Xác nhận việc nguy hiểm không đạt – sai mật khẩu nhập lại (Q6).</summary>
     public const string DangerConfirmFailed = "DangerConfirmFailed";
+
+    /// <summary>Bật / tắt chế độ bảo trì (lát QT5).</summary>
+    public const string MaintenanceModeChanged = "MaintenanceModeChanged";
+
+    /// <summary>Khai / sửa môi trường bộ thực thi (lát QT5).</summary>
+    public const string AgentEnvironmentSaved = "AgentEnvironmentSaved";
+
+    /// <summary>Tạo khóa bộ thực thi mới (lát QT5 – Q6).</summary>
+    public const string AgentKeyCreated = "AgentKeyCreated";
+
+    /// <summary>Ra lệnh cho bộ thực thi (lát QT5).</summary>
+    public const string AgentCommandQueued = "AgentCommandQueued";
+
+    /// <summary>Lệnh bộ thực thi kết thúc: xong, lỗi, hết hạn, quá giờ (lát QT5).</summary>
+    public const string AgentCommandFinished = "AgentCommandFinished";
+
+    /// <summary>Hủy lệnh bộ thực thi còn chờ (lát QT5).</summary>
+    public const string AgentCommandCancelled = "AgentCommandCancelled";
 }
 
 /// <summary>
@@ -207,7 +225,8 @@ public interface IOperationsAccess
 /// <summary>Môi trường và cảnh báo cấu hình hiện trên dải màu mọi màn hình (kể cả trang đăng nhập – không chứa bí mật).</summary>
 /// <param name="Environment">Dev / Test / Prod; None = máy chưa khai <c>App:Environment</c>.</param>
 /// <param name="Warning">Cảnh báo cấu hình (chưa khai môi trường, TEST chưa khai hộp thư test…); null = ổn.</param>
-public sealed record EnvironmentStatusDto(string Environment, string? Warning);
+/// <param name="Maintenance">Chế độ bảo trì đang bật (lát QT5 – dải đỏ "ĐANG BẢO TRÌ"); null = tắt. Trường thêm sau – API v1 chỉ thêm, không bỏ.</param>
+public sealed record EnvironmentStatusDto(string Environment, string? Warning, MaintenanceNoticeDto? Maintenance = null);
 
 /// <summary>Đọc môi trường và cảnh báo cấu hình của máy đang chạy.</summary>
 public interface IEnvironmentStatus

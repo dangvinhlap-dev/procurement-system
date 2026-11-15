@@ -985,6 +985,22 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT5 đang làm 15/11/2026 – nhánh `feature/qt5-bo-thuc-thi`** (người dùng "làm tiếp" sau menu Quản trị hệ thống; bản 0.34.0). Chia 4 bước:
+- **QT5-1 + QT5-2 xong (máy chủ)**: chế độ bảo trì – bảng một dòng `MaintenanceModeState`, `IMaintenanceMode` singleton đệm 5 giây,
+  `MaintenanceModeMiddleware` (sau CompanyScope): bật thì mọi `/api` trả 503 (`code: maintenance`, câu thông báo, Retry-After 60) trừ người có
+  quyền `System.Ops*` tại công ty đang làm, `/api/auth`, API môi trường, API bộ thực thi; `/health`, file giao diện không chặn; API
+  `GET|PUT /api/ops/v1/maintenance-mode` (bắt buộc lý do ≥ 5 ký tự, quyền mới `System.OpsMaintenanceMode.Manage`); API môi trường thêm trường
+  `maintenance` (câu thông báo, giờ bật). Bộ thực thi – `AgentEnvironment` (Dev / Test / Prod mỗi mã một dòng, địa chỉ, băm SHA256 khóa `qta_…`
+  + 4 ký tự cuối, lần liên lạc, phiên bản, tên máy), `AgentCommand` (Ping; Chờ / Đang chạy / Xong / Lỗi / Hết hạn / Đã hủy; hạn lấy 1 giờ; chạy
+  quá `Agent:RunningTimeoutHours` (6) thì Lỗi; chỉ mục duy nhất một lệnh Đang chạy mỗi môi trường + khóa dòng `FOR UPDATE` khi giao lệnh);
+  quyền `System.OpsAgent.View` / `.Manage`; API quản trị `/api/ops/v1/agent-admin/environments|…/{id}/key|commands|commands/{id}/cancel`
+  (tạo khóa xác nhận Q6 "TẠO KHÓA"); cổng bộ thực thi `GET /api/ops/v1/agent/commands` (200 lệnh / 204 không việc, `peek=true` chỉ xem),
+  `POST …/commands/{id}/result`, xác thực header `X-Ops-Agent-Key` (sai / cũ / ngừng dùng → 401); nhật ký vận hành 6 việc mới. Migration
+  `V0_34_0_BoThucThi`. Test: domain `AgentCommandTests` 4, tích hợp `AgentTests` 3, `MaintenanceModeTests` 1. Build 0 cảnh báo, `dotnet test`
+  770/770.
+- Còn: **QT5-3** script `qt-agent.ps1` + `qt-agent-install.ps1` (chạy thử với API dev), **QT5-4** giao diện AGT + nút bảo trì trên SYS + dải đỏ +
+  câu báo 503, tài liệu (design.md 21.14, ui-style, deploy-windows 4d, ke-hoach-qt).
+
 **Menu "Quản trị hệ thống" xong 15/11/2026 (chưa phát hành – sau 0.33.0)** – người dùng: "tạo một tab riêng tên là: Quản trị hệ thống, các chức
 năng quản trị hệ thống bạn phải đặt vào tab đó, không để lộn xộn trong tab hệ thống". Nhánh `feature/menu-quan-tri-he-thong` (đã merge): module
 menu mới `admin` "Quản trị hệ thống" (Alt+Q, sau Hệ thống – thanh menu và cây điều hướng): Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy

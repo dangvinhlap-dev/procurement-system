@@ -293,6 +293,15 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Lịch sử bảo trì CSDL – VACUUM, REINDEX, ngắt phiên (lát QT4, màn hình DBM).</summary>
     public DbSet<Proc.Domain.Operations.MaintenanceRun> MaintenanceRuns => Set<Proc.Domain.Operations.MaintenanceRun>();
 
+    /// <summary>Chế độ bảo trì – một dòng (lát QT5).</summary>
+    public DbSet<Proc.Domain.Operations.MaintenanceModeState> MaintenanceModes => Set<Proc.Domain.Operations.MaintenanceModeState>();
+
+    /// <summary>Môi trường có bộ thực thi (lát QT5).</summary>
+    public DbSet<Proc.Domain.Operations.AgentEnvironment> AgentEnvironments => Set<Proc.Domain.Operations.AgentEnvironment>();
+
+    /// <summary>Lệnh bộ thực thi (lát QT5).</summary>
+    public DbSet<Proc.Domain.Operations.AgentCommand> AgentCommands => Set<Proc.Domain.Operations.AgentCommand>();
+
     /// <summary>Lô nhập dữ liệu mua lịch sử (design.md mục 18.1).</summary>
     public DbSet<Proc.Domain.Analysis.PurchaseHistoryBatch> PurchaseHistoryBatches => Set<Proc.Domain.Analysis.PurchaseHistoryBatch>();
 

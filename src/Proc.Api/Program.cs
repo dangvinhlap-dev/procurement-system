@@ -81,6 +81,12 @@ builder.Services.AddOptions<Proc.Application.Operations.DbMaintenanceOptions>()
     .Validate(o => o.CommandTimeoutMinutes is >= 1 and <= 24 * 60, "DbMaintenance:CommandTimeoutMinutes phải từ 1 đến 1440 phút.")
     .ValidateOnStart();
 builder.Services.AddHostedService<Proc.Infrastructure.Operations.DbMaintenanceBackgroundService>();
+// Bộ thực thi (lát QT5): hạn chạy lệnh, số phút coi là đang liên lạc.
+builder.Services.AddOptions<Proc.Application.Operations.AgentOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.AgentOptions.Section))
+    .Validate(o => o.RunningTimeoutHours is >= 1 and <= 72 && o.OnlineMinutes is >= 1 and <= 60,
+        "Agent:RunningTimeoutHours phải từ 1 đến 72, Agent:OnlineMinutes từ 1 đến 60.")
+    .ValidateOnStart();
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
@@ -224,6 +230,8 @@ app.UseAuthorization();
 // Sau xác thực: nạp phạm vi (công ty từ X-Company-Id, quyền, kho, nhóm hàng) trước khi vào endpoint.
 app.UseMiddleware<CompanyScopeMiddleware>();
 app.UseMiddleware<ExpectedVersionMiddleware>();
+// Chế độ bảo trì (lát QT5): sau khi nạp phạm vi để biết người có quyền quản trị vận hành – họ vẫn vào được.
+app.UseMiddleware<MaintenanceModeMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
