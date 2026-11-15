@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
-import { ADMIN, loginViaApi, openInCurrentTab } from './helpers.ts'
+import { ADMIN, loginViaApi, openByCommand } from './helpers.ts'
 
 /**
  * Màn hình Nhóm hàng CAT – cây tối đa 4 cấp (lát N4b; design.md mục 5.7 N4-1…N4-9, bản vẽ duyệt 14/11/2026): cột Cấp có ô số màu, nút
@@ -30,7 +30,7 @@ test('CAT: thêm nhóm con đến cấp 4, cấp 4 khóa thêm nhóm con, đư�
 
   await loginViaApi(page)
   await page.goto('/')
-  await openInCurrentTab(page, 'CAT')
+  await openByCommand(page, 'CAT')
   await expect(page.getByRole('heading', { name: 'Nhóm hàng' })).toBeVisible()
   await page.getByLabel('Tìm kiếm', { exact: true }).fill(tag)
   const row = (code: string) => page.locator('.data-grid-row', { hasText: code })
@@ -90,7 +90,7 @@ test('Hàng hóa: ô Nhóm hàng chỉ chọn được nhóm cấp 4 (N4-5)', as
 
   await loginViaApi(page)
   await page.goto('/')
-  await openInCurrentTab(page, 'ITEM')
+  await openByCommand(page, 'ITEM')
   await page.getByRole('button', { name: 'Tạo mới' }).click()
   const drawer = page.locator('.detail-drawer')
   await expect(drawer).toContainText('Chỉ chọn nhóm cấp 4 – Chủng loại.')

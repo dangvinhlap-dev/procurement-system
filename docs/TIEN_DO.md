@@ -1000,6 +1000,13 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - Còn: **QT6-3** script `qt-agent.ps1` 1.1.0 (4 lệnh mới, `qt-enable-wal.ps1` cấp `GRANT proc TO proc_maint`), **QT6-4** màn hình RST + tài liệu
   (design.md 21.15, ui-style, deploy-windows, ke-hoach-qt).
 
+**Bỏ thẻ màn hình 15/11/2026 – nhánh `fix/bo-the-man-hinh`** (người dùng: "các lát trước tôi có yêu cầu bạn cho mở tối đa 6 tab trong một màn
+hình. Hãy gỡ bỏ trả lại tình trạng cũ"): AppShell về một `Outlet` (bọc `ErrorBoundary` theo đường dẫn); xóa `ScreenTabs.tsx`,
+`useScreenTabsState.ts`, `app/screenTabs.ts`, CSS thanh thẻ, e2e `screen-tabs.spec.ts`; cây điều hướng, menu, ô lệnh, ô số chứng từ, nút Quay lại
+dùng `navigate` như trước; bỏ Alt+1…6, Shift+bấm, `/n` `/o`, hỏi "Đổi công ty đang làm việc". **Giữ** hỏi lại khi còn phiếu chưa lưu (rời trang,
+đổi công ty, đăng xuất, F5) – `useUnsavedGuard` gọn lại, `useUnsavedCheck` chuyển sang `app/unsaved.ts`. e2e: helper `openByCommand` (chọn đúng
+dòng mã trong ô lệnh), `mainContent`, bỏ bản sao helper trong 7 file. Tài liệu: ui-style 8a, 5k; design.md 17 (đoạn thẻ màn hình), 21.10.
+
 **QT5 xong 15/11/2026 (chưa phát hành – bản 0.34.0) – nhánh `feature/qt5-bo-thuc-thi`** (người dùng "làm tiếp" sau menu Quản trị hệ thống; bản 0.34.0). Chia 4 bước:
 - **QT5-1 + QT5-2 xong (máy chủ)**: chế độ bảo trì – bảng một dòng `MaintenanceModeState`, `IMaintenanceMode` singleton đệm 5 giây,
   `MaintenanceModeMiddleware` (sau CompanyScope): bật thì mọi `/api` trả 503 (`code: maintenance`, câu thông báo, Retry-After 60) trừ người có

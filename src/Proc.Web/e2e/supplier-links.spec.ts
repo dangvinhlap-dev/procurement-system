@@ -1,5 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { ADMIN, loginViaApi, openInCurrentTab } from './helpers.ts'
+import { expect, test, type APIRequestContext } from '@playwright/test'
+import { ADMIN, loginViaApi, openByCommand } from './helpers.ts'
 import { approveSupplier } from './inventoryHelpers.ts'
 
 /**
@@ -22,11 +22,6 @@ async function adminApi(request: APIRequestContext) {
       return (await response.json()) as T
     },
   }
-}
-
-/** Mở màn hình bằng cách gõ mã vào ô lệnh rồi Enter. */
-async function openByCommand(page: Page, code: string) {
-  await openInCurrentTab(page, code)
 }
 
 test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công ty, xem NCC từ ngăn kéo hàng hóa, dòng PO/PR lấy ĐVT mua', async ({ page, request }) => {

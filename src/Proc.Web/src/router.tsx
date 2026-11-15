@@ -233,7 +233,7 @@ const drawerPages = [
   { code: 'ERR', path: '/he-thong/nhat-ky-loi/:id', element: <ErrorLogListPage /> },
 ]
 
-/** Các trang nằm trong AppShell – dùng chung cho bộ định tuyến và cho từng thẻ màn hình (tối đa 6 thẻ). */
+/** Các trang nằm trong AppShell. */
 const shellRoutes: RouteObject[] = [
   ...screens.map((s) => ({
     path: s.path,
@@ -261,8 +261,8 @@ const shellRoutes: RouteObject[] = [
 ]
 
 /**
- * Gắn trang lỗi cho mỗi tuyến gốc (lát QT2): lỗi khi vẽ trang ngoài thẻ màn hình được gửi về nhật ký lỗi, hiện mã theo dõi thay cho trang lỗi
- * mặc định tiếng Anh của react-router. Trang trong thẻ màn hình đã có ErrorBoundary riêng từng thẻ (ScreenTabs).
+ * Gắn trang lỗi cho mỗi tuyến gốc (lát QT2): lỗi khi vẽ trang ngoài vùng nội dung của AppShell được gửi về nhật ký lỗi, hiện mã theo dõi thay
+ * cho trang lỗi mặc định tiếng Anh của react-router. Trang trong AppShell đã có ErrorBoundary bọc vùng nội dung.
  * @param routes Tuyến gốc.
  * @returns Tuyến gốc có errorElement.
  */
@@ -329,10 +329,9 @@ export const router = createBrowserRouter(withErrorElement([
   {
     element: (
       <RequireAuth>
-        <AppShell routes={shellRoutes} />
+        <AppShell />
       </RequireAuth>
     ),
-    // Khai báo cho bộ định tuyến nhận đường dẫn; trang thật do từng thẻ màn hình của AppShell vẽ (useRoutes theo đường dẫn của thẻ).
     children: shellRoutes,
   },
 ]))
