@@ -16,6 +16,8 @@ export const Permission = {
   ErrorLogView: 'System.OpsErrorLog.View',
   /** Đổi trạng thái nhóm lỗi, gây lỗi thử; nhận thông báo lỗi mới (lát QT2). */
   ErrorLogManage: 'System.OpsErrorLog.Manage',
+  /** Xem sao lưu BAK, tình trạng lưu WAL – chỉ ở tổng công ty (lát QT3a). */
+  BackupView: 'System.OpsBackup.View',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

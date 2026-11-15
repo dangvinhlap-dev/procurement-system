@@ -218,6 +218,9 @@ public static class WalArchiveEvaluator
             return new(Parameters, "archive_command", "(không xem được)", "Warning",
                 "Tài khoản đang đọc không có quyền pg_read_all_settings – khai ConnectionStrings:Maintenance (tài khoản proc_maint).");
         if (!string.IsNullOrWhiteSpace(library)) return new(Parameters, "archive_library", library, "Ok", null);
+        // PostgreSQL hiện "(disabled)" thay cho lệnh khi archive_mode tắt.
+        if (!modeOn && command == "(disabled)")
+            return new(Parameters, "archive_command", command, "Neutral", "PostgreSQL ẩn lệnh khi archive_mode tắt.");
         if (string.IsNullOrWhiteSpace(command))
             return new(Parameters, "archive_command", "(trống)", modeOn ? "Error" : "Neutral", modeOn ? "Bật lưu mà không có lệnh chép – WAL dồn trong pg_wal." : null);
         return new(Parameters, "archive_command", command, "Ok", "Lệnh không ghi đè file đã có trong thư mục WAL.");

@@ -117,6 +117,8 @@ public class WalArchiveTests
         Assert.Equal(("NotEnabled", "Error"), StateOf(off, Stats(), env: AppEnvironments.Prod));
         Assert.Equal(("NotEnabled", "Neutral"), StateOf(off, Stats(), env: AppEnvironments.Dev));
         Assert.Equal(("NotEnabled", "Error"), StateOf(Settings(level: "minimal"), Stats(), env: AppEnvironments.Test));
+        // archive_mode tắt thì PostgreSQL hiện "(disabled)" thay lệnh – không phải lỗi của lệnh.
+        Assert.Equal(("(disabled)", "Neutral"), Pick(Evaluate(Settings(mode: "off", command: "(disabled)"), Stats(), AppEnvironments.Prod), "archive_command"));
 
         var pending = Settings(mode: "off", modePending: true);
         var result = Evaluate(pending, Stats(), AppEnvironments.Prod);

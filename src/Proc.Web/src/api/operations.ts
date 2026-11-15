@@ -63,6 +63,34 @@ export function useSystemOverview() {
   })
 }
 
+/** Trạng thái lưu WAL (khớp WalArchiveStates máy chủ – lát QT3a). */
+export type WalArchiveState = 'NotEnabled' | 'PendingRestart' | 'Running' | 'Lagging' | 'Failing'
+
+/** Tình trạng lưu WAL của máy chủ CSDL (màn hình BAK). */
+export interface WalArchiveStatus {
+  state: WalArchiveState
+  stateLabel: string
+  status: OverviewStatus
+  /** Một câu tóm tắt: lần chép cuối, độ trễ, việc cần làm. */
+  summary: string
+  checkedAt: string
+  lastArchivedAt: string | null
+  /** Giây trễ khi còn file WAL đầy chờ chép; 0 = không chờ; null = không tính được. */
+  lagSeconds: number | null
+  /** Tham số PostgreSQL, thống kê chép, nơi lưu – cùng dạng dòng bảng SYS. */
+  rows: SystemOverviewRow[]
+}
+
+/** Tình trạng lưu WAL – chỉ ở tổng công ty, quyền System.OpsBackup.View; bấm "Làm mới" để lấy lại. */
+export function useWalArchiveStatus() {
+  const companyId = useAuth().workingCompany?.id ?? ''
+  return useQuery({
+    queryKey: ['ops', companyId, 'wal-status'],
+    queryFn: () => apiFetch<WalArchiveStatus>('/api/ops/v1/backup/wal-status'),
+    retry: false,
+  })
+}
+
 /** Kết quả thao tác vận hành. */
 export type OperationResult = 'Succeeded' | 'Failed' | 'Info'
 
