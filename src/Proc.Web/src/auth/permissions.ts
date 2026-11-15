@@ -30,6 +30,10 @@ export const Permission = {
   AgentView: 'System.OpsAgent.View',
   /** Khai môi trường, tạo khóa (xác nhận Q6), ra lệnh, hủy lệnh chờ (lát QT5). */
   AgentManage: 'System.OpsAgent.Manage',
+  /** Xem phục hồi RST: lịch sử, kế hoạch, bảng so sánh – chỉ ở tổng công ty (lát QT6). */
+  RestoreView: 'System.OpsRestore.View',
+  /** Khôi phục, bỏ bản khôi phục, hoán đổi (xác nhận Q6 "KHÔI PHỤC") (lát QT6). */
+  RestoreRun: 'System.OpsRestore.Run',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

@@ -175,12 +175,24 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
 ## 8.9a Bộ thực thi (AGT) và chế độ bảo trì
 
 - **Bộ thực thi** là chương trình nhỏ trên từng máy chủ (TEST, PROD) tự hỏi phần mềm lấy lệnh mỗi phút để làm các việc cần quyền cao (cài bản mới,
-  khôi phục – các bản sau). Màn hình **Bộ thực thi**: tab **Môi trường** (đèn xanh "Đang liên lạc", vàng "Mất liên lạc"), **Khai môi trường…**,
+  khôi phục – mục 8.9b). Màn hình **Bộ thực thi**: tab **Môi trường** (đèn xanh "Đang liên lạc", vàng "Mất liên lạc"), **Khai môi trường…**,
   **Tạo khóa…** (nhập lại mật khẩu, gõ "TẠO KHÓA"; khóa chỉ hiện một lần – đưa cho người cài trên máy đó), **Lệnh thử** (kiểm tra bộ thực thi chạy
   được); tab **Lệnh**: lịch sử lệnh, bấm đúp xem nhật ký, **Hủy lệnh** còn chờ. Cách cài: docs/deploy-windows.md mục 4d.
 - **Chế độ bảo trì** (màn hình Tổng quan hệ thống – nút **Bật chế độ bảo trì…**): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
   Portal) thấy dải đỏ "ĐANG BẢO TRÌ" và câu thông báo, không thao tác được; người có quyền quản trị vận hành vẫn làm việc. Bắt buộc ghi lý do;
   xong việc bấm **Tắt chế độ bảo trì…**.
+
+## 8.9b Phục hồi (RST)
+
+- Màn hình **Quản trị hệ thống → Phục hồi** lấy lại dữ liệu từ bản sao lưu mà **không ghi đè** CSDL đang chạy: khôi phục ra một bản riêng → xem
+  bảng **So sánh số dòng** → **Hoán đổi…** (bản khôi phục thành CSDL đang chạy) hoặc **Bỏ bản khôi phục**.
+- **Từ pg_dump** (tab **Bản pg_dump** → chọn bản → **Khôi phục từ bản này…**): chỉ dựng lại CSDL của phần mềm này, sang CSDL mới cùng máy chủ.
+- **Về mốc thời gian…** (chọn ngày, giờ → **Lập kế hoạch**): phần mềm tìm bản Full, Diff, WAL; đủ chuỗi thì bộ thực thi dựng máy chủ CSDL tạm. Lưu
+  ý: cách này đưa **mọi CSDL trên cùng máy chủ PostgreSQL** về mốc – màn hình liệt kê các CSDL đó.
+- **Hoán đổi…** nhập lại mật khẩu, lý do, gõ "KHÔI PHỤC". Bộ thực thi bật chế độ bảo trì, dừng phần mềm vài phút, hoán đổi, chạy lại; bản cũ giữ
+  lại. Lịch sử sao lưu, bộ thực thi, nhật ký vận hành giữ như hiện tại. Xong việc **kiểm tra dữ liệu rồi tắt chế độ bảo trì** ở Tổng quan hệ thống.
+- Bản khôi phục khác phiên bản CSDL (bản sao lưu của phiên bản phần mềm cũ) chỉ dùng để tra cứu, không hoán đổi được. Cách chuẩn bị máy chủ:
+  docs/deploy-windows.md mục 4e.
 
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 

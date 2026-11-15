@@ -162,6 +162,11 @@ public static class DependencyInjection
         services.AddSingleton<Proc.Application.Operations.IDbMaintenanceExecutor, Proc.Infrastructure.Operations.DbMaintenanceExecutor>();
         services.AddScoped<Proc.Application.Operations.IDbMaintenanceService, Proc.Infrastructure.Operations.DbMaintenanceService>();
         services.AddScoped<Proc.Application.Operations.IDbMaintenanceScheduler, Proc.Infrastructure.Operations.DbMaintenanceScheduler>();
+        // Phục hồi (lát QT6): hàng chờ khôi phục pg_dump, nối lệnh bộ thực thi với lần phục hồi.
+        services.AddSingleton<Proc.Application.Operations.IRestoreQueueSignal, Proc.Infrastructure.Operations.RestoreQueueSignal>();
+        services.AddSingleton<Proc.Application.Operations.IRestoreExecutor, Proc.Infrastructure.Operations.RestoreExecutor>();
+        services.AddScoped<Proc.Application.Operations.IRestoreService, Proc.Infrastructure.Operations.RestoreService>();
+        services.AddScoped<Proc.Application.Operations.IRestoreAgentHooks, Proc.Infrastructure.Operations.RestoreAgentHooks>();
         services.AddScoped<Proc.Application.Operations.IDangerousActionGuard, Proc.Infrastructure.Operations.DangerousActionGuard>();
         services.AddScoped<Proc.Application.Operations.IOperationsAccess, Proc.Infrastructure.Operations.OperationsAccess>();
         // Bộ thực thi + chế độ bảo trì (lát QT5): chế độ bảo trì singleton có đệm – middleware hỏi ở mọi request.

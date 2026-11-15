@@ -985,12 +985,43 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**QT6 – Phục hồi (RST) xong 15/11/2026 (chưa phát hành – bản 0.34.0) – nhánh `feature/qt6-phuc-hoi` (đã merge)** (người dùng "làm tiếp"; bản 0.34.0). Chia 4 bước:
+- **QT6-1 + phần máy chủ QT6-2 xong (commit)**: domain `RestoreRun` (Dump / PointInTime; Chờ → Đang khôi phục → Chờ kiểm tra → Đang hoán đổi →
+  Đã hoán đổi, cộng Lỗi, Đã bỏ; hoán đổi lỗi về Chờ kiểm tra), `RestorePlanner` (Full mới nhất trước mốc → Diff của Full đó → WAL liên tục, đứt
+  WAL, mốc sau WAL cuối, đổi timeline), `RestoreNames`; migration `V0_34_0_PhucHoi`; quyền `System.OpsRestore.View` / `.Run`; Q6 "KHÔI PHỤC" khi
+  hoán đổi. pg_dump: bộ chạy nền tạo `<CSDL>_restore_yyyyMMdd_HHmm` (cùng bảng mã / locale, chủ là tài khoản ứng dụng), `pg_restore --no-owner
+  --exit-on-error [--role]`, so sánh `count(*)` mọi bảng + migration cuối (khác phiên bản thì không hoán đổi). Mốc thời gian / bỏ bản theo mốc /
+  hoán đổi: lệnh bộ thực thi mới `RestorePointInTime`, `DiscardPointInTime`, `SwapDatabase`, `SwapCluster` (AGT chỉ ra được Ping); cổng bộ
+  thực thi `POST …/agent/commands/{id}/prepare-swap` – bật bảo trì + chép bảng vận hành (`RestoreCarryOver`: AgentEnvironment, AgentCommand,
+  BackupRun, MaintenanceRun, MaintenanceModeState, OperationLog chỉ thêm, RestoreRun) sang bản khôi phục; kết quả lệnh cập nhật lần phục hồi.
+  Cảnh báo CSDL khác cùng máy chủ (khôi phục theo mốc quay lùi cả chúng – lưu ý người dùng 15/11/2026). API `/api/ops/v1/restore/overview|plan|
+  runs|runs/{id}|compare|discard|swap`. Test: domain `RestoreTests` 8, tích hợp `RestoreTests` 3 (pg_restore thật, hoán đổi qua bộ thực thi giả).
+  Build 0 cảnh báo, `dotnet test` 781/781.
+- **QT6-3 xong (script)**: `qt-agent.ps1` 1.1.0 – `RestorePointInTime` (pg_combinebackup / robocopy Full, `recovery.signal` + `restore_command`
+  + `recovery_target_time`, `pg_ctl start -o "-p <cổng> -c archive_mode=off"`, chờ hết `pg_is_in_recovery`), `DiscardPointInTime`, `SwapDatabase`
+  (prepare-swap → dừng app pool → ngắt phiên → đổi tên hai CSDL, lỗi thì đổi ngược; /health không lên thì trả về như cũ), `SwapCluster` (dừng
+  site, máy chủ tạm, dịch vụ PostgreSQL; cất thư mục dữ liệu `_old_<giờ>`, robocopy /MOVE, chép ACL, chép `.history` vào thư mục WAL); sửa lỗi
+  PowerShell 5.1 coi stderr psql (NOTICE) là lỗi dừng. `qt-agent-install.ps1` thêm `-PgBinPath -PgUser -PgPassword -AppPoolName -HealthUrl
+  -PgServiceName -PgDataPath`; `qt-enable-wal.ps1` thêm `-AppUser`, `GRANT proc TO proc_maint`. Thử thật `SwapDatabase` trên 2 CSDL nháp (đổi tên
+  đúng, chặn tên lạ, chặn khi CSDL cũ đã có). PITR / SwapCluster chưa chạy thật được trên máy dev (không có bản Full) – diễn tập D2 trên TEST.
+  deploy-windows.md mục **4e**.
+- **QT6-4 xong (giao diện + tài liệu)**: màn hình **RST** `/he-thong/phuc-hoi` (menu Quản trị hệ thống, `pages/system/RestorePage.tsx`,
+  `api/restore.ts`): tab Lịch sử (Về mốc thời gian… – lập kế hoạch rồi khôi phục; So sánh lại; Hoán đổi… Q6 "KHÔI PHỤC" icon đỏ; Bỏ bản khôi phục;
+  tự làm mới 5 giây; bấm đúp mở ngăn kéo Thông tin / So sánh số dòng / Kế hoạch), tab Bản pg_dump (Khôi phục từ bản này… icon xanh); thông báo
+  bộ thực thi máy này + khối vàng CSDL khác cùng máy chủ. CSS icon `swap` đỏ, `cloud-download` xanh. Nhật ký vận hành có tên 5 việc mới. e2e
+  `restore.spec.ts` 2 (pg_dump → khôi phục thật → so sánh → hộp thoại hoán đổi chặn sai chữ, không hoán đổi thật – bộ thực thi giả lập sẵn sàng bằng
+  page.route → bỏ; về mốc báo chưa đủ chuỗi). Tài liệu: design.md **21.15** + dòng RST 21.4 + 17.1, ui-style **5o**, ke-hoach-qt (Đã làm QT6),
+  hướng dẫn 08 mục 8.9b, deploy-windows **4e**.
+- Kiểm tra cuối: build 0 cảnh báo, `dotnet test` 781/781, tsc, oxlint, `npm run build`; Playwright đủ bộ 156/156 (lượt đầu Vite dev dừng giữa chừng – lỗi nội bộ Node – 26 test ECONNREFUSED, chạy lại `--last-failed` qua hết). **Đã merge.**
+- **Phát hành 0.34.0 cần** (cùng QT5): chạy lại `qt-enable-wal.ps1` (GRANT proc TO proc_maint), cài bộ thực thi 1.1.0 kèm cấu hình phục hồi
+  (deploy-windows 4e), gán quyền `System.OpsRestore.*`, diễn tập D2 trên TEST. Lát kế tiếp theo kế hoạch: **QT7 – CFG** (bản 0.35.0) – chờ lệnh.
+
 **Bỏ thẻ màn hình 15/11/2026 – nhánh `fix/bo-the-man-hinh`** (người dùng: "các lát trước tôi có yêu cầu bạn cho mở tối đa 6 tab trong một màn
 hình. Hãy gỡ bỏ trả lại tình trạng cũ"): AppShell về một `Outlet` (bọc `ErrorBoundary` theo đường dẫn); xóa `ScreenTabs.tsx`,
 `useScreenTabsState.ts`, `app/screenTabs.ts`, CSS thanh thẻ, e2e `screen-tabs.spec.ts`; cây điều hướng, menu, ô lệnh, ô số chứng từ, nút Quay lại
 dùng `navigate` như trước; bỏ Alt+1…6, Shift+bấm, `/n` `/o`, hỏi "Đổi công ty đang làm việc". **Giữ** hỏi lại khi còn phiếu chưa lưu (rời trang,
 đổi công ty, đăng xuất, F5) – `useUnsavedGuard` gọn lại, `useUnsavedCheck` chuyển sang `app/unsaved.ts`. e2e: helper `openByCommand` (chọn đúng
-dòng mã trong ô lệnh), `mainContent`, bỏ bản sao helper trong 7 file. Tài liệu: ui-style 8a, 5k; design.md 17 (đoạn thẻ màn hình), 21.10.
+dòng mã trong ô lệnh), `mainContent`, bỏ bản sao helper trong 7 file. Tài liệu: ui-style 8a, 5k; design.md 17 (đoạn thẻ màn hình), 21.10. Playwright 154/154. **Đã merge.**
 
 **QT5 xong 15/11/2026 (chưa phát hành – bản 0.34.0) – nhánh `feature/qt5-bo-thuc-thi`** (người dùng "làm tiếp" sau menu Quản trị hệ thống; bản 0.34.0). Chia 4 bước:
 - **QT5-1 + QT5-2 xong (máy chủ)**: chế độ bảo trì – bảng một dòng `MaintenanceModeState`, `IMaintenanceMode` singleton đệm 5 giây,

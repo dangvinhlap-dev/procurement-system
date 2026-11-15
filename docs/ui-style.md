@@ -287,6 +287,25 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   trì…** (icon cờ lê vàng; nút OK hộp thoại đỏ "Bật bảo trì") / **Tắt chế độ bảo trì…** (icon dấu tích xanh); hộp thoại có ô câu thông báo (khi
   bật) và **Lý do** bắt buộc. Lát QT7 chuyển nút sang CFG.
 
+## 5o. Màn hình RST – Phục hồi (lát QT6, 15/11/2026 – design.md mục 21.15)
+
+- Khuôn `ListPage` + `DataGrid`, thanh tab `viewTabs`: **Lịch sử** (mặc định), **Bản pg_dump**. Cột Tình trạng là đèn ô vuông kèm chữ: Đang chờ /
+  Đang khôi phục / Đang hoán đổi / Đã bỏ trung tính, **Chờ kiểm tra** vàng, Đã hoán đổi xanh, Lỗi đỏ; dòng Chờ kiểm tra / Lỗi tô dấu. Còn lần đang
+  chạy thì lưới tự làm mới 5 giây.
+- Thông báo đầu trang: "CSDL đang chạy: … · bộ thực thi máy này (…): sẵn sàng / chưa sẵn sàng" (xanh dương / vàng kèm lý do); máy chủ PostgreSQL có
+  CSDL khác thì thêm khối **vàng** liệt kê tên và câu "khôi phục về mốc thời gian đưa CẢ các CSDL này về mốc".
+- Nút (quyền chạy, thao tác trên dòng đang chọn, chưa chọn / không hợp thì khóa kèm chú thích): tab Lịch sử **Về mốc thời gian…** (icon đồng hồ
+  vàng), **So sánh lại** (vàng), **Hoán đổi…** (icon `SwapOutlined` **đỏ**), **Bỏ bản khôi phục** (icon đỏ, hỏi lại); tab Bản pg_dump **Khôi phục từ
+  bản này…** (icon `CloudDownloadOutlined` **xanh**). Mọi tab có **Làm mới**.
+- Hộp thoại **Về mốc thời gian**: ô Ngày (`DateInput`) + Giờ (HH:mm) + nút **Lập kế hoạch**; khối kế hoạch xanh (Full + Diff + số file WAL, tên đoạn
+  đầu → cuối) hoặc đỏ (lý do: chưa có Full, đứt WAL, mốc sau WAL cuối, chưa khai thư mục WAL), cảnh báo vàng từng dòng; đủ chuỗi mới hiện ô Lý do,
+  nút **Khôi phục** mới mở.
+- Hộp thoại **Hoán đổi bản khôi phục** theo bố cục việc nguy hiểm 5m: khối cảnh báo vàng (việc bộ thực thi sẽ làm, dữ liệu nhập sau thời điểm bản
+  khôi phục không còn, bảng vận hành giữ nguyên; mốc thời gian thêm câu **đậm** về CSDL khác cùng máy chủ), lỗi máy chủ khối đỏ trong hộp thoại, ô
+  **Lý do**, **Mật khẩu của bạn**, **Gõ "KHÔI PHỤC" để xác nhận**; nút **Hoán đổi** đỏ (icon) bên phải, **Không hoán đổi** bên trái.
+- Bấm đúp dòng mở `DetailDrawer` chỉ xem: tab Thông tin, **So sánh số dòng** (`lazy` – dải thông báo giờ so sánh + phiên bản CSDL hai bên, lưới Bảng
+  / So sánh (đèn: Bằng nhau, Khác, Bảng vận hành) / Đang chạy / Bản khôi phục / Chênh lệch, số canh phải phông đơn cách), **Kế hoạch** (mốc thời gian).
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).

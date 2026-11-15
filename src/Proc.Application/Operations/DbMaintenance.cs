@@ -26,6 +26,9 @@ public static class DangerConfirmations
 {
     /// <summary>Ngắt phiên CSDL (màn hình DBM – lát QT4).</summary>
     public const string TerminateSession = "NGẮT PHIÊN";
+
+    /// <summary>Hoán đổi bản khôi phục thành CSDL đang chạy (màn hình RST – lát QT6).</summary>
+    public const string Restore = "KHÔI PHỤC";
 }
 
 /// <summary>

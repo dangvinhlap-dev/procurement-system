@@ -144,6 +144,10 @@ public static class AgentLabels
     public static string Kind(AgentCommandKind kind) => kind switch
     {
         AgentCommandKind.Ping => "Lệnh thử (Ping)",
+        AgentCommandKind.RestorePointInTime => "Khôi phục về mốc thời gian",
+        AgentCommandKind.DiscardPointInTime => "Bỏ bản khôi phục theo mốc",
+        AgentCommandKind.SwapDatabase => "Hoán đổi CSDL",
+        AgentCommandKind.SwapCluster => "Hoán đổi máy chủ CSDL",
         _ => kind.ToString(),
     };
 
@@ -252,6 +256,17 @@ public interface IAgentGateway
     /// <exception cref="Proc.Application.Common.NotFoundException">Lệnh không có / thuộc môi trường khác.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Lệnh không đang chạy (đã báo, hết hạn, đã hủy).</exception>
     Task ReportAsync(Guid environmentId, Guid commandId, AgentResultRequest result, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bộ thực thi xin chuẩn bị hoán đổi (lát QT6, trước khi dừng site): máy chủ bật chế độ bảo trì và chép bảng vận hành sang bản khôi phục.
+    /// </summary>
+    /// <param name="environmentId">Môi trường (từ khóa).</param>
+    /// <param name="commandId">Lệnh hoán đổi đang chạy.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Task.</returns>
+    /// <exception cref="Proc.Application.Common.NotFoundException">Lệnh không có / thuộc môi trường khác.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Không phải lệnh hoán đổi đang chạy; lần phục hồi không ở trạng thái hoán đổi.</exception>
+    Task PrepareSwapAsync(Guid environmentId, Guid commandId, CancellationToken cancellationToken);
 }
 
 /// <summary>Chế độ bảo trì hiện trên dải đỏ và câu báo 503.</summary>

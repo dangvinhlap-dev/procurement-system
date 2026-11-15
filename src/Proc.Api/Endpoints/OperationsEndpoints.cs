@@ -123,6 +123,34 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsAgentManage)
             .RequireHeadOffice();
 
+        // Phục hồi (lát QT6) – màn hình RST. Hoán đổi xác nhận Q6 ("KHÔI PHỤC") ở dịch vụ.
+        var rst = ops.MapGroup("/restore");
+        rst.MapGet("/overview", (IRestoreService s, CancellationToken ct) => s.GetOverviewAsync(ct))
+            .RequirePermission(Permissions.System.OpsRestoreView)
+            .RequireHeadOffice();
+        rst.MapGet("/plan", (DateTimeOffset target, IRestoreService s, CancellationToken ct) => s.PlanAsync(target, ct))
+            .RequirePermission(Permissions.System.OpsRestoreView)
+            .RequireHeadOffice();
+        rst.MapGet("/runs", (DateOnly from, DateOnly to, IRestoreService s, CancellationToken ct) => s.SearchAsync(from, to, ct))
+            .RequirePermission(Permissions.System.OpsRestoreView)
+            .RequireHeadOffice();
+        rst.MapGet("/runs/{id:guid}", (Guid id, IRestoreService s, CancellationToken ct) => s.GetAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsRestoreView)
+            .RequireHeadOffice();
+        rst.MapPost("/runs", (QueueRestoreRequest request, IRestoreService s, CancellationToken ct) => s.QueueAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsRestoreRun)
+            .RequireHeadOffice();
+        rst.MapPost("/runs/{id:guid}/compare", (Guid id, IRestoreService s, CancellationToken ct) => s.CompareAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsRestoreRun)
+            .RequireHeadOffice();
+        rst.MapPost("/runs/{id:guid}/discard", (Guid id, IRestoreService s, CancellationToken ct) => s.DiscardAsync(id, ct))
+            .RequirePermission(Permissions.System.OpsRestoreRun)
+            .RequireHeadOffice();
+        rst.MapPost("/runs/{id:guid}/swap", (Guid id, SwapRestoreRequest request, IRestoreService s, CancellationToken ct) =>
+                s.SwapAsync(id, request, ct))
+            .RequirePermission(Permissions.System.OpsRestoreRun)
+            .RequireHeadOffice();
+
         // Cổng cho bộ thực thi (lát QT5): không JWT – xác thực bằng khóa X-Ops-Agent-Key (băm lưu CSDL); không có phiên người dùng, công ty.
         var agent = ops.MapGroup("/agent").AllowAnonymous().AddEndpointFilter(AuthenticateAgentAsync);
         agent.MapGet("/commands", PollAgentAsync);
@@ -130,6 +158,12 @@ public static class OperationsEndpoints
             CancellationToken ct) =>
         {
             await gateway.ReportAsync(AgentEnvironmentId(http), id, result, ct);
+            return Results.NoContent();
+        });
+        // Lát QT6: trước khi dừng site để hoán đổi, bộ thực thi xin máy chủ bật bảo trì + chép bảng vận hành sang bản khôi phục.
+        agent.MapPost("/commands/{id:guid}/prepare-swap", async (Guid id, HttpContext http, IAgentGateway gateway, CancellationToken ct) =>
+        {
+            await gateway.PrepareSwapAsync(AgentEnvironmentId(http), id, ct);
             return Results.NoContent();
         });
 

@@ -35,6 +35,15 @@ param(
     [string]$StatePath = 'D:\ProcurementData\agent',
     [string]$AppPath = 'C:\inetpub\procurement',
     [string[]]$GrantModify = @(),
+    # Lát QT6 – phục hồi (RST): thư mục bin PostgreSQL, tài khoản bảo trì, app pool IIS của site, dịch vụ + thư mục dữ liệu PostgreSQL chính.
+    # Bỏ trống thì bộ thực thi chỉ làm được Lệnh thử; khôi phục / hoán đổi báo thiếu cấu hình.
+    [string]$PgBinPath,
+    [string]$PgUser = 'proc_maint',
+    [SecureString]$PgPassword,
+    [string]$AppPoolName,
+    [string]$HealthUrl,
+    [string]$PgServiceName,
+    [string]$PgDataPath,
     [string]$TaskName = 'Procurement QT agent',
     [switch]$Uninstall,
     [switch]$DryRun
@@ -73,6 +82,7 @@ $target = Join-Path $InstallPath 'qt-agent.ps1'
 Step "Chép qt-agent.ps1 vào $InstallPath."
 Step "Tạo thư mục trạng thái $StatePath, cấp quyền Sửa cho $TaskUser."
 Step "Ghi $configPath (ServerUrl $ServerUrl, AppPath $AppPath) – chỉ Administrators, SYSTEM, $TaskUser đọc được."
+if ($AppPoolName) { Step "Phục hồi (QT6): app pool $AppPoolName, PostgreSQL $PgUser, dịch vụ $PgServiceName, thư mục dữ liệu $PgDataPath." }
 foreach ($path in $GrantModify) { Step "Cấp quyền Sửa thư mục $path cho $TaskUser." }
 Step "Đăng ký tác vụ '$TaskName' chạy mỗi phút bằng $TaskUser."
 if ($DryRun) { Write-Host 'Chạy thử (-DryRun) – không đổi gì.'; return }
@@ -86,7 +96,16 @@ $null = New-Item -ItemType Directory -Force -Path $InstallPath
 $null = New-Item -ItemType Directory -Force -Path $StatePath
 Copy-Item -LiteralPath $source -Destination $target -Force
 
+if ($AppPoolName -and -not $PgPassword) { $PgPassword = Read-Host -AsSecureString "Mật khẩu tài khoản PostgreSQL $PgUser (khôi phục / hoán đổi)" }
 $config = [ordered]@{ ServerUrl = $ServerUrl.TrimEnd('/'); AgentKey = $key; AppPath = $AppPath; StatePath = $StatePath }
+# Cấu hình phục hồi (lát QT6) – chỉ ghi mục đã khai.
+if ($PgBinPath) { $config.PgBinPath = $PgBinPath }
+if ($PgUser) { $config.PgUser = $PgUser }
+if ($PgPassword) { $config.PgPassword = ConvertTo-Plain $PgPassword }
+if ($AppPoolName) { $config.AppPoolName = $AppPoolName }
+if ($HealthUrl) { $config.HealthUrl = $HealthUrl }
+if ($PgServiceName) { $config.PgServiceName = $PgServiceName }
+if ($PgDataPath) { $config.PgDataPath = $PgDataPath }
 [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 # File có khóa: bỏ kế thừa, chỉ quản trị máy, SYSTEM, tài khoản bộ thực thi.
 & icacls $configPath /inheritance:r /grant:r '*S-1-5-32-544:(F)' '*S-1-5-18:(F)' "${TaskUser}:(R)" | Out-Null

@@ -627,6 +627,7 @@ body.erp-col-resizing {
 .ant-btn .anticon-close-circle,
 .ant-btn .anticon-stop,
 .ant-btn .anticon-rollback,
+.ant-btn .anticon-swap,
 .ant-btn .anticon-logout,
 .ant-btn-dangerous .anticon,
 .ant-dropdown-menu-item .anticon-logout,
@@ -644,6 +645,7 @@ body.erp-col-resizing {
 .ant-btn .anticon-send,
 .ant-btn .anticon-upload,
 .ant-btn .anticon-cloud-upload,
+.ant-btn .anticon-cloud-download,
 .ant-btn .anticon-import,
 .ant-btn .anticon-file-done,
 .ant-btn .anticon-login {

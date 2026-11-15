@@ -81,6 +81,12 @@ builder.Services.AddOptions<Proc.Application.Operations.DbMaintenanceOptions>()
     .Validate(o => o.CommandTimeoutMinutes is >= 1 and <= 24 * 60, "DbMaintenance:CommandTimeoutMinutes phải từ 1 đến 1440 phút.")
     .ValidateOnStart();
 builder.Services.AddHostedService<Proc.Infrastructure.Operations.DbMaintenanceBackgroundService>();
+// Phục hồi (lát QT6): khôi phục pg_dump sang CSDL mới – Testing tắt bằng Restore:WorkerEnabled = false; cổng máy chủ CSDL tạm (mốc thời gian).
+builder.Services.AddOptions<Proc.Application.Operations.RestoreOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.RestoreOptions.Section))
+    .Validate(o => o.TempPort is >= 1024 and <= 65535, "Restore:TempPort phải từ 1024 đến 65535.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<Proc.Infrastructure.Operations.RestoreBackgroundService>();
 // Bộ thực thi (lát QT5): hạn chạy lệnh, số phút coi là đang liên lạc.
 builder.Services.AddOptions<Proc.Application.Operations.AgentOptions>()
     .Bind(builder.Configuration.GetSection(Proc.Application.Operations.AgentOptions.Section))

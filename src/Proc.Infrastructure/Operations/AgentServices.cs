@@ -210,6 +210,9 @@ public sealed class AgentAdminService : IAgentAdminService
         var env = await FindAsync(request.EnvironmentId, cancellationToken);
         if (!env.IsActive) throw new BusinessRuleException($"Môi trường {env.Code} đang ngừng dùng.");
         if (env.AgentKeyHash is null) throw new BusinessRuleException($"Môi trường {env.Code} chưa có khóa bộ thực thi – tạo khóa trước.");
+        // Lệnh khôi phục / hoán đổi (QT6) chỉ ra từ màn hình RST – ở đó có kiểm tra kế hoạch, xác nhận Q6, tham số đúng của lần phục hồi.
+        if (request.Kind != AgentCommandKind.Ping)
+            throw new BusinessRuleException("Màn hình AGT chỉ ra được Lệnh thử; khôi phục / hoán đổi làm ở màn hình Phục hồi (RST).");
         var cmd = AgentCommand.Create(env.Id, request.Kind, null, request.Reason, _user.UserName, _clock.UtcNow);
         _db.AgentCommands.Add(cmd);
         await _db.SaveChangesAsync(cancellationToken);
@@ -266,14 +269,17 @@ public sealed class AgentGateway : IAgentGateway
     private readonly IClock _clock;
     private readonly IOperationLog _operationLog;
     private readonly AgentOptions _options;
+    private readonly IRestoreAgentHooks _restore;
 
     /// <summary>Tạo cổng.</summary>
     /// <param name="db">CSDL.</param>
     /// <param name="clock">Đồng hồ.</param>
     /// <param name="operationLog">Nhật ký vận hành.</param>
     /// <param name="options">Cấu hình bộ thực thi.</param>
-    public AgentGateway(ProcDbContext db, IClock clock, IOperationLog operationLog, IOptions<AgentOptions> options)
+    /// <param name="restore">Cập nhật lần phục hồi theo lệnh bộ thực thi (lát QT6).</param>
+    public AgentGateway(ProcDbContext db, IClock clock, IOperationLog operationLog, IOptions<AgentOptions> options, IRestoreAgentHooks restore)
     {
+        _restore = restore;
         _db = db;
         _clock = clock;
         _operationLog = operationLog;
@@ -348,7 +354,11 @@ public sealed class AgentGateway : IAgentGateway
         }
 
         foreach (var (command, detail) in finished)
+        {
             await LogFinishedAsync(envCode, command, detail, cancellationToken);
+            await _restore.OnCommandFinishedAsync(command.Id, cancellationToken);
+        }
+
         return work;
     }
 
@@ -364,6 +374,20 @@ public sealed class AgentGateway : IAgentGateway
         env.RecordContact(null, null, null, now);
         await _db.SaveChangesAsync(cancellationToken);
         await LogFinishedAsync(env.Code, cmd, cmd.ResultMessage ?? "", cancellationToken);
+        // Lệnh của lần phục hồi (QT6): cập nhật lần phục hồi theo kết quả (sẵn sàng kiểm tra, đã hoán đổi, lỗi…).
+        await _restore.OnCommandFinishedAsync(cmd.Id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task PrepareSwapAsync(Guid environmentId, Guid commandId, CancellationToken cancellationToken)
+    {
+        var cmd = await _db.AgentCommands.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == commandId && c.EnvironmentId == environmentId, cancellationToken)
+            ?? throw new NotFoundException("Không tìm thấy lệnh của môi trường này.");
+        if (cmd.Status != AgentCommandStatus.Running || cmd.Kind is not (AgentCommandKind.SwapDatabase or AgentCommandKind.SwapCluster))
+            throw new BusinessRuleException("Chỉ lệnh hoán đổi đang chạy mới xin chuẩn bị hoán đổi được.");
+        var env = await _db.AgentEnvironments.AsNoTracking().FirstAsync(e => e.Id == environmentId, cancellationToken);
+        await _restore.PrepareSwapAsync(cmd.Id, env.Code, cancellationToken);
     }
 
     private Task LogFinishedAsync(string? envCode, AgentCommand c, string detail, CancellationToken ct) =>

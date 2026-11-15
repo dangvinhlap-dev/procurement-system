@@ -48,6 +48,7 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Backup:SecondaryPath", BackupSecondary);
         builder.UseSetting("Backup:WorkerEnabled", "false");
         builder.UseSetting("DbMaintenance:WorkerEnabled", "false");
+        builder.UseSetting("Restore:WorkerEnabled", "false");
     }
 
     /// <summary>Khởi động host (migration + seed) rồi đưa dữ liệu về trạng thái sạch.</summary>

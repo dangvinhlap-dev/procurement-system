@@ -1157,7 +1157,7 @@ nhưng không kèm file phông "72" (giấy phép riêng của SAP); chuyển đ
 **Menu module** (thứ tự): Hằng ngày, Mua hàng, Giá và NCC, Đấu thầu, Báo cáo, Hệ thống, **Quản trị hệ thống** (người dùng yêu cầu 15/11/2026 –
 không để lẫn việc quản trị trong Hệ thống). Hệ thống: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt, Xếp loại NCC, Đánh số danh mục / chứng từ,
 Tham số hệ thống. Quản trị hệ thống (Alt+Q): Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy cập và module Quản trị vận hành (SYS, Nhật ký
-vận hành, ERR, BAK, DBM; các màn hình QT sau – RST, CFG, REL, TST – cũng vào đây). Đường dẫn giữ `/he-thong/…` để liên kết cũ vẫn mở được.
+vận hành, ERR, BAK, DBM, AGT, RST; các màn hình QT sau – CFG, REL, TST – cũng vào đây). Đường dẫn giữ `/he-thong/…` để liên kết cũ vẫn mở được.
 
 Bỏ thanh công cụ và thanh trạng thái kiểu Windows (lát UI-b): Lưu/In nằm trên chứng từ, phiên bản và ngày làm việc nằm trong menu người dùng;
 bỏ chế độ INS/OVR (phím Insert) vì ô nhập web luôn ở chế độ chèn.
@@ -3034,7 +3034,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | SYS | Tổng quan hệ thống | Bảng ba môi trường: phiên bản, migration đã chạy / đang chờ, tình trạng (`/health`), lần sao lưu cuối (đèn đỏ khi quá 24 giờ), độ trễ lưu WAL, dung lượng CSDL, ổ đĩa, thư mục đính kèm, số kết nối, dịch vụ nền; khác biệt cấu hình (không bí mật) của TEST so với PROD |
 | ERR | Nhật ký lỗi | Lỗi máy chủ (500) và lỗi giao diện (trình duyệt gửi về): giờ, người dùng, công ty, đường dẫn, mã theo dõi, nội dung, chi tiết kỹ thuật, phiên bản, môi trường; lỗi trùng gộp nhóm kèm số lần; trạng thái Mới / Đang xử lý / Đã xử lý; **thông báo trong phần mềm** (không email – E10) khi có **loại lỗi mới**; tự xóa sau N ngày (tham số `ERRLOG_KEEP_DAYS`) |
 | BAK | Sao lưu | Full / Diff / tình trạng lưu WAL / `pg_dump` / đính kèm: chạy tay hoặc theo lịch, kiểm tra (`pg_verifybackup`, `pg_restore --list`), SHA256, giữ theo B1, dọn WAL cũ, chép nơi thứ hai; lịch sử (giờ, kiểu, dung lượng, kết quả, người chạy); cảnh báo ổ sắp đầy |
-| RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng |
+| RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng; đã làm lát QT6 – mục 21.15 |
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
 | CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào) |
 | REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
@@ -3305,6 +3305,52 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   `Agent:OnlineMinutes` = 3 phút, vàng mất liên lạc, đỏ ngừng dùng / chưa có khóa, trung tính chưa liên lạc), tab Lệnh (lịch sử, ngăn kéo nhật ký).
 - Khác kế hoạch: `EnvironmentRegistration` đặt tên `AgentEnvironment`; **chưa có băm khóa trạng thái** (API trạng thái chỉ đọc của QT8 – thêm cột
   ở QT8, kiểu "thêm trước – bỏ sau"); quyền đặt theo mẫu 3 đoạn `System.OpsAgent.*`, `System.OpsMaintenanceMode.Manage`.
+
+### 21.15 Lát QT6 – phục hồi (RST), đã làm (15/11/2026)
+
+- **Nguyên tắc** (N1, N2): khôi phục **không ghi đè** CSDL đang chạy – ra bản riêng → so sánh số dòng → **hoán đổi** (bộ thực thi) hoặc **bỏ**.
+  Mỗi lúc chỉ một lần phục hồi chưa kết thúc. Bảng `RestoreRun` (migration `V0_34_0_PhucHoi`): cách (pg_dump / mốc thời gian), trạng thái Đang chờ
+  → Đang khôi phục → **Chờ kiểm tra** → Đang hoán đổi → **Đã hoán đổi**, cộng Lỗi, Đã bỏ (hoán đổi lỗi thì bộ thực thi trả về như cũ, lần phục hồi
+  về Chờ kiểm tra kèm lỗi); nguồn (bản dump / Full + Diff, mốc), tên CSDL đang chạy / khôi phục / cũ, cổng máy chủ tạm, lý do, người, giờ, kế
+  hoạch và bảng so sánh (JSON), hoán đổi được hay không. Không thuộc công ty, chỉ tổng công ty; dòng không xóa.
+- **Từ pg_dump** (lấy lại dữ liệu phần mềm này – không đụng CSDL khác): bộ chạy nền của ứng dụng tạo CSDL `<CSDL>_restore_yyyyMMdd_HHmm` (cùng
+  bảng mã / locale CSDL đang chạy, từ `template0`; chủ là tài khoản ứng dụng), `pg_restore --no-owner --exit-on-error` (tài khoản bảo trì thì
+  `--role=<tài khoản ứng dụng>` – `qt-enable-wal.ps1` cấp `GRANT proc TO proc_maint`; không khai tài khoản bảo trì thì dùng tài khoản ứng dụng, cần
+  CREATEDB), lỗi thì xóa CSDL dở. Tên CSDL do phần mềm đặt, đưa vào câu lệnh qua `format('%I')`.
+- **Về mốc thời gian** (`RestorePlanner`): bản Full dùng được mới nhất xong trước mốc → bản Diff mới nhất **của Full đó** xong trước mốc (không có
+  thì chỉ Full) → WAL liên tục từ file WAL đầu của bản gốc tới file đầu tiên có giờ ghi ≥ mốc; thiếu một đoạn là **đứt WAL** (chặn, nêu tên đoạn
+  thiếu); mốc sau file WAL cuối đã lưu cũng chặn (PostgreSQL sẽ dừng lỗi). Đoạn ở timeline cao hơn (sau lần khôi phục trước) vẫn nối được. Bộ thực
+  thi ghép Full + Diff (`pg_combinebackup`, chỉ Full thì robocopy) ra `<Backup:RootPath>\restore\<giờ>\data`, đặt `restore_command` +
+  `recovery_target_time` + `recovery_target_action = promote`, chạy máy chủ CSDL tạm cổng `Restore:TempPort` (5434, chỉ localhost,
+  `archive_mode=off` truyền khi chạy – không ghi file cấu hình) tới khi hết `pg_is_in_recovery`; máy chủ báo Chờ kiểm tra sau khi so sánh qua cổng tạm.
+- **Bản Full là cả thư mục dữ liệu PostgreSQL** (lưu ý người dùng 15/11/2026): hoán đổi về mốc đưa **mọi CSDL trên máy chủ PostgreSQL đó** về mốc.
+  RST, kế hoạch và hộp thoại hoán đổi liệt kê CSDL khác cùng máy chủ (bỏ `postgres`, template, bản `_restore_` / `_old_` của phần mềm) kèm cảnh
+  báo; máy chủ dùng chung với phần mềm khác thì chỉ dùng pg_dump, hoặc tách máy chủ CSDL riêng cho phần mềm.
+- **So sánh**: `count(*)` đúng mọi bảng hai bên + migration cuối; bảng nghiệp vụ bằng nhau đèn xanh, khác đèn vàng (xếp trước), bảng vận hành trung
+  tính. **Khác migration cuối thì không hoán đổi được** (bản của phiên bản phần mềm khác – chỉ tra cứu / lấy lại dữ liệu, hoặc quay về bản cũ mức 3
+  ở QT8). "So sánh lại" đếm lại khi đang chờ kiểm tra.
+- **Bảng vận hành giữ theo hiện tại khi hoán đổi** (`RestoreCarryOver` – tự chọn): AgentEnvironment, AgentCommand, BackupRun, MaintenanceRun,
+  MaintenanceModeState, OperationLog (bảng chỉ thêm – chỉ chèn dòng chưa có), RestoreRun. Lý do: phục hồi là đưa **dữ liệu nghiệp vụ** về mốc; lịch
+  sử sao lưu (file vẫn trên đĩa), khóa bộ thực thi, lệnh hoán đổi đang chạy, nhật ký vận hành, chính lần phục hồi phải giữ – không thì bộ thực thi
+  không xác thực được, lệnh không báo được kết quả. Chép bằng `COPY … (FORMAT BINARY)` vào bảng tạm rồi thay nội dung, trong một giao dịch.
+- **Hoán đổi** (Q6: mật khẩu + lý do + gõ "KHÔI PHỤC"; phải có bộ thực thi của chính máy này – mã môi trường = `App:Environment` – đang dùng, có
+  khóa): lệnh `SwapDatabase` (pg_dump) / `SwapCluster` (mốc). Bộ thực thi gọi `POST /api/ops/v1/agent/commands/{id}/prepare-swap` (máy chủ **bật
+  chế độ bảo trì**, ghi nhật ký, chép bảng vận hành sang bản khôi phục) → dừng app pool → pg_dump: ngắt phiên, đổi tên `<CSDL>` → `<CSDL>_old_<giờ>`,
+  bản khôi phục → `<CSDL>` (lỗi giữa chừng đổi ngược); mốc: dừng máy chủ tạm và dịch vụ PostgreSQL, bỏ dòng phục hồi trong `postgresql.auto.conf`,
+  đổi tên thư mục dữ liệu thành `<thư mục>_old_<giờ>`, chuyển bản khôi phục vào (robocopy /MOVE, chép ACL thư mục cũ), chạy lại, chép file
+  `.history` vào thư mục WAL → chạy app pool → `/health`; không lên thì trả về như cũ. Kết quả báo về **CSDL mới** (lệnh, lần phục hồi đã được chép
+  sang). **Chế độ bảo trì vẫn bật sau hoán đổi** – người quản trị kiểm tra rồi tắt ở SYS. Bản cũ giữ tới khi xóa tay.
+- **Bỏ**: pg_dump – ứng dụng `DROP DATABASE … WITH (FORCE)` (không bao giờ CSDL đang chạy); mốc – lệnh `DiscardPointInTime` (dừng máy chủ tạm, xóa
+  thư mục). Lệnh hết hạn / bị hủy / lỗi mà bộ thực thi không báo thì lần phục hồi tự cập nhật khi mở RST. Màn hình AGT chỉ ra được Lệnh thử.
+- **API, quyền**: `/api/ops/v1/restore/overview|plan?target|runs?from&to|runs/{id}` (`System.OpsRestore.View`), `POST runs`, `runs/{id}/compare`,
+  `runs/{id}/discard`, `runs/{id}/swap` (`System.OpsRestore.Run`); chỉ tổng công ty. Nhật ký vận hành `RestoreQueued`, `RestoreFinished`,
+  `RestoreDiscarded`, `RestoreSwapRequested`, `RestoreSwapFinished`. Cấu hình `Restore:WorkerEnabled`, `Restore:TempPort`. Bộ thực thi 1.1.0
+  (deploy-windows.md mục 4e).
+- **Giao diện RST** `/he-thong/phuc-hoi` (menu Quản trị hệ thống; ui-style.md mục 5o).
+- Khác kế hoạch: quyền `System.OpsRestore.View` / `.Run` (mẫu 3 đoạn); Q6 đặt ở bước **hoán đổi** (khôi phục ra bản riêng không đụng dữ liệu đang
+  chạy – chỉ cần lý do); thêm bảng vận hành giữ theo hiện tại, chặn hoán đổi khi khác phiên bản CSDL, cảnh báo CSDL khác cùng máy chủ. Khôi phục
+  theo mốc và hoán đổi máy chủ CSDL chưa chạy thật trên máy dev (không có bản Full) – diễn tập D2 trên máy TEST; hoán đổi CSDL đã chạy thật trên CSDL
+  nháp.
 
 ## Nguồn tham khảo
 
