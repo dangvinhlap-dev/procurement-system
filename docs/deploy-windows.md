@@ -81,6 +81,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Backup:SecondaryPath` | Không bắt buộc: NAS / thư mục mạng, ví dụ `\\\\nas01\\procurement-backup` – chép sau mỗi lần sao lưu; tài khoản App Pool phải ghi được |
 | `Backup:PgBinPath` | Thư mục `bin` của PostgreSQL 18 trên máy app, ví dụ `C:\\Program Files\\PostgreSQL\\18\\bin`. Bỏ trống thì tự tìm (PATH, Program Files) |
 | `Backup:ScheduleEnabled` | `true` (mặc định) – sao lưu tự động theo lịch B1; tắt lịch `backup.ps1` cũ (mục 4b) để không sao lưu hai lần |
+| `DbMaintenance:ScheduleEnabled` | Từ 0.33.0 (QT4): `true` (mặc định) – VACUUM ANALYZE cả CSDL hằng tuần (tham số DB_MAINT_DAY / DB_MAINT_TIME, mặc định Chủ nhật 03:00). `DbMaintenance:CommandTimeoutMinutes` (240) = thời gian tối đa một lệnh VACUUM / REINDEX |
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự, sinh bằng lệnh ngay dưới bảng |
 | `Seed:AdminPassword`, `Seed:HeadOffice` | Mật khẩu quản trị ban đầu (đổi ngay sau lần đăng nhập đầu), mã/tên tổng công ty |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (trong JSON viết `\\`) |
@@ -226,6 +227,24 @@ Làm một lần (sau mục 4a – Full / Diff cần tài khoản `proc_maint` c
 
 **Đường dẫn có dấu tiếng Việt**: công cụ PostgreSQL trên Windows đọc tham số theo bảng mã ANSI, nên phần mềm chạy công cụ ngay trong thư mục sao
 lưu và chỉ truyền tên tương đối không dấu – thư mục đặt tên có dấu vẫn chạy, nhưng nên đặt không dấu cho dễ gõ lệnh khôi phục bằng tay.
+
+## 4c. Bảo trì CSDL – màn hình DBM (từ 0.33.0 – lát QT4)
+
+Màn hình **Hệ thống → Bảo trì CSDL** (DBM, design.md mục 21.13): dung lượng từng bảng, dòng chết, lần VACUUM / ANALYZE gần nhất; phiên đang kết
+nối, phiên chờ khóa; chạy **VACUUM ANALYZE** (một bảng / cả CSDL), **REINDEX CONCURRENTLY** (một bảng) qua hàng chờ; **ngắt phiên treo** (nhập lại
+mật khẩu + lý do + gõ "NGẮT PHIÊN"). Phần mềm tự VACUUM ANALYZE cả CSDL hằng tuần (Chủ nhật 03:00 – sửa ở Tham số hệ thống nhóm "Bảo trì CSDL"),
+ngoài autovacuum của PostgreSQL. VACUUM / REINDEX chạy bằng tài khoản `proc` (chủ các bảng) – không cần cấu hình thêm.
+
+Ngắt phiên của **tài khoản khác** (ví dụ phiên psql / pgAdmin của người quản trị treo giữ khóa) cần `ConnectionStrings:Maintenance` và vai trò
+`pg_signal_backend` của `proc_maint` – `qt-enable-wal.ps1` từ 0.33.0 đã cấp; máy đã chạy script bản trước thì chạy lại script (không cần
+`-Restart`) hoặc `psql -U postgres -c "GRANT pg_signal_backend TO proc_maint"`. Không khai thì chỉ ngắt được phiên của tài khoản `proc`.
+
+Kiểm tra trên máy TEST:
+- [ ] DBM → tab **Bảng**: có số liệu, dòng "CSDL procurement: … MB · … bảng".
+- [ ] Chọn một bảng → **VACUUM ANALYZE** → tab Lịch sử dòng "Xong"; cột "VACUUM gần nhất" của bảng đổi giờ.
+- [ ] Tab **Phiên và khóa**: thấy phiên của App Pool; mở psql `BEGIN; LOCK TABLE "Item";` ở cửa sổ khác rồi mở một phiếu có mặt hàng → phiên
+  psql đèn vàng "Đang chặn …"; **Ngắt phiên…** nhập lý do, mật khẩu, "NGẮT PHIÊN" → Xong, phiếu mở được; Nhật ký vận hành có "Ngắt phiên CSDL".
+- [ ] Tab **Lịch sử**: "Lịch hằng tuần: VACUUM ANALYZE cả CSDL Chủ nhật 03:00 · lượt kế tiếp …"; sáng thứ Hai có lần "Theo lịch".
 
 ## 5. Nâng cấp lên bản mới
 

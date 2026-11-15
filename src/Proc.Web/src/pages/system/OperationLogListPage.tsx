@@ -13,6 +13,10 @@ const kindLabels: Record<string, string> = {
   BackupQueued: 'Sao lưu ngay',
   BackupFinished: 'Sao lưu xong',
   BackupCleanup: 'Dọn bản sao lưu cũ',
+  MaintenanceQueued: 'Đặt bảo trì CSDL',
+  MaintenanceFinished: 'Bảo trì CSDL xong',
+  SessionTerminated: 'Ngắt phiên CSDL',
+  DangerConfirmFailed: 'Xác nhận việc nguy hiểm sai',
 }
 
 const resultLabels: Record<OperationResult, { label: string; tone: StatusTone }> = {

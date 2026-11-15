@@ -20,6 +20,10 @@ export const Permission = {
   BackupView: 'System.OpsBackup.View',
   /** Chạy sao lưu ngay (lát QT3b). */
   BackupRun: 'System.OpsBackup.Run',
+  /** Xem bảo trì CSDL DBM: bảng, phiên và khóa, lịch sử – chỉ ở tổng công ty (lát QT4). */
+  MaintenanceView: 'System.OpsMaintenance.View',
+  /** Chạy VACUUM, REINDEX, ngắt phiên (ngắt phiên còn xác nhận Q6 – lát QT4). */
+  MaintenanceRun: 'System.OpsMaintenance.Run',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

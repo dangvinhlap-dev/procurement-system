@@ -17,34 +17,12 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime, formatQuantity } from '../../utils/format'
 import { LogDateRangeFilter, TruncatedNotice } from './logFilters'
+import { formatBytes, formatDuration } from './opsFormat'
 import { overviewColumns, statusLabels } from './overviewColumns'
 
 /** Kiểu thông báo đầu trang theo đèn của trạng thái lưu WAL. */
 function alertType(status: WalArchiveStatus['status']) {
   return status === 'Error' ? 'error' : status === 'Warning' ? 'warning' : status === 'Ok' ? 'success' : 'info'
-}
-
-/** Dung lượng dễ đọc kiểu Việt Nam (1.536 MB → "1,5 GB"), như SYS. */
-function formatBytes(bytes: number | null): string {
-  if (bytes == null) return ''
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let value = bytes
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024
-    unit++
-  }
-  return `${value.toLocaleString('vi-VN', { maximumFractionDigits: unit === 0 ? 0 : 1, minimumFractionDigits: unit === 0 ? 0 : 1 })} ${units[unit]}`
-}
-
-/** Thời gian chạy: "45 giây", "12 phút 5 giây", "1 giờ 20 phút". */
-function formatDuration(seconds: number | null): string {
-  if (seconds == null) return ''
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h} giờ ${m} phút`
-  return m > 0 ? `${m} phút ${s} giây` : `${s} giây`
 }
 
 /** Chữ kết quả kiểm tra / chép nơi thứ hai (null = chưa kiểm tra / không khai). */
