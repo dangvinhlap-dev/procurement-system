@@ -26,6 +26,9 @@ public sealed class BackupService : IBackupService
     private readonly IOperationLog _operationLog;
     private readonly IBackupQueueSignal _signal;
     private readonly BackupOptions _options;
+    private readonly PgToolRunner _tools;
+    private readonly AttachmentOptions _attachments;
+    private readonly AppEnvironmentOptions _environment;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">CSDL.</param>
@@ -34,8 +37,12 @@ public sealed class BackupService : IBackupService
     /// <param name="operationLog">Nhật ký vận hành.</param>
     /// <param name="signal">Đánh thức bộ chạy nền.</param>
     /// <param name="options">Cấu hình sao lưu.</param>
+    /// <param name="tools">Tìm công cụ PostgreSQL (tab Nơi lưu).</param>
+    /// <param name="attachments">Thư mục đính kèm (nguồn chép).</param>
+    /// <param name="environment">Môi trường (DEV không bắt buộc sao lưu).</param>
     public BackupService(
-        ProcDbContext db, ICurrentUser user, IClock clock, IOperationLog operationLog, IBackupQueueSignal signal, IOptions<BackupOptions> options)
+        ProcDbContext db, ICurrentUser user, IClock clock, IOperationLog operationLog, IBackupQueueSignal signal, IOptions<BackupOptions> options,
+        PgToolRunner tools, IOptions<AttachmentOptions> attachments, IOptions<AppEnvironmentOptions> environment)
     {
         _db = db;
         _user = user;
@@ -43,7 +50,119 @@ public sealed class BackupService : IBackupService
         _operationLog = operationLog;
         _signal = signal;
         _options = options.Value;
+        _tools = tools;
+        _attachments = attachments.Value;
+        _environment = environment.Value;
     }
+
+    /// <inheritdoc />
+    public async Task<BackupOverviewDto> GetOverviewAsync(CancellationToken cancellationToken)
+    {
+        var settings = await BackupScheduler.LoadSettingsAsync(_db, cancellationToken);
+        var now = _clock.UtcNow;
+        var strict = _environment.Name != AppEnvironments.Dev;
+        var kept = await _db.BackupRuns.AsNoTracking()
+            .Where(r => r.Status == BackupRunStatus.Succeeded && r.PurgedAt == null)
+            .Select(r => new { r.Kind, r.SizeBytes, r.FinishedAt, r.Verified, r.StartWalFile })
+            .ToListAsync(cancellationToken);
+        var hasFull = kept.Any(r => r.Kind == BackupKind.Full && r.Verified != false);
+
+        const string schedule = "Lịch", keep = "Thời hạn giữ", held = "Bản đang giữ";
+        var rows = new List<SystemOverviewRowDto>
+        {
+            _options.ScheduleEnabled && !string.IsNullOrWhiteSpace(_options.RootPath)
+                ? new(schedule, "Lịch tự động", "Bật", "Ok", "Tắt lịch backup.ps1 / backup.sh cũ để không sao lưu hai lần (Q2).")
+                : new(schedule, "Lịch tự động", "Tắt", strict ? "Error" : "Neutral",
+                    string.IsNullOrWhiteSpace(_options.RootPath)
+                        ? "Chưa khai Backup:RootPath."
+                        : "Backup:ScheduleEnabled = false – chỉ sao lưu khi bấm \"Sao lưu ngay\"."),
+            new(schedule, "Ngày chạy Full", $"{settings.FullDay.ToString(CultureInfo.InvariantCulture)} – {IsoDayName(settings.FullDay)}", "Neutral",
+                "Các ngày khác chạy Diff lấy bản Full gần nhất làm gốc. Sửa ở màn hình Tham số hệ thống (BACKUP_FULL_DAY)."),
+            new(schedule, "Giờ chạy", settings.Time.ToString("HH:mm", CultureInfo.InvariantCulture), "Neutral",
+                "Giờ Việt Nam: Full / Diff → pg_dump → đính kèm (BACKUP_TIME)."),
+            NextRun(settings, now, hasFull),
+            new(keep, "Bản Full", $"{settings.KeepWeeks.ToString(CultureInfo.InvariantCulture)} tuần", "Neutral",
+                "Dọn kèm các bản Diff của nó; luôn giữ bản Full dùng được mới nhất (BACKUP_KEEP_WEEKS)."),
+            new(keep, "Bản pg_dump", $"{settings.DumpKeepDays.ToString(CultureInfo.InvariantCulture)} ngày", "Neutral",
+                "Luôn giữ bản mới nhất dùng được (DUMP_KEEP_DAYS)."),
+            new(keep, "WAL", kept.Where(r => r.Kind == BackupKind.Full && r.StartWalFile != null).OrderBy(r => r.FinishedAt)
+                    .Select(r => $"Giữ từ {r.StartWalFile}").FirstOrDefault() ?? "Chưa dọn", "Neutral",
+                "Giữ từ file WAL đầu của bản Full cũ nhất còn giữ – khôi phục được tới thời điểm bất kỳ sau bản Full đó."),
+        };
+        foreach (var kind in new[] { BackupKind.Full, BackupKind.Diff, BackupKind.Dump })
+        {
+            var list = kept.Where(r => r.Kind == kind).ToList();
+            var last = list.MaxBy(r => r.FinishedAt);
+            rows.Add(new(held, BackupLabels.Kind(kind), $"{list.Count.ToString(CultureInfo.InvariantCulture)} bản · " +
+                    SystemOverviewService.Bytes(list.Sum(r => r.SizeBytes ?? 0)),
+                list.Count == 0 && kind != BackupKind.Diff && strict ? "Warning" : "Neutral",
+                last?.FinishedAt is { } at ? $"Mới nhất {SystemOverviewService.Stamp(at)}." : "Chưa có bản nào."));
+        }
+
+        return new BackupOverviewDto(rows, StorageRows(strict));
+    }
+
+    /// <summary>Lượt lịch kế tiếp: hôm nay chưa tới giờ / tới giờ mà chưa đặt (chạy bù) / ngày mai.</summary>
+    private SystemOverviewRowDto NextRun(BackupScheduleSettings settings, DateTimeOffset now, bool hasFull)
+    {
+        if (!_options.ScheduleEnabled || string.IsNullOrWhiteSpace(_options.RootPath))
+            return new("Lịch", "Lượt kế tiếp", "Không có", "Neutral", "Lịch tự động đang tắt.");
+        var local = TimeZoneInfo.ConvertTime(now, VietnamTime.Zone).DateTime;
+        var today = DateOnly.FromDateTime(local);
+        var date = BackupPlanner.DueSlot(local, settings.Time) is null ? today : today.AddDays(1);
+        var kind = BackupPlanner.BaseKind(date, settings.FullDay, hasFull);
+        return new("Lịch", "Lượt kế tiếp",
+            $"{BackupLabels.Kind(kind)} lúc {settings.Time.ToString("HH:mm", CultureInfo.InvariantCulture)} {date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)}",
+            "Neutral", hasFull ? "Kèm pg_dump và chép bổ sung đính kèm." : "Chưa có bản Full dùng được nên lượt kế tiếp chạy Full.");
+    }
+
+    /// <summary>Tab "Nơi lưu": thư mục, chỗ trống ổ, công cụ PostgreSQL, tài khoản bảo trì.</summary>
+    private List<SystemOverviewRowDto> StorageRows(bool strict)
+    {
+        const string place = "Nơi lưu", tools = "Công cụ";
+        var rows = new List<SystemOverviewRowDto>();
+        if (string.IsNullOrWhiteSpace(_options.RootPath))
+            rows.Add(new(place, "Thư mục sao lưu", "Chưa khai", strict ? "Error" : "Warning",
+                "Khai Backup:RootPath – ổ khác ổ dữ liệu CSDL (B4), xem docs/deploy-windows.md mục 4b."));
+        else
+        {
+            rows.Add(new(place, "Thư mục sao lưu", _options.RootPath, "Neutral", "Các thư mục con full, diff, dump, attachments."));
+            rows.Add(SystemOverviewService.Disk(place, "Ổ sao lưu", _options.RootPath));
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.SecondaryPath))
+            rows.Add(new(place, "Nơi lưu thứ hai", "Không khai", strict ? "Warning" : "Neutral",
+                "Nên khai Backup:SecondaryPath (NAS / thư mục mạng) – máy chủ hỏng ổ vẫn còn bản sao lưu."));
+        else
+        {
+            rows.Add(new(place, "Nơi lưu thứ hai", _options.SecondaryPath, Directory.Exists(_options.SecondaryPath) ? "Neutral" : "Error",
+                Directory.Exists(_options.SecondaryPath) ? "Chép sau mỗi lần sao lưu, đối chiếu dung lượng / mã kiểm tra." : "Không mở được thư mục."));
+            rows.Add(SystemOverviewService.Disk(place, "Ổ nơi lưu thứ hai", _options.SecondaryPath));
+        }
+
+        rows.Add(new(place, "Thư mục WAL", string.IsNullOrWhiteSpace(_options.WalArchivePath) ? "Chưa khai" : _options.WalArchivePath,
+            string.IsNullOrWhiteSpace(_options.WalArchivePath) && strict ? "Warning" : "Neutral",
+            "Backup:WalArchivePath – để dọn WAL cũ (pg_archivecleanup) và báo chỗ trống ổ."));
+        rows.Add(new(place, "Thư mục đính kèm (nguồn)", _attachments.RootPath, "Neutral", "Chép bổ sung mỗi đêm, không xóa file đã xóa ở nguồn."));
+
+        foreach (var tool in new[] { "pg_basebackup", "pg_verifybackup", "pg_dump", "pg_restore", "pg_archivecleanup" })
+        {
+            var path = _tools.Resolve(tool);
+            var found = File.Exists(path);
+            rows.Add(new(tools, tool, found ? path : "Không thấy", found ? "Ok" : "Error",
+                found ? null : "Khai Backup:PgBinPath là thư mục bin của PostgreSQL 18 (cùng bản với máy chủ CSDL)."));
+        }
+
+        rows.Add(string.IsNullOrWhiteSpace(_options.MaintenanceConnectionString)
+            ? new(tools, "Tài khoản bảo trì", "Chưa khai", strict ? "Error" : "Warning",
+                "Full / Diff cần ConnectionStrings:Maintenance (proc_maint, quyền REPLICATION – qt-enable-wal.ps1); pg_dump chạy bằng tài khoản ứng dụng.")
+            : new(tools, "Tài khoản bảo trì", PgConnectionInfo.Parse(_options.MaintenanceConnectionString).Username ?? "(không tên)", "Ok",
+                "ConnectionStrings:Maintenance – dùng cho pg_basebackup, pg_dump."));
+        return rows;
+    }
+
+    private static string IsoDayName(int day) =>
+        day switch { 1 => "Thứ hai", 2 => "Thứ ba", 3 => "Thứ tư", 4 => "Thứ năm", 5 => "Thứ sáu", 6 => "Thứ bảy", _ => "Chủ nhật" };
 
     /// <inheritdoc />
     public async Task<BackupRunSearchResult> SearchAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)

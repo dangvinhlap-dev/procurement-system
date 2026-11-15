@@ -426,6 +426,15 @@ public class BackupTests
         var overview = await ReadAsync<SystemOverviewDto>(await head.GetAsync("/api/ops/v1/overview", Ct));
         Assert.Equal("Chưa có", Assert.Single(overview.Rows, r => r.Item == "Sao lưu gần nhất").Value);
         Assert.Contains(overview.Rows, r => r.Item == "Ổ sao lưu");
+
+        // Tab "Lịch và thời hạn giữ", "Nơi lưu": máy test tắt lịch; công cụ pg_dump tìm thấy; chưa khai tài khoản bảo trì.
+        var bak = await ReadAsync<BackupOverviewDto>(await head.GetAsync("/api/ops/v1/backup/overview", Ct));
+        Assert.Equal("Tắt", Assert.Single(bak.ScheduleRows, r => r.Item == "Lịch tự động").Value);
+        Assert.Equal("7 – Chủ nhật", Assert.Single(bak.ScheduleRows, r => r.Item == "Ngày chạy Full").Value);
+        Assert.Contains(bak.ScheduleRows, r => r.Group == "Bản đang giữ" && r.Item == "pg_dump");
+        Assert.Equal(ProcApiFactory.BackupRoot, Assert.Single(bak.StorageRows, r => r.Item == "Thư mục sao lưu").Value);
+        Assert.Equal("Chưa khai", Assert.Single(bak.StorageRows, r => r.Item == "Tài khoản bảo trì").Value);
+        Assert.Contains(bak.StorageRows, r => r.Item == "pg_dump");
         await ClearRunsAsync();
     }
 

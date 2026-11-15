@@ -49,6 +49,10 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsBackupView)
             .RequireHeadOffice();
 
+        ops.MapGet("/backup/overview", (IBackupService s, CancellationToken ct) => s.GetOverviewAsync(ct))
+            .RequirePermission(Permissions.System.OpsBackupView)
+            .RequireHeadOffice();
+
         ops.MapGet("/backup/runs/{id:guid}", (Guid id, IBackupService s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.System.OpsBackupView)
             .RequireHeadOffice();

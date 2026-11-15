@@ -109,6 +109,11 @@ public interface IBackupService
     /// <returns>Lần sao lưu vừa đặt.</returns>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi chưa khai thư mục, đang có lần cùng kiểu.</exception>
     Task<BackupRunDto> QueueAsync(QueueBackupRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Lịch, thời hạn giữ và nơi lưu (tab "Lịch và thời hạn giữ", "Nơi lưu" của BAK).</summary>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Hai bảng dòng.</returns>
+    Task<BackupOverviewDto> GetOverviewAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -169,3 +174,8 @@ public interface IBackupScheduler
     /// <returns>Kết quả.</returns>
     Task<BackupCleanupResult> CleanupAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>Tab "Lịch và thời hạn giữ", "Nơi lưu" của màn hình BAK (lát QT3b-3) – bảng nhóm / hạng mục / giá trị / đèn / ghi chú như SYS.</summary>
+/// <param name="ScheduleRows">Lịch tự động, tham số, lượt kế tiếp, số bản đang giữ.</param>
+/// <param name="StorageRows">Thư mục sao lưu, nơi thứ hai, thư mục WAL, chỗ trống ổ, công cụ PostgreSQL, tài khoản bảo trì.</param>
+public sealed record BackupOverviewDto(IReadOnlyList<SystemOverviewRowDto> ScheduleRows, IReadOnlyList<SystemOverviewRowDto> StorageRows);
