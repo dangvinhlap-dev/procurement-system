@@ -21,7 +21,8 @@ namespace Proc.Infrastructure.Operations;
 /// <list type="number">
 /// <item>Tính dấu vết (<see cref="ErrorFingerprint"/>); chưa có nhóm thì tạo nhóm Mới (hai request cùng tạo – trùng khóa – thì quay về bước 2).</item>
 /// <item>Đã có nhóm: tăng số lần, lần cuối bằng một lệnh UPDATE nguyên tử; nhóm Đã xử lý thì chuyển về Mới, tăng số lần mở lại.</item>
-/// <item>Nhóm mới hoặc mở lại: thông báo (kèm email qua hàng chờ sẵn có) cho người có quyền <c>System.Ops.ErrorLog.Manage</c> ở tổng công ty.</item>
+/// <item>Nhóm mới hoặc mở lại: thông báo trong phần mềm cho người có quyền <c>System.Ops.ErrorLog.Manage</c> ở tổng công ty – <b>không gửi
+/// email</b> (người dùng chốt 15/11/2026).</item>
 /// </list>
 /// Không bao giờ ném lỗi: hỏng thì ghi log kỹ thuật kèm mã theo dõi, vẫn trả mã cho người dùng.
 /// </summary>
@@ -155,7 +156,8 @@ public sealed class ErrorRecorder : IErrorRecorder
 
     /// <summary>
     /// Thông báo nhóm lỗi mới / mở lại cho người có quyền xử lý ở tổng công ty – kể cả chính người gặp lỗi nếu họ có quyền (khác thông báo nghiệp
-    /// vụ: ở đây không có "người gây ra sự kiện"). Email đi theo hàng chờ email thông báo sẵn có.
+    /// vụ: ở đây không có "người gây ra sự kiện"). Chỉ hiện trong phần mềm: đánh dấu bỏ qua email ngay khi tạo để dịch vụ gửi email không gửi
+    /// (người dùng chốt 15/11/2026 – không cần gửi lỗi qua email).
     /// </summary>
     private static async Task NotifyManagersAsync(
         ProcDbContext db, Guid groupId, Pending e, string code, bool reopened, DateTimeOffset now, CancellationToken cancellationToken)
@@ -174,10 +176,15 @@ public sealed class ErrorRecorder : IErrorRecorder
         var message = $"{e.Type}: {e.Message} – mã theo dõi {code}" + (e.RawPath is { } p ? $" – {p}" : string.Empty);
         foreach (var userId in users.Distinct())
         {
-            db.Notifications.Add(Notification.Create(companyId, userId, NotificationTypes.ErrorLogNew,
-                Cut(title, Notification.TitleMaxLength), Cut(message, Notification.MessageMaxLength), "ERR", groupId, now));
+            var notification = Notification.Create(companyId, userId, NotificationTypes.ErrorLogNew,
+                Cut(title, Notification.TitleMaxLength), Cut(message, Notification.MessageMaxLength), "ERR", groupId, now);
+            notification.SkipEmail(now, NoEmailReason);
+            db.Notifications.Add(notification);
         }
     }
+
+    /// <summary>Lý do bỏ qua email của thông báo nhật ký lỗi.</summary>
+    public const string NoEmailReason = "Thông báo nhật ký lỗi chỉ hiện trong phần mềm, không gửi email.";
 
     private static string Cut(string value, int max) => value.Length <= max ? value : value[..(max - 1)] + "…";
 }

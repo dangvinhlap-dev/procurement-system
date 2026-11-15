@@ -16,7 +16,7 @@ namespace Proc.IntegrationTests;
 
 /// <summary>
 /// Lát QT2 – nhật ký lỗi (màn hình ERR, design.md mục 21.4): lỗi 500 vào nhóm kèm mã theo dõi trùng câu báo lỗi, gộp lỗi trùng, mở lại khi lặp
-/// sau khi đã xử lý (kèm thông báo người quản lý), lỗi giao diện (giới hạn 8 KB, 30 lần/phút), quyền, dọn theo hạn giữ.
+/// sau khi đã xử lý (kèm thông báo trong phần mềm, không email), lỗi giao diện (giới hạn 8 KB, 30 lần/phút), quyền, dọn theo hạn giữ.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public class ErrorLogTests
@@ -62,7 +62,11 @@ public class ErrorLogTests
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
-        return await db.Notifications.IgnoreQueryFilters().CountAsync(n => n.Type == NotificationTypes.ErrorLogNew && n.TargetId == groupId, Ct);
+        var notifications = await db.Notifications.IgnoreQueryFilters()
+            .Where(n => n.Type == NotificationTypes.ErrorLogNew && n.TargetId == groupId).ToListAsync(Ct);
+        // Không gửi lỗi qua email (người dùng chốt 15/11/2026): thông báo tạo ra đã ở trạng thái bỏ qua email.
+        Assert.All(notifications, n => Assert.Equal(NotificationEmailState.Skipped, n.EmailState));
+        return notifications.Count;
     }
 
     /// <summary>
@@ -108,7 +112,7 @@ public class ErrorLogTests
         var third = await CauseServerErrorAsync(head);
         var reopened = await FindByCodeAsync(head, third);
         Assert.Equal(("New", resolved.ReopenCount + 1, "Đã sửa ở bản sau"), (reopened.Status, reopened.ReopenCount, reopened.Note));
-        // Admin có mọi quyền ở tổng công ty nên nhận thông báo (kèm email qua hàng chờ) "lỗi lặp lại sau khi đã xử lý".
+        // Admin có mọi quyền ở tổng công ty nên nhận thông báo "lỗi lặp lại sau khi đã xử lý" (chỉ trong phần mềm, không email).
         Assert.True(await NotificationCountAsync(group.Id) > notificationsBefore);
     }
 

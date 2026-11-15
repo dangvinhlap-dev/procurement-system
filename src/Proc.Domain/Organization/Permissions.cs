@@ -51,7 +51,7 @@ public static class Permissions
         public const string OpsErrorLogView = "System.Ops.ErrorLog.View";
         /// <summary>
         /// Quyền "Xử lý nhật ký lỗi" (lát QT2): đổi trạng thái / ghi chú nhóm lỗi, gây lỗi thử; người có quyền này ở tổng công ty nhận thông báo
-        /// + email khi có nhóm lỗi mới.
+        /// trong phần mềm (không email) khi có nhóm lỗi mới.
         /// </summary>
         public const string OpsErrorLogManage = "System.Ops.ErrorLog.Manage";
     }
@@ -335,7 +335,7 @@ public static class Permissions
         new(System.DocumentCancel, "Hủy phiếu đã gửi duyệt (quyền đặc biệt – chỉ quản trị)"),
         new(System.OpsView, "Xem tổng quan vận hành, nhật ký vận hành (chỉ ở tổng công ty)"),
         new(System.OpsErrorLogView, "Xem nhật ký lỗi (chỉ ở tổng công ty)"),
-        new(System.OpsErrorLogManage, "Xử lý nhật ký lỗi, nhận email khi có lỗi mới (chỉ ở tổng công ty)"),
+        new(System.OpsErrorLogManage, "Xử lý nhật ký lỗi, nhận thông báo khi có lỗi mới (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),
         new(Organization.DepartmentView, "Xem danh mục bộ phận, khối"),
