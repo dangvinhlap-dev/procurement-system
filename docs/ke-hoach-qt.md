@@ -119,6 +119,7 @@ Bản 0.34.0 · Lớn · GĐ2.
 | Backend, API | Domain `AgentCommand` (môi trường, loại, tham số, trạng thái Chờ / Đang chạy / Xong / Lỗi, người tạo, lý do, kết quả, nhật ký) + `EnvironmentRegistration` (tên, địa chỉ, băm khóa bộ thực thi, băm khóa trạng thái, lần liên lạc cuối, phiên bản) · `GET /api/ops/v1/agent/commands`, `POST /api/ops/v1/agent/commands/{id}/result` xác thực bằng header `X-Ops-Agent-Key` (băm lưu CSDL, không phải JWT) |
 | CSDL | Migration `V0_34_0_BoThucThi` |
 | Test | Tích hợp: khóa sai / hết hạn bị từ chối, một môi trường chỉ một lệnh đang chạy, ghi kết quả, chế độ bảo trì chặn người thường cho qua admin · kiểm tra tay bộ thực thi `-DryRun` trên máy TEST |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.14): `EnvironmentRegistration` thành `AgentEnvironment`, chưa có băm khóa trạng thái (thêm ở QT8); quyền `System.OpsAgent.View` / `.Manage`, `System.OpsMaintenanceMode.Manage`; tạo khóa xác nhận Q6 "TẠO KHÓA"; lệnh chạy quá `Agent:RunningTimeoutHours` (6) thì Lỗi; nút bật / tắt bảo trì tạm trên SYS (QT7 chuyển vào CFG), lý do bắt buộc, không đòi mật khẩu; màn hình **AGT** `/he-thong/bo-thuc-thi` (Môi trường, Lệnh); API môi trường thêm `maintenance` → dải đỏ; e2e `agent.spec.ts` (chế độ bảo trì giả lập API vì Playwright chạy song song); deploy-windows.md mục 4d. Đã chạy thật `qt-agent.ps1` với API dev (Lệnh thử Xong) |
 
 ### QT6 – Phục hồi (RST)
 Bản 0.34.0 · Lớn · GĐ2.

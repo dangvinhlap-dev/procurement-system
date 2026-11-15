@@ -39,6 +39,7 @@ function useTestTitle(active: boolean) {
 /**
  * Dải nhận diện môi trường (design.md mục 21.3, lát QT1 – ui-style.md mục 5j): xám "DEV", cam "MÔI TRƯỜNG TEST", PROD không dải. Máy thiếu
  * cấu hình (chưa khai App:Environment, TEST chưa khai hộp thư test – người dùng chốt 14/11/2026) thì dải đỏ kèm cảnh báo, email không gửi.
+ * Chế độ bảo trì đang bật (lát QT5) cũng dải đỏ "ĐANG BẢO TRÌ: <câu thông báo>" – kể cả trang đăng nhập, Portal.
  * Đặt đầu AppShell, trang đăng nhập, trang điện thoại `/duyet`, Portal NCC.
  * @param endpoint API môi trường – Portal NCC dùng `/api/portal/auth/environment`.
  * @param floating Dải nổi trên đầu trang (trang đăng nhập canh giữa màn hình).
@@ -48,13 +49,24 @@ export function EnvironmentBanner({ endpoint, floating = false }: { endpoint?: s
   useTestTitle(status?.environment === 'Test')
   if (!status) return null
   const label = labels[status.environment]
-  if (!label && !status.warning) return null
-  const tone = status.warning ? 'warning' : status.environment.toLowerCase()
-  const text = status.warning ? [shortLabels[status.environment], status.warning].filter(Boolean).join(' – ') : (label ?? '')
+  const maintenance = status.maintenance
+  if (!label && !status.warning && !maintenance) return null
+  // Chế độ bảo trì (lát QT5) và cảnh báo cấu hình đều là dải đỏ; bảo trì đứng trước vì người dùng cần biết ngay vì sao không làm việc được.
+  const alert = maintenance != null || status.warning != null
+  const tone = alert ? 'warning' : status.environment.toLowerCase()
+  const text = alert
+    ? [
+        shortLabels[status.environment],
+        maintenance ? `ĐANG BẢO TRÌ: ${maintenance.message}` : null,
+        status.warning,
+      ]
+        .filter(Boolean)
+        .join(' – ')
+    : (label ?? '')
   return (
     <div
       className={`erp-env-banner is-${tone}${floating ? ' is-floating' : ''}`}
-      role={status.warning ? 'alert' : 'status'}
+      role={alert ? 'alert' : 'status'}
       data-testid="environment-banner"
       title={text}
     >

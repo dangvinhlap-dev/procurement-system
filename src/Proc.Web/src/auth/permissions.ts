@@ -24,6 +24,12 @@ export const Permission = {
   MaintenanceView: 'System.OpsMaintenance.View',
   /** Chạy VACUUM, REINDEX, ngắt phiên (ngắt phiên còn xác nhận Q6 – lát QT4). */
   MaintenanceRun: 'System.OpsMaintenance.Run',
+  /** Bật / tắt chế độ bảo trì (lát QT5). */
+  MaintenanceModeManage: 'System.OpsMaintenanceMode.Manage',
+  /** Xem bộ thực thi AGT: môi trường, lịch sử lệnh – chỉ ở tổng công ty (lát QT5). */
+  AgentView: 'System.OpsAgent.View',
+  /** Khai môi trường, tạo khóa (xác nhận Q6), ra lệnh, hủy lệnh chờ (lát QT5). */
+  AgentManage: 'System.OpsAgent.Manage',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

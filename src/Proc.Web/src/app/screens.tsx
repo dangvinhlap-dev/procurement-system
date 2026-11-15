@@ -12,6 +12,7 @@ import {
   CheckSquareOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
+  ApiOutlined,
   ClusterOutlined,
   ColumnWidthOutlined,
   ContainerOutlined,
@@ -216,6 +217,7 @@ export const screens: Screen[] = [
   { code: 'ERR', title: 'Nhật ký lỗi', navLabel: 'Nhật ký lỗi', path: '/he-thong/nhat-ky-loi', icon: <BugOutlined />, group: 'admin', permission: Permission.ErrorLogView },
   { code: 'BAK', title: 'Sao lưu', navLabel: 'Sao lưu', path: '/he-thong/sao-luu', icon: <CloudServerOutlined />, group: 'admin', permission: Permission.BackupView },
   { code: 'DBM', title: 'Bảo trì CSDL', navLabel: 'Bảo trì CSDL', path: '/he-thong/bao-tri-csdl', icon: <DatabaseOutlined />, group: 'admin', permission: Permission.MaintenanceView },
+  { code: 'AGT', title: 'Bộ thực thi', navLabel: 'Bộ thực thi', path: '/he-thong/bo-thuc-thi', icon: <ApiOutlined />, group: 'admin', permission: Permission.AgentView },
 ]
 
 /**

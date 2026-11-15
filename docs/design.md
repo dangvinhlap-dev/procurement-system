@@ -3040,6 +3040,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
 | CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào) |
 | REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
+| AGT | Bộ thực thi (lát QT5) | Môi trường DEV / TEST / PROD có bộ thực thi: tình trạng liên lạc, phiên bản, khóa (tạo khóa xác nhận Q6); lịch sử lệnh, "Lệnh thử"; QT8 dùng bảng môi trường này cho REL – mục 21.14 |
 | TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới |
 
 ### 21.5 Sao lưu và phục hồi (PostgreSQL 18, công cụ có sẵn)
@@ -3269,6 +3270,43 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
   `POST sessions/terminate` (`System.OpsMaintenance.Run`); chỉ tổng công ty. Nhật ký vận hành `MaintenanceQueued`, `MaintenanceFinished`,
   `SessionTerminated`, `DangerConfirmFailed`. SYS có dịch vụ nền "Bảo trì CSDL".
 - **Giao diện DBM** (ui-style.md mục 5m): tab Bảng, Phiên và khóa, Lịch sử.
+
+### 21.14 Lát QT5 – bộ thực thi và chế độ bảo trì, đã làm (15/11/2026)
+
+- **Chế độ bảo trì**: bảng một dòng `MaintenanceModeState` (bật / tắt, câu thông báo, lý do, người, giờ bật); lịch sử bật / tắt ở nhật ký vận
+  hành (`MaintenanceModeChanged`). `MaintenanceModeMiddleware` (sau nạp phạm vi): bật thì mọi `/api` trả **503** (ProblemDetails `code` =
+  `maintenance`, `title` = câu thông báo, `Retry-After: 60`) – **trừ** người có ít nhất một quyền `System.Ops*` tại công ty đang làm việc,
+  `/api/auth` (đăng nhập, đổi công ty), API môi trường ẩn danh, API bộ thực thi; file giao diện và `/health` không chặn. Trạng thái đọc qua dịch
+  vụ singleton đệm 5 giây (nhiều tiến trình IIS thấy nhau sau tối đa 5 giây); đọc CSDL lỗi thì coi như tắt (không khóa người dùng vì lỗi đọc).
+  Bật / tắt bắt buộc lý do ≥ 5 ký tự (tự chọn – chặn mọi người dùng nên phải ghi vì sao), không đòi mật khẩu (không mất dữ liệu, tắt lại được
+  ngay). Quyền riêng `System.OpsMaintenanceMode.Manage`; nút "Bật / Tắt chế độ bảo trì…" tạm đặt trên **SYS** – lát QT7 chuyển vào CFG.
+  API môi trường (`/api/ops/v1/environment`, `/api/portal/auth/environment`) thêm trường `maintenance` (câu thông báo, giờ bật – không lý do,
+  không người bật) → dải **đỏ** "ĐANG BẢO TRÌ: …" trên mọi màn hình kể cả đăng nhập, Portal; giao diện lấy lại mỗi phút và ngay khi API trả 503.
+  NCC trên Portal cũng bị chặn (người dùng thường).
+- **Bộ thực thi** (N1): bảng `AgentEnvironment` – mỗi mã Dev / Test / Prod một dòng, tên, địa chỉ web, đang dùng, **băm SHA256** của khóa
+  (`qta_` + 32 byte ngẫu nhiên base64url; khóa đủ mạnh nên băm một lần, so thời gian cố định) + 4 ký tự cuối, người / giờ tạo khóa, lần liên lạc
+  cuối, phiên bản bộ thực thi, phiên bản phần mềm, tên máy. Bảng `AgentCommand` – môi trường, loại (QT5: `Ping` – "Lệnh thử"; các lát sau chỉ
+  **thêm** loại), tham số JSON, lý do (≥ 5 ký tự), người ra lệnh, trạng thái Chờ → Đang chạy → Xong / Lỗi, cộng Hết hạn (chờ quá **1 giờ** chưa
+  nhận – máy bật lại không chạy lệnh cũ), Đã hủy (chỉ khi còn chờ); chạy quá `Agent:RunningTimeoutHours` (6) không báo kết quả thì Lỗi để môi
+  trường nhận lệnh mới; nhật ký bộ thực thi gửi về giữ 64.000 ký tự cuối. **Mỗi môi trường một lệnh Đang chạy**: chỉ mục duy nhất có lọc + khóa
+  dòng môi trường `FOR UPDATE` khi giao lệnh. Migration `V0_34_0_BoThucThi`.
+- **API bộ thực thi** (không JWT, không công ty – header `X-Ops-Agent-Key`; sai / thiếu khóa, khóa cũ, môi trường ngừng dùng → 401 cùng một câu):
+  `GET /api/ops/v1/agent/commands?agentVersion&appVersion&host[&peek=true]` – ghi lần liên lạc, trả lệnh kế tiếp (200, đánh dấu Đang chạy) hoặc
+  204; `peek` (chạy thử `-DryRun`) chỉ xem, không nhận, không đánh dấu hết hạn. `POST /api/ops/v1/agent/commands/{id}/result` (`succeeded`,
+  `message`, `journal`) – chỉ lệnh Đang chạy của đúng môi trường (khác → 404, đã báo → 400).
+- **API quản trị** (tổng công ty; xem `System.OpsAgent.View`, thao tác `System.OpsAgent.Manage`): `/api/ops/v1/agent-admin/environments` (GET,
+  POST khai, PUT `{id}` sửa tên / địa chỉ / ngừng dùng – không đổi mã), `POST environments/{id}/key` – tạo khóa, **xác nhận Q6** (mật khẩu + gõ
+  "TẠO KHÓA"), khóa cũ hết hiệu lực ngay, khóa chỉ trả **một lần**; `commands?from&to[&environmentId]`, `commands/{id}` (kèm nhật ký), `POST
+  commands` (môi trường phải đang dùng và có khóa), `POST commands/{id}/cancel`. Nhật ký vận hành `AgentEnvironmentSaved`, `AgentKeyCreated`,
+  `AgentCommandQueued`, `AgentCommandFinished` (xong / lỗi / hết hạn / quá giờ), `AgentCommandCancelled` – không bao giờ ghi khóa.
+- **Script** `deploy/windows/qt-agent.ps1` (bản 1.0.0, PowerShell 5.1): khóa file chống chạy chồng, gửi lại kết quả treo, hỏi lệnh, chạy, **ghi
+  kết quả ra file trước rồi mới gửi** (T2), `agent-journal.log`, `-DryRun`; lệnh lạ báo "chưa biết lệnh – cài bộ thực thi mới".
+  `qt-agent-install.ps1`: tác vụ "Procurement QT agent" mỗi phút bằng tài khoản riêng, file cấu hình có khóa chỉ Administrators / SYSTEM / tài
+  khoản đó đọc (deploy-windows.md mục 4d). Bộ thực thi trên TEST / DEV hỏi máy chủ có màn hình AGT (PROD; chế độ một môi trường: chính máy đó).
+- **Màn hình AGT** `/he-thong/bo-thuc-thi` (menu Quản trị hệ thống; ui-style.md mục 5n): tab Môi trường (đèn liên lạc: xanh trong
+  `Agent:OnlineMinutes` = 3 phút, vàng mất liên lạc, đỏ ngừng dùng / chưa có khóa, trung tính chưa liên lạc), tab Lệnh (lịch sử, ngăn kéo nhật ký).
+- Khác kế hoạch: `EnvironmentRegistration` đặt tên `AgentEnvironment`; **chưa có băm khóa trạng thái** (API trạng thái chỉ đọc của QT8 – thêm cột
+  ở QT8, kiểu "thêm trước – bỏ sau"); quyền đặt theo mẫu 3 đoạn `System.OpsAgent.*`, `System.OpsMaintenanceMode.Manage`.
 
 ## Nguồn tham khảo
 
