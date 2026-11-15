@@ -22,6 +22,11 @@ const kindLabels: Record<string, string> = {
   AgentCommandQueued: 'Ra lệnh bộ thực thi',
   AgentCommandFinished: 'Lệnh bộ thực thi kết thúc',
   AgentCommandCancelled: 'Hủy lệnh bộ thực thi',
+  RestoreQueued: 'Đặt lần phục hồi',
+  RestoreFinished: 'Khôi phục xong / lỗi',
+  RestoreDiscarded: 'Bỏ bản khôi phục',
+  RestoreSwapRequested: 'Hoán đổi bản khôi phục',
+  RestoreSwapFinished: 'Hoán đổi xong / lỗi',
   DangerConfirmFailed: 'Xác nhận việc nguy hiểm sai',
 }
 

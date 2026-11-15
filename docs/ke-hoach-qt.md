@@ -131,6 +131,7 @@ Bản 0.34.0 · Lớn · GĐ2.
 | Bảo vệ | `System.Ops.Restore.Run`; Q6 (gõ "KHÔI PHỤC"); nhật ký ghi ra file **trước** khi hoán đổi; giữ bản cũ tới khi người dùng xóa tay |
 | CSDL | Migration `V0_34_0_PhucHoi` (`RestoreRun`) |
 | Test | Tích hợp: khôi phục pg_dump sang CSDL tên tạm + so sánh số dòng (không hoán đổi CSDL test) · đơn vị: chọn chuỗi Full → Diff → WAL, phát hiện đứt WAL · diễn tập D2 bắt buộc |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.15): quyền `System.OpsRestore.View` / `.Run`; Q6 "KHÔI PHỤC" ở bước hoán đổi; bảng vận hành (bộ thực thi, sao lưu, nhật ký vận hành, lần phục hồi) chép từ CSDL đang chạy sang bản khôi phục khi hoán đổi (`prepare-swap`); khác phiên bản CSDL thì không hoán đổi; RST cảnh báo CSDL khác cùng máy chủ (khôi phục theo mốc quay lùi cả chúng); bộ thực thi 1.1.0 lệnh `RestorePointInTime`, `DiscardPointInTime`, `SwapDatabase`, `SwapCluster`; `qt-enable-wal.ps1` cấp `GRANT proc TO proc_maint`; deploy-windows.md mục 4e; test domain 8, tích hợp 3, e2e `restore.spec.ts` 2. Khôi phục theo mốc / hoán đổi máy chủ CSDL diễn tập D2 trên TEST |
 
 ### QT7 – Cấu hình truy cập và bảo mật (CFG)
 Bản 0.35.0 · Vừa · GĐ2.
