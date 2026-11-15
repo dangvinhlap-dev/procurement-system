@@ -31,6 +31,9 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     /// <summary>Mật khẩu quản trị tạo sẵn.</summary>
     public const string AdminPassword = "Admin@2026";
 
+    /// <summary>Thư mục cất gói phát hành của test (lát QT8).</summary>
+    public static readonly string PackageRoot = Path.Combine(Path.GetTempPath(), "proc test goi phat hanh");
+
     /// <summary>Thư mục sao lưu của test (lát QT3b).</summary>
     public static readonly string BackupRoot = Path.Combine(Path.GetTempPath(), "proc test sao lưu", "chính");
 
@@ -43,6 +46,11 @@ public sealed class ProcApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseEnvironment("Testing");
         // Lát QT7: test giả lập IP người gọi qua header X-Test-Client-Ip (giới hạn tần suất, dải IP quản trị).
         builder.ConfigureServices(s => s.AddTransient<IStartupFilter, TestClientIpStartupFilter>());
+        // Lát QT8: gói phát hành cất ở thư mục tạm; GitHub giả (không gọi mạng thật).
+        builder.UseSetting("Release:PackageRoot", PackageRoot);
+        builder.UseSetting("Release:GitHubRepository", "demo/procurement");
+        builder.ConfigureServices(s => s.AddHttpClient(Proc.Infrastructure.Operations.ReleaseService.GitHubClient)
+            .ConfigurePrimaryHttpMessageHandler(() => FakeGitHubHandler.Shared));
         // File đính kèm của test ghi vào thư mục tạm, không lẫn vào thư mục ứng dụng (design.md mục 18.4).
         builder.UseSetting("Attachments:RootPath", Path.Combine(Path.GetTempPath(), "proc-test-attachments"));
         // Sao lưu (lát QT3b): thư mục tạm có dấu cách + dấu tiếng Việt (thử truyền tham số lệnh); test tự gọi bộ chạy, không để dịch vụ nền chạy đua.

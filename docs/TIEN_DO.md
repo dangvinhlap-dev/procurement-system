@@ -994,8 +994,18 @@ cài TEST).
   hơn mức tối thiểu của gói); lệnh bộ thực thi `DeployRelease`, `RollbackRelease`; quyền `System.OpsRelease.Manage/.DeployTest/.UatSignOff/
   .DeployProd`; loại chủ đính kèm `ReleaseTicket` (khóa khi đã cài PROD, chỉ tổng công ty); migration `V0_36_0_TrungTamPhatHanh`. Test domain
   `ReleaseTicketTests` 6; `dotnet test` 798/798.
-- **Còn**: QT8-2 nhận gói (tải lên ≤ 200 MB, GitHub Release; SHA256; CHANGELOG → mục kiểm thử; `rollback.json`; `publish.ps1`), QT8-3 cài / quay
-  về qua bộ thực thi 1.2.0 + `/api/ops/v1/smoke`, QT8-4 giao diện REL + e2e, QT8-5 tài liệu (trình người dùng bản viết lại phat-hanh.md, CLAUDE.md 8).
+- **QT8-2 xong (máy chủ, commit)**: `ReleasePackageReader` (gói phải có `app\Proc.Api.dll` + `rollback.json`; mục của bản trong CHANGELOG →
+  mục kiểm thử, nhóm "Thay đổi CSDL" / "Cách quay lại bản trước" vào ô riêng); `ReleaseService` (+ `IReleaseAgentHooks`): nhận gói tải lên (body là
+  file zip, không multipart; `Release:MaxPackageSizeMb` 200, web.config nới 250 MB riêng đường dẫn upload) hoặc GitHub Release (zip + `.sha256` của
+  tag `vx.y.z`, `Release:GitHubRepository`, HttpClient bọc `ReleaseGitHubHttp` – Infrastructure không thêm gói); cất gói ở `Release:PackageRoot`;
+  bước kiểm thử / lỗi / ghi chú / UAT / đóng / hủy; **cài TEST / PROD và quay về** giao lệnh `DeployRelease` / `RollbackRelease` (Q6 "CÀI x.y.z" /
+  "QUAY VỀ"; quyền theo môi trường); bộ thực thi tải gói `GET /api/ops/v1/agent/releases/{id}/package` (chỉ khi đang chạy lệnh cài phiếu đó),
+  kiểm thử nhanh `GET /api/ops/v1/agent/smoke`; kết quả lệnh (thêm trường `InstalledSha256`) chuyển bước phiếu qua hook của `AgentGateway`; lệnh hết
+  hạn / hủy cập nhật khi mở phiếu; bản trước lấy theo phiên bản bộ thực thi báo. API `/api/ops/v1/releases…` (`ReleaseEndpoints`). `publish.ps1`:
+  thêm `rollback.json` (từ `db\scripts\rollback\<bản>.json`; có script CSDL mà chưa khai thì dừng), `CHANGELOG.md`, `tools\qt-agent*.ps1`, file
+  `.sha256`. Test tích hợp `ReleaseTests` 4 (gói giả, GitHub giả `FakeGitHubHandler`, bộ thực thi giả); `dotnet test` 802/802.
+- **Còn**: QT8-3 bộ thực thi 1.2.0 (`DeployRelease`, `RollbackRelease` trên Windows/IIS), QT8-4 giao diện REL + e2e, QT8-5 tài liệu (trình người
+  dùng bản viết lại phat-hanh.md, CLAUDE.md 8).
 
 **Hoãn phát hành (15/11/2026)** – người dùng yêu cầu "phát hành bản 0.36.0" rồi đổi ý: "chờ có trung tâm phát hành". Chưa tạo tag, chưa đổi
 `Directory.Build.props` (vẫn 0.33.1). Phần chưa phát hành QT5 + QT6 (dự kiến 0.34.0) và QT7 (dự kiến 0.35.0) sẽ phát hành **cùng QT8 – REL** thành

@@ -411,10 +411,13 @@ public sealed class ReleaseTicket : AuditableEntity
     /// <param name="message">Kết quả.</param>
     /// <param name="byName">Người (bộ thực thi) báo.</param>
     /// <param name="now">Thời điểm (UTC).</param>
+    /// <param name="runningVersion">Phiên bản bộ thực thi báo đang chạy lúc nhận lệnh – điền bản trước khi lúc giao lệnh chưa biết.</param>
     /// <exception cref="BusinessRuleException">Không có lần cài, lần cài đã báo.</exception>
-    public void CompleteInstall(Guid installId, bool succeeded, string? installedSha256, string? message, string? byName, DateTimeOffset now)
+    public void CompleteInstall(
+        Guid installId, bool succeeded, string? installedSha256, string? message, string? byName, DateTimeOffset now, string? runningVersion = null)
     {
         var install = _installs.FirstOrDefault(i => i.Id == installId) ?? throw new BusinessRuleException("Không có lần cài này trên phiếu.");
+        if (install.Kind == ReleaseInstallKind.Deploy && install.PreviousVersion is null) install.SetPreviousVersion(runningVersion);
         // Cài thành công nhưng gói khác SHA256 của phiếu (gói bị thay giữa chừng) – coi như lỗi, không chuyển bước.
         if (succeeded && install.Kind == ReleaseInstallKind.Deploy
             && !string.Equals(installedSha256?.Trim(), Sha256, StringComparison.OrdinalIgnoreCase))
@@ -742,6 +745,9 @@ public sealed class ReleaseInstall : Entity
         ByName = LogText.Cut(byName, 256),
         StartedAt = now,
     };
+
+    internal void SetPreviousVersion(string? version) =>
+        PreviousVersion = LogText.Cut(string.IsNullOrWhiteSpace(version) ? null : version.Trim(), ReleaseTicket.VersionMaxLength);
 
     internal void SetTargetVersion(string version) => TargetVersion = LogText.Cut(version.Trim(), ReleaseTicket.VersionMaxLength);
 
