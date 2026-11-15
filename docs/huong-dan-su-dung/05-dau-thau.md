@@ -40,7 +40,7 @@ Luồng: **Phiếu tìm nguồn** (khi chưa có NCC phù hợp) → **RFQ** m�
 - Trên RFQ, tab So sánh có dòng **Nộp qua Portal**: "Niêm phong – nộp lúc … (n lần)" – **chưa có giá**. Không nhập báo giá thay cho NCC đã
   nộp Portal, không chọn thầu được khi còn báo giá niêm phong.
 - **Xem báo giá niêm phong** (chỉ người được cấp quyền "Xem báo giá Portal trước giờ mở"): hỏi lại rồi hiện giá; **mỗi lần xem ghi nhật ký
-  truy cập** (Hệ thống → Nhật ký truy cập, sự kiện "Xem báo giá niêm phong").
+  truy cập** (Quản trị hệ thống → Nhật ký truy cập, sự kiện "Xem báo giá niêm phong").
 - NCC tải **file báo giá** (bảng giá chi tiết, catalogue…, tối đa 2 MB/file) lên Portal, thêm/xóa đến giờ hạn. Trên RFQ dòng **File báo giá
   Portal** chỉ hiện số file khi còn niêm phong; bấm "n file" để xem (sau khi mở, hoặc người có quyền xem trước giờ mở – mỗi lần tải ghi nhật ký).
   Phần mềm nội bộ không thêm, xóa file của NCC.

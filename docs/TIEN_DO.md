@@ -985,6 +985,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Menu "Quản trị hệ thống" xong 15/11/2026 (chưa phát hành – sau 0.33.0)** – người dùng: "tạo một tab riêng tên là: Quản trị hệ thống, các chức
+năng quản trị hệ thống bạn phải đặt vào tab đó, không để lộn xộn trong tab hệ thống". Nhánh `feature/menu-quan-tri-he-thong` (đã merge): module
+menu mới `admin` "Quản trị hệ thống" (Alt+Q, sau Hệ thống – thanh menu và cây điều hướng): Người dùng, Vai trò, Nhật ký thao tác, Nhật ký truy
+cập, Tổng quan hệ thống, Nhật ký vận hành, Nhật ký lỗi, Sao lưu, Bảo trì CSDL. Menu Hệ thống còn: Công ty, Kho, Bộ phận, Khối, Quy trình duyệt,
+Xếp loại NCC, Đánh số danh mục / chứng từ, Tham số hệ thống (tự chọn cách chia – người dùng đổi được). Đường dẫn giữ `/he-thong/…` (liên kết
+thông báo, email, dấu trang cũ vẫn mở). Màn hình QT sau (RST, CFG, REL, TST) vào menu mới. Chỉ giao diện, không đổi quyền / API. e2e
+`admin-menu.spec` (mới), `po-list.spec` thêm menu mới. Tài liệu: design.md 17.1, ui-style mục 1, hướng dẫn sử dụng 08, đường dẫn "Hệ thống →"
+của các màn hình đã chuyển (design, deploy-windows, README, hướng dẫn 01, 05). Kiểm tra: tsc, oxlint, `npm run build`, Playwright đủ bộ 155/155.
+
 **QT4 xong 15/11/2026 (chưa phát hành – bản 0.33.0) – nhánh `feature/qt4-bao-tri-csdl` (đã merge)** (người dùng "làm tiếp" sau QT3b): bảo trì
 CSDL, màn hình DBM. Chia 2 bước:
 - **QT4-1 xong (máy chủ + lịch tuần)**: bảng `MaintenanceRun` (VACUUM ANALYZE / REINDEX CONCURRENTLY / ngắt phiên, chờ → chạy → xong / lỗi, lý do,

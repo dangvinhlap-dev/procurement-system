@@ -5,7 +5,7 @@
 1. Mở trình duyệt (Chrome, Edge) vào địa chỉ do quản trị cung cấp, ví dụ `http://procurement.congty.vn` hoặc `http://<IP máy chủ>`.
 2. Nhập **Tên đăng nhập** và **Mật khẩu**, bấm **Đăng nhập**. Phiên làm việc kéo dài 8 giờ, hết hạn phải đăng nhập lại.
 3. Sai mật khẩu **5 lần liên tiếp** thì tài khoản bị **khóa tạm 15 phút**; màn hình báo giờ mở khóa. Cần mở ngay thì nhờ quản trị
-   **Đặt lại mật khẩu** (Hệ thống → Người dùng).
+   **Đặt lại mật khẩu** (Quản trị hệ thống → Người dùng).
 4. Lần đầu đăng nhập: bấm tên mình ở góc phải trên → **Đổi mật khẩu**.
 5. **Công ty đang làm việc**: ô chọn công ty trên thanh trên cùng. Mọi danh sách, chứng từ, báo cáo chỉ hiện dữ liệu của công ty
    đang chọn (trừ báo cáo "toàn tập đoàn" khi có quyền). Chỉ thấy những công ty mình được gán vai trò.

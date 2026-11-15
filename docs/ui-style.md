@@ -12,7 +12,7 @@ biểu tượng hay nhận diện thương hiệu của hãng nào; mọi chữ 
 
 | # | Vùng | Component | Nội dung |
 | --- | --- | --- | --- |
-| 1 | Thanh menu chữ | `MenuBar` | Phiếu, Sửa, Đi tới, Hệ thống, Trợ giúp; chữ gạch chân là phím Alt |
+| 1 | Thanh menu chữ | `MenuBar` | Phiếu, Sửa, Đi tới, Hệ thống, Trợ giúp; chữ gạch chân là phím Alt (AppShell: Hằng ngày … Hệ thống, Quản trị hệ thống – design.md 17.1) |
 | 2 | Thanh công cụ icon | `Toolbar` | Ô lệnh (gõ mã màn hình) + nút icon 16px: Lưu, Quay lại, Thoát, Hủy, In, Tìm; nhóm cách nhau bằng vạch dọc |
 | 3 | Tiêu đề màn hình | `ScreenTitle` | Chữ đậm 18px, xanh đậm, ví dụ "Tạo đơn mua hàng" |
 | 4 | Thanh lệnh phụ | `CommandBar` + `CommandButton` | Tổng quan chứng từ, Giữ, Xem trước in, Thông báo… |
