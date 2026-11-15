@@ -782,7 +782,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     khác". design.md 18.22. Không migration. Test: tích hợp `NguoiDuyetTiepTheo_TheoCapDangCho_BoNguoiLapVaXungDot`, e2e `purchasing`
     (người lập có họ tên riêng). Kiểm tra: `dotnet test` 508; Playwright 89/89; `npm run build`, `tsc`, `oxlint` qua.
   - Môi trường lần này: API dev (5000) và API Testing cũ (5010) cùng khóa `src/Proc.Api/bin` – không được dừng; build/test bằng
-    `--artifacts-path <scratchpad>rtifacts`, e2e chạy API Testing bản mới từ đó ở cổng 5011 + Vite 5180.
+    `--artifacts-path <scratchpad>\artifacts`, e2e chạy API Testing bản mới từ đó ở cổng 5011 + Vite 5180.
   - Môi trường: 02/11/2026 người dùng yêu cầu tắt API 5000, 5010, 5011 (đã tắt – build không còn vướng khóa bin). Trước đó: API dev cũ (PID 28216) giữ cổng 5000; e2e chạy trên API Testing cổng 5010 + Vite 5179
     (`E2E_WEB_URL`, `E2E_API_URL`, `VITE_API_URL`).
 - **Bản 0.14.0 (02/11/2026): dữ liệu thử + kịch bản test cho người dùng test qua mạng LAN** (theo yêu cầu người dùng).
@@ -1128,8 +1128,8 @@ không quyền mới. Test: tích hợp `MuaHangTheoNhomHang_GopTheoCap`, e2e `p
 Tag `v0.33.0`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.33.0 (gói `procurement-0.33.0.zip`, `publish.ps1 -NoInstall`).
 5 migration (104 → 109), script `db/scripts/0.33.0.sql` (idempotent; K3 **xóa 7 bảng kho**). Kiểm tra trước phát hành: build 0 cảnh báo, `dotnet
 test` 762/762, Playwright 154/154 + 17/17 sau sửa đăng nhập, tsc, oxlint, `npm run build`. **Bản test 5007 nâng tại chỗ lên 0.33.0**: sao lưu
-`D:\project\procurement_kiemtra_0150_truoc_0.33.0.dump` (652 KB, `pg_restore --list` đọc được); dừng PID 17248; chạy `goi .33.0\db-scripts .33.0.sql`
-(109 migration, cuối `V0_33_0_BaoTriCsdl`); `app` = 0.33.0, `app-0.30.0` = bản cũ, gói `goi .33.0`, giữ `appsettings.Production.json` + thêm
+`D:\project\procurement_kiemtra_0150_truoc_0.33.0.dump` (652 KB, `pg_restore --list` đọc được); dừng PID 17248; chạy `goi\0.33.0\db-scripts\0.33.0.sql`
+(109 migration, cuối `V0_33_0_BaoTriCsdl`); `app` = 0.33.0, `app-0.30.0` = bản cũ, gói `goi\0.33.0`, giữ `appsettings.Production.json` + thêm
 `App:Environment` = **Dev** (cách an toàn: không cần hộp thư test, dải xám DEV) và `Operations:LogDirectory` = `data\operations-log`; **chưa** chạy
 `qt-enable-wal.ps1` (không khởi động lại PostgreSQL dùng chung máy dev), **chưa** khai `Backup:RootPath` (BAK / SYS báo "chưa khai"). PID 27816 trong
 `pid.txt`; `/health` Healthy 0.33.0 (cả qua http://192.168.1.199:5007). Kiểm tra sau khi chạy (đăng nhập admin, gọi API SYS / DBM, đọc log) bị
