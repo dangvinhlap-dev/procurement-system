@@ -22,6 +22,7 @@ Thumbs.db
 
 # Bản sao lưu CSDL trên server (docker-compose.yml)
 backups/
+wal-archive/
 
 # File khóa tạm của Word/Excel khi đang mở tài liệu
 ~$*
