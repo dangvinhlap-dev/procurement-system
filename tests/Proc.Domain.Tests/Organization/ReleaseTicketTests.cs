@@ -113,6 +113,37 @@ public class ReleaseTicketTests
         Assert.Equal((ReleaseStatus.RolledBack, "Bản mới làm sai số liệu"), (t.Status, t.EndReason));
     }
 
+    /// <summary>
+    /// Quay về trên TEST (người dùng yêu cầu 16/11/2026 – lát QT9): chỉ khi Đang UAT / UAT đạt và TEST đang chạy bản của phiếu; đạt → về Đã nhận, bỏ
+    /// xác nhận UAT; cài TEST lại được và lại Đang UAT.
+    /// </summary>
+    [Fact]
+    public void QuayVeTest_VeDaNhan_BoXacNhanUat()
+    {
+        var t = NewTicket();
+        Assert.Throws<BusinessRuleException>(() =>
+            t.StartRollback(AppEnvironments.Test, RollbackLevel.CodeOnly, Guid.NewGuid(), "0.35.0", "UAT không đạt", "admin", Now));
+        var deploy = t.StartDeploy(AppEnvironments.Test, Guid.NewGuid(), "0.35.0", null, "admin", Now);
+        t.CompleteInstall(deploy.Id, true, Sha, null, "agent", Now);
+        t.SignOffUat("Đạt sau khi thử", false, "pm", Now);
+        Assert.True(t.InstalledOnTest);
+        Assert.Throws<BusinessRuleException>(() =>
+            t.StartRollback("Dev", RollbackLevel.CodeOnly, Guid.NewGuid(), "0.35.0", "UAT không đạt", "admin", Now));
+
+        var back = t.StartRollback(AppEnvironments.Test, RollbackLevel.CodeOnly, Guid.NewGuid(), "0.35.0", "UAT không đạt", "admin", Now);
+        Assert.Equal((AppEnvironments.Test, "0.35.0"), (back.Environment, back.TargetVersion));
+        t.CompleteInstall(back.Id, true, null, "Đã về 0.35.0", "agent", Now);
+        Assert.Equal((ReleaseStatus.Received, (DateTimeOffset?)null, false), (t.Status, t.UatSignedAt, t.InstalledOnTest));
+        // Không còn bản trên TEST → không quay về lần nữa; PROD không cài được khi chưa UAT lại.
+        Assert.Throws<BusinessRuleException>(() =>
+            t.StartRollback(AppEnvironments.Test, RollbackLevel.CodeOnly, Guid.NewGuid(), "0.35.0", "UAT không đạt", "admin", Now));
+        Assert.Throws<BusinessRuleException>(() => t.StartDeploy(AppEnvironments.Prod, Guid.NewGuid(), "0.35.0", null, "admin", Now));
+
+        var again = t.StartDeploy(AppEnvironments.Test, Guid.NewGuid(), "0.35.0", null, "admin", Now);
+        t.CompleteInstall(again.Id, true, Sha, null, "agent", Now);
+        Assert.Equal((ReleaseStatus.UatInProgress, true), (t.Status, t.InstalledOnTest));
+    }
+
     /// <summary>Lỗi phát hiện: Đã sửa / Không sửa phải ghi cách xử lý; mở lại xóa người xử lý.</summary>
     [Fact]
     public void LoiPhatHien_XuLy()

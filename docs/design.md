@@ -3101,6 +3101,10 @@ trúc CSDL mới mới phải đụng tới CSDL:
   định; đổi tên = thêm cột mới, chép dữ liệu, bản sau mới bỏ cột cũ; xóa cột / bảng làm ở bản sau khi đã ngừng dùng (đã là quy tắc CLAUDE.md
   mục 8). Bản nào buộc phải không tương thích (ví dụ 0.31.0 gỡ bảng kho) thì ghi rõ "chỉ quay về được mức 2 hoặc 3".
 - Quay về **nhiều bản** (ví dụ 0.36.0 → 0.33.0): đi lần lượt từng bản theo thứ tự ngược, mức của cả chuỗi là mức cao nhất trong chuỗi.
+- **Quay về trên TEST** (người dùng yêu cầu 16/11/2026 – lát QT9): phiếu **Đang UAT / UAT đạt** mà TEST đang chạy bản của phiếu thì REL có nút
+  "Quay về bản cũ trên TEST…" (quyền `System.OpsRelease.DeployTest`, Q6 "QUAY VỀ", chọn mức như trên) – bộ thực thi TEST trả về bản TEST chạy trước
+  lần cài. Đạt thì phiếu **trở lại Đã nhận, bỏ xác nhận UAT** (sửa xong cài TEST, UAT lại – hoặc hủy phiếu, nhận bản vá); TEST lại cùng bản PROD nên
+  làm mới TEST từ PROD được. Mức 3 trên TEST mất dữ liệu thử nhập sau lần cài.
 
 ### 21.7 Chia lát (thứ tự làm)
 

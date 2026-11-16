@@ -122,6 +122,11 @@ public static class OperationsEndpoints
                 s.CreateKeyAsync(id, request, ct))
             .RequirePermission(Permissions.System.OpsAgentManage)
             .RequireHeadOffice();
+        // Lát QT9: khóa dịch vụ (máy đó gọi máy này – TEST chuyển báo lỗi về PROD), cùng xác nhận Q6 "TẠO KHÓA".
+        agt.MapPost("/environments/{id:guid}/service-key", (Guid id, CreateAgentKeyRequest request, IAgentAdminService s, CancellationToken ct) =>
+                s.CreateServiceKeyAsync(id, request, ct))
+            .RequirePermission(Permissions.System.OpsAgentManage)
+            .RequireHeadOffice();
         agt.MapGet("/commands", (DateOnly from, DateOnly to, Guid? environmentId, IAgentAdminService s, CancellationToken ct) =>
                 s.SearchCommandsAsync(from, to, environmentId, ct))
             .RequirePermission(Permissions.System.OpsAgentView)
@@ -164,6 +169,27 @@ public static class OperationsEndpoints
             .RequirePermission(Permissions.System.OpsRestoreRun)
             .RequireHeadOffice();
 
+        // Làm mới TEST từ PROD (lát QT9) – màn hình TST. Giao lệnh xác nhận Q6 ("LÀM MỚI TEST") ở dịch vụ.
+        var tst = ops.MapGroup("/test-refresh");
+        tst.MapGet("/overview", (ITestRefreshService s, CancellationToken ct) => s.GetOverviewAsync(ct))
+            .RequireAnyPermission(Permissions.System.OpsView, Permissions.System.OpsTestRefreshRun)
+            .RequireHeadOffice();
+        tst.MapGet("/runs", (DateOnly from, DateOnly to, ITestRefreshService s, CancellationToken ct) => s.SearchAsync(from, to, ct))
+            .RequireAnyPermission(Permissions.System.OpsView, Permissions.System.OpsTestRefreshRun)
+            .RequireHeadOffice();
+        tst.MapPost("/runs", (RunTestRefreshRequest request, ITestRefreshService s, CancellationToken ct) => s.QueueAsync(request, ct))
+            .RequirePermission(Permissions.System.OpsTestRefreshRun)
+            .RequireHeadOffice();
+
+        // Nút "Báo lỗi / góp ý" trên máy TEST (lát QT9): mọi người đã đăng nhập ở mọi công ty (người thử là người dùng thường); máy chủ TEST chuyển
+        // về PROD bằng khóa dịch vụ trong appsettings.
+        ops.MapPost("/feedback", (SendFeedbackRequest request, ITestFeedbackService s, CancellationToken ct) => s.SendAsync(request, ct));
+
+        // Cổng máy chủ – máy chủ (lát QT9): không JWT – khóa dịch vụ X-Ops-Service-Key (băm lưu CSDL, tách khóa bộ thực thi).
+        var service = ops.MapGroup("/service").AllowAnonymous().AddEndpointFilter(AuthenticateServiceAsync);
+        service.MapPost("/defects", (ForwardDefectRequest request, HttpContext http, IReleaseDefectInbox inbox, CancellationToken ct) =>
+            inbox.ReceiveAsync((string)http.Items[ServiceEnvironmentItem]!, request, ct));
+
         // Cổng cho bộ thực thi (lát QT5): không JWT – xác thực bằng khóa X-Ops-Agent-Key (băm lưu CSDL); không có phiên người dùng, công ty.
         var agent = ops.MapGroup("/agent").AllowAnonymous().AddEndpointFilter(AuthenticateAgentAsync);
         agent.MapGet("/commands", PollAgentAsync);
@@ -187,6 +213,17 @@ public static class OperationsEndpoints
             return Results.File(file.Path, "application/zip", file.FileName, enableRangeProcessing: true);
         });
         agent.MapGet("/smoke", (IReleaseAgentHooks release, CancellationToken ct) => release.SmokeAsync(ct));
+        // Lát QT9: bộ thực thi TEST tải bản pg_dump và file đính kèm của máy này – chỉ khi chính môi trường đó đang chạy lệnh làm mới.
+        agent.MapGet("/test-refresh/dump", async (HttpContext http, ITestRefreshAgentHooks hooks, CancellationToken ct) =>
+        {
+            var file = await hooks.OpenDumpAsync(AgentEnvironmentId(http), ct);
+            http.Response.Headers["X-Package-Sha256"] = file.Sha256;
+            return Results.File(file.Path, "application/octet-stream", file.FileName, enableRangeProcessing: true);
+        });
+        agent.MapGet("/test-refresh/attachments", (HttpContext http, ITestRefreshAgentHooks hooks, CancellationToken ct) =>
+            hooks.GetAttachmentManifestAsync(AgentEnvironmentId(http), ct));
+        agent.MapGet("/test-refresh/attachments/file", async (string? path, HttpContext http, ITestRefreshAgentHooks hooks, CancellationToken ct) =>
+            Results.File(await hooks.OpenAttachmentAsync(AgentEnvironmentId(http), path, ct), "application/octet-stream"));
 
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở ApiRateLimiting; xem và xử lý chỉ ở tổng công ty.
@@ -236,6 +273,20 @@ public static class OperationsEndpoints
     }
 
     private static Guid AgentEnvironmentId(HttpContext http) => (Guid)http.Items[AgentEnvironmentItem]!;
+
+    private const string ServiceEnvironmentItem = "ops.service.environment";
+
+    /// <summary>Bộ lọc nhóm /service (lát QT9): khóa dịch vụ sai / thiếu / môi trường ngừng dùng → 401 cùng một câu.</summary>
+    private static async ValueTask<object?> AuthenticateServiceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var http = context.HttpContext;
+        var inbox = http.RequestServices.GetRequiredService<IReleaseDefectInbox>();
+        var code = await inbox.AuthenticateAsync(http.Request.Headers[ServiceHeaders.Key].ToString(), http.RequestAborted);
+        if (code is null)
+            return Results.Problem(title: "Khóa dịch vụ không hợp lệ.", statusCode: StatusCodes.Status401Unauthorized);
+        http.Items[ServiceEnvironmentItem] = code;
+        return await next(context);
+    }
 
     /// <summary>Bộ thực thi hỏi lệnh: có lệnh trả 200, không có việc trả 204.</summary>
     private static async Task<IResult> PollAgentAsync(

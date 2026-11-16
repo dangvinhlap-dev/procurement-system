@@ -993,6 +993,13 @@ vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục h�
 - **QT9-1 xong (CSDL, quyền, commit)**: `AgentEnvironment` thêm khóa dịch vụ (`ServiceKeyHash` – chỉ mục duy nhất có lọc, `ServiceKeyHint`, người / giờ
   tạo; `SetServiceKey`), lệnh `AgentCommandKind.RefreshTest = 7` ("Làm mới TEST từ PROD"), quyền `System.OpsTestRefresh.Run`; migration
   `V0_37_0_LamMoiTest` (chỉ thêm cột – quay về mức 1). Test domain thêm khóa dịch vụ.
+- **Quay về bản cũ trên TEST (commit)** – người dùng yêu cầu giữa lát "cho quay về bản cũ trên TEST": `ReleaseTicket.StartRollback(env, …)` – TEST
+  khi Đang UAT / UAT đạt và `InstalledOnTest` (nay = lần cài / quay về thành công gần nhất trên TEST là lần cài); đạt → **Đã nhận**, bỏ xác nhận UAT.
+  `RollbackReleaseRequest.Environment` (trống = PROD), API quay về: TEST cần `DeployTest`, PROD cần `DeployProd`; DTO phiếu thêm `InstalledOnTest`;
+  REL nút **Quay về bản cũ trên TEST…** (hộp thoại ghi môi trường + câu "trở lại Đã nhận"). Bộ thực thi không đổi (quay về theo máy). design.md
+  21.6a. Test domain `QuayVeTest_VeDaNhan_BoXacNhanUat`, tích hợp mở rộng `CoMayTest_CaiTestTruoc`.
+- **QT9-2 đang làm (máy chủ, chưa commit phần dịch vụ)**: `TestRefresh.cs` (Application), `TestRefreshServices.cs` (TST, hộp nhận lỗi, chuyển báo lỗi),
+  API `/test-refresh`, `/feedback`, `/service/defects`, `/agent/test-refresh/*`, AGT "khóa dịch vụ", `EnvironmentStatusDto.FeedbackEnabled`.
 
 **QT8 – Trung tâm phát hành (REL) xong 16/11/2026 (chưa phát hành – bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh` (đã merge)** (người dùng
 "làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –

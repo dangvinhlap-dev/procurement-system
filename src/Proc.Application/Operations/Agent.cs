@@ -52,10 +52,14 @@ public static class AgentHeaders
 /// <param name="Note">Lý do đèn, cách xử lý.</param>
 /// <param name="QueuedCount">Số lệnh đang chờ.</param>
 /// <param name="RunningCommandId">Lệnh đang chạy (nếu có).</param>
+/// <param name="HasServiceKey">Đã tạo khóa dịch vụ (lát QT9 – trường thêm sau).</param>
+/// <param name="ServiceKeyHint">4 ký tự cuối của khóa dịch vụ.</param>
+/// <param name="ServiceKeyCreatedAt">Lúc tạo khóa dịch vụ (UTC).</param>
 public sealed record AgentEnvironmentDto(
     Guid Id, string Code, string Name, string? Address, bool IsActive, bool IsCurrent, bool HasKey, string? KeyHint, DateTimeOffset? KeyCreatedAt,
     string? KeyCreatedByName, DateTimeOffset? LastSeenAt, string? AgentVersion, string? AppVersion, string? HostName, string Light,
-    string StatusLabel, string? Note, int QueuedCount, Guid? RunningCommandId);
+    string StatusLabel, string? Note, int QueuedCount, Guid? RunningCommandId, bool HasServiceKey = false, string? ServiceKeyHint = null,
+    DateTimeOffset? ServiceKeyCreatedAt = null);
 
 /// <summary>Khai / sửa môi trường.</summary>
 /// <param name="Code">Dev / Test / Prod (sửa thì không đổi được).</param>
@@ -201,6 +205,16 @@ public interface IAgentAdminService
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Khóa – chỉ trả một lần.</returns>
     Task<AgentKeyCreatedDto> CreateKeyAsync(Guid id, CreateAgentKeyRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tạo khóa dịch vụ mới (lát QT9) sau xác nhận Q6 ("TẠO KHÓA"); khóa cũ hết hiệu lực ngay. Khóa dán vào <c>Operations:Upstream:ServiceKey</c> của
+    /// máy đó để máy đó gọi máy này (TEST chuyển báo lỗi về PROD).
+    /// </summary>
+    /// <param name="id">Môi trường.</param>
+    /// <param name="request">Mật khẩu, chữ xác nhận.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Khóa – chỉ trả một lần.</returns>
+    Task<AgentKeyCreatedDto> CreateServiceKeyAsync(Guid id, CreateAgentKeyRequest request, CancellationToken cancellationToken);
 
     /// <summary>Lịch sử lệnh theo khoảng ngày ra lệnh (giờ Việt Nam).</summary>
     /// <param name="from">Từ ngày.</param>

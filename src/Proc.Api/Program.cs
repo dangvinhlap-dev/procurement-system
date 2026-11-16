@@ -109,6 +109,16 @@ builder.Services.AddHttpClient(Proc.Infrastructure.Operations.ReleaseService.Git
 });
 builder.Services.AddScoped(sp => new Proc.Infrastructure.Operations.ReleaseGitHubHttp(
     sp.GetRequiredService<IHttpClientFactory>().CreateClient(Proc.Infrastructure.Operations.ReleaseService.GitHubClient)));
+// Lát QT9: máy TEST chuyển báo lỗi về PROD (Operations:Upstream – PROD, DEV để trống). Thời gian chờ đặt theo từng lần gửi.
+builder.Services.AddOptions<Proc.Application.Operations.UpstreamOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.UpstreamOptions.Section));
+builder.Services.AddHttpClient(UpstreamClient, c =>
+{
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("procurement-ops-upstream");
+    c.Timeout = Timeout.InfiniteTimeSpan;
+});
+builder.Services.AddScoped(sp => new Proc.Infrastructure.Operations.UpstreamHttp(
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient(UpstreamClient)));
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
@@ -339,4 +349,8 @@ app.Run();
 /// <summary>
 /// Điểm vào của ứng dụng API. Khai báo public để test tích hợp dùng được WebApplicationFactory.
 /// </summary>
-public partial class Program;
+public partial class Program
+{
+    /// <summary>Tên HttpClient gọi máy chủ PROD từ TEST (lát QT9 – chuyển báo lỗi; test thay bộ xử lý).</summary>
+    public const string UpstreamClient = "ops-upstream";
+}

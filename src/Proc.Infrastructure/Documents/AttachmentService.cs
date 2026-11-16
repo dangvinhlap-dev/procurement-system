@@ -495,6 +495,29 @@ public sealed class AttachmentService : IAttachmentService
             $"Tải file báo giá Portal niêm phong '{attachment.FileName}' của RFQ {rfq.No}", cancellationToken);
     }
 
+    /// <summary>
+    /// File do máy chủ khác gửi tới, không có người dùng đăng nhập (lát QT9 – ảnh báo lỗi từ máy TEST vào phiếu phát hành). Người gọi đã xác thực
+    /// khóa dịch vụ; chỉ nhận chủ <see cref="AttachmentOwnerTypes.ReleaseTicket"/>. Vẫn kiểm đuôi, dung lượng, nội dung như mọi file.
+    /// </summary>
+    /// <param name="ownerType">Loại chủ (chỉ phiếu phát hành).</param>
+    /// <param name="ownerId">Phiếu.</param>
+    /// <param name="fileName">Tên file.</param>
+    /// <param name="sizeBytes">Dung lượng.</param>
+    /// <param name="content">Nội dung.</param>
+    /// <param name="note">Ghi chú.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File vừa lưu.</returns>
+    /// <exception cref="BusinessRuleException">Sai loại chủ; file sai đuôi, quá dung lượng, nội dung không khớp đuôi.</exception>
+    public async Task<AttachmentDto> UploadSystemAsync(
+        string ownerType, Guid ownerId, string fileName, long sizeBytes, Stream content, string? note, CancellationToken cancellationToken)
+    {
+        if (ownerType != AttachmentOwnerTypes.ReleaseTicket) throw new BusinessRuleException("Loại chủ không nhận file từ máy chủ khác.");
+        var extension = Attachment.ValidateFile(fileName, sizeBytes, _maxFileSizeMb);
+        var attachment = await StoreAsync(ownerType, ownerId, null, fileName, extension, content, note, null, false, null, cancellationToken);
+        return new AttachmentDto(attachment.Id, attachment.FileName, attachment.ContentType, attachment.SizeBytes, attachment.Note,
+            attachment.CreatedAt, null, null, false, true, null);
+    }
+
     /// <summary>Dung lượng tối đa một file (MB) theo cấu hình máy chủ – Portal hiện cho NCC (không gọi được API giới hạn nội bộ).</summary>
     public int MaxFileSizeMb => _maxFileSizeMb;
 

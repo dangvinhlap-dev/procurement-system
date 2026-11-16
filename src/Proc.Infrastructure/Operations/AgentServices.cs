@@ -21,10 +21,14 @@ public static class AgentKeys
     /// <summary>Tiền tố khóa – nhìn là biết khóa bộ thực thi (dò khóa lộ trong log, repo).</summary>
     public const string Prefix = "qta_";
 
+    /// <summary>Tiền tố khóa dịch vụ (lát QT9) – máy chủ gọi máy chủ, nằm trong appsettings.</summary>
+    public const string ServicePrefix = "qts_";
+
     /// <summary>Tạo khóa mới.</summary>
+    /// <param name="prefix">Tiền tố (mặc định khóa bộ thực thi).</param>
     /// <returns>Khóa.</returns>
-    public static string Generate() =>
-        Prefix + Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    public static string Generate(string prefix = Prefix) =>
+        prefix + Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     /// <summary>Băm SHA256 (hex chữ thường) của khóa.</summary>
     /// <param name="key">Khóa.</param>
@@ -179,6 +183,23 @@ public sealed class AgentAdminService : IAgentAdminService
     }
 
     /// <inheritdoc />
+    public async Task<AgentKeyCreatedDto> CreateServiceKeyAsync(Guid id, CreateAgentKeyRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var env = await FindAsync(id, cancellationToken);
+        // Khóa cho máy đó ghi vào trung tâm phát hành của máy này (báo lỗi) – cùng mức xác nhận với khóa bộ thực thi.
+        await _guard.VerifyAsync($"Tạo khóa dịch vụ {env.Code}", request.Password, request.Confirmation, AgentConfirmations.CreateKey,
+            cancellationToken);
+        var key = AgentKeys.Generate(AgentKeys.ServicePrefix);
+        var hint = key[^4..];
+        env.SetServiceKey(AgentKeys.Hash(key), hint, _user.UserName, _clock.UtcNow);
+        await _db.SaveChangesAsync(cancellationToken);
+        await LogAsync(OperationKinds.AgentKeyCreated, env.Code, null, OperationResult.Succeeded,
+            $"Tạo khóa dịch vụ mới (…{hint}) – khóa cũ hết hiệu lực.", cancellationToken);
+        return new AgentKeyCreatedDto(env.Id, key, hint);
+    }
+
+    /// <inheritdoc />
     public async Task<AgentCommandSearchResult> SearchCommandsAsync(
         DateOnly from, DateOnly to, Guid? environmentId, CancellationToken cancellationToken)
     {
@@ -239,7 +260,7 @@ public sealed class AgentAdminService : IAgentAdminService
         var (light, label, note) = AgentMapping.Contact(e, now, _options.OnlineMinutes);
         return new AgentEnvironmentDto(e.Id, e.Code, e.Name, e.Address, e.IsActive, e.Code == _environment.Name, e.AgentKeyHash is not null,
             e.AgentKeyHint, e.KeyCreatedAt, e.KeyCreatedByName, e.LastSeenAt, e.AgentVersion, e.AppVersion, e.HostName, light, label, note, queued,
-            running);
+            running, e.ServiceKeyHash is not null, e.ServiceKeyHint, e.ServiceKeyCreatedAt);
     }
 
     private async Task<AgentEnvironment> FindAsync(Guid id, CancellationToken cancellationToken) =>
