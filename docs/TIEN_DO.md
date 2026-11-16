@@ -994,7 +994,12 @@ file lên được – lỗi tìm ra ở QT9-2) + test `ReleaseTests.NhanGoi_Tai
 nhánh. Tag `v0.36.1`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.1 (gói đóng từ mã 0.36.x – không có TST / script 0.37.0).
 Merge nhánh vào `main` (giữ `<Version>` 0.37.0, CHANGELOG thêm mục 0.36.1, câu mở 0.37.0 sửa: gói 0.37.0 đã đóng nên CHANGELOG trong gói còn câu
 "không có bản vá 0.36.1" – bỏ qua); deploy-windows 4g, ke-hoach-qt trả lại 0.36.1 là lần đầu qua REL. **Thứ tự cài trên TEST / PROD: 0.36.0 (tay) →
-0.36.1 (REL) → 0.37.0 (REL).** Bản test 5007 đã ở 0.37.0 (đã có bản sửa) – không hạ bản.
+0.36.1 (REL) → 0.37.0 (REL).** **Bản test 5007 (người dùng "đồng ý" 16/11/2026) đi lại đúng thứ tự**: sao lưu
+`D:\project\procurement_kiemtra_0150_truoc_quayve_0.36.0.dump`; 0.37.0 → **0.36.0** (mức 1, chỉ đổi `app`, CSDL giữ 114 migration – `/health` Healthy
+0.36.0) → **0.36.1** (`/health` Healthy 0.36.1, PID 28628 trong `pid.txt`). Thư mục: `app` = 0.36.1, `app-0.36.0`, `app-0.37.0` (bản 0.37.0 có
+`appsettings.Production.json`), gói `goi\0.36.0`, `goi\0.36.1`, `goi\0.37.0`. **Dừng ở 0.36.1 chờ người dùng kiểm thử** (REL → phiếu → tab Đính kèm tải
+file lên được); lên 0.37.0: dừng PID trong `pid.txt`, đổi `app` → `app-0.36.1`, `app-0.37.0` → `app`, chạy lại `app\Proc.Api.exe --urls
+http://0.0.0.0:5007`. 0.37.1 (gói sạch câu CHANGELOG) chưa làm – chỉ khi người dùng yêu cầu.
 Script chạy thử trên `procurement_test` (đã có migration – kiểm cú pháp khối DO), không lỗi. `rollback.json` khai ở `db/scripts/rollback/`.
 Release: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.0, …/tag/v0.37.0 (zip + `.sha256`). Đóng gói: `npm ci` EPERM (Vite cũ
 PID 1568 / 5876 từ 12/11 giữ `rolldown-binding.node`) đã xóa dở node_modules → `npm install` bù, `publish.ps1 -NoInstall` chạy qua `powershell.exe -File`
