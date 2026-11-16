@@ -93,7 +93,7 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
                 CorrelationId = _request.CorrelationId,
                 EntityType = descriptor!.EntityType,
                 EntityId = KeyOf(entry),
-                EntityLabel = descriptor.LabelProperty is { } label ? ValueOf(entry, label)?.ToString() : null,
+                EntityLabel = descriptor.LabelProperty is { } label ? LabelOf(ValueOf(entry, label)) : null,
                 DocumentNumber = (entry.Entity as IHasDocumentNumber)?.DocumentNumber,
                 Action = entry.State switch
                 {
@@ -143,6 +143,17 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
     /// <summary>Khóa chính của entity ghép thành chuỗi (khóa nhiều cột nối bằng |).</summary>
     private static string KeyOf(EntityEntry entry) =>
         string.Join("|", entry.Metadata.FindPrimaryKey()!.Properties.Select(p => entry.Property(p.Name).CurrentValue));
+
+    /// <summary>
+    /// Nhãn ghi vào nhật ký: dài quá <see cref="AuditLog.EntityLabelMaxLength"/> thì cắt còn 255 ký tự + "…". Nhãn có thể là nội dung dài (mục kiểm
+    /// thử phát hành tới 2.000 ký tự, tiêu đề lỗi phát hiện 300) – không cắt thì lưu phiếu lỗi 22001 (bản vá 0.36.2, nhận gói có CHANGELOG thật).
+    /// </summary>
+    /// <param name="value">Giá trị thuộc tính nhãn.</param>
+    /// <returns>Nhãn đã cắt, hoặc null.</returns>
+    private static string? LabelOf(object? value) =>
+        value?.ToString() is { } text && text.Length > AuditLog.EntityLabelMaxLength
+            ? string.Concat(text.AsSpan(0, AuditLog.EntityLabelMaxLength - 1), "…")
+            : value?.ToString();
 
     /// <summary>Đọc giá trị một thuộc tính để làm nhãn; thuộc tính tính toán không lưu CSDL thì đọc thẳng từ đối tượng.</summary>
     private static object? ValueOf(EntityEntry entry, string propertyName)

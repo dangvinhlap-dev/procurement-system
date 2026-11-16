@@ -64,7 +64,10 @@ public class ReleaseTests
     }
 
     /// <summary>Gói giả giống gói publish.ps1: app\Proc.Api.dll, rollback.json, CHANGELOG.md có mục của bản.</summary>
-    private static byte[] Package(string version, int minLevel = 1, bool withRollback = true, bool withDll = true)
+    /// <param name="extraItem">Thêm một gạch đầu dòng vào "Thêm mới" (thử mục kiểm thử dài như CHANGELOG thật).</param>
+    /// <param name="changelog">CHANGELOG.md thay cho bản giả (thử CHANGELOG thật của repo).</param>
+    private static byte[] Package(string version, int minLevel = 1, bool withRollback = true, bool withDll = true, string? extraItem = null,
+        string? changelog = null)
     {
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
@@ -77,7 +80,8 @@ public class ReleaseTests
 
             if (withDll) Add("app/Proc.Api.dll", "MZ giả");
             if (withRollback) Add("rollback.json", $"{{\"version\":\"{version}\",\"minLevel\":{minLevel},\"migrations\":[\"V9_9_9_Thu\"]}}");
-            Add("CHANGELOG.md", $"""
+            if (changelog is not null) Add("CHANGELOG.md", changelog);
+            else Add("CHANGELOG.md", $"""
                 # Nhật ký thay đổi
 
                 ## [{version}] - 2026-11-16
@@ -87,7 +91,7 @@ public class ReleaseTests
                 ### Thêm mới
                 - Màn hình **REL** – trung tâm phát hành: nhận gói,
                   cài TEST / PROD.
-                - Màn hình CFG.
+                - Màn hình CFG.{(extraItem is null ? "" : "\n- " + extraItem)}
 
                 ### Sửa lỗi
                 - Không có.
@@ -170,6 +174,49 @@ public class ReleaseTests
             Assert.Equal(HttpStatusCode.OK, (await head.PostAsync("/api/attachments", form, Ct)).StatusCode);
         var files = await ReadAsync<List<AttachmentDto>>(await head.GetAsync($"/api/attachments?ownerType=ReleaseTicket&ownerId={ticket.Id}", Ct));
         Assert.Equal("bien-ban.txt", files.Single().FileName);
+    }
+
+    /// <summary>
+    /// Bản vá 0.36.2: CHANGELOG thật có gạch đầu dòng dài hơn 256 ký tự – nhận gói từng lỗi 500 vì nhãn nhật ký thao tác (AuditLog.EntityLabel
+    /// 256 ký tự) lấy nguyên nội dung mục kiểm thử; tiêu đề lỗi phát hiện (tối đa 300) cũng vậy. Nhãn nay được cắt, nội dung mục giữ đủ.
+    /// </summary>
+    [Fact]
+    public async Task NhanGoi_MucKiemThuDai_LoiPhatHienDai()
+    {
+        await ClearAsync();
+        var head = await HeadAsync();
+        var longItem = "Màn hình TST – làm mới TEST từ PROD: " + string.Concat(Enumerable.Repeat("điều kiện, điều chặn, giữ lịch sử vận hành; ", 20));
+        var zip = Package("9.5.0", extraItem: longItem);
+        var ticket = await ReadAsync<ReleaseTicketDto>(await UploadAsync(head, zip, "procurement-9.5.0.zip"));
+        Assert.Contains(ticket.Items, i => i.Content == longItem.Trim());
+
+        var title = new string('L', 300);
+        ticket = await ReadAsync<ReleaseTicketDto>(await head.PostAsJsonAsync($"{RelPath}/{ticket.Id}/defects",
+            new AddReleaseDefectRequest(title, null, null), Ct));
+        Assert.Equal(title, ticket.Defects.Single().Title);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+        var labels = await db.AuditLogs.Where(a => a.EntityType == "ReleaseTestItem" || a.EntityType == "ReleaseDefect")
+            .Select(a => a.EntityLabel).ToListAsync(Ct);
+        Assert.Contains(labels, l => l != null && l.Length == 256 && l.EndsWith('…'));
+    }
+
+    /// <summary>Nhận gói có CHANGELOG thật của repo (bản trên cùng): mọi mục kiểm thử lưu được, không lỗi 500 (bản vá 0.36.2).</summary>
+    [Fact]
+    public async Task NhanGoi_ChangelogThatCuaRepo()
+    {
+        await ClearAsync();
+        var head = await HeadAsync();
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CHANGELOG.md"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        var text = await File.ReadAllTextAsync(Path.Combine(dir.FullName, "CHANGELOG.md"), Ct);
+        var version = System.Text.RegularExpressions.Regex.Match(text, @"^## \[(?<v>[^\]]+)\]", System.Text.RegularExpressions.RegexOptions.Multiline)
+            .Groups["v"].Value;
+        var ticket = await ReadAsync<ReleaseTicketDto>(await UploadAsync(head, Package(version, changelog: text), $"procurement-{version}.zip"));
+        Assert.Equal(version, ticket.Version);
+        Assert.NotEmpty(ticket.Items);
     }
 
     /// <summary>GitHub Release giả: lấy zip + .sha256 của tag; bản chưa có trên GitHub báo rõ.</summary>

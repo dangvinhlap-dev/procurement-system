@@ -37,7 +37,10 @@ public sealed class AuditLog
     /// <summary>Khóa bản ghi; khóa ghép nối bằng dấu "|".</summary>
     public string EntityId { get; init; } = string.Empty;
 
-    /// <summary>Mô tả bản ghi (mã, tên đăng nhập…).</summary>
+    /// <summary>Độ dài tối đa của <see cref="EntityLabel"/> (cột varchar(256)).</summary>
+    public const int EntityLabelMaxLength = 256;
+
+    /// <summary>Mô tả bản ghi (mã, tên đăng nhập…); dài quá <see cref="EntityLabelMaxLength"/> thì bộ ghi nhật ký cắt kèm "…".</summary>
     public string? EntityLabel { get; init; }
 
     /// <summary>Số chứng từ, với entity có số chứng từ.</summary>

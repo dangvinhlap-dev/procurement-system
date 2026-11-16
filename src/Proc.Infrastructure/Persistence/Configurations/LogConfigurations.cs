@@ -22,7 +22,7 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(x => x.CorrelationId).HasMaxLength(128);
         builder.Property(x => x.EntityType).HasMaxLength(100).IsRequired();
         builder.Property(x => x.EntityId).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.EntityLabel).HasMaxLength(256);
+        builder.Property(x => x.EntityLabel).HasMaxLength(AuditLog.EntityLabelMaxLength);
         builder.Property(x => x.DocumentNumber).HasMaxLength(50);
         builder.Property(x => x.Action).HasMaxLength(30).IsRequired();
         builder.Property(x => x.Changes).HasColumnType("jsonb").IsRequired();
