@@ -3,6 +3,32 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.36.1] - 2026-11-16
+
+**Bản vá kiểm chứng** (design.md 21.8 GĐ3): bản đầu tiên đưa lên TEST / PROD qua trung tâm phát hành REL, có người theo dõi từng bước. Nội dung
+nhỏ, ít rủi ro để thử trọn đường đi Nhận gói → Cài TEST → UAT → Cài PROD → Đóng phiếu.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- REL: tab **Đính kèm** của phiếu phát hành chưa cài PROD báo "Loại đối tượng đính kèm 'ReleaseTicket' không hợp lệ" khi tải file lên – nay tải lên,
+  tải xuống được (ví dụ biên bản UAT, ảnh lỗi); phiếu đã cài PROD vẫn khóa đính kèm như trước.
+
+### Thay đổi CSDL
+- Không có (không migration, không script mới).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** trên PROD: Nhận gói (GitHub hoặc tải lên) → Cài TEST → kiểm thử mục trên, thử thêm một file vào chính phiếu 0.36.1 → Xác nhận UAT
+  đạt → Cài PROD → theo dõi ERR → Đóng phiếu. Hỏng ở bước nào thì cài tay theo `docs/deploy-windows.md` mục 5 và ghi lỗi vào phiếu.
+- Không cần làm thêm gì trên máy chủ; người dùng mở lại trình duyệt (hoặc Ctrl+F5).
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (hoặc thay lại gói 0.36.0) – không có thay đổi CSDL.
+
 ## [0.36.0] - 2026-11-16
 
 Gộp các phần chưa phát hành từ sau 0.33.1 (dự kiến 0.34.0, 0.35.0, 0.36.0): **bộ thực thi và chế độ bảo trì** (QT5), **phục hồi** (QT6), **cấu hình
