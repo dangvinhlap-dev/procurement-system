@@ -149,7 +149,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Nhóm hàng (`ItemCategory`) | Mã (người dùng gõ), tên, `ParentId`, `Level` – cây **tối đa 4 cấp** (1 Ngành hàng, 2 Nhóm hàng, 3 Loại hàng, 4 Chủng loại – mục 5.7, N4), tài khoản kho mặc định | Dùng để phân quyền theo nhóm hàng |
-| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, ảnh, thông số kỹ thuật (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, điểm đặt hàng lại, vật tư trọng yếu – bỏ 16/11/2026, mục 19.4; cột ngừng dùng, xóa ở bản sau) | Loại hàng chỉ để phân loại – không còn đi qua kho |
+| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, ảnh, thông số kỹ thuật (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, điểm đặt hàng lại, vật tư trọng yếu – bỏ 16/11/2026, mục 19.4; cột đã xóa ở 0.39.0) | Loại hàng chỉ để phân loại – không còn đi qua kho |
 | Đơn vị tính (`Uom`) | Mã, tên | Cái, hộp, thùng, kg… |
 | Quy đổi ĐVT (`ItemUomConversion`) | `ItemId`, ĐVT, hệ số về ĐVT cơ sở | 1 thùng = 24 hộp; tồn kho luôn lưu theo ĐVT cơ sở |
 | Thuộc tính mở rộng | Bộ thuộc tính theo nhóm hàng (key–value) | Tránh phải sửa bảng khi thêm thông số |
