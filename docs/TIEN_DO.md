@@ -998,8 +998,17 @@ vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục h�
   `RollbackReleaseRequest.Environment` (trống = PROD), API quay về: TEST cần `DeployTest`, PROD cần `DeployProd`; DTO phiếu thêm `InstalledOnTest`;
   REL nút **Quay về bản cũ trên TEST…** (hộp thoại ghi môi trường + câu "trở lại Đã nhận"). Bộ thực thi không đổi (quay về theo máy). design.md
   21.6a. Test domain `QuayVeTest_VeDaNhan_BoXacNhanUat`, tích hợp mở rộng `CoMayTest_CaiTestTruoc`.
-- **QT9-2 đang làm (máy chủ, chưa commit phần dịch vụ)**: `TestRefresh.cs` (Application), `TestRefreshServices.cs` (TST, hộp nhận lỗi, chuyển báo lỗi),
-  API `/test-refresh`, `/feedback`, `/service/defects`, `/agent/test-refresh/*`, AGT "khóa dịch vụ", `EnvironmentStatusDto.FeedbackEnabled`.
+- **QT9-2 xong (máy chủ, commit)**: `TestRefresh.cs` (Application – `UpstreamOptions` mục `Operations:Upstream`, `TestRefreshCarryOver` = bảng vận
+  hành của RST + `ErrorGroup`, `ErrorOccurrence`), `TestRefreshServices.cs`: **TST** không bảng riêng – mỗi lần làm mới là lệnh `RefreshTest` của môi
+  trường Test; tổng quan chặn khi máy TEST (chỉ xem), chưa khai / ngừng / chưa khóa TEST, chưa biết hoặc **khác phiên bản**, đang có lệnh TEST, chưa có
+  pg_dump (dump > 24 giờ cảnh báo vàng; TEST chưa khóa dịch vụ cảnh báo); giao lệnh Q6 "LÀM MỚI TEST", tham số: bản dump (SHA256), `keepTables`,
+  `resetSql` (`TestRefreshSql.Reset`: thư chờ → Skipped kèm ghi chú, `AccessPolicy.SessionsRevokedAt`). API bộ thực thi `/agent/test-refresh/dump`
+  (header SHA256), `/attachments` (danh sách), `/attachments/file?path=` (chặn ".."), chỉ khi môi trường đang chạy lệnh làm mới. **Khóa dịch vụ**
+  `qts_…` (AGT `POST environments/{id}/service-key`, Q6 "TẠO KHÓA"); **hộp nhận lỗi** `POST /service/defects` (header `X-Ops-Service-Key`, chỉ
+  môi trường Test, máy nhận không phải TEST): lỗi vào phiếu cùng phiên bản (chưa hủy / đóng / quay về), ảnh ghi trước qua
+  `AttachmentService.UploadSystemAsync` (ảnh sai → từ chối cả báo lỗi). **Máy TEST** `POST /feedback` (mọi người đăng nhập) chuyển về PROD qua
+  HttpClient `ops-upstream`; `EnvironmentStatusDto.FeedbackEnabled`. **Sửa lỗi QT8**: `AttachmentOwnerTypes.All` thiếu `ReleaseTicket` (tab Đính kèm
+  của phiếu phát hành không tải file lên được). Test tích hợp `TestRefreshTests` (3), môi trường thêm cờ báo lỗi.
 
 **QT8 – Trung tâm phát hành (REL) xong 16/11/2026 (chưa phát hành – bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh` (đã merge)** (người dùng
 "làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –
