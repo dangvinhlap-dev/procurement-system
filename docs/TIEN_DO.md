@@ -990,7 +990,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 chạy thử gỡ → nâng → nâng lại (idempotent) trên `procurement_test` đều qua. Tag `v0.39.0`, gói + `.sha256` trên GitHub Release. Cài sau 0.38.0 qua REL.
 Sau phát hành (người dùng "xóa hẳn các cột kho cũ"): CSDL dev `procurement` nâng từ `V0_34_0_BoThucThi` lên `V0_39_0_BoCotKho` (116 migration) –
 không còn 10 cột kho + 4 cột tham số kho; design.md bảng `Item` sửa "xóa ở bản sau" → "đã xóa ở 0.39.0". Bản thử cổng 5007
-(`D:\project\procurement-thu-0.15.0`, CSDL `procurement_kiemtra_0150`) vẫn 0.37.1, còn cột – nâng qua REL: 0.38.0 rồi 0.39.0.
+(`D:\project\procurement-thu-0.15.0`, CSDL `procurement_kiemtra_0150`) **đã nâng 0.37.1 → 0.39.0 (16/11/2026, cài tay – chưa có bộ thực thi nên REL
+không cài được)**: sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.39.0.dump`; chạy `0.38.0.sql` + `0.39.0.sql` (116 migration, không còn cột
+kho; 8 kho, 1.600 mặt hàng giữ nguyên); `app` = 0.39.0, `app-0.37.1` = bản cũ, gói `goi\0.38.0`, `goi\0.39.0`; PID mới trong `pid.txt`;
+`/health` Healthy 0.39.0 (cả qua http://192.168.1.199:5007). Script cài tay `.ps1` phải lưu UTF-8 có BOM (PowerShell 5.1 đọc sai chữ có dấu).
 Còn treo: thư mục chưa theo dõi `Lưu ý\` (ảnh "các thư mục lưu trữ.png" của người dùng, 11/11) – không commit, chờ người dùng; hai nhánh cũ chưa merge
 `feature/d1-diem-dat-hang-lai` (02/11, tồn an toàn / điểm đặt hàng lại – đã lỗi thời vì bỏ kho) và `feature/h1-y-kien-tham-dinh` (09/11, H1a) – chờ
 người dùng quyết định.
