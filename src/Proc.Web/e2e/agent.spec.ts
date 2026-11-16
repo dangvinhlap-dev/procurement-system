@@ -56,7 +56,7 @@ test('AGT: khai môi trường, tạo khóa, lệnh thử chạy qua bộ thực
 
   expect((await agentPoll(page, 'qta_sai')).status()).toBe(401)
   expect((await agentPoll(page, key)).status()).toBe(204)
-  await page.getByRole('button', { name: 'Làm mới' }).click()
+  await page.getByRole('button', { name: /Làm mới$/ }).click()
   await expect(row).toContainText('Đang liên lạc')
   await expect(row).toContainText('E2E-AGENT')
   await row.click()

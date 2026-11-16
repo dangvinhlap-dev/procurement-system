@@ -42,7 +42,14 @@ export interface AgentEnvironment {
   note: string | null
   queuedCount: number
   runningCommandId: string | null
+  /** Đã tạo khóa dịch vụ (lát QT9 – máy đó gọi máy này, ví dụ TEST chuyển báo lỗi về PROD). */
+  hasServiceKey?: boolean
+  serviceKeyHint?: string | null
+  serviceKeyCreatedAt?: string | null
 }
+
+/** Loại khóa: bộ thực thi (lệnh quyền cao) hoặc dịch vụ (máy chủ gọi máy chủ – lát QT9). */
+export type AgentKeyKind = 'agent' | 'service'
 
 /** Một lệnh bộ thực thi (tab Lệnh). */
 export interface AgentCommand {
@@ -145,12 +152,12 @@ export function useSaveAgentEnvironment() {
   })
 }
 
-/** Tạo khóa bộ thực thi mới – xác nhận Q6 (mật khẩu + gõ "TẠO KHÓA"); khóa cũ hết hiệu lực. */
+/** Tạo khóa bộ thực thi / khóa dịch vụ mới – xác nhận Q6 (mật khẩu + gõ "TẠO KHÓA"); khóa cũ cùng loại hết hiệu lực. */
 export function useCreateAgentKey() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (v: { environmentId: string; password: string; confirmation: string }) =>
-      apiFetch<AgentKeyCreated>(`/api/ops/v1/agent-admin/environments/${v.environmentId}/key`, {
+    mutationFn: (v: { environmentId: string; kind: AgentKeyKind; password: string; confirmation: string }) =>
+      apiFetch<AgentKeyCreated>(`/api/ops/v1/agent-admin/environments/${v.environmentId}/${v.kind === 'service' ? 'service-key' : 'key'}`, {
         method: 'POST',
         body: { password: v.password, confirmation: v.confirmation },
       }),

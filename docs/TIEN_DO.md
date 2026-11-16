@@ -1017,6 +1017,13 @@ vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục h�
   `qt-agent-install.ps1` thêm `-AttachmentsPath`, `-AppDbUser`. **Đã chạy thử thật** `Copy-KeptTables` + câu đặt lại trên hai CSDL nháp dựng từ
   `procurement_test` (giữ môi trường của "TEST", nhật ký không trùng, thư chờ về 0, ghi chú đúng dấu); phần tải / đổi tên / IIS chưa chạy trên máy
   TEST thật – diễn tập trên TEST.
+- **QT9-4 xong (giao diện, commit)**: màn hình **TST** `/he-thong/lam-moi-test` (`pages/system/TestRefreshPage.tsx`, `api/testRefresh.ts`): tab Tình
+  trạng (cột `overviewColumns`: máy này, bản pg_dump, bộ thực thi / phiên bản / khóa dịch vụ TEST, phần giữ – đặt lại; thông báo đầu trang liệt kê
+  điều chặn / lưu ý), tab Lịch sử (lệnh RefreshTest, 90 ngày); nút **Làm mới TEST…** (khóa khi còn chặn) → hộp thoại Q6 "LÀM MỚI TEST". `DangerFields`
+  tách ra `pages/system/DangerFields.tsx` (REL, TST dùng chung). **Nút "Báo lỗi / góp ý"** (`components/AppShell/FeedbackButton.tsx`) trên thanh trên khi
+  `feedbackEnabled`: tiêu đề, mô tả, màn hình điền sẵn, ảnh dán Ctrl+V / chọn file (PNG / JPG ≤ 2 MB). AGT nút **Tạo khóa dịch vụ…** + cột "Khóa dịch
+  vụ" (`CreateKeyModal` hai loại khóa). CSS `.erp-tst-list`, `.erp-feedback-paste`. e2e `test-refresh.spec.ts` (2, API giả lập); `agent.spec.ts` sửa
+  chọn nút "Làm mới" (trùng tên với mục cây "Làm mới TEST").
 
 **QT8 – Trung tâm phát hành (REL) xong 16/11/2026 (chưa phát hành – bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh` (đã merge)** (người dùng
 "làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –

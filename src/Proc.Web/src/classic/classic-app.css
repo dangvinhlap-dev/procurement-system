@@ -933,3 +933,30 @@ body.erp-col-resizing {
 .erp-mono {
   font-family: var(--erp-font-mono);
 }
+
+/* Lát QT9 – TST: danh sách điều chặn / lưu ý trong thông báo đầu trang (ui-style.md mục 5r). */
+.erp-tst-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+/* Lát QT9 – nút "Báo lỗi / góp ý" (máy TEST): ô dán ảnh, ảnh xem trước (ui-style.md mục 5r). */
+.erp-feedback-paste {
+  border: 1px dashed var(--erp-input-border);
+  border-radius: 2px;
+  background: var(--erp-readonly-bg);
+  padding: 8px;
+  min-height: 60px;
+  color: var(--erp-text-muted);
+  outline: none;
+}
+.erp-feedback-paste:focus {
+  border-color: var(--erp-input-focus);
+}
+.erp-feedback-paste img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  margin-bottom: 4px;
+  border: 1px solid var(--erp-grid-line);
+}

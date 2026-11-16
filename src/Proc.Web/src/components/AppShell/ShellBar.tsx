@@ -15,6 +15,7 @@ import { searchScreens } from '../../app/commands'
 import { moduleGroups, type ModuleGroup, type ModuleKey } from '../../app/screens'
 import { useVisibleScreens } from '../../app/useVisibleScreens'
 import { hasWildcard, normalizeVi } from '../../utils/text'
+import { FeedbackButton } from './FeedbackButton'
 
 type MenuItems = NonNullable<MenuProps['items']>
 
@@ -209,6 +210,7 @@ export function ShellBar({
           options={companies}
           popupMatchSelectWidth={false}
         />
+        <FeedbackButton />
         <Badge count={unreadCount} size="small" offset={[-4, 4]}>
           <Button
             type="text"

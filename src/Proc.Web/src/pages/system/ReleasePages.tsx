@@ -42,14 +42,12 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime } from '../../utils/format'
+import { DangerFields } from './DangerFields'
 
 /** Đường dẫn màn hình REL. */
 export const RELEASE_PATH = '/he-thong/phat-hanh'
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} MB`
-
-/** Chuẩn hóa chữ xác nhận như máy chủ: bỏ khoảng trắng hai đầu, NFC, không phân biệt hoa thường. */
-const sameConfirmation = (typed: string | undefined, expected: string) => typed?.trim().normalize().toUpperCase() === expected.normalize()
 
 /** Dòng tóm tắt môi trường trên đầu REL: máy này + bộ thực thi đã khai ở AGT. */
 function environmentNotice(o: ReleaseOverview) {
@@ -208,23 +206,6 @@ export function ReleaseListPage() {
   )
 }
 
-/** Ô nhập lý do + mật khẩu + chữ xác nhận (việc nguy hiểm Q6 – ui-style.md mục 5m). */
-function DangerFields({ confirmation }: { confirmation: string }) {
-  return (
-    <>
-      <Form.Item label="Lý do" name="reason" rules={[{ required: true, message: 'Nhập lý do.' }, { min: 5, message: 'Lý do ít nhất 5 ký tự.' }]}>
-        <Input.TextArea autoFocus maxLength={500} autoSize={{ minRows: 2, maxRows: 4 }} />
-      </Form.Item>
-      <Form.Item label="Mật khẩu của bạn" name="password" rules={[{ required: true, message: 'Nhập lại mật khẩu để xác nhận.' }]}>
-        <Input.Password autoComplete="current-password" />
-      </Form.Item>
-      <Form.Item label={`Gõ "${confirmation}" để xác nhận`} name="confirmation"
-        rules={[{ validator: (_, v?: string) => (sameConfirmation(v, confirmation) ? Promise.resolve() : Promise.reject(new Error(`Gõ đúng "${confirmation}".`))) }]}>
-        <Input autoComplete="off" />
-      </Form.Item>
-    </>
-  )
-}
 
 /** Kiểu hộp thoại đang mở trên form phiếu. */
 type Dialog =
