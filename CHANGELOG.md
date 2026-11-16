@@ -3,6 +3,44 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.38.0] - 2026-11-16
+
+**Dọn phần kho còn sót sau khi bỏ phân hệ kho** (design.md 19.4): kho chỉ còn là nơi nhận hàng, mặt hàng không còn thông số tồn kho. Cài sau
+**0.37.1** qua REL.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- **Kho nhận hàng** (Danh mục → Kho): danh sách phẳng xếp theo mã – không còn kho tổng / kho phụ, kho cha, cờ cho phép tồn âm; form kho chỉ còn
+  mã, tên, địa chỉ, thủ kho; kho nào cũng ngừng dùng được (kể cả kho tạo sẵn cùng công ty).
+- **Tạo công ty**: khối "Kho nhận hàng" (mã, tên kho đầu tiên) thay cho "Kho tổng".
+- **Nơi nhận mặc định** trên PO mới, PO lập từ RFQ và đặt hàng gộp: kho đang dùng có mã nhỏ nhất (trước là kho tổng); ô chọn kho không còn chữ
+  "(kho tổng)".
+- **Mặt hàng**: bỏ tab "Quản lý kho" (quản lý tồn, tồn tối thiểu / tối đa, điểm đặt hàng lại…); file Excel mẫu nhập mặt hàng bỏ 7 cột tương ứng –
+  file cũ còn các cột này vẫn nhập được (cột bị bỏ qua).
+- **Tham số hệ thống**: bỏ các tham số kho đã ngừng dùng từ 0.31.0 (% cộng thêm giá nội bộ, bắt buộc nhận hàng theo PO, mục tiêu / số ngày hàng
+  chậm luân chuyển).
+- Hướng dẫn sử dụng 02, 03, 05, 07, 08 và hướng dẫn cài đặt sửa theo.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 1 migration (114 → 115), script `db/scripts/0.38.0.sql` (idempotent): `V0_38_0_BoCotThamSoKho` – **xóa 4 cột** của `CompanyParameter`
+  (`InternalMarkupPercent`, `RequireReceiptPo`, `KpiSlowMovingTarget`, `KpiSlowMovingDays`), ngừng dùng từ 0.31.0.
+- Các cột kho (loại kho, kho cha, cho phép tồn âm) và 7 cột thông số tồn kho của mặt hàng **ngừng dùng, chưa xóa** – xóa ở bản sau (CLAUDE.md
+  mục 8).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); bộ thực thi tự sao lưu CSDL trước khi chạy script.
+- Không có quyền mới, không có cấu hình mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 2**: REL → Quay về bản cũ (về 0.37.1), chọn mức 2 – bộ thực thi chạy `db-scripts\down\0.38.0.sql` tạo lại 4 cột tham số với giá trị
+  mặc định (% cộng thêm 0, không bắt buộc nhận theo PO, mục tiêu hàng chậm luân chuyển 10 %, 90 ngày). **Mất**: giá trị cũ của 4 tham số này
+  (không còn dùng từ 0.31.0). Kho, mặt hàng tạo trên 0.38.0 vẫn mở được trên 0.37.1 (kho mới hiện là kho phụ).
+
 ## [0.37.1] - 2026-11-16
 
 **Thay 0.37.0** – gồm toàn bộ QT9 của 0.37.0 (làm mới TEST từ PROD, báo lỗi từ TEST, quay về trên TEST, khóa dịch vụ) cộng bản sửa của 0.36.2.
