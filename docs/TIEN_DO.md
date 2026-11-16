@@ -999,7 +999,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 - Test: domain kho viết lại (danh sách phẳng, ngừng dùng mọi kho), `DoiLoaiHang_KhongConThongSoTonKho`; tích hợp `CompanyWarehouseTests` (thêm kho, sửa,
   ngừng kho có sẵn), bỏ `ScopeTests.MoiCongTyToiDaMotKhoTong`, thứ tự kho theo mã, cột Excel THUNG 19 → 12, 46 lời gọi `CreateItemRequest` bỏ 4 tham số;
   e2e `organization` (thêm kho, ngừng kho có sẵn), `master-data` (không còn tab Quản lý kho). Hướng dẫn 02, 03, 05, 07 (bỏ REORD), 08, cài đặt.
-  Kiểm tra: build 0 cảnh báo, `dotnet test` 801/801, tsc, oxlint, `npm run build`, e2e `organization` + `master-data` 6/6; Playwright đủ bộ – xem dòng dưới.
+  Kiểm tra: build 0 cảnh báo, `dotnet test` 801/801, tsc, oxlint, `npm run build`, e2e `organization` + `master-data` 6/6; Playwright đủ bộ 159/160 (`--workers=2`) – `lookup-wildcard` (chập chờn đã biết: spec khác thêm hàng làm đổi thứ tự dòng khi gõ `*`) chạy riêng qua 2/2. **Đã merge `main` 16/11/2026.**
 
 **Dọn cột tham số kho đã ngừng dùng (16/11/2026, chưa phát hành – bản 0.38.0) – nhánh `feature/bo-cot-tham-so-kho`** (người dùng "làm tiếp việc tiếp
 theo" – việc đề xuất số 1). Migration `V0_38_0_BoCotThamSoKho` xóa 4 cột `CompanyParameter`: `InternalMarkupPercent`, `RequireReceiptPo`,
