@@ -48,20 +48,9 @@ internal sealed class WarehouseConfiguration : IEntityTypeConfiguration<Warehous
         builder.Property(x => x.Keeper).HasMaxLength(200);
         builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
 
-        // Chỉ mục cũ "mỗi công ty tối đa một kho Main" – ngừng dùng từ 0.38.0 cùng cột Type (kho mới ghi Sub nên không vướng);
-        // xóa cùng cột ở bản sau (design.md mục 19.4, CLAUDE.md mục 8).
-        builder.HasIndex(x => x.CompanyId).IsUnique().HasFilter($"\"Type\" = {(int)WarehouseType.Main}")
-            .HasDatabaseName("IX_Warehouse_CompanyId_Main");
-
         // Khóa (Id, CompanyId) để các bảng khác trỏ tới kho kèm công ty, CSDL tự chặn ghép kho với công ty khác.
         builder.HasAlternateKey(x => new { x.Id, x.CompanyId });
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
-
-        // Kho cha phải cùng công ty – kho Sub không được treo dưới kho công ty khác (design.md mục 4, 12.2).
-        builder.HasOne<Warehouse>().WithMany()
-            .HasForeignKey(x => new { x.ParentWarehouseId, x.CompanyId })
-            .HasPrincipalKey(x => new { x.Id, x.CompanyId })
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

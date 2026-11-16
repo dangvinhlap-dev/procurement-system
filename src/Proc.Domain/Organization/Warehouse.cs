@@ -3,19 +3,6 @@ using Proc.Domain.Common;
 namespace Proc.Domain.Organization;
 
 /// <summary>
-/// Loại kho cũ – <b>ngừng dùng từ 0.38.0</b> (design.md mục 19.4: bỏ kho tổng / kho phụ); giữ để đọc cột <c>Warehouse.Type</c> tới khi xóa cột ở
-/// bản sau (CLAUDE.md mục 8). Kho mới ghi <see cref="Sub"/> để không vướng chỉ mục "mỗi công ty một kho Main" còn trong CSDL.
-/// </summary>
-public enum WarehouseType
-{
-    /// <summary>Kho tổng (cũ).</summary>
-    Main = 1,
-
-    /// <summary>Kho phụ (cũ) – giá trị của mọi kho tạo từ 0.38.0.</summary>
-    Sub = 2,
-}
-
-/// <summary>
 /// Kho của một công ty – từ khi bỏ phân hệ kho chỉ còn là <b>nơi nhận hàng</b> (design.md mục 19.4): danh sách phẳng, không kho cha, không tồn
 /// kho. Mã duy nhất trong công ty.
 /// </summary>
@@ -35,20 +22,11 @@ public sealed class Warehouse : AuditableEntity, ICompanyOwned
     /// <summary>Tên kho.</summary>
     public string Name { get; private set; } = string.Empty;
 
-    /// <summary>Loại kho cũ – <b>ngừng dùng từ 0.38.0</b>, xóa cột ở bản sau; không chức năng nào đọc.</summary>
-    public WarehouseType Type { get; private set; }
-
-    /// <summary>Kho cha cũ – <b>ngừng dùng từ 0.38.0</b>, xóa cột ở bản sau; kho mới luôn null.</summary>
-    public Guid? ParentWarehouseId { get; private set; }
-
     /// <summary>Địa chỉ.</summary>
     public string? Address { get; private set; }
 
     /// <summary>Thủ kho.</summary>
     public string? Keeper { get; private set; }
-
-    /// <summary>Cho phép tồn âm – <b>ngừng dùng từ 0.38.0</b> (không còn tồn kho), xóa cột ở bản sau.</summary>
-    public bool AllowNegativeStock { get; private set; }
 
     /// <summary>Còn sử dụng.</summary>
     public bool IsActive { get; private set; } = true;
@@ -74,8 +52,6 @@ public sealed class Warehouse : AuditableEntity, ICompanyOwned
             CompanyId = companyId,
             Code = normalized,
             Name = name.Trim(),
-            // Cột cũ còn chỉ mục duy nhất "một kho Main mỗi công ty" tới khi xóa ở bản sau – ghi Sub để công ty thêm bao nhiêu kho cũng được.
-            Type = WarehouseType.Sub,
         };
     }
 

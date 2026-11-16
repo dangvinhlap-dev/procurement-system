@@ -785,17 +785,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsCritical")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("MaxStock")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal?>("MinStock")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -804,14 +793,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("Origin")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<decimal?>("ReorderPoint")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal?>("SafetyStock")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("SearchText")
                         .IsRequired()
@@ -825,12 +806,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.Property<string>("TechnicalSpecs")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
-
-                    b.Property<bool>("TrackExpiry")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("TrackLot")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -3671,9 +3646,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<bool>("AllowNegativeStock")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -3700,12 +3672,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<Guid?>("ParentWarehouseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -3714,15 +3680,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompanyId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Warehouse_CompanyId_Main")
-                        .HasFilter("\"Type\" = 1");
-
                     b.HasIndex("CompanyId", "Code")
                         .IsUnique();
-
-                    b.HasIndex("ParentWarehouseId", "CompanyId");
 
                     b.ToTable("Warehouse", (string)null);
                 });
@@ -8854,12 +8813,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Proc.Domain.Organization.Warehouse", null)
-                        .WithMany()
-                        .HasForeignKey("ParentWarehouseId", "CompanyId")
-                        .HasPrincipalKey("Id", "CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Proc.Domain.Pricing.InternalPrice", b =>

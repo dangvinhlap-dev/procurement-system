@@ -985,6 +985,16 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Xóa cột kho đã ngừng dùng (16/11/2026, chưa phát hành – bản 0.39.0) – nhánh `feature/bo-cot-kho`** (làm sau khi 0.38.0 đã phát hành). Migration
+`V0_39_0_BoCotKho`: xóa `Warehouse.Type`, `ParentWarehouseId`, `AllowNegativeStock` + chỉ mục `IX_Warehouse_CompanyId_Main`,
+`IX_Warehouse_ParentWarehouseId_CompanyId`, khóa ngoại kho cha; xóa 7 cột `Item` (`TrackLot`, `TrackExpiry`, `MinStock`, `MaxStock`, `SafetyStock`,
+`ReorderPoint`, `IsCritical`). `Down()` tạo lại cột mặc định (kho `Type = 2` – Sub, mất giá trị cũ). Domain bỏ thuộc tính + enum `WarehouseType`;
+cấu hình EF bỏ chỉ mục / khóa. Không đổi API, giao diện. Test: tích hợp `CompanyWarehouseTests.CsdlKhongConCotKhoCu_SauBan039` (information_schema,
+pg_indexes). design.md 19.4 + bảng dữ liệu. `dotnet test` 802/802, build 0 cảnh báo. **Khi phát hành 0.39.0**: mức quay về **2** (0.38.0 còn đọc cột)
+– sinh `db/scripts/0.39.0.sql`, `db/scripts/down/0.39.0.sql`, `rollback/0.39.0.json`. **Lưu ý máy dev**: `src\Proc.Web\node_modules` hỏng (npm ci của
+publish.ps1 lỗi EPERM giữa chừng – Vite thử cổng 5191 từ 12/11 giữ file rolldown) – dừng Vite đó rồi `npm ci` lại; gói 0.38.0 đã đóng từ worktree
+sạch của tag (`artifacts\wt-0.38.0`, đã gỡ).
+
 **Phát hành 0.38.0 (16/11/2026)** – người dùng "làm tiếp lát dọn cột kho rồi phát hành 0.38.0". Đảo thứ tự cho đúng CLAUDE.md mục 8 (cột kho mới
 ngừng dùng ở 0.38.0 – không xóa trong cùng bản): phát hành 0.38.0 trước (dọn 4 cột tham số + bỏ kho tổng / kho phụ, tồn âm, tab Tồn kho), rồi
 làm lát xóa cột kho cho **0.39.0**. Script `db/scripts/0.38.0.sql` (`V0_37_0_LamMoiTest` → `V0_38_0_BoCotThamSoKho`), **script gỡ đầu tiên**

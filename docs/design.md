@@ -140,7 +140,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Công ty (`Company`) | Mã, tên, tên viết tắt, MST, địa chỉ, người đại diện, `IsHeadOffice`, tiền tệ hạch toán, ngày bắt đầu dùng hệ thống | Tổng công ty cũng là một bản ghi, `IsHeadOffice = true` |
-| Kho (`Warehouse`) | Mã, tên, `CompanyId`, địa chỉ, thủ kho, còn dùng – **nơi nhận hàng**, danh sách phẳng (từ 16/11/2026, mục 19.4: bỏ kho tổng / kho phụ `WarehouseType`, `ParentWarehouseId` và cờ tồn âm – cột ngừng dùng, xóa ở bản sau) | Mã duy nhất trong công ty; kho nào cũng ngừng dùng được |
+| Kho (`Warehouse`) | Mã, tên, `CompanyId`, địa chỉ, thủ kho, còn dùng – **nơi nhận hàng**, danh sách phẳng (từ 16/11/2026, mục 19.4: bỏ kho tổng / kho phụ `WarehouseType`, `ParentWarehouseId` và cờ tồn âm – cột ngừng dùng ở 0.38.0, xóa ở 0.39.0) | Mã duy nhất trong công ty; kho nào cũng ngừng dùng được |
 | Bộ phận (`Department`) | Mã, tên, `CompanyId`, trưởng bộ phận, còn dùng | Mỗi công ty một danh mục riêng (màn hình DEPT); PR **bắt buộc** chọn bộ phận; dùng cho ngân sách, phân bổ chi phí – mục 18.5 |
 | Người dùng (`User`) | Tên đăng nhập, họ tên, email, công ty mặc định, trạng thái, 2FA | Một người có thể thuộc nhiều công ty |
 
@@ -2649,6 +2649,9 @@ Công ty dùng phần mềm kho riêng. Thay thế:
   - CSDL (CLAUDE.md mục 8 – không xóa cột cùng bản ngừng dùng): **chưa migration**; cột `Warehouse.Type`, `ParentWarehouseId`,
     `AllowNegativeStock`, `Item.TrackLot`, `TrackExpiry`, `MinStock`, `MaxStock`, `SafetyStock`, `ReorderPoint`, `IsCritical` ngừng dùng (kho mới ghi
     `Type = Sub` để không vướng chỉ mục một kho Main), **xóa ở bản sau** cùng chỉ mục `IX_Warehouse_CompanyId_Main` và khóa kho cha.
+  - **Đã xóa ở 0.39.0** (16/11/2026, migration `V0_39_0_BoCotKho`, sau khi 0.38.0 phát hành): 10 cột trên, chỉ mục `IX_Warehouse_CompanyId_Main`,
+    `IX_Warehouse_ParentWarehouseId_CompanyId` và khóa ngoại kho cha; enum `WarehouseType` bỏ khỏi code. `Down()` tạo lại cột với giá trị mặc định
+    (mọi kho `Type = 2` – kho phụ; mặt hàng không còn thông số tồn cũ) – mức quay về 2, script gỡ `db/scripts/down/0.39.0.sql` (design.md 21.6a).
 
 ### 19.5 Portal nhà cung cấp
 

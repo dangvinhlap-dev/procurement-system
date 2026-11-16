@@ -20,7 +20,6 @@ public class WarehouseAndPermissionTests
 
         Assert.Equal("KT", kho.Code);
         Assert.Equal(CompanyA, kho.CompanyId);
-        Assert.Null(kho.ParentWarehouseId);
         Assert.True(kho.IsActive);
     }
 

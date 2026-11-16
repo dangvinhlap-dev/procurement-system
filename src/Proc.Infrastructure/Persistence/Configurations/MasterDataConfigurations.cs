@@ -35,11 +35,6 @@ internal sealed class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.HasIndex(x => x.Barcode);
         builder.Property(x => x.VatCode).HasMaxLength(5);
         builder.Property(x => x.TechnicalSpecs).HasMaxLength(4000);
-        // Số lượng numeric(18,4) – CLAUDE.md mục 4.
-        builder.Property(x => x.MinStock).HasPrecision(18, 4);
-        builder.Property(x => x.MaxStock).HasPrecision(18, 4);
-        builder.Property(x => x.SafetyStock).HasPrecision(18, 4);
-        builder.Property(x => x.ReorderPoint).HasPrecision(18, 4);
         builder.Property(x => x.SearchText).HasMaxLength(800).IsRequired();
         builder.HasIndex(x => x.CategoryId);
 
