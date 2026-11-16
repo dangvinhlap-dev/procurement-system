@@ -479,7 +479,7 @@ export function PooledOrderPage() {
         const cid = companyRows[field.name]?.companyId
         const saved = doc?.companies.find((x) => x.companyId === cid)
         const options = context.data?.companies.find((x) => x.companyId === cid)?.warehouses
-          .map((w) => ({ value: w.id, label: `${w.code} – ${w.name}${w.isMain ? ' (kho tổng)' : ''}` }))
+          .map((w) => ({ value: w.id, label: `${w.code} – ${w.name}` }))
           ?? (saved ? [{ value: saved.warehouseId, label: saved.warehouseCode ?? '' }] : [])
         return (
           <Form.Item name={[field.name, 'warehouseId']} noStyle rules={[{ required: true, message: 'Chọn kho nhận.' }]}>

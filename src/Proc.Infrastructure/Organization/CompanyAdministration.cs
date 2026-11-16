@@ -69,10 +69,10 @@ public sealed class CompanyAdministration : ICompanyAdministration
             throw new BusinessRuleException($"Mã công ty {company.Code} đã có.");
         await EnsureTaxCodeUniqueAsync(company, cancellationToken);
 
-        // Mỗi công ty có đúng một kho tổng (design.md mục 4) – tạo cùng lúc để công ty không bao giờ thiếu kho tổng.
-        var main = Warehouse.CreateMain(company.Id, request.MainWarehouseCode, request.MainWarehouseName);
+        // Tạo sẵn một kho nhận hàng để công ty mới lập được đề nghị mua / PO ngay (thêm kho khác ở danh mục Kho – design.md mục 19.4).
+        var warehouse = Warehouse.Create(company.Id, request.FirstWarehouseCode, request.FirstWarehouseName);
         _db.Companies.Add(company);
-        _db.Warehouses.Add(main);
+        _db.Warehouses.Add(warehouse);
 
         await AssignCreatorAsync(headOfficeId, company.Id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -102,8 +102,8 @@ public sealed class CompanyAdministration : ICompanyAdministration
 
     /// <summary>
     /// Người thêm công ty được gán các vai trò mình đang có ở tổng công ty, cùng phạm vi nhóm hàng như ở tổng công ty, mọi kho
-    /// (công ty mới chỉ có kho tổng vừa tạo). Không cấp thêm quyền nào người đó chưa có, nhưng nếu không gán thì không ai vào
-    /// được công ty mới để khai báo kho phụ và gán người dùng (gán quyền chỉ làm tại công ty đang làm việc – design.md mục 9.5).
+    /// (công ty mới chỉ có kho vừa tạo). Không cấp thêm quyền nào người đó chưa có, nhưng nếu không gán thì không ai vào
+    /// được công ty mới để khai báo thêm kho và gán người dùng (gán quyền chỉ làm tại công ty đang làm việc – design.md mục 9.5).
     /// </summary>
     private async Task AssignCreatorAsync(Guid headOfficeId, Guid companyId, CancellationToken cancellationToken)
     {

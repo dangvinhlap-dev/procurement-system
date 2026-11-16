@@ -597,7 +597,7 @@ export function RfqPage() {
     doc &&
     modal.confirm({
       title: 'Tạo đơn mua hàng từ kết quả chọn thầu?',
-      content: 'Mỗi NCC trúng thầu một PO nháp: giá theo báo giá, kho nhận là kho tổng. Mở PO để kiểm tra rồi gửi duyệt.',
+      content: 'Mỗi NCC trúng thầu một PO nháp: giá theo báo giá, kho nhận là kho đang dùng có mã nhỏ nhất. Mở PO để kiểm tra rồi gửi duyệt.',
       okText: 'Tạo PO',
       cancelText: 'Không',
       onOk: async () => {

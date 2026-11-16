@@ -19,8 +19,8 @@ test('thủ kho nhập tồn trên đề nghị mua chờ duyệt, tính cần m
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Găng tay ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,
-    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null,
-    maxStock: null, conversions: [],
+    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const deptCode = unique('NT').slice(0, 10)
   const dept = await bha.send<{ id: string }>('post', '/api/departments', { code: deptCode, name: `Phòng nhập tồn ${deptCode}`, managerName: null })

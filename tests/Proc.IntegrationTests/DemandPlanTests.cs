@@ -58,7 +58,7 @@ public class DemandPlanTests
         var other = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm khác kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name) => (await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, []), Ct))).Id;
         var item = await ItemAsync(category.Id, "Găng tay kế hoạch");
         var item2 = await ItemAsync(category.Id, "Khẩu trang kế hoạch");
         var outside = await ItemAsync(other.Id, "Ống thép kế hoạch");
@@ -147,8 +147,7 @@ public class DemandPlanTests
         var sibling = await ReadAsync<ItemCategoryDetailDto>(await tct.PostAsJsonAsync("/api/item-categories",
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm con nháp {Guid.NewGuid():N}", category.Id, null), Ct));
         async Task<ItemDetailDto> ItemAsync(Guid categoryId, string name) => await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null,
-                [new(thung, 12)]), Ct));
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, [new(thung, 12)]), Ct));
         var item = await ItemAsync(child.Id, "Bóng đèn tổng hợp");
         var draftOnly = await ItemAsync(sibling.Id, "Dây điện tổng hợp");
 
@@ -234,8 +233,7 @@ public class DemandPlanTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(tct,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm SL kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await tct.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Ốc vít SL kế hoạch", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, [new(thung, 12)]), Ct));
+            new CreateItemRequest(null, "Ốc vít SL kế hoạch", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, [new(thung, 12)]), Ct));
         async Task PlanAsync(HttpClient client, int year, Guid uomId, decimal[] months)
         {
             var plan = await ReadAsync<DemandPlanDto>(await client.PostAsJsonAsync(Url,
@@ -304,8 +302,7 @@ public class DemandPlanTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(client,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm chia ngày {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await client.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Ốc vít chia ngày", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, [new(thung, 12)]), Ct));
+            new CreateItemRequest(null, "Ốc vít chia ngày", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, [new(thung, 12)]), Ct));
         // Tháng 1: 31 cái, tháng 2: 50 cái, tháng 3: 31 cái.
         var plan = await ReadAsync<DemandPlanDto>(await client.PostAsJsonAsync(Url,
             new SaveDemandPlanRequest(Year, category.Id, null, [new SaveDemandPlanLineRequest(null, item.Id, cai, Months(31, 50, 31), null)]), Ct));

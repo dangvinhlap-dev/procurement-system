@@ -97,29 +97,28 @@ public sealed class Item : AuditableEntity, IVersioned
     /// <summary>Thông số kỹ thuật.</summary>
     public string? TechnicalSpecs { get; private set; }
 
-    /// <summary>Quản lý theo lô (chỉ hàng tồn kho).</summary>
+    // Thông số tồn kho cũ – ngừng dùng từ 0.38.0 (design.md mục 19.4: bỏ tab Tồn kho của mặt hàng), giữ cột tới khi xóa ở bản sau
+    // (CLAUDE.md mục 8). Không chức năng nào đọc / ghi; private để EF vẫn ánh xạ cột.
+
+    /// <summary>Quản lý theo lô (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public bool TrackLot { get; private set; }
 
-    /// <summary>Quản lý hạn dùng (chỉ hàng tồn kho).</summary>
+    /// <summary>Quản lý hạn dùng (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public bool TrackExpiry { get; private set; }
 
-    /// <summary>Tồn tối thiểu theo ĐVT cơ sở – numeric(18,4) như mọi số lượng.</summary>
+    /// <summary>Tồn tối thiểu (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public decimal? MinStock { get; private set; }
 
-    /// <summary>Tồn tối đa theo ĐVT cơ sở.</summary>
+    /// <summary>Tồn tối đa (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public decimal? MaxStock { get; private set; }
 
-    /// <summary>
-    /// Tồn an toàn theo ĐVT cơ sở: mức dự phòng – khả dụng xuống dưới mức này là cần mua gấp (lát D1, design.md mục 18.16).
-    /// </summary>
+    /// <summary>Tồn an toàn (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public decimal? SafetyStock { get; private set; }
 
-    /// <summary>
-    /// Điểm đặt hàng lại theo ĐVT cơ sở: khả dụng (tồn + đang đặt + đề nghị còn mở) ≤ mức này thì gợi ý lập PR (design.md mục 18.16).
-    /// </summary>
+    /// <summary>Điểm đặt hàng lại (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public decimal? ReorderPoint { get; private set; }
 
-    /// <summary>Vật tư trọng yếu: thiếu sẽ dừng sản xuất/vận hành – được lọc riêng trên báo cáo gợi ý đặt hàng (design.md mục 18.16).</summary>
+    /// <summary>Vật tư trọng yếu (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
     public bool IsCritical { get; private set; }
 
     /// <summary>Còn sử dụng.</summary>
@@ -217,54 +216,15 @@ public sealed class Item : AuditableEntity, IVersioned
     }
 
     /// <summary>
-    /// Đặt loại hàng và các thông số quản lý kho. Chỉ hàng tồn kho mới đi qua kho (design.md mục 5.2) nên các loại khác
-    /// không được bật lô/hạn dùng hay đặt tồn tối thiểu/tối đa.
+    /// Đổi loại hàng. Các thông số quản lý kho cũ (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, điểm đặt hàng lại, vật tư trọng yếu) bỏ từ
+    /// 0.38.0 – công ty quản lý tồn ở phần mềm kho riêng (design.md mục 19.4).
     /// </summary>
     /// <param name="type">Loại hàng.</param>
-    /// <param name="trackLot">Quản lý lô.</param>
-    /// <param name="trackExpiry">Quản lý hạn dùng.</param>
-    /// <param name="minStock">Tồn tối thiểu (≥ 0, tối đa 4 chữ số thập phân).</param>
-    /// <param name="maxStock">Tồn tối đa (≥ tồn tối thiểu).</param>
-    /// <exception cref="BusinessRuleException">Khi thông số không hợp lệ với loại hàng.</exception>
-    public void SetStockControl(ItemType type, bool trackLot, bool trackExpiry, decimal? minStock, decimal? maxStock)
+    /// <exception cref="BusinessRuleException">Khi loại hàng không hợp lệ.</exception>
+    public void ChangeType(ItemType type)
     {
         if (!Enum.IsDefined(type)) throw new BusinessRuleException("Loại hàng không hợp lệ.");
-        if (type != ItemType.Inventory && (trackLot || trackExpiry || minStock is not null || maxStock is not null))
-            throw new BusinessRuleException("Chỉ hàng tồn kho mới quản lý lô, hạn dùng và tồn tối thiểu/tối đa.");
-        CheckQuantity(minStock, "Tồn tối thiểu");
-        CheckQuantity(maxStock, "Tồn tối đa");
-        if (minStock is { } min && maxStock is { } max && min > max)
-            throw new BusinessRuleException("Tồn tối thiểu không được lớn hơn tồn tối đa.");
-
         Type = type;
-        TrackLot = trackLot;
-        TrackExpiry = trackExpiry;
-        MinStock = minStock;
-        MaxStock = maxStock;
-    }
-
-    /// <summary>
-    /// Đặt thông số đặt hàng lại (đề xuất Ban CUVT K1 – design.md mục 18.16). Gọi sau <see cref="SetStockControl"/> vì chỉ hàng tồn kho mới có.
-    /// Ràng buộc: tồn an toàn ≤ điểm đặt hàng lại ≤ tồn tối đa (khi có) – ví dụ an toàn 20, đặt lại 50, tối đa 200.
-    /// </summary>
-    /// <param name="safetyStock">Tồn an toàn (≥ 0, tối đa 4 chữ số thập phân).</param>
-    /// <param name="reorderPoint">Điểm đặt hàng lại.</param>
-    /// <param name="isCritical">Vật tư trọng yếu.</param>
-    /// <exception cref="BusinessRuleException">Khi không phải hàng tồn kho hoặc các mức không theo thứ tự.</exception>
-    public void SetReorderControl(decimal? safetyStock, decimal? reorderPoint, bool isCritical)
-    {
-        if (Type != ItemType.Inventory && (safetyStock is not null || reorderPoint is not null || isCritical))
-            throw new BusinessRuleException("Chỉ hàng tồn kho mới có tồn an toàn, điểm đặt hàng lại và cờ vật tư trọng yếu.");
-        CheckQuantity(safetyStock, "Tồn an toàn");
-        CheckQuantity(reorderPoint, "Điểm đặt hàng lại");
-        if (safetyStock is { } safety && reorderPoint is { } point && safety > point)
-            throw new BusinessRuleException("Tồn an toàn không được lớn hơn điểm đặt hàng lại.");
-        if (MaxStock is { } max && (reorderPoint ?? safetyStock) is { } level && level > max)
-            throw new BusinessRuleException("Điểm đặt hàng lại và tồn an toàn không được lớn hơn tồn tối đa.");
-
-        SafetyStock = safetyStock;
-        ReorderPoint = reorderPoint;
-        IsCritical = isCritical;
     }
 
     /// <summary>
@@ -298,14 +258,6 @@ public sealed class Item : AuditableEntity, IVersioned
 
     /// <summary>Dùng lại.</summary>
     public void Activate() => IsActive = true;
-
-    /// <summary>Kiểm tra số lượng không âm và vừa kiểu numeric(18,4).</summary>
-    private static void CheckQuantity(decimal? value, string label)
-    {
-        // Số lượng lưu numeric(18,4) (CLAUDE.md mục 4): tối đa 14 chữ số phần nguyên, 4 chữ số thập phân.
-        if (value is { } v && (v < 0 || decimal.Round(v, 4) != v || v >= 100_000_000_000_000m))
-            throw new BusinessRuleException($"{label} phải ≥ 0 và tối đa 4 chữ số thập phân.");
-    }
 
     /// <summary>Bỏ khoảng trắng hai đầu; chuỗi rỗng hoặc toàn khoảng trắng thành null.</summary>
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

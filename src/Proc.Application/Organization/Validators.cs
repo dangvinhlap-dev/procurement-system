@@ -17,8 +17,8 @@ public sealed class CreateCompanyRequestValidator : AbstractValidator<CreateComp
         RuleFor(x => x.TaxCode).MaximumLength(20);
         RuleFor(x => x.Address).MaximumLength(500);
         RuleFor(x => x.Representative).MaximumLength(200);
-        RuleFor(x => x.MainWarehouseCode).NotEmpty().WithMessage("Hãy nhập mã kho tổng.");
-        RuleFor(x => x.MainWarehouseName).NotEmpty().WithMessage("Hãy nhập tên kho tổng.").MaximumLength(200);
+        RuleFor(x => x.FirstWarehouseCode).NotEmpty().WithMessage("Hãy nhập mã kho nhận hàng.");
+        RuleFor(x => x.FirstWarehouseName).NotEmpty().WithMessage("Hãy nhập tên kho nhận hàng.").MaximumLength(200);
     }
 }
 
@@ -44,7 +44,6 @@ public sealed class CreateWarehouseRequestValidator : AbstractValidator<CreateWa
     {
         RuleFor(x => x.Code).NotEmpty().WithMessage("Hãy nhập mã kho.");
         RuleFor(x => x.Name).NotEmpty().WithMessage("Hãy nhập tên kho.").MaximumLength(200);
-        RuleFor(x => x.ParentWarehouseId).NotEmpty().WithMessage("Hãy chọn kho cha.");
         RuleFor(x => x.Address).MaximumLength(500);
         RuleFor(x => x.Keeper).MaximumLength(200);
     }

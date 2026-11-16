@@ -88,7 +88,7 @@ public class ApprovalReminderTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử nhắc duyệt {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Bulong", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+            new CreateItemRequest(null, "Bulong", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct));
         var department = await ReadAsync<DepartmentDto>(await buyer.PostAsJsonAsync("/api/departments",
             new CreateDepartmentRequest("PX1", "Phân xưởng 1", null), Ct));
         Guid adminRole;

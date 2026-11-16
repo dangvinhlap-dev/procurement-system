@@ -25,7 +25,7 @@ public partial class PurchasingTests
         await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PR", 1, 0, headRole), Ct));
         await ReadAsync<ApprovalRuleDto>(await f.Buyer.PostAsJsonAsync("/api/approval-rules", new SaveApprovalRuleRequest("PR", 2, 0, directorRole), Ct));
 
-        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", f.Kt, null, null, false), Ct));
+        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", null, null), Ct));
         var keeperRole = UniqueCode("K");
         await _factory.CreateRoleAsync(keeperRole, Permissions.Purchase.PrView, Permissions.Purchase.PrEnterStock);
         async Task<HttpClient> KeeperAsync(string warehouse)

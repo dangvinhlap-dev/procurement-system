@@ -15,7 +15,7 @@ async function newCompany(request: APIRequestContext, prefix: string) {
   const code = unique(prefix).slice(0, 8)
   await head.send('post', '/api/companies', {
     code, name: `Công ty thử duyệt mẫu ${code}`, shortName: null, taxCode: null, address: null, representative: null,
-    startDate: new Date().toISOString().slice(0, 8) + '01', mainWarehouseCode: 'KT', mainWarehouseName: 'Kho tổng',
+    startDate: new Date().toISOString().slice(0, 8) + '01', firstWarehouseCode: 'KT', firstWarehouseName: 'Kho tổng',
   })
   return code
 }

@@ -211,7 +211,7 @@ Copy-Item .\appsettings.Production.example.json D:\Procurement\app\appsettings.P
 | `Jwt:SigningKey` | Chuỗi ngẫu nhiên ≥ 32 ký tự (lệnh dưới bảng). Đổi khóa thì mọi người phải đăng nhập lại |
 | `Database:MigrateOnStartup` | Giữ **false** – CSDL chỉ nâng bằng script sau khi đã sao lưu |
 | `Seed:AdminUserName`, `Seed:AdminPassword` | Tài khoản quản trị tạo lần đầu (đã có thì không đổi). **Đổi mật khẩu ngay** sau lần đăng nhập đầu |
-| `Seed:HeadOffice` | Mã, tên tổng công ty và kho tổng (mã công ty nằm trong số chứng từ, chọn ngắn: ví dụ `TCT`) |
+| `Seed:HeadOffice` | Mã, tên tổng công ty và kho nhận hàng (mã công ty nằm trong số chứng từ, chọn ngắn: ví dụ `TCT`) |
 | `Attachments:RootPath` | `D:\\ProcurementData\\attachments` (JSON viết `\\`) |
 | `Attachments:MaxFileSizeMb` | Mặc định 2 (cho phép 1–25) |
 | `Serilog:WriteTo` → `File` → `path` | `D:\\ProcurementData\\logs\\proc-.log` |

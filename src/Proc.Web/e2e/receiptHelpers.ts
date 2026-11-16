@@ -56,8 +56,8 @@ export async function seedApprovedPo(request: APIRequestContext, qty = 10, appro
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Găng tay nhận hàng', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const supplier = await head.send<{ id: string; code: string }>('post', '/api/suppliers', {
     code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC nhận hàng ${unique('X')}`, shortName: null,

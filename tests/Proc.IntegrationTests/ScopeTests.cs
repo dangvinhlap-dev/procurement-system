@@ -43,9 +43,9 @@ public class ScopeTests
         var warehouses = await bha.GetFromJsonAsync<List<WarehouseDto>>("/api/warehouses", Ct);
         Assert.NotNull(warehouses);
 
-        // Kho tổng đứng đầu, rồi kho phụ theo mã; không có kho nào của NMI (NMI cũng có mã KT, KP1 nhưng tên khác).
-        Assert.Equal(["KT", "KP1", "KP2"], warehouses.Select(w => w.Code));
-        Assert.Equal("Kho tổng Bắc Hà", warehouses[0].Name);
+        // Danh sách phẳng theo mã (design.md mục 19.4); không có kho nào của NMI (NMI cũng có mã KT, KP1 nhưng tên khác).
+        Assert.Equal(["KP1", "KP2", "KT"], warehouses.Select(w => w.Code));
+        Assert.Equal("Kho tổng Bắc Hà", warehouses[2].Name);
         Assert.DoesNotContain(warehouses, w => w.Name.Contains("Miền Nam") || w.Name.Contains("Bình Dương"));
     }
 
@@ -69,7 +69,7 @@ public class ScopeTests
 
         var warehouses = await admin.GetFromJsonAsync<List<WarehouseDto>>("/api/warehouses", Ct);
 
-        Assert.Equal(["Kho tổng Miền Nam", "Kho phụ Bình Dương"], warehouses!.Select(w => w.Name));
+        Assert.Equal(["Kho phụ Bình Dương", "Kho tổng Miền Nam"], warehouses!.Select(w => w.Name));
     }
 
     [Fact]
@@ -195,19 +195,6 @@ public class ScopeTests
 
         Assert.Equal(0, await db.Warehouses.CountAsync(Ct));
         Assert.Equal(0, await db.ItemCategories.CountAsync(Ct));
-    }
-
-    [Fact]
-    public async Task MoiCongTyToiDaMotKhoTong()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var bha = await _factory.GetCompanyIdAsync("BHA");
-        scope.ServiceProvider.GetRequiredService<CurrentUserScope>().Initialize(Guid.Empty, bha, [], true, [], true, []);
-        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
-
-        db.Warehouses.Add(Warehouse.CreateMain(bha, "KT2", "Kho tổng thứ hai"));
-
-        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(Ct));
     }
 
     [Fact]

@@ -17,7 +17,7 @@ test('lập kế hoạch nhu cầu 12 tháng, chốt, điều chỉnh, chụp m�
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Găng tay ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'CAI')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   await loginViaApi(page)

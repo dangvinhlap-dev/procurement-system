@@ -65,7 +65,7 @@ public class SupplierCoverageTests
         async Task<ItemCategoryDetailDto> Category(string name, Guid? parentId) => await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync(
             "/api/item-categories", new CreateItemCategoryRequest(TestCodes.Category(), $"{name} {UniqueCode("")}", parentId, null), Ct));
         async Task<ItemDetailDto> Item(string name, Guid categoryId) => await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, []), Ct));
         // Nhóm cha cấp 3 (không có mặt hàng) và ba nhóm con cấp 4: đủ, thiếu, độc quyền (mặt hàng chỉ gắn nhóm cấp 4 – design.md mục 5.7, N4-5).
         var parent = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostAtLevelAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm đủ NCC {UniqueCode("")}", null, null), 3, Ct));

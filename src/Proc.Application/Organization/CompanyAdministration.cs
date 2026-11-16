@@ -29,7 +29,7 @@ public sealed record CompanyDetailDto(
     Guid Id, string Code, string Name, string? ShortName, string? TaxCode, string? Address, string? Representative,
     bool IsHeadOffice, string AccountingCurrency, DateOnly? StartDate, bool IsActive, bool CanEdit);
 
-/// <summary>Thêm công ty thành viên, kèm kho tổng của công ty.</summary>
+/// <summary>Thêm công ty thành viên, kèm một kho nhận hàng đầu tiên.</summary>
 /// <param name="Code">Mã công ty (2–10 chữ không dấu hoặc số), không đổi được về sau.</param>
 /// <param name="Name">Tên đầy đủ.</param>
 /// <param name="ShortName">Tên viết tắt.</param>
@@ -37,11 +37,11 @@ public sealed record CompanyDetailDto(
 /// <param name="Address">Địa chỉ.</param>
 /// <param name="Representative">Người đại diện.</param>
 /// <param name="StartDate">Ngày bắt đầu dùng hệ thống.</param>
-/// <param name="MainWarehouseCode">Mã kho tổng.</param>
-/// <param name="MainWarehouseName">Tên kho tổng.</param>
+/// <param name="FirstWarehouseCode">Mã kho nhận hàng đầu tiên (tạo cùng công ty).</param>
+/// <param name="FirstWarehouseName">Tên kho nhận hàng đầu tiên.</param>
 public sealed record CreateCompanyRequest(
     string Code, string Name, string? ShortName, string? TaxCode, string? Address, string? Representative,
-    DateOnly? StartDate, string MainWarehouseCode, string MainWarehouseName);
+    DateOnly? StartDate, string FirstWarehouseCode, string FirstWarehouseName);
 
 /// <summary>Sửa công ty.</summary>
 /// <param name="Name">Tên đầy đủ.</param>
@@ -77,8 +77,8 @@ public interface ICompanyAdministration
     Task<CompanyDetailDto> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Thêm công ty thành viên cùng kho tổng; người thêm được gán các vai trò mình đang có ở tổng công ty tại công ty mới
-    /// để vào làm việc được ngay (khai báo kho phụ, gán người dùng).
+    /// Thêm công ty thành viên cùng một kho nhận hàng; người thêm được gán các vai trò mình đang có ở tổng công ty tại công ty mới
+    /// để vào làm việc được ngay (khai báo thêm kho, gán người dùng).
     /// </summary>
     /// <param name="request">Thông tin công ty.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>

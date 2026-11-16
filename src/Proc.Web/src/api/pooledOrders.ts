@@ -134,7 +134,6 @@ export interface PooledPlaceOption {
   id: string
   code: string
   name: string
-  isMain: boolean
 }
 
 /** Ngữ cảnh lập phiếu theo phiếu GTH + NCC. */

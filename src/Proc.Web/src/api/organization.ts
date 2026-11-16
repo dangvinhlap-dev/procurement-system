@@ -47,11 +47,11 @@ export interface CompanyInfoInput {
   startDate: string | null
 }
 
-/** Thêm công ty kèm kho tổng. */
+/** Thêm công ty kèm một kho nhận hàng đầu tiên. */
 export interface CreateCompanyInput extends CompanyInfoInput {
   code: string
-  mainWarehouseCode: string
-  mainWarehouseName: string
+  firstWarehouseCode: string
+  firstWarehouseName: string
 }
 
 /** Kho trên danh sách và trong ngăn kéo chi tiết. */
@@ -59,23 +59,16 @@ export interface WarehouseDetail {
   id: string
   code: string
   name: string
-  type: 'Main' | 'Sub'
-  parentWarehouseId: string | null
-  /** Mã kho cha; null nếu không có hoặc kho cha ngoài phạm vi của người xem. */
-  parentCode: string | null
   address: string | null
   keeper: string | null
-  allowNegativeStock: boolean
   isActive: boolean
 }
 
 /** Thông tin kho khi thêm/sửa. */
 export interface WarehouseInput {
   name: string
-  parentWarehouseId: string | null
   address: string | null
   keeper: string | null
-  allowNegativeStock: boolean
 }
 
 /** Khóa cache: có công ty đang làm việc vì danh sách công ty và kho khác nhau theo công ty. */
@@ -134,7 +127,7 @@ export function useCompanyMutations() {
   }
 }
 
-/** Kho của công ty đang làm việc trong phạm vi được phép, kho tổng trước. */
+/** Kho (nơi nhận hàng) của công ty đang làm việc trong phạm vi được phép, theo mã. */
 export function useWarehouses() {
   const companyId = useCompanyId()
   return useQuery({ queryKey: keys.warehouses(companyId), queryFn: () => apiFetch<WarehouseDetail[]>('/api/warehouses') })

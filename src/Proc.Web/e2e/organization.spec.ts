@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { loginViaApi, confirmCompanySwitch, openByCommand } from './helpers.ts'
 
 /**
- * Danh mục công ty và kho (design.md mục 4, 5.1, 5.6): thêm công ty kèm kho tổng ở tổng công ty, vào làm việc ở công ty mới
- * ngay, thêm kho phụ; công ty thành viên chỉ xem công ty mình.
+ * Danh mục công ty và kho (design.md mục 5.1, 5.6, 19.4): thêm công ty kèm kho nhận hàng đầu tiên ở tổng công ty, vào làm việc ở
+ * công ty mới ngay, thêm kho (danh sách phẳng – không kho tổng / kho phụ); công ty thành viên chỉ xem công ty mình.
  * Dữ liệu Testing không bị xóa giữa các lần chạy Playwright nên mã công ty luôn mới.
  */
 
@@ -28,7 +28,7 @@ test.describe('danh mục công ty và kho', () => {
     await page.goto('/')
   })
 
-  test('thêm công ty ở tổng công ty, chuyển sang công ty mới, thêm kho phụ', async ({ page }) => {
+  test('thêm công ty ở tổng công ty, chuyển sang công ty mới, thêm kho, ngừng dùng kho có sẵn', async ({ page }) => {
     const code = uniqueCode()
     await openByCommand(page, 'COMP')
     await expect(page.getByRole('heading', { name: 'Danh mục công ty' })).toBeVisible()
@@ -43,7 +43,7 @@ test.describe('danh mục công ty và kho', () => {
     await page.keyboard.press('Control+s')
     await expect(drawer.getByText('10 chữ số, hoặc 10 chữ số + "-" + 3 chữ số.')).toBeVisible()
     await drawer.getByLabel('Mã số thuế').fill('')
-    await drawer.getByLabel('Tên kho tổng').fill(`Kho tổng ${code}`)
+    await drawer.getByLabel('Tên kho', { exact: true }).fill(`Kho nhận ${code}`)
     await page.keyboard.press('Control+s')
 
     await expect(page.locator('.ant-message')).toContainText(`Đã thêm công ty ${code}.`)
@@ -53,25 +53,26 @@ test.describe('danh mục công ty và kho', () => {
     await switchCompany(page, code)
     await openByCommand(page, 'WH')
     await expect(page.getByRole('heading', { name: `Danh mục kho – ${code}` })).toBeVisible()
-    await expect(gridRow(page, `Kho tổng ${code}`)).toContainText('Kho tổng')
+    await expect(gridRow(page, `Kho nhận ${code}`)).toContainText('Đang dùng')
 
     await page.getByRole('button', { name: 'Tạo mới' }).click()
+    await expect(drawer.getByText('Thêm kho')).toBeVisible()
+    await expect(drawer.getByLabel('Kho cha')).toHaveCount(0)
+    await expect(drawer.getByText('Cho phép tồn âm')).toHaveCount(0)
     await drawer.getByLabel('Mã kho').fill('kp1')
-    await drawer.getByLabel('Tên kho').fill('Kho phụ xưởng 1')
+    await drawer.getByLabel('Tên kho').fill('Kho xưởng 1')
     await drawer.getByLabel('Thủ kho').fill('Trần Bình')
     await drawer.getByRole('button', { name: 'Lưu' }).click()
     await expect(page.locator('.ant-message')).toContainText('Đã thêm kho KP1.')
-    const sub = gridRow(page, 'Kho phụ xưởng 1')
-    await expect(sub).toContainText('Kho phụ')
-    await expect(sub).toContainText('KT')
-    await expect(sub).toContainText('Trần Bình')
+    await expect(gridRow(page, 'Kho xưởng 1')).toContainText('Trần Bình')
 
-    // Kho tổng không ngừng dùng được.
-    await gridRow(page, `Kho tổng ${code}`).dblclick()
+    // Kho có sẵn của công ty cũng ngừng dùng được (không còn kho tổng bắt buộc).
+    await gridRow(page, `Kho nhận ${code}`).dblclick()
     await expect(drawer.getByText(`Kho: KT`)).toBeVisible()
-    await expect(drawer.getByRole('checkbox', { name: 'Còn sử dụng' })).toBeDisabled()
-    await page.keyboard.press('Escape')
-    await expect(drawer).toHaveCount(0)
+    await drawer.getByRole('checkbox', { name: 'Còn sử dụng' }).uncheck()
+    await drawer.getByRole('button', { name: 'Lưu' }).click()
+    await expect(page.locator('.ant-message')).toContainText('Đã lưu kho KT.')
+    await expect(gridRow(page, `Kho nhận ${code}`)).toContainText('Ngừng dùng')
     await page.waitForLoadState('networkidle')
     await page.screenshot({ path: 'e2e/screenshots/warehouse-list.png' })
   })

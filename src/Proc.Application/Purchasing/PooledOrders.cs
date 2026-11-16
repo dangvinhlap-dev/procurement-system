@@ -52,9 +52,9 @@ public sealed record PooledApprovalOptionDto(
     IReadOnlyList<PooledCompanyOptionDto> Companies);
 
 /// <summary>Kho hoặc bộ phận của một công ty nhận hàng.</summary>
-public sealed record PooledPlaceOptionDto(Guid Id, string Code, string Name, bool IsMain);
+public sealed record PooledPlaceOptionDto(Guid Id, string Code, string Name);
 
-/// <summary>Công ty nhận hàng kèm kho (kho Main đứng đầu) và bộ phận đang dùng.</summary>
+/// <summary>Công ty nhận hàng kèm kho (theo mã) và bộ phận đang dùng.</summary>
 public sealed record PooledCompanyContextDto(
     Guid CompanyId, string Code, string Name, IReadOnlyList<PooledPlaceOptionDto> Warehouses, IReadOnlyList<PooledPlaceOptionDto> Departments);
 

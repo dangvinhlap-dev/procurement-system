@@ -374,7 +374,6 @@ function AccessTab({
               {options.warehouses.map((w) => (
                 <Checkbox key={w.id} value={w.id}>
                   {w.code} – {w.name}
-                  {w.type === 'Main' && <span className="detail-hint"> (kho tổng)</span>}
                 </Checkbox>
               ))}
             </Checkbox.Group>

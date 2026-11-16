@@ -53,7 +53,7 @@ public class SharedCatalogEditTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm sửa tên {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, []), Ct));
+            new CreateItemRequest(null, "Dây điện", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, []), Ct));
         var group = await ReadAsync<SupplierGroupDto>(await head.PostAsJsonAsync("/api/supplier-groups", new CreateSupplierGroupRequest(null, "Nhóm NCC sửa tên"), Ct));
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, group.Id, "NCC cũ", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));
@@ -67,7 +67,7 @@ public class SharedCatalogEditTests
         var seen = await ReadAsync<ItemDetailDto>(await editor.GetAsync($"/api/items/{item.Id}", Ct));
         Assert.True(seen.CanEdit);
         var renamed = await ReadAsync<ItemDetailDto>(await editor.PutAsJsonAsync($"/api/items/{item.Id}",
-            new UpdateItemRequest("Dây điện 2x1,5", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, [], true), Ct));
+            new UpdateItemRequest("Dây điện 2x1,5", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, [], true), Ct));
         Assert.Equal((item.Code, "Dây điện 2x1,5"), (renamed.Code, renamed.Name));
         Assert.Equal("Cuộn dây", (await ReadAsync<UomDto>(await editor.PutAsJsonAsync($"/api/uoms/{uom.Id}", new UpdateUomRequest("Cuộn dây", true), Ct))).Name);
         // Tên mới có hậu tố riêng: nhóm hàng không được trùng tên trong cùng nhóm cha (lần chạy trước đã có "Nhóm dây điện" ở gốc).
@@ -93,6 +93,6 @@ public class SharedCatalogEditTests
         var manager = await MemberUserAsync(company.Code, Permissions.MasterData.ItemManage, Permissions.MasterData.ItemView);
         Assert.False((await ReadAsync<ItemDetailDto>(await manager.GetAsync($"/api/items/{item.Id}", Ct))).CanEdit);
         Assert.Equal(HttpStatusCode.Forbidden, (await manager.PutAsJsonAsync($"/api/items/{item.Id}",
-            new UpdateItemRequest("Đổi tên trái phép", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, false, false, null, null, [], true), Ct)).StatusCode);
+            new UpdateItemRequest("Đổi tên trái phép", null, "Inventory", category.Id, uom.Id, null, null, null, null, "10", null, [], true), Ct)).StatusCode);
     }
 }

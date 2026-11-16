@@ -53,13 +53,13 @@ public class PrintingTests
             new CreateCompanyRequest(UniqueCode("I"), "Công ty thử in phiếu", null, "0101234567", "12 Lê Lợi, Hà Nội", null, new DateOnly(Today.Year, Today.Month, 1), "KT", "Kho tổng"), Ct));
         var client = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
         var kt = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single().Id;
-        var kp = (await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", kt, null, null, false), Ct))).Id;
+        var kp = (await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", null, null), Ct))).Id;
         var cai = (await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct))!.Single(u => u.Code == "CAI").Id;
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm in phiếu {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Bu lông mạ kẽm M8 – loại dài để thử xuống dòng trong ô tên hàng", null, "Inventory", category.Id, cai,
-                null, null, null, null, "10", null, false, false, null, null, []), Ct));
+                null, null, null, null, "10", null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "Công ty TNHH Bu lông Việt", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));

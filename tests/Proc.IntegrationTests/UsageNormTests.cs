@@ -48,7 +48,7 @@ public class UsageNormTests
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm chưa kế hoạch {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name, params ItemUomConversionInput[] conversions) => (await ReadAsync<ItemDetailDto>(
             await tct.PostAsJsonAsync("/api/items", new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10",
-                null, false, false, null, null, conversions), Ct))).Id;
+                null, conversions), Ct))).Id;
         var planned = await ItemAsync(child.Id, "Găng tay định mức", new ItemUomConversionInput(thung, 10));
         var unplanned = await ItemAsync(child.Id, "Khẩu trang ngoài kế hoạch");
         var unchecked_ = await ItemAsync(noPlan.Id, "Ống thép chưa kế hoạch");

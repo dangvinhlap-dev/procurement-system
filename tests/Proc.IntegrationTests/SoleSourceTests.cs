@@ -72,8 +72,7 @@ public class SoleSourceTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {name}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct));
+            new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct));
         return (item.Id, cai);
     }
 

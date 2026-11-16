@@ -146,8 +146,8 @@ public class ExcelTransferTests
         using var exported = new XLWorkbook(new MemoryStream(await head.GetByteArrayAsync("/api/excel/items", Ct)));
         var sheet = exported.Worksheet("Hàng hóa");
         var row = sheet.RowsUsed().Single(r => r.Cell(1).GetString() == code);
-        // Cột 19: sau 3 cột đặt hàng lại (tồn an toàn, điểm đặt hàng lại, trọng yếu – lát D1).
-        Assert.Equal("THUNG", row.Cell(19).GetString());
+        // Cột 12: ngay sau Thuế suất – bỏ 7 cột tồn kho (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, đặt hàng lại, trọng yếu – design.md 19.4).
+        Assert.Equal("THUNG", row.Cell(12).GetString());
         row.Cell(2).Value = "Bu lông M8 mạ kẽm";
         using var stream = new MemoryStream();
         exported.SaveAs(stream);

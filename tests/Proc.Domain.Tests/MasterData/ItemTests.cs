@@ -51,40 +51,16 @@ public class ItemTests
     }
 
     [Fact]
-    public void QuanLyKho_ChiHangTonKhoMoiCoLoHanDungTonToiThieu()
+    public void DoiLoaiHang_KhongConThongSoTonKho()
     {
-        // Chỉ hàng tồn kho đi qua kho – design.md mục 5.2.
-        var service = NewItem(ItemType.Service);
-        Assert.Throws<BusinessRuleException>(() => service.SetStockControl(ItemType.Service, trackLot: true, false, null, null));
-        Assert.Throws<BusinessRuleException>(() => service.SetStockControl(ItemType.Service, false, false, 10, null));
-
+        // Bỏ tab Tồn kho của mặt hàng (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, điểm đặt hàng lại, vật tư trọng yếu – design.md 19.4):
+        // đổi loại hàng không còn vướng các thông số đó.
         var item = NewItem();
-        item.SetStockControl(ItemType.Inventory, true, true, 10.5m, 100);
-        Assert.Equal((true, true, 10.5m, 100m), (item.TrackLot, item.TrackExpiry, item.MinStock, item.MaxStock));
-
-        Assert.Throws<BusinessRuleException>(() => item.SetStockControl(ItemType.Inventory, false, false, 100, 10));
-        Assert.Throws<BusinessRuleException>(() => item.SetStockControl(ItemType.Inventory, false, false, -1, null));
-        Assert.Throws<BusinessRuleException>(() => item.SetStockControl(ItemType.Inventory, false, false, 1.23456m, null));
-    }
-
-    [Fact]
-    public void DatHangLai_AnToanNhoHonDiemDatLaiNhoHonToiDa_ChiHangTonKho()
-    {
-        // Đề xuất Ban CUVT K1 – design.md mục 18.16.
-        var service = NewItem(ItemType.Service);
-        Assert.Throws<BusinessRuleException>(() => service.SetReorderControl(null, null, isCritical: true));
-        Assert.Throws<BusinessRuleException>(() => service.SetReorderControl(null, 5, false));
-
-        var item = NewItem();
-        item.SetStockControl(ItemType.Inventory, false, false, 10, 200);
-        item.SetReorderControl(20, 50, true);
-        Assert.Equal((20m, 50m, true), (item.SafetyStock, item.ReorderPoint, item.IsCritical));
-
-        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(60, 50, false));
-        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(null, 250, false));
-        Assert.Throws<BusinessRuleException>(() => item.SetReorderControl(-1, null, false));
-        item.SetReorderControl(null, null, false);
-        Assert.Equal(((decimal?)null, (decimal?)null, false), (item.SafetyStock, item.ReorderPoint, item.IsCritical));
+        item.ChangeType(ItemType.Service);
+        Assert.Equal(ItemType.Service, item.Type);
+        item.ChangeType(ItemType.Inventory);
+        Assert.Equal(ItemType.Inventory, item.Type);
+        Assert.Throws<BusinessRuleException>(() => item.ChangeType((ItemType)99));
     }
 
     [Fact]

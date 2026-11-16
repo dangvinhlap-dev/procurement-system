@@ -35,7 +35,7 @@ test('phân tích giá hợp nhất hai pháp nhân và tiết kiệm dự kiế
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Bơm ly tâm 2HP ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'HOP')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   const companies = [

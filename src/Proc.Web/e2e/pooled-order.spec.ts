@@ -50,7 +50,7 @@ test('lập phiếu đặt hàng gộp, phân bổ theo kế hoạch, tạo PO c
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Nước rửa chén ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: cai, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   // Kế hoạch nhu cầu tháng này: TCT 60, BHA 40 (đã chốt).

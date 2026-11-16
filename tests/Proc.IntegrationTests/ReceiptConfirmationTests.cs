@@ -98,7 +98,7 @@ public partial class PurchasingTests
         var po = await ApprovedPoAsync(f, 4);
 
         // Thủ kho kho khác (KP) không lập được XNH cho PO nhận về KT; thủ kho KT lập được.
-        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", f.Kt, null, null, false), Ct));
+        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", null, null), Ct));
         var keeperRole = UniqueCode("K");
         await _factory.CreateRoleAsync(keeperRole, Permissions.Purchase.ReceiptView, Permissions.Purchase.ReceiptManage);
         async Task<HttpClient> KeeperAsync(string warehouse)

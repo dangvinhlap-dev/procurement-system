@@ -379,13 +379,13 @@ public sealed class PooledOrderService : IPooledOrderService
             .ToDictionaryAsync(c => c.Id, c => new CompanyInfo(c.Id, c.Code, c.Name), cancellationToken);
     }
 
-    /// <summary>Kho đang dùng (kho Main đầu tiên) và bộ phận đang dùng của các công ty áp dụng – xem lý do bỏ filter ở <see cref="ResolveAsync"/>.</summary>
+    /// <summary>Kho đang dùng (theo mã) và bộ phận đang dùng của các công ty áp dụng – xem lý do bỏ filter ở <see cref="ResolveAsync"/>.</summary>
     private async Task<IReadOnlyList<PooledCompanyContextDto>> CompanyContextAsync(IReadOnlyCollection<Guid> companyIds, CancellationToken cancellationToken)
     {
         var companies = await CompaniesAsync(companyIds, cancellationToken);
         var warehouses = await _db.Warehouses.IgnoreQueryFilters().AsNoTracking()
             .Where(w => companyIds.Contains(w.CompanyId) && w.IsActive)
-            .Select(w => new { w.CompanyId, w.Id, w.Code, w.Name, w.Type })
+            .Select(w => new { w.CompanyId, w.Id, w.Code, w.Name })
             .ToListAsync(cancellationToken);
         var departments = await _db.Departments.IgnoreQueryFilters().AsNoTracking()
             .Where(d => companyIds.Contains(d.CompanyId) && d.IsActive)
@@ -393,10 +393,10 @@ public sealed class PooledOrderService : IPooledOrderService
             .ToListAsync(cancellationToken);
         return companies.Values.OrderBy(c => c.Code).Select(c => new PooledCompanyContextDto(
                 c.Id, c.Code, c.Name,
-                warehouses.Where(w => w.CompanyId == c.Id).OrderByDescending(w => w.Type == WarehouseType.Main).ThenBy(w => w.Code)
-                    .Select(w => new PooledPlaceOptionDto(w.Id, w.Code, w.Name, w.Type == WarehouseType.Main)).ToList(),
+                warehouses.Where(w => w.CompanyId == c.Id).OrderBy(w => w.Code)
+                    .Select(w => new PooledPlaceOptionDto(w.Id, w.Code, w.Name)).ToList(),
                 departments.Where(d => d.CompanyId == c.Id).OrderBy(d => d.Code)
-                    .Select(d => new PooledPlaceOptionDto(d.Id, d.Code, d.Name, false)).ToList()))
+                    .Select(d => new PooledPlaceOptionDto(d.Id, d.Code, d.Name)).ToList()))
             .ToList();
     }
 

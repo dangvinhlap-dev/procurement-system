@@ -18,7 +18,7 @@ test('ghi ý kiến thẩm định Không đạt kèm file trên RFQ, rút ý ki
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Van an toàn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: cai, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
   const in7 = new Date(Date.now() + 7 * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })

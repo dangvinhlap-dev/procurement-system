@@ -47,7 +47,7 @@ public class BoardMonthlyReportTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử báo cáo tháng {Guid.NewGuid():N}", null, null), Ct));
         var item = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Bóng đèn G12", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+            new CreateItemRequest(null, "Bóng đèn G12", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct))).Id;
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC báo cáo tháng G12", null, false, null, null, null, null, null, null, null, null, "Approved", null, null, [], []), Ct));

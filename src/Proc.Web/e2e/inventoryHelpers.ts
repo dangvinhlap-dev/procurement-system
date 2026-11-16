@@ -168,8 +168,8 @@ export async function seedItemSupplier(request: APIRequestContext) {
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Bulông thử trả chuyển', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const itemCode = item.code
   const supplierTag = unique('NCC')

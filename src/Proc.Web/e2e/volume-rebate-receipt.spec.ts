@@ -54,8 +54,8 @@ test('ghi thực nhận chiết khấu sản lượng gộp cho kỳ đã kết 
   })
   const item = await tct.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Gạch thực nhận ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false,
-    minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
 
   // Thỏa thuận theo tháng: từ đầu tháng trước đến cuối tháng này, áp cho TCT; bậc 10 cái 1%.

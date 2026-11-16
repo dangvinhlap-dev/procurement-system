@@ -4,10 +4,8 @@ namespace Proc.Application.Organization;
 /// <param name="Id">Id kho.</param>
 /// <param name="Code">Mã kho.</param>
 /// <param name="Name">Tên kho.</param>
-/// <param name="Type">"Main" hoặc "Sub".</param>
-/// <param name="ParentWarehouseId">Kho cha (kho Sub).</param>
 /// <param name="IsActive">Còn sử dụng.</param>
-public sealed record WarehouseDto(Guid Id, string Code, string Name, string Type, Guid? ParentWarehouseId, bool IsActive);
+public sealed record WarehouseDto(Guid Id, string Code, string Name, bool IsActive);
 
 /// <summary>Một nhóm hàng trên danh sách.</summary>
 /// <param name="Id">Id nhóm.</param>
@@ -24,7 +22,7 @@ public sealed record ItemCategoryDto(Guid Id, string Code, string Name, Guid? Pa
 public interface IOrganizationQueries
 {
     /// <summary>
-    /// Danh sách kho của công ty đang làm việc trong phạm vi được phép, kho tổng trước rồi theo mã.
+    /// Danh sách kho của công ty đang làm việc trong phạm vi được phép, theo mã.
     /// </summary>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Danh sách kho.</returns>

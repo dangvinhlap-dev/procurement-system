@@ -46,7 +46,7 @@ public class StandardSavingsReportTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử tiết kiệm giá chuẩn {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(string name) => (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+            new CreateItemRequest(null, name, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct))).Id;
         var item = await ItemAsync("Dây cáp G4c");
         var other = await ItemAsync("Ống nhựa G4c");
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;

@@ -52,12 +52,12 @@ public class CompanyWarehouseTests
         return (company, await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code), userName);
     }
 
-    private static async Task<WarehouseDetailDto> CreateSubAsync(HttpClient client, string code, Guid parentId) =>
+    private static async Task<WarehouseDetailDto> CreateWarehouseAsync(HttpClient client, string code) =>
         await ReadAsync<WarehouseDetailDto>(await client.PostAsJsonAsync(
-            "/api/warehouses", new CreateWarehouseRequest(code, $"Kho {code}", parentId, null, null, false), Ct));
+            "/api/warehouses", new CreateWarehouseRequest(code, $"Kho {code}", null, null), Ct));
 
-    private static UpdateWarehouseRequest Edit(WarehouseDetailDto w, Guid? parentId = null, bool? isActive = null) =>
-        new(w.Name, parentId ?? w.ParentWarehouseId, w.Address, w.Keeper, w.AllowNegativeStock, isActive ?? w.IsActive);
+    private static UpdateWarehouseRequest Edit(WarehouseDetailDto w, bool? isActive = null) =>
+        new(w.Name, w.Address, w.Keeper, isActive ?? w.IsActive);
 
     [Fact]
     public async Task DanhSach_TongCongTyThayMoiCongTy_CongTyThanhVienChiThayCongTyMinh()
@@ -101,8 +101,9 @@ public class CompanyWarehouseTests
 
         var inNew = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
         var warehouses = await inNew.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct);
-        var main = Assert.Single(warehouses!);
-        Assert.Equal(("KT", "Main"), (main.Code, main.Type));
+        // Công ty mới có sẵn một kho nhận hàng (design.md mục 19.4 – danh sách phẳng, không còn kho tổng).
+        var first = Assert.Single(warehouses!);
+        Assert.Equal(("KT", true), (first.Code, first.IsActive));
     }
 
     [Fact]
@@ -177,84 +178,45 @@ public class CompanyWarehouseTests
     }
 
     [Fact]
-    public async Task Kho_ThemKhoPhu_TrungMaBaoLoi()
+    public async Task Kho_ThemKho_TrungMaBaoLoi()
     {
         var (_, client, _) = await NewCompanyAsync();
-        var main = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single();
 
-        var sub = await CreateSubAsync(client, "kp1", main.Id);
-        Assert.Equal(("KP1", "Sub", main.Id, "KT"), (sub.Code, sub.Type, sub.ParentWarehouseId, sub.ParentCode));
+        var kp1 = await CreateWarehouseAsync(client, "kp1");
+        Assert.Equal(("KP1", "Kho kp1", true), (kp1.Code, kp1.Name, kp1.IsActive));
 
-        var duplicate = await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP1", "Trùng", main.Id, null, null, false), Ct);
+        var duplicate = await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP1", "Trùng", null, null), Ct);
         Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
         Assert.Equal("Mã kho KP1 đã có ở công ty này.", await TitleAsync(duplicate));
 
         var list = await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct);
-        Assert.Equal(["KT", "KP1"], list!.Select(w => w.Code));
+        Assert.Equal(["KP1", "KT"], list!.Select(w => w.Code));
     }
 
     [Fact]
-    public async Task Kho_KhoChaCuaCongTyKhac_KhongTimThay()
+    public async Task Kho_SuaThongTin_KhoNaoCungNgungDungDuoc()
     {
-        // Kho cha lấy qua global query filter: kho của công ty khác như không tồn tại – design.md mục 4.
+        // Bỏ kho tổng / kho phụ (design.md mục 19.4): kho có sẵn của công ty cũng ngừng được, dùng lại được.
         var (_, client, _) = await NewCompanyAsync();
-        var admin = await _factory.CreateClientInCompanyAsync(ProcApiFactory.AdminUserName, ProcApiFactory.AdminPassword, "NMI");
-        var nmiMain = (await admin.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.First(w => w.Type == "Main");
+        var first = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single();
+        var kb = await CreateWarehouseAsync(client, "KB");
 
-        var response = await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP9", "Kho lạ", nmiMain.Id, null, null, false), Ct);
+        var edited = await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{kb.Id}",
+            new UpdateWarehouseRequest("Kho B mới", "Bình Dương", "Trần Bình", true), Ct));
+        Assert.Equal(("Kho B mới", "Bình Dương", "Trần Bình"), (edited.Name, edited.Address, edited.Keeper));
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Kho_SuaThongTinVaDoiKhoCha_ChanVongLap()
-    {
-        var (_, client, _) = await NewCompanyAsync();
-        var main = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single();
-        var a = await CreateSubAsync(client, "KA", main.Id);
-        var b = await CreateSubAsync(client, "KB", a.Id);
-
-        var edited = await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{b.Id}",
-            new UpdateWarehouseRequest("Kho B mới", main.Id, "Bình Dương", "Trần Bình", true, true), Ct));
-        Assert.Equal(("Kho B mới", main.Id, "Bình Dương", "Trần Bình", true), (edited.Name, edited.ParentWarehouseId, edited.Address, edited.Keeper, edited.AllowNegativeStock));
-
-        // A → con của B, rồi B → con của A thì thành vòng.
-        await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{a.Id}", Edit(a, parentId: b.Id), Ct));
-        var cycle = await client.PutAsJsonAsync($"/api/warehouses/{b.Id}", Edit(edited, parentId: a.Id), Ct);
-        Assert.Equal(HttpStatusCode.BadRequest, cycle.StatusCode);
-        Assert.Contains("vòng", await TitleAsync(cycle));
-    }
-
-    [Fact]
-    public async Task Kho_NgungDung_ChanKhoTongVaKhoConDangDung()
-    {
-        var (_, client, _) = await NewCompanyAsync();
-        var main = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single();
-        var parent = await CreateSubAsync(client, "KCHA", main.Id);
-        var child = await CreateSubAsync(client, "KCON", parent.Id);
-
-        var mainOff = await client.PutAsJsonAsync($"/api/warehouses/{main.Id}", Edit(main, isActive: false), Ct);
-        Assert.Equal("Không ngừng dùng được kho tổng của công ty.", await TitleAsync(mainOff));
-
-        var parentOff = await client.PutAsJsonAsync($"/api/warehouses/{parent.Id}", Edit(parent, isActive: false), Ct);
-        Assert.Equal(HttpStatusCode.BadRequest, parentOff.StatusCode);
-        Assert.Contains("KCON", await TitleAsync(parentOff));
-
-        await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{child.Id}", Edit(child, isActive: false), Ct));
-        await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{parent.Id}", Edit(parent, isActive: false), Ct));
-
-        // Kho cha đã ngừng thì không treo kho mới vào được.
-        var under = await client.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KMOI", "Kho mới", parent.Id, null, null, false), Ct);
-        Assert.Equal(HttpStatusCode.BadRequest, under.StatusCode);
+        var off = await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{first.Id}", Edit(first, isActive: false), Ct));
+        Assert.False(off.IsActive);
+        var on = await ReadAsync<WarehouseDetailDto>(await client.PutAsJsonAsync($"/api/warehouses/{first.Id}", Edit(off, isActive: true), Ct));
+        Assert.True(on.IsActive);
     }
 
     [Fact]
     public async Task Kho_NguoiBiGioiHanKho_KhongThemDuoc_ChiSuaKhoDuocGan()
     {
         var (company, client, _) = await NewCompanyAsync();
-        var main = (await client.GetFromJsonAsync<List<WarehouseDetailDto>>("/api/warehouses", Ct))!.Single();
-        var kp1 = await CreateSubAsync(client, "KP1", main.Id);
-        var kp2 = await CreateSubAsync(client, "KP2", main.Id);
+        var kp1 = await CreateWarehouseAsync(client, "KP1");
+        var kp2 = await CreateWarehouseAsync(client, "KP2");
 
         var roleCode = UniqueCode("QLK");
         await _factory.CreateRoleAsync(roleCode, Permissions.Organization.WarehouseView, Permissions.Organization.WarehouseManage);
@@ -263,10 +225,10 @@ public class CompanyWarehouseTests
         var limited = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, company.Code);
 
         // Kho mới nằm ngoài danh sách kho được gán – người bị giới hạn kho không thêm được.
-        var create = await limited.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP3", "Kho 3", main.Id, null, null, false), Ct);
+        var create = await limited.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP3", "Kho 3", null, null), Ct);
         Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
 
-        // Sửa kho được gán mà không đổi kho cha: không cần thấy kho cha (kho tổng nằm ngoài phạm vi của người này).
+        // Sửa được kho được gán; kho ngoài phạm vi như không tồn tại.
         await ReadAsync<WarehouseDetailDto>(await limited.PutAsJsonAsync($"/api/warehouses/{kp1.Id}", Edit(kp1) with { Keeper = "Thủ kho 1" }, Ct));
         Assert.Equal(HttpStatusCode.NotFound, (await limited.PutAsJsonAsync($"/api/warehouses/{kp2.Id}", Edit(kp2), Ct)).StatusCode);
     }

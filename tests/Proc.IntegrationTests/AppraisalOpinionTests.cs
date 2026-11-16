@@ -82,8 +82,7 @@ public class AppraisalOpinionTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(client,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thẩm định {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await client.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Van an toàn H1", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct));
+            new CreateItemRequest(null, "Van an toàn H1", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct));
         return await ReadAsync<RfqDto>(await client.PostAsJsonAsync("/api/rfqs", new SaveRfqRequest(Today, "Van an toàn", Today.AddDays(7), null,
             new RfqWeightsDto(60, 20, 10, 5, 5), null, [new(null, item.Id, cai, 10, null, null)], supplierIds), Ct));
     }

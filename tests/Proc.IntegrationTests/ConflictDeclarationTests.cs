@@ -117,8 +117,7 @@ public class ConflictDeclarationTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm kê khai {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Bulong M12", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct));
+            new CreateItemRequest(null, "Bulong M12", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct));
         var list = await ReadAsync<PriceListDto>(await head.PostAsJsonAsync("/api/price-lists",
             new SavePriceListRequest(supplierId, "Bảng giá bulong", false, Today, null, null, null, [new(null, item.Id, cai, 0, 1_000, 0, null, null)]), Ct));
         var (approver, _) = await UserWithAsync(Permissions.Pricing.PriceListView, Permissions.Pricing.PriceListApprove);
@@ -157,8 +156,7 @@ public class ConflictDeclarationTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thầu kê khai {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Gioăng cao su", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct));
+            new CreateItemRequest(null, "Gioăng cao su", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct));
         var rfq = await ReadAsync<RfqDto>(await head.PostAsJsonAsync("/api/rfqs", new SaveRfqRequest(Today, "Gioăng", Today.AddDays(7), null,
             new RfqWeightsDto(60, 20, 10, 5, 5), null, [new(null, item.Id, cai, 10, null, null)], suppliers), Ct));
         rfq = await ReadAsync<RfqDto>(await head.PostAsync($"/api/rfqs/{rfq.Id}/send", null, Ct));

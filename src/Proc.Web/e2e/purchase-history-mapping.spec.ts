@@ -15,7 +15,7 @@ test('ánh xạ mã vật tư cũ sang mã hàng chung từ gợi ý', async ({ 
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Vòng bi 6205-2RS ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'HOP')!.id, specification: '25x52x15', brand: 'SKF', origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   // Nhập file mẫu bằng API ở công ty mặc định (màn hình nhập đã có test riêng – purchase-history.spec.ts).

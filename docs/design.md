@@ -140,7 +140,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Công ty (`Company`) | Mã, tên, tên viết tắt, MST, địa chỉ, người đại diện, `IsHeadOffice`, tiền tệ hạch toán, ngày bắt đầu dùng hệ thống | Tổng công ty cũng là một bản ghi, `IsHeadOffice = true` |
-| Kho (`Warehouse`) | Mã, tên, `CompanyId`, `WarehouseType` (Main/Sub), `ParentWarehouseId`, địa chỉ, thủ kho, cho phép tồn âm (mặc định không) | Mỗi công ty đúng **một** kho tổng |
+| Kho (`Warehouse`) | Mã, tên, `CompanyId`, địa chỉ, thủ kho, còn dùng – **nơi nhận hàng**, danh sách phẳng (từ 16/11/2026, mục 19.4: bỏ kho tổng / kho phụ `WarehouseType`, `ParentWarehouseId` và cờ tồn âm – cột ngừng dùng, xóa ở bản sau) | Mã duy nhất trong công ty; kho nào cũng ngừng dùng được |
 | Bộ phận (`Department`) | Mã, tên, `CompanyId`, trưởng bộ phận, còn dùng | Mỗi công ty một danh mục riêng (màn hình DEPT); PR **bắt buộc** chọn bộ phận; dùng cho ngân sách, phân bổ chi phí – mục 18.5 |
 | Người dùng (`User`) | Tên đăng nhập, họ tên, email, công ty mặc định, trạng thái, 2FA | Một người có thể thuộc nhiều công ty |
 
@@ -149,7 +149,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | Danh mục | Trường chính | Ghi chú |
 | --- | --- | --- |
 | Nhóm hàng (`ItemCategory`) | Mã (người dùng gõ), tên, `ParentId`, `Level` – cây **tối đa 4 cấp** (1 Ngành hàng, 2 Nhóm hàng, 3 Loại hàng, 4 Chủng loại – mục 5.7, N4), tài khoản kho mặc định | Dùng để phân quyền theo nhóm hàng |
-| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, quản lý lô (Y/N), quản lý hạn dùng (Y/N), tồn tối thiểu/tối đa, tồn an toàn, điểm đặt hàng lại, vật tư trọng yếu (mục 18.16), ảnh, thông số kỹ thuật | Chỉ `ItemType = Hàng tồn kho` mới đi qua kho |
+| Hàng hóa/dịch vụ (`Item`) | Mã, tên, tên tiếng Anh, `ItemType` (Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao), nhóm hàng, ĐVT cơ sở, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất VAT mặc định, ảnh, thông số kỹ thuật (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, điểm đặt hàng lại, vật tư trọng yếu – bỏ 16/11/2026, mục 19.4; cột ngừng dùng, xóa ở bản sau) | Loại hàng chỉ để phân loại – không còn đi qua kho |
 | Đơn vị tính (`Uom`) | Mã, tên | Cái, hộp, thùng, kg… |
 | Quy đổi ĐVT (`ItemUomConversion`) | `ItemId`, ĐVT, hệ số về ĐVT cơ sở | 1 thùng = 24 hộp; tồn kho luôn lưu theo ĐVT cơ sở |
 | Thuộc tính mở rộng | Bộ thuộc tính theo nhóm hàng (key–value) | Tránh phải sửa bảng khi thêm thông số |
@@ -242,7 +242,7 @@ Master data chia hai tầng: **dùng chung toàn tập đoàn** (do tổng công
 | **N4-9** Ô chọn nhóm hàng hiện số cấp; ô chọn nhóm cha khóa nhóm cấp 4 và nhóm làm nhánh vượt 4 cấp (giao diện – lát N4b, xong 14/11/2026: màn hình CAT có cột Cấp, mở/thu nhánh, nút Thêm nhóm con, ngăn kéo có đường dẫn + tab Nhóm con – ui-style.md mục 5h). Danh mục trả thêm tên cấp, số nhóm con | |
 | **N4-10** **Báo cáo gộp theo cấp** (lát N4d, 14/11/2026 – người dùng chốt "báo cáo gộp theo cấp để lát sau" khi giao N4): màn hình **Mua hàng theo NCC** (RPSUP) tổng hợp theo nhóm hàng có ô **Cấp nhóm** – "Nhóm của mặt hàng" (mặc định, không gộp) hoặc cấp 1 Ngành hàng … 4 Chủng loại: tiền cộng lên nhóm tổ tiên ở cấp đã chọn (API `categoryLevel`); nhóm đang ở cấp thấp hơn cấp chọn (mặt hàng cũ gắn nhóm cấp 1–3) giữ nguyên nhóm đó. Lưới thêm cột **Cấp** (ô số cấp) và **Đường dẫn** (mã từ nhóm gốc). Tên nhóm tổ tiên lấy cả ngoài phạm vi (ngoại lệ mục 9.2), số tiền chỉ gồm mặt hàng trong phạm vi | Xem chi tiêu theo ngành hàng / nhóm hàng mà không phải cộng tay |
 | Ngừng ĐVT khi không còn hàng đang dùng nó làm ĐVT cơ sở hay ĐVT quy đổi | Hàng đang dùng phải lập được chứng từ |
-| Chỉ hàng tồn kho mới bật lô, hạn dùng, tồn tối thiểu/tối đa (số lượng numeric(18,4), tối thiểu ≤ tối đa) | Chỉ hàng tồn kho đi qua kho (mục 5.2) |
+| ~~Chỉ hàng tồn kho mới bật lô, hạn dùng, tồn tối thiểu/tối đa~~ – bỏ 16/11/2026 cùng tab Tồn kho của mặt hàng (mục 19.4) | Tồn kho quản lý ở phần mềm kho riêng |
 | Quy đổi ĐVT: 1 ĐVT quy đổi = hệ số × ĐVT cơ sở, hệ số > 0, numeric(18,6); không trùng ĐVT cơ sở, mỗi ĐVT một dòng | Tồn kho luôn lưu theo ĐVT cơ sở; 6 chữ số thập phân để quy đổi g → kg |
 | Thuế suất mặc định: KCT, 0, 5, 8, 10 (%) | Danh mục thuế suất đầy đủ (mục 5.4) làm sau, giữ đúng các mã này |
 | Tìm hàng: mỗi lần tối đa 5.000 dòng; tìm theo mã, tên, tên tiếng Anh, mã vạch, có dấu hay không dấu (cột `SearchText`); lọc nhóm gồm nhóm con | Danh mục tới ~100.000 mã (mục 1.3) |
@@ -857,7 +857,8 @@ Mã loại chứng từ (`DocType`): PR, PO, GRN (nhập mua NCC), RTV (trả NC
 - Chứng từ đã ghi sổ **không sửa trực tiếp**: phải *Bỏ ghi sổ* khi kỳ còn mở, hoặc lập chứng từ điều chỉnh khi kỳ đã đóng.
 - Kiểu số: số lượng `numeric(18,4)`, đơn giá `numeric(19,6)`, tiền `numeric(19,2)`. Không dùng double/float.
 - Ràng buộc kho trong CSDL: trigger/check bảo đảm ICS/ICR chỉ dùng kho Main, TRF chỉ giữa hai kho cùng `CompanyId`.
-  Bảng `Warehouse` có khóa (`Id`, `CompanyId`); kho cha của kho Sub và `UserWarehouseScope` trỏ tới khóa kép này, nên CSDL tự chặn ghép kho với công ty khác. Mỗi công ty tối đa một kho Main (chỉ mục duy nhất có điều kiện).
+  Bảng `Warehouse` có khóa (`Id`, `CompanyId`); kho cha của kho Sub và `UserWarehouseScope` trỏ tới khóa kép này, nên CSDL tự chặn ghép kho với công ty khác. Mỗi công ty tối đa một kho Main (chỉ mục duy nhất có điều kiện). *Lịch sử – từ 16/11/2026 kho là danh sách phẳng (mục 19.4); kho mới ghi Sub,
+  không kho cha, chỉ mục và khóa kho cha còn tới khi xóa cột.*
 - Khóa chính dùng `uuid` v7 (sắp xếp theo thời gian); số chứng từ là cột riêng, duy nhất theo (CompanyId, DocType, No).
 
 ### 12.3 Ghi sổ và bỏ ghi sổ (đã làm cho GRN, RTV, TRF)
@@ -1503,6 +1504,8 @@ Migration `V0_13_0_TienHoaDonPhieuNhap` (cột `InvoiceAmount` của `InventoryD
 
 ### 18.16 Điểm đặt hàng lại, tồn an toàn, vật tư trọng yếu (lát D1, 02/11/2026)
 
+> **Lịch sử** – báo cáo gợi ý đặt hàng gỡ ở K3 (0.31.0); các trường trên mặt hàng bỏ khỏi giao diện / API 16/11/2026 (mục 19.4).
+
 Nguồn: đề xuất Ban CUVT K1 (mục 3.5 `docs/Phantich_01112026.md`). Thông số đặt trên mặt hàng (danh mục dùng chung) như tồn tối thiểu/tối
 đa, áp cho **từng công ty** (mỗi công ty tự so với tồn, đơn đặt của mình).
 
@@ -1926,7 +1929,7 @@ toàn (người dùng "làm tiếp" 08/11/2026):
 | Quy tắc | Lý do |
 | --- | --- |
 | Phiếu `PooledOrder` thuộc **tổng công ty** – chỉ lập, sửa, hủy, tạo PO khi đang làm việc ở tổng công ty; quyền `Purchase.PooledOrder.View` / `Purchase.PooledOrder.Manage` (vai trò mẫu VANHANH, CUCTRUONGPHONG, CUCDATHANG có Manage; mọi vai trò xem nghiệp vụ mua có View). Đầu phiếu: **ngày đặt**, **phiếu GTH Đã duyệt** của tháng chứa ngày đặt, **NCC** (NCC chính hoặc dự phòng trên phiếu GTH), ngày giao dự kiến (≥ ngày đặt), Ghi chú; tab **Đính kèm** (loại chủ `PooledOrder`) | Phòng cung ứng chung đặt hàng cho các công ty đúng NCC và giá Ban đã duyệt trong tháng – không tự chọn NCC |
-| **Công ty nhận hàng** thuộc các công ty áp dụng phiếu GTH; mỗi công ty một **kho nhận** (mặc định kho Main, phải thuộc đúng công ty, đang dùng) và **bộ phận** (không bắt buộc, cùng công ty – dùng cho ngân sách bộ phận) | Mỗi pháp nhân nhận hàng, ghi sổ, ngân sách riêng |
+| **Công ty nhận hàng** thuộc các công ty áp dụng phiếu GTH; mỗi công ty một **kho nhận** (mặc định kho đang dùng có mã nhỏ nhất, phải thuộc đúng công ty, đang dùng) và **bộ phận** (không bắt buộc, cùng công ty – dùng cho ngân sách bộ phận) | Mỗi pháp nhân nhận hàng, ghi sổ, ngân sách riêng |
 | Dòng = **dòng phiếu GTH** (mặt hàng × ĐVT của phiếu, mỗi dòng một lần); **đơn giá = giá Ban duyệt cho NCC đã chọn** (chính → giá chính, dự phòng → giá dự phòng), không sửa; SL phân bổ cho từng công ty ≥ 0, 4 số lẻ; tổng dòng > 0 | Không tự thỏa thuận giá ngoài khung Ban duyệt |
 | **Phân bổ đề xuất** theo tỷ lệ **kế hoạch nhu cầu tháng** đã chốt (KHN, cột tháng của ngày đặt, quy về ĐVT dòng) của từng công ty: đề xuất = tổng × KH công ty ÷ tổng KH. Nút "Phân bổ theo kế hoạch" chia số nguyên khi tổng là số nguyên (dư cho phần lẻ lớn nhất), ngược lại 4 số lẻ. Ví dụ tổng 10, KH A 2, B 1 → A 7, B 3 | Quy tắc phân bổ do Ban duyệt – theo nhu cầu đã lập |
 | **Biên độ**: mỗi công ty được lệch đề xuất tối đa **dung sai = max(tổng dòng × biên độ % ÷ 100, 1 ĐVT)**; biên độ là tham số **`POOLED_MARGIN_PERCENT`** của tổng công ty (SEC, mặc định **10%**, 0–100). Ví dụ tổng 100, KH A 60, B 40 → A được 50–70. Mặt hàng **không có kế hoạch** ở công ty nào → phân bổ tự do nhưng **bắt buộc lý do phân bổ**. Kiểm tra lúc **Tạo PO** (lưu nháp được, phiếu hiện cảnh báo dòng vượt) – vượt thì chặn | Phòng cung ứng chỉ điều chỉnh phân bổ trong biên độ cho phép; vượt thì đề xuất Ban (sửa kế hoạch hoặc biên độ) |
@@ -2636,9 +2639,16 @@ Công ty dùng phần mềm kho riêng. Thay thế:
 - **Cột tham số đã xóa** (16/11/2026, migration `V0_38_0_BoCotThamSoKho` – ngừng dùng từ 0.31.0, xóa ở bản sau theo CLAUDE.md mục 8):
   `KpiSlowMovingTarget`, `KpiSlowMovingDays`, `InternalMarkupPercent`, `RequireReceiptPo`; `Down()` tạo lại cột với giá trị mặc định (mất giá trị
   cũ – không chức năng nào còn đọc). Bản trước 0.38.0 chạy trên CSDL đã xóa cột thì lỗi (EF còn đọc cột) – quay về **mức 2** (chạy script gỡ).
-- **Còn giữ**: giá trị `KpiCode.SlowMoving = 7` (giữ số). Danh mục kho (`Warehouse` – nơi
-  nhận hàng) giữ nguyên, kể cả cờ kho Main/Sub, cho phép tồn âm; trường mặt hàng lô / hạn dùng / tồn tối thiểu – tối đa (tab Tồn kho của mặt hàng)
-  giữ chờ người dùng quyết định có bỏ không.
+- **Còn giữ**: giá trị `KpiCode.SlowMoving = 7` (giữ số).
+- **Bỏ kho tổng / kho phụ, tồn âm, tab Tồn kho của mặt hàng** (người dùng chốt "bỏ" 16/11/2026, bản 0.38.0):
+  - Kho chỉ còn là **nơi nhận hàng**, danh sách phẳng theo mã: không kho cha, không loại kho, không cờ tồn âm; kho nào cũng ngừng / dùng lại được;
+    thêm công ty tạo sẵn **một kho nhận hàng** (`FirstWarehouseCode/Name` thay `MainWarehouseCode/Name`). Nơi nhận mặc định của PO từ RFQ, PO mới,
+    đặt hàng gộp = kho đang dùng có **mã nhỏ nhất** trong phạm vi.
+  - Mặt hàng: bỏ quản lý lô, hạn dùng, tồn tối thiểu / tối đa / an toàn, điểm đặt hàng lại, vật tư trọng yếu khỏi API, ngăn kéo (tab Quản lý kho),
+    mẫu Excel (file cũ còn các cột đó thì bỏ qua); đổi loại hàng tự do (`Item.ChangeType`).
+  - CSDL (CLAUDE.md mục 8 – không xóa cột cùng bản ngừng dùng): **chưa migration**; cột `Warehouse.Type`, `ParentWarehouseId`,
+    `AllowNegativeStock`, `Item.TrackLot`, `TrackExpiry`, `MinStock`, `MaxStock`, `SafetyStock`, `ReorderPoint`, `IsCritical` ngừng dùng (kho mới ghi
+    `Type = Sub` để không vướng chỉ mục một kho Main), **xóa ở bản sau** cùng chỉ mục `IX_Warehouse_CompanyId_Main` và khóa kho cha.
 
 ### 19.5 Portal nhà cung cấp
 

@@ -17,8 +17,8 @@ test('Portal: NCC xem bảng giá đã duyệt, giá sau chiết khấu', async 
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: 'Khẩu trang bảng giá', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '8', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '8', technicalSpecs: null,
+    conversions: [],
   })
   const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
     code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC bảng giá ${unique('G')}`, shortName: null,

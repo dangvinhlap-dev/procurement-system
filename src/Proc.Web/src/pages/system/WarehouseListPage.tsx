@@ -10,11 +10,8 @@ import { WarehouseDrawer } from './WarehouseDrawer'
 const columns: GridColumn<WarehouseDetail>[] = [
   { key: 'code', title: 'Mã kho', width: 90, value: (r) => r.code },
   { key: 'name', title: 'Tên kho', width: 220, value: (r) => r.name },
-  { key: 'type', title: 'Loại kho', width: 90, value: (r) => (r.type === 'Main' ? 'Kho tổng' : 'Kho phụ'), groupable: true },
-  { key: 'parent', title: 'Kho cha', width: 80, value: (r) => r.parentCode, groupable: true },
   { key: 'keeper', title: 'Thủ kho', width: 150, value: (r) => r.keeper },
   { key: 'address', title: 'Địa chỉ', width: 220, value: (r) => r.address },
-  { key: 'negative', title: 'Tồn âm', width: 80, value: (r) => (r.allowNegativeStock ? 'Cho phép' : 'Không'), groupable: true },
   {
     key: 'status',
     title: 'Trạng thái',
@@ -27,8 +24,8 @@ const columns: GridColumn<WarehouseDetail>[] = [
 ]
 
 /**
- * Màn hình Danh mục kho (design.md mục 4, 5.1): kho của công ty đang làm việc trong phạm vi được phép, kho tổng đầu tiên.
- * Kho tổng có sẵn khi thêm công ty; ở đây thêm kho phụ, sửa thông tin, đổi kho cha, bật cho phép tồn âm.
+ * Màn hình Danh mục kho (design.md mục 5.1, 19.4): kho – nơi nhận hàng – của công ty đang làm việc trong phạm vi được phép, theo mã.
+ * Danh sách phẳng (không kho tổng / kho phụ, không tồn âm); thêm kho, sửa thông tin, ngừng / dùng lại.
  */
 export function WarehouseListPage() {
   const { workingCompany, hasPermission } = useAuth()
@@ -74,7 +71,7 @@ export function WarehouseListPage() {
         }
       />
       {open !== undefined && (
-        <WarehouseDrawer warehouse={open} warehouses={warehouses.data ?? []} onClose={() => setOpen(undefined)} />
+        <WarehouseDrawer warehouse={open} onClose={() => setOpen(undefined)} />
       )}
     </>
   )

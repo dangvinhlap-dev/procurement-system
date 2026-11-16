@@ -96,7 +96,7 @@ function computeLine(line: PoLineValues | undefined) {
 }
 
 /**
- * Trang đơn mua hàng (design.md mục 10.3) trên khuôn DocumentForm: NCC đã duyệt và áp dụng tại công ty, kho nhận (mặc định kho tổng),
+ * Trang đơn mua hàng (design.md mục 10.3) trên khuôn DocumentForm: NCC đã duyệt và áp dụng tại công ty, kho nhận (mặc định kho đang dùng có mã nhỏ nhất),
  * dòng nhập tay hoặc "Lấy dòng từ PR" (PR đã duyệt còn chưa đặt), chiết khấu, VAT, dung sai nhận hàng. Chỉ VND ở giai đoạn này.
  * Phiếu đã duyệt hiện SL đã nhận, còn lại theo phiếu nhập kho. Giá đã duyệt (design.md mục 18.10): cột "Giá đã duyệt" và "Nguồn giá"
  * theo kết quả chọn thầu / hợp đồng nguyên tắc / bảng giá NCC hiệu lực; nút "Áp giá đã duyệt" chép giá vào các dòng. Người lập vẫn sửa
@@ -136,7 +136,8 @@ export function PurchaseOrderPage() {
   const itemIds = useMemo(() => lines.map((l) => l?.itemId).filter((x): x is string => !!x), [lines])
   const lookup = useItemLookup(search, itemIds)
   const itemsById = useMemo(() => new Map((lookup.data ?? []).map((i) => [i.id, i])), [lookup.data])
-  const mainWarehouse = warehouses.data?.find((w) => w.type === 'Main' && w.isActive)?.id
+  // Kho nhận mặc định của PO mới: kho đang dùng có mã nhỏ nhất (danh sách đã theo mã; không còn kho tổng – design.md 19.4).
+  const mainWarehouse = warehouses.data?.find((w) => w.isActive)?.id
   const supplierId = Form.useWatch('supplierId', form) as string | undefined
   const orderDate = Form.useWatch('date', form) as Dayjs | undefined
   const departmentId = Form.useWatch('departmentId', form) as string | null | undefined

@@ -19,7 +19,7 @@ danh mục (DSDM)** – xem 08. Chưa cấu hình dải thì không thêm mới 
 
 ## 2.2 Công ty (COMP) – Hệ thống → Công ty
 
-- Thêm công ty: chỉ ở tổng công ty, quyền `System.Company.Manage`. Thêm công ty là **tạo luôn kho tổng** của công ty đó; người thêm được gán
+- Thêm công ty: chỉ ở tổng công ty, quyền `System.Company.Manage`. Thêm công ty là **tạo luôn một kho nhận hàng** của công ty đó; người thêm được gán
   các vai trò mình đang có ở tổng công ty tại công ty mới.
 - Mã công ty nằm trong số chứng từ (ví dụ PO-**BHA**-2611-0001) nên chỉ gồm chữ và số, không đổi được.
 - Mã số thuế: 10 số hoặc 10 số + "-" + 3 số; không trùng giữa các công ty.
@@ -28,10 +28,11 @@ danh mục (DSDM)** – xem 08. Chưa cấu hình dải thì không thêm mới 
 
 ## 2.3 Kho (WH) – Hệ thống → Kho
 
-- Mỗi công ty có **đúng một kho tổng (Main)**; kho phụ (Sub) thuộc một kho cha cùng công ty.
-- Thông tin: mã, tên, loại, kho cha, địa chỉ, thủ kho, **cho phép tồn âm** (mặc định không).
-- Thêm kho phụ hoặc đổi kho cha cần phạm vi **mọi kho** của công ty. Kho cha không được là chính nó hay kho con cháu của nó.
-- Kho tổng không ngừng dùng được; kho còn kho con đang dùng thì ngừng kho con trước.
+- Kho chỉ còn là **nơi nhận hàng** (tồn kho quản lý ở phần mềm kho riêng): danh sách phẳng theo mã – không kho tổng / kho phụ, không kho cha,
+  không "cho phép tồn âm" (bỏ từ bản 0.38.0).
+- Thông tin: mã (không đổi được), tên, địa chỉ, thủ kho, còn sử dụng.
+- Thêm kho cần phạm vi **mọi kho** của công ty. Kho nào cũng ngừng dùng / dùng lại được; kho ngừng dùng không chọn được trên phiếu mới.
+- Nơi nhận mặc định khi tạo PO từ kết quả chọn thầu, PO mới, đặt hàng gộp: kho đang dùng có **mã nhỏ nhất** – đổi được trên phiếu.
 
 ## 2.4 Bộ phận (DEPT) – Hệ thống → Bộ phận
 
@@ -66,15 +67,15 @@ Thông tin chính:
 | Nhóm | Trường |
 | --- | --- |
 | Chung | Mã (tự cấp), tên, tên tiếng Anh, **loại hàng** (hàng tồn kho, dịch vụ…), nhóm hàng, **ĐVT cơ sở**, quy cách, thương hiệu, xuất xứ, mã vạch, thuế suất mặc định (KCT, 0, 5, 8, 10%) |
-| Tồn kho (chỉ hàng tồn kho) | Quản lý **lô / hạn dùng**, tồn tối thiểu/tối đa, **tồn an toàn**, **điểm đặt hàng lại**, **vật tư trọng yếu** |
-| Quy đổi ĐVT | 1 ĐVT quy đổi = hệ số × ĐVT cơ sở (ví dụ 1 thùng = 24 chai); tồn kho luôn tính theo ĐVT cơ sở |
+| Quy đổi ĐVT | 1 ĐVT quy đổi = hệ số × ĐVT cơ sở (ví dụ 1 thùng = 24 chai) |
 | Thông số kỹ thuật | Bảng tên – giá trị |
 | Tab Nhà cung cấp | Những NCC bán mặt hàng này, NCC ưu tiên |
 
+Từ bản 0.38.0 không còn tab **Quản lý kho** (lô, hạn dùng, tồn tối thiểu / tối đa / an toàn, điểm đặt hàng lại, vật tư trọng yếu); file Excel mẫu
+cũ còn các cột đó thì khi nhập được bỏ qua.
+
 - Danh sách hàng hóa chỉ hiện mặt hàng trong **phạm vi nhóm hàng** của người xem. Tìm theo mã, tên, tên tiếng Anh, mã vạch; lọc nhóm (gồm
   nhóm con) và loại hàng.
-- Mặt hàng bật lô/hạn dùng thì phiếu kho bắt buộc nhập lô, hạn dùng.
-- Điểm đặt hàng lại và tồn an toàn dùng cho báo cáo **Gợi ý đặt hàng (REORD)**.
 
 ## 2.8 Nhóm NCC (SGRP)
 

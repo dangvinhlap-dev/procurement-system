@@ -22,10 +22,8 @@ public sealed class OrganizationQueries : IOrganizationQueries
     public async Task<IReadOnlyList<WarehouseDto>> GetWarehousesAsync(CancellationToken cancellationToken) =>
         await _db.Warehouses
             .AsNoTracking()
-            .OrderBy(w => w.Type)
-            .ThenBy(w => w.Code)
-            .Select(w => new WarehouseDto(
-                w.Id, w.Code, w.Name, w.Type == WarehouseType.Main ? "Main" : "Sub", w.ParentWarehouseId, w.IsActive))
+            .OrderBy(w => w.Code)
+            .Select(w => new WarehouseDto(w.Id, w.Code, w.Name, w.IsActive))
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
