@@ -15,12 +15,6 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>Giới hạn trên của số NCC tối thiểu – tránh nhập nhầm khiến không RFQ nào gửi được.</summary>
     public const int MaxRfqMinSuppliers = 20;
 
-    /// <summary>% markup nội bộ mặc định khi công ty chưa khai báo: 0% = gợi ý bán đúng giá vốn.</summary>
-    public const decimal DefaultInternalMarkupPercent = 0m;
-
-    /// <summary>Giới hạn trên của % markup nội bộ (gấp 11 lần giá vốn) – quá mức này gần như chắc chắn là gõ nhầm.</summary>
-    public const decimal MaxInternalMarkupPercent = 1000m;
-
     private CompanyParameter()
     {
     }
@@ -32,31 +26,16 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     public int RfqMinSuppliers { get; private set; } = DefaultRfqMinSuppliers;
 
     /// <summary>
-    /// % markup nội bộ mặc định – numeric(9,4). Dùng gợi ý giá bán nội bộ khi mặt hàng chưa có trong bảng giá nội bộ
-    /// (design.md mục 1 câu hỏi 2): giá gợi ý = giá vốn kỳ đã đóng gần nhất × (1 + % markup).
-    /// </summary>
-    public decimal InternalMarkupPercent { get; private set; } = DefaultInternalMarkupPercent;
-
-    /// <summary>
-    /// Bắt buộc mọi dòng phiếu nhập mua có kết quả kiểm tra chất lượng mới ghi sổ được (design.md mục 18.14 – V7). Mặc định tắt để công ty
-    /// chưa tổ chức kiểm tra không bị chặn nhận hàng.
+    /// Bắt buộc mọi dòng phiếu xác nhận nhận hàng (XNH) có kết quả kiểm tra chất lượng mới xác nhận được (design.md mục 18.14 – V7; từ lát K2
+    /// áp cho XNH thay phiếu nhập kho). Mặc định tắt để công ty chưa tổ chức kiểm tra không bị chặn nhận hàng.
     /// </summary>
     public bool RequireReceiptQc { get; private set; }
 
     /// <summary>
-    /// Người lập đơn mua hàng không được ghi sổ phiếu nhập của chính đơn đó (design.md mục 18.14 – G4: người đặt hàng không một mình xác
-    /// nhận giao nhận). Mặc định tắt (công ty nhỏ một người kiêm).
+    /// Người lập đơn mua hàng không được xác nhận phiếu nhận hàng (XNH) của chính đơn đó (design.md mục 18.14 – G4: người đặt hàng không một
+    /// mình xác nhận giao nhận). Mặc định tắt (công ty nhỏ một người kiêm).
     /// </summary>
     public bool SeparatePoCreatorFromReceipt { get; private set; }
-
-    /// <summary>
-    /// Phiếu nhập mua từ NCC bắt buộc theo đơn mua hàng đã duyệt (lát R4, design.md mục 18.26): không lập, không ghi sổ phiếu nhập "thẳng"
-    /// với đơn giá gõ tay – tránh mua hàng ngoài luồng PR/PO/duyệt. Mua gấp dùng PO mua khẩn cấp. Mặc định tắt (giữ cách làm cũ).
-    /// </summary>
-    public bool RequireReceiptPo { get; private set; }
-
-    /// <summary>Bật/tắt bắt buộc nhập mua theo PO; null = về mặc định (tắt).</summary>
-    public void ChangeRequireReceiptPo(bool? value) => RequireReceiptPo = value ?? false;
 
     /// <summary>
     /// Chọn thầu (gửi hội đồng duyệt kết quả) chỉ khi hồ sơ trình đủ mọi mục (design.md mục 8.6 – lát B3b). Mặc định tắt: thiếu mục vẫn gửi
@@ -330,20 +309,6 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
         RfqMinSuppliers = v;
     }
 
-    /// <summary>
-    /// Đổi % markup nội bộ mặc định.
-    /// </summary>
-    /// <param name="value">Giá trị mới (làm tròn 4 số lẻ theo cột numeric(9,4)); null = về mặc định <see cref="DefaultInternalMarkupPercent"/>.</param>
-    /// <exception cref="BusinessRuleException">Khi ngoài khoảng 0–<see cref="MaxInternalMarkupPercent"/>.</exception>
-    public void ChangeInternalMarkupPercent(decimal? value)
-    {
-        var v = Math.Round(value ?? DefaultInternalMarkupPercent, 4, MidpointRounding.AwayFromZero);
-        // Không cho âm: bán nội bộ dưới giá vốn phải là quyết định riêng từng mặt hàng ở bảng giá, không phải mặc định.
-        if (v < 0 || v > MaxInternalMarkupPercent)
-            throw new BusinessRuleException($"% markup nội bộ phải từ 0 đến {MaxInternalMarkupPercent:0}.");
-        InternalMarkupPercent = v;
-    }
-
     /// <summary>Đổi SLA một loại yêu cầu (design.md mục 18.13).</summary>
     /// <param name="category">Loại yêu cầu.</param>
     /// <param name="days">Số ngày làm việc; null = về mặc định.</param>
@@ -383,17 +348,11 @@ public sealed class CompanyParameter : AuditableEntity, ICompanyOwned
     /// <summary>Mức trần KPI tỷ lệ mua khẩn cấp (%).</summary>
     public decimal KpiEmergencyTarget { get; private set; } = KpiCatalog.Get(KpiCode.Emergency).DefaultTarget;
 
-    /// <summary>Mức trần KPI tồn kho chậm luân chuyển (%) – <b>ngừng dùng từ 0.31.0</b> (lát K3), giữ cột, xóa ở bản sau (CLAUDE.md mục 8).</summary>
-    public decimal KpiSlowMovingTarget { get; private set; } = 10m;
-
     /// <summary>Mục tiêu KPI hoàn thành đánh giá NCC (%).</summary>
     public decimal KpiSupplierReviewTarget { get; private set; } = KpiCatalog.Get(KpiCode.SupplierReview).DefaultTarget;
 
     /// <summary>Mức trần KPI vi phạm nghiêm trọng (số vụ).</summary>
     public int KpiViolationTarget { get; private set; }
-
-    /// <summary>Số ngày không xuất tính KPI tồn chậm luân chuyển – <b>ngừng dùng từ 0.31.0</b> (lát K3), giữ cột, xóa ở bản sau.</summary>
-    public int KpiSlowMovingDays { get; private set; } = 90;
 
     /// <summary>Mục tiêu đang dùng của một KPI.</summary>
     /// <param name="code">Mã chỉ số.</param>

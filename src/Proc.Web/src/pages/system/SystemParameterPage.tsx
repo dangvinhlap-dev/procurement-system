@@ -53,11 +53,10 @@ export function SystemParameterPage() {
 
 /**
  * Giới hạn ô nhập theo tham số (khớp kiểm tra ở Proc.Domain.Organization.CompanyParameter): số NCC tối thiểu là số nguyên
- * 1–20; % markup nội bộ 0–1000, tối đa 4 số lẻ (cột numeric(9,4)).
+ * 1–20; SLA theo ngày làm việc; mục tiêu KPI tỷ lệ 0–100 (tối đa 4 số lẻ), vi phạm số nguyên.
  */
 const inputLimits: Record<string, { min: number; max: number; precision: number; suffix?: string }> = {
   RFQ_MIN_SUPPLIERS: { min: 1, max: 20, precision: 0 },
-  INTERNAL_MARKUP_PERCENT: { min: 0, max: 1000, precision: 4, suffix: '%' },
   // SLA mua hàng theo ngày làm việc (design.md mục 18.13).
   SLA_PRICED_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
   SLA_SOURCING_DAYS: { min: 0, max: 60, precision: 0, suffix: 'ngày' },
@@ -69,14 +68,12 @@ const inputLimits: Record<string, { min: number; max: number; precision: number;
   KPI_TARGET_ONTIMEDELIVERY: { min: 0, max: 100, precision: 4, suffix: '%' },
   KPI_TARGET_QUALITY: { min: 0, max: 100, precision: 4, suffix: '%' },
   KPI_TARGET_EMERGENCY: { min: 0, max: 100, precision: 4, suffix: '%' },
-  KPI_TARGET_SLOWMOVING: { min: 0, max: 100, precision: 4, suffix: '%' },
   KPI_TARGET_SUPPLIERREVIEW: { min: 0, max: 100, precision: 4, suffix: '%' },
   KPI_TARGET_VIOLATION: { min: 0, max: 1000, precision: 0, suffix: 'vụ' },
-  KPI_SLOW_MOVING_DAYS: { min: 1, max: 3650, precision: 0, suffix: 'ngày' },
 }
 
 /** Tham số bật/tắt (giá trị "Bật"/"Tắt" – design.md mục 18.14): ô nhập là công tắc, gửi "true"/"false". */
-const toggleCodes = new Set(['RECEIPT_QC_REQUIRED', 'RECEIPT_SEPARATE_PO_CREATOR', 'RECEIPT_PO_REQUIRED'])
+const toggleCodes = new Set(['RECEIPT_QC_REQUIRED', 'RECEIPT_SEPARATE_PO_CREATOR'])
 
 /** Ngăn kéo xem/sửa một tham số: tham số số dùng InputNumber, tham số bật/tắt dùng công tắc. */
 function ParameterDrawer({ row, onClose }: { row: SystemParameter; onClose: () => void }) {
