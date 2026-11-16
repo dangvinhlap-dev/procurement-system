@@ -992,6 +992,11 @@ Script chạy thử trên `procurement_test` (đã có migration – kiểm cú 
 Release: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.0, …/tag/v0.37.0 (zip + `.sha256`). Đóng gói: `npm ci` EPERM (Vite cũ
 PID 1568 / 5876 từ 12/11 giữ `rolldown-binding.node`) đã xóa dở node_modules → `npm install` bù, `publish.ps1 -NoInstall` chạy qua `powershell.exe -File`
 (PowerShell gộp stderr của Vite thành lỗi). Kiểm tra: `dotnet test` 806/806 trên `main` sau merge, build 0 cảnh báo.
+**Bản test 5007 nâng tại chỗ 0.33.1 → 0.37.0** (cài tay – máy dev không có IIS / bộ thực thi nên không qua REL được): sao lưu
+`D:\project\procurement_kiemtra_0150_truoc_0.37.0.dump` (629 KB, `pg_restore --list` đọc được); dừng PID 27224; chạy `goi\0.37.0\db-scripts\0.36.0.sql`
+rồi `0.37.0.sql` (114 migration, cuối `V0_37_0_LamMoiTest`); `app` = 0.37.0, `app-0.33.1` = bản cũ, gói `goi\0.37.0`, giữ `appsettings.Production.json`
+(`App:Environment` = Dev); PID 27168 trong `pid.txt`; `/health` Healthy 0.37.0 (cả qua http://192.168.1.199:5007). Đọc log sau khi chạy bị chặn quyền tự
+động – người dùng tự kiểm tra; mọi người đăng nhập lại một lần (CFG – 0.35.0). Chưa cài bộ thực thi, chưa khai `Release:*` trên 5007.
 
 **QT9 – Làm mới TEST từ PROD + nút báo lỗi trên TEST – xong 16/11/2026 (bản 0.37.0, đã phát hành) – nhánh `feature/qt9-lam-moi-test` (đã merge)** (người dùng "làm tiếp").
 Chia 5 bước. Mặc định tự chọn: dùng bản pg_dump mới nhất của PROD (không tự tạo; cũ hơn 24 giờ thì cảnh báo vàng); chỉ làm mới khi TEST chạy **cùng
