@@ -26,7 +26,7 @@ test('lập thỏa thuận chiết khấu sản lượng gộp, xem lũy kế, g
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Xi măng bao ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'CAI')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   await loginViaApi(page)

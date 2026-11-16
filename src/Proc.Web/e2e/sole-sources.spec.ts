@@ -23,7 +23,7 @@ test('lập phiếu NCC độc quyền, gửi duyệt, duyệt, đánh giá lạ
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Phụ tùng máy nén ${unique('pt')}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'CAI')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   await loginViaApi(page)

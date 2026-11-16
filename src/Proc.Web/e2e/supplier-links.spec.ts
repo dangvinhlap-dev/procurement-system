@@ -50,8 +50,8 @@ test('NCC – sản phẩm: thêm mặt hàng NCC bán, áp dụng tại công t
   // Mã hàng do hệ thống cấp theo dải đánh số (design.md mục 5.11).
   const item = await api.post<{ id: string; code: string }>('/api/items', {
     code: null, name: 'Dây cáp điện thử', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: uom('M'),
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [{ uomId: uom('CUON'), factor: 100 }],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [{ uomId: uom('CUON'), factor: 100 }],
   })
   const itemCode = item.code
 

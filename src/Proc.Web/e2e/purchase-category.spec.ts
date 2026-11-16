@@ -18,8 +18,8 @@ test('đề nghị mua loại A chọn công trình, hiện dự toán – lũy 
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Xi măng ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,
-    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null,
-    maxStock: null, conversions: [],
+    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const other = await bha.send<{ id: string }>('post', '/api/departments', { code: unique('PK').slice(0, 10), name: 'Phòng khác', managerName: null })
   const deptCode = unique('XD').slice(0, 10)

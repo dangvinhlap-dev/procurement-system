@@ -55,7 +55,7 @@ public class PooledOrderTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử đặt gộp {Guid.NewGuid():N}", null, null), Ct));
         var item = (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Bột giặt G7", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+            new CreateItemRequest(null, "Bột giặt G7", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct))).Id;
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         async Task<Guid> SupplierAsync(string name)
         {
@@ -106,7 +106,7 @@ public class PooledOrderTests
         var source = backupContext.Lines.Single();
         Assert.Equal((12_500m, true, 10m), (source.UnitPrice, source.IsBackup, backupContext.MarginPercent));
         Assert.Equal(60m, source.Plans.Single(p => p.CompanyId == companyA.Id).PlanQty);
-        Assert.True(backupContext.Companies.Single(c => c.CompanyId == companyA.Id).Warehouses[0].IsMain);
+        Assert.NotEmpty(backupContext.Companies.Single(c => c.CompanyId == companyA.Id).Warehouses);
 
         // Công ty thành viên không lập phiếu đặt gộp.
         SavePooledOrderRequest Request(decimal a, decimal b, Guid? lineId = null) => new(Today, gth.Id, main, Today.AddDays(2), "Giao một lần",

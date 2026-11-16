@@ -140,7 +140,6 @@ Theo **công ty đang làm việc**:
 | NCC (tổng công ty) | Cho duyệt NCC mới không qua hồ sơ HSN (`SUPPLIER_ONBOARDING_OPTIONAL`) | Tắt |
 | KPI | Mục tiêu 9 chỉ số KPI (tiết kiệm, mua theo giá đã duyệt, SLA, giao đúng hạn, chất lượng, mua khẩn, chậm luân chuyển, đánh giá NCC, vi phạm) và số ngày tính chậm luân chuyển | Theo danh mục KPI |
 
-Màn hình cũng hiện phương pháp giá vốn (bình quân gia quyền cuối kỳ tháng) và các kho cho phép tồn âm.
 
 ## 8.6 Đánh số chứng từ (DSCT)
 
@@ -234,8 +233,8 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 
 1. Đăng nhập tài khoản quản trị ban đầu, **đổi mật khẩu**.
-2. **COMP**: kiểm tra tổng công ty, thêm các công ty thành viên (mỗi công ty tự có kho tổng).
-3. **WH**: thêm kho phụ; **DEPT**: khai bộ phận từng công ty.
+2. **COMP**: kiểm tra tổng công ty, thêm các công ty thành viên (mỗi công ty có sẵn một kho nhận hàng).
+3. **WH**: thêm các kho nhận hàng khác; **DEPT**: khai bộ phận từng công ty.
 4. **DSDM**: sửa dải mã danh mục; **DSCT**: kiểm tra mẫu số chứng từ.
 5. **ROLE**: tạo **Bộ vai trò mẫu…** hoặc vai trò riêng; **USER**: tạo tài khoản, gán vai trò/kho/nhóm hàng tại từng công ty.
 6. **APRL**: cấu hình quy trình duyệt từng công ty (có thể dùng cấu hình mẫu rồi sửa ngưỡng).

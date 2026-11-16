@@ -16,8 +16,8 @@ interface CompanyFormValues {
   representative: string
   startDate: Dayjs | null
   isActive: boolean
-  mainWarehouseCode: string
-  mainWarehouseName: string
+  firstWarehouseCode: string
+  firstWarehouseName: string
 }
 
 const emptyValues: CompanyFormValues = {
@@ -29,8 +29,8 @@ const emptyValues: CompanyFormValues = {
   representative: '',
   startDate: null,
   isActive: true,
-  mainWarehouseCode: 'KT',
-  mainWarehouseName: '',
+  firstWarehouseCode: 'KT',
+  firstWarehouseName: '',
 }
 
 /** Chuỗi rỗng gửi lên là null, để API lưu "chưa có" thay vì chuỗi trắng. */
@@ -53,7 +53,7 @@ function toInfo(v: CompanyFormValues): CompanyInfoInput {
 }
 
 /**
- * Ngăn kéo chi tiết công ty. Thêm công ty thì khai báo luôn kho tổng (mỗi công ty đúng một kho tổng – design.md mục 4);
+ * Ngăn kéo chi tiết công ty. Thêm công ty thì khai báo luôn một kho nhận hàng đầu tiên (thêm kho khác ở danh mục Kho – design.md 19.4);
  * mã công ty không đổi được sau khi tạo vì nằm trong số chứng từ.
  * @param companyId Id công ty; null = thêm mới.
  * @param onClose Đóng ngăn kéo.
@@ -100,8 +100,8 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
         await mutations.create.mutateAsync({
           ...toInfo(values),
           code: values.code,
-          mainWarehouseCode: values.mainWarehouseCode,
-          mainWarehouseName: values.mainWarehouseName.trim(),
+          firstWarehouseCode: values.firstWarehouseCode,
+          firstWarehouseName: values.firstWarehouseName.trim(),
         })
         message.success(`Đã thêm công ty ${values.code.toUpperCase()}. Bạn đã được gán vào công ty này.`)
       } else if (detail) {
@@ -183,16 +183,16 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
               </div>
               {isNew && (
                 <fieldset className="detail-section">
-                  <legend>Kho tổng</legend>
+                  <legend>Kho nhận hàng</legend>
                   <div className="detail-hint" style={{ marginBottom: 6 }}>
-                    Mỗi công ty có đúng một kho tổng – nơi duy nhất nhập/xuất bán nội bộ với công ty khác.
+                    Tạo sẵn một kho nhận hàng để công ty lập được đề nghị mua, đơn mua hàng ngay; thêm kho khác ở danh mục Kho.
                   </div>
                   <div className="detail-grid">
                     <Form.Item
-                      label="Mã kho tổng"
-                      name="mainWarehouseCode"
+                      label="Mã kho"
+                      name="firstWarehouseCode"
                       rules={[
-                        { required: true, message: 'Hãy nhập mã kho tổng.' },
+                        { required: true, message: 'Hãy nhập mã kho.' },
                         { pattern: /^[A-Za-z0-9]{2,20}$/, message: 'Mã gồm 2–20 chữ không dấu hoặc số.' },
                       ]}
                       normalize={(v: string) => v.toUpperCase()}
@@ -200,9 +200,9 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
                       <Input autoComplete="off" />
                     </Form.Item>
                     <Form.Item
-                      label="Tên kho tổng"
-                      name="mainWarehouseName"
-                      rules={[{ required: true, whitespace: true, message: 'Hãy nhập tên kho tổng.' }, { max: 200 }]}
+                      label="Tên kho"
+                      name="firstWarehouseName"
+                      rules={[{ required: true, whitespace: true, message: 'Hãy nhập tên kho.' }, { max: 200 }]}
                     >
                       <Input />
                     </Form.Item>

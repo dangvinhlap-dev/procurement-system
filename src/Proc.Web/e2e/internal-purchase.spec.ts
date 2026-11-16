@@ -39,8 +39,8 @@ test('Mua nội bộ: PO cho NCC nội bộ, giá gợi ý, bên bán xác nhậ
   const itemName = `Bu lông nội bộ ${unique('X')}`
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: itemName, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const nmi = await api(request, 'NMI')
   await nmi.send('post', '/api/internal-prices', {

@@ -31,13 +31,6 @@ interface ItemFormValues {
   barcode: string
   vatCode: string | null
   technicalSpecs: string
-  trackLot: boolean
-  trackExpiry: boolean
-  minStock: number | null
-  maxStock: number | null
-  safetyStock: number | null
-  reorderPoint: number | null
-  isCritical: boolean
   conversions: { uomId: string | undefined; factor: number | null }[]
   isActive: boolean
 }
@@ -55,13 +48,6 @@ const emptyValues: ItemFormValues = {
   barcode: '',
   vatCode: '10',
   technicalSpecs: '',
-  trackLot: false,
-  trackExpiry: false,
-  minStock: null,
-  maxStock: null,
-  safetyStock: null,
-  reorderPoint: null,
-  isCritical: false,
   conversions: [],
   isActive: true,
 }
@@ -73,8 +59,9 @@ const orNull = (value: string | undefined) => (value?.trim() ? value.trim() : nu
 const numberProps = { decimalSeparator: ',', style: { width: '100%' } } as const
 
 /**
- * Ngăn kéo chi tiết hàng hóa: tab Thông tin chung, Quản lý kho, Quy đổi ĐVT, Thông số kỹ thuật, Nhà cung cấp (chỉ xem).
- * Chỉ hàng tồn kho mới quản lý lô/hạn dùng/tồn tối thiểu (design.md mục 5.2); đổi loại khác thì các ô đó bị khóa và xóa.
+ * Ngăn kéo chi tiết hàng hóa: tab Thông tin chung, Quy đổi ĐVT, Thông số kỹ thuật, Nhà cung cấp (chỉ xem).
+ * Không còn tab Quản lý kho (lô, hạn dùng, tồn tối thiểu/tối đa/an toàn, đặt hàng lại, trọng yếu) – tồn kho quản lý ở phần mềm kho
+ * riêng của công ty (design.md mục 19.4).
  * @param itemId Id hàng; null = thêm mới.
  * @param categories Nhóm hàng trong phạm vi.
  * @param canManage Được sửa (ở tổng công ty, có quyền).
@@ -102,9 +89,7 @@ export function ItemDrawer({
   const isNew = itemId === null
   const detail = item.data
   const editable = isNew ? canManage : detail?.canEdit === true
-  const type = Form.useWatch('type', form)
   const baseUomId = Form.useWatch('baseUomId', form)
-  const isInventory = (type ?? 'Inventory') === 'Inventory'
   // Mặt hàng chỉ gắn nhóm cấp 4 – Chủng loại (design.md mục 5.7, N4-5); máy chủ chặn lại lần nữa.
   const tree = useMemo(() => buildCategoryTree(categories, { activeOnly: true, itemLevelOnly: true }), [categories])
   // ĐVT đã ngừng chỉ còn hiện nếu mặt hàng đang dùng nó, để không chọn mới được.
@@ -128,25 +113,10 @@ export function ItemDrawer({
       barcode: detail.barcode ?? '',
       vatCode: detail.vatCode,
       technicalSpecs: detail.technicalSpecs ?? '',
-      trackLot: detail.trackLot,
-      trackExpiry: detail.trackExpiry,
-      minStock: detail.minStock,
-      maxStock: detail.maxStock,
-      safetyStock: detail.safetyStock,
-      reorderPoint: detail.reorderPoint,
-      isCritical: detail.isCritical,
       conversions: detail.conversions.map((c) => ({ uomId: c.uomId, factor: c.factor })),
       isActive: detail.isActive,
     })
   }, [detail, form])
-
-  // Hàng không phải tồn kho thì không quản lý lô/hạn dùng/tồn tối thiểu/đặt hàng lại – xóa luôn để khỏi bị API từ chối khi lưu.
-  useEffect(() => {
-    if (type && type !== 'Inventory')
-      form.setFieldsValue({
-        trackLot: false, trackExpiry: false, minStock: null, maxStock: null, safetyStock: null, reorderPoint: null, isCritical: false,
-      })
-  }, [type, form])
 
   const save = async () => {
     let values: ItemFormValues
@@ -170,13 +140,6 @@ export function ItemDrawer({
       barcode: orNull(values.barcode),
       vatCode: values.vatCode ?? null,
       technicalSpecs: orNull(values.technicalSpecs),
-      trackLot: values.trackLot,
-      trackExpiry: values.trackExpiry,
-      minStock: values.minStock ?? null,
-      maxStock: values.maxStock ?? null,
-      safetyStock: values.safetyStock ?? null,
-      reorderPoint: values.reorderPoint ?? null,
-      isCritical: values.isCritical,
       conversions: (values.conversions ?? []).map((c) => ({ uomId: c.uomId!, factor: c.factor! })),
     }
     try {
@@ -245,7 +208,7 @@ export function ItemDrawer({
                 <Form.Item
                   label="ĐVT cơ sở"
                   name="baseUomId"
-                  extra="Đơn vị lưu tồn kho và tính giá vốn."
+                  extra="Đơn vị tính số lượng trên chứng từ."
                   rules={[{ required: true, message: 'Hãy chọn ĐVT cơ sở.' }]}
                 >
                   <Select options={uomOptions} showSearch={{ optionFilterProp: 'label' }} />
@@ -271,70 +234,6 @@ export function ItemDrawer({
                   <Checkbox>Còn sử dụng</Checkbox>
                 </Form.Item>
               )}
-            </>
-          ),
-        },
-        {
-          key: 'stock',
-          label: 'Quản lý kho',
-          children: (
-            <>
-              {!isInventory && <div className="detail-hint" style={{ marginBottom: 8 }}>Chỉ hàng tồn kho mới quản lý lô, hạn dùng và tồn tối thiểu/tối đa.</div>}
-              <Form.Item name="trackLot" valuePropName="checked">
-                <Checkbox disabled={!isInventory}>Quản lý theo lô</Checkbox>
-              </Form.Item>
-              <Form.Item name="trackExpiry" valuePropName="checked">
-                <Checkbox disabled={!isInventory}>Quản lý hạn dùng</Checkbox>
-              </Form.Item>
-              <div className="detail-grid">
-                <Form.Item label={`Tồn tối thiểu (${baseUomCode})`} name="minStock">
-                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
-                </Form.Item>
-                <Form.Item
-                  label={`Tồn tối đa (${baseUomCode})`}
-                  name="maxStock"
-                  dependencies={['minStock']}
-                  rules={[
-                    ({ getFieldValue }) => ({
-                      validator: (_, v: number | null) =>
-                        v == null || getFieldValue('minStock') == null || v >= getFieldValue('minStock')
-                          ? Promise.resolve()
-                          : Promise.reject(new Error('Tồn tối đa phải ≥ tồn tối thiểu.')),
-                    }),
-                  ]}
-                >
-                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
-                </Form.Item>
-                {/* Đặt hàng lại (design.md mục 18.16): tồn an toàn ≤ điểm đặt hàng lại ≤ tồn tối đa. */}
-                <Form.Item label={`Tồn an toàn (${baseUomCode})`} name="safetyStock">
-                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
-                </Form.Item>
-                <Form.Item
-                  label={`Điểm đặt hàng lại (${baseUomCode})`}
-                  name="reorderPoint"
-                  dependencies={['safetyStock', 'maxStock']}
-                  rules={[
-                    ({ getFieldValue }) => ({
-                      validator: (_, v: number | null) => {
-                        const safety = getFieldValue('safetyStock') as number | null
-                        const max = getFieldValue('maxStock') as number | null
-                        if (safety != null && v != null && safety > v) return Promise.reject(new Error('Phải ≥ tồn an toàn.'))
-                        if (max != null && (v ?? safety) != null && (v ?? safety)! > max) return Promise.reject(new Error('Phải ≤ tồn tối đa.'))
-                        return Promise.resolve()
-                      },
-                    }),
-                  ]}
-                >
-                  <InputNumber {...numberProps} min={0} precision={4} disabled={!isInventory} />
-                </Form.Item>
-              </div>
-              <Form.Item name="isCritical" valuePropName="checked">
-                <Checkbox disabled={!isInventory}>Vật tư trọng yếu (thiếu sẽ dừng sản xuất/vận hành)</Checkbox>
-              </Form.Item>
-              <div className="detail-hint">
-                Khả dụng (tồn + đang đặt + đề nghị còn mở) dưới điểm đặt hàng lại thì mặt hàng hiện ở Báo cáo → Gợi ý đặt hàng; chưa nhập
-                điểm đặt hàng lại thì dùng tồn tối thiểu.
-              </div>
             </>
           ),
         },

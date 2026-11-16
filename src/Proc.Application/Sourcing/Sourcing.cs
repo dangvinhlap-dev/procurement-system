@@ -374,7 +374,7 @@ public interface IRfqService
     /// <returns>RFQ.</returns>
     Task<RfqDto> RecallAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Sinh PO nháp cho mỗi NCC trúng thầu chưa có PO (giá theo báo giá, kho nhận = kho tổng).</summary>
+    /// <summary>Sinh PO nháp cho mỗi NCC trúng thầu chưa có PO (giá theo báo giá, kho nhận = kho đang dùng có mã nhỏ nhất).</summary>
     /// <param name="id">Id.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Các PO vừa sinh.</returns>

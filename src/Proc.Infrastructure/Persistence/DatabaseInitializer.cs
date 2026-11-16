@@ -30,9 +30,6 @@ public sealed class SeedWarehouse
 
     /// <summary>Tên kho.</summary>
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>"Main" hoặc "Sub"; kho Sub đặt dưới kho Main của cùng công ty.</summary>
-    public string Type { get; set; } = "Main";
 }
 
 /// <summary>Một công ty cần tạo sẵn.</summary>
@@ -44,7 +41,7 @@ public sealed class SeedCompany
     /// <summary>Tên công ty.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Kho của công ty; kho Main khai báo trước kho Sub.</summary>
+    /// <summary>Kho (nơi nhận hàng) của công ty.</summary>
     public List<SeedWarehouse> Warehouses { get; set; } = [];
 }
 
@@ -359,9 +356,7 @@ internal sealed class DataSeeder
         {
             var code = item.Code.Trim().ToUpperInvariant();
             if (existing.Any(w => w.Code == code)) continue;
-            var warehouse = item.Type.Equals("Sub", StringComparison.OrdinalIgnoreCase)
-                ? Warehouse.CreateSub(existing.First(w => w.Type == WarehouseType.Main), code, item.Name)
-                : Warehouse.CreateMain(company.Id, code, item.Name);
+            var warehouse = Warehouse.Create(company.Id, code, item.Name);
             _db.Warehouses.Add(warehouse);
             existing.Add(warehouse);
         }

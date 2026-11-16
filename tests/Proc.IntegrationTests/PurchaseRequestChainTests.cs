@@ -38,7 +38,7 @@ public partial class PurchasingTests
         Assert.Equal(("Storekeeper", "Thủ kho nơi nhận"), (keeperRule.ApproverKind, keeperRule.RoleName));
         await ReadAsync<ApprovalRuleDto>(await RuleAsync(f, "PR", 2, headRole));
 
-        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", f.Kt, null, null, false), Ct));
+        await ReadAsync<WarehouseDetailDto>(await f.Buyer.PostAsJsonAsync("/api/warehouses", new CreateWarehouseRequest("KP", "Kho phụ", null, null), Ct));
         var keeperRole = UniqueCode("K");
         await _factory.CreateRoleAsync(keeperRole, Permissions.Purchase.PrView, Permissions.Purchase.PrEnterStock);
 

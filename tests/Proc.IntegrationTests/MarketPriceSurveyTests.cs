@@ -49,7 +49,7 @@ public class MarketPriceSurveyTests
         var other = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm khác khảo sát {Guid.NewGuid():N}", null, null), Ct));
         async Task<Guid> ItemAsync(Guid categoryId, string name) => (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, false, false, null, null, []), Ct))).Id;
+            new CreateItemRequest(null, name, null, "Inventory", categoryId, cai, null, null, null, null, "10", null, []), Ct))).Id;
         var item = await ItemAsync(category.Id, "Que hàn khảo sát");
         var outside = await ItemAsync(other.Id, "Ống thép khảo sát");
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;

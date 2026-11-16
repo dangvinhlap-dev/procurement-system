@@ -89,7 +89,7 @@ public class PurchaseHistoryTests
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm thử mua lịch sử {Guid.NewGuid():N}", null, null), Ct));
         return await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, name, null, "Inventory", category.Id, uoms["HOP"], null, null, null,
-                null, null, null, false, false, null, null, []), Ct));
+                null, null, null, []), Ct));
     }
 
     /// <summary>NCC mới có MST ngẫu nhiên 10 chữ số.</summary>

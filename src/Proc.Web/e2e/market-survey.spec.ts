@@ -23,7 +23,7 @@ test('lập phiếu khảo sát giá thị trường, chốt, chụp màn hình'
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Que hàn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: uoms.find((u) => u.code === 'CAI')!.id, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   await loginViaApi(page)

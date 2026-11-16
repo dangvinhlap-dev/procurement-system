@@ -15,7 +15,7 @@ test('bước Thủ kho nơi nhận: nhập tồn rồi mới duyệt đề ngh�
   const code = unique('TK').slice(0, 8)
   await head.send('post', '/api/companies', {
     code, name: `Công ty thử thủ kho ${code}`, shortName: null, taxCode: null, address: null, representative: null,
-    startDate: new Date().toISOString().slice(0, 8) + '01', mainWarehouseCode: 'KT', mainWarehouseName: 'Kho tổng',
+    startDate: new Date().toISOString().slice(0, 8) + '01', firstWarehouseCode: 'KT', firstWarehouseName: 'Kho tổng',
   })
   const company = await api(request, code)
   const kt = (await company.get<{ id: string; code: string }[]>('/api/warehouses')).find((w) => w.code === 'KT')!.id
@@ -34,8 +34,8 @@ test('bước Thủ kho nơi nhận: nhập tồn rồi mới duyệt đề ngh�
   })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Ủng bảo hộ ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,
-    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null,
-    maxStock: null, conversions: [],
+    brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const dept = await company.send<{ id: string }>('post', '/api/departments', { code: `PX${tag}`.slice(0, 10), name: `Phân xưởng ${tag}`, managerName: null })
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })

@@ -59,23 +59,14 @@ public sealed record ItemUomConversionInput(Guid UomId, decimal Factor);
 /// <param name="Barcode">Mã vạch.</param>
 /// <param name="VatCode">Thuế suất mặc định.</param>
 /// <param name="TechnicalSpecs">Thông số kỹ thuật.</param>
-/// <param name="TrackLot">Quản lý lô.</param>
-/// <param name="TrackExpiry">Quản lý hạn dùng.</param>
-/// <param name="MinStock">Tồn tối thiểu.</param>
-/// <param name="MaxStock">Tồn tối đa.</param>
 /// <param name="IsActive">Còn sử dụng.</param>
 /// <param name="Conversions">ĐVT quy đổi.</param>
 /// <param name="CanEdit">Người xem sửa được (có quyền và đang làm việc ở tổng công ty).</param>
-/// <param name="SafetyStock">Tồn an toàn (design.md mục 18.16).</param>
-/// <param name="ReorderPoint">Điểm đặt hàng lại.</param>
-/// <param name="IsCritical">Vật tư trọng yếu.</param>
 /// <param name="Version">Phiên bản dòng – web gửi lại ở header If-Match khi sửa, thao tác (lát R2).</param>
 public sealed record ItemDetailDto(
     Guid Id, string Code, string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
-    string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs,
-    bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, bool IsActive,
-    IReadOnlyList<ItemUomConversionDto> Conversions, bool CanEdit,
-    decimal? SafetyStock = null, decimal? ReorderPoint = null, bool IsCritical = false, uint Version = 0);
+    string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs, bool IsActive,
+    IReadOnlyList<ItemUomConversionDto> Conversions, bool CanEdit, uint Version = 0);
 
 /// <summary>Thêm hàng hóa.</summary>
 /// <param name="Code">Mã hàng: 2–30 ký tự chữ không dấu, số và - . _ /.</param>
@@ -90,19 +81,11 @@ public sealed record ItemDetailDto(
 /// <param name="Barcode">Mã vạch.</param>
 /// <param name="VatCode">Thuế suất mặc định.</param>
 /// <param name="TechnicalSpecs">Thông số kỹ thuật.</param>
-/// <param name="TrackLot">Quản lý lô.</param>
-/// <param name="TrackExpiry">Quản lý hạn dùng.</param>
-/// <param name="MinStock">Tồn tối thiểu.</param>
-/// <param name="MaxStock">Tồn tối đa.</param>
 /// <param name="Conversions">ĐVT quy đổi.</param>
-/// <param name="SafetyStock">Tồn an toàn (design.md mục 18.16).</param>
-/// <param name="ReorderPoint">Điểm đặt hàng lại.</param>
-/// <param name="IsCritical">Vật tư trọng yếu.</param>
 public sealed record CreateItemRequest(
     string? Code, string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
     string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs,
-    bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, IReadOnlyList<ItemUomConversionInput> Conversions,
-    decimal? SafetyStock = null, decimal? ReorderPoint = null, bool IsCritical = false);
+    IReadOnlyList<ItemUomConversionInput> Conversions);
 
 /// <summary>Sửa hàng hóa (mọi trường trừ mã).</summary>
 /// <param name="Name">Tên.</param>
@@ -116,20 +99,12 @@ public sealed record CreateItemRequest(
 /// <param name="Barcode">Mã vạch.</param>
 /// <param name="VatCode">Thuế suất mặc định.</param>
 /// <param name="TechnicalSpecs">Thông số kỹ thuật.</param>
-/// <param name="TrackLot">Quản lý lô.</param>
-/// <param name="TrackExpiry">Quản lý hạn dùng.</param>
-/// <param name="MinStock">Tồn tối thiểu.</param>
-/// <param name="MaxStock">Tồn tối đa.</param>
 /// <param name="Conversions">Toàn bộ ĐVT quy đổi mới.</param>
 /// <param name="IsActive">Còn sử dụng.</param>
-/// <param name="SafetyStock">Tồn an toàn (design.md mục 18.16).</param>
-/// <param name="ReorderPoint">Điểm đặt hàng lại.</param>
-/// <param name="IsCritical">Vật tư trọng yếu.</param>
 public sealed record UpdateItemRequest(
     string Name, string? EnglishName, string Type, Guid CategoryId, Guid BaseUomId,
     string? Specification, string? Brand, string? Origin, string? Barcode, string? VatCode, string? TechnicalSpecs,
-    bool TrackLot, bool TrackExpiry, decimal? MinStock, decimal? MaxStock, IReadOnlyList<ItemUomConversionInput> Conversions,
-    bool IsActive, decimal? SafetyStock = null, decimal? ReorderPoint = null, bool IsCritical = false);
+    IReadOnlyList<ItemUomConversionInput> Conversions, bool IsActive);
 
 /// <summary>Một ĐVT chọn được trên dòng chứng từ.</summary>
 /// <param name="UomId">ĐVT.</param>
@@ -144,12 +119,9 @@ public sealed record ItemUomOptionDto(Guid UomId, string Code, decimal Factor);
 /// <param name="Type">Loại hàng.</param>
 /// <param name="BaseUomId">ĐVT cơ sở.</param>
 /// <param name="VatCode">Thuế suất mặc định.</param>
-/// <param name="TrackLot">Quản lý lô.</param>
-/// <param name="TrackExpiry">Quản lý hạn dùng.</param>
 /// <param name="Uoms">ĐVT chọn được: ĐVT cơ sở trước, rồi ĐVT quy đổi.</param>
 public sealed record ItemLookupDto(
-    Guid Id, string Code, string Name, string Type, Guid BaseUomId, string? VatCode, bool TrackLot, bool TrackExpiry,
-    IReadOnlyList<ItemUomOptionDto> Uoms);
+    Guid Id, string Code, string Name, string Type, Guid BaseUomId, string? VatCode, IReadOnlyList<ItemUomOptionDto> Uoms);
 
 /// <summary>
 /// Quản lý hàng hóa – dịch vụ dùng chung (design.md mục 5.2, 5.7). Chỉ thấy hàng thuộc nhóm hàng trong phạm vi

@@ -53,7 +53,7 @@ test('PO vượt giá trần: cảnh báo và chặng duyệt "Vượt giá tr�
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: `Van khóa ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id,
     baseUomId: cai, specification: null, brand: null, origin: null, barcode: null, vatCode: '10',
-    technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    technicalSpecs: null, conversions: [],
   })
 
   // Phiếu GTH tháng này cho TCT: giá NCC chính 10.000, trần 10.500; một NCC – ngoại lệ (lát H2) nên hai người duyệt.

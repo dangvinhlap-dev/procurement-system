@@ -52,7 +52,7 @@ export interface UserDetail {
 /** Lựa chọn khi phân quyền tại công ty đang làm việc. */
 export interface UserAccessOptions {
   roles: { id: string; code: string; name: string; canAssign: boolean }[]
-  warehouses: { id: string; code: string; name: string; type: 'Main' | 'Sub'; parentWarehouseId: string | null; isActive: boolean }[]
+  warehouses: { id: string; code: string; name: string; isActive: boolean }[]
   itemCategories: { id: string; code: string; name: string; parentId: string | null; isActive: boolean }[]
   mustLimitWarehouses: boolean
   mustLimitItemCategories: boolean

@@ -47,7 +47,7 @@ public class CatalogNumberingTests
         Assert.Equal(($"{prefix}100", $"{prefix}100"), (own.Sample, own.NextCode));
         Assert.Contains("đã có dải mã hàng riêng", await TitleAsync(await head.PostAsJsonAsync("/api/catalog-numberings",
             new SaveCatalogNumberingRequest("item", category.Id, "X", 3, 1, 999), Ct)));
-        CreateItemRequest Item() => new(null, "Mặt hàng dải riêng", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false, null, null, []);
+        CreateItemRequest Item() => new(null, "Mặt hàng dải riêng", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []);
         Assert.Equal($"{prefix}100", (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", Item(), Ct))).Code);
 
         // Sửa dải: số đầu dải mới lớn hơn số đang có → mã kế tiếp nhảy lên.

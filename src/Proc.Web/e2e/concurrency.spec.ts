@@ -14,8 +14,8 @@ test('lưu phiếu đã bị người khác sửa thì báo xung đột, không 
   const category = await createLeafCategory<{ id: string }>(head, { code: `N${crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase()}`, name: `Nhóm xung đột ${crypto.randomUUID().slice(0, 8)}`, parentId: null, inventoryAccount: null })
   const item = await head.send<{ id: string }>('post', '/api/items', {
     code: null, name: 'Hàng thử xung đột', englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: hop,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false,
-    trackExpiry: false, minStock: null, maxStock: null, conversions: [],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [],
   })
   const supplier = await head.send<{ id: string }>('post', '/api/suppliers', {
     code: null, groupId: groups.find((g) => g.code === 'TN')!.id, name: `NCC xung đột ${unique('X')}`, shortName: null,

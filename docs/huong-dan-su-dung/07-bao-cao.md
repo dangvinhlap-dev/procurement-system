@@ -10,7 +10,6 @@ Mọi báo cáo: lọc trên đầu trang, **Xuất Excel** đúng cột đang h
 | NXT | Nhập – xuất – tồn | Theo kỳ tháng, kho × mặt hàng: tồn đầu, nhập, xuất, tồn cuối (SL, giá trị) |
 | SLOW | Hàng chậm luân chuyển | Mặt hàng còn tồn mà không xuất trong N ngày |
 | EXP | Hàng sắp hết hạn | Lô đã/sắp hết hạn dùng |
-| REORD | Gợi ý đặt hàng | Mặt hàng tồn dưới **điểm đặt hàng lại** / tồn an toàn; nút **Lập đề nghị mua** điền sẵn PR |
 | GSTK | Tồn tập đoàn | Tồn một mặt hàng ở mọi công ty (chỉ số lượng), gợi ý mua nội bộ – quyền `Report.Stock.ViewAllCompanies` |
 | TRANSIT | Hàng đi đường nội bộ | ICS đã ghi sổ mà ICR chưa ghi sổ, cả chiều bán ra và mua vào |
 | ICREC | Đối chiếu mua bán nội bộ | Theo khoảng ngày: bên này bán – bên kia đã nhận và ngược lại (giá trị trước VAT) |

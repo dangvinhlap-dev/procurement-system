@@ -113,7 +113,7 @@ public sealed class ItemAdministration : IItemAdministration
         var codes = await _db.Uoms.AsNoTracking().Where(u => uomIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Code, cancellationToken);
         return found
             .Select(i => new ItemLookupDto(
-                i.Id, i.Code, i.Name, i.Type.ToString(), i.BaseUomId, i.VatCode, i.TrackLot, i.TrackExpiry,
+                i.Id, i.Code, i.Name, i.Type.ToString(), i.BaseUomId, i.VatCode,
                 [new ItemUomOptionDto(i.BaseUomId, codes[i.BaseUomId], 1m),
                  .. i.Conversions.OrderBy(c => c.Factor).Select(c => new ItemUomOptionDto(c.UomId, codes[c.UomId], c.Factor))]))
             .ToList();
@@ -135,8 +135,7 @@ public sealed class ItemAdministration : IItemAdministration
         return new ItemDetailDto(
             item.Id, item.Code, item.Name, item.EnglishName, item.Type.ToString(), item.CategoryId, item.BaseUomId,
             item.Specification, item.Brand, item.Origin, item.Barcode, item.VatCode, item.TechnicalSpecs,
-            item.TrackLot, item.TrackExpiry, item.MinStock, item.MaxStock, item.IsActive, conversions, canEdit,
-            item.SafetyStock, item.ReorderPoint, item.IsCritical) { Version = item.Version };
+            item.IsActive, conversions, canEdit) { Version = item.Version };
     }
 
     /// <inheritdoc />
@@ -154,8 +153,6 @@ public sealed class ItemAdministration : IItemAdministration
             await FindUomAsync(request.BaseUomId, cancellationToken),
             new ItemDescription(request.Name, request.EnglishName, request.Specification, request.Brand, request.Origin,
                 request.Barcode, request.VatCode, request.TechnicalSpecs));
-        item.SetStockControl(type, request.TrackLot, request.TrackExpiry, request.MinStock, request.MaxStock);
-        item.SetReorderControl(request.SafetyStock, request.ReorderPoint, request.IsCritical);
         item.SetConversions(await ResolveConversionsAsync(request.Conversions, cancellationToken));
 
         _db.Items.Add(item);
@@ -185,8 +182,7 @@ public sealed class ItemAdministration : IItemAdministration
         }
 
         item.SetConversions(conversions);
-        item.SetStockControl(type, request.TrackLot, request.TrackExpiry, request.MinStock, request.MaxStock);
-        item.SetReorderControl(request.SafetyStock, request.ReorderPoint, request.IsCritical);
+        item.ChangeType(type);
         if (request.IsActive) item.Activate();
         else item.Deactivate();
 

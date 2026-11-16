@@ -263,13 +263,6 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     private const string Origin = "Xuất xứ";
     private const string Barcode = "Mã vạch";
     private const string Vat = "Thuế suất";
-    private const string TrackLot = "Quản lý lô";
-    private const string TrackExpiry = "Quản lý hạn dùng";
-    private const string MinStock = "Tồn tối thiểu";
-    private const string MaxStock = "Tồn tối đa";
-    private const string SafetyStock = "Tồn an toàn";
-    private const string ReorderPoint = "Điểm đặt hàng lại";
-    private const string IsCritical = "Trọng yếu";
     private const string Uom1 = "ĐVT quy đổi 1";
     private const string Factor1 = "Hệ số 1";
     private const string Uom2 = "ĐVT quy đổi 2";
@@ -312,19 +305,12 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         new(EnglishName, ""),
         new(Type, "Hàng tồn kho / Dịch vụ / Tài sản / Vật tư tiêu hao.", Required: true),
         new(Category, "Mã nhóm hàng (đang dùng).", Required: true, Text: true),
-        new(BaseUom, "Mã ĐVT cơ sở, ví dụ CAI – đơn vị lưu tồn kho.", Required: true, Text: true),
+        new(BaseUom, "Mã ĐVT cơ sở, ví dụ CAI – đơn vị tính số lượng trên chứng từ.", Required: true, Text: true),
         new(Specification, ""),
         new(Brand, ""),
         new(Origin, ""),
         new(Barcode, "", Text: true),
         new(Vat, "KCT, 0, 5, 8 hoặc 10 (%).", Text: true),
-        new(TrackLot, "Có / Không – chỉ hàng tồn kho."),
-        new(TrackExpiry, "Có / Không – chỉ hàng tồn kho."),
-        new(MinStock, "Theo ĐVT cơ sở, tối đa 4 chữ số thập phân – chỉ hàng tồn kho."),
-        new(MaxStock, "Theo ĐVT cơ sở, ≥ tồn tối thiểu – chỉ hàng tồn kho."),
-        new(SafetyStock, "Theo ĐVT cơ sở, ≤ điểm đặt hàng lại – chỉ hàng tồn kho."),
-        new(ReorderPoint, "Theo ĐVT cơ sở, ≤ tồn tối đa: khả dụng xuống tới mức này thì gợi ý lập đề nghị mua – chỉ hàng tồn kho."),
-        new(IsCritical, "Có / Không – vật tư trọng yếu, chỉ hàng tồn kho."),
         new(Uom1, "Mã ĐVT quy đổi, ví dụ THUNG.", Text: true),
         new(Factor1, "Số ĐVT cơ sở trong 1 ĐVT quy đổi, ví dụ 24 (1 thùng = 24 cái)."),
         new(Uom2, "", Text: true),
@@ -339,6 +325,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     [
         "Quy đổi ĐVT: tối đa 3 ĐVT trên file. Khi cập nhật, để trống cả 3 cột ĐVT quy đổi thì giữ nguyên quy đổi đang có; ghi bất kỳ cột nào thì thay toàn bộ quy đổi theo file.",
         "Thông số kỹ thuật không có trên file, sửa ở màn hình Hàng hóa (nhập Excel không xóa thông số đang có).",
+        "File mẫu cũ còn cột Quản lý lô, Quản lý hạn dùng, Tồn tối thiểu / tối đa / an toàn, Điểm đặt hàng lại, Trọng yếu thì các cột đó được bỏ qua (bỏ từ 0.38.0 – tồn kho quản lý ở phần mềm kho riêng).",
     ];
 
     /// <inheritdoc />
@@ -356,8 +343,6 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
             [
                 i.Code, i.Name, i.EnglishName, TypeLabels[i.Type.ToString()], categories.GetValueOrDefault(i.CategoryId),
                 uomCodes[i.BaseUomId], i.Specification, i.Brand, i.Origin, i.Barcode, i.VatCode,
-                ExcelHeaders.YesNo(i.TrackLot), ExcelHeaders.YesNo(i.TrackExpiry), i.MinStock, i.MaxStock,
-                i.SafetyStock, i.ReorderPoint, ExcelHeaders.YesNo(i.IsCritical),
                 ConvUom(0), ConvFactor(0), ConvUom(1), ConvFactor(1), ConvUom(2), ConvFactor(2), ExcelHeaders.YesNo(i.IsActive),
             ];
         }).ToList();
@@ -394,9 +379,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
         {
             var create = new CreateItemRequest(
                 null, row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
-                row.Text(Origin), row.Text(Barcode), vat, null, row.Bool(TrackLot) ?? false, row.Bool(TrackExpiry) ?? false,
-                row.Decimal(MinStock), row.Decimal(MaxStock), conversions,
-                row.Decimal(SafetyStock), row.Decimal(ReorderPoint), row.Bool(IsCritical) ?? false);
+                row.Text(Origin), row.Text(Barcode), vat, null, conversions);
             await ValidateAsync(services, create, cancellationToken);
             var created = await items.CreateAsync(create, cancellationToken);
             if (!Active(row)) await items.UpdateAsync(created.Id, ToUpdate(created, conversions, false), cancellationToken);
@@ -409,12 +392,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
             : existing.Conversions.Select(c => new ItemUomConversionInput(c.UomId, c.Factor)).ToList();
         var update = new UpdateItemRequest(
             row.RequiredText(Name), row.Text(EnglishName), type, categoryId, baseUomId, row.Text(Specification), row.Text(Brand),
-            row.Text(Origin), row.Text(Barcode), vat, existing.TechnicalSpecs, row.Bool(TrackLot) ?? false, row.Bool(TrackExpiry) ?? false,
-            row.Decimal(MinStock), row.Decimal(MaxStock), keptConversions, Active(row),
-            // File mẫu cũ (trước lát D1) không có 3 cột đặt hàng lại: giữ nguyên giá trị đang có thay vì xóa.
-            row.HasColumn(SafetyStock) ? row.Decimal(SafetyStock) : existing.SafetyStock,
-            row.HasColumn(ReorderPoint) ? row.Decimal(ReorderPoint) : existing.ReorderPoint,
-            row.HasColumn(IsCritical) ? row.Bool(IsCritical) ?? false : existing.IsCritical);
+            row.Text(Origin), row.Text(Barcode), vat, existing.TechnicalSpecs, keptConversions, Active(row));
         await ValidateAsync(services, update, cancellationToken);
         await items.UpdateAsync(existing.Id, update, cancellationToken);
         return false;
@@ -423,7 +401,7 @@ internal sealed class ItemExcelCatalog(ProcDbContext db, IItemAdministration ite
     /// <summary>Đổi chi tiết mặt hàng đang có thành yêu cầu cập nhật (giữ nguyên các trường file Excel không có).</summary>
     private static UpdateItemRequest ToUpdate(ItemDetailDto d, IReadOnlyList<ItemUomConversionInput> conversions, bool isActive) =>
         new(d.Name, d.EnglishName, d.Type, d.CategoryId, d.BaseUomId, d.Specification, d.Brand, d.Origin, d.Barcode, d.VatCode,
-            d.TechnicalSpecs, d.TrackLot, d.TrackExpiry, d.MinStock, d.MaxStock, conversions, isActive, d.SafetyStock, d.ReorderPoint, d.IsCritical);
+            d.TechnicalSpecs, conversions, isActive);
 
     /// <summary>Tìm Id ĐVT theo mã trong file Excel; không thấy thì báo lỗi dòng.</summary>
     private async Task<Guid> UomIdAsync(string code, CancellationToken cancellationToken)

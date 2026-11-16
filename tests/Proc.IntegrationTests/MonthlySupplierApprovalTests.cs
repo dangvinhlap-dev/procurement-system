@@ -80,8 +80,7 @@ public class MonthlySupplierApprovalTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm {name}", null, null), Ct));
         async Task<Guid> ItemAsync(string itemName) => (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, itemName, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct))).Id;
+            new CreateItemRequest(null, itemName, null, "Inventory", category.Id, cai, null, null, null, null, "10", null, []), Ct))).Id;
         return (category.Id, await ItemAsync($"{name} 1"), await ItemAsync($"{name} 2"), cai);
     }
 
@@ -213,8 +212,7 @@ public class MonthlySupplierApprovalTests
             var child = await ReadAsync<ItemCategoryDetailDto>(await head.PostAsJsonAsync("/api/item-categories",
                 new CreateItemCategoryRequest(TestCodes.Category(), $"{categoryName} {UniqueCode("")}", categoryId, null), Ct));
             return (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-                new CreateItemRequest(null, itemName, null, "Inventory", child.Id, cai, null, null, null, null, "10", null, false, false,
-                    null, null, []), Ct))).Id;
+                new CreateItemRequest(null, itemName, null, "Inventory", child.Id, cai, null, null, null, null, "10", null, []), Ct))).Id;
         }
         var item1 = await ItemInChildAsync("Nhóm con 1 ngoại lệ", "Phụ tùng ngoại lệ 1");
         await LinkAsync(head, third, item1, cai);

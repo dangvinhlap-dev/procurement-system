@@ -21,8 +21,8 @@ test('PR vượt định mức sử dụng theo kế hoạch nhu cầu: cảnh b
   const newItem = (name: string) =>
     head.send<{ id: string; code: string }>('post', '/api/items', {
       code: null, name: `${name} ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai, specification: null,
-      brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false, minStock: null,
-      maxStock: null, conversions: [],
+      brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+      conversions: [],
     })
   const planned = await newItem('Găng tay định mức')
   const outside = await newItem('Khẩu trang ngoài kế hoạch')

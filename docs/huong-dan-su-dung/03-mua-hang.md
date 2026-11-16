@@ -232,7 +232,7 @@ Dòng PO đã duyệt còn chưa nhận đủ: số đặt, đã nhận, còn l�
 Phòng cung ứng chung (ở **tổng công ty**) đặt hàng cho nhiều công ty theo NCC và giá Ban đã duyệt trong tháng; **mỗi công ty vẫn một PO**.
 
 1. **Tạo mới**: ngày đặt, **phiếu GTH đã duyệt** của tháng, **NCC** (NCC chính hoặc dự phòng trên phiếu GTH), ngày giao dự kiến.
-2. **Công ty nhận hàng** (thuộc các công ty áp dụng phiếu GTH): mỗi công ty một kho nhận (mặc định kho tổng) và bộ phận.
+2. **Công ty nhận hàng** (thuộc các công ty áp dụng phiếu GTH): mỗi công ty một kho nhận (mặc định kho đang dùng có mã nhỏ nhất) và bộ phận.
 3. Dòng = dòng phiếu GTH; **đơn giá = giá Ban duyệt**, không sửa. Nhập SL phân bổ từng công ty.
 4. **Phân bổ theo kế hoạch**: chia tổng theo tỷ lệ kế hoạch nhu cầu tháng đã chốt của từng công ty (ví dụ tổng 10, KH A 2, B 1 → A 7, B 3).
 5. **Biên độ**: mỗi công ty được lệch đề xuất tối đa max(tổng × `POOLED_MARGIN_PERCENT` %, 1 ĐVT) (mặc định 10%). Mặt hàng không có kế

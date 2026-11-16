@@ -74,13 +74,12 @@ public class ItemCatalogTests
 
     /// <summary>Hàng mới – mã để trống, hệ thống cấp theo dải của nhóm hàng (design.md mục 5.11).</summary>
     private static CreateItemRequest NewItem(Guid categoryId, Guid baseUomId, string name = "Bu lông lục giác M8",
-        string type = "Inventory", IReadOnlyList<ItemUomConversionInput>? conversions = null, bool trackLot = false) =>
-        new(null, name, "Hex bolt M8", type, categoryId, baseUomId, "M8x50", "Đài Loan", "Đài Loan", null, "10", null,
-            trackLot, false, null, null, conversions ?? []);
+        string type = "Inventory", IReadOnlyList<ItemUomConversionInput>? conversions = null) =>
+        new(null, name, "Hex bolt M8", type, categoryId, baseUomId, "M8x50", "Đài Loan", "Đài Loan", null, "10", null, conversions ?? []);
 
     private static UpdateItemRequest Edit(ItemDetailDto d, bool? isActive = null) =>
         new(d.Name, d.EnglishName, d.Type, d.CategoryId, d.BaseUomId, d.Specification, d.Brand, d.Origin, d.Barcode, d.VatCode,
-            d.TechnicalSpecs, d.TrackLot, d.TrackExpiry, d.MinStock, d.MaxStock,
+            d.TechnicalSpecs,
             d.Conversions.Select(c => new ItemUomConversionInput(c.UomId, c.Factor)).ToList(), isActive ?? d.IsActive);
 
     [Fact]
@@ -287,8 +286,8 @@ public class ItemCatalogTests
         var code = $"{child.Code}-00001";
 
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            NewItem(child.Id, hop, conversions: [new(thung, 24m)], trackLot: true), Ct));
-        Assert.Equal((code, "Inventory", true), (item.Code, item.Type, item.TrackLot));
+            NewItem(child.Id, hop, conversions: [new(thung, 24m)]), Ct));
+        Assert.Equal((code, "Inventory"), (item.Code, item.Type));
         Assert.Equal(("THUNG", 24m), (Assert.Single(item.Conversions).UomCode, item.Conversions[0].Factor));
         Assert.True(item.CanEdit);
 
@@ -301,8 +300,11 @@ public class ItemCatalogTests
         Assert.Equal("Mã hàng hóa do hệ thống tự cấp theo dải đã cấu hình – để trống mã.", await TitleAsync(manual));
         Assert.Equal($"{child.Code}-00002", (await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop), Ct))).Code);
 
-        var service = await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop, type: "Service", trackLot: true), Ct);
-        Assert.Equal("Chỉ hàng tồn kho mới quản lý lô, hạn dùng và tồn tối thiểu/tối đa.", await TitleAsync(service));
+        // Bỏ thông số tồn kho (design.md mục 19.4): dịch vụ thêm như hàng thường, đổi loại hàng tự do.
+        var service = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(child.Id, hop, type: "Service"), Ct));
+        Assert.Equal("Service", service.Type);
+        var toInventory = await ReadAsync<ItemDetailDto>(await head.PutAsJsonAsync($"/api/items/{service.Id}", Edit(service) with { Type = "Inventory" }, Ct));
+        Assert.Equal("Inventory", toInventory.Type);
     }
 
     [Fact]
@@ -316,10 +318,9 @@ public class ItemCatalogTests
 
         // Đổi ĐVT cơ sở sang Cái, Hộp thành ĐVT quy đổi (1 hộp = 10 cái), bỏ Thùng – trong một lần lưu.
         var edited = await ReadAsync<ItemDetailDto>(await head.PutAsJsonAsync($"/api/items/{item.Id}",
-            Edit(item) with { BaseUomId = cai, Conversions = [new(hop, 10m)], MinStock = 5, MaxStock = 50 }, Ct));
+            Edit(item) with { BaseUomId = cai, Conversions = [new(hop, 10m)] }, Ct));
         Assert.Equal(cai, edited.BaseUomId);
         Assert.Equal(("HOP", 10m), (Assert.Single(edited.Conversions).UomCode, edited.Conversions[0].Factor));
-        Assert.Equal((5m, 50m), (edited.MinStock, edited.MaxStock));
 
         // ĐVT đang dùng cho hàng còn dùng thì không ngừng được.
         var uoms = await head.GetFromJsonAsync<List<UomDto>>("/api/uoms", Ct);

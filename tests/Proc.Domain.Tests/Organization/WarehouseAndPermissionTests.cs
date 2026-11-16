@@ -13,26 +13,15 @@ public class WarehouseAndPermissionTests
     private static readonly Guid CompanyA = Guid.CreateVersion7();
 
     [Fact]
-    public void KhoTong_KhongCoKhoCha()
+    public void Kho_LaNoiNhanHang_DanhSachPhang()
     {
-        var main = Warehouse.CreateMain(CompanyA, " kt ", "Kho tổng");
+        // Từ 0.38.0 kho chỉ là nơi nhận hàng (design.md mục 19.4 – bỏ kho tổng / kho phụ, cờ tồn âm): không kho cha.
+        var kho = Warehouse.Create(CompanyA, " kt ", "Kho nhận hàng");
 
-        Assert.Equal(WarehouseType.Main, main.Type);
-        Assert.Equal("KT", main.Code);
-        Assert.Null(main.ParentWarehouseId);
-        Assert.False(main.AllowNegativeStock);
-    }
-
-    [Fact]
-    public void KhoPhu_LuonCungCongTyVoiKhoCha()
-    {
-        // Kho Sub không được thuộc công ty khác với kho cha – design.md mục 4.
-        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
-        var sub = Warehouse.CreateSub(main, "KP1", "Kho phụ 1");
-
-        Assert.Equal(WarehouseType.Sub, sub.Type);
-        Assert.Equal(CompanyA, sub.CompanyId);
-        Assert.Equal(main.Id, sub.ParentWarehouseId);
+        Assert.Equal("KT", kho.Code);
+        Assert.Equal(CompanyA, kho.CompanyId);
+        Assert.Null(kho.ParentWarehouseId);
+        Assert.True(kho.IsActive);
     }
 
     [Theory]
@@ -41,58 +30,37 @@ public class WarehouseAndPermissionTests
     [InlineData("")]
     public void Kho_TuChoiMaKhongHopLe(string code)
     {
-        Assert.Throws<BusinessRuleException>(() => Warehouse.CreateMain(CompanyA, code, "Kho"));
+        Assert.Throws<BusinessRuleException>(() => Warehouse.Create(CompanyA, code, "Kho"));
     }
 
     [Fact]
     public void Kho_PhaiThuocCongTy()
     {
-        Assert.Throws<BusinessRuleException>(() => Warehouse.CreateMain(Guid.Empty, "KT", "Kho"));
+        Assert.Throws<BusinessRuleException>(() => Warehouse.Create(Guid.Empty, "KT", "Kho"));
     }
 
     [Fact]
-    public void Kho_SuaThongTinVaChoPhepTonAm()
+    public void Kho_SuaThongTin()
     {
-        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
+        var kho = Warehouse.Create(CompanyA, "KT", "Kho nhận hàng");
 
-        main.Update(" Kho tổng mới ", " Hà Nội ", " Trần Bình ", allowNegativeStock: true);
+        kho.Update(" Kho mới ", " Hà Nội ", " Trần Bình ");
 
-        Assert.Equal("Kho tổng mới", main.Name);
-        Assert.Equal("Hà Nội", main.Address);
-        Assert.Equal("Trần Bình", main.Keeper);
-        Assert.True(main.AllowNegativeStock);
-        Assert.Throws<BusinessRuleException>(() => main.Update(" ", null, null, false));
+        Assert.Equal("Kho mới", kho.Name);
+        Assert.Equal("Hà Nội", kho.Address);
+        Assert.Equal("Trần Bình", kho.Keeper);
+        Assert.Throws<BusinessRuleException>(() => kho.Update(" ", null, null));
     }
 
     [Fact]
-    public void KhoTong_KhongNgungDungDuoc()
+    public void Kho_NaoCungNgungDungDuoc()
     {
-        // Mỗi công ty luôn có một kho tổng đang dùng để giao dịch liên công ty ICS/ICR – design.md mục 4.
-        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
-        Assert.Throws<BusinessRuleException>(main.Deactivate);
-
-        var sub = Warehouse.CreateSub(main, "KP1", "Kho phụ 1");
-        sub.Deactivate();
-        Assert.False(sub.IsActive);
-        sub.Activate();
-        Assert.True(sub.IsActive);
-    }
-
-    [Fact]
-    public void KhoPhu_DoiKhoChaTrongCungCongTy()
-    {
-        var main = Warehouse.CreateMain(CompanyA, "KT", "Kho tổng");
-        var sub1 = Warehouse.CreateSub(main, "KP1", "Kho phụ 1");
-        var sub2 = Warehouse.CreateSub(main, "KP2", "Kho phụ 2");
-
-        sub2.MoveTo(sub1);
-        Assert.Equal(sub1.Id, sub2.ParentWarehouseId);
-
-        // Kho cha công ty khác, chính nó, hoặc đổi kho cha của kho tổng đều bị chặn.
-        var other = Warehouse.CreateMain(Guid.CreateVersion7(), "KT", "Kho tổng công ty khác");
-        Assert.Throws<BusinessRuleException>(() => sub2.MoveTo(other));
-        Assert.Throws<BusinessRuleException>(() => sub2.MoveTo(sub2));
-        Assert.Throws<BusinessRuleException>(() => main.MoveTo(sub1));
+        // Không còn kho tổng bắt buộc (bỏ giao dịch liên công ty ICS/ICR từ K3) – kho nào cũng ngừng / dùng lại được.
+        var kho = Warehouse.Create(CompanyA, "KT", "Kho nhận hàng");
+        kho.Deactivate();
+        Assert.False(kho.IsActive);
+        kho.Activate();
+        Assert.True(kho.IsActive);
     }
 
     [Fact]

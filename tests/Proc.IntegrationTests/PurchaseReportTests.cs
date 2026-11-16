@@ -57,8 +57,7 @@ public class PurchaseReportTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm báo cáo mua hàng {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Dây curoa B52", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, [new(thung, 12)]), Ct));
+            new CreateItemRequest(null, "Dây curoa B52", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, [new(thung, 12)]), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var suppliers = new List<SupplierDetailDto>();
         foreach (var name in new[] { "A", "B", "C" })
@@ -131,8 +130,7 @@ public class PurchaseReportTests
         var sibling = await ReadAsync<ItemCategoryDetailDto>(await f.Head.PostAsJsonAsync("/api/item-categories",
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm cùng cha {Guid.NewGuid():N}", f.Category.ParentId, null), Ct));
         var item2 = await ReadAsync<ItemDetailDto>(await f.Head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Dây curoa B60", null, "Inventory", sibling.Id, f.Cai, null, null, null, null, "10", null, false, false,
-                null, null, []), Ct));
+            new CreateItemRequest(null, "Dây curoa B60", null, "Inventory", sibling.Id, f.Cai, null, null, null, null, "10", null, []), Ct));
         await ReceiveAsync(f, await ApprovedPoAsync(f, f.Suppliers[0], Today.AddDays(-3), null, 10, 100_000), 10);
         await ReceiveAsync(f, await ApprovedPoAsync(f, f.Suppliers[1], Today.AddDays(-3), null, 5, 100_000, item2.Id), 5);
         var range = $"from={Today.AddDays(-30):yyyy-MM-dd}&to={Today:yyyy-MM-dd}&groupBy=category";

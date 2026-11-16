@@ -384,9 +384,10 @@ public sealed class RfqService : IRfqService
     {
         var rfq = await LoadAsync(id, cancellationToken);
         if (rfq.Status != RfqStatus.Awarded) throw new BusinessRuleException($"RFQ {rfq.No} chưa chọn thầu.");
-        var warehouseId = await _db.Warehouses.AsNoTracking().Where(w => w.Type == WarehouseType.Main && w.IsActive).Select(w => (Guid?)w.Id)
+        // Kho nhận mặc định của PO nháp: kho đang dùng có mã nhỏ nhất trong phạm vi (không còn kho tổng – design.md mục 19.4); người mua đổi trên PO.
+        var warehouseId = await _db.Warehouses.AsNoTracking().Where(w => w.IsActive).OrderBy(w => w.Code).Select(w => (Guid?)w.Id)
             .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new BusinessRuleException("Không tìm thấy kho tổng trong phạm vi của bạn để làm kho nhận.");
+            ?? throw new BusinessRuleException("Không có kho đang dùng trong phạm vi của bạn để làm kho nhận.");
         var itemIds = rfq.Lines.Select(l => l.ItemId).Distinct().ToList();
         var vatByItem = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.VatCode, cancellationToken);
         var codes = await _db.Suppliers.AsNoTracking().Where(s => rfq.Suppliers.Select(x => x.SupplierId).Contains(s.Id))

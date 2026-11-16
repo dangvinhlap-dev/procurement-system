@@ -15,8 +15,6 @@ export interface ItemLookup {
   type: string
   baseUomId: string
   vatCode: string | null
-  trackLot: boolean
-  trackExpiry: boolean
   uoms: { uomId: string; code: string; factor: number }[]
 }
 

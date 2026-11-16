@@ -93,7 +93,7 @@ thấy "đủ x/7, còn thiếu…"); công ty bật tham số `RFQ_DOSSIER_REQU
 
 | Nút | Kết quả |
 | --- | --- |
-| **Tạo PO** | Mỗi NCC trúng thầu một **PO nháp** (giá, CK, VAT theo báo giá; ngày giao = hôm nay + thời gian giao; kho nhận = kho tổng). NCC phải Đã duyệt và áp dụng tại công ty |
+| **Tạo PO** | Mỗi NCC trúng thầu một **PO nháp** (giá, CK, VAT theo báo giá; ngày giao = hôm nay + thời gian giao; kho nhận = kho đang dùng có mã nhỏ nhất). NCC phải Đã duyệt và áp dụng tại công ty |
 | **Tạo bảng giá** | Mỗi NCC trúng thầu một **bảng giá NCC nháp**; RFQ lập ở tổng công ty thì đánh dấu sẵn **toàn tập đoàn**. Bảng giá vẫn phải gửi duyệt |
 | **Tạo hợp đồng** | Mỗi NCC trúng thầu một **hợp đồng nguyên tắc nháp** gắn bảng giá sinh từ chính RFQ (phải Tạo bảng giá trước); sản lượng dự kiến = SL trúng thầu. Bổ sung số HĐ giấy, ngày ký, điều khoản rồi gửi duyệt |
 

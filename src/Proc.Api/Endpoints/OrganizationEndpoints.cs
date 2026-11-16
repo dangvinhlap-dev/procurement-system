@@ -8,7 +8,7 @@ namespace Proc.Api.Endpoints;
 
 /// <summary>
 /// Endpoint danh mục tổ chức: công ty, kho, bộ phận, khối, ủy quyền duyệt (design.md mục 5.1, 5.6, 18.5, 19.3). Dữ liệu đã được lọc theo phạm vi người dùng;
-/// quy tắc thêm/sửa (chỉ ở tổng công ty, kho tổng, phạm vi kho) nằm ở dịch vụ.
+/// quy tắc thêm/sửa (chỉ ở tổng công ty, phạm vi kho) nằm ở dịch vụ.
 /// </summary>
 public static class OrganizationEndpoints
 {

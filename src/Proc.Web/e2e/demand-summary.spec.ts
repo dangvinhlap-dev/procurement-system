@@ -19,8 +19,8 @@ test('tổng hợp nhu cầu toàn tập đoàn theo công ty, đổi kỳ, xem 
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Bóng đèn ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false,
-    minStock: null, maxStock: null, conversions: [{ uomId: thung, factor: 12 }],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [{ uomId: thung, factor: 12 }],
   })
   const year = new Date().getFullYear() + 1
   const months = (...first: number[]) => [...first, ...Array(12 - first.length).fill(0)]

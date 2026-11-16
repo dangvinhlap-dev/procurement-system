@@ -20,8 +20,8 @@ test('RFQ lấy SL kế hoạch toàn tập đoàn, quy về ĐVT dòng, chụp 
   })
   const item = await head.send<{ id: string; code: string }>('post', '/api/items', {
     code: null, name: `Ốc vít ${tag}`, englishName: null, type: 'Inventory', categoryId: category.id, baseUomId: cai,
-    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null, trackLot: false, trackExpiry: false,
-    minStock: null, maxStock: null, conversions: [{ uomId: thung, factor: 12 }],
+    specification: null, brand: null, origin: null, barcode: null, vatCode: '10', technicalSpecs: null,
+    conversions: [{ uomId: thung, factor: 12 }],
   })
   const year = new Date().getFullYear() + 1
   const plan = async (client: typeof head, uomId: string, months: number[]) => {

@@ -73,7 +73,7 @@ public class AttachmentTests
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm đính kèm {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
             new CreateItemRequest(null, "Vật tư đính kèm", null, "Inventory", category.Id, uoms["HOP"], null, null, null,
-                null, "10", null, false, false, null, null, []), Ct));
+                null, "10", null, []), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var supplier = await ReadAsync<SupplierDetailDto>(await head.PostAsJsonAsync("/api/suppliers",
             new SaveSupplierRequest(null, groupId, "NCC đính kèm", null, false, null, null, null, null, null, null, null, null,

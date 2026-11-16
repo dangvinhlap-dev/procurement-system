@@ -985,6 +985,22 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Bỏ kho tổng / kho phụ, tồn âm, tab Tồn kho của mặt hàng (16/11/2026, chưa phát hành – bản 0.38.0) – nhánh `feature/bo-thuoc-tinh-kho`**
+(người dùng "mục 2: bỏ" – các phần kho còn giữ chờ quyết định từ K3). design.md 19.4 (đoạn "Bỏ kho tổng / kho phụ…").
+- **Kho = nơi nhận hàng, danh sách phẳng**: `Warehouse.Create` (thay `CreateMain` / `CreateSub` / `MoveTo`), `Update(name, address, keeper)`, kho nào cũng
+  ngừng được; DTO / request bỏ `Type`, `ParentWarehouseId`, `ParentCode`, `AllowNegativeStock`; danh sách theo mã. Tạo công ty: `FirstWarehouseCode/Name`
+  (thay `MainWarehouse*` – web, e2e đổi theo). Nơi nhận mặc định: PO từ RFQ, PO mới (web), đặt hàng gộp = kho đang dùng mã nhỏ nhất
+  (`PooledPlaceOptionDto` bỏ `IsMain`). Seed appsettings bỏ `"Type"`. Web: `WarehouseDrawer` (bỏ kho cha, loại kho, tồn âm), `WarehouseListPage` (bỏ 3 cột),
+  `CompanyDrawer` (khối "Kho nhận hàng"), `UserDrawer`, `PooledOrderPages`, `RfqPages` (bỏ "(kho tổng)").
+- **Mặt hàng**: `Item.ChangeType` thay `SetStockControl` / `SetReorderControl`; DTO / request / `ItemLookupDto` bỏ 7 trường; Excel mẫu bỏ 7 cột (file cũ
+  có cột thì bỏ qua – dòng hướng dẫn); `ItemDrawer` bỏ tab Quản lý kho; e2e 24 file bỏ trường trong dữ liệu tạo hàng.
+- **CSDL**: không migration (`has-pending-model-changes` sạch) – cột cũ ngừng dùng, private trong entity, kho mới ghi `Type = Sub` (tránh chỉ mục một kho
+  Main); **xóa cột + chỉ mục `IX_Warehouse_CompanyId_Main` + khóa kho cha ở bản sau** (CLAUDE.md mục 8).
+- Test: domain kho viết lại (danh sách phẳng, ngừng dùng mọi kho), `DoiLoaiHang_KhongConThongSoTonKho`; tích hợp `CompanyWarehouseTests` (thêm kho, sửa,
+  ngừng kho có sẵn), bỏ `ScopeTests.MoiCongTyToiDaMotKhoTong`, thứ tự kho theo mã, cột Excel THUNG 19 → 12, 46 lời gọi `CreateItemRequest` bỏ 4 tham số;
+  e2e `organization` (thêm kho, ngừng kho có sẵn), `master-data` (không còn tab Quản lý kho). Hướng dẫn 02, 03, 05, 07 (bỏ REORD), 08, cài đặt.
+  Kiểm tra: build 0 cảnh báo, `dotnet test` 801/801, tsc, oxlint, `npm run build`, e2e `organization` + `master-data` 6/6; Playwright đủ bộ 159/160 (`--workers=2`) – `lookup-wildcard` (chập chờn đã biết: spec khác thêm hàng làm đổi thứ tự dòng khi gõ `*`) chạy riêng qua 2/2. **Đã merge `main` 16/11/2026.**
+
 **Dọn cột tham số kho đã ngừng dùng (16/11/2026, chưa phát hành – bản 0.38.0) – nhánh `feature/bo-cot-tham-so-kho`** (người dùng "làm tiếp việc tiếp
 theo" – việc đề xuất số 1). Migration `V0_38_0_BoCotThamSoKho` xóa 4 cột `CompanyParameter`: `InternalMarkupPercent`, `RequireReceiptPo`,
 `KpiSlowMovingTarget`, `KpiSlowMovingDays` (ngừng dùng từ 0.31.0 – K3); `Down()` tạo lại với mặc định (mất giá trị cũ). Domain bỏ thuộc tính, hằng,

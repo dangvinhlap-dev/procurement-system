@@ -52,8 +52,7 @@ public partial class SourcingTests
         var category = await ReadAsync<ItemCategoryDetailDto>(await TestCategories.PostLeafAsync(head,
             new CreateItemCategoryRequest(TestCodes.Category(), $"Nhóm đấu thầu {Guid.NewGuid():N}", null, null), Ct));
         var item = await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items",
-            new CreateItemRequest(null, "Vòng bi 6305", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, false, false,
-                null, null, [new(thung, 12)]), Ct));
+            new CreateItemRequest(null, "Vòng bi 6305", null, "Inventory", category.Id, cai, null, null, null, null, "10", null, [new(thung, 12)]), Ct));
         var groupId = (await head.GetFromJsonAsync<List<SupplierGroupDto>>("/api/supplier-groups", Ct))!.Single(g => g.Code == "TN").Id;
         var suppliers = new List<Guid>();
         foreach (var name in new[] { "A", "B", "C", "D" })

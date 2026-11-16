@@ -48,7 +48,8 @@ internal sealed class WarehouseConfiguration : IEntityTypeConfiguration<Warehous
         builder.Property(x => x.Keeper).HasMaxLength(200);
         builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
 
-        // Mỗi công ty tối đa một kho Main (design.md mục 4, 5.1): chỉ mục duy nhất theo CompanyId trên các dòng Type = Main.
+        // Chỉ mục cũ "mỗi công ty tối đa một kho Main" – ngừng dùng từ 0.38.0 cùng cột Type (kho mới ghi Sub nên không vướng);
+        // xóa cùng cột ở bản sau (design.md mục 19.4, CLAUDE.md mục 8).
         builder.HasIndex(x => x.CompanyId).IsUnique().HasFilter($"\"Type\" = {(int)WarehouseType.Main}")
             .HasDatabaseName("IX_Warehouse_CompanyId_Main");
 
