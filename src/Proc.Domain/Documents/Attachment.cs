@@ -80,6 +80,9 @@ public static class AttachmentOwnerTypes
     /// <summary>Bảng tổng hợp đề xuất mua 2A/2B (biên bản, bảng so sánh nhu cầu – lát Y5b).</summary>
     public const string PurchaseSummary = "PurchaseSummary";
 
+    /// <summary>Phiếu phát hành (biên bản UAT, ảnh màn hình lỗi, kế hoạch cài – lát QT8). Khóa khi phiếu đã cài PROD / kết thúc.</summary>
+    public const string ReleaseTicket = "ReleaseTicket";
+
     /// <summary>
     /// File báo giá NCC nộp trên Portal (lát P3b-1, design.md 19.5): chủ là dòng NCC được mời của RFQ (<c>RfqSupplier.Id</c>) – NCC tải lên ngay
     /// khi có thư mời, không cần hàng chờ. Niêm phong như giá báo giá Portal.

@@ -6,12 +6,16 @@
   Chạy trên máy build (có .NET SDK 10 và Node.js 22) tại bất kỳ thư mục nào; mọi đường dẫn tính từ vị trí script.
   Kết quả: <Output>\procurement-<phiên bản>\ gồm
     app\                    – chép vào thư mục website IIS (Proc.Api.dll, web.config, wwwroot\ chứa giao diện)
-    db-scripts\             – script nâng cấp CSDL theo phiên bản (db/scripts)
+    db-scripts\             – script nâng cấp CSDL theo phiên bản (db/scripts); db-scripts\down\ – script gỡ (quay về mức 2)
+    rollback.json           – phiên bản, mức quay về tối thiểu, migration của bản (trung tâm phát hành đọc – lát QT8, design.md 21.6a)
+    CHANGELOG.md            – nhật ký thay đổi (trung tâm phát hành tạo mục kiểm thử từ mục của bản)
     tools\backup.ps1        – sao lưu CSDL + file đính kèm
     tools\qt-enable-wal.ps1 – bật lưu WAL liên tục cho PostgreSQL (chạy một lần trên máy CSDL – lát QT3a)
+    tools\qt-agent*.ps1     – bộ thực thi và script cài (cài xong bản mới, bộ thực thi tự lấy bản của gói – design.md 21.8 T1)
     tools\du-lieu-thu\      – công cụ tạo dữ liệu thử cho môi trường test (Node.js 22; không chạy trên CSDL thật)
     appsettings.Production.example.json – mẫu cấu hình, đổi tên thành app\appsettings.Production.json khi cài lần đầu
-  và file procurement-<phiên bản>.zip cùng nội dung.
+  và file procurement-<phiên bản>.zip cùng nội dung, file procurement-<phiên bản>.zip.sha256 ("<băm>  <tên file>") để trung tâm phát hành kiểm gói.
+  rollback.json lấy từ db\scripts\rollback\<phiên bản>.json; bản có script CSDL mà chưa khai file này thì dừng (phải khai mức quay về – phat-hanh.md).
   Bản publish là framework-dependent: server cần cài ASP.NET Core Hosting Bundle 10 (có sẵn runtime và module IIS).
 
 .PARAMETER Output
@@ -72,6 +76,26 @@ Copy-Item -Recurse (Join-Path $repo 'db\scripts') (Join-Path $package 'db-script
 New-Item -ItemType Directory -Force (Join-Path $package 'tools') | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'backup.ps1') (Join-Path $package 'tools')
 Copy-Item (Join-Path $PSScriptRoot 'qt-enable-wal.ps1') (Join-Path $package 'tools')
+Copy-Item (Join-Path $PSScriptRoot 'qt-agent.ps1') (Join-Path $package 'tools')
+Copy-Item (Join-Path $PSScriptRoot 'qt-agent-install.ps1') (Join-Path $package 'tools')
+Copy-Item (Join-Path $repo 'CHANGELOG.md') $package
+
+# 5. rollback.json (lát QT8): mức quay về tối thiểu so với bản trước. Bản không đổi CSDL thì mức 1; có script CSDL thì phải khai tay.
+$rollbackSource = Join-Path $repo "db\scripts\rollback\$version.json"
+$rollbackTarget = Join-Path $package 'rollback.json'
+if (Test-Path $rollbackSource) {
+    $rollback = Get-Content -Raw -Encoding UTF8 $rollbackSource | ConvertFrom-Json
+    if ($rollback.version -ne $version) { throw "db\scripts\rollback\$version.json ghi version '$($rollback.version)' khác $version." }
+    Copy-Item $rollbackSource $rollbackTarget
+}
+elseif (Test-Path (Join-Path $repo "db\scripts\$version.sql")) {
+    throw "Bản $version có script CSDL – khai mức quay về ở db\scripts\rollback\$version.json (docs\phat-hanh.md, design.md 21.6a)."
+}
+else {
+    # Không đổi CSDL: quay về chỉ cần trả code. Ghi UTF-8 không BOM để máy chủ đọc thẳng.
+    $json = ConvertTo-Json @{ version = $version; minLevel = 1; migrations = @() } -Compress
+    [System.IO.File]::WriteAllText($rollbackTarget, $json, (New-Object System.Text.UTF8Encoding($false)))
+}
 Copy-Item -Recurse (Join-Path $repo 'tools\du-lieu-thu') (Join-Path $package 'tools\du-lieu-thu')
 Copy-Item (Join-Path $PSScriptRoot 'appsettings.Production.example.json') $package
 
@@ -91,4 +115,8 @@ for ($attempt = 1; ; $attempt++) {
         Start-Sleep -Seconds 5
     }
 }
+# SHA256 của gói – tải lên GitHub Release cùng file zip; trung tâm phát hành so trước khi nhận (định dạng giống sha256sum).
+$hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+[System.IO.File]::WriteAllText("$zip.sha256", "$hash  $(Split-Path -Leaf $zip)`n", (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Xong: $zip"
+Write-Host "SHA256: $hash ($zip.sha256)"

@@ -36,6 +36,14 @@ export const Permission = {
   RestoreRun: 'System.OpsRestore.Run',
   /** Sửa cấu hình truy cập CFG, "Đăng xuất tất cả" (xác nhận Q6) – lát QT7; xem CFG cần OpsView. */
   ConfigManage: 'System.OpsConfig.Manage',
+  /** Phiếu phát hành REL: nhận gói, kiểm thử, lỗi, ghi chú, đóng, hủy (lát QT8). */
+  ReleaseManage: 'System.OpsRelease.Manage',
+  /** Cài bản phát hành lên TEST (Q6). */
+  ReleaseDeployTest: 'System.OpsRelease.DeployTest',
+  /** Xác nhận UAT đạt. */
+  ReleaseUatSignOff: 'System.OpsRelease.UatSignOff',
+  /** Cài PROD, quay về bản cũ (Q6). */
+  ReleaseDeployProd: 'System.OpsRelease.DeployProd',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

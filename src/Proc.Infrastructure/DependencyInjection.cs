@@ -167,6 +167,11 @@ public static class DependencyInjection
         // Cấu hình truy cập CFG (lát QT7): bản đệm dùng chung mọi request + dịch vụ màn hình.
         services.AddSingleton<Proc.Application.Operations.IAccessPolicyProvider, Proc.Infrastructure.Operations.AccessPolicyProvider>();
         services.AddScoped<Proc.Application.Operations.IAccessConfigService, Proc.Infrastructure.Operations.AccessConfigService>();
+        // Trung tâm phát hành (lát QT8) – một đối tượng cho cả màn hình REL và phần bộ thực thi gọi tới. ReleaseGitHubHttp do Api đăng ký.
+        services.AddScoped<Proc.Infrastructure.Operations.ReleaseService>();
+        services.AddScoped<Proc.Application.Operations.IReleaseService>(sp => sp.GetRequiredService<Proc.Infrastructure.Operations.ReleaseService>());
+        services.AddScoped<Proc.Application.Operations.IReleaseAgentHooks>(
+            sp => sp.GetRequiredService<Proc.Infrastructure.Operations.ReleaseService>());
         services.AddSingleton<Proc.Application.Operations.IEnvironmentStatus, Proc.Infrastructure.Operations.EnvironmentStatus>();
         // Nhật ký lỗi (lát QT2): bộ ghi singleton – mỗi lần ghi một scope CSDL riêng, không phụ thuộc DbContext của request vừa lỗi.
         services.AddSingleton<Proc.Application.Operations.IErrorRecorder, Proc.Infrastructure.Operations.ErrorRecorder>();

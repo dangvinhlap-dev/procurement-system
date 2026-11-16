@@ -179,6 +179,14 @@ public static class OperationsEndpoints
             await gateway.PrepareSwapAsync(AgentEnvironmentId(http), id, ct);
             return Results.NoContent();
         });
+        // Lát QT8: tải gói của phiếu phát hành đang cài (chỉ khi môi trường này đang chạy lệnh cài phiếu đó) và kiểm thử nhanh sau khi cài.
+        agent.MapGet("/releases/{ticketId:guid}/package", async (Guid ticketId, HttpContext http, IReleaseAgentHooks release, CancellationToken ct) =>
+        {
+            var file = await release.OpenPackageAsync(AgentEnvironmentId(http), ticketId, ct);
+            http.Response.Headers["X-Package-Sha256"] = file.Sha256;
+            return Results.File(file.Path, "application/zip", file.FileName, enableRangeProcessing: true);
+        });
+        agent.MapGet("/smoke", (IReleaseAgentHooks release, CancellationToken ct) => release.SmokeAsync(ct));
 
         // Nhật ký lỗi (lát QT2). Gửi lỗi giao diện: mọi người đã đăng nhập ở mọi công ty (lỗi xảy ra ở đâu cũng phải ghi), ≤ 8 KB, giới hạn
         // tần suất ở ApiRateLimiting; xem và xử lý chỉ ở tổng công ty.

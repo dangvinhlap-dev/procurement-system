@@ -96,6 +96,9 @@ Phần mềm quản lý nhà cung cấp, giá, mua hàng, đấu thầu và kho 
 - Semantic Versioning, số phiên bản trong `Directory.Build.props`. Chỉ phát hành khi tôi yêu cầu, làm đủ các bước trong docs/phat-hanh.md.
 - Thay đổi CSDL chỉ qua EF Core migration tên rõ nghĩa (ví dụ `V0_4_0_ThemBangGiaNoiBo`), luôn có `Down()`; ghi chú nếu `Down()` mất dữ liệu.
 - Không xóa cột/bảng đang có dữ liệu trong cùng một bản: đánh dấu ngừng dùng trước, xóa ở bản sau.
+- Bản có thay đổi CSDL khai mức quay về `db/scripts/rollback/<bản>.json` (1 / 2 / 3 – design.md 21.6a), mức 2 kèm script gỡ
+  `db/scripts/down/<bản>.sql`; GitHub Release đăng kèm file `.sha256` của gói.
+- Từ bản 0.36.1: đưa bản lên TEST / PROD qua **trung tâm phát hành REL** (Nhận gói → Cài TEST → UAT → Cài PROD → Đóng); cài tay chỉ là dự phòng.
 - "Quay về phiên bản X": không xóa lịch sử, liệt kê thay đổi và rủi ro, chờ tôi đồng ý; chỉ gỡ migration khi tôi xác nhận đã sao lưu.
 
 ## 9. Giao diện (bắt buộc)

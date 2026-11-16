@@ -93,6 +93,22 @@ builder.Services.AddOptions<Proc.Application.Operations.AgentOptions>()
     .Validate(o => o.RunningTimeoutHours is >= 1 and <= 72 && o.OnlineMinutes is >= 1 and <= 60,
         "Agent:RunningTimeoutHours phải từ 1 đến 72, Agent:OnlineMinutes từ 1 đến 60.")
     .ValidateOnStart();
+// Trung tâm phát hành (lát QT8): thư mục cất gói (ngoài thư mục ứng dụng trên server; tương đối tính từ ContentRoot), giới hạn dung lượng, kho GitHub.
+builder.Services.AddOptions<Proc.Application.Operations.ReleaseOptions>()
+    .Bind(builder.Configuration.GetSection(Proc.Application.Operations.ReleaseOptions.Section))
+    .PostConfigure(o => o.PackageRoot = Path.GetFullPath(o.PackageRoot, builder.Environment.ContentRootPath))
+    .Validate(o => o.MaxPackageSizeMb is >= 10 and <= Proc.Api.Endpoints.ReleaseEndpoints.MaxUploadMb,
+        $"Release:MaxPackageSizeMb phải từ 10 đến {Proc.Api.Endpoints.ReleaseEndpoints.MaxUploadMb}.")
+    .ValidateOnStart();
+// Lấy gói từ GitHub Release: User-Agent chung (không mang thông tin người dùng / dự án – API GitHub bắt buộc có User-Agent).
+builder.Services.AddHttpClient(Proc.Infrastructure.Operations.ReleaseService.GitHubClient, c =>
+{
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("procurement-release-center");
+    c.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+    c.Timeout = TimeSpan.FromMinutes(10);
+});
+builder.Services.AddScoped(sp => new Proc.Infrastructure.Operations.ReleaseGitHubHttp(
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient(Proc.Infrastructure.Operations.ReleaseService.GitHubClient)));
 // Bỏ phần "+<mã commit>" mà SDK tự gắn vào InformationalVersion, chỉ giữ số phiên bản.
 var version = (typeof(Program).Assembly
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
@@ -297,6 +313,7 @@ app.MapContractEndpoints();
 app.MapAdministrationEndpoints();
 app.MapLogEndpoints();
 app.MapOperationsEndpoints();
+app.MapReleaseEndpoints();
 app.MapDocumentNumberingEndpoints();
 app.MapSystemParameterEndpoints();
 app.MapNotificationEndpoints();

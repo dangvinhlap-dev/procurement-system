@@ -160,6 +160,7 @@ Bản 0.36.0 · Lớn · GĐ2 (lần cài tay cuối).
 | Giao diện | **REL** `/he-thong/phat-hanh`: bảng môi trường + ListPage phiếu + DocumentForm (tab Mục kiểm thử, Lỗi phát hiện, Lịch sử cài, Đính kèm); chỉ hoạt động khi `App:Environment=Prod` |
 | CSDL | Migration `V0_36_0_TrungTamPhatHanh` |
 | Test | Domain: máy trạng thái, khóa phiếu, chọn mức quay về · tích hợp: nhận gói (nguồn giả lập từ file), sai SHA256 bị từ chối, chặn cài PROD khi chưa UAT đạt, quyền, tương thích API v1 · bộ thực thi `-DryRun` · e2e `release-center.spec.ts` · diễn tập D3, D4 |
+| **Đã làm 15/11/2026** | Khác kế hoạch (design.md 21.17): quyền `System.OpsRelease.*`; 0.36.0 gộp cả QT5–QT7 (người dùng "chờ có trung tâm phát hành"); sao lưu trước cài bằng `pg_dump` + đọc lại (không Full); chế độ một môi trường khi chưa khai TEST; REL ghi được trên PROD và DEV, TEST chỉ xem; `rollback.json` lấy từ `db\scripts\rollback\<bản>.json`; chưa có thông báo người dùng trước giờ cài, khóa trạng thái, bảng ba môi trường trên SYS. Test domain 6, tích hợp 4 (`ReleaseTests` – gói giả, GitHub giả, bộ thực thi giả), e2e `release.spec.ts`. Bộ thực thi 1.2.0 chưa chạy thật trên IIS – diễn tập D3, D4 |
 | Tài liệu | Viết lại `docs/phat-hanh.md`, CLAUDE.md mục 8, deploy-windows.md (cài bộ thực thi, khai môi trường) – **trình người dùng trước khi đổi quy tắc** |
 
 ### QT9 – Làm mới TEST từ PROD (nguyên trạng) và nút báo lỗi trên TEST
@@ -179,9 +180,7 @@ Bản 0.37.0 · Vừa · GĐ4 (cài qua trung tâm).
 | 0.31.0 | K3 – gỡ phân hệ kho (đã merge) | – | Như hiện nay |
 | 0.32.0 | QT1 + QT2 | GĐ1 | Cài tay; đặt `App:Environment`, `Email:RedirectAllTo` (TEST) |
 | 0.33.0 | QT3a + QT3b + QT4 | GĐ1 | Cài tay; `qt-enable-wal.ps1` + khởi động lại PostgreSQL; tắt lịch sao lưu cũ; diễn tập D1 |
-| 0.34.0 | QT5 + QT6 | GĐ2 | Cài tay; cài bộ thực thi trên TEST (thử `Ping`); diễn tập D2 |
-| 0.35.0 | QT7 | GĐ2 | Cài tay; đặt dải IP quản trị, chính sách mật khẩu (TEST giống PROD – 21.3a) |
-| 0.36.0 | QT8 | GĐ2 | **Lần cài tay cuối**; bộ thực thi PROD; khai môi trường + khóa ở REL; "Lệnh thử"; diễn tập D3, D4 |
+| 0.36.0 | QT5 + QT6 + QT7 + QT8 (không phát hành riêng 0.34.0, 0.35.0 – người dùng chốt 15/11/2026) | GĐ2 | **Lần cài tay cuối**; cài bộ thực thi 1.2.0 trên TEST, PROD (thử `Ping`); đặt CFG (dải IP, mật khẩu ≥ 10); khai môi trường + khóa ở AGT; diễn tập D2, D3, D4 |
 | 0.36.1 | Bản vá kiểm chứng | GĐ3 | **Lần đầu qua trung tâm phát hành**, có người theo dõi |
 | 0.37.0 | QT9 | GĐ4 | Qua trung tâm phát hành |
 

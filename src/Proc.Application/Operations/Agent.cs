@@ -133,7 +133,8 @@ public sealed record AgentWorkDto(
 /// <param name="Succeeded">Chạy được.</param>
 /// <param name="Message">Kết quả / lỗi tóm tắt.</param>
 /// <param name="Journal">Nhật ký chi tiết.</param>
-public sealed record AgentResultRequest(bool Succeeded, string? Message, string? Journal);
+/// <param name="InstalledSha256">Lệnh cài bản phát hành (lát QT8): SHA256 gói đã cài – máy chủ so với phiếu. Trường thêm sau (API v1 chỉ thêm).</param>
+public sealed record AgentResultRequest(bool Succeeded, string? Message, string? Journal, string? InstalledSha256 = null);
 
 /// <summary>Chữ hiển thị và đèn của lệnh bộ thực thi.</summary>
 public static class AgentLabels
@@ -148,6 +149,8 @@ public static class AgentLabels
         AgentCommandKind.DiscardPointInTime => "Bỏ bản khôi phục theo mốc",
         AgentCommandKind.SwapDatabase => "Hoán đổi CSDL",
         AgentCommandKind.SwapCluster => "Hoán đổi máy chủ CSDL",
+        AgentCommandKind.DeployRelease => "Cài bản phát hành",
+        AgentCommandKind.RollbackRelease => "Quay về bản cũ",
         _ => kind.ToString(),
     };
 

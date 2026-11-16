@@ -270,6 +270,7 @@ public sealed class AgentGateway : IAgentGateway
     private readonly IOperationLog _operationLog;
     private readonly AgentOptions _options;
     private readonly IRestoreAgentHooks _restore;
+    private readonly IReleaseAgentHooks _release;
 
     /// <summary>Tạo cổng.</summary>
     /// <param name="db">CSDL.</param>
@@ -277,9 +278,12 @@ public sealed class AgentGateway : IAgentGateway
     /// <param name="operationLog">Nhật ký vận hành.</param>
     /// <param name="options">Cấu hình bộ thực thi.</param>
     /// <param name="restore">Cập nhật lần phục hồi theo lệnh bộ thực thi (lát QT6).</param>
-    public AgentGateway(ProcDbContext db, IClock clock, IOperationLog operationLog, IOptions<AgentOptions> options, IRestoreAgentHooks restore)
+    /// <param name="release">Cập nhật lần cài bản phát hành theo lệnh bộ thực thi (lát QT8).</param>
+    public AgentGateway(ProcDbContext db, IClock clock, IOperationLog operationLog, IOptions<AgentOptions> options, IRestoreAgentHooks restore,
+        IReleaseAgentHooks release)
     {
         _restore = restore;
+        _release = release;
         _db = db;
         _clock = clock;
         _operationLog = operationLog;
@@ -376,6 +380,8 @@ public sealed class AgentGateway : IAgentGateway
         await LogFinishedAsync(env.Code, cmd, cmd.ResultMessage ?? "", cancellationToken);
         // Lệnh của lần phục hồi (QT6): cập nhật lần phục hồi theo kết quả (sẵn sàng kiểm tra, đã hoán đổi, lỗi…).
         await _restore.OnCommandFinishedAsync(cmd.Id, cancellationToken);
+        // Lệnh cài / quay về bản phát hành (QT8): cập nhật lần cài, chuyển bước phiếu.
+        await _release.OnCommandFinishedAsync(cmd.Id, result.InstalledSha256, cancellationToken);
     }
 
     /// <inheritdoc />

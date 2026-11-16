@@ -242,6 +242,16 @@ public enum AgentCommandKind
     /// cũ, đưa thư mục khôi phục vào chỗ đó, chạy lại PostgreSQL và site, kiểm tra.
     /// </summary>
     SwapCluster = 4,
+
+    /// <summary>
+    /// Cài bản phát hành (lát QT8 – design.md 21.6 bước 2, 4): tải gói qua API bộ thực thi, kiểm SHA256, sao lưu CSDL (pg_dump + kiểm tra),
+    /// <c>app_offline.htm</c>, cất thư mục ứng dụng vào <c>releases\&lt;bản cũ&gt;</c>, giải nén (giữ appsettings.Production.json), chạy script CSDL
+    /// mới hơn bản đang chạy, chờ <c>/health</c> đúng phiên bản + kiểm thử nhanh; lỗi thì tự trả gói cũ + CSDL vừa sao lưu (mức 3).
+    /// </summary>
+    DeployRelease = 5,
+
+    /// <summary>Quay về bản cũ (lát QT8 – design.md 21.6a): cài lại gói cất ở <c>releases\&lt;bản&gt;</c> theo mức 1 / 2 / 3.</summary>
+    RollbackRelease = 6,
 }
 
 /// <summary>Trạng thái lệnh bộ thực thi.</summary>

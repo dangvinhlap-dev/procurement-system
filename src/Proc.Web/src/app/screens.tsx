@@ -11,6 +11,7 @@ import {
   CalendarOutlined,
   CheckSquareOutlined,
   CloudServerOutlined,
+  CloudUploadOutlined,
   DatabaseOutlined,
   ApiOutlined,
   ClusterOutlined,
@@ -220,6 +221,8 @@ export const screens: Screen[] = [
   { code: 'BAK', title: 'Sao lưu', navLabel: 'Sao lưu', path: '/he-thong/sao-luu', icon: <CloudServerOutlined />, group: 'admin', permission: Permission.BackupView },
   { code: 'RST', title: 'Phục hồi', navLabel: 'Phục hồi', path: '/he-thong/phuc-hoi', icon: <RollbackOutlined />, group: 'admin', permission: Permission.RestoreView },
   { code: 'DBM', title: 'Bảo trì CSDL', navLabel: 'Bảo trì CSDL', path: '/he-thong/bao-tri-csdl', icon: <DatabaseOutlined />, group: 'admin', permission: Permission.MaintenanceView },
+  { code: 'REL', title: 'Trung tâm phát hành', navLabel: 'Trung tâm phát hành', path: '/he-thong/phat-hanh', icon: <CloudUploadOutlined />, group: 'admin',
+    anyPermission: [Permission.OpsView, Permission.ReleaseManage] },
   { code: 'CFG', title: 'Cấu hình truy cập', navLabel: 'Cấu hình truy cập', path: '/he-thong/cau-hinh-truy-cap', icon: <LockOutlined />, group: 'admin', permission: Permission.OpsView },
   { code: 'AGT', title: 'Bộ thực thi', navLabel: 'Bộ thực thi', path: '/he-thong/bo-thuc-thi', icon: <ApiOutlined />, group: 'admin', permission: Permission.AgentView },
 ]

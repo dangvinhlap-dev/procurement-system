@@ -130,6 +130,18 @@ public static class OperationKinds
 
     /// <summary>Gọi chức năng vận hành từ IP ngoài dải cho phép (lát QT7).</summary>
     public const string OpsIpDenied = "OpsIpDenied";
+
+    /// <summary>Nhận gói phát hành (lát QT8).</summary>
+    public const string ReleaseReceived = "ReleaseReceived";
+
+    /// <summary>Bước của phiếu phát hành: xác nhận UAT, đóng, hủy (lát QT8).</summary>
+    public const string ReleaseStepChanged = "ReleaseStepChanged";
+
+    /// <summary>Giao lệnh cài / quay về bản phát hành (lát QT8 – Q6).</summary>
+    public const string ReleaseInstallQueued = "ReleaseInstallQueued";
+
+    /// <summary>Lần cài / quay về kết thúc (lát QT8).</summary>
+    public const string ReleaseInstallFinished = "ReleaseInstallFinished";
 }
 
 /// <summary>

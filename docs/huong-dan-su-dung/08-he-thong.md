@@ -178,7 +178,7 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
   khôi phục – mục 8.9b). Màn hình **Bộ thực thi**: tab **Môi trường** (đèn xanh "Đang liên lạc", vàng "Mất liên lạc"), **Khai môi trường…**,
   **Tạo khóa…** (nhập lại mật khẩu, gõ "TẠO KHÓA"; khóa chỉ hiện một lần – đưa cho người cài trên máy đó), **Lệnh thử** (kiểm tra bộ thực thi chạy
   được); tab **Lệnh**: lịch sử lệnh, bấm đúp xem nhật ký, **Hủy lệnh** còn chờ. Cách cài: docs/deploy-windows.md mục 4d.
-- **Chế độ bảo trì** (màn hình **Cấu hình truy cập**, tab **Bảo trì** – nút **Bật chế độ bảo trì…**; trước bản 0.35.0 ở Tổng quan hệ thống): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
+- **Chế độ bảo trì** (màn hình **Cấu hình truy cập**, tab **Bảo trì** – nút **Bật chế độ bảo trì…**; trước bản 0.36.0 ở Tổng quan hệ thống): trong lúc cài đặt / khôi phục, mọi người dùng (kể cả NCC trên
   Portal) thấy dải đỏ "ĐANG BẢO TRÌ" và câu thông báo, không thao tác được; người có quyền quản trị vận hành vẫn làm việc. Bắt buộc ghi lý do;
   xong việc bấm **Tắt chế độ bảo trì…**.
 
@@ -206,6 +206,19 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
   Phiên của bạn được giữ.
 - Đổi mật khẩu (menu người dùng) hoặc quản trị đặt lại mật khẩu: các phiên khác của người đó tự đăng xuất.
 - Tab **Bảo mật**: các lớp bảo vệ của máy chủ (chỉ xem). Tab **Bảo trì**: bật / tắt chế độ bảo trì (mục 8.9a).
+
+## 8.9d Trung tâm phát hành (REL)
+
+- Màn hình **Quản trị hệ thống → Trung tâm phát hành** (máy PROD; máy TEST chỉ xem). Mỗi phiên bản phần mềm là một **phiếu phát hành**: **Nhận gói
+  tải lên…** (file procurement-x.y.z.zip, dán SHA256 nếu có) hoặc **Nhận từ GitHub…** (gõ phiên bản).
+- Mở phiếu: tab **Mục kiểm thử** (mỗi dòng thay đổi của bản một mục) – chọn dòng, bấm **Đạt** / **Không đạt…** (ghi lỗi gì, ở đâu); tab **Lỗi phát
+  hiện** – **Thêm lỗi…**; tab **CHANGELOG**, **Đính kèm** (biên bản UAT, ảnh màn hình).
+- Các bước: **Cài TEST…** → người dùng kiểm thử trên máy TEST → **Xác nhận UAT đạt…** → **Cài PROD…** → theo dõi Nhật ký lỗi → **Đóng phiếu**. Cài
+  TEST / PROD và **Quay về bản cũ…** phải nhập lại mật khẩu, lý do, gõ "CÀI x.y.z" / "QUAY VỀ". Bộ thực thi trên máy đó sao lưu, cài, kiểm tra;
+  cài lỗi thì tự trả bản cũ. Kết quả ở tab **Lịch sử cài** (trang tự làm mới khi đang chờ).
+- **Quay về bản cũ**: mức 1 chỉ trả phần mềm (giữ dữ liệu); mức 2 gỡ cấu trúc mới (mất dữ liệu ở phần bị gỡ); mức 3 khôi phục CSDL trước lần cài
+  (mất dữ liệu nhập sau đó). Chỉ chọn được từ mức tối thiểu của gói trở lên.
+- Phiếu đã cài PROD bị khóa – chỉ thêm ghi chú, lỗi.
 
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 

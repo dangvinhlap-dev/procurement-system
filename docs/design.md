@@ -640,11 +640,11 @@ dùng nhập thì thấy ai tạo, ai sửa, ai xóa giá trị, lúc nào, giá
 | Quy tắc | Giá trị |
 | --- | --- |
 | Cách đăng nhập | ASP.NET Core Identity (bảng `User`, `UserClaim`, `UserLogin`, `UserToken`) + JWT; chưa bật 2FA, có sẵn chỗ bật sau |
-| Mật khẩu | Có chữ thường và chữ số; độ dài tối thiểu, chặn mật khẩu phổ biến và danh sách cấm thêm theo **cấu hình truy cập CFG** (từ 0.35.0, mặc định 8 ký tự – TEST, PROD đặt 10; mục 21.16) |
-| Sai mật khẩu nhiều lần | Sai mật khẩu 5 lần liên tiếp thì **chờ 10 phút** mới đăng nhập lại được; trong 10 phút đó mật khẩu đúng cũng không vào được. **Không khóa hẳn tài khoản** – hết 10 phút tự đăng nhập được, không cần quản trị mở (quản trị đặt lại mật khẩu thì vào được ngay). Người dùng chốt 15/11/2026 (trước đó 15 phút). Ô nhập lại mật khẩu xác nhận việc nguy hiểm Q6 (mục 21.1) cùng quy tắc: sai 5 lần trong 10 phút thì chờ 10 phút, nhưng không ảnh hưởng đăng nhập. Portal NCC giữ cấu hình riêng `Portal:LockoutMinutes`. Từ 0.35.0 số lần, số phút đổi được trên CFG (mặc định vẫn 5 lần, 10 phút – mục 21.16) |
+| Mật khẩu | Có chữ thường và chữ số; độ dài tối thiểu, chặn mật khẩu phổ biến và danh sách cấm thêm theo **cấu hình truy cập CFG** (từ 0.36.0, mặc định 8 ký tự – TEST, PROD đặt 10; mục 21.16) |
+| Sai mật khẩu nhiều lần | Sai mật khẩu 5 lần liên tiếp thì **chờ 10 phút** mới đăng nhập lại được; trong 10 phút đó mật khẩu đúng cũng không vào được. **Không khóa hẳn tài khoản** – hết 10 phút tự đăng nhập được, không cần quản trị mở (quản trị đặt lại mật khẩu thì vào được ngay). Người dùng chốt 15/11/2026 (trước đó 15 phút). Ô nhập lại mật khẩu xác nhận việc nguy hiểm Q6 (mục 21.1) cùng quy tắc: sai 5 lần trong 10 phút thì chờ 10 phút, nhưng không ảnh hưởng đăng nhập. Portal NCC giữ cấu hình riêng `Portal:LockoutMinutes`. Từ 0.36.0 số lần, số phút đổi được trên CFG (mặc định vẫn 5 lần, 10 phút – mục 21.16) |
 | Thông báo khi sai | Sai tên hay sai mật khẩu đều báo cùng một câu, để không dò được tài khoản nào tồn tại |
-| Thời hạn phiên | Token 8 giờ (một ngày làm việc – đổi trên CFG từ 0.35.0); phiên lưu trong tab trình duyệt, đóng trình duyệt là phải đăng nhập lại. Đổi / đặt lại mật khẩu, "Đăng xuất tất cả" làm token cũ hết hiệu lực ngay (mục 21.16) |
-| Nội dung token | Chỉ chứa định danh người dùng (từ 0.35.0 kèm mã bảo mật của tài khoản để thu hồi phiên); công ty và vai trò đọc từ CSDL mỗi lần, nên quản trị gỡ quyền hay ngừng tài khoản là có hiệu lực ngay |
+| Thời hạn phiên | Token 8 giờ (một ngày làm việc – đổi trên CFG từ 0.36.0); phiên lưu trong tab trình duyệt, đóng trình duyệt là phải đăng nhập lại. Đổi / đặt lại mật khẩu, "Đăng xuất tất cả" làm token cũ hết hiệu lực ngay (mục 21.16) |
+| Nội dung token | Chỉ chứa định danh người dùng (từ 0.36.0 kèm mã bảo mật của tài khoản để thu hồi phiên); công ty và vai trò đọc từ CSDL mỗi lần, nên quản trị gỡ quyền hay ngừng tài khoản là có hiệu lực ngay |
 | Công ty làm việc | Chỉ chọn được công ty có ít nhất một dòng `UserCompanyRole` với công ty và vai trò đang hoạt động; tổng công ty đứng đầu danh sách |
 | Tài khoản đầu tiên | Tạo từ cấu hình `Seed` khi khởi động: dev/test tạo sẵn `admin` và 4 công ty mẫu; server thật đặt mật khẩu qua biến môi trường rồi đổi ngay sau lần đăng nhập đầu |
 
@@ -3037,7 +3037,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | RST | Phục hồi | Chọn **mốc thời gian** → hệ thống tìm chuỗi Full → Diff → WAL → bộ thực thi khôi phục ra máy chủ CSDL tạm → kiểm tra → hoán đổi (N2); hoặc khôi phục `pg_dump` sang CSDL riêng; đã làm lát QT6 – mục 21.15 |
 | DBM | Bảo trì CSDL | Dung lượng từng bảng; VACUUM ANALYZE, REINDEX CONCURRENTLY; phiên đang chạy, khóa đang chờ, ngắt phiên treo; lịch bảo trì hằng tuần |
 | CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào); đã làm lát QT7 – mục 21.16 |
-| REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6) |
+| REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6); đã làm lát QT8 – mục 21.17 |
 | AGT | Bộ thực thi (lát QT5) | Môi trường DEV / TEST / PROD có bộ thực thi: tình trạng liên lạc, phiên bản, khóa (tạo khóa xác nhận Q6); lịch sử lệnh, "Lệnh thử"; QT8 dùng bảng môi trường này cho REL – mục 21.14 |
 | TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới |
 
@@ -3114,7 +3114,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | QT5 | Bộ thực thi (Windows trước) + chế độ bảo trì |
 | QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
 | QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) – **xong 15/11/2026** (mục 21.16) |
-| QT8 | Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
+| QT8 | **Xong 15/11/2026** (mục 21.17) – Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
 | QT9 | Làm mới TEST từ PROD (nguyên trạng + đính kèm, không làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
 
 ### 21.8 Đưa chính module QT vào vận hành (14/11/2026)
@@ -3373,7 +3373,7 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - **Thu hồi phiên**: JWT thêm claim `sstamp` = SecurityStamp của tài khoản; `UserScopeLoader` so mã (đọc cùng truy vấn IsActive – không thêm lượt
   đọc CSDL) và so `iat` với mốc **"Đăng xuất tất cả"** (`SessionsRevokedAt`, tròn giây). Sai thì 401 "Phiên đăng nhập đã hết hiệu lực…" → giao diện
   về màn hình đăng nhập. Đổi mật khẩu (Identity tự đổi mã), quản trị đặt lại mật khẩu → mọi phiên của người đó hết hiệu lực; người tự đổi nhận token
-  mới (`POST /api/auth/change-password` trả `LoginResult` – 200 thay 204). Ngừng dùng tài khoản đã chặn từ trước (IsActive). Token cấp trước 0.35.0
+  mới (`POST /api/auth/change-password` trả `LoginResult` – 200 thay 204). Ngừng dùng tài khoản đã chặn từ trước (IsActive). Token cấp trước 0.36.0
   không có `sstamp` → đăng nhập lại một lần sau khi nâng cấp.
 - **Đăng xuất tất cả** (việc nguy hiểm Q6: lý do + mật khẩu + gõ "ĐĂNG XUẤT TẤT CẢ"): mọi token cấp trước lúc bấm bị từ chối, kể cả phiên khác của
   người bấm; phiên đang dùng nhận token mới. Nhật ký vận hành `SessionsRevoked`.
@@ -3400,6 +3400,46 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - Khác kế hoạch: quyền `System.OpsConfig.Manage` (mẫu 3 đoạn như các quyền QT khác); mặc định độ dài mật khẩu 8 (không phải 10); giới hạn theo tên
   đăng nhập dùng khóa tạm sẵn có thay cho bộ đếm riêng; thêm cách gỡ khóa IP bằng file cấu hình (người dùng yêu cầu); SYS so cấu hình bảo mật TEST –
   PROD làm ở QT8 (cần bảng ba môi trường).
+
+### 21.17 Lát QT8 – trung tâm phát hành (REL), đã làm (15/11/2026)
+
+- **Phát hành**: người dùng chốt 15/11/2026 "chờ có trung tâm phát hành" – phần đã xong nhưng chưa phát hành (QT5, QT6 dự kiến 0.34.0; QT7 dự kiến
+  0.35.0) phát hành **cùng QT8 thành 0.36.0** (lần cài tay cuối – GĐ2, mục 21.8).
+- **Phiếu** `ReleaseTicket` (migration `V0_36_0_TrungTamPhatHanh`, [Auditable]; bảng con `ReleaseTestItem`, `ReleaseDefect` [Auditable],
+  `ReleaseInstall`): phiên bản (không trùng giữa phiếu chưa hủy), gói (tên, dung lượng, **SHA256**), nguồn (Tải lên / GitHub Release), CHANGELOG
+  của bản, thay đổi CSDL, **mức quay về tối thiểu** (`rollback.json`), rủi ro, cách quay lại, ghi chú, UAT (người, giờ, ý kiến, "không qua TEST").
+  Trạng thái Đã nhận → Đang UAT → UAT đạt → Đã cài PROD → Đã đóng, cộng Đã hủy, Đã quay về. **Khóa từ Đã cài PROD**: không sửa, không đính kèm,
+  không ghi kiểm thử, không hủy; vẫn thêm ghi chú (nối kèm người, giờ), thêm lỗi, đóng, quay về. Không chuỗi duyệt (E3) – mỗi bước một quyền.
+- **Nhận gói**: tải lên (thân request là file zip – không multipart; tối đa `Release:MaxPackageSizeMb` = 200, web.config nới IIS 250 MB riêng đường
+  dẫn upload; người tải dán SHA256 của file `.sha256` thì so) hoặc **GitHub Release** (tag `vx.y.z`, tài sản `procurement-x.y.z.zip` + `.sha256` bắt
+  buộc; `Release:GitHubRepository`; User-Agent chung "procurement-release-center"). Gói phải có `app\Proc.Api.dll` và `rollback.json`; mục
+  `## [x.y.z]` của CHANGELOG.md → mỗi gạch đầu dòng (gộp dòng thụt nối tiếp) của nhóm thường là một **mục kiểm thử**, bỏ "Không có."; nhóm "Thay đổi
+  CSDL" / "Cách quay lại bản trước" vào ô riêng. Gói cất ở `Release:PackageRoot\<bản>\` (ngoài thư mục ứng dụng trên server).
+- **UAT**: mục kiểm thử Đạt / Không đạt (bắt buộc ý kiến) / Chưa kiểm thử; lỗi phát hiện (Mới → Đã sửa / Không sửa – ghi cách xử lý). Xác nhận UAT
+  đạt khi còn mục không đạt / chưa kiểm thử / lỗi chưa xử lý thì bắt buộc lý do. Có môi trường TEST (khai ở AGT, có khóa) thì phải cài TEST thành công
+  trước; **chưa khai TEST = chế độ một môi trường** – xác nhận từ Đã nhận (ghi "không qua TEST"; tự chọn).
+- **Cài TEST / PROD** (Q6: mật khẩu + lý do + gõ "CÀI x.y.z"; quyền `System.OpsRelease.DeployTest` / `.DeployProd` theo môi trường; PROD chỉ khi
+  UAT đạt): máy chủ ghi lệnh bộ thực thi `DeployRelease` cho môi trường đó (mỗi phiếu một lần cài chờ). Bộ thực thi 1.2.0 tải gói qua `GET
+  /api/ops/v1/agent/releases/{id}/package` (chỉ khi chính môi trường đó đang chạy lệnh cài phiếu đó), kiểm SHA256, **sao lưu `pg_dump` + đọc lại**
+  (tự chọn thay cho Full + kiểm tra: đủ cho quay về mức 3 vì đang tắt site), `app_offline.htm`, cất bản đang chạy vào `ReleasesPath\<bản cũ>`, chép
+  bản mới (giữ `appsettings.Production.json`), chạy `db-scripts\<bản>.sql` mới hơn bản đang chạy, mở site, chờ `/health` Healthy **đúng phiên bản**,
+  **kiểm thử nhanh** `GET /api/ops/v1/agent/smoke` (CSDL, PO, NCC, trung tâm phát hành đọc được – T2). Lỗi → tự trả bản cũ (+ khôi phục CSDL nếu đã
+  chạy script). Đạt → báo kết quả kèm `installedSha256`; máy chủ so với phiếu (khác → ghi lỗi, không chuyển bước); cài TEST đạt → Đang UAT, cài PROD
+  đạt → Đã cài PROD; rồi chép `tools\qt-agent.ps1` của gói cho lần chạy sau (T1). Lệnh hết hạn / hủy / quá giờ → lần cài ghi lỗi khi mở phiếu.
+- **Quay về bản cũ** (Q6 "QUAY VỀ", quyền DeployProd, phiếu Đã cài PROD / Đã đóng): chọn mức ≥ mức tối thiểu của gói (21.6a); lệnh
+  `RollbackRelease` về **bản đang chạy trước lần cài PROD** (cất ở `ReleasesPath`): mức 1 chỉ chép lại thư mục ứng dụng; mức 2 chạy
+  `db-scripts\down\<bản>.sql` của gói; mức 3 khôi phục bản sao lưu trước lần cài. Đạt → Đã quay về.
+- **Gói** (`publish.ps1`): thêm `rollback.json` (từ `db\scripts\rollback\<bản>.json`; bản có `db\scripts\<bản>.sql` mà chưa khai thì dừng đóng
+  gói; không có script CSDL thì tự ghi mức 1), `CHANGELOG.md`, `tools\qt-agent.ps1` + `qt-agent-install.ps1`, file `procurement-x.y.z.zip.sha256`.
+- **Máy ghi được**: PROD và DEV (máy lập trình thử); **TEST chỉ xem** (T4 – làm mới TEST từ PROD chép đè dữ liệu QT của TEST; tự chọn cho DEV).
+- **API, quyền**: `/api/ops/v1/releases` (overview, danh sách, phiếu – `System.Ops.View` hoặc `System.OpsRelease.Manage`; upload, github, info,
+  notes, defects/{id}, close, cancel – Manage; items, defects – Manage hoặc UatSignOff; uat-sign-off – UatSignOff; deploy – DeployTest / DeployProd;
+  rollback – DeployProd); chỉ tổng công ty, dải IP CFG. Trường enum trả dạng chữ. Nhật ký vận hành `ReleaseReceived`, `ReleaseStepChanged`,
+  `ReleaseInstallQueued`, `ReleaseInstallFinished`. Loại chủ đính kèm `ReleaseTicket`.
+- **Giao diện REL** `/he-thong/phat-hanh` (ui-style.md mục 5q).
+- Khác kế hoạch: quyền `System.OpsRelease.*` (mẫu 3 đoạn); sao lưu trước cài bằng `pg_dump` (không Full); chưa có **thông báo người dùng trước giờ cài
+  PROD** (hộp thoại nhắc báo trước – làm ở bản sau nếu cần); chưa có **khóa trạng thái** riêng và bảng ba môi trường trên SYS (dùng bảng môi trường AGT
+  trên đầu REL); "Lỗi phát hiện" gửi từ TEST và làm mới TEST là QT9. Bộ thực thi 1.2.0 **chưa chạy thật trên IIS** – diễn tập D3, D4 trên TEST.
 
 ## Nguồn tham khảo
 
