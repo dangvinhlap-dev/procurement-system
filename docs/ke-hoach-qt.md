@@ -182,8 +182,8 @@ Bản 0.37.0 · Vừa · GĐ4 (cài qua trung tâm).
 | 0.32.0 | QT1 + QT2 | GĐ1 | Cài tay; đặt `App:Environment`, `Email:RedirectAllTo` (TEST) |
 | 0.33.0 | QT3a + QT3b + QT4 | GĐ1 | Cài tay; `qt-enable-wal.ps1` + khởi động lại PostgreSQL; tắt lịch sao lưu cũ; diễn tập D1 |
 | 0.36.0 | QT5 + QT6 + QT7 + QT8 (không phát hành riêng 0.34.0, 0.35.0 – người dùng chốt 15/11/2026) | GĐ2 | **Lần cài tay cuối**; cài bộ thực thi 1.2.0 trên TEST, PROD (thử `Ping`); đặt CFG (dải IP, mật khẩu ≥ 10); khai môi trường + khóa ở AGT; diễn tập D2, D3, D4 |
-| 0.36.1 | Bản vá kiểm chứng | GĐ3 | **Lần đầu qua trung tâm phát hành**, có người theo dõi |
-| 0.37.0 | QT9 | GĐ4 | Qua trung tâm phát hành |
+| 0.36.1 | (không phát hành – 16/11/2026 phát hành thẳng 0.37.0) | – | – |
+| 0.37.0 | QT9 | GĐ3 | **Lần đầu qua trung tâm phát hành**, có người theo dõi |
 
 Hiện chưa có máy TEST / PROD thật (bản test 5007 trên máy lập trình, dữ liệu thử). Code không phụ thuộc số máy; chưa đủ ba máy thì cài như
 hiện nay lên 5007 và diễn tập trên đó. Phát hành chỉ khi người dùng yêu cầu (docs/phat-hanh.md).

@@ -3,6 +3,43 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.37.0] - 2026-11-16
+
+**Làm mới TEST từ PROD** và **báo lỗi từ TEST** (QT9). Bản đầu tiên đưa lên TEST / PROD qua trung tâm phát hành REL (không có bản vá 0.36.1).
+
+### Thêm mới
+- **TST – Làm mới TEST** (Quản trị hệ thống → Làm mới TEST, trên PROD): tab Tình trạng liệt kê điều kiện (TEST cùng phiên bản PROD, có bản pg_dump
+  PROD, bộ thực thi TEST đang liên lạc, có khóa dịch vụ) và điều còn chặn; **Làm mới TEST…** (lý do, mật khẩu, gõ "LÀM MỚI TEST") → bộ thực thi TEST
+  nạp dữ liệu PROD, giữ lịch sử vận hành của TEST (sao lưu, bộ thực thi, bảo trì, phục hồi, nhật ký vận hành, nhật ký lỗi), chép thêm file đính kèm,
+  thư chờ gửi không đi, mọi phiên TEST phải đăng nhập lại; giữ một bản CSDL TEST trước lần làm mới. Tab Lịch sử xem các lần làm mới (90 ngày).
+- Nút **Báo lỗi / góp ý** trên thanh trên của máy **TEST**: tiêu đề, mô tả, màn hình điền sẵn, ảnh dán Ctrl+V hoặc chọn file (PNG / JPG ≤ 2 MB) →
+  lỗi vào phiếu phát hành cùng phiên bản trên PROD (tab Lỗi phát hiện, ảnh ở tab Đính kèm).
+- REL: **Quay về bản cũ trên TEST…** cho phiếu Đang UAT / UAT đạt mà TEST đang chạy bản của phiếu – TEST chạy lại bản trước, phiếu trở lại **Đã
+  nhận** (bỏ xác nhận UAT).
+- AGT: **Tạo khóa dịch vụ…** (lý do, mật khẩu, gõ chữ xác nhận, khóa hiện một lần) và cột "Khóa dịch vụ" – khóa riêng cho máy TEST gửi báo lỗi.
+- Bộ thực thi **1.3.0** (`tools\qt-agent.ps1`): lệnh làm mới TEST; `qt-agent-install.ps1` thêm `-AttachmentsPath`, `-AppDbUser`.
+- Quyền mới `System.OpsTestRefresh.Run` (ADMIN tự có).
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- REL: tab **Đính kèm** của phiếu phát hành không tải file lên được – nay tải lên, tải xuống được như phiếu khác.
+
+### Thay đổi CSDL
+- 1 migration (113 → 114), script `db/scripts/0.37.0.sql` (idempotent): `V0_37_0_LamMoiTest` – **chỉ thêm 4 cột cho phép trống** vào
+  AgentEnvironment (khóa dịch vụ) và một chỉ mục.
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); REL hỏng thì cài tay theo `docs/deploy-windows.md` mục 5.
+- Sau khi cài làm một lần theo mục **4h**: chạy lại `qt-agent-install.ps1` trên TEST với `-AttachmentsPath -AppDbUser`; trên PROD AGT tạo khóa dịch vụ
+  cho môi trường Test; trên TEST khai `Operations:Upstream:BaseUrl` + `ServiceKey` rồi khởi động lại site; gán `System.OpsTestRefresh.Run`.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 1** (`rollback.json`): REL → Quay về bản cũ, hoặc thay lại gói 0.36.0, giữ CSDL – bản 0.36.0 không đọc các cột mới. Dữ liệu nhập sau
+  khi nâng còn nguyên; khóa dịch vụ đã tạo bị bỏ qua.
+
 ## [0.36.0] - 2026-11-16
 
 Gộp các phần chưa phát hành từ sau 0.33.1 (dự kiến 0.34.0, 0.35.0, 0.36.0): **bộ thực thi và chế độ bảo trì** (QT5), **phục hồi** (QT6), **cấu hình

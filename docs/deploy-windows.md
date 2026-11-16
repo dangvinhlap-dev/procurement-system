@@ -366,7 +366,7 @@ Kiểm tra trên máy TEST:
    Tài khoản `proc-agent` cần quyền sửa thư mục website, `ReleasesPath`, `StatePath`; `proc_maint` cần quyền `pg_dump` / `pg_restore` CSDL phần mềm
    (đã cấp ở 4a, 4e). Bộ thực thi TEST hỏi máy **PROD** (`-ServerUrl` là địa chỉ PROD).
 3. AGT (trên PROD): khai môi trường **Test**, **Prod**, tạo khóa từng máy, **Lệnh thử** → cả hai "Xong". Đầu REL hiện hai môi trường "đang liên lạc".
-4. Bản vá kế tiếp (0.36.1 – GĐ3) là **lần đầu qua REL**, có người theo dõi: Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → theo dõi ERR
+4. Bản kế tiếp (0.37.0 – GĐ3; không phát hành bản vá 0.36.1 – người dùng yêu cầu phát hành bản mới nhất 16/11/2026) là **lần đầu qua REL**, có người theo dõi: Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → theo dõi ERR
    → Đóng phiếu. Hỏng ở bước nào thì cài tay bản đó (mục 5), ghi lỗi vào phiếu.
 
 Gói và quay về:
