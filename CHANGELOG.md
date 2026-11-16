@@ -3,6 +3,30 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.37.1] - 2026-11-16
+
+**Thay 0.37.0** – gồm toàn bộ QT9 của 0.37.0 (làm mới TEST từ PROD, báo lỗi từ TEST, quay về trên TEST, khóa dịch vụ) cộng bản sửa của 0.36.2.
+Cài sau **0.36.2** qua REL; không cài 0.37.0.
+
+### Thêm mới
+- Không có (chức năng QT9 xem mục 0.37.0 bên dưới – kiểm thử theo các mục đó).
+
+### Thay đổi
+- CHANGELOG trong gói ghi đúng thứ tự cài 0.36.0 → 0.36.2 → 0.37.1 (gói 0.37.0 còn câu "không có bản vá 0.36.1").
+
+### Sửa lỗi
+- REL: nhận gói có dòng CHANGELOG dài không còn báo "Có lỗi hệ thống" (như 0.36.2); lỗi phát hiện tiêu đề dài lưu được.
+
+### Thay đổi CSDL
+- Không có so với 0.37.0. So với 0.36.x: script `db/scripts/0.37.0.sql` (migration `V0_37_0_LamMoiTest`, chỉ thêm cột) – gói tự chạy.
+
+### Lưu ý khi nâng cấp
+- Từ 0.36.2: REL → Nhận gói 0.37.1 → Cài TEST → kiểm thử (gồm các mục của 0.37.0) → Cài PROD; rồi làm một lần theo `docs/deploy-windows.md` 4h.
+- Máy đang chạy 0.37.0: cài 0.37.1 đè lên, không cần làm gì thêm.
+
+### Cách quay lại bản trước
+- Mức quay về 1: REL → Quay về bản cũ (về 0.36.2) – bản 0.36.2 chạy được trên CSDL đã có cột mới của 0.37.0.
+
 ## [0.37.0] - 2026-11-16
 
 **Làm mới TEST từ PROD** và **báo lỗi từ TEST** (QT9). Cài sau bản vá kiểm chứng **0.36.1** (bản đầu tiên qua REL), cũng qua

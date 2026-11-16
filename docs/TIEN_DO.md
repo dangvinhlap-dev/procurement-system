@@ -999,7 +999,15 @@ Merge nhánh vào `main` (giữ `<Version>` 0.37.0, CHANGELOG thêm mục 0.36.1
 0.36.0) → **0.36.1** (`/health` Healthy 0.36.1, PID 28628 trong `pid.txt`). Thư mục: `app` = 0.36.1, `app-0.36.0`, `app-0.37.0` (bản 0.37.0 có
 `appsettings.Production.json`), gói `goi\0.36.0`, `goi\0.36.1`, `goi\0.37.0`. **Dừng ở 0.36.1 chờ người dùng kiểm thử** (REL → phiếu → tab Đính kèm tải
 file lên được); lên 0.37.0: dừng PID trong `pid.txt`, đổi `app` → `app-0.36.1`, `app-0.37.0` → `app`, chạy lại `app\Proc.Api.exe --urls
-http://0.0.0.0:5007`. 0.37.1 (gói sạch câu CHANGELOG) chưa làm – chỉ khi người dùng yêu cầu.
+http://0.0.0.0:5007`.
+**Lỗi khi người dùng thử trên 5007 (ERR-M7FMPRY7)**: "Nhận gói tải lên" gói 0.37.0 trên 0.36.1 → 500, `22001 value too long for varchar(256)` – mục
+kiểm thử [Auditable] có `LabelProperty = Content` (tới 2.000 ký tự) mà `AuditLog.EntityLabel` 256; CHANGELOG 0.36.0 / 0.37.0 có dòng > 256 (gói thử
+trong test ngắn nên không bắt được). Người dùng: "bạn tự quyết … hệ thống test, không quan trọng". Quyết định: **0.36.2** (nhánh từ `v0.36.1`):
+`AuditLogInterceptor.LabelOf` cắt nhãn 255 ký tự + "…" (chung mọi entity; `AuditLog.EntityLabelMaxLength`), test `NhanGoi_MucKiemThuDai_LoiPhatHienDai`
+(đỏ trước khi sửa) + `NhanGoi_ChangelogThatCuaRepo` (gói dùng CHANGELOG thật của repo, bản trên cùng); CHANGELOG 0.36.2 giữ mọi dòng < 160 ký tự để
+máy 0.36.0 / 0.36.1 (còn lỗi) nhận được. Release …/tag/v0.36.2. Merge `main` (808/808) → **0.37.1** = 0.37.0 + sửa 0.36.2, thay 0.37.0
+(`db/scripts/rollback/0.37.1.json` mức 1, gói chạy `0.37.0.sql` khi từ 0.36.x). **Thứ tự cài: 0.36.0 (tay) → 0.36.2 (REL) → 0.37.1 (REL)**; deploy-windows
+4g, 4h, ke-hoach-qt sửa theo.
 Script chạy thử trên `procurement_test` (đã có migration – kiểm cú pháp khối DO), không lỗi. `rollback.json` khai ở `db/scripts/rollback/`.
 Release: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.0, …/tag/v0.37.0 (zip + `.sha256`). Đóng gói: `npm ci` EPERM (Vite cũ
 PID 1568 / 5876 từ 12/11 giữ `rolldown-binding.node`) đã xóa dở node_modules → `npm install` bù, `publish.ps1 -NoInstall` chạy qua `powershell.exe -File`

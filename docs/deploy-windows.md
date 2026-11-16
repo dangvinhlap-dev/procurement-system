@@ -366,7 +366,7 @@ Kiểm tra trên máy TEST:
    Tài khoản `proc-agent` cần quyền sửa thư mục website, `ReleasesPath`, `StatePath`; `proc_maint` cần quyền `pg_dump` / `pg_restore` CSDL phần mềm
    (đã cấp ở 4a, 4e). Bộ thực thi TEST hỏi máy **PROD** (`-ServerUrl` là địa chỉ PROD).
 3. AGT (trên PROD): khai môi trường **Test**, **Prod**, tạo khóa từng máy, **Lệnh thử** → cả hai "Xong". Đầu REL hiện hai môi trường "đang liên lạc".
-4. Bản vá kế tiếp (0.36.1 – GĐ3, sửa đính kèm phiếu phát hành) là **lần đầu qua REL** – cài 0.36.1 xong mới cài 0.37.0, có người theo dõi: Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → theo dõi ERR
+4. Bản vá kế tiếp (**0.36.2** – GĐ3; 0.36.1 không nhận được gói 0.37.x vì lỗi CHANGELOG dài) là **lần đầu qua REL** – cài 0.36.2 xong mới cài **0.37.1** (bỏ qua 0.37.0), có người theo dõi: Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → theo dõi ERR
    → Đóng phiếu. Hỏng ở bước nào thì cài tay bản đó (mục 5), ghi lỗi vào phiếu.
 
 Gói và quay về:
@@ -383,7 +383,7 @@ Kiểm tra trên máy TEST (diễn tập D3, D4 – ke-hoach-qt.md mục 5):
 
 ## 4h. Làm mới TEST từ PROD, báo lỗi từ TEST (từ 0.37.0 – lát QT9)
 
-Cài bản 0.37.0 qua REL như mọi bản (mục 4g); sau đó làm một lần:
+Cài bản 0.37.1 qua REL như mọi bản (mục 4g; không cài 0.37.0 – xem mục 4g bước 4); sau đó làm một lần:
 
 1. **Bộ thực thi TEST 1.3.0**: tự cập nhật khi cài 0.37.0 qua REL (T1). Chạy lại `qt-agent-install.ps1` trên **TEST** để thêm cấu hình làm mới:
    ```powershell
