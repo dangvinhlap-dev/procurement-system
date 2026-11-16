@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Proc.Application.Documents;
 using Proc.Application.Operations;
 using Proc.Domain.Operations;
 using Proc.Infrastructure.Operations;
@@ -159,6 +160,16 @@ public class ReleaseTests
         Assert.Contains("Đã có phiếu", await FailAsync(await UploadAsync(head, zip, "procurement-9.1.0.zip"), HttpStatusCode.BadRequest));
         var list = await ReadAsync<List<ReleaseListItemDto>>(await head.GetAsync(RelPath, Ct));
         Assert.Contains(list, r => r.Id == ticket.Id && r.TotalItems == 2 && r.StatusLabel == "Đã nhận");
+
+        // Bản vá 0.36.1: phiếu chưa khóa phải đính kèm được (trước đó "ReleaseTicket" thiếu trong AttachmentOwnerTypes.All).
+        using (var form = new MultipartFormDataContent
+               {
+                   { new StringContent("ReleaseTicket"), "ownerType" }, { new StringContent(ticket.Id.ToString()), "ownerId" },
+                   { new ByteArrayContent("bien ban UAT"u8.ToArray()), "file", "bien-ban.txt" },
+               })
+            Assert.Equal(HttpStatusCode.OK, (await head.PostAsync("/api/attachments", form, Ct)).StatusCode);
+        var files = await ReadAsync<List<AttachmentDto>>(await head.GetAsync($"/api/attachments?ownerType=ReleaseTicket&ownerId={ticket.Id}", Ct));
+        Assert.Equal("bien-ban.txt", files.Single().FileName);
     }
 
     /// <summary>GitHub Release giả: lấy zip + .sha256 của tag; bản chưa có trên GitHub báo rõ.</summary>
