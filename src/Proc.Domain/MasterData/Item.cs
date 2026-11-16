@@ -97,30 +97,6 @@ public sealed class Item : AuditableEntity, IVersioned
     /// <summary>Thông số kỹ thuật.</summary>
     public string? TechnicalSpecs { get; private set; }
 
-    // Thông số tồn kho cũ – ngừng dùng từ 0.38.0 (design.md mục 19.4: bỏ tab Tồn kho của mặt hàng), giữ cột tới khi xóa ở bản sau
-    // (CLAUDE.md mục 8). Không chức năng nào đọc / ghi; private để EF vẫn ánh xạ cột.
-
-    /// <summary>Quản lý theo lô (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public bool TrackLot { get; private set; }
-
-    /// <summary>Quản lý hạn dùng (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public bool TrackExpiry { get; private set; }
-
-    /// <summary>Tồn tối thiểu (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public decimal? MinStock { get; private set; }
-
-    /// <summary>Tồn tối đa (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public decimal? MaxStock { get; private set; }
-
-    /// <summary>Tồn an toàn (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public decimal? SafetyStock { get; private set; }
-
-    /// <summary>Điểm đặt hàng lại (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public decimal? ReorderPoint { get; private set; }
-
-    /// <summary>Vật tư trọng yếu (cũ) – <b>ngừng dùng từ 0.38.0</b>.</summary>
-    public bool IsCritical { get; private set; }
-
     /// <summary>Còn sử dụng.</summary>
     public bool IsActive { get; private set; } = true;
 

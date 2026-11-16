@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Proc.Application.Auth;
 using Proc.Application.Organization;
 using Proc.Domain.Organization;
+using Proc.Infrastructure.Persistence;
 
 namespace Proc.IntegrationTests;
 
@@ -231,5 +234,29 @@ public class CompanyWarehouseTests
         // Sửa được kho được gán; kho ngoài phạm vi như không tồn tại.
         await ReadAsync<WarehouseDetailDto>(await limited.PutAsJsonAsync($"/api/warehouses/{kp1.Id}", Edit(kp1) with { Keeper = "Thủ kho 1" }, Ct));
         Assert.Equal(HttpStatusCode.NotFound, (await limited.PutAsJsonAsync($"/api/warehouses/{kp2.Id}", Edit(kp2), Ct)).StatusCode);
+    }
+
+    [Fact]
+    public async Task CsdlKhongConCotKhoCu_SauBan039()
+    {
+        // Cột kho tổng / kho phụ, tồn âm và thông số tồn kho của mặt hàng ngừng dùng từ 0.38.0, xóa ở 0.39.0 (design.md 19.4, CLAUDE.md mục 8).
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ProcDbContext>();
+
+        var columns = await db.Database.SqlQuery<string>($"""
+            SELECT table_name || '.' || column_name AS "Value" FROM information_schema.columns
+            WHERE table_schema = 'public' AND (
+                (table_name = 'Warehouse' AND column_name IN ('Type', 'ParentWarehouseId', 'AllowNegativeStock'))
+                OR (table_name = 'Item' AND column_name IN ('TrackLot', 'TrackExpiry', 'MinStock', 'MaxStock', 'SafetyStock',
+                                                            'ReorderPoint', 'IsCritical')))
+            """).ToListAsync(Ct);
+        Assert.Empty(columns);
+
+        var indexes = await db.Database.SqlQuery<string>($"""
+            SELECT indexname AS "Value" FROM pg_indexes
+            WHERE schemaname = 'public' AND tablename = 'Warehouse'
+              AND indexname IN ('IX_Warehouse_CompanyId_Main', 'IX_Warehouse_ParentWarehouseId_CompanyId')
+            """).ToListAsync(Ct);
+        Assert.Empty(indexes);
     }
 }
