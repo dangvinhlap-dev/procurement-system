@@ -3,6 +3,31 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.36.2] - 2026-11-16
+
+**Bản vá kiểm chứng thay 0.36.1**: REL không nhận được gói có dòng CHANGELOG dài (gói 0.37.0 báo "Có lỗi hệ thống"). Cài bản này trước mọi bản sau.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- REL: nhận gói 0.37.x (dòng CHANGELOG dài hơn 256 ký tự) không còn báo "Có lỗi hệ thống"; phiếu tạo đủ mục kiểm thử.
+- REL: thêm lỗi phát hiện có tiêu đề dài (tới 300 ký tự) lưu được.
+- Có sẵn bản sửa của 0.36.1: tab Đính kèm của phiếu phát hành tải file lên được.
+
+### Thay đổi CSDL
+- Không có (không migration, không script mới).
+
+### Lưu ý khi nâng cấp
+- Nhận gói này trên REL (máy 0.36.0 / 0.36.1 nhận được – các dòng CHANGELOG đều ngắn) → Cài TEST → kiểm thử → Cài PROD.
+- Bỏ qua 0.37.0: sau 0.36.2 cài thẳng 0.37.1.
+
+### Cách quay lại bản trước
+- Mức quay về 1: REL → Quay về bản cũ (hoặc thay lại gói 0.36.1) – không có thay đổi CSDL.
+
 ## [0.36.1] - 2026-11-16
 
 **Bản vá kiểm chứng** (design.md 21.8 GĐ3): bản đầu tiên đưa lên TEST / PROD qua trung tâm phát hành REL, có người theo dõi từng bước. Nội dung
