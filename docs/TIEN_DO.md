@@ -1007,7 +1007,13 @@ trong test ngắn nên không bắt được). Người dùng: "bạn tự quy�
 (đỏ trước khi sửa) + `NhanGoi_ChangelogThatCuaRepo` (gói dùng CHANGELOG thật của repo, bản trên cùng); CHANGELOG 0.36.2 giữ mọi dòng < 160 ký tự để
 máy 0.36.0 / 0.36.1 (còn lỗi) nhận được. Release …/tag/v0.36.2. Merge `main` (808/808) → **0.37.1** = 0.37.0 + sửa 0.36.2, thay 0.37.0
 (`db/scripts/rollback/0.37.1.json` mức 1, gói chạy `0.37.0.sql` khi từ 0.36.x). **Thứ tự cài: 0.36.0 (tay) → 0.36.2 (REL) → 0.37.1 (REL)**; deploy-windows
-4g, 4h, ke-hoach-qt sửa theo.
+4g, 4h, ke-hoach-qt sửa theo; Release 0.36.1, 0.37.0 ghi "đã thay" ở đầu mô tả GitHub.
+**Bản test 5007**: 0.36.1 → **0.36.2** (cài tay; khai thêm `Release:PackageRoot` = `D:\project\procurement-thu-0.15.0\data\packages` – mặc định
+`data/packages` nằm trong `app`, đổi bản là mất gói) → thử bằng API như người dùng (admin, header `X-Company-Id` TCT): nhận gói 0.37.1 → phiếu "Đã nhận",
+đính kèm `artifacts\thu-dinh-kem-0.36.1.txt` HTTP 200; nhận gói **0.37.0** (dòng > 256 ký tự) → được, nhãn AuditLog cắt 256 → **0.37.1** (cài tay, CSDL đã
+114 migration, không chạy script). PID 16936 trong `pid.txt`; `/health` Healthy 0.37.1 (cả qua LAN). Thư mục `app-0.36.0`, `app-0.36.1`, `app-0.36.2`,
+`app-0.37.0`; gói `goi\0.36.0` … `goi\0.37.1`. REL trên 5007 có hai phiếu thử 0.37.0 (7 mục) và 0.37.1 (2 mục), trạng thái Đã nhận – không bấm Cài (chưa
+có bộ thực thi).
 Script chạy thử trên `procurement_test` (đã có migration – kiểm cú pháp khối DO), không lỗi. `rollback.json` khai ở `db/scripts/rollback/`.
 Release: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.0, …/tag/v0.37.0 (zip + `.sha256`). Đóng gói: `npm ci` EPERM (Vite cũ
 PID 1568 / 5876 từ 12/11 giữ `rolldown-binding.node`) đã xóa dở node_modules → `npm install` bù, `publish.ps1 -NoInstall` chạy qua `powershell.exe -File`
