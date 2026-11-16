@@ -992,7 +992,7 @@ theo" – việc đề xuất số 1). Migration `V0_38_0_BoCotThamSoKho` xóa 4
 sổ"); web `SystemParameterPage` bỏ mã chết `INTERNAL_MARKUP_PERCENT`, `RECEIPT_PO_REQUIRED`, `KPI_TARGET_SLOWMOVING`, `KPI_SLOW_MOVING_DAYS`. Test domain
 markup bỏ (class đổi tên `CompanyKpiTargetTests`). design.md 4.x bảng tham số, SEC-2, R4, 19.4 K3. **Khi phát hành**: quay về **mức 2** (bản cũ EF
 còn đọc cột) – cần `db/scripts/down/0.38.0.sql`. Kiểm tra: build 0 cảnh báo, `dotnet test` 807/807, tsc, oxlint, `npm run build`, e2e
-`system-parameters`, `kpi` qua; Playwright đủ bộ – xem dòng dưới.
+`system-parameters`, `kpi` qua; Playwright đủ bộ 160/160 (`--workers=2`). **Đã merge `main` 16/11/2026.**
 
 **Phát hành 0.36.0 và 0.37.0 (16/11/2026)** – người dùng "phát hành bản mới nhất và làm tiếp cho tôi". Theo lộ trình ke-hoach-qt: **0.36.0** (QT5–QT8,
 4 migration 109 → 113, `db/scripts/0.36.0.sql`, mức quay về 1 – **lần cài tay cuối**) tag trên `main` trước khi merge QT9; rồi merge QT9 → **0.37.0**
