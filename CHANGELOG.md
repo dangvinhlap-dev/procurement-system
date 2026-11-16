@@ -5,7 +5,8 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 
 ## [0.37.0] - 2026-11-16
 
-**Làm mới TEST từ PROD** và **báo lỗi từ TEST** (QT9). Bản đầu tiên đưa lên TEST / PROD qua trung tâm phát hành REL (không có bản vá 0.36.1).
+**Làm mới TEST từ PROD** và **báo lỗi từ TEST** (QT9). Cài sau bản vá kiểm chứng **0.36.1** (bản đầu tiên qua REL), cũng qua
+REL. Ghi chú: gói 0.37.0 đóng trước khi có 0.36.1 nên CHANGELOG trong gói còn câu "không có bản vá 0.36.1" – bỏ qua câu đó.
 
 ### Thêm mới
 - **TST – Làm mới TEST** (Quản trị hệ thống → Làm mới TEST, trên PROD): tab Tình trạng liệt kê điều kiện (TEST cùng phiên bản PROD, có bản pg_dump
@@ -24,7 +25,7 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 - Không có.
 
 ### Sửa lỗi
-- REL: tab **Đính kèm** của phiếu phát hành không tải file lên được – nay tải lên, tải xuống được như phiếu khác.
+- REL: tab **Đính kèm** của phiếu phát hành không tải file lên được – nay tải lên, tải xuống được như phiếu khác (cùng bản sửa của 0.36.1).
 
 ### Thay đổi CSDL
 - 1 migration (113 → 114), script `db/scripts/0.37.0.sql` (idempotent): `V0_37_0_LamMoiTest` – **chỉ thêm 4 cột cho phép trống** vào
@@ -39,6 +40,32 @@ Mỗi bản phát hành có Git tag `vx.y.z`.
 ### Cách quay lại bản trước
 - **Mức quay về 1** (`rollback.json`): REL → Quay về bản cũ, hoặc thay lại gói 0.36.0, giữ CSDL – bản 0.36.0 không đọc các cột mới. Dữ liệu nhập sau
   khi nâng còn nguyên; khóa dịch vụ đã tạo bị bỏ qua.
+
+## [0.36.1] - 2026-11-16
+
+**Bản vá kiểm chứng** (design.md 21.8 GĐ3): bản đầu tiên đưa lên TEST / PROD qua trung tâm phát hành REL, có người theo dõi từng bước. Nội dung
+nhỏ, ít rủi ro để thử trọn đường đi Nhận gói → Cài TEST → UAT → Cài PROD → Đóng phiếu.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- REL: tab **Đính kèm** của phiếu phát hành chưa cài PROD báo "Loại đối tượng đính kèm 'ReleaseTicket' không hợp lệ" khi tải file lên – nay tải lên,
+  tải xuống được (ví dụ biên bản UAT, ảnh lỗi); phiếu đã cài PROD vẫn khóa đính kèm như trước.
+
+### Thay đổi CSDL
+- Không có (không migration, không script mới).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** trên PROD: Nhận gói (GitHub hoặc tải lên) → Cài TEST → kiểm thử mục trên, thử thêm một file vào chính phiếu 0.36.1 → Xác nhận UAT
+  đạt → Cài PROD → theo dõi ERR → Đóng phiếu. Hỏng ở bước nào thì cài tay theo `docs/deploy-windows.md` mục 5 và ghi lỗi vào phiếu.
+- Không cần làm thêm gì trên máy chủ; người dùng mở lại trình duyệt (hoặc Ctrl+F5).
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (hoặc thay lại gói 0.36.0) – không có thay đổi CSDL.
 
 ## [0.36.0] - 2026-11-16
 

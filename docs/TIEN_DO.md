@@ -987,7 +987,14 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 **Phát hành 0.36.0 và 0.37.0 (16/11/2026)** – người dùng "phát hành bản mới nhất và làm tiếp cho tôi". Theo lộ trình ke-hoach-qt: **0.36.0** (QT5–QT8,
 4 migration 109 → 113, `db/scripts/0.36.0.sql`, mức quay về 1 – **lần cài tay cuối**) tag trên `main` trước khi merge QT9; rồi merge QT9 → **0.37.0**
-(1 migration 113 → 114, `db/scripts/0.37.0.sql`, mức 1 – **lần đầu qua REL**; không phát hành bản vá 0.36.1, đã sửa deploy-windows 4g, ke-hoach-qt).
+(1 migration 113 → 114, `db/scripts/0.37.0.sql`, mức 1).
+**Bản vá 0.36.1 (16/11/2026, sau 0.37.0)** – người dùng: "làm lại bản vá 0.36.1 trước khi cài 0.37.0" (đúng lộ trình GĐ3 – lần đầu qua REL). Nhánh
+`fix/0.36.1-dinh-kem-phieu-phat-hanh` từ tag `v0.36.0`: sửa `AttachmentOwnerTypes.All` thiếu `ReleaseTicket` (tab Đính kèm phiếu phát hành không tải
+file lên được – lỗi tìm ra ở QT9-2) + test `ReleaseTests.NhanGoi_TaiLen_KiemTraGoi` (đỏ trước khi sửa); không migration. `dotnet test` 802/802 trên
+nhánh. Tag `v0.36.1`, https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.1 (gói đóng từ mã 0.36.x – không có TST / script 0.37.0).
+Merge nhánh vào `main` (giữ `<Version>` 0.37.0, CHANGELOG thêm mục 0.36.1, câu mở 0.37.0 sửa: gói 0.37.0 đã đóng nên CHANGELOG trong gói còn câu
+"không có bản vá 0.36.1" – bỏ qua); deploy-windows 4g, ke-hoach-qt trả lại 0.36.1 là lần đầu qua REL. **Thứ tự cài trên TEST / PROD: 0.36.0 (tay) →
+0.36.1 (REL) → 0.37.0 (REL).** Bản test 5007 đã ở 0.37.0 (đã có bản sửa) – không hạ bản.
 Script chạy thử trên `procurement_test` (đã có migration – kiểm cú pháp khối DO), không lỗi. `rollback.json` khai ở `db/scripts/rollback/`.
 Release: https://github.com/dangvinhlap-dev/procurement-system/releases/tag/v0.36.0, …/tag/v0.37.0 (zip + `.sha256`). Đóng gói: `npm ci` EPERM (Vite cũ
 PID 1568 / 5876 từ 12/11 giữ `rolldown-binding.node`) đã xóa dở node_modules → `npm install` bù, `publish.ps1 -NoInstall` chạy qua `powershell.exe -File`
