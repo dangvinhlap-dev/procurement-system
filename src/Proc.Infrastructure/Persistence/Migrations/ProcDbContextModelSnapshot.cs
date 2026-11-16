@@ -2246,6 +2246,22 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateTimeOffset?>("ServiceKeyCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ServiceKeyCreatedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ServiceKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("ServiceKeyHint")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AgentKeyHash")
@@ -2254,6 +2270,10 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("ServiceKeyHash")
+                        .IsUnique()
+                        .HasFilter("\"ServiceKeyHash\" IS NOT NULL");
 
                     b.ToTable("AgentEnvironment", (string)null);
                 });

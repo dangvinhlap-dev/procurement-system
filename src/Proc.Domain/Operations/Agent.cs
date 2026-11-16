@@ -146,6 +146,21 @@ public sealed class AgentEnvironment : Entity
     /// <summary>Phiên bản phần mềm đang cài trên máy đó (bộ thực thi đọc từ file Proc.Api.dll).</summary>
     public string? AppVersion { get; private set; }
 
+    /// <summary>
+    /// Băm SHA256 (hex) của <b>khóa dịch vụ</b> (lát QT9): máy chủ của môi trường này gọi máy chủ PROD (chuyển báo lỗi từ TEST về phiếu phát hành).
+    /// Tách khỏi khóa bộ thực thi: khóa dịch vụ nằm trong cấu hình web (appsettings) – lộ thì không nhận / báo được lệnh bộ thực thi.
+    /// </summary>
+    public string? ServiceKeyHash { get; private set; }
+
+    /// <summary>4 ký tự cuối của khóa dịch vụ.</summary>
+    public string? ServiceKeyHint { get; private set; }
+
+    /// <summary>Lúc tạo khóa dịch vụ (UTC).</summary>
+    public DateTimeOffset? ServiceKeyCreatedAt { get; private set; }
+
+    /// <summary>Người tạo khóa dịch vụ.</summary>
+    public string? ServiceKeyCreatedByName { get; private set; }
+
     /// <summary>Tên máy chạy bộ thực thi.</summary>
     public string? HostName { get; private set; }
 
@@ -200,6 +215,22 @@ public sealed class AgentEnvironment : Entity
         KeyCreatedByName = LogText.Cut(byName, 256);
     }
 
+    /// <summary>Gắn khóa dịch vụ mới (lát QT9 – khóa cũ hết hiệu lực ngay).</summary>
+    /// <param name="keyHash">Băm SHA256 hex của khóa.</param>
+    /// <param name="hint">4 ký tự cuối của khóa.</param>
+    /// <param name="byName">Người tạo.</param>
+    /// <param name="now">Thời điểm (UTC).</param>
+    /// <exception cref="BusinessRuleException">Băm sai độ dài; môi trường ngừng dùng.</exception>
+    public void SetServiceKey(string keyHash, string hint, string? byName, DateTimeOffset now)
+    {
+        if (!IsActive) throw new BusinessRuleException("Môi trường đang ngừng dùng – bật lại trước khi tạo khóa.");
+        if (keyHash is not { Length: KeyHashLength }) throw new BusinessRuleException("Băm khóa không hợp lệ.");
+        ServiceKeyHash = keyHash;
+        ServiceKeyHint = LogText.Cut(hint, 8);
+        ServiceKeyCreatedAt = now;
+        ServiceKeyCreatedByName = LogText.Cut(byName, 256);
+    }
+
     /// <summary>Bộ thực thi vừa liên lạc: ghi giờ, phiên bản, tên máy (bỏ trống thì giữ giá trị cũ).</summary>
     /// <param name="agentVersion">Phiên bản bộ thực thi.</param>
     /// <param name="appVersion">Phiên bản phần mềm trên máy.</param>
@@ -252,6 +283,13 @@ public enum AgentCommandKind
 
     /// <summary>Quay về bản cũ (lát QT8 – design.md 21.6a): cài lại gói cất ở <c>releases\&lt;bản&gt;</c> theo mức 1 / 2 / 3.</summary>
     RollbackRelease = 6,
+
+    /// <summary>
+    /// Làm mới TEST từ PROD (lát QT9 – design.md 21.5, 21.18): bộ thực thi TEST tải bản <c>pg_dump</c> mới nhất của PROD, kiểm SHA256, tắt site,
+    /// khôi phục ra CSDL mới, giữ bảng vận hành của chính TEST, đặt lại phần riêng của TEST (hàng chờ email, phiên đăng nhập), hoán đổi tên CSDL,
+    /// chép bổ sung file đính kèm, mở site, kiểm tra <c>/health</c>; lỗi thì trả CSDL cũ.
+    /// </summary>
+    RefreshTest = 7,
 }
 
 /// <summary>Trạng thái lệnh bộ thực thi.</summary>

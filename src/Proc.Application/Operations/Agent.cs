@@ -151,6 +151,7 @@ public static class AgentLabels
         AgentCommandKind.SwapCluster => "Hoán đổi máy chủ CSDL",
         AgentCommandKind.DeployRelease => "Cài bản phát hành",
         AgentCommandKind.RollbackRelease => "Quay về bản cũ",
+        AgentCommandKind.RefreshTest => "Làm mới TEST từ PROD",
         _ => kind.ToString(),
     };
 
