@@ -122,13 +122,14 @@ public sealed record ReleaseInstallDto(
 /// <param name="Items">Mục kiểm thử.</param>
 /// <param name="Defects">Lỗi phát hiện.</param>
 /// <param name="Installs">Lịch sử cài.</param>
+/// <param name="InstalledOnTest">TEST đang chạy bản của phiếu (lát QT9 – nút quay về trên TEST; trường thêm sau).</param>
 public sealed record ReleaseTicketDto(
     Guid Id, string Version, [property: JsonConverter(typeof(JsonStringEnumConverter))] ReleaseStatus Status, string StatusLabel, string Tone, string Source, string? SourceUrl, string PackageFileName,
     long PackageSize, string Sha256, string? Changelog, string? DatabaseChanges, [property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel MinRollbackLevel, string? Risks, string? RollbackPlan,
     string? Note, DateTimeOffset ReceivedAt, string? ReceivedByName, DateTimeOffset? UatSignedAt, string? UatSignedByName, string? UatComment,
     bool UatWithoutTest, DateTimeOffset? ProdInstalledAt, DateTimeOffset? EndedAt, string? EndedByName, string? EndReason, bool IsLocked,
     IReadOnlyList<string> OpenIssues, IReadOnlyList<ReleaseTestItemDto> Items, IReadOnlyList<ReleaseDefectDto> Defects,
-    IReadOnlyList<ReleaseInstallDto> Installs);
+    IReadOnlyList<ReleaseInstallDto> Installs, bool InstalledOnTest = false);
 
 /// <summary>Một môi trường trên bảng đầu REL (bộ thực thi đã khai ở AGT).</summary>
 /// <param name="Code">Dev / Test / Prod.</param>
@@ -197,12 +198,15 @@ public sealed record CancelReleaseRequest(string? Reason);
 /// <param name="Confirmation">Chữ xác nhận "CÀI &lt;phiên bản&gt;".</param>
 public sealed record DeployReleaseRequest(string? Environment, string? Reason, string? Password, string? Confirmation);
 
-/// <summary>Quay về bản cũ trên PROD (Q6).</summary>
+/// <summary>Quay về bản cũ (Q6) trên PROD, hoặc trên TEST khi UAT không đạt (lát QT9).</summary>
 /// <param name="Level">Mức.</param>
 /// <param name="Reason">Lý do.</param>
 /// <param name="Password">Mật khẩu.</param>
 /// <param name="Confirmation">Chữ xác nhận "QUAY VỀ".</param>
-public sealed record RollbackReleaseRequest([property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel Level, string? Reason, string? Password, string? Confirmation);
+/// <param name="Environment">Test / Prod; trống = Prod (trường thêm sau – API v1 chỉ thêm).</param>
+public sealed record RollbackReleaseRequest(
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] RollbackLevel Level, string? Reason, string? Password, string? Confirmation,
+    string? Environment = null);
 
 /// <summary>Trung tâm phát hành – màn hình REL (lát QT8, design.md mục 21.6). Chỉ tổng công ty; ghi chỉ trên PROD / DEV (TEST chỉ xem – T4).</summary>
 public interface IReleaseService

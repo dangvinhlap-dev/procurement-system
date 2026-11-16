@@ -13,6 +13,7 @@ import {
   type AgentCommand,
   type AgentEnvironment,
   type AgentKeyCreated,
+  type AgentKeyKind,
 } from '../../api/agent'
 import { defaultLogRange } from '../../api/logs'
 import { Permission } from '../../auth/permissions'
@@ -53,6 +54,12 @@ const environmentColumns: GridColumn<AgentEnvironment>[] = [
     width: 170,
     value: (r) => r.keyCreatedAt,
     render: (r) => (r.keyCreatedAt ? `${formatDateTime(r.keyCreatedAt)} · ${r.keyCreatedByName ?? ''}` : ''),
+  },
+  {
+    key: 'serviceKey',
+    title: 'Khóa dịch vụ',
+    width: 95,
+    value: (r) => (r.hasServiceKey ? `…${r.serviceKeyHint ?? ''}` : ''),
   },
   { key: 'queued', title: 'Lệnh chờ', width: 70, type: 'quantity', value: (r) => r.queuedCount, render: (r) => String(r.queuedCount) },
   { key: 'address', title: 'Địa chỉ', width: 200, value: (r) => r.address },
@@ -155,18 +162,39 @@ function EnvironmentModal({ editing, onClose }: { editing: AgentEnvironment | nu
   )
 }
 
+/** Chữ của hai loại khóa trên hộp thoại. */
+const keyTexts: Record<AgentKeyKind, { title: string; name: string; purpose: string; paste: string }> = {
+  agent: {
+    title: 'Khóa bộ thực thi',
+    name: 'khóa bộ thực thi',
+    purpose: 'Khóa cho phép ra lệnh quyền cao trên máy chủ đó.',
+    paste: 'Dán khóa khi chạy qt-agent-install.ps1 trên máy đó (deploy-windows.md mục 4d). Không gửi khóa qua email, chat.',
+  },
+  service: {
+    title: 'Khóa dịch vụ',
+    name: 'khóa dịch vụ',
+    purpose: 'Khóa cho máy chủ đó gọi máy này – máy TEST chuyển báo lỗi / góp ý của người dùng về trung tâm phát hành.',
+    paste:
+      'Dán vào Operations:Upstream:ServiceKey trong appsettings.Production.json của máy đó rồi khởi động lại site (deploy-windows.md mục 4h). Không gửi khóa qua email, chat.',
+  },
+}
+
 /**
- * Hộp thoại tạo khóa – xác nhận việc nguy hiểm Q6 (mật khẩu + gõ "TẠO KHÓA"): khóa cho phép ra lệnh quyền cao trên máy chủ; khóa cũ hết hiệu
- * lực ngay. Tạo xong hiện khóa **một lần** kèm nút sao chép.
+ * Hộp thoại tạo khóa – xác nhận việc nguy hiểm Q6 (mật khẩu + gõ "TẠO KHÓA"): khóa bộ thực thi (ra lệnh quyền cao trên máy chủ) hoặc khóa dịch vụ
+ * (lát QT9 – máy đó gọi máy này); khóa cũ cùng loại hết hiệu lực ngay. Tạo xong hiện khóa **một lần** kèm nút sao chép.
  * @param environment Môi trường; null = đóng.
+ * @param kind Loại khóa.
  * @param onClose Đóng hộp thoại.
  */
-function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironment | null; onClose: () => void }) {
+function CreateKeyModal({ environment, kind, onClose }: { environment: AgentEnvironment | null; kind: AgentKeyKind; onClose: () => void }) {
   const { message } = App.useApp()
   const [form] = Form.useForm<{ password: string; confirmation: string }>()
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<AgentKeyCreated | null>(null)
   const createKey = useCreateAgentKey()
+  const text = keyTexts[kind]
+  const hasOld = kind === 'service' ? environment?.hasServiceKey : environment?.hasKey
+  const oldHint = kind === 'service' ? environment?.serviceKeyHint : environment?.keyHint
   const close = () => {
     setError(null)
     setCreated(null)
@@ -176,7 +204,7 @@ function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironmen
   if (created) {
     return (
       <Modal
-        title={`Khóa bộ thực thi ${environment?.code ?? ''}`}
+        title={`${text.title} ${environment?.code ?? ''}`}
         open
         onCancel={close}
         footer={
@@ -191,7 +219,7 @@ function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironmen
           showIcon
           style={{ marginBottom: 8 }}
           title="Khóa chỉ hiện một lần – máy chủ chỉ lưu băm."
-          description="Dán khóa khi chạy qt-agent-install.ps1 trên máy đó (deploy-windows.md mục 4d). Không gửi khóa qua email, chat."
+          description={text.paste}
         />
         <Input.TextArea readOnly value={created.key} autoSize data-testid="agent-key" style={{ fontFamily: 'Consolas, monospace' }} />
         <Button
@@ -210,7 +238,7 @@ function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironmen
 
   return (
     <Modal
-      title={environment ? `Tạo khóa bộ thực thi ${environment.code}` : 'Tạo khóa'}
+      title={environment ? `Tạo ${text.name} ${environment.code}` : 'Tạo khóa'}
       open={environment != null}
       onCancel={close}
       onOk={() => form.submit()}
@@ -225,8 +253,8 @@ function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironmen
         type="warning"
         showIcon
         style={{ marginBottom: 8 }}
-        title={environment?.hasKey ? `Khóa cũ (…${environment.keyHint ?? ''}) hết hiệu lực ngay.` : 'Khóa cho phép ra lệnh quyền cao trên máy chủ đó.'}
-        description="Bộ thực thi trên máy đó phải dán khóa mới mới liên lạc lại được. Việc này ghi vào nhật ký vận hành."
+        title={hasOld ? `Khóa cũ (…${oldHint ?? ''}) hết hiệu lực ngay.` : text.purpose}
+        description={`${kind === 'service' ? 'Máy đó' : 'Bộ thực thi trên máy đó'} phải dán khóa mới mới liên lạc lại được. Việc này ghi vào nhật ký vận hành.`}
       />
       {error && <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />}
       <Form
@@ -237,7 +265,7 @@ function CreateKeyModal({ environment, onClose }: { environment: AgentEnvironmen
           if (!environment) return
           setError(null)
           try {
-            setCreated(await createKey.mutateAsync({ environmentId: environment.id, ...v }))
+            setCreated(await createKey.mutateAsync({ environmentId: environment.id, kind, ...v }))
           } catch (e) {
             setError(e instanceof Error ? e.message : 'Không tạo được khóa.')
           }
@@ -409,7 +437,7 @@ export function AgentPage() {
   const [environment, setEnvironment] = useState<AgentEnvironment | null>(null)
   const [command, setCommand] = useState<AgentCommand | null>(null)
   const [editing, setEditing] = useState<AgentEnvironment | null | undefined>(null)
-  const [keyFor, setKeyFor] = useState<AgentEnvironment | null>(null)
+  const [keyFor, setKeyFor] = useState<{ environment: AgentEnvironment; kind: AgentKeyKind } | null>(null)
   const [pingFor, setPingFor] = useState<AgentEnvironment | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const environments = useAgentEnvironments()
@@ -460,10 +488,24 @@ export function AgentPage() {
                   <Button
                     icon={<KeyOutlined />}
                     disabled={!environment?.isActive}
-                    onClick={() => setKeyFor(environment)}
+                    onClick={() => environment && setKeyFor({ environment, kind: 'agent' })}
                     title={!environment ? noRow : !environment.isActive ? 'Môi trường đang ngừng dùng' : `Tạo khóa bộ thực thi ${environment.code}`}
                   >
                     Tạo khóa…
+                  </Button>
+                  <Button
+                    icon={<KeyOutlined />}
+                    disabled={!environment?.isActive}
+                    onClick={() => environment && setKeyFor({ environment, kind: 'service' })}
+                    title={
+                      !environment
+                        ? noRow
+                        : !environment.isActive
+                          ? 'Môi trường đang ngừng dùng'
+                          : `Khóa cho máy ${environment.code} gọi máy này (máy TEST chuyển báo lỗi về PROD)`
+                    }
+                  >
+                    Tạo khóa dịch vụ…
                   </Button>
                   <Button
                     icon={<SendOutlined />}
@@ -496,7 +538,7 @@ export function AgentPage() {
           }
         />
         <EnvironmentModal editing={editing} onClose={() => setEditing(null)} />
-        <CreateKeyModal environment={keyFor} onClose={() => setKeyFor(null)} />
+        <CreateKeyModal environment={keyFor?.environment ?? null} kind={keyFor?.kind ?? 'agent'} onClose={() => setKeyFor(null)} />
         <PingModal
           environment={pingFor}
           onClose={() => setPingFor(null)}

@@ -142,6 +142,9 @@ public static class OperationKinds
 
     /// <summary>Lần cài / quay về kết thúc (lát QT8).</summary>
     public const string ReleaseInstallFinished = "ReleaseInstallFinished";
+
+    /// <summary>Người dùng TEST báo lỗi / góp ý – ghi vào phiếu phát hành (lát QT9).</summary>
+    public const string ReleaseDefectReported = "ReleaseDefectReported";
 }
 
 /// <summary>
@@ -262,7 +265,9 @@ public interface IOperationsAccess
 /// <param name="Environment">Dev / Test / Prod; None = máy chưa khai <c>App:Environment</c>.</param>
 /// <param name="Warning">Cảnh báo cấu hình (chưa khai môi trường, TEST chưa khai hộp thư test…); null = ổn.</param>
 /// <param name="Maintenance">Chế độ bảo trì đang bật (lát QT5 – dải đỏ "ĐANG BẢO TRÌ"); null = tắt. Trường thêm sau – API v1 chỉ thêm, không bỏ.</param>
-public sealed record EnvironmentStatusDto(string Environment, string? Warning, MaintenanceNoticeDto? Maintenance = null);
+/// <param name="FeedbackEnabled">Hiện nút "Báo lỗi / góp ý" (lát QT9): máy TEST đã khai <c>Operations:Upstream</c>.</param>
+public sealed record EnvironmentStatusDto(
+    string Environment, string? Warning, MaintenanceNoticeDto? Maintenance = null, bool FeedbackEnabled = false);
 
 /// <summary>Đọc môi trường và cảnh báo cấu hình của máy đang chạy.</summary>
 public interface IEnvironmentStatus

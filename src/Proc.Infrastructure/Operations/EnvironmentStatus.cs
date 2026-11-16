@@ -22,14 +22,18 @@ public sealed class EnvironmentStatus : IEnvironmentStatus
 
     private readonly AppEnvironmentOptions _environment;
     private readonly IOptionsMonitor<EmailOptions> _email;
+    private readonly IOptionsMonitor<UpstreamOptions> _upstream;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="environment">Môi trường.</param>
     /// <param name="email">Cấu hình email.</param>
-    public EnvironmentStatus(IOptions<AppEnvironmentOptions> environment, IOptionsMonitor<EmailOptions> email)
+    /// <param name="upstream">Máy chủ PROD mà TEST chuyển báo lỗi tới (lát QT9).</param>
+    public EnvironmentStatus(
+        IOptions<AppEnvironmentOptions> environment, IOptionsMonitor<EmailOptions> email, IOptionsMonitor<UpstreamOptions> upstream)
     {
         _environment = environment.Value;
         _email = email;
+        _upstream = upstream;
     }
 
     /// <inheritdoc />
@@ -39,6 +43,6 @@ public sealed class EnvironmentStatus : IEnvironmentStatus
         string? warning = null;
         if (!_environment.IsConfigured) warning = NotConfiguredWarning;
         else if (_environment.IsTest && email.Enabled && string.IsNullOrWhiteSpace(email.RedirectAllTo)) warning = TestWithoutRedirectWarning;
-        return new EnvironmentStatusDto(_environment.Name, warning);
+        return new EnvironmentStatusDto(_environment.Name, warning, null, _environment.IsTest && _upstream.CurrentValue.IsConfigured);
     }
 }

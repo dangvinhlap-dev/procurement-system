@@ -42,14 +42,12 @@ import type { GridColumn } from '../../components/DataGrid/types'
 import { DocumentForm } from '../../components/DocumentForm/DocumentForm'
 import { ListPage } from '../../components/ListPage/ListPage'
 import { formatDateTime } from '../../utils/format'
+import { DangerFields } from './DangerFields'
 
 /** Đường dẫn màn hình REL. */
 export const RELEASE_PATH = '/he-thong/phat-hanh'
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} MB`
-
-/** Chuẩn hóa chữ xác nhận như máy chủ: bỏ khoảng trắng hai đầu, NFC, không phân biệt hoa thường. */
-const sameConfirmation = (typed: string | undefined, expected: string) => typed?.trim().normalize().toUpperCase() === expected.normalize()
 
 /** Dòng tóm tắt môi trường trên đầu REL: máy này + bộ thực thi đã khai ở AGT. */
 function environmentNotice(o: ReleaseOverview) {
@@ -208,28 +206,11 @@ export function ReleaseListPage() {
   )
 }
 
-/** Ô nhập lý do + mật khẩu + chữ xác nhận (việc nguy hiểm Q6 – ui-style.md mục 5m). */
-function DangerFields({ confirmation }: { confirmation: string }) {
-  return (
-    <>
-      <Form.Item label="Lý do" name="reason" rules={[{ required: true, message: 'Nhập lý do.' }, { min: 5, message: 'Lý do ít nhất 5 ký tự.' }]}>
-        <Input.TextArea autoFocus maxLength={500} autoSize={{ minRows: 2, maxRows: 4 }} />
-      </Form.Item>
-      <Form.Item label="Mật khẩu của bạn" name="password" rules={[{ required: true, message: 'Nhập lại mật khẩu để xác nhận.' }]}>
-        <Input.Password autoComplete="current-password" />
-      </Form.Item>
-      <Form.Item label={`Gõ "${confirmation}" để xác nhận`} name="confirmation"
-        rules={[{ validator: (_, v?: string) => (sameConfirmation(v, confirmation) ? Promise.resolve() : Promise.reject(new Error(`Gõ đúng "${confirmation}".`))) }]}>
-        <Input autoComplete="off" />
-      </Form.Item>
-    </>
-  )
-}
 
 /** Kiểu hộp thoại đang mở trên form phiếu. */
 type Dialog =
   | { kind: 'deploy'; env: 'Test' | 'Prod' }
-  | { kind: 'rollback' }
+  | { kind: 'rollback'; env: 'Test' | 'Prod' }
   | { kind: 'signOff' }
   | { kind: 'cancel' }
   | { kind: 'fail'; item: ReleaseTestItem }
@@ -274,14 +255,17 @@ function StepDialog({ ticket, dialog, onClose }: { ticket: ReleaseTicket; dialog
         }
       case 'rollback':
         return {
-          title: `Quay về bản trước ${ticket.version}`,
+          title: `Quay về bản trước ${ticket.version} trên ${dialog.env === 'Prod' ? 'PROD' : 'TEST'}`,
           ok: 'Quay về',
           danger: true,
           icon: <RollbackOutlined />,
           body: (
             <>
               <Alert type="warning" showIcon style={{ marginBottom: 8 }}
-                title={`Gói khai mức quay về tối thiểu ${minNo}. Bộ thực thi PROD tắt site, quay về theo mức chọn, kiểm tra /health.`} />
+                title={`Gói khai mức quay về tối thiểu ${minNo}. Bộ thực thi ${dialog.env === 'Prod' ? 'PROD' : 'TEST'} tắt site, quay về theo mức chọn, kiểm tra /health.`}
+                description={dialog.env === 'Test'
+                  ? 'Quay về xong phiếu trở lại Đã nhận, bỏ xác nhận UAT – sửa xong thì cài TEST và UAT lại (hoặc hủy phiếu, nhận bản vá).'
+                  : undefined} />
               <Form.Item label="Mức quay về" name="level" rules={[{ required: true, message: 'Chọn mức.' }]}>
                 <Select showSearch={false} options={(Object.keys(rollbackLevels) as RollbackLevel[])
                   .filter((k) => rollbackLevels[k].no >= minNo)
@@ -290,8 +274,8 @@ function StepDialog({ ticket, dialog, onClose }: { ticket: ReleaseTicket; dialog
               <DangerFields confirmation={ROLLBACK_CONFIRMATION} />
             </>
           ),
-          run: (v) => m.rollback.mutateAsync({ id, level: v.level as RollbackLevel, reason: v.reason, password: v.password, confirmation: v.confirmation }),
-          done: 'Đã giao lệnh quay về cho bộ thực thi PROD.',
+          run: (v) => m.rollback.mutateAsync({ id, environment: dialog.env, level: v.level as RollbackLevel, reason: v.reason, password: v.password, confirmation: v.confirmation }),
+          done: `Đã giao lệnh quay về cho bộ thực thi ${dialog.env === 'Prod' ? 'PROD' : 'TEST'}.`,
         }
       case 'signOff':
         return {
@@ -493,8 +477,11 @@ export function ReleasePage() {
       {t.status === 'UatPassed' && hasPermission(Permission.ReleaseDeployProd) && (
         <Button icon={<CloudUploadOutlined />} disabled={pendingInstall} onClick={() => setDialog({ kind: 'deploy', env: 'Prod' })}>Cài PROD…</Button>
       )}
+      {(t.status === 'UatInProgress' || t.status === 'UatPassed') && t.installedOnTest && hasPermission(Permission.ReleaseDeployTest) && (
+        <Button icon={<RollbackOutlined />} disabled={pendingInstall} onClick={() => setDialog({ kind: 'rollback', env: 'Test' })}>Quay về bản cũ trên TEST…</Button>
+      )}
       {(t.status === 'ProdInstalled' || t.status === 'Closed') && hasPermission(Permission.ReleaseDeployProd) && (
-        <Button icon={<RollbackOutlined />} disabled={pendingInstall} onClick={() => setDialog({ kind: 'rollback' })}>Quay về bản cũ…</Button>
+        <Button icon={<RollbackOutlined />} disabled={pendingInstall} onClick={() => setDialog({ kind: 'rollback', env: 'Prod' })}>Quay về bản cũ…</Button>
       )}
       {t.status === 'ProdInstalled' && canManage && <Button icon={<CheckOutlined />} disabled={pendingInstall} onClick={close}>Đóng phiếu</Button>}
       {canManage && <Button icon={<EditOutlined />} onClick={() => setDialog({ kind: 'note' })}>Thêm ghi chú…</Button>}

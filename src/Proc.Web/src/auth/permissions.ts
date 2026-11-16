@@ -44,6 +44,8 @@ export const Permission = {
   ReleaseUatSignOff: 'System.OpsRelease.UatSignOff',
   /** Cài PROD, quay về bản cũ (Q6). */
   ReleaseDeployProd: 'System.OpsRelease.DeployProd',
+  /** Làm mới TEST từ PROD – màn hình TST (lát QT9, Q6). */
+  TestRefreshRun: 'System.OpsTestRefresh.Run',
   ParameterView: 'System.Parameter.View',
   ParameterManage: 'System.Parameter.Manage',
   WarehouseView: 'Organization.Warehouse.View',

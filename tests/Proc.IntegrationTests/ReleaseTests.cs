@@ -332,5 +332,21 @@ public class ReleaseTests
         var tester = await _factory.CreateClientInCompanyAsync(name, ProcApiFactory.TestPassword, "TCT");
         await FailAsync(await tester.PostAsJsonAsync($"{RelPath}/{ticket.Id}/deploy",
             new DeployReleaseRequest("Prod", "x", ProcApiFactory.TestPassword, "CÀI 9.4.0"), Ct), HttpStatusCode.Forbidden);
+
+        // Lát QT9 – quay về trên TEST (người dùng yêu cầu 16/11/2026): quyền cài TEST là đủ; không ghi môi trường = PROD → cần quyền cài PROD.
+        Assert.True(ticket.InstalledOnTest);
+        var rollback = $"{RelPath}/{ticket.Id}/rollback";
+        await FailAsync(await tester.PostAsJsonAsync(rollback,
+            new RollbackReleaseRequest(RollbackLevel.CodeOnly, "UAT không đạt", ProcApiFactory.TestPassword, "QUAY VỀ"), Ct), HttpStatusCode.Forbidden);
+        ticket = await ReadAsync<ReleaseTicketDto>(await tester.PostAsJsonAsync(rollback,
+            new RollbackReleaseRequest(RollbackLevel.CodeOnly, "UAT không đạt", ProcApiFactory.TestPassword, "QUAY VỀ", "Test"), Ct));
+        var back = await ReadAsync<AgentWorkDto>(await testAgent.GetAsync($"{AgentPath}/commands?agentVersion=1.2.0&appVersion=9.4.0&host=TEST", Ct));
+        Assert.Equal("RollbackRelease", back.Kind);
+        Assert.Contains("\"targetVersion\":\"9.3.0\"", back.Parameters);
+        await testAgent.PostAsJsonAsync($"{AgentPath}/commands/{back.Id}/result", new AgentResultRequest(true, "Đã về 9.3.0", null), Ct);
+        ticket = await ReadAsync<ReleaseTicketDto>(await head.GetAsync($"{RelPath}/{ticket.Id}", Ct));
+        Assert.Equal((ReleaseStatus.Received, false), (ticket.Status, ticket.InstalledOnTest));
+        Assert.Equal(("Test", ReleaseInstallKind.Rollback, ReleaseInstallStatus.Succeeded),
+            (ticket.Installs[0].Environment, ticket.Installs[0].Kind, ticket.Installs[0].Status));
     }
 }

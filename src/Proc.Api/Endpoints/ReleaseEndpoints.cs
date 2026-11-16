@@ -73,9 +73,16 @@ public static class ReleaseEndpoints
                 return s.DeployAsync(id, request, ct);
             })
             .RequireAnyPermission(Permissions.System.OpsReleaseDeployTest, Permissions.System.OpsReleaseDeployProd).RequireHeadOffice();
-        rel.MapPost("/{id:guid}/rollback", (Guid id, RollbackReleaseRequest request, IReleaseService s, CancellationToken ct) =>
-                s.RollbackAsync(id, request, ct))
-            .RequirePermission(Permissions.System.OpsReleaseDeployProd).RequireHeadOffice();
+        // Quay về: TEST (lát QT9) cần quyền cài TEST, PROD (hoặc không ghi môi trường) cần quyền cài PROD.
+        rel.MapPost("/{id:guid}/rollback", (Guid id, RollbackReleaseRequest request, IReleaseService s,
+                Proc.Application.Common.ICurrentUserScope scope, CancellationToken ct) =>
+            {
+                scope.EnsurePermission(string.Equals(request.Environment, "Test", StringComparison.OrdinalIgnoreCase)
+                    ? Permissions.System.OpsReleaseDeployTest
+                    : Permissions.System.OpsReleaseDeployProd);
+                return s.RollbackAsync(id, request, ct);
+            })
+            .RequireAnyPermission(Permissions.System.OpsReleaseDeployTest, Permissions.System.OpsReleaseDeployProd).RequireHeadOffice();
 
         return app;
     }

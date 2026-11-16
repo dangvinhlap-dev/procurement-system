@@ -108,6 +108,11 @@ public static class Permissions
         public const string OpsReleaseUatSignOff = "System.OpsRelease.UatSignOff";
         /// <summary>Quyền "Cài bản lên PROD, quay về bản cũ" (bước 4 – xác nhận Q6). Chỉ ở tổng công ty.</summary>
         public const string OpsReleaseDeployProd = "System.OpsRelease.DeployProd";
+        /// <summary>
+        /// Quyền "Làm mới TEST từ PROD" (màn hình TST – lát QT9, design.md 21.5): giao bộ thực thi TEST khôi phục bản pg_dump của PROD (xác nhận Q6).
+        /// Chỉ ở tổng công ty.
+        /// </summary>
+        public const string OpsTestRefreshRun = "System.OpsTestRefresh.Run";
     }
 
     /// <summary>Tổ chức: kho, bộ phận.</summary>
@@ -403,6 +408,7 @@ public static class Permissions
         new(System.OpsReleaseDeployTest, "Cài bản phát hành lên máy TEST (chỉ ở tổng công ty)"),
         new(System.OpsReleaseUatSignOff, "Xác nhận UAT đạt cho bản phát hành (chỉ ở tổng công ty)"),
         new(System.OpsReleaseDeployProd, "Cài bản phát hành lên PROD, quay về bản cũ (chỉ ở tổng công ty)"),
+        new(System.OpsTestRefreshRun, "Làm mới dữ liệu TEST từ PROD (chỉ ở tổng công ty)"),
         new(System.OpsConfigManage, "Sửa cấu hình truy cập: mật khẩu, khóa, hạn phiên, dải IP quản trị, đăng xuất tất cả (chỉ ở tổng công ty)"),
         new(Organization.WarehouseView, "Xem danh mục kho"),
         new(Organization.WarehouseManage, "Thêm, sửa kho"),

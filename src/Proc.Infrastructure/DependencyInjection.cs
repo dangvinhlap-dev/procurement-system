@@ -169,6 +169,13 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Operations.IAccessConfigService, Proc.Infrastructure.Operations.AccessConfigService>();
         // Trung tâm phát hành (lát QT8) – một đối tượng cho cả màn hình REL và phần bộ thực thi gọi tới. ReleaseGitHubHttp do Api đăng ký.
         services.AddScoped<Proc.Infrastructure.Operations.ReleaseService>();
+        // Làm mới TEST từ PROD, báo lỗi từ TEST (lát QT9). UpstreamHttp do Api đăng ký.
+        services.AddScoped<Proc.Infrastructure.Operations.TestRefreshService>();
+        services.AddScoped<Proc.Application.Operations.ITestRefreshService>(sp => sp.GetRequiredService<Proc.Infrastructure.Operations.TestRefreshService>());
+        services.AddScoped<Proc.Application.Operations.ITestRefreshAgentHooks>(
+            sp => sp.GetRequiredService<Proc.Infrastructure.Operations.TestRefreshService>());
+        services.AddScoped<Proc.Application.Operations.IReleaseDefectInbox, Proc.Infrastructure.Operations.ReleaseDefectInbox>();
+        services.AddScoped<Proc.Application.Operations.ITestFeedbackService, Proc.Infrastructure.Operations.TestFeedbackService>();
         services.AddScoped<Proc.Application.Operations.IReleaseService>(sp => sp.GetRequiredService<Proc.Infrastructure.Operations.ReleaseService>());
         services.AddScoped<Proc.Application.Operations.IReleaseAgentHooks>(
             sp => sp.GetRequiredService<Proc.Infrastructure.Operations.ReleaseService>());

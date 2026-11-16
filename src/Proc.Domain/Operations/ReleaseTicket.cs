@@ -218,9 +218,12 @@ public sealed class ReleaseTicket : AuditableEntity
     /// <summary>Đang có lần cài chờ bộ thực thi báo – không giao lệnh khác.</summary>
     public bool HasPendingInstall => _installs.Any(i => i.Status == ReleaseInstallStatus.Pending);
 
-    /// <summary>Đã cài TEST thành công ít nhất một lần.</summary>
-    public bool InstalledOnTest => _installs.Any(i =>
-        i.Kind == ReleaseInstallKind.Deploy && i.Environment == AppEnvironments.Test && i.Status == ReleaseInstallStatus.Succeeded);
+    /// <summary>TEST đang chạy bản của phiếu: lần cài / quay về thành công gần nhất trên TEST là lần cài (quay về TEST thì không còn – lát QT9).</summary>
+    public bool InstalledOnTest => _installs
+        .Where(i => i.Environment == AppEnvironments.Test && i.Status == ReleaseInstallStatus.Succeeded)
+        // Sắp theo giờ (nạp từ CSDL không giữ thứ tự); OrderBy ổn định nên cùng giờ thì giữ thứ tự thêm.
+        .OrderBy(i => i.StartedAt)
+        .LastOrDefault()?.Kind == ReleaseInstallKind.Deploy;
 
     /// <summary>Nhận gói: tạo phiếu Đã nhận và mục kiểm thử từ CHANGELOG.</summary>
     /// <param name="package">Thông tin gói đã kiểm.</param>
@@ -385,24 +388,56 @@ public sealed class ReleaseTicket : AuditableEntity
     /// <returns>Lần quay về đang chờ.</returns>
     /// <exception cref="BusinessRuleException">Sai bước, mức thấp hơn tối thiểu, thiếu lý do, đang có lần cài chờ.</exception>
     public ReleaseInstall StartRollback(
-        RollbackLevel level, Guid agentCommandId, string? targetVersion, string? reason, string? byName, DateTimeOffset now)
+        RollbackLevel level, Guid agentCommandId, string? targetVersion, string? reason, string? byName, DateTimeOffset now) =>
+        StartRollback(AppEnvironments.Prod, level, agentCommandId, targetVersion, reason, byName, now);
+
+    /// <summary>
+    /// Giao lệnh quay về bản cũ, mức không thấp hơn mức tối thiểu của gói. PROD: phiếu Đã cài PROD / Đã đóng. <b>TEST</b> (người dùng yêu cầu
+    /// 16/11/2026 – lát QT9): phiếu Đang UAT / UAT đạt và TEST đang chạy bản của phiếu – UAT không đạt thì trả TEST về bản trước (cùng bản PROD) để
+    /// thử tiếp / làm mới TEST từ PROD.
+    /// </summary>
+    /// <param name="environment">Môi trường: Test hoặc Prod.</param>
+    /// <param name="level">Mức quay về.</param>
+    /// <param name="agentCommandId">Lệnh bộ thực thi.</param>
+    /// <param name="targetVersion">Bản quay về.</param>
+    /// <param name="reason">Lý do (≥ <see cref="ReasonMinLength"/> ký tự).</param>
+    /// <param name="byName">Người giao.</param>
+    /// <param name="now">Thời điểm (UTC).</param>
+    /// <returns>Lần quay về đang chờ.</returns>
+    /// <exception cref="BusinessRuleException">Sai bước, mức thấp hơn tối thiểu, thiếu lý do, đang có lần cài chờ.</exception>
+    public ReleaseInstall StartRollback(
+        string environment, RollbackLevel level, Guid agentCommandId, string? targetVersion, string? reason, string? byName, DateTimeOffset now)
     {
-        if (Status is not (ReleaseStatus.ProdInstalled or ReleaseStatus.Closed))
+        if (environment == AppEnvironments.Test)
+        {
+            if (Status is not (ReleaseStatus.UatInProgress or ReleaseStatus.UatPassed))
+                throw new BusinessRuleException("Chỉ quay về bản cũ trên TEST khi phiếu Đang UAT hoặc UAT đạt (chưa cài PROD).");
+            if (!InstalledOnTest) throw new BusinessRuleException("TEST không chạy bản của phiếu này – không có gì để quay về.");
+        }
+        else if (environment != AppEnvironments.Prod)
+        {
+            throw new BusinessRuleException("Chỉ quay về trên môi trường TEST hoặc PROD.");
+        }
+        else if (Status is not (ReleaseStatus.ProdInstalled or ReleaseStatus.Closed))
+        {
             throw new BusinessRuleException("Chỉ quay về bản cũ khi phiếu Đã cài PROD hoặc Đã đóng.");
+        }
+
         if (HasPendingInstall) throw new BusinessRuleException("Đang có lần cài chưa xong – chờ bộ thực thi báo kết quả.");
         if (!Enum.IsDefined(level)) throw new BusinessRuleException("Mức quay về không hợp lệ.");
         if (level < MinRollbackLevel)
             throw new BusinessRuleException($"Bản {Version} chỉ quay về được từ mức {(int)MinRollbackLevel} trở lên (rollback.json của gói).");
         if (string.IsNullOrWhiteSpace(targetVersion)) throw new BusinessRuleException("Không biết bản cũ để quay về.");
         var install = ReleaseInstall.Create(
-            Id, AppEnvironments.Prod, ReleaseInstallKind.Rollback, agentCommandId, Version, level, RequireReason(reason, "quay về bản cũ"), byName, now);
+            Id, environment, ReleaseInstallKind.Rollback, agentCommandId, Version, level, RequireReason(reason, "quay về bản cũ"), byName, now);
         install.SetTargetVersion(targetVersion);
         _installs.Add(install);
         return install;
     }
 
     /// <summary>
-    /// Bộ thực thi báo kết quả một lần cài: cài TEST đạt → Đang UAT; cài PROD đạt (đúng SHA256 của phiếu) → Đã cài PROD; quay về đạt → Đã quay về.
+    /// Bộ thực thi báo kết quả một lần cài: cài TEST đạt → Đang UAT; cài PROD đạt (đúng SHA256 của phiếu) → Đã cài PROD; quay về PROD đạt → Đã quay
+    /// về; quay về TEST đạt → về Đã nhận, bỏ xác nhận UAT (bản phải cài TEST và UAT lại – lát QT9).
     /// Lỗi thì phiếu giữ trạng thái (bộ thực thi đã tự trả về bản cũ).
     /// </summary>
     /// <param name="installId">Lần cài.</param>
@@ -436,6 +471,13 @@ public sealed class ReleaseTicket : AuditableEntity
             case (ReleaseInstallKind.Deploy, AppEnvironments.Prod):
                 Status = ReleaseStatus.ProdInstalled;
                 ProdInstalledAt = now;
+                break;
+            case (ReleaseInstallKind.Rollback, AppEnvironments.Test):
+                Status = ReleaseStatus.Received;
+                UatSignedAt = null;
+                UatSignedByName = null;
+                UatComment = null;
+                UatWithoutTest = false;
                 break;
             case (ReleaseInstallKind.Rollback, _):
                 Status = ReleaseStatus.RolledBack;

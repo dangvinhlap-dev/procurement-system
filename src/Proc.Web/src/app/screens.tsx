@@ -43,6 +43,7 @@ import {
   SafetyCertificateOutlined,
   SafetyOutlined,
   ScheduleOutlined,
+  SyncOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
   SolutionOutlined,
@@ -223,6 +224,8 @@ export const screens: Screen[] = [
   { code: 'DBM', title: 'Bảo trì CSDL', navLabel: 'Bảo trì CSDL', path: '/he-thong/bao-tri-csdl', icon: <DatabaseOutlined />, group: 'admin', permission: Permission.MaintenanceView },
   { code: 'REL', title: 'Trung tâm phát hành', navLabel: 'Trung tâm phát hành', path: '/he-thong/phat-hanh', icon: <CloudUploadOutlined />, group: 'admin',
     anyPermission: [Permission.OpsView, Permission.ReleaseManage] },
+  { code: 'TST', title: 'Làm mới TEST', navLabel: 'Làm mới TEST', path: '/he-thong/lam-moi-test', icon: <SyncOutlined />, group: 'admin',
+    anyPermission: [Permission.OpsView, Permission.TestRefreshRun] },
   { code: 'CFG', title: 'Cấu hình truy cập', navLabel: 'Cấu hình truy cập', path: '/he-thong/cau-hinh-truy-cap', icon: <LockOutlined />, group: 'admin', permission: Permission.OpsView },
   { code: 'AGT', title: 'Bộ thực thi', navLabel: 'Bộ thực thi', path: '/he-thong/bo-thuc-thi', icon: <ApiOutlined />, group: 'admin', permission: Permission.AgentView },
 ]

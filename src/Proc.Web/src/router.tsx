@@ -97,6 +97,7 @@ import { AgentPage } from './pages/system/AgentPage'
 import { RestorePage } from './pages/system/RestorePage'
 import { AccessConfigPage } from './pages/system/AccessConfigPage'
 import { ReleaseListPage, ReleasePage } from './pages/system/ReleasePages'
+import { TestRefreshPage } from './pages/system/TestRefreshPage'
 import { ErrorLogListPage } from './pages/system/ErrorLogListPage'
 import { RouteErrorFallback } from './classic/ErrorBoundary'
 import { SystemOverviewPage } from './pages/system/SystemOverviewPage'
@@ -196,6 +197,7 @@ const implemented: Record<string, ReactNode> = {
   RST: <RestorePage />,
   CFG: <AccessConfigPage />,
   REL: <ReleaseListPage />,
+  TST: <TestRefreshPage />,
   DSCT: <DocumentNumberingPage />,
   RATE: <SupplierRatingPage />,
   DSDM: <CatalogNumberingPage />,

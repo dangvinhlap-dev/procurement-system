@@ -18,6 +18,8 @@ export interface EnvironmentStatus {
   warning: string | null
   /** Chế độ bảo trì đang bật (lát QT5) – dải đỏ "ĐANG BẢO TRÌ"; null / thiếu = tắt. */
   maintenance?: { message: string; startedAt: string | null } | null
+  /** Hiện nút "Báo lỗi / góp ý" (lát QT9): máy TEST đã khai Operations:Upstream. */
+  feedbackEnabled?: boolean
 }
 
 /**

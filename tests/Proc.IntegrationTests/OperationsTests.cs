@@ -88,13 +88,20 @@ public class OperationsTests
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Dev, null), body);
         Assert.Equal(body, await ReadAsync<EnvironmentStatusDto>(await anonymous.GetAsync("/api/portal/auth/environment", Ct)));
 
-        EnvironmentStatusDto Status(string? environment, bool enabled, string? redirect) =>
+        EnvironmentStatusDto Status(string? environment, bool enabled, string? redirect, UpstreamOptions? upstream = null) =>
             new EnvironmentStatus(Options.Create(new AppEnvironmentOptions { Environment = environment }),
-                new FixedOptions(new EmailOptions { Enabled = enabled, RedirectAllTo = redirect })).Get();
+                new FixedOptions<EmailOptions>(new EmailOptions { Enabled = enabled, RedirectAllTo = redirect }),
+                new FixedOptions<UpstreamOptions>(upstream ?? new UpstreamOptions())).Get();
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.None, EnvironmentStatus.NotConfiguredWarning), Status(null, false, null));
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Test, EnvironmentStatus.TestWithoutRedirectWarning), Status("test", true, " "));
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Test, null), Status("Test", true, "test@congty.vn"));
         Assert.Equal(new EnvironmentStatusDto(AppEnvironments.Prod, null), Status("Prod", true, null));
+
+        // Lát QT9: nút "Báo lỗi / góp ý" chỉ trên TEST đã khai đủ địa chỉ PROD + khóa dịch vụ.
+        var upstream = new UpstreamOptions { BaseUrl = "https://prod.local", ServiceKey = "qts_abc" };
+        Assert.True(Status("Test", true, "test@congty.vn", upstream).FeedbackEnabled);
+        Assert.False(Status("Prod", true, null, upstream).FeedbackEnabled);
+        Assert.False(Status("Test", true, "test@congty.vn", new UpstreamOptions { BaseUrl = "https://prod.local" }).FeedbackEnabled);
     }
 
     /// <summary>
@@ -161,13 +168,13 @@ public class OperationsTests
     }
 
     /// <summary>Cấu hình email cố định.</summary>
-    private sealed class FixedOptions(EmailOptions value) : IOptionsMonitor<EmailOptions>
+    private sealed class FixedOptions<T>(T value) : IOptionsMonitor<T>
     {
-        public EmailOptions CurrentValue => value;
+        public T CurrentValue => value;
 
-        public EmailOptions Get(string? name) => value;
+        public T Get(string? name) => value;
 
-        public IDisposable? OnChange(Action<EmailOptions, string?> listener) => null;
+        public IDisposable? OnChange(Action<T, string?> listener) => null;
     }
 
     /// <summary>
@@ -180,7 +187,7 @@ public class OperationsTests
     {
         var message = new EmailMessage("an@congty.vn", "Nguyễn An", "Phiếu chờ duyệt", "<p>x</p>", "x");
         RedirectingEmailSender Sender(FakeSender inner, string? redirect, string? environment) =>
-            new(inner, new FixedOptions(new EmailOptions { RedirectAllTo = redirect }),
+            new(inner, new FixedOptions<EmailOptions>(new EmailOptions { RedirectAllTo = redirect }),
                 Options.Create(new AppEnvironmentOptions { Environment = environment }));
 
         var test = new FakeSender();

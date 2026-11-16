@@ -219,6 +219,17 @@ Xem lịch sử một ô cụ thể: đặt con trỏ vào ô và bấm **F1** (
 - **Quay về bản cũ**: mức 1 chỉ trả phần mềm (giữ dữ liệu); mức 2 gỡ cấu trúc mới (mất dữ liệu ở phần bị gỡ); mức 3 khôi phục CSDL trước lần cài
   (mất dữ liệu nhập sau đó). Chỉ chọn được từ mức tối thiểu của gói trở lên.
 - Phiếu đã cài PROD bị khóa – chỉ thêm ghi chú, lỗi.
+- **Quay về bản cũ trên TEST…** (phiếu Đang UAT / UAT đạt): khi UAT không đạt, trả máy TEST về bản trước; phiếu trở lại **Đã nhận**, sửa xong cài
+  TEST và kiểm thử lại.
+
+## 8.9e Làm mới TEST, báo lỗi từ TEST
+
+- Màn hình **Quản trị hệ thống → Làm mới TEST** (trên máy PROD): trước mỗi đợt kiểm thử, đưa dữ liệu PROD sang máy TEST **nguyên trạng** (người dùng,
+  mật khẩu như PROD). Tab **Tình trạng** cho biết đủ điều kiện chưa: TEST phải chạy cùng phiên bản với PROD, có bản sao lưu pg_dump (màn hình Sao lưu).
+  Bấm **Làm mới TEST…**, nhập lý do, mật khẩu, gõ "LÀM MỚI TEST". Bộ thực thi TEST tắt site vài phút, thay dữ liệu, chép thêm file đính kèm; kết quả ở
+  tab **Lịch sử**. Phiếu nhập thử và quyền cấp thêm trên TEST mất; mọi người trên TEST phải đăng nhập lại (mật khẩu PROD).
+- Trên **máy TEST**, thanh trên có nút **Báo lỗi / góp ý**: ghi tiêu đề, mô tả (đã làm gì, thấy gì, mong đợi gì), chụp màn hình bằng Win+Shift+S rồi
+  bấm vào ô ảnh, Ctrl+V. Bấm **Gửi** – lỗi vào tab **Lỗi phát hiện** của phiếu phát hành đang kiểm thử trên trung tâm phát hành.
 
 ## 8.10 Việc cần làm của quản trị khi bắt đầu dùng
 

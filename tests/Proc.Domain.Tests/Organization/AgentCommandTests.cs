@@ -80,8 +80,15 @@ public class AgentCommandTests
         env.RecordContact(" ", null, null, Now.AddMinutes(1));
         Assert.Equal(("1.0.0", "0.34.0", "SRV-TEST", Now.AddMinutes(1)), (env.AgentVersion, env.AppVersion, env.HostName, env.LastSeenAt));
 
+        // Lát QT9: khóa dịch vụ tách khỏi khóa bộ thực thi – tạo khóa này không đổi khóa kia.
+        Assert.Throws<BusinessRuleException>(() => env.SetServiceKey("abc", "abcd", "admin", Now));
+        env.SetServiceKey(new string('a', 64), "srvk", "admin", Now.AddMinutes(2));
+        Assert.Equal(("srvk", Now.AddMinutes(2), "wxyz", new string('f', 64)),
+            (env.ServiceKeyHint, env.ServiceKeyCreatedAt, env.AgentKeyHint, env.AgentKeyHash));
+
         env.Update("Máy TEST", null, false);
         Assert.Throws<BusinessRuleException>(() => env.SetKey(new string('e', 64), "abcd", "admin", Now));
+        Assert.Throws<BusinessRuleException>(() => env.SetServiceKey(new string('e', 64), "abcd", "admin", Now));
     }
 
     /// <summary>Chế độ bảo trì: bật cần lý do, câu mặc định; bật lại giữ giờ bật; tắt khi đang tắt bị từ chối.</summary>

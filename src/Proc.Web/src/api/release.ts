@@ -122,6 +122,8 @@ export interface ReleaseTicket {
   items: ReleaseTestItem[]
   defects: ReleaseDefect[]
   installs: ReleaseInstall[]
+  /** TEST đang chạy bản của phiếu (lát QT9 – quay về trên TEST). */
+  installedOnTest: boolean
 }
 
 export interface ReleaseEnvironment {
@@ -216,7 +218,7 @@ export function useReleaseMutations() {
       onSuccess: done,
     }),
     rollback: useMutation({
-      mutationFn: (v: { id: string; level: RollbackLevel; reason: string; password: string; confirmation: string }) =>
+      mutationFn: (v: { id: string; environment: 'Test' | 'Prod'; level: RollbackLevel; reason: string; password: string; confirmation: string }) =>
         post<ReleaseTicket>(`/${v.id}/rollback`, v),
       onSuccess: done,
     }),

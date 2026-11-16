@@ -118,7 +118,7 @@ public static class AttachmentOwnerTypes
         SoleSourceApproval, SourcingRequest, ContractAmendment, SupplierReview, ControlFinding, ConflictDeclaration,
         MonthlySupplierApproval, MarketPriceSurvey, DemandPlan, VolumeRebateAgreement, VolumeRebateReceipt, PooledOrder, AppraisalOpinion, SupplierOnboarding,
         GoodsReceiptConfirmation, ApprovalDelegation, ConstructionProject, PurchaseSummary, RfqPortalQuote, PoSupplierFile, DeliveryNoticeFile,
-        PaymentRequest, SundryExpenseSheet, SupplierProfileFile];
+        PaymentRequest, SundryExpenseSheet, SupplierProfileFile, ReleaseTicket];
 }
 
 /// <summary>

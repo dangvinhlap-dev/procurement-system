@@ -232,13 +232,17 @@ public sealed class ReleaseService : IReleaseService, IReleaseAgentHooks
         EnsureWritable();
         var ticket = await LoadAsync(id, cancellationToken);
         await SyncAndSaveAsync(ticket, cancellationToken);
-        await _guard.VerifyAsync($"Quay về bản trước {ticket.Version}", request.Password, request.Confirmation, IReleaseService.RollbackConfirmation,
-            cancellationToken);
-        var prodInstall = ticket.Installs
-            .Where(i => i.Kind == ReleaseInstallKind.Deploy && i.Environment == AppEnvironments.Prod && i.Status == ReleaseInstallStatus.Succeeded)
+        // Lát QT9: quay về được cả trên TEST (UAT không đạt) – trống là PROD như trước.
+        var code = string.IsNullOrWhiteSpace(request.Environment) ? AppEnvironments.Prod : AppEnvironments.Normalize(request.Environment);
+        if (code is not (AppEnvironments.Test or AppEnvironments.Prod)) throw new BusinessRuleException("Chọn môi trường TEST hoặc PROD.");
+        await _guard.VerifyAsync($"Quay về bản trước {ticket.Version} trên {code}", request.Password, request.Confirmation,
+            IReleaseService.RollbackConfirmation, cancellationToken);
+        // Bản quay về = bản đang chạy trên môi trường đó trước lần cài thành công gần nhất của phiếu.
+        var lastDeploy = ticket.Installs
+            .Where(i => i.Kind == ReleaseInstallKind.Deploy && i.Environment == code && i.Status == ReleaseInstallStatus.Succeeded)
             .OrderByDescending(i => i.StartedAt).FirstOrDefault();
-        var target = prodInstall?.PreviousVersion;
-        var env = await AgentEnvironmentAsync(AppEnvironments.Prod, cancellationToken);
+        var target = lastDeploy?.PreviousVersion;
+        var env = await AgentEnvironmentAsync(code, cancellationToken);
         var now = _clock.UtcNow;
         var parameters = JsonSerializer.Serialize(new
         {
@@ -248,12 +252,12 @@ public sealed class ReleaseService : IReleaseService, IReleaseAgentHooks
             level = (int)request.Level,
         }, Json);
         var command = AgentCommand.Create(env.Id, AgentCommandKind.RollbackRelease, parameters, request.Reason, _currentUser.UserName, now);
-        var install = ticket.StartRollback(request.Level, command.Id, target, request.Reason, _currentUser.UserName, now);
+        var install = ticket.StartRollback(code, request.Level, command.Id, target, request.Reason, _currentUser.UserName, now);
         _db.AgentCommands.Add(command);
         _db.Add(install);
         await _db.SaveChangesAsync(cancellationToken);
         await _operationLog.WriteAsync(new OperationLogEntry(OperationKinds.ReleaseInstallQueued, $"{ticket.Version} → {target} (quay về)",
-            request.Reason, OperationResult.Info, $"Lệnh {command.Id}: quay về mức {(int)request.Level} trên PROD."), cancellationToken);
+            request.Reason, OperationResult.Info, $"Lệnh {command.Id}: quay về mức {(int)request.Level} trên {code}."), cancellationToken);
         return ToDto(ticket);
     }
 
@@ -468,7 +472,8 @@ public sealed class ReleaseService : IReleaseService, IReleaseAgentHooks
             t.Defects.OrderBy(d => d.ReportedAt).Select(d => new ReleaseDefectDto(d.Id, d.Title, d.Description, d.Screen, d.ReporterName, d.ReportedAt,
                 d.Status, d.Resolution, d.ResolvedByName, d.ResolvedAt)).ToList(),
             t.Installs.OrderByDescending(i => i.StartedAt).Select(i => new ReleaseInstallDto(i.Id, i.Environment, i.Kind, i.Status, i.PreviousVersion,
-                i.TargetVersion, i.Level, i.InstalledSha256, i.Reason, i.ByName, i.StartedAt, i.FinishedAt, i.Message, i.AgentCommandId)).ToList());
+                i.TargetVersion, i.Level, i.InstalledSha256, i.Reason, i.ByName, i.StartedAt, i.FinishedAt, i.Message, i.AgentCommandId)).ToList(),
+            t.InstalledOnTest);
     }
 
     /// <summary>Phần trả về của GitHub API cần dùng.</summary>

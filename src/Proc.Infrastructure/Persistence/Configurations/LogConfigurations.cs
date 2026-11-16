@@ -315,12 +315,16 @@ public sealed class AgentEnvironmentConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(x => x.AgentKeyHash).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.KeyHashLength).IsFixedLength();
         builder.Property(x => x.AgentKeyHint).HasMaxLength(8);
         builder.Property(x => x.KeyCreatedByName).HasMaxLength(256);
+        builder.Property(x => x.ServiceKeyHash).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.KeyHashLength).IsFixedLength();
+        builder.Property(x => x.ServiceKeyHint).HasMaxLength(8);
+        builder.Property(x => x.ServiceKeyCreatedByName).HasMaxLength(256);
         builder.Property(x => x.AgentVersion).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
         builder.Property(x => x.AppVersion).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
         builder.Property(x => x.HostName).HasMaxLength(Proc.Domain.Operations.AgentEnvironment.InfoMaxLength);
         builder.HasIndex(x => x.Code).IsUnique();
         // Xác thực bộ thực thi tìm theo băm khóa; hai môi trường không bao giờ trùng khóa.
         builder.HasIndex(x => x.AgentKeyHash).IsUnique().HasFilter("\"AgentKeyHash\" IS NOT NULL");
+        builder.HasIndex(x => x.ServiceKeyHash).IsUnique().HasFilter("\"ServiceKeyHash\" IS NOT NULL");
     }
 }
 
