@@ -3,6 +3,35 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.39.0] - 2026-11-16
+
+**Xóa hẳn các cột kho đã ngừng dùng ở 0.38.0** (design.md 19.4, CLAUDE.md mục 8 – ngừng dùng trước, xóa ở bản sau). Không đổi giao diện, API.
+Cài sau **0.38.0** qua REL.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Danh mục kho và mặt hàng hoạt động như 0.38.0 sau khi cài: tạo, sửa, ngừng dùng kho; tạo, sửa, nhập Excel mặt hàng; lập PR / PO / RFQ / đặt
+  hàng gộp chọn nơi nhận vẫn bình thường.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 1 migration (115 → 116), script `db/scripts/0.39.0.sql` (idempotent): `V0_39_0_BoCotKho` – **xóa 3 cột** của `Warehouse` (`Type`,
+  `ParentWarehouseId`, `AllowNegativeStock`) cùng khóa ngoại kho cha và 2 chỉ mục; **xóa 7 cột** của `Item` (`TrackLot`, `TrackExpiry`, `MinStock`,
+  `MaxStock`, `SafetyStock`, `ReorderPoint`, `IsCritical`).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); bộ thực thi tự sao lưu CSDL trước khi chạy script.
+- Phải cài **0.38.0 trước** (0.38.0 ngừng ghi các cột này). Không có quyền mới, không có cấu hình mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 2**: REL → Quay về bản cũ (về 0.38.0), chọn mức 2 – bộ thực thi chạy `db-scripts\down\0.39.0.sql` tạo lại 10 cột với giá trị mặc
+  định (kho: loại kho phụ, không kho cha, không cho tồn âm; mặt hàng: không quản lý lô / hạn dùng, không tồn tối thiểu / tối đa / an toàn / điểm đặt
+  hàng lại, không trọng yếu). **Mất**: giá trị cũ của các cột này (0.38.0 đã không còn dùng).
+
 ## [0.38.0] - 2026-11-16
 
 **Dọn phần kho còn sót sau khi bỏ phân hệ kho** (design.md 19.4): kho chỉ còn là nơi nhận hàng, mặt hàng không còn thông số tồn kho. Cài sau
