@@ -28,7 +28,11 @@
                       <ReleasesPath>\<bản>, chép bản mới (giữ appsettings.Production.json), chạy script CSDL mới hơn bản đang chạy, mở site, chờ
                       /health đúng phiên bản + kiểm thử nhanh; lỗi thì tự trả bản cũ + CSDL vừa sao lưu. Đạt thì chép bộ thực thi của gói cho lần sau.
     RollbackRelease – quay về bản đã cất: mức 1 chỉ trả code; mức 2 chạy script gỡ db-scripts\down\<bản>.sql; mức 3 khôi phục bản sao lưu trước
-                      lần cài (design.md 21.6a).
+                      lần cài (design.md 21.6a). Chạy được cả trên TEST (quay về khi UAT không đạt – lát QT9).
+  Từ bản 1.3.0 (lát QT9 – làm mới TEST từ PROD, chỉ máy TEST):
+    RefreshTest     – tải bản pg_dump của PROD (kiểm SHA256), khôi phục ra CSDL <CSDL>_refresh_<giờ>, tắt site, giữ bảng vận hành của chính TEST
+                      và đặt lại phần riêng TEST (thư chờ gửi, phiên đăng nhập), đổi tên: CSDL cũ → <CSDL>_prerefresh_<giờ>, bản mới → <CSDL>,
+                      chép bổ sung file đính kèm, mở site, chờ /health; không lên thì trả CSDL cũ. Chỉ giữ một bản _prerefresh_.
   Lệnh lạ (bộ thực thi cũ hơn máy chủ): báo Lỗi "chưa biết lệnh" – cài lại bộ thực thi bản mới.
 
   -DryRun: chỉ XEM lệnh kế tiếp (máy chủ không đánh dấu nhận lệnh), in ra màn hình, không chạy, không gửi kết quả.
@@ -41,7 +45,9 @@
       "AppPoolName": "Procurement", "HealthUrl": "https://procurement.congty.local/health",
       "PgServiceName": "postgresql-x64-18", "PgDataPath": "D:\PostgreSQL\18\data",
       // từ 1.2.0 – cài bản phát hành:
-      "DatabaseName": "procurement", "ReleasesPath": "D:\ProcurementData\releases" }
+      "DatabaseName": "procurement", "ReleasesPath": "D:\ProcurementData\releases",
+      // từ 1.3.0 – làm mới TEST (chỉ máy TEST):
+      "AttachmentsPath": "D:\ProcurementData\attachments", "AppDbUser": "proc" }
   Khóa có thể đặt ở biến môi trường PROC_AGENT_KEY thay cho "AgentKey"; mật khẩu PostgreSQL ở PROC_AGENT_PGPASSWORD thay cho "PgPassword".
 
 .EXAMPLE
@@ -55,7 +61,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 # Phiên bản script – báo về máy chủ mỗi lần hỏi lệnh (màn hình AGT cột "Bộ thực thi"). Tăng khi sửa script.
-$AgentVersion = '1.2.0'
+$AgentVersion = '1.3.0'
 # Máy chủ cũ / Windows Server 2016 mặc định chưa bật TLS 1.2.
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
@@ -627,6 +633,168 @@ function Invoke-RollbackRelease($Command) {
     return New-Result $false "Đã chép bản $target nhưng /health chưa đạt – kiểm tra tay (deploy-windows.md mục 6)."
 }
 
+# ---------------- Từ 1.3.0 (lát QT9 – làm mới TEST từ PROD, design.md 21.5, 21.18) ----------------
+# Cấu hình thêm (chỉ máy TEST): AttachmentsPath (thư mục đính kèm của TEST – Attachments:RootPath), AppDbUser (tài khoản CSDL của ứng dụng, chủ CSDL
+# mới – mặc định proc). Thư mục làm việc <StatePath>\refresh\<giờ> (bản dump tải về, file bảng giữ lại) – xong thì xóa.
+
+$attachmentsPath = [string]$config.AttachmentsPath
+$appDbUser = if ($config.AppDbUser) { [string]$config.AppDbUser } else { 'proc' }
+
+function Invoke-SqlFile([string]$Database, [string]$Sql, [string]$WorkDir, [string]$Name) {
+    # Câu lệnh có dấu tiếng Việt / dấu ngoặc kép: ghi file UTF-8 rồi psql -f (tham số dòng lệnh Windows đọc theo bảng mã ANSI, PowerShell 5.1 làm mất
+    # ngoặc kép). Chạy trong thư mục làm việc để \copy dùng tên file tương đối.
+    [IO.File]::WriteAllText((Join-Path $WorkDir $Name), $Sql, [Text.UTF8Encoding]::new($false))
+    $old = $env:PGCLIENTENCODING; $env:PGCLIENTENCODING = 'UTF8'
+    try {
+        return Invoke-Pg 'psql' @('-h', $pgHost, '-p', "$pgPort", '-U', $pgUser, '-d', $Database, '-w', '-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1', '-f', $Name) $WorkDir
+    }
+    finally { $env:PGCLIENTENCODING = $old }
+}
+
+function Copy-KeptTables([string]$From, [string]$To, [string[]]$Tables, [string]$ResetSql, [string]$WorkDir) {
+    # Bảng vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục hồi, nhật ký vận hành / lỗi): xuất từ CSDL đang chạy ra file nhị phân, nạp
+    # vào CSDL mới thay bản của PROD – trong một giao dịch cùng câu đặt lại phần riêng TEST. OperationLog chỉ thêm (trigger chặn xóa) nên chỉ chèn
+    # dòng chưa có – như hoán đổi phục hồi (QT6).
+    $export = [Collections.Generic.List[string]]::new()
+    $import = [Collections.Generic.List[string]]::new()
+    $import.Add('BEGIN;')
+    $cols = @{}
+    foreach ($t in $Tables) {
+        if ($t -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,62}$') { throw "Tên bảng không hợp lệ: $t" }
+        $c = Invoke-Sql $From "SELECT string_agg(quote_ident(column_name), ',' ORDER BY ordinal_position) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '$t'"
+        if (-not $c) { Step "Bảng $t không có trên CSDL đang chạy – bỏ qua."; continue }
+        $cols[$t] = $c
+        $export.Add("\copy public.""$t"" ($c) TO 'keep_$t.bin' WITH (FORMAT binary)")
+    }
+    $null = Invoke-SqlFile $From ($export -join "`n") $WorkDir 'export.sql'
+    $kept = @($Tables | Where-Object { $cols.ContainsKey($_) })
+    # Xóa bảng con trước bảng cha (AgentCommand → AgentEnvironment, ErrorOccurrence → ErrorGroup), nạp bảng cha trước.
+    for ($i = $kept.Count - 1; $i -ge 0; $i--) {
+        if ($kept[$i] -ne 'OperationLog') { $import.Add("DELETE FROM public.""$($kept[$i])"";") }
+    }
+    foreach ($t in $kept) {
+        $c = $cols[$t]
+        $import.Add("CREATE TEMP TABLE ""keep_$t"" (LIKE public.""$t"") ON COMMIT DROP;")
+        $import.Add("\copy ""keep_$t"" ($c) FROM 'keep_$t.bin' WITH (FORMAT binary)")
+        if ($t -eq 'OperationLog') {
+            $import.Add("INSERT INTO public.""$t"" ($c) SELECT $c FROM ""keep_$t"" k WHERE NOT EXISTS (SELECT 1 FROM public.""$t"" x WHERE x.""Id"" = k.""Id"");")
+        }
+        else {
+            $import.Add("INSERT INTO public.""$t"" ($c) SELECT $c FROM ""keep_$t"";")
+        }
+    }
+    $import.Add($ResetSql)
+    $import.Add('COMMIT;')
+    $null = Invoke-SqlFile $To ($import -join "`n") $WorkDir 'import.sql'
+    Step "Đã giữ bảng của TEST: $($kept -join ', '); đã đặt lại hàng chờ thư và phiên đăng nhập."
+}
+
+function Sync-Attachments([string]$ManifestPath) {
+    # Chép bổ sung file đính kèm của PROD: file chưa có hoặc khác dung lượng; không xóa file của TEST. Lỗi từng file ghi nhật ký, không dừng cả lệnh.
+    if (-not $attachmentsPath) { Step 'Không khai AttachmentsPath – bỏ qua chép file đính kèm.'; return @{ Copied = 0; Failed = 0; Skipped = $true } }
+    $files = @((Invoke-Agent 'GET' $ManifestPath $null).Content | ConvertFrom-Json)
+    $copied = 0; $failed = 0
+    foreach ($f in $files) {
+        $rel = [string]$f.path
+        if (-not $rel -or $rel.Contains('..') -or [IO.Path]::IsPathRooted($rel)) { $failed++; continue }
+        $local = Join-Path $attachmentsPath ($rel -replace '/', '\')
+        if ((Test-Path -LiteralPath $local) -and (Get-Item -LiteralPath $local).Length -eq [long]$f.size) { continue }
+        try {
+            $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $local)
+            Invoke-WebRequest -Uri "$serverUrl$ManifestPath/file?path=$([uri]::EscapeDataString($rel))" -Headers @{ 'X-Ops-Agent-Key' = $agentKey } `
+                -OutFile $local -UseBasicParsing -TimeoutSec 600
+            $copied++
+        }
+        catch {
+            $failed++
+            Step "Chép $rel lỗi: $($_.Exception.Message)"
+        }
+    }
+    Step "File đính kèm: PROD có $($files.Count), đã chép $copied$(if ($failed) { ", lỗi $failed" })."
+    return @{ Copied = $copied; Failed = $failed; Skipped = $false }
+}
+
+function Invoke-RefreshTest($Command) {
+    if (-not $appPath) { throw 'Cấu hình thiếu AppPath (thư mục website).' }
+    $p = $Command.parameters | ConvertFrom-Json
+    Assert-DbName $databaseName
+    if ($appDbUser -cnotmatch '^[a-z_][a-z0-9_]{0,62}$') { throw "AppDbUser không hợp lệ: $appDbUser" }
+    $source = [string]$p.sourceVersion; Assert-Version $source
+    $current = Get-AppVersion
+    # Cấu trúc CSDL theo phiên bản: TEST phải chạy đúng bản của máy nguồn (máy chủ đã chặn khi giao lệnh; kiểm lại vì có thể vừa cài bản khác).
+    if ($current -ne $source) { return New-Result $false "TEST đang chạy bản $current, bản dump của bản $source – không làm mới (đưa TEST về bản $source trước)." }
+    $stamp = (Get-Date).ToString('yyyyMMdd_HHmm')
+    $newDb = "${databaseName}_refresh_$stamp"; $oldDb = "${databaseName}_prerefresh_$stamp"
+    Assert-DbName $newDb; Assert-DbName $oldDb
+    $work = Join-Path $statePath "refresh\$stamp"
+    $null = New-Item -ItemType Directory -Force -Path $work
+    Step "Làm mới TEST từ $($p.sourceEnvironment) bản $source (pg_dump $($p.dumpFileName))."
+
+    # 1. Tải bản dump, kiểm SHA256 – sai thì dừng, chưa đổi gì trên máy.
+    $dumpFile = Join-Path $work 'source.dump'
+    Invoke-WebRequest -Uri "$serverUrl$([string]$p.dumpPath)" -Headers @{ 'X-Ops-Agent-Key' = $agentKey } -OutFile $dumpFile -UseBasicParsing -TimeoutSec 7200
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $dumpFile).Hash.ToLowerInvariant()
+    if ($actual -ne ([string]$p.sha256).ToLowerInvariant()) {
+        Remove-Item -LiteralPath $work -Recurse -Force
+        return New-Result $false "SHA256 bản dump tải về ($actual) khác máy chủ báo ($($p.sha256)) – không làm mới."
+    }
+    Step "Đã tải bản dump ($([math]::Round((Get-Item -LiteralPath $dumpFile).Length / 1MB, 1)) MB), SHA256 đúng."
+
+    # 2. Khôi phục ra CSDL mới (site TEST vẫn chạy): cùng bảng mã / locale CSDL đang chạy, chủ là tài khoản ứng dụng.
+    $info = (Invoke-Sql 'postgres' "SELECT pg_encoding_to_char(encoding) || '|' || datcollate || '|' || datctype FROM pg_database WHERE datname = '$databaseName'") -split '\|'
+    if ($info.Count -ne 3) { throw "Không thấy CSDL $databaseName trên máy chủ." }
+    $null = Invoke-Sql 'postgres' "CREATE DATABASE $newDb OWNER $appDbUser TEMPLATE template0 ENCODING '$($info[0])' LC_COLLATE '$($info[1])' LC_CTYPE '$($info[2])'"
+    $offline = $false
+    try {
+        $null = Invoke-Pg 'pg_restore' @('-h', $pgHost, '-p', "$pgPort", '-U', $pgUser, '-w', '--no-owner', "--role=$appDbUser", '--exit-on-error',
+            '-d', $newDb, 'source.dump') $work
+        Step "Đã khôi phục bản dump vào $newDb."
+
+        # 3. Tắt site, giữ bảng của TEST + đặt lại phần riêng, đổi tên CSDL.
+        Set-AppOffline $true 'Đang làm mới dữ liệu TEST từ PROD, vui lòng quay lại sau ít phút.'
+        $offline = $true
+        Copy-KeptTables $databaseName $newDb ([string[]]$p.keepTables) ([string]$p.resetSql) $work
+        $null = Invoke-Sql 'postgres' "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE datname IN ('$databaseName', '$newDb') AND pid <> pg_backend_pid()"
+        $null = Invoke-Sql 'postgres' "ALTER DATABASE $databaseName RENAME TO $oldDb"
+        try { $null = Invoke-Sql 'postgres' "ALTER DATABASE $newDb RENAME TO $databaseName" }
+        catch { $null = Invoke-Sql 'postgres' "ALTER DATABASE $oldDb RENAME TO $databaseName"; throw }
+        Step "Đã hoán đổi: $databaseName cũ → $oldDb, bản mới → $databaseName."
+    }
+    catch {
+        $why = $_.Exception.Message
+        Step "Làm mới lỗi: $why – giữ CSDL TEST như cũ."
+        try { $null = Invoke-Sql 'postgres' "DROP DATABASE IF EXISTS $newDb WITH (FORCE)" } catch { Step "Xóa $newDb lỗi: $($_.Exception.Message)" }
+        if ($offline) { Set-AppOffline $false '' }
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+        return New-Result $false "Không làm mới được TEST (CSDL TEST giữ nguyên): $why"
+    }
+
+    # 4. Chép bổ sung file đính kèm (site còn tắt), mở site, kiểm tra; không lên thì trả CSDL cũ.
+    $att = Sync-Attachments ([string]$p.attachmentsPath)
+    Set-AppOffline $false ''
+    if (-not (Test-HealthVersion $current)) {
+        Step 'Site không lên với dữ liệu mới – trả CSDL TEST cũ.'
+        Set-AppOffline $true 'Đang trả dữ liệu TEST cũ.'
+        $null = Invoke-Sql 'postgres' "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE datname = '$databaseName' AND pid <> pg_backend_pid()"
+        $null = Invoke-Sql 'postgres' "ALTER DATABASE $databaseName RENAME TO $newDb"
+        $null = Invoke-Sql 'postgres' "ALTER DATABASE $oldDb RENAME TO $databaseName"
+        Set-AppOffline $false ''
+        $null = Test-HealthVersion $current
+        return New-Result $false "Site không chạy được với dữ liệu PROD (/health) – đã trả CSDL TEST cũ; bản làm mới giữ tên $newDb để xem lỗi."
+    }
+
+    # 5. Dọn: chỉ giữ một CSDL TEST trước lần làm mới (dữ liệu thử – bản cũ hơn xóa), xóa thư mục làm việc (bản dump lớn).
+    $prefix = "${databaseName}_prerefresh_"
+    $olds = @(((Invoke-Sql 'postgres' "SELECT string_agg(datname, ',' ORDER BY datname) FROM pg_database WHERE left(datname, $($prefix.Length)) = '$prefix' AND datname <> '$oldDb'") -split ',') | Where-Object { $_ })
+    foreach ($o in $olds) {
+        try { Assert-DbName $o; $null = Invoke-Sql 'postgres' "DROP DATABASE IF EXISTS $o WITH (FORCE)"; Step "Đã xóa CSDL TEST cũ $o." }
+        catch { Step "Xóa $o lỗi: $($_.Exception.Message)" }
+    }
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    $attText = if ($att.Skipped) { 'chưa khai AttachmentsPath nên không chép file đính kèm' } else { "chép $($att.Copied) file đính kèm$(if ($att.Failed) { " ($($att.Failed) file lỗi – xem nhật ký)" })" }
+    return New-Result $true "Đã làm mới TEST từ $($p.sourceEnvironment) (pg_dump $($p.dumpFileName)), $attText; CSDL TEST trước đó giữ tên $oldDb. Người dùng đăng nhập lại bằng mật khẩu PROD."
+}
+
 $lockFile = Join-Path $statePath 'qt-agent.lock'
 try {
     $lock = [IO.File]::Open($lockFile, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
@@ -676,6 +844,7 @@ try {
             'SwapCluster' { Invoke-SwapCluster $work }
             'DeployRelease' { Invoke-DeployRelease $work }
             'RollbackRelease' { Invoke-RollbackRelease $work }
+            'RefreshTest' { Invoke-RefreshTest $work }
             default {
                 @{ Succeeded = $false; Message = "Bộ thực thi $AgentVersion chưa biết lệnh '$($work.kind)' – cài bộ thực thi bản mới (qt-agent-install.ps1)."; Journal = '' }
             }

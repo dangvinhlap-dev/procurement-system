@@ -1009,6 +1009,14 @@ vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục h�
   `AttachmentService.UploadSystemAsync` (ảnh sai → từ chối cả báo lỗi). **Máy TEST** `POST /feedback` (mọi người đăng nhập) chuyển về PROD qua
   HttpClient `ops-upstream`; `EnvironmentStatusDto.FeedbackEnabled`. **Sửa lỗi QT8**: `AttachmentOwnerTypes.All` thiếu `ReleaseTicket` (tab Đính kèm
   của phiếu phát hành không tải file lên được). Test tích hợp `TestRefreshTests` (3), môi trường thêm cờ báo lỗi.
+- **QT9-3 xong (bộ thực thi 1.3.0, commit)**: lệnh `RefreshTest` – kiểm TEST cùng bản nguồn, tải dump kiểm SHA256, `CREATE DATABASE
+  <csdl>_refresh_<giờ>` (cùng encoding / locale, chủ `AppDbUser`), `pg_restore --no-owner --role`, tắt site (`app_offline.htm`), `Copy-KeptTables`
+  (xuất `\copy … (FORMAT binary)` theo danh sách cột, nạp vào bảng tạm → DELETE + INSERT, `OperationLog` chỉ chèn dòng chưa có; câu đặt lại cùng
+  giao dịch; SQL ghi file UTF-8 chạy `psql -f` – PowerShell 5.1 làm mất ngoặc kép / dấu khi truyền `-c`), đổi tên CSDL (lỗi → đổi ngược, xóa bản
+  mới), chép bổ sung đính kèm (`AttachmentsPath`), mở site, `/health` đúng bản (không lên → trả CSDL cũ), xóa bản `_prerefresh_` cũ hơn.
+  `qt-agent-install.ps1` thêm `-AttachmentsPath`, `-AppDbUser`. **Đã chạy thử thật** `Copy-KeptTables` + câu đặt lại trên hai CSDL nháp dựng từ
+  `procurement_test` (giữ môi trường của "TEST", nhật ký không trùng, thư chờ về 0, ghi chú đúng dấu); phần tải / đổi tên / IIS chưa chạy trên máy
+  TEST thật – diễn tập trên TEST.
 
 **QT8 – Trung tâm phát hành (REL) xong 16/11/2026 (chưa phát hành – bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh` (đã merge)** (người dùng
 "làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –
