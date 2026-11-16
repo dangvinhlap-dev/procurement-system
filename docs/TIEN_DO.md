@@ -158,6 +158,15 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Đơn giá dự kiến trên PR – hướng B (người dùng chốt 16/11/2026, nhánh `feature/pr-gia-du-kien`, bản 0.40.0 chưa phát hành)**: mặt hàng
+  có giá nhận hàng gần nhất (XNH) thì máy chủ tự lấy, bỏ qua giá gửi lên; chưa có thì người lập nhập đơn giá dự kiến, lưu nháp được khi
+  trống, **gửi duyệt bắt buộc mọi dòng (kể cả hàng mới) > 0** (`PurchaseRequest.EnsurePricedForSubmit`). Cờ `PurchaseRequestLine.EstPriceManual`
+  (migration `V0_40_0_DonGiaDuKienPR`), API `POST /api/purchase-requests/reference-prices`. Người dùng yêu cầu thêm: **cảnh báo người duyệt**
+  "Giá tham khảo do người lập đề nghị tự nhập" – Alert đầu phiếu, tam giác vàng ô giá, trang `/duyet` (`manualPriceWarning`). Test: tích hợp
+  `DonGiaDuKien_ChuaCoGiaNhan_…` + sửa 27 test cũ thêm giá; `dotnet test` 803/803. e2e mới `pr-manual-price.spec.ts`.
+  **Còn:** `node_modules` của Proc.Web bị thiếu/khóa (tsc không có, `npm ci` bị hệ điều hành từ chối) → chưa chạy `npm run build`, `tsc`,
+  `oxlint`, Playwright; chưa merge main.
+
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →
   Z3 ô số chứng từ (sao chép, bấm đúp mở phiếu gốc) → Z4 quyền Hủy đặc biệt **chỉ cấp cho admin** (người lập không hủy được, bắt buộc lý

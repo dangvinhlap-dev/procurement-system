@@ -65,6 +65,10 @@ public static class PurchasingEndpoints
             .RequirePermission(Permissions.Purchase.PrView);
         pr.MapGet("/open-lines", (IPurchaseRequestService s, CancellationToken ct) => s.OpenLinesAsync(ct))
             .RequirePermission(Permissions.Purchase.PoCreate);
+        // Màn hình PR tra giá nhận hàng gần nhất khi chọn mặt hàng: chưa có giá thì mở ô đơn giá dự kiến (design.md mục 10.2).
+        pr.MapPost("/reference-prices", (IReadOnlyList<ReferencePriceQuery> request, IPurchaseRequestService s, CancellationToken ct) =>
+                s.ReferencePricesAsync(request, ct))
+            .RequirePermission(Permissions.Purchase.PrCreate);
         pr.MapPost("/", async (SavePurchaseRequestRequest request, IPurchaseRequestService s, CancellationToken ct) =>
             {
                 var created = await s.CreateAsync(request, ct);

@@ -41,8 +41,8 @@ test('PR vượt định mức sử dụng theo kế hoạch nhu cầu: cảnh b
     date: today, departmentId: department.id, purpose: 'Thử định mức', neededDate: `${year}-02-15`, warehouseId: null, priority: 'Normal',
     note: null,
     lines: [
-      { id: null, itemId: planned.id, uomId: cai, qty: 25, suggestedSupplierId: null, neededDate: null, note: null },
-      { id: null, itemId: outside.id, uomId: cai, qty: 3, suggestedSupplierId: null, neededDate: null, note: null },
+      { id: null, itemId: planned.id, uomId: cai, qty: 25, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 },
+      { id: null, itemId: outside.id, uomId: cai, qty: 3, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 },
     ],
   })
 

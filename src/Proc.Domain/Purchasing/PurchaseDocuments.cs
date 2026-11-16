@@ -62,10 +62,11 @@ public sealed record PurchaseRequestNewItemData(
 
 /// <summary>
 /// Dữ liệu một dòng đề nghị mua hàng. <c>Qty</c> là <b>SL cần sử dụng</b> người đề xuất nhập; SL cần mua = cần sử dụng − tồn thủ kho nhập
-/// (lát Y3b) do Domain tính.
+/// (lát Y3b) do Domain tính. <c>EstPriceManual</c> = đơn giá do người lập nhập vì mặt hàng chưa có giá nhận hàng gần nhất (design.md mục 10.2).
 /// </summary>
 public sealed record PurchaseRequestLineData(
-    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal EstPrice, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
+    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, decimal EstPrice, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note,
+    bool EstPriceManual = false);
 
 /// <summary>Đầu phiếu đơn mua hàng (design.md mục 10.3). Giai đoạn 5 chỉ dùng VND.</summary>
 /// <param name="DepartmentId">Bộ phận đặt hàng (không bắt buộc) – xét phạm vi "bộ phận được phép đặt" của hợp đồng (design.md mục 18.10).</param>
@@ -687,13 +688,29 @@ public sealed class PurchaseRequest : ApprovableDocument
         var line = new PurchaseRequestLine(Id);
         line.Set(
             _lines.Count == 0 ? 1 : _lines.Max(l => l.LineNo) + 1,
-            new PurchaseRequestLineData(null, item.Id, row.UomId, row.Qty, row.EstPrice, null, row.NeededDate, row.Note ?? row.Description),
+            new PurchaseRequestLineData(null, item.Id, row.UomId, row.Qty, row.EstPrice, null, row.NeededDate, row.Note ?? row.Description, EstPriceManual: true),
             item);
         _lines.Add(line);
         row.ItemId = item.Id;
         row.LinkedLineId = line.Id;
         RecomputeTotal();
         return line;
+    }
+
+    /// <summary>
+    /// Kiểm tra trước khi gửi duyệt: mọi dòng có mã và hàng mới chưa gắn mã phải có đơn giá &gt; 0. Thành tiền dự kiến dùng để chọn cấp duyệt
+    /// theo ngưỡng và kiểm tra ngân sách – giá 0 làm phiếu lọt ngưỡng (design.md mục 10.2, hướng B người dùng chốt 16/11/2026). Nháp thì
+    /// được để trống để lưu dở.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi có dòng chưa có đơn giá.</exception>
+    public void EnsurePricedForSubmit()
+    {
+        var missing = _lines.Where(l => l.EstPrice <= 0).OrderBy(l => l.LineNo).Select(l => $"dòng {l.LineNo}")
+            .Concat(_newItems.Where(n => n.LinkedLineId is null && n.EstPrice <= 0).OrderBy(n => n.LineNo).Select(n => $"hàng mới dòng {n.LineNo}"))
+            .ToList();
+        if (missing.Count > 0)
+            throw new BusinessRuleException(
+                $"Chưa có đơn giá dự kiến ở {string.Join(", ", missing)} – mặt hàng chưa có giá nhận hàng gần nhất thì người lập nhập đơn giá dự kiến lớn hơn 0 rồi mới gửi duyệt.");
     }
 
     /// <summary>Tổng dự kiến = dòng có mã + hàng mới chưa gắn mã (đã gắn thì tính ở dòng có mã sinh ra, không đếm hai lần).</summary>
@@ -831,6 +848,12 @@ public sealed class PurchaseRequestLine : Entity
     /// <summary>Đơn giá tham khảo theo ĐVT trên phiếu – numeric(19,6).</summary>
     public decimal EstPrice { get; private set; }
 
+    /// <summary>
+    /// Đơn giá do người lập nhập (mặt hàng chưa có giá nhận hàng gần nhất, hoặc dòng sinh ra khi gắn mã hàng mới); false = máy chủ lấy từ
+    /// phiếu xác nhận nhận hàng (design.md mục 10.2). Người duyệt nhìn cờ này để biết giá chưa có căn cứ lịch sử.
+    /// </summary>
+    public bool EstPriceManual { get; private set; }
+
     /// <summary>Thành tiền dự kiến = SL × đơn giá tham khảo, làm tròn 2 số – numeric(19,2).</summary>
     public decimal Amount { get; private set; }
 
@@ -848,8 +871,9 @@ public sealed class PurchaseRequestLine : Entity
     {
         var prefix = $"Dòng {lineNo} ({item.Code})";
         CheckItem(item, data, prefix);
-        if (data.EstPrice < 0 || decimal.Round(data.EstPrice, 6) != data.EstPrice)
-            throw new BusinessRuleException($"{prefix}: đơn giá tham khảo phải ≥ 0, tối đa 6 chữ số thập phân.");
+        // numeric(19,6): phần nguyên tối đa 13 chữ số.
+        if (data.EstPrice < 0 || decimal.Round(data.EstPrice, 6) != data.EstPrice || data.EstPrice >= 10_000_000_000_000m)
+            throw new BusinessRuleException($"{prefix}: đơn giá phải ≥ 0, tối đa 6 chữ số thập phân.");
         var factor = Factor(item, data.UomId, prefix);
         // Tồn thủ kho đã nhập (lượt trước) giữ lại khi dòng vẫn cùng mặt hàng, cùng ĐVT; đổi thì bỏ để thủ kho nhập lại ở lượt sau (lát Y3b).
         if (ItemId != item.Id || UomId != data.UomId) StockQty = null;
@@ -859,6 +883,7 @@ public sealed class PurchaseRequestLine : Entity
         RequiredQty = data.Qty;
         UomFactor = factor;
         EstPrice = data.EstPrice;
+        EstPriceManual = data.EstPriceManual;
         Recompute();
         SuggestedSupplierId = data.SuggestedSupplierId;
         NeededDate = data.NeededDate;

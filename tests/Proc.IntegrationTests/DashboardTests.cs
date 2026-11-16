@@ -64,7 +64,7 @@ public class DashboardTests
         // PR chờ duyệt; PO đã duyệt hẹn giao 2 ngày trước (trễ); nhận 2 × 50.000 theo PO bằng XNH trong tháng (chi tiêu tính theo XNH –
         // design.md mục 19.4).
         var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(buyer), null, Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 5, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(buyer), null, Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 5, null, null, null, 100_000)]), Ct));
         await ReadAsync<PurchaseRequestDto>(await buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         var po = await ReadAsync<PurchaseOrderDto>(await buyer.PostAsJsonAsync("/api/purchase-orders",
             new SavePurchaseOrderRequest(Today.AddDays(-10), supplier.Id, kt, Today.AddDays(-2), null, null, null, 0, null,

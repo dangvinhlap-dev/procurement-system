@@ -26,7 +26,7 @@ test('lập bảng tổng hợp 2B, duyệt trên điện thoại, hủy', async
   // Đề nghị mua 6 hộp, gửi duyệt và duyệt qua API (người lập – quản trị – không tự duyệt).
   const pr = await bha.send<{ id: string; no: string }>('post', '/api/purchase-requests', {
     date: todayVn(), departmentId: department.id, purpose: 'Bảo hộ lao động quý IV', neededDate: null, warehouseId: null, priority: 'Normal',
-    category: 'Goods', note: null, lines: [{ id: null, itemId, uomId: hop, qty: 6, suggestedSupplierId: null, neededDate: null, note: null }],
+    category: 'Goods', note: null, lines: [{ id: null, itemId, uomId: hop, qty: 6, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 }],
     newItems: [],
   })
   await bha.send('post', `/api/purchase-requests/${pr.id}/submit`, {})

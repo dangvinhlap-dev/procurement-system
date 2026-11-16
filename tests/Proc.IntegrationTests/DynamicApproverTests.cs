@@ -76,7 +76,7 @@ public class DynamicApproverTests
 
     private static async Task<PurchaseRequestDto> PrAsync(Fixture f, HttpClient client, Guid departmentId) =>
         await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, departmentId, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, departmentId, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null, 100_000)]), Ct));
 
     private static Task<HttpResponseMessage> ActAsync(HttpClient client, Guid prId, string action, string? comment = null) =>
         client.PostAsJsonAsync($"/api/purchase-requests/{prId}/{action}", new ApprovalActionRequest(comment), Ct);

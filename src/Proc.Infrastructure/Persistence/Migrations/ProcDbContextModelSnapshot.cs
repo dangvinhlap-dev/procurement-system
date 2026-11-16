@@ -6805,6 +6805,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(19, 6)
                         .HasColumnType("numeric(19,6)");
 
+                    b.Property<bool>("EstPriceManual")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("ItemId")
                         .HasColumnType("uuid");
 

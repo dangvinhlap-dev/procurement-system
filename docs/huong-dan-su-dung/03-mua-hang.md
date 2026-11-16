@@ -33,7 +33,9 @@ Mỗi mặt hàng × năm × công ty chỉ thuộc một phiếu còn hiệu l�
 
 1. **Tạo mới**. Đầu phiếu: ngày, **bộ phận** (bắt buộc, chọn từ danh mục), mục đích, ngày cần, kho nhận, **mức ưu tiên** (Thường/Khẩn).
 2. Tab dòng hàng: mặt hàng, ĐVT, số lượng, ngày cần, NCC đề xuất (nếu có – dòng tự lấy **ĐVT mua** và **mã hàng NCC** của NCC đó).
-   - **Đơn giá tham khảo** do hệ thống lấy = giá nhập gần nhất của công ty (chưa từng nhập thì 0). Cột tồn hiện tại chỉ để xem.
+   - **Đơn giá tham khảo** do hệ thống lấy = giá nhận hàng gần nhất của công ty (phiếu xác nhận nhận hàng), chỉ đọc. Mặt hàng **chưa từng
+     nhận hàng** thì ô giá có tam giác vàng để bạn **nhập đơn giá dự kiến**: lưu nháp được khi còn trống, nhưng **gửi duyệt bắt buộc giá > 0**.
+     Người duyệt sẽ thấy cảnh báo "Giá tham khảo do người lập đề nghị tự nhập" ở đầu phiếu và ở ô giá. Cột tồn hiện tại chỉ để xem.
    - Cột **Đang đặt**: số lượng đã lên PO.
    - Cột **Định mức LK**: lũy kế từ kế hoạch nhu cầu đã chốt; vượt định mức thì đầu phiếu **cảnh báo** (không chặn).
 3. Tab **Hàng mới chưa có mã**: hàng chưa có trong danh mục – ghi mô tả, quy cách, số lượng, ĐVT. Được duyệt cùng PR; sau khi duyệt, phòng

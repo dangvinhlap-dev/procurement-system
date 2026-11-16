@@ -230,6 +230,8 @@ export interface PurchaseRequestLine {
   lastStockAt?: string | null
   /** SL đang đặt của mặt hàng tại công ty (PO đã duyệt chưa nhận đủ, ĐVT cơ sở) – design.md mục 18.13. */
   onOrderQty: number
+  /** Đơn giá do người lập nhập vì mặt hàng chưa có giá nhận hàng gần nhất (design.md mục 10.2); false = máy chủ lấy từ XNH. */
+  estPriceManual?: boolean
   /**
    * Định mức sử dụng (lát G11, design.md mục 18.25): null = không kiểm tra; Ok; Over – vượt; NoPlan – ngoài kế hoạch nhu cầu.
    * SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến normThrough.
@@ -336,7 +338,10 @@ export interface PurchaseRequestNewItem {
   itemCode: string | null
 }
 
-/** Nội dung PR gửi lên (đơn giá tham khảo do server lấy). */
+/**
+ * Nội dung PR gửi lên. Dòng có mã: `estPrice` là đơn giá dự kiến người lập nhập – máy chủ chỉ nhận khi mặt hàng chưa có giá nhận hàng
+ * gần nhất, có giá thì tự lấy (design.md mục 10.2).
+ */
 export interface SavePurchaseRequestInput {
   date: string
   departmentId: string | null
@@ -345,7 +350,16 @@ export interface SavePurchaseRequestInput {
   warehouseId: string | null
   priority: PurchasePriority
   note: string | null
-  lines: { id: string | null; itemId: string; uomId: string; qty: number; suggestedSupplierId: string | null; neededDate: string | null; note: string | null }[]
+  lines: {
+    id: string | null
+    itemId: string
+    uomId: string
+    qty: number
+    suggestedSupplierId: string | null
+    neededDate: string | null
+    note: string | null
+    estPrice: number | null
+  }[]
   newItems: {
     id: string | null
     description: string
@@ -692,6 +706,49 @@ export function usePurchaseDocuments(kind: PurchaseKind, filter: { from: string;
     queryFn: () => apiFetch<PurchaseListResult>(`/api/${kind}?${params.toString()}`),
     placeholderData: keepPreviousData,
   })
+}
+
+/** Đơn giá tham khảo của một cặp mặt hàng – ĐVT; price null = chưa có giá nhận hàng, người lập nhập đơn giá dự kiến. */
+export interface ReferencePrice {
+  itemId: string
+  uomId: string
+  price: number | null
+}
+
+/**
+ * Tra giá nhận hàng gần nhất của công ty cho các cặp mặt hàng – ĐVT trên PR (design.md mục 10.2).
+ * @param pairs Các cặp mặt hàng – ĐVT đang có trên lưới.
+ * @param enabled false khi phiếu chỉ xem (không cần tra).
+ * @returns Map khóa `itemId|uomId` → giá (null = chưa có); undefined khi đang tra.
+ */
+export function useReferencePrices(pairs: { itemId: string; uomId: string }[], enabled: boolean) {
+  const companyId = useCompanyId()
+  const keys = [...new Set(pairs.map((p) => `${p.itemId}|${p.uomId}`))].sort()
+  return useQuery({
+    queryKey: ['purchasing', companyId, 'reference-prices', keys],
+    queryFn: async () => {
+      const body = keys.map((k) => ({ itemId: k.split('|')[0], uomId: k.split('|')[1] }))
+      const rows = await apiFetch<ReferencePrice[]>('/api/purchase-requests/reference-prices', { method: 'POST', body })
+      return new Map(rows.map((r) => [`${r.itemId}|${r.uomId}`, r.price]))
+    },
+    enabled: enabled && keys.length > 0,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * Câu cảnh báo cho người duyệt khi PR có đơn giá do người lập tự nhập (người dùng yêu cầu 16/11/2026 – design.md mục 10.2); null khi không có.
+ * Gồm dòng có mã đánh dấu `estPriceManual` và hàng mới chưa gắn mã (luôn là giá người lập ước).
+ * @param doc Phiếu đề nghị đã lưu.
+ */
+export function manualPriceWarning(doc: Pick<PurchaseRequest, 'lines' | 'newItems'> | undefined): string | null {
+  if (!doc) return null
+  const parts = [
+    ...doc.lines.filter((l) => l.estPriceManual).map((l) => `dòng ${l.lineNo} ${l.itemCode}`),
+    ...doc.newItems.filter((n) => !n.itemId).map((n) => `hàng mới dòng ${n.lineNo}`),
+  ]
+  if (parts.length === 0) return null
+  return `Giá tham khảo do người lập đề nghị tự nhập (chưa có dữ liệu lịch sử giá nhận hàng): ${parts.join(', ')}. Người duyệt kiểm tra lại đơn giá trước khi duyệt.`
 }
 
 /** Chi tiết PR. */
