@@ -1024,6 +1024,9 @@ vận hành của chính TEST (sao lưu, bộ thực thi, bảo trì, phục h�
   `feedbackEnabled`: tiêu đề, mô tả, màn hình điền sẵn, ảnh dán Ctrl+V / chọn file (PNG / JPG ≤ 2 MB). AGT nút **Tạo khóa dịch vụ…** + cột "Khóa dịch
   vụ" (`CreateKeyModal` hai loại khóa). CSS `.erp-tst-list`, `.erp-feedback-paste`. e2e `test-refresh.spec.ts` (2, API giả lập); `agent.spec.ts` sửa
   chọn nút "Làm mới" (trùng tên với mục cây "Làm mới TEST").
+- **QT9-5 xong (tài liệu, commit)**: design.md **21.18** (+ 21.4, 21.7, 21.6a quay về trên TEST); ui-style **5r**; deploy-windows **4h** (bộ thực thi
+  TEST 1.3.0 `-AttachmentsPath -AppDbUser`, khóa dịch vụ, `Operations:Upstream:*`, danh sách kiểm tra); hướng dẫn 08 mục **8.9e** + quay về trên TEST
+  ở 8.9d; ke-hoach-qt (Đã làm QT9). Kiểm tra: build 0 cảnh báo, `dotnet test` 806/806, tsc, oxlint, `npm run build`; Playwright đủ bộ – xem dòng dưới.
 
 **QT8 – Trung tâm phát hành (REL) xong 16/11/2026 (chưa phát hành – bản 0.36.0, gộp QT5–QT7) – nhánh `feature/qt8-trung-tam-phat-hanh` (đã merge)** (người dùng
 "làm tiếp", rồi "giữ chế độ này" – giữ cách làm và mặc định đã nêu). Chia 5 bước; mặc định tự chọn: REL ghi được trên PROD và DEV (TEST chỉ xem –

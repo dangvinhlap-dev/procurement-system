@@ -381,6 +381,39 @@ Kiểm tra trên máy TEST (diễn tập D3, D4 – ke-hoach-qt.md mục 5):
 - [ ] D4 mức 1: cài bản mới, nhập vài phiếu, Quay về mức 1 → bản cũ chạy, phiếu vừa nhập còn nguyên.
 - [ ] D4 mức 2 / 3: với bản có script CSDL – đúng dữ liệu bị gỡ / khôi phục như hộp thoại liệt kê.
 
+## 4h. Làm mới TEST từ PROD, báo lỗi từ TEST (từ 0.37.0 – lát QT9)
+
+Cài bản 0.37.0 qua REL như mọi bản (mục 4g); sau đó làm một lần:
+
+1. **Bộ thực thi TEST 1.3.0**: tự cập nhật khi cài 0.37.0 qua REL (T1). Chạy lại `qt-agent-install.ps1` trên **TEST** để thêm cấu hình làm mới:
+   ```powershell
+   .\qt-agent-install.ps1 -ServerUrl https://procurement.congty.local -TaskUser .\proc-agent -AppPath C:\inetpub\procurement `
+       -StatePath D:\ProcurementData\agent -AppPoolName Procurement -PgUser proc_maint -DatabaseName procurement `
+       -ReleasesPath D:\ProcurementData\releases -AttachmentsPath D:\ProcurementData\attachments -AppDbUser proc
+   ```
+   `proc_maint` cần quyền tạo CSDL (`CREATEDB`), đổi tên / xóa CSDL của phần mềm và là thành viên `proc` (đã cấp ở 4e – `GRANT proc TO proc_maint`);
+   `proc-agent` cần quyền sửa `AttachmentsPath`. Ổ của `StatePath` phải đủ chỗ cho một bản dump PROD; máy chủ CSDL TEST đủ chỗ cho **ba** bản CSDL lúc
+   làm mới (đang chạy, bản mới, bản `_prerefresh_` giữ lại).
+2. Trên **PROD** màn hình AGT: chọn môi trường **Test** → **Tạo khóa dịch vụ…** → chép khóa. Trên **TEST** sửa `appsettings.Production.json`:
+   ```json
+   "Operations": { "Upstream": { "BaseUrl": "https://procurement.congty.local", "ServiceKey": "qts_…" } }
+   ```
+   rồi khởi động lại site. Máy TEST phải gọi được PROD qua HTTPS (tường lửa mở 443 từ TEST tới PROD). Thanh trên TEST hiện nút **Báo lỗi / góp ý**.
+3. Gán quyền `System.OpsTestRefresh.Run` (TST) cho người phụ trách (ADMIN có sẵn).
+
+| Cấu hình | Ý nghĩa |
+| --- | --- |
+| `Operations:Upstream:BaseUrl` | Chỉ máy **TEST**: địa chỉ PROD để chuyển báo lỗi; PROD, DEV để trống |
+| `Operations:Upstream:ServiceKey` | Chỉ máy **TEST**: khóa dịch vụ tạo ở AGT trên PROD (`qts_…`) – bí mật, không gửi qua email / chat |
+| `Operations:Upstream:TimeoutSeconds` | Chờ PROD trả lời (30 giây) |
+
+Kiểm tra trên máy TEST (diễn tập):
+- [ ] TST (trên PROD) báo "Đủ điều kiện" (TEST cùng bản, có bản pg_dump trong 24 giờ) → **Làm mới TEST…** → lệnh Xong; đăng nhập TEST bằng mật khẩu
+  PROD thấy dữ liệu PROD, file đính kèm mở được; BAK / AGT / ERR trên TEST vẫn là lịch sử của TEST; thư chờ gửi không đi; có CSDL `procurement_prerefresh_…`.
+- [ ] Làm mới lần hai: bản `_prerefresh_` cũ bị xóa, chỉ còn bản mới nhất.
+- [ ] Trên TEST bấm **Báo lỗi / góp ý** kèm ảnh → phiếu phát hành đang UAT trên PROD có dòng lỗi "(TEST)", ảnh ở tab Đính kèm.
+- [ ] Phiếu Đang UAT → **Quay về bản cũ trên TEST…** mức 1 → TEST chạy lại bản PROD, phiếu về Đã nhận.
+
 ## 5. Nâng cấp lên bản mới
 
 Đọc CHANGELOG.md mục "Lưu ý khi nâng cấp" của bản đó trước.

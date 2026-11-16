@@ -3039,7 +3039,7 @@ và báo **đèn đỏ** khi TEST lỏng hơn PROD.
 | CFG | Cấu hình truy cập | Chính sách mật khẩu, số lần sai, thời gian khóa, hạn phiên; danh sách IP được dùng chức năng QT; đăng xuất tất cả; **chế độ bảo trì** (chỉ người có quyền vào, câu thông báo); giới hạn tần suất đăng nhập và header bảo mật (lát S1 cũ gộp vào); đã làm lát QT7 – mục 21.16 |
 | REL | Trung tâm phát hành | Danh sách phiếu phát hành + bảng môi trường; phiếu (mục 21.6); đã làm lát QT8 – mục 21.17 |
 | AGT | Bộ thực thi (lát QT5) | Môi trường DEV / TEST / PROD có bộ thực thi: tình trạng liên lạc, phiên bản, khóa (tạo khóa xác nhận Q6); lịch sử lệnh, "Lệnh thử"; QT8 dùng bảng môi trường này cho REL – mục 21.14 |
-| TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới |
+| TST | Làm mới TEST | Lấy `pg_dump` PROD mới nhất → bộ thực thi TEST khôi phục (nguyên trạng) + chép bổ sung file đính kèm → đặt lại cấu hình TEST; lịch sử làm mới; đã làm lát QT9 – mục 21.18 |
 
 ### 21.5 Sao lưu và phục hồi (PostgreSQL 18, công cụ có sẵn)
 
@@ -3119,7 +3119,7 @@ trúc CSDL mới mới phải đụng tới CSDL:
 | QT6 | Phục hồi RST theo mốc thời gian và từ `pg_dump` |
 | QT7 | Cấu hình truy cập CFG (gộp lát bảo mật S1) – **xong 15/11/2026** (mục 21.16) |
 | QT8 | **Xong 15/11/2026** (mục 21.17) – Trung tâm phát hành REL: phiếu phát hành, nhận gói, cài TEST / PROD qua bộ thực thi, UAT, quay về bản cũ ba mức (21.6a – `publish.ps1` sinh `rollback.json` + script gỡ), bảng ba môi trường; cập nhật `docs/phat-hanh.md`, CLAUDE.md mục 8 |
-| QT9 | Làm mới TEST từ PROD (nguyên trạng + đính kèm, không làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành |
+| QT9 | Làm mới TEST từ PROD (nguyên trạng + đính kèm, không làm mờ) + nút "Báo lỗi / góp ý" trên TEST gửi về phiếu phát hành – **xong 16/11/2026** (mục 21.18) |
 
 ### 21.8 Đưa chính module QT vào vận hành (14/11/2026)
 
@@ -3444,6 +3444,37 @@ chạy bản cài thì khai thêm khóa dịch vụ để SYS hiện cả DEV.
 - Khác kế hoạch: quyền `System.OpsRelease.*` (mẫu 3 đoạn); sao lưu trước cài bằng `pg_dump` (không Full); chưa có **thông báo người dùng trước giờ cài
   PROD** (hộp thoại nhắc báo trước – làm ở bản sau nếu cần); chưa có **khóa trạng thái** riêng và bảng ba môi trường trên SYS (dùng bảng môi trường AGT
   trên đầu REL); "Lỗi phát hiện" gửi từ TEST và làm mới TEST là QT9. Bộ thực thi 1.2.0 **chưa chạy thật trên IIS** – diễn tập D3, D4 trên TEST.
+
+### 21.18 Lát QT9 – làm mới TEST từ PROD, báo lỗi từ TEST, quay về trên TEST, đã làm (16/11/2026)
+
+- **Làm mới TEST** (màn hình **TST** `/he-thong/lam-moi-test`, chạy trên PROD – DEV thử; máy TEST chỉ xem): không bảng riêng – mỗi lần là lệnh bộ
+  thực thi `RefreshTest` của môi trường Test (lịch sử = các lệnh đó). **Chặn** khi: máy TEST; chưa khai / ngừng / chưa có khóa môi trường Test (AGT);
+  chưa biết hoặc **khác phiên bản** phần mềm giữa TEST và máy này (cấu trúc CSDL theo phiên bản – tự chọn; TEST khác bản thì cài / quay về ở REL trước);
+  TEST đang có lệnh chờ / chạy; chưa có bản `pg_dump` dùng được (BAK). **Cảnh báo** khi bản dump cũ hơn 24 giờ (tự chọn: dùng bản dump mới nhất,
+  không tự tạo – muốn mới hơn thì BAK → Sao lưu ngay), bộ thực thi TEST mất liên lạc, TEST chưa có khóa dịch vụ. Giao lệnh xác nhận Q6 (lý do, mật
+  khẩu, gõ "LÀM MỚI TEST"); quyền `System.OpsTestRefresh.Run`, xem cần `System.Ops.View`.
+- **Bộ thực thi TEST 1.3.0** (`RefreshTest`): kiểm TEST đang chạy đúng bản nguồn → tải dump qua `GET /api/ops/v1/agent/test-refresh/dump` (chỉ khi
+  chính môi trường đó đang chạy lệnh làm mới), kiểm SHA256 → tạo `<CSDL>_refresh_<giờ>` (cùng encoding / locale, chủ là tài khoản ứng dụng),
+  `pg_restore --no-owner --role` (site TEST vẫn chạy) → `app_offline.htm` → **giữ bảng vận hành của chính TEST** (`TestRefreshCarryOver` = bảng giữ
+  khi hoán đổi phục hồi + `ErrorGroup`, `ErrorOccurrence` – tự chọn: lịch sử sao lưu trỏ file trên đĩa TEST, khóa / lệnh bộ thực thi, bảo trì, nhật ký
+  vận hành / lỗi là của máy TEST; `OperationLog` chỉ thêm dòng chưa có) và **đặt lại phần riêng TEST** trong cùng giao dịch (`TestRefreshSql.Reset`:
+  thư chờ gửi → Bỏ gửi kèm ghi chú, `AccessPolicy.SessionsRevokedAt` = lúc làm mới) → đổi tên CSDL cũ thành `<CSDL>_prerefresh_<giờ>`, bản mới thành
+  `<CSDL>` → **chép bổ sung file đính kèm** (danh sách + tải từng file qua API bộ thực thi, chặn ".."; chỉ chép file chưa có / khác dung lượng, không
+  xóa file của TEST) → mở site, chờ `/health` đúng bản; không lên thì trả CSDL cũ. Chỉ giữ **một** bản `_prerefresh_` (bản cũ hơn tự xóa – dữ liệu thử,
+  tự chọn). Cấu hình máy TEST (`App:Environment`, `Email:RedirectAllTo`, khóa) nằm trong file nên giữ nguyên; người dùng, vai trò, mật khẩu như PROD
+  (E8 – quyền cấp thêm trên TEST mất).
+- **Khóa dịch vụ** (`AgentEnvironment.ServiceKeyHash` – migration `V0_37_0_LamMoiTest`): `qts_` + 32 byte ngẫu nhiên, băm SHA256, tạo ở AGT ("Tạo khóa
+  dịch vụ…", Q6 "TẠO KHÓA"), khóa cũ hết hiệu lực ngay. **Tách khỏi khóa bộ thực thi**: khóa dịch vụ nằm trong appsettings của web (TEST gọi PROD), lộ
+  thì không nhận / báo được lệnh bộ thực thi.
+- **Báo lỗi / góp ý** (máy TEST): nút trên thanh trên AppShell khi máy là Test và đã khai `Operations:Upstream:BaseUrl` + `ServiceKey` (API môi trường
+  thêm `feedbackEnabled`). Người dùng nhập tiêu đề, mô tả, màn hình (điền sẵn), ảnh (dán Ctrl+V / chọn file – PNG / JPG ≤ 2 MB, không thêm thư viện chụp
+  màn hình – tự chọn) → `POST /api/ops/v1/feedback` → máy chủ TEST gửi `POST /api/ops/v1/service/defects` lên PROD (header `X-Ops-Service-Key`; người
+  báo lấy từ phiên đăng nhập, phiên bản từ máy TEST). PROD: chỉ khóa của môi trường Test; ghi **Lỗi phát hiện** vào phiếu phát hành **cùng phiên bản**
+  chưa hủy / đóng / quay về (không có thì từ chối, báo người dùng), người báo "… (TEST)", ảnh vào tab Đính kèm của phiếu (ảnh sai thì từ chối cả báo
+  lỗi – không sinh lỗi trùng); nhật ký vận hành `ReleaseDefectReported`.
+- **Quay về bản cũ trên TEST** (người dùng yêu cầu giữa lát): mục 21.6a.
+- Sửa lỗi QT8: loại chủ đính kèm `ReleaseTicket` chưa có trong danh sách loại hợp lệ – tab Đính kèm của phiếu phát hành không tải file lên được.
+- Chưa chạy thật trên máy TEST (tải dump, đổi tên CSDL, IIS) – diễn tập trên TEST; phần giữ bảng + đặt lại đã chạy thật trên hai CSDL nháp.
 
 ## Nguồn tham khảo
 

@@ -172,6 +172,7 @@ Bản 0.37.0 · Vừa · GĐ4 (cài qua trung tâm).
 | Dữ liệu, quyền | **Không làm mờ** (E6). Người dùng, vai trò, phạm vi, mật khẩu như PROD (E8); quyền admin cấp thêm trên TEST mất ở lần làm mới sau |
 | Báo lỗi trên TEST | Nút "Báo lỗi / góp ý" trong AppShell khi môi trường Test: mô tả, ảnh màn hình (đính kèm), màn hình đang mở → API TEST chuyển tiếp máy chủ – máy chủ sang PROD → dòng Lỗi phát hiện của phiếu phát hành đang UAT đúng phiên bản |
 | Quyền, test | `System.Ops.TestRefresh.Run` · tích hợp: dữ liệu sau làm mới khớp PROD, cấu hình riêng TEST còn nguyên, chặn chạy khi môi trường không phải Test, chuyển tiếp báo lỗi · diễn tập làm mới trên máy TEST |
+| **Đã làm 16/11/2026** | Khác kế hoạch (design.md 21.18): quyền `System.OpsTestRefresh.Run` (mẫu 3 đoạn); không bảng riêng – lần làm mới là lệnh `RefreshTest`; dùng bản pg_dump mới nhất (không tự tạo, > 24 giờ cảnh báo); chặn khi TEST khác phiên bản PROD; giữ bảng vận hành + nhật ký lỗi của TEST, đặt lại thư chờ gửi, phiên đăng nhập; giữ một bản `_prerefresh_`; khóa dịch vụ riêng (`qts_…`, AGT) cho TEST gọi PROD; ảnh báo lỗi dán / chọn file (không thư viện chụp); thêm **quay về bản cũ trên TEST** ở REL (người dùng yêu cầu); sửa loại đính kèm `ReleaseTicket` thiếu (QT8). Bộ thực thi 1.3.0; deploy-windows.md mục 4h; test domain 2, tích hợp 3 + mở rộng REL, e2e `test-refresh.spec.ts` 2; phần giữ bảng chạy thật trên CSDL nháp – tải / đổi tên / IIS diễn tập trên TEST |
 
 ## 3. Lộ trình phiên bản (dự kiến)
 

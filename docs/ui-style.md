@@ -343,6 +343,23 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   khẩu của bạn**, **Gõ "CÀI x.y.z"** / **"QUAY VỀ"**; nút Cài PROD / Quay về **đỏ**, Cài TEST thường; quay về có ô chọn mức (chỉ mức ≥ tối thiểu, kèm hậu
   quả dữ liệu). Xác nhận UAT: cảnh báo vàng điều còn vướng, ô Ý kiến bắt buộc khi còn vướng.
 
+## 5r. Màn hình TST – Làm mới TEST, nút "Báo lỗi / góp ý" (lát QT9, 16/11/2026 – design.md mục 21.18)
+
+- TST theo khuôn `ListPage` + `DataGrid`, thanh tab `viewTabs`: **Tình trạng** (mặc định – cột `overviewColumns` như SYS: Nguồn dữ liệu / Máy TEST /
+  Sau khi làm mới; dòng đèn vàng / đỏ tô dấu), **Lịch sử** (lệnh làm mới: Ra lệnh lúc, Tình trạng đèn kèm chữ, Người, Lý do, Thời gian chạy, Kết quả;
+  ô lọc Từ ngày – Đến ngày, mặc định 90 ngày). Thông báo đầu trang: đỏ "Chưa làm mới được" + danh sách điều chặn (`.erp-tst-list`); vàng / xanh "Đủ điều
+  kiện làm mới – TEST sẽ có dữ liệu … lúc …" + lưu ý; xanh dương khi đang chờ bộ thực thi (tự làm mới 5 giây); máy TEST vàng "chỉ xem".
+- Nút **Làm mới TEST…** (icon đồng bộ) khóa khi còn điều chặn, chú thích nêu lý do; **Làm mới** (vàng). Hộp thoại theo bố cục việc nguy hiểm mục 5m:
+  cảnh báo vàng việc bộ thực thi sẽ làm và dữ liệu TEST mất, ô **Lý do**, **Mật khẩu của bạn**, **Gõ "LÀM MỚI TEST"**; nút **Làm mới TEST** đỏ phải,
+  **Không làm mới** trái. Ô lý do / mật khẩu / chữ xác nhận dùng chung `pages/system/DangerFields.tsx` (REL, TST).
+- **Báo lỗi / góp ý** (chỉ máy TEST đã khai): nút chữ có icon con bọ trên thanh trên AppShell, trước chuông thông báo. Hộp thoại 560px: thông báo xanh
+  dương (lỗi về phiếu phát hành, cách chụp Win+Shift+S), **Tiêu đề** (bắt buộc), **Mô tả**, **Màn hình** (điền sẵn đường dẫn trang), ô **Ảnh màn hình**
+  `.erp-feedback-paste` (viền 1px gạch, nền `--erp-readonly-bg`, bấm vào rồi Ctrl+V; có ảnh thì xem trước tối đa 240px + tên file), nút **Chọn ảnh…** /
+  **Bỏ ảnh**; **Bỏ qua** trái – **Gửi** (icon gửi xanh) phải; lỗi máy chủ là khối đỏ trong hộp thoại.
+- AGT thêm nút **Tạo khóa dịch vụ…** (icon chìa khóa vàng) và cột "Khóa dịch vụ" (…4 ký tự cuối); hộp thoại như "Tạo khóa", chữ theo loại khóa.
+- REL: phiếu Đang UAT / UAT đạt mà TEST đang chạy bản của phiếu có nút **Quay về bản cũ trên TEST…** (icon quay lại đỏ), hộp thoại như quay về PROD
+  thêm câu "phiếu trở lại Đã nhận".
+
 ## 5a. Tab
 
 - Chữ trên tab **in hoa** mặc định (CSS `text-transform: uppercase`, tên trong code viết thường).
