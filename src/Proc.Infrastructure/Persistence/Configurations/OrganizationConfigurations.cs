@@ -15,14 +15,12 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.CompanyId).IsUnique();
         builder.Property(x => x.RfqMinSuppliers).HasDefaultValue(CompanyParameter.DefaultRfqMinSuppliers);
-        builder.Property(x => x.InternalMarkupPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultInternalMarkupPercent);
         builder.Property(x => x.PoHighPriceWarnPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultPoHighPriceWarnPercent);
         builder.Property(x => x.PooledMarginPercent).HasPrecision(9, 4).HasDefaultValue(CompanyParameter.DefaultPooledMarginPercent);
         builder.Property(x => x.RfqComparisonThreshold).HasPrecision(19, 2).HasDefaultValue(0m);
         builder.Property(x => x.SlaPricedDays).HasDefaultValue(CompanyParameter.DefaultSlaPricedDays);
         builder.Property(x => x.RequireReceiptQc).HasDefaultValue(false);
         builder.Property(x => x.SeparatePoCreatorFromReceipt).HasDefaultValue(false);
-        builder.Property(x => x.RequireReceiptPo).HasDefaultValue(false);
         builder.Property(x => x.RequireRfqDossierComplete).HasDefaultValue(false);
         builder.Property(x => x.AllowSupplierWithoutOnboarding).HasDefaultValue(false);
         builder.Property(x => x.SlaSourcingDays).HasDefaultValue(CompanyParameter.DefaultSlaSourcingDays);
@@ -40,10 +38,8 @@ internal sealed class CompanyParameterConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.KpiOnTimeTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.OnTimeDelivery).DefaultTarget);
         builder.Property(x => x.KpiQualityTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Quality).DefaultTarget);
         builder.Property(x => x.KpiEmergencyTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.Emergency).DefaultTarget);
-        builder.Property(x => x.KpiSlowMovingTarget).HasPrecision(9, 4).HasDefaultValue(10m);
         builder.Property(x => x.KpiSupplierReviewTarget).HasPrecision(9, 4).HasDefaultValue(KpiCatalog.Get(KpiCode.SupplierReview).DefaultTarget);
         builder.Property(x => x.KpiViolationTarget).HasDefaultValue(0);
-        builder.Property(x => x.KpiSlowMovingDays).HasDefaultValue(90);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }

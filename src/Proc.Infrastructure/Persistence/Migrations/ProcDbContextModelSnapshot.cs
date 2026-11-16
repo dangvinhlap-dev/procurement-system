@@ -3212,12 +3212,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(90);
 
-                    b.Property<decimal>("InternalMarkupPercent")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(9, 4)
-                        .HasColumnType("numeric(9,4)")
-                        .HasDefaultValue(0m);
-
                     b.Property<decimal>("KpiContractTarget")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(9, 4)
@@ -3254,17 +3248,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(9,4)")
                         .HasDefaultValue(95m);
 
-                    b.Property<int>("KpiSlowMovingDays")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(90);
-
-                    b.Property<decimal>("KpiSlowMovingTarget")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(9, 4)
-                        .HasColumnType("numeric(9,4)")
-                        .HasDefaultValue(10m);
-
                     b.Property<decimal>("KpiSupplierReviewTarget")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(9, 4)
@@ -3287,11 +3270,6 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasPrecision(9, 4)
                         .HasColumnType("numeric(9,4)")
                         .HasDefaultValue(10m);
-
-                    b.Property<bool>("RequireReceiptPo")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
 
                     b.Property<bool>("RequireReceiptQc")
                         .ValueGeneratedOnAdd()

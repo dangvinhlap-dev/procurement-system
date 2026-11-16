@@ -24,26 +24,9 @@ public class CompanyParameterTests
     }
 }
 
-/// <summary>% markup nội bộ mặc định và giá bán nội bộ gợi ý (design.md mục 1 câu hỏi 2, mục 5.4).</summary>
-public class InternalMarkupTests
+/// <summary>Mục tiêu KPI của công ty (design.md mục 18 – KPI). Test % markup nội bộ đã bỏ cùng cột (lát dọn tham số kho, 0.38.0).</summary>
+public class CompanyKpiTargetTests
 {
-    [Fact]
-    public void MarkupMoi_MacDinh0_DoiDuocTrongGioiHan_LamTron4So()
-    {
-        var p = CompanyParameter.Create(Guid.CreateVersion7());
-        Assert.Equal(0m, p.InternalMarkupPercent);
-
-        p.ChangeInternalMarkupPercent(12.5m);
-        Assert.Equal(12.5m, p.InternalMarkupPercent);
-        p.ChangeInternalMarkupPercent(7.123456m);
-        Assert.Equal(7.1235m, p.InternalMarkupPercent);
-        p.ChangeInternalMarkupPercent(null);
-        Assert.Equal(CompanyParameter.DefaultInternalMarkupPercent, p.InternalMarkupPercent);
-
-        Assert.Throws<BusinessRuleException>(() => p.ChangeInternalMarkupPercent(-0.01m));
-        Assert.Throws<BusinessRuleException>(() => p.ChangeInternalMarkupPercent(CompanyParameter.MaxInternalMarkupPercent + 1));
-    }
-
     [Fact]
     public void MucTieuKpi_MacDinhTheoDeXuat_DoiTrongGioiHan_DanhGiaDatTheoChieu()
     {
