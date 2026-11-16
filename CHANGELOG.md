@@ -3,6 +3,57 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.36.0] - 2026-11-16
+
+Gộp các phần chưa phát hành từ sau 0.33.1 (dự kiến 0.34.0, 0.35.0, 0.36.0): **bộ thực thi và chế độ bảo trì** (QT5), **phục hồi** (QT6), **cấu hình
+truy cập** (QT7), **trung tâm phát hành** (QT8). Đây là **lần cài tay cuối** – từ bản sau đưa bản lên TEST / PROD qua màn hình REL.
+
+### Thêm mới
+- **AGT – Bộ thực thi** (Quản trị hệ thống → Bộ thực thi): khai môi trường Test / Prod, tạo khóa (nhập lại mật khẩu, gõ "TẠO KHÓA", khóa hiện một
+  lần), **Lệnh thử** → bộ thực thi trên máy đích chạy và báo "Xong"; tab Lệnh xem trạng thái, hủy lệnh đang chờ, bấm đúp xem nhật ký bộ thực thi.
+  Script `tools\qt-agent.ps1` + `tools\qt-agent-install.ps1` (bản 1.2.0) chạy mỗi phút bằng Task Scheduler.
+- **Chế độ bảo trì**: bật ở CFG tab Bảo trì (câu thông báo + lý do) → mọi người khác nhận thông báo bảo trì, dải đỏ "ĐANG BẢO TRÌ: …" trên mọi màn
+  hình kể cả đăng nhập; người có quyền quản trị vận hành vẫn làm việc được; tắt thì trở lại bình thường.
+- **RST – Phục hồi**: khôi phục một bản pg_dump thành CSDL riêng `<csdl>_restore_…`, **so sánh số dòng** từng bảng với CSDL đang chạy; lập kế hoạch
+  **về mốc thời gian** (Full + Diff + WAL, báo đứt chuỗi); **hoán đổi** bản khôi phục vào chạy thật (lý do, mật khẩu, gõ "KHÔI PHỤC" – bộ thực thi
+  làm); bỏ bản khôi phục.
+- **CFG – Cấu hình truy cập**: độ dài mật khẩu tối thiểu, chặn mật khẩu phổ biến + danh sách cấm thêm, số lần sai / phút chờ, hạn phiên đăng nhập,
+  dải IP được vào màn hình quản trị vận hành, giới hạn tần suất đăng nhập / API; tab Bảo mật xem header, HTTPS, proxy; **Đăng xuất tất cả** (lý do,
+  mật khẩu, gõ "ĐĂNG XUẤT TẤT CẢ" – mọi người khác phải đăng nhập lại, phiên của mình giữ lại).
+- **REL – Trung tâm phát hành**: nhận gói (tải file zip lên kèm SHA256, hoặc lấy từ GitHub Release), phiếu phát hành có **mục kiểm thử** tạo từ
+  CHANGELOG (Đạt / Không đạt / Chưa kiểm thử), ghi lỗi phát hiện, **Cài TEST**, **Xác nhận UAT đạt**, **Cài PROD**, **Quay về bản cũ** theo mức, đóng /
+  hủy phiếu, tab Lịch sử cài, CHANGELOG, Đính kèm. Việc cài do bộ thực thi làm: sao lưu trước, cài, chạy script CSDL, kiểm tra; lỗi thì tự trả bản cũ.
+- Quyền mới (chỉ dùng ở tổng công ty, ADMIN tự có đủ): `System.OpsAgent.View/.Manage`, `System.OpsMaintenanceMode.Manage`,
+  `System.OpsRestore.View/.Run`, `System.OpsConfig.Manage`, `System.OpsRelease.Manage/.DeployTest/.UatSignOff/.DeployProd`.
+
+### Thay đổi
+- Hạn phiên đăng nhập đặt ở CFG (thôi dùng `Jwt:LifetimeMinutes` trong file cấu hình).
+- Đổi mật khẩu xong tự nhận phiên mới (không phải đăng nhập lại); đổi mật khẩu / đặt lại mật khẩu làm các phiên cũ của người đó hết hiệu lực.
+- Gợi ý mật khẩu ở Đổi mật khẩu và màn hình Người dùng theo chính sách CFG.
+- Máy chủ thêm header bảo mật (CSP, Permissions-Policy, HSTS khi chạy HTTPS); `/health` không đăng nhập chỉ trả trạng thái và phiên bản.
+- Nút Bật / Tắt chế độ bảo trì chuyển từ SYS sang CFG tab Bảo trì; SYS chỉ còn thông báo đỏ khi đang bảo trì.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 4 migration (109 → 113), script `db/scripts/0.36.0.sql` (idempotent): `V0_34_0_BoThucThi` (bảng AgentEnvironment, AgentCommand,
+  MaintenanceModeState), `V0_34_0_PhucHoi` (RestoreRun), `V0_35_0_CauHinhTruyCap` (AccessPolicy), `V0_36_0_TrungTamPhatHanh` (ReleaseTicket,
+  ReleaseTestItem, ReleaseDefect, ReleaseInstall). **Chỉ thêm bảng** – không sửa, không xóa dữ liệu cũ.
+
+### Lưu ý khi nâng cấp
+- **Cài tay** theo `docs/deploy-windows.md` mục 5 (lần cài tay cuối); nên sao lưu CSDL như mọi lần nâng.
+- Sau khi cài **mọi người đăng nhập lại một lần** (phiên cũ không còn hợp lệ).
+- Trên từng máy: CFG đặt mật khẩu tối thiểu ≥ 10 và dải IP quản trị (mục 4f); chạy lại `tools\qt-enable-wal.ps1` (cấp `proc` cho `proc_maint` –
+  mục 4e); cài bộ thực thi 1.2.0 (mục 4d, 4g) với tài khoản Windows riêng; AGT khai môi trường Test / Prod, tạo khóa, **Lệnh thử** → "Xong".
+- PROD khai `Release:PackageRoot` (và `Release:GitHubRepository` nếu nhận gói từ GitHub) – mục 4g; gán các quyền mới cho người phụ trách.
+- Người dùng mở lại trình duyệt (hoặc Ctrl+F5) để nạp giao diện mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 1** (`rollback.json`): thay lại gói 0.33.1 (`app-0.33.1`), giữ CSDL – bản 0.33.1 không đọc các bảng mới. Dữ liệu nhập sau khi nâng còn
+  nguyên. Muốn gỡ hẳn bảng mới: `dotnet ef database update V0_33_0_BaoTriCsdl` (mất dữ liệu bộ thực thi, phục hồi, CFG, phiếu phát hành) – chỉ làm
+  sau khi sao lưu.
+
 ## [0.33.1] - 2026-11-15
 
 **Menu "Quản trị hệ thống" riêng** – các chức năng quản trị không còn lẫn trong menu Hệ thống.
