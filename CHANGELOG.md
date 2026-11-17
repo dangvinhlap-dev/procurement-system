@@ -3,6 +3,43 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.40.0] - 2026-11-17
+
+**Người lập đề nghị mua nhập đơn giá dự kiến khi mặt hàng chưa có giá nhận hàng, người duyệt được cảnh báo** (design.md mục 6.7, 10.2 –
+người dùng chốt hướng B 16/11/2026). Cài sau **0.39.0** qua REL.
+
+### Thêm mới
+- **Đề nghị mua – mặt hàng chưa có giá nhận hàng**: chọn một mặt hàng chưa từng có phiếu xác nhận nhận hàng (XNH) → ô **Giá tham khảo** mở cho
+  người lập nhập đơn giá dự kiến, có tam giác vàng (rê chuột thấy chú thích); Thành tiền dự kiến và Tổng giá trị dự kiến tính theo giá vừa nhập.
+- **Lưu nháp khi chưa nhập giá**: phiếu có dòng chưa nhập giá vẫn **Lưu nháp** được.
+- **Chặn gửi duyệt khi thiếu giá**: bấm **Gửi duyệt** khi còn dòng (kể cả dòng ở tab Hàng mới chưa có mã) có đơn giá 0 → báo "Chưa có đơn giá
+  dự kiến ở dòng …", không gửi được; nhập giá > 0 rồi gửi lại thì được.
+- **Cảnh báo người duyệt**: mở phiếu đề nghị có giá do người lập tự nhập → khung vàng đầu phiếu "Giá tham khảo do người lập đề nghị tự nhập
+  (chưa có dữ liệu lịch sử giá nhận hàng): dòng … Người duyệt kiểm tra lại đơn giá trước khi duyệt."; ô giá của các dòng đó có tam giác vàng.
+- **Cảnh báo trên trang duyệt điện thoại** (`/duyet/PR/…`, mở từ link trong email trên điện thoại): khối Dòng hàng có câu cảnh báo chữ đỏ, từng
+  dòng giá tự nhập ghi "Giá do người lập tự nhập – chưa có lịch sử giá".
+
+### Thay đổi
+- **Mặt hàng đã có giá nhận hàng**: ô Giá tham khảo vẫn **chỉ đọc**, lấy giá nhận hàng gần nhất (quy đổi theo ĐVT của dòng) như trước; đổi ĐVT
+  thì giá đổi theo; người lập không sửa được giá này.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 1 migration (116 → 117), script `db/scripts/0.40.0.sql` (idempotent): `V0_40_0_DonGiaDuKienPR` – **chỉ thêm 1 cột** `EstPriceManual`
+  (boolean, mặc định `false`) vào `PurchaseRequestLine` – đánh dấu đơn giá do người lập tự nhập. Phiếu cũ giữ nguyên giá, không có cảnh báo.
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); bộ thực thi tự sao lưu CSDL trước khi chạy script.
+- Không có quyền mới, không có cấu hình mới. Đề nghị nháp cũ có dòng giá 0 (mặt hàng chưa có giá nhận hàng) phải nhập đơn giá dự kiến trước khi
+  gửi duyệt.
+- Bản in phiếu 1A/1B và email báo chờ duyệt **chưa** ghi cảnh báo giá tự nhập – người duyệt xem trên phần mềm hoặc trang duyệt điện thoại.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.39.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL (0.39.0 chạy được với cột mới vì cột có
+  giá trị mặc định). Đơn giá người lập đã nhập vẫn giữ; 0.39.0 không còn cảnh báo người duyệt và không cho người lập nhập giá.
+
 ## [0.39.0] - 2026-11-16
 
 **Xóa hẳn các cột kho đã ngừng dùng ở 0.38.0** (design.md 19.4, CLAUDE.md mục 8 – ngừng dùng trước, xóa ở bản sau). Không đổi giao diện, API.
