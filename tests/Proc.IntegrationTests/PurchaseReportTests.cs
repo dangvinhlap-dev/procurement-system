@@ -85,7 +85,7 @@ public class PurchaseReportTests
     private async Task<PurchaseRequestDto> SubmitPrAsync(Fixture f, decimal qty, bool approve)
     {
         var pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(f.Buyer), "Bảo trì", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(f.Buyer), "Bảo trì", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, null, null, null, 100_000)]), Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         if (approve)
         {

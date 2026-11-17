@@ -14,6 +14,7 @@ import {
   type PendingApproval,
   type PurchaseOrder,
   type PurchaseRequest,
+  manualPriceWarning,
 } from '../../api/purchasing'
 import { approvalFullPaths, isMobileApprovable } from '../../app/approvalRoutes'
 import { useAuth } from '../../auth/useAuth'
@@ -222,8 +223,12 @@ function PendingSummary({ row }: { row: PendingApproval }) {
   )
 }
 
-/** Chi tiết đề nghị mua: mục đích, ngày cần, dòng hàng (cảnh báo vượt định mức – lát G11), lịch sử duyệt. */
+/**
+ * Chi tiết đề nghị mua: mục đích, ngày cần, dòng hàng (cảnh báo vượt định mức – lát G11; giá do người lập tự nhập – design.md mục 10.2),
+ * lịch sử duyệt.
+ */
 function RequestDetail({ doc }: { doc: PurchaseRequest }) {
+  const priceWarning = manualPriceWarning(doc)
   return (
     <>
       <section className="erp-mobile-section">
@@ -237,6 +242,7 @@ function RequestDetail({ doc }: { doc: PurchaseRequest }) {
       </section>
       <section className="erp-mobile-section">
         <h2>Dòng hàng ({doc.lines.length + doc.newItems.length})</h2>
+        {priceWarning && <p className="erp-mobile-warn" data-testid="manual-price-notice">{priceWarning}</p>}
         <ul className="erp-mobile-lines">
           {doc.lines.map((l) => (
             <li key={l.id}>
@@ -246,12 +252,14 @@ function RequestDetail({ doc }: { doc: PurchaseRequest }) {
               </span>
               {l.normStatus === 'Over' && <span className="erp-mobile-warn">Vượt định mức sử dụng lũy kế</span>}
               {l.normStatus === 'NoPlan' && <span className="erp-mobile-warn">Ngoài kế hoạch nhu cầu</span>}
+              {l.estPriceManual && <span className="erp-mobile-warn">Giá do người lập tự nhập – chưa có lịch sử giá</span>}
             </li>
           ))}
           {doc.newItems.map((n) => (
             <li key={n.id}>
               <strong>Hàng mới: {n.description}</strong>
               <span>{formatQuantity(n.qty)} × {formatMoney(n.estPrice)}</span>
+              {!n.itemId && <span className="erp-mobile-warn">Giá do người lập tự nhập – chưa có lịch sử giá</span>}
             </li>
           ))}
         </ul>

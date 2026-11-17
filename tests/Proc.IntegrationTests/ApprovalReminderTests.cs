@@ -103,7 +103,7 @@ public class ApprovalReminderTests
         var b = await _factory.CreateUserAsync($"nb.{Guid.NewGuid():N}"[..16], ProcApiFactory.TestPassword, [company.Code]);
 
         var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, department.Id, "Bảo trì", Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 2, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, department.Id, "Bảo trì", Today.AddDays(7), kt, "Normal", null, [new(null, item.Id, cai, 2, null, null, null, 100_000)]), Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         Assert.Equal("Submitted", pr.Status);
 

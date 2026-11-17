@@ -16,10 +16,10 @@ public partial class PurchasingTests
         await ReadAsync<ConstructionProjectDto>(await f.Buyer.PostAsJsonAsync("/api/construction-projects",
             new CreateConstructionProjectRequest(UniqueCode("CT"), "Nhà xưởng số 2", f.DepartmentId, "Khu B", Today, null, estimate, "QĐ 01", null), Ct));
 
-    private static Task<HttpResponseMessage> CreatePrOfAsync(Fixture f, string? category, Guid? projectId, decimal qty = 8) =>
+    private static Task<HttpResponseMessage> CreatePrOfAsync(Fixture f, string? category, Guid? projectId, decimal qty = 8, decimal price = 100_000) =>
         f.Buyer.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, f.DepartmentId, "Thi công", Today.AddDays(7), f.Kt, "Normal", null,
-                [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null)], null, category, projectId), Ct);
+                [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null, price)], null, category, projectId), Ct);
 
     [Fact]
     public async Task DeNghiLoaiA_BatBuocCongTrinh_LuyKeTheoPoDaDuyet_ChuaVaCoVat()
@@ -84,7 +84,7 @@ public partial class PurchasingTests
         Assert.Contains("Đang thực hiện", await TitleAsync(await CreatePrOfAsync(f, "Construction", project.Id)));
         var saved = await f.Buyer.PutAsJsonAsync($"/api/purchase-requests/{draft.Id}",
             new SavePurchaseRequestRequest(Today, f.DepartmentId, "Thi công đợt 2", null, f.Kt, "Normal", null,
-                [new(draft.Lines[0].Id, f.ItemId, f.Cai, 2, null, null, null)], null, "Construction", project.Id), Ct);
+                [new(draft.Lines[0].Id, f.ItemId, f.Cai, 2, null, null, null, 100_000)], null, "Construction", project.Id), Ct);
         Assert.True(saved.IsSuccessStatusCode, await saved.Content.ReadAsStringAsync(Ct));
         var submit = await f.Buyer.PostAsync($"/api/purchase-requests/{draft.Id}/submit", null, Ct);
         Assert.Contains("không gửi duyệt", await TitleAsync(submit));

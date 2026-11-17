@@ -41,7 +41,7 @@ test('bước Thủ kho nơi nhận: nhập tồn rồi mới duyệt đề ngh�
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
   const pr = await company.send<{ id: string; no: string }>('post', '/api/purchase-requests', {
     date: today, departmentId: dept.id, purpose: 'Bảo hộ lao động', neededDate: null, warehouseId: kt, priority: 'Normal', note: null,
-    lines: [{ id: null, itemId: item.id, uomId: cai, qty: 6, suggestedSupplierId: null, neededDate: null, note: null }],
+    lines: [{ id: null, itemId: item.id, uomId: cai, qty: 6, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 }],
   })
   await company.send('post', `/api/purchase-requests/${pr.id}/submit`, {})
 

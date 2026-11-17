@@ -85,7 +85,7 @@ public partial class PurchasingTests
 
     private static Task<HttpResponseMessage> CreatePrAsync(Fixture f, decimal qty) =>
         f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Bảo trì máy", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null)]), Ct);
+            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Bảo trì máy", Today.AddDays(7), f.Kt, "Urgent", null, [new(null, f.ItemId, f.Cai, qty, f.SupplierId, null, null, 100_000)]), Ct);
 
     private static Task<HttpResponseMessage> CreatePoAsync(Fixture f, decimal qty, Guid? prLineId, decimal tolerance = 0) =>
         f.Buyer.PostAsJsonAsync("/api/purchase-orders",
@@ -525,6 +525,42 @@ public partial class PurchasingTests
         var small = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 1));
         small = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{small.Id}/submit", null, Ct));
         Assert.Single(small.Approvals);
+    }
+
+    /// <summary>
+    /// Đơn giá dự kiến (design.md mục 10.2, hướng B 16/11/2026): mặt hàng chưa có giá nhận hàng thì người lập nhập giá – lưu nháp được khi
+    /// trống, gửi duyệt bắt buộc &gt; 0; đã có giá nhận hàng thì server tự lấy, bỏ qua giá người lập gửi lên.
+    /// </summary>
+    [Fact]
+    public async Task DonGiaDuKien_ChuaCoGiaNhan_NguoiLapNhap_CoGiaNhanThiBoQuaGiaGuiLen()
+    {
+        var f = await ArrangeAsync();
+        var prices = await ReadAsync<List<ReferencePriceDto>>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests/reference-prices",
+            new[] { new ReferencePriceQuery(f.ItemId, f.Cai) }, Ct));
+        Assert.Null(Assert.Single(prices).Price);
+
+        SavePurchaseRequestRequest Pr(Guid? lineId, decimal? price) =>
+            new(Today, f.DepartmentId, "Bảo trì máy", Today.AddDays(7), f.Kt, "Normal", null, [new(lineId, f.ItemId, f.Cai, 10, null, null, null, price)]);
+
+        // Lưu nháp khi chưa nhập giá được; gửi duyệt thì chặn.
+        var pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests", Pr(null, null), Ct));
+        Assert.Equal((0m, true), (pr.Lines[0].EstPrice, pr.Lines[0].EstPriceManual));
+        Assert.Contains("Chưa có đơn giá dự kiến ở dòng 1", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct)));
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Buyer.PutAsJsonAsync($"/api/purchase-requests/{pr.Id}", Pr(pr.Lines[0].Id, -1), Ct)).StatusCode);
+
+        // Nhập 150.000/cái → thành tiền 1.500.000, gửi duyệt được.
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PutAsJsonAsync($"/api/purchase-requests/{pr.Id}", Pr(pr.Lines[0].Id, 150_000), Ct));
+        Assert.Equal((150_000m, true, 1_500_000m), (pr.Lines[0].EstPrice, pr.Lines[0].EstPriceManual, pr.TotalAmount));
+        pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
+        Assert.NotEqual("Draft", pr.Status);
+
+        // Có giá nhận hàng 200.000 → tra giá trả 200.000; người lập gửi 50.000 cũng bị bỏ qua (không khai thấp để lọt ngưỡng duyệt).
+        await TestReceipts.ReceiveAsync(_factory, f.Buyer, f.SupplierId, f.Kt, [new(f.ItemId, f.Cai, 1, 200_000)], Today);
+        prices = await ReadAsync<List<ReferencePriceDto>>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests/reference-prices",
+            new[] { new ReferencePriceQuery(f.ItemId, f.Cai) }, Ct));
+        Assert.Equal(200_000m, Assert.Single(prices).Price);
+        var second = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests", Pr(null, 50_000), Ct));
+        Assert.Equal((200_000m, false, 2_000_000m), (second.Lines[0].EstPrice, second.Lines[0].EstPriceManual, second.TotalAmount));
     }
 
     /// <summary>

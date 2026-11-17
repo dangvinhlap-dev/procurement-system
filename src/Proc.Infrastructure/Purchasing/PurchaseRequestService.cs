@@ -133,6 +133,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 throw new BusinessRuleException($"Công trình {project.Code} không còn ở trạng thái Đang thực hiện – không gửi duyệt đề nghị mua được.");
         }
 
+        // Thành tiền dự kiến chọn cấp duyệt và kiểm tra ngân sách – dòng chưa có giá không được gửi (design.md mục 10.2).
+        pr.EnsurePricedForSubmit();
+
         // Ngân sách tính lại lúc gửi (phiếu khác có thể đã dùng ngân sách từ lúc lưu nháp); vượt thì qua thêm chặng duyệt
         // "vượt ngân sách" PRB – không chặn gửi (design.md mục 18.24, quyết định Q5).
         pr.ApplyBudgetCheck(await _budgets.CheckAsync(pr, cancellationToken));
@@ -369,8 +372,10 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
 
     /// <summary>
-    /// Dòng PR: mặt hàng qua filter nhóm hàng; đơn giá tham khảo = giá nhập gần nhất của công ty (phiếu nhập mua đã ghi sổ) theo ĐVT cơ
-    /// sở × hệ số ĐVT – không nhận từ client (design.md mục 10.2: chỉ đọc). Chưa từng nhập thì 0.
+    /// Dòng PR: mặt hàng qua filter nhóm hàng. Đơn giá (design.md mục 10.2, hướng B người dùng chốt 16/11/2026):
+    /// - có giá nhận hàng gần nhất của công ty (XNH đã xác nhận, &gt; 0) → server lấy = giá theo ĐVT cơ sở × hệ số ĐVT, <b>bỏ qua giá client
+    ///   gửi</b> – để người lập không khai thấp cho lọt ngưỡng duyệt, ngân sách;
+    /// - chưa có → nhận đơn giá dự kiến người lập nhập (null = 0, gửi duyệt mới bắt buộc &gt; 0), đánh dấu <c>EstPriceManual</c>.
     /// </summary>
     private async Task<List<(PurchaseRequestLineData, Item)>> ResolveLinesAsync(IReadOnlyList<SavePurchaseRequestLineRequest> lines, CancellationToken cancellationToken)
     {
@@ -381,10 +386,37 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         {
             var item = items.GetValueOrDefault(l.ItemId)
                 ?? throw new NotFoundException($"Dòng {index + 1}: không tìm thấy mặt hàng (hoặc mặt hàng ngoài phạm vi nhóm hàng của bạn).");
-            var factor = l.UomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == l.UomId)?.Factor ?? 1m;
-            var price = Math.Round(prices.GetValueOrDefault(item.Id) * factor, 6, MidpointRounding.AwayFromZero);
-            return (new PurchaseRequestLineData(l.Id, l.ItemId, l.UomId, l.Qty, price, l.SuggestedSupplierId, l.NeededDate, l.Note), item);
+            var history = ReferencePrice(item, l.UomId, prices);
+            var data = history is { } price
+                ? new PurchaseRequestLineData(l.Id, l.ItemId, l.UomId, l.Qty, price, l.SuggestedSupplierId, l.NeededDate, l.Note)
+                : new PurchaseRequestLineData(l.Id, l.ItemId, l.UomId, l.Qty, l.EstPrice ?? 0m, l.SuggestedSupplierId, l.NeededDate, l.Note, EstPriceManual: true);
+            return (data, item);
         }).ToList();
+    }
+
+    /// <summary>
+    /// Giá nhận hàng gần nhất quy theo ĐVT của dòng: giá theo ĐVT cơ sở × hệ số (ví dụ 1.500/cái, hộp 10 cái → 15.000/hộp); null khi chưa có
+    /// giá &gt; 0 (hàng tặng giá 0 coi như chưa có căn cứ).
+    /// </summary>
+    private static decimal? ReferencePrice(Item item, Guid uomId, Dictionary<Guid, decimal> basePrices)
+    {
+        var basePrice = basePrices.GetValueOrDefault(item.Id);
+        if (basePrice <= 0) return null;
+        var factor = uomId == item.BaseUomId ? 1m : item.Conversions.FirstOrDefault(c => c.UomId == uomId)?.Factor ?? 1m;
+        return Math.Round(basePrice * factor, 6, MidpointRounding.AwayFromZero);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ReferencePriceDto>> ReferencePricesAsync(IReadOnlyList<ReferencePriceQuery> queries, CancellationToken cancellationToken)
+    {
+        if (queries.Count > 500) throw new BusinessRuleException("Mỗi lần tra tối đa 500 dòng.");
+        var ids = queries.Select(q => q.ItemId).Distinct().ToList();
+        // Mặt hàng đi qua filter nhóm hàng – ngoài phạm vi thì không trả giá (CLAUDE.md mục 4).
+        var items = await _db.Items.AsNoTracking().Include(i => i.Conversions).Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id, cancellationToken);
+        var prices = await LastPurchasePricesAsync(items.Keys.ToList(), cancellationToken);
+        return queries.Distinct().Where(q => items.ContainsKey(q.ItemId))
+            .Select(q => new ReferencePriceDto(q.ItemId, q.UomId, ReferencePrice(items[q.ItemId], q.UomId, prices)))
+            .ToList();
     }
 
     /// <summary>
@@ -627,6 +659,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             {
                 LastStockQty = last is null ? null : Math.Round(last.BaseQty / l.UomFactor, 4, MidpointRounding.AwayFromZero),
                 LastStockRequestNo = last?.No, LastStockRequestId = last?.RequestId, LastStockAt = last?.At,
+                EstPriceManual = l.EstPriceManual,
             };
         }).ToList();
 

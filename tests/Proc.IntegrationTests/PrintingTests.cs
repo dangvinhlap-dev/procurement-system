@@ -80,7 +80,7 @@ public class PrintingTests
         Assert.True(trackPdf.PageCount >= 2, $"60 dòng phải sang trang, có {trackPdf.PageCount} trang.");
 
         var pr = await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null)],
+            new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(client), "Bảo trì", Today.AddDays(7), kt, "Urgent", null, [new(null, item.Id, cai, 3, null, null, null, 100_000)],
                 [new(null, "Van bi inox DN50", "Áp lực PN16", cai, 2, 450_000, null, "Mẫu như van cũ")]), Ct));
         // Đề nghị mua in theo biểu mẫu CUVT 1B (lát Y10); hàng mới chưa có mã in nối sau dòng có mã, đánh số tiếp (design.md mục 18.12).
         Assert.Equal($"ĐỀ NGHỊ MUA HÀNG HÓA THIẾT BỊ {pr.No}", (await PdfAsync(await client.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct))).Info.Title);

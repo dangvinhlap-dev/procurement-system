@@ -69,7 +69,7 @@ public class UsageNormTests
         var feb = new DateOnly(Year, 2, 15);
 
         // PR1: 1,5 thùng = 15 cái tháng 2 – định mức lũy kế đến tháng 2 là 20 cái: trong định mức. Gửi duyệt.
-        var pr1 = await ReadAsync<PurchaseRequestDto>(await bha.PostAsJsonAsync("/api/purchase-requests", Pr(new SavePurchaseRequestLineRequest(null, planned, thung, 1.5m, null, feb, null)), Ct));
+        var pr1 = await ReadAsync<PurchaseRequestDto>(await bha.PostAsJsonAsync("/api/purchase-requests", Pr(new SavePurchaseRequestLineRequest(null, planned, thung, 1.5m, null, feb, null, 100_000)), Ct));
         var line1 = Assert.Single(pr1.Lines);
         Assert.Equal(("Ok", 20m, 15m, new DateOnly(Year, 2, DateTime.DaysInMonth(Year, 2))), (line1.NormStatus, line1.NormQty, line1.NormRequestedQty, line1.NormThrough));
         await ReadAsync<PurchaseRequestDto>(await bha.PostAsync($"/api/purchase-requests/{pr1.Id}/submit", null, Ct));
@@ -77,10 +77,10 @@ public class UsageNormTests
         // PR2 nháp: 8 cái tháng 2 → 15 + 8 = 23 > 20 vượt; 5 cái tháng 3 → 28 ≤ 30; mặt hàng không có trong kế hoạch của nhóm đã lập
         // kế hoạch → ngoài kế hoạch; nhóm hàng chưa có kế hoạch đã chốt → không kiểm tra.
         var pr2 = await ReadAsync<PurchaseRequestDto>(await bha.PostAsJsonAsync("/api/purchase-requests", Pr(
-            new(null, planned, cai, 8, null, new DateOnly(Year, 2, 20), null),
-            new(null, planned, cai, 5, null, new DateOnly(Year, 3, 10), null),
-            new(null, unplanned, cai, 1, null, feb, null),
-            new(null, unchecked_, cai, 1, null, feb, null)), Ct));
+            new(null, planned, cai, 8, null, new DateOnly(Year, 2, 20), null, 100_000),
+            new(null, planned, cai, 5, null, new DateOnly(Year, 3, 10), null, 100_000),
+            new(null, unplanned, cai, 1, null, feb, null, 100_000),
+            new(null, unchecked_, cai, 1, null, feb, null, 100_000)), Ct));
         Assert.Equal(("Over", 20m, 23m), (pr2.Lines[0].NormStatus, pr2.Lines[0].NormQty, pr2.Lines[0].NormRequestedQty));
         Assert.Equal(("Ok", 30m, 28m), (pr2.Lines[1].NormStatus, pr2.Lines[1].NormQty, pr2.Lines[1].NormRequestedQty));
         Assert.Equal(("NoPlan", 0m), (pr2.Lines[2].NormStatus, pr2.Lines[2].NormQty));

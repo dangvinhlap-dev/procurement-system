@@ -1,5 +1,5 @@
 import { useDocumentFormSync } from '../../components/DocumentForm/useDocumentFormSync'
-import { FileDoneOutlined, FileSearchOutlined, LinkOutlined } from '@ant-design/icons'
+import { FileDoneOutlined, FileSearchOutlined, LinkOutlined, WarningFilled } from '@ant-design/icons'
 import { Alert, App, Button, ConfigProvider, DatePicker, Form, Input, InputNumber, Modal } from 'antd'
 import { Select } from '../../classic/Select'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -17,6 +17,8 @@ import {
   usePurchaseMutations,
   usePurchaseRequest,
   usePrNewItemActions,
+  useReferencePrices,
+  manualPriceWarning,
   type PurchaseCategory,
   type PurchasePriority,
   type PurchaseRequest,
@@ -47,6 +49,8 @@ interface PrLineValues {
   suggestedSupplierId?: string
   neededDate?: Dayjs | null
   note?: string
+  /** Đơn giá dự kiến người lập nhập – chỉ dùng khi mặt hàng chưa có giá nhận hàng gần nhất (design.md mục 10.2). */
+  estPrice?: number | null
 }
 
 /** Dòng hàng mới chưa có mã trên form (design.md mục 18.12). */
@@ -94,8 +98,8 @@ export interface PrPrefillState {
 }
 
 /**
- * Trang đề nghị mua hàng (design.md mục 10.2) trên khuôn DocumentForm. Đơn giá tham khảo = giá nhập gần nhất do server lấy khi lưu
- * (chỉ đọc); tồn hiện tại chỉ để xem. Gửi duyệt theo quy trình duyệt của công ty; tab Lịch sử duyệt.
+ * Trang đề nghị mua hàng (design.md mục 10.2) trên khuôn DocumentForm. Đơn giá tham khảo = giá nhận hàng gần nhất do server lấy (chỉ
+ * đọc); mặt hàng chưa có giá thì người lập nhập đơn giá dự kiến (bắt buộc &gt; 0 khi gửi duyệt) và người duyệt thấy cảnh báo. Gửi duyệt theo quy trình duyệt của công ty; tab Lịch sử duyệt.
  */
 export function PurchaseRequestPage() {
   const { id = 'moi' } = useParams()
@@ -155,6 +159,12 @@ export function PurchaseRequestPage() {
   const lineSupplierIds = useMemo(() => lines.map((l) => l?.suggestedSupplierId).filter((x): x is string => !!x), [lines])
   const supplierItems = useSupplierItemLookup(lineSupplierIds)
   const fetchSupplierItem = useFetchSupplierItem()
+  // Giá nhận hàng gần nhất theo từng cặp mặt hàng – ĐVT: chưa có thì mở ô đơn giá dự kiến (design.md mục 10.2).
+  const pricePairs = useMemo(
+    () => lines.filter((l) => l?.itemId && l?.uomId).map((l) => ({ itemId: l.itemId!, uomId: l.uomId! })),
+    [lines],
+  )
+  const referencePrices = useReferencePrices(pricePairs, !readOnly)
 
   /**
    * Dòng có cả mặt hàng và NCC đề xuất mà NCC đã khai báo ĐVT mua thì dòng lấy ĐVT đó (ĐVT đã bị gỡ khỏi mặt hàng thì bỏ qua). Chỉ áp khi
@@ -196,6 +206,7 @@ export function PurchaseRequestPage() {
       // Ô SL trên form là SL cần sử dụng; SL cần mua (l.qty) do máy chủ tính sau khi thủ kho nhập tồn (lát Y3b).
       id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.requiredQty, suggestedSupplierId: l.suggestedSupplierId ?? undefined,
       neededDate: l.neededDate ? dayjs(l.neededDate) : null, note: l.note ?? '',
+      estPrice: l.estPriceManual ? l.estPrice : null,
     })),
     newItems: doc.newItems.map((n) => ({
       id: n.id, description: n.description, specification: n.specification ?? '', uomId: n.uomId, qty: n.qty, estPrice: n.estPrice,
@@ -224,7 +235,7 @@ export function PurchaseRequestPage() {
       note: orNull(values.note),
       lines: (values.lines ?? []).map((l) => ({
         id: l.id ?? null, itemId: l.itemId!, uomId: l.uomId!, qty: l.qty ?? 0, suggestedSupplierId: l.suggestedSupplierId ?? null,
-        neededDate: l.neededDate ? l.neededDate.format('YYYY-MM-DD') : null, note: orNull(l.note),
+        neededDate: l.neededDate ? l.neededDate.format('YYYY-MM-DD') : null, note: orNull(l.note), estPrice: l.estPrice ?? null,
       })),
       newItems: (values.newItems ?? []).map((n) => ({
         id: n.id ?? null, description: n.description?.trim() ?? '', specification: orNull(n.specification), uomId: n.uomId!, qty: n.qty ?? 0,
@@ -249,6 +260,44 @@ export function PurchaseRequestPage() {
   /** Dòng đã lưu tương ứng (để hiện giá tham khảo, tồn, SL đã đặt do server tính). */
   const savedLine = (index: number) => (lines[index]?.id ? doc?.lines.find((l) => l.id === lines[index].id) : undefined)
   const readonlyCell = (text: string) => <span className="line-grid-readonly">{text}</span>
+
+  /**
+   * Ô "Giá tham khảo" (design.md mục 10.2): có giá nhận hàng gần nhất thì chỉ đọc; chưa có thì người lập nhập đơn giá dự kiến. Ô giá do người
+   * lập nhập có tam giác vàng – người duyệt biết giá chưa có căn cứ lịch sử (người dùng yêu cầu 16/11/2026).
+   * @param name Tên trường của dòng trong Form.List.
+   * @param index Chỉ số dòng (từ 0).
+   */
+  const priceCell = (name: number, index: number) => {
+    const saved = savedLine(index)
+    const manualTitle = 'Giá do người lập đề nghị tự nhập – chưa có dữ liệu lịch sử giá nhận hàng của mặt hàng.'
+    if (readOnly) {
+      if (!saved) return readonlyCell('')
+      return saved.estPriceManual ? (
+        <span className="line-grid-readonly line-grid-warning" title={manualTitle} data-testid={`price-manual-${index + 1}`}>
+          <WarningFilled className="line-grid-alert-icon" aria-label={`Giá tự nhập dòng ${index + 1}`} /> {formatMoney(saved.estPrice)}
+        </span>
+      ) : (
+        readonlyCell(formatMoney(saved.estPrice))
+      )
+    }
+    const line = lines[index]
+    if (!line?.itemId || !line?.uomId) return readonlyCell('')
+    const prices = referencePrices.data
+    const key = `${line.itemId}|${line.uomId}`
+    if (!prices?.has(key)) return readonlyCell(referencePrices.isError ? 'Không tra được giá' : 'Đang tra giá…')
+    const reference = prices.get(key)
+    if (reference != null)
+      return <span className="line-grid-readonly" title="Giá nhận hàng gần nhất của công ty (phiếu xác nhận nhận hàng).">{formatMoney(reference)}</span>
+    return (
+      <span className="line-grid-warning" style={{ display: 'flex', alignItems: 'center', gap: 2 }} title={`${manualTitle} Nhập đơn giá dự kiến (bắt buộc khi gửi duyệt).`}>
+        <WarningFilled className="line-grid-alert-icon" />
+        <Form.Item name={[name, 'estPrice']} noStyle rules={[{ type: 'number', min: 0, message: '≥ 0.' }]}>
+          <InputNumber {...vnNumberInput} variant="borderless" style={{ width: '100%' }} min={0} placeholder="Nhập giá"
+            aria-label={`Đơn giá dự kiến dòng ${index + 1}`} />
+        </Form.Item>
+      </span>
+    )
+  }
 
   const columns: LineColumn[] = [
     {
@@ -323,7 +372,7 @@ export function PurchaseRequestPage() {
     { key: 'onOrder', title: 'Đang đặt', width: 90, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatQuantity(savedLine(index)!.onOrderQty) : '') },
     // Định mức sử dụng lũy kế theo kế hoạch nhu cầu đã chốt – chỉ cảnh báo (lát G11, design.md mục 18.25).
     { key: 'norm', title: 'Định mức LK', width: 120, align: 'right', render: (_, index) => <UsageNormCell line={savedLine(index)} index={index} /> },
-    { key: 'price', title: 'Giá tham khảo', width: 115, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.estPrice) : 'Tự lấy khi lưu') },
+    { key: 'price', title: 'Giá tham khảo', width: 125, align: 'right', render: (field, index) => priceCell(field.name, index) },
     { key: 'amount', title: 'Thành tiền dự kiến', width: 125, align: 'right', render: (_, index) => readonlyCell(savedLine(index) ? formatMoney(savedLine(index)!.amount) : '') },
     {
       key: 'supplier',
@@ -511,6 +560,7 @@ export function PurchaseRequestPage() {
           <BudgetNotice budget={doc?.budget} draft={doc?.status === 'Draft'} />
           <ConstructionBudgetNotice construction={doc?.construction} />
           <UsageNormNotice lines={doc?.lines} />
+          {manualPriceWarning(doc) && <Alert type="warning" showIcon data-testid="manual-price-notice" title={manualPriceWarning(doc)} />}
           <ClosedRemainingNotice doc={doc} />
           {doc && doc.category !== 'Service' && doc.status !== 'Draft' && (
             <Alert

@@ -258,6 +258,9 @@ public sealed record PurchaseRequestLineDto(
 
     /// <summary>Thời điểm thủ kho xác nhận tồn gợi ý (UTC).</summary>
     public DateTimeOffset? LastStockAt { get; init; }
+
+    /// <summary>Đơn giá do người lập nhập (chưa có giá nhận hàng gần nhất); false = máy chủ lấy từ XNH (design.md mục 10.2).</summary>
+    public bool EstPriceManual { get; init; }
 }
 
 /// <summary>
@@ -376,10 +379,21 @@ public interface IPurchaseRequestNewItemService
 }
 
 /// <summary>
-/// Dòng PR gửi lên. <c>Qty</c> là SL cần sử dụng (SL cần mua do server tính sau khi thủ kho nhập tồn – lát Y3b). Đơn giá tham khảo do
-/// server lấy (giá nhập gần nhất), không nhận từ client.
+/// Dòng PR gửi lên. <c>Qty</c> là SL cần sử dụng (SL cần mua do server tính sau khi thủ kho nhập tồn – lát Y3b).
+/// <c>EstPrice</c>: đơn giá dự kiến người lập nhập – server <b>chỉ nhận khi mặt hàng chưa có giá nhận hàng gần nhất</b>; có giá thì server
+/// tự lấy, bỏ qua giá gửi lên (design.md mục 10.2). Null = chưa nhập (lưu nháp được, gửi duyệt thì bắt buộc &gt; 0).
 /// </summary>
-public sealed record SavePurchaseRequestLineRequest(Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note);
+public sealed record SavePurchaseRequestLineRequest(
+    Guid? Id, Guid ItemId, Guid UomId, decimal Qty, Guid? SuggestedSupplierId, DateOnly? NeededDate, string? Note, decimal? EstPrice = null);
+
+/// <summary>Cặp mặt hàng – ĐVT cần tra đơn giá tham khảo (màn hình PR hỏi khi chọn mặt hàng, đổi ĐVT).</summary>
+public sealed record ReferencePriceQuery(Guid ItemId, Guid UomId);
+
+/// <summary>
+/// Đơn giá tham khảo của một cặp mặt hàng – ĐVT: giá nhận hàng gần nhất của công ty (XNH đã xác nhận) quy theo ĐVT; null = chưa có, người
+/// lập phải nhập đơn giá dự kiến (design.md mục 10.2).
+/// </summary>
+public sealed record ReferencePriceDto(Guid ItemId, Guid UomId, decimal? Price);
 
 /// <summary>
 /// Lưu PR nháp. DepartmentId: bắt buộc, bộ phận đang dùng của công ty (giữ nguyên bộ phận đã ngừng dùng nếu phiếu đã chọn trước đó).
@@ -538,6 +552,15 @@ public interface IPurchaseRequestService
 
     /// <summary>Chi tiết PR.</summary>
     Task<PurchaseRequestDto> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tra đơn giá tham khảo (giá nhận hàng gần nhất của công ty, theo ĐVT) cho các cặp mặt hàng – ĐVT; mặt hàng ngoài phạm vi nhóm hàng
+    /// không trả về. Price null = chưa có giá, người lập nhập đơn giá dự kiến.
+    /// </summary>
+    /// <param name="queries">Các cặp mặt hàng – ĐVT (tối đa 500).</param>
+    /// <param name="cancellationToken">Hủy.</param>
+    /// <returns>Một dòng cho mỗi cặp hợp lệ.</returns>
+    Task<IReadOnlyList<ReferencePriceDto>> ReferencePricesAsync(IReadOnlyList<ReferencePriceQuery> queries, CancellationToken cancellationToken);
 
     /// <summary>Lập PR nháp (cấp số).</summary>
     Task<PurchaseRequestDto> CreateAsync(SavePurchaseRequestRequest request, CancellationToken cancellationToken);

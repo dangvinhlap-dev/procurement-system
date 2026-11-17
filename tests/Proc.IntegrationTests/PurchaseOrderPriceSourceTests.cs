@@ -131,9 +131,9 @@ public class PurchaseOrderPriceSourceTests
         }
 
         var pr1 = await ApprovedPrAsync(new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", null, f.WarehouseId, "Normal", null,
-            [new(null, f.ItemId, f.Cai, 10, null, null, null)]));
+            [new(null, f.ItemId, f.Cai, 10, null, null, null, 100_000)]));
         var pr2 = await ApprovedPrAsync(new SavePurchaseRequestRequest(Today, px1.Id, "Sự cố", null, f.WarehouseId, "Urgent", null, [],
-            [new(null, "Phớt chặn dầu đặc chủng", null, f.Cai, 2, 0, null, null)]));
+            [new(null, "Phớt chặn dầu đặc chủng", null, f.Cai, 2, 300_000, null, null)]));
 
         // PO từ PR1 được duyệt ngay hôm nay → đúng hạn; dòng PR khác cùng mặt hàng thấy "đang đặt" 10.
         var po = await ReadAsync<PurchaseOrderDto>(await f.Client.PostAsJsonAsync("/api/purchase-orders",
@@ -142,7 +142,7 @@ public class PurchaseOrderPriceSourceTests
         po = await ReadAsync<PurchaseOrderDto>(await approver.PostAsJsonAsync($"/api/purchase-orders/{po.Id}/approve", new ApprovalActionRequest(null), Ct));
         Assert.Equal("Approved", po.Status);
         var draft = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, px1.Id, "Kiểm tra", null, f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, px1.Id, "Kiểm tra", null, f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null, 100_000)]), Ct));
         Assert.Equal(10m, draft.Lines[0].OnOrderQty);
 
         var report = await ReadAsync<PurchaseSlaResult>(await f.Client.GetAsync($"/api/reports/purchase-sla?from={Today:yyyy-MM-dd}&to={Today:yyyy-MM-dd}", Ct));
@@ -280,7 +280,7 @@ public class PurchaseOrderPriceSourceTests
 
         // Dòng từ PR: PO lấy bộ phận của PR; PR khác bộ phận đã chọn thì chặn.
         var pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", Today.AddDays(7), f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 20, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, px1.Id, "Bảo trì", Today.AddDays(7), f.WarehouseId, "Normal", null, [new(null, f.ItemId, f.Cai, 20, null, null, null, 100_000)]), Ct));
         await ReadAsync<PurchaseRequestDto>(await f.Client.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await approver.PostAsJsonAsync($"/api/purchase-requests/{pr.Id}/approve", new ApprovalActionRequest(null), Ct));
         await _factory.ApproveSummaryForRequestAsync(pr.Id);

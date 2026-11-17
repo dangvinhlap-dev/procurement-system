@@ -81,7 +81,7 @@ public class ApprovalDelegationTests
     private static async Task<PurchaseRequestDto> SubmittedPrAsync(Fixture f, HttpClient client)
     {
         var pr = await ReadAsync<PurchaseRequestDto>(await client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.Department.Id, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, f.Department.Id, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null, 100_000)]), Ct));
         return await ReadAsync<PurchaseRequestDto>(await client.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
     }
 
@@ -136,7 +136,7 @@ public class ApprovalDelegationTests
 
         // Trưởng phòng ban tự lập phiếu bộ phận mình: chưa ủy quyền thì chặn gửi, đã ủy quyền thì gửi được và người được ủy quyền duyệt cấp 1.
         var draft = await ReadAsync<PurchaseRequestDto>(await f.Head.Client.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.Department.Id, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, f.Department.Id, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null, 100_000)]), Ct));
         var blocked = await f.Head.Client.PostAsync($"/api/purchase-requests/{draft.Id}/submit", null, Ct);
         Assert.Contains("lập ủy quyền duyệt", await TitleAsync(blocked));
         var delegation = await ReadAsync<ApprovalDelegationDto>(await DelegateAsync(f.Head, f.Deputy.Id, null, Today, Today.AddDays(5)));

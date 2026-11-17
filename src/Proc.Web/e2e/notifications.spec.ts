@@ -29,7 +29,7 @@ test('PR gửi duyệt → chuông có số → mở thông báo vào phiếu �
     headers,
     data: {
       date: today, departmentId: department.id, purpose: 'Thử thông báo', neededDate: null, warehouseId: null, priority: 'Normal', note: null,
-      lines: [{ id: null, itemId, uomId: uoms.find((u) => u.code === 'HOP')!.id, qty: 2, suggestedSupplierId: null, neededDate: null, note: null }],
+      lines: [{ id: null, itemId, uomId: uoms.find((u) => u.code === 'HOP')!.id, qty: 2, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 }],
     },
   })
   expect(created.ok(), await created.text()).toBeTruthy()

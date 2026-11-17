@@ -163,11 +163,11 @@ public partial class SupplierPricingTests
         // Lịch sử: 3 phiếu nhận hàng XNH + 3 PO của chúng + 1 bảng giá.
         Assert.Equal(7, all.History.Count);
 
-        // Giá tham khảo PR chỉ lấy giá nhập của chính công ty: công ty C chưa nhập lần nào → 0.
+        // Giá tham khảo PR chỉ lấy giá nhập của chính công ty: công ty C chưa nhập lần nào → 0, ô đơn giá dự kiến để người lập nhập.
         var c = await MemberAsync(f);
         var pr = await ReadAsync<PurchaseRequestDto>(await c.Client.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, await TestDepartments.CreateAsync(c.Client), null, null, c.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)]), Ct));
-        Assert.Equal(0m, pr.Lines[0].EstPrice);
+        Assert.Equal((0m, true), (pr.Lines[0].EstPrice, pr.Lines[0].EstPriceManual));
 
         // Chỉ công ty mình: không thấy B.
         var mine = await ReadAsync<PriceComparisonDto>(await a.Client.GetAsync($"/api/price-comparison?itemId={f.ItemId}", Ct));

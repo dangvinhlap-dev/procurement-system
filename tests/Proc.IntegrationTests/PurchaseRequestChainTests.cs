@@ -50,7 +50,7 @@ public partial class PurchasingTests
 
         // Phiếu B có cấp Thủ kho mà chưa chọn nơi nhận: chặn gửi.
         var noWarehouse = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Không nơi nhận", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)]), Ct));
+            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Không nơi nhận", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null, 100_000)]), Ct));
         Assert.Contains("nơi nhận", await TitleAsync(await f.Buyer.PostAsync($"/api/purchase-requests/{noWarehouse.Id}/submit", null, Ct)));
 
         pr = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/submit", null, Ct));
@@ -80,13 +80,13 @@ public partial class PurchasingTests
 
         // Dịch vụ chưa có bộ PRS: dùng bộ PR nhưng tự bỏ cấp Thủ kho – không cần nơi nhận.
         var service = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Sửa máy", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)], null, "Service"), Ct));
+            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Sửa máy", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null, 100_000)], null, "Service"), Ct));
         service = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{service.Id}/submit", null, Ct));
         Assert.Equal([2], service.Approvals.Select(s => s.Level));
         // Có bộ PRS thì dịch vụ đi theo bộ PRS.
         await ReadAsync<ApprovalRuleDto>(await RuleAsync(f, "PRS", 1, directorRole));
         var service2 = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsJsonAsync("/api/purchase-requests",
-            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Thuê xe", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null)], null, "Service"), Ct));
+            new SavePurchaseRequestRequest(Today, f.DepartmentId, "Thuê xe", null, null, "Normal", null, [new(null, f.ItemId, f.Cai, 1, null, null, null, 100_000)], null, "Service"), Ct));
         service2 = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{service2.Id}/submit", null, Ct));
         Assert.Contains("vai trò", await TitleAsync(await ActAsync(head, "purchase-requests", service2.Id, "approve")));
         service2 = await ReadAsync<PurchaseRequestDto>(await ActAsync(director, "purchase-requests", service2.Id, "approve"));
@@ -112,7 +112,8 @@ public partial class PurchasingTests
 
         // Công trình dự toán 1 đ đã có PO đã duyệt 95.000 (lũy kế > dự toán): đề nghị sau vượt dự toán.
         var small = await ProjectAsync(f, 1m);
-        var first = await ReadAsync<PurchaseRequestDto>(await CreatePrOfAsync(f, "Construction", small.Id, 1));
+        // Đơn giá dự kiến 1 đ: 1 × 1 = 1 không vượt dự toán 1 đ.
+        var first = await ReadAsync<PurchaseRequestDto>(await CreatePrOfAsync(f, "Construction", small.Id, 1, 1));
         first = await ReadAsync<PurchaseRequestDto>(await f.Buyer.PostAsync($"/api/purchase-requests/{first.Id}/submit", null, Ct));
         Assert.Equal([(1, 1)], first.Approvals.Select(s => (s.Stage, s.Level)));
         await ReadAsync<PurchaseRequestDto>(await ActAsync(head, "purchase-requests", first.Id, "approve"));

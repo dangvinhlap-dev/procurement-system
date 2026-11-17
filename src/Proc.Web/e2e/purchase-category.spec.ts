@@ -32,7 +32,7 @@ test('đề nghị mua loại A chọn công trình, hiện dự toán – lũy 
   })
   const pr = await bha.send<{ id: string; no: string }>('post', '/api/purchase-requests', {
     date: today, departmentId: other.id, purpose: 'Thi công móng', neededDate: null, warehouseId: null, priority: 'Normal', note: null,
-    lines: [{ id: null, itemId: item.id, uomId: cai, qty: 5, suggestedSupplierId: null, neededDate: null, note: null }],
+    lines: [{ id: null, itemId: item.id, uomId: cai, qty: 5, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 }],
   })
 
   await loginViaApi(page)
