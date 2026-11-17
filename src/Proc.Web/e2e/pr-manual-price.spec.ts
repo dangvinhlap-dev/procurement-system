@@ -40,8 +40,8 @@ test('PR: mặt hàng chưa có giá nhận hàng – người lập nhập đơ
   await expect(price).toBeVisible()
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu PR-BHA-\d{4}-\d{4}\./)
+  // Bước xem trước chuỗi duyệt chạy thử lệnh gửi trên máy chủ → bị chặn ngay, chưa hiện hộp thoại xác nhận.
   await page.getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
-  await page.getByRole('dialog').getByRole('button', { name: /(^| )Gửi duyệt$/ }).click()
   await expect(page.getByText(/Chưa có đơn giá dự kiến ở dòng 1/).first()).toBeVisible()
 
   await price.fill('150000')
