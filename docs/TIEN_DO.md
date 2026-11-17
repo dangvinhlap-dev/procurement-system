@@ -990,6 +990,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 Script `db/scripts/0.40.0.sql` (`V0_39_0_BoCotKho` → `V0_40_0_DonGiaDuKienPR`, 117 migration), `rollback/0.40.0.json` **mức 1** (chỉ thêm cột có
 mặc định – không có script gỡ); chạy thử gỡ → nâng → nâng lại (idempotent) trên `procurement_test` đều qua. Tag `v0.40.0`, gói + `.sha256` trên
 GitHub Release. Cài sau 0.39.0 qua REL.
+Bản thử cổng 5007 **đã nâng 0.39.0 → 0.40.0 (17/11/2026, cài tay bằng `D:\project\nang-5007-0.40.0.ps1` – chưa có bộ thực thi)**: sao lưu
+`D:\project\procurement_kiemtra_0150_truoc_0.40.0.dump`; chạy `0.40.0.sql` (117 migration, có cột `EstPriceManual`); `app` = 0.40.0, `app-0.39.0` =
+bản cũ, gói `goi\0.40.0`; PID mới trong `pid.txt`; `/health` Healthy 0.40.0 (cả qua http://192.168.1.199:5007). Người dùng nhận gói trên REL của
+5007 để ghi kiểm thử / UAT (không bấm Cài TEST / PROD). Lưu ý: khung `!` của Claude Code chạy bash – đường dẫn `\` bị nuốt, phải dùng `/`.
 
 **Phát hành 0.39.0 (16/11/2026)** – người dùng "ghi nhận và đóng gói tất cả các việc đã làm". Gồm lát xóa cột kho (dưới). Script
 `db/scripts/0.39.0.sql` (`V0_38_0_BoCotThamSoKho` → `V0_39_0_BoCotKho`), script gỡ `db/scripts/down/0.39.0.sql`, `rollback/0.39.0.json` **mức 2**;
