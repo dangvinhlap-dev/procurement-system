@@ -1015,6 +1015,9 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 **Phát hành 0.42.1 (18/11/2026)** – người dùng "phát hành bản mới nhất cho tôi". Gồm sửa lỗi chọn mặt hàng dịch vụ trên PR, PO… (bảng Đã xong).
 Kiểm tra: build 0 cảnh báo, `dotnet test` 815/815, tsc, oxlint, `npm run build`, Playwright đủ bộ 164/164 (2 luồng). **Không đổi CSDL** (118
 migration) – `rollback/0.42.1.json` **mức 1**. Tag `v0.42.1`, gói + `.sha256` trên GitHub Release. Cài sau 0.42.0 qua REL.
+Bản thử cổng 5007 **đã nâng 0.42.0 → 0.42.1 (18/11/2026, cài tay bằng `D:\project\nang-5007-0.42.1.ps1`)** – người dùng "nâng lên cho tôi để tôi kiểm
+tra". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.42.1.dump`, không chạy script CSDL, `app` = 0.42.1, `app-0.42.0` = bản cũ,
+gói `goi\0.42.1`; `/health` Healthy 0.42.1 (cả qua http://192.168.1.199:5007). Phiếu 0.42.1 trên REL (nếu nhận) cần ghi chú "đã cài tay".
 
 **Phát hành 0.42.0 (18/11/2026)** – người dùng "phát hành cho tôi test bản mới nhất". Gồm lát IN2 (các phiếu in giữ nguyên sheet Excel 4A/4B, 2A/2B,
 3a/3A/3B, 5A/5B; 1C/2C giả lập có chữ ký). Trước khi phát hành: Playwright đủ bộ chạy lại chia hai nửa (94 + 69 = 163/163 qua), merge
