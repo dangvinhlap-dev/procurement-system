@@ -28,12 +28,12 @@ function useCompanyId(): string {
  * và/hoặc theo Id (hiển thị lại các dòng đã có).
  * @param search Từ khóa.
  * @param ids Id các mặt hàng đang có trên phiếu.
- * @param inventoryOnly Chỉ hàng loại tồn kho (ItemType.Inventory).
+ * Tìm mọi loại hàng (tồn kho, dịch vụ, tài sản, tiêu hao): lọc "chỉ hàng tồn kho" là của phiếu kho, đã gỡ ở lát K3 (design.md mục 19.4).
  */
-export function useItemLookup(search: string, ids: string[], inventoryOnly = true) {
+export function useItemLookup(search: string, ids: string[]) {
   const companyId = useCompanyId()
   const keyword = search.trim()
-  const params = new URLSearchParams({ inventoryOnly: String(inventoryOnly) })
+  const params = new URLSearchParams()
   const searching = keyword.length >= 2 || hasWildcard(keyword)
   if (searching) params.set('search', keyword)
   for (const id of [...new Set(ids)].sort()) params.append('ids', id)

@@ -221,6 +221,31 @@ public class ItemCatalogTests
         Assert.Contains("đang ở cấp 1 (Ngành hàng)", await TitleAsync(moveUp));
     }
 
+    /// <summary>
+    /// Ô chọn mặt hàng trên PR, PO, RFQ, bảng giá… tìm được mọi loại hàng (dịch vụ, tài sản, tiêu hao), không chỉ hàng tồn kho –
+    /// lọc "chỉ hàng tồn kho" là của phiếu kho, đã gỡ ở lát K3 (design.md mục 19.4). Lỗi người dùng báo 18/11/2026: mã dịch vụ
+    /// MAIN-00001 không chọn được trên PR, PO.
+    /// </summary>
+    [Fact]
+    public async Task OChonMatHang_TimDuocMoiLoaiHang_KeCaDichVu()
+    {
+        var head = await HeadOfficeAdminAsync();
+        var hop = await UomIdAsync(head, "HOP");
+        var category = await CreateCategoryAsync(head, UniqueCode("DV"), level: 4);
+        var word = UniqueCode("TK").ToLowerInvariant();
+        string[] types = ["Inventory", "Service", "Asset", "Consumable"];
+        foreach (var type in types)
+            await ReadAsync<ItemDetailDto>(await head.PostAsJsonAsync("/api/items", NewItem(category.Id, hop, $"Hạng mục {word} {type}", type), Ct));
+
+        // Trình duyệt còn bản web cũ gửi `inventoryOnly=true` – máy chủ bỏ qua tham số đã gỡ.
+        var found = await head.GetFromJsonAsync<List<ItemLookupDto>>($"/api/items/lookup?search={word}&inventoryOnly=true", Ct);
+        Assert.Equal(types.Order(), found!.Select(i => i.Type).Order());
+
+        // Bấm `*` (kiểu SAP ECC) cũng liệt kê được dịch vụ.
+        var wildcard = await head.GetFromJsonAsync<List<ItemLookupDto>>($"/api/items/lookup?search={word}*service", Ct);
+        Assert.Equal("Service", Assert.Single(wildcard!).Type);
+    }
+
     [Fact]
     public async Task NhomHang_NguoiBiGioiHan_ChiThemNhomConTrongNhanhDuocPhep()
     {
