@@ -329,6 +329,15 @@ public sealed class ProcDbContext : IdentityUserContext<AppUser, Guid>
     /// <summary>Ý kiến thẩm định của thành viên chuyên môn (lát H1 – design.md mục 18.25).</summary>
     public DbSet<Proc.Domain.Documents.AppraisalOpinion> AppraisalOpinions => Set<Proc.Domain.Documents.AppraisalOpinion>();
 
+    /// <summary>Chữ ký người dùng theo phiên bản (lát IN1).</summary>
+    public DbSet<Proc.Domain.Documents.UserSignature> UserSignatures => Set<Proc.Domain.Documents.UserSignature>();
+
+    /// <summary>Logo công ty in đầu phiếu (lát IN1).</summary>
+    public DbSet<CompanyLogo> CompanyLogos => Set<CompanyLogo>();
+
+    /// <summary>Nhật ký in chứng từ (lát IN1).</summary>
+    public DbSet<Proc.Domain.Documents.DocumentPrintLog> DocumentPrintLogs => Set<Proc.Domain.Documents.DocumentPrintLog>();
+
     /// <summary>
     /// Cấu hình bảng Identity, áp dụng các lớp IEntityTypeConfiguration trong assembly Infrastructure, rồi gắn filter phạm vi.
     /// </summary>

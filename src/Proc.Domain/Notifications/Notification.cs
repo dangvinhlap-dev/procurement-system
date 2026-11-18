@@ -58,6 +58,9 @@ public static class NotificationTypes
     /// (lát QT3b, màn hình BAK). Chỉ trong phần mềm như thông báo nhật ký lỗi (E10).
     /// </summary>
     public const string BackupProblem = "BackupProblem";
+
+    /// <summary>Người quản trị tải lên / thay / ngừng dùng chữ ký của bạn (lát IN1).</summary>
+    public const string SignatureChanged = "SignatureChanged";
 }
 
 /// <summary>

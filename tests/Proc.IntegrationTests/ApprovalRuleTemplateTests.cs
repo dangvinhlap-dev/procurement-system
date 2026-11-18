@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Administration;
 using Proc.Application.Common;
@@ -113,8 +113,9 @@ public class ApprovalRuleTemplateTests
             [(1, (string?)null, "Storekeeper"), (2, null, "DepartmentHead"), (3, "TPCUVT", "Role"), (4, "TPTCKT", "Role"), (5, "TPHC", "Role"),
                 (6, null, "DivisionDirector"), (7, "PHOCTUBCL", "Role"), (8, "CHUTICH", "Role")],
             rules.Where(r => r.DocType == "PR").OrderBy(r => r.Level).Select(r => (r.Level, r.RoleCode, r.ApproverKind)));
-        // Lát Y3c: bộ PRA (1A, không TP HC), PRS (DV, không Thủ kho), PRE (vượt dự toán).
-        Assert.Equal(7, rules.Count(r => r.DocType == "PRA"));
+        // Lát Y3c: bộ PRA (1A), PRS (DV, không Thủ kho), PRE (vượt dự toán). Lát IN1 (người dùng chốt 18/11/2026): PRA có thêm TP HC như mẫu 1A.
+        Assert.Equal(8, rules.Count(r => r.DocType == "PRA"));
+        Assert.Contains(rules, r => r is { DocType: "PRA", Level: 5, RoleCode: "TPHC" });
         Assert.DoesNotContain(rules, r => r.DocType == "PRS" && r.ApproverKind == "Storekeeper");
         Assert.Equal(["GDTCKT"], rules.Where(r => r.DocType == "PRE").Select(r => r.RoleCode));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "CHUTICH"], rules.Where(r => r.DocType == "PO").OrderBy(r => r.Level).Select(r => r.RoleCode));

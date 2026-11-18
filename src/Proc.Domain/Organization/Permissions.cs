@@ -27,6 +27,11 @@ public static class Permissions
         public const string UserView = "System.User.View";
         /// <summary>Quyền "Thêm, sửa người dùng và gán vai trò".</summary>
         public const string UserManage = "System.User.Manage";
+        /// <summary>
+        /// Quyền "Tải lên, thay, ngừng dùng chữ ký của người dùng khác" (lát IN1 – người dùng chốt 18/11/2026: admin được tải thay). Chữ ký của
+        /// chính mình ai cũng tự tải được, không cần quyền này.
+        /// </summary>
+        public const string UserSignature = "System.User.Signature";
         /// <summary>Quyền "Xem vai trò".</summary>
         public const string RoleView = "System.Role.View";
         /// <summary>Quyền "Thêm, sửa vai trò và quyền".</summary>
@@ -386,6 +391,7 @@ public static class Permissions
         new(System.CompanyManage, "Thêm, sửa công ty"),
         new(System.UserView, "Xem người dùng"),
         new(System.UserManage, "Thêm, sửa người dùng và gán vai trò"),
+        new(System.UserSignature, "Tải lên, thay chữ ký của người dùng khác"),
         new(System.RoleView, "Xem vai trò"),
         new(System.RoleManage, "Thêm, sửa vai trò và quyền"),
         new(System.LogView, "Xem nhật ký thao tác"),

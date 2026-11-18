@@ -34,6 +34,12 @@ public sealed class AppUser : IdentityUser<Guid>
     /// </summary>
     public string? Position { get; set; }
 
+    /// <summary>
+    /// Danh xưng in trước họ tên dưới chữ ký trên phiếu, ví dụ "AHLĐ." – mẫu 1A in "AHLĐ. ĐINH VĂN VUI" ở ô Chủ tịch (lát IN1, design.md mục
+    /// 20.3; người dùng chốt 18/11/2026: nhập ở danh mục người dùng). null/trống = chỉ in họ tên.
+    /// </summary>
+    public string? Honorific { get; set; }
+
     /// <summary>Công ty mặc định khi đăng nhập.</summary>
     public Guid? DefaultCompanyId { get; set; }
 
