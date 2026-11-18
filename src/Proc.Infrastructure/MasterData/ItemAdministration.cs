@@ -82,7 +82,7 @@ public sealed class ItemAdministration : IItemAdministration
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ItemLookupDto>> LookupAsync(
-        string? search, bool inventoryOnly, IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+        string? search, IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
         var words = SearchText.Normalize(search).Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -90,7 +90,6 @@ public sealed class ItemAdministration : IItemAdministration
         if (words.Length > 0)
         {
             var items = _db.Items.AsNoTracking().Where(i => i.IsActive);
-            if (inventoryOnly) items = items.Where(i => i.Type == ItemType.Inventory);
             foreach (var word in words)
             {
                 var pattern = LikePatterns.Contains(word);

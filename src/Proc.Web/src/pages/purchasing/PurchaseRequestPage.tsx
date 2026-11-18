@@ -716,7 +716,7 @@ export function PurchaseRequestPage() {
 function LinkItemDialog({ label, loading, onLink, onCancel }: { label: string; loading: boolean; onLink: (itemId: string) => void; onCancel: () => void }) {
   const [search, setSearch] = useState('')
   const [itemId, setItemId] = useState<string | undefined>()
-  const lookup = useItemLookup(search, itemId ? [itemId] : [], false)
+  const lookup = useItemLookup(search, itemId ? [itemId] : [])
   return (
     <Modal open title={`Gắn mã hàng cho: ${label}`} okText="Gắn mã" cancelText="Đóng" okButtonProps={{ disabled: !itemId, loading }}
       onOk={() => itemId && onLink(itemId)} onCancel={onCancel}>

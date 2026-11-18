@@ -72,10 +72,10 @@ public static class MasterDataEndpoints
         items.MapGet("/", (string? search, Guid? categoryId, string? type, bool? activeOnly, IItemAdministration s, CancellationToken ct) =>
                 s.SearchAsync(new ItemQuery(search, categoryId, type, activeOnly ?? false), ct))
             .RequirePermission(Permissions.MasterData.ItemView);
-        // Ô chọn hàng trên chứng từ: người lập chứng từ kho có thể không có quyền xem danh mục hàng hóa, nên chỉ cần đăng nhập
-        // và có công ty làm việc; kết quả vẫn lọc theo phạm vi nhóm hàng.
-        items.MapGet("/lookup", (string? search, bool? inventoryOnly, Guid[]? ids, IItemAdministration s, CancellationToken ct) =>
-            s.LookupAsync(search, inventoryOnly ?? false, ids ?? [], ct));
+        // Ô chọn hàng trên chứng từ: người lập chứng từ có thể không có quyền xem danh mục hàng hóa, nên chỉ cần đăng nhập
+        // và có công ty làm việc; kết quả vẫn lọc theo phạm vi nhóm hàng. Tham số cũ `inventoryOnly` (của phiếu kho, gỡ ở K3) bị bỏ qua.
+        items.MapGet("/lookup", (string? search, Guid[]? ids, IItemAdministration s, CancellationToken ct) =>
+            s.LookupAsync(search, ids ?? [], ct));
         items.MapGet("/{id:guid}", (Guid id, IItemAdministration s, CancellationToken ct) => s.GetAsync(id, ct))
             .RequirePermission(Permissions.MasterData.ItemView);
         items.MapPost("/", async (CreateItemRequest request, IItemAdministration s, CancellationToken ct) =>

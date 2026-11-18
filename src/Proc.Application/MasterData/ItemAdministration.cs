@@ -139,11 +139,11 @@ public interface IItemAdministration
     /// Tìm hàng đang dùng cho ô chọn hàng trên chứng từ (tối đa 50 dòng), theo mã/tên/mã vạch có dấu hay không dấu.
     /// </summary>
     /// <param name="search">Từ khóa; trống thì trả rỗng.</param>
-    /// <param name="inventoryOnly">Chỉ hàng tồn kho (chứng từ kho).</param>
+    /// <remarks>Mọi loại hàng (tồn kho, dịch vụ, tài sản, tiêu hao) – lọc "chỉ hàng tồn kho" của phiếu kho đã gỡ ở lát K3 (design.md mục 19.4).</remarks>
     /// <param name="ids">Thêm các mặt hàng theo Id (để hiển thị lại dòng đã chọn).</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>Mặt hàng kèm ĐVT chọn được.</returns>
-    Task<IReadOnlyList<ItemLookupDto>> LookupAsync(string? search, bool inventoryOnly, IReadOnlyList<Guid> ids, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ItemLookupDto>> LookupAsync(string? search, IReadOnlyList<Guid> ids, CancellationToken cancellationToken);
 
     /// <summary>Chi tiết hàng hóa.</summary>
     /// <param name="id">Id.</param>
