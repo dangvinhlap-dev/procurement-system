@@ -242,15 +242,9 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
     }
 
     /// <inheritdoc />
-    public async Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var summary = await _summaries.GetAsync(id, cancellationToken);
-        var company = await CompanyAsync(cancellationToken);
-        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
-            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, summary.Date, cancellationToken)
-            : 0;
-        return new PdfFile($"{summary.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent)));
-    }
+    public Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2: bản xem giữ nguyên sheet 2A/2B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderSummarySheetAsync(id, null, cancellationToken);
 
     /// <inheritdoc />
     public async Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken)

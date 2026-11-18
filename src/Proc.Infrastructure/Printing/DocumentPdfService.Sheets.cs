@@ -6,6 +6,7 @@ using Proc.Application.Printing;
 using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Purchasing;
+using Proc.Infrastructure.Purchasing;
 
 namespace Proc.Infrastructure.Printing;
 
@@ -26,11 +27,26 @@ public sealed partial class DocumentPdfService
         ],
         new("", "Chủ tịch HĐQT/TGĐ", ""));
 
+    /// <summary>
+    /// Khối ký 2A/2B nguyên văn ảnh trong sheet "2A.TH MUA VT" / "2B.TH MUA VT": Người lập bảng · Trưởng phòng CUVT · GĐ Khối liên quan ·
+    /// Phó CT.UBCL&amp;PT · Chủ tịch HĐQT/TGĐ (chuỗi duyệt 2A/2B – design.md mục 19.2).
+    /// </summary>
+    public static readonly SheetSignSpec Sign2 = new(
+        SheetSign.Heading,
+        new("", "Người lập bảng", ""),
+        [
+            new("TPCUVT", "Trưởng phòng CUVT", ""),
+            new("DivisionDirector", "GĐ Khối liên quan", ""),
+            new("PHOCTUBCL", "Phó CT.UBCL&PT", ""),
+        ],
+        new("", "Chủ tịch HĐQT/TGĐ", ""));
+
     /// <inheritdoc />
     public Task<PdfFile> DocumentPrintAsync(string docType, Guid id, PrintKind kind, CancellationToken cancellationToken) => docType switch
     {
         DocumentTypes.PurchaseRequest => RenderPurchaseRequestAsync(id, kind, cancellationToken),
         DocumentTypes.PurchaseOrder => RenderPurchaseOrderSheetAsync(id, kind, cancellationToken),
+        DocumentTypes.PurchaseSummary => RenderSummarySheetAsync(id, kind, cancellationToken),
         _ => throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu."),
     };
 
@@ -46,6 +62,9 @@ public sealed partial class DocumentPdfService
             case DocumentTypes.PurchaseOrder:
                 await _orders.GetAsync(id, cancellationToken);
                 break;
+            case DocumentTypes.PurchaseSummary:
+                await _summaries.GetAsync(id, cancellationToken);
+                break;
             default:
                 throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu.");
         }
@@ -59,6 +78,22 @@ public sealed partial class DocumentPdfService
         return logs.Select(l => new DocumentPrintDto(
             l.PrintNo, l.Kind.ToString(), l.PrintedAt, users.GetValueOrDefault(l.PrintedBy)?.FullName, users.GetValueOrDefault(l.PrintedBy)?.UserName,
             l.ApprovalStatus)).ToList();
+    }
+
+    /// <summary>Bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>
+    private async Task<PdfFile> RenderSummarySheetAsync(Guid id, PrintKind? kind, CancellationToken cancellationToken)
+    {
+        var summary = await _summaries.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
+            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, summary.Date, cancellationToken)
+            : 0;
+        var form = CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent);
+        var createdBy = await _db.PurchaseSummaries.AsNoTracking().Where(s => s.Id == id).Select(s => s.CreatedBy).SingleAsync(cancellationToken);
+        var sign = await SignBlockAsync(Sign2, DocumentTypes.PurchaseSummary, id, summary.Status, createdBy, summary.CreatedByName, cancellationToken);
+        var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseSummary, id, summary.No, summary.Status, kind, sign.ApprovalStatus, cancellationToken);
+        var spec = form.FormNo == "2A" ? CuvtSheetLayout.Sheet2A : CuvtSheetLayout.Sheet2B;
+        return new PdfFile($"{summary.No}.pdf", CuvtSheetLayout.Render(form, spec, logo, sign, stamp));
     }
 
     /// <summary>Bảng theo dõi mua hàng 4A/4B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>

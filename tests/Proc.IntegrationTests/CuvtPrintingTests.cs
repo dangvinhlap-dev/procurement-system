@@ -67,7 +67,9 @@ public partial class PurchasingTests
         var unit = await UnitAsync(f);
         var summary = await ReadAsync<PurchaseSummaryDto>(await SaveSummaryAsync(f, "2A", f.DepartmentId, project.Id, [new(prA.Lines[0].Id, unit.Id, null)]));
         Assert.Equal((prA.Date, "Thi công"), (summary.Lines[0].RequestDate, summary.Lines[0].RequestPurpose));
-        var pdf2A = await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-summaries/{summary.Id}/pdf", Ct));
+        var response2A = await f.Buyer.GetAsync($"/api/purchase-summaries/{summary.Id}/pdf", Ct);
+        SavePdfForReview("2A-nhap.pdf", await response2A.Content.ReadAsByteArrayAsync(Ct));
+        var pdf2A = await PdfOfAsync(response2A);
         Assert.Equal($"BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA VẬT TƯ {summary.No}", pdf2A.Info.Title);
         Assert.True(pdf2A.Pages[0].Width.Point > pdf2A.Pages[0].Height.Point, "Mẫu 2A khổ ngang.");
         var form2A = CuvtPrintForms.PurchaseSummary(summary, "Công ty thử");
@@ -78,7 +80,9 @@ public partial class PurchasingTests
         Assert.Equal(
             (summary.Frame.AccumulatedAmount + summary.TotalAmount).ToString("#,##0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + " đ",
             form2A.Info.Single(i => i.Label == "Lũy kế số tiền đã mua").Value);
-        Assert.Equal(form2A.Columns.Count - form2A.TotalSpan, form2A.TotalCells.Count);
+        // Lát IN2b: dòng tổng như sheet – "Tổng cộng" gộp 3 cột đầu, tổng số lượng (cùng ĐVT) và tổng tiền.
+        Assert.Equal((3, form2A.Columns.Count - 3), (form2A.TotalSpan, form2A.TotalCells.Count));
+        Assert.Equal(summary.TotalAmount.ToString("#,##0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")), form2A.TotalCells[4]);
         Assert.Equal(["Người lập"], form2A.Signers.Select(s => s.Title));
 
         // Không có quyền xem bảng tổng hợp: không in được.

@@ -33,11 +33,15 @@ public sealed record SheetSignStyle(
 /// </summary>
 /// <param name="Landscape">Khổ ngang.</param>
 /// <param name="SheetColumns">Độ rộng cột A… của sheet (đơn vị ký tự Excel; điểm ảnh = rộng × 7 + 5).</param>
-/// <param name="ColumnMap">Số cột sheet của từng cột logic của bảng (ví dụ "Tên hàng" gộp B:C = 2).</param>
+/// <param name="ColumnMap">
+/// Số cột sheet của từng cột logic của bảng (ví dụ "Tên hàng" gộp B:C = 2). Biểu mẫu có nhiều cột hơn bản đồ (cột "Đơn vị mua" của 2A/2B – mỗi đơn
+/// vị một cột) thì các cột thêm lấy độ rộng bình quân của các cột sheet còn lại: 2A có 2 cột đơn vị K, L (rộng 8,6 / 7,5) → mỗi đơn vị 61 điểm
+/// ảnh; bảng 3 đơn vị rộng thêm một cột như khi chèn cột trong Excel.
+/// </param>
 /// <param name="HeaderRowsPt">Cao các dòng khung đầu phiếu (pt): tiêu đề, phụ đề, ngày.</param>
 /// <param name="DateColor">Màu dòng ngày (4A đen, 4B xanh #0000CC).</param>
 /// <param name="InfoRowPt">Cao mỗi dòng khung thông tin.</param>
-/// <param name="TableHeaderPt">Cao dòng tiêu đề bảng.</param>
+/// <param name="TableHeaderPt">Cao dòng tiêu đề bảng (tầng trên khi có cột nhóm).</param>
 /// <param name="RowPt">Cao tối thiểu dòng hàng.</param>
 /// <param name="TotalRowPt">Cao dòng tổng.</param>
 /// <param name="Logo">Vị trí khung logo.</param>
@@ -45,9 +49,14 @@ public sealed record SheetSignStyle(
 /// <param name="Sign">Số đo khối ký.</param>
 /// <param name="CenteredColumns">Cột logic căn giữa ở dòng hàng (ngoài cột có cờ <see cref="CuvtColumn.Center"/>).</param>
 /// <param name="Scale">Tỉ lệ in của sheet (Page Setup – 4A 85 %, 4B 75 %); sheet rộng hơn vùng in thì co thêm cho vừa.</param>
+/// <param name="TableHeader2Pt">Cao tầng dưới của tiêu đề bảng khi có cột nhóm (2A "Nội dung đề xuất", "Đơn vị mua").</param>
+/// <param name="HeaderFilled">Tiêu đề bảng nền xanh nhạt (4A/4B có, 2A/2B không).</param>
+/// <param name="TotalDash">Ô trống dòng tổng in "-" (định dạng kế toán của 4A/4B); false = để trống.</param>
+/// <param name="RedColumns">Cột logic chữ đỏ ở dòng hàng (2A/2B "Ngày cung ứng").</param>
 public sealed record SheetLayoutSpec(
     bool Landscape, double[] SheetColumns, int[] ColumnMap, double[] HeaderRowsPt, Color DateColor, double InfoRowPt, double TableHeaderPt,
-    double RowPt, double TotalRowPt, SheetPicture Logo, SheetPicture Circle, SheetSignStyle Sign, int[]? CenteredColumns = null, double Scale = 0.85);
+    double RowPt, double TotalRowPt, SheetPicture Logo, SheetPicture Circle, SheetSignStyle Sign, int[]? CenteredColumns = null, double Scale = 0.85,
+    double TableHeader2Pt = 0, bool HeaderFilled = true, bool TotalDash = true, int[]? RedColumns = null);
 
 /// <summary>
 /// Khuôn in giữ nguyên sheet biểu mẫu CUVT (lát IN2, cùng cách làm của 1A – <see cref="PurchaseRequestSheetLayout"/>): mọi kích thước lấy từ sheet
@@ -88,6 +97,25 @@ public static class CuvtSheetLayout
         new SheetPicture(0, 25, 12, 101, 98), new SheetPicture(11, 77, 28, 97, 96),
         new SheetSignStyle([204, 265, 320, 258, 297], [45, 41, 161], 1360, 274, 16, true, 15, 14), [3, 4], 0.75);
 
+    /// <summary>
+    /// Số đo sheet "2A.TH MUA VT" (A4 ngang 85 %, cột A–L): tiêu đề bảng hai tầng ("Nội dung đề xuất", "Đơn vị mua") không nền, dòng tổng "Tổng cộng"
+    /// gộp A:C căn giữa, ngày cung ứng chữ đỏ; ĐVT, số lượng căn trái như sheet.
+    /// </summary>
+    public static readonly SheetLayoutSpec Sheet2A = new(
+        true, [11.8, 6.9, 11.9, 22.3, 6.7, 7.3, 15.6, 19.4, 14.0, 14.3, 8.6, 7.5], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [23.25, 20.1, 20.1, 20.1, 20.1], Colors.Black, 26.1, 24, 33.6, 20.25,
+        new SheetPicture(0, 39, 9, 95, 90), new SheetPicture(9, 84, 9, 89, 84),
+        new SheetSignStyle([168, 204, 186, 192, 216], [34, 28, 149], 1179, 242, 16, true, 15, 14),
+        TableHeader2Pt: 33.6, HeaderFilled: false, TotalDash: false, RedColumns: [8]);
+
+    /// <summary>Số đo sheet "2B.TH MUA VT" – như 2A, 4 dòng thông tin, ngày xanh, ngày đề xuất và ngày cung ứng chữ đỏ, các cột căn giữa.</summary>
+    public static readonly SheetLayoutSpec Sheet2B = new(
+        true, [11.3, 6.9, 12.9, 19.6, 6.7, 8.4, 15.6, 19.4, 14.0, 13.4, 8.6, 9.3], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [23.25, 20.1, 20.1, 20.1, 20.1], Blue, 26.1, 24, 33, 33,
+        new SheetPicture(0, 39, 9, 95, 90), new SheetPicture(10, 29, 16, 89, 84),
+        new SheetSignStyle([168, 204, 186, 192, 216], [34, 28, 149], 1179, 248, 5, true, 15, 14), [4, 5, 6, 8],
+        TableHeader2Pt: 33.6, HeaderFilled: false, TotalDash: false, RedColumns: [0, 8]);
+
     /// <summary>Dựng PDF.</summary>
     /// <param name="form">Nội dung phiếu (tiêu đề, phụ đề, thông tin, cột, dòng, dòng tổng).</param>
     /// <param name="spec">Số đo sheet.</param>
@@ -99,7 +127,8 @@ public static class CuvtSheetLayout
     {
         var document = new Document();
         document.Info.Title = $"{form.Title} {form.No}";
-        var g = new Geometry(spec);
+        var columnPx = LogicalPx(form, spec);
+        var g = new Geometry(spec, columnPx.Sum());
         var normal = document.Styles[StyleNames.Normal]!;
         normal.Font.Name = PdfFonts.SerifFamily;
         normal.Font.Size = g.Pt(13);
@@ -117,7 +146,7 @@ public static class CuvtSheetLayout
         SheetPrintParts.AddStamp(section, stamp, g.WidthMm);
         AddHeader(section, form, spec, g);
         AddInfo(section, form, spec, g);
-        AddLines(section, form, spec, g);
+        AddLines(section, form, spec, g, columnPx);
         AddSignBlock(section, sign, spec.Sign, g);
 
         var renderer = new PdfDocumentRenderer { Document = document };
@@ -131,11 +160,12 @@ public static class CuvtSheetLayout
     /// <summary>Quy đổi điểm ảnh sheet ↔ mm trên giấy: cả sheet co theo một tỉ lệ để vừa bề ngang vùng in.</summary>
     private sealed class Geometry
     {
-        public Geometry(SheetLayoutSpec spec)
+        public Geometry(SheetLayoutSpec spec, double totalPx)
         {
-            ColumnPx = spec.SheetColumns.Select(w => w * 7 + 5).ToArray();
+            ColumnPx = spec.SheetColumns.Select(ColumnWidthPx).ToArray();
+            TotalPx = totalPx;
             PageWidthMm = spec.Landscape ? 297 : 210;
-            var natural = ColumnPx.Sum() * MmPerPx;
+            var natural = totalPx * MmPerPx;
             K = Math.Min(spec.Scale, (PageWidthMm - 2 * MarginMm) / natural);
             WidthMm = natural * K;
             MmPx = MmPerPx * K;
@@ -150,6 +180,9 @@ public static class CuvtSheetLayout
 
         /// <summary>Rộng từng cột sheet (điểm ảnh).</summary>
         public double[] ColumnPx { get; }
+
+        /// <summary>Rộng bảng của phiếu đang in (điểm ảnh) – bằng rộng sheet, trừ khi có thêm cột đơn vị mua.</summary>
+        public double TotalPx { get; }
 
         /// <summary>Rộng sheet trên giấy (mm).</summary>
         public double WidthMm { get; }
@@ -166,7 +199,17 @@ public static class CuvtSheetLayout
 
         /// <summary>Mép trái cột <paramref name="col"/> (điểm ảnh).</summary>
         public double Left(int col) => ColumnPx.Take(col).Sum();
+
+        /// <summary>
+        /// Mép trái hình neo trên sheet. Vòng tròn số biểu mẫu nằm sát phải khung đầu phiếu nên giữ khoảng cách tới mép phải (bảng rộng thêm cột
+        /// đơn vị mua thì vòng tròn dời theo); logo giữ khoảng cách tới mép trái.
+        /// </summary>
+        public double PictureLeft(SheetPicture p, bool fromRight) =>
+            fromRight ? TotalPx - (ColumnPx.Sum() - (Left(p.Col) + p.OffsetPx)) : Left(p.Col) + p.OffsetPx;
     }
+
+    /// <summary>Rộng một cột Excel ra điểm ảnh (cỡ chữ mặc định 7 điểm ảnh một ký tự + 5 lề): cột 8,43 = 64 điểm ảnh.</summary>
+    private static double ColumnWidthPx(double width) => width * 7 + 5;
 
     /// <summary>
     /// Khung đầu phiếu: tiêu đề, phụ đề, ngày căn giữa cả bề ngang; dòng nào dài hơn phần giữa logo và vòng tròn thì thu nhỏ cỡ chữ cho vừa một dòng
@@ -182,9 +225,9 @@ public static class CuvtSheetLayout
         while (lines.Count < spec.HeaderRowsPt.Length - 1) lines.Add(("", 12, Blue));
         lines.Add(($"Ngày {form.Date.Day} tháng {form.Date.Month} năm {form.Date.Year}", 16, spec.DateColor));
         var measure = XGraphics.CreateMeasureContext(new XSize(4000, 4000), XGraphicsUnit.Point, XPageDirection.Downwards);
-        var leftPx = g.Left(spec.Logo.Col) + spec.Logo.OffsetPx + spec.Logo.WidthPx;
-        var rightPx = g.ColumnPx.Sum() - (g.Left(spec.Circle.Col) + spec.Circle.OffsetPx);
-        var room = (g.ColumnPx.Sum() - 2 * Math.Max(leftPx, rightPx)) * g.MmPx * 72 / 25.4;
+        var leftPx = g.PictureLeft(spec.Logo, false) + spec.Logo.WidthPx;
+        var rightPx = g.TotalPx - g.PictureLeft(spec.Circle, true);
+        var room = (g.TotalPx - 2 * Math.Max(leftPx, rightPx)) * g.MmPx * 72 / 25.4;
         for (var r = 0; r < spec.HeaderRowsPt.Length; r++)
         {
             var row = table.AddRow();
@@ -230,10 +273,11 @@ public static class CuvtSheetLayout
     }
 
     /// <summary>
-    /// Bảng dòng hàng theo cột sheet. Cột gộp dọc (<see cref="CuvtColumn.MergeRows"/>) chỉ gộp khi bảng không quá
-    /// <see cref="CuvtFormLayout.MaxMergedRows"/> dòng (ô gộp của MigraDoc không tách sang trang sau).
+    /// Bảng dòng hàng theo cột sheet: tiêu đề một tầng, hoặc hai tầng khi có cột nhóm (nhóm gộp ngang, cột không nhóm gộp dọc). Cột gộp dọc
+    /// (<see cref="CuvtColumn.MergeRows"/>) chỉ gộp khi bảng không quá <see cref="CuvtFormLayout.MaxMergedRows"/> dòng (ô gộp của MigraDoc không
+    /// tách sang trang sau).
     /// </summary>
-    private static void AddLines(Section section, CuvtForm form, SheetLayoutSpec spec, Geometry g)
+    private static void AddLines(Section section, CuvtForm form, SheetLayoutSpec spec, Geometry g, double[] columnPx)
     {
         var table = section.AddTable();
         table.Borders.Width = 0.75;
@@ -241,20 +285,43 @@ public static class CuvtSheetLayout
         table.LeftPadding = table.RightPadding = Unit.FromMillimeter(1);
         table.TopPadding = table.BottomPadding = Unit.FromMillimeter(0.5);
         table.Format.Font.Size = g.Pt(13);
-        var widths = LogicalWidths(form, spec, g);
-        foreach (var w in widths) table.AddColumn(Unit.FromMillimeter(w));
+        foreach (var px in columnPx) table.AddColumn(Unit.FromMillimeter(px * g.MmPx));
 
-        var header = table.AddRow();
-        header.HeadingFormat = true;
-        header.HeightRule = RowHeightRule.AtLeast;
-        header.Height = g.Pt(spec.TableHeaderPt);
-        header.VerticalAlignment = VerticalAlignment.Center;
-        header.Format.Font.Bold = true;
-        header.Format.Alignment = ParagraphAlignment.Center;
-        header.Shading.Color = HeaderFill;
-        for (var c = 0; c < form.Columns.Count; c++) header.Cells[c].AddParagraph(form.Columns[c].Title);
+        var grouped = form.Columns.Any(c => c.Group is not null);
+        var top = table.AddRow();
+        var bottom = grouped ? table.AddRow() : null;
+        foreach (var header in bottom is null ? [top] : new[] { top, bottom })
+        {
+            header.HeadingFormat = true;
+            header.HeightRule = RowHeightRule.AtLeast;
+            header.VerticalAlignment = VerticalAlignment.Center;
+            header.Format.Font.Bold = true;
+            header.Format.Alignment = ParagraphAlignment.Center;
+            if (spec.HeaderFilled) header.Shading.Color = HeaderFill;
+        }
+
+        top.Height = g.Pt(spec.TableHeaderPt);
+        if (bottom is not null) bottom.Height = g.Pt(spec.TableHeader2Pt);
+        for (var c = 0; c < form.Columns.Count; c++)
+        {
+            var column = form.Columns[c];
+            if (bottom is null || column.Group is null)
+            {
+                top.Cells[c].AddParagraph(column.Title);
+                if (bottom is not null) top.Cells[c].MergeDown = 1;
+                continue;
+            }
+
+            bottom.Cells[c].AddParagraph(column.Title);
+            if (c > 0 && form.Columns[c - 1].Group == column.Group) continue;
+            var span = 1;
+            while (c + span < form.Columns.Count && form.Columns[c + span].Group == column.Group) span++;
+            top.Cells[c].AddParagraph(column.Group);
+            top.Cells[c].MergeRight = span - 1;
+        }
 
         var centered = spec.CenteredColumns ?? [];
+        var red = spec.RedColumns ?? [];
         var mergeRows = form.Rows.Count > 1 && form.Rows.Count <= CuvtFormLayout.MaxMergedRows;
         for (var r = 0; r < form.Rows.Count; r++)
         {
@@ -268,8 +335,9 @@ public static class CuvtSheetLayout
                 var cell = row.Cells[c];
                 cell.Format.Alignment = column.Center || centered.Contains(c) ? ParagraphAlignment.Center
                     : column.AlignRight ? ParagraphAlignment.Right : ParagraphAlignment.Left;
-                // Tên hàng cỡ 12 như sheet (B12 Times New Roman 12), các cột khác 13.
-                if (c == 1) cell.Format.Font.Size = g.Pt(12);
+                if (red.Contains(c)) cell.Format.Font.Color = Colors.Red;
+                // Tên hàng 4A/4B cỡ 12 như sheet (B12 Times New Roman 12), các cột khác 13.
+                if (c == 1 && !grouped) cell.Format.Font.Size = g.Pt(12);
                 if (column.MergeRows && r > 0 && mergeRows) continue;
                 cell.AddParagraph(form.Rows[r][c]);
                 if (column.MergeRows && mergeRows) cell.MergeDown = form.Rows.Count - 1;
@@ -283,36 +351,48 @@ public static class CuvtSheetLayout
         total.Format.Font.Bold = true;
         total.Format.Font.Size = g.Pt(15);
         total.Shading.Color = TotalFill;
-        total.Cells[0].AddParagraph(form.TotalLabel).Format.Alignment = ParagraphAlignment.Right;
+        // 4A/4B: "Tổng chưa bao gồm VAT" căn phải (A14:G14); 2A/2B: "Tổng cộng" căn giữa (A15:C15).
+        total.Cells[0].AddParagraph(form.TotalLabel).Format.Alignment = spec.TotalDash ? ParagraphAlignment.Right : ParagraphAlignment.Center;
         total.Cells[0].MergeRight = form.TotalSpan - 1;
         for (var i = 0; i < form.TotalCells.Count && form.TotalSpan + i < form.Columns.Count; i++)
         {
-            // Ô tổng trống in "-" như định dạng kế toán của sheet (=SUM của cột trống).
+            // Ô tổng trống in "-" như định dạng kế toán của sheet 4A/4B (=SUM của cột trống).
             var text = form.TotalCells[i];
             var cell = total.Cells[form.TotalSpan + i];
-            cell.AddParagraph(string.IsNullOrEmpty(text) ? "-" : text);
-            cell.Format.Alignment = string.IsNullOrEmpty(text) ? ParagraphAlignment.Center : ParagraphAlignment.Right;
+            var dash = spec.TotalDash && string.IsNullOrEmpty(text);
+            cell.AddParagraph(dash ? "-" : text);
+            cell.Format.Alignment = dash ? ParagraphAlignment.Center : ParagraphAlignment.Right;
         }
     }
 
-    /// <summary>Rộng cột logic (mm) = tổng cột sheet nó gộp; số cột logic khác bản đồ thì chia theo độ rộng của biểu mẫu.</summary>
-    private static double[] LogicalWidths(CuvtForm form, SheetLayoutSpec spec, Geometry g)
+    /// <summary>Rộng cột logic (điểm ảnh sheet) – xem <see cref="SheetLayoutSpec.ColumnMap"/>.</summary>
+    private static double[] LogicalPx(CuvtForm form, SheetLayoutSpec spec)
     {
-        if (form.Columns.Count != spec.ColumnMap.Length)
+        var sheet = spec.SheetColumns.Select(ColumnWidthPx).ToArray();
+        if (form.Columns.Count < spec.ColumnMap.Length)
         {
+            // Biểu mẫu ít cột hơn sheet (không xảy ra với mẫu hiện có): chia theo độ rộng ghi trong biểu mẫu, giữ rộng sheet.
             var sum = form.Columns.Sum(c => c.WidthMm);
-            return form.Columns.Select(c => g.WidthMm * c.WidthMm / sum).ToArray();
+            return form.Columns.Select(c => sheet.Sum() * c.WidthMm / sum).ToArray();
         }
 
-        var widths = new double[spec.ColumnMap.Length];
+        var widths = new List<double>();
         var col = 0;
-        for (var i = 0; i < spec.ColumnMap.Length; i++)
+        foreach (var span in spec.ColumnMap)
         {
-            widths[i] = g.ColumnPx.Skip(col).Take(spec.ColumnMap[i]).Sum() * g.MmPx;
-            col += spec.ColumnMap[i];
+            widths.Add(sheet.Skip(col).Take(span).Sum());
+            col += span;
         }
 
-        return widths;
+        var extra = form.Columns.Count - spec.ColumnMap.Length;
+        if (extra > 0)
+        {
+            var rest = sheet.Skip(col).ToArray();
+            var each = rest.Length == 0 ? sheet.Average() : rest.Average();
+            widths.AddRange(Enumerable.Repeat(each, extra));
+        }
+
+        return widths.ToArray();
     }
 
     /// <summary>
@@ -424,7 +504,7 @@ public static class CuvtSheetLayout
     private static void DrawOverlays(PdfSharp.Pdf.PdfDocument pdf, string formNo, SheetImage? logo, string? watermark, SheetLayoutSpec spec, Geometry g)
     {
         const double mmToPt = 72 / 25.4;
-        double X(SheetPicture p) => (g.LeftMm + (g.Left(p.Col) + p.OffsetPx) * g.MmPx) * mmToPt;
+        double X(SheetPicture p) => (g.LeftMm + g.PictureLeft(p, p == spec.Circle) * g.MmPx) * mmToPt;
         double Y(SheetPicture p) => (MarginMm + p.TopPx * g.MmPx) * mmToPt;
         for (var i = 0; i < pdf.PageCount; i++)
         {

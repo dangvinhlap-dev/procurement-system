@@ -76,8 +76,10 @@ dòng (danh mục Mua hàng → Đơn vị mua) rồi trình duyệt. Dòng đ�
 6. **Hủy phiếu** dùng hộp hủy dây chuyền: bảng → các PO lấy dòng của bảng → XNH (hủy từ phiếu cuối về bảng). RFQ chưa hủy có dòng của
    bảng thì phải hủy RFQ trước. Hủy xong các dòng đề nghị trở lại chọn được ở bảng khác.
 
-7. **In phiếu** (Ctrl+P): in theo biểu mẫu **2A / 2B** khổ ngang – mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x"; khối ký in
-   người lập và từng cấp duyệt (họ tên, giờ ngày đã duyệt), vẫn chừa chỗ ký tay.
+7. **Xem bảng tổng hợp** (Ctrl+P – từ lát IN2 thay nút In phiếu): hộp thoại xem trang in **giữ nguyên sheet Excel 2A / 2B** khổ ngang –
+   mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x", ngày cung ứng chữ đỏ, dòng "Tổng cộng" (tổng số lượng khi cùng ĐVT, tổng tiền).
+   Khối ký nguyên văn sheet (Người lập bảng · Trưởng phòng CUVT · GĐ Khối liên quan · Phó CT.UBCL&PT · Chủ tịch HĐQT/TGĐ) có **chữ ký**
+   người đã duyệt; **In…** / **Tải PDF** tính một lần in.
 
 **Xem đề nghị** (nút trên form PR, Ctrl+P – từ bản 0.41.0 thay nút In phiếu): mở hộp thoại xem trang in, **giữ nguyên mẫu Excel 1A** (loại A),
 **1B** (loại B), dịch vụ mẫu 1B không có cột tồn kho. Dòng "Lũy kế số tiền đã mua" của 1A là PO đã duyệt của công trình; của 1B là **PO đã

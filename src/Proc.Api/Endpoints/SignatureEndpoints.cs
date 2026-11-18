@@ -84,6 +84,19 @@ public static class SignatureEndpoints
                 (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PurchaseOrder, id, ct))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PoView);
+
+        // Lát IN2b: bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet – cùng quyền với xem bảng tổng hợp.
+        app.MapPost("/api/purchase-summaries/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(DocumentTypes.PurchaseSummary, id, kind == "download" ? PrintKind.Download : PrintKind.Print, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.SummaryView);
+        app.MapGet("/api/purchase-summaries/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PurchaseSummary, id, ct))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.SummaryView);
         return app;
     }
 
