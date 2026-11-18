@@ -62,13 +62,19 @@ test('RFQ: gia hạn có lý do, chọn thầu khi ít báo giá phải giải t
   await expect(page.getByRole('alert').filter({ hasText: 'Hai NCC không phản hồi trong hạn' })).toBeVisible()
   await page.screenshot({ path: 'e2e/screenshots/rfq-deadline.png' })
 
-  // Lát Y6: RFQ dòng gõ tay là loại B → biểu mẫu 3B (trình giá 1 NCC); "In phiếu" mở PDF bảng trình giá ở tab mới.
+  // Lát Y6: RFQ dòng gõ tay là loại B → biểu mẫu 3B (trình giá 1 NCC). Lát IN2c: "Xem kết quả hỏi giá" mở hộp thoại xem trang in giữ nguyên sheet.
   await expect(page.getByTestId('rfq-form-code')).toHaveValue(/B – Hàng hóa, dịch vụ · 3B/)
   const pdf = page.waitForResponse((r) => r.url().endsWith(`/api/rfqs/${rfq.id}/pdf`))
-  const popup = page.waitForEvent('popup')
-  await page.getByRole('button', { name: 'In phiếu' }).click()
+  await page.getByRole('button', { name: 'Xem kết quả hỏi giá' }).click()
   const pdfResponse = await pdf
   expect(pdfResponse.status()).toBe(200)
   expect(pdfResponse.headers()['content-type']).toContain('application/pdf')
-  await (await popup).close()
+  const preview = page.getByRole('dialog', { name: `Xem kết quả hỏi giá ${rfq.no} – mẫu 3B` })
+  await expect(page.getByTestId('print-count')).toHaveText('Chưa in lần nào')
+  // Chromium chạy ẩn không có trình xem PDF: khung xem trong hộp thoại cũng sinh sự kiện tải (tên mã blob) – chờ đúng file tải có tên phiếu.
+  const download = page.waitForEvent('download', { predicate: (d) => d.suggestedFilename() === `${rfq.no}.pdf` })
+  await preview.getByRole('button', { name: 'Tải PDF' }).click()
+  expect((await download).suggestedFilename()).toBe(`${rfq.no}.pdf`)
+  await expect(page.getByTestId('print-count')).toContainText('Đã in 1 lần')
+  await preview.getByRole('button', { name: 'Đóng', exact: true }).click()
 })

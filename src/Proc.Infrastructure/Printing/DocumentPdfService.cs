@@ -72,24 +72,27 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
     }
 
     /// <inheritdoc />
-    public async Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var sheet = await _sundries.GetAsync(id, cancellationToken);
-        var company = await CompanyAsync(cancellationToken);
-        return new PdfFile($"{sheet.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.SundryExpenseSheet(sheet, company.Name)));
-    }
+    public Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2d: mẫu giả lập 2C – khuôn chung kèm chữ ký người duyệt, logo, góc thông tin hệ thống (bản xem không ghi nhật ký in).
+        RenderSundrySheetAsync(id, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken)
+    public Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2d: bản xem 5A/5B giữ nguyên sheet (1C giả lập: khuôn chung) có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderPaymentSheetAsync(id, null, cancellationToken);
+
+    /// <summary>
+    /// Nội dung phiếu đề nghị thanh toán: 5A/5B theo khung chi phí của PO (lát Y8); 1C tạp vụ (không PO) theo bảng kê (lát Y11b). Đọc đề nghị qua
+    /// dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
+    /// </summary>
+    /// <param name="id">Đề nghị thanh toán.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Đề nghị và nội dung in.</returns>
+    private async Task<(PaymentRequestDto Payment, CuvtForm Form)> PaymentFormAsync(Guid id, CancellationToken cancellationToken)
     {
-        // Đọc đề nghị qua dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
         var payment = await _payments.GetAsync(id, cancellationToken);
         if (payment.PurchaseOrderId is null)
-        {
-            // 1C tạp vụ (lát Y11b): không có PO – in theo bảng kê.
-            var sundry = CuvtPrintForms.SundryPaymentRequest(payment, (await CompanyAsync(cancellationToken)).Name);
-            return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(sundry));
-        }
+            return (payment, CuvtPrintForms.SundryPaymentRequest(payment, (await CompanyAsync(cancellationToken)).Name));
 
         var po = await _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines).SingleAsync(o => o.Id == payment.PurchaseOrderId, cancellationToken);
         var itemIds = po.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -100,8 +103,7 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
             po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList(), names, cancellationToken);
         var context = new PoPrintContext(company.Name, frame.ProjectName, frame.DepartmentName, frame.GoodsTitle, frame.Budget, frame.PastNet,
             frame.PastVat, null, new Dictionary<Guid, string?>(), new Dictionary<Guid, decimal>());
-        var form = CuvtPrintForms.PaymentRequest(payment, context, po.TotalAmount);
-        return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(form));
+        return (payment, CuvtPrintForms.PaymentRequest(payment, context, po.TotalAmount));
     }
 
     /// <inheritdoc />
@@ -112,10 +114,15 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
         if (!string.IsNullOrEmpty(wanted) && wanted is not ("4A" or "4B"))
             throw new BusinessRuleException("Mẫu in đơn mua hàng không hợp lệ (4A, 4B hoặc supplier).");
 
-        var form4 = await PurchaseOrderFormAsync(id, cancellationToken);
-        if (!string.IsNullOrEmpty(wanted) && wanted != form4.FormNo)
-            throw new BusinessRuleException($"Đơn {form4.No} in theo biểu mẫu {form4.FormNo} (theo loại mua của dòng đề nghị nguồn).");
-        return new PdfFile($"{form4.No}.pdf", CuvtFormLayout.Render(form4));
+        if (!string.IsNullOrEmpty(wanted))
+        {
+            var form4 = await PurchaseOrderFormAsync(id, cancellationToken);
+            if (wanted != form4.FormNo)
+                throw new BusinessRuleException($"Đơn {form4.No} in theo biểu mẫu {form4.FormNo} (theo loại mua của dòng đề nghị nguồn).");
+        }
+
+        // Lát IN2: bản xem giữ nguyên sheet 4A/4B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        return await RenderPurchaseOrderSheetAsync(id, null, cancellationToken);
     }
 
     /// <summary>
@@ -237,18 +244,24 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
     }
 
     /// <inheritdoc />
-    public async Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var summary = await _summaries.GetAsync(id, cancellationToken);
-        var company = await CompanyAsync(cancellationToken);
-        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
-            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, summary.Date, cancellationToken)
-            : 0;
-        return new PdfFile($"{summary.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent)));
-    }
+    public Task<PdfFile> PurchaseSummaryAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2: bản xem giữ nguyên sheet 2A/2B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderSummarySheetAsync(id, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken)
+    public Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken) =>
+        // Lát IN2c: bản xem giữ nguyên sheet 3a/3A/3B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderRfqSheetAsync(id, form, null, cancellationToken);
+
+    /// <summary>
+    /// Nội dung các biểu mẫu kết quả hỏi giá của một RFQ (lát Y6): số liệu khung chi phí (dự toán công trình / ngân sách tháng bộ phận), NCC cũ / mới,
+    /// giá cũ gần nhất, thuế suất mặt hàng.
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="form">"3A" in bảng so sánh; null theo biểu mẫu của phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ đã đọc theo phạm vi và các biểu mẫu.</returns>
+    private async Task<(RfqDto Rfq, IReadOnlyList<CuvtForm> Forms)> RfqFormsAsync(Guid id, string? form, CancellationToken cancellationToken)
     {
         var rfq = await _rfqs.GetAsync(id, cancellationToken);
         var company = await CompanyAsync(cancellationToken);
@@ -309,8 +322,7 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
         var context = new RfqPrintContext(
             company.Name, date, projectName, estimate, spent, departmentName, budget, purpose, suppliers, lastPrices,
             rfq.Lines.ToDictionary(l => l.Id, l => itemVat.GetValueOrDefault(l.ItemId)));
-        var forms = CuvtPrintForms.Rfq(rfq, context, form);
-        return new PdfFile($"{rfq.No}.pdf", CuvtFormLayout.RenderMany(forms));
+        return (rfq, CuvtPrintForms.Rfq(rfq, context, form));
     }
 
     /// <summary>

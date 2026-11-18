@@ -241,7 +241,18 @@ export function SundryExpensePage() {
       title="Bảng kê chi phí tạp vụ"
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'SundryExpenseSheet', id: doc?.id }}
-      printPath={doc ? `/api/sundry-expense-sheets/${doc.id}/pdf` : undefined}
+      // Mẫu 2C còn giả lập: khuôn chung kèm chữ ký người duyệt, góc thông tin; In / Tải PDF đếm lần in (lát IN2d).
+      printPreview={
+        doc
+          ? {
+              label: 'Xem bảng kê',
+              title: `Xem bảng kê chi phí tạp vụ ${doc.no} – mẫu 2C`,
+              viewPath: `/api/sundry-expense-sheets/${doc.id}/pdf`,
+              printPath: `/api/sundry-expense-sheets/${doc.id}/print`,
+              printsPath: `/api/sundry-expense-sheets/${doc.id}/prints`,
+            }
+          : undefined
+      }
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={sheet.isLoading}

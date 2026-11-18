@@ -122,19 +122,16 @@ public static partial class CuvtPrintForms
         var is2A = summary.Form == nameof(PurchaseSummaryForm.Construction);
         var units = summary.Lines.GroupBy(l => l.PurchasingUnitId)
             .Select(g => (Id: g.Key, g.First().PurchasingUnitName, g.First().PurchasingUnitCode)).OrderBy(u => u.PurchasingUnitCode).ToList();
-        // Cột cố định 205 mm (ngoài Tên vật tư); mỗi đơn vị mua 14 mm; Tên vật tư lấy phần còn lại, tối thiểu 30 mm.
-        const double fixedWidth = 205;
-        var unitWidth = units.Count <= 4 ? 14 : Math.Max(10, 56.0 / units.Count);
-        var nameWidth = Math.Max(30, CuvtFormLayout.LandscapeWidthMm - fixedWidth - unitWidth * units.Count);
+        // Độ rộng, căn lề in theo số đo sheet 2A/2B (CuvtSheetLayout.Sheet2A/Sheet2B – lát IN2); cột "Đơn vị mua" mỗi đơn vị một cột.
         const string content = "Nội dung đề xuất";
         var columns = new List<CuvtColumn>
         {
-            new("Ngày đề xuất", 20, Center: true), new("Số phiếu", 34), new("Phòng ban đề xuất", 24),
-            new("Tên vật tư", nameWidth, Group: content), new("ĐVT", 13, Group: content, Center: true), new("Số lượng", 17, true, content),
-            new("Đơn giá", 20, true, content), new("Thành tiền", 25, true, content), new("Ngày cung ứng", 22, Group: content, Center: true),
-            new("Mục đích sử dụng", 30, Group: content),
+            new("Ngày đề xuất", 20, Center: true), new("Số phiếu", 34, Center: true), new("Phòng ban đề xuất", 24, Center: true),
+            new("Tên vật tư", 40, Group: content), new("ĐVT", 13, Group: content), new("Số lượng", 17, Group: content),
+            new("Đơn giá", 20, true, content), new("Thành tiền", 25, true, content), new("Ngày cung ứng", 22, Group: content),
+            new("Mục đích sử dụng", 30, Group: content, Center: true),
         };
-        columns.AddRange(units.Select(u => new CuvtColumn(u.PurchasingUnitName, unitWidth, Group: "Đơn vị mua", Center: true)));
+        columns.AddRange(units.Select(u => new CuvtColumn(u.PurchasingUnitName, 14, Group: "Đơn vị mua", Center: true)));
 
         var rows = summary.Lines.OrderBy(l => l.LineNo).Select(l => new[]
             {
@@ -161,13 +158,17 @@ public static partial class CuvtPrintForms
                 new("Tổng tiền đề xuất", Vnd(frame.ProposedAmount), true),
             ];
 
-        // Dòng tổng: gộp 7 cột đầu (đến Đơn giá), rồi Thành tiền, các cột còn lại để trống.
-        var totalCells = new[] { Money(summary.TotalAmount) }.Concat(Enumerable.Repeat("", columns.Count - 8)).ToList();
+        // Dòng tổng như sheet: "Tổng cộng" gộp 3 cột đầu (A15:C15), tổng số lượng ở cột Số lượng, tổng tiền ở cột Thành tiền. Tự đặt: sheet cộng cả
+        // cột Đơn giá (=SUM) – tổng đơn giá các mặt hàng không có nghĩa nên để trống; tổng số lượng chỉ ghi khi mọi dòng cùng ĐVT.
+        var oneUom = summary.Lines.Select(l => l.UomCode).Distinct().Count() == 1;
+        var totalCells = new List<string> { "", "", oneUom ? Qty(summary.Lines.Sum(l => l.Qty)) : "", "", Money(summary.TotalAmount) };
+        totalCells.AddRange(Enumerable.Repeat("", columns.Count - 3 - totalCells.Count));
         return new CuvtForm(
             is2A ? "2A" : "2B",
             is2A ? "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA VẬT TƯ" : "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA",
-            is2A ? Subtitles1A : Subtitles1B,
-            companyName, summary.No, summary.Date, true, StatusNote(summary.Status), info, columns, rows, 7, totalCells, (null, null),
+            // Phụ đề 2B nguyên văn sheet (có dấu chấm cuối dòng 1, "SỬA-CHỮA") – như 3B, 4B.
+            is2A ? Subtitles1A : Subtitles3B,
+            companyName, summary.No, summary.Date, true, StatusNote(summary.Status), info, columns, rows, 3, totalCells, (null, null),
             summary.Note, Signers("Người lập", summary.CreatedByName, summary.Approvals));
     }
 

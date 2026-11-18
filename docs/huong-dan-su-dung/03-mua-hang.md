@@ -76,8 +76,10 @@ dòng (danh mục Mua hàng → Đơn vị mua) rồi trình duyệt. Dòng đ�
 6. **Hủy phiếu** dùng hộp hủy dây chuyền: bảng → các PO lấy dòng của bảng → XNH (hủy từ phiếu cuối về bảng). RFQ chưa hủy có dòng của
    bảng thì phải hủy RFQ trước. Hủy xong các dòng đề nghị trở lại chọn được ở bảng khác.
 
-7. **In phiếu** (Ctrl+P): in theo biểu mẫu **2A / 2B** khổ ngang – mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x"; khối ký in
-   người lập và từng cấp duyệt (họ tên, giờ ngày đã duyệt), vẫn chừa chỗ ký tay.
+7. **Xem bảng tổng hợp** (Ctrl+P – từ lát IN2 thay nút In phiếu): hộp thoại xem trang in **giữ nguyên sheet Excel 2A / 2B** khổ ngang –
+   mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x", ngày cung ứng chữ đỏ, dòng "Tổng cộng" (tổng số lượng khi cùng ĐVT, tổng tiền).
+   Khối ký nguyên văn sheet (Người lập bảng · Trưởng phòng CUVT · GĐ Khối liên quan · Phó CT.UBCL&PT · Chủ tịch HĐQT/TGĐ) có **chữ ký**
+   người đã duyệt; **In…** / **Tải PDF** tính một lần in.
 
 **Xem đề nghị** (nút trên form PR, Ctrl+P – từ bản 0.41.0 thay nút In phiếu): mở hộp thoại xem trang in, **giữ nguyên mẫu Excel 1A** (loại A),
 **1B** (loại B), dịch vụ mẫu 1B không có cột tồn kho. Dòng "Lũy kế số tiền đã mua" của 1A là PO đã duyệt của công trình; của 1B là **PO đã
@@ -140,9 +142,11 @@ bấm **Đã bổ sung hồ sơ**; quá hạn thì PO bị gắn cờ quá hạn
 
 ### Sau khi duyệt
 
-- **In phiếu** (Ctrl+P) in **bảng theo dõi mua hàng 4A** (PO có dòng từ đề nghị loại A – công trình) hoặc **4B** (hàng hóa, dịch vụ), khổ
-  ngang: giá cũ gần nhất, giá mới ghi cột **tăng** hoặc **bằng–giảm**, lũy kế (đã mua trước đây + đơn này), còn lại theo dự toán / định mức;
-  khối ký là các bước duyệt PO. Ô **Loại mua – biểu mẫu** trên PO cho biết đơn in mẫu nào. PO không gộp dòng đề nghị loại A với dòng đề nghị
+- **Xem bảng theo dõi** (Ctrl+P – từ lát IN2 thay nút In phiếu) mở hộp thoại xem trang in **bảng theo dõi mua hàng 4A** (PO có dòng từ đề
+  nghị loại A – công trình) hoặc **4B** (hàng hóa, dịch vụ), **giữ nguyên sheet Excel** (khổ ngang, tỉ lệ in 85 % / 75 % như sheet): giá cũ gần
+  nhất, giá mới ghi cột **tăng** hoặc **bằng–giảm**, lũy kế (đã mua trước đây + đơn này), còn lại theo dự toán / định mức. Khối ký nguyên văn
+  sheet (Người lập bảng · Trưởng phòng CUVT · Trưởng phòng TC-NQ-KT · GĐ Phòng TC-NQ-KT · Chủ tịch HĐQT/TGĐ) có **chữ ký** người đã duyệt như
+  đề nghị mua; góc dưới phải ghi giờ in, người in, lần in, tình trạng phê duyệt. **In…** / **Tải PDF** tính một lần in, chỉ xem thì không. Ô **Loại mua – biểu mẫu** trên PO cho biết đơn in mẫu nào. PO không gộp dòng đề nghị loại A với dòng đề nghị
   B/DV, và dòng loại A phải cùng một công trình.
 - **In đơn gửi NCC** (nút trên PO đã lưu): đơn đặt hàng PDF có mã hàng NCC, giá, chiết khấu, thuế, điều khoản giao – gửi NCC.
 - Thủ kho lập **phiếu nhập mua theo PO** (06 – Kho). PO tự chuyển **Đã nhận đủ** khi nhận đủ mọi dòng; bỏ ghi sổ phiếu nhập làm thiếu lại
@@ -205,8 +209,12 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 - **Duyệt**: Gửi duyệt → GĐ khối (của bộ phận đặt hàng) → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch (khi đã áp "Cấu hình duyệt mẫu" CUVT ở Quy trình
   duyệt). Duyệt xong **kế toán** bấm **Ghi Đã chi** (ngày chi, số UNC / phiếu chi) – phiếu chuyển "Đã chi", không hủy được nữa.
 - Mỗi XNH chỉ ở một đề nghị chưa hủy; khi đã ở đề nghị thì không sửa hóa đơn trên XNH được – hủy đề nghị (khi chưa chi) rồi sửa.
-- **In phiếu** theo mẫu "Phiếu đề nghị thanh toán tiền mặt / chuyển khoản" 5A/5B: định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B
-  của đơn; bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ, khối ký theo chuỗi duyệt.
+- **Xem đề nghị thanh toán** (Ctrl+P – từ lát IN2 thay nút In phiếu): hộp thoại xem trang in **giữ nguyên sheet Excel** "Phiếu đề nghị thanh
+  toán tiền mặt / chuyển khoản" 5A/5B (theo hình thức của phiếu): ô "Kính trình", định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B của
+  đơn; tên NCC, địa chỉ (chuyển khoản thêm ngân hàng, số tài khoản); bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ. Khối ký nguyên văn
+  sheet (Người đề xuất · GĐK đề nghị · TP. TC-NQ-KT · GĐ Phòng TC-NQ-KT, ô Chủ tịch HĐQT/TGĐ cả hàng) có **chữ ký** người đã duyệt; **In…** /
+  **Tải PDF** tính một lần in. Bảng kê 2C và đề nghị 1C (mẫu giả lập) cũng có nút xem (**Xem bảng kê**, **Xem đề nghị thanh toán**) với chữ ký,
+  góc thông tin, đếm lần in.
 
 ### Bảng kê chi phí tạp vụ 2C (BKT – từ bản 0.27.0, lát Y11a)
 

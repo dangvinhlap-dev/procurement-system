@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.Purchasing;
@@ -56,6 +56,7 @@ public partial class PurchasingTests
         var pdf = await approver.GetAsync($"/api/sundry-expense-sheets/{first.Id}/pdf", Ct);
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
+        SavePdfForReview("2C-gia-lap.pdf", await pdf.Content.ReadAsByteArrayAsync(Ct));
         var form = Proc.Infrastructure.Printing.CuvtPrintForms.SundryExpenseSheet(first, "Công ty thử");
         Assert.Equal(("2C", "BẢNG KÊ CHI PHÍ TẠP VỤ", true, 2, 6), (form.FormNo, form.Title, form.Landscape, form.Rows.Count, form.Columns.Count));
         Assert.Contains(form.Info, i => i.Label.StartsWith("Định mức", StringComparison.Ordinal) && i.Value == "1.000.000 đ");

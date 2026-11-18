@@ -62,6 +62,19 @@ test('đề nghị thanh toán từ PO: nhiều dòng hóa đơn, duyệt, ghi �
   await expect(page.locator('.document-form-content')).toContainText('PC 0456')
   await page.screenshot({ path: 'e2e/screenshots/payment-request-paid.png', fullPage: true })
 
+  // Lát IN2d: "Xem đề nghị thanh toán" – trang in giữ nguyên sheet 5A/5B; Tải PDF tính một lần in.
+  const view = page.waitForResponse((r) => r.url().endsWith(`/api/payment-requests/${id}/pdf`))
+  await page.getByRole('button', { name: 'Xem đề nghị thanh toán' }).click()
+  expect((await view).headers()['content-type']).toContain('application/pdf')
+  const preview = page.getByRole('dialog', { name: new RegExp(`Xem đề nghị thanh toán ${no} – mẫu 5[AB]`) })
+  await expect(page.getByTestId('print-count')).toHaveText('Chưa in lần nào')
+  // Chromium chạy ẩn không có trình xem PDF: khung xem cũng sinh sự kiện tải (tên mã blob) – chờ đúng file tải có tên phiếu.
+  const printDownload = page.waitForEvent('download', { predicate: (d) => d.suggestedFilename() === `${no}.pdf` })
+  await preview.getByRole('button', { name: 'Tải PDF' }).click()
+  await printDownload
+  await expect(page.getByTestId('print-count')).toContainText('Đã in 1 lần')
+  await preview.getByRole('button', { name: 'Đóng', exact: true }).click()
+
   // Danh sách DNT.
   await page.goto('/mua-hang/de-nghi-thanh-toan')
   await expect(page.getByRole('heading', { name: 'Đề nghị thanh toán (DNT)' })).toBeVisible()

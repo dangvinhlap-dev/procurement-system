@@ -1,4 +1,4 @@
-using MigraDoc.DocumentObjectModel;
+﻿using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 using PdfSharp.Drawing;
@@ -73,7 +73,7 @@ public static class PurchaseRequestSheetLayout
         setup.BottomMargin = Mm(26);
         setup.FooterDistance = Mm(4);
 
-        AddStamp(section, stamp);
+        SheetPrintParts.AddStamp(section, stamp, WidthMm);
         AddHeader(section, form);
         AddInfo(section, form);
         AddLines(section, form);
@@ -358,7 +358,7 @@ public static class PurchaseRequestSheetLayout
         image.Format.Alignment = ParagraphAlignment.Center;
         image.Format.SpaceBefore = chairman ? Mm(1) : Mm(0.5);
         var maxHeight = chairman ? 20.0 : 15.0;
-        if (box.Signature is not null) AddImage(image, box.Signature, Math.Min(widthMm - 4, chairman ? 80 : widthMm), maxHeight);
+        if (box.Signature is not null) SheetPrintParts.AddImage(image, box.Signature, Math.Min(widthMm - 4, chairman ? 80 : widthMm), maxHeight);
         else image.Format.SpaceAfter = Mm(maxHeight);
 
         var name = cell.AddParagraph(box.Name ?? "");
@@ -371,60 +371,6 @@ public static class PurchaseRequestSheetLayout
         detail.Format.Font.Size = 7;
         detail.Format.SpaceAfter = Mm(1);
         if (!box.InChain) detail.Format.Font.Color = Muted;
-    }
-
-    /// <summary>Chèn ảnh co vừa khung, giữ tỉ lệ điểm ảnh – như chữ ký mực trên giấy: nền PNG trong suốt nên không che đường kẻ.</summary>
-    private static void AddImage(Paragraph paragraph, SheetImage image, double maxWidthMm, double maxHeightMm)
-    {
-        var scale = Math.Min(maxWidthMm / image.Width, maxHeightMm / image.Height);
-        var picture = paragraph.AddImage("base64:" + Convert.ToBase64String(image.Content));
-        picture.LockAspectRatio = false;
-        picture.Width = Mm(image.Width * scale);
-        picture.Height = Mm(image.Height * scale);
-    }
-
-    /// <summary>Góc dưới phải mọi trang: khung viền mảnh, chữ 9 (phông không chân), số trang thay "{PAGE}" / "{PAGES}".</summary>
-    private static void AddStamp(Section section, SheetStamp stamp)
-    {
-        var table = section.Footers.Primary.AddTable();
-        table.Borders.Visible = false;
-        table.AddColumn(Mm(WidthMm - 124));
-        table.AddColumn(Mm(124));
-        var row = table.AddRow();
-        var cell = row.Cells[1];
-        cell.Borders.Visible = true;
-        cell.Borders.Width = 0.5;
-        cell.Borders.Color = Muted;
-        cell.Format.Font.Name = PdfFonts.Family;
-        cell.Format.Font.Size = 9;
-        foreach (var line in stamp.Lines)
-        {
-            var p = cell.AddParagraph();
-            var rest = line;
-            while (rest.Length > 0)
-            {
-                var page = rest.IndexOf("{PAGE}", StringComparison.Ordinal);
-                var pages = rest.IndexOf("{PAGES}", StringComparison.Ordinal);
-                var next = new[] { page, pages }.Where(i => i >= 0).DefaultIfEmpty(-1).Min();
-                if (next < 0)
-                {
-                    p.AddText(rest);
-                    break;
-                }
-
-                p.AddText(rest[..next]);
-                if (next == pages)
-                {
-                    p.AddNumPagesField();
-                    rest = rest[(next + 7)..];
-                }
-                else
-                {
-                    p.AddPageField();
-                    rest = rest[(next + 6)..];
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -462,15 +408,7 @@ public static class PurchaseRequestSheetLayout
                 if (logo is not null) DrawLogo(gfx, logo);
             }
 
-            if (watermark is null) continue;
-            var w = page.Width.Point;
-            var h = page.Height.Point;
-            var state = gfx.Save();
-            gfx.TranslateTransform(w / 2, h / 2);
-            gfx.RotateTransform(-35);
-            var mark = new XFont(PdfFonts.Family, 60, XFontStyleEx.Bold);
-            gfx.DrawString(watermark, mark, new XSolidBrush(XColor.FromArgb(40, 200, 0, 0)), new XRect(-w, -60, 2 * w, 120), XStringFormats.Center);
-            gfx.Restore(state);
+            if (watermark is not null) SheetPrintParts.DrawWatermark(gfx, page, watermark);
         }
     }
 }

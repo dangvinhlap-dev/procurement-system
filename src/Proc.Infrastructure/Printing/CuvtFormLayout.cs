@@ -1,14 +1,32 @@
 ﻿using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
+using PdfSharp.Drawing;
 
 namespace Proc.Infrastructure.Printing;
+
+/// <summary>Loại dòng thông tin đầu phiếu – sheet 5A/5B có ô "Kính trình" và khối NCC – ngân hàng riêng (lát IN2d).</summary>
+public enum CuvtInfoKind
+{
+    /// <summary>Dòng thông tin IN HOA căn giữa (khung thông tin).</summary>
+    Normal = 0,
+
+    /// <summary>Ô "Kính trình: …" đậm căn giữa; giá trị nhiều dòng tách bằng xuống dòng.</summary>
+    Addressee = 1,
+
+    /// <summary>Dòng khối NCC: nhãn căn trái có dấu hai chấm, giá trị căn giữa.</summary>
+    Party = 2,
+
+    /// <summary>Dòng ngân hàng / số tài khoản của khối NCC: nhãn không dấu hai chấm (chữ đỏ ở sheet 5A).</summary>
+    PartyAlert = 3,
+}
 
 /// <summary>Một dòng thông tin đầu phiếu của biểu mẫu CUVT, in "NHÃN: giá trị".</summary>
 /// <param name="Label">Nhãn (in hoa khi in).</param>
 /// <param name="Value">Giá trị đã định dạng; không bao giờ để "…" (biểu mẫu cấm dấu chấm lửng).</param>
 /// <param name="Strong">In đậm giá trị – số tiền phải in đậm theo biểu mẫu.</param>
-public sealed record CuvtInfoLine(string Label, string Value, bool Strong = false);
+/// <param name="Kind">Loại dòng (khuôn giữ nguyên sheet in theo loại; khuôn chung in như dòng thường).</param>
+public sealed record CuvtInfoLine(string Label, string Value, bool Strong = false, CuvtInfoKind Kind = CuvtInfoKind.Normal);
 
 /// <summary>Một cột bảng của biểu mẫu CUVT.</summary>
 /// <param name="Title">Tiêu đề cột.</param>
@@ -26,7 +44,16 @@ public sealed record CuvtColumn(string Title, double WidthMm, bool AlignRight = 
 /// <param name="Name">Họ tên người đã ký/duyệt; null = chưa duyệt (để trống chờ ký tay).</param>
 /// <param name="Detail">Dòng phụ: "Đã duyệt 10:30 12/11/2026", "Chưa duyệt"…</param>
 /// <param name="Position">Chức vụ người duyệt (nếu có).</param>
-public sealed record CuvtSigner(string Title, string? Name, string? Detail, string? Position = null);
+/// <param name="Signature">Ảnh chữ ký có hiệu lực lúc duyệt / gửi duyệt (lát IN2 – design.md mục 20.4); null = để chỗ ký tay.</param>
+public sealed record CuvtSigner(string Title, string? Name, string? Detail, string? Position = null, SheetImage? Signature = null);
+
+/// <summary>
+/// Phần thêm của bản in có chữ ký (lát IN2 – design.md mục 20.4, dùng lại của IN1): logo công ty ở đầu phiếu, góc thông tin hệ thống dưới phải mọi
+/// trang thay dòng chân "Biểu mẫu … – Trang", dấu chìm khi phiếu chưa có hiệu lực.
+/// </summary>
+/// <param name="Logo">Logo công ty của phiếu; null = không in.</param>
+/// <param name="Stamp">Góc thông tin hệ thống và dấu chìm.</param>
+public sealed record CuvtDecor(SheetImage? Logo, SheetStamp Stamp);
 
 /// <summary>
 /// Nội dung một phiếu in theo biểu mẫu CUVT (1A, 1B, 2A, 2B…) – đổ vào khuôn <see cref="CuvtFormLayout"/>.
@@ -70,13 +97,15 @@ public sealed record CuvtCell(string Text, int Span = 1, bool AlignRight = true)
 /// <param name="Cells">Các ô còn lại, tổng Span = số cột − LabelSpan.</param>
 /// <param name="FontSize">Cỡ chữ theo biểu mẫu (13 thường, 15 dòng "Tổng cộng").</param>
 /// <param name="Bold">In đậm.</param>
-public sealed record CuvtExtraRow(string Label, int LabelSpan, IReadOnlyList<CuvtCell> Cells, double FontSize = 13, bool Bold = false);
+/// <param name="Fill">Nền xanh nhạt như dòng "Tổng cộng" của sheet 3a/3B (lát IN2).</param>
+public sealed record CuvtExtraRow(string Label, int LabelSpan, IReadOnlyList<CuvtCell> Cells, double FontSize = 13, bool Bold = false, bool Fill = false);
 
 /// <summary>Dòng chữ dưới bảng "Nhãn: nội dung" căn trái, ví dụ "Bằng chữ", "Hình thức thanh toán", "Đề xuất chọn".</summary>
 /// <param name="Label">Nhãn (in đậm).</param>
 /// <param name="Value">Nội dung.</param>
 /// <param name="Strong">In đậm nội dung.</param>
-public sealed record CuvtTextLine(string Label, string Value, bool Strong = false);
+/// <param name="BoldLabel">In đậm cả nhãn – "Bằng chữ" của sheet 3a/3B (lát IN2); khuôn chung luôn in đậm nhãn.</param>
+public sealed record CuvtTextLine(string Label, string Value, bool Strong = false, bool BoldLabel = false);
 
 /// <summary>
 /// Khuôn in theo biểu mẫu CUVT của công ty (lát Y10, design.md mục 10.10 và 19.1 Q13). Quy tắc lấy từ ghi chú trong file Excel biểu mẫu:
@@ -111,13 +140,20 @@ public static class CuvtFormLayout
     /// <returns>Nội dung file PDF; tiêu đề tài liệu là "tên biểu mẫu + số phiếu".</returns>
     public static byte[] Render(CuvtForm form) => RenderMany([form]);
 
+    /// <summary>Dựng file PDF theo biểu mẫu kèm logo, góc thông tin hệ thống, dấu chìm (lát IN2).</summary>
+    /// <param name="form">Nội dung phiếu.</param>
+    /// <param name="decor">Phần thêm; null = như bản in cũ.</param>
+    /// <returns>Nội dung file PDF.</returns>
+    public static byte[] Render(CuvtForm form, CuvtDecor? decor) => RenderMany([form], decor);
+
     /// <summary>
     /// Dựng nhiều biểu mẫu vào một file PDF, mỗi biểu mẫu bắt đầu trang mới – ví dụ bảng trình giá 3a/3B của từng NCC trúng thầu (lát Y6).
     /// </summary>
     /// <param name="forms">Các biểu mẫu (ít nhất một).</param>
     /// <returns>Nội dung file PDF; tiêu đề tài liệu theo biểu mẫu đầu.</returns>
+    /// <param name="decor">Logo, góc thông tin hệ thống, dấu chìm (lát IN2); null = như bản in cũ.</param>
     /// <exception cref="ArgumentException">Khi danh sách rỗng.</exception>
-    public static byte[] RenderMany(IReadOnlyList<CuvtForm> forms)
+    public static byte[] RenderMany(IReadOnlyList<CuvtForm> forms, CuvtDecor? decor = null)
     {
         if (forms.Count == 0) throw new ArgumentException("Cần ít nhất một biểu mẫu.", nameof(forms));
         var document = new Document();
@@ -125,17 +161,26 @@ public static class CuvtFormLayout
         var normal = document.Styles[StyleNames.Normal]!;
         normal.Font.Name = PdfFonts.SerifFamily;
         normal.Font.Size = Pt(13);
-        foreach (var form in forms) AddForm(document, form);
+        foreach (var form in forms) AddForm(document, form, decor);
 
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();
+        if (decor?.Stamp.Watermark is { } watermark)
+        {
+            foreach (var page in renderer.PdfDocument.Pages)
+            {
+                using var gfx = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
+                SheetPrintParts.DrawWatermark(gfx, page, watermark);
+            }
+        }
+
         using var stream = new MemoryStream();
         renderer.PdfDocument.Save(stream, false);
         return stream.ToArray();
     }
 
     /// <summary>Một biểu mẫu là một section riêng (trang mới, hướng giấy riêng).</summary>
-    private static void AddForm(Document document, CuvtForm form)
+    private static void AddForm(Document document, CuvtForm form, CuvtDecor? decor)
     {
         var section = document.AddSection();
         var setup = section.PageSetup;
@@ -146,15 +191,25 @@ public static class CuvtFormLayout
         setup.BottomMargin = Unit.FromMillimeter(14);
         var width = form.Landscape ? LandscapeWidthMm : PortraitWidthMm;
 
-        var footer = section.Footers.Primary.AddParagraph();
-        footer.Format.Alignment = ParagraphAlignment.Right;
-        footer.Format.Font.Size = 7.5;
-        footer.AddText($"Biểu mẫu {form.FormNo} – {form.No} – Trang ");
-        footer.AddPageField();
-        footer.AddText("/");
-        footer.AddNumPagesField();
+        if (decor is null)
+        {
+            var footer = section.Footers.Primary.AddParagraph();
+            footer.Format.Alignment = ParagraphAlignment.Right;
+            footer.Format.Font.Size = 7.5;
+            footer.AddText($"Biểu mẫu {form.FormNo} – {form.No} – Trang ");
+            footer.AddPageField();
+            footer.AddText("/");
+            footer.AddNumPagesField();
+        }
+        else
+        {
+            // Góc thông tin 4 dòng chữ 9 thay dòng chân cũ – lề dưới nới ra cho đủ chỗ như bản in đề nghị mua (IN1).
+            setup.BottomMargin = Unit.FromMillimeter(26);
+            setup.FooterDistance = Unit.FromMillimeter(4);
+            SheetPrintParts.AddStamp(section, decor.Stamp, width);
+        }
 
-        AddTop(section, form, width);
+        AddTop(section, form, width, decor?.Logo);
         AddTitle(section, form);
         AddLines(section, form);
         foreach (var line in form.AfterTable ?? [])
@@ -188,19 +243,30 @@ public static class CuvtFormLayout
         AddSigners(section, form, width);
     }
 
-    /// <summary>Dòng đầu: tên công ty + số phiếu bên trái; số biểu mẫu cỡ 25 bên phải.</summary>
-    private static void AddTop(Section section, CuvtForm form, double width)
+    /// <summary>
+    /// Dòng đầu: logo công ty (nếu có – khung tối đa 24 × 16 mm, lát IN2) rồi tên công ty + số phiếu bên trái; số biểu mẫu cỡ 25 bên phải.
+    /// </summary>
+    private static void AddTop(Section section, CuvtForm form, double width, SheetImage? logo)
     {
+        const double logoMm = 28;
         var table = section.AddTable();
-        table.AddColumn(Unit.FromMillimeter(width - 40));
+        if (logo is not null) table.AddColumn(Unit.FromMillimeter(logoMm));
+        table.AddColumn(Unit.FromMillimeter(width - 40 - (logo is null ? 0 : logoMm)));
         table.AddColumn(Unit.FromMillimeter(40));
         var row = table.AddRow();
         row.VerticalAlignment = VerticalAlignment.Center;
-        var company = row.Cells[0].AddParagraph(form.CompanyName.ToUpperInvariant());
+        var first = 0;
+        if (logo is not null)
+        {
+            SheetPrintParts.AddImage(row.Cells[0].AddParagraph(), logo, logoMm - 4, 16);
+            first = 1;
+        }
+
+        var company = row.Cells[first].AddParagraph(form.CompanyName.ToUpperInvariant());
         company.Format.Font.Bold = true;
         company.Format.Font.Size = Pt(12);
-        row.Cells[0].AddParagraph($"Số phiếu: {form.No}").Format.Font.Size = Pt(12);
-        var formNo = row.Cells[1].AddParagraph(form.FormNo);
+        row.Cells[first].AddParagraph($"Số phiếu: {form.No}").Format.Font.Size = Pt(12);
+        var formNo = row.Cells[first + 1].AddParagraph(form.FormNo);
         formNo.Format.Alignment = ParagraphAlignment.Right;
         formNo.Format.Font.Size = Pt(25);
         formNo.Format.Font.Bold = true;
@@ -363,8 +429,16 @@ public static class CuvtFormLayout
                 var detail = cell.AddParagraph(signer.Detail ?? "");
                 detail.Format.Font.Italic = true;
                 detail.Format.Font.Size = Pt(11);
+                // Ảnh chữ ký chiếm đúng khoảng trống ký tay (cao tối đa 13 mm) để ô có chữ ký và ô chưa ký cao gần bằng nhau.
+                if (signer.Signature is not null)
+                {
+                    var image = cell.AddParagraph();
+                    image.Format.SpaceBefore = Unit.FromMillimeter(1);
+                    SheetPrintParts.AddImage(image, signer.Signature, Math.Min(width / columns - 4, 50), 13);
+                }
+
                 var name = cell.AddParagraph(signer.Name ?? "");
-                name.Format.SpaceBefore = Unit.FromMillimeter(14);
+                if (signer.Signature is null) name.Format.SpaceBefore = Unit.FromMillimeter(14);
                 name.Format.Font.Bold = true;
                 if (!string.IsNullOrWhiteSpace(signer.Position)) cell.AddParagraph(signer.Position).Format.Font.Size = Pt(11);
             }

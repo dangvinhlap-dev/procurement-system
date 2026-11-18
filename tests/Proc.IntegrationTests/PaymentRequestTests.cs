@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Common;
 using Proc.Application.Purchasing;
@@ -91,7 +91,13 @@ public partial class PurchasingTests
         var pdf = await accountant.GetAsync($"/api/payment-requests/{dnt.Id}/pdf", Ct);
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
-        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(await pdf.Content.ReadAsByteArrayAsync(Ct), 0, 4), StringComparison.Ordinal);
+        var pdfBytes = await pdf.Content.ReadAsByteArrayAsync(Ct);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdfBytes, 0, 4), StringComparison.Ordinal);
+        SavePdfForReview("5B-tien-mat.pdf", pdfBytes);
+        // Lát IN2d: In / Tải PDF ghi lần in (kế toán chỉ có quyền đề nghị thanh toán).
+        Assert.True((await accountant.PostAsync($"/api/payment-requests/{dnt.Id}/print", null, Ct)).IsSuccessStatusCode);
+        var prints = (await accountant.GetFromJsonAsync<List<Proc.Application.Documents.DocumentPrintDto>>($"/api/payment-requests/{dnt.Id}/prints", Ct))!;
+        Assert.Equal([(1, "Print")], prints.Select(p => (p.PrintNo, p.Kind)));
 
         // Nội dung mẫu 5B tiền mặt: lũy kế = đã mua trước + đơn (950.000), còn lại = định mức − lũy kế; dòng giảm trừ, số tiền còn lại.
         var form = Proc.Infrastructure.Printing.CuvtPrintForms.PaymentRequest(dnt,
@@ -102,6 +108,12 @@ public partial class PurchasingTests
         Assert.Contains(form.Info, i => i.Label == "Số tiền còn lại" && i.Value == "1.000.000 đ");
         Assert.Equal(["627.000"], form.TotalCells);
         Assert.Equal("600.000", form.ExtraRows![1].Cells[0].Text);
+        // Như sheet 5B: ô "Kính trình" hai dòng, khối NCC (tên NCC đậm), tiêu đề bảng "CHỨNG TỪ" / "NỘI DUNG THANH TOÁN" / "SỐ TIỀN".
+        var addressee = form.Info.Single(i => i.Kind == Proc.Infrastructure.Printing.CuvtInfoKind.Addressee);
+        Assert.Equal("CHỦ TỊCH HĐQT-TỔNG GIÁM ĐỐC\nCÔNG TY THỬ", addressee.Value);
+        Assert.Contains(form.Info, i => i.Label == "Tên NCC" && i.Strong && i.Kind == Proc.Infrastructure.Printing.CuvtInfoKind.Party);
+        Assert.Equal(("CHỨNG TỪ", "NỘI DUNG THANH TOÁN"), (form.Columns[0].Group, form.Columns[2].Title));
+        Assert.True(form.AfterTable!.Single().BoldLabel);
 
         var chain = await ReadAsync<CancelChainDto>(await f.Buyer.GetAsync($"/api/cancel-chain/DNT/{dnt.Id}", Ct));
         Assert.Contains("Đã chi", chain.BlockedReason, StringComparison.Ordinal);

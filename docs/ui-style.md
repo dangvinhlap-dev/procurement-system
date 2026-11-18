@@ -366,7 +366,10 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   `PrintPreviewModal` (`components/PrintPreview/`) rộng 940px: hàng nút **In…** (icon máy in), **Tải PDF** (icon tải về), **Làm mới**, dòng chữ mờ
   "Đã in n lần · lần gần nhất … – người" / "Chưa in lần nào" sát phải, **Đóng** (đỏ); vùng xem nền `--erp-print-viewer-bg`, viền 1px, cao 72vh,
   trang PDF trong khung (ẩn thanh công cụ trình xem PDF – in qua nút In để đếm lần in). In bằng khung ẩn `.erp-print-frame`.
-- **Trang in** (PDF, không phải màn hình): giữ nguyên sheet biểu mẫu (mục 20.4 IN1-1); góc dưới phải mọi trang khung viền mảnh, chữ 9 phông không
+- **Xem bảng theo dõi** (PO, lát IN2), **Xem bảng tổng hợp** (BTH), **Xem kết quả hỏi giá** (RFQ): cùng `printPreview` + `PrintPreviewModal`, tiêu đề
+  "Xem bảng theo dõi mua hàng <số> – mẫu 4A/4B", "Xem bảng tổng hợp <số> – mẫu 2A/2B", "Xem kết quả hỏi giá <số> – mẫu 3a/3A/3B"; **Xem đề nghị
+  thanh toán** ("… – mẫu 5A/5B/1C"), **Xem bảng kê** ("Xem bảng kê chi phí tạp vụ <số> – mẫu 2C").
+- **Trang in** (PDF, không phải màn hình): giữ nguyên sheet biểu mẫu (mục 20.4 IN1-1, IN2-1 – 1A/1B, 4A/4B); góc dưới phải mọi trang khung viền mảnh, chữ 9 phông không
   chân (giờ in, người in, số phiếu, lần in, trang, tình trạng phê duyệt); dấu chìm đỏ nhạt nghiêng khi chưa duyệt.
 - **CKY – Chữ ký của tôi**: khuôn `ListPage` + `DataGrid`, một tab "LỊCH SỬ CHỮ KÝ" (`viewTabs`), không có "Tạo mới". Thông báo đầu trang
   `SignatureCurrent`: ô ký thử đúng cỡ in (`.erp-signature-sample` – rộng 46 mm, viền đen, nền `--erp-paper`, phông có chân như bản in) + đèn ô

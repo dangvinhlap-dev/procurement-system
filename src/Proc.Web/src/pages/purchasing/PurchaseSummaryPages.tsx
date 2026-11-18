@@ -362,7 +362,18 @@ export function PurchaseSummaryPage() {
         title="Bảng tổng hợp đề xuất mua"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PurchaseSummary', id: doc?.id }}
-        printPath={doc ? `/api/purchase-summaries/${doc.id}/pdf` : undefined}
+        // "Xem bảng tổng hợp" (lát IN2b, người dùng yêu cầu 18/11/2026): trang in giữ nguyên sheet 2A/2B, chữ ký người đã duyệt, In / Tải PDF đếm lần in.
+        printPreview={
+          doc
+            ? {
+                label: 'Xem bảng tổng hợp',
+                title: `Xem bảng tổng hợp ${doc.no} – mẫu ${doc.form === 'Construction' ? '2A' : '2B'}`,
+                viewPath: `/api/purchase-summaries/${doc.id}/pdf`,
+                printPath: `/api/purchase-summaries/${doc.id}/print`,
+                printsPath: `/api/purchase-summaries/${doc.id}/prints`,
+              }
+            : undefined
+        }
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={summary.isLoading}

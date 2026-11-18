@@ -160,6 +160,30 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Lát IN2 – các phiếu khác in giữ nguyên sheet Excel như 1A (nhánh `feature/in2-chu-ky-phieu-khac`, 18/11/2026)**: người dùng "làm tiếp" rồi
+  yêu cầu "các phiếu này giống hệt sheet Excel như 1A" (design.md 20.4 IN2-1…IN2-4). Khuôn chung `CuvtSheetLayout` + số đo từng sheet
+  (`SheetLayoutSpec` – cột, dòng, tỉ lệ in, vị trí logo / vòng tròn, ảnh khối ký), bộ ghép ô ký `SheetSign` (tách từ 1A), `SheetPrintParts`
+  (góc thông tin, dấu chìm), `DocumentPdfService.Sheets.cs` (chữ ký theo phiên bản, logo, nhật ký in theo loại phiếu). Ảnh tham chiếu sheet dựng
+  bằng LibreOffice (`soffice --convert-to pdf`) + PyMuPDF; test đặt biến `PROC_PRINT_OUT` để lưu PDF ra đối chiếu.
+  - **IN2a 4A/4B (PO) – xong**: `GET /api/purchase-orders/{id}/pdf` in theo sheet, `POST …/print`, `GET …/prints`; nút "Xem bảng theo dõi";
+    test `Po_BangTheoDoiGiuNguyenSheet_ChuKyNguoiDuyet_DemLanIn`, `KhoiKy4A_GhepTheoMaVaiTroMau_ChuTichCotCuoi`; e2e `po-print-4ab`, `printing`.
+    Kiểm tra: build 0 cảnh báo, `dotnet test` 814/814, tsc, oxlint, `npm run build`, e2e 4/4 (po-print-4ab, printing, print-preview-signature).
+  - **IN2b 2A/2B (bảng tổng hợp) – xong**: khuôn thêm tiêu đề hai tầng, cột đơn vị mua tùy số lượng, cột chữ đỏ; số đo `Sheet2A/2B`, khối ký
+    `Sign2`; API `POST /api/purchase-summaries/{id}/print`, `GET …/prints`; nút "Xem bảng tổng hợp"; test `InBieuMauCuvt_1A_1B_DichVu_2A` (dòng
+    tổng), e2e `purchase-summary`.
+  - **IN2c 3a/3A/3B (RFQ) – xong**: khuôn viết lại gọn – tiêu đề bảng nhiều tầng (nhóm lồng "|"), cột lặp theo nhóm (`DynamicGroup`), dòng tổng phụ
+    (nền, gộp dọc ô trống 3A), dòng chữ dưới bảng (nghiêng 3a/3B, hai nửa 3A), nhiều phiếu một file (`RenderMany` nối trang), co theo chiều cao khi
+    chỉ vừa tràn trang; số đo `Sheet3a/3A/3B`, khối ký `Sign3`; 3A luôn đủ 3 nhóm NCC; API `POST /api/rfqs/{id}/print`, `GET …/prints`; nút "Xem kết
+    quả hỏi giá"; test `Rfq_LoaiMuaTheoDeNghi_BieuMau3A_3a_3B_InKhoNgang` (tiêu đề nhiều tầng, dòng tổng, đếm lần in), e2e `rfq-deadline`. e2e chờ
+    tải PDF lọc theo tên phiếu (Chromium ẩn không có trình xem PDF – khung xem cũng sinh sự kiện tải tên mã blob).
+  - **IN2d 5A/5B (đề nghị thanh toán) – xong**: `CuvtInfoKind` (ô "Kính trình", khối NCC – ngân hàng), số đo 4 sheet `Sheet5ATransfer/5ACash/5BCash/
+    5BTransfer`, khối ký `Sign5` (4 ô + Chủ tịch cả hàng), phụ đề 5B nguyên văn; 1C/2C giả lập: khuôn chung + chữ ký (`RenderGenericAsync`), góc
+    thông tin, nhật ký in; API print/prints cho `/api/payment-requests`, `/api/sundry-expense-sheets`; nút "Xem đề nghị thanh toán", "Xem bảng kê".
+    Test `DeNghiThanhToan_NhieuHoaDonXnh…` (ô Kính trình, khối NCC, đếm lần in), 2C lưu PDF; e2e `payment-request`, `sundry-expense`.
+  - **Kiểm tra cả nhánh (18/11/2026)**: build 0 cảnh báo, `dotnet test` 814/814, tsc, oxlint, `npm run build` qua; e2e liên quan qua (po-print-4ab,
+    printing, print-preview-signature, purchase-summary, rfq-deadline, payment-request, sundry-expense). **Playwright đủ bộ chưa chạy xong** – Claude
+    Code dừng lệnh vì máy thiếu bộ nhớ → **chưa merge `main`**. Việc còn lại: chạy `npx playwright test --workers=2` đủ bộ, qua thì merge + xóa nhánh.
+
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →
   Z3 ô số chứng từ (sao chép, bấm đúp mở phiếu gốc) → Z4 quyền Hủy đặc biệt **chỉ cấp cho admin** (người lập không hủy được, bắt buộc lý

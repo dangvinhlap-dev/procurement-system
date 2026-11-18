@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Proc.Api.Security;
 using Proc.Application.Documents;
 using Proc.Application.Printing;
@@ -71,6 +71,74 @@ public static class SignatureEndpoints
         app.MapGet("/api/purchase-requests/{id:guid}/prints", (Guid id, IDocumentPdfService s, CancellationToken ct) => s.PurchaseRequestPrintsAsync(id, ct))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PrView);
+
+        // Lát IN2: bảng theo dõi mua hàng 4A/4B giữ nguyên sheet – cùng quyền với xem PO; xem trước dùng GET /pdf sẵn có (không ghi).
+        app.MapPost("/api/purchase-orders/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(DocumentTypes.PurchaseOrder, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.PoView);
+        app.MapGet("/api/purchase-orders/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PurchaseOrder, id, ct))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.PoView);
+
+        // Lát IN2b: bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet – cùng quyền với xem bảng tổng hợp.
+        app.MapPost("/api/purchase-summaries/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(DocumentTypes.PurchaseSummary, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.SummaryView);
+        app.MapGet("/api/purchase-summaries/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PurchaseSummary, id, ct))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Purchase.SummaryView);
+
+        // Lát IN2c: kết quả hỏi giá 3a/3A/3B giữ nguyên sheet (form=3A in bảng so sánh) – cùng quyền với xem RFQ.
+        app.MapPost("/api/rfqs/{id:guid}/print", async (Guid id, string? kind, string? form, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(
+                    DocumentTypes.RequestForQuotation, id, kind == "download" ? PrintKind.Download : PrintKind.Print, form, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Sourcing.RfqView);
+        // Lát IN2d: đề nghị thanh toán 5A/5B (giữ nguyên sheet), 1C và bảng kê 2C (mẫu giả lập) – cùng quyền với GET /pdf.
+        string[] paymentRead = [Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate, Permissions.Purchase.PaymentApprove,
+            Permissions.Purchase.PaymentPay];
+        app.MapPost("/api/payment-requests/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(DocumentTypes.PaymentRequest, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequireAnyPermission(paymentRead);
+        app.MapGet("/api/payment-requests/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PaymentRequest, id, ct))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(paymentRead);
+        string[] sundryRead = [Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate, Permissions.Purchase.SundryApprove];
+        app.MapPost("/api/sundry-expense-sheets/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(
+                    DocumentTypes.SundryExpenseSheet, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequireAnyPermission(sundryRead);
+        app.MapGet("/api/sundry-expense-sheets/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.SundryExpenseSheet, id, ct))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(sundryRead);
+
+        app.MapGet("/api/rfqs/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.RequestForQuotation, id, ct))
+            .WithTags("In phiếu")
+            .RequirePermission(Permissions.Sourcing.RfqView);
         return app;
     }
 
