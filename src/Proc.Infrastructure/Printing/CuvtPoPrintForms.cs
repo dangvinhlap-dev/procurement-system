@@ -39,7 +39,7 @@ public static partial class CuvtPrintForms
         var columns = new List<CuvtColumn>
         {
             new("Stt", 9, Center: true), new("Tên hàng hóa - vật tư", 40), new("Đặc điểm/quy cách", 28), new("ĐVT", 12, Center: true),
-            new("Số lượng", 16, true), new("Đơn giá cũ gần nhất", 22, true), new("Đơn giá mới tăng", 21, true), new("Đơn giá mới bằng-giảm", 21, true),
+            new("Số lượng", 16, true), new("Đơn giá cũ gần nhất", 22, true), new(is4A ? "Đơn giá mới tăng" : "Đơn giá mới TĂNG", 21, true), new("Đơn giá mới bằng-giảm", 21, true),
             new("Thành tiền", 26, true), new("Tên Nhà cung cấp đã mua", 28, Center: true, MergeRows: true),
             new("Lũy kế số tiền đã mua", 25, true, MergeRows: true), new("Số tiền còn lại theo dự toán/định mức", 25, true, MergeRows: true),
         };

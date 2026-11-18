@@ -112,10 +112,15 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
         if (!string.IsNullOrEmpty(wanted) && wanted is not ("4A" or "4B"))
             throw new BusinessRuleException("Mẫu in đơn mua hàng không hợp lệ (4A, 4B hoặc supplier).");
 
-        var form4 = await PurchaseOrderFormAsync(id, cancellationToken);
-        if (!string.IsNullOrEmpty(wanted) && wanted != form4.FormNo)
-            throw new BusinessRuleException($"Đơn {form4.No} in theo biểu mẫu {form4.FormNo} (theo loại mua của dòng đề nghị nguồn).");
-        return new PdfFile($"{form4.No}.pdf", CuvtFormLayout.Render(form4));
+        if (!string.IsNullOrEmpty(wanted))
+        {
+            var form4 = await PurchaseOrderFormAsync(id, cancellationToken);
+            if (wanted != form4.FormNo)
+                throw new BusinessRuleException($"Đơn {form4.No} in theo biểu mẫu {form4.FormNo} (theo loại mua của dòng đề nghị nguồn).");
+        }
+
+        // Lát IN2: bản xem giữ nguyên sheet 4A/4B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        return await RenderPurchaseOrderSheetAsync(id, null, cancellationToken);
     }
 
     /// <summary>

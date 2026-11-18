@@ -48,6 +48,27 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<IReadOnlyList<Documents.DocumentPrintDto>> PurchaseRequestPrintsAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// In / tải PDF một phiếu theo sheet biểu mẫu (lát IN2 – design.md mục 20.4): ghi một lần in vào nhật ký rồi dựng bản in có "Lần in thứ n".
+    /// Hiện có: PO (4A/4B).
+    /// </summary>
+    /// <param name="docType">Loại chứng từ (<c>DocumentTypes</c>).</param>
+    /// <param name="id">Phiếu.</param>
+    /// <param name="kind">In hay tải PDF.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi loại phiếu chưa in theo sheet.</exception>
+    Task<PdfFile> DocumentPrintAsync(string docType, Guid id, Proc.Domain.Documents.PrintKind kind, CancellationToken cancellationToken);
+
+    /// <summary>Các lần in một phiếu, mới nhất trước – cho hộp thoại xem phiếu (lát IN2).</summary>
+    /// <param name="docType">Loại chứng từ.</param>
+    /// <param name="id">Phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Nhật ký in.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<IReadOnlyList<Documents.DocumentPrintDto>> DocumentPrintsAsync(string docType, Guid id, CancellationToken cancellationToken);
+
     /// <summary>In bảng tổng hợp đề xuất mua theo biểu mẫu CUVT 2A/2B, khổ ngang (lát Y10).</summary>
     /// <param name="id">Bảng tổng hợp.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>

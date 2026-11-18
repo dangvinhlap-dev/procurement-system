@@ -51,6 +51,10 @@ public partial class PurchasingTests
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po1.Id}/submit", null, Ct));
         await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po1.Id, "approve"));
         var form1 = await PoFormAsync(f, po1.Id);
+        // Lát IN2: bản xem 4A giữ nguyên sheet dựng được qua API (máy dev lưu ra đối chiếu với sheet Excel).
+        var sheet4A = await f.Buyer.GetAsync($"/api/purchase-orders/{po1.Id}/pdf", Ct);
+        Assert.Equal("application/pdf", sheet4A.Content.Headers.ContentType?.MediaType);
+        SavePdfForReview("4A-da-duyet.pdf", await sheet4A.Content.ReadAsByteArrayAsync(Ct));
         Assert.Equal(("4A", true, (string?)null, "BẢNG THEO DÕI MUA HÀNG"), (form1.FormNo, form1.Landscape, form1.StatusNote, form1.Title));
         Assert.Equal(["Lần đầu", "", "95.000", "285.000"], form1.Rows[0][5..9]);
         Assert.Equal(("285.000", "715.000"), (form1.Rows[0][10], form1.Rows[0][11]));
