@@ -669,7 +669,18 @@ export function PurchaseOrderPage() {
         title="Đơn mua hàng"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PurchaseOrder', id: doc?.id }}
-        printPath={doc ? `/api/purchase-orders/${doc.id}/pdf` : undefined}
+        // "Xem bảng theo dõi" (lát IN2, người dùng yêu cầu 18/11/2026): trang in giữ nguyên sheet 4A/4B, chữ ký người đã duyệt, In / Tải PDF đếm lần in.
+        printPreview={
+          doc
+            ? {
+                label: 'Xem bảng theo dõi',
+                title: `Xem bảng theo dõi mua hàng ${doc.no} – mẫu ${doc.formCode}`,
+                viewPath: `/api/purchase-orders/${doc.id}/pdf`,
+                printPath: `/api/purchase-orders/${doc.id}/print`,
+                printsPath: `/api/purchase-orders/${doc.id}/prints`,
+              }
+            : undefined
+        }
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={order.isLoading}

@@ -4,10 +4,10 @@ import { ADMIN, loginViaApi } from './helpers.ts'
 import { seedDraftPo, switchCompany } from './inventoryHelpers.ts'
 
 /**
- * In phiếu PDF (design.md mục 10.10): mở đơn mua hàng ở BHA, bấm "In phiếu" → tab mới hiện file PDF; Ctrl+P cũng in. File PDF lưu vào
- * e2e/screenshots để so mẫu in. (Phiếu nhập kho cũ gỡ ở lát K3; biên bản giao nhận in từ XNH – receipt-confirmation.spec.ts.)
+ * In phiếu PDF (design.md mục 10.10): mở đơn mua hàng nháp ở BHA, bấm "Xem bảng theo dõi" (lát IN2) → hộp thoại xem trang in 4B; Ctrl+P cũng
+ * mở. File PDF lưu vào e2e/screenshots để so mẫu in. (Phiếu nhập kho cũ gỡ ở lát K3; biên bản giao nhận in từ XNH – receipt-confirmation.spec.ts.)
  */
-test('in đơn mua hàng ra PDF ở tab mới', async ({ page, request }) => {
+test('xem bảng theo dõi đơn mua hàng (PDF)', async ({ page, request }) => {
   const { poId, poNo } = await seedDraftPo(request)
   await loginViaApi(page)
   await page.goto('/')
@@ -16,8 +16,7 @@ test('in đơn mua hàng ra PDF ở tab mới', async ({ page, request }) => {
   await expect(page.locator('.document-form-number')).toHaveText(poNo)
 
   const response = page.waitForResponse((r) => r.url().endsWith('/pdf'))
-  const popup = page.waitForEvent('popup')
-  await page.getByRole('button', { name: 'In phiếu' }).click()
+  await page.getByRole('button', { name: 'Xem bảng theo dõi' }).click()
   const pdf = await response
   expect(pdf.status()).toBe(200)
   expect(pdf.headers()['content-type']).toContain('application/pdf')
@@ -29,16 +28,14 @@ test('in đơn mua hàng ra PDF ở tab mới', async ({ page, request }) => {
   const body = await file.body()
   expect(body.subarray(0, 4).toString()).toBe('%PDF')
   writeFileSync('e2e/screenshots/don-mua-hang.pdf', body)
-  // Chromium chạy ẩn không có trình xem PDF (coi như tải file) nên chỉ kiểm tra tab mới được mở và không bị đóng vì lỗi.
-  const tab = await popup
-  expect(tab.isClosed()).toBe(false)
-  await tab.close()
+  const dialog = page.getByRole('dialog', { name: new RegExp(`Xem bảng theo dõi mua hàng ${poNo}`) })
+  await expect(page.getByTestId('print-preview-frame')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Đóng', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
 
-  // Ctrl+P: in phiếu thay cho in trang web.
-  const again = page.waitForEvent('popup')
+  // Ctrl+P: mở bản xem thay cho in trang web.
   const reprint = page.waitForResponse((r) => r.url().endsWith('/pdf'))
   await page.keyboard.press('Control+p')
   expect((await reprint).status()).toBe(200)
-  expect((await again).isClosed()).toBe(false)
+  await expect(dialog).toBeVisible()
 })
-
