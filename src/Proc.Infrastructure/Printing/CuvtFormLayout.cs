@@ -5,11 +5,28 @@ using PdfSharp.Drawing;
 
 namespace Proc.Infrastructure.Printing;
 
+/// <summary>Loại dòng thông tin đầu phiếu – sheet 5A/5B có ô "Kính trình" và khối NCC – ngân hàng riêng (lát IN2d).</summary>
+public enum CuvtInfoKind
+{
+    /// <summary>Dòng thông tin IN HOA căn giữa (khung thông tin).</summary>
+    Normal = 0,
+
+    /// <summary>Ô "Kính trình: …" đậm căn giữa; giá trị nhiều dòng tách bằng xuống dòng.</summary>
+    Addressee = 1,
+
+    /// <summary>Dòng khối NCC: nhãn căn trái có dấu hai chấm, giá trị căn giữa.</summary>
+    Party = 2,
+
+    /// <summary>Dòng ngân hàng / số tài khoản của khối NCC: nhãn không dấu hai chấm (chữ đỏ ở sheet 5A).</summary>
+    PartyAlert = 3,
+}
+
 /// <summary>Một dòng thông tin đầu phiếu của biểu mẫu CUVT, in "NHÃN: giá trị".</summary>
 /// <param name="Label">Nhãn (in hoa khi in).</param>
 /// <param name="Value">Giá trị đã định dạng; không bao giờ để "…" (biểu mẫu cấm dấu chấm lửng).</param>
 /// <param name="Strong">In đậm giá trị – số tiền phải in đậm theo biểu mẫu.</param>
-public sealed record CuvtInfoLine(string Label, string Value, bool Strong = false);
+/// <param name="Kind">Loại dòng (khuôn giữ nguyên sheet in theo loại; khuôn chung in như dòng thường).</param>
+public sealed record CuvtInfoLine(string Label, string Value, bool Strong = false, CuvtInfoKind Kind = CuvtInfoKind.Normal);
 
 /// <summary>Một cột bảng của biểu mẫu CUVT.</summary>
 /// <param name="Title">Tiêu đề cột.</param>

@@ -76,12 +76,19 @@ public enum SheetAfterStyle
 /// <param name="RedColumns">Cột logic chữ đỏ ở dòng hàng (2A/2B "Ngày cung ứng").</param>
 /// <param name="DynamicGroup">Số cột của một nhóm lặp (2A/2B: 1 – mỗi đơn vị mua một cột; 3A: 2 – Đơn giá, Thành tiền mỗi NCC); 0 = không lặp.</param>
 /// <param name="After">Cách in dòng chữ dưới bảng.</param>
+/// <param name="AddresseePt">Cao ô "Kính trình" (5A/5B: 41,25 pt).</param>
+/// <param name="AddresseeFontPt">Cỡ chữ ô "Kính trình" (5A chuyển khoản 15, tiền mặt 14).</param>
+/// <param name="PartyRowsPt">Cao các dòng khối NCC – ngân hàng (5A/5B: tên NCC 33, các dòng sau 21,75); dòng thừa lấy giá trị cuối.</param>
+/// <param name="PartyLabelColumns">Số cột sheet của nhãn khối NCC (A:B = 2), giá trị nằm phần còn lại.</param>
+/// <param name="PartyAlertRed">Nhãn ngân hàng / số tài khoản chữ đỏ (5A có, 5B không).</param>
+/// <param name="AfterRowPt">Cao dòng chữ dưới bảng; null = bằng dòng hàng (5A/5B "Bằng chữ" 21,75 pt, dòng hàng 58,5 pt).</param>
 public sealed record SheetLayoutSpec(
     bool Landscape, double[] SheetColumns, int[] ColumnMap, double[] HeaderRowsPt, Color DateColor, double InfoRowPt, double TableHeaderPt,
     double RowPt, double TotalRowPt, SheetPicture Logo, SheetPicture Circle, SheetSignStyle Sign, int[]? CenteredColumns = null, double Scale = 0.85,
     double[]? MoreHeaderPt = null, bool HeaderFilled = true, double HeaderFontPt = 13, double NameFontPt = 13, bool TotalDash = false,
     bool TotalLabelCenter = false, double TotalFontPt = 15, bool TotalFilled = true, bool ShowExtraRows = true, bool MergeBlankTotals = false,
-    int[]? RedColumns = null, int DynamicGroup = 0, SheetAfterStyle After = SheetAfterStyle.None);
+    int[]? RedColumns = null, int DynamicGroup = 0, SheetAfterStyle After = SheetAfterStyle.None, double AddresseePt = 41.25,
+    double AddresseeFontPt = 15, double[]? PartyRowsPt = null, int PartyLabelColumns = 2, bool PartyAlertRed = false, double? AfterRowPt = null);
 
 /// <summary>Một phiếu trong file in: nội dung, số đo sheet, khối ký, góc thông tin.</summary>
 /// <param name="Form">Nội dung phiếu.</param>
@@ -123,6 +130,12 @@ public static class CuvtSheetLayout
 
     /// <summary>Khối ký 3a/3A/3B (6 ô có dòng chú thích nghiêng).</summary>
     private static readonly double[] Sign3Columns = [148, 167, 161, 161, 219, 232];
+
+    /// <summary>Khối ký 5A/5B (4 ô + ô Chủ tịch cả hàng dưới).</summary>
+    private static readonly double[] Sign5Columns = [179, 199, 211, 206];
+
+    /// <summary>Hàng khối ký 5A/5B: "Kính trình…", chức danh, ô ký, ô Chủ tịch.</summary>
+    private static readonly double[] Sign5Rows = [36, 40, 116, 162];
 
     /// <summary>Số đo sheet "4A.Theo dõi MH" (A4 ngang 85 %, cột A–M); dòng VAT ẩn trên sheet nên không in.</summary>
     public static readonly SheetLayoutSpec Sheet4A = new(
@@ -190,6 +203,56 @@ public static class CuvtSheetLayout
         new SheetSignStyle(Sign3Columns, [35, 52, 157], 1319, 220, 8, true, 13, 13), [2, 3], 0.80,
         MoreHeaderPt: [36.75, 26.25, 21], HeaderFilled: false, HeaderFontPt: 14, TotalFontPt: 13, TotalFilled: false, MergeBlankTotals: true,
         DynamicGroup: 2, After: SheetAfterStyle.Paired);
+
+    /// <summary>
+    /// Số đo sheet đề nghị thanh toán chuyển khoản 5A (sheet "5A.ĐN TTTM" – tên sheet đặt ngược, tiêu đề in "CHUYỂN KHOẢN"; A4 dọc 85 %, cột A–D):
+    /// ô "Kính trình" 15 đậm, khung thông tin 5 dòng 25,5 pt, khối NCC – ngân hàng (nhãn ngân hàng đỏ), bảng chứng từ hai tầng nền xanh nhạt, dòng
+    /// hàng 58,5 pt, "Tổng cộng" – "Số tiền giảm trừ" – "Số tiền còn lại" (15 đậm nền xanh), "Bằng chữ" đậm nghiêng; khối ký 4 ô + Chủ tịch cả hàng.
+    /// </summary>
+    public static readonly SheetLayoutSpec Sheet5ATransfer = new(
+        false, [12.3, 14.6, 60.4, 17.7], [1, 1, 1, 1],
+        [24.9, 20.1, 20.1, 20.1, 20.1], Blue, 25.5, 23.25, 58.5, 23.25,
+        new SheetPicture(0, 3, 21, 92, 86), new SheetPicture(3, 27, 38, 89, 82),
+        new SheetSignStyle(Sign5Columns, Sign5Rows, 742, 361, 0, false, 15, 14), [1],
+        MoreHeaderPt: [23.25], TotalLabelCenter: true, TotalFontPt: 13, TotalFilled: false, After: SheetAfterStyle.Italic,
+        PartyRowsPt: [33, 21.75], PartyAlertRed: true, AfterRowPt: 21.75);
+
+    /// <summary>Số đo sheet đề nghị thanh toán tiền mặt 5A (sheet "5A.ĐN TTCK"; tỉ lệ 75 %): như chuyển khoản, không có dòng ngân hàng, "Kính trình" 14.</summary>
+    public static readonly SheetLayoutSpec Sheet5ACash = Sheet5ATransfer with
+    {
+        SheetColumns = [12.3, 16.1, 63.1, 24.0],
+        Logo = new SheetPicture(0, 7, 18, 93, 87),
+        Circle = new SheetPicture(3, 44, 39, 89, 82),
+        Sign = new SheetSignStyle(Sign5Columns, Sign5Rows, 936, 394, 5, false, 15, 14),
+        Scale = 0.75,
+        AddresseeFontPt = 14,
+    };
+
+    /// <summary>Số đo sheet đề nghị thanh toán tiền mặt 5B (sheet "5B.ĐN TTTM"; tỉ lệ 80 %, khung thông tin 24,9 pt, nhãn ngân hàng chữ đen).</summary>
+    public static readonly SheetLayoutSpec Sheet5BCash = Sheet5ATransfer with
+    {
+        SheetColumns = [10.2, 11.5, 52.3, 35.0],
+        InfoRowPt = 24.9,
+        Logo = new SheetPicture(0, 8, 18, 92, 86),
+        Circle = new SheetPicture(3, 183, 9, 88, 80),
+        Sign = new SheetSignStyle(Sign5Columns, Sign5Rows, 882, 375, 9, false, 15, 14),
+        Scale = 0.80,
+        PartyAlertRed = false,
+    };
+
+    /// <summary>Số đo sheet đề nghị thanh toán chuyển khoản 5B (sheet "5B.ĐN TTCK"; tỉ lệ 90 %, "Kính trình" 14, nhãn ngân hàng chữ đen).</summary>
+    public static readonly SheetLayoutSpec Sheet5BTransfer = Sheet5ATransfer with
+    {
+        SheetColumns = [12.3, 14.6, 60.4, 21.7],
+        InfoRowPt = 24.9,
+        Logo = new SheetPicture(0, 8, 22, 93, 87),
+        Circle = new SheetPicture(3, 84, 11, 89, 90),
+        Sign = new SheetSignStyle(Sign5Columns, Sign5Rows, 882, 369, 8, false, 15, 14),
+        Scale = 0.90,
+        AddresseeFontPt = 14,
+        PartyRowsPt = [33, 21.75],
+        PartyAlertRed = false,
+    };
 
     /// <summary>Dựng PDF một phiếu.</summary>
     /// <param name="form">Nội dung phiếu (tiêu đề, phụ đề, thông tin, cột, dòng, dòng tổng).</param>
@@ -315,7 +378,8 @@ public static class CuvtSheetLayout
         /// thì vòng tròn dời theo); logo giữ khoảng cách tới mép trái.
         /// </summary>
         public double PictureLeft(SheetPicture p, bool fromRight) =>
-            fromRight ? TotalPx - (ColumnPx.Sum() - (Left(p.Col) + p.OffsetPx)) : Left(p.Col) + p.OffsetPx;
+            // Hình neo sát mép phải có thể chờm sang cột ghi chú ngoài vùng in (5B: vòng tròn tới 804 / 783 điểm ảnh) – giữ trong khung.
+            fromRight ? Math.Min(TotalPx - (ColumnPx.Sum() - (Left(p.Col) + p.OffsetPx)), TotalPx - p.WidthPx - 4) : Left(p.Col) + p.OffsetPx;
     }
 
     /// <summary>
@@ -335,8 +399,16 @@ public static class CuvtSheetLayout
         };
         // Hàng ô phát sinh (chặng vượt…) thêm hàng chức danh + hàng ký như ảnh.
         var signPx = spec.Sign.HeightPx * (1 + (sign.Extra.Count > 0 ? (spec.Sign.RowsPx[1] + spec.Sign.RowsPx[2]) / spec.Sign.RowsPx.Sum() : 0));
-        return spec.HeaderRowsPt.Sum() + form.Info.Count * spec.InfoRowPt + header + form.Rows.Count * spec.RowPt + totals * spec.TotalRowPt
-               + after * spec.RowPt + (spec.Sign.GapPx + signPx) * 0.75;
+        var party = spec.PartyRowsPt ?? [spec.InfoRowPt];
+        var partyIndex = 0;
+        var info = form.Info.Sum(l => l.Kind switch
+        {
+            CuvtInfoKind.Addressee => spec.AddresseePt,
+            CuvtInfoKind.Party or CuvtInfoKind.PartyAlert => party[Math.Min(partyIndex++, party.Length - 1)],
+            _ => spec.InfoRowPt,
+        });
+        return spec.HeaderRowsPt.Sum() + info + header + form.Rows.Count * spec.RowPt + totals * spec.TotalRowPt
+               + after * (spec.AfterRowPt ?? spec.RowPt) + (spec.Sign.GapPx + signPx) * 0.75;
     }
 
     /// <summary>Rộng một cột Excel ra điểm ảnh (cỡ chữ mặc định 7 điểm ảnh một ký tự + 5 lề): cột 8,43 = 64 điểm ảnh.</summary>
@@ -379,28 +451,94 @@ public static class CuvtSheetLayout
         table.SetEdge(0, 0, 1, spec.HeaderRowsPt.Length, Edge.Box, BorderStyle.Single, 0.75, Colors.Black);
     }
 
-    /// <summary>Khung thông tin: dòng IN HOA căn giữa cỡ 14 (ghi chú sheet "Phải tạo thành chữ V"), số tiền in đậm có đơn vị "đ".</summary>
+    /// <summary>
+    /// Phần thông tin đầu phiếu theo loại dòng (<see cref="CuvtInfoKind"/>), mỗi nhóm dòng liền nhau cùng loại một khung kẻ viền ngoài: ô "Kính
+    /// trình" (5A/5B); khung thông tin – dòng IN HOA căn giữa cỡ 14 (ghi chú sheet "Phải tạo thành chữ V"), số tiền in đậm có đơn vị "đ"; khối NCC –
+    /// ngân hàng (nhãn trái, giá trị IN HOA căn giữa, dòng tên NCC đậm có kẻ dưới).
+    /// </summary>
     private static void AddInfo(Section section, CuvtForm form, SheetLayoutSpec spec, Geometry g)
     {
-        if (form.Info.Count == 0) return;
-        var table = section.AddTable();
-        table.Borders.Visible = false;
-        table.AddColumn(Unit.FromMillimeter(g.WidthMm));
-        foreach (var line in form.Info)
+        var index = 0;
+        while (index < form.Info.Count)
         {
-            var row = table.AddRow();
-            row.HeightRule = RowHeightRule.AtLeast;
-            row.Height = g.Pt(spec.InfoRowPt);
-            row.VerticalAlignment = VerticalAlignment.Center;
-            var p = row.Cells[0].AddParagraph();
-            p.Format.Alignment = ParagraphAlignment.Center;
-            p.Format.Font.Size = g.Pt(14);
-            p.AddText(line.Label.ToUpperInvariant() + ": ");
-            if (line.Strong) p.AddFormattedText(line.Value, TextFormat.Bold);
-            else p.AddText(line.Value.ToUpperInvariant());
+            var kind = Group(form.Info[index].Kind);
+            var group = form.Info.Skip(index).TakeWhile(l => Group(l.Kind) == kind).ToList();
+            index += group.Count;
+            var table = section.AddTable();
+            table.Borders.Visible = false;
+            if (kind == CuvtInfoKind.Party) AddParty(table, group, spec, g);
+            else
+            {
+                table.AddColumn(Unit.FromMillimeter(g.WidthMm));
+                foreach (var line in group)
+                {
+                    if (kind == CuvtInfoKind.Addressee) AddAddressee(table, line, spec, g);
+                    else AddInfoLine(table, line, spec, g);
+                }
+            }
+
+            table.SetEdge(0, 0, table.Columns.Count, group.Count, Edge.Box, BorderStyle.Single, 0.75, Colors.Black);
         }
 
-        table.SetEdge(0, 0, 1, form.Info.Count, Edge.Box, BorderStyle.Single, 0.75, Colors.Black);
+        static CuvtInfoKind Group(CuvtInfoKind k) => k == CuvtInfoKind.PartyAlert ? CuvtInfoKind.Party : k;
+    }
+
+    private static void AddInfoLine(Table table, CuvtInfoLine line, SheetLayoutSpec spec, Geometry g)
+    {
+        var row = table.AddRow();
+        row.HeightRule = RowHeightRule.AtLeast;
+        row.Height = g.Pt(spec.InfoRowPt);
+        row.VerticalAlignment = VerticalAlignment.Center;
+        var p = row.Cells[0].AddParagraph();
+        p.Format.Alignment = ParagraphAlignment.Center;
+        p.Format.Font.Size = g.Pt(14);
+        p.AddText(line.Label.ToUpperInvariant() + ": ");
+        if (line.Strong) p.AddFormattedText(line.Value, TextFormat.Bold);
+        else p.AddText(line.Value.ToUpperInvariant());
+    }
+
+    /// <summary>Ô "Kính trình: CT.HĐQT-TỔNG GIÁM ĐỐC" + tên công ty dòng dưới, đậm căn giữa (A6 của sheet 5A/5B).</summary>
+    private static void AddAddressee(Table table, CuvtInfoLine line, SheetLayoutSpec spec, Geometry g)
+    {
+        var row = table.AddRow();
+        row.HeightRule = RowHeightRule.AtLeast;
+        row.Height = g.Pt(spec.AddresseePt);
+        row.VerticalAlignment = VerticalAlignment.Center;
+        var parts = line.Value.Split('\n');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var p = row.Cells[0].AddParagraph(i == 0 ? $"{line.Label}: {parts[i]}" : parts[i]);
+            p.Format.Alignment = ParagraphAlignment.Center;
+            p.Format.Font.Bold = true;
+            p.Format.Font.Size = g.Pt(spec.AddresseeFontPt);
+        }
+    }
+
+    /// <summary>
+    /// Khối NCC – ngân hàng (5A/5B dòng 12–15): nhãn ở cột A:B căn trái ("TÊN NCC:", "ĐỊA CHỈ:" có dấu hai chấm; "TÊN NGÂN HÀNG", "SỐ TÀI KHOẢN"
+    /// không – chữ đỏ ở sheet 5A), giá trị cột C:D IN HOA căn giữa; dòng tên NCC đậm, kẻ dưới như sheet.
+    /// </summary>
+    private static void AddParty(Table table, IReadOnlyList<CuvtInfoLine> lines, SheetLayoutSpec spec, Geometry g)
+    {
+        var labelMm = g.ColumnPx.Take(spec.PartyLabelColumns).Sum() * g.MmPx;
+        table.AddColumn(Unit.FromMillimeter(labelMm));
+        table.AddColumn(Unit.FromMillimeter(g.WidthMm - labelMm));
+        var heights = spec.PartyRowsPt ?? [spec.InfoRowPt];
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            var row = table.AddRow();
+            row.HeightRule = RowHeightRule.AtLeast;
+            row.Height = g.Pt(heights[Math.Min(i, heights.Length - 1)]);
+            row.VerticalAlignment = VerticalAlignment.Center;
+            row.Format.Font.Bold = line.Strong;
+            var alert = line.Kind == CuvtInfoKind.PartyAlert;
+            var label = row.Cells[0].AddParagraph(line.Label.ToUpperInvariant() + (alert ? "" : ":"));
+            if (alert && spec.PartyAlertRed) label.Format.Font.Color = Colors.Red;
+            var value = row.Cells[1].AddParagraph(line.Value.ToUpperInvariant());
+            value.Format.Alignment = ParagraphAlignment.Center;
+            if (i == 0 && lines.Count > 1) row.Borders.Bottom.Visible = true;
+        }
     }
 
     /// <summary>
@@ -620,7 +758,7 @@ public static class CuvtSheetLayout
             {
                 var row = table.AddRow();
                 row.HeightRule = RowHeightRule.AtLeast;
-                row.Height = g.Pt(spec.RowPt);
+                row.Height = g.Pt(spec.AfterRowPt ?? spec.RowPt);
                 row.VerticalAlignment = VerticalAlignment.Center;
                 var p = row.Cells[0].AddParagraph();
                 p.Format.Font.Italic = true;
@@ -639,7 +777,7 @@ public static class CuvtSheetLayout
         {
             var row = table.AddRow();
             row.HeightRule = RowHeightRule.AtLeast;
-            row.Height = g.Pt(spec.RowPt);
+            row.Height = g.Pt(spec.AfterRowPt ?? spec.RowPt);
             row.VerticalAlignment = VerticalAlignment.Center;
             row.Format.Font.Bold = true;
             for (var i = 0; i < pair.Length; i++) row.Cells[i].AddParagraph($"{pair[i].Label}: {pair[i].Value}");

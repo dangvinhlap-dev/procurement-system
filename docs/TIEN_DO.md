@@ -175,7 +175,11 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     (nền, gộp dọc ô trống 3A), dòng chữ dưới bảng (nghiêng 3a/3B, hai nửa 3A), nhiều phiếu một file (`RenderMany` nối trang), co theo chiều cao khi
     chỉ vừa tràn trang; số đo `Sheet3a/3A/3B`, khối ký `Sign3`; 3A luôn đủ 3 nhóm NCC; API `POST /api/rfqs/{id}/print`, `GET …/prints`; nút "Xem kết
     quả hỏi giá"; test `Rfq_LoaiMuaTheoDeNghi_BieuMau3A_3a_3B_InKhoNgang` (tiêu đề nhiều tầng, dòng tổng, đếm lần in), e2e `rfq-deadline`. e2e chờ
-    tải PDF lọc theo tên phiếu (Chromium ẩn không có trình xem PDF – khung xem cũng sinh sự kiện tải tên mã blob). Còn: IN2d 5A/5B (đề nghị thanh toán).
+    tải PDF lọc theo tên phiếu (Chromium ẩn không có trình xem PDF – khung xem cũng sinh sự kiện tải tên mã blob).
+  - **IN2d 5A/5B (đề nghị thanh toán) – xong**: `CuvtInfoKind` (ô "Kính trình", khối NCC – ngân hàng), số đo 4 sheet `Sheet5ATransfer/5ACash/5BCash/
+    5BTransfer`, khối ký `Sign5` (4 ô + Chủ tịch cả hàng), phụ đề 5B nguyên văn; 1C/2C giả lập: khuôn chung + chữ ký (`RenderGenericAsync`), góc
+    thông tin, nhật ký in; API print/prints cho `/api/payment-requests`, `/api/sundry-expense-sheets`; nút "Xem đề nghị thanh toán", "Xem bảng kê".
+    Test `DeNghiThanhToan_NhieuHoaDonXnh…` (ô Kính trình, khối NCC, đếm lần in), 2C lưu PDF; e2e `payment-request`, `sundry-expense`.
 
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →

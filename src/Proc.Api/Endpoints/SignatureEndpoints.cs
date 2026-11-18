@@ -107,6 +107,34 @@ public static class SignatureEndpoints
             })
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Sourcing.RfqView);
+        // Lát IN2d: đề nghị thanh toán 5A/5B (giữ nguyên sheet), 1C và bảng kê 2C (mẫu giả lập) – cùng quyền với GET /pdf.
+        string[] paymentRead = [Permissions.Purchase.PaymentView, Permissions.Purchase.PaymentCreate, Permissions.Purchase.PaymentApprove,
+            Permissions.Purchase.PaymentPay];
+        app.MapPost("/api/payment-requests/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(DocumentTypes.PaymentRequest, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequireAnyPermission(paymentRead);
+        app.MapGet("/api/payment-requests/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.PaymentRequest, id, ct))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(paymentRead);
+        string[] sundryRead = [Permissions.Purchase.SundryView, Permissions.Purchase.SundryCreate, Permissions.Purchase.SundryApprove];
+        app.MapPost("/api/sundry-expense-sheets/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+            {
+                var file = await s.DocumentPrintAsync(
+                    DocumentTypes.SundryExpenseSheet, id, kind == "download" ? PrintKind.Download : PrintKind.Print, null, ct);
+                return Results.File(file.Content, "application/pdf", file.FileName);
+            })
+            .WithTags("In phiếu")
+            .RequireAnyPermission(sundryRead);
+        app.MapGet("/api/sundry-expense-sheets/{id:guid}/prints",
+                (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.SundryExpenseSheet, id, ct))
+            .WithTags("In phiếu")
+            .RequireAnyPermission(sundryRead);
+
         app.MapGet("/api/rfqs/{id:guid}/prints",
                 (Guid id, IDocumentPdfService s, CancellationToken ct) => s.DocumentPrintsAsync(DocumentTypes.RequestForQuotation, id, ct))
             .WithTags("In phiếu")

@@ -1,4 +1,4 @@
-using Proc.Application.Purchasing;
+﻿using Proc.Application.Purchasing;
 using Proc.Domain.Common;
 
 namespace Proc.Infrastructure.Printing;
@@ -21,28 +21,33 @@ public static partial class CuvtPrintForms
         var is5A = payment.Form == "5A";
         var transfer = payment.Method == "BankTransfer";
         var spent = order.PastNet + orderNet;
+        // Ô "Kính trình" hai dòng nguyên văn sheet (5A "CT.HĐQT-TỔNG GIÁM ĐỐC", 5B "CHỦ TỊCH HĐQT-TỔNG GIÁM ĐỐC") + tên công ty IN HOA.
         var info = new List<CuvtInfoLine>
         {
-            new("Kính trình", $"Chủ tịch HĐQT – Tổng Giám đốc {order.CompanyName}"),
+            new("Kính trình", $"{(is5A ? "CT.HĐQT-TỔNG GIÁM ĐỐC" : "CHỦ TỊCH HĐQT-TỔNG GIÁM ĐỐC")}\n{order.CompanyName.ToUpper(Vi)}", true,
+                CuvtInfoKind.Addressee),
             is5A ? new("Tên công trình", order.ProjectName ?? "") : new("Tên hàng hóa", order.GoodsTitle ?? ""),
             new("Phòng ban đề xuất", order.DepartmentName ?? "Chưa khai báo"),
             new("Định mức/dự trù ngân sách", order.BudgetAmount is { } b ? Vnd(b) : "Chưa khai báo", order.BudgetAmount is not null),
             new("Lũy kế số tiền đã mua", Vnd(spent), true),
             new("Số tiền còn lại", order.BudgetAmount is { } bb ? Vnd(bb - spent) : "Chưa khai báo", order.BudgetAmount is not null),
-            new("Tên NCC", payment.SupplierName ?? ""),
-            new("Địa chỉ", payment.SupplierAddress ?? ""),
+            new("Tên NCC", payment.SupplierName ?? "", true, CuvtInfoKind.Party),
+            new("Địa chỉ", payment.SupplierAddress ?? "", false, CuvtInfoKind.Party),
         };
         if (transfer)
         {
-            info.Add(new("Tên ngân hàng", string.Join(" – ", new[] { payment.BankName, payment.BankBranch }.Where(x => !string.IsNullOrWhiteSpace(x)))));
+            info.Add(new("Tên ngân hàng", string.Join(" – ", new[] { payment.BankName, payment.BankBranch }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                false, CuvtInfoKind.PartyAlert));
             info.Add(new("Số tài khoản",
-                payment.BankAccountNumber + (string.IsNullOrWhiteSpace(payment.BankAccountName) ? "" : $" ({payment.BankAccountName.Trim()})")));
+                payment.BankAccountNumber + (string.IsNullOrWhiteSpace(payment.BankAccountName) ? "" : $" ({payment.BankAccountName.Trim()})"), false,
+                CuvtInfoKind.PartyAlert));
         }
 
+        // Tiêu đề bảng nguyên văn sheet: "CHỨNG TỪ" (Ngày, Số hóa đơn), "NỘI DUNG THANH TOÁN", "SỐ TIỀN".
         var columns = new List<CuvtColumn>
         {
-            new("Ngày", 24, Group: "Chứng từ", Center: true), new("Số hóa đơn", 32, Group: "Chứng từ", Center: true),
-            new("Nội dung thanh toán", 92), new("Số tiền", 38, true),
+            new("Ngày", 24, Group: "CHỨNG TỪ", Center: true), new("Số hóa đơn", 32, Group: "CHỨNG TỪ", Center: true),
+            new("NỘI DUNG THANH TOÁN", 92), new("SỐ TIỀN", 38, true),
         };
         var rows = payment.Lines.OrderBy(l => l.LineNo).Select(l => new[]
         {
@@ -52,18 +57,25 @@ public static partial class CuvtPrintForms
         var extra = new List<CuvtExtraRow>
         {
             new("Số tiền giảm trừ" + (string.IsNullOrWhiteSpace(payment.DeductionReason) ? "" : $" ({payment.DeductionReason.Trim()})"), 3,
-                [new(Money(payment.DeductionAmount))]),
-            new("Số tiền còn lại", 3, [new(Money(payment.PayableAmount))], 15, true),
+                [new(Money(payment.DeductionAmount))], Bold: true),
+            new("Số tiền còn lại", 3, [new(Money(payment.PayableAmount))], 15, true, true),
         };
-        var after = new List<CuvtTextLine> { new("Bằng chữ", VietnameseNumberText.ToVndWords(payment.PayableAmount) + " ./.") };
-        if (payment.PaidDate is { } paid)
-            after.Add(new("Đã chi", $"ngày {paid:dd/MM/yyyy}" + (string.IsNullOrWhiteSpace(payment.PaymentNote) ? "" : $" – {payment.PaymentNote.Trim()}")));
+        // Như sheet: chỉ dòng "Bằng chữ" đậm nghiêng dưới bảng (tình trạng đã chi xem trên phần mềm, không in lên phiếu đề nghị).
+        var after = new List<CuvtTextLine> { new("Bằng chữ", VietnameseNumberText.ToVndWords(payment.PayableAmount) + " ./.", true, true) };
 
         return new CuvtForm(
-            payment.Form, transfer ? "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN" : "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", is5A ? Subtitles1A : Subtitles1B,
+            payment.Form, transfer ? "PHIẾU ĐỀ NGHỊ THANH TOÁN CHUYỂN KHOẢN" : "PHIẾU ĐỀ NGHỊ THANH TOÁN TIỀN MẶT", is5A ? Subtitles1A : Subtitles5B,
             order.CompanyName, payment.No, payment.Date, false, StatusNote(payment.Status), info, columns, rows, 3, [Money(payment.TotalAmount)],
             (null, null), payment.Note, Signers("Người lập", payment.CreatedByName, payment.Approvals), extra, "Tổng cộng", after);
     }
+
+    /// <summary>Phụ đề mẫu 5B nguyên văn sheet "5B.ĐN TTTM / TTCK" – khác 1B: không có chữ "NHÓM", "SỬA-CHỮA" có gạch nối (lát IN2d).</summary>
+    private static readonly string[] Subtitles5B =
+    [
+        "VẬT TƯ TIÊU HAO, VẬT TƯ CÓ ĐỊNH MỨC CỐ ĐỊNH SỬ DỤNG HÀNG THÁNG.",
+        "DV SỬ DỤNG MỘT LẦN, SỬA-CHỮA MÁY MÓC THIẾT BỊ, MUA TÀI SẢN",
+        "VẬT TƯ CỦA CÔNG TRÌNH PHÁT SINH CHƯA CÓ DỰ TOÁN",
+    ];
 
     /// <summary>
     /// Phụ đề mẫu 1C – theo file giả lập "docs/CUVT nhóm C 13.11.2026 (giả lập).xlsx" (lát Y11c); sửa khi người dùng gửi mẫu thật.

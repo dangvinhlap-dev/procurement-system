@@ -209,8 +209,12 @@ PO đặt cho NCC ngoài có tài khoản Portal (02 – Tài khoản Portal):
 - **Duyệt**: Gửi duyệt → GĐ khối (của bộ phận đặt hàng) → TP TC-NQ-KT → GĐ TC-NQ-KT → Chủ tịch (khi đã áp "Cấu hình duyệt mẫu" CUVT ở Quy trình
   duyệt). Duyệt xong **kế toán** bấm **Ghi Đã chi** (ngày chi, số UNC / phiếu chi) – phiếu chuyển "Đã chi", không hủy được nữa.
 - Mỗi XNH chỉ ở một đề nghị chưa hủy; khi đã ở đề nghị thì không sửa hóa đơn trên XNH được – hủy đề nghị (khi chưa chi) rồi sửa.
-- **In phiếu** theo mẫu "Phiếu đề nghị thanh toán tiền mặt / chuyển khoản" 5A/5B: định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B
-  của đơn; bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ, khối ký theo chuỗi duyệt.
+- **Xem đề nghị thanh toán** (Ctrl+P – từ lát IN2 thay nút In phiếu): hộp thoại xem trang in **giữ nguyên sheet Excel** "Phiếu đề nghị thanh
+  toán tiền mặt / chuyển khoản" 5A/5B (theo hình thức của phiếu): ô "Kính trình", định mức, lũy kế đã mua, còn lại như bảng theo dõi 4A/4B của
+  đơn; tên NCC, địa chỉ (chuyển khoản thêm ngân hàng, số tài khoản); bảng chứng từ, giảm trừ, số tiền còn lại, bằng chữ. Khối ký nguyên văn
+  sheet (Người đề xuất · GĐK đề nghị · TP. TC-NQ-KT · GĐ Phòng TC-NQ-KT, ô Chủ tịch HĐQT/TGĐ cả hàng) có **chữ ký** người đã duyệt; **In…** /
+  **Tải PDF** tính một lần in. Bảng kê 2C và đề nghị 1C (mẫu giả lập) cũng có nút xem (**Xem bảng kê**, **Xem đề nghị thanh toán**) với chữ ký,
+  góc thông tin, đếm lần in.
 
 ### Bảng kê chi phí tạp vụ 2C (BKT – từ bản 0.27.0, lát Y11a)
 

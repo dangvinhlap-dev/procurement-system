@@ -72,24 +72,27 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
     }
 
     /// <inheritdoc />
-    public async Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var sheet = await _sundries.GetAsync(id, cancellationToken);
-        var company = await CompanyAsync(cancellationToken);
-        return new PdfFile($"{sheet.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.SundryExpenseSheet(sheet, company.Name)));
-    }
+    public Task<PdfFile> SundryExpenseSheetAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2d: mẫu giả lập 2C – khuôn chung kèm chữ ký người duyệt, logo, góc thông tin hệ thống (bản xem không ghi nhật ký in).
+        RenderSundrySheetAsync(id, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken)
+    public Task<PdfFile> PaymentRequestAsync(Guid id, CancellationToken cancellationToken) =>
+        // Lát IN2d: bản xem 5A/5B giữ nguyên sheet (1C giả lập: khuôn chung) có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderPaymentSheetAsync(id, null, cancellationToken);
+
+    /// <summary>
+    /// Nội dung phiếu đề nghị thanh toán: 5A/5B theo khung chi phí của PO (lát Y8); 1C tạp vụ (không PO) theo bảng kê (lát Y11b). Đọc đề nghị qua
+    /// dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
+    /// </summary>
+    /// <param name="id">Đề nghị thanh toán.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Đề nghị và nội dung in.</returns>
+    private async Task<(PaymentRequestDto Payment, CuvtForm Form)> PaymentFormAsync(Guid id, CancellationToken cancellationToken)
     {
-        // Đọc đề nghị qua dịch vụ (quyền xem đề nghị); PO đọc thẳng qua filter công ty – người duyệt, kế toán không cần quyền xem PO để in.
         var payment = await _payments.GetAsync(id, cancellationToken);
         if (payment.PurchaseOrderId is null)
-        {
-            // 1C tạp vụ (lát Y11b): không có PO – in theo bảng kê.
-            var sundry = CuvtPrintForms.SundryPaymentRequest(payment, (await CompanyAsync(cancellationToken)).Name);
-            return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(sundry));
-        }
+            return (payment, CuvtPrintForms.SundryPaymentRequest(payment, (await CompanyAsync(cancellationToken)).Name));
 
         var po = await _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines).SingleAsync(o => o.Id == payment.PurchaseOrderId, cancellationToken);
         var itemIds = po.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -100,8 +103,7 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
             po.Lines.Select(l => l.SourcePrLineId).OfType<Guid>().ToList(), names, cancellationToken);
         var context = new PoPrintContext(company.Name, frame.ProjectName, frame.DepartmentName, frame.GoodsTitle, frame.Budget, frame.PastNet,
             frame.PastVat, null, new Dictionary<Guid, string?>(), new Dictionary<Guid, decimal>());
-        var form = CuvtPrintForms.PaymentRequest(payment, context, po.TotalAmount);
-        return new PdfFile($"{payment.No}.pdf", CuvtFormLayout.Render(form));
+        return (payment, CuvtPrintForms.PaymentRequest(payment, context, po.TotalAmount));
     }
 
     /// <inheritdoc />

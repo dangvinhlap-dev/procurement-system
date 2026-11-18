@@ -347,7 +347,19 @@ function PurchasePaymentRequestPage() {
         title="Đề nghị thanh toán"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PaymentRequest', id: doc?.id }}
-        printPath={doc ? `/api/payment-requests/${doc.id}/pdf` : undefined}
+        // "Xem đề nghị thanh toán" (lát IN2d, người dùng yêu cầu 18/11/2026): trang in giữ nguyên sheet 5A/5B tiền mặt / chuyển khoản, chữ ký người
+        // đã duyệt, In / Tải PDF đếm lần in.
+        printPreview={
+          doc
+            ? {
+                label: 'Xem đề nghị thanh toán',
+                title: `Xem đề nghị thanh toán ${doc.no} – mẫu ${doc.form}`,
+                viewPath: `/api/payment-requests/${doc.id}/pdf`,
+                printPath: `/api/payment-requests/${doc.id}/print`,
+                printsPath: `/api/payment-requests/${doc.id}/prints`,
+              }
+            : undefined
+        }
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={payment.isLoading}
@@ -676,7 +688,18 @@ function SundryPaymentRequestPage() {
         title="Đề nghị thanh toán tổng hợp tạp vụ (1C)"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'PaymentRequest', id: doc?.id }}
-        printPath={doc ? `/api/payment-requests/${doc.id}/pdf` : undefined}
+        // Mẫu 1C còn giả lập: khuôn chung kèm chữ ký người duyệt, góc thông tin; In / Tải PDF đếm lần in (lát IN2d).
+        printPreview={
+          doc
+            ? {
+                label: 'Xem đề nghị thanh toán',
+                title: `Xem đề nghị thanh toán ${doc.no} – mẫu 1C`,
+                viewPath: `/api/payment-requests/${doc.id}/pdf`,
+                printPath: `/api/payment-requests/${doc.id}/print`,
+                printsPath: `/api/payment-requests/${doc.id}/prints`,
+              }
+            : undefined
+        }
         status={status}
         meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
         loading={payment.isLoading}

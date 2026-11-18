@@ -56,6 +56,20 @@ public sealed partial class DocumentPdfService
         ],
         new("", "Chủ tịch HĐQT/TGĐ", "(Ký duyệt)"));
 
+    /// <summary>
+    /// Khối ký 5A/5B nguyên văn ảnh trong sheet: Người đề xuất · GĐK đề nghị (GĐ khối của phiếu) · TP. TC-NQ-KT · GĐ Phòng TC-NQ-KT, mỗi ô "(Ký, ghi rõ
+    /// họ tên)"; ô CHỦ TỊCH HĐQT/TGĐ (Duyệt đồng ý) cả hàng – chuỗi duyệt 5A/5B (design.md mục 19.2).
+    /// </summary>
+    public static readonly SheetSignSpec Sign5 = new(
+        SheetSign.Heading,
+        new("", "Người đề xuất", "(Ký, ghi rõ họ tên)"),
+        [
+            new("DivisionDirector", "GĐK đề nghị", "(Ký, ghi rõ họ tên)"),
+            new("TPTCKT", "TP. TC-NQ-KT", "(Ký, ghi rõ họ tên)"),
+            new("GDTCKT", "GĐ Phòng TC-NQ-KT", "(Ký, ghi rõ họ tên)"),
+        ],
+        new("", "CHỦ TỊCH HĐQT/TGĐ", "(Duyệt đồng ý)"));
+
     /// <inheritdoc />
     public Task<PdfFile> DocumentPrintAsync(string docType, Guid id, PrintKind kind, string? form, CancellationToken cancellationToken) => docType switch
     {
@@ -63,6 +77,8 @@ public sealed partial class DocumentPdfService
         DocumentTypes.PurchaseOrder => RenderPurchaseOrderSheetAsync(id, kind, cancellationToken),
         DocumentTypes.PurchaseSummary => RenderSummarySheetAsync(id, kind, cancellationToken),
         DocumentTypes.RequestForQuotation => RenderRfqSheetAsync(id, form, kind, cancellationToken),
+        DocumentTypes.PaymentRequest => RenderPaymentSheetAsync(id, kind, cancellationToken),
+        DocumentTypes.SundryExpenseSheet => RenderSundrySheetAsync(id, kind, cancellationToken),
         _ => throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu."),
     };
 
@@ -83,6 +99,12 @@ public sealed partial class DocumentPdfService
                 break;
             case DocumentTypes.RequestForQuotation:
                 await _rfqs.GetAsync(id, cancellationToken);
+                break;
+            case DocumentTypes.PaymentRequest:
+                await _payments.GetAsync(id, cancellationToken);
+                break;
+            case DocumentTypes.SundryExpenseSheet:
+                await _sundries.GetAsync(id, cancellationToken);
                 break;
             default:
                 throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu.");
@@ -114,6 +136,71 @@ public sealed partial class DocumentPdfService
         var pages = forms.Select(f => new SheetPage(
             f, f.FormNo switch { "3A" => CuvtSheetLayout.Sheet3A, "3a" => CuvtSheetLayout.Sheet3a, _ => CuvtSheetLayout.Sheet3B }, sign, stamp)).ToList();
         return new PdfFile($"{rfq.No}.pdf", CuvtSheetLayout.RenderMany(pages, logo));
+    }
+
+    /// <summary>
+    /// Đề nghị thanh toán: 5A/5B giữ nguyên sheet tiền mặt / chuyển khoản theo hình thức của phiếu; 1C tạp vụ (mẫu giả lập) in khuôn chung kèm chữ ký
+    /// người duyệt, logo, góc thông tin. <paramref name="kind"/> null = bản xem.
+    /// </summary>
+    private async Task<PdfFile> RenderPaymentSheetAsync(Guid id, PrintKind? kind, CancellationToken cancellationToken)
+    {
+        var (payment, form) = await PaymentFormAsync(id, cancellationToken);
+        var createdBy = await _db.PaymentRequests.AsNoTracking().Where(p => p.Id == id).Select(p => p.CreatedBy).SingleAsync(cancellationToken);
+        if (payment.PurchaseOrderId is null)
+            return await RenderGenericAsync(form, DocumentTypes.PaymentRequest, id, payment.Status, createdBy, kind, cancellationToken);
+
+        var sign = await SignBlockAsync(Sign5, DocumentTypes.PaymentRequest, id, payment.Status, createdBy, payment.CreatedByName, cancellationToken);
+        var (logo, stamp) = await DecorAsync(DocumentTypes.PaymentRequest, id, payment.No, payment.Status, kind, sign.ApprovalStatus, cancellationToken);
+        var transfer = payment.Method == "BankTransfer";
+        var spec = (form.FormNo == "5A", transfer) switch
+        {
+            (true, true) => CuvtSheetLayout.Sheet5ATransfer,
+            (true, false) => CuvtSheetLayout.Sheet5ACash,
+            (false, true) => CuvtSheetLayout.Sheet5BTransfer,
+            _ => CuvtSheetLayout.Sheet5BCash,
+        };
+        return new PdfFile($"{payment.No}.pdf", CuvtSheetLayout.Render(form, spec, logo, sign, stamp));
+    }
+
+    /// <summary>Bảng kê chi phí tạp vụ 2C (mẫu giả lập) – khuôn chung kèm chữ ký người duyệt, logo, góc thông tin; <paramref name="kind"/> null = bản xem.</summary>
+    private async Task<PdfFile> RenderSundrySheetAsync(Guid id, PrintKind? kind, CancellationToken cancellationToken)
+    {
+        var sheet = await _sundries.GetAsync(id, cancellationToken);
+        var company = await CompanyAsync(cancellationToken);
+        var form = CuvtPrintForms.SundryExpenseSheet(sheet, company.Name);
+        var createdBy = await _db.SundryExpenseSheets.AsNoTracking().Where(s => s.Id == id).Select(s => s.CreatedBy).SingleAsync(cancellationToken);
+        return await RenderGenericAsync(form, DocumentTypes.SundryExpenseSheet, id, sheet.Status, createdBy, kind, cancellationToken);
+    }
+
+    /// <summary>
+    /// Mẫu giả lập 1C/2C (chưa có sheet thật – design.md 19.3): khuôn chung <see cref="CuvtFormLayout"/>, ô ký theo chuỗi duyệt (chức danh = tên vai
+    /// trò của bước) có chữ ký theo phiên bản, logo, góc thông tin hệ thống, dấu chìm, nhật ký in như các mẫu giữ nguyên sheet.
+    /// </summary>
+    private async Task<PdfFile> RenderGenericAsync(
+        CuvtForm form, string docType, Guid id, string status, Guid? createdBy, PrintKind? kind, CancellationToken cancellationToken)
+    {
+        var data = await SignDataAsync(docType, id, createdBy, cancellationToken);
+        var draft = status == "Draft" || data.SubmittedAt is null;
+        var signers = new List<CuvtSigner>
+        {
+            new(form.Signers.FirstOrDefault()?.Title ?? "Người lập", data.FirstName ?? form.Signers.FirstOrDefault()?.Name,
+                draft ? "Chưa gửi duyệt"
+                : data.SubmittedByOther is { } other ? $"Gửi duyệt bởi {other} {SheetSign.Time(data.SubmittedAt)}"
+                : $"Gửi duyệt {SheetSign.Time(data.SubmittedAt)}",
+                Signature: draft ? null : data.FirstSignature),
+        };
+        signers.AddRange(data.Steps.OrderBy(s => s.Stage).ThenBy(s => s.Level).Select(s => s.Status switch
+        {
+            "Approved" when !draft => new CuvtSigner(s.RoleName ?? $"Cấp {s.Level}", s.ActorName,
+                s.Signature is null ? $"Đã duyệt điện tử {SheetSign.Time(s.ActedAt)}" : $"Đã duyệt {SheetSign.Time(s.ActedAt)}", Signature: s.Signature),
+            "Rejected" when !draft => new CuvtSigner(s.RoleName ?? $"Cấp {s.Level}", s.ActorName, $"Từ chối {SheetSign.Time(s.ActedAt)}"),
+            _ => new CuvtSigner(s.RoleName ?? $"Cấp {s.Level}", null, "Chưa duyệt"),
+        }));
+        // Tình trạng phê duyệt cùng cách viết với các mẫu giữ nguyên sheet (khối ký tạm không có ô cố định – mọi bước vào ô phát sinh).
+        var approval = SheetSign.Build(new SheetSignSpec(SheetSign.Heading, new("", "Người lập", ""), [], new("", "Cấp cao nhất", "")), status,
+            data.FirstName, data.SubmittedAt, null, data.SubmittedByOther, data.Steps).ApprovalStatus;
+        var (logo, stamp) = await DecorAsync(docType, id, form.No, status, kind, approval, cancellationToken);
+        return new PdfFile($"{form.No}.pdf", CuvtFormLayout.Render(form with { Signers = signers }, new CuvtDecor(logo, stamp)));
     }
 
     /// <summary>Bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>
@@ -235,6 +322,23 @@ public sealed partial class DocumentPdfService
     private async Task<SheetSignBlock> SignBlockAsync(
         SheetSignSpec spec, string docType, Guid id, string status, Guid? firstUserId, string? firstFallbackName, CancellationToken cancellationToken)
     {
+        var data = await SignDataAsync(docType, id, firstUserId, cancellationToken);
+        return SheetSign.Build(
+            spec, status, data.FirstName ?? firstFallbackName, data.SubmittedAt, data.FirstSignature, data.SubmittedByOther, data.Steps);
+    }
+
+    /// <summary>Số liệu ô ký: bước duyệt (đã gồm tên in và chữ ký), người lập (tên, chữ ký lúc gửi), lúc gửi, người gửi thay.</summary>
+    /// <param name="FirstName">Tên người lập kèm danh xưng; null khi không đọc được tài khoản.</param>
+    /// <param name="FirstSignature">Chữ ký người lập lúc gửi duyệt – chỉ khi chính người lập gửi.</param>
+    /// <param name="SubmittedAt">Lúc gửi duyệt của lượt hiện tại.</param>
+    /// <param name="SubmittedByOther">Người gửi duyệt khi khác người lập.</param>
+    /// <param name="Steps">Bước duyệt của lượt hiện tại (đã bỏ bước "Skipped").</param>
+    private sealed record SignData(
+        string? FirstName, SheetImage? FirstSignature, DateTimeOffset? SubmittedAt, string? SubmittedByOther, IReadOnlyList<SheetApprovalStep> Steps);
+
+    /// <summary>Đọc bước duyệt của lượt gần nhất, tên in (danh xưng + họ tên, "(thay …)"), chữ ký có hiệu lực lúc duyệt / gửi.</summary>
+    private async Task<SignData> SignDataAsync(string docType, Guid id, Guid? firstUserId, CancellationToken cancellationToken)
+    {
         var all = await _db.ApprovalSteps.AsNoTracking().Where(s => s.DocType == docType && s.DocumentId == id).ToListAsync(cancellationToken);
         var round = all.Count == 0 ? 0 : all.Max(s => s.Round);
         var steps = all.Where(s => s.Round == round && s.Status != ApprovalStepStatus.Skipped).ToList();
@@ -266,8 +370,6 @@ public sealed partial class DocumentPdfService
             s.OnBehalfOf is { } o ? $"{Display(s.ActedBy)} (thay {users.GetValueOrDefault(o)?.FullName})" : Display(s.ActedBy),
             s.ActedAt, s.Status == ApprovalStepStatus.Approved ? SignatureAt(s.ActedBy, s.ActedAt) : null)).ToList();
         var byOther = submittedBy is { } sb && firstUserId is { } fu && sb != fu ? users.GetValueOrDefault(sb)?.FullName : null;
-        return SheetSign.Build(
-            spec, status, Display(firstUserId) ?? firstFallbackName,
-            submittedAt, byOther is null ? SignatureAt(firstUserId, submittedAt) : null, byOther, printSteps);
+        return new SignData(Display(firstUserId), byOther is null ? SignatureAt(firstUserId, submittedAt) : null, submittedAt, byOther, printSteps);
     }
 }
