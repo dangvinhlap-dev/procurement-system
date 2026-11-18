@@ -1,4 +1,4 @@
-using Proc.Domain.Organization;
+﻿using Proc.Domain.Organization;
 using Proc.Domain.Purchasing;
 
 namespace Proc.Domain.Tests.Purchasing;
@@ -151,11 +151,12 @@ public class ApprovalRuleTemplateTests
         foreach (var group in rules.GroupBy(r => r.DocType))
             Assert.Equal(Enumerable.Range(1, group.Count()), group.Select(r => r.Level).Order());
 
-        // Mục 19.3 (lát Y3c – Q6): 1B có Thủ kho + TP HC; 1A (PRA) bỏ TP HC; DV (PRS) bỏ Thủ kho; vượt dự toán (PRE); 3a/3A/3B; 4A/4B.
+        // Mục 19.3 (lát Y3c – Q6): 1B có Thủ kho + TP HC; 1A (PRA) có TP HC từ lát IN1 (người dùng chốt 18/11/2026 – mục 20.4 IN1-4);
+        // DV (PRS) bỏ Thủ kho; vượt dự toán (PRE); 3a/3A/3B; 4A/4B.
         static IEnumerable<string> Chain(IEnumerable<ApprovalRuleTemplate> rs, string docType) =>
             rs.Where(r => r.DocType == docType).OrderBy(r => r.Level).Select(r => r.RoleCode ?? r.Kind.ToString());
         Assert.Equal(["Storekeeper", "DepartmentHead", "TPCUVT", "TPTCKT", "TPHC", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PR"));
-        Assert.Equal(["Storekeeper", "DepartmentHead", "TPCUVT", "TPTCKT", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PRA"));
+        Assert.Equal(["Storekeeper", "DepartmentHead", "TPCUVT", "TPTCKT", "TPHC", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PRA"));
         Assert.Equal(["DepartmentHead", "TPCUVT", "TPTCKT", "TPHC", "DivisionDirector", "PHOCTUBCL", "CHUTICH"], Chain(rules, "PRS"));
         Assert.Equal(["GDTCKT"], Chain(rules, "PRE"));
         Assert.Equal(["TPCUVT", "TPTCKT", "GDTCKT", "PHOCTUBCL", "CHUTICH"], Chain(rules, "RFQ"));

@@ -5,7 +5,7 @@ import { signatureColumns } from '../../components/Signature/signatureColumns'
 import { useSignatureActions } from '../../components/Signature/useSignatureActions'
 
 /**
- * Màn hình CKY – "Chữ ký của tôi" (lát IN1 – design.md mục 20.3, ui-style.md mục 5s): mỗi người tự tải chữ ký (ảnh chụp / scan trên giấy,
+ * Màn hình CKY – "Chữ ký của tôi" (lát IN1 – design.md mục 20.4, ui-style.md mục 5s): mỗi người tự tải chữ ký (ảnh chụp / scan trên giấy,
  * phần mềm tách nền, cắt sát, đổi màu mực) để in vào ô ký của phiếu mình gửi duyệt / duyệt. Khuôn `ListPage` + `DataGrid`: lưới là lịch sử
  * phiên bản; thông báo đầu trang là chữ ký đang dùng trên ô ký thử đúng cỡ in. Thay chữ ký mới chỉ có hiệu lực từ lúc thay – phiếu đã duyệt
  * trước đó vẫn in chữ ký cũ (người dùng chốt 18/11/2026).

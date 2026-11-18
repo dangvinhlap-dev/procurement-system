@@ -1,4 +1,4 @@
-# Design system – phong cách ERP desktop cổ điển
+﻿# Design system – phong cách ERP desktop cổ điển
 
 > **Chính thức từ 01/11/2026** (người dùng duyệt bản thử). Thay cho `docs/ui-guide.md` (SAP Fiori Horizon) – tài liệu đó chỉ còn để đối chiếu
 > lịch sử. Toàn bộ màn hình đã chuyển qua khung dùng chung (mục 8); màn hình mới làm theo CLAUDE.md mục 9;
@@ -359,6 +359,28 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - AGT thêm nút **Tạo khóa dịch vụ…** (icon chìa khóa vàng) và cột "Khóa dịch vụ" (…4 ký tự cuối); hộp thoại như "Tạo khóa", chữ theo loại khóa.
 - REL: phiếu Đang UAT / UAT đạt mà TEST đang chạy bản của phiếu có nút **Quay về bản cũ trên TEST…** (icon quay lại đỏ), hộp thoại như quay về PROD
   thêm câu "phiếu trở lại Đã nhận".
+
+## 5s. Xem đề nghị, chữ ký người dùng, logo công ty (lát IN1, 18/11/2026 – design.md mục 20.4)
+
+- **Xem đề nghị**: `DocumentForm` prop `printPreview` – nút chữ có icon mắt (vàng) thay nút "In phiếu" (Ctrl+P vẫn mở). Hộp thoại
+  `PrintPreviewModal` (`components/PrintPreview/`) rộng 940px: hàng nút **In…** (icon máy in), **Tải PDF** (icon tải về), **Làm mới**, dòng chữ mờ
+  "Đã in n lần · lần gần nhất … – người" / "Chưa in lần nào" sát phải, **Đóng** (đỏ); vùng xem nền `--erp-print-viewer-bg`, viền 1px, cao 72vh,
+  trang PDF trong khung (ẩn thanh công cụ trình xem PDF – in qua nút In để đếm lần in). In bằng khung ẩn `.erp-print-frame`.
+- **Trang in** (PDF, không phải màn hình): giữ nguyên sheet biểu mẫu (mục 20.4 IN1-1); góc dưới phải mọi trang khung viền mảnh, chữ 9 phông không
+  chân (giờ in, người in, số phiếu, lần in, trang, tình trạng phê duyệt); dấu chìm đỏ nhạt nghiêng khi chưa duyệt.
+- **CKY – Chữ ký của tôi**: khuôn `ListPage` + `DataGrid`, một tab "LỊCH SỬ CHỮ KÝ" (`viewTabs`), không có "Tạo mới". Thông báo đầu trang
+  `SignatureCurrent`: ô ký thử đúng cỡ in (`.erp-signature-sample` – rộng 46 mm, viền đen, nền `--erp-paper`, phông có chân như bản in) + đèn ô
+  vuông kèm chữ "Đang dùng chữ ký phiên bản n – từ …" (xanh) / "Chưa có chữ ký đang dùng" (vàng). Lưới: Phiên bản, Tình trạng (đèn: Đang dùng
+  xanh, Hết hiệu lực trung tính), Hiệu lực từ / Đến, Người tải lên, Cách tải, Lý do, Ngừng dùng. Nút **Tải chữ ký mới…** (icon tải lên xanh),
+  **Ngừng dùng chữ ký…** (icon dừng đỏ, hỏi lại).
+- Hộp thoại **Tải chữ ký** 860px: ba khung cùng hàng (màn hình hẹp một cột) có dải tiêu đề `--erp-grid-head`: Ảnh gốc · Sau khi phần mềm xử lý
+  (nền ô vuông `--erp-check-tile` để thấy phần trong suốt, viền gạch đỏ quanh ảnh đã cắt) · Xem thử trên ô ký; hàng tùy chọn Màu mực (Xanh / Đen
+  / Giữ màu gốc), thanh trượt Tách nền 1–10, nút xoay trái / phải; ô **Lý do tải thay** (dấu * đỏ) khi làm thay người khác; dòng gợi ý chữ mờ;
+  chân hộp thoại **Chọn ảnh…** (icon thư mục) trái – **Bỏ qua** (đỏ), **Lưu chữ ký** (xanh, khóa khi chưa có ảnh / thiếu lý do) phải.
+- Ngăn kéo người dùng: ô **Danh xưng** sau Chức vụ; tab **CHỮ KÝ** (`lazy`, chỉ khi có quyền) – khối cảnh báo viền `--erp-light-yellow` "Bạn đang quản
+  lý chữ ký của …", ô ký thử, lưới phiên bản cao 200px, nút **Tải chữ ký thay…** / **Ngừng dùng chữ ký…**.
+- Ngăn kéo công ty: tab **LOGO** (`lazy`) – khung ảnh 160 × 120px viền 1px nền `--erp-paper`, dòng gợi ý, nút **Tải logo… / Thay logo…** (xanh),
+  **Xóa logo** (đỏ, hỏi lại).
 
 ## 5a. Tab
 

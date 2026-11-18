@@ -3,7 +3,7 @@ import { loginViaApi } from './helpers.ts'
 import { api, chooseOption, createLeafCategory, pickOption, switchCompany, unique } from './inventoryHelpers.ts'
 
 /**
- * Lát IN1 (design.md mục 20.3): "Chữ ký của tôi" (CKY) – chọn ảnh chụp chữ ký, phần mềm tách nền / cắt sát / đổi màu mực, lưu thành phiên bản
+ * Lát IN1 (design.md mục 20.4): "Chữ ký của tôi" (CKY) – chọn ảnh chụp chữ ký, phần mềm tách nền / cắt sát / đổi màu mực, lưu thành phiên bản
  * đang dùng; "Xem đề nghị" trên đề nghị mua – hộp thoại xem trang in theo mẫu 1A/1B, Tải PDF tính một lần in.
  */
 

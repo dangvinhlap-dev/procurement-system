@@ -13,7 +13,7 @@ public enum PrintKind
 }
 
 /// <summary>
-/// Nhật ký in chứng từ (lát IN1 – design.md mục 20.3): mỗi lần In / Tải PDF một dòng, số lần in đánh liên tục theo phiếu để in vào góc dưới
+/// Nhật ký in chứng từ (lát IN1 – design.md mục 20.4): mỗi lần In / Tải PDF một dòng, số lần in đánh liên tục theo phiếu để in vào góc dưới
 /// phải "Lần in thứ n". Chỉ xem trên màn hình không ghi. Bảng chỉ thêm – không sửa, không xóa (như AuditLog).
 /// </summary>
 public sealed class DocumentPrintLog : Entity, ICompanyOwned

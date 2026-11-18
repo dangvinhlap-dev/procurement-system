@@ -76,7 +76,7 @@ public sealed class AppraisalOpinionConfiguration : IEntityTypeConfiguration<App
 }
 
 /// <summary>
-/// Cấu hình bảng UserSignature – chữ ký người dùng theo phiên bản (lát IN1, design.md mục 20.3). Mỗi người một dãy số phiên bản; tra chữ ký lúc
+/// Cấu hình bảng UserSignature – chữ ký người dùng theo phiên bản (lát IN1, design.md mục 20.4). Mỗi người một dãy số phiên bản; tra chữ ký lúc
 /// in theo (UserId, ValidFrom).
 /// </summary>
 public sealed class UserSignatureConfiguration : IEntityTypeConfiguration<UserSignature>
@@ -97,7 +97,7 @@ public sealed class UserSignatureConfiguration : IEntityTypeConfiguration<UserSi
 }
 
 /// <summary>
-/// Cấu hình bảng DocumentPrintLog – nhật ký in (lát IN1, design.md mục 20.3). Lần in thứ n duy nhất theo phiếu: hai người bấm In cùng lúc thì
+/// Cấu hình bảng DocumentPrintLog – nhật ký in (lát IN1, design.md mục 20.4). Lần in thứ n duy nhất theo phiếu: hai người bấm In cùng lúc thì
 /// một người lấy số kế tiếp ở lần thử lại.
 /// </summary>
 public sealed class DocumentPrintLogConfiguration : IEntityTypeConfiguration<DocumentPrintLog>

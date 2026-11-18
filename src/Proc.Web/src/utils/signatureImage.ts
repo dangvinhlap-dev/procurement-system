@@ -1,5 +1,5 @@
 /**
- * Xử lý ảnh chữ ký / logo ngay trên trình duyệt trước khi tải lên (lát IN1 – design.md mục 20.3): không cần thư viện ảnh trả phí, máy chủ chỉ kiểm
+ * Xử lý ảnh chữ ký / logo ngay trên trình duyệt trước khi tải lên (lát IN1 – design.md mục 20.4): không cần thư viện ảnh trả phí, máy chủ chỉ kiểm
  * định dạng, cỡ. Chữ ký chụp / scan trên giấy trắng được:
  * 1. Xoay (nếu chụp ngang), thu về tối đa 1600 điểm cạnh dài cho nhanh.
  * 2. Tách nền: độ sáng nền = phân vị 90 % độ sáng các điểm ảnh (giấy hơi xám, chụp tối vẫn đúng); điểm tối hơn ngưỡng (nền − độ lệch) là nét mực,

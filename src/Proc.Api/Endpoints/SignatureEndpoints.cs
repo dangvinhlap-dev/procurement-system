@@ -9,7 +9,7 @@ using Proc.Domain.Organization;
 namespace Proc.Api.Endpoints;
 
 /// <summary>
-/// Chữ ký người dùng, logo công ty, In / Tải PDF đề nghị mua có nhật ký in (lát IN1 – design.md mục 20.3). Chữ ký của mình: chỉ cần đăng nhập
+/// Chữ ký người dùng, logo công ty, In / Tải PDF đề nghị mua có nhật ký in (lát IN1 – design.md mục 20.4). Chữ ký của mình: chỉ cần đăng nhập
 /// (chính sách mặc định); chữ ký người khác: quyền <c>System.User.Signature</c>; logo: quyền xem / sửa công ty.
 /// </summary>
 public static class SignatureEndpoints

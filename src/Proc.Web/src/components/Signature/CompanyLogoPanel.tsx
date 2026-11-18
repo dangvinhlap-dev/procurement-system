@@ -6,7 +6,7 @@ import { formatDateTime } from '../../utils/format'
 import { canvasToPng, loadImage, processLogo } from '../../utils/signatureImage'
 
 /**
- * Tab LOGO của ngăn kéo công ty (lát IN1 – design.md mục 20.3): logo in góc trên trái phiếu theo biểu mẫu CUVT; làm chứng từ ở công ty nào thì in
+ * Tab LOGO của ngăn kéo công ty (lát IN1 – design.md mục 20.4): logo in góc trên trái phiếu theo biểu mẫu CUVT; làm chứng từ ở công ty nào thì in
  * logo công ty đó (người dùng chốt 18/11/2026). Ảnh PNG/JPG được thu về tối đa 600 điểm mỗi cạnh trên trình duyệt trước khi tải lên.
  * @param companyId Công ty của ngăn kéo.
  * @param canEdit Có quyền sửa công ty.

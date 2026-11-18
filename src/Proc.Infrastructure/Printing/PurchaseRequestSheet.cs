@@ -48,7 +48,7 @@ public sealed record SheetSignBlock(
 public sealed record SheetStamp(IReadOnlyList<string> Lines, string? Watermark);
 
 /// <summary>
-/// Ghép ô ký của đề nghị mua theo mẫu 1A/1B (lát IN1 – design.md mục 20.3). Khối ký giữ <b>nguyên văn</b> ảnh trong file Excel biểu mẫu (người dùng
+/// Ghép ô ký của đề nghị mua theo mẫu 1A/1B (lát IN1 – design.md mục 20.4). Khối ký giữ <b>nguyên văn</b> ảnh trong file Excel biểu mẫu (người dùng
 /// chốt 18/11/2026: "form như thế nào thì giữ nguyên như vậy"); bước duyệt ghép vào ô theo loại người duyệt / mã vai trò mẫu:
 /// Thủ kho nơi nhận → "Thủ kho"; Trưởng phòng ban của phiếu → "Trưởng Phòng/Ban"; GĐ khối của phiếu → "GĐ Khối phòng ban"; vai trò TPCUVT →
 /// "Phòng CUVT"; TPTCKT → "Phòng TC-NQ-KT"; TPHC → "Trưởng phòng HC"; PHOCTUBCL → "Phó CTUBCL &amp; PT"; CHUTICH → "CHỦ TỊCH HĐQT/TGĐ". Cấp cao nhất

@@ -110,7 +110,7 @@ internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     }
 }
 
-/// <summary>Cấu hình bảng CompanyLogo – logo in đầu phiếu (lát IN1, design.md mục 20.3): mỗi công ty tối đa một dòng.</summary>
+/// <summary>Cấu hình bảng CompanyLogo – logo in đầu phiếu (lát IN1, design.md mục 20.4): mỗi công ty tối đa một dòng.</summary>
 public sealed class CompanyLogoConfiguration : IEntityTypeConfiguration<CompanyLogo>
 {
     /// <inheritdoc />

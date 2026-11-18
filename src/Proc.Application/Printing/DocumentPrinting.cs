@@ -31,7 +31,7 @@ public interface IDocumentPdfService
     Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// In / tải PDF đề nghị mua có ghi nhật ký (lát IN1 – design.md mục 20.3): ghi một lần in rồi dựng bản có "Lần in thứ n" ở góc dưới phải.
+    /// In / tải PDF đề nghị mua có ghi nhật ký (lát IN1 – design.md mục 20.4): ghi một lần in rồi dựng bản có "Lần in thứ n" ở góc dưới phải.
     /// <see cref="PurchaseRequestAsync"/> là bản xem (không ghi, ghi "đã in n lần").
     /// </summary>
     /// <param name="id">PR.</param>

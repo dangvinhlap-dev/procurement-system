@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Proc.Infrastructure.Persistence.Migrations
 {
     /// <summary>
-    /// Lát IN1 (design.md mục 20.3): bảng chữ ký người dùng theo phiên bản, logo công ty, nhật ký in chứng từ; cột danh xưng của người dùng.
+    /// Lát IN1 (design.md mục 20.4): bảng chữ ký người dùng theo phiên bản, logo công ty, nhật ký in chứng từ; cột danh xưng của người dùng.
     /// </summary>
     public partial class V0_41_0_ChuKyLogoNhatKyIn : Migration
     {

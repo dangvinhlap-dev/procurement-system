@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiBlob, apiFetch, apiUpload } from './client'
 
-/** Một phiên bản chữ ký – khớp Proc.Application.Documents.SignatureVersionDto (lát IN1, design.md mục 20.3). */
+/** Một phiên bản chữ ký – khớp Proc.Application.Documents.SignatureVersionDto (lát IN1, design.md mục 20.4). */
 export interface SignatureVersion {
   versionNo: number
   validFrom: string

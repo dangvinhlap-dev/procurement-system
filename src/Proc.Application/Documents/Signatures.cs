@@ -1,6 +1,6 @@
 namespace Proc.Application.Documents;
 
-/// <summary>Một phiên bản chữ ký (lát IN1 – design.md mục 20.3).</summary>
+/// <summary>Một phiên bản chữ ký (lát IN1 – design.md mục 20.4).</summary>
 /// <param name="VersionNo">Số phiên bản.</param>
 /// <param name="ValidFrom">Hiệu lực từ (UTC).</param>
 /// <param name="ValidTo">Hiệu lực đến (UTC); null = đang dùng.</param>
@@ -31,7 +31,7 @@ public sealed record UserSignatureDto(
 public sealed record SignatureReasonRequest(string? Reason);
 
 /// <summary>
-/// Chữ ký người dùng để in vào ô ký (lát IN1 – design.md mục 20.3). <paramref>userId</paramref> null = chính người đang đăng nhập (ai cũng tự làm
+/// Chữ ký người dùng để in vào ô ký (lát IN1 – design.md mục 20.4). <paramref>userId</paramref> null = chính người đang đăng nhập (ai cũng tự làm
 /// được); người khác cần quyền <c>System.User.Signature</c> (người dùng chốt 18/11/2026: admin tải thay) – tải thay / ngừng dùng thay thì người
 /// được làm thay nhận thông báo. Ảnh chỉ xem được bởi chính chủ và người có quyền đó; bản in lấy ảnh trực tiếp ở máy chủ.
 /// </summary>
@@ -81,7 +81,7 @@ public interface IUserSignatureService
 public sealed record CompanyLogoDto(Guid CompanyId, bool HasLogo, string? ContentType, int Width, int Height, DateTimeOffset? UpdatedAt);
 
 /// <summary>
-/// Logo công ty in đầu phiếu (lát IN1 – design.md mục 20.3): làm chứng từ ở công ty nào in logo công ty đó. Xem cần quyền xem danh mục công ty,
+/// Logo công ty in đầu phiếu (lát IN1 – design.md mục 20.4): làm chứng từ ở công ty nào in logo công ty đó. Xem cần quyền xem danh mục công ty,
 /// tải / xóa cần quyền sửa công ty.
 /// </summary>
 public interface ICompanyLogoService

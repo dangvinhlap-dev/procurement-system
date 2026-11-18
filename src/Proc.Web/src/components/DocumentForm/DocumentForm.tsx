@@ -70,7 +70,7 @@ export interface DocumentFormProps {
   /** API PDF của phiếu đã lưu, ví dụ "/api/purchase-orders/{id}/pdf": hiện nút "In phiếu" (Ctrl+P) – design.md mục 10.10. */
   printPath?: string
   /**
-   * Xem trước khi in, có đếm số lần in (lát IN1 – design.md mục 20.3): có thì nút "In phiếu" đổi thành nút <c>label</c> (ví dụ "Xem đề nghị")
+   * Xem trước khi in, có đếm số lần in (lát IN1 – design.md mục 20.4): có thì nút "In phiếu" đổi thành nút <c>label</c> (ví dụ "Xem đề nghị")
    * mở hộp thoại xem trang A4; In / Tải PDF trong hộp thoại ghi nhật ký in. Phiếu đang sửa dở chưa lưu thì nhắc lưu trước (bản xem lấy dữ liệu đã lưu).
    */
   printPreview?: Omit<PrintPreviewProps, 'open' | 'onClose'> & { label: string }

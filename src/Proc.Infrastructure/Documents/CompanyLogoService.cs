@@ -7,7 +7,7 @@ using Proc.Infrastructure.Persistence;
 namespace Proc.Infrastructure.Documents;
 
 /// <summary>
-/// Logo công ty in đầu phiếu (lát IN1 – design.md mục 20.3). Quyền kiểm ở endpoint (xem: <c>System.Company.View</c>; tải / xóa:
+/// Logo công ty in đầu phiếu (lát IN1 – design.md mục 20.4). Quyền kiểm ở endpoint (xem: <c>System.Company.View</c>; tải / xóa:
 /// <c>System.Company.Manage</c>) như danh mục công ty – danh mục công ty dùng chung nên không lọc theo công ty đang làm việc.
 /// </summary>
 public sealed class CompanyLogoService : ICompanyLogoService

@@ -10,7 +10,7 @@ namespace Proc.Domain.Documents;
 public sealed record PrintImageInfo(string ContentType, int Width, int Height);
 
 /// <summary>
-/// Kiểm ảnh chữ ký / logo trước khi lưu (lát IN1 – design.md mục 20.3): đọc byte đầu file để biết đúng PNG hay JPEG (không tin đuôi file hay
+/// Kiểm ảnh chữ ký / logo trước khi lưu (lát IN1 – design.md mục 20.4): đọc byte đầu file để biết đúng PNG hay JPEG (không tin đuôi file hay
 /// Content-Type của trình duyệt), lấy rộng – cao từ phần đầu ảnh. Không giải mã cả ảnh – PDFsharp tự đọc khi in.
 /// </summary>
 public static class PrintImages

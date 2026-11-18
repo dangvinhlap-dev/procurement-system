@@ -4,7 +4,7 @@ using Proc.Domain.Organization;
 
 namespace Proc.Domain.Tests.Documents;
 
-/// <summary>Chữ ký người dùng theo phiên bản, logo công ty, kiểm ảnh in (lát IN1 – design.md mục 20.3).</summary>
+/// <summary>Chữ ký người dùng theo phiên bản, logo công ty, kiểm ảnh in (lát IN1 – design.md mục 20.4).</summary>
 public class UserSignatureTests
 {
     private static readonly Guid Owner = Guid.CreateVersion7();

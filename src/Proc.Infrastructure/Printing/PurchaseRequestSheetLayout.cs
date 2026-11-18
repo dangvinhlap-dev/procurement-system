@@ -6,7 +6,7 @@ using PdfSharp.Drawing;
 namespace Proc.Infrastructure.Printing;
 
 /// <summary>
-/// Khuôn in đề nghị mua <b>giữ nguyên sheet "1A.DN VT-CT"</b> của file biểu mẫu CUVT (lát IN1 – design.md mục 20.3; người dùng chốt 18/11/2026:
+/// Khuôn in đề nghị mua <b>giữ nguyên sheet "1A.DN VT-CT"</b> của file biểu mẫu CUVT (lát IN1 – design.md mục 20.4; người dùng chốt 18/11/2026:
 /// "form tôi cung cấp như thế nào thì giữ nguyên như vậy"). Dùng chung cho 1B và đề nghị dịch vụ (sheet 1B cùng bố cục, cùng khối ký). Đo từ sheet:
 /// <list type="bullet">
 /// <item>Sheet in tỉ lệ 85 %, lề 0 → mọi cỡ chữ / chiều cao dòng trong Excel nhân <see cref="K"/> = 0,85; vùng in rộng 198 mm (lề 6 mm) như bản in

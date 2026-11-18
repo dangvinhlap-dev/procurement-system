@@ -13,7 +13,7 @@ using Proc.Infrastructure.Printing;
 namespace Proc.IntegrationTests;
 
 /// <summary>
-/// Lát IN1 (design.md mục 20.3): "Xem đề nghị" in đề nghị mua giữ nguyên mẫu 1A – chữ ký người đã duyệt theo phiên bản có hiệu lực lúc duyệt,
+/// Lát IN1 (design.md mục 20.4): "Xem đề nghị" in đề nghị mua giữ nguyên mẫu 1A – chữ ký người đã duyệt theo phiên bản có hiệu lực lúc duyệt,
 /// In / Tải PDF ghi nhật ký in (lần in thứ n), xem thì không; admin tải chữ ký thay (bắt buộc lý do, báo người được tải thay).
 /// </summary>
 public partial class PurchasingTests
@@ -31,7 +31,7 @@ public partial class PurchasingTests
     /// <summary>Kích thước các ảnh (XObject /Image) trên mọi trang của PDF.</summary>
     private static List<(int Width, int Height)> PdfImages(byte[] pdf)
     {
-        var document = PdfReader.Open(new MemoryStream(pdf), PdfDocumentOpenMode.ReadOnly);
+        var document = PdfReader.Open(new MemoryStream(pdf), PdfDocumentOpenMode.Import);
         var images = new List<(int, int)>();
         foreach (var page in document.Pages)
         {

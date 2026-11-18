@@ -11,7 +11,7 @@ using Proc.Infrastructure.Purchasing;
 namespace Proc.Infrastructure.Printing;
 
 /// <summary>
-/// In đề nghị mua giữ nguyên sheet 1A (lát IN1 – design.md mục 20.3): chữ ký của người đã duyệt (phiên bản có hiệu lực lúc duyệt), logo công ty
+/// In đề nghị mua giữ nguyên sheet 1A (lát IN1 – design.md mục 20.4): chữ ký của người đã duyệt (phiên bản có hiệu lực lúc duyệt), logo công ty
 /// của phiếu, góc dưới phải ghi giờ in, người in, lần in, tình trạng phê duyệt; In / Tải PDF ghi nhật ký in, Xem thì không.
 /// </summary>
 public sealed partial class DocumentPdfService

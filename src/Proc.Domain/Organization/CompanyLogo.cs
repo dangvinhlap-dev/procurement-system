@@ -4,7 +4,7 @@ using Proc.Domain.Documents;
 namespace Proc.Domain.Organization;
 
 /// <summary>
-/// Logo của một công ty, in góc trên trái phiếu theo biểu mẫu CUVT (lát IN1 – design.md mục 20.3, người dùng chốt 18/11/2026: làm chứng từ ở
+/// Logo của một công ty, in góc trên trái phiếu theo biểu mẫu CUVT (lát IN1 – design.md mục 20.4, người dùng chốt 18/11/2026: làm chứng từ ở
 /// công ty nào thì in logo công ty đó). Bảng riêng, không gắn vào <see cref="Company"/>, để đọc danh mục công ty không phải kéo theo ảnh.
 /// Mỗi công ty tối đa một logo; thay logo là ghi đè (phiếu in lại dùng logo mới – logo không phải chữ ký nên không giữ phiên bản).
 /// </summary>

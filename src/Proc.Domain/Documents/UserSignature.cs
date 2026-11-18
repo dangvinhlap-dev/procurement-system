@@ -3,7 +3,7 @@ using Proc.Domain.Common;
 namespace Proc.Domain.Documents;
 
 /// <summary>
-/// Một phiên bản chữ ký của người dùng để in vào ô ký của phiếu đã duyệt (lát IN1 – design.md mục 20.3, người dùng chốt 18/11/2026):
+/// Một phiên bản chữ ký của người dùng để in vào ô ký của phiếu đã duyệt (lát IN1 – design.md mục 20.4, người dùng chốt 18/11/2026):
 /// <list type="bullet">
 /// <item>Ảnh PNG nền trong suốt – giao diện đã tách nền, cắt sát nét, đổi màu mực trước khi gửi; máy chủ chỉ kiểm định dạng, cỡ.</item>
 /// <item><b>Theo phiên bản</b>: thay chữ ký mới thì phiên bản cũ kết thúc hiệu lực (<see cref="ValidTo"/>) nhưng vẫn giữ; phiếu duyệt trước lúc

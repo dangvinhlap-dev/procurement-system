@@ -10,7 +10,7 @@ using Proc.Infrastructure.Persistence;
 namespace Proc.Infrastructure.Documents;
 
 /// <summary>
-/// Chữ ký người dùng theo phiên bản (lát IN1 – design.md mục 20.3). Chính chủ tự tải / ngừng dùng; người có quyền
+/// Chữ ký người dùng theo phiên bản (lát IN1 – design.md mục 20.4). Chính chủ tự tải / ngừng dùng; người có quyền
 /// <see cref="Permissions.System.UserSignature"/> làm thay (bắt buộc lý do, người được làm thay nhận thông báo).
 /// </summary>
 public sealed class UserSignatureService : IUserSignatureService
