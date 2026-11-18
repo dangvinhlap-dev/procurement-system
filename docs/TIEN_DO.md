@@ -160,6 +160,17 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Đang làm
 
+- **Lát IN2 – các phiếu khác in giữ nguyên sheet Excel như 1A (nhánh `feature/in2-chu-ky-phieu-khac`, 18/11/2026)**: người dùng "làm tiếp" rồi
+  yêu cầu "các phiếu này giống hệt sheet Excel như 1A" (design.md 20.4 IN2-1…IN2-4). Khuôn chung `CuvtSheetLayout` + số đo từng sheet
+  (`SheetLayoutSpec` – cột, dòng, tỉ lệ in, vị trí logo / vòng tròn, ảnh khối ký), bộ ghép ô ký `SheetSign` (tách từ 1A), `SheetPrintParts`
+  (góc thông tin, dấu chìm), `DocumentPdfService.Sheets.cs` (chữ ký theo phiên bản, logo, nhật ký in theo loại phiếu). Ảnh tham chiếu sheet dựng
+  bằng LibreOffice (`soffice --convert-to pdf`) + PyMuPDF; test đặt biến `PROC_PRINT_OUT` để lưu PDF ra đối chiếu.
+  - **IN2a 4A/4B (PO) – xong**: `GET /api/purchase-orders/{id}/pdf` in theo sheet, `POST …/print`, `GET …/prints`; nút "Xem bảng theo dõi";
+    test `Po_BangTheoDoiGiuNguyenSheet_ChuKyNguoiDuyet_DemLanIn`, `KhoiKy4A_GhepTheoMaVaiTroMau_ChuTichCotCuoi`; e2e `po-print-4ab`, `printing`.
+    Kiểm tra: build 0 cảnh báo, `dotnet test` 814/814, tsc, oxlint, `npm run build`, e2e 4/4 (po-print-4ab, printing, print-preview-signature).
+  - **IN2b 2A/2B (bảng tổng hợp) – đang làm**: khuôn thêm tiêu đề hai tầng, cột đơn vị mua tùy số lượng, cột chữ đỏ; số đo `Sheet2A/2B`,
+    khối ký `Sign2`; nút "Xem bảng tổng hợp". Còn: IN2c 3a/3A/3B (RFQ), IN2d 5A/5B (đề nghị thanh toán).
+
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →
   Z3 ô số chứng từ (sao chép, bấm đúp mở phiếu gốc) → Z4 quyền Hủy đặc biệt **chỉ cấp cho admin** (người lập không hủy được, bắt buộc lý

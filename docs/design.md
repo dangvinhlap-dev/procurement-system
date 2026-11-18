@@ -2983,8 +2983,20 @@ bằng file ảnh, phần mềm tự định dạng; góc dưới phải ghi th�
 | IN1-11 | **Xem đề nghị** (thay nút "In phiếu" của PR): bấm được khi phiếu đã lưu (còn sửa dở thì nhắc Lưu trước); hộp thoại hiện trang PDF; **In…** ghi một lần in rồi mở hộp in của trình duyệt; **Tải PDF** cũng tính một lần in; chỉ xem thì không (câu 3). Thanh công cụ trình xem PDF ẩn để mọi lần in đi qua nút In. Phiếu nháp / chưa duyệt xem và in được, có dấu chìm "BẢN NHÁP" / "CHƯA DUYỆT" ("ĐÃ HỦY") (câu 4) | API `GET …/pdf` (xem), `POST …/print?kind=print\|download`, `GET …/prints` |
 | IN1-12 | **Góc dưới phải mọi trang, chữ 9**: "In lúc HH:mm dd/MM/yyyy" (bản xem: "Bản xem lúc … (chưa in)"), "Người in: tên đăng nhập – họ tên", "Số phiếu … · Lần in thứ n (bản xem: Đã in n lần) · Trang x/y", "Tình trạng phê duyệt: Đã duyệt đủ 8/8 bước – giờ / Đang chờ duyệt – đã duyệt 3/8 bước, chờ … / Bị từ chối tại … / Nháp – chưa gửi duyệt / Đã hủy". Số phiếu ở góc này vì thân phiếu giữ nguyên mẫu (mẫu không có ô số phiếu) | Bảng `DocumentPrintLog` chỉ thêm; lần in thứ n duy nhất theo phiếu |
 
-Migration `V0_41_0_ChuKyLogoNhatKyIn` (Down mất chữ ký, logo, nhật ký in, danh xưng). Chưa làm: các phiếu khác (2A/2B, 3A, 4A, đề nghị thanh toán…)
-dùng lại khối ký + chữ ký + góc thông tin hệ thống ở lát sau (câu 8).
+Migration `V0_41_0_ChuKyLogoNhatKyIn` (Down mất chữ ký, logo, nhật ký in, danh xưng). Các phiếu khác dùng lại khối ký + chữ ký + góc thông tin
+hệ thống ở lát IN2 (câu 8).
+
+**Lát IN2 – các phiếu khác giữ nguyên sheet Excel như 1A (người dùng yêu cầu 18/11/2026: "các phiếu này giống hệt sheet Excel như 1A").**
+
+| # | Quy tắc | Ghi chú |
+| --- | --- | --- |
+| IN2-1 | Mỗi biểu mẫu in **giữ nguyên sheet** của file CUVT nhóm A / B: khung đầu phiếu (logo, vòng tròn số biểu mẫu đúng vị trí neo hình trong sheet, tiêu đề 18, phụ đề 12 xanh, ngày 16), khung thông tin IN HOA căn giữa, bảng theo độ rộng cột sheet (tiêu đề nền xanh nhạt, dòng tổng 15 đậm nền xanh nhạt, ô tổng trống in "-" như định dạng kế toán), **tỉ lệ in của sheet** (Page Setup – 4A 85 %, 4B 75 %), căn giữa trang. Dòng **ẩn** trên sheet không in (VAT của 4A/4B); dòng không có trên sheet (bằng chữ, hình thức thanh toán, ghi chú) không in | Khuôn `CuvtSheetLayout` + số đo từng sheet (`SheetLayoutSpec`) |
+| IN2-2 | Khối ký **vẽ lại theo ảnh khối ký trong sheet**, chức danh nguyên văn (kể cả "Trưởng phòng TC-NQ- KT" của 4A/4B). 4A/4B: Người lập bảng · Trưởng phòng CUVT · Trưởng phòng TC-NQ- KT · GĐ Phòng TC-NQ-KT · Chủ tịch HĐQT/TGĐ (cột cuối). Ghép bước duyệt theo vai trò mẫu TPCUVT, TPTCKT, GDTCKT, CHUTICH (cấp cao nhất không khớp mã → ô Chủ tịch); bước khác in hàng ô phát sinh. Ô Chủ tịch in tên IN HOA như ảnh ("AHLĐ. ĐINH VĂN VUI") | Dùng chung `SheetSign` với 1A (IN1-3, IN1-5) |
+| IN2-3 | Chữ ký theo phiên bản, danh xưng, logo, góc thông tin hệ thống chữ 9, dấu chìm, nhật ký in: **như IN1-5 … IN1-12**. Người lập ký khi chính họ gửi duyệt | `DocumentPrintLog` theo loại phiếu |
+| IN2-4 | Form PO: nút **Xem bảng theo dõi** (Ctrl+P) thay "In phiếu" – hộp thoại xem như "Xem đề nghị"; "In đơn gửi NCC" giữ khuôn chung | API `GET /api/purchase-orders/{id}/pdf` (xem), `POST …/print?kind=`, `GET …/prints` |
+
+Đợt làm (tự đặt): **IN2a** 4A/4B (PO) → IN2b 2A/2B (bảng tổng hợp) → IN2c 3a/3A/3B (RFQ) → IN2d 5A/5B tiền mặt / chuyển khoản (đề nghị thanh
+toán) → 1C/2C khi có mẫu thật (hiện vẫn mẫu giả lập).
 
 ## 21. Quản trị vận hành (QT) – ba môi trường, phát hành, sao lưu, phục hồi (người dùng chốt 14/11/2026)
 

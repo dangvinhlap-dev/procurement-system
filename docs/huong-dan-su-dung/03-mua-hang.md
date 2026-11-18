@@ -140,9 +140,11 @@ bấm **Đã bổ sung hồ sơ**; quá hạn thì PO bị gắn cờ quá hạn
 
 ### Sau khi duyệt
 
-- **In phiếu** (Ctrl+P) in **bảng theo dõi mua hàng 4A** (PO có dòng từ đề nghị loại A – công trình) hoặc **4B** (hàng hóa, dịch vụ), khổ
-  ngang: giá cũ gần nhất, giá mới ghi cột **tăng** hoặc **bằng–giảm**, lũy kế (đã mua trước đây + đơn này), còn lại theo dự toán / định mức;
-  khối ký là các bước duyệt PO. Ô **Loại mua – biểu mẫu** trên PO cho biết đơn in mẫu nào. PO không gộp dòng đề nghị loại A với dòng đề nghị
+- **Xem bảng theo dõi** (Ctrl+P – từ lát IN2 thay nút In phiếu) mở hộp thoại xem trang in **bảng theo dõi mua hàng 4A** (PO có dòng từ đề
+  nghị loại A – công trình) hoặc **4B** (hàng hóa, dịch vụ), **giữ nguyên sheet Excel** (khổ ngang, tỉ lệ in 85 % / 75 % như sheet): giá cũ gần
+  nhất, giá mới ghi cột **tăng** hoặc **bằng–giảm**, lũy kế (đã mua trước đây + đơn này), còn lại theo dự toán / định mức. Khối ký nguyên văn
+  sheet (Người lập bảng · Trưởng phòng CUVT · Trưởng phòng TC-NQ-KT · GĐ Phòng TC-NQ-KT · Chủ tịch HĐQT/TGĐ) có **chữ ký** người đã duyệt như
+  đề nghị mua; góc dưới phải ghi giờ in, người in, lần in, tình trạng phê duyệt. **In…** / **Tải PDF** tính một lần in, chỉ xem thì không. Ô **Loại mua – biểu mẫu** trên PO cho biết đơn in mẫu nào. PO không gộp dòng đề nghị loại A với dòng đề nghị
   B/DV, và dòng loại A phải cùng một công trình.
 - **In đơn gửi NCC** (nút trên PO đã lưu): đơn đặt hàng PDF có mã hàng NCC, giá, chiết khấu, thuế, điều khoản giao – gửi NCC.
 - Thủ kho lập **phiếu nhập mua theo PO** (06 – Kho). PO tự chuyển **Đã nhận đủ** khi nhận đủ mọi dòng; bỏ ghi sổ phiếu nhập làm thiếu lại
