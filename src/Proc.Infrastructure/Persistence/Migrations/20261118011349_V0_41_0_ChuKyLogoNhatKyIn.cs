@@ -136,8 +136,8 @@ namespace Proc.Infrastructure.Persistence.Migrations
         }
 
         /// <summary>
-        /// Gỡ lát IN1. <b>Mất dữ liệu</b>: mọi chữ ký, logo công ty đã tải, nhật ký in và danh xưng của người dùng (mức quay về 2 – kèm
-        /// script db/scripts/down/0.41.0.sql).
+        /// Gỡ lát IN1. <b>Mất dữ liệu</b>: mọi chữ ký, logo công ty đã tải, nhật ký in và danh xưng của người dùng. Bản 0.41.0 chỉ thêm bảng và
+        /// cột cho phép trống nên quay về 0.40.0 theo mức 1 (giữ CSDL) – không cần chạy hàm này.
         /// </summary>
         protected override void Down(MigrationBuilder migrationBuilder)
         {

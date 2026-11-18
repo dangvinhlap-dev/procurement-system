@@ -1,7 +1,63 @@
-# Nhật ký thay đổi
+﻿# Nhật ký thay đổi
 
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
+
+## [0.41.0] - 2026-11-18
+
+**"Xem đề nghị" – in đề nghị mua giữ nguyên mẫu 1A kèm chữ ký người đã duyệt, logo công ty, đếm số lần in** (design.md mục 20.4 – người dùng
+duyệt bố cục và chốt 18/11/2026). Cài sau **0.40.0** qua REL.
+
+### Thêm mới
+- **Nút "Xem đề nghị"** trên form đề nghị mua (thay nút In phiếu, Ctrl+P vẫn dùng được): phiếu đã lưu → bấm mở hộp thoại xem trang in; phiếu
+  đang sửa dở chưa lưu → phần mềm nhắc bấm Lưu trước.
+- **Trang in giống sheet "1A.DN VT-CT"**: đề nghị loại A in khung đầu phiếu có logo trái, số "1A" trong vòng tròn phải, tiêu đề (chữ "CÁC" đỏ), 3 dòng
+  phụ đề xanh, ngày; khung thông tin IN HOA (số tiền đậm); bảng có nhóm "Số lượng"; dòng "Tổng cộng" nền xanh nhạt; dòng "Thời gian cần sử dụng"
+  (ngày đỏ) – "Địa điểm tập kết/giao hàng". Loại B và dịch vụ in mẫu 1B cùng khuôn.
+- **Khối ký 9 ô nguyên văn mẫu** ("Kính trình Chủ Tịch HĐQT/TGĐ xem xét và ký duyệt"; Người đề xuất, Thủ kho, Trưởng Phòng/Ban, Phòng CUVT,
+  Phòng TC-NQ-KT, Trưởng phòng HC, GĐ Khối phòng ban, Phó CTUBCL & PT, CHỦ TỊCH HĐQT/TGĐ): ô của bước đã duyệt có **ảnh chữ ký**, họ tên (kèm danh
+  xưng), giờ duyệt; người duyệt chưa tải chữ ký → "Đã duyệt điện tử …"; bước chưa duyệt → "Chưa duyệt"; ô không có bước trong chuỗi duyệt →
+  "Không thuộc chuỗi duyệt"; chặng vượt dự toán / ngân sách in thêm một hàng ô trước ô Chủ tịch.
+- **In… và Tải PDF đếm số lần in**: bấm In… → mở hộp in của máy; bấm Tải PDF → lưu file; mỗi lần dòng "Đã in n lần · lần gần nhất …" trong hộp
+  thoại tăng 1. Chỉ xem không tăng.
+- **Góc dưới phải mỗi trang, chữ 9**: giờ phút in (bản xem ghi "Bản xem lúc … (chưa in)"), người in (tên đăng nhập – họ tên), số phiếu, lần in
+  thứ mấy (bản xem: "Đã in n lần"), Trang x/y, tình trạng phê duyệt (Nháp / Đang chờ duyệt – đã duyệt a/b bước, chờ … / Bị từ chối tại … / Đã duyệt
+  đủ b/b bước – giờ / Đã hủy).
+- **Dấu chìm** mờ giữa trang: phiếu Nháp "BẢN NHÁP", chờ duyệt hoặc bị từ chối "CHƯA DUYỆT", đã hủy "ĐÃ HỦY"; phiếu đã duyệt không có.
+- **Chữ ký của tôi (CKY)** – menu tên người dùng → "Chữ ký của tôi…" hoặc gõ `CKY`: Tải chữ ký mới… → Chọn ảnh (chụp / scan chữ ký trên giấy) →
+  phần mềm tự xóa nền giấy, cắt sát, đổi màu mực xanh (chọn được Đen / Giữ màu gốc), thanh "Tách nền" 1–10, xoay trái / phải, xem thử trên ô ký đúng
+  cỡ in → Lưu chữ ký. Lưới lịch sử phiên bản (Đang dùng / Hết hiệu lực); nút Ngừng dùng chữ ký….
+- **Chữ ký theo phiên bản**: thay chữ ký mới thì phiếu đã duyệt trước đó vẫn in chữ ký cũ, phiếu duyệt sau lúc thay in chữ ký mới.
+- **Admin tải chữ ký thay**: Quản trị hệ thống → Người dùng → mở người dùng → tab **CHỮ KÝ** → Tải chữ ký thay… (bắt buộc lý do) / Ngừng dùng
+  chữ ký… (bắt buộc lý do); người được tải thay nhận thông báo "Chữ ký của bạn đã được cập nhật". Quyền mới "Tải lên, thay chữ ký của người dùng
+  khác" (vai trò ADMIN có sẵn); người không có quyền không thấy tab.
+- **Danh xưng**: ô "Danh xưng" (sau Chức vụ) trong người dùng, ví dụ "AHLĐ." – in trước họ tên dưới chữ ký (ô Chủ tịch in hoa "AHLĐ. NGUYỄN …").
+- **Logo công ty**: Hệ thống → Công ty → mở công ty → tab **LOGO** → Tải logo… / Thay logo… / Xóa logo; phiếu làm ở công ty nào in logo công ty đó,
+  chưa có logo thì góc để trống.
+
+### Thay đổi
+- **Mẫu duyệt CUVT bộ PRA (đề nghị loại A) có thêm cấp Trưởng phòng HC** (kiểm định mức) như mẫu giấy 1A – áp "Cấu hình duyệt mẫu theo biểu mẫu
+  CUVT" cho công ty mới tạo 46 cấp (trước 45); PRA 8 cấp: Thủ kho → TP phòng ban → TP CUVT → TP TC-NQ-KT → **TP HC** → GĐ khối → Phó CT → Chủ tịch.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- 1 migration (117 → 118), script `db/scripts/0.41.0.sql` (idempotent): `V0_41_0_ChuKyLogoNhatKyIn` – **chỉ thêm** 3 bảng `UserSignature`
+  (chữ ký theo phiên bản, ảnh PNG), `CompanyLogo`, `DocumentPrintLog` (nhật ký in) và cột `Honorific` (cho phép trống) vào `User`.
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); bộ thực thi tự sao lưu CSDL trước khi chạy script.
+- Sau khi cài: mọi người tự tải chữ ký (CKY), quản trị tải logo từng công ty và nhập Danh xưng nếu cần. Phiếu đã duyệt **trước** khi người duyệt tải
+  chữ ký in "Đã duyệt điện tử" (chữ ký chỉ có hiệu lực từ lúc tải).
+- Công ty **đã áp** mẫu duyệt CUVT trước đây: mẫu không tự ghi đè – muốn có ô Trưởng phòng HC trên 1A thì vào APRL thêm cấp vai trò TPHC cho bộ
+  PRA và gán vai trò cho người duyệt.
+- Chưa áp khối ký + chữ ký cho các phiếu khác (2A/2B, 3A, 4A, đề nghị thanh toán…) – làm ở bản sau.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.40.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL (0.40.0 chạy được vì bản này chỉ thêm bảng
+  và cột cho phép trống; quyền mới tự xóa khi 0.40.0 khởi động). Chữ ký, logo, nhật ký in, danh xưng đã nhập vẫn nằm trong CSDL, dùng lại khi nâng
+  lên 0.41.0; 0.40.0 in đề nghị mua theo khuôn cũ (không chữ ký, không đếm lần in).
 
 ## [0.40.0] - 2026-11-17
 
