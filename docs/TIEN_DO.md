@@ -1012,6 +1012,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 
 ## Việc tiếp theo
 
+**Phát hành 0.42.1 (18/11/2026)** – người dùng "phát hành bản mới nhất cho tôi". Gồm sửa lỗi chọn mặt hàng dịch vụ trên PR, PO… (bảng Đã xong).
+Kiểm tra: build 0 cảnh báo, `dotnet test` 815/815, tsc, oxlint, `npm run build`, Playwright đủ bộ 164/164 (2 luồng). **Không đổi CSDL** (118
+migration) – `rollback/0.42.1.json` **mức 1**. Tag `v0.42.1`, gói + `.sha256` trên GitHub Release. Cài sau 0.42.0 qua REL.
+
 **Phát hành 0.42.0 (18/11/2026)** – người dùng "phát hành cho tôi test bản mới nhất". Gồm lát IN2 (các phiếu in giữ nguyên sheet Excel 4A/4B, 2A/2B,
 3a/3A/3B, 5A/5B; 1C/2C giả lập có chữ ký). Trước khi phát hành: Playwright đủ bộ chạy lại chia hai nửa (94 + 69 = 163/163 qua), merge
 `feature/in2-chu-ky-phieu-khac` vào `main`, xóa nhánh. **Không đổi CSDL** (vẫn 118 migration) – không có script, `rollback/0.42.0.json` **mức 1**.

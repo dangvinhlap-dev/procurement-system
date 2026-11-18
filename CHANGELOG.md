@@ -3,6 +3,35 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.42.1] - 2026-11-18
+
+**Sửa lỗi: mặt hàng dịch vụ không tìm chọn được trên đề nghị mua, đơn mua hàng** (người dùng báo 18/11/2026: mã `MAIN-00001` loại Dịch vụ).
+Cài sau **0.42.0** qua REL.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- Không có.
+
+### Sửa lỗi
+- **Ô "Mặt hàng" trên PR, PO tìm được mặt hàng loại Dịch vụ, Tài sản, Vật tư tiêu hao** – trước đây chỉ liệt kê hàng tồn kho (lọc còn sót của
+  phân hệ kho đã gỡ ở 0.31.0). Thử: lập PR loại "DV – Dịch vụ", thêm dòng, gõ mã hoặc một phần tên dịch vụ (hoặc `*` rồi Enter) → chọn được; lập
+  PO, thêm dòng, chọn được cùng mặt hàng dịch vụ.
+- Cùng sửa ở các ô chọn mặt hàng khác dùng chung: yêu cầu báo giá (RFQ), bảng giá NCC, bảng giá nội bộ, khảo sát giá, duyệt giá tháng, so sánh giá,
+  chiết khấu sản lượng, hợp đồng nguyên tắc, kế hoạch nhu cầu, phiếu tìm nguồn. Thử: trên một trong các màn hình này gõ mã dịch vụ → chọn được.
+
+### Thay đổi CSDL
+- Không có (vẫn `V0_41_0_ChuKyLogoNhatKyIn`, 118 migration).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng). Không cần sao lưu riêng (không đổi CSDL).
+- Sau khi cài, người dùng tải lại trang (F5) để trình duyệt nạp bản web mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.42.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL. Bản 0.42.0 lại không chọn được mặt hàng
+  dịch vụ trên các ô chọn hàng; dòng dịch vụ đã lưu trên phiếu vẫn giữ nguyên.
+
 ## [0.42.0] - 2026-11-18
 
 **Các phiếu khác in giống hệt sheet Excel như 1A – kèm chữ ký người đã duyệt, logo công ty, đếm số lần in** (design.md mục 20.4, lát IN2 –
