@@ -1015,11 +1015,10 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 3a/3A/3B, 5A/5B; 1C/2C giả lập có chữ ký). Trước khi phát hành: Playwright đủ bộ chạy lại chia hai nửa (94 + 69 = 163/163 qua), merge
 `feature/in2-chu-ky-phieu-khac` vào `main`, xóa nhánh. **Không đổi CSDL** (vẫn 118 migration) – không có script, `rollback/0.42.0.json` **mức 1**.
 Tag `v0.42.0`, gói + `.sha256` trên GitHub Release. Cài sau 0.41.0 qua REL.
-Bản thử cổng 5007 **đã nâng 0.40.0 → 0.42.0 (18/11/2026, cài tay bằng `D:\project
-ang-5007-0.42.0.ps1`)**: người dùng bấm Cài PROD trên REL của 5007
+Bản thử cổng 5007 **đã nâng 0.40.0 → 0.42.0 (18/11/2026, cài tay bằng `D:\project\nang-5007-0.42.0.ps1`)**: người dùng bấm Cài PROD trên REL của 5007
 nhưng lệnh đứng "Đang chờ" – máy chưa cài bộ thực thi (AGT môi trường Prod có khóa, chưa liên lạc lần nào; 5007 chạy Kestrel console, không phải
 IIS, `App:Environment = Dev`). Cài tay: kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.42.0.dump`, chạy `0.41.0.sql` (118
-migration), `app` = 0.42.0, `app-0.40.0` = bản cũ, gói `goi .42.0`; `/health` Healthy 0.42.0 (cả qua http://192.168.1.199:5007). Lệnh DeployRelease
+migration), `app` = 0.42.0, `app-0.40.0` = bản cũ, gói `goi\0.42.0`; `/health` Healthy 0.42.0 (cả qua http://192.168.1.199:5007). Lệnh DeployRelease
 còn "Đang chờ" trên REL tự hết hạn 12:39; phiếu 0.42.0 trên REL cần ghi chú "đã cài tay" (người dùng thêm trên giao diện).
 
 **Phát hành 0.41.0 (18/11/2026)** – người dùng "phát hành". Gồm lát IN1 (bảng Đã xong). Script `db/scripts/0.41.0.sql`
