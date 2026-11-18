@@ -316,6 +316,7 @@ app.MapReportEndpoints();
 app.MapControlEndpoints();
 app.MapAnalysisEndpoints();
 app.MapPrintingEndpoints();
+app.MapSignatureEndpoints();
 app.MapPricingEndpoints();
 app.MapPurchasingEndpoints();
 app.MapSourcingEndpoints();

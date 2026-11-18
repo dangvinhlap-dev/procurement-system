@@ -30,6 +30,24 @@ public interface IDocumentPdfService
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// In / tải PDF đề nghị mua có ghi nhật ký (lát IN1 – design.md mục 20.3): ghi một lần in rồi dựng bản có "Lần in thứ n" ở góc dưới phải.
+    /// <see cref="PurchaseRequestAsync"/> là bản xem (không ghi, ghi "đã in n lần").
+    /// </summary>
+    /// <param name="id">PR.</param>
+    /// <param name="kind">In hay tải PDF.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>File PDF.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<PdfFile> PurchaseRequestPrintAsync(Guid id, Proc.Domain.Documents.PrintKind kind, CancellationToken cancellationToken);
+
+    /// <summary>Các lần in đề nghị mua, mới nhất trước – cho hộp thoại "Xem đề nghị" (lát IN1).</summary>
+    /// <param name="id">PR.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Nhật ký in.</returns>
+    /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
+    Task<IReadOnlyList<Documents.DocumentPrintDto>> PurchaseRequestPrintsAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>In bảng tổng hợp đề xuất mua theo biểu mẫu CUVT 2A/2B, khổ ngang (lát Y10).</summary>
     /// <param name="id">Bảng tổng hợp.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
