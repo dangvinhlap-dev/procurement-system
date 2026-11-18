@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Proc.Application.Administration;
@@ -108,7 +108,8 @@ public sealed class UserAdministration : IUserAdministration
             id == _scope.UserId,
             access,
             companyCodes,
-            user.Position);
+            user.Position,
+            user.Honorific);
     }
 
     /// <inheritdoc />
@@ -148,6 +149,7 @@ public sealed class UserAdministration : IUserAdministration
             FullName = request.FullName.Trim(),
             Email = NormalizeEmail(request.Email),
             Position = NormalizePosition(request.Position),
+            Honorific = NormalizePosition(request.Honorific),
             CreatedAt = _clock.UtcNow,
             DefaultCompanyId = request.Access.RoleIds.Count > 0 ? companyId : null,
         };
@@ -178,6 +180,7 @@ public sealed class UserAdministration : IUserAdministration
         user.FullName = request.FullName.Trim();
         user.Email = NormalizeEmail(request.Email);
         user.Position = NormalizePosition(request.Position);
+        user.Honorific = NormalizePosition(request.Honorific);
         user.IsActive = request.IsActive;
         ThrowIfFailed(await _userManager.UpdateAsync(user));
         return await GetAsync(id, cancellationToken);

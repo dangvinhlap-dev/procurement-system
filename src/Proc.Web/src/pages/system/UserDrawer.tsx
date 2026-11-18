@@ -11,6 +11,7 @@ import {
 } from '../../api/administration'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
+import { SignaturePanel } from '../../components/Signature/SignatureParts'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
 import { Select } from '../../classic/Select'
 import { formatDateTime } from '../../utils/format'
@@ -21,6 +22,8 @@ interface UserFormValues {
   fullName: string
   /** Chức vụ – hiện ở "Kiểm tra phê duyệt" của chứng từ (design.md mục 20.2 D5). */
   position: string
+  /** Danh xưng in trước họ tên dưới chữ ký (lát IN1), ví dụ "AHLĐ.". */
+  honorific: string
   email: string
   password: string
   isActive: boolean
@@ -36,6 +39,7 @@ const emptyValues: UserFormValues = {
   userName: '',
   fullName: '',
   position: '',
+  honorific: '',
   email: '',
   password: '',
   isActive: true,
@@ -55,6 +59,7 @@ function toFormValues(user: UserDetail): UserFormValues {
     userName: user.userName,
     fullName: user.fullName,
     position: user.position ?? '',
+    honorific: user.honorific ?? '',
     email: user.email ?? '',
     isActive: user.isActive,
     roleIds: access.roleIds,
@@ -124,6 +129,7 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
           userName: values.userName.trim(),
           fullName: values.fullName,
           position: values.position.trim() || null,
+          honorific: values.honorific.trim() || null,
           email: values.email || null,
           password: values.password,
           access: toAccess(values),
@@ -133,6 +139,7 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
         const infoChanged =
           values.fullName !== detail.fullName ||
           (values.position.trim() || null) !== (detail.position ?? null) ||
+          (values.honorific.trim() || null) !== (detail.honorific ?? null) ||
           (values.email || null) !== detail.email ||
           values.isActive !== detail.isActive
         if (canEditInfo && infoChanged) {
@@ -143,6 +150,7 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
               email: values.email || null,
               isActive: values.isActive,
               position: values.position.trim() || null,
+              honorific: values.honorific.trim() || null,
             },
           })
         }
@@ -205,6 +213,10 @@ export function UserDrawer({ userId, onClose }: { userId: string | null; onClose
               />
             ),
           },
+          // Lát IN1: người có quyền "Tải lên, thay chữ ký của người dùng khác" (admin có sẵn) tải thay / ngừng dùng chữ ký – bắt buộc lý do.
+          ...(detail && hasPermission(Permission.UserSignature)
+            ? [{ key: 'signature', label: 'Chữ ký', lazy: true, children: <SignaturePanel userId={detail.id} /> }]
+            : []),
         ]}
       />
       {detail && (
@@ -255,6 +267,14 @@ function AccountTab({ isNew, detail, disabled }: { isNew: boolean; detail?: User
         rules={[{ max: 100, message: 'Chức vụ tối đa 100 ký tự.' }]}
       >
         <Input disabled={disabled} maxLength={100} />
+      </Form.Item>
+      <Form.Item
+        label="Danh xưng"
+        name="honorific"
+        extra="In trước họ tên dưới chữ ký trên phiếu, ví dụ “AHLĐ.”; để trống thì chỉ in họ tên."
+        rules={[{ max: 30, message: 'Danh xưng tối đa 30 ký tự.' }]}
+      >
+        <Input disabled={disabled} maxLength={30} />
       </Form.Item>
       <Form.Item label="Email" name="email" rules={[{ type: 'email', message: 'Email không hợp lệ.' }]}>
         <Input disabled={disabled} />

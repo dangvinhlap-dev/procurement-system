@@ -7,6 +7,8 @@ export const Permission = {
   CompanyManage: 'System.Company.Manage',
   UserView: 'System.User.View',
   UserManage: 'System.User.Manage',
+  /** Tải lên, thay chữ ký của người dùng khác (lát IN1). */
+  UserSignature: 'System.User.Signature',
   RoleView: 'System.Role.View',
   RoleManage: 'System.Role.Manage',
   LogView: 'System.Log.View',

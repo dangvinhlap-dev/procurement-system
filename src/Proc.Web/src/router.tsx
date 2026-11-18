@@ -41,6 +41,7 @@ import { PurchaseSummaryListPage, PurchaseSummaryPage } from './pages/purchasing
 import { PaymentRequestListPage, PaymentRequestPage } from './pages/purchasing/PaymentRequestPages'
 import { SundryExpenseListPage, SundryExpensePage } from './pages/purchasing/SundryExpensePages'
 import { DelegationListPage } from './pages/purchasing/DelegationListPage'
+import { MySignaturePage } from './pages/system/MySignaturePage'
 import { SoleSourceListPage } from './pages/pricing/SoleSourceListPage'
 import { SoleSourceDetailPage } from './pages/pricing/SoleSourceDrawer'
 import { SupplierReviewDetailPage } from './pages/pricing/SupplierReviewDrawer'
@@ -135,6 +136,7 @@ const implemented: Record<string, ReactNode> = {
   DHG: <PooledOrderListPage />,
   TODO: <PendingApprovalsPage />,
   UQD: <DelegationListPage />,
+  CKY: <MySignaturePage />,
   APRL: <ApprovalRuleListPage />,
   SUP: <SupplierListPage />,
   SUPAPR: <SupplierApprovalPage />,

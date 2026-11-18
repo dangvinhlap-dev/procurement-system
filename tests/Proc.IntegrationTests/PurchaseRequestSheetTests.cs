@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using PdfSharp.Pdf;
@@ -92,6 +92,12 @@ public partial class PurchasingTests
         Assert.True(byAdmin.Versions[0].ByAdmin);
         Assert.Contains((await head.GetFromJsonAsync<List<NotificationDto>>("/api/notifications", Ct))!, n => n.Title.Contains("Chữ ký của bạn"));
         Assert.Equal(HttpStatusCode.Forbidden, (await head.GetAsync($"/api/users/{mine.UserId}/signature", Ct)).StatusCode);
+        // Danh xưng nhập ở danh mục người dùng (in trước họ tên dưới chữ ký, ví dụ ô Chủ tịch "AHLĐ. …").
+        var headUser = (await f.Buyer.GetFromJsonAsync<Proc.Application.Administration.UserDetailDto>($"/api/users/{headId}", Ct))!;
+        headUser = await ReadAsync<Proc.Application.Administration.UserDetailDto>(await f.Buyer.PutAsJsonAsync($"/api/users/{headId}",
+            new Proc.Application.Administration.UpdateUserRequest(headUser.FullName, headUser.Email, true, headUser.Position, " AHLĐ. "), Ct));
+        Assert.Equal("AHLĐ.", headUser.Honorific);
+        Assert.Equal("AHLĐ.", (await head.GetFromJsonAsync<UserSignatureDto>("/api/me/signature", Ct))!.Honorific);
         // Ngừng dùng chữ ký của mình: không còn chữ ký đang dùng.
         var retired = await ReadAsync<UserSignatureDto>(await f.Buyer.PostAsJsonAsync("/api/me/signature/retire", new SignatureReasonRequest(null), Ct));
         Assert.Null(retired.CurrentVersionNo);

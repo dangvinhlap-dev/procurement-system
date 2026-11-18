@@ -1,4 +1,4 @@
-using Proc.Application.Organization;
+﻿using Proc.Application.Organization;
 
 namespace Proc.Application.Administration;
 
@@ -49,6 +49,7 @@ public sealed record UserAccessDto(
 /// <param name="Access">Vai trò và phạm vi tại công ty đang làm việc.</param>
 /// <param name="CompanyCodes">Mã mọi công ty người dùng được gán vai trò.</param>
 /// <param name="Position">Chức vụ (design.md mục 20.2 D5); null = chưa nhập.</param>
+/// <param name="Honorific">Danh xưng in trước họ tên dưới chữ ký (ví dụ "AHLĐ." – lát IN1); null = không có.</param>
 public sealed record UserDetailDto(
     Guid Id,
     string UserName,
@@ -61,7 +62,8 @@ public sealed record UserDetailDto(
     bool IsSelf,
     UserAccessDto Access,
     IReadOnlyList<string> CompanyCodes,
-    string? Position = null);
+    string? Position = null,
+    string? Honorific = null);
 
 /// <summary>Vai trò chọn được khi gán cho người dùng.</summary>
 /// <param name="Id">Id vai trò.</param>
@@ -98,14 +100,17 @@ public sealed record UserDepartmentOptionDto(Guid Id, string Code, string Name);
 /// <param name="Password">Mật khẩu ban đầu.</param>
 /// <param name="Access">Vai trò và phạm vi tại công ty đang làm việc.</param>
 /// <param name="Position">Chức vụ (tùy chọn – design.md mục 20.2 D5).</param>
-public sealed record CreateUserRequest(string UserName, string FullName, string? Email, string Password, UserAccessDto Access, string? Position = null);
+/// <param name="Honorific">Danh xưng in trên chữ ký (tùy chọn – lát IN1).</param>
+public sealed record CreateUserRequest(
+    string UserName, string FullName, string? Email, string Password, UserAccessDto Access, string? Position = null, string? Honorific = null);
 
 /// <summary>Sửa thông tin tài khoản.</summary>
 /// <param name="FullName">Họ tên.</param>
 /// <param name="Email">Email (tùy chọn).</param>
 /// <param name="IsActive">Còn sử dụng.</param>
 /// <param name="Position">Chức vụ (tùy chọn – design.md mục 20.2 D5); trống = xóa chức vụ.</param>
-public sealed record UpdateUserRequest(string FullName, string? Email, bool IsActive, string? Position = null);
+/// <param name="Honorific">Danh xưng in trên chữ ký (tùy chọn – lát IN1); trống = xóa.</param>
+public sealed record UpdateUserRequest(string FullName, string? Email, bool IsActive, string? Position = null, string? Honorific = null);
 
 /// <summary>Quản trị đặt lại mật khẩu cho người dùng (quên mật khẩu, bị khóa).</summary>
 /// <param name="NewPassword">Mật khẩu mới.</param>

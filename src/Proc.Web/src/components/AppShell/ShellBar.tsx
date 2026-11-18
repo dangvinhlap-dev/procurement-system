@@ -4,6 +4,7 @@ import {
   CalendarOutlined,
   InfoCircleOutlined,
   KeyOutlined,
+  SignatureOutlined,
   LogoutOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -229,11 +230,14 @@ export function ShellBar({
               { key: 'version', icon: <InfoCircleOutlined />, label: `Phiên bản ${version}`, disabled: true },
               { type: 'divider' },
               { key: 'password', icon: <KeyOutlined />, label: 'Đổi mật khẩu' },
+              // Lát IN1: tự tải chữ ký in vào ô ký của phiếu (màn hình CKY).
+              { key: 'signature', icon: <SignatureOutlined />, label: 'Chữ ký của tôi…' },
               { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất' },
             ],
             onClick: ({ key }) => {
               if (key === 'logout') onLogout()
               if (key === 'password') onChangePassword()
+              if (key === 'signature') navigate('/hang-ngay/chu-ky-cua-toi')
             },
           }}
         >

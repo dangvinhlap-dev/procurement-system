@@ -21,6 +21,8 @@ export interface UserListItem {
   createdAt: string
   /** Chức vụ (design.md mục 20.2 D5); null = chưa nhập. */
   position?: string | null
+  /** Danh xưng in trước họ tên dưới chữ ký, ví dụ "AHLĐ." (lát IN1). */
+  honorific?: string | null
 }
 
 /** Vai trò, kho, nhóm hàng tại công ty đang làm việc; danh sách kho/nhóm rỗng = tất cả. */
@@ -47,6 +49,8 @@ export interface UserDetail {
   companyCodes: string[]
   /** Chức vụ (design.md mục 20.2 D5); null = chưa nhập. */
   position?: string | null
+  /** Danh xưng in trước họ tên dưới chữ ký, ví dụ "AHLĐ." (lát IN1). */
+  honorific?: string | null
 }
 
 /** Lựa chọn khi phân quyền tại công ty đang làm việc. */
@@ -69,6 +73,8 @@ export interface CreateUserInput {
   access: UserAccess
   /** Chức vụ (tùy chọn). */
   position?: string | null
+  /** Danh xưng in trước họ tên dưới chữ ký, ví dụ "AHLĐ." (lát IN1). */
+  honorific?: string | null
 }
 
 /** Dữ liệu sửa tài khoản. */
@@ -78,6 +84,8 @@ export interface UpdateUserInput {
   isActive: boolean
   /** Chức vụ; trống = xóa chức vụ (nơi hiển thị dùng tên vai trò). */
   position: string | null
+  /** Danh xưng in trước họ tên dưới chữ ký, ví dụ "AHLĐ." (lát IN1). */
+  honorific: string | null
 }
 
 /** Một dòng trên danh sách vai trò. */

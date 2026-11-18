@@ -1,4 +1,5 @@
-import { DownOutlined, PrinterOutlined, UpOutlined } from '@ant-design/icons'
+import { DownOutlined, EyeOutlined, PrinterOutlined, UpOutlined } from '@ant-design/icons'
+import { PrintPreviewModal, type PrintPreviewProps } from '../PrintPreview/PrintPreviewModal'
 import { Alert, App, Button, Form, Spin, Tabs, Tag, type FormInstance } from 'antd'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { apiOpenPdf } from '../../api/client'
@@ -69,6 +70,11 @@ export interface DocumentFormProps {
   /** API PDF của phiếu đã lưu, ví dụ "/api/purchase-orders/{id}/pdf": hiện nút "In phiếu" (Ctrl+P) – design.md mục 10.10. */
   printPath?: string
   /**
+   * Xem trước khi in, có đếm số lần in (lát IN1 – design.md mục 20.3): có thì nút "In phiếu" đổi thành nút <c>label</c> (ví dụ "Xem đề nghị")
+   * mở hộp thoại xem trang A4; In / Tải PDF trong hộp thoại ghi nhật ký in. Phiếu đang sửa dở chưa lưu thì nhắc lưu trước (bản xem lấy dữ liệu đã lưu).
+   */
+  printPreview?: Omit<PrintPreviewProps, 'open' | 'onClose'> & { label: string }
+  /**
    * Bản ghi của đầu phiếu trong nhật ký (design.md mục 9.3a): bấm F1 ở ô đầu phiếu xem lịch sử ô; có id thì hiện nút "Lịch sử thay đổi"
    * (cả phiếu và các dòng). Dòng khai báo riêng ở LineGrid (auditEntity).
    */
@@ -108,6 +114,7 @@ export function DocumentForm({
   onSave,
   onAddLine,
   printPath,
+  printPreview,
   audit,
   approval,
 }: DocumentFormProps) {
@@ -115,11 +122,20 @@ export function DocumentForm({
   const [tab, setTab] = useState(defaultTab)
   const { message } = App.useApp()
   const [printing, setPrinting] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   // Thu gọn khối "Thông tin phiếu" để lưới dòng được nhiều chỗ; chỉ ẩn bằng CSS, các ô vẫn nằm trong form nên kiểm tra dữ liệu vẫn chạy.
   const [headerCollapsed, setHeaderCollapsed] = useState(false)
 
-  /** Mở PDF của phiếu ở tab mới để xem, in hoặc lưu file. */
+  /** Mở PDF của phiếu ở tab mới để xem, in hoặc lưu file; phiếu có xem trước (lát IN1) thì mở hộp thoại xem. */
   const print = useCallback(async () => {
+    if (printPreview) {
+      if (!readOnly && isFormDirty(form)) {
+        void message.warning('Phiếu còn thay đổi chưa lưu – bấm Lưu trước khi xem (bản xem lấy dữ liệu đã lưu).')
+        return
+      }
+      setPreviewOpen(true)
+      return
+    }
     if (!printPath) return
     setPrinting(true)
     try {
@@ -129,7 +145,7 @@ export function DocumentForm({
     } finally {
       setPrinting(false)
     }
-  }, [printPath, message])
+  }, [printPath, printPreview, readOnly, form, message])
 
   // Thay đổi chưa lưu (hỏi lại khi rời trang – yêu cầu 13/11/2026): mở phiếu là sạch; người dùng sửa ô thì bẩn; nạp/lưu phiếu
   // (useDocumentFormSync) thì sạch lại. Phiếu chỉ xem không bao giờ hỏi.
@@ -144,7 +160,7 @@ export function DocumentForm({
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && onSave) {
         e.preventDefault()
         onSave()
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p' && printPath) {
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p' && (printPath || printPreview)) {
         // Ctrl+P in phiếu PDF thay cho in cả trang web của trình duyệt.
         e.preventDefault()
         void print()
@@ -156,7 +172,7 @@ export function DocumentForm({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onSave, onAddLine, readOnly, printPath, print])
+  }, [onSave, onAddLine, readOnly, printPath, printPreview, print])
 
   return (
     <div className="document-form" ref={rootRef} {...auditScopeProps(audit)}>
@@ -173,10 +189,16 @@ export function DocumentForm({
           {readOnly && actions}
           {approval && <ApprovalCheckButton {...approval} />}
           {audit?.id && <RecordHistoryButton entityType={audit.entityType} entityId={audit.id} rootRef={rootRef} />}
-          {printPath && (
-            <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
-              In phiếu
+          {printPreview ? (
+            <Button icon={<EyeOutlined />} onClick={() => void print()} title={`${printPreview.label} – xem trang in, In / Tải PDF (Ctrl+P)`}>
+              {printPreview.label}
             </Button>
+          ) : (
+            printPath && (
+              <Button icon={<PrinterOutlined />} onClick={() => void print()} loading={printing} title="In phiếu (Ctrl+P)">
+                In phiếu
+              </Button>
+            )
           )}
         </div>
       </div>
@@ -229,6 +251,7 @@ export function DocumentForm({
           {actions}
         </div>
       )}
+      {printPreview && previewOpen && <PrintPreviewModal {...printPreview} open onClose={() => setPreviewOpen(false)} />}
     </div>
   )
 }

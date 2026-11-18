@@ -46,6 +46,7 @@ import {
   SyncOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
+  SignatureOutlined,
   SolutionOutlined,
   StarOutlined,
   SwapOutlined,
@@ -123,6 +124,8 @@ export const screens: Screen[] = [
   { code: 'TODO', title: 'Việc cần làm', navLabel: 'Việc cần làm', path: '/hang-ngay/viec-can-lam', icon: <CheckSquareOutlined />, group: 'daily' },
   { code: 'UQD', title: 'Ủy quyền duyệt', navLabel: 'Ủy quyền duyệt', path: '/hang-ngay/uy-quyen-duyet', icon: <UserSwitchOutlined />, group: 'daily' },
   { code: 'NOTI', title: 'Thông báo', navLabel: 'Thông báo', path: '/hang-ngay/thong-bao', icon: <BellOutlined />, group: 'daily' },
+  // Lát IN1: mỗi người tự tải chữ ký in vào ô ký của phiếu (design.md mục 20.3) – ai đăng nhập cũng mở được; cũng mở từ menu người dùng.
+  { code: 'CKY', title: 'Chữ ký của tôi', navLabel: 'Chữ ký của tôi', path: '/hang-ngay/chu-ky-cua-toi', icon: <SignatureOutlined />, group: 'daily' },
   { code: 'DOCS', title: 'Tra cứu chứng từ', navLabel: 'Tra cứu chứng từ', path: '/hang-ngay/tra-cuu-chung-tu', icon: <FileSearchOutlined />, group: 'daily' },
 
   { code: 'PR', title: 'Danh sách đề nghị mua hàng (PR)', navLabel: 'Đề nghị mua hàng', path: '/mua-hang/pr', icon: <FileAddOutlined />, group: 'purchasing', permission: Permission.PrView },
