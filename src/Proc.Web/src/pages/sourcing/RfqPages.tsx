@@ -917,7 +917,19 @@ export function RfqPage() {
         title="Yêu cầu báo giá (RFQ)"
         number={isNew ? null : (doc?.no ?? '')}
         audit={{ entityType: 'Rfq', id: doc?.id }}
-        printPath={doc && (doc.quotedSupplierCount ?? 0) > 0 ? `/api/rfqs/${doc.id}/pdf` : undefined}
+        // "Xem kết quả hỏi giá" (lát IN2c, người dùng yêu cầu 18/11/2026): trang in giữ nguyên sheet 3a/3A/3B (3a/3B mỗi NCC trúng thầu một trang),
+        // chữ ký người đã duyệt, In / Tải PDF đếm lần in. Chưa có báo giá thì chưa in được.
+        printPreview={
+          doc && (doc.quotedSupplierCount ?? 0) > 0
+            ? {
+                label: 'Xem kết quả hỏi giá',
+                title: `Xem kết quả hỏi giá ${doc.no} – mẫu ${doc.formCode ?? (doc.category === 'Construction' ? '3A' : '3B')}`,
+                viewPath: `/api/rfqs/${doc.id}/pdf`,
+                printPath: `/api/rfqs/${doc.id}/print`,
+                printsPath: `/api/rfqs/${doc.id}/prints`,
+              }
+            : undefined
+        }
         status={status}
         meta={
           doc && (

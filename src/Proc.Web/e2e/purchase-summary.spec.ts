@@ -71,7 +71,8 @@ test('lập bảng tổng hợp 2B, duyệt trên điện thoại, hủy', async
   expect(pdfResponse.headers()['content-type']).toContain('application/pdf')
   const preview = page.getByRole('dialog', { name: `Xem bảng tổng hợp ${no} – mẫu 2B` })
   await expect(page.getByTestId('print-count')).toHaveText('Chưa in lần nào')
-  const download = page.waitForEvent('download')
+  // Chromium chạy ẩn không có trình xem PDF: khung xem trong hộp thoại cũng sinh sự kiện tải (tên mã blob) – chờ đúng file tải có tên phiếu.
+  const download = page.waitForEvent('download', { predicate: (d) => d.suggestedFilename() === `${no}.pdf` })
   await preview.getByRole('button', { name: 'Tải PDF' }).click()
   expect((await download).suggestedFilename()).toBe(`${no}.pdf`)
   await expect(page.getByTestId('print-count')).toContainText('Đã in 1 lần')

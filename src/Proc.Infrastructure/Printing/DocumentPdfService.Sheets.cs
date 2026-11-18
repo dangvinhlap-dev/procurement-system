@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Proc.Application.Common;
 using Proc.Application.Documents;
@@ -41,12 +41,28 @@ public sealed partial class DocumentPdfService
         ],
         new("", "Chủ tịch HĐQT/TGĐ", ""));
 
+    /// <summary>
+    /// Khối ký 3a/3A/3B nguyên văn ảnh trong sheet: Người đề nghị (Ký đề nghị) · TP. CUVT (Ký kiểm tra) · TP. TC-NQ-KT (Ký kiểm tra) · GĐ TC-NQ-KT
+    /// (Ký, kiểm soát chi phí) · P.Chủ tịch UBCL&amp;PT (Ký duyệt đề nghị) · Chủ tịch HĐQT/TGĐ (Ký duyệt) – chuỗi duyệt 3a/3A/3B (design.md mục 19.2).
+    /// </summary>
+    public static readonly SheetSignSpec Sign3 = new(
+        SheetSign.Heading,
+        new("", "Người đề nghị", "(Ký đề nghị)"),
+        [
+            new("TPCUVT", "TP. CUVT", "(Ký kiểm tra)"),
+            new("TPTCKT", "TP. TC-NQ-KT", "(Ký kiểm tra)"),
+            new("GDTCKT", "GĐ TC-NQ-KT", "(Ký, kiểm soát chi phí)"),
+            new("PHOCTUBCL", "P.Chủ tịch UBCL&PT", "(Ký duyệt đề nghị)"),
+        ],
+        new("", "Chủ tịch HĐQT/TGĐ", "(Ký duyệt)"));
+
     /// <inheritdoc />
-    public Task<PdfFile> DocumentPrintAsync(string docType, Guid id, PrintKind kind, CancellationToken cancellationToken) => docType switch
+    public Task<PdfFile> DocumentPrintAsync(string docType, Guid id, PrintKind kind, string? form, CancellationToken cancellationToken) => docType switch
     {
         DocumentTypes.PurchaseRequest => RenderPurchaseRequestAsync(id, kind, cancellationToken),
         DocumentTypes.PurchaseOrder => RenderPurchaseOrderSheetAsync(id, kind, cancellationToken),
         DocumentTypes.PurchaseSummary => RenderSummarySheetAsync(id, kind, cancellationToken),
+        DocumentTypes.RequestForQuotation => RenderRfqSheetAsync(id, form, kind, cancellationToken),
         _ => throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu."),
     };
 
@@ -65,6 +81,9 @@ public sealed partial class DocumentPdfService
             case DocumentTypes.PurchaseSummary:
                 await _summaries.GetAsync(id, cancellationToken);
                 break;
+            case DocumentTypes.RequestForQuotation:
+                await _rfqs.GetAsync(id, cancellationToken);
+                break;
             default:
                 throw new BusinessRuleException($"Phiếu loại {docType} chưa in theo biểu mẫu.");
         }
@@ -78,6 +97,23 @@ public sealed partial class DocumentPdfService
         return logs.Select(l => new DocumentPrintDto(
             l.PrintNo, l.Kind.ToString(), l.PrintedAt, users.GetValueOrDefault(l.PrintedBy)?.FullName, users.GetValueOrDefault(l.PrintedBy)?.UserName,
             l.ApprovalStatus)).ToList();
+    }
+
+    /// <summary>
+    /// Kết quả hỏi giá 3A (bảng so sánh) / 3a, 3B (bảng trình giá từng NCC trúng thầu, nối trong một file) giữ nguyên sheet; <paramref name="kind"/>
+    /// null = bản xem. Người đề nghị là người chọn thầu (không có thì người lập RFQ).
+    /// </summary>
+    private async Task<PdfFile> RenderRfqSheetAsync(Guid id, string? wanted, PrintKind? kind, CancellationToken cancellationToken)
+    {
+        var (rfq, forms) = await RfqFormsAsync(id, wanted, cancellationToken);
+        var entity = await _db.Rfqs.AsNoTracking().Where(r => r.Id == id).Select(r => new { r.AwardedBy, r.CreatedBy }).SingleAsync(cancellationToken);
+        var sign = await SignBlockAsync(
+            Sign3, DocumentTypes.RequestForQuotation, id, rfq.Status, entity.AwardedBy ?? entity.CreatedBy, rfq.AwardedByName ?? rfq.CreatedByName,
+            cancellationToken);
+        var (logo, stamp) = await DecorAsync(DocumentTypes.RequestForQuotation, id, rfq.No, rfq.Status, kind, sign.ApprovalStatus, cancellationToken);
+        var pages = forms.Select(f => new SheetPage(
+            f, f.FormNo switch { "3A" => CuvtSheetLayout.Sheet3A, "3a" => CuvtSheetLayout.Sheet3a, _ => CuvtSheetLayout.Sheet3B }, sign, stamp)).ToList();
+        return new PdfFile($"{rfq.No}.pdf", CuvtSheetLayout.RenderMany(pages, logo));
     }
 
     /// <summary>Bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>
@@ -150,11 +186,12 @@ public sealed partial class DocumentPdfService
                 $"Số phiếu: {no} · Lần in thứ {printNo} · Trang {{PAGE}}/{{PAGES}}",
                 $"Tình trạng phê duyệt: {approvalStatus}",
             ];
+        // RFQ: "Sent" (đã gửi NCC, chưa chọn thầu), "AwardPending" (chờ duyệt kết quả) cũng chưa có hiệu lực.
         var watermark = status switch
         {
             "Draft" => "BẢN NHÁP",
             "Cancelled" => "ĐÃ HỦY",
-            "Submitted" or "Rejected" => "CHƯA DUYỆT",
+            "Submitted" or "Rejected" or "Sent" or "AwardPending" => "CHƯA DUYỆT",
             _ => null,
         };
         return (logo, new SheetStamp(lines, watermark));

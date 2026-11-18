@@ -170,7 +170,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
     Kiểm tra: build 0 cảnh báo, `dotnet test` 814/814, tsc, oxlint, `npm run build`, e2e 4/4 (po-print-4ab, printing, print-preview-signature).
   - **IN2b 2A/2B (bảng tổng hợp) – xong**: khuôn thêm tiêu đề hai tầng, cột đơn vị mua tùy số lượng, cột chữ đỏ; số đo `Sheet2A/2B`, khối ký
     `Sign2`; API `POST /api/purchase-summaries/{id}/print`, `GET …/prints`; nút "Xem bảng tổng hợp"; test `InBieuMauCuvt_1A_1B_DichVu_2A` (dòng
-    tổng), e2e `purchase-summary`. Còn: IN2c 3a/3A/3B (RFQ), IN2d 5A/5B (đề nghị thanh toán).
+    tổng), e2e `purchase-summary`.
+  - **IN2c 3a/3A/3B (RFQ) – xong**: khuôn viết lại gọn – tiêu đề bảng nhiều tầng (nhóm lồng "|"), cột lặp theo nhóm (`DynamicGroup`), dòng tổng phụ
+    (nền, gộp dọc ô trống 3A), dòng chữ dưới bảng (nghiêng 3a/3B, hai nửa 3A), nhiều phiếu một file (`RenderMany` nối trang), co theo chiều cao khi
+    chỉ vừa tràn trang; số đo `Sheet3a/3A/3B`, khối ký `Sign3`; 3A luôn đủ 3 nhóm NCC; API `POST /api/rfqs/{id}/print`, `GET …/prints`; nút "Xem kết
+    quả hỏi giá"; test `Rfq_LoaiMuaTheoDeNghi_BieuMau3A_3a_3B_InKhoNgang` (tiêu đề nhiều tầng, dòng tổng, đếm lần in), e2e `rfq-deadline`. e2e chờ
+    tải PDF lọc theo tên phiếu (Chromium ẩn không có trình xem PDF – khung xem cũng sinh sự kiện tải tên mã blob). Còn: IN2d 5A/5B (đề nghị thanh toán).
 
 - **Đợt Z – quy tắc chung chứng từ (người dùng chốt 11/11/2026, design.md mục 20)**: Z1 ý kiến + đính kèm từng bước duyệt, khóa file
   sau duyệt → Z2 ổ khóa vàng từng bước + "Kiểm tra phê duyệt" (bước 0…n, tên đăng nhập, họ tên, chức vụ, giờ ngày) + trường Chức vụ →

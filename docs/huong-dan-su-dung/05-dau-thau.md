@@ -88,6 +88,11 @@ thấy "đủ x/7, còn thiếu…"); công ty bật tham số `RFQ_DOSSIER_REQU
 - **Người lập RFQ và người chọn thầu không tự duyệt.**
 - Từ chối bắt buộc lý do → RFQ về Đang nhận báo giá (giữ lựa chọn cũ làm gợi ý). Người chọn thầu rút về được khi còn chờ.
 - Thành viên chuyên môn ghi **ý kiến thẩm định** (tab THẨM ĐỊNH, xem 5.3) – hiện trong hộp thoại Duyệt.
+- **Xem kết quả hỏi giá** (Ctrl+P, khi đã có báo giá – từ lát IN2): hộp thoại xem trang in **giữ nguyên sheet Excel** – **3A** "So sánh giá và
+  chọn nhà cung cấp" (tiêu đề "CÁC NHÀ CUNG CẤP", mỗi NCC tên + cũ/mới, điện thoại, đơn giá – thành tiền; luôn in đủ 3 nhóm NCC như tờ mẫu,
+  thiếu thì để trống; "3. Đề xuất chọn" – "4. Lý do chọn") hoặc **3a / 3B** "Bảng trình duyệt giá khách hàng" (mỗi NCC trúng thầu một trang).
+  Khối ký nguyên văn sheet: Người đề nghị · TP. CUVT · TP. TC-NQ-KT · GĐ TC-NQ-KT · P.Chủ tịch UBCL&PT · Chủ tịch HĐQT/TGĐ, có **chữ ký**
+  người đã duyệt; **In…** / **Tải PDF** tính một lần in.
 
 ### Sau khi kết quả được duyệt
 

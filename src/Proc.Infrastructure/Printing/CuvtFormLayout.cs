@@ -80,13 +80,15 @@ public sealed record CuvtCell(string Text, int Span = 1, bool AlignRight = true)
 /// <param name="Cells">Các ô còn lại, tổng Span = số cột − LabelSpan.</param>
 /// <param name="FontSize">Cỡ chữ theo biểu mẫu (13 thường, 15 dòng "Tổng cộng").</param>
 /// <param name="Bold">In đậm.</param>
-public sealed record CuvtExtraRow(string Label, int LabelSpan, IReadOnlyList<CuvtCell> Cells, double FontSize = 13, bool Bold = false);
+/// <param name="Fill">Nền xanh nhạt như dòng "Tổng cộng" của sheet 3a/3B (lát IN2).</param>
+public sealed record CuvtExtraRow(string Label, int LabelSpan, IReadOnlyList<CuvtCell> Cells, double FontSize = 13, bool Bold = false, bool Fill = false);
 
 /// <summary>Dòng chữ dưới bảng "Nhãn: nội dung" căn trái, ví dụ "Bằng chữ", "Hình thức thanh toán", "Đề xuất chọn".</summary>
 /// <param name="Label">Nhãn (in đậm).</param>
 /// <param name="Value">Nội dung.</param>
 /// <param name="Strong">In đậm nội dung.</param>
-public sealed record CuvtTextLine(string Label, string Value, bool Strong = false);
+/// <param name="BoldLabel">In đậm cả nhãn – "Bằng chữ" của sheet 3a/3B (lát IN2); khuôn chung luôn in đậm nhãn.</param>
+public sealed record CuvtTextLine(string Label, string Value, bool Strong = false, bool BoldLabel = false);
 
 /// <summary>
 /// Khuôn in theo biểu mẫu CUVT của công ty (lát Y10, design.md mục 10.10 và 19.1 Q13). Quy tắc lấy từ ghi chú trong file Excel biểu mẫu:

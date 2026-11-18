@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Proc.Application.Organization;
 using Proc.Application.Purchasing;
@@ -49,7 +49,9 @@ public partial class PurchasingTests
         rfqA = await QuoteAsync(f, rfqA, 330_000, 100_000);
 
         // In trước khi chọn thầu: bảng so sánh 3A, khổ ngang, ghi chưa chọn thầu.
-        var preview = await PdfOfAsync(await f.Buyer.GetAsync($"/api/rfqs/{rfqA.Id}/pdf", Ct));
+        var previewResponse = await f.Buyer.GetAsync($"/api/rfqs/{rfqA.Id}/pdf", Ct);
+        SavePdfForReview("3A-chua-chon.pdf", await previewResponse.Content.ReadAsByteArrayAsync(Ct));
+        var preview = await PdfOfAsync(previewResponse);
         Assert.Equal($"SO SÁNH GIÁ VÀ CHỌN NHÀ CUNG CẤP {rfqA.No}", preview.Info.Title);
         Assert.True(preview.Pages[0].Width.Point > preview.Pages[0].Height.Point, "Mẫu 3A khổ ngang.");
 
@@ -65,15 +67,18 @@ public partial class PurchasingTests
         var form3A = CuvtPrintForms.Rfq(rfqA, context, null).Single();
         Assert.Equal(("3A", true, "ĐANG CHỜ DUYỆT – chưa có hiệu lực"), (form3A.FormNo, form3A.Landscape, form3A.StatusNote));
         // 8 × 330.000 + 1 × 100.000 = 2.740.000; VAT 274.000; gồm thuế 3.014.000. NCC chưa có PO đã duyệt → "MỚI", không điện thoại → "Chưa ghi".
-        Assert.Equal(["", "2.740.000"], form3A.TotalCells);
+        // Sheet in sẵn 3 nhóm NCC: NCC2, NCC3 để trống (lát IN2c).
+        Assert.Equal(["", "2.740.000", "", "", "", ""], form3A.TotalCells);
+        Assert.StartsWith("CÁC NHÀ CUNG CẤP|NCC3:", form3A.Columns[^1].Group);
         Assert.Equal("274.000", form3A.ExtraRows![0].Cells[1].Text);
         Assert.Equal("3.014.000", form3A.ExtraRows[1].Cells[1].Text);
-        Assert.Contains("Cũ/mới: MỚI", form3A.Columns[4].Group);
-        Assert.Contains("Điện thoại: Chưa ghi", form3A.Columns[4].Group);
-        Assert.Equal(("Đề xuất chọn", "NCC mua hàng"), (form3A.AfterTable![0].Label, form3A.AfterTable[0].Value));
+        // Lát IN2c: tiêu đề NCC nhiều tầng như sheet – "CÁC NHÀ CUNG CẤP" / tên + cũ/mới / điện thoại.
+        Assert.Equal(["CÁC NHÀ CUNG CẤP", "NCC1: NCC mua hàng\nCũ/mới: MỚI", "- Điện thoại: Chưa ghi"], form3A.Columns[4].Group!.Split('|'));
+        Assert.Equal(("3. Đề xuất chọn", "NCC mua hàng"), (form3A.AfterTable![0].Label, form3A.AfterTable[0].Value));
         Assert.Equal("Giá tốt, giao nhanh", form3A.AfterTable[1].Value);
         Assert.Equal("1.000.000.000 đ", form3A.Info.Single(i => i.Label == "Định mức/tổng dự toán").Value);
         Assert.Equal("2 ngày sau khi đặt hàng", form3A.ExtraRows[3].Cells[0].Text);
+        Assert.Equal("Hình thức thanh toán (chuyển khoản/tiền mặt)", form3A.ExtraRows[2].Label);
         Assert.DoesNotContain(form3A.Info, i => i.Value.Contains('…'));
 
         // In bảng trình giá 3a: rút về, đặt ngưỡng 5.000.000 > giá trị trúng thầu → 3a, không bắt buộc lý do chọn.
@@ -82,14 +87,19 @@ public partial class PurchasingTests
             .EnsureSuccessStatusCode();
         rfqA = await ReadAsync<RfqDto>(await f.Buyer.PostAsJsonAsync($"/api/rfqs/{rfqA.Id}/award", award, Ct));
         Assert.Equal(("3a", 5_000_000m), (rfqA.FormCode, rfqA.ComparisonThreshold));
-        var pdf3a = await PdfOfAsync(await f.Buyer.GetAsync($"/api/rfqs/{rfqA.Id}/pdf", Ct));
+        var response3a = await f.Buyer.GetAsync($"/api/rfqs/{rfqA.Id}/pdf", Ct);
+        SavePdfForReview("3a-cho-duyet.pdf", await response3a.Content.ReadAsByteArrayAsync(Ct));
+        var pdf3a = await PdfOfAsync(response3a);
         Assert.Equal($"BẢNG TRÌNH DUYỆT GIÁ KHÁCH HÀNG {rfqA.No}", pdf3a.Info.Title);
         var form3a = CuvtPrintForms.Rfq(rfqA, context, null).Single();
         Assert.Equal(("3a", "Cộng", 7), (form3a.FormNo, form3a.TotalLabel, form3a.Columns.Count));
         Assert.Equal(("Tên công trình", project.Name), (form3a.Info[0].Label, form3a.Info[0].Value));
         Assert.Equal("95.000", form3a.Rows[0][6]);
-        Assert.Equal(("Thuế VAT (10%)", "274.000"), (form3a.ExtraRows![0].Label, form3a.ExtraRows[0].Cells[0].Text));
+        // Như sheet 3a: "Cộng" gộp STT:Tên, tiền ở cột Thành tiền (ô thứ 4 sau nhãn); "Tổng cộng" nền xanh nhạt.
+        Assert.Equal(("Thuế VAT (10%)", "274.000"), (form3a.ExtraRows![0].Label, form3a.ExtraRows[0].Cells[3].Text));
+        Assert.Equal((2, "2.740.000", true), (form3a.TotalSpan, form3a.TotalCells[3], form3a.ExtraRows[1].Fill));
         Assert.StartsWith("Ba triệu", form3a.AfterTable![0].Value);
+        Assert.True(form3a.AfterTable[0].BoldLabel);
         Assert.Equal("Chuyển khoản sau 7 ngày", form3a.AfterTable[1].Value);
         // Vẫn in được bảng so sánh 3A theo yêu cầu.
         await PdfOfAsync(await f.Buyer.GetAsync($"/api/rfqs/{rfqA.Id}/pdf?form=3A", Ct));
@@ -102,9 +112,16 @@ public partial class PurchasingTests
         rfqB = await ReadAsync<RfqDto>(await f.Buyer.PostAsJsonAsync($"/api/rfqs/{rfqB.Id}/award",
             new AwardRfqRequest([new(rfqB.Lines[0].Id, f.SupplierId, null)], "Chỉ một NCC cung cấp"), Ct));
         Assert.Equal("3B", rfqB.FormCode);
-        var pdf3B = await PdfOfAsync(await f.Buyer.GetAsync($"/api/rfqs/{rfqB.Id}/pdf", Ct));
+        var response3B = await f.Buyer.GetAsync($"/api/rfqs/{rfqB.Id}/pdf", Ct);
+        SavePdfForReview("3B-cho-duyet.pdf", await response3B.Content.ReadAsByteArrayAsync(Ct));
+        var pdf3B = await PdfOfAsync(response3B);
         Assert.True(pdf3B.Pages[0].Width.Point > pdf3B.Pages[0].Height.Point, "Mẫu 3B khổ ngang.");
         Assert.Contains("loại A", await TitleAsync(await f.Buyer.GetAsync($"/api/rfqs/{rfqB.Id}/pdf?form=3A", Ct)));
+
+        // Lát IN2c: In / Tải PDF ghi lần in; danh sách lần in theo RFQ.
+        Assert.True((await f.Buyer.PostAsync($"/api/rfqs/{rfqB.Id}/print?kind=download", null, Ct)).IsSuccessStatusCode);
+        var prints = (await f.Buyer.GetFromJsonAsync<List<Proc.Application.Documents.DocumentPrintDto>>($"/api/rfqs/{rfqB.Id}/prints", Ct))!;
+        Assert.Equal([(1, "Download")], prints.Select(p => (p.PrintNo, p.Kind)));
 
         // Người không có quyền xem RFQ không in được.
         Assert.Equal(HttpStatusCode.Forbidden, (await approver.GetAsync($"/api/rfqs/{rfqB.Id}/pdf", Ct)).StatusCode);

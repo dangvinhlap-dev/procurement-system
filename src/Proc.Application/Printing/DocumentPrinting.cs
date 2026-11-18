@@ -50,16 +50,17 @@ public interface IDocumentPdfService
 
     /// <summary>
     /// In / tải PDF một phiếu theo sheet biểu mẫu (lát IN2 – design.md mục 20.4): ghi một lần in vào nhật ký rồi dựng bản in có "Lần in thứ n".
-    /// Hiện có: PO (4A/4B).
+    /// Hiện có: PR (1A/1B), PO (4A/4B), bảng tổng hợp (2A/2B), RFQ (3a/3A/3B).
     /// </summary>
     /// <param name="docType">Loại chứng từ (<c>DocumentTypes</c>).</param>
     /// <param name="id">Phiếu.</param>
     /// <param name="kind">In hay tải PDF.</param>
+    /// <param name="form">Biểu mẫu muốn in khi phiếu có nhiều mẫu (RFQ "3A"); null theo phiếu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi loại phiếu chưa in theo sheet.</exception>
-    Task<PdfFile> DocumentPrintAsync(string docType, Guid id, Proc.Domain.Documents.PrintKind kind, CancellationToken cancellationToken);
+    Task<PdfFile> DocumentPrintAsync(string docType, Guid id, Proc.Domain.Documents.PrintKind kind, string? form, CancellationToken cancellationToken);
 
     /// <summary>Các lần in một phiếu, mới nhất trước – cho hộp thoại xem phiếu (lát IN2).</summary>
     /// <param name="docType">Loại chứng từ.</param>

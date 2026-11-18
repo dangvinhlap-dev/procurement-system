@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Proc.Application.Sourcing;
 using Proc.Domain.Common;
 using Proc.Domain.MasterData;
@@ -42,6 +42,9 @@ public static partial class CuvtPrintForms
         "VẬT TƯ CỦA CÔNG TRÌNH PHÁT SINH CHƯA CÓ DỰ TOÁN",
     ];
 
+    /// <summary>Số nhóm cột NCC in sẵn trên sheet 3A.</summary>
+    public const int MinComparisonSuppliers = 3;
+
     /// <summary>
     /// Các biểu mẫu in cho một RFQ: <paramref name="form"/> = "3A" in bảng so sánh (chỉ RFQ loại A); null in theo biểu mẫu của phiếu – 3A một
     /// bảng so sánh, 3a/3B mỗi NCC một bảng trình giá (NCC trúng thầu; chưa chọn thầu thì mọi NCC đã chào giá).
@@ -81,20 +84,27 @@ public static partial class CuvtPrintForms
         var suppliers = rfq.Suppliers.Where(s => s.HasQuoted)
             .OrderByDescending(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId))
             .ThenByDescending(s => s.TotalScore).ThenBy(s => s.SupplierCode).ToList();
-        // Cột cố định TT 8, ĐVT 12, Số lượng 16 mm; mỗi NCC 2 cột chia đều phần còn lại sau Tên (tối thiểu 50 mm).
-        var supplierWidth = Math.Min(64, (CuvtFormLayout.LandscapeWidthMm - 36 - 50) / suppliers.Count);
-        var nameWidth = CuvtFormLayout.LandscapeWidthMm - 36 - supplierWidth * suppliers.Count;
+        // Độ rộng theo sheet 3A (CuvtSheetLayout.Sheet3A – lát IN2); tiêu đề NCC 3 tầng dưới "CÁC NHÀ CUNG CẤP": tên + cũ/mới, điện thoại, Đơn giá – Thành tiền.
         var columns = new List<CuvtColumn>
         {
-            new("TT", 8, Center: true), new("Tên hàng hóa - vật tư", nameWidth), new("ĐVT", 12, Center: true), new("Số lượng", 16, true),
+            new("TT", 8, Center: true), new("Tên hàng hóa - vật tư", 60), new("ĐVT", 12, Center: true), new("Số lượng", 16, true),
         };
         for (var i = 0; i < suppliers.Count; i++)
         {
             var s = suppliers[i];
             var contact = context.Suppliers.GetValueOrDefault(s.SupplierId);
-            var group = $"NCC{i + 1}: {s.SupplierName}\nCũ/mới: {(contact?.IsExisting == true ? "CŨ" : "MỚI")}\nĐiện thoại: {Text(contact?.Phone)}";
-            columns.Add(new("Đơn giá", supplierWidth * 0.45, true, group));
-            columns.Add(new("Thành tiền", supplierWidth * 0.55, true, group));
+            var group = $"CÁC NHÀ CUNG CẤP|NCC{i + 1}: {s.SupplierName}\nCũ/mới: {(contact?.IsExisting == true ? "CŨ" : "MỚI")}|- Điện thoại: {Text(contact?.Phone)}";
+            columns.Add(new("Đơn giá", 25, Group: group, Center: true));
+            columns.Add(new("Thành tiền", 35, Group: group, Center: true));
+        }
+
+        // Sheet 3A in sẵn 3 nhóm cột NCC: ít hơn 3 NCC chào giá thì nhóm còn lại để trống như tờ mẫu (lát IN2c).
+        var blankSuppliers = Math.Max(0, MinComparisonSuppliers - suppliers.Count);
+        for (var i = 0; i < blankSuppliers; i++)
+        {
+            var group = $"CÁC NHÀ CUNG CẤP|NCC{suppliers.Count + i + 1}:\nCũ/mới:|- Điện thoại:";
+            columns.Add(new("Đơn giá", 25, Group: group, Center: true));
+            columns.Add(new("Thành tiền", 35, Group: group, Center: true));
         }
 
         var rows = new List<string[]>();
@@ -108,17 +118,27 @@ public static partial class CuvtPrintForms
                 cells.Add(q is null ? "" : Money(LineAmount(line.Qty, q)));
             }
 
+            cells.AddRange(Enumerable.Repeat("", 2 * blankSuppliers));
             rows.Add([.. cells]);
         }
 
         var totals = suppliers.Select(s => Totals(rfq, context, s, s.Lines.Select(q => q.RfqLineId).ToHashSet())).ToList();
         var extra = new List<CuvtExtraRow>
         {
-            new("Thuế VAT", 4, totals.SelectMany(t => new[] { new CuvtCell(""), new CuvtCell(Money(t.Vat)) }).ToList()),
-            new("Tổng tiền bao gồm thuế", 4, totals.SelectMany(t => new[] { new CuvtCell(""), new CuvtCell(Money(t.Net + t.Vat)) }).ToList(), Bold: true),
-            new("Hình thức thanh toán", 4, suppliers.Select(s => new CuvtCell(Text(s.PaymentTerms), 2, false)).ToList()),
-            new("Thời gian giao hàng", 4, suppliers.Select(s => new CuvtCell(LeadTime(s), 2, false)).ToList()),
+            // Nhãn, chữ đậm nguyên văn sheet 3A (dòng 17–20).
+            new("Thuế VAT", 4, Money2(totals.Select(t => t.Vat)), Bold: true),
+            new("Tổng tiền bao gồm thuế", 4, Money2(totals.Select(t => t.Net + t.Vat)), Bold: true),
+            new("Hình thức thanh toán (chuyển khoản/tiền mặt)", 4, Wide(suppliers.Select(s => Text(s.PaymentTerms))), Bold: true),
+            new("Thời gian giao hàng", 4, Wide(suppliers.Select(LeadTime)), Bold: true),
         };
+
+        // Mỗi NCC: ô đơn giá trống (gộp dọc với dòng tổng) + ô tiền; nhóm NCC trống thêm ô trống.
+        List<CuvtCell> Money2(IEnumerable<decimal> values) =>
+            values.SelectMany(v => new[] { new CuvtCell(""), new CuvtCell(Money(v)) })
+                .Concat(Enumerable.Repeat(new CuvtCell(""), 2 * blankSuppliers)).ToList();
+        // Mỗi NCC một ô gộp 2 cột (hình thức thanh toán, thời gian giao hàng).
+        List<CuvtCell> Wide(IEnumerable<string> values) =>
+            values.Select(v => new CuvtCell(v, 2, false)).Concat(Enumerable.Repeat(new CuvtCell("", 2, false), blankSuppliers)).ToList();
 
         var awarded = suppliers.Where(s => rfq.Lines.Any(l => l.AwardedSupplierId == s.SupplierId)).ToList();
         var proposal = awarded.Count switch
@@ -128,7 +148,8 @@ public static partial class CuvtPrintForms
             _ => string.Join("; ", awarded.Select(s =>
                 $"{s.SupplierName} (dòng {string.Join(", ", rfq.Lines.Where(l => l.AwardedSupplierId == s.SupplierId).OrderBy(l => l.LineNo).Select(l => l.LineNo))})")),
         };
-        var after = new List<CuvtTextLine> { new("Đề xuất chọn", proposal, true), new("Lý do chọn", rfq.SelectionReason ?? "") };
+        // Dòng 21 của sheet: "3. Đề xuất chọn: …" nửa trái, "4. Lý do chọn: …" nửa phải.
+        var after = new List<CuvtTextLine> { new("3. Đề xuất chọn", proposal, true), new("4. Lý do chọn", rfq.SelectionReason ?? "") };
         after.AddRange(LineReasons(rfq));
 
         var info = new List<CuvtInfoLine>
@@ -139,7 +160,8 @@ public static partial class CuvtPrintForms
         };
         return new CuvtForm(
             "3A", "SO SÁNH GIÁ VÀ CHỌN NHÀ CUNG CẤP", Subtitles1A, context.CompanyName, rfq.No, context.Date, true, RfqStatusNote(rfq.Status),
-            info, columns, rows, 4, totals.SelectMany(t => new[] { "", Money(t.Net) }).ToList(), (null, null), rfq.Note,
+            info, columns, rows, 4, totals.SelectMany(t => new[] { "", Money(t.Net) }).Concat(Enumerable.Repeat("", 2 * blankSuppliers)).ToList(),
+            (null, null), rfq.Note,
             Signers("Người lập", rfq.AwardedByName ?? rfq.CreatedByName, rfq.Approvals), extra, "Tổng tiền chưa bao gồm thuế", after);
     }
 
@@ -154,8 +176,8 @@ public static partial class CuvtPrintForms
             .ToList();
         var columns = new List<CuvtColumn>
         {
-            new("STT", 10, Center: true), new("Tên hàng hóa - vật tư", 129), new("ĐVT", 16, Center: true), new("Số lượng", 20, true),
-            new("Đơn giá", 30, true), new("Thành tiền", 34, true), new("Giá cũ đã mua gần nhất", 34, true),
+            new("STT", 10, Center: true), new("Tên hàng hóa - vật tư", 129), new("ĐVT", 16, Center: true), new("Số lượng", 20),
+            new("Đơn giá", 30, true), new("Thành tiền", 34, true), new("Giá cũ đã mua gần nhất", 34),
         };
         var rows = lines.Select((l, i) =>
         {
@@ -168,10 +190,11 @@ public static partial class CuvtPrintForms
         }).ToList();
         var (net, vat, rates) = Totals(rfq, context, supplier, lines.Select(l => l.Id).ToHashSet());
         var vatLabel = rates.Count == 1 ? $"Thuế VAT ({rates[0]})" : "Thuế VAT";
+        // Như sheet 3a/3B: "Cộng" – "Thuế VAT (10%)" – "Tổng cộng" (15 đậm, nền xanh nhạt) gộp STT:Tên, tiền ở cột Thành tiền.
         var extra = new List<CuvtExtraRow>
         {
-            new(vatLabel, 5, [new CuvtCell(Money(vat)), new CuvtCell("")]),
-            new("Tổng cộng", 5, [new CuvtCell(Money(net + vat)), new CuvtCell("")], 15, true),
+            new(vatLabel, 2, [new(""), new(""), new(""), new(Money(vat)), new("")]),
+            new("Tổng cộng", 2, [new(""), new(""), new(""), new(Money(net + vat)), new("")], 15, true, true),
         };
         var info = context.Suppliers.GetValueOrDefault(supplier.SupplierId);
         var header = new List<CuvtInfoLine>();
@@ -193,16 +216,20 @@ public static partial class CuvtPrintForms
         header.Add(new("Số điện thoại", Text(info?.Phone)));
 
         var note = string.Join(" ", new[] { supplier.Note, rfq.Note }.Where(n => !string.IsNullOrWhiteSpace(n)));
+        // Dòng chữ dưới bảng nghiêng như sheet: "Bằng chữ" đậm cả dòng, hình thức thanh toán in đậm nội dung. Tự đặt: sheet ghi "Gi chú" (gõ thiếu) –
+        // phiếu in "Ghi chú".
         var after = new List<CuvtTextLine>
         {
-            new("Bằng chữ", VietnameseNumberText.ToVndWords(net + vat) + " ./."),
-            new("Hình thức thanh toán", Text(supplier.PaymentTerms)),
+            new("Bằng chữ", VietnameseNumberText.ToVndWords(net + vat) + " ./.", true, true),
+            new("Hình thức thanh toán", Text(supplier.PaymentTerms), true),
             new("Ghi chú", note),
         };
         after.AddRange(LineReasons(rfq).Where(r => lines.Any(l => r.Label == $"Dòng {l.LineNo}")));
         return new CuvtForm(
             code, "BẢNG TRÌNH DUYỆT GIÁ KHÁCH HÀNG", code == "3a" ? Subtitles1A : Subtitles3B, context.CompanyName, rfq.No, context.Date, true,
-            RfqStatusNote(rfq.Status), header, columns, rows, 5, [Money(net), ""], (null, null), null,
+            RfqStatusNote(rfq.Status), header, columns, rows, 2,
+            // "Cộng": tổng số lượng (chỉ khi cùng ĐVT) và tiền; tự đặt – sheet cộng cả cột đơn giá, giá cũ (=SUM) nhưng tổng đơn giá không có nghĩa.
+            ["", lines.Select(l => l.UomCode).Distinct().Count() == 1 ? Qty(lines.Sum(l => l.Qty)) : "", "", Money(net), ""], (null, null), null,
             Signers("Người lập", rfq.AwardedByName ?? rfq.CreatedByName, rfq.Approvals), extra, "Cộng", after);
     }
 

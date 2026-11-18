@@ -247,7 +247,19 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
         RenderSummarySheetAsync(id, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken)
+    public Task<PdfFile> RfqAsync(Guid id, string? form, CancellationToken cancellationToken) =>
+        // Lát IN2c: bản xem giữ nguyên sheet 3a/3A/3B, có chữ ký người duyệt, góc thông tin hệ thống (không ghi nhật ký in).
+        RenderRfqSheetAsync(id, form, null, cancellationToken);
+
+    /// <summary>
+    /// Nội dung các biểu mẫu kết quả hỏi giá của một RFQ (lát Y6): số liệu khung chi phí (dự toán công trình / ngân sách tháng bộ phận), NCC cũ / mới,
+    /// giá cũ gần nhất, thuế suất mặt hàng.
+    /// </summary>
+    /// <param name="id">RFQ.</param>
+    /// <param name="form">"3A" in bảng so sánh; null theo biểu mẫu của phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>RFQ đã đọc theo phạm vi và các biểu mẫu.</returns>
+    private async Task<(RfqDto Rfq, IReadOnlyList<CuvtForm> Forms)> RfqFormsAsync(Guid id, string? form, CancellationToken cancellationToken)
     {
         var rfq = await _rfqs.GetAsync(id, cancellationToken);
         var company = await CompanyAsync(cancellationToken);
@@ -308,8 +320,7 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
         var context = new RfqPrintContext(
             company.Name, date, projectName, estimate, spent, departmentName, budget, purpose, suppliers, lastPrices,
             rfq.Lines.ToDictionary(l => l.Id, l => itemVat.GetValueOrDefault(l.ItemId)));
-        var forms = CuvtPrintForms.Rfq(rfq, context, form);
-        return new PdfFile($"{rfq.No}.pdf", CuvtFormLayout.RenderMany(forms));
+        return (rfq, CuvtPrintForms.Rfq(rfq, context, form));
     }
 
     /// <summary>
