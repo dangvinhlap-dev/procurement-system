@@ -3,6 +3,58 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.42.0] - 2026-11-18
+
+**Các phiếu khác in giống hệt sheet Excel như 1A – kèm chữ ký người đã duyệt, logo công ty, đếm số lần in** (design.md mục 20.4, lát IN2 –
+người dùng yêu cầu 18/11/2026: "các phiếu này giống hệt sheet Excel như 1A"). Cài sau **0.41.0** qua REL.
+
+### Thêm mới
+- **Đơn mua hàng (PO) – nút "Xem bảng theo dõi"** (thay nút In phiếu, Ctrl+P vẫn dùng được): hộp thoại xem trang in **bảng theo dõi mua hàng 4A**
+  (PO từ đề nghị loại A) / **4B** (hàng hóa, dịch vụ) giống sheet "4A/4B.Theo dõi MH": khổ ngang, logo trái, số biểu mẫu trong vòng tròn, phụ đề
+  xanh, khung thông tin IN HOA, bảng tiêu đề nền xanh nhạt, dòng "Tổng chưa bao gồm VAT" (ô trống in "-"); khối ký "Người lập bảng · Trưởng phòng
+  CUVT · Trưởng phòng TC-NQ- KT · GĐ Phòng TC-NQ-KT · Chủ tịch HĐQT/TGĐ". Nút "In đơn gửi NCC" giữ như cũ.
+- **Bảng tổng hợp đề xuất mua – nút "Xem bảng tổng hợp"**: trang in giống sheet **2A / 2B**: tiêu đề bảng hai tầng ("Nội dung đề xuất", "Đơn vị
+  mua"), mỗi đơn vị mua một cột đánh "x", ngày cung ứng chữ đỏ (2B cả ngày đề xuất), dòng "Tổng cộng" (tổng số lượng khi các dòng cùng ĐVT, tổng
+  tiền) nền xanh nhạt; khối ký "Người lập bảng · Trưởng phòng CUVT · GĐ Khối liên quan · Phó CT.UBCL&PT · Chủ tịch HĐQT/TGĐ".
+- **Yêu cầu báo giá (RFQ) – nút "Xem kết quả hỏi giá"** (khi đã có báo giá): **3A** "So sánh giá và chọn nhà cung cấp" – tiêu đề "CÁC NHÀ CUNG
+  CẤP" / từng NCC (tên, Cũ/mới) / điện thoại / Đơn giá – Thành tiền, **luôn in đủ 3 nhóm NCC** (thiếu thì để trống như tờ mẫu), tổng chưa thuế –
+  thuế VAT – tổng gồm thuế, hình thức thanh toán, thời gian giao hàng, "3. Đề xuất chọn" – "4. Lý do chọn". **3a / 3B** "Bảng trình duyệt giá khách
+  hàng" mỗi NCC trúng thầu một trang: "Cộng" – "Thuế VAT" – "Tổng cộng" (nền xanh), dòng nghiêng "Bằng chữ", "Hình thức thanh toán", "Ghi chú".
+  Khối ký "Người đề nghị · TP. CUVT · TP. TC-NQ-KT · GĐ TC-NQ-KT · P.Chủ tịch UBCL&PT · Chủ tịch HĐQT/TGĐ" kèm dòng chú thích nghiêng.
+- **Đề nghị thanh toán – nút "Xem đề nghị thanh toán"**: trang in giống sheet **5A / 5B** khổ dọc theo hình thức của phiếu (tiền mặt / chuyển
+  khoản): ô "Kính trình: …" + tên công ty, khung thông tin, khối NCC (tên NCC đậm, địa chỉ; chuyển khoản thêm ngân hàng, số tài khoản – nhãn đỏ ở
+  5A), bảng "CHỨNG TỪ" (Ngày, Số hóa đơn) – "NỘI DUNG THANH TOÁN" – "SỐ TIỀN", "Tổng cộng" – "Số tiền giảm trừ" – "Số tiền còn lại" (nền xanh),
+  "Bằng chữ"; khối ký "Người đề xuất · GĐK đề nghị · TP. TC-NQ-KT · GĐ Phòng TC-NQ-KT" + ô "CHỦ TỊCH HĐQT/TGĐ (Duyệt đồng ý)" cả hàng.
+- **Bảng kê tạp vụ (2C) – nút "Xem bảng kê"; đề nghị thanh toán tạp vụ (1C) – nút "Xem đề nghị thanh toán"**: vẫn là **mẫu giả lập** (chờ mẫu thật)
+  nhưng có chữ ký người đã duyệt, logo, góc thông tin, đếm số lần in như các phiếu trên.
+- **Mọi phiếu trên giống đề nghị mua (0.41.0)**: ô đã duyệt có **ảnh chữ ký** đúng phiên bản lúc duyệt + họ tên (kèm danh xưng; ô Chủ tịch in hoa) +
+  giờ duyệt; người lập ký khi chính họ gửi duyệt (người khác gửi thay ghi "Gửi duyệt bởi …"); logo công ty; góc dưới phải mỗi trang chữ 9 (giờ in,
+  người in, số phiếu, lần in, trang, tình trạng phê duyệt); dấu chìm "BẢN NHÁP" / "CHƯA DUYỆT" / "ĐÃ HỦY"; **In…** và **Tải PDF** tăng "Đã in n
+  lần", chỉ xem thì không.
+
+### Thay đổi
+- Bản in giữ **đúng tỉ lệ in của từng sheet** (4A 85 %, 4B 75 %, 3A 80 %, 5B chuyển khoản 90 %…) và căn giữa trang như sheet; phiếu chỉ hơi tràn
+  trang thì tự co cho vừa một trang (không nhỏ hơn 80 % tỉ lệ sheet), bảng dài thì sang trang.
+- Dòng sheet bị ẩn không in (dòng VAT của 4A/4B); dòng không có trên sheet không in (4A/4B: bằng chữ, hình thức thanh toán; đề nghị thanh toán:
+  dòng "Đã chi" – xem tình trạng đã chi trên phần mềm).
+- Tự đặt (sheet có chỗ không hợp lý): dòng tổng không cộng cột đơn giá; sheet 3a/3B ghi "Gi chú" – phiếu in "Ghi chú".
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (không thêm migration – vẫn `V0_41_0_ChuKyLogoNhatKyIn`, 118 migration). Nhật ký in dùng bảng `DocumentPrintLog` có từ 0.41.0.
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng).
+- Không cần sao lưu riêng (không đổi CSDL); bộ thực thi vẫn tự sao lưu trước khi cài.
+- Ô ký ghép theo **vai trò mẫu** của chuỗi duyệt (TPCUVT, TPTCKT, GDTCKT, PHOCTUBCL, CHUTICH; GĐ khối của phiếu): công ty dùng vai trò tự tạo thì
+  bước đó in ở hàng ô phát sinh, cấp cao nhất vào ô Chủ tịch.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.41.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL. Nhật ký in của các phiếu mới vẫn nằm trong
+  CSDL; 0.41.0 in các phiếu này theo khuôn cũ (không chữ ký, không đếm lần in).
+
 ## [0.41.0] - 2026-11-18
 
 **"Xem đề nghị" – in đề nghị mua giữ nguyên mẫu 1A kèm chữ ký người đã duyệt, logo công ty, đếm số lần in** (design.md mục 20.4 – người dùng
