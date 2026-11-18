@@ -306,7 +306,7 @@ public static class RoleTemplates
             Permissions.Purchase.PaymentApprove, Permissions.Purchase.SundryApprove,
         ]),
         // Q6: Trưởng phòng HC kiểm định mức nhóm B (và dịch vụ – như B) – có trong bộ cấp PR, PRS của cấu hình mẫu CUVT, không có trong PRA (lát Y3c).
-        new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức tháng trên đề nghị mua nhóm B (hàng hóa) và dịch vụ",
+        new("TPHC", "Trưởng phòng Hành chính", "Kiểm định mức trên đề nghị mua 1A (công trình), 1B (hàng hóa) và dịch vụ",
         [
             .. CatalogView, Permissions.Purchase.PrView, Permissions.Purchase.PrApprove, Permissions.Purchase.BudgetView, Permissions.Purchase.ProjectView,
         ]),

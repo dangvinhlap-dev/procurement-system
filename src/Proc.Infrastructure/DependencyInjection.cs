@@ -193,6 +193,8 @@ public static class DependencyInjection
         services.AddScoped<Proc.Application.Documents.IAttachmentService>(
             sp => sp.GetRequiredService<Proc.Infrastructure.Documents.AttachmentService>());
         services.AddScoped<Proc.Application.Documents.IAppraisalOpinionService, Proc.Infrastructure.Documents.AppraisalOpinionService>();
+        services.AddScoped<Proc.Application.Documents.IUserSignatureService, Proc.Infrastructure.Documents.UserSignatureService>();
+        services.AddScoped<Proc.Application.Documents.ICompanyLogoService, Proc.Infrastructure.Documents.CompanyLogoService>();
         services.AddScoped<IExcelTransfer>(sp => new ExcelTransfer(
             sp.GetRequiredService<ProcDbContext>(), sp.GetRequiredService<ICurrentUserScope>(), sp.GetServices<ExcelCatalog>()));
         services.AddScoped<IUserAdministration, UserAdministration>();

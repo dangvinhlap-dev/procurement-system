@@ -74,3 +74,43 @@ public sealed class AppraisalOpinionConfiguration : IEntityTypeConfiguration<App
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>
+/// Cấu hình bảng UserSignature – chữ ký người dùng theo phiên bản (lát IN1, design.md mục 20.4). Mỗi người một dãy số phiên bản; tra chữ ký lúc
+/// in theo (UserId, ValidFrom).
+/// </summary>
+public sealed class UserSignatureConfiguration : IEntityTypeConfiguration<UserSignature>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<UserSignature> builder)
+    {
+        builder.ToTable("UserSignature");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Image).IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(UserSignature.ReasonMaxLength);
+        builder.Property(x => x.RetireReason).HasMaxLength(UserSignature.ReasonMaxLength);
+        builder.HasIndex(x => new { x.UserId, x.VersionNo }).IsUnique();
+        // Mỗi người tối đa một chữ ký đang dùng – chặn hai lần tải cùng lúc tạo hai bản đang dùng.
+        builder.HasIndex(x => x.UserId).IsUnique().HasFilter("\"ValidTo\" IS NULL").HasDatabaseName("IX_UserSignature_UserId_Current");
+        builder.HasOne<Proc.Infrastructure.Identity.AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>
+/// Cấu hình bảng DocumentPrintLog – nhật ký in (lát IN1, design.md mục 20.4). Lần in thứ n duy nhất theo phiếu: hai người bấm In cùng lúc thì
+/// một người lấy số kế tiếp ở lần thử lại.
+/// </summary>
+public sealed class DocumentPrintLogConfiguration : IEntityTypeConfiguration<DocumentPrintLog>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<DocumentPrintLog> builder)
+    {
+        builder.ToTable("DocumentPrintLog");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.DocType).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.ApprovalStatus).HasMaxLength(200).IsRequired();
+        builder.HasIndex(x => new { x.DocType, x.DocumentId, x.PrintNo }).IsUnique();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

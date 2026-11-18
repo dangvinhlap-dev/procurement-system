@@ -206,6 +206,30 @@ export async function apiOpenPdf(path: string): Promise<void> {
 }
 
 /**
+ * Lấy nội dung nhị phân từ API (PDF xem / in phiếu, ảnh chữ ký, logo – lát IN1) kèm header Authorization, X-Company-Id.
+ * @param path Đường dẫn API.
+ * @param method "GET" (mặc định) hoặc "POST" (lệnh có ghi, ví dụ In phiếu ghi nhật ký in).
+ * @returns Nội dung và tên file máy chủ gợi ý (Content-Disposition), nếu có.
+ * @throws ApiError khi server trả lỗi hoặc không kết nối được.
+ */
+export async function apiBlob(path: string, method: 'GET' | 'POST' = 'GET'): Promise<{ blob: Blob; fileName: string | null }> {
+  let response: Response
+  try {
+    response = await fetch(path, { method, headers: authHeaders() })
+  } catch {
+    throw new ApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng hoặc báo quản trị hệ thống.')
+  }
+  if (!response.ok) {
+    if (response.status === 401) bridge.onUnauthorized()
+    throw new ApiError(response.status, await readErrorMessage(response))
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1]
+  const plain = /filename="?([^";]+)"?/i.exec(disposition)?.[1]
+  return { blob: await response.blob(), fileName: encoded ? decodeURIComponent(encoded) : (plain ?? null) }
+}
+
+/**
  * Gửi file lên API dạng multipart/form-data (trường "file").
  * @param path Đường dẫn API.
  * @param file File người dùng chọn.

@@ -1,4 +1,4 @@
-# 8. Hệ thống và phân quyền
+﻿# 8. Hệ thống và phân quyền
 
 Dành cho người quản trị. Từ 15/11/2026 các màn hình chia hai menu:
 
@@ -28,6 +28,19 @@ Màn hình, nút lệnh người dùng không có quyền thì bị ẩn; mở t
 3. **Đặt lại mật khẩu** (cũng mở khóa tạm), **Ngừng dùng** tài khoản.
 
 Chặn tự nâng quyền: chỉ gán được vai trò có quyền nằm trong quyền của chính mình; không tự sửa quyền của mình.
+
+### Chữ ký, danh xưng, logo (từ bản 0.41.0)
+
+- **Chữ ký của tôi** (menu tên người dùng góc phải → "Chữ ký của tôi…", hoặc gõ `CKY`): bấm **Tải chữ ký mới…** → **Chọn ảnh…** (chụp / scan
+  chữ ký bút mực trên giấy trắng) → phần mềm tự xóa nền giấy, cắt sát, đổi màu mực xanh (chọn được Đen / Giữ màu gốc, chỉnh "Tách nền" nếu nét
+  bị mất hoặc còn vệt nền, xoay nếu chụp ngang) → xem thử trên ô ký → **Lưu chữ ký**. Chữ ký mới chỉ dùng từ lúc lưu; phiếu đã duyệt trước đó
+  vẫn in chữ ký cũ.
+- **Quản trị tải thay**: người có quyền "Tải lên, thay chữ ký của người dùng khác" mở ngăn kéo người dùng → tab **CHỮ KÝ** → **Tải chữ ký
+  thay…**, bắt buộc nhập lý do; người đó nhận thông báo.
+- **Danh xưng** (ngăn kéo người dùng, sau Chức vụ): in trước họ tên dưới chữ ký, ví dụ "AHLĐ.".
+- **Logo công ty**: Hệ thống → Công ty → mở công ty → tab **LOGO** → Tải logo… (PNG nền trong suốt hoặc JPG).
+- Mẫu duyệt CUVT bộ **PRA** (đề nghị loại A) từ 0.41.0 có cấp **Trưởng phòng HC** (kiểm định mức) như mẫu giấy 1A; công ty đã áp mẫu trước đó
+  thì tự thêm cấp ở APRL và gán vai trò TPHC cho người duyệt.
 
 ## 8.3 Vai trò và phân quyền (ROLE)
 

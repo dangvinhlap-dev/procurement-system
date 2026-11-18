@@ -739,7 +739,7 @@ Dạng **danh sách + ngăn kéo (drawer) chi tiết**: lưới có lọc, tìm 
 | In được: đơn mua hàng (PO – từ lát Y7 mặc định bảng theo dõi mua hàng **4A/4B**, `?form=supplier` in "ĐƠN ĐẶT HÀNG" gửi NCC), đề nghị mua hàng (PR – từ lát Y10 in theo biểu mẫu CUVT 1A/1B, mục 19.3), bảng tổng hợp 2A/2B (`/api/purchase-summaries/{id}/pdf`), phiếu nhập mua (GRN), xuất trả NCC (RTV), chuyển kho (TRF – không in cột tiền), xuất bán nội bộ (ICS), nhập mua nội bộ (ICR), phiếu xác nhận nhận hàng **XNH** (lát K2b – biên bản giao nhận và kiểm tra hàng hóa, mục 19.4). API `GET /api/purchase-orders/{id}/pdf`, `/api/purchase-requests/{id}/pdf`, `/api/inventory-documents/{id}/pdf`, `/api/receipt-confirmations/{id}/pdf`; quyền như xem phiếu (`Purchase.PO.View`, `Purchase.PR.View`, `Inventory.Document.View`; XNH: một trong `Purchase.Receipt.View/Manage/Accept`); dữ liệu đọc qua dịch vụ xem phiếu nên phiếu ngoài phạm vi công ty/kho báo không tìm thấy | Không có đường vòng qua phạm vi (mục 9.2) |
 | Khuôn chung A4 dọc: tên, địa chỉ, MST công ty; tên phiếu, số, ngày; thông tin phiếu; bảng dòng (tiêu đề cột lặp lại khi sang trang); tiền hàng, chiết khấu, thuế GTGT, tổng thanh toán; **số tiền bằng chữ** (làm tròn đồng; "không trăm", "lẻ", "mốt", "lăm" theo cách đọc chứng từ kế toán); ghi chú; ô ký tên theo loại phiếu (tên người lập, người duyệt in sẵn); chân trang "Số phiếu – Trang x/y". Phiếu chưa có hiệu lực in dòng đỏ "BẢN NHÁP – chưa duyệt / chưa ghi sổ", "ĐANG CHỜ DUYỆT", "ĐÃ HỦY" | Tránh dùng nhầm bản nháp |
 | Phông: Arial (Windows), DejaVu Sans hoặc Liberation Sans (Linux – image Docker cài `fonts-dejavu-core`); thêm thư mục ở `Printing:FontDirectories`. Phông nhúng vào file PDF. Không tìm thấy phông thì báo lỗi tiếng Việt hướng dẫn cài | Image .NET không có phông; cần đủ dấu tiếng Việt |
-| Giao diện: khuôn `DocumentForm` có nút "In phiếu" (Ctrl+P) khi phiếu đã lưu, mở PDF ở tab mới để xem, in, lưu file. Chưa làm: gửi PDF qua email cho NCC | Mục 10.1 |
+| Giao diện: khuôn `DocumentForm` có nút "In phiếu" (Ctrl+P) khi phiếu đã lưu, mở PDF ở tab mới để xem, in, lưu file. Đề nghị mua (lát IN1): nút "Xem đề nghị" mở hộp thoại xem, In / Tải PDF ghi nhật ký in, bản in giữ nguyên sheet 1A kèm chữ ký người duyệt – mục 20.4. Chưa làm: gửi PDF qua email cho NCC | Mục 10.1 |
 
 ## 11. Báo cáo
 
@@ -2085,7 +2085,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | Q3 | Bảng tổng hợp 2A/2B | Giữ. **Mọi công ty bắt buộc qua bảng tổng hợp, bật sẵn khi phát hành – không có tham số tắt** (người dùng chốt 12/11/2026, thay cho "bật/tắt bằng tham số"). **Đơn vị mua là một danh mục** (người dùng chốt 10/11/2026): người dùng được cấp quyền tự tạo, quản lý giống danh mục phòng ban đề nghị (bộ phận) hiện có |
 | Q4 | Lũy kế đã mua | Tính theo PO đã duyệt, giá chưa VAT; hiện thêm số có VAT |
 | Q5 | Vượt dự toán / định mức | Không chặn – thêm chặng duyệt; phần vượt được xem trước khi trình lên Chủ tịch (chốt 11/11/2026, lát Y3c) |
-| Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC chỉ kiểm định mức nhóm B; dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
+| Q6 | Chuỗi duyệt theo loại mua | Trưởng phòng HC kiểm định mức nhóm B (từ lát IN1 – 18/11/2026 – cả 1A, mục 20.4 IN1-4); dịch vụ bỏ Thủ kho, TC-NQ-KT chỉ kiểm dự toán; ngưỡng 0 như biểu mẫu (mọi phiếu lên Chủ tịch), chỉnh sau bằng APRL |
 | Q7 | Trình giá 1 NCC (3a) hay so sánh 3 NCC (3A) – nhóm A | Theo ngưỡng giá trị (tham số công ty); nhóm B, dịch vụ được trình giá 1 NCC |
 | Q8 | Ai lập XNH | Hàng: thủ kho nơi nhận; dịch vụ: phòng ban đề xuất; đơn vị đặt hàng xác nhận nghiệm thu |
 | Q9 | Ủy quyền, nhắc quá hạn | Có ủy quyền duyệt có thời hạn; nhắc sau 1 ngày làm việc |
@@ -2122,7 +2122,7 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 
 | Phiếu | Chuỗi duyệt (theo thứ tự) | Cấp |
 | --- | --- | --- |
-| 1A, 1B | Thủ kho (nhập tồn) → Trưởng phòng/ban → Phòng CUVT → Phòng TC-NQ-KT → Trưởng phòng HC (chỉ B) → GĐ khối → Phó CT UBCL&PT → Chủ tịch | 8 |
+| 1A, 1B | Thủ kho (nhập tồn) → Trưởng phòng/ban → Phòng CUVT → Phòng TC-NQ-KT → Trưởng phòng HC (cả 1A từ lát IN1) → GĐ khối → Phó CT UBCL&PT → Chủ tịch | 8 |
 | Đề nghị DV | Như 1B, bỏ Thủ kho; TC-NQ-KT chỉ kiểm dự toán | 7 |
 | 2A, 2B | TP CUVT → GĐ khối → Phó CT UBCL&PT → Chủ tịch | 4 |
 | 3a, 3A, 3B | TP CUVT → TP TC-NQ-KT → GĐ TC-NQ-KT → Phó CT UBCL&PT → Chủ tịch | 5 |
@@ -2301,7 +2301,7 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
 11/11/2026: **phần vượt được xem trước khi trình lên Chủ tịch**):
 
 - **Bộ cấp theo loại mua** ở APRL: **PR** (1B – hàng hóa), **PRA** (1A – công trình), **PRS** (DV – dịch vụ); đều cùng quyền duyệt PR. Đề nghị loại A
-  dùng PRA, dịch vụ dùng PRS; bộ đó chưa cấu hình thì dùng PR (tự đặt – như POK của PO khẩn). TP HC chỉ có trong PR, PRS (Q6), không có trong PRA.
+  dùng PRA, dịch vụ dùng PRS; bộ đó chưa cấu hình thì dùng PR (tự đặt – như POK của PO khẩn). TP HC có trong PR, PRS (Q6) và từ lát IN1 (18/11/2026) cả PRA – mục 20.4.
 - **Cấp "Thủ kho nơi nhận"** (loại người duyệt `Storekeeper`, chỉ cấu hình cho PR, PRA): người duyệt là người có quyền `Purchase.PR.EnterStock`
   **và** phạm vi kho chứa nơi nhận của phiếu tại công ty (nhiều thủ kho cùng kho đều duyệt được; không cần quyền duyệt PR). Bước ghi nơi nhận lúc
   gửi (`ApprovalStep.WarehouseId`, migration `V0_23_0_BuocThuKho` – Down mất nơi nhận của bước). Thủ kho **nhập tồn trước rồi mới Duyệt** (tồn xác
@@ -2315,7 +2315,7 @@ Cần mua); **Y3c** chuỗi duyệt theo loại mua (A/DV bộ cấp riêng, TP 
   thì **cấp cao nhất** của chuỗi duyệt thường (không tính cấp Thủ kho; theo biểu mẫu là Chủ tịch) dời ra sau cùng (chặng 9, hiện "Duyệt thường"):
   ví dụ 1A 7 cấp vượt dự toán: cấp 1–6 → chặng vượt dự toán → cấp 7 Chủ tịch. PO giữ thứ tự cũ (chặng phụ sau mọi cấp PO).
 - **Cấu hình duyệt mẫu CUVT**: PR 8 cấp (Thủ kho → Trưởng phòng ban → TP CUVT → TP TC-NQ-KT → TP HC → GĐ khối → Phó CT UBCL&PT → Chủ tịch); PRA
-  7 cấp (bỏ TP HC); PRS 7 cấp (bỏ Thủ kho); PRE 1 cấp Giám đốc TC-NQ-KT (tự đặt – vai trò mẫu GDTCKT thêm quyền duyệt PR). Công ty đã áp bộ PR cũ 6
+  8 cấp như PR (từ lát IN1 – 18/11/2026; trước đó 7 cấp bỏ TP HC); PRS 7 cấp (bỏ Thủ kho); PRE 1 cấp Giám đốc TC-NQ-KT (tự đặt – vai trò mẫu GDTCKT thêm quyền duyệt PR). Công ty đã áp bộ PR cũ 6
   cấp thì mẫu không ghi đè (trạng thái "Đã cấu hình") – xóa các cấp PR cũ rồi áp lại nếu muốn bộ mới.
 
 **Lát Y5 – bảng tổng hợp đề xuất mua 2A/2B (0.23.0, Q3).** Tách ba lát: **Y5a** danh mục đơn vị mua; **Y5b** phiếu bảng tổng hợp + duyệt;
@@ -2961,6 +2961,30 @@ phiếu của DHG, RFQ dùng hộp thoại trình tự (`cancelChainDialog.tsx`)
 Z1 ý kiến + đính kèm theo bước duyệt, khóa phiếu sau duyệt (cả đính kèm) · Z2 ổ khóa từng bước trên form + "Kiểm tra phê duyệt" bước 0…n,
 trường Chức vụ người dùng · Z3 ô số chứng từ dùng chung (sao chép, bấm đúp mở phiếu gốc) · Z4 quyền Hủy riêng từng loại phiếu + hủy dây
 chuyền (hộp thoại trình tự, hủy ngược trong một giao dịch, tính lại SL đã đặt/đã nhận, ngân sách, sản lượng hợp đồng…).
+
+### 20.4 In đề nghị mua giữ nguyên mẫu 1A, chữ ký người duyệt, nhật ký in (lát IN1 – người dùng yêu cầu và chốt 18/11/2026)
+
+Yêu cầu: trên form đề nghị mua có chức năng **Xem đề nghị** – xem / in phiếu giống sheet "1A.DN VT-CT" của file `docs/CUVT nhóm A 08.01.2025.
+(final).xlsx`; người ký là người đã phê duyệt, phần mềm lấy **chữ ký ảnh** của từng người chèn vào như ký trên giấy; người dùng tải chữ ký
+bằng file ảnh, phần mềm tự định dạng; góc dưới phải ghi thông tin hệ thống chữ 9. Người dùng duyệt bố cục mô phỏng rồi chốt:
+
+| # | Quy tắc | Ghi chú |
+| --- | --- | --- |
+| IN1-1 | **Giữ nguyên sheet 1A** ("form như thế nào thì giữ nguyên như vậy"): khung đầu phiếu (logo trái, số biểu mẫu trong vòng tròn phải, tiêu đề 18 đậm chữ "CÁC" đỏ, phụ đề 12 đậm xanh, ngày 16 đậm xanh), khung thông tin IN HOA căn giữa (số tiền đậm, đơn vị "đ"), bảng cột theo tỉ lệ cột A–L, dòng "Tổng cộng" gộp 3 cột đầu nền xanh nhạt, dòng "Thời gian cần sử dụng" (ngày đỏ) – "Địa điểm tập kết/giao hàng", khối ký theo ảnh trong sheet. Sheet in 85 % → cỡ chữ × 0,85, lề 6 mm. Đề nghị 1B và dịch vụ dùng cùng khuôn (sheet 1B cùng bố cục, cùng khối ký) | Khuôn `PurchaseRequestSheetLayout`; nội dung bảng/thông tin vẫn lấy từ `CuvtPrintForms.PurchaseRequest` (lát Y10) |
+| IN1-2 | **Khối ký 9 ô nguyên văn mẫu**: dòng "Kính trình Chủ Tịch HĐQT/TGĐ xem xét và ký duyệt"; Người đề xuất (Trình ký đề xuất) · Thủ kho (Xác nhận hàng tồn kho) · Trưởng Phòng/Ban (Ký kiểm tra đề nghị) · Phòng CUVT (Kiểm tra mua hàng) · Phòng TC-NQ-KT (Kiểm tra dự toán, hàng tồn) · Trưởng phòng HC (Kiểm tra định mức) · GĐ Khối phòng ban (Ký duyệt đề nghị) · Phó CTUBCL & PT (Ký duyệt đề nghị) · CHỦ TỊCH HĐQT/TGĐ (Duyệt đồng ý) cả hàng | Câu 2, 9 |
+| IN1-3 | Ghép bước duyệt (lượt hiện tại, bỏ bước "bỏ qua") vào ô: Thủ kho nơi nhận → Thủ kho; Trưởng phòng ban của phiếu / vai trò TRUONGPHONGBAN → Trưởng Phòng/Ban; GĐ khối của phiếu / GDKHOI → GĐ Khối; vai trò mẫu TPCUVT, TPTCKT, TPHC, PHOCTUBCL, CHUTICH → ô tương ứng. Cấp cao nhất của chuỗi thường không khớp mã nào → ô Chủ tịch. Bước còn lại (chặng vượt dự toán / ngân sách, vai trò tự tạo, hai cấp trùng ô) in **hàng ô phát sinh** trước ô Chủ tịch. Ô không có bước: "Không thuộc chuỗi duyệt" (phiếu nháp chưa có chuỗi thì để trống) | Tự đặt; dùng vai trò mẫu thì đúng ô |
+| IN1-4 | **Trưởng phòng HC duyệt cả 1A** (câu 2: "vẫn để ô HCNS phê duyệt, tôi sẽ cấp quyền cho họ") – mẫu duyệt CUVT bộ PRA thêm cấp 5 TPHC (8 cấp như PR). Công ty đã áp mẫu cũ thì thêm cấp ở APRL | Thay Q6 (mục 19.2) |
+| IN1-5 | Ô đã duyệt: **ảnh chữ ký** → họ tên đậm (danh xưng + họ tên; ô Chủ tịch IN HOA) → "Đã duyệt HH:mm dd/MM/yyyy" nhỏ. Chưa tải chữ ký: họ tên + "Đã duyệt điện tử …". Từ chối: họ tên + "Từ chối …" (không chữ ký). Chưa duyệt: "Chưa duyệt". Người đề xuất: chữ ký của chính người đề xuất lúc gửi duyệt; người khác gửi thay thì không in chữ ký, ghi "Gửi duyệt bởi …". Duyệt theo ủy quyền: chữ ký + tên người bấm duyệt, kèm "(thay …)" | Tự đặt |
+| IN1-6 | **Chữ ký theo phiên bản** (câu 1): thay chữ ký mới thì phiếu cũ vẫn in chữ ký cũ, chữ ký mới tính từ lúc thay – in chữ ký có hiệu lực tại thời điểm duyệt (ValidFrom ≤ lúc duyệt < ValidTo). Không xóa phiên bản; "ngừng dùng" chỉ đóng hiệu lực. Mỗi người tối đa một phiên bản đang dùng | Bảng `UserSignature` (bytea, ảnh ghi nhật ký dạng "***") |
+| IN1-7 | **Tải chữ ký**: mỗi người tự tải ở màn hình **CKY – Chữ ký của tôi** (menu người dùng, Hằng ngày). **Admin tải thay** (người dùng yêu cầu 18/11/2026) – quyền mới `System.User.Signature` "Tải lên, thay chữ ký của người dùng khác" (ADMIN có sẵn), tab CHỮ KÝ của ngăn kéo người dùng; tải thay / ngừng dùng thay **bắt buộc lý do**, người được làm thay nhận thông báo. Ảnh chữ ký chỉ chính chủ và người có quyền đó xem được | Tự đặt: không đòi nhập lại mật khẩu khi lưu |
+| IN1-8 | **Phần mềm tự định dạng** ảnh trên trình duyệt (không thư viện trả phí): tách nền giấy thành trong suốt (ngưỡng theo độ sáng nền, mức "Tách nền" 1–10), làm đậm nét mờ, đổi màu mực **xanh** mặc định (Đen / Giữ màu gốc), cắt sát nét, thu về tối đa 600 × 240 điểm, xoay 90°; xem ảnh gốc – ảnh sau xử lý – ô ký thử đúng cỡ in trước khi lưu. Máy chủ nhận **PNG ≤ 512 KB**, kiểm định dạng bằng byte đầu file, kích thước ≤ 4000 × 4000 | Câu 7 |
+| IN1-9 | **Logo theo công ty** (câu 5): tab LOGO ở ngăn kéo công ty (quyền sửa công ty), PNG/JPG thu về ≤ 600 điểm, ≤ 1 MB; phiếu in logo của công ty của phiếu (công ty đang làm việc). Chưa có logo thì góc để trống | Bảng `CompanyLogo` |
+| IN1-10 | **Danh xưng** (câu 6): ô "Danh xưng" (≤ 30 ký tự) ở danh mục người dùng, in trước họ tên dưới chữ ký (ví dụ "AHLĐ. NGUYỄN VĂN A") | Cột `User.Honorific` |
+| IN1-11 | **Xem đề nghị** (thay nút "In phiếu" của PR): bấm được khi phiếu đã lưu (còn sửa dở thì nhắc Lưu trước); hộp thoại hiện trang PDF; **In…** ghi một lần in rồi mở hộp in của trình duyệt; **Tải PDF** cũng tính một lần in; chỉ xem thì không (câu 3). Thanh công cụ trình xem PDF ẩn để mọi lần in đi qua nút In. Phiếu nháp / chưa duyệt xem và in được, có dấu chìm "BẢN NHÁP" / "CHƯA DUYỆT" ("ĐÃ HỦY") (câu 4) | API `GET …/pdf` (xem), `POST …/print?kind=print\|download`, `GET …/prints` |
+| IN1-12 | **Góc dưới phải mọi trang, chữ 9**: "In lúc HH:mm dd/MM/yyyy" (bản xem: "Bản xem lúc … (chưa in)"), "Người in: tên đăng nhập – họ tên", "Số phiếu … · Lần in thứ n (bản xem: Đã in n lần) · Trang x/y", "Tình trạng phê duyệt: Đã duyệt đủ 8/8 bước – giờ / Đang chờ duyệt – đã duyệt 3/8 bước, chờ … / Bị từ chối tại … / Nháp – chưa gửi duyệt / Đã hủy". Số phiếu ở góc này vì thân phiếu giữ nguyên mẫu (mẫu không có ô số phiếu) | Bảng `DocumentPrintLog` chỉ thêm; lần in thứ n duy nhất theo phiếu |
+
+Migration `V0_41_0_ChuKyLogoNhatKyIn` (Down mất chữ ký, logo, nhật ký in, danh xưng). Chưa làm: các phiếu khác (2A/2B, 3A, 4A, đề nghị thanh toán…)
+dùng lại khối ký + chữ ký + góc thông tin hệ thống ở lát sau (câu 8).
 
 ## 21. Quản trị vận hành (QT) – ba môi trường, phát hành, sao lưu, phục hồi (người dùng chốt 14/11/2026)
 

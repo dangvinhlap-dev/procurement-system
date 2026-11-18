@@ -1,4 +1,4 @@
-# 3. Mua hàng
+﻿# 3. Mua hàng
 
 Chứng từ mua hàng (kế hoạch nhu cầu, PR, PO, hợp đồng, đặt hàng gộp) **không làm thay đổi tồn kho**. Tồn kho chỉ đổi khi ghi sổ phiếu kho
 (06 – Kho).
@@ -79,8 +79,17 @@ dòng (danh mục Mua hàng → Đơn vị mua) rồi trình duyệt. Dòng đ�
 7. **In phiếu** (Ctrl+P): in theo biểu mẫu **2A / 2B** khổ ngang – mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x"; khối ký in
    người lập và từng cấp duyệt (họ tên, giờ ngày đã duyệt), vẫn chừa chỗ ký tay.
 
-**In đề nghị mua** (nút In phiếu trên form PR): loại A in mẫu **1A**, loại B mẫu **1B**, dịch vụ mẫu 1B không có cột tồn kho. Dòng
-"Lũy kế số tiền đã mua" của 1A là PO đã duyệt của công trình; của 1B là **PO đã duyệt trong tháng** của bộ phận (chưa VAT).
+**Xem đề nghị** (nút trên form PR, Ctrl+P – từ bản 0.41.0 thay nút In phiếu): mở hộp thoại xem trang in, **giữ nguyên mẫu Excel 1A** (loại A),
+**1B** (loại B), dịch vụ mẫu 1B không có cột tồn kho. Dòng "Lũy kế số tiền đã mua" của 1A là PO đã duyệt của công trình; của 1B là **PO đã
+duyệt trong tháng** của bộ phận (chưa VAT).
+
+- Phiếu phải **lưu** trước khi xem (còn sửa dở thì phần mềm nhắc bấm Lưu).
+- Khối ký 9 ô như mẫu giấy; ô của bước đã duyệt có **chữ ký ảnh** của người duyệt (chữ ký đang dùng lúc họ duyệt), họ tên, giờ duyệt. Người chưa
+  tải chữ ký thì in "Đã duyệt điện tử". Ô không có bước duyệt ghi "Không thuộc chuỗi duyệt".
+- **In…** mở hộp in của máy; **Tải PDF** lưu file. Cả hai đều được đếm là một lần in; chỉ xem thì không.
+- Góc dưới phải mỗi trang (chữ nhỏ): giờ in, người in, số phiếu, lần in thứ mấy, tình trạng phê duyệt. Phiếu chưa duyệt xong có chữ mờ
+  "BẢN NHÁP" / "CHƯA DUYỆT" giữa trang.
+- Logo góc trên lấy theo công ty đang làm chứng từ (quản trị tải ở Hệ thống → Công ty → tab LOGO).
 
 ## 3.4 Đơn mua hàng (PO) – Mua hàng → Đơn mua hàng
 

@@ -5,6 +5,7 @@ import { useCompany, useCompanyMutations, type CompanyInfoInput } from '../../ap
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+import { CompanyLogoPanel } from '../../components/Signature/CompanyLogoPanel'
 import { DATE_INPUT_FORMATS } from '../../utils/format'
 
 interface CompanyFormValues {
@@ -217,6 +218,8 @@ export function CompanyDrawer({ companyId, onClose }: { companyId: string | null
             </>
           ),
         },
+        // Lát IN1: logo in đầu phiếu theo biểu mẫu CUVT – mỗi công ty một logo.
+        ...(detail ? [{ key: 'logo', label: 'Logo', lazy: true, children: <CompanyLogoPanel companyId={detail.id} canEdit={hasPermission(Permission.CompanyManage)} /> }] : []),
       ]}
     />
   )

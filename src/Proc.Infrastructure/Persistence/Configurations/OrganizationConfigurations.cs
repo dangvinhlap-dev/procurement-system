@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Proc.Domain.Organization;
 using Proc.Infrastructure.Identity;
@@ -105,6 +105,22 @@ internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.ToTable("User");
         builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Position).HasMaxLength(100);
+        builder.Property(x => x.Honorific).HasMaxLength(30);
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.DefaultCompanyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Cấu hình bảng CompanyLogo – logo in đầu phiếu (lát IN1, design.md mục 20.4): mỗi công ty tối đa một dòng.</summary>
+public sealed class CompanyLogoConfiguration : IEntityTypeConfiguration<CompanyLogo>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<CompanyLogo> builder)
+    {
+        builder.ToTable("CompanyLogo");
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Image).IsRequired();
+        builder.Property(x => x.ContentType).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => x.CompanyId).IsUnique();
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }

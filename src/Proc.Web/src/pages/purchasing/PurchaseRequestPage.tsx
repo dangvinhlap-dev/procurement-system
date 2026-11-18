@@ -545,7 +545,18 @@ export function PurchaseRequestPage() {
       title="Đề nghị mua hàng"
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'PurchaseRequest', id: doc?.id }}
-      printPath={doc ? `/api/purchase-requests/${doc.id}/pdf` : undefined}
+      // "Xem đề nghị" (lát IN1, người dùng yêu cầu 18/11/2026): xem trang in giữ nguyên mẫu 1A/1B, chữ ký người đã duyệt, In / Tải PDF đếm lần in.
+      printPreview={
+        doc
+          ? {
+              label: 'Xem đề nghị',
+              title: `Xem đề nghị mua ${doc.no} – mẫu ${doc.category === 'Construction' ? '1A' : '1B'}`,
+              viewPath: `/api/purchase-requests/${doc.id}/pdf`,
+              printPath: `/api/purchase-requests/${doc.id}/print`,
+              printsPath: `/api/purchase-requests/${doc.id}/prints`,
+            }
+          : undefined
+      }
       status={status}
       meta={doc && `Người lập: ${doc.createdByName ?? ''} · Lập lúc ${formatDateTime(doc.createdAt)}`}
       loading={request.isLoading}

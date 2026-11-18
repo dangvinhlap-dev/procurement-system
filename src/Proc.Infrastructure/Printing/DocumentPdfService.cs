@@ -17,7 +17,7 @@ namespace Proc.Infrastructure.Printing;
 /// In phiếu PDF (design.md mục 10.10). Đọc phiếu qua dịch vụ xem phiếu của module (giữ phạm vi công ty, kho và quyền), rồi đổ vào khuôn
 /// <see cref="PdfLayout"/>. Số theo kiểu Việt Nam, tiền VND không số lẻ (CLAUDE.md mục 5).
 /// </summary>
-public sealed class DocumentPdfService : IDocumentPdfService
+public sealed partial class DocumentPdfService : IDocumentPdfService
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
 
@@ -30,6 +30,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
     private readonly IPaymentRequestService _payments;
     private readonly ISundryExpenseSheetService _sundries;
     private readonly IReceiptConfirmationService _receipts;
+    private readonly IClock _clock;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext (đọc thông tin công ty, tên kho).</param>
@@ -42,10 +43,11 @@ public sealed class DocumentPdfService : IDocumentPdfService
     /// <param name="sundries">Bảng kê chi phí tạp vụ (in 2C – lát Y11c).</param>
     /// <param name="receipts">Phiếu xác nhận nhận hàng XNH (lát K2b).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
+    /// <param name="clock">Đồng hồ (giờ in góc dưới phải, nhật ký in – lát IN1).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests,
         IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, ISundryExpenseSheetService sundries,
-        IReceiptConfirmationService receipts, IOptions<PrintingOptions> options)
+        IReceiptConfirmationService receipts, IOptions<PrintingOptions> options, IClock clock)
     {
         try
         {
@@ -66,6 +68,7 @@ public sealed class DocumentPdfService : IDocumentPdfService
         _payments = payments;
         _sundries = sundries;
         _receipts = receipts;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -231,21 +234,6 @@ public sealed class DocumentPdfService : IDocumentPdfService
             VietnameseNumberText.ToVndWords(po.TotalAmount + po.TotalVat), po.Note,
             ["Người lập", "Người duyệt", "Xác nhận của nhà cung cấp"], [po.CreatedByName, approver, null]);
         return new PdfFile($"{po.No}.pdf", PdfLayout.Render(await CompanyAsync(cancellationToken), doc));
-    }
-
-    /// <inheritdoc />
-    public async Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken)
-    {
-        // In theo biểu mẫu CUVT 1A/1B (lát Y10, design.md mục 10.10) thay khuôn chung.
-        var pr = await _requests.GetAsync(id, cancellationToken);
-        var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
-        var specifications = await _db.Items.AsNoTracking().Where(i => itemIds.Contains(i.Id))
-            .ToDictionaryAsync(i => i.Id, i => i.Specification, cancellationToken);
-        var company = await CompanyAsync(cancellationToken);
-        var monthSpent = pr.DepartmentId is { } department && pr.Category != nameof(PurchaseCategory.Construction)
-            ? await DepartmentSpending.MonthAsync(_db, department, pr.Date, cancellationToken)
-            : 0;
-        return new PdfFile($"{pr.No}.pdf", CuvtFormLayout.Render(CuvtPrintForms.PurchaseRequest(pr, company.Name, specifications, monthSpent)));
     }
 
     /// <inheritdoc />

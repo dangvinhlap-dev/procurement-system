@@ -24,6 +24,11 @@
   --erp-required: #b00e12;
   --erp-icon-danger: #d0281e;
   --erp-icon-success: #1e8f2e;
+  /* Lát IN1 (ui-style.md mục 5s): giấy trắng của trang in / ô ký thử, nền vùng xem PDF, mực chữ ký mẫu, ô vuông nền trong suốt. */
+  --erp-paper: #ffffff;
+  --erp-print-viewer-bg: #7b8794;
+  --erp-paper-text: #000000;
+  --erp-check-tile: #e6e6e6;
   --erp-icon-warning: #c48a00;
   /* Đèn trạng thái (.erp-light – classic.css) dùng cả ngoài .erp-classic (panel trong DocumentForm, hộp thoại): khai báo lại ở gốc, cùng mã
      màu với classic.css, nếu không đèn hiện ô trắng. */
@@ -959,4 +964,199 @@ body.erp-col-resizing {
   max-height: 240px;
   margin-bottom: 4px;
   border: 1px solid var(--erp-grid-line);
+}
+
+/* Lát IN1 – Xem đề nghị, chữ ký người dùng, logo công ty (ui-style.md mục 5s). */
+.erp-print-preview-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 0 0 4px;
+  border-bottom: 1px solid var(--erp-grid-line);
+  margin-bottom: 4px;
+}
+.erp-print-preview-info {
+  margin-left: auto;
+  color: var(--erp-text-muted);
+}
+.erp-print-preview-viewer {
+  background: var(--erp-print-viewer-bg);
+  border: 1px solid var(--erp-grid-line);
+  height: 72vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.erp-print-preview-viewer iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--erp-paper);
+}
+/* Khung in ẩn: trình duyệt in PDF trong khung này khi bấm "In…". */
+.erp-print-frame {
+  position: fixed;
+  width: 0;
+  height: 0;
+  border: 0;
+  visibility: hidden;
+}
+.erp-signature-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.erp-signature-pane {
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-paper);
+  display: flex;
+  flex-direction: column;
+}
+.erp-signature-pane-head {
+  background: var(--erp-grid-head);
+  padding: 2px 6px;
+}
+.erp-signature-pane-body {
+  flex: 1;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+.erp-signature-pane-body img {
+  max-width: 100%;
+  max-height: 140px;
+}
+/* Nền ô vuông xám – trắng: thấy rõ phần trong suốt sau khi tách nền. */
+.erp-signature-check {
+  background-color: var(--erp-paper);
+  background-image:
+    linear-gradient(45deg, var(--erp-check-tile) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--erp-check-tile) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--erp-check-tile) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--erp-check-tile) 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+}
+.erp-signature-check img {
+  outline: 1px dashed var(--erp-light-red);
+}
+.erp-signature-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 4px;
+}
+.erp-signature-slider {
+  width: 140px;
+}
+.erp-signature-reason {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.erp-signature-hint {
+  color: var(--erp-text-muted);
+  margin-top: 4px;
+}
+.erp-signature-alert {
+  margin-bottom: 8px;
+}
+.erp-signature-footer {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.erp-signature-spacer {
+  flex: 1;
+}
+/* Ô ký thử đúng cỡ in: rộng 46 mm như ô "Phòng CUVT" của mẫu 1A, ảnh cao tối đa 15 mm, phông có chân như bản in. */
+.erp-signature-sample {
+  width: 46mm;
+  border: 1px solid var(--erp-paper-text);
+  background: var(--erp-paper);
+  color: var(--erp-paper-text);
+  font-family: 'Times New Roman', Times, serif;
+  text-align: center;
+  padding: 1mm;
+}
+.erp-signature-sample-title {
+  font-weight: 700;
+  font-size: 11pt;
+}
+.erp-signature-sample-caption {
+  font-style: italic;
+  font-size: 8.5pt;
+}
+.erp-signature-sample-image {
+  height: 16mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.erp-signature-sample-image img {
+  max-height: 15mm;
+  max-width: 44mm;
+}
+.erp-signature-sample-name {
+  font-weight: 700;
+  font-size: 10pt;
+  min-height: 14px;
+}
+.erp-signature-current {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.erp-signature-light {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-light-yellow);
+  vertical-align: -1px;
+}
+.erp-signature-light.is-on {
+  background: var(--erp-light-green);
+}
+.erp-signature-warn {
+  border: 1px solid var(--erp-light-yellow);
+  background: var(--erp-panel-bg);
+  padding: 4px 8px;
+  margin-bottom: 8px;
+}
+.erp-signature-grid {
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+.erp-signature-buttons {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.erp-logo-box {
+  width: 160px;
+  height: 120px;
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-text-muted);
+}
+.erp-logo-box img {
+  max-width: 150px;
+  max-height: 110px;
+}
+@media (max-width: 768px) {
+  .erp-signature-panes {
+    grid-template-columns: 1fr;
+  }
 }
