@@ -3,6 +3,37 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.43.0] - 2026-11-19
+
+**Phiếu nháp in chữ ký người lập / người đề xuất** (người dùng yêu cầu 19/11/2026: tạo đề nghị mua mới, "Xem đề nghị" không thấy chữ ký; design.md
+mục 20.4 IN1-5, IN2-3). Áp cho mọi loại phiếu. Cài sau **0.42.1** qua REL.
+
+### Thêm mới
+- Không có.
+
+### Thay đổi
+- **Đề nghị mua nháp – "Xem đề nghị" in chữ ký người đề xuất**: ô "Người đề xuất" có ảnh chữ ký đang dùng ngay khi phiếu còn nháp (vẫn ghi "Chưa gửi
+  duyệt", dấu chìm "BẢN NHÁP"; ô người duyệt vẫn trống). Thử: tải chữ ký ở CKY – Chữ ký của tôi, lập PR mới, Lưu, bấm "Xem đề nghị" → thấy chữ ký.
+- **Bản nháp đổi theo chữ ký mới**: còn nháp mà thay chữ ký thì bản xem in chữ ký mới. Thử: PR nháp ở trên, tải chữ ký khác ở CKY, bấm "Làm mới"
+  trong hộp thoại xem → chữ ký mới.
+- **Mọi phiếu khác cũng vậy** – ô người lập của bảng tổng hợp 2A/2B ("Xem bảng tổng hợp"), kết quả hỏi giá 3a/3A/3B (người đề nghị), PO 4A/4B ("Xem
+  bảng theo dõi"), đề nghị thanh toán 5A/5B/1C, bảng kê tạp vụ 2C. Thử: lập một PO nháp, Lưu, bấm "Xem bảng theo dõi" → ô "Người lập bảng" có chữ ký.
+- Phiếu đã gửi duyệt giữ như cũ: in chữ ký có hiệu lực lúc gửi; người duyệt in chữ ký lúc duyệt. Thử: gửi duyệt PR nháp ở trên, duyệt, "Xem đề nghị"
+  → chữ ký người đề xuất và người duyệt đều có.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (vẫn `V0_41_0_ChuKyLogoNhatKyIn`, 118 migration).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng). Không cần sao lưu riêng (không đổi CSDL).
+- Sau khi cài, người dùng tải lại trang (F5) để trình duyệt nạp bản web mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.42.1), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL. Bản 0.42.1 lại không in chữ ký trên phiếu nháp.
+
 ## [0.42.1] - 2026-11-18
 
 **Sửa lỗi: mặt hàng dịch vụ không tìm chọn được trên đề nghị mua, đơn mua hàng** (người dùng báo 18/11/2026: mã `MAIN-00001` loại Dịch vụ).
