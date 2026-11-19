@@ -175,6 +175,10 @@ export interface Department {
   directorName: string | null
   /** Số người dùng thuộc bộ phận. */
   memberCount: number
+  /** Phó phòng ban (tài khoản) – tự lập phiếu khi bộ phận chưa có Trưởng phòng ban thì gộp bước (design.md mục 19.3). */
+  deputyUserIds: string[] | null
+  /** Họ tên các Phó phòng ban, cùng thứ tự với deputyUserIds. */
+  deputyNames: string[] | null
 }
 
 /** Thông tin bộ phận khi thêm/sửa. */
@@ -183,6 +187,8 @@ export interface DepartmentInput {
   managerName: string | null
   divisionId: string | null
   managerUserId: string | null
+  /** Phó phòng ban – thay cả danh sách. */
+  deputyUserIds: string[]
 }
 
 /** Khối của công ty đang làm việc – khớp Proc.Application.Organization.DivisionDto (lát O1). */

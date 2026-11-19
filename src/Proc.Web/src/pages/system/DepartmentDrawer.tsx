@@ -7,10 +7,24 @@ import {
   useOrganizationUserOptions,
   userSelectOptions,
   type Department,
+  type OrganizationUserOption,
 } from '../../api/organization'
 import { Permission } from '../../auth/permissions'
 import { useAuth } from '../../auth/useAuth'
 import { DetailDrawer } from '../../components/DetailDrawer/DetailDrawer'
+
+/**
+ * Lựa chọn Phó phòng ban: tài khoản có vai trò tại công ty, cộng Phó phòng ban đang gán mà không còn trong danh sách (vẫn hiện tên).
+ * @param options Tài khoản chọn được.
+ * @param department Bộ phận đang mở.
+ */
+function deputyOptions(options: OrganizationUserOption[] | undefined, department: Department | null) {
+  const list = userSelectOptions(options)
+  ;(department?.deputyUserIds ?? []).forEach((id, i) => {
+    if (!list.some((o) => o.value === id)) list.push({ value: id, label: department?.deputyNames?.[i] ?? id })
+  })
+  return list
+}
 
 interface DepartmentFormValues {
   code: string
@@ -18,6 +32,7 @@ interface DepartmentFormValues {
   managerName: string
   divisionId: string | null
   managerUserId: string | null
+  deputyUserIds: string[]
   isActive: boolean
 }
 
@@ -47,6 +62,7 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
     managerName: department?.managerName ?? '',
     divisionId: department?.divisionId ?? null,
     managerUserId: department?.managerUserId ?? null,
+    deputyUserIds: department?.deputyUserIds ?? [],
     isActive: department?.isActive ?? true,
   }
 
@@ -65,6 +81,7 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
       managerName: values.managerName?.trim() ? values.managerName.trim() : null,
       divisionId: values.divisionId ?? null,
       managerUserId: values.managerUserId ?? null,
+      deputyUserIds: values.deputyUserIds ?? [],
     }
     try {
       if (isNew) {
@@ -142,6 +159,19 @@ export function DepartmentDrawer({ department, onClose }: { department: Departme
                     id: department?.managerUserId ?? null,
                     name: department?.managerUserName ?? null,
                   })}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Phó phòng ban (tài khoản)"
+                name="deputyUserIds"
+                extra="Trưởng phòng ban tự lập phiếu thì bước Trưởng phòng ban gộp với người lập. Phó phòng ban chỉ gộp khi bộ phận chưa có Trưởng phòng ban; có Trưởng phòng ban thì Trưởng phòng ban vẫn duyệt."
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Chọn tài khoản"
+                  loading={users.isLoading}
+                  options={deputyOptions(users.data, department)}
                 />
               </Form.Item>
               <Form.Item label="Trưởng bộ phận (tên in)" name="managerName" rules={[{ max: 200 }]}>

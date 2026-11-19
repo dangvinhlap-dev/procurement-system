@@ -53,7 +53,7 @@ export function ApprovalLocks({ steps, byCompany = false, stageLabels }: Omit<Ap
         const closed = s.status === 'Approved'
         const who =
           s.status === 'Approved' || s.status === 'Rejected'
-            ? ` – ${s.actedByName ?? ''} lúc ${formatDateTime(s.actedAt)}`
+            ? ` – ${s.actedByName ?? ''}${s.mergedWithCreator ? ' (gộp với người lập)' : ''} lúc ${formatDateTime(s.actedAt)}`
             : s.nextApprovers
               ? ` – chờ: ${nextApproversText(s.nextApprovers)}`
               : ''

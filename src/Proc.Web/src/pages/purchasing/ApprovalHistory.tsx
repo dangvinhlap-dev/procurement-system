@@ -151,13 +151,25 @@ export function ApprovalChain({
       ? `${stageLabels?.[s.stage] ?? 'Duyệt thường'} · `
       : !staged ? '' : byCompany ? (s.stage === 2 ? 'Tổng công ty (cuối) · ' : 'Công ty liên quan · ') : s.stage === 2 ? 'Chặng ngoại lệ · ' : 'Duyệt thường · '
 
-  if (approvedImmediately) return <p>Phiếu dưới mọi ngưỡng duyệt đã cấu hình – gửi là được duyệt ngay, không cần ai duyệt.</p>
+  if (approvedImmediately)
+    return steps.some((s) => s.mergedWithCreator) ? (
+      <p>Bước Trưởng phòng ban gộp với bạn (người lập) và không còn cấp nào khác – gửi là được duyệt ngay.</p>
+    ) : (
+      <p>Phiếu dưới mọi ngưỡng duyệt đã cấu hình – gửi là được duyệt ngay, không cần ai duyệt.</p>
+    )
   return (
     <div className="approval-chain">
       {!hideIntro && <p>Phiếu chuyển sang Chờ duyệt, không sửa được nữa trừ khi bị từ chối. Người duyệt lần lượt:</p>}
       <ol>
         {steps.map((s) => {
           const names = s.nextApprovers ?? s.upcomingApprovers ?? []
+          // Người lập là Trưởng / Phó phòng ban của bộ phận: bước này tính là người lập đã ký (design.md mục 19.3).
+          if (s.mergedWithCreator)
+            return (
+              <li key={`${s.stage}-${s.companyCode ?? ''}-${s.level}`}>
+                {stageLabel(s)}Cấp {s.level} ({s.roleName ?? 'người có quyền duyệt'}): gộp với người lập – {s.actedByName}
+              </li>
+            )
           return (
             <li key={`${s.stage}-${s.companyCode ?? ''}-${s.level}`}>
               {stageLabel(s)}

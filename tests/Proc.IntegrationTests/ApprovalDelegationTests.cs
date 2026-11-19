@@ -130,20 +130,20 @@ public class ApprovalDelegationTests
     }
 
     [Fact]
-    public async Task TruongPhongTuLap_GuiDuocKhiUyQuyen_ThuHoiThiHetDuyetThay()
+    public async Task TruongPhongTuLap_GopBuoc_ThuHoiThiHetDuyetThay()
     {
         var f = await ArrangeAsync();
 
-        // Trưởng phòng ban tự lập phiếu bộ phận mình: chưa ủy quyền thì chặn gửi, đã ủy quyền thì gửi được và người được ủy quyền duyệt cấp 1.
+        // Trưởng phòng ban tự lập phiếu bộ phận mình (19/11/2026 – design.md mục 19.3): không cần ủy quyền, bước Trưởng phòng ban gộp với
+        // người lập ngay khi gửi, phiếu chờ cấp sau (thay quy tắc cũ lát O2a "chưa ủy quyền thì chặn gửi").
         var draft = await ReadAsync<PurchaseRequestDto>(await f.Head.Client.PostAsJsonAsync("/api/purchase-requests",
             new SavePurchaseRequestRequest(Today, f.Department.Id, "Bảo trì", Today.AddDays(7), f.Kt, "Normal", null, [new(null, f.ItemId, f.Cai, 2, null, null, null, 100_000)]), Ct));
-        var blocked = await f.Head.Client.PostAsync($"/api/purchase-requests/{draft.Id}/submit", null, Ct);
-        Assert.Contains("lập ủy quyền duyệt", await TitleAsync(blocked));
-        var delegation = await ReadAsync<ApprovalDelegationDto>(await DelegateAsync(f.Head, f.Deputy.Id, null, Today, Today.AddDays(5)));
         var own = await ReadAsync<PurchaseRequestDto>(await f.Head.Client.PostAsync($"/api/purchase-requests/{draft.Id}/submit", null, Ct));
         Assert.Equal("Submitted", own.Status);
-        own = await ReadAsync<PurchaseRequestDto>(await ActAsync(f.Deputy.Client, own.Id, "approve"));
-        Assert.Contains("(thay ", own.Approvals.Single(a => a.Level == 1).ActedByName);
+        var merged = own.Approvals.Single(a => a.Level == 1);
+        Assert.Equal(("Approved", true), (merged.Status, merged.MergedWithCreator));
+        Assert.DoesNotContain("(thay ", merged.ActedByName);
+        var delegation = await ReadAsync<ApprovalDelegationDto>(await DelegateAsync(f.Head, f.Deputy.Id, null, Today, Today.AddDays(5)));
 
         // Thu hồi: phiếu mới chờ cấp 1 thì phó phòng hết duyệt thay, Trưởng phòng ban tự duyệt.
         var pr = await SubmittedPrAsync(f, f.Buyer);
