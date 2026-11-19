@@ -348,6 +348,27 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     }
 
     /// <summary>
+    /// Số PO chưa hủy theo dòng PR – PO lấy PR thì PR hiện số PO (người dùng yêu cầu 19/11/2026). Tính lúc xem từ dòng PO (không ghi lên PR đã khóa).
+    /// </summary>
+    /// <param name="prLineIds">Dòng PR.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>Dòng PR → các PO (sắp theo số PO).</returns>
+    private async Task<Dictionary<Guid, IReadOnlyList<PurchaseRequestOrderRefDto>>> OrdersByLineAsync(
+        IReadOnlyList<Guid> prLineIds, CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from ol in _db.Set<PurchaseOrderLine>().AsNoTracking()
+                join o in _db.PurchaseOrders on ol.OrderId equals o.Id
+                where ol.SourcePrLineId != null && prLineIds.Contains(ol.SourcePrLineId.Value) && o.Status != ApprovalDocumentStatus.Cancelled
+                select new { LineId = ol.SourcePrLineId!.Value, o.Id, o.No, o.Status })
+            .Distinct().ToListAsync(cancellationToken);
+        return rows.GroupBy(r => r.LineId).ToDictionary(
+            g => g.Key,
+            g => (IReadOnlyList<PurchaseRequestOrderRefDto>)[.. g.DistinctBy(r => r.Id).OrderBy(r => r.No, StringComparer.Ordinal)
+                .Select(r => new PurchaseRequestOrderRefDto(r.Id, r.No, r.Status.ToString()))]);
+    }
+
+    /// <summary>
     /// SL đã lên PO (ĐVT cơ sở) theo dòng PR, chỉ PO chưa hủy. <paramref name="excludeOrderId"/>: PO đang sửa (không tính chính nó).
     /// </summary>
     internal async Task<Dictionary<Guid, decimal>> OrderedBaseByLineAsync(IReadOnlyList<Guid> prLineIds, Guid? excludeOrderId, CancellationToken cancellationToken) =>
@@ -638,6 +659,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
         var (canEnterStock, enterStockBlocker) = await EnterStockStateAsync(pr, itemsVisible, cancellationToken);
         var lastStock = canEnterStock ? await LastStockAsync(pr, itemIds, cancellationToken) : [];
         var ordered = await OrderedBaseByLineAsync(pr.Lines.Select(l => l.Id).ToList(), null, cancellationToken);
+        var orders = await OrdersByLineAsync(pr.Lines.Select(l => l.Id).ToList(), cancellationToken);
         var onOrder = await OnOrderBaseByItemAsync(itemIds, cancellationToken);
         var department = pr.DepartmentId is { } departmentId
             ? await _db.Departments.Where(d => d.Id == departmentId).Select(d => d.Name).SingleOrDefaultAsync(cancellationToken)
@@ -660,6 +682,7 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
                 LastStockQty = last is null ? null : Math.Round(last.BaseQty / l.UomFactor, 4, MidpointRounding.AwayFromZero),
                 LastStockRequestNo = last?.No, LastStockRequestId = last?.RequestId, LastStockAt = last?.At,
                 EstPriceManual = l.EstPriceManual,
+                Orders = orders.TryGetValue(l.Id, out var lineOrders) ? lineOrders : [],
             };
         }).ToList();
 
@@ -700,7 +723,9 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
             pr.CreatedBy is { } c ? users.GetValueOrDefault(c) : null, pr.ApprovedAt, lines,
             await _approvals.HistoryAsync(DocumentTypes.PurchaseRequest, pr.Id, cancellationToken, pr), actions, newItems,
             pendingNew && _scope.HasPermission(Permissions.Sourcing.RfqManage),
-            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) { Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null,
+            pendingNew && (_scope.HasPermission(Permissions.Purchase.PoCreate) || canCreate), BudgetService.ToDto(pr)) {
+            Orders = [.. orders.Values.SelectMany(o => o).DistinctBy(o => o.Id).OrderBy(o => o.No, StringComparer.Ordinal)],
+            Version = pr.Version, ClosedReason = pr.ClosedReason, ClosedAt = pr.ClosedAt, CancelReason = pr.CancelReason, ClosedByName = pr.ClosedBy is { } closedBy ? await _db.Users.AsNoTracking().Where(u => u.Id == closedBy).Select(u => u.FullName).SingleOrDefaultAsync(cancellationToken) : null,
             Category = pr.Category.ToString(), Construction = await ConstructionBudgetAsync(pr, cancellationToken),
             WarehouseName = pr.WarehouseId is { } warehouseId
                 ? await _db.Warehouses.AsNoTracking().Where(w => w.Id == warehouseId).Select(w => w.Name).SingleOrDefaultAsync(cancellationToken)

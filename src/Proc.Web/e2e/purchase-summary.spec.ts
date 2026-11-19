@@ -32,26 +32,45 @@ test('lập bảng tổng hợp 2B, duyệt trên điện thoại, hủy', async
   await bha.send('post', `/api/purchase-requests/${pr.id}/submit`, {})
   const prApproved = await request.post(`/api/purchase-requests/${pr.id}/approve`, { headers: approverHeaders, data: { comment: null } })
   expect(prApproved.ok(), await prApproved.text()).toBeTruthy()
+  // Đề nghị thứ hai của bộ phận khác: cùng hiện trong hộp chọn nhưng không chọn chung bảng được (khác nhóm).
+  const otherCode = unique('TK')
+  const other = await bha.send<{ id: string }>('post', '/api/departments', { code: otherCode, name: `Phòng ${otherCode}`, managerName: null })
+  const pr2 = await bha.send<{ id: string; no: string }>('post', '/api/purchase-requests', {
+    date: todayVn(), departmentId: other.id, purpose: 'Bảo hộ phòng khác', neededDate: null, warehouseId: null, priority: 'Normal',
+    category: 'Goods', note: null, lines: [{ id: null, itemId, uomId: hop, qty: 2, suggestedSupplierId: null, neededDate: null, note: null, estPrice: 100000 }],
+    newItems: [],
+  })
+  await bha.send('post', `/api/purchase-requests/${pr2.id}/submit`, {})
+  const pr2Approved = await request.post(`/api/purchase-requests/${pr2.id}/approve`, { headers: approverHeaders, data: { comment: null } })
+  expect(pr2Approved.ok(), await pr2Approved.text()).toBeTruthy()
 
-  // 1. Quản trị lập bảng tổng hợp 2B: chọn bộ phận, chọn dòng đề nghị kèm đơn vị mua, lưu, gửi duyệt.
+  // 1. Quản trị lập bảng tổng hợp 2B: mở hộp chọn ngay (không cần chọn trước biểu mẫu, bộ phận – người dùng yêu cầu 19/11/2026), chọn dòng
+  // đề nghị kèm đơn vị mua → đầu phiếu tự điền biểu mẫu, bộ phận; lưu, gửi duyệt.
   await loginViaApi(page)
   await page.goto('/')
   await switchCompany(page, 'BHA')
   await openByCommand(page, 'BTH')
   await expect(page.getByRole('heading', { name: 'Bảng tổng hợp đề xuất mua (BTH)' })).toBeVisible()
   await page.getByRole('button', { name: 'Tạo mới' }).click()
-  // Chưa chọn bộ phận thì chưa chọn dòng được.
-  await page.getByRole('button', { name: 'Chọn dòng đề nghị' }).click()
-  await expect(page.locator('.ant-message')).toContainText('Hãy chọn biểu mẫu và bộ phận đề xuất')
-  await chooseOption(page, 'Bộ phận đề xuất', departmentCode)
   await page.getByRole('button', { name: 'Chọn dòng đề nghị' }).click()
   const picker = page.getByRole('dialog', { name: 'Chọn dòng đề nghị mua đã duyệt còn cần mua' })
   const candidate = picker.locator('.ant-table-row', { hasText: pr.no })
+  const otherRow = picker.locator('.ant-table-row', { hasText: pr2.no })
+  // Cột biểu mẫu, bộ phận đề xuất ngay trên lưới chọn.
   await expect(candidate).toContainText(itemCode)
   await expect(candidate).toContainText('300.000')
+  await expect(candidate).toContainText('2B')
+  await expect(candidate).toContainText(`Phòng ${departmentCode}`)
+  await expect(otherRow).toContainText(`Phòng ${otherCode}`)
+  await expect(otherRow.getByRole('checkbox')).toBeEnabled()
   await chooseOption(page, 'Đơn vị mua cho các dòng chọn', unitCode)
   await candidate.getByRole('checkbox').check()
+  // Chọn dòng đầu tiên thì dòng khác bộ phận bị khóa (một bảng một nhóm biểu mẫu – bộ phận – công trình).
+  await expect(otherRow.getByRole('checkbox')).toBeDisabled()
+  await page.screenshot({ path: 'e2e/screenshots/purchase-summary-picker.png', fullPage: true })
   await picker.getByRole('button', { name: 'Thêm 1 dòng' }).click()
+  await expect(page.locator('.ant-message')).toContainText(`bộ phận Phòng ${departmentCode}`)
+  await expect(page.locator('.document-form-content')).toContainText(departmentCode)
   const line = page.locator('.line-grid-row').first()
   await expect(line).toContainText(pr.no)
   await expect(line).toContainText(itemCode)

@@ -112,6 +112,9 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   const picker = buyer.getByRole('dialog')
   await picker.getByRole('row', { name: new RegExp(prNo) }).getByRole('checkbox').check()
   await picker.getByRole('button', { name: 'Thêm 1 dòng' }).click()
+  // Số PR hiện ngay khi lấy dòng (chưa lưu): cột "PR nguồn" và ô "Đề nghị mua" đầu phiếu (người dùng yêu cầu 19/11/2026).
+  await expect(buyer.locator('.line-grid-row').first().getByLabel(`Số chứng từ ${prNo}`)).toBeVisible()
+  await expect(buyer.locator('.ant-form-item', { hasText: 'Đề nghị mua' }).getByLabel(`Số chứng từ ${prNo}`)).toBeVisible()
   await chooseOption(buyer, 'Nhà cung cấp', supplierCode)
   await expect(buyer.getByLabel('SL đặt dòng 1')).toHaveValue('12')
   await buyer.getByLabel('Đơn giá dòng 1').fill('48000')
@@ -128,6 +131,14 @@ test('PR → duyệt → PO từ PR → duyệt → nhập kho theo PO', async (
   // Bộ phận đặt hàng tự lấy theo bộ phận của PR nguồn (design.md mục 18.10).
   await expect(buyer.locator('.ant-form-item', { hasText: 'Bộ phận đặt hàng' })).toContainText(departmentCode)
   const poNo = (await buyer.locator('.document-form-number').textContent())!
+  // PO lấy PR thì PR hiện số PO: ô "Đơn mua hàng" đầu phiếu và cột "Số PO" của dòng; bấm đúp số PO mở lại PO.
+  await buyer.locator('.ant-form-item', { hasText: 'Đề nghị mua' }).getByLabel(`Số chứng từ ${prNo}`).dblclick()
+  await expect(buyer.locator('.document-form-number')).toHaveText(prNo)
+  await expect(buyer.locator('.ant-form-item', { hasText: 'Đơn mua hàng' }).getByLabel(`Số chứng từ ${poNo}`)).toBeVisible()
+  await expect(buyer.locator('.line-grid-row').first().getByLabel(`Số chứng từ ${poNo}`)).toBeVisible()
+  await buyer.screenshot({ path: 'e2e/screenshots/purchase-request-po-numbers.png', fullPage: true })
+  await buyer.locator('.ant-form-item', { hasText: 'Đơn mua hàng' }).getByLabel(`Số chứng từ ${poNo}`).dblclick()
+  await expect(buyer.locator('.document-form-number')).toHaveText(poNo)
   await confirm(buyer, 'Gửi duyệt', `Đã gửi duyệt phiếu ${poNo}.`)
   // NCC chưa có giá đã duyệt: cảnh báo đầu phiếu, phải qua thêm chặng "Ngoài danh sách/giá" (POL – design.md mục 18.25).
   await expect(buyer.getByRole('alert').filter({ hasText: 'Ngoài danh sách/giá' })).toBeVisible()

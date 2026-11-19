@@ -66,3 +66,24 @@ export function DocNo({ no, docType, id, className, suffix }: DocNoProps) {
     </span>
   )
 }
+
+/** Một số chứng từ trong danh sách `DocNoList`. */
+export interface DocNoRef {
+  /** Id phiếu gốc (bấm đúp mở). */
+  id?: string | null
+  /** Số chứng từ. */
+  no: string
+}
+
+/**
+ * Nhiều ô số chứng từ cùng loại trên một hàng (tự xuống dòng), ví dụ các PO đã lấy một PR, các PR nguồn của một PO (người dùng yêu cầu 19/11/2026
+ * – docs/ui-style.md mục 5e). Mỗi số là một `DocNo` (bấm sao chép, bấm đúp mở). Không có số nào thì hiện chữ mờ `empty`.
+ */
+export function DocNoList({ items, docType, empty }: { items: DocNoRef[]; docType: string; empty?: string }) {
+  if (items.length === 0) return empty ? <span className="erp-doc-no-empty">{empty}</span> : null
+  return (
+    <span className="erp-doc-no-list">
+      {items.map((d) => <DocNo key={d.id ?? d.no} no={d.no} docType={docType} id={d.id} />)}
+    </span>
+  )
+}

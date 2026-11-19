@@ -113,12 +113,13 @@ public sealed record PurchaseSummaryDto(
 /// <param name="EstPrice">Đơn giá tham khảo.</param>
 /// <param name="Amount">Thành tiền theo SL còn cần mua.</param>
 /// <param name="NeededDate">Ngày cần.</param>
+/// <param name="ConstructionProjectName">Tên công trình (cột Công trình của hộp chọn dòng – người dùng yêu cầu 19/11/2026).</param>
 public sealed record PurchaseSummaryCandidateDto(
     Guid RequestLineId, Guid RequestId, string RequestNo, DateOnly RequestDate, string RequestCategory, Guid? DepartmentId, string? DepartmentName,
     Guid? ConstructionProjectId, string? ConstructionProjectCode, Guid ItemId, string ItemCode, string ItemName, Guid UomId, string UomCode,
-    decimal OpenQty, decimal EstPrice, decimal Amount, DateOnly? NeededDate);
+    decimal OpenQty, decimal EstPrice, decimal Amount, DateOnly? NeededDate, string? ConstructionProjectName = null);
 
-/// <summary>Lọc dòng đề nghị để chọn vào bảng tổng hợp.</summary>
+/// <summary>Lọc dòng đề nghị để chọn vào bảng tổng hợp; mọi ô trống = mọi dòng đề nghị đang chờ (hộp chọn dòng – người dùng yêu cầu 19/11/2026).</summary>
 /// <param name="Form">Construction (2A) hoặc Goods (2B); trống = mọi loại.</param>
 /// <param name="DepartmentId">Chỉ bộ phận này.</param>
 /// <param name="ConstructionProjectId">Chỉ công trình này (2A).</param>

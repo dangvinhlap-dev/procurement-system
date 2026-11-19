@@ -106,6 +106,8 @@ export interface PurchaseSummaryCandidate {
   departmentName: string | null
   constructionProjectId: string | null
   constructionProjectCode: string | null
+  /** Tên công trình (cột Công trình của hộp chọn dòng). */
+  constructionProjectName?: string | null
   itemId: string
   itemCode: string
   itemName: string
@@ -154,21 +156,22 @@ export function usePurchaseSummary(id: string | null) {
 }
 
 /**
- * Dòng đề nghị chọn được vào bảng tổng hợp theo biểu mẫu, bộ phận, công trình của đầu phiếu.
- * @param filter Bộ lọc; null = chưa đủ điều kiện để tải.
- * @param filter.form Biểu mẫu.
- * @param filter.departmentId Bộ phận đề xuất.
- * @param filter.constructionProjectId Công trình (2A).
+ * Dòng đề nghị đã duyệt còn cần mua, chưa ở bảng tổng hợp chưa hủy nào; mọi điều kiện tùy chọn (trống = tất cả).
+ * @param filter Bộ lọc; null = không tải.
+ * @param filter.form Biểu mẫu (trống = 2A và 2B).
+ * @param filter.departmentId Bộ phận đề xuất (trống = mọi bộ phận).
+ * @param filter.constructionProjectId Công trình (trống = mọi công trình).
  * @param filter.summaryId Bảng đang sửa – dòng đã ở chính bảng này vẫn hiện.
  */
 export function usePurchaseSummaryCandidates(
-  filter: { form: PurchaseSummaryForm; departmentId: string; constructionProjectId: string | null; summaryId: string | null } | null,
+  filter: { form?: PurchaseSummaryForm | null; departmentId?: string | null; constructionProjectId?: string | null; summaryId: string | null } | null,
 ) {
   const companyId = useCompanyId()
   const params = new URLSearchParams()
+  // Mọi điều kiện đều tùy chọn: trống = mọi dòng đề nghị đang chờ lên PO (hộp chọn dòng – người dùng yêu cầu 19/11/2026).
   if (filter) {
-    params.set('form', filter.form)
-    params.set('departmentId', filter.departmentId)
+    if (filter.form) params.set('form', filter.form)
+    if (filter.departmentId) params.set('departmentId', filter.departmentId)
     if (filter.constructionProjectId) params.set('constructionProjectId', filter.constructionProjectId)
     if (filter.summaryId) params.set('summaryId', filter.summaryId)
   }

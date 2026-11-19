@@ -207,6 +207,15 @@ public sealed record PurchaseDocumentActions(
     bool CanEdit, bool CanSubmit, bool CanApprove, bool CanCancel, string? ReadOnlyReason, bool CanCloseRemaining = false, bool CanRecall = false);
 
 /// <summary>
+/// Đơn mua hàng (chưa hủy) đã lấy dòng của PR – hiện số PO trên PR (người dùng yêu cầu 19/11/2026, design.md mục 10.2). Tính từ dòng PO lúc xem,
+/// không ghi lên PR, nên PR đã duyệt vẫn khóa (mục 20) mà số PO luôn đúng khi PO mới lập hoặc bị hủy.
+/// </summary>
+/// <param name="Id">Id PO (bấm đúp ô số mở PO).</param>
+/// <param name="No">Số PO.</param>
+/// <param name="Status">Trạng thái PO.</param>
+public sealed record PurchaseRequestOrderRefDto(Guid Id, string No, string Status);
+
+/// <summary>
 /// Dòng PR. OrderedQty: SL đã lên PO (chưa hủy) theo ĐVT trên phiếu. Tồn do thủ kho nơi nhận nhập trên phiếu (lát Y3b, design.md mục
 /// 19.3) – không còn đọc tồn kho của phân hệ kho cũ (đã tắt từ 0.22.0).
 /// Định mức sử dụng (lát G11, design.md mục 18.25) – mọi SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến <paramref name="NormThrough"/>:
@@ -261,6 +270,9 @@ public sealed record PurchaseRequestLineDto(
 
     /// <summary>Đơn giá do người lập nhập (chưa có giá nhận hàng gần nhất); false = máy chủ lấy từ XNH (design.md mục 10.2).</summary>
     public bool EstPriceManual { get; init; }
+
+    /// <summary>Các PO chưa hủy đã lấy dòng này (theo số PO).</summary>
+    public IReadOnlyList<PurchaseRequestOrderRefDto> Orders { get; init; } = [];
 }
 
 /// <summary>
@@ -273,6 +285,9 @@ public sealed record PurchaseRequestDto(
     DateTimeOffset? ApprovedAt, IReadOnlyList<PurchaseRequestLineDto> Lines, IReadOnlyList<ApprovalStepDto> Approvals, PurchaseDocumentActions Actions,
     IReadOnlyList<PurchaseRequestNewItemDto> NewItems, bool CanCreateSourcing, bool CanLinkItem, BudgetCheckDto? Budget = null, uint Version = 0)
 {
+    /// <summary>Mọi PO chưa hủy đã lấy dòng của phiếu, theo số PO (ô "Đơn mua hàng" đầu phiếu).</summary>
+    public IReadOnlyList<PurchaseRequestOrderRefDto> Orders { get; init; } = [];
+
     /// <summary>Lý do đóng phần còn lại (lát R6); null = không đóng tay.</summary>
     public string? ClosedReason { get; init; }
 

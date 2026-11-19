@@ -232,6 +232,8 @@ export interface PurchaseRequestLine {
   onOrderQty: number
   /** Đơn giá do người lập nhập vì mặt hàng chưa có giá nhận hàng gần nhất (design.md mục 10.2); false = máy chủ lấy từ XNH. */
   estPriceManual?: boolean
+  /** Các PO chưa hủy đã lấy dòng này (cột "Số PO" – người dùng yêu cầu 19/11/2026). */
+  orders?: PurchaseRequestOrderRef[]
   /**
    * Định mức sử dụng (lát G11, design.md mục 18.25): null = không kiểm tra; Ok; Over – vượt; NoPlan – ngoài kế hoạch nhu cầu.
    * SL theo ĐVT cơ sở, lũy kế từ tháng 1 đến normThrough.
@@ -246,7 +248,16 @@ export interface PurchaseRequestLine {
 }
 
 /** Chi tiết PR. */
+/** PO chưa hủy đã lấy dòng của PR – khớp PurchaseRequestOrderRefDto (tính lúc xem từ dòng PO, không ghi lên PR đã khóa). */
+export interface PurchaseRequestOrderRef {
+  id: string
+  no: string
+  status: PurchaseStatus
+}
+
 export interface PurchaseRequest extends ClosedRemaining {
+  /** Mọi PO chưa hủy đã lấy dòng của phiếu (ô "Đơn mua hàng" đầu phiếu). */
+  orders?: PurchaseRequestOrderRef[]
   id: string
   no: string
   date: string
