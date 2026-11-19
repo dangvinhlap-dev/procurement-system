@@ -150,6 +150,8 @@ function SummaryFrameNotice({ frame, form }: { frame: PurchaseSummaryFrame; form
 /**
  * Trang phiếu bảng tổng hợp đề xuất mua 2A/2B (lát Y5c-2) trên khuôn DocumentForm. Đầu phiếu: ngày, biểu mẫu, bộ phận đề xuất, công trình
  * (2A), ghi chú. Dòng chỉ lấy từ đề nghị đã duyệt còn cần mua qua hộp "Chọn dòng đề nghị" (Thêm dòng / F2); mỗi dòng bắt buộc đơn vị mua.
+ * Hộp chọn mở ngay, liệt kê mọi đề nghị đang chờ (người dùng chốt cách A 19/11/2026): bảng trống thì chọn dòng xong tự điền biểu mẫu – bộ phận
+ * – công trình theo dòng đầu; dòng khác nhóm không chọn chung được (mọi dòng cùng biểu mẫu, bộ phận, công trình – design.md mục 19.3, Y5b).
  * SL, đơn giá do máy chủ chụp lúc lưu nháp và lúc gửi duyệt. Lệnh duyệt, rút về nháp, hủy dây chuyền dùng chung với PR/PO.
  */
 export function PurchaseSummaryPage() {
@@ -165,6 +167,8 @@ export function PurchaseSummaryPage() {
   const [picking, setPicking] = useState(false)
   // Thông tin dòng vừa chọn trong hộp chọn (chưa lưu), theo Id dòng đề nghị.
   const [picked, setPicked] = useState<Map<string, LineInfo>>(() => new Map())
+  // Công trình vừa tự điền từ dòng chọn – thêm vào ô chọn nếu không nằm trong danh sách công trình đang thực hiện (để hiện tên, không hiện Id).
+  const [pickedProject, setPickedProject] = useState<{ value: string; label: string } | null>(null)
   const addRef = useRef<(() => void) | null>(null)
   const doc = summary.data
   const readOnly = isNew ? !hasPermission(Permission.SummaryManage) : !doc?.actions.canEdit
@@ -182,8 +186,9 @@ export function PurchaseSummaryPage() {
     const options = (projectOptions.data ?? []).map((p) => ({ value: p.id, label: `${p.code} – ${p.name}` }))
     if (doc?.constructionProjectId && !options.some((o) => o.value === doc.constructionProjectId))
       options.push({ value: doc.constructionProjectId, label: `${doc.frame.projectCode ?? ''} – ${doc.frame.projectName ?? ''} (không còn thực hiện)` })
+    if (pickedProject && !options.some((o) => o.value === pickedProject.value)) options.push(pickedProject)
     return options
-  }, [projectOptions.data, doc])
+  }, [projectOptions.data, doc, pickedProject])
 
   // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ để hiện tên (design.md mục 18.5).
   const departmentOptions = useMemo(
@@ -238,21 +243,32 @@ export function PurchaseSummaryPage() {
     message.info(`Đã bỏ ${count} dòng vì đổi biểu mẫu, bộ phận hoặc công trình – hãy chọn lại dòng đề nghị.`)
   }
 
-  /** Mở hộp chọn dòng đề nghị khi đầu phiếu đã đủ biểu mẫu, bộ phận (và công trình với 2A). */
-  const openPicker = () => {
-    if (!summaryForm || !departmentId) {
-      message.warning('Hãy chọn biểu mẫu và bộ phận đề xuất trước khi chọn dòng đề nghị.')
-      return
-    }
-    if (summaryForm === 'Construction' && !projectId) {
-      message.warning('Biểu mẫu 2A: hãy chọn công trình trước khi chọn dòng đề nghị.')
-      return
-    }
-    setPicking(true)
-  }
+  /** Mở hộp chọn dòng đề nghị – không cần chọn trước biểu mẫu, bộ phận, công trình (người dùng yêu cầu 19/11/2026). */
+  const openPicker = () => setPicking(true)
 
-  /** Thêm các dòng đề nghị đã chọn, gán sẵn đơn vị mua chọn trong hộp (nếu có). */
+  /**
+   * Nhóm bắt buộc của bảng: bảng đã có dòng thì theo đầu phiếu (mọi dòng cùng biểu mẫu – bộ phận – công trình); bảng trống thì null – dòng chọn
+   * đầu tiên trong hộp quyết định nhóm.
+   */
+  const anchor: CandidateGroup | null = lines.some((l) => l?.requestLineId) && summaryForm && departmentId
+    ? { form: summaryForm, departmentId, projectId: summaryForm === 'Construction' ? (projectId ?? null) : null }
+    : null
+
+  /**
+   * Thêm các dòng đề nghị đã chọn, gán sẵn đơn vị mua chọn trong hộp (nếu có). Bảng chưa có dòng thì điền biểu mẫu, bộ phận, công trình theo dòng
+   * đầu (đặt thẳng giá trị – không qua onChange nên không bỏ dòng).
+   */
   const addPicked = (rows: PurchaseSummaryCandidate[], unitId: string | undefined) => {
+    const first = rows[0]
+    if (!anchor && first) {
+      const group = groupOf(first)
+      form.setFieldsValue({ form: group.form, departmentId: group.departmentId ?? undefined, constructionProjectId: group.projectId ?? undefined })
+      setPickedProject(group.projectId
+        ? { value: group.projectId, label: [first.constructionProjectCode, first.constructionProjectName].filter(Boolean).join(' – ') }
+        : null)
+      message.info(`Đã điền biểu mẫu ${purchaseSummaryFormLabels[group.form]}, bộ phận ${first.departmentName ?? ''}`
+        + (first.constructionProjectCode ? `, công trình ${first.constructionProjectCode}` : '') + ' theo dòng đề nghị đã chọn.')
+    }
     setPicked((prev) => {
       const next = new Map(prev)
       for (const r of rows)
@@ -452,9 +468,10 @@ export function PurchaseSummaryPage() {
           attachmentTab,
         ]}
       />
-      {picking && summaryForm && departmentId && (
+      {picking && (
         <CandidatePicker
-          filter={{ form: summaryForm, departmentId, constructionProjectId: summaryForm === 'Construction' ? (projectId ?? null) : null, summaryId: doc?.id ?? null }}
+          summaryId={doc?.id ?? null}
+          anchor={anchor}
           exclude={new Set(lines.map((l) => l?.requestLineId).filter((x): x is string => !!x))}
           unitOptions={unitOptions}
           onCancel={() => setPicking(false)}
@@ -465,39 +482,87 @@ export function PurchaseSummaryPage() {
   )
 }
 
+/** Nhóm của một bảng tổng hợp: mọi dòng cùng biểu mẫu – bộ phận – công trình (design.md mục 19.3, lát Y5b). */
+interface CandidateGroup {
+  form: PurchaseSummaryForm
+  departmentId: string | null
+  /** Công trình – chỉ biểu mẫu 2A. */
+  projectId: string | null
+}
+
+/** Nhóm của dòng đề nghị: loại A → 2A theo công trình; B, DV → 2B. */
+const groupOf = (r: PurchaseSummaryCandidate): CandidateGroup => r.requestCategory === 'Construction'
+  ? { form: 'Construction', departmentId: r.departmentId, projectId: r.constructionProjectId }
+  : { form: 'Goods', departmentId: r.departmentId, projectId: null }
+
+/** Hai nhóm trùng nhau (cùng biểu mẫu, bộ phận, công trình). */
+const sameGroup = (a: CandidateGroup, b: CandidateGroup) =>
+  a.form === b.form && a.departmentId === b.departmentId && (a.form !== 'Construction' || a.projectId === b.projectId)
+
+/** Bộ lọc cột của lưới chọn: các giá trị khác nhau của một cột (bỏ trống), sắp theo chữ. */
+const distinctFilters = (values: (string | null | undefined)[]) =>
+  [...new Set(values.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b, 'vi')).map((v) => ({ text: v, value: v }))
+
+/** Chữ cột Công trình: "mã – tên". */
+const projectText = (r: PurchaseSummaryCandidate) => [r.constructionProjectCode, r.constructionProjectName].filter(Boolean).join(' – ')
+
 /**
- * Hộp chọn dòng đề nghị đã duyệt còn cần mua, chưa ở bảng tổng hợp nào chưa hủy, đúng biểu mẫu – bộ phận – công trình của đầu phiếu
- * (`GET /api/purchase-summaries/candidates`). Chọn sẵn đơn vị mua cho mọi dòng chọn được (sửa từng dòng sau).
- * @param filter Bộ lọc theo đầu phiếu.
+ * Hộp chọn dòng đề nghị: liệt kê **mọi** dòng đề nghị đã duyệt còn cần mua, chưa ở bảng tổng hợp nào chưa hủy – không cần điều kiện đầu phiếu
+ * (người dùng yêu cầu 19/11/2026, chốt cách A). Biểu mẫu, bộ phận, công trình thành cột (lọc được trên tiêu đề cột). Một bảng chỉ gồm một nhóm
+ * biểu mẫu – bộ phận – công trình: bảng đã có dòng thì chỉ chọn được dòng cùng nhóm đầu phiếu; bảng trống thì dòng chọn đầu tiên quyết định nhóm,
+ * dòng khác nhóm bị khóa kèm lý do. Chọn sẵn đơn vị mua cho mọi dòng chọn được (sửa từng dòng sau).
+ * @param summaryId Bảng đang sửa – dòng đã ở chính bảng này vẫn hiện.
+ * @param anchor Nhóm bắt buộc theo đầu phiếu khi bảng đã có dòng; null = bảng trống.
  * @param exclude Dòng đề nghị đã có trên phiếu.
  * @param unitOptions Đơn vị mua chọn được.
  * @param onPick Thêm các dòng đã chọn kèm đơn vị mua chung (có thể trống).
  * @param onCancel Đóng.
  */
 function CandidatePicker({
-  filter, exclude, unitOptions, onPick, onCancel,
+  summaryId, anchor, exclude, unitOptions, onPick, onCancel,
 }: {
-  filter: { form: PurchaseSummaryForm; departmentId: string; constructionProjectId: string | null; summaryId: string | null }
+  summaryId: string | null
+  anchor: CandidateGroup | null
   exclude: Set<string>
   unitOptions: { value: string; label: string }[]
   onPick: (rows: PurchaseSummaryCandidate[], unitId: string | undefined) => void
   onCancel: () => void
 }) {
-  const candidates = usePurchaseSummaryCandidates(filter)
+  const candidates = usePurchaseSummaryCandidates({ summaryId })
   const [selected, setSelected] = useState<string[]>([])
   const [unitId, setUnitId] = useState<string | undefined>()
-  const rows = (candidates.data ?? []).filter((r) => !exclude.has(r.requestLineId))
+  const rows = useMemo(() => (candidates.data ?? []).filter((r) => !exclude.has(r.requestLineId)), [candidates.data, exclude])
+  const firstSelected = rows.find((r) => r.requestLineId === selected[0])
+  // Nhóm đang khóa: theo đầu phiếu (bảng đã có dòng) hoặc theo dòng chọn đầu tiên.
+  const group = anchor ?? (firstSelected ? groupOf(firstSelected) : null)
+  /** Lý do không chọn được dòng; null = chọn được. */
+  const blocker = (r: PurchaseSummaryCandidate): string | null => {
+    if (!r.departmentId) return 'Đề nghị chưa có bộ phận đề xuất – không đưa vào bảng tổng hợp được.'
+    if (group && !sameGroup(group, groupOf(r)))
+      return anchor
+        ? 'Khác biểu mẫu, bộ phận hoặc công trình của bảng này – lập bảng tổng hợp riêng.'
+        : 'Khác biểu mẫu, bộ phận hoặc công trình của dòng đã chọn – một bảng chỉ gồm một nhóm; lập bảng tổng hợp riêng.'
+    return null
+  }
   return (
     <Modal
       open
       title="Chọn dòng đề nghị mua đã duyệt còn cần mua"
-      width={1000}
+      width={1240}
       okText={`Thêm ${selected.length} dòng`}
       okButtonProps={{ disabled: selected.length === 0 }}
       cancelText="Đóng"
       onCancel={onCancel}
       onOk={() => onPick(rows.filter((r) => selected.includes(r.requestLineId)), unitId)}
     >
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 6 }}
+        title={anchor
+          ? 'Bảng đã có dòng: chỉ chọn được dòng cùng biểu mẫu, bộ phận, công trình của đầu phiếu; dòng khác nhóm lập bảng tổng hợp riêng.'
+          : 'Mọi đề nghị đã duyệt còn chờ lên PO. Một bảng gồm dòng cùng biểu mẫu, bộ phận, công trình – chọn dòng đầu tiên thì đầu phiếu tự điền theo dòng đó.'}
+      />
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
         <label htmlFor="summary-pick-unit">Đơn vị mua cho các dòng chọn</label>
         <Select id="summary-pick-unit" aria-label="Đơn vị mua cho các dòng chọn" style={{ width: 280 }} allowClear options={unitOptions}
@@ -508,15 +573,40 @@ function CandidatePicker({
         rowKey="requestLineId"
         loading={candidates.isLoading}
         pagination={false}
-        scroll={{ y: 360 }}
+        scroll={{ x: 1200, y: 360 }}
         dataSource={rows}
-        rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys as string[]) }}
-        locale={{ emptyText: 'Không còn dòng đề nghị đã duyệt nào cần mua của bộ phận (và công trình) này mà chưa vào bảng tổng hợp.' }}
+        rowSelection={{
+          selectedRowKeys: selected,
+          onChange: (keys) => setSelected(keys as string[]),
+          getCheckboxProps: (r) => {
+            const reason = blocker(r)
+            return { disabled: !!reason && !selected.includes(r.requestLineId), title: reason ?? undefined }
+          },
+        }}
+        onRow={(r) => ({ title: blocker(r) ?? undefined })}
+        rowClassName={(r) => (blocker(r) && !selected.includes(r.requestLineId) ? 'erp-pick-row-blocked' : '')}
+        locale={{ emptyText: 'Không còn dòng đề nghị đã duyệt nào cần mua mà chưa vào bảng tổng hợp.' }}
         columns={[
-          { title: 'Số đề nghị', dataIndex: 'requestNo', width: 150 },
+          { title: 'Số đề nghị', dataIndex: 'requestNo', width: 150, fixed: 'left', render: (v: string, r) => <DocNo no={v} docType="PR" id={r.requestId} /> },
           { title: 'Ngày', dataIndex: 'requestDate', width: 90, render: (v: string) => formatDate(v) },
+          {
+            title: 'Biểu mẫu', key: 'form', width: 90,
+            render: (_, r) => purchaseSummaryFormLabels[groupOf(r).form].split(' ')[0],
+            filters: [{ text: '2A', value: 'Construction' }, { text: '2B', value: 'Goods' }],
+            onFilter: (v, r) => groupOf(r).form === v,
+          },
           { title: 'Loại', dataIndex: 'requestCategory', width: 60, render: (v: string) => categoryLabel(v).split(' ')[0] },
-          { title: 'Mặt hàng', key: 'item', render: (_, r) => `${r.itemCode} – ${r.itemName}` },
+          {
+            title: 'Bộ phận đề xuất', dataIndex: 'departmentName', width: 180, ellipsis: true,
+            filters: distinctFilters(rows.map((r) => r.departmentName)), filterSearch: true,
+            onFilter: (v, r) => r.departmentName === v,
+          },
+          {
+            title: 'Công trình', key: 'project', width: 200, ellipsis: true, render: (_, r) => projectText(r),
+            filters: distinctFilters(rows.map(projectText)), filterSearch: true,
+            onFilter: (v, r) => projectText(r) === v,
+          },
+          { title: 'Mặt hàng', key: 'item', width: 240, ellipsis: true, render: (_, r) => `${r.itemCode} – ${r.itemName}` },
           { title: 'ĐVT', dataIndex: 'uomCode', width: 60 },
           { title: 'Còn cần mua', dataIndex: 'openQty', width: 100, align: 'right', render: (v: number) => formatQuantity(v) },
           { title: 'Thành tiền', dataIndex: 'amount', width: 120, align: 'right', render: (v: number) => formatMoney(v) },

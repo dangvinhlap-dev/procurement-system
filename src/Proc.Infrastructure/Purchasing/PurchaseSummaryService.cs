@@ -98,6 +98,7 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
                     l.Id, RequestId = r.Id, r.No, r.Date, r.Category, r.DepartmentId, r.ConstructionProjectId,
                     Department = _db.Departments.Where(d => d.Id == r.DepartmentId).Select(d => d.Name).FirstOrDefault(),
                     Project = _db.ConstructionProjects.Where(p => p.Id == r.ConstructionProjectId).Select(p => p.Code).FirstOrDefault(),
+                    ProjectName = _db.ConstructionProjects.Where(p => p.Id == r.ConstructionProjectId).Select(p => p.Name).FirstOrDefault(),
                     l.ItemId, ItemCode = i.Code, ItemName = i.Name, l.UomId, UomCode = u.Code, l.BaseQty, l.UomFactor, l.EstPrice,
                     NeededDate = l.NeededDate ?? r.NeededDate,
                 })
@@ -109,7 +110,7 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
             .Select(x => new PurchaseSummaryCandidateDto(
                 x.r.Id, x.r.RequestId, x.r.No, x.r.Date, x.r.Category.ToString(), x.r.DepartmentId, x.r.Department, x.r.ConstructionProjectId,
                 x.r.Project, x.r.ItemId, x.r.ItemCode, x.r.ItemName, x.r.UomId, x.r.UomCode, x.Open, x.r.EstPrice,
-                decimal.Round(x.Open * x.r.EstPrice, 2, MidpointRounding.AwayFromZero), x.r.NeededDate))
+                decimal.Round(x.Open * x.r.EstPrice, 2, MidpointRounding.AwayFromZero), x.r.NeededDate, x.r.ProjectName))
             .ToList();
     }
 

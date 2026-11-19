@@ -40,7 +40,7 @@ import { DeliveryNoticePanel } from './DeliveryNoticePanel'
 import { SupplierResponsePanel } from './SupplierResponsePanel'
 import { supplierResponseSummary } from './supplierResponseSummary'
 import { useApprovalCommands } from './useApprovalCommands'
-import { DocNo } from '../../classic/DocNo'
+import { DocNo, DocNoList, type DocNoRef } from '../../classic/DocNo'
 
 interface PoLineValues {
   id: string | null
@@ -53,6 +53,9 @@ interface PoLineValues {
   deliveryDate?: Dayjs | null
   note?: string
   sourcePrLineId?: string | null
+  /** Số, Id PR nguồn – chỉ để hiện ngay khi lấy dòng (chưa lưu), không gửi lên máy chủ. */
+  sourcePrNo?: string | null
+  sourcePrId?: string | null
   priceDeviationReason?: string
   sourceRfqLineId?: string | null
 }
@@ -322,6 +325,7 @@ export function PurchaseOrderPage() {
     lines: doc.lines.map((l) => ({
       id: l.id, itemId: l.itemId, uomId: l.uomId, qty: l.qty, unitPrice: l.unitPrice, discountPct: l.discountPct, vatCode: l.vatCode,
       deliveryDate: l.deliveryDate ? dayjs(l.deliveryDate) : null, note: l.note ?? '', sourcePrLineId: l.sourcePrLineId,
+      sourcePrNo: l.sourcePrNo, sourcePrId: l.sourcePrId,
       priceDeviationReason: l.priceDeviationReason ?? '', sourceRfqLineId: l.sourceRfqLineId,
     })),
   }))
@@ -387,6 +391,7 @@ export function PurchaseOrderPage() {
       .map((p) => ({
         id: null, itemId: p.itemId, uomId: p.uomId, qty: p.remainingQty, unitPrice: p.estPrice, discountPct: 0, vatCode: p.vatCode,
         deliveryDate: p.neededDate ? dayjs(p.neededDate) : null, note: '', sourcePrLineId: p.prLineId,
+        sourcePrNo: p.requestNo, sourcePrId: p.requestId,
       }))
     form.setFieldValue('lines', [...current, ...added])
     if (!form.getFieldValue('supplierId')) {
@@ -397,6 +402,15 @@ export function PurchaseOrderPage() {
   }
 
   const savedLine = (index: number) => (lines[index]?.id ? doc?.lines.find((l) => l.id === lines[index].id) : undefined)
+  /** Các PR nguồn (không trùng) của dòng lấy từ PR – ô "Đề nghị mua" đầu phiếu, có ngay khi lấy dòng (chưa lưu). */
+  const sourceRequests = useMemo(() => {
+    const seen = new Map<string, DocNoRef>()
+    for (const l of lines) {
+      const no = l?.sourcePrNo ?? (l?.id ? doc?.lines.find((d) => d.id === l.id)?.sourcePrNo : null)
+      if (no && !seen.has(no)) seen.set(no, { no, id: l?.sourcePrId ?? doc?.lines.find((d) => d.sourcePrNo === no)?.sourcePrId })
+    }
+    return [...seen.values()].sort((a, b) => a.no.localeCompare(b.no))
+  }, [lines, doc])
   // Mã hàng theo NCC: PO nháp hiện mã đang khai báo ở NCC – sản phẩm (máy chủ chép đúng mã này khi lưu/gửi); PO đã gửi hiện mã đã chép.
   const supplierItemCode = (index: number) =>
     !doc || doc.status === 'Draft'
@@ -417,6 +431,12 @@ export function PurchaseOrderPage() {
             <Input />
           </Form.Item>
           <Form.Item name={[field.name, 'sourcePrLineId']} hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name={[field.name, 'sourcePrNo']} hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name={[field.name, 'sourcePrId']} hidden>
             <Input />
           </Form.Item>
           <Form.Item name={[field.name, 'sourceRfqLineId']} hidden>
@@ -622,11 +642,13 @@ export function PurchaseOrderPage() {
     },
     {
       key: 'pr', title: 'PR nguồn', width: 130,
+      // Số PR hiện ngay khi lấy dòng từ PR, chưa cần lưu (người dùng yêu cầu 19/11/2026).
       render: (_, index) => {
-        const saved = savedLine(index)
-        return saved?.sourcePrNo
-          ? <DocNo no={saved.sourcePrNo} docType="PR" id={saved.sourcePrId} />
-          : readonlyCell(lines[index]?.sourcePrLineId ? '(từ PR)' : '')
+        const line = lines[index]
+        const no = line?.sourcePrNo ?? savedLine(index)?.sourcePrNo
+        return no
+          ? <DocNo no={no} docType="PR" id={line?.sourcePrId ?? savedLine(index)?.sourcePrId} />
+          : readonlyCell(line?.sourcePrLineId ? '(từ PR)' : '')
       },
     },
   ]
@@ -781,6 +803,11 @@ export function PurchaseOrderPage() {
                   data-testid="po-form-code"
                   value={doc.category === 'Construction' ? `A – Công trình ${doc.constructionProjectName ?? ''} · 4A` : 'B – Hàng hóa, dịch vụ · 4B'}
                 />
+              </Form.Item>
+            )}
+            {sourceRequests.length > 0 && (
+              <Form.Item label="Đề nghị mua" tooltip="Các PR nguồn của dòng lấy từ PR – bấm đúp số để mở PR. PR cũng hiện số PO này." className="document-form-wide">
+                <DocNoList items={sourceRequests} docType="PR" />
               </Form.Item>
             )}
             {doc?.internalSale && (

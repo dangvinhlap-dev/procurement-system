@@ -729,6 +729,21 @@ body.erp-col-resizing {
   font-family: var(--ant-font-family);
   color: var(--erp-text-muted);
 }
+/* Nhiều số chứng từ trên một hàng (DocNoList): cách nhau 4px, tự xuống dòng; không có số thì chữ mờ. */
+.erp-doc-no-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.erp-doc-no-empty {
+  color: var(--erp-text-muted);
+}
+/* Hộp chọn dòng đề nghị của bảng tổng hợp: dòng khác nhóm biểu mẫu – bộ phận – công trình chữ mờ, rê chuột xem lý do. */
+.erp-pick-row-blocked td {
+  color: var(--erp-text-muted);
+}
 
 /* Luồng hỏi đáp (QaThread – lát P3b-2, docs/ui-style.md mục 5g): khung viền 1px, dải đầu loại – người – giờ, không bóng, bo 0. */
 .erp-qa {

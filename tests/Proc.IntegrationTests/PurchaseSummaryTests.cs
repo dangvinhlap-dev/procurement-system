@@ -135,6 +135,47 @@ public partial class PurchasingTests
     }
 
     [Fact]
+    public async Task HopChonDong_KhongDieuKien_LietKeMoiDeNghiCho_KemBieuMau_BoPhan_CongTrinh_PrHienSoPo()
+    {
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var goods = await ApprovedPrAsync(f, approver);
+        var project = await ProjectAsync(f, 1_000_000m);
+        var construction = await ApprovedPrAsync(f, approver, "Construction", project.Id, 5);
+
+        // Không truyền điều kiện: liệt kê mọi dòng đề nghị đã duyệt còn cần mua (người dùng yêu cầu 19/11/2026) – kèm loại, bộ phận, công trình.
+        var all = (await f.Buyer.GetFromJsonAsync<List<PurchaseSummaryCandidateDto>>("/api/purchase-summaries/candidates", Ct))!;
+        var g = all.Single(c => c.RequestId == goods.Id);
+        var c2 = all.Single(c => c.RequestId == construction.Id);
+        Assert.Equal(("Goods", f.DepartmentId, (Guid?)null), (g.RequestCategory, g.DepartmentId!.Value, g.ConstructionProjectId));
+        Assert.Equal(("Construction", (Guid?)project.Id), (c2.RequestCategory, c2.ConstructionProjectId));
+        Assert.Equal(project.Name, c2.ConstructionProjectName);
+        Assert.False(string.IsNullOrEmpty(g.DepartmentName));
+
+        // PR chưa lên PO: không có số PO.
+        Assert.Empty(goods.Orders);
+        await _factory.ApproveSummaryForRequestAsync(goods.Id);
+        var line = goods.Lines.Single();
+        var first = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 4, line.Id));
+        var second = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 3, line.Id));
+        // PO hiện số PR nguồn trên dòng.
+        Assert.Equal(goods.No, first.Lines.Single().SourcePrNo);
+
+        // PR hiện số mọi PO đã lấy (đầu phiếu và từng dòng), sắp theo số PO.
+        var pr = (await f.Buyer.GetFromJsonAsync<PurchaseRequestDto>($"/api/purchase-requests/{goods.Id}", Ct))!;
+        string[] expected = [.. new[] { first.No, second.No }.Order(StringComparer.Ordinal)];
+        Assert.Equal(expected, pr.Orders.Select(o => o.No));
+        Assert.Equal(expected, pr.Lines.Single().Orders.Select(o => o.No));
+        Assert.All(pr.Orders, o => Assert.Equal("Draft", o.Status));
+
+        // Hủy PO: số PO đó không còn trên PR.
+        await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsJsonAsync($"/api/purchase-orders/{first.Id}/cancel", new CancelDocumentRequest("Đặt lại"), Ct));
+        pr = (await f.Buyer.GetFromJsonAsync<PurchaseRequestDto>($"/api/purchase-requests/{goods.Id}", Ct))!;
+        Assert.Equal([second.No], pr.Orders.Select(o => o.No));
+        Assert.Equal([second.Id], pr.Lines.Single().Orders.Select(o => o.Id));
+    }
+
+    [Fact]
     public async Task BangTongHop2A_CungCongTrinh_KhungDuToan_RutVeNhap()
     {
         var f = await ArrangeAsync();

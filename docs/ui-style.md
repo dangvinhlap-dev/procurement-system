@@ -133,6 +133,10 @@ Trang `/duyet` (danh sách phiếu chờ tôi duyệt) và `/duyet/:loại/:id` 
   = mở form chứng từ gốc (`documentPath`). Ô mở được có chữ xanh đậm gạch chấm (`is-link`); không có Id phiếu gốc thì chỉ sao chép.
 - Lưới `DataGrid`: khai báo `docRef: (r) => ({ docType, id })` trên cột – bấm đúp ô mở phiếu gốc của ô, không mở dòng.
 - Form: số phiếu đầu `DocumentForm` tự là ô chữ; số phiếu liên quan dùng `<DocNo no docType id />` thay cho link chữ.
+- **Nhiều số cùng loại** (19/11/2026 – PR ô "Đơn mua hàng" + cột "Số PO", PO ô "Đề nghị mua"): `<DocNoList items docType empty? />` cùng file –
+  các ô `DocNo` trên một hàng cách nhau 4px, tự xuống dòng (`.erp-doc-no-list`); không có số thì chữ mờ `empty` (`.erp-doc-no-empty`).
+- Hộp chọn dòng đề nghị của BTH: dòng không chọn chung được (khác nhóm biểu mẫu – bộ phận – công trình) khóa ô chọn, chữ mờ
+  (`.erp-pick-row-blocked`), rê chuột xem lý do; cột Biểu mẫu, Bộ phận đề xuất, Công trình có nút lọc trên tiêu đề cột.
 
 ## 5f. Portal nhà cung cấp `/ncc` (lát P1, 12/11/2026)
 

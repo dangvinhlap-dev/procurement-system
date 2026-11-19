@@ -680,7 +680,7 @@ Mọi form chứng từ dùng **một khuôn chung** (`DocumentForm`): thanh cô
 
 | Phần | Trường |
 | --- | --- |
-| Đầu phiếu | Số PR (tự sinh), ngày, công ty, bộ phận đề nghị (bắt buộc, từ danh mục bộ phận – mục 18.5), người đề nghị, mục đích sử dụng, ngày cần hàng, kho nhận dự kiến, mức ưu tiên, ghi chú |
+| Đầu phiếu | Số PR (tự sinh), ngày, công ty, bộ phận đề nghị (bắt buộc, từ danh mục bộ phận – mục 18.5), người đề nghị, mục đích sử dụng, ngày cần hàng, kho nhận dự kiến, mức ưu tiên, ghi chú; **Đơn mua hàng** – số các PO chưa hủy đã lấy dòng của PR (ô số chứng từ, bấm đúp mở PO; phiếu đã gửi duyệt trở đi). Dòng có cột **Số PO** (PO chưa hủy lấy dòng đó). Người dùng yêu cầu 19/11/2026 "PO lấy PR thì cập nhật số PO lên PR": tính lúc xem từ dòng PO, **không ghi lên PR** – PR đã duyệt vẫn khóa (mục 20), PO mới / PO hủy thì số PO tự đúng |
 | Dòng | Mã hàng (hoặc mô tả hàng mới chưa có mã), ĐVT, SL đề nghị, tồn hiện tại (chỉ đọc), đơn giá tham khảo (giá nhận hàng gần nhất, chỉ đọc; chưa có thì người lập nhập đơn giá dự kiến, gửi duyệt bắt buộc > 0, người duyệt thấy cảnh báo – mục 6.7), thành tiền dự kiến, NCC đề xuất, ngày cần, ghi chú |
 | Chân | Tổng giá trị dự kiến, luồng duyệt |
 
@@ -688,7 +688,7 @@ Mọi form chứng từ dùng **một khuôn chung** (`DocumentForm`): thanh cô
 
 | Phần | Trường |
 | --- | --- |
-| Đầu phiếu | Số PO, ngày, công ty, NCC (chỉ NCC đã duyệt và được áp dụng cho công ty), người liên hệ NCC, hợp đồng/bảng giá áp dụng, tiền tệ, tỷ giá, điều khoản thanh toán, điều khoản giao hàng, ngày giao dự kiến, kho nhận (mặc định kho tổng), địa chỉ giao, PR nguồn, RFQ nguồn |
+| Đầu phiếu | Số PO, ngày, công ty, NCC (chỉ NCC đã duyệt và được áp dụng cho công ty), người liên hệ NCC, hợp đồng/bảng giá áp dụng, tiền tệ, tỷ giá, điều khoản thanh toán, điều khoản giao hàng, ngày giao dự kiến, kho nhận (mặc định kho tổng), địa chỉ giao, PR nguồn (ô **Đề nghị mua** – mọi số PR nguồn của dòng, hiện ngay khi lấy dòng từ PR, chưa cần lưu; cột "PR nguồn" trên dòng cũng vậy – người dùng yêu cầu 19/11/2026), RFQ nguồn |
 | Dòng | Mã hàng, mô tả, ĐVT mua, SL, đơn giá (tự lấy từ bảng giá; sửa được kèm cảnh báo nếu cao hơn giá thấp nhất tập đoàn), % CK, tiền CK, % VAT, tiền VAT, thành tiền, ngày giao, SL đã nhận (chỉ đọc), SL còn lại (chỉ đọc) |
 | Chân | Tiền hàng, chiết khấu, VAT, tổng thanh toán, bằng chữ |
 
@@ -2371,8 +2371,13 @@ phát hành").**
   biểu mẫu 2A/2B, bộ phận, công trình, số dòng, tổng đề xuất, trạng thái, người lập) và form `DocumentForm`.
 - Form: ngày lập, biểu mẫu, bộ phận đề xuất, công trình (2A – chọn công trình điền sẵn bộ phận của công trình), ghi chú; **đổi biểu mẫu /
   bộ phận / công trình thì bỏ hết dòng đã chọn** (mọi dòng cùng biểu mẫu – bộ phận – công trình). Dòng **chỉ lấy qua hộp "Chọn dòng đề nghị"**
-  (nút riêng, cũng là Thêm dòng / F2 – `LineGrid.addLines`): dòng đề nghị chọn được theo đầu phiếu, trừ dòng đã có trên phiếu; chọn sẵn một
-  đơn vị mua cho các dòng chọn. Cột: số đề nghị (`DocNo` mở PR), loại, mặt hàng, ĐVT, SL đề xuất mua, đơn giá tham khảo, thành tiền, ngày cần
+  (nút riêng, cũng là Thêm dòng / F2 – `LineGrid.addLines`), trừ dòng đã có trên phiếu; chọn sẵn một đơn vị mua cho các dòng chọn.
+  **Từ 19/11/2026 (người dùng yêu cầu, chốt cách A)**: hộp chọn **mở ngay, không cần chọn trước** biểu mẫu / bộ phận / công trình, liệt kê **mọi**
+  dòng đề nghị đã duyệt còn cần mua chưa ở bảng tổng hợp chưa hủy (`/candidates` không truyền điều kiện); biểu mẫu (2A / 2B), loại, bộ phận đề
+  xuất, công trình là **cột** (lọc trên tiêu đề cột). Vẫn **một bảng một nhóm** biểu mẫu – bộ phận – công trình (chuỗi duyệt GĐ khối, khung chi
+  phí, mẫu in giữ nguyên): bảng trống thì dòng chọn đầu tiên quyết định nhóm và **đầu phiếu tự điền** theo dòng đó; bảng đã có dòng thì chỉ chọn
+  được dòng cùng nhóm đầu phiếu; dòng khác nhóm (hoặc đề nghị chưa có bộ phận) khóa ô chọn, chữ mờ, rê chuột xem lý do "lập bảng tổng hợp
+  riêng". Máy chủ vẫn kiểm nhóm khi lưu. Cột: số đề nghị (`DocNo` mở PR), loại, mặt hàng, ĐVT, SL đề xuất mua, đơn giá tham khảo, thành tiền, ngày cần
   (chỉ đọc), **đơn vị mua** (bắt buộc), ghi chú. Đầu phiếu hiện khung chi phí (vượt thì cảnh báo vàng). Tab Lịch sử duyệt, Đính kèm.
 - Lệnh dùng chung PR/PO (`useApprovalCommands`, loại `BTH`): lưu nháp, gửi duyệt có xem trước chuỗi duyệt, duyệt / từ chối (ý kiến + đính
   kèm gắn vào phiếu BTH), rút về nháp, **Hủy phiếu = hộp hủy dây chuyền** (Y5c-1).

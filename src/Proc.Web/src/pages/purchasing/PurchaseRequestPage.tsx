@@ -39,7 +39,7 @@ import { UsageNormCell, UsageNormNotice } from './UsageNormNotice'
 import { ClosedRemainingNotice } from './ClosedRemainingNotice'
 import { useApprovalCommands } from './useApprovalCommands'
 import { StockEntryDialog } from './StockEntryDialog'
-import { DocNo } from '../../classic/DocNo'
+import { DocNo, DocNoList } from '../../classic/DocNo'
 
 interface PrLineValues {
   id: string | null
@@ -413,6 +413,8 @@ export function PurchaseRequestPage() {
       ),
     },
     { key: 'ordered', title: 'Đã đặt', width: 80, align: 'right', render: (_, index) => readonlyCell(savedLine(index)?.orderedQty ? formatQuantity(savedLine(index)!.orderedQty) : '') },
+    // PO lấy PR thì PR hiện số PO (người dùng yêu cầu 19/11/2026 – design.md mục 10.2): các PO chưa hủy đã lấy dòng, bấm đúp mở PO.
+    { key: 'orders', title: 'Số PO', width: 150, render: (_, index) => <DocNoList items={savedLine(index)?.orders ?? []} docType="PO" /> },
     {
       key: 'note',
       title: 'Ghi chú',
@@ -662,6 +664,11 @@ export function PurchaseRequestPage() {
             <Select allowClear showSearch={{ optionFilterProp: 'label' }}
               options={(warehouses.data ?? []).filter((w) => w.isActive || w.id === doc?.warehouseId).map((w) => ({ value: w.id, label: `${w.code} – ${w.name}` }))} />
           </Form.Item>
+          {doc && doc.status !== 'Draft' && (
+            <Form.Item label="Đơn mua hàng" className="document-form-wide">
+              <DocNoList items={doc.orders ?? []} docType="PO" empty="Chưa lên đơn mua hàng" />
+            </Form.Item>
+          )}
           <Form.Item label="Ghi chú" name="note" rules={[{ max: 1000 }]} className="document-form-wide">
             <Input />
           </Form.Item>
