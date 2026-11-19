@@ -36,10 +36,11 @@ public sealed partial class DocumentPdfService
             ? await DepartmentSpending.MonthAsync(_db, department, pr.Date, cancellationToken)
             : 0;
         var form = CuvtPrintForms.PurchaseRequest(pr, company.Name, specifications, monthSpent);
-        var requesterId = await _db.PurchaseRequests.AsNoTracking().Where(r => r.Id == pr.Id)
-            .Select(r => r.RequesterId ?? r.CreatedBy).SingleAsync(cancellationToken);
+        var people = await _db.PurchaseRequests.AsNoTracking().Where(r => r.Id == pr.Id)
+            .Select(r => new { Requester = r.RequesterId ?? r.CreatedBy, r.CreatedBy }).SingleAsync(cancellationToken);
         var sign = await SignBlockAsync(
-            PurchaseRequestSheet.Spec, DocumentTypes.PurchaseRequest, pr.Id, pr.Status, requesterId, pr.RequesterName ?? pr.CreatedByName, cancellationToken);
+            PurchaseRequestSheet.Spec, DocumentTypes.PurchaseRequest, pr.Id, pr.Status, people.Requester, pr.RequesterName ?? pr.CreatedByName, cancellationToken,
+            people.CreatedBy);
         var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseRequest, pr.Id, pr.No, pr.Status, kind, sign.ApprovalStatus, cancellationToken);
         return new PdfFile($"{pr.No}.pdf", PurchaseRequestSheetLayout.Render(form, logo, sign, stamp));
     }

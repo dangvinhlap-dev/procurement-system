@@ -41,7 +41,7 @@ public static class SheetSign
     /// <param name="status">Trạng thái phiếu (Draft, Submitted, Approved, Rejected, Cancelled…).</param>
     /// <param name="firstName">Họ tên người lập / đề xuất (đã gồm danh xưng).</param>
     /// <param name="submittedAt">Lúc gửi duyệt của lượt hiện tại; null = chưa gửi.</param>
-    /// <param name="firstSignature">Chữ ký người lập có hiệu lực lúc gửi (chỉ khi chính người đó gửi).</param>
+    /// <param name="firstSignature">Chữ ký người lập: có hiệu lực lúc gửi (chỉ khi chính người đó gửi); phiếu nháp = chữ ký đang dùng.</param>
     /// <param name="submittedByOther">Người gửi duyệt khi khác người lập (in "Gửi duyệt bởi …").</param>
     /// <param name="steps">Bước duyệt của lượt hiện tại (đã bỏ bước "Skipped").</param>
     /// <returns>Khối ký: <see cref="SheetSignBlock.Boxes"/> = ô đầu + ô cố định theo thứ tự sheet, <see cref="SheetSignBlock.Final"/> = ô Chủ tịch.</returns>
@@ -71,7 +71,8 @@ public static class SheetSign
             : $"Gửi duyệt {Time(submittedAt)}";
         var boxes = new List<SheetSignBox>
         {
-            new(spec.First.Title, spec.First.Caption, firstName, firstDetail, draft ? null : firstSignature),
+            // Phiếu nháp vẫn in chữ ký người lập (chữ ký đang dùng – người dùng chốt 19/11/2026, design.md 20.4 IN1-5); nơi gọi quyết định có chữ ký hay không.
+            new(spec.First.Title, spec.First.Caption, firstName, firstDetail, firstSignature),
         };
         boxes.AddRange(spec.Slots.Select(s => assigned.TryGetValue(s.Key, out var step)
             ? Box(s.Title, s.Caption, step, draft)

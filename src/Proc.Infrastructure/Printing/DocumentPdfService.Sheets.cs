@@ -179,7 +179,7 @@ public sealed partial class DocumentPdfService
     private async Task<PdfFile> RenderGenericAsync(
         CuvtForm form, string docType, Guid id, string status, Guid? createdBy, PrintKind? kind, CancellationToken cancellationToken)
     {
-        var data = await SignDataAsync(docType, id, createdBy, cancellationToken);
+        var data = await SignDataAsync(docType, id, status, createdBy, createdBy, cancellationToken);
         var draft = status == "Draft" || data.SubmittedAt is null;
         var signers = new List<CuvtSigner>
         {
@@ -187,7 +187,7 @@ public sealed partial class DocumentPdfService
                 draft ? "Chưa gửi duyệt"
                 : data.SubmittedByOther is { } other ? $"Gửi duyệt bởi {other} {SheetSign.Time(data.SubmittedAt)}"
                 : $"Gửi duyệt {SheetSign.Time(data.SubmittedAt)}",
-                Signature: draft ? null : data.FirstSignature),
+                Signature: data.FirstSignature),
         };
         signers.AddRange(data.Steps.OrderBy(s => s.Stage).ThenBy(s => s.Level).Select(s => s.Status switch
         {
@@ -311,6 +311,7 @@ public sealed partial class DocumentPdfService
     /// <summary>
     /// Bước duyệt của lượt gần nhất + chữ ký có hiệu lực lúc duyệt (người dùng chốt 18/11/2026: thay chữ ký mới thì phiếu cũ vẫn in chữ ký cũ), ghép
     /// vào khối ký của sheet. Người lập: chữ ký của chính người lập lúc gửi duyệt; người khác gửi thay thì không in chữ ký, ghi "Gửi duyệt bởi …".
+    /// Phiếu nháp: chữ ký đang dùng của người lập (người dùng chốt 19/11/2026 – design.md 20.4 IN1-5), trừ khi người khác lập thay.
     /// </summary>
     /// <param name="spec">Khối ký của sheet.</param>
     /// <param name="docType">Loại chứng từ của bước duyệt.</param>
@@ -319,17 +320,19 @@ public sealed partial class DocumentPdfService
     /// <param name="firstUserId">Người lập / đề xuất (ô đầu).</param>
     /// <param name="firstFallbackName">Tên ô đầu khi không đọc được tài khoản.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <param name="createdBy">Người lập phiếu khi khác ô đầu (đề nghị mua lập thay người đề xuất); null = chính người ở ô đầu.</param>
     private async Task<SheetSignBlock> SignBlockAsync(
-        SheetSignSpec spec, string docType, Guid id, string status, Guid? firstUserId, string? firstFallbackName, CancellationToken cancellationToken)
+        SheetSignSpec spec, string docType, Guid id, string status, Guid? firstUserId, string? firstFallbackName, CancellationToken cancellationToken,
+        Guid? createdBy = null)
     {
-        var data = await SignDataAsync(docType, id, firstUserId, cancellationToken);
+        var data = await SignDataAsync(docType, id, status, firstUserId, createdBy ?? firstUserId, cancellationToken);
         return SheetSign.Build(
             spec, status, data.FirstName ?? firstFallbackName, data.SubmittedAt, data.FirstSignature, data.SubmittedByOther, data.Steps);
     }
 
     /// <summary>Số liệu ô ký: bước duyệt (đã gồm tên in và chữ ký), người lập (tên, chữ ký lúc gửi), lúc gửi, người gửi thay.</summary>
     /// <param name="FirstName">Tên người lập kèm danh xưng; null khi không đọc được tài khoản.</param>
-    /// <param name="FirstSignature">Chữ ký người lập lúc gửi duyệt – chỉ khi chính người lập gửi.</param>
+    /// <param name="FirstSignature">Chữ ký người lập lúc gửi duyệt – chỉ khi chính người lập gửi; phiếu nháp = chữ ký đang dùng (khi chính người đó lập).</param>
     /// <param name="SubmittedAt">Lúc gửi duyệt của lượt hiện tại.</param>
     /// <param name="SubmittedByOther">Người gửi duyệt khi khác người lập.</param>
     /// <param name="Steps">Bước duyệt của lượt hiện tại (đã bỏ bước "Skipped").</param>
@@ -337,7 +340,8 @@ public sealed partial class DocumentPdfService
         string? FirstName, SheetImage? FirstSignature, DateTimeOffset? SubmittedAt, string? SubmittedByOther, IReadOnlyList<SheetApprovalStep> Steps);
 
     /// <summary>Đọc bước duyệt của lượt gần nhất, tên in (danh xưng + họ tên, "(thay …)"), chữ ký có hiệu lực lúc duyệt / gửi.</summary>
-    private async Task<SignData> SignDataAsync(string docType, Guid id, Guid? firstUserId, CancellationToken cancellationToken)
+    private async Task<SignData> SignDataAsync(
+        string docType, Guid id, string status, Guid? firstUserId, Guid? createdBy, CancellationToken cancellationToken)
     {
         var all = await _db.ApprovalSteps.AsNoTracking().Where(s => s.DocType == docType && s.DocumentId == id).ToListAsync(cancellationToken);
         var round = all.Count == 0 ? 0 : all.Max(s => s.Round);
@@ -370,6 +374,12 @@ public sealed partial class DocumentPdfService
             s.OnBehalfOf is { } o ? $"{Display(s.ActedBy)} (thay {users.GetValueOrDefault(o)?.FullName})" : Display(s.ActedBy),
             s.ActedAt, s.Status == ApprovalStepStatus.Approved ? SignatureAt(s.ActedBy, s.ActedAt) : null)).ToList();
         var byOther = submittedBy is { } sb && firstUserId is { } fu && sb != fu ? users.GetValueOrDefault(sb)?.FullName : null;
-        return new SignData(Display(firstUserId), byOther is null ? SignatureAt(firstUserId, submittedAt) : null, submittedAt, byOther, printSteps);
+        // Phiếu nháp (chưa gửi, hoặc trả về nháp sau lượt trước): chữ ký đang dùng lúc xem / in – thay chữ ký thì bản nháp đổi theo; người khác lập
+        // thay người đề xuất thì không in (như gửi thay). Đã gửi: chữ ký có hiệu lực lúc gửi (IN1-6).
+        var draft = status == "Draft" || submittedAt is null;
+        var firstSignature = draft
+            ? createdBy == firstUserId ? SignatureAt(firstUserId, _clock.UtcNow) : null
+            : byOther is null ? SignatureAt(firstUserId, submittedAt) : null;
+        return new SignData(Display(firstUserId), firstSignature, submittedAt, byOther, printSteps);
     }
 }
