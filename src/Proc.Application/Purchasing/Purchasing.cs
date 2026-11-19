@@ -51,11 +51,14 @@ public sealed record SaveApprovalRuleRequest(string DocType, int Level, decimal 
 /// </param>
 /// <param name="SubmittedByUserName">Tên đăng nhập người gửi duyệt lượt của bước.</param>
 /// <param name="SubmittedByPosition">Chức vụ người gửi duyệt (cùng cách lấy như <paramref name="ActedByPosition"/>).</param>
+/// <param name="MergedWithCreator">
+/// Bước Trưởng phòng ban gộp với người lập – người lập là Trưởng / Phó phòng ban của bộ phận (design.md mục 19.3, 19/11/2026).
+/// </param>
 public sealed record ApprovalStepDto(
     int Round, int Level, string? RoleName, string Status, string? ActedByName, DateTimeOffset? ActedAt, string? Comment, string? CompanyCode = null,
     int Stage = 1, IReadOnlyList<string>? NextApprovers = null, IReadOnlyList<string>? UpcomingApprovers = null, DateTimeOffset? SubmittedAt = null,
     string? SubmittedByName = null, string? ActedByUserName = null, string? ActedByPosition = null, string? SubmittedByUserName = null,
-    string? SubmittedByPosition = null);
+    string? SubmittedByPosition = null, bool MergedWithCreator = false);
 
 /// <summary>Một phiếu đang chờ người dùng hiện tại duyệt (Việc cần làm).</summary>
 /// <param name="DocType">Loại phiếu duyệt (PR, PO…).</param>

@@ -103,3 +103,37 @@ public sealed class UserDepartment : AuditableEntity
         DepartmentId = department.Id;
     }
 }
+
+/// <summary>
+/// Phó phòng ban (tài khoản) của một bộ phận (người dùng chốt 19/11/2026 – design.md mục 19.3 "gộp bước người lập – Trưởng phòng ban"). Một
+/// bộ phận có nhiều Phó phòng ban. Phó phòng ban <b>không</b> duyệt thay Trưởng phòng ban trên phiếu của người khác; chỉ khi chính họ lập phiếu
+/// của bộ phận <b>chưa có Trưởng phòng ban</b> thì bước "Trưởng phòng ban của phiếu" gộp với người lập (bộ phận có Trưởng phòng ban thì
+/// Trưởng phòng ban vẫn duyệt – người lập nhỏ hơn).
+/// </summary>
+[Auditable("Phó phòng ban")]
+public sealed class DepartmentDeputy : AuditableEntity, ICompanyOwned
+{
+    private DepartmentDeputy()
+    {
+    }
+
+    /// <inheritdoc />
+    public Guid CompanyId { get; private set; }
+
+    /// <summary>Bộ phận.</summary>
+    public Guid DepartmentId { get; private set; }
+
+    /// <summary>Tài khoản Phó phòng ban.</summary>
+    public Guid UserId { get; private set; }
+
+    /// <summary>Gán Phó phòng ban cho bộ phận (lấy công ty theo bộ phận).</summary>
+    /// <param name="department">Bộ phận.</param>
+    /// <param name="userId">Tài khoản.</param>
+    /// <returns>Dòng gán.</returns>
+    /// <exception cref="BusinessRuleException">Khi thiếu tài khoản.</exception>
+    public static DepartmentDeputy Assign(Department department, Guid userId)
+    {
+        if (userId == Guid.Empty) throw new BusinessRuleException("Hãy chọn tài khoản Phó phòng ban.");
+        return new() { CompanyId = department.CompanyId, DepartmentId = department.Id, UserId = userId };
+    }
+}

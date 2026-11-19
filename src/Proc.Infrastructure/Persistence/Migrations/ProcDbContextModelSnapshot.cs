@@ -3514,6 +3514,47 @@ namespace Proc.Infrastructure.Persistence.Migrations
                     b.ToTable("Department", (string)null);
                 });
 
+            modelBuilder.Entity("Proc.Domain.Organization.DepartmentDeputy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DepartmentId", "CompanyId");
+
+                    b.HasIndex("DepartmentId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("DepartmentDeputy", (string)null);
+                });
+
             modelBuilder.Entity("Proc.Domain.Organization.Division", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4792,6 +4833,9 @@ namespace Proc.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Level")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("MergedWithCreator")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("OnBehalfOf")
                         .HasColumnType("uuid");
@@ -8876,6 +8920,28 @@ namespace Proc.Infrastructure.Persistence.Migrations
                         .HasForeignKey("DivisionId", "CompanyId")
                         .HasPrincipalKey("Id", "CompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Proc.Domain.Organization.DepartmentDeputy", b =>
+                {
+                    b.HasOne("Proc.Domain.Organization.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Proc.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Proc.Domain.Organization.Division", b =>

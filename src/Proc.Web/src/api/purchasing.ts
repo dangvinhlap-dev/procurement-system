@@ -75,6 +75,8 @@ export interface ApprovalStep {
   /** Tên đăng nhập, chức vụ người gửi duyệt lượt của bước. */
   submittedByUserName?: string | null
   submittedByPosition?: string | null
+  /** Bước Trưởng phòng ban gộp với người lập – người lập là Trưởng / Phó phòng ban của bộ phận (design.md mục 19.3). */
+  mergedWithCreator?: boolean
 }
 
 /**

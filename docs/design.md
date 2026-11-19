@@ -2131,6 +2131,8 @@ mục cũ (4, 6, 7, 11, 18) khi mâu thuẫn.
 | 2C | Trưởng phòng ban → GĐ khối → Phòng TC-NQ-KT → Chủ tịch | 4 |
 
 Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng ban của phiếu (lát O1). Vượt dự toán / định mức thêm chặng duyệt (Q5).
+Người lập là Trưởng phòng ban (hoặc Phó phòng ban khi bộ phận chưa có Trưởng phòng ban) thì bước Trưởng phòng ban **gộp với người lập** (19/11/2026 –
+xem lát O1 dưới đây).
 
 **Lát O1 – khối, Trưởng phòng ban, GĐ khối, duyệt động (0.22.0).** Quy tắc (mặc định tự chọn ghi "tự đặt"):
 
@@ -2151,8 +2153,22 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
   khi phiếu đang chờ thì người mới duyệt (tự đặt). Người duyệt vẫn phải có quyền duyệt loại phiếu tại công ty, không phải người lập, không vướng kê
   khai xung đột lợi ích, mỗi người một cấp trong lượt (R3). Lịch sử duyệt hiện "Trưởng phòng ban PX1", "GĐ khối HCNS" ở cột vai trò.
 - **Chặn gửi duyệt** (phiếu giữ Nháp, báo rõ chỗ sửa) khi có cấp động mà: phiếu chưa có bộ phận; bộ phận chưa khai Trưởng phòng ban / chưa gán khối;
-  khối chưa khai GĐ khối; tài khoản đó đã ngừng dùng hoặc chưa có quyền duyệt loại phiếu; người đó là **người lập** (Trưởng phòng ban tự lập
-  phiếu của bộ phận mình phải nhờ người khác lập hoặc ủy quyền duyệt – lát O2a); một người giữ hai cấp động (Trưởng phòng ban đồng thời GĐ khối).
+  khối chưa khai GĐ khối; tài khoản đó đã ngừng dùng hoặc chưa có quyền duyệt loại phiếu; người đó là **người lập** (GĐ khối tự lập phiếu phải nhờ
+  người khác lập hoặc ủy quyền duyệt – lát O2a; Trưởng phòng ban tự lập thì **gộp bước**, xem dưới); một người giữ hai cấp động (Trưởng phòng ban
+  đồng thời GĐ khối).
+- **Gộp bước người lập – Trưởng phòng ban** (người dùng chốt 19/11/2026, bản 0.45.0 – thay cho "Trưởng phòng ban tự lập bị chặn gửi"): người lập là
+  **người cao nhất của bộ phận trên phiếu** thì khi gửi duyệt, bước "Trưởng phòng ban của phiếu" tự ghi **Đã duyệt** bởi người lập vào lúc gửi, ý kiến
+  "Gộp với người lập (Trưởng phòng ban PX1)" (cờ `ApprovalStep.MergedWithCreator`); phiếu đi tiếp các cấp còn lại (1A/1B: Thủ kho → TP CUVT…).
+  - Người cao nhất = **Trưởng phòng ban** (tài khoản) của bộ phận; hoặc **Phó phòng ban** khi bộ phận **chưa khai Trưởng phòng ban**.
+  - Người lập **nhỏ hơn** Trưởng phòng ban (nhân viên, Phó phòng ban khi bộ phận đã có Trưởng phòng ban) → Trưởng phòng ban **vẫn duyệt** như cũ.
+    Nhân viên lập khi bộ phận chưa khai Trưởng phòng ban vẫn bị chặn gửi (tự đặt – Phó phòng ban không duyệt thay phiếu người khác).
+  - **Phó phòng ban** (`DepartmentDeputy`, nhiều người mỗi bộ phận): ô chọn nhiều tài khoản ở ngăn kéo Bộ phận, cùng điều kiện như Trưởng phòng ban
+    (tài khoản còn hoạt động có vai trò tại công ty), không trùng Trưởng phòng ban. Migration `V0_45_0_GopBuocTruongPhong` (Down mất danh sách Phó
+    phòng ban và cờ gộp).
+  - Áp mọi bộ cấp có cấp "Trưởng phòng ban của phiếu" (PR, PRA, PRS, 2C, PO nếu cấu hình); xác định theo danh mục **lúc gửi**, mỗi lượt gửi lại
+    tính lại. Bộ cấp chỉ có cấp Trưởng phòng ban mà được gộp thì gửi là duyệt xong. Không cần quyền duyệt loại phiếu cho bước gộp (tự đặt).
+  - Hiện: xem trước chuỗi duyệt "Cấp n (Trưởng phòng ban PX1): gộp với người lập – họ tên"; ổ khóa đóng "(gộp với người lập)"; Kiểm tra phê duyệt và
+    bản in hiện người lập ở ô Trưởng phòng ban. Tra cứu chứng từ "Tôi đã duyệt" không tính bước gộp.
 - "Chuỗi duyệt theo loại mua" (A/B/DV/C) làm cùng lát Y3 khi đề nghị mua có trường loại mua.
 
 **Lát O2a – ủy quyền duyệt có thời hạn (0.22.0, Q9).** Quy tắc (mặc định tự chọn ghi "tự đặt"):

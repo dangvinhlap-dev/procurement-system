@@ -150,12 +150,69 @@ public class DynamicApproverTests
         Assert.Equal("Không gửi duyệt được – cấp 2 (GĐ khối (bộ phận PX3)): Bộ phận PX3 chưa gán khối (Hệ thống → Bộ phận).",
             await SubmitBlockedAsync(f.Buyer, noDivision.Id));
 
-        // Trưởng phòng ban tự lập phiếu của bộ phận mình: không tự duyệt được cấp của mình.
+        // GĐ khối tự lập phiếu: vẫn không tự duyệt cấp của mình (chỉ bước Trưởng phòng ban gộp được với người lập – design.md mục 19.3).
         var own = await DepartmentAsync(f, "PX4", f.Division.Id, f.Head.Id);
-        Assert.Contains("đó là người lập phiếu", await SubmitBlockedAsync(f.Head.Client, own.Id));
+        Assert.Contains("đó là người lập phiếu", await SubmitBlockedAsync(f.Director.Client, own.Id));
 
         // Trưởng phòng ban cũng là GĐ khối: mỗi người chỉ duyệt một cấp trong lượt (lát R3) nên chặn ngay khi gửi.
         var same = await DepartmentAsync(f, "PX5", f.Division.Id, f.Director.Id);
         Assert.Contains("vừa là Trưởng phòng ban PX5 vừa là GĐ khối SX", await SubmitBlockedAsync(f.Buyer, same.Id));
+    }
+
+    [Fact]
+    public async Task NguoiLapLaTruongPhong_GopBuoc_PhoPhongChiGopKhiChuaCoTruongPhong()
+    {
+        var f = await ArrangeAsync();
+        await ConfigureAsync(f);
+
+        // Phó phòng ban không trùng Trưởng phòng ban; danh sách Phó phòng ban trả về theo bộ phận.
+        var duplicated = await f.Buyer.PostAsJsonAsync("/api/departments",
+            new CreateDepartmentRequest("PX9", "Bộ phận PX9", null, f.Division.Id, f.Head.Id, [f.Head.Id]), Ct);
+        Assert.Equal("Phó phòng ban không được trùng Trưởng phòng ban của bộ phận.", await TitleAsync(duplicated));
+        var withHead = await ReadAsync<DepartmentDto>(await f.Buyer.PostAsJsonAsync("/api/departments",
+            new CreateDepartmentRequest("PX1", "Bộ phận PX1", null, f.Division.Id, f.Head.Id, [f.Other.Id]), Ct));
+        Assert.Equal([f.Other.Id], withHead.DeputyUserIds!);
+
+        // Trưởng phòng ban tự lập: bước Trưởng phòng ban gộp với người lập, phiếu tới thẳng GĐ khối (xem trước cũng hiện bước gộp).
+        var own = await PrAsync(f, f.Head.Client, withHead.Id);
+        var preview = await ReadAsync<ApprovalPreviewDto>(await f.Head.Client.PostAsJsonAsync("/api/approvals/preview", new ApprovalPreviewRequest("PR", own.Id), Ct));
+        Assert.False(preview.ApprovedImmediately);
+        Assert.Equal([(1, "Approved", true), (2, "Pending", false)], preview.Steps.Select(s => (s.Level, s.Status, s.MergedWithCreator)));
+        own = await ReadAsync<PurchaseRequestDto>(await f.Head.Client.PostAsync($"/api/purchase-requests/{own.Id}/submit", null, Ct));
+        Assert.Equal("Submitted", own.Status);
+        var merged = own.Approvals[0];
+        Assert.Equal(("Approved", true, "Gộp với người lập (Trưởng phòng ban PX1)"), (merged.Status, merged.MergedWithCreator, merged.Comment));
+        Assert.NotNull(merged.ActedAt);
+        Assert.Contains((await f.Director.Client.GetFromJsonAsync<List<PendingApprovalDto>>("/api/approvals/pending", Ct))!, p => p.DocumentId == own.Id);
+
+        // Từ chối rồi gửi lại: lượt mới cũng gộp; GĐ khối duyệt là xong.
+        await ReadAsync<PurchaseRequestDto>(await ActAsync(f.Director.Client, own.Id, "reject", "Bổ sung quy cách"));
+        own = await ReadAsync<PurchaseRequestDto>(await f.Head.Client.PostAsync($"/api/purchase-requests/{own.Id}/submit", null, Ct));
+        Assert.True(own.Approvals.Single(a => a.Round == 2 && a.Level == 1).MergedWithCreator);
+        own = await ReadAsync<PurchaseRequestDto>(await ActAsync(f.Director.Client, own.Id, "approve"));
+        Assert.Equal("Approved", own.Status);
+
+        // Phó phòng ban lập khi bộ phận đã có Trưởng phòng ban: người lập nhỏ hơn → Trưởng phòng ban vẫn duyệt.
+        var byDeputy = await PrAsync(f, f.Other.Client, withHead.Id);
+        byDeputy = await ReadAsync<PurchaseRequestDto>(await f.Other.Client.PostAsync($"/api/purchase-requests/{byDeputy.Id}/submit", null, Ct));
+        Assert.Equal(("Pending", false), (byDeputy.Approvals[0].Status, byDeputy.Approvals[0].MergedWithCreator));
+        await ReadAsync<PurchaseRequestDto>(await ActAsync(f.Head.Client, byDeputy.Id, "approve"));
+
+        // Bộ phận chưa có Trưởng phòng ban: Phó phòng ban là người cao nhất → gộp; người khác lập thì vẫn chặn vì chưa khai Trưởng phòng ban.
+        var noHead = await ReadAsync<DepartmentDto>(await f.Buyer.PostAsJsonAsync("/api/departments",
+            new CreateDepartmentRequest("PX6", "Bộ phận PX6", null, f.Division.Id, null, [f.Other.Id]), Ct));
+        var deputyOnly = await PrAsync(f, f.Other.Client, noHead.Id);
+        deputyOnly = await ReadAsync<PurchaseRequestDto>(await f.Other.Client.PostAsync($"/api/purchase-requests/{deputyOnly.Id}/submit", null, Ct));
+        Assert.Equal("Gộp với người lập (Phó phòng ban PX6)", deputyOnly.Approvals[0].Comment);
+        var staff = await PrAsync(f, f.Buyer, noHead.Id);
+        Assert.Equal(HttpStatusCode.BadRequest, (await f.Buyer.PostAsync($"/api/purchase-requests/{staff.Id}/submit", null, Ct)).StatusCode);
+
+        // Bỏ Phó phòng ban: danh sách rỗng; sửa bộ phận không gửi danh sách thì giữ nguyên.
+        var kept = await ReadAsync<DepartmentDto>(await f.Buyer.PutAsJsonAsync($"/api/departments/{withHead.Id}",
+            new UpdateDepartmentRequest(withHead.Name, null, true, f.Division.Id, f.Head.Id), Ct));
+        Assert.Equal([f.Other.Id], kept.DeputyUserIds!);
+        var cleared = await ReadAsync<DepartmentDto>(await f.Buyer.PutAsJsonAsync($"/api/departments/{withHead.Id}",
+            new UpdateDepartmentRequest(withHead.Name, null, true, f.Division.Id, f.Head.Id, []), Ct));
+        Assert.Empty(cleared.DeputyUserIds!);
     }
 }

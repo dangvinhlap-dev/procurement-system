@@ -101,7 +101,7 @@ public sealed class DocumentRegistryService : IDocumentRegistryService
 
         // Phiếu có quy trình duyệt: "tôi đã duyệt" = có bước duyệt/từ chối do tôi thực hiện.
         IQueryable<Guid> ActedIds(string docType) => _db.ApprovalSteps
-            .Where(s => s.DocType == docType && s.ActedBy == userId
+            .Where(s => s.DocType == docType && s.ActedBy == userId && !s.MergedWithCreator
                         && (s.Status == ApprovalStepStatus.Approved || s.Status == ApprovalStepStatus.Rejected))
             .Select(s => s.DocumentId);
 

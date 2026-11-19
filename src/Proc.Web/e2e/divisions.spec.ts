@@ -33,12 +33,22 @@ test('thêm khối, gán bộ phận vào khối kèm Trưởng phòng ban, ch�
   await drawer.getByLabel('Tên bộ phận').fill(`Phòng ${departmentCode}`)
   await chooseOption(page, 'Khối', divisionCode)
   await chooseOption(page, 'Trưởng phòng ban (tài khoản)', THUKHO_BHA.fullName)
+  // Phó phòng ban (design.md mục 19.3 – gộp bước người lập khi bộ phận chưa có Trưởng phòng ban): ô chọn nhiều tài khoản.
+  await chooseOption(page, 'Phó phòng ban (tài khoản)', ADMIN.fullName)
+  await page.keyboard.press('Escape')
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ant-message')).toContainText(`Đã thêm bộ phận ${departmentCode}.`)
   const row = page.locator('.data-grid-row', { hasText: departmentCode })
   await expect(row).toContainText(`${divisionCode} – Khối thử ${divisionCode}`)
   await expect(row).toContainText(THUKHO_BHA.fullName)
   await expect(row).toContainText(ADMIN.fullName)
+
+  // Mở lại: Phó phòng ban đã lưu.
+  await row.dblclick()
+  await expect(drawer.locator('.ant-select-selection-item', { hasText: ADMIN.fullName })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await page.screenshot({ path: 'e2e/screenshots/department-deputy.png', animations: 'disabled' })
+  await drawer.getByRole('button', { name: 'Đóng' }).click()
 
   await openByCommand(page, 'DIV')
   await expect(page.locator('.data-grid-row', { hasText: divisionCode })).toContainText('1')
