@@ -1017,7 +1017,7 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 Kiểm tra: build 0 cảnh báo, `dotnet test` 815/815, tsc, oxlint, `npm run build`, Playwright đủ bộ 164/164 (2 luồng). **Không đổi CSDL** (118
 migration) – `rollback/0.42.1.json` **mức 1**. Tag `v0.42.1`, gói + `.sha256` trên GitHub Release. Cài sau 0.42.0 qua REL.
 Bản thử cổng 5007 **đã nâng 0.42.1 → 0.43.0 (19/11/2026, cài tay bằng `D:\project
-ang-5007-0.43.0.ps1`)** – người dùng "phát hành để tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.43.0.dump`, không chạy script CSDL, `app` = 0.43.0, `app-0.42.1` = bản cũ, gói `goi .43.0`; `/health` Healthy 0.43.0 (cả qua http://192.168.1.199:5007). Phát hành 0.43.0 (tag `v0.43.0`, GitHub Release kèm zip + .sha256) – phiếu nháp in chữ ký người lập.
+ang-5007-0.43.0.ps1`)** – người dùng "phát hành để tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.43.0.dump`, không chạy script CSDL, `app` = 0.43.0, `app-0.42.1` = bản cũ, gói `goi\0.43.0`; `/health` Healthy 0.43.0 (cả qua http://192.168.1.199:5007). Phát hành 0.43.0 (tag `v0.43.0`, GitHub Release kèm zip + .sha256) – phiếu nháp in chữ ký người lập.
 
 Bản thử cổng 5007 **đã nâng 0.42.0 → 0.42.1 (18/11/2026, cài tay bằng `D:\project\nang-5007-0.42.1.ps1`)** – người dùng "nâng lên cho tôi để tôi kiểm
 tra". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.42.1.dump`, không chạy script CSDL, `app` = 0.42.1, `app-0.42.0` = bản cũ,
