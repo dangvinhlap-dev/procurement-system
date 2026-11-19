@@ -468,13 +468,44 @@ public sealed class PurchaseRequestService : IPurchaseRequestService
     /// <summary>
     /// Bộ phận phải thuộc công ty đang làm việc (global query filter) và còn dùng; phiếu đã chọn bộ phận nay ngừng dùng thì
     /// lưu lại vẫn được, để sửa dòng hàng không buộc đổi bộ phận (design.md mục 18.5).
+    /// Khi tạo phiếu hoặc đổi bộ phận, người không có quyền lập thay chỉ chọn được bộ phận của chính mình (<see cref="CheckOwnDepartmentAsync"/>).
     /// </summary>
+    /// <param name="departmentId">Bộ phận gửi lên.</param>
+    /// <param name="currentId">Bộ phận đang lưu trên phiếu (null khi tạo mới).</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <exception cref="NotFoundException">Bộ phận không có ở công ty đang làm việc.</exception>
+    /// <exception cref="BusinessRuleException">Bộ phận ngừng dùng, hoặc không phải bộ phận của người lập.</exception>
     private async Task CheckDepartmentAsync(Guid? departmentId, Guid? currentId, CancellationToken cancellationToken)
     {
         if (departmentId is not { } id) return;
         var active = await _db.Departments.Where(d => d.Id == id).Select(d => (bool?)d.IsActive).SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy bộ phận đề nghị (hoặc bộ phận thuộc công ty khác).");
         if (!active && id != currentId) throw new BusinessRuleException("Bộ phận đề nghị đã ngừng dùng.");
+        if (id != currentId) await CheckOwnDepartmentAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Bộ phận đề nghị khóa theo bộ phận của người lập (design.md mục 19, lát O1 – người dùng chốt 19/11/2026): Trưởng phòng ban / GĐ khối là
+    /// người duyệt động theo bộ phận của phiếu, nên nếu nhân viên tự chọn bộ phận khác thì phiếu đến tay người không quản lý mình. Chỉ người có
+    /// quyền <see cref="Permissions.Purchase.PrAnyDepartment"/> (lập thay, ví dụ Văn phòng) mới chọn bộ phận khác. Chỉ kiểm khi tạo hoặc đổi bộ phận:
+    /// người lập chuyển bộ phận thì phiếu nháp giữ bộ phận cũ vẫn sửa được (tự đặt).
+    /// </summary>
+    /// <param name="departmentId">Bộ phận chọn trên phiếu.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <exception cref="BusinessRuleException">Người lập chưa được gán bộ phận, hoặc chọn bộ phận không phải của mình.</exception>
+    private async Task CheckOwnDepartmentAsync(Guid departmentId, CancellationToken cancellationToken)
+    {
+        if (_scope.HasPermission(Permissions.Purchase.PrAnyDepartment)) return;
+        var companyId = _scope.RequireCompany();
+        var own = await _db.UserDepartments.AsNoTracking()
+            .Where(u => u.UserId == _scope.UserId && u.CompanyId == companyId)
+            .Join(_db.Departments, u => u.DepartmentId, d => d.Id, (_, d) => new { d.Id, d.Name })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new BusinessRuleException(
+                "Bạn chưa được gán bộ phận tại công ty này – nhờ quản trị gán ở Người dùng → Phân quyền rồi lập đề nghị mua.");
+        if (own.Id != departmentId)
+            throw new BusinessRuleException(
+                $"Bạn chỉ lập được đề nghị mua cho bộ phận của mình ({own.Name}) – lập cho bộ phận khác cần quyền lập thay.");
     }
 
     /// <summary>

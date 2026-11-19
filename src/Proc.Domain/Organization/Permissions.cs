@@ -201,6 +201,11 @@ public static class Permissions
         /// chờ duyệt; chỉ đề nghị có nơi nhận trong phạm vi kho của người dùng.
         /// </summary>
         public const string PrEnterStock = "Purchase.PR.EnterStock";
+        /// <summary>
+        /// Quyền "Lập đề nghị mua cho bộ phận khác (lập thay)": không có quyền này thì bộ phận đề nghị phải là bộ phận của người lập, để Trưởng
+        /// phòng ban (người duyệt động theo bộ phận của phiếu) duyệt đúng nhân viên của mình – design.md mục 19, lát O1 (chốt 19/11/2026).
+        /// </summary>
+        public const string PrAnyDepartment = "Purchase.PR.AnyDepartment";
         /// <summary>Quyền "Xem đơn mua hàng".</summary>
         public const string PoView = "Purchase.PO.View";
         /// <summary>Quyền "Lập đơn mua hàng".</summary>
@@ -444,6 +449,7 @@ public static class Permissions
         new(Purchase.PrCreate, "Lập đề nghị mua hàng"),
         new(Purchase.PrApprove, "Duyệt đề nghị mua hàng"),
         new(Purchase.PrEnterStock, "Nhập tồn trên đề nghị mua (thủ kho nơi nhận)"),
+        new(Purchase.PrAnyDepartment, "Lập đề nghị mua cho bộ phận khác (lập thay)"),
         new(Purchase.PoView, "Xem đơn mua hàng"),
         new(Purchase.PoCreate, "Lập đơn mua hàng"),
         new(Purchase.PoApprove, "Duyệt đơn mua hàng"),

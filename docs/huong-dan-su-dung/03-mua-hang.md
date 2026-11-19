@@ -31,7 +31,9 @@ Mỗi mặt hàng × năm × công ty chỉ thuộc một phiếu còn hiệu l�
 
 ### Lập PR
 
-1. **Tạo mới**. Đầu phiếu: ngày, **bộ phận** (bắt buộc, chọn từ danh mục), mục đích, ngày cần, kho nhận, **mức ưu tiên** (Thường/Khẩn).
+1. **Tạo mới**. Đầu phiếu: ngày, **bộ phận** (bắt buộc), mục đích, ngày cần, kho nhận, **mức ưu tiên** (Thường/Khẩn).
+   Bộ phận **tự lấy theo bộ phận của bạn** (Người dùng → Phân quyền) và bị khóa, để Trưởng phòng ban duyệt đúng nhân viên của mình; chưa được
+   gán bộ phận thì nhờ quản trị gán. Chỉ người có quyền **Lập đề nghị mua cho bộ phận khác (lập thay)** mới chọn được bộ phận khác.
 2. Tab dòng hàng: mặt hàng, ĐVT, số lượng, ngày cần, NCC đề xuất (nếu có – dòng tự lấy **ĐVT mua** và **mã hàng NCC** của NCC đó).
    - **Đơn giá tham khảo** do hệ thống lấy = giá nhận hàng gần nhất của công ty (phiếu xác nhận nhận hàng), chỉ đọc. Mặt hàng **chưa từng
      nhận hàng** thì ô giá có tam giác vàng để bạn **nhập đơn giá dự kiến**: lưu nháp được khi còn trống, nhưng **gửi duyệt bắt buộc giá > 0**.

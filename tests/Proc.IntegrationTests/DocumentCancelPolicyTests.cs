@@ -12,12 +12,16 @@ namespace Proc.IntegrationTests;
 /// </summary>
 public partial class PurchasingTests
 {
-    /// <summary>Người mua thường (không phải quản trị) lập được PR, PO tại công ty thử.</summary>
+    /// <summary>
+    /// Người mua thường (không phải quản trị) lập được PR, PO tại công ty thử. Có quyền lập thay để chọn bộ phận thử của fixture mà không phải
+    /// gán bộ phận cho người dùng (khóa bộ phận theo người lập kiểm ở DepartmentTests).
+    /// </summary>
     private async Task<(HttpClient Client, Guid RoleId)> PlainBuyerAsync(Fixture f)
     {
         var roleCode = UniqueCode("B");
         var roleId = await _factory.CreateRoleAsync(roleCode,
-            Permissions.Purchase.PrView, Permissions.Purchase.PrCreate, Permissions.Purchase.PoView, Permissions.Purchase.PoCreate,
+            Permissions.Purchase.PrView, Permissions.Purchase.PrCreate, Permissions.Purchase.PrAnyDepartment,
+            Permissions.Purchase.PoView, Permissions.Purchase.PoCreate,
             Permissions.MasterData.ItemView, Permissions.MasterData.SupplierView);
         var userName = $"nm.{Guid.NewGuid():N}"[..16];
         await _factory.CreateScopedUserAsync(userName, f.CompanyCode, roleCode);
