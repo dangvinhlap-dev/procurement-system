@@ -125,8 +125,10 @@ export function PurchaseRequestPage() {
   const [search, setSearch] = useState('')
   const addRef = useRef<(() => void) | null>(null)
   const doc = request.data
-  // Phiếu mới: điền sẵn bộ phận của người lập tại công ty (lát O1 – gán ở Người dùng → Phân quyền); người lập vẫn đổi được.
-  const myDepartment = useMyDepartment(isNew)
+  // Bộ phận đề nghị khóa theo bộ phận của người lập (lát O1, chốt 19/11/2026 – design.md mục 19): Trưởng phòng ban duyệt theo bộ phận của
+  // phiếu nên nhân viên không tự chọn bộ phận khác; chỉ người có quyền lập thay chọn được mọi bộ phận. Phiếu mới điền sẵn bộ phận của người lập.
+  const canPickAnyDepartment = hasPermission(Permission.PrAnyDepartment)
+  const myDepartment = useMyDepartment(isNew || !canPickAnyDepartment)
   useEffect(() => {
     if (isNew && myDepartment.data && !form.getFieldValue('departmentId')) form.setFieldValue('departmentId', myDepartment.data)
   }, [isNew, myDepartment.data, form])
@@ -181,14 +183,23 @@ export function PurchaseRequestPage() {
     if (itemsById.get(itemId)?.uoms.some((u) => u.uomId === found.purchaseUomId)) form.setFieldValue(['lines', index, 'uomId'], found.purchaseUomId)
   }
 
-  // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ trong danh sách để hiện tên (design.md mục 18.5).
+  // Chỉ chọn bộ phận đang dùng; bộ phận phiếu đã chọn nay ngừng dùng vẫn giữ trong danh sách để hiện tên (design.md mục 18.5). Không có quyền
+  // lập thay thì chỉ còn bộ phận của mình (và bộ phận phiếu đang lưu – người lập đã chuyển bộ phận vẫn sửa được phiếu nháp cũ).
   const departmentOptions = useMemo(
     () =>
       (departments.data ?? [])
         .filter((d) => d.isActive || d.id === doc?.departmentId)
+        .filter((d) => canPickAnyDepartment || d.id === myDepartment.data || d.id === doc?.departmentId)
         .map((d) => ({ value: d.id, label: `${d.code} – ${d.name}${d.isActive ? '' : ' (ngừng dùng)'}` })),
-    [departments.data, doc?.departmentId],
+    [departments.data, doc?.departmentId, canPickAnyDepartment, myDepartment.data],
   )
+  const departmentLocked = !canPickAnyDepartment && departmentOptions.length <= 1
+  /** Dòng gợi ý dưới ô bộ phận: chưa gán bộ phận thì báo cách xử lý, đang khóa thì nêu lý do. */
+  const departmentHint = canPickAnyDepartment || readOnly
+    ? null
+    : myDepartment.isSuccess && !myDepartment.data
+      ? 'Bạn chưa được gán bộ phận – nhờ quản trị gán ở Người dùng → Phân quyền.'
+      : 'Theo bộ phận của người lập – lập thay cần quyền riêng.'
   // PR lập trước khi có danh mục bộ phận chỉ có tên dạng chữ (cột cũ, chỉ đọc).
   const legacyDepartment = doc && !doc.departmentId ? doc.department : null
 
@@ -630,9 +641,9 @@ export function PurchaseRequestPage() {
                 loading={projectOptions.isLoading}
                 placeholder="Chọn công trình đang thực hiện"
                 onChange={(v: string | undefined) => {
-                  // Điền sẵn phòng ban đề xuất của công trình (in trên 1A); người lập vẫn đổi được.
+                  // Điền sẵn phòng ban đề xuất của công trình (in trên 1A) – chỉ khi người lập được chọn mọi bộ phận (quyền lập thay).
                   const project = projectOptions.data?.find((p) => p.id === v)
-                  if (project) form.setFieldValue('departmentId', project.departmentId)
+                  if (project && canPickAnyDepartment) form.setFieldValue('departmentId', project.departmentId)
                 }}
               />
             </Form.Item>
@@ -641,10 +652,11 @@ export function PurchaseRequestPage() {
             label="Bộ phận đề nghị"
             name="departmentId"
             rules={[{ required: true, message: 'Chọn bộ phận đề nghị.' }]}
-            extra={legacyDepartment ? `Ghi trước khi có danh mục: ${legacyDepartment}` : undefined}
+            extra={[legacyDepartment ? `Ghi trước khi có danh mục: ${legacyDepartment}` : null, departmentHint].filter(Boolean).join(' · ') || undefined}
           >
             <Select
-              allowClear
+              allowClear={!departmentLocked}
+              disabled={departmentLocked}
               showSearch={{ optionFilterProp: 'label' }}
               options={departmentOptions}
               loading={departments.isLoading}

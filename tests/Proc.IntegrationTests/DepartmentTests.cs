@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Proc.Application.Administration;
 using Proc.Application.Common;
 using Proc.Application.MasterData;
 using Proc.Application.Organization;
@@ -148,6 +149,56 @@ public class DepartmentTests
         Assert.Contains("Hãy chọn bộ phận đề nghị.", await missing.Content.ReadAsStringAsync(Ct));
         pr = await ReadAsync<PurchaseRequestDto>(await f.Client.PutAsJsonAsync($"/api/purchase-requests/{pr.Id}", Pr(f, department.Id), Ct));
         Assert.Equal((department.Id, "Phòng vật tư"), (pr.DepartmentId, pr.Department));
+    }
+
+    /// <summary>
+    /// Bộ phận PR khóa theo bộ phận của người lập (design.md mục 19, lát O1 – người dùng chốt 19/11/2026): Trưởng phòng ban duyệt đúng nhân viên
+    /// của mình. Người không có quyền lập thay chỉ chọn bộ phận của mình; chưa gán bộ phận thì không lập được; có quyền lập thay chọn được mọi bộ phận.
+    /// </summary>
+    [Fact]
+    public async Task Pr_BoPhanKhoaTheoNguoiLap_LapThayCanQuyenRieng()
+    {
+        var f = await ArrangeAsync();
+        var own = await CreateDepartmentAsync(f.Client, "PX1", "Phân xưởng 1");
+        var other = await CreateDepartmentAsync(f.Client, "PX2", "Phân xưởng 2");
+        var roleCode = UniqueCode("L");
+        await _factory.CreateRoleAsync(roleCode, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate);
+        var userName = $"lp.{Guid.NewGuid():N}"[..16];
+        var userId = await _factory.CreateScopedUserAsync(userName, f.CompanyCode, roleCode, ["KT"]);
+        var buyer = await _factory.CreateClientInCompanyAsync(userName, ProcApiFactory.TestPassword, f.CompanyCode);
+
+        // Chưa gán bộ phận: không lập được PR, báo cách xử lý.
+        var none = await buyer.PostAsJsonAsync("/api/purchase-requests", Pr(f, own.Id), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, none.StatusCode);
+        Assert.Equal("Bạn chưa được gán bộ phận tại công ty này – nhờ quản trị gán ở Người dùng → Phân quyền rồi lập đề nghị mua.",
+            await TitleAsync(none));
+
+        var detail = (await f.Client.GetFromJsonAsync<UserDetailDto>($"/api/users/{userId}", Ct))!;
+        await ReadAsync<UserDetailDto>(await f.Client.PutAsJsonAsync($"/api/users/{userId}/access", detail.Access with { DepartmentId = own.Id }, Ct));
+
+        // Bộ phận khác: chặn; bộ phận của mình: lưu được.
+        var wrong = await buyer.PostAsJsonAsync("/api/purchase-requests", Pr(f, other.Id), Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+        Assert.Equal("Bạn chỉ lập được đề nghị mua cho bộ phận của mình (Phân xưởng 1) – lập cho bộ phận khác cần quyền lập thay.",
+            await TitleAsync(wrong));
+        var pr = await ReadAsync<PurchaseRequestDto>(await buyer.PostAsJsonAsync("/api/purchase-requests", Pr(f, own.Id), Ct));
+        Assert.Equal(own.Id, pr.DepartmentId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await buyer.PutAsJsonAsync($"/api/purchase-requests/{pr.Id}", Pr(f, other.Id), Ct)).StatusCode);
+
+        // Người lập chuyển bộ phận: phiếu nháp giữ bộ phận cũ vẫn sửa được (chỉ kiểm khi tạo hoặc đổi bộ phận).
+        detail = (await f.Client.GetFromJsonAsync<UserDetailDto>($"/api/users/{userId}", Ct))!;
+        await ReadAsync<UserDetailDto>(await f.Client.PutAsJsonAsync($"/api/users/{userId}/access", detail.Access with { DepartmentId = other.Id }, Ct));
+        pr = await ReadAsync<PurchaseRequestDto>(await buyer.PutAsJsonAsync($"/api/purchase-requests/{pr.Id}", Pr(f, own.Id), Ct));
+        Assert.Equal(own.Id, pr.DepartmentId);
+
+        // Có quyền lập thay: chọn bộ phận nào cũng được, kể cả khi chưa gán bộ phận.
+        var delegateRole = UniqueCode("T");
+        await _factory.CreateRoleAsync(delegateRole, Permissions.Purchase.PrView, Permissions.Purchase.PrCreate, Permissions.Purchase.PrAnyDepartment);
+        var officeName = $"lt.{Guid.NewGuid():N}"[..16];
+        await _factory.CreateScopedUserAsync(officeName, f.CompanyCode, delegateRole, ["KT"]);
+        var office = await _factory.CreateClientInCompanyAsync(officeName, ProcApiFactory.TestPassword, f.CompanyCode);
+        var byOffice = await ReadAsync<PurchaseRequestDto>(await office.PostAsJsonAsync("/api/purchase-requests", Pr(f, other.Id), Ct));
+        Assert.Equal(other.Id, byOffice.DepartmentId);
     }
 
     [Fact]

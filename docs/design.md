@@ -2139,7 +2139,12 @@ Trưởng phòng/ban và GĐ khối là người duyệt **động** theo phòng
 - **Bộ phận** thêm **Khối** và **Trưởng phòng ban (tài khoản)**; ô chữ cũ đổi tên "Trưởng bộ phận (tên in)", giữ để in. Trưởng phòng ban / GĐ khối
   phải là tài khoản còn hoạt động **có vai trò tại công ty** (chỉ kiểm tra khi đổi người). Khối ngừng dùng: bộ phận đang gán giữ khối, không gán mới.
 - **Người dùng thuộc bộ phận** (`UserDepartment`): mỗi người tối đa một bộ phận ở mỗi công ty, chọn ở Người dùng → Phân quyền; bỏ hết vai trò tại
-  công ty thì bỏ luôn bộ phận. Chỉ dùng điền sẵn bộ phận khi lập đề nghị mua (người lập đổi được) – không ảnh hưởng phạm vi dữ liệu (tự đặt).
+  công ty thì bỏ luôn bộ phận. Không ảnh hưởng phạm vi dữ liệu (tự đặt).
+- **Bộ phận đề nghị khóa theo người lập** (người dùng chốt 19/11/2026 – thay cho "chỉ điền sẵn, người lập đổi được"): Trưởng phòng ban / GĐ khối
+  duyệt theo bộ phận của phiếu, nên bộ phận trên PR phải là **bộ phận của người lưu phiếu** (`UserDepartment`); chưa được gán bộ phận thì không lập
+  được PR. Chỉ người có quyền `Purchase.PR.AnyDepartment` "Lập đề nghị mua cho bộ phận khác (lập thay)" chọn được mọi bộ phận (vai trò mẫu không
+  cấp sẵn, trừ quản trị). Máy chủ kiểm khi **tạo phiếu hoặc đổi bộ phận**; người lập chuyển bộ phận thì phiếu nháp giữ bộ phận cũ vẫn sửa được (tự
+  đặt). Form PR: ô bộ phận khóa (chỉ còn bộ phận của mình), dòng gợi ý nêu lý do; chọn công trình không đè bộ phận khi không có quyền lập thay.
 - **Người duyệt của cấp** ở APRL: *Theo vai trò* (như cũ), *Trưởng phòng ban của phiếu*, *GĐ khối của phiếu*. Hai loại sau chỉ cho loại phiếu có
   bộ phận – PR, PO và các bộ cấp phụ (POX, POK, PRB, POB, POL, POC); bộ phận của phiếu là bộ phận đề nghị (PR) / bộ phận đặt hàng (PO).
 - Bước duyệt ghi loại người duyệt + bộ phận của phiếu lúc gửi; **người duyệt xác định lúc duyệt** theo danh mục hiện hành – đổi Trưởng phòng ban
