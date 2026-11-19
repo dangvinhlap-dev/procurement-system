@@ -3,6 +3,44 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.44.0] - 2026-11-19
+
+**Số chứng từ PR ↔ PO; bảng tổng hợp đề xuất chọn được mọi PR đang chờ** (người dùng yêu cầu 19/11/2026, chốt cách A – design.md mục 10.2,
+10.3, 19.3 lát Y5c-2). Cài sau **0.43.0** qua REL.
+
+### Thêm mới
+- **PR hiện số PO đã lấy**: đầu phiếu đề nghị mua có ô **"Đơn mua hàng"** (các PO chưa hủy đã lấy dòng của PR; chưa có thì ghi "Chưa lên đơn mua
+  hàng"), lưới dòng có cột **"Số PO"**. Bấm số để sao chép, bấm đúp mở PO. Thử: lấy dòng một PR đã qua bảng tổng hợp đã duyệt lên PO, Lưu PO, mở lại
+  PR → thấy số PO ở ô "Đơn mua hàng" và cột "Số PO".
+- **PO hủy thì số PO tự mất khỏi PR**. Thử: hủy PO ở trên, mở lại PR → số PO đó không còn.
+- **PO hiện số PR ngay khi lấy dòng**: cột **"PR nguồn"** có số PR ngay sau khi "Lấy dòng từ PR đã duyệt" (chưa cần Lưu – trước đây ghi "(từ PR)"),
+  đầu phiếu có ô **"Đề nghị mua"** liệt kê mọi PR nguồn. Thử: PO mới → Lấy dòng từ PR đã duyệt → chọn dòng → thấy số PR ở cột và ở đầu phiếu; bấm đúp
+  số PR mở PR.
+
+### Thay đổi
+- **Bảng tổng hợp đề xuất (BTH) – "Chọn dòng đề nghị" mở ngay**, không cần chọn trước Biểu mẫu / Bộ phận / Công trình; hộp chọn liệt kê **mọi** dòng
+  đề nghị đã duyệt còn cần mua chưa vào bảng tổng hợp nào. Thử: BTH → Tạo mới → bấm ngay "Chọn dòng đề nghị" → thấy đề nghị của nhiều bộ phận.
+- **Hộp chọn có thêm cột Biểu mẫu (2A/2B), Loại, Bộ phận đề xuất, Công trình**, lọc được bằng nút trên tiêu đề cột. Thử: bấm nút lọc cột "Bộ phận đề
+  xuất", chọn một bộ phận → chỉ còn dòng của bộ phận đó.
+- **Đầu phiếu tự điền theo dòng chọn đầu tiên**: bảng còn trống, chọn dòng rồi "Thêm" → Biểu mẫu, Bộ phận đề xuất (và Công trình với 2A) tự điền, có
+  thông báo. Thử: BTH mới, chọn một dòng PR loại B → đầu phiếu thành 2B và bộ phận của PR.
+- **Một bảng vẫn một nhóm biểu mẫu – bộ phận – công trình**: đã chọn một dòng (hoặc bảng đã có dòng) thì dòng khác nhóm bị khóa ô chọn, chữ mờ, rê
+  chuột thấy lý do "lập bảng tổng hợp riêng". Thử: trong hộp chọn tích một dòng → các dòng bộ phận khác không tích được.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Không có (vẫn `V0_41_0_ChuKyLogoNhatKyIn`, 118 migration).
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng). Không cần sao lưu riêng (không đổi CSDL).
+- Sau khi cài, người dùng tải lại trang (F5) để trình duyệt nạp bản web mới.
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.43.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL. Bản 0.43.0 không hiện số PO trên PR, hộp
+  chọn dòng BTH lại phải chọn trước biểu mẫu, bộ phận.
+
 ## [0.43.0] - 2026-11-19
 
 **Phiếu nháp in chữ ký người lập / người đề xuất** (người dùng yêu cầu 19/11/2026: tạo đề nghị mua mới, "Xem đề nghị" không thấy chữ ký; design.md
