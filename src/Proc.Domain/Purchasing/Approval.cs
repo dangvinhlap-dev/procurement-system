@@ -217,6 +217,12 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     /// <summary>Ý kiến (bắt buộc khi từ chối).</summary>
     public string? Comment { get; private set; }
 
+    /// <summary>
+    /// Bước "Trưởng phòng ban của phiếu" gộp với người lập (người dùng chốt 19/11/2026 – design.md mục 19.3): người lập là Trưởng / Phó phòng
+    /// ban của bộ phận trên phiếu nên bước tự ghi đã duyệt bởi người lập lúc gửi. Không tính là "tôi đã duyệt" ở tra cứu chứng từ.
+    /// </summary>
+    public bool MergedWithCreator { get; private set; }
+
     /// <summary>Thời điểm gửi duyệt lượt này (UTC) – hiện ở lịch sử duyệt; null với bước lập trước bản 0.17.0.</summary>
     public DateTimeOffset? SubmittedAt { get; private set; }
 
@@ -279,6 +285,22 @@ public sealed class ApprovalStep : Entity, ICompanyOwned, IVersioned
     {
         if (string.IsNullOrWhiteSpace(comment)) throw new BusinessRuleException("Phải nhập lý do từ chối.");
         Act(ApprovalStepStatus.Rejected, userId, at, comment, onBehalfOf);
+    }
+
+    /// <summary>
+    /// Gộp bước Trưởng phòng ban với người lập (design.md mục 19.3): ghi đã duyệt bởi người lập vào lúc gửi, ý kiến nêu lý do gộp. Chỉ bước
+    /// "Trưởng phòng ban của phiếu" – nơi người lập chính là người ký kiểm tra đề nghị của bộ phận mình.
+    /// Ví dụ: Trưởng phòng PX1 (An) lập PR → bước cấp 2 "Đã duyệt – An – Gộp với người lập (Trưởng phòng ban PX1)", phiếu tới Thủ kho rồi CUVT.
+    /// </summary>
+    /// <param name="creatorId">Người lập phiếu.</param>
+    /// <param name="at">Thời điểm gửi (UTC).</param>
+    /// <param name="title">Chức danh của người lập ở bộ phận, ví dụ "Trưởng phòng ban PX1", "Phó phòng ban PX1".</param>
+    /// <exception cref="BusinessRuleException">Khi bước không phải Trưởng phòng ban hoặc không còn chờ.</exception>
+    public void MergeWithCreator(Guid creatorId, DateTimeOffset at, string title)
+    {
+        if (Kind != ApproverKind.DepartmentHead) throw new BusinessRuleException("Chỉ gộp bước Trưởng phòng ban với người lập.");
+        Act(ApprovalStepStatus.Approved, creatorId, at, $"Gộp với người lập ({title})", null);
+        MergedWithCreator = true;
     }
 
     /// <summary>Bước không cần duyệt nữa (cấp dưới đã từ chối hoặc phiếu bị rút/hủy).</summary>

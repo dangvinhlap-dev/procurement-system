@@ -111,6 +111,24 @@ internal sealed class UserDepartmentConfiguration : IEntityTypeConfiguration<Use
     }
 }
 
+/// <summary>Cấu hình bảng DepartmentDeputy – Phó phòng ban của bộ phận (design.md mục 19.3, 19/11/2026).</summary>
+internal sealed class DepartmentDeputyConfiguration : IEntityTypeConfiguration<DepartmentDeputy>
+{
+    /// <inheritdoc />
+    public void Configure(EntityTypeBuilder<DepartmentDeputy> builder)
+    {
+        builder.ToTable("DepartmentDeputy");
+        // Mỗi người một lần trong mỗi bộ phận.
+        builder.HasIndex(x => new { x.DepartmentId, x.UserId }).IsUnique();
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        // Bộ phận cùng công ty (khóa ngoại kép); xóa dòng gán khi bỏ Phó phòng ban, không xóa bộ phận (bộ phận chỉ ngừng dùng).
+        builder.HasOne<Department>().WithMany()
+            .HasForeignKey(x => new { x.DepartmentId, x.CompanyId }).HasPrincipalKey(d => new { d.Id, d.CompanyId })
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Cấu hình bảng ItemCategory (design.md mục 5.2).</summary>
 internal sealed class ItemCategoryConfiguration : IEntityTypeConfiguration<ItemCategory>
 {

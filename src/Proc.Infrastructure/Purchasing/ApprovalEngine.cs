@@ -67,6 +67,7 @@ internal sealed class ApprovalEngine
         var round = document.Submit();
         var rules = await BaseRulesAsync(document, ruleType, cancellationToken);
         var steps = Steps(document, rules, ApprovalPlan.Levels(rules, document.ApprovalAmount), round, stage: 1).ToList();
+        await MergeCreatorStepsAsync(document, steps, cancellationToken);
         await EnsureDynamicApproversAsync(document, steps, cancellationToken);
         await StartAsync(document, steps, cancellationToken);
     }
@@ -127,7 +128,9 @@ internal sealed class ApprovalEngine
         if (resolved.Count == 0) return;
         var approvers = await _notifications.UsersWithPermissionAsync(document.CompanyId, ApprovePermission(document.DocType), null, null, cancellationToken);
         var seen = new Dictionary<Guid, string>();
-        foreach (var step in steps.Where(DynamicApprovers.IsDynamic).OrderBy(s => s.Stage).ThenBy(s => s.Level))
+        // Bước đã gộp với người lập (Trưởng / Phó phòng ban tự lập phiếu) không cần người duyệt.
+        foreach (var step in steps.Where(s => DynamicApprovers.IsDynamic(s) && s.Status == ApprovalStepStatus.Pending)
+                     .OrderBy(s => s.Stage).ThenBy(s => s.Level))
         {
             var r = resolved[step.Id];
             if (r.UserId is not { } userId) throw new BusinessRuleException($"Không gửi duyệt được – cấp {step.Level} ({r.Label}): {r.Problem}");
@@ -143,6 +146,24 @@ internal sealed class ApprovalEngine
                 throw new BusinessRuleException(
                     $"{r.UserName} vừa là {other} vừa là {r.Label} – mỗi cấp phải do một người khác duyệt; sửa danh mục bộ phận/khối hoặc quy trình duyệt.");
             seen[userId] = r.Label;
+        }
+    }
+
+    /// <summary>
+    /// Gộp bước "Trưởng phòng ban của phiếu" với người lập (người dùng chốt 19/11/2026 – design.md mục 19.3): người lập là Trưởng phòng ban
+    /// của bộ phận trên phiếu (hoặc Phó phòng ban khi bộ phận chưa có Trưởng phòng ban – người cao nhất bộ phận) thì bước đó ghi đã duyệt bởi
+    /// người lập lúc gửi – người lập và Trưởng phòng ban là một bước,
+    /// phiếu đi tiếp các cấp còn lại (Thủ kho, CUVT…). Thay cho chặn gửi "người lập không tự duyệt" ở cấp này (lát O1).
+    /// Ví dụ PR 1B do Trưởng phòng PX1 (An) lập: cấp 1 Thủ kho chờ → cấp 2 "Đã duyệt – An – Gộp với người lập (Trưởng phòng ban PX1)" → cấp 3
+    /// CUVT. Nhân viên hoặc Phó phòng PX1 lập (PX1 đã có Trưởng phòng An) thì An vẫn duyệt cấp 2.
+    /// </summary>
+    private async Task MergeCreatorStepsAsync(IApprovalSubject document, List<ApprovalStep> steps, CancellationToken cancellationToken)
+    {
+        if (document.CreatedBy is not { } creatorId) return;
+        foreach (var step in steps.Where(s => s.Kind == ApproverKind.DepartmentHead && s.DepartmentId is not null))
+        {
+            if (await _dynamic.CreatorTitleAsync(step.DepartmentId!.Value, creatorId, cancellationToken) is { } title)
+                step.MergeWithCreator(creatorId, _clock.UtcNow, title);
         }
     }
 
@@ -210,6 +231,7 @@ internal sealed class ApprovalEngine
         }
 
         if (top is { } last) steps.AddRange(Steps(document, baseRules, [last], round, ApprovalTypes.TopLevelStage));
+        await MergeCreatorStepsAsync(document, steps, cancellationToken);
         await EnsureDynamicApproversAsync(document, steps, cancellationToken);
         await StartAsync(document, steps, cancellationToken);
     }
@@ -265,6 +287,13 @@ internal sealed class ApprovalEngine
         // Người và thời điểm gửi – lịch sử duyệt hiện "Lượt n: X gửi duyệt lúc …" (yêu cầu người dùng 03/11/2026).
         foreach (var step in steps) step.MarkSubmitted(_clock.UtcNow, _scope.UserId);
         _db.ApprovalSteps.AddRange(steps);
+        // Mọi bước đã gộp với người lập (bộ cấp chỉ có cấp Trưởng phòng ban): phiếu duyệt xong ngay, vẫn giữ bước làm lịch sử.
+        if (steps.All(s => s.Status != ApprovalStepStatus.Pending))
+        {
+            document.MarkApproved(_clock.UtcNow);
+            return;
+        }
+
         foreach (var step in ApprovalProgress.Active(steps)) await NotifyApproversAsync(document, step, cancellationToken);
     }
 
@@ -656,7 +685,8 @@ internal sealed class ApprovalEngine
                 activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 !activeIds.Contains(s.Id) ? next.GetValueOrDefault(s.Id) : null,
                 s.SubmittedAt, s.SubmittedBy is { } sb ? users.GetValueOrDefault(sb) : null,
-                Login(s.ActedBy), Position(s.ActedBy, s.CompanyId), Login(s.SubmittedBy), Position(s.SubmittedBy, s.CompanyId)))
+                Login(s.ActedBy), Position(s.ActedBy, s.CompanyId), Login(s.SubmittedBy), Position(s.SubmittedBy, s.CompanyId),
+                s.MergedWithCreator))
             .ToList();
     }
 }

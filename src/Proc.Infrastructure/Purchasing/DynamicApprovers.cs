@@ -109,6 +109,30 @@ internal sealed class DynamicApprovers
         return result;
     }
 
+    /// <summary>
+    /// Chức danh của người lập nếu họ là người <b>cao nhất</b> của bộ phận trên phiếu – khi đó bước "Trưởng phòng ban của phiếu" gộp với người
+    /// lập (người dùng chốt 19/11/2026 – design.md mục 19.3): người lập là Trưởng phòng ban; hoặc là Phó phòng ban khi bộ phận <b>chưa có</b>
+    /// Trưởng phòng ban. Người lập thấp hơn Trưởng phòng ban (nhân viên, Phó phòng ban khi đã có Trưởng phòng ban) thì Trưởng phòng ban vẫn
+    /// duyệt. Đọc danh mục hiện hành lúc gửi.
+    /// Ví dụ PX1 có Trưởng phòng An, Phó phòng Bình: An lập → gộp; Bình lập → An duyệt. PX2 chưa khai Trưởng phòng, Phó phòng Cường lập → gộp.
+    /// </summary>
+    /// <param name="departmentId">Bộ phận của phiếu.</param>
+    /// <param name="creatorId">Người lập.</param>
+    /// <param name="cancellationToken">Hủy thao tác.</param>
+    /// <returns>"Trưởng phòng ban PX1", "Phó phòng ban PX2" hoặc null (không gộp).</returns>
+    public async Task<string?> CreatorTitleAsync(Guid departmentId, Guid creatorId, CancellationToken cancellationToken)
+    {
+        var department = await _db.Departments.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .Where(d => d.Id == departmentId).Select(d => new { d.Code, d.ManagerUserId }).SingleOrDefaultAsync(cancellationToken);
+        if (department is null) return null;
+        if (department.ManagerUserId == creatorId) return $"Trưởng phòng ban {department.Code}";
+        // Đã có Trưởng phòng ban thì người lập (kể cả Phó phòng ban) nhỏ hơn – Trưởng phòng ban phải duyệt.
+        if (department.ManagerUserId is not null) return null;
+        var deputy = await _db.DepartmentDeputies.AsNoTracking().IgnoreQueryFilters([ProcDbContext.CompanyFilter])
+            .AnyAsync(d => d.DepartmentId == departmentId && d.UserId == creatorId, cancellationToken);
+        return deputy ? $"Phó phòng ban {department.Code}" : null;
+    }
+
     /// <summary>Tên loại người duyệt (không theo vai trò) như trên cấu hình APRL, khi chưa biết bộ phận / nơi nhận.</summary>
     /// <param name="kind">Loại người duyệt.</param>
     public static string KindLabel(ApproverKind kind) => kind switch

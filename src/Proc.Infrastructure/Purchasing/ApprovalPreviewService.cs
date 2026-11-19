@@ -105,8 +105,9 @@ public sealed class ApprovalPreviewService : IApprovalPreviewService
             };
             // Lượt vừa gửi thử là lượt lớn nhất; không có bước nào ở lượt đó = dưới mọi ngưỡng, gửi là duyệt ngay.
             var round = steps.Count == 0 ? 0 : steps.Max(s => s.Round);
-            var current = steps.Where(s => s.Round == round && s.Status == "Pending").ToList();
-            return new ApprovalPreviewDto(current.Count == 0, current);
+            // Bước Trưởng phòng ban gộp với người lập (design.md mục 19.3) vẫn hiện để người lập thấy bước đó đã tính là mình ký.
+            var current = steps.Where(s => s.Round == round && (s.Status == "Pending" || s.MergedWithCreator)).ToList();
+            return new ApprovalPreviewDto(current.All(s => s.Status != "Pending"), current);
         }
         finally
         {

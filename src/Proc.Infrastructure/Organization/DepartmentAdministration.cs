@@ -31,15 +31,16 @@ public sealed class DepartmentAdministration : IDepartmentAdministration
     public async Task<IReadOnlyList<DepartmentDto>> ListAsync(CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        return await Project(_db.Departments.AsNoTracking().OrderBy(d => d.Code)).ToListAsync(cancellationToken);
+        return await WithDeputiesAsync(await Project(_db.Departments.AsNoTracking().OrderBy(d => d.Code)).ToListAsync(cancellationToken), cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<DepartmentDto> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         _scope.RequireCompany();
-        return await Project(_db.Departments.AsNoTracking().Where(d => d.Id == id)).SingleOrDefaultAsync(cancellationToken)
+        var department = await Project(_db.Departments.AsNoTracking().Where(d => d.Id == id)).SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy bộ phận.");
+        return (await WithDeputiesAsync([department], cancellationToken))[0];
     }
 
     /// <inheritdoc />
@@ -51,6 +52,7 @@ public sealed class DepartmentAdministration : IDepartmentAdministration
             throw new BusinessRuleException($"Mã bộ phận {department.Code} đã có ở công ty này.");
         await CheckOrganizationAsync(companyId, null, request.DivisionId, request.ManagerUserId, cancellationToken);
         department.AssignOrganization(request.DivisionId, request.ManagerUserId);
+        await SyncDeputiesAsync(companyId, department, request.DeputyUserIds ?? [], cancellationToken);
 
         _db.Departments.Add(department);
         await _db.SaveChangesAsync(cancellationToken);
@@ -67,6 +69,7 @@ public sealed class DepartmentAdministration : IDepartmentAdministration
         department.Update(request.Name, request.ManagerName, request.IsActive);
         await CheckOrganizationAsync(companyId, department, request.DivisionId, request.ManagerUserId, cancellationToken);
         department.AssignOrganization(request.DivisionId, request.ManagerUserId);
+        if (request.DeputyUserIds is { } deputies) await SyncDeputiesAsync(companyId, department, deputies, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -106,6 +109,41 @@ public sealed class DepartmentAdministration : IDepartmentAdministration
 
         if (managerUserId is { } uid && uid != Guid.Empty && uid != current?.ManagerUserId)
             await OrganizationUsers.EnsureApproverAsync(_db, companyId, uid, "Trưởng phòng ban", cancellationToken);
+    }
+
+    /// <summary>
+    /// Đặt lại danh sách Phó phòng ban (design.md mục 19.3): bỏ người không còn trong danh sách, thêm người mới. Người mới phải là tài khoản còn
+    /// hoạt động có vai trò tại công ty (như Trưởng phòng ban) và không trùng Trưởng phòng ban của bộ phận.
+    /// </summary>
+    /// <exception cref="BusinessRuleException">Khi tài khoản không hợp lệ hoặc trùng Trưởng phòng ban.</exception>
+    private async Task SyncDeputiesAsync(Guid companyId, Department department, IReadOnlyList<Guid> userIds, CancellationToken cancellationToken)
+    {
+        var wanted = userIds.Where(u => u != Guid.Empty).Distinct().ToList();
+        if (department.ManagerUserId is { } manager && wanted.Contains(manager))
+            throw new BusinessRuleException("Phó phòng ban không được trùng Trưởng phòng ban của bộ phận.");
+        var current = await _db.DepartmentDeputies.Where(d => d.DepartmentId == department.Id).ToListAsync(cancellationToken);
+        _db.DepartmentDeputies.RemoveRange(current.Where(d => !wanted.Contains(d.UserId)));
+        foreach (var userId in wanted.Where(u => current.All(d => d.UserId != u)))
+        {
+            await OrganizationUsers.EnsureApproverAsync(_db, companyId, userId, "Phó phòng ban", cancellationToken);
+            _db.DepartmentDeputies.Add(DepartmentDeputy.Assign(department, userId));
+        }
+    }
+
+    /// <summary>Gắn danh sách Phó phòng ban (Id, họ tên – theo họ tên) vào các bộ phận.</summary>
+    private async Task<List<DepartmentDto>> WithDeputiesAsync(List<DepartmentDto> departments, CancellationToken cancellationToken)
+    {
+        var ids = departments.Select(d => d.Id).ToList();
+        var deputies = (await _db.DepartmentDeputies.AsNoTracking().Where(d => ids.Contains(d.DepartmentId))
+                .Join(_db.Users, d => d.UserId, u => u.Id, (d, u) => new { d.DepartmentId, u.Id, u.FullName })
+                .ToListAsync(cancellationToken))
+            .OrderBy(x => x.FullName, StringComparer.CurrentCulture)
+            .ToLookup(x => x.DepartmentId);
+        return departments.Select(d => d with
+        {
+            DeputyUserIds = deputies[d.Id].Select(x => x.Id).ToList(),
+            DeputyNames = deputies[d.Id].Select(x => x.FullName).ToList(),
+        }).ToList();
     }
 
     /// <summary>Chiếu bộ phận sang DTO kèm số PR đã dùng, khối, Trưởng phòng ban, Giám đốc khối và số người thuộc bộ phận.</summary>

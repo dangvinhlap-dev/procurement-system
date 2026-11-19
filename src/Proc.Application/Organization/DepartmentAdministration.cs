@@ -16,9 +16,12 @@ namespace Proc.Application.Organization;
 /// <param name="ManagerUserName">Họ tên Trưởng phòng ban.</param>
 /// <param name="DirectorName">Họ tên Giám đốc khối của khối đã gán.</param>
 /// <param name="MemberCount">Số người dùng thuộc bộ phận.</param>
+/// <param name="DeputyUserIds">Phó phòng ban (tài khoản) – tự lập phiếu thì bước Trưởng phòng ban gộp với người lập (design.md mục 19.3).</param>
+/// <param name="DeputyNames">Họ tên các Phó phòng ban, theo họ tên.</param>
 public sealed record DepartmentDto(
     Guid Id, string Code, string Name, string? ManagerName, bool IsActive, int RequestCount, Guid? DivisionId = null, string? DivisionName = null,
-    Guid? ManagerUserId = null, string? ManagerUserName = null, string? DirectorName = null, int MemberCount = 0);
+    Guid? ManagerUserId = null, string? ManagerUserName = null, string? DirectorName = null, int MemberCount = 0,
+    IReadOnlyList<Guid>? DeputyUserIds = null, IReadOnlyList<string>? DeputyNames = null);
 
 /// <summary>Thêm bộ phận tại công ty đang làm việc.</summary>
 /// <param name="Code">Mã (2–20 chữ không dấu hoặc số), duy nhất trong công ty, không đổi được.</param>
@@ -26,7 +29,9 @@ public sealed record DepartmentDto(
 /// <param name="ManagerName">Trưởng bộ phận (họ tên in).</param>
 /// <param name="DivisionId">Khối (lát O1).</param>
 /// <param name="ManagerUserId">Trưởng phòng ban (tài khoản có quyền tại công ty).</param>
-public sealed record CreateDepartmentRequest(string Code, string Name, string? ManagerName, Guid? DivisionId = null, Guid? ManagerUserId = null);
+/// <param name="DeputyUserIds">Phó phòng ban (tài khoản có quyền tại công ty); null hoặc rỗng = không có.</param>
+public sealed record CreateDepartmentRequest(
+    string Code, string Name, string? ManagerName, Guid? DivisionId = null, Guid? ManagerUserId = null, IReadOnlyList<Guid>? DeputyUserIds = null);
 
 /// <summary>Sửa bộ phận.</summary>
 /// <param name="Name">Tên bộ phận.</param>
@@ -34,7 +39,9 @@ public sealed record CreateDepartmentRequest(string Code, string Name, string? M
 /// <param name="IsActive">Còn sử dụng.</param>
 /// <param name="DivisionId">Khối (lát O1); null = bỏ gán.</param>
 /// <param name="ManagerUserId">Trưởng phòng ban (tài khoản); null = chưa khai.</param>
-public sealed record UpdateDepartmentRequest(string Name, string? ManagerName, bool IsActive, Guid? DivisionId = null, Guid? ManagerUserId = null);
+/// <param name="DeputyUserIds">Phó phòng ban – thay cả danh sách; null = giữ nguyên (bên gọi cũ không gửi trường này).</param>
+public sealed record UpdateDepartmentRequest(
+    string Name, string? ManagerName, bool IsActive, Guid? DivisionId = null, Guid? ManagerUserId = null, IReadOnlyList<Guid>? DeputyUserIds = null);
 
 /// <summary>Tài khoản chọn được làm Trưởng phòng ban / Giám đốc khối (có vai trò tại công ty đang làm việc, còn hoạt động).</summary>
 /// <param name="Id">Id tài khoản.</param>
