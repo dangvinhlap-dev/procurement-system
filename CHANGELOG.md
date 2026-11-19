@@ -3,6 +3,48 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.45.0] - 2026-11-19
+
+**Gộp bước người lập – Trưởng phòng ban; khóa bộ phận đề nghị mua theo người lập** (người dùng chốt 19/11/2026 – design.md mục 19, 19.3 lát O1).
+Cài sau **0.44.0** qua REL.
+
+### Thêm mới
+- **Phó phòng ban của bộ phận**: ngăn kéo Bộ phận có ô chọn nhiều **"Phó phòng ban (tài khoản)"**. Thử: Bộ phận → mở một bộ phận → chọn một hoặc
+  vài tài khoản ở ô "Phó phòng ban", Lưu, mở lại → vẫn còn đủ.
+- **Quyền mới "Lập đề nghị mua cho bộ phận khác (lập thay)"** (quản trị tự có, vai trò mẫu không cấp sẵn). Thử: cấp quyền này cho một người dùng →
+  người đó lập PR đổi được ô Bộ phận sang bộ phận khác và Lưu được.
+
+### Thay đổi
+- **Người lập là Trưởng phòng ban thì bước "Trưởng phòng ban" gộp với người lập**: gửi duyệt xong bước đó tự ghi đã duyệt bởi người lập, phiếu đi
+  thẳng bước kế (Thủ kho → CUVT…). Thử: đăng nhập Trưởng phòng ban của một bộ phận, lập PR cho bộ phận đó, Gửi duyệt → popup ghi "gộp với người lập –
+  họ tên"; mở lại PR → ổ khóa bước Trưởng phòng ban đóng, chú thích "(gộp với người lập)"; "Kiểm tra phê duyệt" thấy bước đó đã duyệt.
+- **Phó phòng ban chỉ gộp khi bộ phận chưa có Trưởng phòng ban**. Thử: bộ phận chưa khai Trưởng phòng ban, Phó phòng ban lập PR, gửi duyệt → bước gộp
+  như trên; khai Trưởng phòng ban cho bộ phận rồi Phó phòng ban lập PR khác → Trưởng phòng ban vẫn phải duyệt.
+- **Nhân viên thường lập PR thì Trưởng phòng ban vẫn duyệt như cũ**. Thử: nhân viên của bộ phận lập PR, gửi duyệt → bước Trưởng phòng ban chờ duyệt.
+- **"Tôi đã duyệt" không liệt kê bước gộp** (người lập không tự duyệt). Thử: sau khi gửi PR có bước gộp, mở "Tôi đã duyệt" của người lập → không thấy PR đó.
+- **Bộ phận trên đề nghị mua khóa theo bộ phận của người lập** (để Trưởng phòng ban duyệt đúng nhân viên của mình): ô Bộ phận tự lấy theo bộ phận ở
+  Người dùng → Phân quyền và bị khóa, có dòng gợi ý; chọn công trình không đổi bộ phận. Thử: người không có quyền lập thay lập PR → ô Bộ phận khóa đúng
+  bộ phận của mình; người chưa được gán bộ phận lập PR → báo nhờ quản trị gán bộ phận.
+- Phiếu nháp cũ đang ghi bộ phận khác vẫn sửa, lưu được (không bắt đổi bộ phận). Thử: mở một PR nháp lập trước bản này có bộ phận khác bộ phận người
+  lập, sửa ghi chú, Lưu → lưu được.
+
+### Sửa lỗi
+- Không có.
+
+### Thay đổi CSDL
+- Migration `V0_45_0_GopBuocTruongPhong` (119 migration): thêm bảng `DepartmentDeputy` (Phó phòng ban) và cột `ApprovalStep.MergedWithCreator`
+  (mặc định false). Chỉ thêm, không đổi dữ liệu cũ. Script `db/scripts/0.45.0.sql`.
+
+### Lưu ý khi nâng cấp
+- Cài qua **REL** (Nhận gói → Cài TEST → kiểm thử → Xác nhận UAT → Cài PROD → Đóng); bộ thực thi tự sao lưu trước khi chạy script CSDL.
+- Sau khi cài: quản trị kiểm tra **mọi người lập PR đã được gán bộ phận** (Người dùng → Phân quyền), cấp quyền "lập thay" cho người cần lập PR hộ
+  bộ phận khác; khai Phó phòng ban nếu cần. Người dùng tải lại trang (F5).
+
+### Cách quay lại bản trước
+- **Mức quay về 1**: REL → Quay về bản cũ (về 0.44.0), chọn mức 1 – chỉ đổi lại chương trình, giữ CSDL (bảng, cột mới bản cũ không dùng). Bản
+  0.44.0 không gộp bước, không khóa bộ phận PR; bước đã gộp trước đó vẫn hiện là đã duyệt bởi người lập.
+- Gỡ hẳn migration (`Down()`) làm mất danh sách Phó phòng ban và dấu "gộp với người lập" – chỉ làm khi cần, sau khi sao lưu.
+
 ## [0.44.0] - 2026-11-19
 
 **Số chứng từ PR ↔ PO; bảng tổng hợp đề xuất chọn được mọi PR đang chờ** (người dùng yêu cầu 19/11/2026, chốt cách A – design.md mục 10.2,
