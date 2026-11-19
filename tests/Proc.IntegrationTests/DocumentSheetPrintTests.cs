@@ -30,12 +30,13 @@ public partial class PurchasingTests
         await ReadAsync<UserSignatureDto>(await approver.PostAsync("/api/me/signature", ImageForm(TestPng.Create(240, 80)), Ct));
 
         var po = await ReadAsync<PurchaseOrderDto>(await CreatePoAsync(f, 10, null));
-        // Nháp: xem được, chưa có chữ ký nào (dấu chìm "BẢN NHÁP").
+        // Nháp: xem được (dấu chìm "BẢN NHÁP"), ô người lập in chữ ký đang dùng (người dùng chốt 19/11/2026 – mọi loại phiếu), chưa có chữ ký người duyệt.
         var draft = await f.Buyer.GetAsync($"/api/purchase-orders/{po.Id}/pdf", Ct);
         Assert.Equal("application/pdf", draft.Content.Headers.ContentType?.MediaType);
         var draftPdf = await draft.Content.ReadAsByteArrayAsync(Ct);
         SavePdfForReview($"{po.FormCode}-nhap.pdf", draftPdf);
-        Assert.DoesNotContain((300, 100), PdfImages(draftPdf));
+        Assert.Contains((300, 100), PdfImages(draftPdf));
+        Assert.DoesNotContain((240, 80), PdfImages(draftPdf));
 
         await ReadAsync<PurchaseOrderDto>(await f.Buyer.PostAsync($"/api/purchase-orders/{po.Id}/submit", null, Ct));
         po = await ReadAsync<PurchaseOrderDto>(await ActAsync(approver, "purchase-orders", po.Id, "approve"));

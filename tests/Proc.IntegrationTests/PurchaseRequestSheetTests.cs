@@ -104,6 +104,27 @@ public partial class PurchasingTests
     }
 
     [Fact]
+    public async Task XemDeNghi_PhieuNhap_InChuKyDangDungCuaNguoiDeXuat()
+    {
+        var f = await ArrangeAsync();
+        var pr = await ReadAsync<PurchaseRequestDto>(await CreatePrAsync(f, 1));
+        // Chưa tải chữ ký: bản xem nháp không có ảnh chữ ký.
+        var before = PdfImages(await (await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct)).Content.ReadAsByteArrayAsync(Ct));
+        Assert.DoesNotContain((300, 100), before);
+
+        // Tải chữ ký sau khi lập phiếu: phiếu nháp in chữ ký đang dùng (người dùng chốt 19/11/2026 – design.md 20.4 IN1-5).
+        await ReadAsync<UserSignatureDto>(await f.Buyer.PostAsync("/api/me/signature", ImageForm(TestPng.Create(300, 100)), Ct));
+        var draft = PdfImages(await (await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct)).Content.ReadAsByteArrayAsync(Ct));
+        Assert.Contains((300, 100), draft);
+
+        // Thay chữ ký: bản nháp đổi theo chữ ký mới.
+        await ReadAsync<UserSignatureDto>(await f.Buyer.PostAsync("/api/me/signature", ImageForm(TestPng.Create(280, 90)), Ct));
+        var replaced = PdfImages(await (await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct)).Content.ReadAsByteArrayAsync(Ct));
+        Assert.Contains((280, 90), replaced);
+        Assert.DoesNotContain((300, 100), replaced);
+    }
+
+    [Fact]
     public async Task LogoCongTy_TaiThayXoa_InVaoPhieu()
     {
         var f = await ArrangeAsync();
@@ -145,9 +166,10 @@ public partial class PurchasingTests
         Assert.Equal(("GDTCKT", "(Duyệt vượt dự toán)"), (block.Extra.Single().Title, block.Extra.Single().Caption));
         Assert.True(block.Final.InChain);
         Assert.Equal("Đang chờ duyệt – đã duyệt 3/7 bước, chờ Phòng TC-NQ-KT", block.ApprovalStatus);
-        // Nháp: không in chữ ký nào.
+        // Nháp: ô người đề xuất in chữ ký được truyền vào (chữ ký đang dùng – người dùng chốt 19/11/2026), vẫn ghi "Chưa gửi duyệt".
         var draft = PurchaseRequestSheet.Build("Draft", "An", null, sig, null, []);
-        Assert.Null(draft.Boxes[0].Signature);
+        Assert.Same(sig, draft.Boxes[0].Signature);
+        Assert.Equal("Chưa gửi duyệt", draft.Boxes[0].Detail);
         Assert.Equal("Nháp – chưa gửi duyệt", draft.ApprovalStatus);
     }
 }
