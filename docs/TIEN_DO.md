@@ -1047,6 +1047,9 @@ cấp 1 = PHOCTUBCL và thêm quyền `Purchase.PO.Approve`, `Purchase.PO.View` 
 một người không duyệt hai cấp trong một lượt, không khai thì chỉ admin duyệt được. Phát hiện: PO chỉ lấy được dòng PR đã qua BTH đã duyệt (lát
 Y5c) nên kịch bản có bước BTH; XNH không có chuỗi duyệt (thủ kho xác nhận, đủ SL thì PO Đã nhận đủ). Chạy thử qua API 12/12 đạt: PR-APH-2611-0017
 → BTH-APH-2611-0002 → PO-APH-2611-0005 → XNH-APH-2611-0001, 0002; từ chối / gửi lại PO-APH-2611-0006 (đã hủy, nguồn PR-0018, BTH-0003).
+Theo người dùng (chỉ 2 tài khoản nghiệp vụ mới: người tạo PO, người nhập hàng từ PO): thêm vai trò **NHANHANG** "Nhận hàng theo PO" (quyền KHO bỏ
+`Purchase.PR.*` – không hiện ở cấp Thủ kho 1B) và tài khoản `nhanhang` ở 4 công ty; kịch bản dùng PR-APH-2611-0018 (đã qua BTH-0003, bắt đầu từ lập
+PO), XNH do `nhanhang`. `gdtckt` giữ lại (GĐ TC-NQ-KT là cấp 3 PO, không có trong chuỗi 1B) – chờ người dùng quyết giữ hay gán vai trò cho tài khoản có sẵn.
 Bản thử cổng 5007 **đã nâng 0.44.0 → 0.45.0 (19/11/2026, cài tay bằng `D:\project\nang-5007-0.45.0.ps1`)** – người dùng "phát hành bản mới nhất
 cho tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.45.0.dump`, **chạy script `db\scripts\0.45.0.sql`** (119
 migration, cuối `V0_45_0_GopBuocTruongPhong`), `app` = 0.45.0, `app-0.44.0` = bản cũ, gói `goi\0.45.0`; `/health` Healthy 0.45.0 (cả qua
