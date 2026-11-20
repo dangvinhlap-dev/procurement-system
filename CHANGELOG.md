@@ -3,6 +3,16 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.46.2] - 2026-11-20
+
+**Bảng tổng hợp 2B lấy lũy kế từ PR sang** (người dùng chốt 20/11/2026 – design.md mục 20.4 IN1-13). Cài sau **0.46.1**. Không đổi CSDL, mức
+quay về 1.
+
+### Thay đổi
+- Bản in bảng tổng hợp 2B (BTH lập riêng) ghi "Lũy kế số tiền đã mua" **đúng số của 1B**: PO đã duyệt trong tháng lập đề nghị, chưa VAT, không cộng
+  tổng đề xuất. Thử: mở BTH-APH-2611-0003 → Xem bảng tổng hợp → lũy kế bằng dòng "Lũy kế số tiền đã mua trong tháng" trên 1B của PR-APH-2611-0018
+  (1.500.000 đ). Bảng 2A (công trình) giữ như cũ.
+
 ## [0.46.1] - 2026-11-20
 
 **Trang 2B in kèm đề nghị mua giống 1B, chỉ khác form** (người dùng chốt 20/11/2026 – design.md mục 20.4 IN1-13). Cài sau **0.46.0**.
