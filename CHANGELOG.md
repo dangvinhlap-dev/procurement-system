@@ -3,6 +3,19 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.47.1] - 2026-11-20
+
+**Thông tin hệ thống ở góc dưới trái trang cuối; biểu mẫu 2B định dạng gọn như 1B** (người dùng yêu cầu 20/11/2026 – design.md mục 20.4 IN1-12,
+IN1-13). Cài sau **0.47.0**. Không đổi CSDL, mức quay về 1.
+
+### Thay đổi
+- **Mọi biểu mẫu in** (1A/1B, 2A/2B, 3a/3A/3B, 4A/4B, 5A/5B, 1C, 2C): khung "Bản xem lúc / In lúc – Người xem / Người in – Số phiếu · Lần in ·
+  Trang – Tình trạng phê duyệt" nay **chỉ ở góc dưới bên trái của trang cuối cùng** (trước ở góc dưới phải mọi trang). Thử: PR-APH-2611-0018 → Xem
+  đề nghị → Mẫu in 1B: khung ở góc dưới trái trang; mở một phiếu nhiều trang (ví dụ BTH-APH-2611-0003) → chỉ trang cuối có khung.
+- **Biểu mẫu 2B gọn như 1B**: bảng rộng đúng bằng khung đầu phiếu (trước bị hụt mép phải khi phiếu chỉ có một đơn vị mua), cột Số phiếu đủ rộng cho
+  "PR-APH-2611-0018" trên một dòng, cột Phòng ban và Đơn vị mua rộng hơn, khối ký "Kính trình…" nằm cùng trang với bảng. Thử: PR-0018 → Xem đề nghị →
+  Mẫu in 2B → một trang khổ ngang, bảng thẳng mép với khung, khối ký ngay dưới bảng. Bảng tổng hợp BTH lập riêng in cùng định dạng.
+
 ## [0.47.0] - 2026-11-20
 
 **Xem đề nghị: chọn mẫu 1B hoặc 2B để in; con số lũy kế của bảng tổng hợp đúng với 1B trên mọi nơi** (người dùng yêu cầu 20/11/2026 –
