@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
@@ -158,5 +159,16 @@ public partial class PurchasingTests
         var form = CuvtPrintForms.PurchaseRequest(pr, "Công ty thử", new Dictionary<Guid, string?>(), 760_000m);
         Assert.Equal("760.000 đ", form.Info.Single(i => i.Label == "Lũy kế số tiền đã mua trong tháng").Value);
         await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct));
+
+        // Bảng tổng hợp 2B lập riêng cũng lấy lũy kế từ PR sang (người dùng chốt 20/11/2026): đúng số của 1B, không cộng tổng đề xuất.
+        var summaryId = await (
+            from l in db.Set<Proc.Domain.Purchasing.PurchaseSummaryLine>()
+            where l.RequestId == pr.Id
+            select l.SummaryId).FirstAsync(Ct);
+        var summary = await ReadAsync<PurchaseSummaryDto>(await f.Buyer.GetAsync($"/api/purchase-summaries/{summaryId}", Ct));
+        var form2B = CuvtPrintForms.PurchaseSummary(summary, "Công ty thử", 760_000m);
+        Assert.Equal("2B", form2B.FormNo);
+        Assert.Equal("760.000 đ", form2B.Info.Single(i => i.Label == "Lũy kế số tiền đã mua").Value);
+        await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-summaries/{summaryId}/pdf", Ct));
     }
 }

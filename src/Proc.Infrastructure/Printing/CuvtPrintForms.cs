@@ -110,12 +110,12 @@ public static partial class CuvtPrintForms
 
     /// <summary>
     /// Bảng tổng hợp đề xuất mua theo biểu mẫu 2A/2B (khổ ngang): mỗi đơn vị mua một cột, dòng thuộc đơn vị nào đánh "x".
-    /// Lũy kế = đã mua trước đây + tổng đề xuất của bảng (ghi chú biểu mẫu 2A, 2B): 2A đã mua là lũy kế PO của công trình; 2B là PO đã duyệt
-    /// trong tháng của bộ phận, chưa VAT (người dùng chốt 12/11/2026).
+    /// Lũy kế 2A = đã mua trước đây (lũy kế PO của công trình) + tổng đề xuất của bảng (ghi chú biểu mẫu 2A). Lũy kế 2B lấy từ đề nghị như 1B: PO đã
+    /// duyệt trong tháng của bộ phận, chưa VAT, không cộng tổng đề xuất (người dùng chốt 12/11/2026, 20/11/2026).
     /// </summary>
     /// <param name="summary">Bảng tổng hợp đã đọc theo phạm vi.</param>
     /// <param name="companyName">Tên công ty in đầu phiếu.</param>
-    /// <param name="monthSpent">2B: lũy kế PO đã duyệt trong tháng của bộ phận, chưa VAT.</param>
+    /// <param name="monthSpent">2B: lũy kế của đề nghị như 1B – PO đã duyệt trong tháng của đề nghị, bộ phận của bảng, chưa VAT.</param>
     /// <returns>Nội dung in.</returns>
     public static CuvtForm PurchaseSummary(PurchaseSummaryDto summary, string companyName, decimal monthSpent = 0)
     {
@@ -133,7 +133,8 @@ public static partial class CuvtPrintForms
                 new("Lũy kế số tiền đã mua", Vnd(frame.AccumulatedAmount + frame.ProposedAmount), true),
                 new("Tổng tiền đề xuất", Vnd(frame.ProposedAmount), true),
             ]
-            : Info2B(summary.DepartmentName, frame.LimitAmount, monthSpent + frame.ProposedAmount, frame.ProposedAmount);
+                        // "Bảng tổng hợp cũng lấy lũy kế từ PR sang" (người dùng chốt 20/11/2026): 2B in đúng lũy kế của 1B, không cộng tổng đề xuất.
+            : Info2B(summary.DepartmentName, frame.LimitAmount, monthSpent, frame.ProposedAmount);
         return Summary(
             is2A, companyName, summary.No, summary.Date, summary.Status, summary.DepartmentName, lines, summary.TotalAmount, info, summary.Note,
             Signers("Người lập", summary.CreatedByName, summary.Approvals));
@@ -177,8 +178,8 @@ public static partial class CuvtPrintForms
     }
 
     /// <summary>
-    /// Khung thông tin 2B: phòng ban, định mức/dự trù (ngân sách tháng), lũy kế, tổng đề xuất. Bảng tổng hợp: lũy kế = đã mua trong tháng + tổng đề
-    /// xuất (ghi chú biểu mẫu 2B); 2B in kèm đề nghị: lũy kế = đã mua trong tháng như 1B.
+    /// Khung thông tin 2B: phòng ban, định mức/dự trù (ngân sách tháng), lũy kế, tổng đề xuất. Lũy kế lấy từ đề nghị như 1B (PO đã duyệt trong tháng
+    /// của bộ phận, chưa VAT) – cả bảng tổng hợp lập riêng lẫn trang 2B in kèm đề nghị (người dùng chốt 20/11/2026).
     /// </summary>
     private static List<CuvtInfoLine> Info2B(string? department, decimal? limit, decimal accumulated, decimal proposed) =>
     [
