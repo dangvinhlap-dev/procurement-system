@@ -40,10 +40,14 @@ public sealed record SheetSignBox(string Title, string Caption, string? Name, st
 public sealed record SheetSignBlock(
     string Heading, IReadOnlyList<SheetSignBox> Boxes, IReadOnlyList<SheetSignBox> Extra, SheetSignBox Final, string ApprovalStatus);
 
-/// <summary>Thông tin hệ thống in góc dưới trái trang cuối, chữ 9 (người dùng yêu cầu 18/11/2026, đổi vị trí 20/11/2026).</summary>
-/// <param name="Lines">Các dòng; "{PAGE}" / "{PAGES}" thay bằng số trang.</param>
+/// <summary>
+/// Thông tin hệ thống chữ 9: khối đầy đủ ở góc dưới trái trang cuối, các trang trước một dòng nhỏ "Số phiếu … · Trang x/y" (người dùng yêu cầu
+/// 18/11/2026, đổi vị trí 20/11/2026).
+/// </summary>
+/// <param name="Lines">Các dòng của khối đầy đủ; "{PAGE}" / "{PAGES}" thay bằng số trang.</param>
 /// <param name="Watermark">Dấu chìm giữa trang ("BẢN NHÁP", "CHƯA DUYỆT", "ĐÃ HỦY"); null = phiếu đã duyệt.</param>
-public sealed record SheetStamp(IReadOnlyList<string> Lines, string? Watermark);
+/// <param name="DocNo">Số phiếu cho dòng nhỏ ở các trang trước trang cuối; null = không in dòng đó.</param>
+public sealed record SheetStamp(IReadOnlyList<string> Lines, string? Watermark, string? DocNo = null);
 
 /// <summary>
 /// Ghép ô ký của đề nghị mua theo mẫu 1A/1B (lát IN1 – design.md mục 20.4). Khối ký giữ <b>nguyên văn</b> ảnh trong file Excel biểu mẫu (người dùng

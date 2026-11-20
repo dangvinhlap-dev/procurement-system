@@ -34,8 +34,9 @@ internal static class SheetPrintParts
     /// <summary>
     /// Thông tin hệ thống (giờ xem / in, người, số phiếu, lần in, số trang, tình trạng phê duyệt) ở <b>góc dưới bên trái trang cuối cùng</b> (người
     /// dùng yêu cầu 20/11/2026 – thay cho góc dưới phải mọi trang): khung viền mảnh, chữ 9 phông không chân, vẽ sau khi đã nối mọi trang (1B kèm 2B,
-    /// 3a/3B nhiều NCC) nên chỉ một khung cho cả file; "{PAGE}" / "{PAGES}" đều thay bằng tổng số trang. Khung nằm trong lề dưới 26 mm mà các khuôn
-    /// in chừa sẵn nên không đè nội dung.
+    /// 3a/3B nhiều NCC) nên chỉ một khung cho cả file; "{PAGE}" / "{PAGES}" đều thay bằng tổng số trang. Các trang trước trang cuối có một dòng nhỏ
+    /// (chữ 8, xám) cùng góc: "Số phiếu: … · Trang x/y" (người dùng yêu cầu 20/11/2026). Khung, dòng nằm trong lề dưới 26 mm mà các khuôn in chừa sẵn
+    /// nên không đè nội dung.
     /// </summary>
     /// <param name="pdf">File PDF đã dựng xong.</param>
     /// <param name="stamp">Các dòng thông tin.</param>
@@ -44,6 +45,20 @@ internal static class SheetPrintParts
     {
         using var document = PdfReader.Open(new MemoryStream(pdf), PdfDocumentOpenMode.Modify);
         var count = document.PageCount;
+        var left = XUnit.FromMillimeter(StampLeftMm).Point;
+        if (stamp.DocNo is { } no)
+        {
+            var small = new XFont(PdfFonts.Family, 8, XFontStyleEx.Regular);
+            for (var n = 0; n < count - 1; n++)
+            {
+                var other = document.Pages[n];
+                using var g = XGraphics.FromPdfPage(other, XGraphicsPdfPageOptions.Append);
+                var y = other.Height.Point - XUnit.FromMillimeter(StampBottomMm).Point - small.GetHeight();
+                g.DrawString($"Số phiếu: {no} · Trang {n + 1}/{count}", small, new XSolidBrush(XColor.FromArgb(0x50, 0x50, 0x50)),
+                    new XRect(left, y, other.Width.Point - 2 * left, small.GetHeight()), XStringFormats.TopLeft);
+            }
+        }
+
         var page = document.Pages[count - 1];
         var lines = stamp.Lines.Select(l => l.Replace("{PAGES}", count.ToString(), StringComparison.Ordinal)
             .Replace("{PAGE}", count.ToString(), StringComparison.Ordinal)).ToList();
@@ -54,7 +69,6 @@ internal static class SheetPrintParts
             var lineHeight = font.GetHeight();
             var width = lines.Select(l => gfx.MeasureString(l, font).Width).DefaultIfEmpty(0).Max() + 2 * pad;
             var height = lines.Count * lineHeight + 2 * pad;
-            var left = XUnit.FromMillimeter(StampLeftMm).Point;
             var top = page.Height.Point - XUnit.FromMillimeter(StampBottomMm).Point - height;
             gfx.DrawRectangle(new XPen(XColor.FromArgb(0x70, 0x70, 0x70), 0.5), left, top, width, height);
             for (var i = 0; i < lines.Count; i++)

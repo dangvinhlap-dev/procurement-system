@@ -166,11 +166,12 @@ public static class CuvtSheetLayout
 
     /// <summary>
     /// Số đo sheet "2B.TH MUA VT" – như 2A, 4 dòng thông tin, ngày xanh, ngày đề xuất và ngày cung ứng chữ đỏ, các cột căn giữa. Định dạng gọn như
-    /// 1B (người dùng yêu cầu 20/11/2026 – "2B đang định dạng lộn xộn"): giữ tổng bề ngang sheet A–L nhưng chia lại cột cho chữ không gãy dòng – Số
-    /// phiếu 6,9 → 17,5 (đủ "PR-APH-2611-0018" một dòng), Phòng ban 12,9 → 14,5; bớt ở Đơn giá, Thành tiền, Ngày cung ứng, SL (số ngắn).
+    /// 1B (người dùng yêu cầu 20/11/2026 – "2B đang định dạng lộn xộn"): chia lại cột cho chữ không gãy dòng – Số phiếu 6,9 → 22,5 (36,6 mm – đủ
+    /// "PR-APH-2611-0018" một dòng), Phòng ban 12,9 → 17, Tên vật tư 19,6 → 22, Mục đích 13,4 → 15; bớt ở Đơn giá, Thành tiền, Ngày cung ứng, SL (số
+    /// ngắn). Tổng 156 ký tự ≈ 257 mm ở tỉ lệ 85 % – vẫn vừa A4 ngang, không phải co chữ.
     /// </summary>
     public static readonly SheetLayoutSpec Sheet2B = new(
-        true, [11.3, 17.5, 14.5, 19.6, 6.7, 7.2, 11.0, 13.6, 11.6, 13.4, 8.6, 9.3], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        true, [11.3, 22.5, 17.0, 22.0, 6.7, 7.2, 11.0, 13.6, 11.6, 15.0, 8.6, 9.3], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         [23.25, 20.1, 20.1, 20.1, 20.1], Blue, 26.1, 24, 33, 33,
         new SheetPicture(0, 39, 9, 95, 90), new SheetPicture(10, 29, 16, 89, 84),
         new SheetSignStyle(Sign2Columns, [34, 28, 149], 1179, 248, 5, true, 15, 14), [4, 5, 6, 8],
