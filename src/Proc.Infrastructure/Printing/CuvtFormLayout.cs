@@ -48,8 +48,8 @@ public sealed record CuvtColumn(string Title, double WidthMm, bool AlignRight = 
 public sealed record CuvtSigner(string Title, string? Name, string? Detail, string? Position = null, SheetImage? Signature = null);
 
 /// <summary>
-/// Phần thêm của bản in có chữ ký (lát IN2 – design.md mục 20.4, dùng lại của IN1): logo công ty ở đầu phiếu, góc thông tin hệ thống dưới phải mọi
-/// trang thay dòng chân "Biểu mẫu … – Trang", dấu chìm khi phiếu chưa có hiệu lực.
+/// Phần thêm của bản in có chữ ký (lát IN2 – design.md mục 20.4, dùng lại của IN1): logo công ty ở đầu phiếu, thông tin hệ thống góc dưới trái
+/// trang cuối (nơi gọi vẽ – SheetPrintParts.StampLastPage) thay dòng chân "Biểu mẫu … – Trang", dấu chìm khi phiếu chưa có hiệu lực.
 /// </summary>
 /// <param name="Logo">Logo công ty của phiếu; null = không in.</param>
 /// <param name="Stamp">Góc thông tin hệ thống và dấu chìm.</param>
@@ -203,10 +203,9 @@ public static class CuvtFormLayout
         }
         else
         {
-            // Góc thông tin 4 dòng chữ 9 thay dòng chân cũ – lề dưới nới ra cho đủ chỗ như bản in đề nghị mua (IN1).
+            // Thông tin hệ thống 4 dòng chữ 9 ở góc dưới trái trang cuối (SheetPrintParts.StampLastPage – nơi gọi vẽ sau khi dựng) – lề dưới chừa chỗ.
             setup.BottomMargin = Unit.FromMillimeter(26);
             setup.FooterDistance = Unit.FromMillimeter(4);
-            SheetPrintParts.AddStamp(section, decor.Stamp, width);
         }
 
         AddTop(section, form, width, decor?.Logo);

@@ -36,11 +36,11 @@ public sealed record SheetSignBox(string Title, string Caption, string? Name, st
 /// <param name="Boxes">8 ô cố định theo thứ tự mẫu.</param>
 /// <param name="Extra">Ô của bước không có chỗ trên mẫu (chặng vượt dự toán / ngân sách, vai trò tự tạo) – in một hàng trước ô Chủ tịch.</param>
 /// <param name="Final">Ô Chủ tịch HĐQT/TGĐ.</param>
-/// <param name="ApprovalStatus">Tình trạng phê duyệt dạng chữ cho góc dưới phải ("Đã duyệt đủ 8/8 bước…").</param>
+/// <param name="ApprovalStatus">Tình trạng phê duyệt dạng chữ cho góc dưới trái trang cuối ("Đã duyệt đủ 8/8 bước…").</param>
 public sealed record SheetSignBlock(
     string Heading, IReadOnlyList<SheetSignBox> Boxes, IReadOnlyList<SheetSignBox> Extra, SheetSignBox Final, string ApprovalStatus);
 
-/// <summary>Thông tin hệ thống in góc dưới phải mọi trang, chữ 9 (người dùng yêu cầu 18/11/2026).</summary>
+/// <summary>Thông tin hệ thống in góc dưới trái trang cuối, chữ 9 (người dùng yêu cầu 18/11/2026, đổi vị trí 20/11/2026).</summary>
 /// <param name="Lines">Các dòng; "{PAGE}" / "{PAGES}" thay bằng số trang.</param>
 /// <param name="Watermark">Dấu chìm giữa trang ("BẢN NHÁP", "CHƯA DUYỆT", "ĐÃ HỦY"); null = phiếu đã duyệt.</param>
 public sealed record SheetStamp(IReadOnlyList<string> Lines, string? Watermark);

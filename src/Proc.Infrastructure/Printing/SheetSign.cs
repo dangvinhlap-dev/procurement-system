@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Proc.Application.Common;
 using Proc.Domain.Purchasing;
 
@@ -147,7 +147,7 @@ public static class SheetSign
     };
 
     /// <summary>
-    /// Tình trạng phê duyệt cho góc dưới phải: "Nháp – chưa gửi duyệt"; "Đang chờ duyệt – đã duyệt 3/8 bước, chờ Phòng TC-NQ-KT";
+    /// Tình trạng phê duyệt cho khung thông tin hệ thống (góc dưới trái trang cuối): "Nháp – chưa gửi duyệt"; "Đang chờ duyệt – đã duyệt 3/8 bước, chờ Phòng TC-NQ-KT";
     /// "Bị từ chối tại Phòng CUVT"; "Đã duyệt đủ 8/8 bước – 16:20 07/11/2026"; "Đã hủy".
     /// </summary>
     private static string StatusText(string status, bool draft, IReadOnlyList<SheetApprovalStep> ordered, Func<SheetApprovalStep, string> titleOf)

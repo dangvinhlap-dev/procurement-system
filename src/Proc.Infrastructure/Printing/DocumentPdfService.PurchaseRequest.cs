@@ -10,7 +10,7 @@ namespace Proc.Infrastructure.Printing;
 
 /// <summary>
 /// In đề nghị mua giữ nguyên sheet 1A (lát IN1 – design.md mục 20.4): chữ ký của người đã duyệt (phiên bản có hiệu lực lúc duyệt), logo công ty
-/// của phiếu, góc dưới phải ghi giờ in, người in, lần in, tình trạng phê duyệt; In / Tải PDF ghi nhật ký in, Xem thì không.
+/// của phiếu, góc dưới trái trang cuối ghi giờ in, người in, lần in, tình trạng phê duyệt; In / Tải PDF ghi nhật ký in, Xem thì không.
 /// Đề nghị loại B in 1B kèm trang 2B (người dùng yêu cầu 20/11/2026 – design.md mục 20.4 IN1-13).
 /// </summary>
 public sealed partial class DocumentPdfService
@@ -65,15 +65,16 @@ public sealed partial class DocumentPdfService
                 : "Chỉ đề nghị loại B (hàng hóa) mới in kèm mẫu 2B.");
         var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseRequest, pr.Id, pr.No, pr.Status, kind, sign.ApprovalStatus, cancellationToken);
         var sheet1 = only2B ? null : PurchaseRequestSheetLayout.Render(form, logo, sign, stamp);
-        if (form2 is null) return new PdfFile($"{pr.No}.pdf", sheet1!);
-        // "Người lập bảng" của 2B là người đề nghị (bảng dựng từ chính đề nghị); tình trạng phê duyệt góc dưới phải giữ theo cả chuỗi 1B.
+        if (form2 is null) return new PdfFile($"{pr.No}.pdf", SheetPrintParts.StampLastPage(sheet1!, stamp));
+        // "Người lập bảng" của 2B là người đề nghị (bảng dựng từ chính đề nghị); tình trạng phê duyệt góc dưới trái trang cuối giữ theo cả chuỗi 1B.
         var sign2 = SheetSign.Build(
             Sign2, pr.Status, firstName, data.SubmittedAt, data.FirstSignature, data.SubmittedByOther, SheetSign.OnlySlotsOf(Sign2, data.Steps))
             with { ApprovalStatus = sign.ApprovalStatus };
         var sheet2 = CuvtSheetLayout.Render(form2, CuvtSheetLayout.Sheet2B, logo, sign2, stamp);
+        // Thông tin hệ thống chỉ ở góc dưới trái trang cuối của cả file (vẽ sau khi nối 1B + 2B).
         return sheet1 is null
-            ? new PdfFile($"{pr.No}-2B.pdf", sheet2)
-            : new PdfFile($"{pr.No}.pdf", CuvtSheetLayout.Merge($"{form.Title} {form.No}", [sheet1, sheet2]));
+            ? new PdfFile($"{pr.No}-2B.pdf", SheetPrintParts.StampLastPage(sheet2, stamp))
+            : new PdfFile($"{pr.No}.pdf", SheetPrintParts.StampLastPage(CuvtSheetLayout.Merge($"{form.Title} {form.No}", [sheet1, sheet2]), stamp));
     }
 
     /// <summary>Đơn vị mua của dòng đề nghị đã chọn vào bảng tổng hợp chưa hủy (bảng lập sau cùng nếu có nhiều).</summary>

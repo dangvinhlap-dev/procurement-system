@@ -135,7 +135,7 @@ public sealed partial class DocumentPdfService
         var (logo, stamp) = await DecorAsync(DocumentTypes.RequestForQuotation, id, rfq.No, rfq.Status, kind, sign.ApprovalStatus, cancellationToken);
         var pages = forms.Select(f => new SheetPage(
             f, f.FormNo switch { "3A" => CuvtSheetLayout.Sheet3A, "3a" => CuvtSheetLayout.Sheet3a, _ => CuvtSheetLayout.Sheet3B }, sign, stamp)).ToList();
-        return new PdfFile($"{rfq.No}.pdf", CuvtSheetLayout.RenderMany(pages, logo));
+        return new PdfFile($"{rfq.No}.pdf", SheetPrintParts.StampLastPage(CuvtSheetLayout.RenderMany(pages, logo), stamp));
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public sealed partial class DocumentPdfService
             (false, true) => CuvtSheetLayout.Sheet5BTransfer,
             _ => CuvtSheetLayout.Sheet5BCash,
         };
-        return new PdfFile($"{payment.No}.pdf", CuvtSheetLayout.Render(form, spec, logo, sign, stamp));
+        return new PdfFile($"{payment.No}.pdf", SheetPrintParts.StampLastPage(CuvtSheetLayout.Render(form, spec, logo, sign, stamp), stamp));
     }
 
     /// <summary>Bảng kê chi phí tạp vụ 2C (mẫu giả lập) – khuôn chung kèm chữ ký người duyệt, logo, góc thông tin; <paramref name="kind"/> null = bản xem.</summary>
@@ -200,7 +200,7 @@ public sealed partial class DocumentPdfService
         var approval = SheetSign.Build(new SheetSignSpec(SheetSign.Heading, new("", "Người lập", ""), [], new("", "Cấp cao nhất", "")), status,
             data.FirstName, data.SubmittedAt, null, data.SubmittedByOther, data.Steps).ApprovalStatus;
         var (logo, stamp) = await DecorAsync(docType, id, form.No, status, kind, approval, cancellationToken);
-        return new PdfFile($"{form.No}.pdf", CuvtFormLayout.Render(form with { Signers = signers }, new CuvtDecor(logo, stamp)));
+        return new PdfFile($"{form.No}.pdf", SheetPrintParts.StampLastPage(CuvtFormLayout.Render(form with { Signers = signers }, new CuvtDecor(logo, stamp)), stamp));
     }
 
     /// <summary>Bảng tổng hợp đề xuất mua 2A/2B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>
@@ -215,7 +215,7 @@ public sealed partial class DocumentPdfService
         var sign = await SignBlockAsync(Sign2, DocumentTypes.PurchaseSummary, id, summary.Status, createdBy, summary.CreatedByName, cancellationToken);
         var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseSummary, id, summary.No, summary.Status, kind, sign.ApprovalStatus, cancellationToken);
         var spec = form.FormNo == "2A" ? CuvtSheetLayout.Sheet2A : CuvtSheetLayout.Sheet2B;
-        return new PdfFile($"{summary.No}.pdf", CuvtSheetLayout.Render(form, spec, logo, sign, stamp));
+        return new PdfFile($"{summary.No}.pdf", SheetPrintParts.StampLastPage(CuvtSheetLayout.Render(form, spec, logo, sign, stamp), stamp));
     }
 
     /// <summary>Bảng theo dõi mua hàng 4A/4B giữ nguyên sheet; <paramref name="kind"/> null = bản xem.</summary>
@@ -229,7 +229,7 @@ public sealed partial class DocumentPdfService
         var sign = await SignBlockAsync(Sign4, DocumentTypes.PurchaseOrder, id, status, po.CreatedBy, firstName, cancellationToken);
         var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseOrder, id, form.No, status, kind, sign.ApprovalStatus, cancellationToken);
         var spec = form.FormNo == "4A" ? CuvtSheetLayout.Sheet4A : CuvtSheetLayout.Sheet4B;
-        return new PdfFile($"{form.No}.pdf", CuvtSheetLayout.Render(form, spec, logo, sign, stamp));
+        return new PdfFile($"{form.No}.pdf", SheetPrintParts.StampLastPage(CuvtSheetLayout.Render(form, spec, logo, sign, stamp), stamp));
     }
 
     /// <summary>
