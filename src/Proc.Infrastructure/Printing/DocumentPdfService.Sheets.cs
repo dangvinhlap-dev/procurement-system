@@ -208,8 +208,10 @@ public sealed partial class DocumentPdfService
     {
         var summary = await _summaries.GetAsync(id, cancellationToken);
         var company = await CompanyAsync(cancellationToken);
+        // 2B: lũy kế lấy từ đề nghị như 1B (người dùng chốt 20/11/2026) – tháng của ngày lập đề nghị (đề nghị sớm nhất nếu bảng gom nhiều đề nghị).
+        var requestDate = summary.Lines.Select(l => l.RequestDate).OfType<DateOnly>().DefaultIfEmpty(summary.Date).Min();
         var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
-            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, summary.Date, cancellationToken)
+            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, requestDate, cancellationToken)
             : 0;
         var form = CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent);
         var createdBy = await _db.PurchaseSummaries.AsNoTracking().Where(s => s.Id == id).Select(s => s.CreatedBy).SingleAsync(cancellationToken);
