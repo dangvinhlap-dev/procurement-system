@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proc.Application.Documents;
 using Proc.Application.Printing;
+using Proc.Domain.Common;
 using Proc.Domain.Documents;
 using Proc.Domain.Purchasing;
 using Proc.Infrastructure.Purchasing;
@@ -18,11 +19,12 @@ public sealed partial class DocumentPdfService
     private static readonly CuvtPrintForms.SummaryUnit DefaultUnit = new(Guid.Empty, "CUVT", "Phòng CUVT");
 
     /// <inheritdoc />
-    public Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken) => RenderPurchaseRequestAsync(id, null, cancellationToken);
+    public Task<PdfFile> PurchaseRequestAsync(Guid id, string? form, CancellationToken cancellationToken) =>
+        RenderPurchaseRequestAsync(id, form, null, cancellationToken);
 
     /// <inheritdoc />
-    public Task<PdfFile> PurchaseRequestPrintAsync(Guid id, PrintKind kind, CancellationToken cancellationToken) =>
-        RenderPurchaseRequestAsync(id, kind, cancellationToken);
+    public Task<PdfFile> PurchaseRequestPrintAsync(Guid id, PrintKind kind, string? form, CancellationToken cancellationToken) =>
+        RenderPurchaseRequestAsync(id, form, kind, cancellationToken);
 
     /// <inheritdoc />
     public Task<IReadOnlyList<DocumentPrintDto>> PurchaseRequestPrintsAsync(Guid id, CancellationToken cancellationToken) =>
@@ -31,9 +33,10 @@ public sealed partial class DocumentPdfService
     /// <summary>
     /// Dựng bản in; <paramref name="kind"/> null = bản xem (không ghi nhật ký in). Loại B (1B): trang 1 là 1B khổ dọc, trang sau là 2B khổ ngang
     /// dựng từ chính đề nghị – một lần in, một lần ghi nhật ký, chữ ký 2B lấy từ chuỗi duyệt của đề nghị (TP CUVT, GĐ khối, Phó CT, Chủ tịch đều nằm
-    /// trong chuỗi 1B) nên không phải lập và duyệt bảng tổng hợp riêng mới in được 2B.
+    /// trong chuỗi 1B) nên không phải lập và duyệt bảng tổng hợp riêng mới in được 2B. <paramref name="wanted"/> "2B" chỉ trang 2B, "1A"/"1B" chỉ
+    /// trang đề nghị (người dùng chọn một trong hai mẫu ở "Xem đề nghị"), null cả hai.
     /// </summary>
-    private async Task<PdfFile> RenderPurchaseRequestAsync(Guid id, PrintKind? kind, CancellationToken cancellationToken)
+    private async Task<PdfFile> RenderPurchaseRequestAsync(Guid id, string? wanted, PrintKind? kind, CancellationToken cancellationToken)
     {
         var pr = await _requests.GetAsync(id, cancellationToken);
         var itemIds = pr.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -50,19 +53,27 @@ public sealed partial class DocumentPdfService
         var firstName = data.FirstName ?? pr.RequesterName ?? pr.CreatedByName;
         var sign = SheetSign.Build(
             PurchaseRequestSheet.Spec, pr.Status, firstName, data.SubmittedAt, data.FirstSignature, data.SubmittedByOther, data.Steps);
+        var only2B = string.Equals(wanted, "2B", StringComparison.OrdinalIgnoreCase);
+        var form2 = pr.Category == nameof(PurchaseCategory.Goods) && (wanted is null || only2B)
+            ? CuvtPrintForms.PurchaseRequestSummary(
+                pr, company.Name, monthSpent, await SummaryUnitsAsync(pr, cancellationToken), await DefaultSummaryUnitAsync(cancellationToken))
+            : null;
+        // Kiểm trước khi ghi nhật ký in: chọn 2B mà phiếu không có trang 2B thì báo, không tính một lần in.
+        if (only2B && form2 is null)
+            throw new BusinessRuleException(pr.Category == nameof(PurchaseCategory.Goods)
+                ? "Đề nghị không còn dòng cần mua – không có trang 2B."
+                : "Chỉ đề nghị loại B (hàng hóa) mới in kèm mẫu 2B.");
         var (logo, stamp) = await DecorAsync(DocumentTypes.PurchaseRequest, pr.Id, pr.No, pr.Status, kind, sign.ApprovalStatus, cancellationToken);
-        var sheet1 = PurchaseRequestSheetLayout.Render(form, logo, sign, stamp);
-        if (pr.Category != nameof(PurchaseCategory.Goods)) return new PdfFile($"{pr.No}.pdf", sheet1);
-
-        var form2 = CuvtPrintForms.PurchaseRequestSummary(
-            pr, company.Name, monthSpent, await SummaryUnitsAsync(pr, cancellationToken), await DefaultSummaryUnitAsync(cancellationToken));
-        if (form2 is null) return new PdfFile($"{pr.No}.pdf", sheet1);
+        var sheet1 = only2B ? null : PurchaseRequestSheetLayout.Render(form, logo, sign, stamp);
+        if (form2 is null) return new PdfFile($"{pr.No}.pdf", sheet1!);
         // "Người lập bảng" của 2B là người đề nghị (bảng dựng từ chính đề nghị); tình trạng phê duyệt góc dưới phải giữ theo cả chuỗi 1B.
         var sign2 = SheetSign.Build(
             Sign2, pr.Status, firstName, data.SubmittedAt, data.FirstSignature, data.SubmittedByOther, SheetSign.OnlySlotsOf(Sign2, data.Steps))
             with { ApprovalStatus = sign.ApprovalStatus };
         var sheet2 = CuvtSheetLayout.Render(form2, CuvtSheetLayout.Sheet2B, logo, sign2, stamp);
-        return new PdfFile($"{pr.No}.pdf", CuvtSheetLayout.Merge($"{form.Title} {form.No}", [sheet1, sheet2]));
+        return sheet1 is null
+            ? new PdfFile($"{pr.No}-2B.pdf", sheet2)
+            : new PdfFile($"{pr.No}.pdf", CuvtSheetLayout.Merge($"{form.Title} {form.No}", [sheet1, sheet2]));
     }
 
     /// <summary>Đơn vị mua của dòng đề nghị đã chọn vào bảng tổng hợp chưa hủy (bảng lập sau cùng nếu có nhiều).</summary>

@@ -23,7 +23,8 @@ public static class PrintingEndpoints
                 async (Guid id, string? form, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseOrderAsync(id, form, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PoView);
-        app.MapGet("/api/purchase-requests/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseRequestAsync(id, ct)))
+        app.MapGet("/api/purchase-requests/{id:guid}/pdf", async (Guid id, string? form, IDocumentPdfService s, CancellationToken ct) =>
+            Pdf(await s.PurchaseRequestAsync(id, form, ct)))
             .WithTags("In phiếu")
             .RequirePermission(Permissions.Purchase.PrView);
         app.MapGet("/api/purchase-summaries/{id:guid}/pdf", async (Guid id, IDocumentPdfService s, CancellationToken ct) => Pdf(await s.PurchaseSummaryAsync(id, ct)))

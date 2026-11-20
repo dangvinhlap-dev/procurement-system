@@ -50,7 +50,7 @@ test('Chữ ký của tôi: tải ảnh chụp → tách nền, lưu phiên bả
   await page.screenshot({ path: 'e2e/screenshots/signature-mine.png' })
 })
 
-test('Đề nghị mua: Xem đề nghị – trang in mẫu 1B, Tải PDF tính một lần in', async ({ page, request }) => {
+test('Đề nghị mua: Xem đề nghị – chọn mẫu 1B hoặc 2B, Tải PDF tính một lần in', async ({ page, request }) => {
   test.setTimeout(90_000)
   const head = await api(request)
   const bha = await api(request, 'BHA')
@@ -83,10 +83,12 @@ test('Đề nghị mua: Xem đề nghị – trang in mẫu 1B, Tải PDF tính 
   await expect(page.locator('.ant-message')).toContainText(/Đã lưu phiếu PR-BHA-\d{4}-\d{4}\./)
 
   // Xem đề nghị: hộp thoại xem trang in (không ghi lần in).
-  const view = page.waitForResponse((r) => r.url().endsWith('/pdf'))
+  // Loại B: hai mẫu 1B và 2B, mặc định 1B (người dùng yêu cầu 20/11/2026 – chọn một trong hai để in).
+  const view = page.waitForResponse((r) => r.url().endsWith('/pdf?form=1B'))
   await page.getByRole('button', { name: 'Xem đề nghị' }).click()
   expect((await view).headers()['content-type']).toContain('application/pdf')
-  const dialog = page.getByRole('dialog', { name: /Xem đề nghị mua PR-BHA-\d{4}-\d{4} – mẫu 1B/ })
+  const dialog = page.getByRole('dialog', { name: /Xem đề nghị mua PR-BHA-\d{4}-\d{4} – mẫu 1B, 2B/ })
+  await expect(dialog.getByRole('radio', { name: '1B' })).toBeChecked()
   await expect(page.getByTestId('print-preview-frame')).toBeVisible()
   await expect(page.getByTestId('print-count')).toHaveText('Chưa in lần nào')
   await page.screenshot({ path: 'e2e/screenshots/pr-print-preview.png' })
@@ -96,6 +98,16 @@ test('Đề nghị mua: Xem đề nghị – trang in mẫu 1B, Tải PDF tính 
   await dialog.getByRole('button', { name: 'Tải PDF' }).click()
   expect((await download).suggestedFilename()).toMatch(/^PR-BHA-\d{4}-\d{4}\.pdf$/)
   await expect(page.getByTestId('print-count')).toContainText('Đã in 1 lần')
+
+  // Chọn 2B: bản xem chỉ trang bảng tổng hợp; Tải PDF ra file riêng "-2B", cũng tính một lần in.
+  const view2 = page.waitForResponse((r) => r.url().endsWith('/pdf?form=2B'))
+  await dialog.getByText('2B', { exact: true }).click()
+  expect((await view2).ok()).toBe(true)
+  await page.screenshot({ path: 'e2e/screenshots/pr-print-preview-2b.png' })
+  const download2 = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Tải PDF' }).click()
+  expect((await download2).suggestedFilename()).toMatch(/^PR-BHA-\d{4}-\d{4}-2B\.pdf$/)
+  await expect(page.getByTestId('print-count')).toContainText('Đã in 2 lần')
   await dialog.getByRole('button', { name: 'Đóng', exact: true }).click()
   await expect(dialog).toHaveCount(0)
 })

@@ -25,7 +25,6 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
     private readonly ICurrentUserScope _scope;
     private readonly IDocumentNumberService _numbers;
     private readonly ApprovalEngine _approvals;
-    private readonly BudgetUsage _budgets;
 
     /// <summary>Tạo dịch vụ.</summary>
     /// <param name="db">DbContext.</param>
@@ -38,7 +37,6 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
         _scope = scope;
         _numbers = numbers;
         _approvals = new ApprovalEngine(db, scope, clock);
-        _budgets = new BudgetUsage(db);
     }
 
     /// <inheritdoc />
@@ -449,8 +447,9 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
     /// <summary>
     /// Khung chi phí đầu phiếu (biểu mẫu 2A/2B). 2A: còn lại = dự toán − lũy kế PO đã duyệt − tổng đề xuất (chỉ trừ tổng đề xuất khi bảng còn nháp
     /// / chờ duyệt – đã duyệt thì PO lập từ bảng đã vào lũy kế, như đề nghị loại A). Ví dụ dự toán 1.000.000.000, lũy kế 700.000.000, đề xuất
-    /// 350.000.000 → còn lại −50.000.000, vượt. 2B: ngân sách bộ phận tháng của ngày lập, lũy kế đã dùng (đã gồm các đề nghị của bảng), còn lại =
-    /// ngân sách − lũy kế.
+    /// 350.000.000 → còn lại −50.000.000, vượt. 2B: ngân sách bộ phận tháng của ngày lập; lũy kế lấy đúng số của 1B (người dùng chốt 20/11/2026 –
+    /// "chỉ đổi con số cho đúng với 1B", design.md 20.4 IN1-13): PO đã duyệt trong tháng lập đề nghị (đề nghị sớm nhất nếu bảng gom nhiều đề nghị),
+    /// chưa VAT; còn lại = ngân sách − lũy kế.
     /// </summary>
     private async Task<PurchaseSummaryFrameDto> FrameAsync(PurchaseSummary summary, CancellationToken cancellationToken)
     {
@@ -465,14 +464,17 @@ public sealed class PurchaseSummaryService : IPurchaseSummaryService
             return new PurchaseSummaryFrameDto(estimate, spent, summary.TotalAmount, remaining, remaining < 0, project?.Code, project?.Name, null);
         }
 
+        var requestIds = summary.Lines.Select(l => l.RequestId).Distinct().ToList();
+        var requestDate = requestIds.Count == 0
+            ? summary.Date
+            : await _db.PurchaseRequests.AsNoTracking().Where(r => requestIds.Contains(r.Id)).MinAsync(r => r.Date, cancellationToken);
         var month = new DateOnly(summary.Date.Year, summary.Date.Month, 1);
         var budget = await _db.DepartmentBudgets.AsNoTracking()
             .Where(b => b.DepartmentId == summary.DepartmentId && b.Year == month.Year && b.Month == month.Month)
             .Select(b => (decimal?)b.Amount).SingleOrDefaultAsync(cancellationToken);
-        var used = (await _budgets.UsedAsync(month.Year, summary.DepartmentId, null, null, cancellationToken))
-            .GetValueOrDefault((summary.DepartmentId, month.Month));
-        var left = budget - used;
-        return new PurchaseSummaryFrameDto(budget, used, summary.TotalAmount, left, left < 0, null, null, month);
+        var purchased = await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, requestDate, cancellationToken);
+        var left = budget - purchased;
+        return new PurchaseSummaryFrameDto(budget, purchased, summary.TotalAmount, left, left < 0, null, null, month);
     }
 
     /// <summary>Dựng DTO chi tiết.</summary>

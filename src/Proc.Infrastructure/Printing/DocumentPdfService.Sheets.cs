@@ -73,7 +73,7 @@ public sealed partial class DocumentPdfService
     /// <inheritdoc />
     public Task<PdfFile> DocumentPrintAsync(string docType, Guid id, PrintKind kind, string? form, CancellationToken cancellationToken) => docType switch
     {
-        DocumentTypes.PurchaseRequest => RenderPurchaseRequestAsync(id, kind, cancellationToken),
+        DocumentTypes.PurchaseRequest => RenderPurchaseRequestAsync(id, form, kind, cancellationToken),
         DocumentTypes.PurchaseOrder => RenderPurchaseOrderSheetAsync(id, kind, cancellationToken),
         DocumentTypes.PurchaseSummary => RenderSummarySheetAsync(id, kind, cancellationToken),
         DocumentTypes.RequestForQuotation => RenderRfqSheetAsync(id, form, kind, cancellationToken),
@@ -208,11 +208,8 @@ public sealed partial class DocumentPdfService
     {
         var summary = await _summaries.GetAsync(id, cancellationToken);
         var company = await CompanyAsync(cancellationToken);
-        // 2B: lũy kế lấy từ đề nghị như 1B (người dùng chốt 20/11/2026) – tháng của ngày lập đề nghị (đề nghị sớm nhất nếu bảng gom nhiều đề nghị).
-        var requestDate = summary.Lines.Select(l => l.RequestDate).OfType<DateOnly>().DefaultIfEmpty(summary.Date).Min();
-        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods)
-            ? await DepartmentSpending.MonthAsync(_db, summary.DepartmentId, requestDate, cancellationToken)
-            : 0;
+        // 2B: lũy kế lấy từ đề nghị như 1B (người dùng chốt 20/11/2026) – cùng số khung đầu phiếu trên màn hình (PurchaseSummaryService.FrameAsync).
+        var monthSpent = summary.Form == nameof(PurchaseSummaryForm.Goods) ? summary.Frame.AccumulatedAmount : 0;
         var form = CuvtPrintForms.PurchaseSummary(summary, company.Name, monthSpent);
         var createdBy = await _db.PurchaseSummaries.AsNoTracking().Where(s => s.Id == id).Select(s => s.CreatedBy).SingleAsync(cancellationToken);
         var sign = await SignBlockAsync(Sign2, DocumentTypes.PurchaseSummary, id, summary.Status, createdBy, summary.CreatedByName, cancellationToken);

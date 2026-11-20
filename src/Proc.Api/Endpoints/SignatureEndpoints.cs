@@ -61,9 +61,10 @@ public static class SignatureEndpoints
             .RequirePermission(Permissions.System.CompanyManage);
 
         // In / Tải PDF đề nghị mua: POST vì ghi nhật ký in (lần in thứ n); xem trước dùng GET /pdf sẵn có (không ghi).
-        app.MapPost("/api/purchase-requests/{id:guid}/print", async (Guid id, string? kind, IDocumentPdfService s, CancellationToken ct) =>
+        // form=1B / 2B: in riêng một mẫu (người dùng chọn trong "Xem đề nghị" – design.md 20.4 IN1-13).
+        app.MapPost("/api/purchase-requests/{id:guid}/print", async (Guid id, string? kind, string? form, IDocumentPdfService s, CancellationToken ct) =>
             {
-                var file = await s.PurchaseRequestPrintAsync(id, kind == "download" ? PrintKind.Download : PrintKind.Print, ct);
+                var file = await s.PurchaseRequestPrintAsync(id, kind == "download" ? PrintKind.Download : PrintKind.Print, form, ct);
                 return Results.File(file.Content, "application/pdf", file.FileName);
             })
             .WithTags("In phiếu")

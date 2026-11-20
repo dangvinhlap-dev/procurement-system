@@ -995,6 +995,39 @@ body.erp-col-resizing {
   margin-left: auto;
   color: var(--erp-text-muted);
 }
+/* Chọn mẫu in (đề nghị loại B: 1B / 2B – design.md 20.4 IN1-13): ô vuông như tab, mẫu đang chọn nền tab đậm chữ trắng; vạch dọc ngăn nhóm nút. */
+.erp-print-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--erp-grid-line);
+}
+.erp-print-form .ant-radio-button-wrapper {
+  height: 22px;
+  line-height: 20px;
+  padding: 0 8px;
+  border-radius: 0;
+  border: 1px solid var(--erp-grid-line);
+  background: var(--erp-tab-bg);
+  color: var(--erp-text);
+}
+.erp-print-form .ant-radio-button-wrapper + .ant-radio-button-wrapper {
+  margin-left: 2px;
+}
+.erp-print-form .ant-radio-button-wrapper::before {
+  display: none;
+}
+.erp-print-form .ant-radio-button-wrapper.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled),
+.erp-print-form .ant-radio-button-wrapper.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+  background: var(--erp-tab-active);
+  border-color: var(--erp-tab-active);
+  color: var(--erp-paper);
+  font-weight: 700;
+  box-shadow: none;
+  outline: none;
+}
 .erp-print-preview-viewer {
   background: var(--erp-print-viewer-bg);
   border: 1px solid var(--erp-grid-line);

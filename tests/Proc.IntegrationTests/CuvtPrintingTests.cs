@@ -126,9 +126,23 @@ public partial class PurchasingTests
         var steps = new[] { Step(1, "TRUONGPHONGBAN"), Step(2, "TPCUVT"), Step(3, "TPTCKT"), Step(4, "TPHC"), Step(5, "PHOCTUBCL"), Step(6, "CHUTICH") };
         Assert.Equal(["TPCUVT", "PHOCTUBCL", "CHUTICH"], SheetSign.OnlySlotsOf(DocumentPdfService.Sign2, steps).Select(s => s.RoleCode));
 
-        // Dịch vụ vẫn một trang 1B.
+        // Chọn một trong hai mẫu ở "Xem đề nghị" (người dùng yêu cầu 20/11/2026): form=1B chỉ trang 1B, form=2B chỉ trang 2B (file "-2B").
+        var only1B = await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf?form=1B", Ct));
+        Assert.Equal(1, only1B.PageCount);
+        Assert.True(only1B.Pages[0].Height.Point > only1B.Pages[0].Width.Point, "Chỉ trang 1B khổ dọc.");
+        var only2BResponse = await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/print?kind=download&form=2B", null, Ct);
+        Assert.Equal($"{pr.No}-2B.pdf", only2BResponse.Content.Headers.ContentDisposition?.FileNameStar ?? only2BResponse.Content.Headers.ContentDisposition?.FileName);
+        var only2B = await PdfOfAsync(only2BResponse);
+        Assert.True(only2B.Pages[0].Width.Point > only2B.Pages[0].Height.Point, "Chỉ trang 2B khổ ngang.");
+        Assert.Equal($"BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA {pr.No}", only2B.Info.Title);
+
+        // Dịch vụ vẫn một trang 1B; chọn 2B thì báo rõ, không tính lần in.
         var prS = await ReadAsync<PurchaseRequestDto>(await CreatePrOfAsync(f, "Service", null, 2));
         Assert.Equal(1, (await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{prS.Id}/pdf", Ct))).PageCount);
+        var no2B = await f.Buyer.PostAsync($"/api/purchase-requests/{prS.Id}/print?form=2B", null, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, no2B.StatusCode);
+        Assert.Contains("Chỉ đề nghị loại B", await no2B.Content.ReadAsStringAsync(Ct));
+        Assert.Empty(await ReadAsync<List<Proc.Application.Documents.DocumentPrintDto>>(await f.Buyer.GetAsync($"/api/purchase-requests/{prS.Id}/prints", Ct)));
     }
 
     [Fact]
@@ -166,7 +180,10 @@ public partial class PurchasingTests
             where l.RequestId == pr.Id
             select l.SummaryId).FirstAsync(Ct);
         var summary = await ReadAsync<PurchaseSummaryDto>(await f.Buyer.GetAsync($"/api/purchase-summaries/{summaryId}", Ct));
-        var form2B = CuvtPrintForms.PurchaseSummary(summary, "Công ty thử", 760_000m);
+        // Màn hình BTH (khung đầu phiếu) cũng ra đúng số của 1B – bản in dùng chung số này.
+        Assert.Equal(760_000m, summary.Frame.AccumulatedAmount);
+        Assert.Equal(summary.Frame.LimitAmount - 760_000m, summary.Frame.RemainingAmount);
+        var form2B = CuvtPrintForms.PurchaseSummary(summary, "Công ty thử", summary.Frame.AccumulatedAmount);
         Assert.Equal("2B", form2B.FormNo);
         Assert.Equal("760.000 đ", form2B.Info.Single(i => i.Label == "Lũy kế số tiền đã mua").Value);
         await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-summaries/{summaryId}/pdf", Ct));
