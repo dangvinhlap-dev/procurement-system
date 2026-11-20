@@ -1040,6 +1040,13 @@ thuộc KKT (trưởng phòng `truongphong` / `tpcuvt` / `tphc`); 9 tài khoản
 BMI, TCT, CUV cùng vai trò, bộ phận; mỗi công ty có khối KKT (GĐ khối `gdkhoi`), trưởng phòng KTH / VT / HC như APH (CUV không có bộ phận HC).
 Chạy thử kịch bản chuỗi duyệt 1B (tài liệu Claude Docs "Kịch bản test chuỗi duyệt đề nghị mua 1B – bản 0.45.0") qua API + Playwright ở APH:
 12/12 đạt (PR-APH-2611-0009 … 0015). Lưu ý: bản 5007 hiện dải "DEV" (chưa khai `App:Environment` = TEST); admin/admin01 có ADMIN nên hiện ở cấp Thủ kho.
+Kịch bản tiếp PR → BTH 2B → PO 4B → nhận hàng XNH (20/11/2026, tài liệu Claude Docs "Kịch bản test tạo PO từ PR và nhận hàng – bản 0.45.0"):
+thêm tài khoản `nvcuvt` (NVCUVT, bộ phận VT – lập BTH, PO) và `gdtckt` (GDTCKT – PO cấp 3) ở APH, BMI, TCT, CUV; tạo đơn vị mua CUVT ở 4 công
+ty (danh mục đang trống, BTH bắt buộc); chặng **POL** (mua ngoài danh sách/giá – mọi PO trên 5007 đều rơi vào vì chưa có phiếu duyệt giá tháng)
+cấp 1 = PHOCTUBCL và thêm quyền `Purchase.PO.Approve`, `Purchase.PO.View` cho vai trò PHOCTUBCL – vì 4 vai trò có quyền duyệt PO đều ở chuỗi 4B,
+một người không duyệt hai cấp trong một lượt, không khai thì chỉ admin duyệt được. Phát hiện: PO chỉ lấy được dòng PR đã qua BTH đã duyệt (lát
+Y5c) nên kịch bản có bước BTH; XNH không có chuỗi duyệt (thủ kho xác nhận, đủ SL thì PO Đã nhận đủ). Chạy thử qua API 12/12 đạt: PR-APH-2611-0017
+→ BTH-APH-2611-0002 → PO-APH-2611-0005 → XNH-APH-2611-0001, 0002; từ chối / gửi lại PO-APH-2611-0006 (đã hủy, nguồn PR-0018, BTH-0003).
 Bản thử cổng 5007 **đã nâng 0.44.0 → 0.45.0 (19/11/2026, cài tay bằng `D:\project\nang-5007-0.45.0.ps1`)** – người dùng "phát hành bản mới nhất
 cho tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.45.0.dump`, **chạy script `db\scripts\0.45.0.sql`** (119
 migration, cuối `V0_45_0_GopBuocTruongPhong`), `app` = 0.45.0, `app-0.44.0` = bản cũ, gói `goi\0.45.0`; `/health` Healthy 0.45.0 (cả qua
