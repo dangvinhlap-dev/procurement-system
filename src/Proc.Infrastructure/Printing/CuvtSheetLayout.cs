@@ -276,9 +276,19 @@ public static class CuvtSheetLayout
     {
         if (pages.Count == 0) throw new ArgumentException("Cần ít nhất một phiếu.", nameof(pages));
         var parts = pages.Select(p => RenderOne(p, logo)).ToList();
-        if (parts.Count == 1) return parts[0];
+        return parts.Count == 1 ? parts[0] : Merge($"{pages[0].Form.Title} {pages[0].Form.No}", parts);
+    }
+
+    /// <summary>
+    /// Nối nhiều file PDF đã dựng thành một (giữ khổ dọc / ngang của từng trang; số trang đếm trong từng phiếu) – 3a/3B nhiều NCC, đề nghị 1B kèm 2B.
+    /// </summary>
+    /// <param name="title">Tiêu đề tài liệu.</param>
+    /// <param name="parts">Các file PDF theo thứ tự in.</param>
+    /// <returns>Nội dung PDF.</returns>
+    public static byte[] Merge(string title, IReadOnlyList<byte[]> parts)
+    {
         var output = new PdfDocument();
-        output.Info.Title = $"{pages[0].Form.Title} {pages[0].Form.No}";
+        output.Info.Title = title;
         foreach (var part in parts)
         {
             var source = PdfReader.Open(new MemoryStream(part), PdfDocumentOpenMode.Import);

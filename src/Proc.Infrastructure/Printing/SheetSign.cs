@@ -89,6 +89,23 @@ public static class SheetSign
     }
 
     /// <summary>Ô của một bước: đã duyệt → chữ ký + họ tên + giờ; từ chối → họ tên + giờ (không chữ ký); chưa duyệt → trống.</summary>
+    /// <summary>
+    /// Chỉ giữ các bước có ô trên khối ký <paramref name="spec"/> – dùng khi in trang 2B kèm đề nghị 1B (người dùng yêu cầu 20/11/2026): chuỗi 1B
+    /// đã gồm TP CUVT, GĐ khối, Phó CT UBCL&amp;PT, Chủ tịch (ô của 2B); Thủ kho, Trưởng phòng ban, TC-NQ-KT, HC đã ký ở trang 1B nên không in
+    /// thành ô phát sinh trên 2B. Bước chặng vượt (ngân sách, dự toán, ngoài danh sách) và cấp cao nhất vẫn giữ.
+    /// </summary>
+    /// <param name="spec">Khối ký của sheet đích.</param>
+    /// <param name="steps">Bước duyệt của phiếu.</param>
+    /// <returns>Bước được in trên khối ký đó.</returns>
+    public static IReadOnlyList<SheetApprovalStep> OnlySlotsOf(SheetSignSpec spec, IReadOnlyList<SheetApprovalStep> steps)
+    {
+        var ordered = steps.OrderBy(s => s.Stage).ThenBy(s => s.Level).ToList();
+        var top = ordered.Where(s => s.Stage == ApprovalTypes.TopLevelStage).LastOrDefault()
+                  ?? ordered.Where(s => s.Stage == 1).LastOrDefault();
+        var keys = spec.Slots.Select(s => s.Key).Append(ChairmanKey).ToHashSet(StringComparer.Ordinal);
+        return ordered.Where(s => s.Stage is not (1 or ApprovalTypes.TopLevelStage) || s == top || SlotOf(s) is { } k && keys.Contains(k)).ToList();
+    }
+
     private static SheetSignBox Box(string title, string caption, SheetApprovalStep step, bool draft, bool upper = false) => step.Status switch
     {
         _ when draft => new SheetSignBox(title, caption, null, null, null),

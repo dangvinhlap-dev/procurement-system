@@ -120,26 +120,9 @@ public static partial class CuvtPrintForms
     public static CuvtForm PurchaseSummary(PurchaseSummaryDto summary, string companyName, decimal monthSpent = 0)
     {
         var is2A = summary.Form == nameof(PurchaseSummaryForm.Construction);
-        var units = summary.Lines.GroupBy(l => l.PurchasingUnitId)
-            .Select(g => (Id: g.Key, g.First().PurchasingUnitName, g.First().PurchasingUnitCode)).OrderBy(u => u.PurchasingUnitCode).ToList();
-        // Độ rộng, căn lề in theo số đo sheet 2A/2B (CuvtSheetLayout.Sheet2A/Sheet2B – lát IN2); cột "Đơn vị mua" mỗi đơn vị một cột.
-        const string content = "Nội dung đề xuất";
-        var columns = new List<CuvtColumn>
-        {
-            new("Ngày đề xuất", 20, Center: true), new("Số phiếu", 34, Center: true), new("Phòng ban đề xuất", 24, Center: true),
-            new("Tên vật tư", 40, Group: content), new("ĐVT", 13, Group: content), new("Số lượng", 17, Group: content),
-            new("Đơn giá", 20, true, content), new("Thành tiền", 25, true, content), new("Ngày cung ứng", 22, Group: content),
-            new("Mục đích sử dụng", 30, Group: content, Center: true),
-        };
-        columns.AddRange(units.Select(u => new CuvtColumn(u.PurchasingUnitName, 14, Group: "Đơn vị mua", Center: true)));
-
-        var rows = summary.Lines.OrderBy(l => l.LineNo).Select(l => new[]
-            {
-                Date(l.RequestDate) ?? "", l.RequestNo, summary.DepartmentName ?? "", l.ItemName, l.UomCode, Qty(l.Qty), Price(l.EstPrice),
-                Money(l.Amount), Date(l.NeededDate) ?? "", l.RequestPurpose ?? "",
-            }.Concat(units.Select(u => u.Id == l.PurchasingUnitId ? "x" : "")).ToArray())
-            .ToList();
-
+        var lines = summary.Lines.Select(l => new SummaryRow(
+            l.LineNo, l.RequestDate, l.RequestNo, l.ItemName, l.UomCode, l.Qty, l.EstPrice, l.Amount, l.NeededDate, l.RequestPurpose,
+            new SummaryUnit(l.PurchasingUnitId, l.PurchasingUnitCode, l.PurchasingUnitName))).ToList();
         var frame = summary.Frame;
         List<CuvtInfoLine> info = is2A
             ?
@@ -150,26 +133,92 @@ public static partial class CuvtPrintForms
                 new("Lũy kế số tiền đã mua", Vnd(frame.AccumulatedAmount + frame.ProposedAmount), true),
                 new("Tổng tiền đề xuất", Vnd(frame.ProposedAmount), true),
             ]
-            :
-            [
-                new("Phòng ban đề xuất", summary.DepartmentName ?? ""),
-                new("Định mức/dự trù chi phí", frame.LimitAmount is { } limit ? Vnd(limit) : "Chưa khai báo", frame.LimitAmount is not null),
-                new("Lũy kế số tiền đã mua", Vnd(monthSpent + frame.ProposedAmount), true),
-                new("Tổng tiền đề xuất", Vnd(frame.ProposedAmount), true),
-            ];
+            : Info2B(summary.DepartmentName, frame.LimitAmount, monthSpent, frame.ProposedAmount);
+        return Summary(
+            is2A, companyName, summary.No, summary.Date, summary.Status, summary.DepartmentName, lines, summary.TotalAmount, info, summary.Note,
+            Signers("Người lập", summary.CreatedByName, summary.Approvals));
+    }
+
+    /// <summary>Đơn vị mua của một dòng – mỗi đơn vị một cột "Đơn vị mua" trên 2A/2B.</summary>
+    /// <param name="Id">Đơn vị mua.</param>
+    /// <param name="Code">Mã (thứ tự cột).</param>
+    /// <param name="Name">Tên in ở tiêu đề cột.</param>
+    public sealed record SummaryUnit(Guid Id, string Code, string Name);
+
+    /// <summary>Một dòng của bảng tổng hợp 2A/2B (từ dòng bảng tổng hợp, hoặc từ dòng đề nghị khi in 2B kèm 1B).</summary>
+    private sealed record SummaryRow(
+        int LineNo, DateOnly? RequestDate, string RequestNo, string ItemName, string UomCode, decimal Qty, decimal EstPrice, decimal Amount,
+        DateOnly? NeededDate, string? Purpose, SummaryUnit Unit);
+
+    /// <summary>
+    /// Trang 2B in kèm đề nghị mua 1B (người dùng yêu cầu 20/11/2026 – sheet 1B.DN VT-CT và 2B.TH MUA VT "in ra 1 lần", không tạo và duyệt hai
+    /// lần): bảng tổng hợp dựng từ chính đề nghị – các dòng còn cần mua (cần mua &gt; 0), số phiếu / ngày lập / trạng thái của đề nghị; đơn vị mua lấy
+    /// từ bảng tổng hợp đã chọn dòng đó (nếu có), không thì đơn vị mặc định.
+    /// </summary>
+    /// <param name="pr">Đề nghị mua loại B đã đọc theo phạm vi.</param>
+    /// <param name="companyName">Tên công ty in đầu phiếu.</param>
+    /// <param name="monthSpent">Lũy kế PO đã duyệt trong tháng của bộ phận, chưa VAT (cùng cách tính 1B / 2B).</param>
+    /// <param name="unitByLine">Đơn vị mua theo dòng đề nghị (dòng đã ở bảng tổng hợp chưa hủy).</param>
+    /// <param name="fallbackUnit">Đơn vị mua cho dòng chưa ở bảng tổng hợp nào.</param>
+    /// <returns>Nội dung in mẫu 2B; null khi không còn dòng cần mua.</returns>
+    public static CuvtForm? PurchaseRequestSummary(
+        PurchaseRequestDto pr, string companyName, decimal monthSpent, IReadOnlyDictionary<Guid, SummaryUnit> unitByLine, SummaryUnit fallbackUnit)
+    {
+        var lines = pr.Lines.Where(l => l.Qty > 0).OrderBy(l => l.LineNo).Select(l => new SummaryRow(
+            l.LineNo, pr.Date, pr.No, l.ItemName, l.UomCode, l.Qty, l.EstPrice, l.Amount, l.NeededDate ?? pr.NeededDate, pr.Purpose,
+            unitByLine.GetValueOrDefault(l.Id) ?? fallbackUnit)).ToList();
+        if (lines.Count == 0) return null;
+        var proposed = lines.Sum(l => l.Amount);
+        return Summary(
+            false, companyName, pr.No, pr.Date, pr.Status, pr.Department, lines, proposed,
+            Info2B(pr.Department, pr.Budget?.BudgetAmount, monthSpent, proposed), pr.Note,
+            Signers("Người lập", pr.RequesterName ?? pr.CreatedByName, pr.Approvals));
+    }
+
+    /// <summary>Khung thông tin 2B: phòng ban, định mức/dự trù (ngân sách tháng), lũy kế = đã mua trong tháng + tổng đề xuất, tổng đề xuất.</summary>
+    private static List<CuvtInfoLine> Info2B(string? department, decimal? limit, decimal monthSpent, decimal proposed) =>
+    [
+        new("Phòng ban đề xuất", department ?? ""),
+        new("Định mức/dự trù chi phí", limit is { } l ? Vnd(l) : "Chưa khai báo", limit is not null),
+        new("Lũy kế số tiền đã mua", Vnd(monthSpent + proposed), true),
+        new("Tổng tiền đề xuất", Vnd(proposed), true),
+    ];
+
+    /// <summary>Dựng bảng 2A/2B từ các dòng đã quy về <see cref="SummaryRow"/>.</summary>
+    private static CuvtForm Summary(
+        bool is2A, string companyName, string no, DateOnly date, string status, string? departmentName, IReadOnlyList<SummaryRow> lines,
+        decimal totalAmount, List<CuvtInfoLine> info, string? note, IReadOnlyList<CuvtSigner> signers)
+    {
+        var units = lines.Select(l => l.Unit).DistinctBy(u => u.Id).OrderBy(u => u.Code).ToList();
+        // Độ rộng, căn lề in theo số đo sheet 2A/2B (CuvtSheetLayout.Sheet2A/Sheet2B – lát IN2); cột "Đơn vị mua" mỗi đơn vị một cột.
+        const string content = "Nội dung đề xuất";
+        var columns = new List<CuvtColumn>
+        {
+            new("Ngày đề xuất", 20, Center: true), new("Số phiếu", 34, Center: true), new("Phòng ban đề xuất", 24, Center: true),
+            new("Tên vật tư", 40, Group: content), new("ĐVT", 13, Group: content), new("Số lượng", 17, Group: content),
+            new("Đơn giá", 20, true, content), new("Thành tiền", 25, true, content), new("Ngày cung ứng", 22, Group: content),
+            new("Mục đích sử dụng", 30, Group: content, Center: true),
+        };
+        columns.AddRange(units.Select(u => new CuvtColumn(u.Name, 14, Group: "Đơn vị mua", Center: true)));
+
+        var rows = lines.OrderBy(l => l.LineNo).Select(l => new[]
+            {
+                Date(l.RequestDate) ?? "", l.RequestNo, departmentName ?? "", l.ItemName, l.UomCode, Qty(l.Qty), Price(l.EstPrice),
+                Money(l.Amount), Date(l.NeededDate) ?? "", l.Purpose ?? "",
+            }.Concat(units.Select(u => u.Id == l.Unit.Id ? "x" : "")).ToArray())
+            .ToList();
 
         // Dòng tổng như sheet: "Tổng cộng" gộp 3 cột đầu (A15:C15), tổng số lượng ở cột Số lượng, tổng tiền ở cột Thành tiền. Tự đặt: sheet cộng cả
         // cột Đơn giá (=SUM) – tổng đơn giá các mặt hàng không có nghĩa nên để trống; tổng số lượng chỉ ghi khi mọi dòng cùng ĐVT.
-        var oneUom = summary.Lines.Select(l => l.UomCode).Distinct().Count() == 1;
-        var totalCells = new List<string> { "", "", oneUom ? Qty(summary.Lines.Sum(l => l.Qty)) : "", "", Money(summary.TotalAmount) };
+        var oneUom = lines.Select(l => l.UomCode).Distinct().Count() == 1;
+        var totalCells = new List<string> { "", "", oneUom ? Qty(lines.Sum(l => l.Qty)) : "", "", Money(totalAmount) };
         totalCells.AddRange(Enumerable.Repeat("", columns.Count - 3 - totalCells.Count));
         return new CuvtForm(
             is2A ? "2A" : "2B",
             is2A ? "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA VẬT TƯ" : "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA",
             // Phụ đề 2B nguyên văn sheet (có dấu chấm cuối dòng 1, "SỬA-CHỮA") – như 3B, 4B.
             is2A ? Subtitles1A : Subtitles3B,
-            companyName, summary.No, summary.Date, true, StatusNote(summary.Status), info, columns, rows, 3, totalCells, (null, null),
-            summary.Note, Signers("Người lập", summary.CreatedByName, summary.Approvals));
+            companyName, no, date, true, StatusNote(status), info, columns, rows, 3, totalCells, (null, null), note, signers);
     }
 
     /// <summary>
