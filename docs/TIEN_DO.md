@@ -1052,8 +1052,7 @@ Theo người dùng (chỉ 2 tài khoản nghiệp vụ mới: người tạo PO
 PO), XNH do `nhanhang`. `gdtckt` giữ lại (GĐ TC-NQ-KT là cấp 3 PO, không có trong chuỗi 1B) – chờ người dùng quyết giữ hay gán vai trò cho tài khoản có sẵn.
 **Phát hành 0.46.2 (20/11/2026)** – người dùng "bảng tổng hợp cũng lấy lũy kế từ PR sang": bản in BTH 2B lập riêng ghi lũy kế như 1B (PO đã duyệt trong
 tháng của ngày lập đề nghị – đề nghị sớm nhất nếu bảng gom nhiều PR; không cộng tổng đề xuất); 2A giữ như cũ. `dotnet test` 820/820; tag `v0.46.2`,
-Release kèm zip + .sha256, `rollback/0.46.2.json` mức 1; 5007 nâng 0.46.1 → 0.46.2 bằng `D:\project
-ang-5007-0.46.2.ps1` (sao lưu
+Release kèm zip + .sha256, `rollback/0.46.2.json` mức 1; 5007 nâng 0.46.1 → 0.46.2 bằng `D:\project\nang-5007-0.46.2.ps1` (sao lưu
 `…_truoc_0.46.2.dump`, `app-0.46.1` = bản cũ), `/health` Healthy 0.46.2; BTH-APH-2611-0003 in lũy kế 1.500.000 đ = 1B của PR-0018.
 **Phát hành 0.46.1 (20/11/2026)** – người dùng chốt "bảng tổng hợp chỉ lấy 01 PR, người lập bảng = người đề nghị, chữ ký còn lại lấy từ PR" (bản
 0.46.0 đã đúng) và "2B giống 1B chỉ là khác form": trang 2B in kèm PR nay in lũy kế đúng số của 1B (không cộng tổng đề xuất; BTH lập riêng giữ như
