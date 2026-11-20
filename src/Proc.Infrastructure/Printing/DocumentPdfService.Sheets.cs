@@ -280,7 +280,7 @@ public sealed partial class DocumentPdfService
             "Submitted" or "Rejected" or "Sent" or "AwardPending" => "CHƯA DUYỆT",
             _ => null,
         };
-        return (logo, new SheetStamp(lines, watermark));
+        return (logo, new SheetStamp(lines, watermark, no));
     }
 
     /// <summary>

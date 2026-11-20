@@ -376,7 +376,7 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
 - **Xem bảng theo dõi** (PO, lát IN2), **Xem bảng tổng hợp** (BTH), **Xem kết quả hỏi giá** (RFQ): cùng `printPreview` + `PrintPreviewModal`, tiêu đề
   "Xem bảng theo dõi mua hàng <số> – mẫu 4A/4B", "Xem bảng tổng hợp <số> – mẫu 2A/2B", "Xem kết quả hỏi giá <số> – mẫu 3a/3A/3B"; **Xem đề nghị
   thanh toán** ("… – mẫu 5A/5B/1C"), **Xem bảng kê** ("Xem bảng kê chi phí tạp vụ <số> – mẫu 2C").
-- **Trang in** (PDF, không phải màn hình): giữ nguyên sheet biểu mẫu (mục 20.4 IN1-1, IN2-1 – 1A/1B, 4A/4B); góc dưới trái trang cuối cùng (người dùng yêu cầu 20/11/2026) khung viền mảnh, chữ 9 phông không
+- **Trang in** (PDF, không phải màn hình): giữ nguyên sheet biểu mẫu (mục 20.4 IN1-1, IN2-1 – 1A/1B, 4A/4B); góc dưới trái trang cuối cùng (người dùng yêu cầu 20/11/2026; trang trước chỉ dòng nhỏ chữ 8 xám "Số phiếu: … · Trang x/y") khung viền mảnh, chữ 9 phông không
   chân (giờ in, người in, số phiếu, lần in, trang, tình trạng phê duyệt); dấu chìm đỏ nhạt nghiêng khi chưa duyệt.
 - **CKY – Chữ ký của tôi**: khuôn `ListPage` + `DataGrid`, một tab "LỊCH SỬ CHỮ KÝ" (`viewTabs`), không có "Tạo mới". Thông báo đầu trang
   `SignatureCurrent`: ô ký thử đúng cỡ in (`.erp-signature-sample` – rộng 46 mm, viền đen, nền `--erp-paper`, phông có chân như bản in) + đèn ô

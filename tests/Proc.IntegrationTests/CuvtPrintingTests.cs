@@ -130,9 +130,12 @@ public partial class PurchasingTests
         var only1B = await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf?form=1B", Ct));
         Assert.Equal(1, only1B.PageCount);
         Assert.True(only1B.Pages[0].Height.Point > only1B.Pages[0].Width.Point, "Chỉ trang 1B khổ dọc.");
-        // Thông tin hệ thống chỉ ở góc dưới trái trang cuối (người dùng yêu cầu 20/11/2026): file 1B + 2B thì trang 1B không có khung (ít hơn đúng
-        // một luồng vẽ so với file chỉ 1B, nơi trang 1B là trang cuối); trang cuối (2B) có khung.
-        Assert.Equal(only1B.Pages[0].Contents.Elements.Count - 1, pdf.Pages[0].Contents.Elements.Count);
+        // Thông tin hệ thống (người dùng yêu cầu 20/11/2026): khối đầy đủ chỉ ở góc dưới trái trang cuối; trang trước chỉ một dòng nhỏ "Số phiếu … ·
+        // Trang x/y". File 1B + 2B: trang 1B có luồng vẽ dòng nhỏ – ngắn hơn hẳn luồng khối đầy đủ của file chỉ 1B (trang 1B là trang cuối).
+        static int LastStream(PdfPage page) =>
+            ((PdfDictionary)((PdfSharp.Pdf.Advanced.PdfReference)page.Contents.Elements[^1]).Value).Stream.Length;
+        Assert.Equal(only1B.Pages[0].Contents.Elements.Count, pdf.Pages[0].Contents.Elements.Count);
+        Assert.True(LastStream(pdf.Pages[0]) * 2 < LastStream(only1B.Pages[0]), "Trang không phải trang cuối chỉ có dòng nhỏ.");
         var only2BResponse = await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/print?kind=download&form=2B", null, Ct);
         Assert.Equal($"{pr.No}-2B.pdf", only2BResponse.Content.Headers.ContentDisposition?.FileNameStar ?? only2BResponse.Content.Headers.ContentDisposition?.FileName);
         var only2B = await PdfOfAsync(only2BResponse);
