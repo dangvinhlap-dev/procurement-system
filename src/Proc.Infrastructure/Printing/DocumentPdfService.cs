@@ -43,7 +43,7 @@ public sealed partial class DocumentPdfService : IDocumentPdfService
     /// <param name="sundries">Bảng kê chi phí tạp vụ (in 2C – lát Y11c).</param>
     /// <param name="receipts">Phiếu xác nhận nhận hàng XNH (lát K2b).</param>
     /// <param name="options">Cấu hình in (thư mục phông).</param>
-    /// <param name="clock">Đồng hồ (giờ in góc dưới phải, nhật ký in – lát IN1).</param>
+    /// <param name="clock">Đồng hồ (giờ in góc dưới trái trang cuối, nhật ký in – lát IN1).</param>
     public DocumentPdfService(
         ProcDbContext db, ICurrentUserScope scope, IPurchaseOrderService orders, IPurchaseRequestService requests,
         IPurchaseSummaryService summaries, IRfqService rfqs, IPaymentRequestService payments, ISundryExpenseSheetService sundries,

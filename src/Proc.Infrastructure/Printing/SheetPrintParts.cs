@@ -1,19 +1,21 @@
-using MigraDoc.DocumentObjectModel;
+﻿using MigraDoc.DocumentObjectModel;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 
 namespace Proc.Infrastructure.Printing;
 
 /// <summary>
 /// Phần in dùng chung của mọi phiếu có chữ ký (lát IN1 đề nghị mua, lát IN2 các phiếu CUVT khác – design.md mục 20.4): chèn ảnh chữ ký / logo giữ
-/// tỉ lệ, góc thông tin hệ thống dưới phải mọi trang (chữ 9), dấu chìm "BẢN NHÁP" / "CHƯA DUYỆT" / "ĐÃ HỦY".
+/// tỉ lệ, thông tin hệ thống góc dưới trái trang cuối (chữ 9), dấu chìm "BẢN NHÁP" / "CHƯA DUYỆT" / "ĐÃ HỦY".
 /// </summary>
 internal static class SheetPrintParts
 {
-    /// <summary>Độ rộng khung góc thông tin hệ thống (mm) – đủ một dòng "Tình trạng phê duyệt: Đang chờ duyệt – đã duyệt 3/8 bước, chờ …".</summary>
-    public const double StampWidthMm = 124;
+    /// <summary>Khung thông tin hệ thống cách mép trái giấy (mm) – bằng lề trái của các khuôn in.</summary>
+    private const double StampLeftMm = 6;
 
-    private static readonly Color Muted = new(0x70, 0x70, 0x70);
+    /// <summary>Khung thông tin hệ thống cách mép dưới giấy (mm).</summary>
+    private const double StampBottomMm = 4;
 
     /// <summary>Chèn ảnh co vừa khung, giữ tỉ lệ điểm ảnh – như chữ ký mực trên giấy: nền PNG trong suốt nên không che đường kẻ.</summary>
     /// <param name="paragraph">Đoạn chứa ảnh.</param>
@@ -30,53 +32,38 @@ internal static class SheetPrintParts
     }
 
     /// <summary>
-    /// Góc dưới phải mọi trang của section: khung viền mảnh, chữ 9 phông không chân (người dùng yêu cầu 18/11/2026), "{PAGE}" / "{PAGES}" thay bằng
-    /// số trang. Section cần lề dưới đủ chỗ (khoảng 26 mm cho 4 dòng).
+    /// Thông tin hệ thống (giờ xem / in, người, số phiếu, lần in, số trang, tình trạng phê duyệt) ở <b>góc dưới bên trái trang cuối cùng</b> (người
+    /// dùng yêu cầu 20/11/2026 – thay cho góc dưới phải mọi trang): khung viền mảnh, chữ 9 phông không chân, vẽ sau khi đã nối mọi trang (1B kèm 2B,
+    /// 3a/3B nhiều NCC) nên chỉ một khung cho cả file; "{PAGE}" / "{PAGES}" đều thay bằng tổng số trang. Khung nằm trong lề dưới 26 mm mà các khuôn
+    /// in chừa sẵn nên không đè nội dung.
     /// </summary>
-    /// <param name="section">Section của phiếu.</param>
+    /// <param name="pdf">File PDF đã dựng xong.</param>
     /// <param name="stamp">Các dòng thông tin.</param>
-    /// <param name="widthMm">Độ rộng vùng in của section (mm) – khung nằm sát lề phải.</param>
-    public static void AddStamp(Section section, SheetStamp stamp, double widthMm)
+    /// <returns>File PDF có khung thông tin ở trang cuối.</returns>
+    public static byte[] StampLastPage(byte[] pdf, SheetStamp stamp)
     {
-        var table = section.Footers.Primary.AddTable();
-        table.Borders.Visible = false;
-        table.AddColumn(Unit.FromMillimeter(widthMm - StampWidthMm));
-        table.AddColumn(Unit.FromMillimeter(StampWidthMm));
-        var row = table.AddRow();
-        var cell = row.Cells[1];
-        cell.Borders.Visible = true;
-        cell.Borders.Width = 0.5;
-        cell.Borders.Color = Muted;
-        cell.Format.Font.Name = PdfFonts.Family;
-        cell.Format.Font.Size = 9;
-        foreach (var line in stamp.Lines)
+        using var document = PdfReader.Open(new MemoryStream(pdf), PdfDocumentOpenMode.Modify);
+        var count = document.PageCount;
+        var page = document.Pages[count - 1];
+        var lines = stamp.Lines.Select(l => l.Replace("{PAGES}", count.ToString(), StringComparison.Ordinal)
+            .Replace("{PAGE}", count.ToString(), StringComparison.Ordinal)).ToList();
+        using (var gfx = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append))
         {
-            var p = cell.AddParagraph();
-            var rest = line;
-            while (rest.Length > 0)
-            {
-                var page = rest.IndexOf("{PAGE}", StringComparison.Ordinal);
-                var pages = rest.IndexOf("{PAGES}", StringComparison.Ordinal);
-                var next = new[] { page, pages }.Where(i => i >= 0).DefaultIfEmpty(-1).Min();
-                if (next < 0)
-                {
-                    p.AddText(rest);
-                    break;
-                }
-
-                p.AddText(rest[..next]);
-                if (next == pages)
-                {
-                    p.AddNumPagesField();
-                    rest = rest[(next + 7)..];
-                }
-                else
-                {
-                    p.AddPageField();
-                    rest = rest[(next + 6)..];
-                }
-            }
+            var font = new XFont(PdfFonts.Family, 9, XFontStyleEx.Regular);
+            const double pad = 3;
+            var lineHeight = font.GetHeight();
+            var width = lines.Select(l => gfx.MeasureString(l, font).Width).DefaultIfEmpty(0).Max() + 2 * pad;
+            var height = lines.Count * lineHeight + 2 * pad;
+            var left = XUnit.FromMillimeter(StampLeftMm).Point;
+            var top = page.Height.Point - XUnit.FromMillimeter(StampBottomMm).Point - height;
+            gfx.DrawRectangle(new XPen(XColor.FromArgb(0x70, 0x70, 0x70), 0.5), left, top, width, height);
+            for (var i = 0; i < lines.Count; i++)
+                gfx.DrawString(lines[i], font, XBrushes.Black, new XRect(left + pad, top + pad + i * lineHeight, width, lineHeight), XStringFormats.TopLeft);
         }
+
+        using var stream = new MemoryStream();
+        document.Save(stream, false);
+        return stream.ToArray();
     }
 
     /// <summary>Dấu chìm đỏ nhạt nghiêng 35° giữa trang – phiếu chưa có hiệu lực vẫn in được nhưng không thể nhầm với bản đã duyệt.</summary>

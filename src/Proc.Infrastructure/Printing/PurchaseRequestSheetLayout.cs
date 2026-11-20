@@ -15,7 +15,7 @@ namespace Proc.Infrastructure.Printing;
 /// (chữ "CÁC" đỏ), phụ đề 12 đậm xanh #0000CC, ngày 16 đậm xanh; dòng thông tin 14, IN HOA, căn giữa, số tiền đậm.</item>
 /// <item>Bảng: độ rộng cột theo tỉ lệ cột A–L của sheet; chữ căn giữa (tên vật tư căn trái); dòng "Tổng cộng" 15 đậm, nền xanh nhạt, chữ gộp 3 cột đầu.</item>
 /// <item>Khối ký vẽ lại theo ảnh trong sheet: tỉ lệ cột 25/23/22/30 %, dòng "Kính trình…", 8 ô + ô Chủ tịch cả hàng.</item>
-/// <item>Ngoài mẫu (yêu cầu 18/11/2026): góc dưới phải mọi trang chữ 9 – giờ in, người in, lần in, số phiếu, tình trạng phê duyệt; dấu chìm khi
+/// <item>Ngoài mẫu (yêu cầu 18/11/2026): góc dưới trái trang cuối chữ 9 – giờ in, người in, lần in, số phiếu, tình trạng phê duyệt; dấu chìm khi
 /// phiếu chưa duyệt.</item>
 /// </list>
 /// </summary>
@@ -55,7 +55,7 @@ public static class PurchaseRequestSheetLayout
     /// <param name="form">Nội dung phiếu (tiêu đề, phụ đề, thông tin, cột, dòng, tổng, dòng dưới bảng) từ <see cref="CuvtPrintForms.PurchaseRequest"/>.</param>
     /// <param name="logo">Logo công ty của phiếu; null = để trống.</param>
     /// <param name="sign">Khối ký.</param>
-    /// <param name="stamp">Thông tin hệ thống góc dưới phải, dấu chìm.</param>
+    /// <param name="stamp">Thông tin hệ thống (khung vẽ sau ở trang cuối – SheetPrintParts.StampLastPage), dấu chìm.</param>
     /// <returns>Nội dung PDF.</returns>
     public static byte[] Render(CuvtForm form, SheetImage? logo, SheetSignBlock sign, SheetStamp stamp)
     {
@@ -73,7 +73,6 @@ public static class PurchaseRequestSheetLayout
         setup.BottomMargin = Mm(26);
         setup.FooterDistance = Mm(4);
 
-        SheetPrintParts.AddStamp(section, stamp, WidthMm);
         AddHeader(section, form);
         AddInfo(section, form);
         AddLines(section, form);

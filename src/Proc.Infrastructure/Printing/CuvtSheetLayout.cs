@@ -108,7 +108,7 @@ public sealed record SheetPage(CuvtForm Form, SheetLayoutSpec Spec, SheetSignBlo
 /// <item>Bảng: tiêu đề nhiều tầng theo nhóm cột (nhóm lồng nhau tách bằng "|", ví dụ 3A "CÁC NHÀ CUNG CẤP|NCC1…|- Điện thoại: …"), dòng tổng,
 /// dòng tổng phụ; dòng ẩn trên sheet không in.</item>
 /// <item>Khối ký vẽ lại theo ảnh trong sheet (chức danh nguyên văn) – có chữ ký, họ tên, giờ duyệt.</item>
-/// <item>Ngoài sheet (yêu cầu 18/11/2026): góc thông tin hệ thống dưới phải chữ 9, dấu chìm khi phiếu chưa duyệt.</item>
+/// <item>Ngoài sheet (yêu cầu 18/11/2026): thông tin hệ thống góc dưới trái trang cuối chữ 9 (vẽ sau – SheetPrintParts.StampLastPage), dấu chìm khi phiếu chưa duyệt.</item>
 /// </list>
 /// </summary>
 public static class CuvtSheetLayout
@@ -164,9 +164,13 @@ public static class CuvtSheetLayout
         new SheetSignStyle(Sign2Columns, [34, 28, 149], 1179, 242, 16, true, 15, 14),
         MoreHeaderPt: [33.6], HeaderFilled: false, TotalLabelCenter: true, RedColumns: [8], DynamicGroup: 1);
 
-    /// <summary>Số đo sheet "2B.TH MUA VT" – như 2A, 4 dòng thông tin, ngày xanh, ngày đề xuất và ngày cung ứng chữ đỏ, các cột căn giữa.</summary>
+    /// <summary>
+    /// Số đo sheet "2B.TH MUA VT" – như 2A, 4 dòng thông tin, ngày xanh, ngày đề xuất và ngày cung ứng chữ đỏ, các cột căn giữa. Định dạng gọn như
+    /// 1B (người dùng yêu cầu 20/11/2026 – "2B đang định dạng lộn xộn"): giữ tổng bề ngang sheet A–L nhưng chia lại cột cho chữ không gãy dòng – Số
+    /// phiếu 6,9 → 17,5 (đủ "PR-APH-2611-0018" một dòng), Phòng ban 12,9 → 14,5; bớt ở Đơn giá, Thành tiền, Ngày cung ứng, SL (số ngắn).
+    /// </summary>
     public static readonly SheetLayoutSpec Sheet2B = new(
-        true, [11.3, 6.9, 12.9, 19.6, 6.7, 8.4, 15.6, 19.4, 14.0, 13.4, 8.6, 9.3], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        true, [11.3, 17.5, 14.5, 19.6, 6.7, 7.2, 11.0, 13.6, 11.6, 13.4, 8.6, 9.3], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         [23.25, 20.1, 20.1, 20.1, 20.1], Blue, 26.1, 24, 33, 33,
         new SheetPicture(0, 39, 9, 95, 90), new SheetPicture(10, 29, 16, 89, 84),
         new SheetSignStyle(Sign2Columns, [34, 28, 149], 1179, 248, 5, true, 15, 14), [4, 5, 6, 8],
@@ -321,7 +325,6 @@ public static class CuvtSheetLayout
         setup.BottomMargin = Unit.FromMillimeter(26);
         setup.FooterDistance = Unit.FromMillimeter(4);
 
-        SheetPrintParts.AddStamp(section, stamp, g.WidthMm);
         AddHeader(section, form, spec, g);
         AddInfo(section, form, spec, g);
         AddLines(section, form, spec, g, columnPx);
@@ -735,10 +738,18 @@ public static class CuvtSheetLayout
 
         var extra = form.Columns.Count - spec.ColumnMap.Length;
         if (extra <= 0) return widths.ToArray();
-        // Cột lặp (đơn vị mua, NCC): vị trí j trong nhóm lấy độ rộng bình quân các cột sheet cùng vị trí – 3A: Đơn giá (12; 17,1; 13,7),
-        // Thành tiền (20; 19,4; 22,1). Như chèn thêm cột trong Excel: phiếu nhiều đơn vị / NCC hơn sheet mẫu thì bảng rộng ra.
         var rest = sheet.Skip(col).ToArray();
         var group = Math.Max(1, spec.DynamicGroup);
+        if (group == 1 && extra < rest.Length)
+        {
+            // 2A/2B ít đơn vị mua hơn sheet mẫu (sheet 2 cột K, L; phiếu thường 1 đơn vị): chia phần bề ngang của các cột mẫu cho số đơn vị thực có –
+            // bảng rộng đúng bằng khung đầu phiếu như 1B, không hụt mép phải (người dùng yêu cầu 20/11/2026).
+            widths.AddRange(Enumerable.Repeat(rest.Sum() / extra, extra));
+            return widths.ToArray();
+        }
+
+        // Cột lặp (đơn vị mua, NCC): vị trí j trong nhóm lấy độ rộng bình quân các cột sheet cùng vị trí – 3A: Đơn giá (12; 17,1; 13,7),
+        // Thành tiền (20; 19,4; 22,1). Như chèn thêm cột trong Excel: phiếu nhiều đơn vị / NCC hơn sheet mẫu thì bảng rộng ra.
         for (var i = 0; i < extra; i++)
         {
             var position = rest.Where((_, k) => k % group == i % group).ToArray();

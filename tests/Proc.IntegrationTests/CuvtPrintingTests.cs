@@ -130,6 +130,9 @@ public partial class PurchasingTests
         var only1B = await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf?form=1B", Ct));
         Assert.Equal(1, only1B.PageCount);
         Assert.True(only1B.Pages[0].Height.Point > only1B.Pages[0].Width.Point, "Chỉ trang 1B khổ dọc.");
+        // Thông tin hệ thống chỉ ở góc dưới trái trang cuối (người dùng yêu cầu 20/11/2026): file 1B + 2B thì trang 1B không có khung (ít hơn đúng
+        // một luồng vẽ so với file chỉ 1B, nơi trang 1B là trang cuối); trang cuối (2B) có khung.
+        Assert.Equal(only1B.Pages[0].Contents.Elements.Count - 1, pdf.Pages[0].Contents.Elements.Count);
         var only2BResponse = await f.Buyer.PostAsync($"/api/purchase-requests/{pr.Id}/print?kind=download&form=2B", null, Ct);
         Assert.Equal($"{pr.No}-2B.pdf", only2BResponse.Content.Headers.ContentDisposition?.FileNameStar ?? only2BResponse.Content.Headers.ContentDisposition?.FileName);
         var only2B = await PdfOfAsync(only2BResponse);
