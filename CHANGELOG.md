@@ -3,6 +3,23 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.47.0] - 2026-11-20
+
+**Xem đề nghị: chọn mẫu 1B hoặc 2B để in; con số lũy kế của bảng tổng hợp đúng với 1B trên mọi nơi** (người dùng yêu cầu 20/11/2026 –
+design.md mục 20.4 IN1-13, 19.3 Y5). Cài sau **0.46.2**. Không đổi CSDL, mức quay về 1.
+
+### Thêm mới
+- **"Xem đề nghị" của đề nghị mua loại B hiện hai mẫu 1B và 2B, chọn một trong hai để in**: đầu hộp thoại có ô **Mẫu in: 1B | 2B** (mặc định 1B).
+  Bấm 2B thì bản xem đổi sang trang bảng tổng hợp; **In…** và **Tải PDF** in đúng mẫu đang chọn (file 2B tên `PR-…-2B.pdf`), mỗi lần vẫn tính một lần
+  in. Thử: mở PR-APH-2611-0018 → Xem đề nghị → thấy ô Mẫu in, đang chọn 1B → bấm 2B → bản xem là bảng tổng hợp khổ ngang → Tải PDF → file
+  `PR-APH-2611-0018-2B.pdf`, dòng "Đã in n lần" tăng 1.
+- Đề nghị loại A (1A) và dịch vụ không có ô chọn, in một mẫu như cũ.
+
+### Thay đổi
+- **Con số "lũy kế" của bảng tổng hợp 2B đúng với 1B ở cả màn hình**: khung thông tin đầu phiếu BTH (dòng "…lũy kế đã dùng …") và trang duyệt trên
+  điện thoại nay ra cùng số với "Lũy kế số tiền đã mua trong tháng" của 1B (PO đã duyệt trong tháng lập đề nghị, chưa VAT); chữ trên màn hình giữ
+  nguyên, chỉ đổi con số. Thử: mở BTH-APH-2611-0003 → khung đầu phiếu ghi lũy kế 1.500.000 đ (bản cũ 62.900.000 đ), bằng số trên 1B của PR-0018.
+
 ## [0.46.2] - 2026-11-20
 
 **Bảng tổng hợp 2B lấy lũy kế từ PR sang** (người dùng chốt 20/11/2026 – design.md mục 20.4 IN1-13). Cài sau **0.46.1**. Không đổi CSDL, mức
