@@ -3,6 +3,18 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.47.2] - 2026-11-20
+
+**Các trang trước trang cuối có dòng nhỏ "Số phiếu · Trang x/y"; cột 2B rộng hơn** (người dùng yêu cầu 20/11/2026 – design.md mục 20.4 IN1-12).
+Cài sau **0.47.1**. Không đổi CSDL, mức quay về 1.
+
+### Thay đổi
+- Khối thông tin hệ thống đầy đủ vẫn chỉ ở góc dưới trái trang cuối; **các trang khác có một dòng nhỏ "Số phiếu: … · Trang x/y"** cùng góc. Thử:
+  PR-APH-2611-0018 → Xem đề nghị (không chọn mẫu, hoặc phiếu nhiều trang) → trang 1 có dòng nhỏ "Số phiếu: PR-APH-2611-0018 · Trang 1/2", trang cuối
+  có khối đầy đủ.
+- Biểu mẫu 2B: cột Số phiếu đủ rộng để "PR-APH-2611-0018" nằm trên một dòng, cột Phòng ban ("Phòng Kỹ thuật_Sơn tiên"), Tên vật tư, Mục đích rộng
+  hơn. Thử: PR-0018 → Xem đề nghị → Mẫu in 2B → số phiếu, phòng ban không gãy dòng.
+
 ## [0.47.1] - 2026-11-20
 
 **Thông tin hệ thống ở góc dưới trái trang cuối; biểu mẫu 2B định dạng gọn như 1B** (người dùng yêu cầu 20/11/2026 – design.md mục 20.4 IN1-12,
