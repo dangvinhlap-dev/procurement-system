@@ -90,6 +90,43 @@ public partial class PurchasingTests
     }
 
     [Fact]
+    public async Task In1B_KemTrang2B_MotLanIn()
+    {
+        // Người dùng yêu cầu 20/11/2026: sheet 1B.DN VT-CT và 2B.TH MUA VT in ra một lần – in đề nghị loại B ra luôn trang 2B, không lập/duyệt
+        // bảng tổng hợp riêng. Loại A và dịch vụ giữ một trang.
+        var f = await ArrangeAsync();
+        var (approver, _) = await ApproverAsync(f);
+        var pr = await ApprovedPrAsync(f, approver, "Goods", null, 6);
+        var response = await f.Buyer.GetAsync($"/api/purchase-requests/{pr.Id}/pdf", Ct);
+        SavePdfForReview("1B-kem-2B.pdf", await response.Content.ReadAsByteArrayAsync(Ct));
+        var pdf = await PdfOfAsync(response);
+        Assert.Equal($"ĐỀ NGHỊ MUA HÀNG HÓA THIẾT BỊ {pr.No}", pdf.Info.Title);
+        Assert.Equal(2, pdf.PageCount);
+        Assert.True(pdf.Pages[0].Height.Point > pdf.Pages[0].Width.Point, "Trang 1B khổ dọc.");
+        Assert.True(pdf.Pages[1].Width.Point > pdf.Pages[1].Height.Point, "Trang 2B khổ ngang.");
+
+        // Dòng chưa ở bảng tổng hợp → đơn vị mặc định; dòng có bảng tổng hợp → đơn vị của bảng.
+        var fallback = new CuvtPrintForms.SummaryUnit(Guid.NewGuid(), "CUVT", "Phòng CUVT");
+        var form = CuvtPrintForms.PurchaseRequestSummary(pr, "Công ty thử", 0, new Dictionary<Guid, CuvtPrintForms.SummaryUnit>(), fallback)!;
+        Assert.Equal(("2B", "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA", pr.No), (form.FormNo, form.Title, form.No));
+        Assert.Equal(("Phòng CUVT", "Đơn vị mua"), (form.Columns[^1].Title, form.Columns[^1].Group));
+        var row = form.Rows.Single();
+        Assert.Equal((pr.Date.ToString("dd/MM/yyyy"), pr.No, "6", "x"), (row[0], row[1], row[5], row[^1]));
+        var other = new CuvtPrintForms.SummaryUnit(Guid.NewGuid(), "VPNDD", "VP NDD");
+        var mapped = CuvtPrintForms.PurchaseRequestSummary(pr, "Công ty thử", 0, new Dictionary<Guid, CuvtPrintForms.SummaryUnit> { [pr.Lines[0].Id] = other }, fallback)!;
+        Assert.Equal("VP NDD", mapped.Columns[^1].Title);
+
+        // Ô ký 2B: chỉ ô của 2B, bước TC-NQ-KT / HC / Thủ kho / Trưởng phòng ban không thành ô phát sinh.
+        SheetApprovalStep Step(int level, string code) => new(1, level, Proc.Domain.Purchasing.ApproverKind.Role, code, code, "Approved", "A", null, null);
+        var steps = new[] { Step(1, "TRUONGPHONGBAN"), Step(2, "TPCUVT"), Step(3, "TPTCKT"), Step(4, "TPHC"), Step(5, "PHOCTUBCL"), Step(6, "CHUTICH") };
+        Assert.Equal(["TPCUVT", "PHOCTUBCL", "CHUTICH"], SheetSign.OnlySlotsOf(DocumentPdfService.Sign2, steps).Select(s => s.RoleCode));
+
+        // Dịch vụ vẫn một trang 1B.
+        var prS = await ReadAsync<PurchaseRequestDto>(await CreatePrOfAsync(f, "Service", null, 2));
+        Assert.Equal(1, (await PdfOfAsync(await f.Buyer.GetAsync($"/api/purchase-requests/{prS.Id}/pdf", Ct))).PageCount);
+    }
+
+    [Fact]
     public async Task LuyKeTrongThang_1B_ChiTinhPoDaDuyet_ChuaVat()
     {
         // Người dùng chốt 12/11/2026: dòng "Lũy kế số tiền đã mua trong tháng" của 1B chỉ tính PO đã duyệt trong tháng, chưa VAT – giống 1A.
