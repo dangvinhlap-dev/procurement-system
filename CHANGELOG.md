@@ -3,6 +3,20 @@
 Ghi theo [Semantic Versioning](https://semver.org/lang/vi/) – xem CLAUDE.md mục 8.
 Mỗi bản phát hành có Git tag `vx.y.z`.
 
+## [0.46.0] - 2026-11-20
+
+**In đề nghị mua 1B kèm bảng tổng hợp 2B trong một lần** (người dùng yêu cầu 20/11/2026 – design.md mục 20.4 IN1-13). Cài sau **0.45.0**.
+Không đổi CSDL, mức quay về 1.
+
+### Thay đổi
+- **Đề nghị mua loại B (hàng hóa) in ra cả hai mẫu 1B và 2B**: "Xem đề nghị", In, Tải PDF ra một file – trang 1 là 1B (khổ dọc), trang 2 là
+  "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA" 2B (khổ ngang) dựng từ chính đề nghị, không cần lập và duyệt bảng tổng hợp riêng mới in được 2B. Ô ký
+  2B lấy từ chuỗi duyệt của đề nghị: Người lập bảng (người đề nghị), Trưởng phòng CUVT, GĐ Khối liên quan, Phó CT.UBCL&PT, Chủ tịch HĐQT/TGĐ.
+  Thử: mở PR-APH-2611-0018 → Xem đề nghị → thấy 2 trang (1B dọc, 2B ngang); trang 2B có 2 dòng hàng, cột "Đơn vị mua" đánh "x", chữ ký các cấp đã
+  duyệt; bấm In → góc dưới phải ghi "Lần in thứ n", chỉ tăng một lần cho cả hai trang.
+- Đơn vị mua trên trang 2B: dòng đã ở bảng tổng hợp thì lấy đơn vị của bảng đó, chưa có thì đơn vị mã "CUVT".
+- Đề nghị loại A (1A) và dịch vụ vẫn in một trang như cũ. Lập PO giữ nguyên quy tắc hiện hành.
+
 ## [0.45.0] - 2026-11-19
 
 **Gộp bước người lập – Trưởng phòng ban; khóa bộ phận đề nghị mua theo người lập** (người dùng chốt 19/11/2026 – design.md mục 19, 19.3 lát O1).
