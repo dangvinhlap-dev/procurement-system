@@ -1031,6 +1031,12 @@ chạy riêng 3/3 qua (chập chờn, theo dõi); `npm run build`, `tsc`, `oxlin
 **Phát hành 0.42.1 (18/11/2026)** – người dùng "phát hành bản mới nhất cho tôi". Gồm sửa lỗi chọn mặt hàng dịch vụ trên PR, PO… (bảng Đã xong).
 Kiểm tra: build 0 cảnh báo, `dotnet test` 815/815, tsc, oxlint, `npm run build`, Playwright đủ bộ 164/164 (2 luồng). **Không đổi CSDL** (118
 migration) – `rollback/0.42.1.json` **mức 1**. Tag `v0.42.1`, gói + `.sha256` trên GitHub Release. Cài sau 0.42.0 qua REL.
+**Dọn tài khoản / vai trò bản thử 5007 (20/11/2026)** – người dùng yêu cầu xóa mọi tài khoản trừ `admin`, `admin01`, mọi vai trò trừ `ADMIN`, dựng lại
+bộ test chuỗi 1B. Sao lưu trước `D:\project\procurement_kiemtra_0150_truoc_xoa_taikhoan_20112026.dump`. Xóa bằng SQL (64 tài khoản, 29 vai trò; gỡ gán
+vai trò, phạm vi, bộ phận, chữ ký, thông báo, ủy quyền, mọi `ApprovalRule` theo vai trò cũ; bước duyệt cũ giữ, `RoleId` = NULL; nhật ký không đụng).
+Dựng lại qua API ở **APH**: bộ vai trò mẫu CUVT (11 vai trò), cấu hình duyệt mẫu CUVT (46 cấp), khối **KKT** (GĐ khối `gdkhoi`), bộ phận KTH / VT / HC
+thuộc KKT (trưởng phòng `truongphong` / `tpcuvt` / `tphc`); 9 tài khoản mật khẩu Test@2026: `denghi` (KTH), `thukho`, `truongphong`, `tpcuvt`, `tptckt`,
+`tphc`, `gdkhoi`, `phoct`, `chutich`. BMI, TCT, CUV chưa có cấu hình duyệt (đã xóa theo vai trò cũ).
 Bản thử cổng 5007 **đã nâng 0.44.0 → 0.45.0 (19/11/2026, cài tay bằng `D:\project\nang-5007-0.45.0.ps1`)** – người dùng "phát hành bản mới nhất
 cho tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.45.0.dump`, **chạy script `db\scripts\0.45.0.sql`** (119
 migration, cuối `V0_45_0_GopBuocTruongPhong`), `app` = 0.45.0, `app-0.44.0` = bản cũ, gói `goi\0.45.0`; `/health` Healthy 0.45.0 (cả qua
