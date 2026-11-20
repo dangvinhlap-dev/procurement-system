@@ -107,7 +107,11 @@ public partial class PurchasingTests
 
         // Dòng chưa ở bảng tổng hợp → đơn vị mặc định; dòng có bảng tổng hợp → đơn vị của bảng.
         var fallback = new CuvtPrintForms.SummaryUnit(Guid.NewGuid(), "CUVT", "Phòng CUVT");
-        var form = CuvtPrintForms.PurchaseRequestSummary(pr, "Công ty thử", 0, new Dictionary<Guid, CuvtPrintForms.SummaryUnit>(), fallback)!;
+        var form = CuvtPrintForms.PurchaseRequestSummary(pr, "Công ty thử", 1_500_000m, new Dictionary<Guid, CuvtPrintForms.SummaryUnit>(), fallback)!;
+        // "2B giống 1B, chỉ khác form": lũy kế đúng số của 1B (đã mua trong tháng), không cộng tổng đề xuất.
+        var form1B = CuvtPrintForms.PurchaseRequest(pr, "Công ty thử", new Dictionary<Guid, string?>(), 1_500_000m);
+        Assert.Equal("1.500.000 đ", form.Info.Single(i => i.Label == "Lũy kế số tiền đã mua").Value);
+        Assert.Equal(form1B.Info.Single(i => i.Label == "Lũy kế số tiền đã mua trong tháng").Value, form.Info.Single(i => i.Label == "Lũy kế số tiền đã mua").Value);
         Assert.Equal(("2B", "BẢNG TỔNG HỢP CÁC ĐỀ XUẤT MUA HÀNG HÓA", pr.No), (form.FormNo, form.Title, form.No));
         Assert.Equal(("Phòng CUVT", "Đơn vị mua"), (form.Columns[^1].Title, form.Columns[^1].Group));
         var row = form.Rows.Single();

@@ -133,7 +133,7 @@ public static partial class CuvtPrintForms
                 new("Lũy kế số tiền đã mua", Vnd(frame.AccumulatedAmount + frame.ProposedAmount), true),
                 new("Tổng tiền đề xuất", Vnd(frame.ProposedAmount), true),
             ]
-            : Info2B(summary.DepartmentName, frame.LimitAmount, monthSpent, frame.ProposedAmount);
+            : Info2B(summary.DepartmentName, frame.LimitAmount, monthSpent + frame.ProposedAmount, frame.ProposedAmount);
         return Summary(
             is2A, companyName, summary.No, summary.Date, summary.Status, summary.DepartmentName, lines, summary.TotalAmount, info, summary.Note,
             Signers("Người lập", summary.CreatedByName, summary.Approvals));
@@ -171,16 +171,20 @@ public static partial class CuvtPrintForms
         var proposed = lines.Sum(l => l.Amount);
         return Summary(
             false, companyName, pr.No, pr.Date, pr.Status, pr.Department, lines, proposed,
+            // "2B giống 1B, chỉ khác form" (người dùng chốt 20/11/2026): lũy kế in đúng số của 1B – chỉ đã mua trong tháng, không cộng đề xuất.
             Info2B(pr.Department, pr.Budget?.BudgetAmount, monthSpent, proposed), pr.Note,
             Signers("Người lập", pr.RequesterName ?? pr.CreatedByName, pr.Approvals));
     }
 
-    /// <summary>Khung thông tin 2B: phòng ban, định mức/dự trù (ngân sách tháng), lũy kế = đã mua trong tháng + tổng đề xuất, tổng đề xuất.</summary>
-    private static List<CuvtInfoLine> Info2B(string? department, decimal? limit, decimal monthSpent, decimal proposed) =>
+    /// <summary>
+    /// Khung thông tin 2B: phòng ban, định mức/dự trù (ngân sách tháng), lũy kế, tổng đề xuất. Bảng tổng hợp: lũy kế = đã mua trong tháng + tổng đề
+    /// xuất (ghi chú biểu mẫu 2B); 2B in kèm đề nghị: lũy kế = đã mua trong tháng như 1B.
+    /// </summary>
+    private static List<CuvtInfoLine> Info2B(string? department, decimal? limit, decimal accumulated, decimal proposed) =>
     [
         new("Phòng ban đề xuất", department ?? ""),
         new("Định mức/dự trù chi phí", limit is { } l ? Vnd(l) : "Chưa khai báo", limit is not null),
-        new("Lũy kế số tiền đã mua", Vnd(monthSpent + proposed), true),
+        new("Lũy kế số tiền đã mua", Vnd(accumulated), true),
         new("Tổng tiền đề xuất", Vnd(proposed), true),
     ];
 
