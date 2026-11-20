@@ -1036,7 +1036,8 @@ bộ test chuỗi 1B. Sao lưu trước `D:\project\procurement_kiemtra_0150_tru
 vai trò, phạm vi, bộ phận, chữ ký, thông báo, ủy quyền, mọi `ApprovalRule` theo vai trò cũ; bước duyệt cũ giữ, `RoleId` = NULL; nhật ký không đụng).
 Dựng lại qua API ở **APH**: bộ vai trò mẫu CUVT (11 vai trò), cấu hình duyệt mẫu CUVT (46 cấp), khối **KKT** (GĐ khối `gdkhoi`), bộ phận KTH / VT / HC
 thuộc KKT (trưởng phòng `truongphong` / `tpcuvt` / `tphc`); 9 tài khoản mật khẩu Test@2026: `denghi` (KTH), `thukho`, `truongphong`, `tpcuvt`, `tptckt`,
-`tphc`, `gdkhoi`, `phoct`, `chutich`. BMI, TCT, CUV chưa có cấu hình duyệt (đã xóa theo vai trò cũ).
+`tphc`, `gdkhoi`, `phoct`, `chutich`. Sau đó áp cấu hình duyệt mẫu CUVT cho BMI, TCT, CUV (mỗi công ty 46 cấp); ba công ty này chưa có tài khoản,
+khối, trưởng phòng ban nên chưa gửi duyệt được tới khi gán.
 Bản thử cổng 5007 **đã nâng 0.44.0 → 0.45.0 (19/11/2026, cài tay bằng `D:\project\nang-5007-0.45.0.ps1`)** – người dùng "phát hành bản mới nhất
 cho tôi test". Kiểm SHA256 gói, sao lưu `D:\project\procurement_kiemtra_0150_truoc_0.45.0.dump`, **chạy script `db\scripts\0.45.0.sql`** (119
 migration, cuối `V0_45_0_GopBuocTruongPhong`), `app` = 0.45.0, `app-0.44.0` = bản cũ, gói `goi\0.45.0`; `/health` Healthy 0.45.0 (cả qua
