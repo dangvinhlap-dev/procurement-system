@@ -559,14 +559,22 @@ export function PurchaseRequestPage() {
       number={isNew ? null : (doc?.no ?? '')}
       audit={{ entityType: 'PurchaseRequest', id: doc?.id }}
       // "Xem đề nghị" (lát IN1, người dùng yêu cầu 18/11/2026): xem trang in giữ nguyên mẫu 1A/1B, chữ ký người đã duyệt, In / Tải PDF đếm lần in.
+      // Loại B hiện hai mẫu 1B và 2B, người dùng chọn một trong hai để xem và in (người dùng yêu cầu 20/11/2026 – design.md 20.4 IN1-13).
       printPreview={
         doc
           ? {
               label: 'Xem đề nghị',
-              title: `Xem đề nghị mua ${doc.no} – mẫu ${doc.category === 'Construction' ? '1A' : '1B'}`,
+              title: `Xem đề nghị mua ${doc.no} – mẫu ${doc.category === 'Construction' ? '1A' : doc.category === 'Goods' ? '1B, 2B' : '1B'}`,
               viewPath: `/api/purchase-requests/${doc.id}/pdf`,
               printPath: `/api/purchase-requests/${doc.id}/print`,
               printsPath: `/api/purchase-requests/${doc.id}/prints`,
+              forms:
+                doc.category === 'Goods'
+                  ? [
+                      { value: '1B', label: <span title="1B – Đề nghị mua hàng hóa thiết bị">1B</span> },
+                      { value: '2B', label: <span title="2B – Bảng tổng hợp các đề xuất mua hàng hóa">2B</span> },
+                    ]
+                  : undefined,
             }
           : undefined
       }

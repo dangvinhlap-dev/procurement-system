@@ -23,12 +23,18 @@ public interface IDocumentPdfService
     /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi <paramref name="form"/> không hợp lệ.</exception>
     Task<PdfFile> PurchaseOrderAsync(Guid id, string? form, CancellationToken cancellationToken);
 
-    /// <summary>In đề nghị mua hàng theo biểu mẫu CUVT: loại A → 1A, loại B → 1B, dịch vụ → 1B không cột tồn (lát Y10).</summary>
+    /// <summary>
+    /// In đề nghị mua hàng theo biểu mẫu CUVT: loại A → 1A, loại B → 1B, dịch vụ → 1B không cột tồn (lát Y10). Loại B có thêm trang bảng tổng
+    /// hợp 2B dựng từ chính đề nghị (design.md 20.4 IN1-13); <paramref name="form"/> chọn mẫu: "2B" chỉ trang 2B, "1A"/"1B" chỉ trang đề nghị,
+    /// null cả hai.
+    /// </summary>
     /// <param name="id">PR.</param>
+    /// <param name="form">Mẫu cần in; null = mọi mẫu của phiếu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
-    Task<PdfFile> PurchaseRequestAsync(Guid id, CancellationToken cancellationToken);
+    /// <exception cref="Proc.Domain.Common.BusinessRuleException">Khi chọn 2B mà phiếu không có trang 2B.</exception>
+    Task<PdfFile> PurchaseRequestAsync(Guid id, string? form, CancellationToken cancellationToken);
 
     /// <summary>
     /// In / tải PDF đề nghị mua có ghi nhật ký (lát IN1 – design.md mục 20.4): ghi một lần in rồi dựng bản có "Lần in thứ n" ở góc dưới phải.
@@ -36,10 +42,11 @@ public interface IDocumentPdfService
     /// </summary>
     /// <param name="id">PR.</param>
     /// <param name="kind">In hay tải PDF.</param>
+    /// <param name="form">Mẫu cần in như <see cref="PurchaseRequestAsync"/>; null = mọi mẫu.</param>
     /// <param name="cancellationToken">Hủy thao tác.</param>
     /// <returns>File PDF.</returns>
     /// <exception cref="Common.NotFoundException">Khi không có phiếu hoặc phiếu ngoài phạm vi.</exception>
-    Task<PdfFile> PurchaseRequestPrintAsync(Guid id, Proc.Domain.Documents.PrintKind kind, CancellationToken cancellationToken);
+    Task<PdfFile> PurchaseRequestPrintAsync(Guid id, Proc.Domain.Documents.PrintKind kind, string? form, CancellationToken cancellationToken);
 
     /// <summary>Các lần in đề nghị mua, mới nhất trước – cho hộp thoại "Xem đề nghị" (lát IN1).</summary>
     /// <param name="id">PR.</param>

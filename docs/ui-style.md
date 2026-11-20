@@ -370,6 +370,9 @@ Không có dòng chọn vàng, vùng "Kéo tiêu đề cột vào đây để nh
   `PrintPreviewModal` (`components/PrintPreview/`) rộng 940px: hàng nút **In…** (icon máy in), **Tải PDF** (icon tải về), **Làm mới**, dòng chữ mờ
   "Đã in n lần · lần gần nhất … – người" / "Chưa in lần nào" sát phải, **Đóng** (đỏ); vùng xem nền `--erp-print-viewer-bg`, viền 1px, cao 72vh,
   trang PDF trong khung (ẩn thanh công cụ trình xem PDF – in qua nút In để đếm lần in). In bằng khung ẩn `.erp-print-frame`.
+  **Phiếu nhiều mẫu** (đề nghị mua loại B: 1B và 2B – lát IN1-13, 20/11/2026): đầu hàng nút có ô **Mẫu in:** (`PrintPreviewProps.forms`,
+  `.erp-print-form`) – nút ô vuông cao 22px nền `--erp-tab-bg`, mẫu đang chọn nền `--erp-tab-active` chữ trắng đậm, rê chuột thấy tên mẫu đầy đủ,
+  vạch dọc ngăn với nhóm nút In; đổi mẫu thì bản xem, In, Tải PDF đều theo mẫu đang chọn (mặc định mẫu đầu).
 - **Xem bảng theo dõi** (PO, lát IN2), **Xem bảng tổng hợp** (BTH), **Xem kết quả hỏi giá** (RFQ): cùng `printPreview` + `PrintPreviewModal`, tiêu đề
   "Xem bảng theo dõi mua hàng <số> – mẫu 4A/4B", "Xem bảng tổng hợp <số> – mẫu 2A/2B", "Xem kết quả hỏi giá <số> – mẫu 3a/3A/3B"; **Xem đề nghị
   thanh toán** ("… – mẫu 5A/5B/1C"), **Xem bảng kê** ("Xem bảng kê chi phí tạp vụ <số> – mẫu 2C").
